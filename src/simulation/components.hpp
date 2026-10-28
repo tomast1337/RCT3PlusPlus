@@ -272,8 +272,11 @@ namespace rct3::simulation
         PickedUpHappy = 71,
         PickedUpNeutral = 72,
         PickedUpSad = 73,
-        BeenInjured = 163, ///< Thrown from a crashed ride, or knocked over by its blast
-        NoPools = 182,     ///< Wanting a swim in a park with no pool open
+        BeenInjured = 163,     ///< Thrown from a crashed ride, or knocked over by its blast
+        PoolGood = 179,        ///< Out of a pool kept clean
+        PoolBad = 180,         ///< Out of a dirty one
+        PoolOvercleaned = 181, ///< Out of one cleaned with too harsh a fluid
+        NoPools = 182,         ///< Wanting a swim in a park with no pool open
         TooColdForPools = 198,
     };
 
@@ -368,6 +371,26 @@ namespace rct3::simulation
     {
         std::vector<glm::vec3> water { };
         std::vector<glm::vec3> paved { };
+        Share dirt { }; ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
+    };
+
+    /// How dirty a pool looks, in the six steps the pool's window names, cleanest first.
+    [[nodiscard]] std::size_t dirt_step(const SwimPool& pool);
+
+    /// The cleaning fluids a changing room may keep its pool clean with, mildest first.
+    enum class PoolFluid : std::uint8_t
+    {
+        Mild,
+        Strong,
+        Harsh, ///< Cleans fast, but stings swimmers' eyes in a pool with little dirt to clean
+    };
+
+    /// A changing room's cleaning fluid, on its PoolDoor: which, and what is left of it. Mechanics inspecting the
+    /// room fill it up again, at the fluid's price.
+    struct PoolTank
+    {
+        PoolFluid fluid = PoolFluid::Mild;
+        Share left { 1 };
     };
 
     /// A changing room of a pool complex, on its Attraction, whose entrance is the path tile at its door.
@@ -764,6 +787,12 @@ namespace rct3::simulation
     {
         Money paid { };
         double owed = 0; ///< Hundredths earned and not yet paid, under one
+    };
+
+    /// What the park has paid for supplies, such as pools' cleaning fluid, kept in the registry's context.
+    struct Supplies
+    {
+        Money paid { };
     };
 
     /// What guests have paid the park for rides, shops and entry, kept in the registry's context.

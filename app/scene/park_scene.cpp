@@ -2623,7 +2623,7 @@ namespace rct3::scene
                         f.coasters += group == simulation::RideGroup::Coaster ? 1 : 0;
                         f.water_rides += group == simulation::RideGroup::Water ? 1 : 0;
                     }
-                    for (const auto [e, upkeep] : r.view<const simulation::Upkeep>().each())
+                    for (const auto [e, upkeep] : r.view<const simulation::Upkeep>(entt::exclude<simulation::PoolDoor>).each())
                     {
                         f.downtime.push_back(upkeep.downtime_share() * 100);
                         f.reliability += upkeep.reliability.value * 100;
@@ -2893,6 +2893,13 @@ namespace rct3::scene
                     if (scene.park.cash)
                         *scene.park.cash -= payroll->paid.value - scene.wages_seen;
                     scene.wages_seen = payroll->paid.value;
+                }
+                // So are pools' cleaning fluids.
+                if (const auto* supplies = scene.sim.registry.ctx().find<simulation::Supplies>())
+                {
+                    if (scene.park.cash)
+                        *scene.park.cash -= supplies->paid.value - scene.supplies_seen;
+                    scene.supplies_seen = supplies->paid.value;
                 }
                 // What guests pay for rides, shops and entry goes into it.
                 if (const auto* receipts = scene.sim.registry.ctx().find<simulation::Receipts>())

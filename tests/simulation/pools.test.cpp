@@ -169,3 +169,94 @@ TEST_CASE("swimmers walk the plain paved squares, not those a spa pool or diving
     CHECK(pool.water.size() == 1);
     CHECK(pool.paved.size() == 1);
 }
+
+TEST_CASE("swimmers dirty the water, and the room's fluid cleans it while the room is open")
+{
+    Sandbox park;
+    pool_by_path(park);
+    auto& r = park.world().registry;
+    const entt::entity room = room_of(r);
+    auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room).pool);
+    r.get<PoolTank>(room).left = { 0 }; // Nothing to clean with yet
+    for (int k = 0; k < 6; ++k)
+        park.guest({ k % 3, 0 }, { .swim = 0.9f, .cash = 1000 });
+    REQUIRE(park.run_until([&] { return r.view<const Swimmer>().size() == 6; }, 60));
+    park.run_seconds(200);
+    CHECK(pool.dirt.value > 0.05f);
+    // Everyone out: the fluid takes the dirt out, using the tank.
+    REQUIRE(park.run_until([&] { return r.view<const Swimmer>().empty(); }, kTuning.pools.stay.value + 2 * kTuning.pools.changing.value + 60));
+    const float dirty = pool.dirt.value;
+    r.get<PoolTank>(room) = { .fluid = PoolFluid::Harsh, .left = { 1 } };
+    park.run_seconds(120);
+    CHECK(pool.dirt.value < dirty);
+    CHECK(r.get<PoolTank>(room).left.value < 1);
+}
+
+TEST_CASE("swimmers coming out think of the water as it is")
+{
+    const auto thought_after = [](float dirt, PoolFluid fluid) {
+        Sandbox park;
+        pool_by_path(park);
+        auto& r = park.world().registry;
+        const entt::entity room = room_of(r);
+        r.get<PoolTank>(room) = { .fluid = fluid, .left = { 1 } };
+        auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room).pool);
+        const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+        park.run_until(
+            [&] {
+                pool.dirt = { dirt }; // Held where it is
+                return r.all_of<Swimmer>(guest) && r.get<Swimmer>(guest).changed;
+            },
+            120);
+        park.run_until(
+            [&] {
+                pool.dirt = { dirt };
+                return !r.all_of<Swimmer>(guest);
+            },
+            kTuning.pools.stay.value + 2 * kTuning.pools.changing.value + 60);
+        const auto* thoughts = r.try_get<Thoughts>(guest);
+        if (thoughts == nullptr)
+            return std::optional<ThoughtKind> { };
+        const auto& recent = thoughts->recent;
+        for (const ThoughtKind kind : { ThoughtKind::PoolGood, ThoughtKind::PoolBad, ThoughtKind::PoolOvercleaned })
+            if (std::ranges::contains(recent, kind, &Thought::kind))
+                return std::optional(kind);
+        return std::optional<ThoughtKind> { };
+    };
+    CHECK(thought_after(0.1f, PoolFluid::Mild) == ThoughtKind::PoolGood);
+    CHECK(thought_after(0.8f, PoolFluid::Mild) == ThoughtKind::PoolBad);
+    CHECK(thought_after(0.0f, PoolFluid::Harsh) == ThoughtKind::PoolOvercleaned);
+    CHECK(thought_after(0.4f, PoolFluid::Mild) == std::nullopt);
+}
+
+TEST_CASE("a mechanic fills a changing room's tank running low, and the park pays for the fluid")
+{
+    Sandbox park;
+    pool_by_path(park);
+    auto& r = park.world().registry;
+    const entt::entity room = room_of(r);
+    r.get<PoolTank>(room) = { .fluid = PoolFluid::Strong, .left = { 0.1f } };
+    park.staff(StaffRole::Mechanic, { 0, 0 });
+    REQUIRE(park.run_until([&] { return r.get<PoolTank>(room).left.value == 1; }, 300));
+    REQUIRE(r.ctx().contains<Supplies>());
+    const auto paid = r.ctx().get<Supplies>().paid.value;
+    CHECK(paid > kTuning.pools.refill[1].value * 8 / 10);
+    CHECK(paid <= kTuning.pools.refill[1].value);
+}
+
+TEST_CASE("a pool taken in again keeps its dirt")
+{
+    Sandbox park;
+    park::PoolMap pools = pool_by_path(park);
+    auto& r = park.world().registry;
+    r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool).dirt = { 0.5f };
+    import_pools(park.world(), pools);
+    CHECK(r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool).dirt.value == doctest::Approx(0.5f));
+}
+
+TEST_CASE("a pool's dirt shows in six steps")
+{
+    CHECK(dirt_step(SwimPool { .dirt = { 0 } }) == 0);
+    CHECK(dirt_step(SwimPool { .dirt = { 0.5f } }) == 3);
+    CHECK(dirt_step(SwimPool { .dirt = { 1 } }) == 5);
+}

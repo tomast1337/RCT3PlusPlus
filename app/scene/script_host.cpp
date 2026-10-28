@@ -392,6 +392,12 @@ namespace rct3::scene
             park_of(park_).park.time = a[0].get<float>();
             return Json(nullptr);
         });
+        engine_.define("park.setTemperature", [this](const Json& a) -> Json {
+            if (a.size() != 1 || !a[0].is_number())
+                throw std::invalid_argument("park.setTemperature takes degrees");
+            park_of(park_).park.temperature = a[0].get<float>();
+            return Json(nullptr);
+        });
         engine_.define("park.weather", [this](const Json&) { return Json(save::to_string(park_of(park_).park.weather)); });
         engine_.define("park.setWeather", [this](const Json& a) -> Json {
             for (std::int32_t raw = 0; a.size() == 1 && a[0].is_string() && raw <= 6; ++raw)

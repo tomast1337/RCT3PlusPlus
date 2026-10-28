@@ -743,11 +743,13 @@ namespace rct3::simulation
             const entt::entity guest = members.emplace_back(r.create());
             r.emplace<Visitor>(guest, age, is_female, std::string { }, world.tick);
             r.emplace<Pose>(guest, paths.centre(at), 0.0f);
-            r.emplace<Needs>(guest);
+            // Some come wishing for a swim already, the more the more they like pools.
+            const auto liking = static_cast<float>(random::between(dice, double { kTuning.pools.least_liking.value }, double { kTuning.pools.most_liking.value }));
+            r.emplace<Needs>(guest, Needs { .swim = { liking * static_cast<float>(random::unit(dice)) } });
             r.emplace<Mood>(guest, Mood { .happiness = kTuning.arrivals.mood, .energy = { 1 }, .tolerance = age == AgeGroup::Teen ? kTuning.arrivals.teen_tolerance : Mood { }.tolerance });
             const auto spread = [&] { return static_cast<float>(random::between(dice, -1.0, 1.0)) * kTuning.parties.taste_spread.value; };
             const float least = std::clamp(band.least.value + spread(), 0.0f, 1.0f);
-            r.emplace<Taste>(guest, least, std::clamp(band.most.value + spread(), least, 1.0f), static_cast<float>(random::between(dice, double { kTuning.pools.least_liking.value }, double { kTuning.pools.most_liking.value })));
+            r.emplace<Taste>(guest, least, std::clamp(band.most.value + spread(), least, 1.0f), liking);
             // Around the park's averages, each on its own.
             const auto* draw = r.ctx().find<Draw>();
             const auto around = [&](Money average, Money fallback) { return Money { std::llround(static_cast<double>(average.value > 0 ? average.value : fallback.value) * (1 + random::between(dice, -1.0, 1.0) * kTuning.arrivals.cash_spread.value)) }; };
@@ -2304,28 +2306,28 @@ namespace rct3::simulation
                 pose.position = door->poolside;
                 swimmer.goal = door->poolside;
             }
-            const glm::vec3 to = swimmer.goal - pose.position;
-            const float way = glm::length(glm::vec2(to.x, to.z));
+            // Across the ground, at the water's surface over a square of water and on the paving elsewhere.
+            const glm::vec2 to { swimmer.goal.x - pose.position.x, swimmer.goal.z - pose.position.z };
+            const float way = glm::length(to);
             const float pace = (swimmer.in_water ? kTuning.pools.swim.value : r.get<Stride>(g).speed.value) * dt;
-            if (way > pace)
-            {
-                pose.heading.value = std::atan2(to.x, to.z);
-                pose.position += to * (pace / way);
-                swimmer.left.value -= dt;
-                continue;
-            }
-            pose.position = swimmer.goal;
+            const bool there = way <= pace;
+            if (!there)
+                pose.heading.value = std::atan2(to.x, to.y);
+            const glm::vec2 at = there ? glm::vec2 { swimmer.goal.x, swimmer.goal.z } : glm::vec2 { pose.position.x, pose.position.z } + to * (pace / way);
+            const float half = paths.tile_size / 2;
+            const auto water = std::ranges::find_if(pool->water, [&](const glm::vec3& w) { return std::abs(at.x - w.x) <= half && std::abs(at.y - w.z) <= half; });
+            swimmer.in_water = water != pool->water.end();
+            pose.position = { at.x, swimmer.in_water ? water->y : door->poolside.y, at.y };
             swimmer.left.value -= dt;
+            if (!there)
+                continue;
             if (swimmer.left.value <= 0)
             {
                 // Back at the room's side of the pool: in to change.
                 if (glm::distance(pose.position, door->poolside) < 0.01f)
                     swimmer.changing = kTuning.pools.changing;
                 else
-                {
                     swimmer.goal = door->poolside;
-                    swimmer.in_water = false;
-                }
                 continue;
             }
             if ((swimmer.idle.value -= dt) > 0)
@@ -2333,9 +2335,9 @@ namespace rct3::simulation
             swimmer.idle.value = static_cast<float>(random::between(dice, double { kTuning.pools.shortest_rest.value }, double { kTuning.pools.longest_rest.value }));
             // shortcut: swimmers go straight from spot to spot, over the pool's walls; upgrade with ladders and
             // steps as ways in and out.
-            swimmer.in_water = pool->paved.empty() || !random::chance(dice, kTuning.pools.poolside.value);
-            const auto& spots = swimmer.in_water ? pool->water : pool->paved;
-            const float spread = 0.35f * paths.tile_size;
+            const auto& spots = pool->paved.empty() || !random::chance(dice, kTuning.pools.poolside.value) ? pool->water : pool->paved;
+            // Within a quarter tile of a square's middle: the water's cut corners leave no less.
+            const float spread = 0.25f * paths.tile_size;
             swimmer.goal = spots[random::below(dice, spots.size())] + glm::vec3 { static_cast<float>(random::between(dice, -1.0, 1.0)) * spread, 0, static_cast<float>(random::between(dice, -1.0, 1.0)) * spread };
         }
 

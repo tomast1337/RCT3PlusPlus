@@ -335,11 +335,13 @@ namespace rct3::scene
         float speed = 1;      ///< How fast its motion plays
         /// Ground its legs cover in a second of each way of going on foot (by simulation::Gait); 0 unknown
         std::array<float, kGaits> paces { };
-        bool walking = false;            ///< Walkers stand still in their stride until people move
-        bool staff = false;              ///< A member of staff rather than a guest
-        std::size_t saved = 0;           ///< Of the guests or of the staff in the saved people
-        entt::entity guest = entt::null; ///< The simulated guest it shows, for guests the simulation walks
-        std::uint32_t thoughts_seen = 0; ///< Of the simulated guest's thoughts, those already in the saved person
+        bool walking = false;                     ///< Walkers stand still in their stride until people move
+        bool staff = false;                       ///< A member of staff rather than a guest
+        std::size_t saved = 0;                    ///< Of the guests or of the staff in the saved people
+        entt::entity guest = entt::null;          ///< The simulated guest it shows, for guests the simulation walks
+        std::uint32_t thoughts_seen = 0;          ///< Of the simulated guest's thoughts, those already in the saved person
+        const park::PartSet* swim_body = nullptr; ///< Worn in place of the body and legs at a pool, if any
+        const park::PartSet* swim_legs = nullptr;
     };
 
     /// A head, body or legs that a guest coming in at the gate may wear.
@@ -351,6 +353,7 @@ namespace rct3::scene
         save::Sex sex = save::Sex::Male;
         std::uint8_t section = 0; ///< As a part group's
         std::uint8_t vip = 0;     ///< The celebrity it dresses, by the number VIP goals give them; 0 for guests'
+        bool swim = false;        ///< Swimwear, worn at a pool in place of the clothes of its section
     };
 
     /// A photo of a player's guest to draw: where from, and the start of its file name.

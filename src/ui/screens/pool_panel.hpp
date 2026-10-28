@@ -146,8 +146,8 @@ namespace rct3::ui
             return std::exchange(closed_, false);
         }
 
-        /// Shows `texture` (a picture of what is picked, drawn this frame) in the disc instead of its icon, while
-        /// an extra or changing room is picked.
+        /// Shows `texture` (a picture of what is picked, drawn this frame) in the disc instead of its icon, but
+        /// while taking squares up.
         void show_view(TextureId texture)
         {
             view_ = texture;

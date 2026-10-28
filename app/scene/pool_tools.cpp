@@ -486,24 +486,24 @@ namespace rct3::scene
     {
         const profiling::Scope zone("PoolsChanged");
         wait_for_build(scene);
-        // Taken out, not hidden: the work shown lays the pieces again at every move. The prop the info panel
-        // tells about is found again after, a changing room as the new piece of the same room.
+        // The work shown lays the pieces again at every move; those that stay as they were keep their objects.
+        // The prop the info panel tells about is found again after, a changing room as the new piece of the
+        // same room.
         const auto shown = scene.shown_prop && *scene.shown_prop < scene.objects.size() ? std::optional(scene.objects[*scene.shown_prop]) : std::nullopt;
         const bool shown_piece = shown && std::ranges::contains(scene.pool_pieces, shown->id);
-        std::erase_if(scene.objects, [&](const save::PlacedObject& o) { return std::ranges::contains(scene.pool_pieces, o.id); });
-        scene.pool_pieces.clear();
         // The ground under every square is dug down to its floor.
         for (const park::PoolSquare& s : scene.pools.squares)
             if (scene.grid.contains(s.col, s.row))
                 scene.grid.at(s.col, s.row).corners.fill(static_cast<float>(s.surface - s.depth));
+        std::vector<save::PlacedObject> pieces;
         for (save::PlacedObject& piece : park::pool_objects(scene.pools, park::kPoolOverlay, last_id(scene)))
         {
             if (!load_object_model(scene, scene.placing.models, assets, piece))
                 continue;
             piece.colours = scene.models.at(park::model_key(piece)).default_colours;
-            scene.pool_pieces.push_back(piece.id);
-            scene.objects.push_back(std::move(piece));
+            pieces.push_back(std::move(piece));
         }
+        replace_fixtures(scene, scene.pool_pieces, std::move(pieces));
         if (shown)
         {
             const auto same_piece = [&](const save::PlacedObject& o) { return shown_piece && o.col == shown->col && o.row == shown->row && o.symbol == shown->symbol && std::ranges::contains(scene.pool_pieces, o.id); };

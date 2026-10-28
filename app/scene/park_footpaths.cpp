@@ -368,10 +368,9 @@ namespace rct3::scene
         const auto near = [&](save::Tile t) { return touched->grown(1).contains(t.col, t.row); };
         if (f.pavings_stale || !touched || std::ranges::any_of(f.pavings, [&](const park::Paving& p) { return std::ranges::any_of(p.tiles, near) || std::ranges::any_of(p.links, near); }))
         {
-            const profiling::Scope decks("Decks");
-            bool changed = !f.paving_decks.empty();
-            std::erase_if(scene.objects, [&](const save::PlacedObject& o) { return std::ranges::contains(f.paving_decks, o.id); });
-            f.paving_decks.clear();
+            const profiling::Scope decks_zone("Decks");
+            bool changed = false;
+            std::vector<save::PlacedObject> decks;
             for (const park::PavedTile& t : laid)
             {
                 if (!t.path.elevation || park::is_ground_queue(t.path))
@@ -405,7 +404,10 @@ namespace rct3::scene
                             turned.symbol = symbol;
                             turned.rotation = turns;
                             if (load_object_model(scene, f.models, assets, turned))
+                            {
                                 *shown = std::move(turned);
+                                changed = true;
+                            }
                         }
                     }
                 }
@@ -415,11 +417,9 @@ namespace rct3::scene
                 deck.height_adjust = 0.02f;
                 if (!load_object_model(scene, f.models, assets, deck))
                     continue;
-                f.paving_decks.push_back(deck.id);
-                scene.objects.push_back(std::move(deck));
-                changed = true;
+                decks.push_back(std::move(deck));
             }
-            if (changed)
+            if (replace_fixtures(scene, f.paving_decks, std::move(decks)) || changed)
                 objects_changed(scene);
         }
         f.pavings_stale = false;

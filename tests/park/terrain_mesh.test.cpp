@@ -107,6 +107,26 @@ TEST_CASE("water covers the triangles of its bodies at their level")
     CHECK(m.water[0].position.x == doctest::Approx(-4));
 }
 
+TEST_CASE("an area builds only its own tiles, and areas side by side add up to the whole")
+{
+    save::TerrainGrid g = flat(4, 3);
+    g.cells[5].corners = { 2, 2, 2, 2 };
+    g.cells[5].cliff = 3;
+    g.cells[6].surface = 7;
+    save::WaterLayer water;
+    water.bodies.push_back({ 0.5f, { { 0, 0, 0, 7 }, { 3, 2, 1, 7 } } });
+    const TerrainMesh whole = terrain_mesh(g, water);
+    const TerrainMesh left = terrain_mesh(g, water, { }, TileRect { 0, 0, 2, 3 });
+    const TerrainMesh right = terrain_mesh(g, water, { }, TileRect { 2, -5, 9, 9 }); // Clipped to the grid
+    CHECK(left.indices.size() + right.indices.size() == whole.indices.size());
+    CHECK(left.water.size() == 3);
+    CHECK(right.water.size() == 3);
+    for (const GroundBatch& b : whole.batches)
+        CHECK(count(left, b.paint, b.index) + count(right, b.paint, b.index) == b.count);
+    CHECK(left.high.x == doctest::Approx(0)); // Two tiles of 4 from -8
+    CHECK(terrain_mesh(g, water, { }, TileRect { 4, 0, 8, 3 }).indices.empty());
+}
+
 TEST_CASE("a grid whose cells do not match its size makes nothing")
 {
     save::TerrainGrid g = flat(2, 2);

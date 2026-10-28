@@ -334,8 +334,6 @@ namespace rct3::scene
         for (const park::PavedTile& t : laid)
             with.push_back(t.path);
         const std::vector<park::GroundOpening> hollows = profiling::section("Hollows", [&] { return park::tunnel_hollows(f.paths, scene.grid); });
-        park::TerrainMesh mesh = profiling::section("Terrain", [&] { return park::terrain_mesh(scene.grid, f.water, hollows); });
-        profiling::section("Tunnels", [&] { park::add_ground(mesh, park::tunnel_lining(hollows, scene.grid)); });
         park::GroundPathMap paths = profiling::section("PathMap", [&] { return park::ground_path_map(with, scene.grid); });
         paths.walls = f.walls;
         park::seal_pavings(paths, laid, f.pavings);
@@ -451,37 +449,91 @@ namespace rct3::scene
                 }
             }
         });
-        profiling::section("PathMesh", [&] { park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid)); });
-        park::GroundQueues queues = profiling::section("Queues", [&] { return park::ground_queues(with, scene.grid); });
-        park::add_ground(mesh, std::move(queues.mesh));
-        std::vector<park::WaterVertex> water = std::move(mesh.water);
-        std::ranges::copy(park::pool_water(scene.grid, f.pools), std::back_inserter(water));
-        park::TerrainMesh surroundings = profiling::section("Surroundings", [&] { return park::surrounding_land(scene.grid, f.water); });
-        water.insert(water.end(), surroundings.water.begin(), surroundings.water.end());
-        park::add_ground(mesh, std::move(surroundings));
+        // The ground is built in chunks, and only those the change reaches are built again: with the tile
+        // round it, as the ground's shading, the walls between tiles and the paths' edges look at their neighbours.
+        const int across = (scene.grid.width + kGroundChunk - 1) / kGroundChunk;
+        const int down = (scene.grid.height + kGroundChunk - 1) / kGroundChunk;
+        const std::size_t count = static_cast<std::size_t>(across) * static_cast<std::size_t>(down) + 1;
+        if (scene.ground_chunks.size() != count)
+        {
+            touched.reset();
+            for (const GroundChunk& chunk : scene.ground_chunks)
+            {
+                for (const render::BufferHandle b : { chunk.vertices, chunk.indices })
+                {
+                    if (b)
+                        device.destroy_buffer(b);
+                }
+            }
+            scene.ground_chunks.assign(count, { });
+        }
+        const std::optional<park::TileRect> reach = touched ? std::optional(touched->grown(1)) : std::nullopt;
+        const auto show = [&](GroundChunk& chunk, park::TerrainMesh&& mesh) {
+            const profiling::Scope upload_zone("Upload");
+            for (const render::BufferHandle b : { chunk.vertices, chunk.indices })
+            {
+                if (b)
+                    device.destroy_buffer(b);
+            }
+            chunk = { .batches = std::move(mesh.batches), .water = std::move(mesh.water) };
+            if (mesh.indices.empty())
+                return;
+            chunk.low = mesh.vertices.front().position;
+            chunk.high = chunk.low;
+            for (const park::GroundVertex& v : mesh.vertices)
+            {
+                chunk.low = glm::min(chunk.low, v.position);
+                chunk.high = glm::max(chunk.high, v.position);
+            }
+            auto vertices = device.create_buffer({ render::BufferUsage::Vertex, std::as_bytes(std::span(mesh.vertices)), "ground vertices" });
+            auto indices = device.create_buffer({ render::BufferUsage::Index, std::as_bytes(std::span(mesh.indices)), "ground indices" });
+            if (!vertices || !indices)
+            {
+                logging::logger("park").warning("ground: {}", !vertices ? vertices.error() : indices.error());
+                if (vertices)
+                    device.destroy_buffer(*vertices);
+                if (indices)
+                    device.destroy_buffer(*indices);
+                chunk.batches.clear();
+                return;
+            }
+            chunk.vertices = *vertices;
+            chunk.indices = *indices;
+        };
+        std::optional<std::vector<park::QueuePainting>> paintings;
+        for (std::size_t i = 0; i + 1 < count; ++i)
+        {
+            const int col = static_cast<int>(i % static_cast<std::size_t>(across)) * kGroundChunk;
+            const int row = static_cast<int>(i / static_cast<std::size_t>(across)) * kGroundChunk;
+            const park::TileRect area { col, row, col + kGroundChunk, row + kGroundChunk };
+            if (reach && (area.end_col <= reach->col || reach->end_col <= area.col || area.end_row <= reach->row || reach->end_row <= area.row))
+                continue;
+            park::TerrainMesh mesh = profiling::section("Terrain", [&] { return park::terrain_mesh(scene.grid, f.water, hollows, area); });
+            std::vector<park::GroundOpening> inside;
+            std::ranges::copy_if(hollows, std::back_inserter(inside), [&](const park::GroundOpening& h) { return area.contains(h.col, h.row); });
+            park::add_ground(mesh, park::tunnel_lining(inside, scene.grid));
+            profiling::section("PathMesh", [&] { park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid, area)); });
+            park::GroundQueues queues = profiling::section("Queues", [&] { return park::ground_queues(with, scene.grid, area); });
+            park::add_ground(mesh, std::move(queues.mesh));
+            paintings = std::move(queues.paintings);
+            show(scene.ground_chunks[i], std::move(mesh));
+        }
+        // The land round the park meets only the tiles along its edge.
+        if (!reach || reach->col <= 0 || reach->row <= 0 || reach->end_col >= scene.grid.width || reach->end_row >= scene.grid.height)
+            show(scene.ground_chunks.back(), profiling::section("Surroundings", [&] { return park::surrounding_land(scene.grid, f.water); }));
         profiling::section("Water", [&] {
+            // The lakes, the pools, then the water round the park.
+            std::vector<park::WaterVertex> water;
+            for (const GroundChunk& chunk : std::span(scene.ground_chunks).first(count - 1))
+                water.insert(water.end(), chunk.water.begin(), chunk.water.end());
+            std::ranges::copy(park::pool_water(scene.grid, f.pools), std::back_inserter(water));
+            water.insert(water.end(), scene.ground_chunks.back().water.begin(), scene.ground_chunks.back().water.end());
             if (auto replaced = replace_park_water(device, scene.water, water); !replaced)
                 logging::logger("park").warning("water: {}", replaced.error());
         });
         picture_styles(device, scene, assets, paths.styles);
-        picture_queues(device, scene, assets, queues.paintings);
-        const profiling::Scope upload_zone("Upload");
-        auto vertices = device.create_buffer({ render::BufferUsage::Vertex, std::as_bytes(std::span(mesh.vertices)), "ground vertices" });
-        auto indices = device.create_buffer({ render::BufferUsage::Index, std::as_bytes(std::span(mesh.indices)), "ground indices" });
-        if (!vertices || !indices)
-        {
-            logging::logger("park").warning("ground: {}", !vertices ? vertices.error() : indices.error());
-            if (vertices)
-                device.destroy_buffer(*vertices);
-            if (indices)
-                device.destroy_buffer(*indices);
-            return;
-        }
-        device.destroy_buffer(scene.ground_vertices);
-        device.destroy_buffer(scene.ground_indices);
-        scene.ground_vertices = *vertices;
-        scene.ground_indices = *indices;
-        scene.batches = std::move(mesh.batches);
+        if (paintings)
+            picture_queues(device, scene, assets, *paintings);
         scene.grid_lines.stale = true;
         scene.contour_lines.stale = true;
     }
@@ -579,8 +631,17 @@ namespace rct3::scene
             map.walls = scene.footpaths.walls;
             park::seal_pavings(map, laid, scene.footpaths.pavings);
             picture_styles(device, scene, assets, map.styles);
-            park::TerrainMesh mesh = park::ground_path_mesh(map, scene.grid);
-            park::GroundQueues queues = park::ground_queues(paved, scene.grid);
+            // Built only round the spots: only_tiles keeps them and those beside them.
+            std::optional<park::TileRect> area;
+            for (const save::Tile spot : spots)
+            {
+                const park::TileRect one = park::TileRect { spot.col, spot.row, spot.col + 1, spot.row + 1 }.grown(1);
+                area = !area ? one : park::TileRect { std::min(area->col, one.col), std::min(area->row, one.row), std::max(area->end_col, one.end_col), std::max(area->end_row, one.end_row) };
+            }
+            if (!area)
+                return { };
+            park::TerrainMesh mesh = park::ground_path_mesh(map, scene.grid, area);
+            park::GroundQueues queues = park::ground_queues(paved, scene.grid, area);
             picture_queues(device, scene, assets, queues.paintings);
             park::add_ground(mesh, queues.mesh);
             park::TerrainMesh ghost = park::only_tiles(mesh, scene.grid, around(scene.grid, spots));
@@ -912,7 +973,7 @@ namespace rct3::scene
             }
             refresh_area(scene, assets, low, high);
             objects_changed(scene);
-            rebuild_ground(device, scene, assets);
+            rebuild_ground(device, scene, assets, park::TileRect { low.col, low.row, high.col + 1, high.row + 1 });
         }
 
         /// Takes the paths of the last stroke away.
@@ -939,7 +1000,7 @@ namespace rct3::scene
             sim_paths(scene, { }, taken);
             refresh_area(scene, assets, low, high);
             objects_changed(scene);
-            rebuild_ground(device, scene, assets);
+            rebuild_ground(device, scene, assets, park::TileRect { low.col, low.row, high.col + 1, high.row + 1 });
         }
 
         /// Lays the next piece; `refresh` false leaves building the ground and the objects again to the caller.
@@ -1039,7 +1100,7 @@ namespace rct3::scene
             objects_changed(scene);
             // A ground queue's picture follows its open sides, which laying the next tile changes.
             if (piece.ground || piece.cut || piece.tunnel || f.builder.queue)
-                rebuild_ground(device, scene, assets);
+                rebuild_ground(device, scene, assets, park::TileRect { piece.spot.col, piece.spot.row, piece.spot.col + 1, piece.spot.row + 1 }.grown(1));
         }
 
         /// Takes away what draws and holds up `removed`, just taken out of the paths; `also` as refund takes it.
@@ -1069,7 +1130,7 @@ namespace rct3::scene
             refresh_around(scene, assets, { removed.col, removed.row });
             objects_changed(scene);
             if (!removed.elevation || park::is_ground_queue(removed) || removed.elevation->underground)
-                rebuild_ground(device, scene, assets);
+                rebuild_ground(device, scene, assets, park::TileRect { removed.col, removed.row, removed.col + 1, removed.row + 1 });
         }
 
         /// Takes the last piece of the trail away, with what draws and holds it up.
@@ -1157,7 +1218,7 @@ namespace rct3::scene
         simulation::set_wall(scene.sim, wall, standing);
         refresh_around(scene, assets, wall.tile);
         objects_changed(scene);
-        rebuild_ground(device, scene, assets);
+        rebuild_ground(device, scene, assets, park::TileRect { wall.tile.col, wall.tile.row, wall.tile.col + 1, wall.tile.row + 1 });
     }
 
     void toggle_footpath_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options)

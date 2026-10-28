@@ -73,6 +73,23 @@ namespace rct3::scene
             }
         }
 
+        /// Whether the box from `low` to `high` may be seen through `transform`: not when all its corners lie
+        /// beyond the same side of the view, or behind it.
+        bool box_in_view(const glm::mat4& transform, const glm::vec3& low, const glm::vec3& high)
+        {
+            std::array<int, 5> beyond { };
+            for (int k = 0; k < 8; ++k)
+            {
+                const glm::vec4 p = transform * glm::vec4((k & 1) != 0 ? high.x : low.x, (k & 2) != 0 ? high.y : low.y, (k & 4) != 0 ? high.z : low.z, 1.0f);
+                beyond[0] += p.x < -p.w ? 1 : 0;
+                beyond[1] += p.x > p.w ? 1 : 0;
+                beyond[2] += p.y < -p.w ? 1 : 0;
+                beyond[3] += p.y > p.w ? 1 : 0;
+                beyond[4] += p.w <= 0 ? 1 : 0;
+            }
+            return std::ranges::none_of(beyond, [](int n) { return n == 8; });
+        }
+
         /// Which parts of the world a draw shows: a reflection leaves some out, as the options ask.
         struct WorldParts
         {
@@ -147,26 +164,31 @@ namespace rct3::scene
             // Land, cliffs and tunnels, as against the paths and queues drawn on the ground.
             const auto earth = [](const park::GroundBatch& batch) { return batch.paint == park::GroundPaint::Surface || batch.paint == park::GroundPaint::Cliff || batch.paint == park::GroundPaint::TunnelWall || batch.paint == park::GroundPaint::TunnelCeiling; };
             const auto draw_ground = [&](render::PipelineHandle pipeline, auto&& wanted) {
-                for (const park::GroundBatch& batch : scene.batches)
+                for (const GroundChunk& chunk : scene.ground_chunks)
                 {
-                    if (!wanted(batch))
+                    if (!chunk.vertices || !box_in_view(transform, chunk.low, chunk.high))
                         continue;
-                    const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
-                    render::DrawCommand draw;
-                    draw.pipeline = pipeline;
-                    draw.vertices = { scene.ground_vertices };
-                    draw.indices = { scene.ground_indices };
-                    draw.index_type = render::IndexType::U32;
-                    draw.first = batch.first;
-                    draw.count = batch.count;
-                    draw.transform = transform;
-                    draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
-                    draw.filter = render::Filter::Linear;
-                    draw.address = render::AddressMode::Repeat;
-                    draw.light = light;
-                    draw.extra_textures[0] = scene.variation;
-                    draw.extra_textures[1] = relief_of(scene.ground_textures, park::ground_key(batch.paint, batch.index));
-                    device.draw(draw);
+                    for (const park::GroundBatch& batch : chunk.batches)
+                    {
+                        if (!wanted(batch))
+                            continue;
+                        const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
+                        render::DrawCommand draw;
+                        draw.pipeline = pipeline;
+                        draw.vertices = { chunk.vertices };
+                        draw.indices = { chunk.indices };
+                        draw.index_type = render::IndexType::U32;
+                        draw.first = batch.first;
+                        draw.count = batch.count;
+                        draw.transform = transform;
+                        draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
+                        draw.filter = render::Filter::Linear;
+                        draw.address = render::AddressMode::Repeat;
+                        draw.light = light;
+                        draw.extra_textures[0] = scene.variation;
+                        draw.extra_textures[1] = relief_of(scene.ground_textures, park::ground_key(batch.paint, batch.index));
+                        device.draw(draw);
+                    }
                 }
             };
             if (parts.terrain)

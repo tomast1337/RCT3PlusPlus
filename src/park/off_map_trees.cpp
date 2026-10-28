@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <cmath>
 #include <numbers>
+#include <optional>
+#include <unordered_map>
 
 namespace rct3::park
 {
@@ -30,6 +32,28 @@ namespace rct3::park
         bool park_tree(const save::PlacedObject& o, const ObjectModels& models, const save::TerrainGrid& grid)
         {
             return !o.hidden && o.free_standing() && grid.contains(o.col, o.row) && is_plant(o, models);
+        }
+
+        /// Stands `tree`, already placed round the edge, on `land` unturned, as a free-standing item numbered
+        /// after `last_id`: where its foot is, or nothing where there is no land under it (on the map, past the
+        /// land, or under the sea).
+        std::optional<glm::vec3> stand(save::PlacedObject& tree, Positioning positioning, const save::TerrainGrid& grid, const LandRings& land, std::uint64_t last_id)
+        {
+            tree.rotation = 0;
+            tree.base_height = 0;
+            tree.height_adjust = 0.0f;
+            tree.height_offset = 0;
+            tree.force_absolute_height = true;
+            const glm::vec3 foot = object_transform(tree, positioning, grid)[3];
+            const auto ground = land_height(land, grid, foot.x, foot.z);
+            if (!ground)
+                return std::nullopt;
+            const float y = *ground - kTreeSink;
+            tree.base_height = static_cast<std::int32_t>(std::floor(y));
+            tree.height_adjust = y - std::floor(y);
+            tree.id = last_id + 1;
+            tree.owner_ref = tree.id;
+            return glm::vec3(foot.x, *ground, foot.z);
         }
 
     } // namespace
@@ -72,20 +96,38 @@ namespace rct3::park
                 const auto angle = static_cast<float>(random::between(scenery, 0.0, 2 * std::numbers::pi));
                 save::PlacedObject tree = kind;
                 place_at(tree, grid, glm::vec2(source.x, source.z) + reach * u * u * glm::vec2(std::cos(angle), std::sin(angle)));
-                tree.rotation = 0;
-                tree.base_height = 0;
-                tree.height_adjust = 0.0f;
-                tree.height_offset = 0;
-                tree.force_absolute_height = true;
-                const glm::vec3 foot = object_transform(tree, positioning, grid)[3];
-                const auto ground = land_height(land, grid, foot.x, foot.z);
-                if (!ground || flatness(foot.x, foot.z, *ground) < kOffMapFlatness)
-                    continue; // On the map, past the land, under the sea or too steep
-                const float y = *ground - kTreeSink;
-                tree.base_height = static_cast<std::int32_t>(std::floor(y));
-                tree.height_adjust = y - std::floor(y);
-                tree.id = ++last_id;
-                tree.owner_ref = tree.id;
+                const auto foot = stand(tree, positioning, grid, land, last_id);
+                if (foot && flatness(foot->x, foot->z, foot->y) >= kOffMapFlatness)
+                {
+                    ++last_id;
+                    out.push_back(std::move(tree));
+                }
+            }
+        }
+        return out;
+    }
+
+    std::vector<save::PlacedObject> listed_off_map_trees(std::span<const save::SkirtTree> listed, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const LandRings& land)
+    {
+        std::vector<save::PlacedObject> out;
+        std::unordered_map<std::uint64_t, const save::PlacedObject*> by_id;
+        std::uint64_t last_id = 0;
+        for (const save::PlacedObject& o : objects)
+        {
+            last_id = std::max(last_id, o.id);
+            by_id.emplace(o.id, &o);
+        }
+        out.reserve(listed.size());
+        for (const save::SkirtTree& t : listed)
+        {
+            const auto source = by_id.find(t.scenery_ref);
+            if (source == by_id.end() || !park_tree(*source->second, models, grid))
+                continue;
+            save::PlacedObject tree = *source->second;
+            place_at(tree, grid, { t.position.x, t.position.z });
+            if (stand(tree, static_cast<Positioning>(models.find(model_ref(tree))->second.positioning), grid, land, last_id))
+            {
+                ++last_id;
                 out.push_back(std::move(tree));
             }
         }

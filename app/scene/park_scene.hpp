@@ -760,7 +760,6 @@ namespace rct3::scene
         std::size_t own_objects = 0;                                    ///< `objects` from the file; those after it were made on loading or built since
         std::unordered_set<std::uint64_t> placed;                       ///< Scenery the player put down since loading, by id; saved with the park
         std::optional<random::RandomState> off_map_stream;              ///< Where the trees beyond the edge left their stream; none when not grown
-        std::size_t off_map_groves = 0;                                 ///< Groves grown beyond the edge
         bool modelled_plants = true;                                    ///< Trees and plants modelled, not flat, as the options were on loading
         std::unordered_map<std::uint64_t, std::pair<int, int>> columns; ///< Support pieces built, by id, and the tile their column stands on
         SupportWatch supports;                                          ///< How the park stood when its supports were last built

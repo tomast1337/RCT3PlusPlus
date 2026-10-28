@@ -731,14 +731,16 @@ namespace rct3::scene
                     scene.signs.push_back({ .object_ref = id });
             }
             animate_scenery(device, scene, scene.objects.size() - 1);
-            // The woods beyond the edge grow with the park's: more trees call for more groves there.
-            if (scene.off_map_stream && park::is_plant(scene.objects.back(), scene.models) && park::off_map_groves(scene.objects, scene.models, scene.grid) > scene.off_map_groves)
+            // The woods beyond the edge grow with the park's: a tree planted near it seeds some there.
+            if (scene.off_map_stream && park::is_plant(scene.objects.back(), scene.models))
             {
-                std::vector<save::PlacedObject> trees = park::off_map_trees(scene.objects, scene.models, scene.grid, park::land_rings(scene.grid, scene.footpaths.water), *scene.off_map_stream, scene.off_map_groves);
-                scene.off_map_groves = park::off_map_groves(scene.objects, scene.models, scene.grid);
-                logging::logger("park").info("{} more trees beyond the edge", trees.size());
-                scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
-                objects_changed(scene);
+                std::vector<save::PlacedObject> trees = park::off_map_trees(scene.objects, scene.objects.size() - 1, scene.models, scene.grid, park::land_rings(scene.grid, scene.footpaths.water), *scene.off_map_stream);
+                if (!trees.empty())
+                {
+                    logging::logger("park").info("{} more trees beyond the edge", trees.size());
+                    scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
+                    objects_changed(scene);
+                }
             }
             if (scene.park.cash)
                 *scene.park.cash -= p.item->price;

@@ -18,6 +18,7 @@
 #include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
 #include "park/overhead.hpp"
+#include "park/pools.hpp"
 #include "park/track_course.hpp"
 #include "park/track_pieces.hpp"
 #include "profiling/profiler.hpp"
@@ -149,6 +150,7 @@ int main(int argc, char** argv)
     simulation::SimWorld world;
     world.seed = rct3::random::Seed { seed };
     simulation::import_paths(world, *world_model);
+    simulation::import_pools(world, park::saved_pools(*world_model, world_model->objects));
     const auto guests = simulation::import_guests(world, *people);
     const std::size_t shops = simulation::import_stalls(world, *rides);
     std::vector<std::optional<simulation::RideTiming>> timings;
@@ -701,7 +703,7 @@ int main(int argc, char** argv)
             out.info("staff: {:d}, happiness {:.2f}, laziness {:.2f}, at work {:.2f} of the time on average; {:d} resting now", count, mean(happy), mean(lazy), mean(load), resting);
         }
     }
-    std::array<std::size_t, 7> doing { };
+    std::array<std::size_t, 8> doing { };
     double happiness = 0;
     double thirst = 0;
     double hunger = 0;
@@ -715,7 +717,7 @@ int main(int argc, char** argv)
         ++count;
     }
     if (count > 0)
-        out.info("guests: wandering {:d} heading {:d} queueing {:d} riding {:d} following {:d} waiting {:d} buying {:d}  happiness {:.2f} thirst {:.2f} hunger {:.2f}", doing[0], doing[1], doing[2], doing[3], doing[4], doing[5], doing[6], happiness / static_cast<double>(count), thirst / static_cast<double>(count), hunger / static_cast<double>(count));
+        out.info("guests: wandering {:d} heading {:d} queueing {:d} riding {:d} following {:d} waiting {:d} buying {:d} swimming {:d}  happiness {:.2f} thirst {:.2f} hunger {:.2f}", doing[0], doing[1], doing[2], doing[3], doing[4], doing[5], doing[6], doing[7], happiness / static_cast<double>(count), thirst / static_cast<double>(count), hunger / static_cast<double>(count));
     // How well parties keep together: followers' distance from their leader, and how far waiting members stand
     // from the exit of the ride their party is on.
     std::vector<float> apart;

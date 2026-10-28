@@ -735,22 +735,15 @@ namespace rct3::scene
             scene.day.park_hours = from_file.park_hours;
         }
         begin(ParkLoadStage::Ground);
-        const std::vector<park::GroundOpening> hollows = park::tunnel_hollows(world->paths, scene.grid);
-        park::TerrainMesh mesh = profiling::section("Terrain", [&] { return park::terrain_mesh(scene.grid, world->water, hollows); });
-        park::add_ground(mesh, park::tunnel_lining(hollows, scene.grid));
         // The park's own pools, then those the player laid, which the park keeps as squares.
         scene.pools = saved && saved->pools ? *saved->pools : park::PoolMap { };
         scene.saved_pool_water = world->pool_water.size();
         std::ranges::copy(park::pool_water(scene.pools), std::back_inserter(world->pool_water));
-        std::ranges::copy(park::pool_water(scene.grid, world->pool_water), std::back_inserter(mesh.water));
+        // The ground itself is built on the first frame (rebuild_ground), with the pavings known by then; the
+        // paths' and queues' pictures are read here.
         const park::GroundPathMap paths = park::ground_path_map(world->paths, scene.grid);
-        park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
         const park::GroundQueues queues = park::ground_queues(world->paths, scene.grid);
-        park::add_ground(mesh, queues.mesh);
-        const park::TerrainMesh surroundings = park::surrounding_land(scene.grid, world->water);
-        park::add_ground(mesh, surroundings);
-        mesh.water.insert(mesh.water.end(), surroundings.water.begin(), surroundings.water.end());
-        scene.batches = mesh.batches;
+        scene.footpaths.pavings_stale = true;
         scene.footpaths.paths = world->paths;
         scene.footpaths.water = world->water;
         scene.footpaths.pools = world->pool_water;
@@ -763,16 +756,8 @@ namespace rct3::scene
             destroy_park_scene(device, scene);
             return std::unexpected(std::move(message));
         };
-        auto vertices = upload(device, render::BufferUsage::Vertex, mesh.vertices, "ground vertices");
-        if (!vertices)
-            return fail(vertices.error());
-        scene.ground_vertices = *vertices;
-        auto indices = upload(device, render::BufferUsage::Index, mesh.indices, "ground indices");
-        if (!indices)
-            return fail(indices.error());
-        scene.ground_indices = *indices;
         const render::VertexLayout ground_layout { sizeof(park::GroundVertex), kGroundAttributes };
-        if (auto water = create_park_water(device, scene.water, mesh.water, ground_layout); !water)
+        if (auto water = create_park_water(device, scene.water, { }, ground_layout); !water)
             return fail(water.error());
         auto ground = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .label = "ground" });
         if (!ground)
@@ -1361,7 +1346,7 @@ namespace rct3::scene
             scene.desktop->root().add<ui::TutorialGuide>(std::string(kGuideName), skins::tutorial_guide_style(palette), strings, std::move(**tutorial));
         scene.desktop->tooltip_style = skins::tooltip_style(palette);
         scene.map = park_map(scene.grid, world->paths, world->water, scene.objects, scene.models, scene.fitted, scene.attractions, scene.rides, images, install);
-        log.info("{}: {} by {} tiles, {} ground batches", path.filename().string(), scene.grid.width, scene.grid.height, scene.batches.size());
+        log.info("{}: {} by {} tiles", path.filename().string(), scene.grid.width, scene.grid.height);
         const auto drawn = std::ranges::count_if(scene.levels.steady, [](std::int8_t l) { return l != park::kNotDrawn; }) + std::ranges::count_if(scene.levels.finer, [](std::int8_t l) { return l != park::kNotDrawn; });
         const auto modelled = std::ranges::count_if(scene.objects, [&](const save::PlacedObject& o) { return !o.hidden && scene.models.contains(park::model_key(o)); });
         const auto shown = std::ranges::count_if(scene.objects, [](const save::PlacedObject& o) { return !o.hidden; });
@@ -1382,7 +1367,15 @@ namespace rct3::scene
         destroy_park_occlusion(device, scene.occlusion);
         destroy_save_browser(device, scene.saves);
         destroy_save_browser(device, scene.structures.browser);
-        for (const render::BufferHandle b : { scene.ground_vertices, scene.ground_indices, scene.steady_objects.vertices, scene.steady_objects.indices, scene.finer_objects.vertices, scene.finer_objects.indices, scene.coarser_objects.vertices, scene.coarser_objects.indices })
+        for (const GroundChunk& chunk : scene.ground_chunks)
+        {
+            for (const render::BufferHandle b : { chunk.vertices, chunk.indices })
+            {
+                if (b)
+                    device.destroy_buffer(b);
+            }
+        }
+        for (const render::BufferHandle b : { scene.steady_objects.vertices, scene.steady_objects.indices, scene.finer_objects.vertices, scene.finer_objects.indices, scene.coarser_objects.vertices, scene.coarser_objects.indices })
         {
             if (b)
                 device.destroy_buffer(b);

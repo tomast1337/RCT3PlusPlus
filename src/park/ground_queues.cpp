@@ -88,7 +88,7 @@ namespace rct3::park
 
     } // namespace
 
-    GroundQueues ground_queues(std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    GroundQueues ground_queues(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::optional<TileRect> area)
     {
         GroundQueues out;
         std::map<std::size_t, std::vector<GroundVertex>> by_painting;
@@ -106,6 +106,8 @@ namespace rct3::park
                 out.paintings.push_back(painting);
                 found = std::prev(out.paintings.end());
             }
+            if (area && !area->contains(p.col, p.row))
+                continue;
 
             const QueueShape shape = queue_shape(p.queue->start_direction, p.queue->end_direction);
             const save::TerrainCell& cell = grid.at(p.col, p.row);

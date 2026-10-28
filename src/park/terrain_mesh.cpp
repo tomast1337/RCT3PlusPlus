@@ -180,7 +180,7 @@ namespace rct3::park
         return sum;
     }
 
-    TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water, std::span<const GroundOpening> openings)
+    TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water, std::span<const GroundOpening> openings, std::optional<TileRect> area)
     {
         TerrainMesh mesh;
         if (grid.empty() || grid.cells.size() != static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height))
@@ -197,12 +197,17 @@ namespace rct3::park
             return open;
         };
 
+        const TileRect tiles = area.value_or(TileRect { 0, 0, grid.width, grid.height });
+        const int first_col = std::max(tiles.col, 0);
+        const int first_row = std::max(tiles.row, 0);
+        if (first_col >= std::min(tiles.end_col, grid.width) || first_row >= std::min(tiles.end_row, grid.height))
+            return mesh;
         Builder b;
-        float low = grid.cells.front().corners[0];
+        float low = grid.at(first_col, first_row).corners[0];
         float high = low;
-        for (int row = 0; row < grid.height; ++row)
+        for (int row = first_row; row < std::min(tiles.end_row, grid.height); ++row)
         {
-            for (int col = 0; col < grid.width; ++col)
+            for (int col = first_col; col < std::min(tiles.end_col, grid.width); ++col)
             {
                 const save::TerrainCell& cell = grid.at(col, row);
                 low = std::min(low, cell.min_height());
@@ -232,7 +237,7 @@ namespace rct3::park
         {
             for (const save::WaterTri& t : body.tris)
             {
-                if (!grid.contains(t.col, t.row) || t.triangle > 1)
+                if (!grid.contains(t.col, t.row) || !tiles.contains(t.col, t.row) || t.triangle > 1)
                     continue;
                 const std::array<int, 3> corners = t.triangle == 0 ? std::array<int, 3> { 0, 1, 2 } : std::array<int, 3> { 3, 2, 1 };
                 for (const int c : corners)
@@ -246,8 +251,8 @@ namespace rct3::park
             }
         }
 
-        mesh.low = { grid.world_x(0), low, grid.world_z(0) };
-        mesh.high = { grid.world_x(grid.width), high, grid.world_z(grid.height) };
+        mesh.low = { grid.world_x(first_col), low, grid.world_z(first_row) };
+        mesh.high = { grid.world_x(std::min(tiles.end_col, grid.width)), high, grid.world_z(std::min(tiles.end_row, grid.height)) };
         return mesh;
     }
 

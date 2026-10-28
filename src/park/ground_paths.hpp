@@ -162,6 +162,7 @@ namespace rct3::park
 
     /// The ground paths as triangles over the terrain. Batches use GroundPaint::PathA or PathB with the style
     /// index; they go over the ground with the same blending, after it.
-    [[nodiscard]] TerrainMesh ground_path_mesh(const GroundPathMap& map, const save::TerrainGrid& grid);
+    /// Only those on the tiles of `area` when given.
+    [[nodiscard]] TerrainMesh ground_path_mesh(const GroundPathMap& map, const save::TerrainGrid& grid, std::optional<TileRect> area = std::nullopt);
 
 } // namespace rct3::park

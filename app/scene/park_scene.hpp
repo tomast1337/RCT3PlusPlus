@@ -359,15 +359,28 @@ namespace rct3::scene
         std::string name;
     };
 
+    /// Tiles across a square of the ground built and drawn on its own: a change builds again only the
+    /// squares it reaches. Chosen by eye: small enough to build in a few milliseconds, few enough to draw.
+    inline constexpr int kGroundChunk = 32;
+
+    /// One square of the ground, or the land round the park.
+    struct GroundChunk
+    {
+        render::BufferHandle vertices;
+        render::BufferHandle indices;
+        std::vector<park::GroundBatch> batches { };
+        glm::vec3 low { 0.0f }; ///< Corners of the box round it
+        glm::vec3 high { 0.0f };
+        std::vector<park::WaterVertex> water { }; ///< Its lakes' surfaces, with the rest drawn as one
+    };
+
     struct ParkScene
     {
         save::TerrainGrid grid;
         random::Seed seed;
         random::RandomState gameplay; ///< For the simulation; to be kept with a saved park
         park::ParkCamera camera;
-        std::vector<park::GroundBatch> batches;
-        render::BufferHandle ground_vertices;
-        render::BufferHandle ground_indices;
+        std::vector<GroundChunk> ground_chunks; ///< kGroundChunk tiles square, row by row, then the land round the park
         render::PipelineHandle ground_pipeline;
         /// The ground drawn see-through while building under it: its depth alone, then its colour faded over
         /// what is behind, so only its nearest layer shows.

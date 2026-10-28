@@ -395,17 +395,18 @@ namespace rct3::park
 
     } // namespace
 
-    TerrainMesh ground_path_mesh(const GroundPathMap& map, const save::TerrainGrid& grid)
+    TerrainMesh ground_path_mesh(const GroundPathMap& map, const save::TerrainGrid& grid, std::optional<TileRect> area)
     {
         TerrainMesh mesh;
         if (map.width != grid.width || map.height != grid.height || map.tiles.size() != grid.cells.size())
             return mesh;
 
+        const TileRect tiles = area.value_or(TileRect { 0, 0, grid.width, grid.height });
         Builder b;
         bool any = false;
-        for (int row = 0; row < grid.height; ++row)
+        for (int row = std::max(tiles.row, 0); row < std::min(tiles.end_row, grid.height); ++row)
         {
-            for (int col = 0; col < grid.width; ++col)
+            for (int col = std::max(tiles.col, 0); col < std::min(tiles.end_col, grid.width); ++col)
             {
                 const std::int16_t style = map.tiles[static_cast<std::size_t>(row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(col)];
                 if (style == kNoPath)

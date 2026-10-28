@@ -629,7 +629,7 @@ namespace rct3::scene
                 const bool shown = park.shown && park.shown->kind == park::AttractionRef::Kind::Stall && park.shown->index == i;
                 Json one { { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::AttractionState::Open }, { "items", std::move(items) }, { "extras", std::move(extras) }, { "sync", stall.sync }, { "shown", shown }, { "joined", false }, { "demolished", stall.base.demolished }, { "moving", false } };
                 for (const ParkScene::BonedRide& boned : park.boned_rides)
-                    if (boned.object < park.objects.size() && park.objects[boned.object].id == stall.base.placement)
+                    if (const auto owner = boned.object < park.objects.size() ? park.attractions.find(park.objects[boned.object].id) : park.attractions.end(); owner != park.attractions.end() && owner->second == park::AttractionRef { park::AttractionRef::Kind::Stall, i })
                         one["moving"] = true;
                 for (const auto [_, a] : park.sim.registry.view<const simulation::Attraction>().each())
                     if (a.saved == stall.base.id)

@@ -164,6 +164,28 @@ TEST_CASE("a changing room counts the people in its complex in the game's words"
     CHECK(scenery_page(SceneryTab::RoomCustomers, { .pool = PoolComplexFacts { .people = 12 } }, s).lines.at(0).label == u"12 people inside");
 }
 
+TEST_CASE("a changing room's upkeep shows its water's dirt and picks its cleaning fluid")
+{
+    StringTable s = table();
+    s.add("PoolDirt_Label", u"Water:");
+    s.add("PoolDirt_VeryDirty", u"Murky");
+    s.add("Fluid_TypeLabel", u"Fluid:");
+    s.add("Fluid_ZaniClenz", u"Mild");
+    s.add("Fluid_MegaKleen", u"Strong");
+    s.add("Fluid_ToxiScrub", u"Harsh");
+    const InfoPage page = scenery_page(SceneryTab::RoomMaintenance, { .pool = PoolComplexFacts { .dirt = 3, .fluid = 1 } }, s);
+    REQUIRE(page.lines.size() == 1);
+    CHECK(page.lines[0].label == u"Water:");
+    CHECK(page.lines[0].value == u"Murky");
+    REQUIRE(page.controls.size() == 2);
+    CHECK(page.controls[0].id == kPoolFluidControl);
+    CHECK(page.controls[0].value == 1);
+    CHECK(page.controls[0].label == u"Fluid:");
+    CHECK(page.controls[0].items.size() == 3);
+    CHECK(page.controls[1].id == kPoolMechanicControl);
+    CHECK(page.controls[1].enabled);
+}
+
 TEST_CASE("paths, rides, supports and what lies about are not props")
 {
     using enum park::ItemCategory;

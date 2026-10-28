@@ -121,6 +121,7 @@ namespace rct3::park
         std::int64_t ticket = kPoolTicket;
         bool open = false;
         std::string complex_name { }; ///< Its pool complex's name, the same in every room of it; empty for the default
+        std::uint8_t fluid = 0;       ///< The cleaning fluid it keeps its pool clean with, mildest 0 to harshest 2
     };
 
     /// The pools the player has laid, a square to a tile, the extras in them and their changing rooms.

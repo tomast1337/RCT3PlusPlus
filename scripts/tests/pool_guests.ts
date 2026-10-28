@@ -85,6 +85,27 @@ if (cash !== undefined)
 camera.look({ col: c + 5, row: r + 1.5 }, { col: c + 5, row: r + 5, up: 2.5 });
 await frames(300);
 await screenshot("pool_guests_swimming");
+
+// The room's window counts the swimmers, and its upkeep shows the water's dirt; the harshest fluid is picked.
+camera.look({ col: c + 3, row: r + 0.5 }, { col: c - 1, row: r + 3, up: 5 });
+await frames(10);
+// On its roof, above the people at its door.
+const [room_x, room_y] = on_view(c + 1.5, r + 0.5);
+await pointer.click(room_x, room_y - 0.08);
+await until(() => ui.find("info") !== undefined, 120, "the changing room's window");
+await ui.click("info/Attraction_Customers");
+await frames(3);
+const inside = ui.find("info/body/PeopleInPoolComplexX_label") ?? ui.find("info/body/PeopleInPoolComplex4_label");
+expect(inside !== undefined, `the swimmers counted, not ${JSON.stringify(ui.children("info/body"))}`);
+await screenshot("pool_guests_customers");
+await ui.click("info/Attraction_Maintenance");
+await frames(3);
+expect(ui.find("info/body/PoolDirt_Label_label") !== undefined, `the water's dirt shown, not ${JSON.stringify(ui.children("info/body"))}`);
+const fluid = ui.find("info/body/Fluid_TypeLabel")!;
+await pointer.drag([fluid.x, fluid.y], [fluid.x, fluid.bottom + (fluid.bottom - fluid.top) * 3.5], 6);
+await frames(3);
+await screenshot("pool_guests_upkeep");
+await ui.click("info/close");
 camera.look({ col: c + 3, row: r + 0.5 }, { col: c - 1, row: r + 3, up: 5 });
 await frames(30);
 await screenshot("pool_guests_room");

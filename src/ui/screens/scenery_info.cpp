@@ -30,6 +30,10 @@ namespace rct3::ui
         constexpr std::string_view kPeopleIn = "PeopleInPoolComplex"; ///< Followed by how many, up to 4, or X
         constexpr std::string_view kTicket = "AttractionFinancesDialogLabel_AdmissionPrice";
         constexpr std::array<std::string_view, 2> kPoolStates { "AttractionStatusOpen", "AttractionStatusClosed" }; // By kPoolStateControl's value
+        constexpr std::string_view kDirt = "PoolDirt_Label";
+        constexpr std::array<std::string_view, 6> kDirtSteps { "PoolDirt_Clean", "PoolDirt_SlightlyDirty", "PoolDirt_Dirty", "PoolDirt_VeryDirty", "PoolDirt_Disgusting", "PoolDirt_HealthHazard" };
+        constexpr std::string_view kFluid = "Fluid_TypeLabel";
+        constexpr std::array<std::string_view, 3> kFluids { "Fluid_ZaniClenz", "Fluid_MegaKleen", "Fluid_ToxiScrub" }; // By kPoolFluidControl's value
         constexpr int kTicketStep = 10;
         constexpr float kPercent = 100;
         /// Slot 1 is the colours tab's, kept even when a prop takes no colours; what a prop does goes on from the next.
@@ -156,8 +160,6 @@ namespace rct3::ui
             else if (tab == SceneryTab::RoomCustomers)
             {
                 // The game words it for none to four people, and for more.
-                // shortcut: guests do not swim yet, so the count stays at none; count them once the simulation
-                // takes guests into pool complexes.
                 const std::string key = pool.people <= 4 ? std::format("{}{}", kPeopleIn, pool.people) : std::format("{}X", kPeopleIn);
                 std::u16string words(strings.get(key));
                 if (const auto mark = words.find(u'#'); mark != std::u16string::npos)
@@ -166,9 +168,17 @@ namespace rct3::ui
             }
             else if (tab == SceneryTab::RoomMaintenance)
             {
-                // shortcut: pools take no upkeep yet (dirt, cleaning fluids, inspections), so the mechanic's button
-                // is greyed; show their state and enable it once the simulation keeps pools clean.
-                button(kPoolMechanicControl, "Staff_JobIsMechanicIcon", "TT_RideMaintenanceDialog_MechanicButton", false, false);
+                // How dirty the water is, the fluid cleaning it, and a mechanic to call to fill the tank.
+                page.lines.push_back({ std::u16string(strings.get(kDirt)), std::u16string(strings.get(kDirtSteps[std::min(pool.dirt, kDirtSteps.size() - 1)])), false, std::string(kDirt) });
+                InfoControl& fluid = page.controls.emplace_back();
+                fluid.id = kPoolFluidControl;
+                fluid.name = kFluid;
+                fluid.kind = InfoControlKind::Choice;
+                fluid.label = strings.get(kFluid);
+                for (const std::string_view f : kFluids)
+                    fluid.items.emplace_back(strings.get(f));
+                fluid.value = pool.fluid;
+                button(kPoolMechanicControl, "Staff_JobIsMechanicIcon", "TT_RideMaintenanceDialog_MechanicButton", false);
             }
         }
         return page;

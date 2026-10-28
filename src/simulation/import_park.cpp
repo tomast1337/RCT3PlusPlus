@@ -528,7 +528,7 @@ namespace rct3::simulation
             attraction.entrance = on_path ? *node : kNoNode;
             attraction.price = { room.ticket };
             attraction.open = room.open;
-            r.get_or_emplace<PoolTank>(e);
+            r.get_or_emplace<PoolTank>(e).fluid = static_cast<PoolFluid>(std::min<std::uint8_t>(room.fluid, 2));
             r.emplace_or_replace<PoolDoor>(e, PoolDoor { .pool = pool, .col = room.col, .row = room.row, .room = middle(room.col, room.row, surface), .poolside = middle(square->second->col, square->second->row, surface) });
         }
         // A complex kept keeps its dirt.

@@ -542,4 +542,38 @@ namespace rct3::park
         return cost;
     }
 
+    PoolMap saved_pools(const save::WorldModel& world, std::span<const save::PlacedObject> objects)
+    {
+        constexpr std::int32_t kWater = 0, kHighDive = 3, kSpa = 4; // Of the stored types
+        PoolMap map;
+        for (const save::PoolSegmentState& s : world.pool_segments)
+        {
+            PoolSquare& square = map.squares.emplace_back(PoolSquare { .col = s.col, .row = s.row, .surface = s.surface, .depth = s.depth });
+            square.kind = s.type == kWater ? PoolKind::Water : s.type == kSpa ? PoolKind::Jacuzzi : s.type == kHighDive ? PoolKind::HighDive : PoolKind::Tile;
+            square.board = s.type == kHighDive ? s.special : 0;
+        }
+        // A board faces the water beside it.
+        for (PoolSquare& square : map.squares)
+            for (std::int32_t turn = 0; square.kind == PoolKind::HighDive && turn < 4; ++turn)
+                if (const auto next = map.at(square.col + kSideStep[static_cast<std::size_t>(turn)][0], square.row + kSideStep[static_cast<std::size_t>(turn)][1]); next && next->kind == PoolKind::Water)
+                {
+                    square.turn = turn;
+                    break;
+                }
+        for (const save::ChangingRoomState& room : world.changing_rooms)
+        {
+            const auto object = std::ranges::find(objects, room.object_ref, &save::PlacedObject::id);
+            const auto segment = std::ranges::find(world.pool_segments, room.segment, &save::PoolSegmentState::id);
+            if (object == objects.end() || segment == world.pool_segments.end())
+                continue;
+            const auto turn = std::ranges::find(kSideStep, std::array { segment->col - object->col, segment->row - object->row });
+            if (turn == kSideStep.end())
+                continue;
+            const auto complex = std::ranges::find(world.pool_complexes, segment->complex, &save::PoolComplexState::index);
+            const bool named = complex != world.pool_complexes.end() && !complex->name.starts_with("%ME%");
+            map.rooms.push_back({ .symbol = object->symbol, .overlay = object->overlay, .col = object->col, .row = object->row, .turn = static_cast<std::int32_t>(turn - kSideStep.begin()), .ticket = complex != world.pool_complexes.end() ? complex->ticket : kPoolTicket, .open = room.open, .complex_name = named ? complex->name : std::string(), .fluid = static_cast<std::uint8_t>(std::clamp(room.fluid, 0, 2)) });
+        }
+        return map;
+    }
+
 } // namespace rct3::park

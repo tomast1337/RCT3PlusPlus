@@ -354,3 +354,28 @@ TEST_CASE("pools: a complex is the squares that meet side to side, and the chang
     (void)lay_pool(map, kPrices, std::array { PoolSquare { .col = 0, .row = 1, .kind = PoolKind::Water, .surface = 4, .depth = 2 } });
     CHECK(map.rooms.size() == 1);
 }
+
+TEST_CASE("pools: a park from the game gives its squares, boards and changing rooms to the pool tool")
+{
+    save::WorldModel world;
+    world.pool_segments = {
+        { .id = 1, .col = 5, .row = 5, .type = 0, .surface = 4, .depth = 2 }, { .id = 2, .col = 5, .row = 6, .type = 3, .surface = 4, .special = 8 }, { .id = 3, .col = 6, .row = 5, .type = 1, .surface = 4, .complex = 2 }, { .id = 4, .col = 4, .row = 5, .type = 4, .surface = 4 }, { .id = 5, .col = 5, .row = 4, .type = 6, .surface = 4 },
+    };
+    world.pool_complexes = { { .index = 2, .ticket = 250, .name = "Lido" } };
+    world.changing_rooms = { { .object_ref = 90, .segment = 3, .open = true, .fluid = 2 } };
+    const std::vector<save::PlacedObject> objects { { .id = 90, .symbol = "Room", .col = 7, .row = 5 } };
+    const park::PoolMap map = park::saved_pools(world, objects);
+    REQUIRE(map.squares.size() == 5);
+    CHECK(map.at(5, 5)->kind == park::PoolKind::Water);
+    CHECK(map.at(5, 6)->kind == park::PoolKind::HighDive);
+    CHECK(map.at(5, 6)->board == 8);
+    CHECK(map.at(5, 6)->turn == 2); // The water is a row back
+    CHECK(map.at(4, 5)->kind == park::PoolKind::Jacuzzi);
+    CHECK(map.at(5, 4)->kind == park::PoolKind::Tile);
+    REQUIRE(map.rooms.size() == 1);
+    CHECK(map.rooms[0].turn == 3); // Its paved square a column back
+    CHECK(map.rooms[0].ticket == 250);
+    CHECK(map.rooms[0].complex_name == "Lido");
+    CHECK(map.rooms[0].open);
+    CHECK(map.rooms[0].fluid == 2);
+}

@@ -745,8 +745,20 @@ namespace rct3::scene
             scene.day.park_hours = from_file.park_hours;
         }
         begin(ParkLoadStage::Ground);
-        // The park's own pools, then those the player laid, which the park keeps as squares.
-        scene.pools = saved && saved->pools ? *saved->pools : park::PoolMap { };
+        // The park's own pools, then those the player laid, which the park keeps as squares. A park from the game
+        // has its pools taken in as squares too, the pieces and rooms it placed for them left for those the squares
+        // place, so the pool tool works on them; a park saved since keeps them as squares itself.
+        if (!world->pool_segments.empty())
+        {
+            if (!saved)
+            {
+                scene.pools = park::saved_pools(*world, world->objects);
+                std::erase_if(world->objects, [&](const save::PlacedObject& o) { return o.overlay == park::kPoolOverlay || std::ranges::contains(world->changing_rooms, o.id, &save::ChangingRoomState::object_ref); });
+            }
+            world->pool_water.clear();
+        }
+        if (saved && saved->pools)
+            scene.pools = *saved->pools;
         scene.saved_pool_water = world->pool_water.size();
         std::ranges::copy(park::pool_water(scene.pools), std::back_inserter(world->pool_water));
         // The ground itself is built on the first frame (rebuild_ground), with the pavings known by then; the

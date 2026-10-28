@@ -103,6 +103,19 @@ namespace rct3::save
             constexpr std::string_view kPoolSurface = "SurfaceHeight";
             constexpr std::string_view kPoolDepth = "Depth";
             constexpr std::string_view kPoolPrototype = "Prototype";
+            constexpr std::string_view kPoolSpecial = "SpecialHeight";
+            constexpr std::string_view kPoolComplexIndex = "PoolComplexIndex";
+            // Pool complexes, and their changing rooms.
+            constexpr std::string_view kComplexClass = "PoolComplex";
+            constexpr std::string_view kComplexIndex = "Index";
+            constexpr std::string_view kComplexTicket = "TicketPrice";
+            constexpr std::string_view kComplexName = "RawName";
+            constexpr std::string_view kRoomClass = "ChangingRoomInstance";
+            constexpr std::string_view kRoomScenery = "Scenery";
+            constexpr std::string_view kRoomSegment = "PoolSegment";
+            constexpr std::string_view kRoomState = "State";
+            constexpr std::int64_t kRoomOpen = 2;
+            constexpr std::string_view kRoomFluid = "CleaningFluidSelected";
             // Waterfalls between two lakes.
             constexpr std::string_view kWaterfallClass = "WaterfallBody";
             constexpr std::string_view kWaterfallLipLeft = "StartPosLeft";
@@ -489,6 +502,8 @@ namespace rct3::save
             Time,
             Camera,
             Pool,
+            PoolComplex,
+            ChangingRoom,
             Waterfall,
             Enclosures,
         };
@@ -884,6 +899,10 @@ namespace rct3::save
                 kinds[i] = Kind::Camera;
             else if (name == names::kPoolClass)
                 kinds[i] = Kind::Pool;
+            else if (name == names::kComplexClass)
+                kinds[i] = Kind::PoolComplex;
+            else if (name == names::kRoomClass)
+                kinds[i] = Kind::ChangingRoom;
             else if (name == names::kWaterfallClass)
                 kinds[i] = Kind::Waterfall;
             else if (name == names::kEnclosureClass)
@@ -1049,8 +1068,18 @@ namespace rct3::save
                     }
                     break;
                 case Kind::Pool:
-                    if (int_or(o.find(names::kPoolType), -1) == 0 && !get_bool(o.find(names::kPoolPrototype)).value_or(false))
-                        m.pool_water.push_back({ int_or(o.find(names::kPoolCol)), int_or(o.find(names::kPoolRow)), int_or(o.find(names::kPoolSurface)), int_or(o.find(names::kPoolDepth)) });
+                    if (get_bool(o.find(names::kPoolPrototype)).value_or(false))
+                        break;
+                    m.pool_segments.push_back({ .id = o.id, .col = int_or(o.find(names::kPoolCol)), .row = int_or(o.find(names::kPoolRow)), .type = int_or(o.find(names::kPoolType), -1), .surface = int_or(o.find(names::kPoolSurface)), .depth = int_or(o.find(names::kPoolDepth)), .special = int_or(o.find(names::kPoolSpecial)), .complex = int_or(o.find(names::kPoolComplexIndex)) });
+                    if (m.pool_segments.back().type == 0)
+                        m.pool_water.push_back({ m.pool_segments.back().col, m.pool_segments.back().row, m.pool_segments.back().surface, m.pool_segments.back().depth });
+                    break;
+                case Kind::PoolComplex:
+                    m.pool_complexes.push_back({ .index = int_or(o.find(names::kComplexIndex)), .ticket = get_int(o.find(names::kComplexTicket)).value_or(0), .name = string_or(o.find(names::kComplexName)) });
+                    break;
+                case Kind::ChangingRoom:
+                    if (!get_bool(o.find(names::kPoolPrototype)).value_or(false))
+                        m.changing_rooms.push_back({ .object_ref = get_ref(o.find(names::kRoomScenery)).value_or(0), .segment = get_ref(o.find(names::kRoomSegment)).value_or(0), .open = get_int(o.find(names::kRoomState)) == names::kRoomOpen, .fluid = int_or(o.find(names::kRoomFluid)) });
                     break;
                 case Kind::Waterfall:
                     m.waterfalls.push_back(

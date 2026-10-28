@@ -189,6 +189,12 @@ namespace rct3::park
     /// The water of every water square, as the park's water mesh takes it.
     [[nodiscard]] std::vector<save::PoolWater> pool_water(const PoolMap& map);
 
+    /// The pools a park from the game keeps, as squares and changing rooms the pool tool can work on: water,
+    /// paving, spa pools and high diving boards, and the rooms among `objects` that open on them.
+    /// shortcut: stairs and the paths through a pool become plain paving, and the extras stay the scenery they
+    /// are placed as; take them in once the pool tool lays them.
+    [[nodiscard]] PoolMap saved_pools(const save::WorldModel& world, std::span<const save::PlacedObject> objects);
+
     /// What laying `square` costs, from the pool type's price list (ovl::PoolType::prices); in hundredths.
     [[nodiscard]] std::int64_t pool_build_cost(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept;
     /// What taking `square` up again costs: below zero, money back.

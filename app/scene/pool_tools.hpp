@@ -39,6 +39,10 @@ namespace rct3::scene
     /// Marks the squares under a drag at `at`, in a view of `size`, while `down`; lays them when it ends.
     void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, std::span<const ui::PlayCommand> commands);
 
+    /// Takes up the pool complex the changing room `room` (of the pools' rooms) opens on, its squares, extras
+    /// and rooms, refunded as the delete tool refunds them.
+    void delete_pool_complex(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t room);
+
     /// Draws the extra or changing room picked, see-through where it would go.
     void draw_pool_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 

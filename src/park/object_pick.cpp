@@ -96,22 +96,39 @@ namespace rct3::park
 
     std::vector<PickBox> pick_boxes(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
     {
+        ObjectPlaces places;
+        std::vector<PickBox> boxes;
+        update_pick_boxes(boxes, places, update_places(places, objects, models, grid, fitted));
+        return boxes;
+    }
+
+    void update_pick_boxes(std::vector<PickBox>& boxes, const ObjectPlaces& places, std::span<const std::size_t> changed)
+    {
         std::vector<PickBox> out;
-        std::map<std::string, std::optional<std::pair<glm::vec3, glm::vec3>>, std::less<>> shapes;
-        for (std::size_t i = 0; i < objects.size(); ++i)
+        out.reserve(boxes.size() + changed.size());
+        std::map<const ObjectModel*, std::optional<std::pair<glm::vec3, glm::vec3>>> shapes;
+        auto kept = boxes.begin();
+        auto next = changed.begin();
+        for (std::size_t i = 0; i < places.models.size(); ++i)
         {
-            const save::PlacedObject& o = objects[i];
-            const std::string key = model_key(o);
-            const auto model = models.find(key);
-            if (model == models.end() || model->second.levels.empty())
+            while (kept != boxes.end() && kept->index < i)
+                ++kept;
+            if (next == changed.end() || *next != i)
+            {
+                if (kept != boxes.end() && kept->index == i)
+                    out.push_back(*kept);
                 continue;
-            auto shape = shapes.find(key);
+            }
+            ++next;
+            const ObjectModel* model = places.models[i];
+            if (!model || model->levels.empty())
+                continue;
+            auto shape = shapes.find(model);
             if (shape == shapes.end())
-                shape = shapes.emplace(key, shape_box(model->second)).first;
+                shape = shapes.emplace(model, shape_box(*model)).first;
             if (!shape->second)
                 continue;
-            const auto own = fitted.find(o.id);
-            const glm::mat4 transform = own != fitted.end() ? own->second : object_transform(o, static_cast<Positioning>(model->second.positioning), grid, model->second.squares, model->second.ground_height);
+            const glm::mat4& transform = places.transforms[i];
             PickBox& box = out.emplace_back();
             box.index = i;
             box.back = glm::inverse(transform);
@@ -127,7 +144,7 @@ namespace rct3::park
                 box.park_high = glm::max(box.park_high, at);
             }
         }
-        return out;
+        boxes = std::move(out);
     }
 
     std::optional<PickHit> pick_object(const Ray& ray, std::span<const PickBox> boxes, const save::TerrainGrid& grid, const std::function<bool(std::size_t)>& wanted)

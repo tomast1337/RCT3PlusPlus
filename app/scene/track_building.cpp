@@ -1210,13 +1210,22 @@ namespace rct3::scene
         const profiling::Scope zone("ObjectsChanged");
         scene.supports.stale = true;
         wait_for_build(scene); // The build beside the frame reads the anchors written here
-        scene.anchors = profiling::section("Anchors", [&] { return park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted); });
-        scene.lamps = profiling::section("Lamps", [&] { return park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted); });
+        profiling::section("Places", [&] { place_objects(scene); });
+        const park::ObjectPlaces& places = scene.places;
+        scene.anchors.resize(places.transforms.size());
+        std::ranges::transform(places.transforms, scene.anchors.begin(), [](const glm::mat4& m) { return glm::vec3(m[3]); });
+        scene.lamps = profiling::section("Lamps", [&] { return park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted, places.transforms, places.models); });
         scene.lamps_due = true;
-        profiling::section("Effects", [&] { show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted)); });
+        profiling::section("Effects", [&] { show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted, places.transforms, places.models)); });
         scene.levels = { };
         scene.since_rebuild = kObjectRebuildInterval;
-        scene.pick_boxes_of = 0; // A piece built over keeps the count the boxes are kept by
+    }
+
+    void place_objects(const ParkScene& scene)
+    {
+        const std::vector<std::size_t> changed = park::update_places(scene.places, scene.objects, scene.models, scene.grid, scene.fitted);
+        park::update_pick_boxes(scene.pick_boxes, scene.places, changed);
+        scene.pick_boxes_of = scene.objects.size();
     }
 
     void wait_for_build(ParkScene& scene)
@@ -1675,10 +1684,7 @@ namespace rct3::scene
                 return false;
             const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
             if (scene.pick_boxes_of != scene.objects.size())
-            {
-                scene.pick_boxes = park::pick_boxes(scene.objects, scene.models, scene.grid, scene.fitted);
-                scene.pick_boxes_of = scene.objects.size();
-            }
+                place_objects(scene);
             // Only its pieces, not its doors or platforms.
             std::unordered_set<std::uint64_t> pieces;
             for (const save::TrackPiece& p : ride.track->pieces)

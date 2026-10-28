@@ -100,15 +100,30 @@ namespace rct3::park
     /// Where `object` stands in the world, model to world: as `fitted` has it, else as its model places it.
     [[nodiscard]] glm::mat4 placed_transform(const save::PlacedObject& object, const ObjectModel* model, const save::TerrainGrid& grid, const Fitted& fitted = { });
 
+    /// Where each placed object stands and the model it is drawn with, kept from one change of the objects to
+    /// the next: looking a model up by its key is most of the cost, so it is done again only for objects whose
+    /// key changed, or that had no model while more were loaded.
+    struct ObjectPlaces
+    {
+        std::vector<std::string> keys { };          ///< Each object's model key when it was looked up
+        std::vector<const ObjectModel*> models { }; ///< Null where there is none
+        std::vector<glm::mat4> transforms { };      ///< As placed_transform gives them
+        std::size_t model_count = 0;                ///< Of the models when they were looked up
+    };
+
+    /// Brings `places` up to date with `objects`; the indices, rising, of those whose model or place changed.
+    std::vector<std::size_t> update_places(ObjectPlaces& places, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted);
+
     /// Where each object's model origin lands in the park, by index.
     [[nodiscard]] std::vector<glm::vec3> object_anchors(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { });
 
     /// The lamps the objects' models carry, placed in the park, in the colour each names or each object's slot
     /// gives, at full strength. Each object stands at `places` by index when given (moving ride cars), else
-    /// where it was placed. Hidden objects are left out.
+    /// where it was placed, and has the model `found` gives by index when given, else the one `models` has.
+    /// Hidden objects are left out.
     /// shortcut: lamps on bones stand where the bone rests, so a turning ride's or an arm's lamps stay put;
     /// move them with the bones once ride lighting at night shows it.
-    [[nodiscard]] std::vector<Lamp> object_lamps(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { }, std::span<const glm::mat4> places = { });
+    [[nodiscard]] std::vector<Lamp> object_lamps(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { }, std::span<const glm::mat4> places = { }, std::span<const ObjectModel* const> found = { });
 
     /// A particle effect a placed object shows.
     struct PlacedEffect
@@ -122,7 +137,7 @@ namespace rct3::park
 
     /// The particle effects the objects' models show, placed in the park as object_lamps places lamps.
     /// shortcut: effects on bones stand where the bone rests, as lamps do.
-    [[nodiscard]] std::vector<PlacedEffect> object_effects(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { }, std::span<const glm::mat4> places = { });
+    [[nodiscard]] std::vector<PlacedEffect> object_effects(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { }, std::span<const glm::mat4> places = { }, std::span<const ObjectModel* const> found = { });
 
     /// The level of each object seen from `eye`, its models' distances scaled for its kind by `scales`.
     [[nodiscard]] ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, const LevelScales& scales = { });

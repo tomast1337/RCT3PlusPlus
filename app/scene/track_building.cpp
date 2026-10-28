@@ -890,9 +890,13 @@ namespace rct3::scene
                 *scene.park.cash -= shape.record.cost;
             }
             ++scene.built;
-            // The ground it passes into is cut down round it, the scenery standing there seated again.
+            // The ground it passes into is cut down round it, the scenery standing there seated again; the ground is
+            // built again for that, or for the tunnel it lies in.
             // shortcut: the cut costs nothing, upgrade when the original's price for moving ground is matched.
-            if (const auto cuts = park::ground_cuts(std::span(&b.ghost->object, 1), scene.models, scene.grid); !cuts.empty())
+            const std::span<const save::PlacedObject> ghost(&b.ghost->object, 1);
+            if (!park::track_hollows(ghost, scene.models, scene.grid).empty())
+                scene.footpaths.pavings_stale = true;
+            if (const auto cuts = park::ground_cuts(ghost, scene.models, scene.grid); !cuts.empty())
             {
                 const park::GroundHolds holds = park::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
                 save::Tile low = cuts.front().tile;
@@ -1130,6 +1134,9 @@ namespace rct3::scene
             {
                 if (c != nullptr)
                     refund_piece(scene, *c, ride, last, scene.objects[found->second]);
+                // Its tunnel closes; the ground it cut stays cut.
+                if (!park::track_hollows(std::span(&scene.objects[found->second], 1), scene.models, scene.grid).empty())
+                    scene.footpaths.pavings_stale = true;
                 scene.objects[found->second].hidden = true;
             }
             hide_platform(scene, last);

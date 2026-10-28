@@ -528,11 +528,17 @@ namespace rct3::simulation
             attraction.entrance = on_path ? *node : kNoNode;
             attraction.price = { room.ticket };
             attraction.open = room.open;
+            r.get_or_emplace<PoolTank>(e);
             r.emplace_or_replace<PoolDoor>(e, PoolDoor { .pool = pool, .col = room.col, .row = room.row, .room = middle(room.col, room.row, surface), .poolside = middle(square->second->col, square->second->row, surface) });
         }
+        // A complex kept keeps its dirt.
         for (std::size_t c = 0; c < complexes.size(); ++c)
             if (pool_entities[c] != entt::null)
+            {
+                if (const auto* was = r.try_get<SwimPool>(pool_entities[c]))
+                    complexes[c].dirt = was->dirt;
                 r.emplace_or_replace<SwimPool>(pool_entities[c], std::move(complexes[c]));
+            }
         for (const auto& [tile, e] : rooms)
             if (!std::ranges::contains(kept, e))
                 pull_down(world, e);

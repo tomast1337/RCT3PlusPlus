@@ -430,6 +430,12 @@ namespace rct3::simulation
             return found != nullptr ? *found : Weather { };
         }
 
+        /// Whether a pool is cleaned with a harsh fluid while there is little dirt in it for the fluid to take.
+        bool harsh(const SwimPool* pool, const PoolTank* tank)
+        {
+            return pool != nullptr && tank != nullptr && tank->fluid == PoolFluid::Harsh && tank->left.value > 0 && pool->dirt.value < kTuning.pools.good.value / 2;
+        }
+
         /// The guest thinks `kind` about `about` at `now` (seconds into the run), unless they thought it lately.
         void think(entt::registry& r, entt::entity guest, ThoughtKind kind, entt::entity about, float now)
         {
@@ -1061,7 +1067,8 @@ namespace rct3::simulation
 
             // Free mechanics: the nearest by the paths goes to a broken ride, else to one due an inspection.
             const auto spot = [&](entt::entity ride) {
-                const NodeId exit = r.get<CycleRide>(ride).exit;
+                const auto* cycle = r.try_get<CycleRide>(ride);
+                const NodeId exit = cycle != nullptr ? cycle->exit : kNoNode;
                 return exit != kNoNode ? exit : r.get<Attraction>(ride).entrance;
             };
             std::vector<entt::entity> free;
@@ -1092,7 +1099,7 @@ namespace rct3::simulation
                 upkeep.mechanic = *who;
                 free.erase(who);
             };
-            const auto rides = sorted(r.view<const Upkeep, const CycleRide>());
+            const auto rides = sorted(r.view<const Upkeep, const Attraction>()); // Rides, and pools' changing rooms
             for (const bool broken : { true, false })
                 for (const entt::entity ride : rides)
                 {
@@ -1133,6 +1140,13 @@ namespace rct3::simulation
                         upkeep.since_inspection.value = 0;
                         upkeep.called = false;
                         upkeep.mechanic = entt::null;
+                        // A changing room's tank filled up again, the park paying for the fluid.
+                        if (auto* tank = r.try_get<PoolTank>(staff.ride))
+                        {
+                            const auto price = kTuning.pools.refill[std::to_underlying(tank->fluid)].value;
+                            r.ctx().emplace<Supplies>().paid.value += std::llround(static_cast<double>(price) * (1 - tank->left.value));
+                            tank->left.value = 1;
+                        }
                         staff.ride = entt::null;
                     }
                     continue;
@@ -1256,6 +1270,11 @@ namespace rct3::simulation
             }
         }
     } // namespace
+
+    std::size_t dirt_step(const SwimPool& pool)
+    {
+        return std::min(static_cast<std::size_t>(pool.dirt.value * 6), std::size_t { 5 });
+    }
 
     float Upkeep::downtime_share() const
     {
@@ -2268,6 +2287,24 @@ namespace rct3::simulation
             }
         }
 
+        phase.emplace("Pools");
+        // Changing rooms use up their cleaning fluid while open, cleaning their pool, and call for a mechanic to
+        // fill the tank when it runs low.
+        for (const entt::entity e : sorted(r.view<PoolDoor, PoolTank>()))
+        {
+            const auto& door = r.get<PoolDoor>(e);
+            auto& tank = r.get<PoolTank>(e);
+            auto& upkeep = r.get_or_emplace<Upkeep>(e);
+            upkeep.since_inspection.value += dt;
+            if (tank.left.value < kTuning.pools.refill_at.value)
+                upkeep.called = true;
+            if (!r.get<Attraction>(e).open || tank.left.value <= 0)
+                continue;
+            tank.left.value = std::max(tank.left.value - kTuning.pools.tank_use.value * dt, 0.0f);
+            if (auto* pool = r.valid(door.pool) ? r.try_get<SwimPool>(door.pool) : nullptr)
+                pool->dirt.value = std::max(pool->dirt.value - kTuning.pools.cleaning[std::to_underlying(tank.fluid)].value * dt, 0.0f);
+        }
+
         phase.emplace("Swimming");
         // Swimmers change out of sight in the room, then swim from spot to spot in the water and now and then walk
         // the paved squares round it, resting between; their time up, they go back and change again, and come out
@@ -2278,7 +2315,7 @@ namespace rct3::simulation
             auto& pose = r.get<Pose>(g);
             auto& errand = r.get<Errand>(g);
             const auto* door = r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr;
-            const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<SwimPool>(door->pool) : nullptr;
+            auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<SwimPool>(door->pool) : nullptr;
             if (errand.kind != ErrandKind::Swimming || pool == nullptr || pool->water.empty())
             {
                 r.remove<Swimmer>(g);
@@ -2292,7 +2329,15 @@ namespace rct3::simulation
                     continue;
                 if (swimmer.changed)
                 {
-                    // Dressed again: out at the door, the party going on together behind its leader.
+                    // Dressed again: out at the door, thinking of the water, the party going on together behind
+                    // its leader.
+                    const auto* tank = r.try_get<PoolTank>(errand.target);
+                    if (harsh(pool, tank))
+                        think(r, g, ThoughtKind::PoolOvercleaned, errand.target, now);
+                    else if (pool->dirt.value >= kTuning.pools.bad.value)
+                        think(r, g, ThoughtKind::PoolBad, errand.target, now);
+                    else if (pool->dirt.value < kTuning.pools.good.value)
+                        think(r, g, ThoughtKind::PoolGood, errand.target, now);
                     const NodeId out = r.get<Attraction>(errand.target).entrance;
                     const auto* member = r.try_get<Member>(g);
                     const bool follows = member != nullptr && r.valid(member->party) && r.get<Party>(member->party).leader != g;
@@ -2318,6 +2363,14 @@ namespace rct3::simulation
             const auto water = std::ranges::find_if(pool->water, [&](const glm::vec3& w) { return std::abs(at.x - w.x) <= half && std::abs(at.y - w.z) <= half; });
             swimmer.in_water = water != pool->water.end();
             pose.position = { at.x, swimmer.in_water ? water->y : door->poolside.y, at.y };
+            // In the water they dirty it, the less the more water there is, and enjoy it the cleaner it is.
+            if (swimmer.in_water)
+            {
+                pool->dirt.value = std::min(pool->dirt.value + kTuning.pools.dirtying.value * dt / static_cast<float>(pool->water.size()), 1.0f);
+                const float liking = harsh(pool, r.try_get<PoolTank>(errand.target)) ? -0.5f : 1 - 2 * pool->dirt.value / kTuning.pools.bad.value;
+                auto& happiness = r.get<Mood>(g).happiness.value;
+                happiness = std::clamp(happiness + kTuning.pools.cheer.value * liking * dt, 0.0f, 1.0f);
+            }
             swimmer.left.value -= dt;
             if (!there)
                 continue;

@@ -414,7 +414,16 @@ namespace rct3::simulation::tuning
         Seconds shortest_rest { 3 }; ///< Floating or standing between swims
         Seconds longest_rest { 15 };
         Chance poolside { 0.2 };                    ///< Of going to the paved squares next rather than the water
-        PerSecond cheer = PerSecond::over({ 600 }); ///< Happiness gained while swimming
+        PerSecond cheer = PerSecond::over({ 600 }); ///< Happiness gained while swimming in clean water; lost in dirty
+        /// Dirt a swimmer brings to a pool of one square of water in a second; less in bigger pools.
+        PerSecond dirtying = PerSecond::over({ 1200 });
+        /// Dirt a room's fluid takes out of its pool in a second, by fluid, while the tank has any.
+        std::array<PerSecond, 3> cleaning { PerSecond::over({ 1500 }), PerSecond::over({ 700 }), PerSecond::over({ 300 }) };
+        PerSecond tank_use = PerSecond::over({ 1800 });                                 ///< Of a full tank, while the room is open
+        Share refill_at { 0.25f };                                                      ///< Left in the tank when a mechanic is called to fill it
+        std::array<Money, 3> refill { Money { 2000 }, Money { 4000 }, Money { 8000 } }; ///< A full tank, by fluid
+        Share good { 2.0f / 6 };                                                        ///< Dirt under which swimmers think the pool clean
+        Share bad { 3.0f / 6 };                                                         ///< And from which dirty
     };
 
     struct Tuning

@@ -6,7 +6,7 @@
 // the roar of each waterfall.
 // Building is heard too, not placed in the world: a thump each time something is put down (a ride, stall, piece of
 // track, scenery, structure or pool work), at most one in a short while; paths, fences and taking things away are
-// silent.
+// silent. A stroke shaping the ground rumbles once, as loud as land_tools.hpp says, until it ends.
 // The sounds come from the game's overlays by name; whatever it
 // does not have stays quiet. All follow the game volume and, but for building's, hush while the park is paused, and are heard muffled while the eye is under water.
 #pragma once
@@ -71,9 +71,12 @@ namespace rct3::scene
         std::array<std::optional<audio::SoundBuffer>, 3> rain; ///< Loops of light rain, heavy rain and a storm
         std::array<audio::VoiceHandle, 3> rain_voices;
         std::vector<audio::SoundBuffer> thunder;
-        std::vector<audio::SoundBuffer> thumps; ///< Of something put down
-        std::uint32_t built_heard = 0;          ///< ParkScene::built when last looked at
-        float since_thump = 1;                  ///< Seconds
+        std::vector<audio::SoundBuffer> thumps;  ///< Of something put down
+        std::uint32_t built_heard = 0;           ///< ParkScene::built when last looked at
+        std::vector<audio::SoundBuffer> rumbles; ///< Of the ground being shaped
+        audio::VoiceHandle rumble;
+        bool rumbling = false; ///< A stroke's rumble was started; one a stroke, though it ends first
+        float since_thump = 1; ///< Seconds
         std::minstd_rand random;
     };
 

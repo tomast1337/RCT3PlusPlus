@@ -51,6 +51,8 @@
 // paid for, and a message says when money ran short. The park's fence and where its staff may walk follow.
 //
 // Every other change is paid for. A right click puts either tool away.
+//
+// A shaping stroke rumbles from press to release, softly while the ground stays still and loudest as it moves.
 #pragma once
 
 #include "park/ground_holds.hpp"
@@ -117,6 +119,7 @@ namespace rct3::scene
         std::optional<std::size_t> upper_lake;   ///< Of a waterfall: the lake picked first, of the park's water
         save::Tile upper_tile;                   ///< Where it was picked
         park::LandBuy buying = park::LandBuy::Land;
+        std::optional<float> rumble; ///< While a shaping stroke goes: how loud its ground is heard moving, 0..1
     };
 
     /// Picks `tool` from the land menu, or puts it away when it is already out.

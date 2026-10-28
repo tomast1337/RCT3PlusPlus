@@ -247,8 +247,8 @@ declare namespace build {
      * other rides. Undefined while the panel is shut. */
     function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; arrows: boolean; ghostAt: { col: number; row: number; height: number } | null; clashes: boolean; unowned: boolean; ghostDoors: number; completing: boolean; proposed: number; complaint: string; testing: boolean; testAt: number | null; testWrecks: number; designs: string[]; selected: number | null; split: number } | undefined;
     /** What building gave to be heard: how many thumps of something put down were asked for since the park opened
-     * (several close together are heard as one). */
-    function sounds(): { thumps: number };
+     * (several close together are heard as one), and while a shaping stroke goes the loudness of its rumble, 0..1. */
+    function sounds(): { thumps: number; rumble: number | null };
     /** Puts the placing tool or the enclosure tool away, as a right click does. */
     function stop(): void;
     /** While an enclosure drag is held: what letting go would cost in hundredths (below 0 when it pays back),

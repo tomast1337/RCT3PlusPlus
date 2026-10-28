@@ -37,9 +37,11 @@ namespace rct3::scene
     {
         // Prices, in hundredths: painting one tile.
         constexpr std::int32_t kPaintCost = 50;
-        constexpr float kShapeCost = 25;     ///< A height unit of one corner point moved by a brush
-        constexpr float kSmoothRate = 2.5f;  ///< Of the way to where a smoothing brush wants the ground, a second
-        constexpr float kSmoothPass = 0.05f; ///< Seconds between smoothing passes
+        constexpr float kShapeCost = 25;      ///< A height unit of one corner point moved by a brush
+        constexpr float kSmoothRate = 2.5f;   ///< Of the way to where a smoothing brush wants the ground, a second
+        constexpr float kSmoothPass = 0.05f;  ///< Seconds between smoothing passes
+        constexpr float kRumbleQuiet = 0.25f; ///< Chosen by eye: the rumble of a shaping stroke while the ground stays still
+        constexpr float kRumbleFade = 0.6f;   ///< Chosen by eye: seconds it takes to fall back to that once the ground stops moving
 
         constexpr std::string_view kPanelName = "land_panel";
         constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
@@ -113,12 +115,15 @@ namespace rct3::scene
             LandTools& l = scene.land;
             l.holds = park::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
             l.refused = l.holds.held;
+            if (l.tool == LandTools::Tool::Shape)
+                l.rumble = kRumbleQuiet;
         }
 
         /// Ends a stroke: seats the scenery standing on the ground it moved on its new height.
         void end_stroke(ParkScene& scene)
         {
             LandTools& l = scene.land;
+            l.rumble.reset();
             if (!l.stirred)
                 return;
             if (scene.object_build.valid())
@@ -202,6 +207,8 @@ namespace rct3::scene
             rebuild_ground(device, scene, assets, touched);
             if (!step)
                 return;
+            if (l.rumble)
+                l.rumble = 1.0f;
             if (!l.stirred)
                 l.stirred = step;
             (*l.stirred)[0] = { std::min((*l.stirred)[0].col, (*step)[0].col), std::min((*l.stirred)[0].row, (*step)[0].row) };
@@ -733,6 +740,8 @@ namespace rct3::scene
     void update_land_tools(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed)
     {
         LandTools& l = scene.land;
+        if (l.rumble)
+            l.rumble = std::max(kRumbleQuiet, *l.rumble - elapsed / kRumbleFade);
         if (auto panel = panel_of(scene); panel && (l.tool == LandTools::Tool::Shape || l.tool == LandTools::Tool::Paint || l.tool == LandTools::Tool::Buy))
         {
             if (panel->take_closed())

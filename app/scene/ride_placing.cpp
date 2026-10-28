@@ -755,6 +755,7 @@ namespace rct3::scene
             {
                 p.ride = scene.rides.stalls.size();
                 const std::uint64_t object = add_object(scene, *o);
+                animate_scenery(device, scene, scene.objects.size() - 1);
                 save::Stall& stall = scene.rides.stalls.emplace_back();
                 stall.base.id = last_id(scene) + 1;
                 stall.base.symbol = std::format("{}:sta", p.item->symbol);

@@ -18,6 +18,7 @@
 #include "park/relief_maps.hpp"
 #include "park/support_columns.hpp"
 #include "park/surrounding_land.hpp"
+#include "profiling/profiler.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
 #include "scene/park_view.hpp"
@@ -325,16 +326,17 @@ namespace rct3::scene
 
     void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
+        const profiling::Scope zone("RebuildGround");
         ParkFootpaths& f = scene.footpaths;
         scene.supports.stale = true; // Paths or the ground changed
-        const std::vector<park::PavedTile> laid = park::lay_pavings(f.paths, f.pavings, scene.grid);
+        const std::vector<park::PavedTile> laid = profiling::section("Pavings", [&] { return park::lay_pavings(f.paths, f.pavings, scene.grid); });
         std::vector<save::PathTile> with = f.paths;
         for (const park::PavedTile& t : laid)
             with.push_back(t.path);
-        const std::vector<park::GroundOpening> hollows = park::tunnel_hollows(f.paths, scene.grid);
-        park::TerrainMesh mesh = park::terrain_mesh(scene.grid, f.water, hollows);
-        park::add_ground(mesh, park::tunnel_lining(hollows, scene.grid));
-        park::GroundPathMap paths = park::ground_path_map(with, scene.grid);
+        const std::vector<park::GroundOpening> hollows = profiling::section("Hollows", [&] { return park::tunnel_hollows(f.paths, scene.grid); });
+        park::TerrainMesh mesh = profiling::section("Terrain", [&] { return park::terrain_mesh(scene.grid, f.water, hollows); });
+        profiling::section("Tunnels", [&] { park::add_ground(mesh, park::tunnel_lining(hollows, scene.grid)); });
+        park::GroundPathMap paths = profiling::section("PathMap", [&] { return park::ground_path_map(with, scene.grid); });
         paths.walls = f.walls;
         park::seal_pavings(paths, laid, f.pavings);
         // shortcut: reads the path styles again while the panel has not, each time they are needed; keep them once read when that shows.
@@ -364,95 +366,103 @@ namespace rct3::scene
         for (const save::PlacedObject& o : scene.objects)
             id = std::max(id, o.id);
         // Paving off the ground is a deck of its style at its height, open towards its own tiles and its links.
-        bool changed = !f.paving_decks.empty();
-        std::erase_if(scene.objects, [&](const save::PlacedObject& o) { return std::ranges::contains(f.paving_decks, o.id); });
-        f.paving_decks.clear();
-        for (const park::PavedTile& t : laid)
         {
-            if (!t.path.elevation || park::is_ground_queue(t.path))
-                continue;
-            const park::PathStyle* style = style_named(t.path.surface_name);
-            if (!style)
-                continue;
-            const park::Paving& paving = f.pavings[t.paving];
-            std::vector<save::PathTile> around { t.path };
-            for (const auto& tiles : { paving.tiles, paving.links })
+            const profiling::Scope decks("Decks");
+            bool changed = !f.paving_decks.empty();
+            std::erase_if(scene.objects, [&](const save::PlacedObject& o) { return std::ranges::contains(f.paving_decks, o.id); });
+            f.paving_decks.clear();
+            for (const park::PavedTile& t : laid)
             {
-                for (const save::Tile other : tiles)
+                if (!t.path.elevation || park::is_ground_queue(t.path))
+                    continue;
+                const park::PathStyle* style = style_named(t.path.surface_name);
+                if (!style)
+                    continue;
+                const park::Paving& paving = f.pavings[t.paving];
+                std::vector<save::PathTile> around { t.path };
+                for (const auto& tiles : { paving.tiles, paving.links })
                 {
-                    if (std::abs(other.col - t.path.col) + std::abs(other.row - t.path.row) != 1 || !scene.grid.contains(other.col, other.row))
-                        continue;
-                    save::PathTile& o = around.emplace_back(t.path);
-                    o.col = static_cast<std::uint8_t>(other.col);
-                    o.row = static_cast<std::uint8_t>(other.row);
-                    // A raised path of the park it links to opens towards it in turn.
-                    const auto joined = std::ranges::find_if(f.paths, [&](const save::PathTile& p) { return p.col == other.col && p.row == other.row && p.elevation && !park::is_ground_queue(p) && p.elevation->slope == 0 && p.elevation->quantised_height == paving.height; });
-                    const park::PathStyle* own = joined != f.paths.end() && std::ranges::contains(paving.links, other) ? style_named(joined->surface_name) : nullptr;
-                    if (!own)
-                        continue;
-                    std::vector<save::PathTile> next = f.paths;
-                    next.push_back(t.path);
-                    const auto [symbol, turns] = park::deck_for(*own, *joined, next, scene.grid);
-                    const auto shown = std::ranges::find(scene.objects, joined->elevation->scenery_ref, &save::PlacedObject::id);
-                    if (!symbol.empty() && shown != scene.objects.end() && (shown->symbol != symbol || shown->rotation != turns))
+                    for (const save::Tile other : tiles)
                     {
-                        save::PlacedObject turned = *shown;
-                        turned.symbol = symbol;
-                        turned.rotation = turns;
-                        if (load_object_model(scene, f.models, assets, turned))
-                            *shown = std::move(turned);
+                        if (std::abs(other.col - t.path.col) + std::abs(other.row - t.path.row) != 1 || !scene.grid.contains(other.col, other.row))
+                            continue;
+                        save::PathTile& o = around.emplace_back(t.path);
+                        o.col = static_cast<std::uint8_t>(other.col);
+                        o.row = static_cast<std::uint8_t>(other.row);
+                        // A raised path of the park it links to opens towards it in turn.
+                        const auto joined = std::ranges::find_if(f.paths, [&](const save::PathTile& p) { return p.col == other.col && p.row == other.row && p.elevation && !park::is_ground_queue(p) && p.elevation->slope == 0 && p.elevation->quantised_height == paving.height; });
+                        const park::PathStyle* own = joined != f.paths.end() && std::ranges::contains(paving.links, other) ? style_named(joined->surface_name) : nullptr;
+                        if (!own)
+                            continue;
+                        std::vector<save::PathTile> next = f.paths;
+                        next.push_back(t.path);
+                        const auto [symbol, turns] = park::deck_for(*own, *joined, next, scene.grid);
+                        const auto shown = std::ranges::find(scene.objects, joined->elevation->scenery_ref, &save::PlacedObject::id);
+                        if (!symbol.empty() && shown != scene.objects.end() && (shown->symbol != symbol || shown->rotation != turns))
+                        {
+                            save::PlacedObject turned = *shown;
+                            turned.symbol = symbol;
+                            turned.rotation = turns;
+                            if (load_object_model(scene, f.models, assets, turned))
+                                *shown = std::move(turned);
+                        }
                     }
                 }
+                save::PlacedObject deck = deck_object(*style, t.path, around, scene.grid, ++id);
+                deck.fixture = true;
+                // Scaffold tops beside it end at the same height; a hair over them keeps the two from flickering.
+                deck.height_adjust = 0.02f;
+                if (!load_object_model(scene, f.models, assets, deck))
+                    continue;
+                f.paving_decks.push_back(deck.id);
+                scene.objects.push_back(std::move(deck));
+                changed = true;
             }
-            save::PlacedObject deck = deck_object(*style, t.path, around, scene.grid, ++id);
-            deck.fixture = true;
-            // Scaffold tops beside it end at the same height; a hair over them keeps the two from flickering.
-            deck.height_adjust = 0.02f;
-            if (!load_object_model(scene, f.models, assets, deck))
-                continue;
-            f.paving_decks.push_back(deck.id);
-            scene.objects.push_back(std::move(deck));
-            changed = true;
+            if (changed)
+                objects_changed(scene);
         }
-        if (changed)
-            objects_changed(scene);
         f.pavings_stale = false;
         // The fences round the park and the enclosures lean with the ground as it is now.
-        const std::set<std::uint64_t> panels(scene.fence_panels.begin(), scene.fence_panels.end());
-        const std::set<std::uint64_t> pieces(scene.enclosure_panels.begin(), scene.enclosure_panels.end());
-        std::vector<std::pair<std::uint64_t, glm::vec2>> leaning;
-        for (const save::PlacedObject& o : scene.objects)
-        {
-            if (!panels.contains(o.id) && !pieces.contains(o.id))
-                continue;
-            const glm::vec2 lean = pieces.contains(o.id) ? park::fence_piece_lean(scene.grid, o) : park::panel_lean(scene.grid, o);
-            const auto was = scene.leans.find(o.id);
-            if (lean != (was != scene.leans.end() ? was->second : glm::vec2(0.0f)))
-                leaning.emplace_back(o.id, lean);
-        }
-        if (!leaning.empty())
-        {
-            wait_for_build(scene); // The build beside the frame reads the leans
-            for (const auto& [panel, lean] : leaning)
+        profiling::section("Leans", [&] {
+            const std::set<std::uint64_t> panels(scene.fence_panels.begin(), scene.fence_panels.end());
+            const std::set<std::uint64_t> pieces(scene.enclosure_panels.begin(), scene.enclosure_panels.end());
+            std::vector<std::pair<std::uint64_t, glm::vec2>> leaning;
+            for (const save::PlacedObject& o : scene.objects)
             {
-                if (lean == glm::vec2(0.0f))
-                    scene.leans.erase(panel);
-                else
-                    scene.leans[panel] = lean;
+                if (!panels.contains(o.id) && !pieces.contains(o.id))
+                    continue;
+                const glm::vec2 lean = pieces.contains(o.id) ? park::fence_piece_lean(scene.grid, o) : park::panel_lean(scene.grid, o);
+                const auto was = scene.leans.find(o.id);
+                if (lean != (was != scene.leans.end() ? was->second : glm::vec2(0.0f)))
+                    leaning.emplace_back(o.id, lean);
             }
-        }
-        park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid));
-        park::GroundQueues queues = park::ground_queues(with, scene.grid);
+            if (!leaning.empty())
+            {
+                wait_for_build(scene); // The build beside the frame reads the leans
+                for (const auto& [panel, lean] : leaning)
+                {
+                    if (lean == glm::vec2(0.0f))
+                        scene.leans.erase(panel);
+                    else
+                        scene.leans[panel] = lean;
+                }
+            }
+        });
+        profiling::section("PathMesh", [&] { park::add_ground(mesh, park::ground_path_mesh(paths, scene.grid)); });
+        park::GroundQueues queues = profiling::section("Queues", [&] { return park::ground_queues(with, scene.grid); });
         park::add_ground(mesh, std::move(queues.mesh));
         std::vector<park::WaterVertex> water = std::move(mesh.water);
         std::ranges::copy(park::pool_water(scene.grid, f.pools), std::back_inserter(water));
-        park::TerrainMesh surroundings = park::surrounding_land(scene.grid, f.water);
+        park::TerrainMesh surroundings = profiling::section("Surroundings", [&] { return park::surrounding_land(scene.grid, f.water); });
         water.insert(water.end(), surroundings.water.begin(), surroundings.water.end());
         park::add_ground(mesh, std::move(surroundings));
-        if (auto replaced = replace_park_water(device, scene.water, water); !replaced)
-            logging::logger("park").warning("water: {}", replaced.error());
+        profiling::section("Water", [&] {
+            if (auto replaced = replace_park_water(device, scene.water, water); !replaced)
+                logging::logger("park").warning("water: {}", replaced.error());
+        });
         picture_styles(device, scene, assets, paths.styles);
         picture_queues(device, scene, assets, queues.paintings);
+        const profiling::Scope upload_zone("Upload");
         auto vertices = device.create_buffer({ render::BufferUsage::Vertex, std::as_bytes(std::span(mesh.vertices)), "ground vertices" });
         auto indices = device.create_buffer({ render::BufferUsage::Index, std::as_bytes(std::span(mesh.indices)), "ground indices" });
         if (!vertices || !indices)

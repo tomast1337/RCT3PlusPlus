@@ -1210,10 +1210,10 @@ namespace rct3::scene
         const profiling::Scope zone("ObjectsChanged");
         scene.supports.stale = true;
         wait_for_build(scene); // The build beside the frame reads the anchors written here
-        scene.anchors = park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted);
-        scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted);
+        scene.anchors = profiling::section("Anchors", [&] { return park::object_anchors(scene.objects, scene.models, scene.grid, scene.fitted); });
+        scene.lamps = profiling::section("Lamps", [&] { return park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted); });
         scene.lamps_due = true;
-        show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted));
+        profiling::section("Effects", [&] { show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted)); });
         scene.levels = { };
         scene.since_rebuild = kObjectRebuildInterval;
         scene.pick_boxes_of = 0; // A piece built over keeps the count the boxes are kept by

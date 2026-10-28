@@ -5,7 +5,8 @@
 // rectangle of squares; letting go lays them, joining any pool they touch, and lays over the squares already
 // there. The pool's surface is the ground's height where the drag began, or the surface of the pool begun
 // there, or the height the panel sets when it does not snap to the ground; the ground under every square is
-// dug down to the pool's floor. With the delete tool, letting go takes
+// dug down to the pool's floor. A spa pool or a high diving board goes on the one square pressed; dragging up or
+// down from it sets the board's height, and the turn keys turn it to face the water, or it is refused. With the delete tool, letting go takes
 // the squares up and refunds them, leaving the ground flat at their surface. An area with land the park does
 // not own outright, or that the park cannot pay for, shows its marks red and is refused. With an extra or a
 // changing room picked, it follows the pointer as a see-through ghost on the square under it, red where it does

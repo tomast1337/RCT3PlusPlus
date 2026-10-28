@@ -662,12 +662,9 @@ namespace rct3::scene
                 p.problem = park::water_problem(*p.site, p.item->water_only, scene.footpaths.water.bodies);
             // The ground under it is levelled, unless a tile of its footprint may not be; then, as when it is not
             // levelled, the ground may not rise over its base. A tile round it that may not be levelled stays.
-            const auto refused = [&](const park::GroundCut& cut) { return park::cuts_refused(std::span(&cut, 1), scene.grid, p.holds, scene.footpaths.water.bodies); };
-            p.levelling = p.item->water_only ? park::LevelledGround { } : park::levelled_ground(*p.site, p.flatten, scene.grid);
-            if (std::ranges::any_of(p.levelling.footprint, refused))
-                p.levelling = { };
-            std::erase_if(p.levelling.rim, refused);
-            p.levelling_cost = park::cuts_cost(p.levelling.footprint, scene.grid) + park::cuts_cost(p.levelling.rim, scene.grid);
+            p.levelling = p.item->water_only ? park::GroundCuts { } : park::levelled_ground(*p.site, p.flatten, scene.grid);
+            (void)park::allow_cuts(p.levelling, scene.grid, p.holds, scene.footpaths.water.bodies);
+            p.levelling_cost = park::cuts_cost(p.levelling, scene.grid);
             if (p.problem == park::SiteProblem::None && p.levelling.footprint.empty())
                 p.problem = park::ground_problem(*p.site, scene.grid);
             p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price + p.levelling_cost;
@@ -797,9 +794,7 @@ namespace rct3::scene
             const auto price = p.item->price + (levels ? p.levelling_cost : 0);
             if (levels)
             {
-                for (const std::vector<park::GroundCut>* cuts : { &p.levelling.footprint, &p.levelling.rim })
-                    for (const park::GroundCut& cut : *cuts)
-                        scene.grid.at(cut.tile.col, cut.tile.row).corners = cut.corners;
+                park::make_cuts(scene.grid, p.levelling);
                 if (park::seat_followers(scene.objects, p.holds, scene.models, scene.grid, { p.site->col - 1, p.site->row - 1 }, { p.site->col + p.site->span[0], p.site->row + p.site->span[1] }))
                     objects_changed(scene);
             }

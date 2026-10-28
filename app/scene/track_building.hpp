@@ -152,8 +152,9 @@ namespace rct3::scene
         /// The design's ride, whose settings and colours the ride takes once the design is laid whole.
         std::optional<save::Ride> design_ride;
         /// What the round panel's tabs were last shown for: whether the first piece was still to lay, the
-        /// ride's state, and whether the construction strip was hidden.
-        std::optional<std::tuple<bool, save::AttractionState, bool>> tabs_for;
+        /// ride's state, whether the construction strip was hidden, and whether cuts were smooth.
+        std::optional<std::tuple<bool, save::AttractionState, bool, bool>> tabs_for;
+        bool smooth_cuts = false; ///< Whether ground the track passes into is cut smoothly, not sharply
         std::string preview_item; ///< The piece shown on the round panel's disc
         /// Auto-complete: while it looks for a way, the way nearest the station so far shows as the ghost; the way
         /// it found shows until a second click on the button lays it, or any other action turns it down.

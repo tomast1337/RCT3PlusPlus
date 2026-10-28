@@ -3,6 +3,7 @@
 
 #include "park/item_category.hpp"
 
+#include <cmath>
 #include <doctest/doctest.h>
 #include <utility>
 
@@ -48,21 +49,21 @@ TEST_CASE("a piece passing into the ground cuts its tile's corners down to its f
 {
     save::TerrainGrid g = owned_grid(5, 3);
     auto [pieces, models] = one_piece();
-    CHECK(ground_cuts(pieces, models, g).empty());
+    CHECK(ground_cuts(pieces, models, g, false).footprint.empty());
     g.at(2, 1).corners = { 0, 0, 1, 2 };
-    auto cuts = ground_cuts(pieces, models, g);
+    auto cuts = ground_cuts(pieces, models, g, false).footprint;
     REQUIRE(cuts.size() == 1);
     CHECK(cuts[0].tile == save::Tile { 2, 1 });
     CHECK(cuts[0].corners == std::array { 0.0f, 0.0f, 0.0f, 0.0f });
     pieces[0].base_height = 1;
-    cuts = ground_cuts(pieces, models, g);
+    cuts = ground_cuts(pieces, models, g, false).footprint;
     REQUIRE(cuts.size() == 1);
     CHECK(cuts[0].corners == std::array { 0.0f, 0.0f, 1.0f, 1.0f }); // Ground under the floor stays
     pieces[0].base_height = 2;
-    CHECK(ground_cuts(pieces, models, g).empty());
+    CHECK(ground_cuts(pieces, models, g, false).footprint.empty());
     pieces[0].base_height = 0;
     g.at(2, 1).corners.fill(4 + kGroundCover); // Deep enough for a tunnel
-    CHECK(ground_cuts(pieces, models, g).empty());
+    CHECK(ground_cuts(pieces, models, g, false).footprint.empty());
 }
 
 TEST_CASE("a cut is refused off land the park owns outright and where the land tools may not move the ground")
@@ -70,13 +71,39 @@ TEST_CASE("a cut is refused off land the park owns outright and where the land t
     save::TerrainGrid g = owned_grid(5, 3);
     const auto [pieces, models] = one_piece();
     g.at(2, 1).corners = { 0, 0, 1, 2 };
-    const auto cuts = ground_cuts(pieces, models, g);
+    const auto cuts = ground_cuts(pieces, models, g, false).footprint;
     GroundHolds holds;
     CHECK_FALSE(cuts_refused(cuts, g, holds, { }));
+    GroundCuts all { .footprint = cuts, .rim = { } };
+    CHECK(allow_cuts(all, g, holds, { }));
     holds.held.insert(1U << 16 | 2U);
     CHECK(cuts_refused(cuts, g, holds, { }));
+    CHECK_FALSE(allow_cuts(all, g, holds, { }));
+    CHECK(all.footprint.empty());
     g.at(2, 1).flags = 0;
     CHECK(cuts_refused(cuts, g, { }, { }));
+}
+
+TEST_CASE("a smooth cut slopes the tiles round it down to meet it, leaving the far side of each as it was")
+{
+    save::TerrainGrid g = owned_grid(5, 3);
+    auto [pieces, models] = one_piece();
+    for (save::TerrainCell& c : g.cells)
+        c.corners.fill(2);
+    const GroundCuts sharp = ground_cuts(pieces, models, g, false);
+    CHECK(sharp.footprint.size() == 1);
+    CHECK(sharp.rim.empty());
+    const GroundCuts smooth = ground_cuts(pieces, models, g, true);
+    REQUIRE(smooth.footprint.size() == 1);
+    REQUIRE(smooth.rim.size() == 8);
+    for (const GroundCut& cut : smooth.rim)
+    {
+        if (cut.tile == save::Tile { 3, 1 }) // East: its west corners meet the cut
+            CHECK(cut.corners == std::array { 0.0f, 2.0f, 0.0f, 2.0f });
+        if (cut.tile == save::Tile { 1, 0 }) // North-west: only the corner it shares
+            CHECK(cut.corners == std::array { 2.0f, 2.0f, 2.0f, 0.0f });
+    }
+    CHECK(cuts_cost(smooth, g) == std::lround(4 * 2 * kShapeCost + 4 * 2 * 2 * kShapeCost + 4 * 2 * kShapeCost));
 }
 
 TEST_CASE("a piece under enough ground all round hollows its tile up to its top, other items never do")

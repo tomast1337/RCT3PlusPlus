@@ -427,7 +427,7 @@ namespace rct3::scene
         /// Whether the ground `pieces` (their models loaded) would cut may not be cut.
         bool cut_refused(const ParkScene& scene, std::span<const save::PlacedObject> pieces)
         {
-            const std::vector<park::GroundCut> cuts = park::ground_cuts(pieces, scene.models, scene.grid);
+            const std::vector<park::GroundCut> cuts = park::ground_cuts(pieces, scene.models, scene.grid, false).footprint;
             return !cuts.empty() && park::cuts_refused(cuts, scene.grid, park::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid), scene.footpaths.water.bodies);
         }
 
@@ -890,23 +890,27 @@ namespace rct3::scene
                 *scene.park.cash -= shape.record.cost;
             }
             ++scene.built;
-            // The ground it passes into is cut down round it, the scenery standing there seated again; the ground is
-            // built again for that, or for the tunnel it lies in.
+            // The ground it passes into is cut down round it, sharply or smoothly, the scenery standing there seated
+            // again; the ground is built again for that, or for the tunnel it lies in.
             // shortcut: the cut costs nothing, upgrade when the original's price for moving ground is matched.
             const std::span<const save::PlacedObject> ghost(&b.ghost->object, 1);
             if (!park::track_hollows(ghost, scene.models, scene.grid).empty())
                 scene.footpaths.pavings_stale = true;
-            if (const auto cuts = park::ground_cuts(ghost, scene.models, scene.grid); !cuts.empty())
+            if (park::GroundCuts cuts = park::ground_cuts(ghost, scene.models, scene.grid, b.smooth_cuts); !cuts.footprint.empty())
             {
                 const park::GroundHolds holds = park::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
-                save::Tile low = cuts.front().tile;
+                (void)park::allow_cuts(cuts, scene.grid, holds, scene.footpaths.water.bodies);
+                save::Tile low = cuts.footprint.front().tile;
                 save::Tile high = low;
-                for (const park::GroundCut& cut : cuts)
+                for (const std::vector<park::GroundCut>* part : { &cuts.footprint, &cuts.rim })
                 {
-                    scene.grid.at(cut.tile.col, cut.tile.row).corners = cut.corners;
-                    low = { std::min(low.col, cut.tile.col), std::min(low.row, cut.tile.row) };
-                    high = { std::max(high.col, cut.tile.col), std::max(high.row, cut.tile.row) };
+                    for (const park::GroundCut& cut : *part)
+                    {
+                        low = { std::min(low.col, cut.tile.col), std::min(low.row, cut.tile.row) };
+                        high = { std::max(high.col, cut.tile.col), std::max(high.row, cut.tile.row) };
+                    }
                 }
+                park::make_cuts(scene.grid, cuts);
                 if (park::seat_followers(scene.objects, holds, scene.models, scene.grid, low, high))
                     objects_changed(scene);
                 scene.footpaths.pavings_stale = true;
@@ -2087,7 +2091,8 @@ namespace rct3::scene
         const park::PieceCatalogue* c = catalogue(b);
         bool changed = false;
         // The round panel's ring, in this order: the ride's window, turning the first piece, the construction
-        // strip, its state, and the colours of the pieces built next. The turn shows greyed while it does nothing.
+        // strip, its state, the colours of the pieces built next, and cutting the ground smoothly or sharply, one
+        // of the two always lit. The turn shows greyed while it does nothing.
         enum Tab : std::size_t
         {
             Info,
@@ -2095,6 +2100,8 @@ namespace rct3::scene
             Construction,
             State,
             Colour,
+            Smooth,
+            Sharp,
         };
         // A ride set down whole has no strip to show.
         const bool one_piece = *b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].one_piece;
@@ -2112,6 +2119,8 @@ namespace rct3::scene
             // Each press shows or hides the strip of construction controls.
             if (*tab == Construction && !one_piece)
                 panel->visible = !panel->visible;
+            if (*tab == Smooth || *tab == Sharp)
+                b.smooth_cuts = *tab == Smooth;
         }
         const bool whole = !panel->visible;
         if (const auto paint = placing->take_paint(); paint && paint->pot < std::tuple_size_v<save::RideColours>)
@@ -2129,9 +2138,9 @@ namespace rct3::scene
             scene.refusal = change_ride_state(scene, *b.ride, states[choice->second].state).value_or("");
             b.tabs_for.reset();
         }
-        if (const std::tuple now { starting, scene.rides.rides.at(*b.ride).base.state, whole }; b.tabs_for != now || !placing->showing())
+        if (const std::tuple now { starting, scene.rides.rides.at(*b.ride).base.state, whole, b.smooth_cuts }; b.tabs_for != now || !placing->showing())
         {
-            std::vector<ui::InfoTab> tabs(5);
+            std::vector<ui::InfoTab> tabs(7);
             for (const ui::AttractionTabInfo& t : ui::attraction_tabs(ui::AttractionKind::Tracked, std::get<1>(now)))
             {
                 if (t.tab != ui::AttractionTab::View && t.tab != ui::AttractionTab::State && t.tab != ui::AttractionTab::Construction)
@@ -2150,6 +2159,11 @@ namespace rct3::scene
             tabs[Colour].help = assets.strings->get("Scenery_SetFlexiColours");
             tabs[Colour].paints = { colours.begin(), colours.end() };
             tabs[State].choices = state_fan(scene, ref, *assets.strings);
+            for (const auto& [tab, name, lit] : { std::tuple { Smooth, "Smooth", b.smooth_cuts }, std::tuple { Sharp, "Sharp", !b.smooth_cuts } })
+            {
+                tabs[tab].icon = std::format("TerrainFlattener_{}{}", name, lit ? "On" : "Off");
+                tabs[tab].help = assets.strings->get(std::format("TerrainFlattener_{}_ToolTip", name));
+            }
             for (std::size_t i = 0; i < tabs.size(); ++i)
             {
                 tabs[i].slot = static_cast<int>(i);

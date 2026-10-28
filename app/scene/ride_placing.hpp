@@ -84,7 +84,7 @@ namespace rct3::scene
         park::SiteProblem problem = park::SiteProblem::None;
         bool affordable = true;
         park::Flatten flatten = park::Flatten::Off; ///< How a ride's ground is levelled, as the panel's tabs set it
-        park::LevelledGround levelling;             ///< The ground levelled under the ride pointed at, when it may be
+        park::GroundCuts levelling;                 ///< The ground levelled under the ride pointed at, when it may be
         std::int64_t levelling_cost = 0;            ///< In hundredths
         std::size_t ride = 0;                       ///< Of the scene's rides, once placed
         park::ObjectMesh ghost_mesh;

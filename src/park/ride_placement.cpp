@@ -223,9 +223,9 @@ namespace rct3::park
         return static_cast<std::int32_t>(std::ceil(top - kSlack));
     }
 
-    LevelledGround levelled_ground(const RideSite& site, Flatten flatten, const save::TerrainGrid& grid)
+    GroundCuts levelled_ground(const RideSite& site, Flatten flatten, const save::TerrainGrid& grid)
     {
-        LevelledGround out;
+        GroundCuts out;
         if (flatten == Flatten::Off)
             return out;
         const auto height = static_cast<float>(site.height);

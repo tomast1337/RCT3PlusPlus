@@ -110,13 +110,33 @@ namespace rct3::park
         });
     }
 
-    std::int64_t cuts_cost(std::span<const GroundCut> cuts, const save::TerrainGrid& grid)
+    bool allow_cuts(GroundCuts& cuts, const save::TerrainGrid& grid, const GroundHolds& holds, std::span<const save::WaterBody> bodies)
+    {
+        const auto refused = [&](const GroundCut& cut) { return cuts_refused(std::span(&cut, 1), grid, holds, bodies); };
+        if (std::ranges::any_of(cuts.footprint, refused))
+        {
+            cuts = { };
+            return false;
+        }
+        std::erase_if(cuts.rim, refused);
+        return true;
+    }
+
+    std::int64_t cuts_cost(const GroundCuts& cuts, const save::TerrainGrid& grid)
     {
         float moved = 0;
-        for (const GroundCut& cut : cuts)
-            for (std::size_t k = 0; k < 4; ++k)
-                moved += std::abs(cut.corners[k] - grid.at(cut.tile.col, cut.tile.row).corners[k]);
+        for (const std::vector<GroundCut>* part : { &cuts.footprint, &cuts.rim })
+            for (const GroundCut& cut : *part)
+                for (std::size_t k = 0; k < 4; ++k)
+                    moved += std::abs(cut.corners[k] - grid.at(cut.tile.col, cut.tile.row).corners[k]);
         return std::lround(moved * kShapeCost);
+    }
+
+    void make_cuts(save::TerrainGrid& grid, const GroundCuts& cuts)
+    {
+        for (const std::vector<GroundCut>* part : { &cuts.footprint, &cuts.rim })
+            for (const GroundCut& cut : *part)
+                grid.at(cut.tile.col, cut.tile.row).corners = cut.corners;
     }
 
     bool seat_followers(std::span<save::PlacedObject> objects, const GroundHolds& holds, const ObjectModels& models, const save::TerrainGrid& grid, save::Tile first, save::Tile last)

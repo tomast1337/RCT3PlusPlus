@@ -1,5 +1,7 @@
 # rct3++
 
+<p align="center"><img src="assets/icon/panda.svg" alt="rct3++ panda" width="200"></p>
+
 An open-source reimplementation of RollerCoaster Tycoon 3 Complete Edition, in C++26.
 
 rct3++ is a reimplementation, not a decompilation. It reads the game's data, save and scenario files from

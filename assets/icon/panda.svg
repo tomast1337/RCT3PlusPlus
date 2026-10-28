@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1250 1250" width="1250" height="1250">
+  <title>Waving low-poly panda</title>
+  <defs>
+    <style>
+      .maroon  { fill: #4f0a24; }
+      .wine    { fill: #6a0f30; }
+      .crimson { fill: #921c43; }
+      .berry   { fill: #a8244f; }
+      .rose    { fill: #e2456f; }
+      .blush   { fill: #f6a2d8; }
+      .pale    { fill: #fbd6ea; }
+      .white   { fill: #fbfbfb; }
+      .iris    { fill: #911a35; }
+      .rim     { fill: #4f0a24; }
+      .pupil   { fill: #120408; }
+      .shine   { fill: #ffffff; }
+    </style>
+  </defs>
+
+  <!-- Ears -->
+  <g id="ears">
+    <polygon class="rose"   points="375,212 500,62 520,96 470,330"/>
+    <polygon class="maroon" points="505,52 640,130 612,240 520,300 430,250 420,200"/>
+    <polygon class="blush"  points="470,330 520,300 612,240 650,180 600,330"/>
+
+    <polygon class="rose"   points="1000,268 1138,232 1060,300"/>
+    <polygon class="maroon" points="1060,282 1138,232 1195,345 1188,440 1098,495 1070,420"/>
+  </g>
+
+  <!-- Body -->
+  <g id="body">
+    <polygon class="white" points="460,960 560,780 900,820 1030,960 1080,1250 400,1250"/>
+    <polygon class="blush" points="750,860 900,820 1030,960 1060,1250 830,1250 790,1010"/>
+    <polygon class="pale"  points="365,1105 455,1060 410,1250 365,1250"/>
+    <polygon class="blush" points="510,1000 545,995 520,1250 490,1250"/>
+  </g>
+
+  <!-- Collar band -->
+  <g id="collar">
+    <polygon class="maroon"  points="560,770 840,812 950,842 1065,955 1112,1080 1070,1250 1010,1250 990,1110 915,990 760,1000"/>
+    <polygon class="crimson" points="900,830 1000,880 1065,955 1110,1080 1060,1060 1000,950"/>
+    <polygon class="berry"   points="500,780 720,825 760,1000 520,965"/>
+  </g>
+
+  <!-- Waving arm -->
+  <g id="arm">
+    <polygon class="maroon"  points="150,732 400,900 560,955 520,975 360,925 230,860"/>
+    <polygon class="crimson" points="150,732 330,602 610,785 560,955 400,900"/>
+    <polygon class="berry"   points="30,585 140,470 215,500 245,455 300,512 330,602 310,652 170,728 92,702"/>
+    <polygon class="wine"    points="215,500 245,455 255,500 225,520"/>
+  </g>
+
+  <!-- Head -->
+  <g id="head">
+    <polygon class="white" points="470,330 640,145 700,135 940,185 1080,370 1100,432 1062,620 982,760 832,815 600,765 450,642 385,545 420,420"/>
+    <polygon class="blush" points="1060,380 1100,432 1062,620 982,760 918,780 1010,600 1050,470"/>
+    <polygon class="blush" points="560,735 832,815 760,800 600,765"/>
+    <polygon class="blush" points="862,158 878,162 832,442 820,440"/>
+  </g>
+
+  <!-- Eyes -->
+  <g id="eyes">
+    <circle class="rim"   cx="660" cy="462" r="138"/>
+    <circle class="iris"  cx="660" cy="462" r="126"/>
+    <circle class="pupil" cx="630" cy="472" r="46"/>
+    <ellipse class="shine" cx="608" cy="420" rx="27" ry="19" transform="rotate(-35 608 420)"/>
+
+    <circle class="rim"   cx="966" cy="506" r="108"/>
+    <circle class="iris"  cx="966" cy="506" r="97"/>
+    <circle class="pupil" cx="950" cy="522" r="42"/>
+    <ellipse class="shine" cx="930" cy="478" rx="23" ry="16" transform="rotate(-35 930 478)"/>
+  </g>
+
+  <!-- Nose and mouth -->
+  <g id="face">
+    <ellipse class="pupil" cx="820" cy="586" rx="30" ry="17"/>
+    <path fill="#6a0a1e" d="M730,615 L852,636 Q822,718 772,716 Q738,702 730,615 Z"/>
+    <path fill="#f45a75" d="M745,672 Q780,645 818,680 Q794,718 764,712 Q744,700 745,672 Z"/>
+  </g>
+</svg>

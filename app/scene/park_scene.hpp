@@ -821,7 +821,8 @@ namespace rct3::scene
     /// The colour to clear to before drawing the park.
     [[nodiscard]] render::Color park_background(const ParkScene& scene);
 
-    void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
+    /// Draws the park, then its interface over it unless `interface` is false (a screenshot of the park alone).
+    void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool interface);
 
     /// The park as it stands, in our own format (see parkfile/saved_park.hpp): the original park it started
     /// from and the player's changes. Guests, staff and the simulation are not kept.

@@ -178,14 +178,28 @@ await until(() => ui.find("info") !== undefined, 120, "the changing room's windo
 expect(ui.find("pool_panel") === undefined, "the pool panel gone, the room placed once");
 await frames(5);
 await screenshot("pool_changing_room");
-await ui.click("info/Attraction_General_Closed");
+// Its window is an attraction's: details naming the complex, its mode, its money, its customers and upkeep.
+expect(JSON.stringify(ui.children("info")).includes("Attraction_OpMode"), `the attraction tabs, not ${JSON.stringify(ui.children("info"))}`);
+await ui.click("info/body/PoolComplexName");
+keys.press("Ctrl+A");
+keys.type("Lagoon");
+keys.press("Enter");
+await frames(3);
+expect(ui.find("info/body/PoolComplexName")?.text === "Lagoon", `the complex named, not ${ui.find("info/body/PoolComplexName")?.text}`);
+await screenshot("pool_room_details");
+await ui.click("info/Attraction_OpMode");
 await frames(3);
 // Dragged from the choice down onto its first row, Open.
 const choice = ui.find("info/body/AttractionStatusOpen")!;
 await pointer.drag([choice.x, choice.y], [choice.x, choice.bottom + (choice.bottom - choice.top) / 2], 6);
 await frames(3);
-expect(ui.find("info/Attraction_General_Open") !== undefined, `the pool complex open, tabs ${JSON.stringify(ui.children("info"))}`);
 await screenshot("pool_complex_open");
+for (const tab of ["Attraction_Finances", "Attraction_Customers", "Attraction_Maintenance"])
+{
+    await ui.click(`info/${tab}`);
+    await frames(3);
+    await screenshot(`pool_room_${tab}`);
+}
 await ui.click("info/close");
 
 // Below it, in tiles: a lone square, a strip three long, and a strip four long with a block under its first
@@ -287,3 +301,24 @@ expect(room() !== undefined, "the changing room back after loading");
 camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 16, up: 14 });
 await frames(10);
 await screenshot("pool_loaded");
+
+// The changing room's window again, its complex's name kept; selling the complex takes up its squares, extras
+// and room, once asked, and leaves the pool below.
+const first = () => pieces().filter((o) => o.row < r0 + 8).length;
+const below = pieces().length - first();
+camera.look({ col: c0 - 0.5, row: r0 + 4.5 }, { col: c0 + 3, row: r0 + 5.5, up: 2.5 });
+await frames(10);
+await pointer.click(...on_view(c0 - 0.5, r0 + 4.5));
+await until(() => ui.find("info/Guest_Rides") !== undefined, 120, "the changing room's window");
+await ui.click("info/Guest_Rides");
+await until(() => ui.find("info/body/PoolComplexName") !== undefined, 120, "the changing room's details");
+expect(ui.find("info/body/PoolComplexName")?.text === "Lagoon", "the complex's name kept");
+cash = park.cash()!;
+await ui.click("info/body/GUI2_DeleteSelection");
+await until(() => ui.find("sell_pool_question") !== undefined, 120, "the question");
+await screenshot("pool_sell_question");
+await ui.click("sell_pool_question/content/GUI2MiniDialog_Confirm");
+await frames(3);
+expect(first() === 0 && room() === undefined, `the complex gone, not ${first()} pieces`);
+expect(pieces().length === below, "the pool below kept");
+expect(park.cash()! > cash, "money back for the complex");

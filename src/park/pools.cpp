@@ -338,7 +338,7 @@ namespace rct3::park
         return !map.at(col, row) && square && square->kind == PoolKind::Tile && !taken;
     }
 
-    std::vector<std::size_t> pool_complex_rooms(const PoolMap& map, std::size_t room)
+    std::vector<save::Tile> pool_complex(const PoolMap& map, std::size_t room)
     {
         std::vector<save::Tile> complex;
         if (room >= map.rooms.size())
@@ -349,6 +349,12 @@ namespace rct3::park
             for (std::int32_t turn = 0; turn < 4; ++turn)
                 if (const auto next = beside(map, complex[i].col, complex[i].row, turn); next && !std::ranges::contains(complex, save::Tile { next->col, next->row }))
                     complex.push_back({ next->col, next->row });
+        return complex;
+    }
+
+    std::vector<std::size_t> pool_complex_rooms(const PoolMap& map, std::size_t room)
+    {
+        const std::vector<save::Tile> complex = pool_complex(map, room);
         std::vector<std::size_t> out;
         for (std::size_t i = 0; i < map.rooms.size(); ++i)
             if (const auto square = beside(map, map.rooms[i].col, map.rooms[i].row, map.rooms[i].turn); square && std::ranges::contains(complex, save::Tile { square->col, square->row }))

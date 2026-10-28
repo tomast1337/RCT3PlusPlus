@@ -2,8 +2,8 @@
 //
 // What the info panel shows about a prop placed in the park: a tab that pulls it down at once, one that picks
 // its colours when it takes any, and tabs for what some props do, such as a litter bin's state or a sign's
-// words, or the pool complex a changing room lets guests into. A plain prop has no page open; the strip then
-// only names it.
+// words. A plain prop has no page open; the strip then only names it. A changing room's window is laid out as
+// an attraction's instead, about the pool complex it lets guests into.
 #pragma once
 
 #include "save/model/world.hpp"
@@ -27,19 +27,31 @@ namespace rct3::ui
         Colour,  ///< Picks the colours of the parts that take them
         Bin,     ///< How full a litter bin is and when it was emptied
         Sign,    ///< What a sign says
-        Pool,    ///< A changing room's: its pool complex opened or closed, and the ticket price
+        // A changing room's, laid out as an attraction's window about its pool complex:
+        RoomDetails,     ///< The complex's name, pulling down the room or the complex, and finding it
+        RoomMaintenance, ///< Its upkeep
+        RoomMode,        ///< The complex opened or closed
+        RoomFinances,    ///< The ticket price
+        RoomCustomers,   ///< The people in the complex
     };
 
-    /// The ids of the pool tab's controls.
+    /// The ids of a changing room's controls.
     inline constexpr int kPoolStateControl = 1;  ///< A choice: 0 open, 1 closed
     inline constexpr int kPoolTicketControl = 2; ///< The ticket price, hundredths
+    inline constexpr int kPoolNameControl = 3;   ///< The complex's name, typed
+    inline constexpr int kPoolDeleteRoomControl = 4;
+    inline constexpr int kPoolDeleteComplexControl = 5;
+    inline constexpr int kPoolLocateControl = 6;
+    inline constexpr int kPoolMechanicControl = 7;
     inline constexpr int kMostPoolTicket = 2000;
 
     /// The pool complex a changing room lets guests into.
     struct PoolComplexFacts
     {
+        std::u16string name { }; ///< Empty for the default
         std::int64_t ticket = 0; ///< Hundredths
         bool open = false;
+        std::int64_t people = 0; ///< In the complex
     };
 
     struct SceneryTabInfo

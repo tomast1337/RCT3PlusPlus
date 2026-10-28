@@ -375,6 +375,7 @@ namespace rct3::scene
     {
         follow_panel(scene);
         PoolTool& t = scene.pooling;
+        t.room_placed.reset(); // Its window opened, and the click that placed it was not taken as a pick
         // The pointer finds the park as it was before the work shown, which moves with it.
         swap_work(scene);
         const auto spot = t.item && !over ? pointed_spot(scene, at, size) : std::nullopt;
@@ -479,6 +480,34 @@ namespace rct3::scene
         water.resize(scene.saved_pool_water);
         std::ranges::copy(park::pool_water(scene.pools), std::back_inserter(water));
         rebuild_ground(device, scene, assets);
+    }
+
+    void delete_pool_complex(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t room)
+    {
+        const auto& items = scene.build.items;
+        if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+            return;
+        const auto type = std::ranges::find_if(items.get(), [](const park::BuildItem& i) { return i.overlay == park::kPoolOverlay && i.pool_prices.size() == 18; });
+        if (type == items.get().end())
+            return;
+        const auto prices = std::span<const std::int32_t, 18>(type->pool_prices.data(), 18);
+        const std::vector<save::Tile> complex = park::pool_complex(scene.pools, room);
+        if (complex.empty())
+            return;
+        // Each square goes as the delete tool takes it up, the ground left flat at its surface; the rooms
+        // opening on them go with them.
+        std::int64_t cost = 0;
+        for (const save::Tile tile : complex)
+            if (const auto square = scene.pools.at(tile.col, tile.row))
+            {
+                scene.grid.at(tile.col, tile.row).corners.fill(static_cast<float>(square->surface));
+                cost += park::take_up_pool(scene.pools, prices, tile, tile);
+            }
+        if (scene.park.cash)
+            *scene.park.cash -= cost;
+        if (cost != 0)
+            float_money(scene, tile_point(scene.grid, complex.front()), -cost);
+        pools_changed(device, scene, assets);
     }
 
     void draw_pool_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)

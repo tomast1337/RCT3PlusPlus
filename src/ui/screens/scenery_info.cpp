@@ -3,6 +3,7 @@
 
 #include "save/model/park.hpp"
 #include "strings/unicode.hpp"
+#include "ui/screens/attraction_info.hpp"
 
 #include <algorithm>
 #include <array>
@@ -24,7 +25,9 @@ namespace rct3::ui
         constexpr std::string_view kNeverEmptied = "Bin_NeverEmptied";
         constexpr std::string_view kSignOptions = "Sign_Options";
         constexpr std::string_view kNoEntry = "Sign_NoEntry";
-        constexpr std::string_view kPoolHeading = "Pool_ChangingRoomPanel";
+        constexpr std::string_view kPoolDefaultName = "PoolComplexDefaultName";
+        constexpr std::string_view kPoolName = "PoolComplexName";
+        constexpr std::string_view kPeopleIn = "PeopleInPoolComplex"; ///< Followed by how many, up to 4, or X
         constexpr std::string_view kTicket = "AttractionFinancesDialogLabel_AdmissionPrice";
         constexpr std::array<std::string_view, 2> kPoolStates { "AttractionStatusOpen", "AttractionStatusClosed" }; // By kPoolStateControl's value
         constexpr int kTicketStep = 10;
@@ -54,6 +57,15 @@ namespace rct3::ui
 
     std::vector<SceneryTabInfo> scenery_tabs(const SceneryFacts& facts)
     {
+        // A changing room's tabs sit where an attraction's of the same kind do.
+        if (facts.pool)
+            return {
+                { SceneryTab::RoomDetails, 0, "Guest_Rides", "AttractionDetails_ViewHelp", false, { } },
+                { SceneryTab::RoomFinances, 1, "Attraction_Finances", "AttractionDetails_FinanceHelp", false, { } },
+                { SceneryTab::RoomMode, 6, "Attraction_OpMode", "AttractionDetails_RideOpModeHelp", false, { } },
+                { SceneryTab::RoomCustomers, 8, "Attraction_Customers", "AttractionDetails_CustomersHelp", false, { } },
+                { SceneryTab::RoomMaintenance, 10, "Attraction_Maintenance", "AttractionDetails_RideMaintenanceHelp", false, { } },
+            };
         std::vector<SceneryTabInfo> tabs { { SceneryTab::Destroy, 0, "Attraction_General_Delete", "ATE_TT_Demolish", true, { } } };
         if (const std::vector<std::size_t> slots = scenery_paint_slots(facts); !slots.empty())
         {
@@ -71,8 +83,6 @@ namespace rct3::ui
             tabs.push_back({ SceneryTab::Bin, slot++, "Guest_Stats", "Bin_Statistics", false, { } });
         if (facts.sign != nullptr)
             tabs.push_back({ SceneryTab::Sign, slot++, "Obj_Scenery", kSignOptions, false, { } });
-        if (facts.pool)
-            tabs.push_back({ SceneryTab::Pool, slot++, facts.pool->open ? "Attraction_General_Open" : "Attraction_General_Closed", "AttractionDetails_StateChooserHelp", false, { } });
         return tabs;
     }
 
@@ -109,25 +119,57 @@ namespace rct3::ui
             const std::u16string words = facts.sign->kind == 1 ? std::u16string(strings.get(kNoEntry)) : strings::to_utf16(facts.sign->text);
             page.lines.push_back({ words, { }, false });
         }
-        else if (tab == SceneryTab::Pool && facts.pool)
+        else if (facts.pool)
         {
-            page.heading = strings.get(kPoolHeading);
-            InfoControl& state = page.controls.emplace_back();
-            state.id = kPoolStateControl;
-            state.name = kPoolStates[0];
-            state.kind = InfoControlKind::Choice;
-            state.label = strings.get(kPoolStates[facts.pool->open ? 0 : 1]);
-            for (const std::string_view s : kPoolStates)
-                state.items.emplace_back(strings.get(s));
-            state.value = facts.pool->open ? 0 : 1;
-            InfoControl& ticket = page.controls.emplace_back();
-            ticket.id = kPoolTicketControl;
-            ticket.name = kTicket;
-            ticket.label = strings.get(kTicket);
-            ticket.value = static_cast<int>(std::clamp<std::int64_t>(facts.pool->ticket, 0, kMostPoolTicket));
-            ticket.maximum = kMostPoolTicket;
-            ticket.step = kTicketStep;
-            ticket.decimals = 2;
+            const PoolComplexFacts& pool = *facts.pool;
+            page.title = pool.name.empty() ? std::u16string(strings.get(kPoolDefaultName)) : pool.name;
+            const auto button = [&](int id, std::string_view icon, std::string_view help, bool beside, bool enabled = true) { page.controls.push_back({ .id = id, .name = std::string(icon), .kind = InfoControlKind::Button, .icon = std::string(icon), .enabled = enabled, .beside = beside, .help = std::u16string(strings.get(help)) }); };
+            if (tab == SceneryTab::RoomDetails)
+            {
+                page.controls.push_back({ .id = kPoolNameControl, .name = std::string(kPoolName), .kind = InfoControlKind::Text, .maximum = kLongestAttractionName, .text = page.title, .width = kNameWidth, .help = std::u16string(strings.get(kPoolName)) });
+                button(kPoolDeleteRoomControl, "Attraction_General_Delete", "TT_AttractionDialogIconDestroyChangingRoomButton", false);
+                button(kPoolDeleteComplexControl, "GUI2_DeleteSelection", "TT_AttractionDialogIconDestroyPoolComplexButton", true);
+                button(kPoolLocateControl, "CenterInViewIcon", "TT_AttractionDialogIconFocusCameraButton", true);
+            }
+            else if (tab == SceneryTab::RoomMode)
+            {
+                InfoControl& state = page.controls.emplace_back();
+                state.id = kPoolStateControl;
+                state.name = kPoolStates[0];
+                state.kind = InfoControlKind::Choice;
+                state.label = strings.get(kPoolStates[pool.open ? 0 : 1]);
+                for (const std::string_view s : kPoolStates)
+                    state.items.emplace_back(strings.get(s));
+                state.value = pool.open ? 0 : 1;
+            }
+            else if (tab == SceneryTab::RoomFinances)
+            {
+                InfoControl& ticket = page.controls.emplace_back();
+                ticket.id = kPoolTicketControl;
+                ticket.name = kTicket;
+                ticket.label = strings.get(kTicket);
+                ticket.value = static_cast<int>(std::clamp<std::int64_t>(pool.ticket, 0, kMostPoolTicket));
+                ticket.maximum = kMostPoolTicket;
+                ticket.step = kTicketStep;
+                ticket.decimals = 2;
+            }
+            else if (tab == SceneryTab::RoomCustomers)
+            {
+                // The game words it for none to four people, and for more.
+                // shortcut: guests do not swim yet, so the count stays at none; count them once the simulation
+                // takes guests into pool complexes.
+                const std::string key = pool.people <= 4 ? std::format("{}{}", kPeopleIn, pool.people) : std::format("{}X", kPeopleIn);
+                std::u16string words(strings.get(key));
+                if (const auto mark = words.find(u'#'); mark != std::u16string::npos)
+                    words.replace(mark, 1, ascii(std::to_string(pool.people)));
+                page.lines.push_back({ std::move(words), { }, false, key });
+            }
+            else if (tab == SceneryTab::RoomMaintenance)
+            {
+                // shortcut: pools take no upkeep yet (dirt, cleaning fluids, inspections), so the mechanic's button
+                // is greyed; show their state and enable it once the simulation keeps pools clean.
+                button(kPoolMechanicControl, "Staff_JobIsMechanicIcon", "TT_RideMaintenanceDialog_MechanicButton", false, false);
+            }
         }
         return page;
     }

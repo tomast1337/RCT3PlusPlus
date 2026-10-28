@@ -210,7 +210,7 @@ TEST_CASE("pools: a changing room stands off the pool, opening on a paved square
     CHECK(objects.back().base_height == 4);
 }
 
-TEST_CASE("pools: the changing rooms of a complex are those on squares that meet side to side")
+TEST_CASE("pools: a complex is the squares that meet side to side, and the changing rooms opening on them")
 {
     PoolMap map = ringed(2, 2);
     // Another pool, apart from the first.
@@ -220,6 +220,7 @@ TEST_CASE("pools: the changing rooms of a complex are those on squares that meet
     map.rooms.push_back({ .col = 1, .row = 4, .turn = 2 });
     CHECK(pool_complex_rooms(map, 0) == std::vector<std::size_t> { 0, 2 });
     CHECK(pool_complex_rooms(map, 1) == std::vector<std::size_t> { 1 });
+    CHECK(pool_complex(map, 1).size() == 1);
     // A room goes with the square it opens on.
     (void)take_up_pool(map, kPrices, { 10, 0 }, { 10, 0 });
     CHECK(map.rooms.size() == 2);

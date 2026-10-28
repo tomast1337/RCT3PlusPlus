@@ -110,6 +110,11 @@ namespace rct3::scene
         constexpr std::string_view kDemolishName = "demolish_question";
         constexpr std::string_view kDemolishTitle = "SingleItemDeleteEditor_AI_Title";
         constexpr std::string_view kDemolishText = "SingleItemDeleteEditor_AI_Message";
+        constexpr std::string_view kSellPoolName = "sell_pool_question";
+        constexpr std::string_view kSellPoolTitle = "ConfirmSellPoolComplex_Title";
+        constexpr std::string_view kSellPoolText = "ConfirmSellPoolComplex_Text";
+        constexpr std::u16string_view kSellPoolMark = u"%POOLCOMPLEXNAME%";
+        constexpr std::string_view kPoolDefaultName = "PoolComplexDefaultName";
         constexpr std::string_view kEntranceStays = "YouMayNotSellParkEntrance";
         constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
         constexpr std::string_view kDeleteAreaName = "delete_area";
@@ -160,6 +165,24 @@ namespace rct3::scene
             auto& box = scene.desktop->root().add<ui::QuestionBox>(std::string(kDemolishName), style, std::move(text), std::vector<ui::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
             box.title = std::u16string(strings.get(kDemolishTitle));
             scene.demolish_asked = std::move(refs);
+        }
+
+        /// Asks whether to sell the pool complex the changing room `room` opens on.
+        void ask_sell_pool_complex(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, std::size_t room)
+        {
+            if (scene.desktop->root().find(kSellPoolName))
+                return;
+            const std::string& named = scene.pools.rooms.at(room).complex_name;
+            std::u16string text(strings.get(kSellPoolText));
+            if (const auto at = text.find(kSellPoolMark); at != std::u16string::npos)
+                text.replace(at, kSellPoolMark.size(), named.empty() ? std::u16string(strings.get(kPoolDefaultName)) : strings::to_utf16(named));
+            // It names the room asked from as well.
+            if (const auto at = text.find(u"%NAME%"); at != std::u16string::npos)
+                text.replace(at, 6, ui::scenery_name({ .symbol = scene.pools.rooms.at(room).symbol }, strings));
+            const ui::QuestionBoxStyle style = skins::question_box_style(palette);
+            auto& box = scene.desktop->root().add<ui::QuestionBox>(std::string(kSellPoolName), style, std::move(text), std::vector<ui::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
+            box.title = std::u16string(strings.get(kSellPoolTitle));
+            scene.pool_complex_asked = room;
         }
 
         void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, const config::GameOptions& options, float elapsed)
@@ -586,7 +609,7 @@ namespace rct3::scene
             if (const auto sign = std::ranges::find(scene.signs, o.id, &save::SignState::object_ref); sign != scene.signs.end())
                 f.sign = &*sign;
             if (const auto room = pool_room(scene, o))
-                f.pool = ui::PoolComplexFacts { .ticket = scene.pools.rooms[*room].ticket, .open = scene.pools.rooms[*room].open };
+                f.pool = ui::PoolComplexFacts { .name = strings::to_utf16(scene.pools.rooms[*room].complex_name), .ticket = scene.pools.rooms[*room].ticket, .open = scene.pools.rooms[*room].open };
             return f;
         }
 
@@ -2068,12 +2091,12 @@ namespace rct3::scene
             update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, elapsed);
             update_enclosing(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over);
             update_pooling(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, typing(scene) ? std::span<const ui::PlayCommand> { } : std::span(input.commands));
-            // A changing room just placed opens its window.
-            if (const auto room = std::exchange(scene.pooling.room_placed, std::nullopt))
+            // A changing room just placed opens its window, on the tab last open in a room's.
+            if (const auto room = scene.pooling.room_placed)
                 for (std::size_t i = 0; i < scene.objects.size(); ++i)
                     if (pool_room(scene, scene.objects[i]) == room)
                     {
-                        open_prop(scene, *info, i, assets, options, ui::SceneryTab::Pool);
+                        open_prop(scene, *info, i, assets, options, scene.room_tab.value_or(ui::SceneryTab::RoomDetails));
                         break;
                     }
             // The area delete tool marks the tiles a drag spans; its panel clears them or deletes what stands there.
@@ -2128,7 +2151,7 @@ namespace rct3::scene
                 // While painting a patrol area, the left button paints and does not pick.
                 if (scene.holding)
                     hold_person(scene, pointer.position, { screen.width(), screen.height() }, still && !over, false);
-                else if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab || scene.enclosing.item || scene.pooling.item)
+                else if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab || scene.enclosing.item || scene.pooling.item || scene.pooling.room_placed)
                     ;
                 else if (still && !over && scene.deleting.tool == DeleteTools::Tool::One)
                 {
@@ -2156,7 +2179,10 @@ namespace rct3::scene
                         const save::PlacedObject& o = scene.objects[*picked.prop];
                         if (park_entrance(scene, o))
                             open_management_window(desktop, ui::ManagementTopic::ParkOperations, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
-                        if (clickable_prop(scene, o) || pool_room(scene, o))
+                        // A changing room's window opens on the tab last open in one.
+                        if (pool_room(scene, o))
+                            open_prop(scene, *info, *picked.prop, assets, options, scene.room_tab.value_or(ui::SceneryTab::RoomDetails));
+                        else if (clickable_prop(scene, o))
                             open_prop(scene, *info, *picked.prop, assets, options);
                     }
                     else
@@ -2205,17 +2231,8 @@ namespace rct3::scene
             const auto action = info->take_action();
             if (action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::SceneryTab::Destroy)
             {
-                // Pulled down at once and paid for, as in the game; the panel goes with it. A changing room goes
-                // from the pools.
-                bool gone = true;
-                if (const auto room = pool_room(scene, scene.objects[*scene.shown_prop]))
-                {
-                    scene.pools.rooms.erase(scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room));
-                    pools_changed(device, scene, assets);
-                }
-                else
-                    gone = delete_props(device, scene, assets, std::span(&*scene.shown_prop, 1)).has_value();
-                if (gone)
+                // Pulled down at once and paid for, as in the game; the panel goes with it.
+                if (delete_props(device, scene, assets, std::span(&*scene.shown_prop, 1)).has_value())
                 {
                     scene.shown_prop.reset();
                     info->hide();
@@ -2265,15 +2282,36 @@ namespace rct3::scene
             }
             else if (const auto room = change && scene.shown_prop ? pool_room(scene, scene.objects[*scene.shown_prop]) : std::nullopt)
             {
-                // The whole complex is opened or closed and takes the ticket price, all its rooms alike.
-                for (const std::size_t r : park::pool_complex_rooms(scene.pools, *room))
+                const save::PlacedObject& o = scene.objects[*scene.shown_prop];
+                if (change->id == ui::kPoolDeleteRoomControl)
                 {
-                    if (change->id == ui::kPoolStateControl)
-                        scene.pools.rooms[r].open = change->value == 0;
-                    else if (change->id == ui::kPoolTicketControl)
-                        scene.pools.rooms[r].ticket = change->value;
+                    scene.pools.rooms.erase(scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room));
+                    pools_changed(device, scene, assets);
+                    scene.shown_prop.reset();
+                    info->hide();
                 }
-                open_prop(scene, *info, *scene.shown_prop, assets, options, ui::SceneryTab::Pool);
+                else if (change->id == ui::kPoolDeleteComplexControl)
+                    ask_sell_pool_complex(scene, *assets.strings, assets.palette, *room);
+                else if (change->id == ui::kPoolLocateControl)
+                {
+                    const auto model = scene.models.find(park::model_ref(o));
+                    scene.camera.target = glm::vec3(park::placed_transform(o, model == scene.models.end() ? nullptr : &model->second, scene.grid, scene.fitted)[3]);
+                }
+                else
+                {
+                    // The whole complex is opened or closed, takes the ticket price and the name, all its rooms
+                    // alike. A blank name keeps the old one, as an attraction's does.
+                    for (const std::size_t r : park::pool_complex_rooms(scene.pools, *room))
+                    {
+                        if (change->id == ui::kPoolStateControl)
+                            scene.pools.rooms[r].open = change->value == 0;
+                        else if (change->id == ui::kPoolTicketControl)
+                            scene.pools.rooms[r].ticket = change->value;
+                        else if (change->id == ui::kPoolNameControl && change->text.find_first_not_of(u' ') != std::u16string::npos)
+                            scene.pools.rooms[r].complex_name = strings::to_utf8(change->text);
+                    }
+                    open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
+                }
             }
             else if (change && !scene.shown_party.empty())
             {
@@ -2316,6 +2354,8 @@ namespace rct3::scene
                 if (*tab < scene.prop_tabs.size())
                 {
                     scene.prop_tab = scene.prop_tabs[*tab];
+                    if (pool_room(scene, scene.objects[*scene.shown_prop]))
+                        scene.room_tab = scene.prop_tab;
                     show_info_page(scene, *info, assets, options);
                 }
             }
@@ -3305,6 +3345,19 @@ namespace rct3::scene
         {
             if (const auto answer = question->take_answer())
                 scene.leave = scene.leave || *answer == 0;
+        }
+        if (auto question = desktop.root().find_as<ui::QuestionBox>(kSellPoolName))
+        {
+            if (const auto answer = question->take_answer(); answer && *answer == 0)
+                if (const auto room = std::exchange(scene.pool_complex_asked, std::nullopt); room && *room < scene.pools.rooms.size())
+                {
+                    delete_pool_complex(device, scene, assets, *room);
+                    if (auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName); info && scene.shown_prop)
+                    {
+                        scene.shown_prop.reset();
+                        info->hide();
+                    }
+                }
         }
         if (auto question = desktop.root().find_as<ui::QuestionBox>(kDemolishName))
         {

@@ -94,6 +94,7 @@ namespace rct3::park
         std::int32_t turn = 0; ///< The side towards the paved square it opens on
         std::int64_t ticket = kPoolTicket;
         bool open = false;
+        std::string complex_name { }; ///< Its pool complex's name, the same in every room of it; empty for the default
     };
 
     /// The pools the player has laid, a square to a tile, the extras in them and their changing rooms.
@@ -174,6 +175,10 @@ namespace rct3::park
     /// Whether a changing room may stand at (`col`, `row`), off the pool, opening on the paved square at its
     /// side `turn`, where no other room opens.
     [[nodiscard]] bool pool_room_fits(const PoolMap& map, std::int32_t col, std::int32_t row, std::int32_t turn);
+
+    /// The squares of the complex the room `room` (of map.rooms) opens on: every square joined to the one it
+    /// opens on.
+    [[nodiscard]] std::vector<save::Tile> pool_complex(const PoolMap& map, std::size_t room);
 
     /// The changing rooms of the complex the room `room` (of map.rooms) opens on, itself among them.
     [[nodiscard]] std::vector<std::size_t> pool_complex_rooms(const PoolMap& map, std::size_t room);

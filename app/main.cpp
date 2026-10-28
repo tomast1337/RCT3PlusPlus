@@ -763,7 +763,7 @@ int main(int argc, char** argv)
     rct3::scene::ParkGame park_game; ///< What that park is played as
     std::uint64_t park_log_from = 0; ///< The log's last entry before the park loading now began; 0 before ///< Asked for this frame; its loading screen shows first
     bool quit = false;
-    bool screenshot = false;           ///< Asked for this frame; read from the screen as the frame ends
+    bool screenshot = false;           ///< Asked for this frame; read from the screen as the frame ends. The player's show the park without its interface
     std::filesystem::path script_shot; ///< Where the screenshot a script asked for goes; empty for the user's folder
     // Writes a screenshot or photo to the user's folder for it, and tells the player where it went.
     const auto save_picture = [&](rct3::render::ScreenPixels pixels, config::UserFolder into, std::string_view prefix, std::string_view told) {
@@ -1291,7 +1291,7 @@ int main(int argc, char** argv)
                         if (widgets)
                             rct3::scene::draw_widget_demo(*device, *widgets);
                         else if (park && front)
-                            rct3::scene::draw_park_scene(*device, *park, front->assets);
+                            rct3::scene::draw_park_scene(*device, *park, front->assets, !screenshot || !script_shot.empty());
                         else if (park_to_load && front)
                         {
                             // Warnings from here on are this load's.

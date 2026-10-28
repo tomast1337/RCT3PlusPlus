@@ -546,7 +546,7 @@ namespace rct3::scene
         return scale_for(device, scene);
     }
 
-    void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+    void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool interface)
     {
         profiling::section("Flow", [&] { roll_flow(device, scene); });
         if (!scene.footpaths.waterfalls.empty() || !scene.waterfall_mesh.indices.empty())
@@ -652,6 +652,8 @@ namespace rct3::scene
         if (!scene.lens.water.drops.empty())
             profiling::section("LensDrops", [&] { draw_park_lens(device, scene.lens); });
 
+        if (!interface)
+            return;
         const profiling::Scope zone("Interface");
         scene.list.clear();
         scene.list.set_scale(scale_for(device, scene));

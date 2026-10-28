@@ -3,10 +3,12 @@
 
 #include "logging/log.hpp"
 #include "park/support_columns.hpp"
+#include "profiling/profiler.hpp"
 #include "scene/park_scene.hpp"
 
 #include <algorithm>
 #include <chrono>
+#include <optional>
 #include <set>
 
 namespace rct3::scene
@@ -70,6 +72,8 @@ namespace rct3::scene
             return;
         w.stale = false;
         auto started = std::chrono::steady_clock::now();
+        std::optional<profiling::Scope> diff_zone;
+        diff_zone.emplace("Diff");
 
         // The tiles where anything that holds up columns or is in their way changed.
         std::set<park::SupportTile> tiles;
@@ -107,9 +111,10 @@ namespace rct3::scene
         if (tiles.empty() || sets == nullptr)
             return;
 
+        diff_zone.reset();
         // The time waited for the objects' mesh build in hand is not the supports'.
         const auto waited = std::chrono::steady_clock::now();
-        wait_for_build(scene);
+        profiling::section("Wait", [&] { wait_for_build(scene); });
         started += std::chrono::steady_clock::now() - waited;
         // The old pieces go. Their places in the objects are kept for new ones, so no other object moves.
         std::vector<std::size_t> spare;
@@ -130,7 +135,7 @@ namespace rct3::scene
         std::uint64_t last = 0;
         for (const save::PlacedObject& o : scene.objects)
             last = std::max(last, o.id);
-        park::BuiltSupports built = park::support_columns(scene.objects, scene.models, scene.footpaths.paths, scene.grid, *sets, last, supports_passed(scene), tiles);
+        park::BuiltSupports built = profiling::section("Columns", [&] { return park::support_columns(scene.objects, scene.models, scene.footpaths.paths, scene.grid, *sets, last, supports_passed(scene), tiles); });
         for (std::size_t i = 0; i < built.pieces.size(); ++i)
         {
             save::PlacedObject& piece = built.pieces[i];

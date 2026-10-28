@@ -18,6 +18,7 @@
 #include "park/support_columns.hpp"
 #include "park/track_completion.hpp"
 #include "park/track_edit.hpp"
+#include "park/track_ground.hpp"
 #include "park/track_rules.hpp"
 #include "park/track_split.hpp"
 #include "park/water_fill.hpp"
@@ -97,6 +98,7 @@ namespace rct3::scene
         constexpr std::string_view kDemolishHelp = "ATE_TT_Demolish";
         constexpr std::string_view kCannotPlace = "IllegalTrackPlacement";
         constexpr std::string_view kNotOwned = "PlaceObject_NotOwned"; ///< A piece off land the park owns
+        constexpr std::string_view kInGround = "PlaceObject_IntersectsGround";
         constexpr std::string_view kCostLabel = "ShopItem_CostValue";
         /// The roles track files give pieces (ovl::TrackSection::role) that have a picture of their own in the
         /// construction panel, and the picture.
@@ -422,11 +424,18 @@ namespace rct3::scene
             return park::solid_tiles(others, scene.models, scene.grid);
         }
 
-        /// Whether `o`, its model loaded, may not stand: it would take room `taken` or a path takes, or stand off
-        /// land the park owns.
+        /// Whether the ground `pieces` (their models loaded) would cut may not be cut.
+        bool cut_refused(const ParkScene& scene, std::span<const save::PlacedObject> pieces)
+        {
+            const std::vector<park::GroundCut> cuts = park::ground_cuts(pieces, scene.models, scene.grid);
+            return !cuts.empty() && park::cuts_refused(cuts, scene.grid, park::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid), scene.footpaths.water.bodies);
+        }
+
+        /// Whether `o`, its model loaded, may not stand: it would take room `taken` or a path takes, stand off
+        /// land the park owns, or cut ground that may not be cut.
         bool clashes(const ParkScene& scene, const park::SolidTiles& taken, const save::PlacedObject& o)
         {
-            return park::first_refused(std::span(&o, 1), scene.models, taken, scene.footpaths.paths, scene.grid).has_value();
+            return park::first_refused(std::span(&o, 1), scene.models, taken, scene.footpaths.paths, scene.grid).has_value() || cut_refused(scene, std::span(&o, 1));
         }
 
         /// Makes the park's own trains of `ride` ghosts, whose crash off an open end of the track harms nothing and
@@ -452,6 +461,7 @@ namespace rct3::scene
             b.off_water = false;
             b.clashes = false;
             b.unowned = false;
+            b.in_ground = false;
             b.ghost_doors = 0;
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             const bool starting = opening(ride);
@@ -582,7 +592,10 @@ namespace rct3::scene
             }
             b.ghost_doors = shown.size() - pieces;
             const auto refused = park::first_refused(shown, scene.models, taken_room(scene, b), scene.footpaths.paths, scene.grid);
-            b.clashes = !whole || refused.has_value();
+            // shortcut: the ground a ghost would cut is cut only once it is built, upgrade to show the cut under the
+            // ghost if pieces into hills are hard to see.
+            b.in_ground = whole && !refused && cut_refused(scene, std::span(shown).first(pieces));
+            b.clashes = !whole || refused.has_value() || b.in_ground;
             b.unowned = refused && refused->unowned;
             // Ghost track is held up as built track is, its supports ghosts too.
             if (const park::SupportSets* sets = support_sets(scene, assets))
@@ -718,7 +731,7 @@ namespace rct3::scene
                 const park::PieceShape& shape = c->pieces[b.picked->index];
                 v.piece = piece_name(*assets.strings, shape.record.name);
                 if (!b.ghost || b.clashes)
-                    v.piece = assets.strings->get(b.unowned ? kNotOwned : kCannotPlace);
+                    v.piece = assets.strings->get(b.unowned ? kNotOwned : b.in_ground ? kInGround : kCannotPlace);
                 else if (b.off_water)
                     v.piece = assets.strings->get("PlaceObject_MustBeOnWater");
                 if (!b.complaint.empty())
@@ -877,6 +890,23 @@ namespace rct3::scene
                 *scene.park.cash -= shape.record.cost;
             }
             ++scene.built;
+            // The ground it passes into is cut down round it, the scenery standing there seated again.
+            // shortcut: the cut costs nothing, upgrade when the original's price for moving ground is matched.
+            if (const auto cuts = park::ground_cuts(std::span(&b.ghost->object, 1), scene.models, scene.grid); !cuts.empty())
+            {
+                const park::GroundHolds holds = park::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
+                save::Tile low = cuts.front().tile;
+                save::Tile high = low;
+                for (const park::GroundCut& cut : cuts)
+                {
+                    scene.grid.at(cut.tile.col, cut.tile.row).corners = cut.corners;
+                    low = { std::min(low.col, cut.tile.col), std::min(low.row, cut.tile.row) };
+                    high = { std::max(high.col, cut.tile.col), std::max(high.row, cut.tile.row) };
+                }
+                if (park::seat_followers(scene.objects, holds, scene.models, scene.grid, low, high))
+                    objects_changed(scene);
+                scene.footpaths.pavings_stale = true;
+            }
             const bool closed_before = ride.track->circuit;
             // Its end meeting where the first piece starts closes the track.
             if (!opening(ride) && !b.backward && !b.selected)

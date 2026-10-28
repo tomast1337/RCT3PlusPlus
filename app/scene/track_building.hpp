@@ -121,6 +121,7 @@ namespace rct3::scene
         bool off_water = false;      ///< The ghost's piece stands only on water, and some of it is on dry land
         bool clashes = false;        ///< The ghost's piece (or any of a design) takes room a solid item or a path takes, or is off owned land
         bool unowned = false;        ///< Of those, it stands off land the park owns
+        bool in_ground = false;      ///< Of those, it cuts into the ground
         std::size_t ghost_doors = 0; ///< The design's doors the ghost shows with its track
         std::string complaint;       ///< String key: why the track was last not finished; cleared by the next action
         bool arm = false;            ///< The ride's riders sit on arms, whose angles its pieces hold

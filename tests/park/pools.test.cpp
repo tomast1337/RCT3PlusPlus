@@ -80,6 +80,90 @@ TEST_CASE("pools: a lone square, an end and a channel")
     CHECK(has(channel, PoolWall::Edge, 3));
 }
 
+namespace
+{
+
+    /// `map` with its water squares laid with `edge`.
+    PoolMap edged(PoolMap map, PoolEdge edge)
+    {
+        for (PoolSquare& s : map.squares)
+            s.edge = edge;
+        return map;
+    }
+
+    /// The top pieces of the walls of the square at (`col`, `row`), as name and turn.
+    std::vector<std::pair<std::string_view, std::int32_t>> tops(const PoolMap& map, std::int32_t col, std::int32_t row)
+    {
+        std::vector<std::pair<std::string_view, std::int32_t>> out;
+        for (const PoolPiece& p : pool_pieces(map, *map.at(col, row)))
+            if (p.symbol.ends_with("Top") && !p.symbol.starts_with("Solid"))
+                out.emplace_back(p.symbol, p.turn);
+        return out;
+    }
+
+    using Tops = std::vector<std::pair<std::string_view, std::int32_t>>;
+
+} // namespace
+
+TEST_CASE("pools: the edge setting shapes a pool's outside corners")
+{
+    CHECK(tops(ringed(4, 4), 1, 1) == Tops { { "Corner1Top", 2 } });
+    CHECK(tops(edged(ringed(4, 4), PoolEdge::Diagonal), 1, 1) == Tops { { "Corner2Top", 2 } });
+    CHECK(tops(edged(ringed(4, 4), PoolEdge::Tight), 4, 4) == Tops { { "CurveCorner5Top", 0 } });
+    // The edges beside a tight curve stay straight.
+    CHECK(tops(edged(ringed(4, 4), PoolEdge::Tight), 2, 1) == Tops { { "EdgeTop", 2 } });
+}
+
+TEST_CASE("pools: a loose curve sweeps into the squares beside its corner")
+{
+    const PoolMap map = edged(ringed(5, 4), PoolEdge::Loose);
+    CHECK(tops(map, 1, 1) == Tops { { "CurveCorner9Top", 2 } });
+    CHECK(tops(map, 5, 4) == Tops { { "CurveCorner9Top", 0 } });
+    // Along the row before: meeting the sweep at the column before, then at the next column.
+    CHECK(tops(map, 2, 1) == Tops { { "CurveEdge1Top", 2 } });
+    CHECK(tops(map, 3, 1) == Tops { { "EdgeTop", 2 } });
+    CHECK(tops(map, 4, 1) == Tops { { "CurveEdge2Top", 2 } });
+    // Down the column before: meeting the sweep at the row before.
+    CHECK(tops(map, 1, 2) == Tops { { "CurveEdge2Top", 3 } });
+    // Three wide, the middle square meets a sweep at both ends.
+    CHECK(tops(edged(ringed(3, 3), PoolEdge::Loose), 2, 1) == Tops { { "CurveEdge3Top", 2 } });
+}
+
+TEST_CASE("pools: a loose curve beside a straight wall is tight, and the curves beside it meet its neighbours' sweeps")
+{
+    PoolMap map = edged(ringed(4, 4), PoolEdge::Loose);
+    std::ranges::find_if(map.squares, [](const PoolSquare& s) { return s.col == 2 && s.row == 1; })->edge = PoolEdge::Straight;
+    CHECK(tops(map, 1, 1) == Tops { { "CurveCorner5Top", 2 } });
+    CHECK(tops(map, 1, 2) == Tops { { "EdgeTop", 3 } });
+    // Two wide: each corner tight beside a sweep along the next column or the row before.
+    PoolMap narrow = edged(ringed(2, 4), PoolEdge::Loose);
+    std::ranges::find_if(narrow.squares, [](const PoolSquare& s) { return s.col == 1 && s.row == 1; })->edge = PoolEdge::Tight;
+    CHECK(tops(narrow, 1, 1) == Tops { { "CurveCorner7Top", 2 } });
+}
+
+TEST_CASE("pools: an inside corner is rounded, square where a square corner meets it")
+{
+    // An L of water: rows 1 and 2 four long, then two more rows two wide; the inside corner at (2, 2).
+    PoolMap map;
+    for (std::int32_t row = 1; row <= 4; ++row)
+        for (std::int32_t col = 1; col <= (row <= 2 ? 4 : 2); ++col)
+            map.squares.push_back({ .col = col, .row = row, .kind = PoolKind::Water, .surface = 4, .depth = 2 });
+    // Turned to the second of the two sides round it: the next row, then the next column.
+    CHECK(tops(map, 2, 2) == Tops { { "CurveCorner1Top", 1 } });
+    // A ring round a paved middle: each corner square has a square corner outside, so its inside corner is square.
+    PoolMap cut = ringed(3, 3);
+    std::ranges::find_if(cut.squares, [](const PoolSquare& s) { return s.col == 2 && s.row == 2; })->kind = PoolKind::Tile;
+    const auto walls = tops(cut, 1, 1);
+    CHECK(std::ranges::contains(walls, std::pair { std::string_view("Corner3Top"), 1 }));
+}
+
+TEST_CASE("pools: laid curved, the ends of strips and lone squares are rounded")
+{
+    PoolMap strip { { { .col = 0, .row = 0, .kind = PoolKind::Water, .surface = 4, .depth = 2, .edge = PoolEdge::Tight }, { .col = 0, .row = 1, .kind = PoolKind::Water, .surface = 4, .depth = 2 } } };
+    CHECK(tops(strip, 0, 0) == Tops { { "CurveEndTop", 1 } });
+    CHECK(tops(strip, 0, 1) == Tops { { "EndTop", 3 } });
+}
+
 TEST_CASE("pools: a square is a stack from its floor to its surface, railed where the pool ends")
 {
     const PoolMap map = ringed(2, 2);

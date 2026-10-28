@@ -83,6 +83,7 @@ namespace rct3::scene
                 return;
             const ui::PoolEditor& e = panel->editor();
             scene.pooling.height = e.snap ? std::nullopt : std::optional(e.height);
+            scene.pooling.edge = static_cast<park::PoolEdge>(std::clamp(e.edge, 0, 3));
             if (e.grid != scene.pooling.grid)
                 scene.show_grid = scene.pooling.grid = e.grid;
             if (!panel->take_change())
@@ -135,7 +136,7 @@ namespace rct3::scene
             const auto area = marked(a, b);
             for (std::int32_t row = area[1]; row <= area[3]; ++row)
                 for (std::int32_t col = area[0]; col <= area[2]; ++col)
-                    squares.push_back({ .col = col, .row = row, .kind = kind, .surface = surface, .depth = depth, .board = dive ? scene.pooling.board : 0, .turn = dive ? scene.pooling.turns : 0 });
+                    squares.push_back({ .col = col, .row = row, .kind = kind, .surface = surface, .depth = depth, .board = dive ? scene.pooling.board : 0, .turn = dive ? scene.pooling.turns : 0, .edge = scene.pooling.edge });
             const std::int64_t cost = park::lay_pool(map, prices, squares);
             return { std::move(map), cost };
         }
@@ -339,7 +340,7 @@ namespace rct3::scene
         if ((item.kind != park::BuildKind::PoolSquare || item.pool_prices.size() != 18) && item.kind != park::BuildKind::PoolExtra && item.kind != park::BuildKind::PoolRoom)
             return false;
         const bool redraw = put_back(scene) || scene.pooling.redraw;
-        scene.pooling = PoolTool { .item = item, .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .height = scene.pooling.height, .grid = scene.pooling.grid, .redraw = redraw, .turns = scene.pooling.turns, .preview_target = scene.pooling.preview_target, .preview_pixels = scene.pooling.preview_pixels };
+        scene.pooling = PoolTool { .item = item, .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .height = scene.pooling.height, .grid = scene.pooling.grid, .edge = scene.pooling.edge, .redraw = redraw, .turns = scene.pooling.turns, .preview_target = scene.pooling.preview_target, .preview_pixels = scene.pooling.preview_pixels };
         return true;
     }
 
@@ -348,7 +349,7 @@ namespace rct3::scene
         if (auto panel = panel_of(scene))
             panel->hide();
         const bool redraw = put_back(scene) || scene.pooling.redraw;
-        scene.pooling = PoolTool { .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .grid = scene.pooling.grid, .redraw = redraw, .turns = scene.pooling.turns, .preview_target = scene.pooling.preview_target, .preview_pixels = scene.pooling.preview_pixels }; // The marks go on the next frame
+        scene.pooling = PoolTool { .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .grid = scene.pooling.grid, .edge = scene.pooling.edge, .redraw = redraw, .turns = scene.pooling.turns, .preview_target = scene.pooling.preview_target, .preview_pixels = scene.pooling.preview_pixels }; // The marks go on the next frame
     }
 
     void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets)

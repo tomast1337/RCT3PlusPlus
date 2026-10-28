@@ -9,6 +9,13 @@
 // piece at the bottom and, where a side or a corner meets no water, a wall turned to face it. A square of
 // the pool has a railing on each side that meets no square of the pool.
 //
+// Where two walls meet round the outside of a corner, the square's edge setting, chosen when it was laid,
+// shapes the corner: square, cut across, or a tight curve inside the square. A loose curve sweeps on into the
+// squares on either side, which take curved walls to meet it; it falls back to a tight curve where a square
+// beside it has walls laid straight or cut across, or is a lone square or the end of a strip. Squares laid
+// curved round the ends of strips and lone squares too. A corner where water goes round the inside has a
+// rounded wall, square where a square corner meets it, and curved to meet a sweep beside it.
+//
 // Extras (sun loungers, lamps, ladders and the rest) are scenery items standing on a square, each against one
 // of its sides. Each takes parts of its square, named by the words of its pool extra setting: the middle of a
 // paved square or of a water square, the side it is against, the wall under that side, the water across from
@@ -46,6 +53,15 @@ namespace rct3::park
         HighDive, ///< A high diving board, on a paved square, facing the water at its side `turn`
     };
 
+    /// How a square's walls go round its corners, as the pool tool's edge buttons set it.
+    enum class PoolEdge : std::uint8_t
+    {
+        Straight,
+        Diagonal, ///< Cut across
+        Tight,    ///< A curve inside the corner square
+        Loose,    ///< A wide curve, sweeping on into the squares either side
+    };
+
     struct PoolSquare
     {
         std::int32_t col = 0;
@@ -55,6 +71,7 @@ namespace rct3::park
         std::int32_t depth = 2;   ///< Whole units: 1 shallow, 2 normal, 3 deep
         std::int32_t board = 0;   ///< A high diving board's height over the surface, whole units
         std::int32_t turn = 0;    ///< The side a high diving board faces
+        PoolEdge edge = PoolEdge::Straight;
     };
 
     /// A high diving board climbs in levels of this many units: a stretch of ladder and a board at each.
@@ -142,9 +159,8 @@ namespace rct3::park
         kColRowNext = 1u << 7, ///< Between 3 and 0: the column before, the next row
     };
 
-    /// The walls of a water square whose neighbours holding water are the bits `water` (PoolSide).
-    /// shortcut: straight edges and square corners only; the pool type's curved pieces wait for the curve
-    /// modes of the pool tool.
+    /// The walls of a water square whose neighbours holding water are the bits `water` (PoolSide), whatever
+    /// its edge setting.
     [[nodiscard]] std::vector<PoolWallPiece> pool_walls(std::uint8_t water) noexcept;
 
     /// The neighbours of `square` that hold water, at its own surface, as pool_walls takes them.
@@ -191,7 +207,7 @@ namespace rct3::park
 
     /// Lays `squares` in `map`, each over whatever square was where it goes, and returns what that costs:
     /// each new square's price and the refund of each it takes the place of, and of the extras on it. A square
-    /// laid over one the same costs nothing. Changing rooms whose square is no longer paved, or that now stand
+    /// laid over one the same, but for its edge setting, costs nothing. Changing rooms whose square is no longer paved, or that now stand
     /// in the pool, go.
     std::int64_t lay_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, std::span<const PoolSquare> squares);
 

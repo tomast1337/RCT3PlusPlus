@@ -106,7 +106,7 @@ await frames(3);
 expect(park.cash()! < cash, "the water paid for");
 expect(count("Base") === 36, `36 squares of water, not ${count("Base")}`);
 expect(count("SolidTop") === 28, `28 tiles left round it, not ${count("SolidTop")}`);
-expect(count("Corner2Top") === 4 && count("EdgeTop") === 16, `four corners and sixteen edges, not ${count("Corner2Top")} and ${count("EdgeTop")}`);
+expect(count("Corner1Top") === 4 && count("EdgeTop") === 16, `four corners and sixteen edges, not ${count("Corner1Top")} and ${count("EdgeTop")}`);
 expect(map.tile(c0 + 3, r0 + 3)!.corners.every((h) => h < map.tile(c0 - 1, r0 - 1)!.corners[0]), "the ground dug out under the pool");
 await screenshot("pool_built");
 camera.look({ col: c0 + 1.5, row: r0 + 1.5 }, { col: c0 + 4.5, row: r0 + 5, up: 2.5 });
@@ -249,7 +249,53 @@ await frames(10);
 await screenshot("pool_inner_corner");
 expect(count("FullTop") === 1, `a lone square walled all round, not ${count("FullTop")}`);
 expect(count("EndTop") === 3, `the strip's two ends and the long strip's far end, not ${count("EndTop")}`);
-expect(count("Corner3Top") === 1, `the inner corner, not ${count("Corner3Top")}`);
+expect(count("CurveCorner1Top") === 1, `the rounded inner corner, not ${count("CurveCorner1Top")}`);
+
+// The first pool laid again with loose curves from the panel: its corners sweep on into the squares beside
+// them, for nothing. Then a tight curve on one corner, and one cut across.
+const open_editor = async () => {
+    build.stop();
+    if (!ui.find("tools/Rides/Obj_Pools"))
+        await ui.click(rides);
+    await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
+    await ui.click("tools/Rides/Obj_Pools");
+    await until(() => ui.find("pool_panel/Pool_PoolPanel") !== undefined, 120, "the pool panel");
+    // It opens on the page last shown.
+    const on_editor = () => ui.children("pool_panel/body")?.includes("editor") === true;
+    if (!on_editor())
+        await ui.click("pool_panel/Pool_PoolPanel");
+    await until(on_editor, 120, "the pool panel's editor");
+};
+const relay = async (edge: string, a: [number, number], b: [number, number]) => {
+    await ui.click(`pool_panel/body/editor/${edge}`);
+    await frames(2);
+    await pointer.drag(on_view(...a), on_view(...b), 6);
+    await frames(3);
+};
+camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 16, up: 14 });
+await frames(10);
+await open_editor();
+await ui.click("pool_panel/body/editor/Pool_DepthNormal");
+await frames(2);
+cash = park.cash()!;
+await relay("Pool_CurveLarge", [c0 + 1, r0 + 1], [c0 + 6, r0 + 6]);
+expect(count("CurveCorner9Top") === 4, `four sweeping corners, not ${count("CurveCorner9Top")}`);
+expect(count("CurveEdge1Top") === 4 && count("CurveEdge2Top") === 4, `the edges meeting them, not ${count("CurveEdge1Top")} and ${count("CurveEdge2Top")}`);
+// The park runs meanwhile, a few cents either way.
+expect(Math.abs(park.cash()! - cash) < 100, `a new edge free, not ${park.cash()! - cash}`);
+await relay("Pool_CurveSmall", [c0 + 6, r0 + 6], [c0 + 6, r0 + 6]);
+await relay("Pool_CurveDiagonal", [c0 + 1, r0 + 6], [c0 + 1, r0 + 6]);
+expect(count("CurveCorner9Top") === 2 && count("Corner2Top") === 1, `two sweeps left and a corner cut across, not ${count("CurveCorner9Top")} and ${count("Corner2Top")}`);
+expect(count("CurveCorner5Top") + count("CurveCorner6Top") + count("CurveCorner7Top") === 1, "a tight curve");
+build.stop();
+await frames(2);
+camera.look({ col: c0 + 3.5, row: r0 + 4.5 }, { col: c0 + 3.5, row: r0 + 9, up: 20 });
+await frames(10);
+await screenshot("pool_curves");
+await open_editor();
+await ui.click("pool_panel/body/editor/Pool_CurveStraight");
+await frames(2);
+build.stop();
 
 // The panel's delete tool takes the last row of the first pool's tiles up again: they go while the drag lasts,
 // the money back showing at the pointer, and are paid back when it is let go.
@@ -257,14 +303,7 @@ camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 16, up: 14 })
 await frames(10);
 cash = park.cash()!;
 const paved = count("SolidTop");
-build.stop();
-if (!ui.find("tools/Rides/Obj_Pools"))
-    await ui.click(rides);
-await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
-await ui.click("tools/Rides/Obj_Pools");
-await until(() => ui.find("pool_panel/Pool_PoolPanel") !== undefined, 120, "the pool panel again");
-await ui.click("pool_panel/Pool_PoolPanel");
-await until(() => ui.find("pool_panel/body/editor/Pool_DeleteArea") !== undefined, 120, "the editor page");
+await open_editor();
 expect(ui.find("pool_panel/body/editor/Pool_PlaceTiles") !== undefined, "the editor as it was left");
 await ui.click("pool_panel/body/editor/Pool_DeleteArea");
 await frames(2);

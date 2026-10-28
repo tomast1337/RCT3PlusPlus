@@ -15,13 +15,36 @@ namespace rct3::park
 
         constexpr std::array<std::array<std::int32_t, 2>, 4> kSideStep { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } }; // By turn
 
-        /// The piece names of one wall shape, from the bottom of a stack up.
-        constexpr std::array<std::array<std::string_view, 3>, 5> kWallPieces { {
-            { "EdgeBot", "EdgeMid", "EdgeTop" },
-            { "Corner2Bot", "Corner2Mid", "Corner2Top" },
-            { "Corner3Bot", "Corner3Mid", "Corner3Top" },
-            { "EndBot", "EndMid", "EndTop" },
-            { "FullBot", "FullMid", "FullTop" },
+        /// A wall of the pool type, the names of its pieces from the bottom of a stack up.
+        using WallStack = std::array<std::string_view, 3>;
+        constexpr WallStack kEdge { "EdgeBot", "EdgeMid", "EdgeTop" };
+        constexpr WallStack kSquareCorner { "Corner1Bot", "Corner1Mid", "Corner1Top" };
+        constexpr WallStack kCutCorner { "Corner2Bot", "Corner2Mid", "Corner2Top" };
+        constexpr WallStack kSquareInside { "Corner3Bot", "Corner3Mid", "Corner3Top" };
+        constexpr WallStack kEnd { "EndBot", "EndMid", "EndTop" };
+        constexpr WallStack kFull { "FullBot", "FullMid", "FullTop" };
+        constexpr WallStack kCurvedEnd { "CurveEndBot", "CurveEndMid", "CurveEndTop" };
+        constexpr WallStack kCurvedFull { "CurveFullBot", "CurveFullMid", "CurveFullTop" };
+        constexpr WallStack kSweep { "CurveCorner9Bot", "CurveCorner9Mid", "CurveCorner9Top" };
+        /// An edge meeting a sweep: at its next turn, at its turn before, at both.
+        constexpr std::array<WallStack, 3> kSweptEdge { {
+            { "CurveEdge1Bot", "CurveEdge1Mid", "CurveEdge1Top" },
+            { "CurveEdge2Bot", "CurveEdge2Mid", "CurveEdge2Top" },
+            { "CurveEdge3Bot", "CurveEdge3Mid", "CurveEdge3Top" },
+        } };
+        /// A tight curve, alone, then meeting a sweep at its turn before, at its turn after next, at both.
+        constexpr std::array<WallStack, 4> kTightCorner { {
+            { "CurveCorner5Bot", "CurveCorner5Mid", "CurveCorner5Top" },
+            { "CurveCorner7Bot", "CurveCorner7Mid", "CurveCorner7Top" },
+            { "CurveCorner6Bot", "CurveCorner6Mid", "CurveCorner6Top" },
+            { "CurveCorner8Bot", "CurveCorner8Mid", "CurveCorner8Top" },
+        } };
+        /// A rounded inside corner, alone, then meeting a sweep at its turn, at its turn before, at both.
+        constexpr std::array<WallStack, 4> kInside { {
+            { "CurveCorner1Bot", "CurveCorner1Mid", "CurveCorner1Top" },
+            { "CurveCorner2Bot", "CurveCorner2Mid", "CurveCorner2Top" },
+            { "CurveCorner3Bot", "CurveCorner3Mid", "CurveCorner3Top" },
+            { "CurveCorner4Bot", "CurveCorner4Mid", "CurveCorner4Top" },
         } };
 
         /// What one square costs to lay or to take up, from the pool type's price list
@@ -102,6 +125,84 @@ namespace rct3::park
                 return true;
             });
             return cost;
+        }
+
+        /// The water square at side `turn` of `square`, at its surface.
+        std::optional<const PoolSquare&> water_beside(const PoolMap& map, const PoolSquare& square, std::int32_t turn)
+        {
+            const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn & 3)];
+            const auto s = map.at(square.col + dc, square.row + dr);
+            if (!s || s->kind != PoolKind::Water || s->surface != square.surface)
+                return std::nullopt;
+            return s;
+        }
+
+        bool has_wall(const std::vector<PoolWallPiece>& walls, PoolWall shape)
+        {
+            return std::ranges::contains(walls, shape, &PoolWallPiece::shape);
+        }
+
+        /// Whether `square` is the corner of a loose curve that sweeps on into the squares beside it: none of
+        /// them walled straight or cut across, a lone square or the end of a strip.
+        bool sweeps(const PoolMap& map, std::optional<const PoolSquare&> square)
+        {
+            if (!square || square->edge != PoolEdge::Loose || !has_wall(pool_walls(water_around(map, *square)), PoolWall::OuterCorner))
+                return false;
+            for (std::int32_t turn = 0; turn < 4; ++turn)
+                if (const auto next = water_beside(map, *square, turn))
+                {
+                    const auto walls = pool_walls(water_around(map, *next));
+                    const bool angular = next->edge == PoolEdge::Straight || next->edge == PoolEdge::Diagonal;
+                    if (has_wall(walls, PoolWall::End) || has_wall(walls, PoolWall::Full) || (angular && (has_wall(walls, PoolWall::Edge) || has_wall(walls, PoolWall::OuterCorner))))
+                        return false;
+                }
+            return true;
+        }
+
+        /// Whether `square` has a square outside corner.
+        bool square_cornered(const PoolMap& map, std::optional<const PoolSquare&> square)
+        {
+            return square && square->edge == PoolEdge::Straight && has_wall(pool_walls(water_around(map, *square)), PoolWall::OuterCorner);
+        }
+
+        /// The wall stack and its turn for `wall` of the water square `square`.
+        std::pair<WallStack, std::int32_t> wall_stack(const PoolMap& map, const PoolSquare& square, const PoolWallPiece& wall)
+        {
+            const std::int32_t t = wall.turn;
+            const auto swept = [&](std::int32_t turn) { return sweeps(map, water_beside(map, square, turn)); };
+            const bool curved = square.edge == PoolEdge::Tight || square.edge == PoolEdge::Loose;
+            // Which of two sides meet a sweep, as an index: none 0, the first 1, the second 2, both 3.
+            const auto meeting = [&](std::int32_t a, std::int32_t b) { return static_cast<std::size_t>((swept(a) ? 1 : 0) + (swept(b) ? 2 : 0)); };
+            switch (wall.shape)
+            {
+                case PoolWall::Edge:
+                {
+                    const std::size_t at = meeting(t + 1, t - 1);
+                    return { at == 0 ? kEdge : kSweptEdge[at - 1], t };
+                }
+                case PoolWall::OuterCorner:
+                    if (sweeps(map, square))
+                        return { kSweep, t };
+                    if (square.edge == PoolEdge::Straight)
+                        return { kSquareCorner, t };
+                    if (square.edge == PoolEdge::Diagonal)
+                        return { kCutCorner, t };
+                    return { kTightCorner[meeting(t - 1, t + 2)], t };
+                case PoolWall::InnerCorner:
+                {
+                    // Turned to the second of the two sides whose water meets round it.
+                    const std::int32_t turn = (t + 1) & 3;
+                    if (const std::size_t at = meeting(t + 1, t); at != 0)
+                        return { kInside[at], turn };
+                    const bool square_meets = square_cornered(map, square) || square_cornered(map, water_beside(map, square, t)) || square_cornered(map, water_beside(map, square, t + 1));
+                    return { square_meets ? kSquareInside : kInside[0], turn };
+                }
+                case PoolWall::End:
+                    return { curved ? kCurvedEnd : kEnd, t };
+                case PoolWall::Full:
+                    return { curved ? kCurvedFull : kFull, t };
+            }
+            return { kEdge, t };
         }
 
         /// The square at side `turn` of (`col`, `row`).
@@ -239,7 +340,10 @@ namespace rct3::park
         {
             out.push_back({ "Base", floor, 0 });
             for (const PoolWallPiece& wall : pool_walls(water_around(map, square)))
-                stack(kWallPieces[static_cast<std::size_t>(wall.shape)], wall.turn);
+            {
+                const auto [names, turn] = wall_stack(map, square, wall);
+                stack(names, turn);
+            }
         }
         else
         {
@@ -394,6 +498,8 @@ namespace rct3::park
                 *was = square;
                 cost += clear_extras(map, square.col, square.row);
             }
+            else
+                was->edge = square.edge; // A new edge setting alone costs nothing
         }
         drop_loose_rooms(map);
         return cost;

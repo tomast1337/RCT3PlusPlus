@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track_ground.hpp"
 
-#include "park/boundary_fence.hpp"
 #include "park/item_category.hpp"
 #include "park/path_clearance.hpp"
 #include "park/path_tunnels.hpp"
-#include "park/water_fill.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -39,15 +37,6 @@ namespace rct3::park
             out.push_back(cut);
         }
         return out;
-    }
-
-    bool cuts_refused(std::span<const GroundCut> cuts, const save::TerrainGrid& grid, const GroundHolds& holds, std::span<const save::WaterBody> bodies)
-    {
-        return std::ranges::any_of(cuts, [&](const GroundCut& cut) {
-            const auto [col, row] = cut.tile;
-            const auto wet = [&](std::int32_t c, std::int32_t r) { return holds_water(bodies, { c, r }); };
-            return !owned_outright(grid.at(col, row)) || wet(col, row) || wet(col - 1, row) || wet(col + 1, row) || wet(col, row - 1) || wet(col, row + 1) || refuses(holds, cut.tile, grid.at(col, row).corners, cut.corners);
-        });
     }
 
     std::vector<GroundOpening> track_hollows(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)

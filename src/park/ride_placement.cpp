@@ -212,6 +212,48 @@ namespace rct3::park
         return SiteProblem::None;
     }
 
+    std::int32_t clear_height(const RideSite& site, const save::TerrainGrid& grid)
+    {
+        constexpr float kSlack = 0.01f; // Heights read back as floats sit a hair off whole units
+        float top = static_cast<float>(site.height);
+        for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
+            for (std::int32_t c = site.col; c < site.col + site.span[0]; ++c)
+                if (grid.contains(c, r))
+                    top = std::max(top, grid.at(c, r).max_height());
+        return static_cast<std::int32_t>(std::ceil(top - kSlack));
+    }
+
+    LevelledGround levelled_ground(const RideSite& site, Flatten flatten, const save::TerrainGrid& grid)
+    {
+        LevelledGround out;
+        if (flatten == Flatten::Off)
+            return out;
+        const auto height = static_cast<float>(site.height);
+        const std::int32_t reach = flatten == Flatten::Smooth ? 1 : 0;
+        for (std::int32_t r = site.row - reach; r < site.row + site.span[1] + reach; ++r)
+        {
+            for (std::int32_t c = site.col - reach; c < site.col + site.span[0] + reach; ++c)
+            {
+                if (!grid.contains(c, r))
+                    continue;
+                const bool inside = c >= site.col && c < site.col + site.span[0] && r >= site.row && r < site.row + site.span[1];
+                GroundCut cut { { c, r }, grid.at(c, r).corners };
+                // Corners go (col,row), (col+1,row), (col,row+1), (col+1,row+1); a tile round the footprint
+                // moves those on its edge.
+                for (std::size_t k = 0; k < 4; ++k)
+                {
+                    const std::int32_t x = c + static_cast<std::int32_t>(k & 1);
+                    const std::int32_t z = r + static_cast<std::int32_t>(k >> 1);
+                    if (inside || (x >= site.col && x <= site.col + site.span[0] && z >= site.row && z <= site.row + site.span[1]))
+                        cut.corners[k] = height;
+                }
+                if (cut.corners != grid.at(c, r).corners)
+                    (inside ? out.footprint : out.rim).push_back(cut);
+            }
+        }
+        return out;
+    }
+
     void level_ground(save::TerrainGrid& grid, const RideSite& site)
     {
         const auto height = static_cast<float>(site.height);

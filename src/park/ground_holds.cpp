@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground_holds.hpp"
 
+#include "park/boundary_fence.hpp"
 #include "park/ground_paths.hpp"
 #include "park/ground_queues.hpp"
 #include "park/item_category.hpp"
@@ -8,6 +9,7 @@
 #include "park/path_furniture.hpp"
 #include "park/queue_fences.hpp"
 #include "park/support_columns.hpp"
+#include "park/water_fill.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -97,6 +99,24 @@ namespace rct3::park
                 return true;
         }
         return false;
+    }
+
+    bool cuts_refused(std::span<const GroundCut> cuts, const save::TerrainGrid& grid, const GroundHolds& holds, std::span<const save::WaterBody> bodies)
+    {
+        return std::ranges::any_of(cuts, [&](const GroundCut& cut) {
+            const auto [col, row] = cut.tile;
+            const auto wet = [&](std::int32_t c, std::int32_t r) { return holds_water(bodies, { c, r }); };
+            return !owned_outright(grid.at(col, row)) || wet(col, row) || wet(col - 1, row) || wet(col + 1, row) || wet(col, row - 1) || wet(col, row + 1) || refuses(holds, cut.tile, grid.at(col, row).corners, cut.corners);
+        });
+    }
+
+    std::int64_t cuts_cost(std::span<const GroundCut> cuts, const save::TerrainGrid& grid)
+    {
+        float moved = 0;
+        for (const GroundCut& cut : cuts)
+            for (std::size_t k = 0; k < 4; ++k)
+                moved += std::abs(cut.corners[k] - grid.at(cut.tile.col, cut.tile.row).corners[k]);
+        return std::lround(moved * kShapeCost);
     }
 
     bool seat_followers(std::span<save::PlacedObject> objects, const GroundHolds& holds, const ObjectModels& models, const save::TerrainGrid& grid, save::Tile first, save::Tile last)

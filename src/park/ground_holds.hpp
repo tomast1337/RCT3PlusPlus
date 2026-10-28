@@ -29,6 +29,7 @@ namespace rct3::park
 
     inline constexpr float kDeckRoom = 0.25f; ///< Chosen by eye: kept between the ground and a raised path's underside
     inline constexpr float kPavedTilt = 1.5f; ///< Chosen by eye: how far from flat a tile with a path on the ground may go
+    inline constexpr float kShapeCost = 25;   ///< Price, in hundredths, of a height unit of one corner point moved
 
     /// What the land tools must leave be on each tile, by tile (row << 16 | column), gathered as a stroke starts.
     struct GroundHolds
@@ -44,6 +45,20 @@ namespace rct3::park
 
     /// Whether the ground of `tile` may not go from corners `was` to `now`.
     [[nodiscard]] bool refuses(const GroundHolds& holds, save::Tile tile, const std::array<float, 4>& was, const std::array<float, 4>& now);
+
+    /// A tile's ground after a cut or levelling.
+    struct GroundCut
+    {
+        save::Tile tile { };
+        std::array<float, 4> corners { };
+    };
+
+    /// Whether any of `cuts` may not be made: for `holds`, off land the park owns outright, or on a tile holding
+    /// water of `bodies` or beside one.
+    [[nodiscard]] bool cuts_refused(std::span<const GroundCut> cuts, const save::TerrainGrid& grid, const GroundHolds& holds, std::span<const save::WaterBody> bodies);
+
+    /// What moving the ground to `cuts` costs, in hundredths.
+    [[nodiscard]] std::int64_t cuts_cost(std::span<const GroundCut> cuts, const save::TerrainGrid& grid);
 
     /// Seats the followers with a tile from `first` to `last` under them on the ground again; whether there were any.
     bool seat_followers(std::span<save::PlacedObject> objects, const GroundHolds& holds, const ObjectModels& models, const save::TerrainGrid& grid, save::Tile first, save::Tile last);

@@ -35,9 +35,8 @@ namespace rct3::scene
 
     namespace
     {
-        // Prices, in hundredths: painting one tile.
+        // Prices, in hundredths: painting one tile (moving the ground is park::kShapeCost).
         constexpr std::int32_t kPaintCost = 50;
-        constexpr float kShapeCost = 25;      ///< A height unit of one corner point moved by a brush
         constexpr float kSmoothRate = 2.5f;   ///< Of the way to where a smoothing brush wants the ground, a second
         constexpr float kSmoothPass = 0.05f;  ///< Seconds between smoothing passes
         constexpr float kRumbleQuiet = 0.25f; ///< Chosen by eye: the rumble of a shaping stroke while the ground stays still
@@ -275,7 +274,7 @@ namespace rct3::scene
             if (!trial)
                 return;
             const float moved = trial->second;
-            const auto cost = static_cast<std::int32_t>(std::lround(std::max(moved - l.paid_for, 0.0f) * kShapeCost));
+            const auto cost = static_cast<std::int32_t>(std::lround(std::max(moved - l.paid_for, 0.0f) * park::kShapeCost));
             if (!affordable(scene, cost))
                 return;
             pay(scene, cost, *l.tile);
@@ -357,7 +356,7 @@ namespace rct3::scene
             if (!trial)
                 return;
             const float moved = trial->second;
-            const auto cost = static_cast<std::int32_t>(std::lround(std::max(moved - l.paid_for, 0.0f) * kShapeCost));
+            const auto cost = static_cast<std::int32_t>(std::lround(std::max(moved - l.paid_for, 0.0f) * park::kShapeCost));
             if (!affordable(scene, cost))
                 return;
             pay(scene, cost, *l.tile);
@@ -393,7 +392,7 @@ namespace rct3::scene
                 auto trial = try_shape(scene, shaped ? *shaped : scene.grid, [&](save::TerrainGrid& g) { return park::smooth_ground(g, tool.tool, *spot, reach, kSmoothRate * kSmoothPass, l.target, seed, [&](save::Tile t) { return shapeable(scene, t); }); });
                 if (!trial)
                     continue;
-                const auto cost = static_cast<std::int32_t>(std::lround(trial->second * kShapeCost));
+                const auto cost = static_cast<std::int32_t>(std::lround(trial->second * park::kShapeCost));
                 if (trial->second <= 0 || !affordable(scene, cost))
                     continue;
                 pay(scene, cost, { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) });

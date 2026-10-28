@@ -38,6 +38,10 @@ namespace rct3::scene
     /// Opens the pool panel (ui/screens/pool_panel.hpp) with the editor's tool out, or closes it.
     void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets);
 
+    /// Swaps the pool tool's work shown, not yet kept, with the pools and the ground as they were before it;
+    /// twice swaps it back.
+    void swap_pool_work(ParkScene& scene);
+
     /// Marks the squares under a drag at `at`, in a view of `size`, while `down`; lays them when it ends.
     void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, std::span<const ui::PlayCommand> commands);
 

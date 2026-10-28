@@ -323,16 +323,20 @@ namespace rct3::scene
             return true;
         }
 
-        /// Swaps the work shown with what was there before; twice swaps it back.
-        void swap_work(ParkScene& scene)
-        {
-            PoolTool& t = scene.pooling;
-            if (!t.before)
-                return;
-            std::swap(scene.pools, *t.before);
-            for (auto& [tile, corners] : t.dug)
-                std::swap(scene.grid.at(tile.col, tile.row).corners, corners);
-        }
+    } // namespace
+
+    void swap_pool_work(ParkScene& scene)
+    {
+        PoolTool& t = scene.pooling;
+        if (!t.before)
+            return;
+        std::swap(scene.pools, *t.before);
+        for (auto& [tile, corners] : t.dug)
+            std::swap(scene.grid.at(tile.col, tile.row).corners, corners);
+    }
+
+    namespace
+    {
 
         /// Lays `map`, the pools with the work done, in their place, keeping what to put back.
         void lay_work(ParkScene& scene, park::PoolMap map)
@@ -395,9 +399,9 @@ namespace rct3::scene
         PoolTool& t = scene.pooling;
         t.room_placed.reset(); // Its window opened, and the click that placed it was not taken as a pick
         // The pointer finds the park as it was before the work shown, which moves with it.
-        swap_work(scene);
+        swap_pool_work(scene);
         const auto spot = t.item && !over ? pointed_spot(scene, at, size) : std::nullopt;
-        swap_work(scene);
+        swap_pool_work(scene);
         for (const ui::PlayCommand c : commands)
         {
             if (c == ui::PlayCommand::TurnItemRight)

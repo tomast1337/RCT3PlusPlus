@@ -371,7 +371,9 @@ namespace rct3::scene
             }
             else if (yaw != 0 || pitch != 0)
                 c = park::turned(c, yaw * kKeyTurn * elapsed, pitch * kKeyTurn * elapsed, free);
-            // Advanced turns round points above the ground too.
+            // Advanced turns round points above the ground too. The pool tool's work shown is not yet the
+            // ground: the view settles as if it were not there, so a drag's squares stay under the pointer.
+            swap_pool_work(scene);
             scene.camera = free ? c : park::on_ground(c, scene.grid, mode == ControlMode::Advanced);
             // Over a pool it settles on the surface, not on the ground dug out under it, so the view keeps still
             // while the pool tool shows its work there.
@@ -379,6 +381,7 @@ namespace rct3::scene
             const auto pool = free || g.empty() ? std::nullopt : scene.pools.at(static_cast<int>(std::floor((scene.camera.target.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((scene.camera.target.z - g.origin_z) / g.tile_size_z)));
             if (pool)
                 scene.camera.target.y = std::max(scene.camera.target.y, static_cast<float>(pool->surface));
+            swap_pool_work(scene);
         }
 
         /// The sky and the light as the day clock shows them, with a look that is fading out over them.

@@ -103,6 +103,8 @@ declare namespace park {
     function weather(): string;
     /** Sets the weather now, by one of the names weather() gives. */
     function setWeather(name: string): void;
+    /** Sets the park's temperature, in degrees, which the weather then drifts on from. */
+    function setTemperature(degrees: number): void;
     /** How the weather shows now (rain and gloom 0 to 1, a lightning flash), the forecast, the climate's number and the temperature. */
     function weatherLook(): { rain: number; gloom: number; flash: number; forecast: string; climate: number; temperature: number };
     /** The calendar, in units of 90 a week and 360 a month. */

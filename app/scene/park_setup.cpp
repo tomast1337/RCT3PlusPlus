@@ -230,6 +230,8 @@ namespace rct3::scene
                 look.head = set(a.head);
                 look.body = set(a.wearing_swimsuit && !a.swim_body.is_none() ? a.swim_body : a.body);
                 look.legs = set(a.wearing_swimsuit && !a.swim_legs.is_none() ? a.swim_legs : a.legs);
+                shown.swim_body = a.swim_body.is_none() ? nullptr : set(a.swim_body);
+                shown.swim_legs = a.swim_legs.is_none() ? nullptr : set(a.swim_legs);
                 if (look.head == nullptr && look.body == nullptr && look.legs == nullptr)
                     return;
                 for (std::size_t i = 0; i < look.colours.size(); ++i)
@@ -301,6 +303,8 @@ namespace rct3::scene
                 {
                     constexpr std::string_view kStub = "_Stub.common.ovl";
                     constexpr std::array<std::string_view, 3> kSections { "_Head", "_Body", "_Legs" };
+                    // Swimwear: "_SwimSuitBody", and "_SwimSuitLegs" with or without a number after it.
+                    constexpr std::array<std::string_view, 2> kSwimSections { "_SwimSuitBody", "_SwimSuitLegs" };
                     const std::string file_name = file.path().filename().string();
                     if ((vip == 0 && !keeper && !vendor && !file_name.starts_with(name)) || !file_name.ends_with(kStub))
                         continue;
@@ -309,7 +313,13 @@ namespace rct3::scene
                         continue;
                     const std::string_view symbol = std::string_view(file_name).substr(0, file_name.size() - kStub.size());
                     const auto section = std::ranges::find_if(kSections, [&](std::string_view s) { return symbol.ends_with(s); });
-                    const park::PartSet* part = section != kSections.end() ? as_pointer(library.part_set(symbol)) : nullptr;
+                    const auto swim_section = std::ranges::find_if(kSwimSections, [&](std::string_view s) {
+                        const auto at = symbol.rfind(s);
+                        return at != std::string_view::npos && std::ranges::all_of(symbol.substr(at + s.size()), [](char c) { return c >= '0' && c <= '9'; });
+                    });
+                    const bool swim = swim_section != kSwimSections.end();
+                    const auto number = static_cast<std::uint8_t>(swim ? swim_section - kSwimSections.begin() + 1 : section - kSections.begin());
+                    const park::PartSet* part = section != kSections.end() || swim ? as_pointer(library.part_set(symbol)) : nullptr;
                     if (part == nullptr)
                         continue;
                     // A group the park already has keeps its id; symbols are matched in any case.
@@ -317,8 +327,8 @@ namespace rct3::scene
                     const auto known = std::ranges::find_if(scene.people.part_groups, same);
                     const save::PeopleObjectId id = known != scene.people.part_groups.end() ? known->id : next_id++;
                     if (known == scene.people.part_groups.end())
-                        scene.people.part_groups.push_back({ .id = id, .symbol = std::string(symbol), .section = static_cast<std::uint8_t>(section - kSections.begin()), .sex = static_cast<std::uint8_t>(worn_by), .type = static_cast<std::uint8_t>(type) });
-                    scene.wardrobe.push_back({ id, part, static_cast<save::PersonType>(type), vip != 0 ? save::Sex::Male : static_cast<save::Sex>(worn_by), static_cast<std::uint8_t>(section - kSections.begin()), vip });
+                        scene.people.part_groups.push_back({ .id = id, .symbol = std::string(symbol), .section = number, .sex = static_cast<std::uint8_t>(worn_by), .type = static_cast<std::uint8_t>(type) });
+                    scene.wardrobe.push_back({ id, part, static_cast<save::PersonType>(type), vip != 0 ? save::Sex::Male : static_cast<save::Sex>(worn_by), number, vip, swim });
                 }
             }
             library.close_files();

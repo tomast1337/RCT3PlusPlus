@@ -138,6 +138,9 @@ namespace rct3::scene
         const std::int32_t kDangleCrossMotion = park::motion_number("dangleangry").value_or(park::motion::kIdle);
         /// How riders sit in a car, as the game's motions name it.
         const std::int32_t kRideMotion = park::motion_number("ridecar").value_or(park::motion::kIdle);
+        /// Swimming along, and treading water while still.
+        const std::int32_t kSwimMotion = park::motion_number("swimloop").value_or(park::motion::kIdle);
+        const std::int32_t kTreadMotion = park::motion_number("swimtreadwaterloop").value_or(park::motion::kIdle);
         /// What party members standing together in a ring do, in turns: chatting, laughing, nodding, pointing.
         const std::array<std::int32_t, 4> kChatMotions { park::motion::kIdle, park::motion_number("laugh").value_or(park::motion::kIdle), park::motion_number("nodhead").value_or(park::motion::kIdle), park::motion_number("point").value_or(park::motion::kIdle) };
         constexpr float kChatTurnSeconds = 4; ///< How long one of them keeps at one thing
@@ -439,6 +442,27 @@ namespace rct3::scene
                     gestured(r.try_get<simulation::Gesture>(shown.guest));
                 return pose;
             }
+            // At a pool, in their swimwear: out of sight while changing, then swimming, or walking round the water.
+            if (const auto* swimmer = r.try_get<simulation::Swimmer>(shown.guest))
+            {
+                if (swimmer->changing.value > 0)
+                    return std::nullopt;
+                const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
+                const bool moving = now.was != now.position;
+                // shortcut: on the paving they keep their clothes, as the swimwear sets drawn out of the water show
+                // only parts of a person; upgrade once the dry swimwear pieces are understood.
+                pose.look.swimwear = swimmer->in_water;
+                if (swimmer->in_water)
+                {
+                    pose.look.body = shown.swim_body != nullptr ? shown.swim_body : pose.look.body;
+                    pose.look.legs = shown.swim_legs != nullptr ? shown.swim_legs : pose.look.legs;
+                }
+                pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+                pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : moving ? park::motion::kWalk : park::motion::kIdle;
+                if (!swimmer->in_water && moving && shown.paces[0] > 0)
+                    pose.time = at.walked.value / shown.paces[0];
+                return pose;
+            }
             const auto& stride = r.get<simulation::Stride>(shown.guest);
             const auto kind = r.get<simulation::Errand>(shown.guest).kind;
             const auto* ride_walk = r.try_get<simulation::RideWalk>(shown.guest);
@@ -724,17 +748,20 @@ namespace rct3::scene
                 const std::uint8_t celebrity = vip != nullptr ? vip->who : 0;
                 const auto type = vip != nullptr ? save::PersonType::Special : static_cast<save::PersonType>(std::to_underlying(visitor.age)); // The same numbers
                 const save::Sex sex = visitor.female && vip == nullptr ? save::Sex::Female : save::Sex::Male;
-                std::array<const Outfit*, 3> worn { };
-                for (std::size_t section = 0; section < worn.size(); ++section)
+                // Clothes, then swimwear for the body and legs.
+                std::array<const Outfit*, 5> worn { };
+                for (std::size_t k = 0; k < worn.size(); ++k)
                 {
+                    const bool swim = k >= 3;
+                    const std::size_t section = swim ? k - 2 : k;
                     std::vector<const Outfit*> fits;
                     for (const Outfit& o : scene.wardrobe)
-                        if (o.type == type && o.sex == sex && o.vip == celebrity && o.section == section)
+                        if (o.type == type && o.sex == sex && o.vip == celebrity && o.section == section && o.swim == swim)
                             fits.push_back(&o);
                     if (!fits.empty())
-                        worn[section] = fits[random::below(scene.looks, fits.size())];
+                        worn[k] = fits[random::below(scene.looks, fits.size())];
                 }
-                if (std::ranges::contains(worn, nullptr))
+                if (std::ranges::contains(std::span(worn).first(3), nullptr))
                     continue;
                 save::Guest& kept = scene.people.guests.emplace_back();
                 kept.in_park = true;
@@ -746,7 +773,11 @@ namespace rct3::scene
                 a.head = { worn[0]->id };
                 a.body = { worn[1]->id };
                 a.legs = { worn[2]->id };
-                ShownPerson& shown = scene.shown_people.emplace_back(ShownPerson { .walking = true, .saved = scene.people.guests.size() - 1, .guest = e });
+                if (worn[3] != nullptr)
+                    a.swim_body = { worn[3]->id };
+                if (worn[4] != nullptr)
+                    a.swim_legs = { worn[4]->id };
+                ShownPerson& shown = scene.shown_people.emplace_back(ShownPerson { .walking = true, .saved = scene.people.guests.size() - 1, .guest = e, .swim_body = worn[3] != nullptr ? worn[3]->set : nullptr, .swim_legs = worn[4] != nullptr ? worn[4]->set : nullptr });
                 park::PersonLook& look = shown.pose.look;
                 look.head = worn[0]->set;
                 look.body = worn[1]->set;
@@ -762,7 +793,7 @@ namespace rct3::scene
                     continue;
                 std::array<const Outfit*, 3> worn { };
                 for (const Outfit& o : scene.wardrobe)
-                    if (o.type == save::PersonType::AnimalKeeper && worn[o.section] == nullptr)
+                    if (o.type == save::PersonType::AnimalKeeper && !o.swim && worn[o.section] == nullptr)
                         worn[o.section] = &o;
                 if (std::ranges::contains(worn, nullptr))
                     continue;
@@ -830,7 +861,7 @@ namespace rct3::scene
                     const save::Sex sex = random::below(scene.looks, 2) == 0 ? save::Sex::Male : save::Sex::Female;
                     std::array<const Outfit*, 3> worn { };
                     for (const Outfit& o : scene.wardrobe)
-                        if (o.type == save::PersonType::Vendor && o.sex == sex && worn[o.section] == nullptr)
+                        if (o.type == save::PersonType::Vendor && o.sex == sex && !o.swim && worn[o.section] == nullptr)
                             worn[o.section] = &o;
                     if (std::ranges::contains(worn, nullptr))
                         continue;

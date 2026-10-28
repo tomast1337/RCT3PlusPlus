@@ -414,6 +414,8 @@ namespace rct3::simulation::tuning
         Seconds shortest_rest { 3 }; ///< Floating or standing between swims
         Seconds longest_rest { 15 };
         Chance poolside { 0.2 };                    ///< Of going to the paved squares next rather than the water
+        Chance extra { 0.3 };                       ///< Of going to a spa pool or an extra next, of those that go on from the water
+        float spa_water = 0.0f;                     ///< A spa pool's water over the paving round it, in height units
         PerSecond cheer = PerSecond::over({ 600 }); ///< Happiness gained while swimming in clean water; lost in dirty
         /// Dirt a swimmer brings to a pool of one square of water in a second; less in bigger pools.
         PerSecond dirtying = PerSecond::over({ 1200 });

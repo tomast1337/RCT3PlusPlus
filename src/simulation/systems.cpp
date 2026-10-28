@@ -2350,6 +2350,7 @@ namespace rct3::simulation
                 swimmer.changed = true;
                 pose.position = door->poolside;
                 swimmer.goal = door->poolside;
+                swimmer.to_spa = false;
             }
             // Across the ground, at the water's surface over a square of water and on the paving elsewhere.
             const glm::vec2 to { swimmer.goal.x - pose.position.x, swimmer.goal.z - pose.position.z };
@@ -2360,9 +2361,11 @@ namespace rct3::simulation
                 pose.heading.value = std::atan2(to.x, to.y);
             const glm::vec2 at = there ? glm::vec2 { swimmer.goal.x, swimmer.goal.z } : glm::vec2 { pose.position.x, pose.position.z } + to * (pace / way);
             const float half = paths.tile_size / 2;
-            const auto water = std::ranges::find_if(pool->water, [&](const glm::vec3& w) { return std::abs(at.x - w.x) <= half && std::abs(at.y - w.z) <= half; });
-            swimmer.in_water = water != pool->water.end();
-            pose.position = { at.x, swimmer.in_water ? water->y : door->poolside.y, at.y };
+            const auto within = [&](const glm::vec3& w) { return std::abs(at.x - w.x) <= half && std::abs(at.y - w.z) <= half; };
+            const auto water = std::ranges::find_if(pool->water, within);
+            const bool in_spa = swimmer.to_spa && within(swimmer.goal);
+            swimmer.in_water = water != pool->water.end() || in_spa;
+            pose.position = { at.x, in_spa ? swimmer.goal.y : water != pool->water.end() ? water->y : door->poolside.y, at.y };
             // In the water they dirty it, the less the more water there is, and enjoy it the cleaner it is.
             if (swimmer.in_water)
             {
@@ -2380,7 +2383,10 @@ namespace rct3::simulation
                 if (glm::distance(pose.position, door->poolside) < 0.01f)
                     swimmer.changing = kTuning.pools.changing;
                 else
+                {
                     swimmer.goal = door->poolside;
+                    swimmer.to_spa = false;
+                }
                 continue;
             }
             if ((swimmer.idle.value -= dt) > 0)
@@ -2388,10 +2394,18 @@ namespace rct3::simulation
             swimmer.idle.value = static_cast<float>(random::between(dice, double { kTuning.pools.shortest_rest.value }, double { kTuning.pools.longest_rest.value }));
             // shortcut: swimmers go straight from spot to spot, over the pool's walls; upgrade with ladders and
             // steps as ways in and out.
-            const auto& spots = pool->paved.empty() || !random::chance(dice, kTuning.pools.poolside.value) ? pool->water : pool->paved;
-            // Within a quarter tile of a square's middle: the water's cut corners leave no less.
-            const float spread = 0.25f * paths.tile_size;
-            swimmer.goal = spots[random::below(dice, spots.size())] + glm::vec3 { static_cast<float>(random::between(dice, -1.0, 1.0)) * spread, 0, static_cast<float>(random::between(dice, -1.0, 1.0)) * spread };
+            const bool out = !pool->paved.empty() && random::chance(dice, kTuning.pools.poolside.value);
+            const bool extra = out && pool->spa.size() + pool->extras.size() > 0 && random::chance(dice, kTuning.pools.extra.value);
+            const std::size_t pick = random::below(dice, extra ? pool->spa.size() + pool->extras.size() : out ? pool->paved.size() : pool->water.size());
+            swimmer.to_spa = extra && pick < pool->spa.size();
+            if (extra)
+                swimmer.goal = swimmer.to_spa ? pool->spa[pick] : pool->extras[pick - pool->spa.size()];
+            else
+            {
+                // Within a quarter tile of a square's middle: the water's cut corners leave no less.
+                const float spread = 0.25f * paths.tile_size;
+                swimmer.goal = (out ? pool->paved : pool->water)[pick] + glm::vec3 { static_cast<float>(random::between(dice, -1.0, 1.0)) * spread, 0, static_cast<float>(random::between(dice, -1.0, 1.0)) * spread };
+            }
         }
 
         phase.emplace("Ride walks");

@@ -371,7 +371,9 @@ namespace rct3::simulation
     {
         std::vector<glm::vec3> water { };
         std::vector<glm::vec3> paved { };
-        Share dirt { }; ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
+        std::vector<glm::vec3> spa { };    ///< Where swimmers sit in the spa pools, at the spa's water
+        std::vector<glm::vec3> extras { }; ///< The paved squares with an extra on them, loungers and showers
+        Share dirt { };                    ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
     };
 
     /// How dirty a pool looks, in the six steps the pool's window names, cleanest first.
@@ -410,7 +412,8 @@ namespace rct3::simulation
         bool changed = false;    ///< Into their swimwear
         Seconds left { };        ///< In the pool still; then they go back to change
         glm::vec3 goal { 0.0f }; ///< Where they swim or walk to next
-        bool in_water = false;   ///< Swimming; else on the paved squares round the water
+        bool in_water = false;   ///< Swimming, or sitting in a spa pool; else on the paved squares round the water
+        bool to_spa = false;     ///< The goal is a seat in a spa pool
         Seconds idle { };        ///< Floating, or standing, before going on
     };
 

@@ -490,13 +490,20 @@ namespace rct3::simulation
                 todo.pop_back();
                 if (s.kind == park::PoolKind::Water)
                     complex.water.push_back(middle(s.col, s.row, static_cast<float>(s.surface) + park::kPoolBrim));
-                else if (s.kind == park::PoolKind::Tile) // Not the squares a spa pool or diving board stands on
+                else if (s.kind == park::PoolKind::Jacuzzi)
+                    complex.spa.push_back(middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.spa_water));
+                else if (s.kind == park::PoolKind::Tile) // Not the squares a diving board stands on
                     complex.paved.push_back(middle(s.col, s.row, static_cast<float>(s.surface)));
                 for (const auto [dc, dr] : kSides)
                     if (const auto next = squares.find({ s.col + dc, s.row + dr }); next != squares.end() && complex_of.try_emplace(next->first, complexes.size() - 1).second)
                         todo.push_back(next->second);
             }
         }
+        // shortcut: swimmers stand at an extra, on its square, as on any paving; upgrade to lying on loungers and
+        // going down slides with their motions. High diving boards go unused until the swimmers can climb and dive.
+        for (const park::PoolExtra& extra : pools.extras)
+            if (const auto square = squares.find({ extra.col, extra.row }); square != squares.end() && square->second->kind == park::PoolKind::Tile)
+                complexes[complex_of.at(square->first)].extras.push_back(middle(extra.col, extra.row, static_cast<float>(square->second->surface)));
         // The rooms there were, by tile, and the complexes they opened on.
         std::map<std::pair<std::int32_t, std::int32_t>, entt::entity> rooms;
         for (const auto [e, door] : r.view<const PoolDoor>().each())

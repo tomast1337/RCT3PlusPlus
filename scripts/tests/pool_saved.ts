@@ -58,3 +58,16 @@ const at = swimmers()[0];
 camera.look({ col: at.col!, row: at.row! }, { col: at.col!, row: at.row! + 5, up: 4 });
 await frames(60);
 await screenshot("pool_saved_swimming");
+
+// Now and then a swimmer sits in the spa pool, in the spa's water.
+const spa = map.objects().find((o) => o.overlay === kPool && o.symbol === "Jacuzzi");
+if (spa) {
+    log("spa at", spa.col, spa.row);
+    const sitting = () => swimmers().find((p) => Math.abs(p.col! - spa.col - 0.5) < 0.05 && Math.abs(p.row! - spa.row - 0.5) < 0.05);
+    await ui.click("bar/Top_SuperFastForward");
+    await until(() => sitting() !== undefined, 20000, "a swimmer in the spa pool");
+    await ui.click("bar/Top_Play");
+    camera.look({ col: spa.col + 0.5, row: spa.row + 0.5 }, { col: spa.col + 0.5, row: spa.row + 3.5, up: 2 });
+    await frames(30);
+    await screenshot("pool_saved_spa");
+}

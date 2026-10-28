@@ -168,6 +168,42 @@ TEST_CASE("swimmers walk the plain paved squares, not those a spa pool or diving
     const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(park.world().registry)).pool);
     CHECK(pool.water.size() == 1);
     CHECK(pool.paved.size() == 1);
+    CHECK(pool.spa.size() == 1);
+}
+
+TEST_CASE("swimmers sit in the spa pools and stand at the extras now and then")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    park::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+    pools.squares.push_back({ .col = 4, .row = 2, .kind = park::PoolKind::Jacuzzi });
+    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::Tile });
+    pools.squares.push_back({ .col = 5, .row = 3 });
+    pools.extras.push_back({ .symbol = "Lounger", .col = 6, .row = 2 });
+    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
+    REQUIRE(pool.extras.size() == 1);
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 8; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+    bool in_spa = false, at_extra = false;
+    park.run_until(
+        [&] {
+            for (const entt::entity g : guests)
+                if (const auto* swimmer = r.try_get<Swimmer>(g))
+                {
+                    const glm::vec3 at = r.get<Pose>(g).position;
+                    in_spa = in_spa || (swimmer->in_water && glm::distance(at, pool.spa.front()) < 0.01f);
+                    at_extra = at_extra || (!swimmer->in_water && glm::distance(at, pool.extras.front()) < 0.01f);
+                }
+            return in_spa && at_extra;
+        },
+        kTuning.pools.stay.value);
+    CHECK(in_spa);
+    CHECK(at_extra);
 }
 
 TEST_CASE("swimmers dirty the water, and the room's fluid cleans it while the room is open")

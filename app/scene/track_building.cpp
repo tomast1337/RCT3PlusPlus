@@ -876,6 +876,7 @@ namespace rct3::scene
                     return;
                 *scene.park.cash -= shape.record.cost;
             }
+            ++scene.built;
             const bool closed_before = ride.track->circuit;
             // Its end meeting where the first piece starts closes the track.
             if (!opening(ride) && !b.backward && !b.selected)

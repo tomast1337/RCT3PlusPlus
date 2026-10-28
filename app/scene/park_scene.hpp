@@ -748,6 +748,7 @@ namespace rct3::scene
         float since_hover_pick = 0;                                 ///< Seconds since that was looked at
         bool leave = false;
         bool message_alert = false;
+        std::uint32_t built = 0;                                        ///< Things put down so far, each heard as a thump (park_sounds.hpp)
         std::optional<std::size_t> pool_complex_asked;                  ///< Of the pools' rooms, one whose complex the player was asked to sell
         std::optional<ui::SceneryTab> room_tab;                         ///< Last open in a changing room's window
         std::vector<park::AttractionRef> demolish_asked;                ///< Waiting on the question whether to pull them down

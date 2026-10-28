@@ -709,6 +709,7 @@ namespace rct3::scene
         if (!o || p.problem != park::SiteProblem::None || !p.affordable || !scene.models.contains(park::model_key(*o)))
             return true;
         wait_for_build(scene);
+        ++scene.built;
         if (p.step == RidePlacing::Step::Scenery)
         {
             // The tool stays out for the next one, as in the game.

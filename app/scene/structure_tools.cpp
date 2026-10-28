@@ -289,6 +289,7 @@ namespace rct3::scene
         if (t.placed.empty() || t.problem != park::StructureProblem::None || !t.affordable)
             return true;
         wait_for_build(scene);
+        ++scene.built;
         // The tool stays out for another, as in the game.
         const std::size_t first = scene.objects.size();
         std::uint64_t id = last_id(scene);

@@ -39,6 +39,8 @@ namespace rct3::scene
         constexpr float kWaterfallFar = 90;     ///< And no longer heard.
         constexpr float kRainLevel = 0.5f;      ///< Of full loudness, a downpour. Chosen by eye, as the next
         constexpr float kThunderLevel = 0.9f;
+        constexpr float kThumpLevel = 0.6f; ///< Chosen by eye: clear over the park without drowning it
+        constexpr float kThumpGap = 0.4f;   ///< Chosen by eye: seconds before another thump, so a burst of pieces is one
 
         void silence_trains(audio::AudioEngine& engine, ParkSounds& sounds)
         {
@@ -114,6 +116,8 @@ namespace rct3::scene
                 s.rain[i] = std::move(found.front());
         constexpr std::array<std::string_view, 2> kThunder { "Thunder1", "Thunder2" };
         s.thunder = main(kThunder);
+        constexpr std::array<std::string_view, 2> kThumps { "EarthThump1", "EarthThump2" };
+        s.thumps = main(kThumps);
         constexpr std::array<std::string_view, 2> kWaterfall { "Waterfall3", "Waterfall4" };
         s.waterfall = load_named(install, "Sounds/Waterfall/Waterfall.common.ovl", kWaterfall);
         for (std::size_t set = 1; set < audio::kTrackSoundSets; ++set)
@@ -142,6 +146,14 @@ namespace rct3::scene
         const glm::vec3 eye = park::eye(scene.camera);
         engine.set_listener(eye, glm::normalize(scene.camera.target - eye), glm::vec3(0.0f, 1.0f, 0.0f));
         engine.set_muffled(scene.water.eye_in.has_value());
+
+        // Building, heard paused too, as the player builds then: a thump for what was put down.
+        sounds.since_thump += elapsed;
+        if (scene.built != std::exchange(sounds.built_heard, scene.built) && sounds.since_thump >= kThumpGap)
+        {
+            play_any(engine, sounds.thumps, sounds.random, { .volume = kThumpLevel });
+            sounds.since_thump = 0;
+        }
 
         // The chatter: two clips overlapping, each started again with another when it ends, heard from where the
         // people about the camera's point stand, however far the eye.

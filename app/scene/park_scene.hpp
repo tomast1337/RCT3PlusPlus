@@ -264,7 +264,7 @@ namespace rct3::scene
         bool redraw = false;                    ///< The pools were put back away from the frame and are drawn on the next
         std::int32_t turns = 0;                 ///< Of an extra, changing room or high diving board, quarter turns from the turn keys
         std::optional<float> press_y;           ///< Where on the screen the drag began
-        std::int32_t board = park::kBoardLevel; ///< A high diving board's height, from the drag
+        std::int32_t board = park::kBoardLevel; ///< A high diving board's or a staircase's height, from the drag
         std::int32_t worked_board = 0;          ///< And the turn and height of the work shown
         std::int32_t worked_turns = 0;
         bool faces = true; ///< The work shown is no high diving board facing away from the water

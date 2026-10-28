@@ -51,6 +51,7 @@ namespace rct3::scene
                 return out;
             const park::BuildItem* spa = nullptr;
             const park::BuildItem* dive = nullptr;
+            const park::BuildItem* stairs = nullptr;
             for (const park::BuildItem& i : items.get())
             {
                 if (i.list != park::BuildList::Pools)
@@ -64,8 +65,10 @@ namespace rct3::scene
                     spa = &i;
                 else if (i.overlay == park::kPoolOverlay && i.symbol == park::kPoolHighDive)
                     dive = &i;
+                else if (i.overlay == park::kPoolOverlay && i.symbol == park::kPoolStairs)
+                    stairs = &i;
             }
-            for (const park::BuildItem* last : { dive, spa })
+            for (const park::BuildItem* last : { dive, spa, stairs })
                 if (last != nullptr)
                     out.first.push_back(last);
             return out;
@@ -123,20 +126,20 @@ namespace rct3::scene
                 return { std::move(map), cost };
             }
             // Snapped to the ground, the surface is the ground's where the drag began, or the surface of the pool
-            // begun there; else the height the pool panel sets.
-            // shortcut: a surface above the ground stands on nothing; add supports when pools can be raised.
+            // begun there; else the height the pool panel sets. Raised, a pool stands on the land raised to its
+            // floor (pools_changed).
             const auto begun = scene.pools.at(a.col, a.row);
             const std::int32_t surface = scene.pooling.height.value_or(begun ? begun->surface : static_cast<std::int32_t>(std::lround(scene.grid.at(a.col, a.row).max_height())));
             const auto water = std::ranges::find(park::kPoolWater, item.symbol);
-            const park::PoolKind kind = water != park::kPoolWater.end() ? park::PoolKind::Water : item.symbol == park::kPoolJacuzzi ? park::PoolKind::Jacuzzi : item.symbol == park::kPoolHighDive ? park::PoolKind::HighDive : park::PoolKind::Tile;
-            const bool dive = kind == park::PoolKind::HighDive;
+            const park::PoolKind kind = water != park::kPoolWater.end() ? park::PoolKind::Water : item.symbol == park::kPoolJacuzzi ? park::PoolKind::Jacuzzi : item.symbol == park::kPoolHighDive ? park::PoolKind::HighDive : item.symbol == park::kPoolStairs ? park::PoolKind::Stairs : park::PoolKind::Tile;
+            const bool climbs = kind == park::PoolKind::HighDive || kind == park::PoolKind::Stairs;
             // Paved squares take the normal depth, the one the pool type prices them at.
             const std::int32_t depth = water != park::kPoolWater.end() ? static_cast<std::int32_t>(water - park::kPoolWater.begin()) + 1 : 2;
             std::vector<park::PoolSquare> squares;
             const auto area = marked(a, b);
             for (std::int32_t row = area[1]; row <= area[3]; ++row)
                 for (std::int32_t col = area[0]; col <= area[2]; ++col)
-                    squares.push_back({ .col = col, .row = row, .kind = kind, .surface = surface, .depth = depth, .board = dive ? scene.pooling.board : 0, .turn = dive ? scene.pooling.turns : 0, .edge = scene.pooling.edge });
+                    squares.push_back({ .col = col, .row = row, .kind = kind, .surface = surface, .depth = depth, .board = climbs ? scene.pooling.board : 0, .turn = climbs ? scene.pooling.turns : 0, .edge = scene.pooling.edge });
             const std::int64_t cost = park::lay_pool(map, prices, squares);
             return { std::move(map), cost };
         }
@@ -396,9 +399,10 @@ namespace rct3::scene
         if (std::exchange(t.redraw, false))
             pools_changed(device, scene, assets);
         const bool dragging = t.item && down && (t.corner || tile);
-        // A spa pool or a high diving board goes on the square pressed; dragging up or down raises or lowers the
-        // board.
-        const bool single = t.item && (t.item->symbol == park::kPoolJacuzzi || t.item->symbol == park::kPoolHighDive);
+        // A spa pool, a high diving board or a spiral staircase goes on the square pressed; dragging up or down
+        // raises or lowers the board or the staircase's top.
+        const bool climbs = t.item && (t.item->symbol == park::kPoolHighDive || t.item->symbol == park::kPoolStairs);
+        const bool single = t.item && (t.item->symbol == park::kPoolJacuzzi || climbs);
         if (dragging)
         {
             if (!t.corner)
@@ -408,8 +412,11 @@ namespace rct3::scene
             }
             if (tile)
                 t.other = single ? t.corner : tile;
-            if (single && t.item->symbol == park::kPoolHighDive && t.press_y)
-                t.board = std::clamp(park::kBoardLevel + static_cast<std::int32_t>((*t.press_y - at.y) / kPixelsPerBoardUnit), park::kBoardLevel, kHighestBoard);
+            if (climbs && t.press_y)
+            {
+                const std::int32_t lowest = t.item->symbol == park::kPoolStairs ? park::kLowestStairs : park::kBoardLevel;
+                t.board = std::clamp(lowest + static_cast<std::int32_t>((*t.press_y - at.y) / kPixelsPerBoardUnit), lowest, kHighestBoard);
+            }
         }
         // The work is the drag's, else the square under the pointer. As it changes it is laid into the pools to
         // be seen, when it may be done; letting go keeps it.

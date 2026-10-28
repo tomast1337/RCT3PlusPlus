@@ -107,6 +107,9 @@ namespace rct3::park
     inline constexpr std::string_view kPoolJacuzzi = "SceneryItem_Jacuzzi";
     /// The tool laying high diving boards, listed with the extras.
     inline constexpr std::string_view kPoolHighDive = "SegmentTypeHighDive";
+    /// The tool laying spiral staircases, listed with the extras.
+    /// shortcut: no text of the game names it, so its button has no help; add one once rct3++ ships texts.
+    inline constexpr std::string_view kPoolStairs = "SegmentTypeSpiralStairs";
     /// The overlay of the pool type, whose pieces pools are built of.
     inline constexpr std::string_view kPoolOverlay = "Pool/Default/Default_Stub";
 

@@ -68,7 +68,7 @@ namespace rct3::ui
         }
         grid_ = &button("Land_Grid", "Pool_GridToggle");
         snap_ = &button("Pool_Height", "Pool_HeightToggle");
-        height_ = &editor_page_->add<Spinner>("Pool_Height", style_.height);
+        height_ = &editor_page_->add<Spinner>("height", style_.height);
         height_->minimum = pool_panel::kHeightLowest;
         height_->maximum = pool_panel::kHeightHighest;
         height_->tooltip = std::u16string(strings_.get("Pool_Height"));

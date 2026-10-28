@@ -53,7 +53,10 @@
 #include <format>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <set>
+#include <span>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -1219,6 +1222,56 @@ namespace rct3::scene
         profiling::section("Effects", [&] { show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted, places.transforms, places.models)); });
         scene.levels = { };
         scene.since_rebuild = kObjectRebuildInterval;
+    }
+
+    bool replace_fixtures(ParkScene& scene, std::vector<std::uint64_t>& ids, std::vector<save::PlacedObject> pieces)
+    {
+        const auto look = [](const save::PlacedObject& o) { return std::tie(o.overlay, o.symbol, o.col, o.row, o.base_height, o.rotation, o.quadrant, o.height_adjust, o.colours, o.height_offset, o.frame_offset, o.force_absolute_height, o.hidden, o.fixture); };
+        std::map<std::tuple<std::int32_t, std::int32_t, std::string_view>, std::vector<std::size_t>> by_spot;
+        for (std::size_t k = 0; k < pieces.size(); ++k)
+            by_spot[{ pieces[k].col, pieces[k].row, pieces[k].symbol }].push_back(k);
+        const std::unordered_set<std::uint64_t> old(ids.begin(), ids.end());
+        std::vector<bool> kept(pieces.size(), false);
+        std::vector<std::size_t> free;
+        ids.clear();
+        for (std::size_t i = 0; i < scene.objects.size(); ++i)
+        {
+            const save::PlacedObject& o = scene.objects[i];
+            if (!old.contains(o.id))
+                continue;
+            const auto here = by_spot.find({ o.col, o.row, o.symbol });
+            const std::span<const std::size_t> alike = here != by_spot.end() ? std::span<const std::size_t>(here->second) : std::span<const std::size_t>();
+            const auto same = std::ranges::find_if(alike, [&](std::size_t k) { return !kept[k] && look(pieces[k]) == look(o); });
+            if (same == alike.end())
+            {
+                free.push_back(i);
+                continue;
+            }
+            kept[*same] = true;
+            ids.push_back(o.id);
+        }
+        bool changed = false;
+        auto slot = free.begin();
+        for (std::size_t k = 0; k < pieces.size(); ++k)
+        {
+            if (kept[k])
+                continue;
+            changed = true;
+            ids.push_back(pieces[k].id);
+            if (slot != free.end())
+                scene.objects[*slot++] = std::move(pieces[k]);
+            else
+                scene.objects.push_back(std::move(pieces[k]));
+        }
+        if (slot != free.end())
+        {
+            changed = true;
+            std::unordered_set<std::uint64_t> gone;
+            for (; slot != free.end(); ++slot)
+                gone.insert(scene.objects[*slot].id);
+            std::erase_if(scene.objects, [&](const save::PlacedObject& o) { return gone.contains(o.id); });
+        }
+        return changed;
     }
 
     void place_objects(const ParkScene& scene)

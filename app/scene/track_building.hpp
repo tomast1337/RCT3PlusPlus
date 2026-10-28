@@ -254,6 +254,11 @@ namespace rct3::scene
     /// Hands the scene's objects to the mesh builder again after a change, once a build reading them is done.
     void objects_changed(ParkScene& scene);
 
+    /// Puts `pieces` in the place of the objects `ids` names, which then names the pieces. A piece the same as
+    /// one standing keeps it, with its id and its place among the objects; the others take the places of those
+    /// that went, so the objects after them do not move. Whether any object changed.
+    bool replace_fixtures(ParkScene& scene, std::vector<std::uint64_t>& ids, std::vector<save::PlacedObject> pieces);
+
     /// Brings the objects' places and pick boxes up to date, working out again only the objects that changed.
     void place_objects(const ParkScene& scene);
 

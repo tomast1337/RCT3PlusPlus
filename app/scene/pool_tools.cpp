@@ -156,15 +156,6 @@ namespace rct3::scene
             return g.contains(static_cast<int>(std::floor(spot.x)), static_cast<int>(std::floor(spot.y))) ? std::optional(spot) : std::nullopt;
         }
 
-        /// The side of its square a spot is nearest, as a turn.
-        std::int32_t nearest_side(glm::vec2 spot)
-        {
-            const glm::vec2 off = spot - glm::floor(spot) - 0.5f;
-            if (std::abs(off.y) >= std::abs(off.x))
-                return off.y >= 0 ? 0 : 2;
-            return off.x >= 0 ? 1 : 3;
-        }
-
         /// Draws the marks over the area, at the pools' surface where squares are, and remembers them.
         void draw_marks(render::Device& device, ParkScene& scene, std::optional<std::array<std::int32_t, 4>> marks, park::TilePart part, bool ok)
         {
@@ -194,12 +185,19 @@ namespace rct3::scene
 
         /// Puts the extra or changing room out with the pool tool where the pointer is, when it fits and can be
         /// paid for. A changing room goes on the land the park owns.
-        void update_extra(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<glm::vec2> spot, bool down)
+        void update_extra(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<glm::vec2> spot, bool down, std::span<const ui::PlayCommand> commands)
         {
             PoolTool& t = scene.pooling;
             const park::BuildItem& item = *t.item;
+            for (const ui::PlayCommand c : commands)
+            {
+                if (c == ui::PlayCommand::TurnItemRight)
+                    t.turns = (t.turns + 1) % 4;
+                else if (c == ui::PlayCommand::TurnItemLeft)
+                    t.turns = (t.turns + 3) % 4;
+            }
             const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
-            const std::int32_t turn = spot ? nearest_side(*spot) : 0;
+            const std::int32_t turn = t.turns;
             const park::PoolExtraFit fit = park::pool_extra_fit(item.pool_extra);
             const bool room = item.kind == park::BuildKind::PoolRoom;
             const bool fits = tile && (room ? park::pool_room_fits(scene.pools, tile->col, tile->row, turn) && park::owned_outright(scene.grid.at(tile->col, tile->row)) : park::pool_extra_fits(scene.pools, tile->col, tile->row, fit, turn));
@@ -208,14 +206,20 @@ namespace rct3::scene
                 t.corner = tile;
             else if (t.corner && !down)
             {
-                // Let go: the extra goes in where the pointer is now.
+                // Let go: the extra goes in where the pointer is now. A changing room is placed once: the tool
+                // and its ghost go.
                 t.corner.reset();
                 if (ok && room)
                 {
                     scene.pools.rooms.push_back({ .symbol = item.symbol, .overlay = item.overlay, .col = tile->col, .row = tile->row, .turn = turn });
                     pools_changed(device, scene, assets);
+                    // It opens on a paved square, so it is in a complex: its window opens in place of the panel.
+                    const std::size_t placed = scene.pools.rooms.size() - 1;
+                    stop_pooling(scene);
+                    scene.pooling.room_placed = placed;
+                    return;
                 }
-                else if (ok)
+                if (ok)
                 {
                     save::PlacedObject model { .symbol = item.symbol, .overlay = item.overlay };
                     const bool loaded = load_object_model(scene, scene.placing.models, assets, model);
@@ -238,11 +242,42 @@ namespace rct3::scene
                 else if (fits)
                     simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(kNoMoney) });
             }
-            constexpr std::array kSideParts { park::TilePart::Far, park::TilePart::Right, park::TilePart::Near, park::TilePart::Left };
-            const auto marks = tile ? std::optional(marked(*tile, *tile)) : std::nullopt;
-            // shortcut: the side is shown by a mark, not by the extra itself; show it standing there once
-            // placing tools draw what they hold.
-            draw_marks(device, scene, marks, kSideParts[static_cast<std::size_t>(turn)], ok);
+            draw_marks(device, scene, tile ? std::optional(marked(*tile, *tile)) : std::nullopt, park::TilePart::Whole, ok);
+            // The item alone, slowly turning, for the panel's disc.
+            save::PlacedObject alone { .symbol = item.symbol, .overlay = item.overlay, .force_absolute_height = true };
+            if (t.preview_of != item.symbol && load_object_model(scene, scene.placing.models, assets, alone))
+            {
+                t.preview_of = item.symbol;
+                t.preview = park::object_mesh(std::span(&alone, 1), scene.models, scene.grid);
+                ghost_textures(device, scene, t.preview);
+            }
+            if (t.preview_of == item.symbol)
+                t.preview_camera = park::framed(park::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
+            // The ghost: the extra or room as it would stand there, on its square's surface, else on the ground.
+            std::optional<save::PlacedObject> ghost;
+            if (tile)
+            {
+                park::PoolMap alone { .squares = scene.pools.squares };
+                if (room)
+                    alone.rooms.push_back({ .symbol = item.symbol, .overlay = item.overlay, .col = tile->col, .row = tile->row, .turn = turn });
+                else
+                    alone.extras.push_back({ .symbol = item.symbol, .overlay = item.overlay, .col = tile->col, .row = tile->row, .turn = turn, .fit = fit });
+                ghost = park::pool_objects(alone, item.overlay, 0).back();
+                const bool on_square = room ? fits : scene.pools.at(tile->col, tile->row).has_value();
+                if (!on_square)
+                    ghost->base_height = static_cast<std::int32_t>(std::lround(scene.grid.at(tile->col, tile->row).max_height()));
+                if (!load_object_model(scene, scene.placing.models, assets, *ghost))
+                    ghost.reset();
+            }
+            const bool same = ghost.has_value() == t.ghost_of.has_value() && (!ghost || (ghost->col == t.ghost_of->col && ghost->row == t.ghost_of->row && ghost->base_height == t.ghost_of->base_height && ghost->rotation == t.ghost_of->rotation));
+            if (same && ok == t.ghost_ok)
+                return;
+            t.ghost_of = ghost;
+            t.ghost_ok = ok;
+            t.ghost = ghost ? park::object_mesh(std::span(&*ghost, 1), scene.models, scene.grid) : park::ObjectMesh { };
+            for (park::GroundVertex& v : t.ghost.vertices)
+                v.colour *= ok ? kGhostTint : kRefusedTint;
+            ghost_textures(device, scene, t.ghost);
         }
 
         /// Whether the area may be worked on: all of it land the park owns outright, and paid for.
@@ -302,7 +337,7 @@ namespace rct3::scene
         if ((item.kind != park::BuildKind::PoolSquare || item.pool_prices.size() != 18) && item.kind != park::BuildKind::PoolExtra && item.kind != park::BuildKind::PoolRoom)
             return false;
         const bool redraw = put_back(scene) || scene.pooling.redraw;
-        scene.pooling = PoolTool { .item = item, .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .height = scene.pooling.height, .grid = scene.pooling.grid, .redraw = redraw };
+        scene.pooling = PoolTool { .item = item, .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .height = scene.pooling.height, .grid = scene.pooling.grid, .redraw = redraw, .turns = scene.pooling.turns, .preview_target = scene.pooling.preview_target, .preview_pixels = scene.pooling.preview_pixels };
         return true;
     }
 
@@ -311,7 +346,7 @@ namespace rct3::scene
         if (auto panel = panel_of(scene))
             panel->hide();
         const bool redraw = put_back(scene) || scene.pooling.redraw;
-        scene.pooling = PoolTool { .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .grid = scene.pooling.grid, .redraw = redraw }; // The marks go on the next frame
+        scene.pooling = PoolTool { .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .grid = scene.pooling.grid, .redraw = redraw, .turns = scene.pooling.turns, .preview_target = scene.pooling.preview_target, .preview_pixels = scene.pooling.preview_pixels }; // The marks go on the next frame
     }
 
     void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets)
@@ -336,7 +371,7 @@ namespace rct3::scene
         panel->show(choices(extras), choices(rooms));
     }
 
-    void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over)
+    void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, std::span<const ui::PlayCommand> commands)
     {
         follow_panel(scene);
         PoolTool& t = scene.pooling;
@@ -345,7 +380,7 @@ namespace rct3::scene
         const auto spot = t.item && !over ? pointed_spot(scene, at, size) : std::nullopt;
         swap_work(scene);
         if (t.item && (t.item->kind == park::BuildKind::PoolExtra || t.item->kind == park::BuildKind::PoolRoom))
-            return update_extra(device, scene, assets, spot, down);
+            return update_extra(device, scene, assets, spot, down, commands);
         const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
         if (std::exchange(t.redraw, false))
             pools_changed(device, scene, assets);
@@ -444,6 +479,12 @@ namespace rct3::scene
         water.resize(scene.saved_pool_water);
         std::ranges::copy(park::pool_water(scene.pools), std::back_inserter(water));
         rebuild_ground(device, scene, assets);
+    }
+
+    void draw_pool_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
+    {
+        if (scene.pooling.item && !scene.pooling.ghost.vertices.empty())
+            draw_ghost_mesh(device, scene, scene.pooling.ghost, transform, light);
     }
 
 } // namespace rct3::scene

@@ -123,8 +123,13 @@ const put = async (symbol: string, col: number, row: number) => {
 cash = park.cash()!;
 await put("PoolLamp", c0, r0 + 3);
 expect(extras() === 1 && park.cash()! < cash, "a lamp, paid for");
-await put("Ladder", c0 + 1.1, r0 + 3.5);
+// Turned a quarter to the left, against the pool's wall.
+keys.press(",");
+await frames(2);
+await put("Ladder", c0 + 1.5, r0 + 3.5);
 expect(extras() === 2, "a ladder on the wall");
+keys.press(".");
+await frames(2);
 await put("PoolLamp", c0, r0 + 3);
 expect(extras() === 2, "no second lamp where one stands");
 await put("SunLoungers", c0 + 3, r0);
@@ -135,25 +140,44 @@ camera.look({ col: c0 + 1.5, row: r0 + 2.5 }, { col: c0 + 4, row: r0 + 6, up: 3 
 await frames(10);
 await screenshot("pool_extras");
 
-// A changing room on the ground beside the paved ring, opening on it: the railing there opens. Its panel opens
-// the pool complex and sets the ticket price.
-const kRooms = "Style/Vanilla/CapeTyphoon/Style";
-const room = () => map.objects().find((o) => o.symbol === "CRoomGeneric" && o.col === c0 - 1 && o.row === r0 + 4);
+// A changing room on the ground beside the paved ring, opening on it: the railing there opens. Picked in the
+// panel, it follows the pointer as a ghost, shown in the panel's disc too, and turns with the turn keys; placed,
+// the tool goes and the room's window opens, where the pool complex opens and its ticket price is set.
+const room = () => map.objects().find((o) => o.overlay !== kPool && o.col === c0 - 1 && o.row === r0 + 4);
 const railings = count("Railing");
-expect(build.pick(kRooms, "CRoomGeneric"), "the changing room in the pool list");
-await pointer.click(...on_view(c0 - 1.1, r0 + 4.5));
+if (!ui.find("tools/Rides/Obj_Pools"))
+    await ui.click(rides);
+await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
+await ui.click("tools/Rides/Obj_Pools");
+await until(() => ui.find("pool_panel/Pool_ChangingRoomPanel") !== undefined, 120, "the pool panel");
+await ui.click("pool_panel/Pool_ChangingRoomPanel");
+await frames(2);
+await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
+camera.look({ col: c0 - 0.5, row: r0 + 4.5 }, { col: c0 + 3, row: r0 + 5.5, up: 2.5 });
+await frames(10);
+// It opens towards the pool once turned a quarter.
+pointer.move(...on_view(c0 - 0.5, r0 + 4.5));
+await frames(3);
+await screenshot("pool_room_ghost_turned_away");
+await pointer.click(...on_view(c0 - 0.5, r0 + 4.5));
 await frames(3);
 expect(room() === undefined, "no changing room opening away from the pool");
-await pointer.click(...on_view(c0 - 0.15, r0 + 4.5));
+keys.press(".");
+await frames(3);
+await pointer.click(...on_view(c0 - 1.5, r0 + 4.5));
+await frames(3);
+expect(room() === undefined, "no changing room away from the pool");
+pointer.move(...on_view(c0 - 0.5, r0 + 4.5));
+await frames(5);
+await screenshot("pool_room_ghost");
+await pointer.click(...on_view(c0 - 0.5, r0 + 4.5));
 await frames(3);
 expect(room() !== undefined, "a changing room beside the pool");
 expect(count("Railing") === railings - 1, `the railing open towards it, not ${railings - count("Railing")} fewer`);
-build.stop();
-camera.look({ col: c0 - 0.5, row: r0 + 4.5 }, { col: c0 + 3, row: r0 + 5.5, up: 2.5 });
-await frames(10);
-await screenshot("pool_changing_room");
-await pointer.click(...on_view(c0 - 0.5, r0 + 4.5));
 await until(() => ui.find("info") !== undefined, 120, "the changing room's window");
+expect(ui.find("pool_panel") === undefined, "the pool panel gone, the room placed once");
+await frames(5);
+await screenshot("pool_changing_room");
 await ui.click("info/Attraction_General_Closed");
 await frames(3);
 // Dragged from the choice down onto its first row, Open.
@@ -202,7 +226,9 @@ if (!ui.find("tools/Rides/Obj_Pools"))
     await ui.click(rides);
 await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
 await ui.click("tools/Rides/Obj_Pools");
-await until(() => ui.find("pool_panel/body/editor/Pool_DeleteArea") !== undefined, 120, "the pool panel again");
+await until(() => ui.find("pool_panel/Pool_PoolPanel") !== undefined, 120, "the pool panel again");
+await ui.click("pool_panel/Pool_PoolPanel");
+await until(() => ui.find("pool_panel/body/editor/Pool_DeleteArea") !== undefined, 120, "the editor page");
 expect(ui.find("pool_panel/body/editor/Pool_PlaceTiles") !== undefined, "the editor as it was left");
 await ui.click("pool_panel/body/editor/Pool_DeleteArea");
 await frames(2);

@@ -145,6 +145,13 @@ namespace rct3::ui
             return std::exchange(closed_, false);
         }
 
+        /// Shows `texture` (a picture of what is picked, drawn this frame) in the disc instead of its icon, while
+        /// an extra or changing room is picked.
+        void show_view(TextureId texture)
+        {
+            view_ = texture;
+        }
+
         [[nodiscard]] Rect disc() const;
         [[nodiscard]] Rect strip() const;
 
@@ -184,6 +191,7 @@ namespace rct3::ui
         PoolEditor editor_;
         std::optional<std::pair<PoolPage, std::size_t>> placing_;
         bool changed_ = false;
+        TextureId view_ = 0;
         bool closed_ = false;
     };
 

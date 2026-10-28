@@ -30,8 +30,9 @@ namespace rct3::park
     /// tile `allowed` refuses or a lake standing higher.
     [[nodiscard]] std::optional<save::WaterLayer> pour_water(const save::WaterLayer& water, const save::TerrainGrid& grid, save::Tile tile, float level, const std::function<bool(save::Tile)>& allowed);
 
-    /// Takes the lake holding `tile` out of `water`, and the `falls` pouring from or into it; whether there was one.
-    bool remove_lake(save::WaterLayer& water, std::vector<save::Waterfall>& falls, const save::TerrainGrid& grid, save::Tile tile);
+    /// Takes the lake holding `tile` out of `water`, and the `falls` pouring from or into it, putting back in `grid`
+    /// the ground their spillways were cut from; whether there was one.
+    bool remove_lake(save::WaterLayer& water, std::vector<save::Waterfall>& falls, save::TerrainGrid& grid, save::Tile tile);
 
     /// After the ground moved from `was` to `grid`: takes out of `water` every lake on a tile that moved, or beside
     /// one that now dips below its level, and out of `falls` every waterfall with an end on or beside a tile that

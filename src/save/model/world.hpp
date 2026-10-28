@@ -336,6 +336,13 @@ namespace rct3::save
     };
 
     /// A waterfall: water pouring from a higher lake over a cliff edge into a lower one.
+    /// A tile's corners as they were before something cut into the ground there.
+    struct CarvedTile
+    {
+        Tile tile { };
+        std::array<float, 4> corners { };
+    };
+
     struct Waterfall
     {
         WorldPoint3 lip_left { };  ///< One end of the edge the water pours over, at the upper lake's level
@@ -343,6 +350,8 @@ namespace rct3::save
         WorldPoint3 top { };       ///< A point of the upper lake behind the edge; its height is that lake's level
         WorldPoint3 bottom { };    ///< Where the water lands; its height is the lower lake's level
         WorldPoint3 flow { };      ///< Unit direction the water runs across the ground, from `top` to `bottom`
+        /// Of one the player made: the ground its spillway was cut from, as it was, put back when it goes.
+        std::vector<CarvedTile> carved { };
     };
 
     /// The park's animal enclosures: which enclosure each tile belongs to, and what fence each is built with.

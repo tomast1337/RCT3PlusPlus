@@ -167,7 +167,7 @@ namespace rct3::scene
         }
 
         /// Takes on the shaped ground `trial`, the scenery on it following.
-        void take_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, save::TerrainGrid trial)
+        void take_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, save::TerrainGrid trial, bool drain = true)
         {
             LandTools& l = scene.land;
             // The meshes built beside the frame read the ground.
@@ -191,7 +191,7 @@ namespace rct3::scene
                     (*step)[1] = { std::max((*step)[1].col, c), std::max((*step)[1].row, r) };
                 }
             // Water the new ground may not hold goes, as do the waterfalls beside it.
-            if (park::drain_moved(scene.footpaths.water, scene.footpaths.waterfalls, was, scene.grid))
+            if (drain && park::drain_moved(scene.footpaths.water, scene.footpaths.waterfalls, was, scene.grid))
                 show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
             rebuild_ground(device, scene, assets);
             if (!step)
@@ -418,6 +418,23 @@ namespace rct3::scene
             simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(key) });
         }
 
+        /// Fills the lake holding the tile under `top` again at its level, on the ground as it now is, over the tiles
+        /// it held and those of `more`; never beyond, so it cannot run out through a gap the ground left.
+        void refit_lake(ParkScene& scene, const save::WorldPoint3& top, std::span<const save::CarvedTile> more)
+        {
+            const save::TerrainGrid& g = scene.grid;
+            const save::Tile tile { static_cast<int>(std::floor((top.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((top.z - g.origin_z) / g.tile_size_z)) };
+            for (save::WaterBody& b : scene.footpaths.water.bodies)
+            {
+                if (!park::holds(b, tile))
+                    continue;
+                const auto within = [&](save::Tile t) { return park::holds(b, t) || std::ranges::any_of(more, [&](const save::CarvedTile& c) { return c.tile.col == t.col && c.tile.row == t.row; }); };
+                if (auto refilled = park::fill_water(g, tile, b.level, within))
+                    b = std::move(*refilled);
+                return;
+            }
+        }
+
         /// A click with the water tool: takes the lake clicked away, or pours one up to the height clicked.
         void pour(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
         {
@@ -446,8 +463,13 @@ namespace rct3::scene
                 // The ground clicked is under the lake: the click was on its surface.
                 if (!allowed(*l.tile))
                     return say(scene, kWaterRefused);
-                park::remove_lake(scene.footpaths.water, scene.footpaths.waterfalls, g, *l.tile);
+                // Its waterfalls go with it, putting back the ground they cut.
+                save::TerrainGrid ground = g;
+                park::remove_lake(scene.footpaths.water, scene.footpaths.waterfalls, ground, *l.tile);
                 show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
+                start_stroke(scene);
+                take_ground(device, scene, assets, std::move(ground), false);
+                return end_stroke(scene);
             }
             // shortcut: waterfalls of a lake raised this way keep their old heights, ask before covering them when
             // falls get a yes/no question
@@ -459,7 +481,7 @@ namespace rct3::scene
         }
 
         /// A click with the waterfall tool: picks the first lake, or makes the waterfall to the second.
-        void pick_lake(ParkScene& scene, ui::Point at, ui::Point size, bool over)
+        void pick_lake(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
         {
             LandTools& l = scene.land;
             if (l.tile)
@@ -482,12 +504,22 @@ namespace rct3::scene
             }
             const auto fall = park::make_waterfall(scene.grid, bodies, *std::exchange(l.upper_lake, std::nullopt), index, l.upper_tile);
             if (!fall)
-                say(scene, fall.error());
-            else
+                return say(scene, fall.error());
+            // The spillway is cut where nothing holds the ground; the higher lake spreads into it.
+            save::TerrainGrid ground = scene.grid;
+            park::cut_spillway(ground, *fall);
+            start_stroke(scene);
+            for (const save::CarvedTile& c : fall->carved)
             {
-                scene.footpaths.waterfalls.push_back(*fall);
-                show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
+                if (park::refuses(l.holds, c.tile, c.corners, ground.at(c.tile.col, c.tile.row).corners))
+                    return say(scene, park::kWaterfallLandUnsuitable);
             }
+            take_ground(device, scene, assets, std::move(ground), false);
+            end_stroke(scene);
+            refit_lake(scene, fall->top, fall->carved);
+            scene.footpaths.waterfalls.push_back(*fall);
+            show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
+            rebuild_ground(device, scene, assets);
         }
 
         /// The fence round the park's land built again, and the staff kept to that land, after it changed.
@@ -656,7 +688,7 @@ namespace rct3::scene
         return scene.land.tool != LandTools::Tool::None;
     }
 
-    bool delete_waterfall(ParkScene& scene, ui::Point at, ui::Point size)
+    bool delete_waterfall(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size)
     {
         if (scene.land.tool != LandTools::Tool::Waterfall)
             return false;
@@ -671,13 +703,23 @@ namespace rct3::scene
         const save::Waterfall& f = falls[*fall];
         const auto col = static_cast<int>(std::floor(((f.lip_left.x + f.lip_right.x) / 2 - g.origin_x) / g.tile_size_x - f.flow.x / 2));
         const auto row = static_cast<int>(std::floor(((f.lip_left.z + f.lip_right.z) / 2 - g.origin_z) / g.tile_size_z - f.flow.z / 2));
-        if (g.contains(col, row) && !park::owned_outright(g.at(col, row)))
-            say(scene, park::kWaterfallDeleteNotOwned);
-        else
+        // The ground its spillway was cut from goes back, so must be the park's.
+        const auto owned = [&](save::Tile t) { return !g.contains(t.col, t.row) || park::owned_outright(g.at(t.col, t.row)); };
+        if (!owned({ col, row }) || !std::ranges::all_of(f.carved, [&](const save::CarvedTile& c) { return owned(c.tile); }))
         {
-            falls.erase(falls.begin() + static_cast<std::ptrdiff_t>(*fall));
-            show_park_particles(scene.particles, park::waterfall_spray(falls), &ParkParticles::sprays);
+            say(scene, park::kWaterfallDeleteNotOwned);
+            return true;
         }
+        save::TerrainGrid ground = g;
+        park::restore_spillway(ground, f);
+        const save::WorldPoint3 top = f.top;
+        falls.erase(falls.begin() + static_cast<std::ptrdiff_t>(*fall));
+        show_park_particles(scene.particles, park::waterfall_spray(falls), &ParkParticles::sprays);
+        start_stroke(scene);
+        take_ground(device, scene, assets, std::move(ground), false);
+        end_stroke(scene);
+        refit_lake(scene, top, { });
+        rebuild_ground(device, scene, assets);
         return true;
     }
 
@@ -738,7 +780,7 @@ namespace rct3::scene
         else if (l.tool == LandTools::Tool::Paint)
             paint(device, scene, assets, at, size, over);
         else if (l.tool == LandTools::Tool::Waterfall)
-            pick_lake(scene, at, size, over);
+            pick_lake(device, scene, assets, at, size, over);
         else if (l.tool == LandTools::Tool::Buy)
             buy(scene, assets, at, size, over);
         else

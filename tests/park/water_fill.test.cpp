@@ -171,3 +171,18 @@ TEST_CASE("shaping the ground beside a waterfall takes it away with its lakes")
     CHECK(falls.empty());
     CHECK(water.bodies.empty());
 }
+
+TEST_CASE("taking a lake away puts back the ground its waterfalls cut")
+{
+    save::TerrainGrid grid = valley();
+    const save::TerrainGrid was = grid;
+    save::WaterLayer water;
+    water.bodies.push_back(*fill_water(grid, { 1, 0 }, 2, any));
+    std::vector<save::Waterfall> falls(1);
+    falls[0].top = { 6, 2, 2 }; // Over tile 1
+    falls[0].carved = { { .tile = { 3, 0 }, .corners = was.at(3, 0).corners } };
+    grid.at(3, 0).corners = { 1, 1, 1, 1 };
+    CHECK(remove_lake(water, falls, grid, { 1, 0 }));
+    CHECK(falls.empty());
+    CHECK(grid.at(3, 0).corners == was.at(3, 0).corners);
+}

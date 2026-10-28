@@ -128,7 +128,7 @@ namespace rct3::scene
 
     /// A right click at `at` (of a view `size`) with the waterfall tool out: deletes the waterfall there; whether
     /// there was one.
-    bool delete_waterfall(ParkScene& scene, ui::Point at, ui::Point size);
+    bool delete_waterfall(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size);
 
     /// Each frame: follows the pointer at `at` (of a view `size`, not `over` the interface) while the left
     /// button is `down`.

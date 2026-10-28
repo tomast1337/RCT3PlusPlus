@@ -2180,7 +2180,7 @@ namespace rct3::scene
                     stop_pooling(scene);
                 else if (land_tool(scene))
                 {
-                    if (!delete_waterfall(scene, pointer.position, { screen.width(), screen.height() }))
+                    if (!delete_waterfall(device, scene, assets, pointer.position, { screen.width(), screen.height() }))
                         stop_land_tools(scene);
                 }
                 else if (!over)

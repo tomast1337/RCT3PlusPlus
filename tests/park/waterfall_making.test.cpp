@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/waterfall_making.hpp"
 
+#include <array>
 #include <cmath>
 #include <doctest/doctest.h>
 #include <vector>
@@ -45,7 +46,7 @@ TEST_CASE("make_waterfall: pours over the higher lake's edge toward the lower on
     REQUIRE(fall);
     CHECK(fall->flow.x == 1.0f);
     CHECK(fall->flow.z == 0.0f);
-    CHECK(fall->lip_left.x == 8.0f); // The far side of column 1
+    CHECK(fall->lip_left.x == 12.0f); // The far side of column 2, the spillway beyond the edge
     CHECK(fall->lip_left.y == 10.0f);
     CHECK(std::abs(fall->lip_right.z - fall->lip_left.z) == 12.0f); // Rows 0 to 2
     CHECK(fall->bottom.y == 2.0f);
@@ -76,4 +77,37 @@ TEST_CASE("waterfall_at: finds the fall over the ground picked, and none beside 
     CHECK(waterfall_at(falls, 12.0f, 6.0f) == 0u);
     CHECK_FALSE(waterfall_at(falls, 12.0f, 30.0f));
     CHECK_FALSE(waterfall_at(falls, -10.0f, 6.0f));
+}
+
+TEST_CASE("make_waterfall: keeps the ground of the spillway, cut_spillway cuts it and restore_spillway puts it back")
+{
+    // A bank at 12 from column 2 on, the higher lake's floor at 8.
+    save::TerrainGrid grid = owned_grid();
+    for (int r = 0; r < grid.height; ++r)
+        for (int c = 0; c < grid.width; ++c)
+            grid.at(c, r).corners.fill(c < 2 ? 8.0f : c < 4 ? 12.0f : 0.0f);
+    const auto fall = make_waterfall(grid, kLakes, 0, 1, { 1, 1 });
+    REQUIRE(fall);
+    CHECK(fall->carved.size() == 9); // Columns 1 to 3 of rows 0 to 2
+    save::TerrainGrid cut = grid;
+    cut_spillway(cut, *fall);
+    constexpr float kFloor = 10 - kSpillwayDepth;
+    constexpr float kRim = 10 + kSpillwayRim;
+    CHECK(cut.at(1, 1).corners == std::array { 8.0f, kFloor, 8.0f, kFloor });     // The old edge sinks
+    CHECK(cut.at(2, 1).corners == std::array { kFloor, kRim, kFloor, kRim });     // The spillway
+    CHECK(cut.at(3, 1).corners == std::array { kFloor, kFloor, kFloor, kFloor }); // On the way down
+    CHECK(cut.at(2, 3).corners == grid.at(2, 3).corners);                         // Beside the edge
+    CHECK(cut.at(0, 1).corners == grid.at(0, 1).corners);
+    restore_spillway(cut, *fall);
+    for (std::size_t i = 0; i < grid.cells.size(); ++i)
+        CHECK(cut.cells[i].corners == grid.cells[i].corners);
+}
+
+TEST_CASE("make_waterfall: cuts nothing when the lower lake lies against the edge")
+{
+    const std::vector<save::WaterBody> close { lake(10, 0, 1, 0, 2), lake(2, 2, 3, 0, 3) };
+    const auto fall = make_waterfall(owned_grid(), close, 0, 1, { 1, 1 });
+    REQUIRE(fall);
+    CHECK(fall->carved.empty());
+    CHECK(fall->lip_left.x == 8.0f);
 }

@@ -110,6 +110,11 @@ namespace rct3::park
     /// The tool laying spiral staircases, listed with the extras.
     /// shortcut: no text of the game names it, so its button has no help; add one once rct3++ ships texts.
     inline constexpr std::string_view kPoolStairs = "SegmentTypeSpiralStairs";
+    /// The tools of the pool panel's paths page: flat paths, laid along an L from where the drag began, and a
+    /// slope or stairs on one square.
+    inline constexpr std::string_view kPoolPath = "PoolPath";
+    inline constexpr std::string_view kPoolPathSlope = "PoolPathSlope";
+    inline constexpr std::string_view kPoolPathStairs = "PoolPathStairs";
     /// The overlay of the pool type, whose pieces pools are built of.
     inline constexpr std::string_view kPoolOverlay = "Pool/Default/Default_Stub";
 

@@ -100,7 +100,8 @@ namespace rct3::scene
             }
             else if (const auto& items = scene.build.items; items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
             {
-                const std::string_view symbol = e.mode == ui::PoolMode::Water ? park::kPoolWater[static_cast<std::size_t>(std::clamp(e.depth, 1, 3) - 1)] : (e.mode == ui::PoolMode::Tiles ? park::kPoolTiles : park::kPoolDelete);
+                constexpr std::array<std::string_view, 6> kTools { "", park::kPoolTiles, park::kPoolDelete, park::kPoolPath, park::kPoolPathSlope, park::kPoolPathStairs };
+                const std::string_view symbol = e.mode == ui::PoolMode::Water ? park::kPoolWater[static_cast<std::size_t>(std::clamp(e.depth, 1, 3) - 1)] : kTools[std::to_underlying(e.mode)];
                 const auto found = std::ranges::find_if(items.get(), [&](const park::BuildItem& i) { return i.list == park::BuildList::Pools && i.overlay == park::kPoolOverlay && i.symbol == symbol; });
                 item = found != items.get().end() ? &*found : nullptr;
             }
@@ -131,15 +132,30 @@ namespace rct3::scene
             const auto begun = scene.pools.at(a.col, a.row);
             const std::int32_t surface = scene.pooling.height.value_or(begun ? begun->surface : static_cast<std::int32_t>(std::lround(scene.grid.at(a.col, a.row).max_height())));
             const auto water = std::ranges::find(park::kPoolWater, item.symbol);
-            const park::PoolKind kind = water != park::kPoolWater.end() ? park::PoolKind::Water : item.symbol == park::kPoolJacuzzi ? park::PoolKind::Jacuzzi : item.symbol == park::kPoolHighDive ? park::PoolKind::HighDive : item.symbol == park::kPoolStairs ? park::PoolKind::Stairs : park::PoolKind::Tile;
+            const park::PoolKind kind = water != park::kPoolWater.end() ? park::PoolKind::Water : item.symbol == park::kPoolJacuzzi ? park::PoolKind::Jacuzzi : item.symbol == park::kPoolHighDive ? park::PoolKind::HighDive : item.symbol == park::kPoolStairs ? park::PoolKind::Stairs : item.symbol == park::kPoolPath ? park::PoolKind::Path : item.symbol == park::kPoolPathSlope ? park::PoolKind::PathSlope : item.symbol == park::kPoolPathStairs ? park::PoolKind::PathStairs : park::PoolKind::Tile;
             const bool climbs = kind == park::PoolKind::HighDive || kind == park::PoolKind::Stairs;
+            const bool turned = climbs || kind == park::PoolKind::PathSlope || kind == park::PoolKind::PathStairs;
             // Paved squares take the normal depth, the one the pool type prices them at.
-            const std::int32_t depth = water != park::kPoolWater.end() ? static_cast<std::int32_t>(water - park::kPoolWater.begin()) + 1 : 2;
+            // Paths go no deeper than their surface.
+            const std::int32_t depth = water != park::kPoolWater.end() ? static_cast<std::int32_t>(water - park::kPoolWater.begin()) + 1 : park::is_pool_path(kind) ? 0 : 2;
             std::vector<park::PoolSquare> squares;
+            const auto square = [&](std::int32_t col, std::int32_t row) { squares.push_back({ .col = col, .row = row, .kind = kind, .surface = surface, .depth = depth, .board = climbs ? scene.pooling.board : 0, .turn = turned ? scene.pooling.turns : 0, .edge = scene.pooling.edge }); };
             const auto area = marked(a, b);
-            for (std::int32_t row = area[1]; row <= area[3]; ++row)
+            if (kind == park::PoolKind::Path)
+            {
+                // Along the row where the drag began, then down the column where it is.
+                // shortcut: the marks and the check of the land owned cover the drag's whole rectangle; mark the L
+                // alone once it misleads.
                 for (std::int32_t col = area[0]; col <= area[2]; ++col)
-                    squares.push_back({ .col = col, .row = row, .kind = kind, .surface = surface, .depth = depth, .board = climbs ? scene.pooling.board : 0, .turn = climbs ? scene.pooling.turns : 0, .edge = scene.pooling.edge });
+                    square(col, a.row);
+                for (std::int32_t row = area[1]; row <= area[3]; ++row)
+                    if (row != a.row)
+                        square(b.col, row);
+            }
+            else
+                for (std::int32_t row = area[1]; row <= area[3]; ++row)
+                    for (std::int32_t col = area[0]; col <= area[2]; ++col)
+                        square(col, row);
             const std::int64_t cost = park::lay_pool(map, prices, squares);
             return { std::move(map), cost };
         }
@@ -416,7 +432,7 @@ namespace rct3::scene
         if (t.item)
         {
             const std::string_view s = t.item->symbol;
-            const std::string_view piece = s == park::kPoolDelete ? "" : s == park::kPoolTiles ? "SolidTop" : s == park::kPoolJacuzzi ? "Jacuzzi" : s == park::kPoolHighDive ? "DBTopBoard" : s == park::kPoolStairs ? "StairsBase" : "Base";
+            const std::string_view piece = s == park::kPoolDelete ? "" : s == park::kPoolTiles ? "SolidTop" : s == park::kPoolJacuzzi ? "Jacuzzi" : s == park::kPoolHighDive ? "DBTopBoard" : s == park::kPoolStairs ? "StairsBase" : s == park::kPoolPath ? "PathStraight" : s == park::kPoolPathSlope ? "PathSlope" : s == park::kPoolPathStairs ? "PathStairs" : "Base";
             turn_preview(device, scene, assets, piece, park::kPoolOverlay);
         }
         const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
@@ -426,7 +442,7 @@ namespace rct3::scene
         // A spa pool, a high diving board or a spiral staircase goes on the square pressed; dragging up or down
         // raises or lowers the board or the staircase's top.
         const bool climbs = t.item && (t.item->symbol == park::kPoolHighDive || t.item->symbol == park::kPoolStairs);
-        const bool single = t.item && (t.item->symbol == park::kPoolJacuzzi || climbs);
+        const bool single = t.item && (t.item->symbol == park::kPoolJacuzzi || t.item->symbol == park::kPoolPathSlope || t.item->symbol == park::kPoolPathStairs || climbs);
         if (dragging)
         {
             if (!t.corner)

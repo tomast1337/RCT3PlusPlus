@@ -69,6 +69,8 @@ namespace rct3::save
             constexpr std::string_view kSceneryBreakFlags = "BREAKFLAGS";
             constexpr std::string_view kSceneryBreakTime = "BREAKTIME";
             constexpr std::string_view kSceneryBehaviours = "BehaviourArray";
+            constexpr std::string_view kSceneryMotions = "AnimInfoList";
+            constexpr std::string_view kSceneryMotionTime = "CurrentAnimationTime";
             constexpr std::string_view kColour0 = "COL0";
             constexpr std::string_view kColour1 = "COL1";
             constexpr std::string_view kColour2 = "COL2";
@@ -793,6 +795,8 @@ namespace rct3::save
             }
             if (std::optional<const Value&> b = o.find(names::kSceneryBehaviours); b && b->kind() == ValueKind::List)
                 p.behaviour_count = static_cast<std::uint32_t>(b->items().size());
+            if (std::optional<const Value&> m = o.find(names::kSceneryMotions); m && m->kind() == ValueKind::List && !m->items().empty() && m->items().front().kind() == ValueKind::Struct)
+                p.motion_time = float_or(m->items().front().field(names::kSceneryMotionTime));
             return p;
         }
 

@@ -309,6 +309,7 @@ namespace rct3::save
         std::int32_t break_flags = 0; ///< Raw bit set; individual bits not confirmed
         float break_time = 0;
         std::uint32_t behaviour_count = 0;
+        float motion_time = 0; ///< Seconds into the motion its model plays, so like objects do not move in step
 
         [[nodiscard]] bool free_standing() const noexcept
         {

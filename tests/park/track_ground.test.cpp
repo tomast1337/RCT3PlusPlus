@@ -78,3 +78,21 @@ TEST_CASE("a cut is refused off land the park owns outright and where the land t
     g.at(2, 1).flags = 0;
     CHECK(cuts_refused(cuts, g, { }, { }));
 }
+
+TEST_CASE("a piece under enough ground all round hollows its tile up to its top, other items never do")
+{
+    save::TerrainGrid g = owned_grid(5, 3);
+    auto [pieces, models] = one_piece();
+    g.at(2, 1).corners.fill(4 + kGroundCover);
+    const auto hollows = track_hollows(pieces, models, g);
+    REQUIRE(hollows.size() == 1);
+    CHECK(hollows[0].col == 2);
+    CHECK(hollows[0].row == 1);
+    CHECK(hollows[0].low < 0);
+    CHECK(hollows[0].high == doctest::Approx(4));
+    g.at(2, 1).corners[0] = 4.5f;
+    CHECK(track_hollows(pieces, models, g).empty());
+    g.at(2, 1).corners.fill(4 + kGroundCover);
+    models.begin()->second.category = std::to_underlying(ItemCategory::Stall);
+    CHECK(track_hollows(pieces, models, g).empty());
+}

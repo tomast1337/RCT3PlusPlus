@@ -30,6 +30,7 @@
 #include "park/sky_models.hpp"
 #include "park/support_columns.hpp"
 #include "park/surrounding_land.hpp"
+#include "park/track_ground.hpp"
 #include "park/water_flow.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "parkfile/saved_park.hpp"
@@ -1033,9 +1034,10 @@ namespace rct3::scene
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
         }
         begin(ParkLoadStage::Scene);
-        // The ground was drawn before the fences and walls were known; drawn again if one parts two paths.
+        // The ground was drawn before the fences, walls and track were known; drawn again if one parts two paths
+        // or track lies in a tunnel.
         scene.footpaths.walls = park::edge_walls(scene.objects, scene.models, scene.grid);
-        scene.footpaths.pavings_stale = scene.footpaths.pavings_stale || std::ranges::any_of(scene.footpaths.paths, [&](const save::PathTile& p) {
+        scene.footpaths.pavings_stale = scene.footpaths.pavings_stale || !park::track_hollows(scene.objects, scene.models, scene.grid).empty() || std::ranges::any_of(scene.footpaths.paths, [&](const save::PathTile& p) {
                                             return !p.elevation && std::ranges::any_of(std::array<std::uint8_t, 4> { 0, 1, 2, 3 }, [&](std::uint8_t side) {
                                                 const auto edge = park::edge_height(p, scene.grid, side);
                                                 return edge && park::walled(scene.footpaths.walls, { p.col, p.row }, side, *edge);

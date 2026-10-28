@@ -335,6 +335,36 @@ namespace rct3::save
         std::int32_t depth = 0;   ///< Whole units
     };
 
+    /// A square of a pool complex, of any kind, as the game keeps it.
+    struct PoolSegmentState
+    {
+        std::uint64_t id = 0;
+        std::int32_t col = 0;
+        std::int32_t row = 0;
+        std::int32_t type = 0;    ///< 0 water, 1 paved, 2 stairs, 3 high diving board, 4 spa pool, 5 to 7 paths
+        std::int32_t surface = 0; ///< Whole units, as placed objects' heights
+        std::int32_t depth = 0;
+        std::int32_t special = 0; ///< A high diving board's height over the surface
+        std::int32_t complex = 0; ///< Its pool complex, by index
+    };
+
+    /// A pool complex's own settings.
+    struct PoolComplexState
+    {
+        std::int32_t index = 0;
+        std::int64_t ticket = 0; ///< Hundredths
+        std::string name { };    ///< As stored; "%ME%" and a number for the default
+    };
+
+    /// A changing room: the placed object it is, the pool square it opens on, and its settings.
+    struct ChangingRoomState
+    {
+        std::uint64_t object_ref = 0;
+        std::uint64_t segment = 0; ///< A PoolSegmentState's id
+        bool open = false;
+        std::int32_t fluid = 0; ///< The cleaning fluid picked, as stored
+    };
+
     /// A waterfall: water pouring from a higher lake over a cliff edge into a lower one.
     /// A tile's corners as they were before something cut into the ground there.
     struct CarvedTile
@@ -487,6 +517,9 @@ namespace rct3::save
         std::vector<SignState> signs { };
         std::vector<std::uint64_t> benches { }; ///< The placed objects that are benches guests can sit on
         std::vector<PoolWater> pool_water { };
+        std::vector<PoolSegmentState> pool_segments { }; ///< Every square of the pools, water and the rest
+        std::vector<PoolComplexState> pool_complexes { };
+        std::vector<ChangingRoomState> changing_rooms { };
         std::vector<Waterfall> waterfalls { };
         EnclosureMap enclosures { };
         std::optional<Weather> weather { };

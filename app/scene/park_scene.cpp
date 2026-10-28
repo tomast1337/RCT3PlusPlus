@@ -3490,8 +3490,7 @@ namespace rct3::scene
         saved.waterfalls = scene.footpaths.waterfalls;
         saved.day_mode = scene.day.mode;
         saved.animals = parkfile::keep_animals(scene.sim, scene.enclosures);
-        if (const park::PoolMap& pools = scene.pooling.before ? *scene.pooling.before : scene.pools; !pools.squares.empty())
-            saved.pools = pools;
+        saved.pools = scene.pooling.before ? *scene.pooling.before : scene.pools; // Even none, so the game's pools stay sold
         for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())
             if (item.broken && item.object != 0)
                 saved.broken_items.push_back(item.object);

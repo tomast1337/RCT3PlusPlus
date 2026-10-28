@@ -65,8 +65,6 @@ namespace rct3::ui
         {
             edges_[i] = &button(kEdges[i], kEdges[i]);
             edges_[i]->icon_scale = pool_panel::kEdgeWidth / 37;
-            // shortcut: straight edges only; the others wait for the curved pieces to be laid.
-            edges_[i]->enabled = i == 0;
         }
         grid_ = &button("Land_Grid", "Pool_GridToggle");
         snap_ = &button("Pool_Height", "Pool_HeightToggle");
@@ -230,8 +228,14 @@ namespace rct3::ui
         for (std::size_t i = 0; i < depths_.size(); ++i)
             if (depths_[i]->take_click())
                 editor_.depth = static_cast<std::int32_t>(i) + 1;
-        for (Button* b : edges_)
-            (void)b->take_click();
+        for (std::size_t i = 0; i < edges_.size(); ++i)
+            if (edges_[i]->take_click())
+            {
+                editor_.edge = static_cast<std::int32_t>(i);
+                editor_.mode = PoolMode::Water;
+                placing_.reset();
+                changed_ = true;
+            }
         if (grid_->take_click())
             editor_.grid = !editor_.grid;
         if (snap_->take_click())
@@ -305,7 +309,7 @@ namespace rct3::ui
                 if (!placing_)
                     lit(modes_[std::to_underlying(editor_.mode)]);
                 lit(depths_[static_cast<std::size_t>(std::clamp(editor_.depth, 1, 3) - 1)]);
-                lit(edges_[0]);
+                lit(edges_[static_cast<std::size_t>(std::clamp(editor_.edge, 0, 3))]);
                 if (editor_.grid)
                     lit(grid_);
                 if (editor_.snap)

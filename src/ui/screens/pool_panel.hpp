@@ -8,7 +8,7 @@
 // page has three rows: the three depths of water, then the snap to ground switch and the surface height beside
 // it, which only counts while the switch is off; under them the four kinds of edge; at the foot, laying water,
 // laying tiles and the grid switch, with the delete tool at the right end. Water, tiles and delete are one
-// choice, the depths another, the edges a third. The extras and changing room pages show their pictures in two
+// choice, the depths another, the edges a third; picking an edge puts the water out, as in the game. The extras and changing room pages show their pictures in two
 // rows; picking one puts it out instead of the editor's tool, and opening the editor's tab brings that back.
 // The disc shows the picture of what the tool lays now. The band along the strip's top tells what the button
 // under the pointer does, else the tab's help.
@@ -69,6 +69,7 @@ namespace rct3::ui
     {
         PoolMode mode = PoolMode::Water;
         std::int32_t depth = 2; ///< 1 shallow, 2 normal, 3 deep
+        std::int32_t edge = 0;  ///< 0 straight, 1 cut across, 2 tight curves, 3 loose curves
         bool grid = false;
         bool snap = true;        ///< The surface sits on the ground; else at `height`
         std::int32_t height = 0; ///< Whole units

@@ -253,6 +253,7 @@ namespace rct3::scene
         std::int32_t drawn_look = -1;                     ///< And how: the part of the tile marked, and the colour
         std::optional<std::int32_t> height;               ///< Of the surface, when the pool panel does not snap it to the ground
         bool grid = false;                                ///< The pool panel's grid switch, as last seen
+        park::PoolEdge edge = park::PoolEdge::Straight;   ///< The pool panel's edge setting, for the squares laid
         /// The squares worked on now, from where the drag began to where it is, or the square under the pointer.
         std::optional<std::pair<save::Tile, save::Tile>> working;
         std::int64_t cost = 0; ///< Of the work, below zero for money back

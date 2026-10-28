@@ -275,7 +275,7 @@ namespace rct3::parkfile
         if (park.animals)
             put_chunk(w, "ANML", 1, *park.animals);
         if (park.pools)
-            put_chunk(w, "POOL", 3, *park.pools);
+            put_chunk(w, "POOL", 4, *park.pools);
         return w.take();
     }
 
@@ -342,7 +342,7 @@ namespace rct3::parkfile
             }
             if (tag == "POOL")
             {
-                if (park.pools || version != 3)
+                if (park.pools || version != 4)
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.pools.emplace());
             }

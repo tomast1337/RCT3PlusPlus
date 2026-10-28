@@ -53,7 +53,17 @@ TEST_CASE("the pool panel opens on the editor with water out")
     CHECK(f.panel->editor().mode == PoolMode::Water);
     CHECK(f.panel->editor().snap);
     CHECK_FALSE(f.button("pools/Pool_PathPanel").enabled);
-    CHECK_FALSE(f.button("pools/body/editor/Pool_CurveSmall").enabled);
+}
+
+TEST_CASE("an edge button sets the edge and puts the water out")
+{
+    Fixture f;
+    f.click("pools/body/editor/Pool_PlaceTiles");
+    (void)f.panel->take_change();
+    f.click("pools/body/editor/Pool_CurveLarge");
+    CHECK(f.panel->take_change());
+    CHECK(f.panel->editor().edge == 3);
+    CHECK(f.panel->editor().mode == PoolMode::Water);
 }
 
 TEST_CASE("the editor's buttons change the tool and keep their choices")

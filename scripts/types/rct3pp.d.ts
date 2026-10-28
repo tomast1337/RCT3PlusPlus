@@ -349,6 +349,8 @@ interface StallInfo {
     shown: boolean;
     /** Whether it was pulled down; it keeps its place in the list. */
     demolished: boolean;
+    /** Whether its building moves: stalls whose models have a motion play it round and round, open or not. */
+    moving: boolean;
     /** Whether the simulation runs it, once a path runs past the tile it faces. The rest are there only when
      * it does: the price it sells at, in hundredths, and whether it is open to guests there. */
     joined: boolean;

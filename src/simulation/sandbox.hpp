@@ -30,6 +30,7 @@ namespace rct3::simulation
         float thirst = 0;
         float hunger = 0;
         float bladder = 0;
+        float swim = 0;
         float happiness = 0.5f;
         float energy = 1;
         float nausea = 0;

@@ -425,6 +425,7 @@ namespace rct3::scene
         save::EnclosureMap enclosures;               ///< The animal enclosures' tiles and fences
         std::vector<std::uint64_t> enclosure_panels; ///< The objects of their fences, as last built
         park::PoolMap pools;                         ///< The swimming pools the player laid
+        std::size_t pools_seen = 0;                  ///< A fingerprint of `pools` as the simulation last took them in
         std::vector<std::uint64_t> pool_pieces;      ///< Their pieces' objects, as last built
         std::size_t saved_pool_water = 0;            ///< footpaths.pools of the park's own file; the pools' follow
         std::size_t entrance_centred = 0;            ///< Of the park's entrances, the one the view last went to

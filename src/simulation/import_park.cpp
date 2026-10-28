@@ -5,6 +5,7 @@
 #include "ovl/tracked_ride.hpp"
 #include "park/ground_paths.hpp"
 #include "park/queue_fences.hpp"
+#include "park/terrain_mesh.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park_state.hpp"
@@ -464,6 +465,79 @@ namespace rct3::simulation
             ++changed;
         }
         return changed;
+    }
+
+    void import_pools(SimWorld& world, const park::PoolMap& pools)
+    {
+        entt::registry& r = world.registry;
+        const PathNetwork& paths = world.paths;
+        const auto middle = [&](std::int32_t col, std::int32_t row, float height) { return glm::vec3 { paths.origin.x + (static_cast<float>(col) + 0.5f) * paths.tile_size, height * paths.level_height, paths.origin.y + (static_cast<float>(row) + 0.5f) * paths.tile_size }; };
+        // Each square's complex, found by spreading from square to square side by side.
+        std::map<std::pair<std::int32_t, std::int32_t>, const park::PoolSquare*> squares;
+        for (const park::PoolSquare& s : pools.squares)
+            squares.emplace(std::pair { s.col, s.row }, &s);
+        constexpr std::array<std::array<std::int32_t, 2>, 4> kSides { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } }; // By turn
+        std::map<std::pair<std::int32_t, std::int32_t>, std::size_t> complex_of;
+        std::vector<SwimPool> complexes;
+        for (const park::PoolSquare& first : pools.squares)
+        {
+            if (!complex_of.try_emplace({ first.col, first.row }, complexes.size()).second)
+                continue;
+            SwimPool& complex = complexes.emplace_back();
+            for (std::vector<const park::PoolSquare*> todo { &first }; !todo.empty();)
+            {
+                const park::PoolSquare& s = *todo.back();
+                todo.pop_back();
+                if (s.kind == park::PoolKind::Water)
+                    complex.water.push_back(middle(s.col, s.row, static_cast<float>(s.surface) + park::kPoolBrim));
+                else
+                    complex.paved.push_back(middle(s.col, s.row, static_cast<float>(s.surface)));
+                for (const auto [dc, dr] : kSides)
+                    if (const auto next = squares.find({ s.col + dc, s.row + dr }); next != squares.end() && complex_of.try_emplace(next->first, complexes.size() - 1).second)
+                        todo.push_back(next->second);
+            }
+        }
+        // The rooms there were, by tile, and the complexes they opened on.
+        std::map<std::pair<std::int32_t, std::int32_t>, entt::entity> rooms;
+        for (const auto [e, door] : r.view<const PoolDoor>().each())
+            rooms.emplace(std::pair { door.col, door.row }, e);
+        std::vector<entt::entity> pool_entities(complexes.size(), entt::null);
+        std::vector<entt::entity> kept;
+        for (const park::PoolRoom& room : pools.rooms)
+        {
+            const auto [dc, dr] = kSides[static_cast<std::size_t>(room.turn & 3)];
+            const auto square = squares.find({ room.col + dc, room.row + dr });
+            if (square == squares.end())
+                continue;
+            const std::size_t complex = complex_of.at(square->first);
+            const auto was = rooms.find({ room.col, room.row });
+            const entt::entity e = was != rooms.end() ? was->second : r.create();
+            kept.push_back(e);
+            entt::entity& pool = pool_entities[complex];
+            if (pool == entt::null && was != rooms.end() && r.valid(r.get<PoolDoor>(e).pool) && !std::ranges::contains(pool_entities, r.get<PoolDoor>(e).pool))
+                pool = r.get<PoolDoor>(e).pool;
+            if (pool == entt::null)
+                pool = r.create();
+            const auto surface = static_cast<float>(square->second->surface);
+            // The door opens on the path tile on the room's side away from the pool.
+            const glm::vec3 outside = middle(room.col - dc, room.row - dr, surface);
+            const auto node = paths.nearest(outside);
+            const bool on_path = node && !paths.nodes()[*node].removed && !paths.nodes()[*node].queue && std::abs(paths.nodes()[*node].height - outside.y) <= paths.level_height;
+            auto& attraction = r.get_or_emplace<Attraction>(e);
+            attraction.kind = AttractionKind::Pool;
+            attraction.entrance = on_path ? *node : kNoNode;
+            attraction.price = { room.ticket };
+            attraction.open = room.open;
+            r.emplace_or_replace<PoolDoor>(e, PoolDoor { .pool = pool, .col = room.col, .row = room.row, .room = middle(room.col, room.row, surface), .poolside = middle(square->second->col, square->second->row, surface) });
+        }
+        for (std::size_t c = 0; c < complexes.size(); ++c)
+            if (pool_entities[c] != entt::null)
+                r.emplace_or_replace<SwimPool>(pool_entities[c], std::move(complexes[c]));
+        for (const auto& [tile, e] : rooms)
+            if (!std::ranges::contains(kept, e))
+                pull_down(world, e);
+        const auto gone = r.view<const SwimPool>() | std::views::filter([&](entt::entity e) { return !std::ranges::contains(pool_entities, e); }) | std::ranges::to<std::vector>();
+        r.destroy(gone.begin(), gone.end());
     }
 
     std::size_t import_stalls(SimWorld& world, const save::RideModel& rides)

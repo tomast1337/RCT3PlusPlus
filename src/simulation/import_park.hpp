@@ -9,6 +9,7 @@
 #include "park/edge_walls.hpp"
 #include "park/object_models.hpp"
 #include "park/overhead.hpp"
+#include "park/pools.hpp"
 #include "park/track_course.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
@@ -50,6 +51,11 @@ namespace rct3::simulation
     /// Returns how many changed.
     std::size_t relink_attractions(SimWorld& world, const save::RideModel& rides);
 
+    /// Brings the pools of `pools` into the simulation, or brings them up to date after they or the paths
+    /// changed: each complex (squares that meet side to side) the spots its swimmers go to, each changing room
+    /// an attraction at the path tile before its door, at its complex's ticket price, open as it is. A room
+    /// that still stands keeps its swimmers; those of a room gone come out at its door. Call after import_paths.
+    void import_pools(SimWorld& world, const park::PoolMap& pools);
     /// Adds a shop for every stall of `rides` that sells a drink or food and stands beside a path; returns how
     /// many were added. Call after import_paths.
     std::size_t import_stalls(SimWorld& world, const save::RideModel& rides);

@@ -51,9 +51,15 @@ namespace rct3::simulation
             r.emplace<Mood>(e, g.mood_now.happiness, g.mood_now.energy, g.mood_now.nausea, kTuning.sickness.tolerance_per_saved_level.value * static_cast<float>(std::to_underlying(g.nausea_tolerance) + 1));
             const save::Cash& c = g.cash;
             r.emplace<Wallet>(e, Wallet { .cash = { c.current }, .bank = { c.bank }, .withdrawn = { c.withdrawn }, .spent = { c.total_spent }, .spent_entry = { c.spent_park_entry }, .spent_rides = { c.spent_rides }, .spent_food = { c.spent_food }, .spent_drink = { c.spent_drink }, .spent_souvenirs = { c.spent_souvenirs } });
-            // Saved on the rides' rating scale, about 0 to 10.
-            if (g.ride_preference.max > g.ride_preference.min)
-                r.emplace<Taste>(e, g.ride_preference.min / 10, g.ride_preference.max / 10);
+            if (g.ride_preference.max > g.ride_preference.min || g.pool_preference)
+            {
+                Taste taste;
+                // Saved on the rides' rating scale, about 0 to 10.
+                if (g.ride_preference.max > g.ride_preference.min)
+                    taste = { g.ride_preference.min / 10, g.ride_preference.max / 10 };
+                taste.pools.value = std::clamp(g.pool_preference.value_or(taste.pools.value), 0.0f, 1.0f);
+                r.emplace<Taste>(e, taste);
+            }
         }
         return out;
     }

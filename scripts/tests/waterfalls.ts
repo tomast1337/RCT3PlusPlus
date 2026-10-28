@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Waterfalls: a scenario's falls drawn from the park, seen from below.
+// Waterfalls: a scenario's falls drawn from the park, seen from below; one made with the tool, cutting its
+// spillway into the bank, and deleted again, putting the ground back.
 //
 //   ./nob script scripts/tests/waterfalls.ts -- --no-intro --no-audio --no-simulate --seed 1
 
@@ -53,6 +54,15 @@ await click_tile(upper.col, upper.row);
 await click_tile(upper.col, upper.row);
 await frames(2);
 expect(map.waterfalls().length === falls.length, "no fall from a lake into itself");
+// The ground between the lakes, to see the spillway cut and put back.
+const ground = (): string => {
+    const out: number[] = [];
+    for (let r = Math.min(upper.row, lower.row) - 6; r <= Math.max(upper.row, lower.row) + 6; ++r)
+        for (let c = Math.min(upper.col, lower.col) - 6; c <= Math.max(upper.col, lower.col) + 6; ++c)
+            out.push(...(map.tile(c, r)?.corners ?? []));
+    return JSON.stringify(out);
+};
+const before = ground();
 await click_tile(lower.col, lower.row); // Picked first this time; the fall still pours from the higher lake
 await click_tile(upper.col, upper.row);
 await frames(2);
@@ -61,3 +71,19 @@ log("made", JSON.stringify(made[made.length - 1]));
 expect(made.length === falls.length + 1, "a new waterfall");
 expect(Math.abs(made[made.length - 1].top - first.top) < 0.1 && Math.abs(made[made.length - 1].bottom - first.bottom) < 0.1, "it to join the same two lakes");
 await screenshot("made");
+
+// Unless the lower lake lies against the edge, the new fall cut a spillway into the bank, one tile out; deleting
+// it with a right click on its water puts the ground back.
+const fresh = made[made.length - 1];
+const reach = Math.abs(lower.col - upper.col) + Math.abs(lower.row - upper.row);
+log("reach", reach, "cut", ground() !== before);
+expect(reach <= 1 || ground() !== before, "the spillway cut");
+const middle = map.screen((fresh.col + fresh.landCol) / 2, (fresh.row + fresh.landRow) / 2);
+if (!middle)
+    throw new Error("the new fall is not in sight");
+await pointer.click(middle.x, middle.y, "right");
+await frames(2);
+log("falls after deleting", map.waterfalls().length);
+expect(map.waterfalls().length === falls.length, "the new fall deleted");
+expect(ground() === before, "the ground put back");
+await screenshot("deleted");

@@ -3,6 +3,7 @@
 
 #include "park/boundary_fence.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -94,16 +95,64 @@ namespace rct3::park
                     return std::unexpected(kWaterfallNotOwned);
             }
 
+        // The edge tiles, the spillway beyond them and the ground on the way down to the lower lake; none when the
+        // lower lake lies against the edge.
+        std::vector<save::CarvedTile> carved;
+        const bool spillway = best->reach > 1;
+        for (int s = from; spillway && s <= to; ++s)
+            for (int k = 0; k < best->reach; ++k)
+            {
+                const save::Tile t = step(step(best->from, side, s), best->out, k);
+                carved.push_back({ .tile = t, .corners = grid.at(t.col, t.row).corners });
+            }
+
         // In world units: the tiles' sizes along the map's two ways.
         const glm::vec3 flow { static_cast<float>(best->out.col), 0.0f, static_cast<float>(best->out.row) };
         const glm::vec3 across { static_cast<float>(side.col), 0.0f, static_cast<float>(side.row) };
         const glm::vec3 size { grid.tile_size_x, 0.0f, grid.tile_size_z };
         const glm::vec3 centre = glm::vec3 { grid.world_x(best->from.col) + grid.tile_size_x / 2, high.level, grid.world_z(best->from.row) + grid.tile_size_z / 2 } + across * size * (static_cast<float>(from + to) / 2);
-        const glm::vec3 lip = centre + flow * size / 2.0f;
+        const glm::vec3 lip = centre + flow * size * (spillway ? 1.5f : 0.5f);
         const glm::vec3 half = across * size * (static_cast<float>(to - from + 1) / 2);
-        glm::vec3 bottom = lip + flow * size * (static_cast<float>(best->reach) - 0.5f);
+        glm::vec3 bottom = centre + flow * size * static_cast<float>(best->reach);
         bottom.y = low.level;
-        return save::Waterfall { .lip_left = world(lip - half), .lip_right = world(lip + half), .top = world(centre), .bottom = world(bottom), .flow = world(flow) };
+        return save::Waterfall { .lip_left = world(lip - half), .lip_right = world(lip + half), .top = world(centre), .bottom = world(bottom), .flow = world(flow), .carved = std::move(carved) };
+    }
+
+    void cut_spillway(save::TerrainGrid& grid, const save::Waterfall& fall)
+    {
+        const glm::vec2 flow { fall.flow.x, fall.flow.z };
+        const glm::vec2 lip = (glm::vec2 { fall.lip_left.x, fall.lip_left.z } + glm::vec2 { fall.lip_right.x, fall.lip_right.z }) / 2.0f;
+        const float length = std::abs(flow.x) * grid.tile_size_x + std::abs(flow.y) * grid.tile_size_z; // Of a tile, along the flow
+        const float level = fall.top.y;
+        constexpr float kOn = 0.01f; ///< Tiles from a line a corner may be and still be on it
+        for (const save::CarvedTile& c : fall.carved)
+        {
+            if (!grid.contains(c.tile.col, c.tile.row))
+                continue;
+            // Measured in tiles out from the lip: the edge tiles' middles at -1.5, the spillway's at -0.5.
+            const auto out = [&](float x, float z) { return glm::dot(glm::vec2 { x, z } - lip, flow) / length; };
+            const float middle = out(grid.world_x(c.tile.col) + grid.tile_size_x / 2, grid.world_z(c.tile.row) + grid.tile_size_z / 2);
+            auto& corners = grid.at(c.tile.col, c.tile.row).corners;
+            for (std::size_t k = 0; k < 4; ++k)
+            {
+                const float at = out(grid.world_x(c.tile.col) + static_cast<float>(k % 2) * grid.tile_size_x, grid.world_z(c.tile.row) + static_cast<float>(k / 2) * grid.tile_size_z);
+                if (middle > 0)
+                    corners[k] = std::min(corners[k], level - kSpillwayDepth); // On the way down
+                else if (std::abs(at + 1) < kOn)
+                    corners[k] = level - kSpillwayDepth; // The old edge
+                else if (std::abs(at) < kOn)
+                    corners[k] = level + kSpillwayRim; // The spillway's far side
+            }
+        }
+    }
+
+    void restore_spillway(save::TerrainGrid& grid, const save::Waterfall& fall)
+    {
+        for (const save::CarvedTile& c : fall.carved)
+        {
+            if (grid.contains(c.tile.col, c.tile.row))
+                grid.at(c.tile.col, c.tile.row).corners = c.corners;
+        }
     }
 
     std::optional<std::size_t> waterfall_at(std::span<const save::Waterfall> falls, float x, float z)

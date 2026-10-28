@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/water_fill.hpp"
 
+#include "park/waterfall_making.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -86,13 +88,18 @@ namespace rct3::park
         return poured;
     }
 
-    bool remove_lake(save::WaterLayer& water, std::vector<save::Waterfall>& falls, const save::TerrainGrid& grid, save::Tile tile)
+    bool remove_lake(save::WaterLayer& water, std::vector<save::Waterfall>& falls, save::TerrainGrid& grid, save::Tile tile)
     {
         const auto lake = std::ranges::find_if(water.bodies, [&](const save::WaterBody& b) { return holds(b, tile); });
         if (lake == water.bodies.end())
             return false;
         const auto on_lake = [&](const save::WorldPoint3& p) { return holds(*lake, { static_cast<int>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<int>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) }); };
-        std::erase_if(falls, [&](const save::Waterfall& f) { return on_lake(f.top) || on_lake(f.bottom); });
+        std::erase_if(falls, [&](const save::Waterfall& f) {
+            if (!on_lake(f.top) && !on_lake(f.bottom))
+                return false;
+            restore_spillway(grid, f);
+            return true;
+        });
         water.bodies.erase(lake);
         return true;
     }

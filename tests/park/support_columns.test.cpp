@@ -139,6 +139,10 @@ TEST_CASE("a column under track on the ground: deep foot, middles lined up on th
     CHECK(built.fitted.empty());
     CHECK(built.pieces.front().id == 101);
     CHECK(built.pieces.front().force_absolute_height);
+    // Models handed in by index stand for those looked up; none handed in means none.
+    const std::vector<const ObjectModel*> found { &park.models.at(model_key(park.objects[0])) };
+    CHECK(stack(support_columns(park.objects, park.models, { }, flat_grid(8, 2), girders(), 100, { }, std::nullopt, found).pieces, 3, 3) == stack(built.pieces, 3, 3));
+    CHECK(support_columns(park.objects, park.models, { }, flat_grid(8, 2), girders(), 100, { }, std::nullopt, std::vector<const ObjectModel*> { nullptr }).pieces.empty());
 }
 
 TEST_CASE("a column needs room above the ground and no ground path under it")

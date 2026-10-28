@@ -4,6 +4,7 @@
 #include "logging/log.hpp"
 #include "park/support_columns.hpp"
 #include "profiling/profiler.hpp"
+#include "scene/park_refresh.hpp"
 #include "scene/park_scene.hpp"
 
 #include <algorithm>
@@ -68,7 +69,9 @@ namespace rct3::scene
     void refresh_supports(ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         SupportWatch& w = scene.supports;
-        if (!w.stale)
+        // Not while the objects' mesh build reads them: they are looked at once it is done, and no new build
+        // starts while they are stale (refresh_objects), so the frame does not wait for one.
+        if (!w.stale || (scene.object_build.valid() && !ready(scene.object_build)))
             return;
         w.stale = false;
         auto started = std::chrono::steady_clock::now();
@@ -135,7 +138,8 @@ namespace rct3::scene
         std::uint64_t last = 0;
         for (const save::PlacedObject& o : scene.objects)
             last = std::max(last, o.id);
-        park::BuiltSupports built = profiling::section("Columns", [&] { return park::support_columns(scene.objects, scene.models, scene.footpaths.paths, scene.grid, *sets, last, supports_passed(scene), tiles); });
+        place_objects(scene); // Their models, kept
+        park::BuiltSupports built = profiling::section("Columns", [&] { return park::support_columns(scene.objects, scene.models, scene.footpaths.paths, scene.grid, *sets, last, supports_passed(scene), tiles, scene.places.models); });
         for (std::size_t i = 0; i < built.pieces.size(); ++i)
         {
             save::PlacedObject& piece = built.pieces[i];

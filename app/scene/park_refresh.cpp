@@ -318,7 +318,9 @@ namespace rct3::scene
                     const auto* cycle = scene.simulate && boned.ride != entt::null ? scene.sim.registry.try_get<simulation::CycleRide>(boned.ride) : nullptr;
                     const auto into = cycle != nullptr ? simulation::seconds_into_cycle(*cycle) : std::nullopt;
                     const float length = cycle != nullptr ? simulation::cycle_seconds(*cycle) : 0.0f;
-                    playing = park::flat_ride_motion(seconds, length, into ? std::min(*into + scene.sim_time, length) : 0.0f, into.has_value(), scene.park_clock);
+                    // Scenery and stalls carry on from where the save left them, each at its own point in its loop.
+                    const float idle = scene.park_clock + (boned.ride == entt::null ? scene.objects[boned.object].motion_time : 0.0f);
+                    playing = park::flat_ride_motion(seconds, length, into ? std::min(*into + scene.sim_time, length) : 0.0f, into.has_value(), idle);
                 }
                 const auto [motion, time] = playing;
                 const std::vector<glm::mat4> moves = park::bone_moves(*model->second.rig, motion, time);

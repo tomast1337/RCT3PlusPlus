@@ -43,6 +43,7 @@ namespace rct3::ui
     inline constexpr int kPoolDeleteComplexControl = 5;
     inline constexpr int kPoolLocateControl = 6;
     inline constexpr int kPoolMechanicControl = 7;
+    inline constexpr int kPoolFluidControl = 8; ///< A choice: the cleaning fluid, mildest 0 to harshest 2
     inline constexpr int kMostPoolTicket = 2000;
 
     /// The pool complex a changing room lets guests into.
@@ -52,6 +53,8 @@ namespace rct3::ui
         std::int64_t ticket = 0; ///< Hundredths
         bool open = false;
         std::int64_t people = 0; ///< In the complex
+        std::size_t dirt = 0;    ///< How dirty its water is, in six steps, cleanest 0
+        std::uint8_t fluid = 0;  ///< As kPoolFluidControl's value
     };
 
     struct SceneryTabInfo

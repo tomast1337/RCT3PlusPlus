@@ -590,6 +590,15 @@ namespace rct3::scene
             return room == scene.pools.rooms.end() ? std::nullopt : std::optional(static_cast<std::size_t>(room - scene.pools.rooms.begin()));
         }
 
+        /// The simulated changing room of `room`, if the simulation has it.
+        entt::entity room_entity(const ParkScene& scene, std::size_t room)
+        {
+            for (const auto [e, door] : scene.sim.registry.view<const simulation::PoolDoor>().each())
+                if (door.col == scene.pools.rooms[room].col && door.row == scene.pools.rooms[room].row)
+                    return e;
+            return entt::null;
+        }
+
         ui::SceneryFacts prop_facts(const ParkScene& scene, std::size_t index)
         {
             ui::SceneryFacts f;
@@ -606,7 +615,17 @@ namespace rct3::scene
             if (const auto sign = std::ranges::find(scene.signs, o.id, &save::SignState::object_ref); sign != scene.signs.end())
                 f.sign = &*sign;
             if (const auto room = pool_room(scene, o))
-                f.pool = ui::PoolComplexFacts { .name = strings::to_utf16(scene.pools.rooms[*room].complex_name), .ticket = scene.pools.rooms[*room].ticket, .open = scene.pools.rooms[*room].open };
+            {
+                // Its complex's swimmers, and its water's dirt, as the simulation has them.
+                const auto& r = scene.sim.registry;
+                const entt::entity e = room_entity(scene, *room);
+                const auto* door = e != entt::null ? &r.get<simulation::PoolDoor>(e) : nullptr;
+                const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
+                std::int64_t people = 0;
+                for (const auto [g, swimmer, errand] : r.view<const simulation::Swimmer, const simulation::Errand>().each())
+                    people += door != nullptr && r.valid(errand.target) && r.all_of<simulation::PoolDoor>(errand.target) && r.get<simulation::PoolDoor>(errand.target).pool == door->pool;
+                f.pool = ui::PoolComplexFacts { .name = strings::to_utf16(scene.pools.rooms[*room].complex_name), .ticket = scene.pools.rooms[*room].ticket, .open = scene.pools.rooms[*room].open, .people = people, .dirt = pool != nullptr ? simulation::dirt_step(*pool) : 0, .fluid = scene.pools.rooms[*room].fluid };
+            }
             return f;
         }
 
@@ -2285,6 +2304,11 @@ namespace rct3::scene
                 }
                 else if (change->id == ui::kPoolDeleteComplexControl)
                     ask_sell_pool_complex(scene, *assets.strings, assets.palette, *room);
+                else if (change->id == ui::kPoolMechanicControl)
+                {
+                    if (const entt::entity e = room_entity(scene, *room); e != entt::null)
+                        scene.sim.registry.get_or_emplace<simulation::Upkeep>(e).called = true;
+                }
                 else if (change->id == ui::kPoolLocateControl)
                 {
                     const auto model = scene.models.find(park::model_ref(o));
@@ -2300,6 +2324,8 @@ namespace rct3::scene
                             scene.pools.rooms[r].open = change->value == 0;
                         else if (change->id == ui::kPoolTicketControl)
                             scene.pools.rooms[r].ticket = change->value;
+                        else if (change->id == ui::kPoolFluidControl)
+                            scene.pools.rooms[r].fluid = static_cast<std::uint8_t>(std::clamp(change->value, 0, 2));
                         else if (change->id == ui::kPoolNameControl && change->text.find_first_not_of(u' ') != std::u16string::npos)
                             scene.pools.rooms[r].complex_name = strings::to_utf8(change->text);
                     }
@@ -2726,14 +2752,14 @@ namespace rct3::scene
                 scene.sim.registry.ctx().insert_or_assign(simulation::guest_weather(scene.park));
                 scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day.time });
                 const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;
-                // The pools taken in again once built on, or their rooms opened, closed or priced.
+                // The pools taken in again once built on, or their rooms opened, closed, priced or given another fluid.
                 std::size_t pools = 14695981039346656037u;
                 const auto mix = [&](std::int64_t v) { pools = (pools ^ static_cast<std::size_t>(v)) * 1099511628211u; };
                 for (const park::PoolSquare& s : scene.pools.squares)
                     for (const std::int64_t v : { std::int64_t { s.col }, std::int64_t { s.row }, std::int64_t { std::to_underlying(s.kind) }, std::int64_t { s.surface } })
                         mix(v);
                 for (const park::PoolRoom& room : scene.pools.rooms)
-                    for (const std::int64_t v : { std::int64_t { room.col }, std::int64_t { room.row }, std::int64_t { room.turn }, room.ticket, std::int64_t { room.open } })
+                    for (const std::int64_t v : { std::int64_t { room.col }, std::int64_t { room.row }, std::int64_t { room.turn }, room.ticket, std::int64_t { room.open }, std::int64_t { room.fluid } })
                         mix(v);
                 if (std::exchange(scene.pools_seen, pools) != pools)
                     simulation::import_pools(scene.sim, scene.pools);

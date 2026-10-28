@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The land tools on the game's blank landscape: digs a pit with Shape ground, paints round it with Paint
-// ground, fills it with Water by clicking its wall and takes the lake away again, by clicking it and by digging
-// under it, then raises the ground under a tree planted there, which rises with it.
+// The land tools on the game's blank landscape: digs a pit with Shape ground, heard rumbling while the stroke
+// goes, paints round it with Paint ground, fills it with Water by clicking its wall and takes the lake away again,
+// by clicking it and by digging under it, then raises the ground under a tree planted there, which rises with it.
 //
 //   ./nob script scripts/tests/land_tools.ts -- --no-intro --no-audio --no-simulate --seed 1
 
@@ -63,7 +63,22 @@ const cash = park.cash();
 await pick("Land_Brush_Height");
 const [x, y] = on_view(col, row);
 
-await pointer.drag([x, y], [x, y + 0.1], 40);
+// By hand, to hear the stroke: it rumbles softly once pressed, louder as the ground moves, and stops on letting go.
+const thumps = build.sounds().thumps;
+pointer.move(x, y);
+pointer.press();
+await frames(2);
+const still = build.sounds().rumble;
+for (let i = 1; i <= 20; ++i) {
+    pointer.move(x, y + 0.005 * i);
+    await frames(1);
+}
+const moving = build.sounds().rumble;
+pointer.release();
+await frames(2);
+log("rumble:", still, "->", moving, "->", build.sounds().rumble);
+expect(still !== null && moving !== null && moving > still, "the stroke rumbling, louder as the ground moves");
+expect(build.sounds().rumble === null && build.sounds().thumps === thumps, "the rumble stopped on letting go, and no thump");
 
 log("dug a pit:", before, "->", low(col, row), "cash", cash, "->", park.cash());
 

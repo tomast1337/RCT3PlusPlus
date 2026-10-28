@@ -118,6 +118,8 @@ namespace rct3::scene
         s.thunder = main(kThunder);
         constexpr std::array<std::string_view, 2> kThumps { "EarthThump1", "EarthThump2" };
         s.thumps = main(kThumps);
+        constexpr std::array<std::string_view, 3> kRumbles { "EarthMove1", "EarthMove2", "EarthMove3" };
+        s.rumbles = main(kRumbles);
         constexpr std::array<std::string_view, 2> kWaterfall { "Waterfall3", "Waterfall4" };
         s.waterfall = load_named(install, "Sounds/Waterfall/Waterfall.common.ovl", kWaterfall);
         for (std::size_t set = 1; set < audio::kTrackSoundSets; ++set)
@@ -154,6 +156,15 @@ namespace rct3::scene
             play_any(engine, sounds.thumps, sounds.random, { .volume = kThumpLevel });
             sounds.since_thump = 0;
         }
+        if (!scene.land.rumble)
+        {
+            engine.stop(sounds.rumble);
+            sounds.rumbling = false;
+        }
+        else if (!std::exchange(sounds.rumbling, true))
+            sounds.rumble = play_any(engine, sounds.rumbles, sounds.random, { .volume = *scene.land.rumble });
+        else
+            engine.set_voice_volume(sounds.rumble, *scene.land.rumble);
 
         // The chatter: two clips overlapping, each started again with another when it ends, heard from where the
         // people about the camera's point stand, however far the eye.
@@ -418,6 +429,7 @@ namespace rct3::scene
         sounds.fires.clear();
         for (const audio::VoiceHandle voice : sounds.rain_voices)
             engine.stop(voice);
+        engine.stop(sounds.rumble);
         silence_trains(engine, sounds);
     }
 

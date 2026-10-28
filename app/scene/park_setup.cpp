@@ -1026,8 +1026,7 @@ namespace rct3::scene
         if (options.flag(config::GameOption::OffMapTrees))
         {
             scene.off_map_stream = random::stream(seed, random::RandomStream::Scenery);
-            std::vector<save::PlacedObject> trees = park::off_map_trees(scene.objects, scene.models, scene.grid, park::land_rings(scene.grid, scene.footpaths.water), *scene.off_map_stream);
-            scene.off_map_groves = park::off_map_groves(scene.objects, scene.models, scene.grid);
+            std::vector<save::PlacedObject> trees = park::off_map_trees(scene.objects, 0, scene.models, scene.grid, park::land_rings(scene.grid, scene.footpaths.water), *scene.off_map_stream);
             log.info("{} trees beyond the edge", trees.size());
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
         }

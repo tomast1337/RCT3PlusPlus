@@ -16,6 +16,7 @@
 #pragma once
 
 #include "park/build_catalogue.hpp"
+#include "park/terrain_mesh.hpp"
 #include "render/device.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/key_map.hpp"
@@ -47,8 +48,8 @@ namespace rct3::scene
     /// Draws the extra or changing room picked, see-through where it would go.
     void draw_pool_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
-    /// Builds the pools' pieces and water again after they changed.
+    /// Builds the pools' pieces and water again after they changed, on the tiles of `touched` or anywhere.
     /// shortcut: the old pieces stay hidden among the objects; drop them when objects can be taken out.
-    void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
+    void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<park::TileRect> touched = std::nullopt);
 
 } // namespace rct3::scene

@@ -6,6 +6,7 @@
 #include "park/object_pick.hpp"
 #include "park/pools.hpp"
 #include "park/tile_shaping.hpp"
+#include "profiling/profiler.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_view.hpp"
@@ -421,6 +422,16 @@ namespace rct3::scene
         if ((working != t.working || t.board != t.worked_board || t.turns != t.worked_turns) && (letting_go || !scene.object_build.valid()))
         {
             bool changed = put_back(scene);
+            // The work shown before and now, with the walls and railings round each.
+            std::optional<park::TileRect> touched;
+            for (const auto& work : { t.working, working })
+            {
+                if (!work)
+                    continue;
+                const auto [c0, r0, c1, r1] = marked(work->first, work->second);
+                const park::TileRect area = park::TileRect { c0, r0, c1 + 1, r1 + 1 }.grown(1);
+                touched = !touched ? area : park::TileRect { std::min(touched->col, area.col), std::min(touched->row, area.row), std::max(touched->end_col, area.end_col), std::max(touched->end_row, area.end_row) };
+            }
             t.working = working;
             t.worked_board = t.board;
             t.worked_turns = t.turns;
@@ -443,7 +454,7 @@ namespace rct3::scene
             {
                 // Supports are made again only for work kept: nothing they hold up stands on pool squares.
                 const bool stale = scene.supports.stale;
-                pools_changed(device, scene, assets);
+                pools_changed(device, scene, assets, touched);
                 scene.supports.stale = stale;
             }
         }
@@ -471,8 +482,9 @@ namespace rct3::scene
         draw_marks(device, scene, marks, park::TilePart::Whole, !working || t.ok);
     }
 
-    void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+    void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<park::TileRect> touched)
     {
+        const profiling::Scope zone("PoolsChanged");
         wait_for_build(scene);
         // Taken out, not hidden: the work shown lays the pieces again at every move. The prop the info panel
         // tells about is found again after, a changing room as the new piece of the same room.
@@ -502,7 +514,7 @@ namespace rct3::scene
         std::vector<save::PoolWater>& water = scene.footpaths.pools;
         water.resize(scene.saved_pool_water);
         std::ranges::copy(park::pool_water(scene.pools), std::back_inserter(water));
-        rebuild_ground(device, scene, assets);
+        rebuild_ground(device, scene, assets, touched);
     }
 
     void delete_pool_complex(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t room)

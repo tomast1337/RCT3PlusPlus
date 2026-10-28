@@ -324,7 +324,7 @@ namespace rct3::scene
         scene.footpaths.pavings_stale = true;
     }
 
-    void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+    void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<park::TileRect> touched)
     {
         const profiling::Scope zone("RebuildGround");
         ParkFootpaths& f = scene.footpaths;
@@ -365,7 +365,10 @@ namespace rct3::scene
             id = std::max(id, p.id);
         for (const save::PlacedObject& o : scene.objects)
             id = std::max(id, o.id);
-        // Paving off the ground is a deck of its style at its height, open towards its own tiles and its links.
+        // Paving off the ground is a deck of its style at its height, open towards its own tiles and its links:
+        // laid again when the pavings changed, or something on or beside their tiles did.
+        const auto near = [&](save::Tile t) { return touched->grown(1).contains(t.col, t.row); };
+        if (f.pavings_stale || !touched || std::ranges::any_of(f.pavings, [&](const park::Paving& p) { return std::ranges::any_of(p.tiles, near) || std::ranges::any_of(p.links, near); }))
         {
             const profiling::Scope decks("Decks");
             bool changed = !f.paving_decks.empty();

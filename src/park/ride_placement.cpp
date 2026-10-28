@@ -151,11 +151,21 @@ namespace rct3::park
         site.span = site.turns % 2 == 0 ? squares : std::array { squares[1], squares[0] };
         site.col = col - (site.span[0] - 1) / 2;
         site.row = row - (site.span[1] - 1) / 2;
-        if (grid.contains(col, row))
+        float sum = 0;
+        std::int32_t corners = 0;
+        for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
         {
-            const auto& corners = grid.at(col, row).corners;
-            site.height = static_cast<std::int32_t>(std::lround(std::accumulate(corners.begin(), corners.end(), 0.0f) / 4));
+            for (std::int32_t c = site.col; c < site.col + site.span[0]; ++c)
+            {
+                if (!grid.contains(c, r))
+                    continue;
+                const auto& at = grid.at(c, r).corners;
+                sum += std::accumulate(at.begin(), at.end(), 0.0f);
+                corners += 4;
+            }
         }
+        if (corners > 0)
+            site.height = static_cast<std::int32_t>(std::floor(sum / static_cast<float>(corners) + 0.5f));
         return site;
     }
 
@@ -183,6 +193,20 @@ namespace rct3::park
                     return SiteProblem::OffWater;
                 if (!water_only && lake != bodies.end() && lake->level > static_cast<float>(site.height))
                     return SiteProblem::UnderWater;
+            }
+        }
+        return SiteProblem::None;
+    }
+
+    SiteProblem ground_problem(const RideSite& site, const save::TerrainGrid& grid)
+    {
+        constexpr float kSlack = 0.05f; // Ground at the base is under it
+        for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
+        {
+            for (std::int32_t c = site.col; c < site.col + site.span[0]; ++c)
+            {
+                if (grid.contains(c, r) && grid.at(c, r).max_height() > static_cast<float>(site.height) + kSlack)
+                    return SiteProblem::IntoGround;
             }
         }
         return SiteProblem::None;

@@ -598,6 +598,9 @@ namespace rct3::scene
             p.problem = park::site_problem(*p.site, scene.grid, scene.footpaths.paths, p.solids);
             if (p.problem == park::SiteProblem::None)
                 p.problem = park::water_problem(*p.site, p.item->water_only, scene.footpaths.water.bodies);
+            // Raised, it stands over the ground as it is, so none may rise into it.
+            if (p.problem == park::SiteProblem::None && p.site->height > p.ground)
+                p.problem = park::ground_problem(*p.site, scene.grid);
             p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
             show_ghost();
             return;
@@ -630,6 +633,8 @@ namespace rct3::scene
             p.problem = park::site_problem(*p.site, scene.grid, paths, p.solids);
             if (p.problem == park::SiteProblem::None)
                 p.problem = park::water_problem(*p.site, p.item->water_only, scene.footpaths.water.bodies);
+            if (p.problem == park::SiteProblem::None && p.site->height > p.ground)
+                p.problem = park::ground_problem(*p.site, scene.grid);
             p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
         }
         else

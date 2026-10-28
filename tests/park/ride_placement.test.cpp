@@ -46,6 +46,26 @@ TEST_CASE("a ride's footprint is centred on the tile under the pointer, turned, 
     CHECK(ride_site({ 6, 6 }, { 1, 1 }, 0, grid).height == 6);
 }
 
+TEST_CASE("a ride stands at the mean height of the ground under its whole footprint, halves rounded up")
+{
+    save::TerrainGrid grid = owned_land();
+    CHECK(ride_site({ 6, 6 }, { 3, 3 }, 0, grid).height == 2); // Pointed at the hill, among flat tiles
+    grid.at(1, 2).corners = { 3, 3, 3, 3 };
+    CHECK(ride_site({ 1, 1 }, { 1, 2 }, 0, grid).height == 3);
+}
+
+TEST_CASE("a ride raised over the ground may not have the ground of any tile rise over its base")
+{
+    const save::TerrainGrid grid = owned_land();
+    RideSite site = ride_site({ 6, 6 }, { 3, 3 }, 0, grid);
+    site.height = 3;
+    CHECK(ground_problem(site, grid) == SiteProblem::IntoGround);
+    site.height = 7;
+    CHECK(ground_problem(site, grid) == SiteProblem::None);
+    site = ride_site({ 2, 2 }, { 3, 3 }, 0, grid);
+    CHECK(ground_problem(site, grid) == SiteProblem::None); // On the ground is not in it
+}
+
 TEST_CASE("a ride needs owned land clear of paths and of solid things above its base")
 {
     save::TerrainGrid grid = owned_land();

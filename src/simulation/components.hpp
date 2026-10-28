@@ -80,6 +80,7 @@ namespace rct3::simulation
         Share hunger { };
         Share thirst { };
         Share bladder { };
+        Share swim { }; ///< Wish to go swimming, grown by how much they like pools
     };
 
     struct Mood
@@ -163,6 +164,7 @@ namespace rct3::simulation
     {
         Share least { };
         Share most { 1 };
+        Share pools { 0.5f }; ///< How much they like swimming, which their wish to swim grows by
     };
 
     /// A guest carrying an umbrella, up while it rains.
@@ -223,6 +225,7 @@ namespace rct3::simulation
         Following, ///< Walking beside their party's leader, who chooses where to go
         Waiting,   ///< For the rest of their party, on a tile near where those still busy are
         Buying,    ///< At the stall `target`, served for `rest` ticks while the rest of their party waits
+        Swimming,  ///< At the pool whose changing room is `target`, changing or in the pool (see Swimmer)
     };
 
     struct Errand
@@ -270,6 +273,8 @@ namespace rct3::simulation
         PickedUpNeutral = 72,
         PickedUpSad = 73,
         BeenInjured = 163, ///< Thrown from a crashed ride, or knocked over by its blast
+        NoPools = 182,     ///< Wanting a swim in a park with no pool open
+        TooColdForPools = 198,
     };
 
     struct Thought
@@ -342,6 +347,7 @@ namespace rct3::simulation
     {
         Shop,
         Ride,
+        Pool, ///< A changing room of a pool, where guests pay to swim
     };
 
     struct Attraction
@@ -355,6 +361,34 @@ namespace rct3::simulation
         Money income { };     ///< Taken so far
         std::uint32_t customers = 0;
         std::uint64_t saved = 0; ///< The saved park's own id of it; 0 when not from a save
+    };
+
+    /// A pool complex: the squares its swimmers go to, each spot the middle of a square at its surface.
+    struct SwimPool
+    {
+        std::vector<glm::vec3> water { };
+        std::vector<glm::vec3> paved { };
+    };
+
+    /// A changing room of a pool complex, on its Attraction, whose entrance is the path tile at its door.
+    struct PoolDoor
+    {
+        entt::entity pool = entt::null; ///< Its SwimPool
+        std::int32_t col = 0;           ///< Its tile
+        std::int32_t row = 0;
+        glm::vec3 room { 0.0f };     ///< The middle of its tile, at the pool's surface
+        glm::vec3 poolside { 0.0f }; ///< The middle of the paved square it opens on
+    };
+
+    /// A guest at a pool, from paying at its changing room until they come out of it again.
+    struct Swimmer
+    {
+        Seconds changing { };    ///< Still to spend changing, out of sight in the room
+        bool changed = false;    ///< Into their swimwear
+        Seconds left { };        ///< In the pool still; then they go back to change
+        glm::vec3 goal { 0.0f }; ///< Where they swim or walk to next
+        bool in_water = false;   ///< Swimming; else on the paved squares round the water
+        Seconds idle { };        ///< Floating, or standing, before going on
     };
 
     /// What a shop sells, or what a facility does for its guests.

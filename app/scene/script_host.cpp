@@ -767,7 +767,7 @@ namespace rct3::scene
                     person["col"] = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
                     person["row"] = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
                     person["up"] = at.y;
-                    person["state"] = r.all_of<simulation::Held>(p.guest) ? "held" : r.all_of<simulation::Dropped>(p.guest) ? (r.get<simulation::Dropped>(p.guest).thrown ? "thrown" : "dropped") : errand == nullptr ? "still" : errand->kind == simulation::ErrandKind::Riding ? "riding" : errand->kind == simulation::ErrandKind::Queueing ? "queueing" : errand->kind == simulation::ErrandKind::Waiting ? "waiting" : errand->kind == simulation::ErrandKind::Buying ? "buying" : "walking";
+                    person["state"] = r.all_of<simulation::Held>(p.guest) ? "held" : r.all_of<simulation::Dropped>(p.guest) ? (r.get<simulation::Dropped>(p.guest).thrown ? "thrown" : "dropped") : errand == nullptr ? "still" : errand->kind == simulation::ErrandKind::Riding ? "riding" : errand->kind == simulation::ErrandKind::Queueing ? "queueing" : errand->kind == simulation::ErrandKind::Waiting ? "waiting" : errand->kind == simulation::ErrandKind::Buying ? "buying" : errand->kind == simulation::ErrandKind::Swimming ? "swimming" : "walking";
                     // How they go on foot, and seated on a ride (by its place in rides.list) how they react to it.
                     constexpr std::array<std::string_view, 5> kGaits { "walk", "run", "weary", "queasy", "bursting" };
                     constexpr std::array<std::string_view, 5> kReactions { "waiting", "calm", "hands up", "covering eyes", "strained" };

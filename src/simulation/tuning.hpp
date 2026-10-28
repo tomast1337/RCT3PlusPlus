@@ -401,6 +401,22 @@ namespace rct3::simulation::tuning
         Seconds dwell { 15 };    ///< A train stands at each station on the way
     };
 
+    /// Swimming pools.
+    struct Pools
+    {
+        PerSecond longing = PerSecond::over({ 1500 }); ///< Wish to swim grown in a guest who likes pools fully; slower as they like them less
+        Share least_liking { 0.1f };                   ///< Guests like pools from this much to `most_liking`, as saved guests do
+        Share most_liking { 0.9f };
+        Degrees coldest { 18 };      ///< Under which guests will not swim
+        Seconds stay { 300 };        ///< In the pool, out of their clothes: the longest saved swimmers have left
+        Seconds changing { 20 };     ///< In the changing room, each way
+        Pace swim { 0.7f };          ///< Across the water
+        Seconds shortest_rest { 3 }; ///< Floating or standing between swims
+        Seconds longest_rest { 15 };
+        Chance poolside { 0.2 };                    ///< Of going to the paved squares next rather than the water
+        PerSecond cheer = PerSecond::over({ 600 }); ///< Happiness gained while swimming
+    };
+
     struct Tuning
     {
         Needs needs;
@@ -429,6 +445,7 @@ namespace rct3::simulation::tuning
         Vips vips;
         Transport transport;
         Holding holding;
+        Pools pools;
     };
 
 } // namespace rct3::simulation::tuning

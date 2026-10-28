@@ -101,7 +101,7 @@ namespace rct3::simulation
         const entt::entity e = r.create();
         r.emplace<Visitor>(e, AgeGroup::Adult, false, std::format("Guest {}", ++guests_), world_.tick);
         r.emplace<Pose>(e, world_.paths.centre(n), 0.0f);
-        r.emplace<Needs>(e, setup.hunger, setup.thirst, setup.bladder);
+        r.emplace<Needs>(e, setup.hunger, setup.thirst, setup.bladder, setup.swim);
         r.emplace<Mood>(e, setup.happiness, setup.energy, setup.nausea);
         r.emplace<Wallet>(e, Money { setup.cash }, Money { setup.bank });
         start_walking(world_, e, n);

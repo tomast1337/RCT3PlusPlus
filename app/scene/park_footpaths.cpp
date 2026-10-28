@@ -921,6 +921,7 @@ namespace rct3::scene
             for (const save::PathTile& p : laid)
                 (void)simulation::add_path(scene.sim, p, scene.grid);
             (void)simulation::relink_attractions(scene.sim, scene.rides);
+            simulation::import_pools(scene.sim, scene.pools);
         }
 
         /// Lays the paths of the stroke just ended.

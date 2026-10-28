@@ -61,9 +61,12 @@ namespace rct3::simulation
         bool covered = false;        ///< Under a roof that keeps the rain off
         bool shaded = false;         ///< Out of the sun: under a roof or trees
         bool removed = false;        ///< Its tile was taken away
-        bool sloped = false;         ///< A ramp, whose height at its middle is halfway between its ends
         std::uint8_t no_entry = 0;   ///< Sides guests may not come in across, bit k for side k as `next` numbers them
         bool staff_kept_off = false; ///< Staff do not step onto it
+        /// World heights of the path's surface at the tile's corners: low col low row, high col low row, low col
+        /// high row, high col high row. Between them it is two flat triangles, split from the second corner to
+        /// the third, as the ground is.
+        std::array<float, 4> corners { };
         /// The node beside this one on each side (+col, +row, -col, -row), or kNoNode.
         std::array<NodeId, 4> next { kNoNode, kNoNode, kNoNode, kNoNode };
         /// The node a step across a square of paths reaches at each corner (+col +row, -col +row, -col -row,
@@ -114,10 +117,10 @@ namespace rct3::simulation
         {
             nodes_[node].line = line;
         }
-        /// Marks a node's tile as a ramp.
-        void set_sloped(NodeId node, bool sloped)
+        /// Gives a node's tile a surface that is not flat at its height: a ramp, or ground that is not level.
+        void set_corners(NodeId node, std::array<float, 4> corners)
         {
-            nodes_[node].sloped = sloped;
+            nodes_[node].corners = corners;
         }
         /// Bars side `side` (as `next` numbers them) of a node's tile to guests coming in, or lifts the bar.
         void set_no_entry(NodeId node, std::size_t side, bool barred)
@@ -142,8 +145,9 @@ namespace rct3::simulation
         [[nodiscard]] std::optional<NodeId> nearest(glm::vec3 at) const;
         /// The middle of a node's tile in world space.
         [[nodiscard]] glm::vec3 centre(NodeId node) const;
-        /// The height of the path a fraction `t` of the way from the middle of `from`'s tile to the middle of `to`'s.
-        [[nodiscard]] float height_between(NodeId from, NodeId to, float t) const;
+        /// The height of the path's surface under world point `at` (x and z) on a walk from `from` to `to`: on
+        /// whichever of their tiles holds it, else on the path tile there nearest them in height.
+        [[nodiscard]] float surface(NodeId from, NodeId to, glm::vec2 at) const;
 
         /// Adds a link; a queue tile it starts from is entered on the way only to take it.
         void link(const PathLink& link);

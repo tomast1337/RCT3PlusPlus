@@ -149,7 +149,7 @@ int main(int argc, char** argv)
 
     simulation::SimWorld world;
     world.seed = rct3::random::Seed { seed };
-    simulation::import_paths(world, *world_model);
+    simulation::import_paths(world, world_model->paths, world_model->terrain);
     simulation::import_pools(world, park::saved_pools(*world_model, world_model->objects));
     const auto guests = simulation::import_guests(world, *people);
     const std::size_t shops = simulation::import_stalls(world, *rides);

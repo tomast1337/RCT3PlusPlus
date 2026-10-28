@@ -32,8 +32,8 @@
 namespace rct3::simulation
 {
 
-    /// Adds a node for every ground, raised and queue path tile of `world_model`, laid on its terrain.
-    void import_paths(SimWorld& world, const save::WorldModel& world_model);
+    /// Adds a node for every ground, raised and queue path tile of `paths`, laid on `grid`.
+    void import_paths(SimWorld& world, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
 
     /// Adds the node of path tile `path`, laid on `grid`, and joins it to the paths beside it; for a node already
     /// there, takes the queue line the tile is in now. Call after import_paths, which sets the network's

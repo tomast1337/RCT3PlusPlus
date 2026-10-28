@@ -165,18 +165,26 @@ TEST_CASE("a tile taken away is joined to nothing and found by nothing; one laid
     CHECK(p.route(*p.find({ 0, 0, 0 }), *p.find({ 2, 0, 0 }))->size() == 2);
 }
 
-TEST_CASE("a walk down a ramp onto a sunken tile bends at the edge, not above the low floor")
+TEST_CASE("a walker stands on the path's surface under their feet, wherever across the tile they walk")
 {
-    PathNetwork p;
+    PathNetwork p; // Tiles 4 across, from the origin
     const NodeId top = p.add({ 0, 0, 0 }, false, 0.0f);
-    const NodeId ramp = p.add({ 1, 0, -1 }, false, -1.0f); // Falls two units across the tile
+    const NodeId ramp = p.add({ 1, 0, -1 }, false, -1.0f);
     const NodeId floor = p.add({ 2, 0, -2 }, false, -2.0f);
-    p.set_sloped(ramp, true);
-    CHECK(p.height_between(top, ramp, 0.5f) == doctest::Approx(0.0f));
-    CHECK(p.height_between(top, ramp, 0.75f) == doctest::Approx(-0.5f));
-    CHECK(p.height_between(ramp, floor, 0.5f) == doctest::Approx(-2.0f));
-    CHECK(p.height_between(floor, ramp, 0.25f) == doctest::Approx(-2.0f));
-    CHECK(p.height_between(top, floor, 0.5f) == doctest::Approx(-1.0f)); // Two flat tiles: a straight line
+    p.set_corners(ramp, { 0.0f, -2.0f, 0.0f, -2.0f }); // Falls two units towards higher columns
+    // Down the ramp: a quarter of the way in, its middle, three quarters, whatever the side of the path.
+    CHECK(p.surface(top, ramp, { 5.0f, 2.0f }) == doctest::Approx(-0.5f));
+    CHECK(p.surface(top, ramp, { 6.0f, 0.5f }) == doctest::Approx(-1.0f));
+    CHECK(p.surface(ramp, floor, { 7.0f, 3.5f }) == doctest::Approx(-1.5f));
+    // Still on the tile above, or already on the floor below, it is flat.
+    CHECK(p.surface(top, ramp, { 3.9f, 2.0f }) == doctest::Approx(0.0f));
+    CHECK(p.surface(ramp, floor, { 8.5f, 2.0f }) == doctest::Approx(-2.0f));
+
+    // Ground that rises across the path: one walking its high side stands higher than one on its low side.
+    const NodeId bank = p.add({ 0, 1, 0 }, false, 0.5f);
+    p.set_corners(bank, { 0.0f, 0.0f, 1.0f, 1.0f });
+    CHECK(p.surface(bank, bank, { 2.0f, 5.0f }) == doctest::Approx(0.25f));
+    CHECK(p.surface(bank, bank, { 2.0f, 7.0f }) == doctest::Approx(0.75f));
 }
 
 TEST_CASE("a wall between two tiles parts them, a queue keeps its own sides, and taking it away joins them again")

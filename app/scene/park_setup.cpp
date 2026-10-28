@@ -669,9 +669,11 @@ namespace rct3::scene
     void animate_scenery(render::Device& device, ParkScene& scene, std::size_t k)
     {
         const auto model = k < scene.objects.size() ? scene.models.find(park::model_ref(scene.objects[k])) : scene.models.end();
-        // Attractions' parts move with their attractions (doors as guests pass, chains while the ride runs), so only
-        // what the scenery lists hold moves on its own.
-        if (model == scene.models.end() || !model->second.rig || scene.objects[k].hidden || !park::scenery_list(model->second.category) || scene.attractions.contains(scene.objects[k].id))
+        // Rides' parts move with their rides (doors as guests pass, chains while the ride runs), so only what the
+        // scenery lists hold moves on its own, and stalls, whose one motion loops open or closed.
+        const auto owner = k < scene.objects.size() ? scene.attractions.find(scene.objects[k].id) : scene.attractions.end();
+        const bool stall = owner != scene.attractions.end() && owner->second.kind == park::AttractionRef::Kind::Stall;
+        if (model == scene.models.end() || !model->second.rig || scene.objects[k].hidden || (!stall && (!park::scenery_list(model->second.category) || owner != scene.attractions.end())))
             return;
         ParkScene::BonedRide& boned = scene.boned_rides.emplace_back();
         boned.object = k;

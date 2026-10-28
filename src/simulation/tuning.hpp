@@ -79,20 +79,21 @@ namespace rct3::simulation::tuning
     /// Riders reacting to the ride, on coasters and flat rides.
     struct Reactions
     {
-        Share thrilled { 0.85f };                     ///< Happiness over which a rider throws their hands up
+        Share thrilled { 0.7f };                      ///< Chosen by eye: happiness over which a rider throws their hands up
         Frequency hands_up = Frequency::every({ 1 }); ///< A thrilled rider's chance of raising them, a second
         Frequency floating = Frequency::every({ 2 }); ///< Any rider's, floating over a hill
         float airtime = 0.3f;                         ///< Up through their seat, in g, under which riders float
         float strain = 3.5f;                          ///< g up through their seat a rider braces against
         float strain_across = 1.2f;                   ///< And sideways
         float hands_down = 4.5f;                      ///< g, up or sideways, that brings raised hands down
-        /// Of riders, the share never raising their hands, in the front car and behind it.
-        Share timid_front { 0.3f };
-        Share timid { 0.5f };
+        /// Chosen by eye, for about a coaster rider in four under way with their hands up: of riders, the share
+        /// never raising their hands, in the front car and behind it.
+        Share timid_front { 0.15f };
+        Share timid { 0.3f };
         Share stoic { 0.3f };     ///< Of riders, the share who never brace or tense up
         Share too_wild { 0.15f }; ///< Ride intensity past what a rider likes that has them cover their eyes
         Share hide_eyes { 0.5f }; ///< Of riders it is too wild for, the share who cover them
-        Share suits { 0.25f };    ///< Chosen by eye: intensity short of what a flat ride's rider likes most that still thrills them
+        Share suits { 0.5f };     ///< Chosen by eye: intensity short of what a flat ride's rider likes most that still thrills them
         float diving = -0.5f;     ///< Of the track's way, the drop under which a car heads down
         float still = 0.5f;       ///< m/s under which a train counts as standing, held at a brake or block
     };

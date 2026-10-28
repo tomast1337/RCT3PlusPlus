@@ -111,7 +111,7 @@ TEST_CASE("timid riders never raise their hands, and the front car has fewer of 
     auto dice = dice_rolls::seeded(dice_rolls::Seed { 5 });
     for (int i = 0; i < 200; ++i)
         CHECK(react(RideReaction::Calm, kCruising, true, false, { 1 }, 0, kTimid, true, dice, 1) != RideReaction::HandsUp);
-    const Leanings middling { .hands = 0.4f };
+    const Leanings middling { .hands = 0.2f };
     int front = 0, back = 0;
     for (int i = 0; i < 200; ++i)
     {

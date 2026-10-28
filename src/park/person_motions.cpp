@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <format>
 #include <string>
 
 namespace rct3::park
@@ -476,7 +477,7 @@ namespace rct3::park
             if (!loop.ends_with("loop"))
                 return std::nullopt;
             loop.remove_suffix(4);
-            return motion_number(std::string(loop) + std::string(end));
+            return motion_number(std::format("{}{}", loop, end));
         };
         return RiderMotions {
             .ride = ride,

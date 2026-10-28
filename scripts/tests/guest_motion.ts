@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // How guests go about the game's parks: on Vanilla Hills' paths not all at one pace, some running and the rest
-// walking; on Gunslinger's mine coaster riders wait in the station and up the lift, and throw their hands up on the way
-// round. Each is looked at and pictured.
+// walking; on its Top Spin riders throw their hands up while it runs; on Gunslinger's mine coaster riders wait in the
+// station and up the lift, and throw their hands up on the way round, plain to see. Each is looked at and pictured.
 //
 //   ./nob script scripts/tests/guest_motion.ts -- --no-audio
 
@@ -43,6 +43,16 @@ async function behind(person: number, name: string): Promise<void> {
 }
 await behind(everyone.findIndex((p) => p.state === "walking" && p.gait === "run"), "running guest");
 
+// Riders on Vanilla Hills' Top Spin: their hands thrown up while it runs, held still for the picture.
+const spin = rides.list().findIndex((r) => r.symbol === "TopSpin:anr");
+expect(spin >= 0, "the Top Spin in the park");
+await until(() => people.list().some((p) => p.ride === spin && p.reaction === "hands up"), 7200, "a Top Spin rider with their hands up");
+const spinners = people.list().filter((p) => p.ride === spin);
+log("top spin", ["waiting", "calm", "hands up", "covering eyes"].map((r) => `${r} ${count(spinners, (p) => p.reaction === r)}`).join(", "));
+await ui.click("bar/Top_Pause");
+await frames(2);
+await behind(people.list().findIndex((p) => p.ride === spin && p.reaction === "hands up"), "top spin rider with hands up");
+
 // Riders on Gunslinger's mine coaster: waiting at the station or on the lift, and hands up on the way round.
 await park.open("Campaigns/Base/Gunslinger.dat");
 await park.ready();
@@ -50,8 +60,23 @@ await frames(60);
 const coasters = rides.list().map((r, i) => ({ r, i })).filter(({ r }) => !r.flat && (r.trains ?? 0) > 0);
 expect(coasters.length > 0, "a coaster in the park");
 await until(() => people.list().some((p) => p.reaction === "hands up"), 7200, "a rider with their hands up");
-const riders = people.list().filter((p) => p.reaction !== undefined);
-log("reactions", ["waiting", "calm", "hands up", "covering eyes", "strained"].map((r) => `${r} ${count(riders, (p) => p.reaction === r)}`).join(", "));
+// Over a lap or so, the share of the coaster riders under way with their hands up: plain to see, as in the game.
+const onCoaster = new Set(coasters.map(({ i }) => i));
+let under_way = 0;
+let hands_up = 0;
+const tally = new Map<string, number>();
+for (let n = 0; n < 240; ++n) {
+    await frames(15);
+    for (const p of people.list().filter((p) => p.ride !== undefined && onCoaster.has(p.ride) && p.reaction !== undefined)) {
+        tally.set(p.reaction!, (tally.get(p.reaction!) ?? 0) + 1);
+        if (p.reaction === "waiting")
+            continue;
+        ++under_way;
+        hands_up += p.reaction === "hands up" ? 1 : 0;
+    }
+}
+log("coaster reactions", [...tally].map(([r, k]) => `${r} ${k}`).join(", "), `hands up ${(100 * hands_up / Math.max(under_way, 1)).toFixed(0)}% of riders under way`);
+expect(hands_up > under_way / 6, "hands up on more than one coaster rider in six under way");
 await until(() => people.list().some((p) => p.reaction === "waiting"), 7200, "riders waiting in a station or up a lift");
 // Paused once a rider has their hands up, so they keep them up for the picture.
 await until(() => people.list().some((p) => p.reaction === "hands up"), 7200, "a rider with their hands up again");

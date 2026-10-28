@@ -27,6 +27,7 @@
 #include <cstddef>
 #include <format>
 #include <future>
+#include <inplace_vector>
 #include <map>
 #include <ranges>
 #include <span>
@@ -240,7 +241,7 @@ namespace rct3::scene
                     if (turn.now != now)
                         turn = { turn.now, now, scene.park_clock };
                     // Bringing down their hands or their arms from their eyes, then raising them, then the loop.
-                    std::vector<park::Clip> clips;
+                    std::inplace_vector<park::Clip, 3> clips;
                     const auto add = [&](RideReaction reaction, const std::optional<std::int32_t>& hands, const std::optional<std::int32_t>& eyes) {
                         if (const auto& once = reaction == RideReaction::HandsUp ? hands : reaction == RideReaction::CoverEyes ? eyes : std::nullopt; once && turn.was != turn.now)
                         {

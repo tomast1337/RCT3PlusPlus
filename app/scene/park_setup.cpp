@@ -1177,7 +1177,7 @@ namespace rct3::scene
             profiling::section("Simulation", [&] {
                 scene.sim.seed = seed;
                 scene.sim.ratings = ratings;
-                simulation::import_paths(scene.sim, *world);
+                simulation::import_paths(scene.sim, world->paths, scene.grid);
                 // The saved ones by their place in scene.people, null for those not drawn.
                 const auto by_look = [](std::size_t count, std::span<const entt::entity> placed, const auto& records) {
                     std::vector<entt::entity> out(count, entt::null);

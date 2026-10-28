@@ -37,7 +37,8 @@ namespace rct3::simulation
         if (const auto found = find(tile))
             return *found;
         const auto id = static_cast<NodeId>(nodes_.size());
-        nodes_.push_back({ .tile = tile, .queue = queue, .height = height.value_or(static_cast<float>(tile.level) * level_height), .line = line });
+        const float middle = height.value_or(static_cast<float>(tile.level) * level_height);
+        nodes_.push_back({ .tile = tile, .queue = queue, .height = middle, .line = line, .corners = { middle, middle, middle, middle } });
         by_tile_.emplace(key(tile.col, tile.row), id);
         join_sides(id);
         // The squares the new tile closes, seen from each tile round it.
@@ -180,15 +181,21 @@ namespace rct3::simulation
         return best;
     }
 
-    float PathNetwork::height_between(NodeId from, NodeId to, float t) const
+    float PathNetwork::surface(NodeId from, NodeId to, glm::vec2 at) const
     {
-        const PathNode& a = nodes_[from];
-        const PathNode& b = nodes_[to];
-        if (a.sloped == b.sloped)
-            return std::lerp(a.height, b.height, t);
-        // A ramp meets a flat tile at the flat tile's height, on the edge halfway between their middles.
-        const float edge = a.sloped ? b.height : a.height;
-        return t < 0.5f ? std::lerp(a.height, edge, t * 2) : std::lerp(edge, b.height, t * 2 - 1);
+        const float x = (at.x - origin.x) / tile_size;
+        const float z = (at.y - origin.y) / tile_size;
+        const PathTileSpot spot { static_cast<int>(std::floor(x)), static_cast<int>(std::floor(z)) };
+        const auto holds = [&](NodeId n) { return nodes_[n].tile.col == spot.col && nodes_[n].tile.row == spot.row; };
+        NodeId on = holds(to) ? to : from;
+        if (!holds(on))
+            on = nearest({ at.x, (nodes_[from].height + nodes_[to].height) / 2, at.y }).value_or(from);
+        const auto& c = nodes_[on].corners;
+        const float fx = std::clamp(x - static_cast<float>(nodes_[on].tile.col), 0.0f, 1.0f);
+        const float fz = std::clamp(z - static_cast<float>(nodes_[on].tile.row), 0.0f, 1.0f);
+        if (fx + fz <= 1)
+            return c[0] + fx * (c[1] - c[0]) + fz * (c[2] - c[0]);
+        return c[3] + (1 - fx) * (c[2] - c[3]) + (1 - fz) * (c[1] - c[3]);
     }
 
     glm::vec3 PathNetwork::centre(NodeId node) const

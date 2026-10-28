@@ -270,7 +270,7 @@ namespace rct3::simulation
             const glm::vec3 a = lane_point(paths, s.from, s.lane_from);
             const glm::vec3 b = lane_point(paths, s.to, s.lane_to);
             pose.position = glm::mix(a, b, s.progress.value);
-            pose.position.y = paths.height_between(s.from, s.to, s.progress.value);
+            pose.position.y = paths.surface(s.from, s.to, { pose.position.x, pose.position.z });
             if (glm::distance(a, b) > 0.01f)
                 pose.heading.value = std::atan2(b.x - a.x, b.z - a.z);
         }
@@ -2570,7 +2570,6 @@ namespace rct3::simulation
                         stride.progress.value = static_cast<float>(behind) - stride.along.value;
                         auto& pose = r.get<Pose>(queue[k]);
                         pose.position = glm::mix(paths.centre(line[behind]), paths.centre(line[ahead]), stride.progress.value);
-                        pose.position.y = paths.height_between(line[behind], line[ahead], stride.progress.value);
                         // To one side of the line, across the way it runs here (on a tile's middle, the way on to the front).
                         const std::size_t from = ahead != behind ? behind : std::min(behind + 1, line.size() - 1);
                         const std::size_t to = ahead != behind ? ahead : (behind > 0 ? behind - 1 : 0);
@@ -2582,6 +2581,7 @@ namespace rct3::simulation
                             pose.position.z += way.x * stride.side.value;
                             pose.heading.value = std::atan2(way.x, way.y);
                         }
+                        pose.position.y = paths.surface(line[behind], line[ahead], { pose.position.x, pose.position.z });
                     }
                 }
             }

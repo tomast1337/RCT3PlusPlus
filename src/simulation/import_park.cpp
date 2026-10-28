@@ -4,6 +4,8 @@
 #include "ovl/animated_ride.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "park/ground_paths.hpp"
+#include "park/ground_queues.hpp"
+#include "park/path_decks.hpp"
 #include "park/queue_fences.hpp"
 #include "park/terrain_mesh.hpp"
 #include "simulation/components.hpp"
@@ -361,9 +363,8 @@ namespace rct3::simulation
         return roofed;
     }
 
-    void import_paths(SimWorld& world, const save::WorldModel& world_model)
+    void import_paths(SimWorld& world, std::span<const save::PathTile> tiles, const save::TerrainGrid& grid)
     {
-        const save::TerrainGrid& grid = world_model.terrain;
         PathNetwork& paths = world.paths;
         paths.tile_size = grid.tile_size_x > 0 ? grid.tile_size_x : paths.tile_size;
         paths.origin = { grid.origin_x, grid.origin_z };
@@ -372,7 +373,7 @@ namespace rct3::simulation
         // shortcut: joins tiles by the levels at their middles, upgrade to matching the heights of shared edges
         // if stacked paths two units apart ever join wrongly.
         paths.max_step = 2;
-        for (const save::PathTile& p : world_model.paths)
+        for (const save::PathTile& p : tiles)
             (void)add_path(world, p, grid);
     }
 
@@ -384,7 +385,21 @@ namespace rct3::simulation
         const std::uint64_t line = path.queue ? path.queue->queue_line_ref : 0;
         const NodeId id = world.paths.add(spot, path.kind == save::PathKind::Queue, height, line);
         world.paths.set_line(id, line);
-        world.paths.set_sloped(id, path.elevation && park::path_rise(path.elevation->slope) > 0);
+        // Its surface: the ground's own corners under a path on the ground, a ramp from the height of the edge behind
+        // it to that of the edge it faces, else flat.
+        std::array<float, 4> corners { height, height, height, height };
+        if ((park::is_ground_queue(path) || (!path.elevation && path.kind == save::PathKind::Ground)) && grid.contains(path.col, path.row))
+            corners = grid.at(path.col, path.row).corners;
+        else if (path.elevation && park::path_rise(path.elevation->slope) > 0)
+        {
+            const std::uint8_t ahead = park::stored_direction(path.direction);
+            const auto behind = static_cast<std::uint8_t>((ahead + 2) % 4);
+            if (const auto up = park::edge_height(path, grid, ahead), down = park::edge_height(path, grid, behind); up && down)
+                for (const std::uint8_t side : { ahead, behind })
+                    for (const std::size_t k : park::edge_corners(side))
+                        corners[k] = side == ahead ? *up : *down;
+        }
+        world.paths.set_corners(id, corners);
         world.paths.keep_staff_off(id, kept_from_staff(world, grid, id));
         return id;
     }

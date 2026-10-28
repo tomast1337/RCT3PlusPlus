@@ -152,8 +152,9 @@ namespace rct3::scene
     /// Closes the path panel if it is open.
     void close_footpath_panel(ParkScene& scene);
 
-    /// Builds the ground again from the scene's grid, with the paths and what the rides and stalls pave as they are now.
-    void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
+    /// Builds the ground again from the scene's grid, with the paths and what the rides and stalls pave as they are now;
+    /// what changed lies on the tiles of `touched`, or anywhere without it.
+    void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<park::TileRect> touched = std::nullopt);
 
     /// Stands the fence or wall `wall` between the paths either side of it, or takes it away when not
     /// `standing`, once the scene's objects show it: the paths' looks and the walks guests take change.

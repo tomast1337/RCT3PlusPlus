@@ -58,6 +58,25 @@ namespace rct3::park
         TunnelCeiling, ///< Its ceiling, likewise
     };
 
+    /// The tiles from column `col` and row `row` up to, not including, `end_col` and `end_row`.
+    struct TileRect
+    {
+        int col = 0;
+        int row = 0;
+        int end_col = 0;
+        int end_row = 0;
+
+        [[nodiscard]] bool contains(int c, int r) const
+        {
+            return c >= col && c < end_col && r >= row && r < end_row;
+        }
+        /// This one with `n` more tiles round each side.
+        [[nodiscard]] TileRect grown(int n) const
+        {
+            return { col - n, row - n, end_col + n, end_row + n };
+        }
+    };
+
     /// A run of `count` indices from `first` painted with one surface or cliff face.
     struct GroundBatch
     {

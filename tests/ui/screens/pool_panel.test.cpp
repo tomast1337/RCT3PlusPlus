@@ -52,7 +52,18 @@ TEST_CASE("the pool panel opens on the editor with water out")
     CHECK(f.panel->take_change());
     CHECK(f.panel->editor().mode == PoolMode::Water);
     CHECK(f.panel->editor().snap);
-    CHECK_FALSE(f.button("pools/Pool_PathPanel").enabled);
+    CHECK_FALSE(f.button("pools/File_LoadGame").enabled);
+}
+
+TEST_CASE("the paths tab puts paths out, its buttons slopes and stairs, and the editor's tab water again")
+{
+    Fixture f;
+    f.click("pools/Pool_PathPanel");
+    CHECK(f.panel->editor().mode == PoolMode::Path);
+    f.click("pools/body/paths/stairs");
+    CHECK(f.panel->editor().mode == PoolMode::PathStairs);
+    f.click("pools/Pool_PoolPanel");
+    CHECK(f.panel->editor().mode == PoolMode::Water);
 }
 
 TEST_CASE("an edge button sets the edge and puts the water out")

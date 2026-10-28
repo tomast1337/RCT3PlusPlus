@@ -11,7 +11,7 @@ namespace
 {
 
     /// An invented price list, shaped like a pool type's.
-    constexpr std::array<std::int32_t, 18> kPrices { 0, 0, 100, 300, 50, -200, 70, 10, -60, -5, 0, 0, 900, -800, 25, -15, 40, -30 };
+    constexpr std::array<std::int32_t, 18> kPrices { 0, 0, 100, 300, 50, -200, 70, 10, -60, -5, 11, -9, 900, -800, 25, -15, 40, -30 };
 
     /// A pool of `cols` by `rows` water squares, ringed by paved squares, its corner at (0, 0).
     PoolMap ringed(std::int32_t cols, std::int32_t rows)
@@ -240,6 +240,37 @@ TEST_CASE("pools: a spiral staircase winds up from its paved stack, railed at it
     CHECK(pool_refund(kPrices, { .kind = PoolKind::Stairs, .depth = 2, .board = 5 }) == -60 - 2 * 5 - 5 * 15);
 }
 
+TEST_CASE("pools: a pool path's piece follows the paths joining it, slopes by their foot and top")
+{
+    const auto piece = [](const PoolMap& map, std::int32_t col, std::int32_t row) {
+        const auto pieces = pool_pieces(map, *map.at(col, row));
+        REQUIRE(pieces.size() == 1);
+        return std::pair { pieces[0].symbol, pieces[0].turn };
+    };
+    using Piece = std::pair<std::string_view, std::int32_t>;
+    // A path along the columns, turning down the rows to a slope rising a unit away from it, then the path on.
+    const PoolMap map { {
+        { .col = 0, .row = 0, .kind = PoolKind::Path, .surface = 4, .depth = 0 },
+        { .col = 1, .row = 0, .kind = PoolKind::Path, .surface = 4, .depth = 0 },
+        { .col = 1, .row = 1, .kind = PoolKind::PathSlope, .surface = 4, .depth = 0, .turn = 2 },
+        { .col = 1, .row = 2, .kind = PoolKind::Path, .surface = 5, .depth = 0 },
+    } };
+    CHECK(piece(map, 0, 0) == Piece { "PathStraight", 3 });
+    CHECK(piece(map, 1, 0) == Piece { "PathCorner", 3 });
+    CHECK(piece(map, 1, 1) == Piece { "PathSlope", 2 });
+    CHECK(piece(map, 1, 2) == Piece { "PathStraight", 2 });
+    // Four ways, and three.
+    PoolMap cross;
+    for (const auto [col, row] : { std::pair { 1, 1 }, { 0, 1 }, { 2, 1 }, { 1, 0 }, { 1, 2 } })
+        cross.squares.push_back({ .col = col, .row = row, .kind = PoolKind::Path, .surface = 4, .depth = 0 });
+    CHECK(piece(cross, 1, 1).first == "PathXRoads");
+    cross.squares.pop_back();
+    CHECK(piece(cross, 1, 1) == Piece { "PathTJunction", 1 });
+    // A path costs its flat price.
+    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Path, .depth = 0 }) == 11);
+    CHECK(pool_refund(kPrices, { .kind = PoolKind::PathStairs, .depth = 0 }) == -9);
+}
+
 TEST_CASE("pools: each square costs its kind's price and its depth's")
 {
     CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Water, .depth = 2 }) == 100 + 2 * 300);
@@ -359,19 +390,21 @@ TEST_CASE("pools: a park from the game gives its squares, boards and changing ro
 {
     save::WorldModel world;
     world.pool_segments = {
-        { .id = 1, .col = 5, .row = 5, .type = 0, .surface = 4, .depth = 2 }, { .id = 2, .col = 5, .row = 6, .type = 3, .surface = 4, .special = 8 }, { .id = 3, .col = 6, .row = 5, .type = 1, .surface = 4, .complex = 2 }, { .id = 4, .col = 4, .row = 5, .type = 4, .surface = 4 }, { .id = 5, .col = 5, .row = 4, .type = 6, .surface = 4 },
+        { .id = 1, .col = 5, .row = 5, .type = 0, .surface = 4, .depth = 2 }, { .id = 2, .col = 5, .row = 6, .type = 3, .surface = 4, .special = 8 }, { .id = 3, .col = 6, .row = 5, .type = 1, .surface = 4, .complex = 2 }, { .id = 4, .col = 4, .row = 5, .type = 4, .surface = 4 }, { .id = 5, .col = 5, .row = 4, .type = 6, .surface = 4 }, { .id = 6, .col = 5, .row = 3, .type = 5, .surface = 4 },
     };
     world.pool_complexes = { { .index = 2, .ticket = 250, .name = "Lido" } };
     world.changing_rooms = { { .object_ref = 90, .segment = 3, .open = true, .fluid = 2 } };
     const std::vector<save::PlacedObject> objects { { .id = 90, .symbol = "Room", .col = 7, .row = 5 } };
     const park::PoolMap map = park::saved_pools(world, objects);
-    REQUIRE(map.squares.size() == 5);
+    REQUIRE(map.squares.size() == 6);
     CHECK(map.at(5, 5)->kind == park::PoolKind::Water);
     CHECK(map.at(5, 6)->kind == park::PoolKind::HighDive);
     CHECK(map.at(5, 6)->board == 8);
     CHECK(map.at(5, 6)->turn == 2); // The water is a row back
     CHECK(map.at(4, 5)->kind == park::PoolKind::Jacuzzi);
-    CHECK(map.at(5, 4)->kind == park::PoolKind::Tile);
+    CHECK(map.at(5, 3)->kind == park::PoolKind::Path);
+    CHECK(map.at(5, 4)->kind == park::PoolKind::PathSlope);
+    CHECK(map.at(5, 4)->turn == 2); // Its foot at the path a row back
     REQUIRE(map.rooms.size() == 1);
     CHECK(map.rooms[0].turn == 3); // Its paved square a column back
     CHECK(map.rooms[0].ticket == 250);

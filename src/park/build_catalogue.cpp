@@ -452,6 +452,9 @@ namespace rct3::park
                     tool(kPoolWater[static_cast<std::size_t>(depth - 1)], PoolSquare { .kind = PoolKind::Water, .depth = depth });
                 tool(kPoolTiles, PoolSquare { .kind = PoolKind::Tile, .depth = 2 });
                 tool(kPoolDelete, std::nullopt);
+                tool(kPoolPath, PoolSquare { .kind = PoolKind::Path, .depth = 0 });
+                tool(kPoolPathSlope, PoolSquare { .kind = PoolKind::PathSlope, .depth = 0 });
+                tool(kPoolPathStairs, PoolSquare { .kind = PoolKind::PathStairs, .depth = 0 });
                 // The extras laid as squares, one at a time: the spa pool, the high diving board and the spiral
                 // staircase.
                 BuildItem& jacuzzi = tool(kPoolJacuzzi, PoolSquare { .kind = PoolKind::Jacuzzi, .depth = 2 });

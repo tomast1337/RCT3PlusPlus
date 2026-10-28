@@ -10,7 +10,8 @@
 // laying tiles and the grid switch, with the delete tool at the right end. Water, tiles and delete are one
 // choice, the depths another, the edges a third; picking an edge puts the water out, as in the game. The extras and changing room pages show their pictures in two
 // rows; picking one puts it out instead of the editor's tool, and opening the editor's tab brings that back.
-// The disc shows the picture of what the tool lays now. The band along the strip's top tells what the button
+// The paths page lays pool paths along an L from where the drag began, or a slope or stairs on one square,
+// turned with the turn keys, and has the delete tool too. The disc shows the picture of what the tool lays now. The band along the strip's top tells what the button
 // under the pointer does, else the tab's help.
 //
 // Tabs and buttons whose feature is not built are greyed. The panel keeps its choices while hidden, so it opens
@@ -62,6 +63,10 @@ namespace rct3::ui
         Water,
         Tiles,
         Delete,
+        // The paths page's.
+        Path,
+        PathSlope,
+        PathStairs,
     };
 
     /// The editor's choices.
@@ -181,6 +186,9 @@ namespace rct3::ui
         std::array<Button*, 3> modes_ { };  ///< Water, tiles, delete
         std::array<Button*, 3> depths_ { }; ///< Shallow, normal, deep
         std::array<Button*, 4> edges_ { };  ///< Straight, diagonal, tight, loose
+        // The paths' page: paths, slopes, stairs and the delete tool.
+        Widget* paths_page_ = nullptr;
+        std::array<Button*, 4> path_modes_ { };
         Button* grid_ = nullptr;
         Button* snap_ = nullptr;
         Spinner* height_ = nullptr;

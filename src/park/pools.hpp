@@ -52,7 +52,19 @@ namespace rct3::park
         Jacuzzi,  ///< A spa pool, on a paved square
         HighDive, ///< A high diving board, on a paved square, facing the water at its side `turn`
         Stairs,   ///< A spiral staircase, on a paved square, climbing `board` units from its foot at side `turn`
+        // Pool paths: walkways of one piece, no deeper than their surface, joining the paths beside them.
+        Path,
+        PathSlope,  ///< Rising kPathSlopeRise units from its foot at side `turn`, at the surface
+        PathStairs, ///< Rising kPathStairsRise units, the same way
     };
+
+    /// Whether `kind` is a pool path's.
+    [[nodiscard]] constexpr bool is_pool_path(PoolKind kind) noexcept
+    {
+        return kind == PoolKind::Path || kind == PoolKind::PathSlope || kind == PoolKind::PathStairs;
+    }
+    inline constexpr std::int32_t kPathSlopeRise = 1;
+    inline constexpr std::int32_t kPathStairsRise = 2;
 
     /// How a square's walls go round its corners, as the pool tool's edge buttons set it.
     enum class PoolEdge : std::uint8_t

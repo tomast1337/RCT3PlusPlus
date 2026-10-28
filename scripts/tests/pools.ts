@@ -417,3 +417,23 @@ expect(count("StairsBase") === 1 && count("StairsTop") === 1 && park.cash()! < c
 build.stop();
 await frames(5);
 await screenshot("pool_raised_stairs");
+
+// Pool paths from the paths tab: an L of path beside the raised squares, a slope at its end.
+camera.look({ col: c0 + 6, row: r0 + 4 }, { col: c0 + 6, row: r0 + 13, up: 9 });
+await frames(10);
+cash = park.cash()!;
+await open_editor();
+await ui.click("pool_panel/Pool_PathPanel");
+await until(() => ui.children("pool_panel/body")?.includes("paths") === true, 120, "the paths page");
+await screenshot("pool_panel_paths");
+await pointer.drag(on_view(c0 + 6.5, r0 + 2.5), on_view(c0 + 8.5, r0 + 5.5), 6);
+await frames(3);
+expect(count("PathCorner") === 1 && count("PathStraight") === 5 && park.cash()! < cash, `an L of path, paid for, not ${count("PathCorner")} corners and ${count("PathStraight")} straights`);
+await ui.click("pool_panel/body/paths/slope");
+await frames(2);
+await pointer.click(...on_view(c0 + 8.5, r0 + 6.5));
+await frames(3);
+expect(count("PathSlope") === 1, `a slope, not ${count("PathSlope")}`);
+build.stop();
+await frames(5);
+await screenshot("pool_paths");

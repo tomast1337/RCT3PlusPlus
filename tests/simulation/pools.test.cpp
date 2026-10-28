@@ -152,3 +152,20 @@ TEST_CASE("pools taken in again keep their rooms and swimmers")
     CHECK(r.get<SwimPool>(r.get<PoolDoor>(room).pool).water.size() == 7);
     CHECK(r.get<Errand>(guest).kind == ErrandKind::Swimming);
 }
+
+TEST_CASE("swimmers walk the plain paved squares, not those a spa pool or diving board stands on")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    park::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+    pools.squares.push_back({ .col = 4, .row = 2, .kind = park::PoolKind::Jacuzzi });
+    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::HighDive, .turn = 0 });
+    pools.squares.push_back({ .col = 5, .row = 3 });
+    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    import_pools(park.world(), pools);
+    const auto& r = park.world().registry;
+    const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(park.world().registry)).pool);
+    CHECK(pool.water.size() == 1);
+    CHECK(pool.paved.size() == 1);
+}

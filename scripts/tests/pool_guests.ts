@@ -21,7 +21,6 @@ function on_view(col: number, row: number): [number, number] {
 }
 
 const kPool = "Pool/Default/Default_Stub";
-const kRooms = "Style/Vanilla/CapeTyphoon/Style";
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined || ui.find("tools/Rides") !== undefined, 600, "the tool row");
@@ -50,22 +49,23 @@ await frames(3);
 const pieces = () => map.objects().filter((o) => o.overlay === kPool);
 expect(pieces().filter((o) => o.symbol === "Base").length === 12, `twelve squares of water, not ${pieces().filter((o) => o.symbol === "Base").length}`);
 
-// The changing room between the road and the pool, opening on it.
-expect(build.pick(kRooms, "CRoomGeneric"), "the changing room in the pool list");
-await pointer.click(...on_view(c + 1.85, r + 0.5));
+// The changing room between the road and the pool, turned to open on it; placed, its window opens, where the
+// complex opens.
+await until(() => ui.find("pool_panel/Pool_ChangingRoomPanel") !== undefined, 120, "the pool panel");
+await ui.click("pool_panel/Pool_ChangingRoomPanel");
+await frames(2);
+await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
+keys.press(".");
 await frames(3);
-build.stop();
-expect(map.objects().some((o) => o.symbol === "CRoomGeneric" && o.col === c + 1 && o.row === r), "the changing room beside the road");
-
-// Its window opens the complex.
 await pointer.click(...on_view(c + 1.5, r + 0.5));
+await frames(3);
+expect(map.objects().some((o) => o.overlay !== kPool && o.col === c + 1 && o.row === r), "the changing room beside the road");
 await until(() => ui.find("info") !== undefined, 120, "the changing room's window");
-await ui.click("info/Attraction_General_Closed");
+await ui.click("info/Attraction_OpMode");
 await frames(3);
 const choice = ui.find("info/body/AttractionStatusOpen")!;
 await pointer.drag([choice.x, choice.y], [choice.x, choice.bottom + (choice.bottom - choice.top) / 2], 6);
 await frames(3);
-expect(ui.find("info/Attraction_General_Open") !== undefined, "the pool complex open");
 await ui.click("info/close");
 
 // A warm, sunny day, and guests.

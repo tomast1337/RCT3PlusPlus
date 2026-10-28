@@ -15,7 +15,12 @@
       .pupil   { fill: #120408; }
       .shine   { fill: #ffffff; }
     </style>
+    <clipPath id="disc"><circle cx="625" cy="625" r="600"/></clipPath>
   </defs>
+
+  <!-- Backdrop disc, so the panda reads on light and dark pages alike -->
+  <circle cx="625" cy="625" r="600" fill="#fde8f1"/>
+  <g clip-path="url(#disc)">
 
   <!-- Ears -->
   <g id="ears">
@@ -77,4 +82,6 @@
     <path fill="#6a0a1e" d="M730,615 L852,636 Q822,718 772,716 Q738,702 730,615 Z"/>
     <path fill="#f45a75" d="M745,672 Q780,645 818,680 Q794,718 764,712 Q744,700 745,672 Z"/>
   </g>
+  </g>
+  <circle cx="625" cy="625" r="600" fill="none" stroke="#4f0a24" stroke-width="24"/>
 </svg>

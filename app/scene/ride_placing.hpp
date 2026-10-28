@@ -83,7 +83,10 @@ namespace rct3::scene
         std::optional<Lift> lift;
         park::SiteProblem problem = park::SiteProblem::None;
         bool affordable = true;
-        std::size_t ride = 0; ///< Of the scene's rides, once placed
+        park::Flatten flatten = park::Flatten::Off; ///< How a ride's ground is levelled, as the panel's tabs set it
+        park::LevelledGround levelling;             ///< The ground levelled under the ride pointed at, when it may be
+        std::int64_t levelling_cost = 0;            ///< In hundredths
+        std::size_t ride = 0;                       ///< Of the scene's rides, once placed
         park::ObjectMesh ghost_mesh;
         std::array<std::int32_t, 3> colours { }; ///< Of the scenery: its own when picked, then those the player paints
         std::string panel_item;                  ///< The scenery the placing panel is set up for
@@ -96,6 +99,7 @@ namespace rct3::scene
         std::uint32_t preview_pixels = 0;
         std::map<std::string, TrackModels, std::less<>> models;
         park::SolidTiles solids;
+        park::GroundHolds holds;                              ///< What keeps the ground still, worked out with the solids
         std::size_t solids_of = static_cast<std::size_t>(-1); ///< The scene's object count when worked out
         std::vector<std::size_t> unjoined;                    ///< Rides placed here that the simulation does not run yet
         std::vector<std::size_t> unjoined_stalls;             ///< The same of the stalls placed here

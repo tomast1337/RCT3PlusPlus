@@ -2,7 +2,7 @@
 //
 // Places a stall as a player would, on the game's blank landscape: picked, turned once with the placing panel's
 // tab to face the road in from the park's entrance, refused on the road itself (a click there builds nothing and is
-// silent), then placed on the grass beside it, with a thump. The tool must go away, the stall's window open, and the new stall sell everything its kind offers, closed;
+// silent), then placed on the grass beside it, with a thump. Its panel's levelling tabs light one at a time, none at first. The tool must go away, the stall's window open, and the new stall sell everything its kind offers, closed;
 // the park must run it, as it faces the road. Its window then takes items off its menu and puts them back.
 // A drink stall, whose model has a motion, then plays it as soon as it stands, closed.
 //
@@ -39,6 +39,12 @@ async function hover(col: number, row: number): Promise<{ x: number; y: number; 
 
 expect(build.pick(kind.overlay, kind.symbol), `${kind.symbol} picked`);
 await frames(2);
+expect(build.placing()?.flatten === "off", "the ground left as it is at first");
+for (const [tab, after] of [["SharpOff", "sharp"], ["SmoothOff", "smooth"], ["SmoothOn", "off"]]) {
+    await ui.click(`placing/TerrainFlattener_${tab}`);
+    await frames(2);
+    expect(build.placing()?.flatten === after, `the ground levelled ${after} after ${tab}, not ${build.placing()?.flatten}`);
+}
 // A quarter turn from where it starts faces it the way of falling columns, to the road west of it.
 await ui.click("placing/IconAttractionEditorRotate");
 const onRoad = await hover(road!.col, road!.row);

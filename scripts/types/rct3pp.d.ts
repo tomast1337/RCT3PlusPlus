@@ -254,9 +254,10 @@ declare namespace build {
     /** While an enclosure drag is held: what letting go would cost in hundredths (below 0 when it pays back),
      * and how many tiles it would take in or out; undefined otherwise. */
     function enclosing(): { cost: number; tiles: number } | undefined;
-    /** What is being placed, what keeps it from where the pointer is, and whether a stall's facing arrow shows;
-     * undefined while nothing is. */
-    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water" | "under water" | "off path" | "off enclosure"; affordable: boolean; ghost: boolean; arrow: boolean; site?: { col: number; row: number; turns: number; height: number } } | undefined;
+    /** What is being placed, what keeps it from where the pointer is, whether a stall's facing arrow shows, and
+     * how the ground under a ride or stall is levelled and what that costs, in hundredths; undefined while nothing
+     * is. */
+    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water" | "under water" | "off path" | "off enclosure" | "into ground"; affordable: boolean; flatten: "off" | "sharp" | "smooth"; levelling: number; ghost: boolean; arrow: boolean; site?: { col: number; row: number; turns: number; height: number } } | undefined;
 }
 
 /** A place a ride's part stands: its lowest tile, and the quarter turn it faces. */

@@ -11,6 +11,7 @@
 // across one of the sides its track does not run through, at the piece's height and facing it.
 #pragma once
 
+#include "park/ground_holds.hpp"
 #include "park/path_clearance.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -85,6 +86,29 @@ namespace rct3::park
     /// What keeps a ride standing over the ground as it is, without levelling it, from `site`: the ground of a
     /// tile rising over its base.
     [[nodiscard]] SiteProblem ground_problem(const RideSite& site, const save::TerrainGrid& grid);
+
+    /// How the ground under a ride being placed is levelled for it: not at all, the ride raised to stand clear of
+    /// it; sharply, only the footprint's own tiles, leaving cliffs round it; or smoothly, the tiles round it
+    /// sloping down or up to it.
+    enum class Flatten : std::uint8_t
+    {
+        Off,
+        Sharp,
+        Smooth,
+    };
+
+    /// The whole-unit height a ride on `site` stands clear of the ground at: its footprint's highest corner.
+    [[nodiscard]] std::int32_t clear_height(const RideSite& site, const save::TerrainGrid& grid);
+
+    /// The ground under `site` levelled to its height, as the tiles that change: the footprint's own tiles, each
+    /// corner at the height, and, levelling smoothly, the tiles round it, those of their corners on the
+    /// footprint's edge at the height and the rest as they are.
+    struct LevelledGround
+    {
+        std::vector<GroundCut> footprint;
+        std::vector<GroundCut> rim;
+    };
+    [[nodiscard]] LevelledGround levelled_ground(const RideSite& site, Flatten flatten, const save::TerrainGrid& grid);
 
     /// Levels the ground under `site` to its height.
     void level_ground(save::TerrainGrid& grid, const RideSite& site);

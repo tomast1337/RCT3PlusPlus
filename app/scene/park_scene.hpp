@@ -260,7 +260,19 @@ namespace rct3::scene
         /// The pools before the work was laid into them to be seen, and the ground it dug, to put back.
         std::optional<park::PoolMap> before;
         std::vector<std::pair<save::Tile, std::array<float, 4>>> dug;
-        bool redraw = false; ///< The pools were put back away from the frame and are drawn on the next
+        bool redraw = false;    ///< The pools were put back away from the frame and are drawn on the next
+        std::int32_t turns = 0; ///< Of an extra or changing room, quarter turns from the turn keys
+        /// The extra or changing room where it would go, drawn see-through, and whether it may go there.
+        std::optional<save::PlacedObject> ghost_of;
+        bool ghost_ok = false;
+        park::ObjectMesh ghost;
+        /// The extra or changing room alone, for the pool panel's disc, and the view of it there.
+        std::string preview_of;
+        park::ObjectMesh preview;
+        park::ParkCamera preview_camera;
+        render::TextureHandle preview_target;
+        std::uint32_t preview_pixels = 0;
+        std::optional<std::size_t> room_placed; ///< Of the pools' rooms, one just placed, its window to open
     };
 
     /// An amount of money floating up from a point of the park (scene/park_view.hpp).

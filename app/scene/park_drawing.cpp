@@ -18,6 +18,8 @@
 #include "scene/park_setup.hpp"
 #include "scene/park_view.hpp"
 #include "scene/park_water.hpp"
+#include "scene/pool_tools.hpp"
+#include "ui/screens/pool_panel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -260,6 +262,7 @@ namespace rct3::scene
                 draw_raised_footpath_ghost(device, scene, transform, light);
                 draw_ride_placing_ghost(device, scene, transform, light);
                 draw_structure_ghost(device, scene, transform, light);
+                draw_pool_ghost(device, scene, transform, light);
             }
             // Last, so what it hides is drawn first and shows through it.
             if (parts.terrain && parts.faded_ground)
@@ -411,7 +414,7 @@ namespace rct3::scene
 
         /// Draws into the round view of `panel`, by `draw` given the view's transform: into `target`, made again
         /// when the view's size in pixels (`pixels`) changes, cleared to `back`.
-        template<typename Draw> void draw_view(render::Device& device, ParkScene& scene, ui::InfoPanel& panel, render::TextureHandle& target, std::uint32_t& pixels, std::string_view label, render::Color back, Draw&& draw)
+        template<typename Panel, typename Draw> void draw_view(render::Device& device, ParkScene& scene, Panel& panel, render::TextureHandle& target, std::uint32_t& pixels, std::string_view label, render::Color back, Draw&& draw)
         {
             const float scale = scale_for(device, scene);
             const auto wanted = static_cast<std::uint32_t>(std::lround(ui::info_panel::kView * scale));
@@ -538,6 +541,8 @@ namespace rct3::scene
         // The item being placed, alone on the disc's grey, lit as the park is.
         // shortcut: its see-through parts are drawn in the mesh's order, not after the rest; sort them if a
         // preview shows a part hidden behind glass.
+        if (auto pools = scene.desktop->root().find_as<ui::PoolPanel>("pool_panel"); pools && pools->showing() && pools->placing() && scene.pooling.item && !scene.pooling.preview.indices.empty())
+            draw_view(device, scene, *pools, scene.pooling.preview_target, scene.pooling.preview_pixels, "pool view", render::hex("#7f7f7f"), [&] { draw_ghost_mesh(device, scene, scene.pooling.preview, park::view_projection(scene.pooling.preview_camera, 1), scene.light, true); });
         if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName); placing && placing->showing() && !scene.placing.preview_mesh.indices.empty())
             profiling::section("PlacingView", [&] { draw_view(device, scene, *placing, scene.placing.preview_target, scene.placing.preview_pixels, "placing view", render::hex("#7f7f7f"), [&] { draw_ghost_mesh(device, scene, scene.placing.preview_bones.empty() ? scene.placing.preview_mesh : scene.placing.preview_moving.mesh, park::view_projection(scene.placing.preview_camera, 1), scene.light, true); }); });
         if (!scene.photos.empty() && !scene.photo_reading)

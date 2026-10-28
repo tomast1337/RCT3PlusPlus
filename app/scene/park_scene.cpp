@@ -2067,7 +2067,15 @@ namespace rct3::scene
             update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, over, input.shift, input.commands);
             update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, elapsed);
             update_enclosing(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over);
-            update_pooling(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over);
+            update_pooling(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, typing(scene) ? std::span<const ui::PlayCommand> { } : std::span(input.commands));
+            // A changing room just placed opens its window.
+            if (const auto room = std::exchange(scene.pooling.room_placed, std::nullopt))
+                for (std::size_t i = 0; i < scene.objects.size(); ++i)
+                    if (pool_room(scene, scene.objects[i]) == room)
+                    {
+                        open_prop(scene, *info, i, assets, options, ui::SceneryTab::Pool);
+                        break;
+                    }
             // The area delete tool marks the tiles a drag spans; its panel clears them or deletes what stands there.
             DeleteTools& deleting = scene.deleting;
             const bool area = deleting.tool == DeleteTools::Tool::Area;

@@ -257,6 +257,7 @@ namespace rct3::ui
             {
                 placing_ = std::pair { *page_, i };
                 changed_ = true;
+                view_ = 0;
             }
         }
     }
@@ -326,7 +327,12 @@ namespace rct3::ui
         list.shape(rim);
         const Rect back { d.x0 + c.rim, d.y0 + c.rim, d.x1 - c.rim, d.y1 - c.rim };
         plain(back, round_corners(back.width() / 2), c.view_back);
-        if (const std::string_view icon = preview(); !icon.empty())
+        if (view_ != 0 && placing_)
+        {
+            const float inset = (info_panel::kDisc - info_panel::kView) / 2;
+            list.disc_image({ d.x0 + inset, d.y0 + inset, d.x1 - inset, d.y1 - inset }, view_, { 0, 0, 1, 1 });
+        }
+        else if (const std::string_view icon = preview(); !icon.empty())
         {
             const Point m = middle_of(d);
             const float h = pool_panel::kDiscIcon / 2;

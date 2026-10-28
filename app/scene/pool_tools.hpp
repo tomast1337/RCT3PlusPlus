@@ -7,17 +7,20 @@
 // there, or the height the panel sets when it does not snap to the ground; the ground under every square is
 // dug down to the pool's floor. With the delete tool, letting go takes
 // the squares up and refunds them, leaving the ground flat at their surface. An area with land the park does
-// not own outright, or that the park cannot pay for, shows its marks red and is refused. With an extra picked,
-// the square under the pointer is marked along the side nearest the pointer, red where the extra does not fit
-// (park/pools.hpp) or cannot be paid for; a click puts it in there. With a changing room picked, the tile under
-// the pointer is marked along the side nearest it, which must meet a paved square of a pool; a click builds
-// it there, opening on that square. A right click, or picking another tool, puts the tool away.
+// not own outright, or that the park cannot pay for, shows its marks red and is refused. With an extra or a
+// changing room picked, it follows the pointer as a see-through ghost on the square under it, red where it does
+// not fit (park/pools.hpp) or cannot be paid for, and shows alone, turning, in the panel's disc; the turn keys
+// turn it a quarter. A click puts an extra in there. A changing room must open on a paved square of a pool; a
+// click builds it there once: the tool and the panel go, and the room's window opens. A right click, or picking another tool, puts the tool away.
 #pragma once
 
 #include "park/build_catalogue.hpp"
 #include "render/device.hpp"
 #include "ui/interface_assets.hpp"
+#include "ui/key_map.hpp"
 #include "ui/widget.hpp"
+
+#include <span>
 
 namespace rct3::scene
 {
@@ -34,7 +37,10 @@ namespace rct3::scene
     void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets);
 
     /// Marks the squares under a drag at `at`, in a view of `size`, while `down`; lays them when it ends.
-    void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over);
+    void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, std::span<const ui::PlayCommand> commands);
+
+    /// Draws the extra or changing room picked, see-through where it would go.
+    void draw_pool_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
     /// Builds the pools' pieces and water again after they changed.
     /// shortcut: the old pieces stay hidden among the objects; drop them when objects can be taken out.

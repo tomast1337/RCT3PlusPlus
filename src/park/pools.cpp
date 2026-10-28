@@ -25,24 +25,25 @@ namespace rct3::park
         } };
 
         /// What one square costs to lay or to take up, from the pool type's price list
-        /// (ovl::PoolType::prices, by index): a part for its kind, another for each unit of its depth, and
-        /// more for a spa pool.
+        /// (ovl::PoolType::prices, by index): a part for its kind, another for each unit of its depth, more
+        /// for a spa pool, and more for each unit a high diving board climbs, in whole levels.
         struct PriceFields
         {
-            std::size_t base, per_depth, jacuzzi;
+            std::size_t base, per_depth, jacuzzi, board;
         };
-        constexpr PriceFields kBuild[] { { 2, 3, 0 }, { 6, 7, 12 } };  // Water, paved
-        constexpr PriceFields kRefund[] { { 4, 5, 0 }, { 8, 9, 13 } }; // The same, when taken up
+        constexpr PriceFields kBuild[] { { 2, 3, 0, 0 }, { 6, 7, 12, 16 } };  // Water, paved
+        constexpr PriceFields kRefund[] { { 4, 5, 0, 0 }, { 8, 9, 13, 17 } }; // The same, when taken up
 
         std::int64_t price(std::span<const std::int32_t, 18> prices, const PoolSquare& square, const PriceFields (&fields)[2]) noexcept
         {
             const PriceFields& f = fields[square.kind == PoolKind::Water ? 0 : 1];
-            return prices[f.base] + std::int64_t { prices[f.per_depth] } * square.depth + (square.kind == PoolKind::Jacuzzi ? prices[f.jacuzzi] : 0);
+            const std::int64_t climb = square.kind == PoolKind::HighDive ? square.board / kBoardLevel * kBoardLevel : 0;
+            return prices[f.base] + std::int64_t { prices[f.per_depth] } * square.depth + (square.kind == PoolKind::Jacuzzi ? prices[f.jacuzzi] : 0) + climb * prices[f.board];
         }
 
         bool same(const PoolSquare& a, const PoolSquare& b) noexcept
         {
-            return a.kind == b.kind && a.depth == b.depth && a.surface == b.surface;
+            return a.kind == b.kind && a.depth == b.depth && a.surface == b.surface && a.board == b.board && a.turn == b.turn;
         }
 
         /// The parts of a square, as bits: its middle, paved or water, then four bits each, by turn, for its
@@ -245,6 +246,20 @@ namespace rct3::park
             stack({ "SolidBot", "SolidMid", "SolidTop" }, 0);
             if (square.kind == PoolKind::Jacuzzi)
                 out.back().symbol = "Jacuzzi";
+        }
+        if (square.kind == PoolKind::HighDive)
+        {
+            // Its foot on the surface, a stretch of ladder and a board for each level but the last, and the top
+            // board; turned, as saved parks show, a half turn from the side it faces.
+            const std::int32_t turn = (square.turn + 2) & 3;
+            const std::int32_t levels = std::max(square.board / kBoardLevel, 1);
+            out.push_back({ "DBBase", square.surface, turn });
+            for (std::int32_t level = 0; level + 1 < levels; ++level)
+            {
+                out.push_back({ "DBMidBoard", square.surface + 2 + kBoardLevel * level, turn });
+                out.push_back({ "DBMid", square.surface + 3 + kBoardLevel * level, turn });
+            }
+            out.push_back({ "DBTopBoard", square.surface + 2 + kBoardLevel * (levels - 1), turn });
         }
         for (std::int32_t turn = 0; turn < 4; ++turn)
         {

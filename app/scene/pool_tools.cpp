@@ -31,6 +31,9 @@ namespace rct3::scene
         constexpr glm::vec4 kRefusedColour { 1.0f, 0.35f, 0.3f, 0.9f };
         constexpr std::string_view kPanelName = "pool_panel";
         constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
+        constexpr float kPixelsPerBoardUnit = 10; ///< Of a drag up, to raise a high diving board a unit
+        constexpr std::int32_t kHighestBoard = 30;
+        constexpr std::array<std::array<std::int32_t, 2>, 4> kFacing { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } }; // By turn, as park/pools.hpp turns
 
         std::optional<ui::PoolPanel&> panel_of(const ParkScene& scene)
         {
@@ -46,6 +49,7 @@ namespace rct3::scene
             if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
                 return out;
             const park::BuildItem* spa = nullptr;
+            const park::BuildItem* dive = nullptr;
             for (const park::BuildItem& i : items.get())
             {
                 if (i.list != park::BuildList::Pools)
@@ -57,9 +61,12 @@ namespace rct3::scene
                     out.first.push_back(&i);
                 else if (i.overlay == park::kPoolOverlay && i.symbol == park::kPoolJacuzzi)
                     spa = &i;
+                else if (i.overlay == park::kPoolOverlay && i.symbol == park::kPoolHighDive)
+                    dive = &i;
             }
-            if (spa != nullptr)
-                out.first.push_back(spa);
+            for (const park::BuildItem* last : { dive, spa })
+                if (last != nullptr)
+                    out.first.push_back(last);
             return out;
         }
 
@@ -119,14 +126,15 @@ namespace rct3::scene
             const auto begun = scene.pools.at(a.col, a.row);
             const std::int32_t surface = scene.pooling.height.value_or(begun ? begun->surface : static_cast<std::int32_t>(std::lround(scene.grid.at(a.col, a.row).max_height())));
             const auto water = std::ranges::find(park::kPoolWater, item.symbol);
-            const park::PoolKind kind = water != park::kPoolWater.end() ? park::PoolKind::Water : park::PoolKind::Tile;
+            const park::PoolKind kind = water != park::kPoolWater.end() ? park::PoolKind::Water : item.symbol == park::kPoolJacuzzi ? park::PoolKind::Jacuzzi : item.symbol == park::kPoolHighDive ? park::PoolKind::HighDive : park::PoolKind::Tile;
+            const bool dive = kind == park::PoolKind::HighDive;
             // Paved squares take the normal depth, the one the pool type prices them at.
             const std::int32_t depth = water != park::kPoolWater.end() ? static_cast<std::int32_t>(water - park::kPoolWater.begin()) + 1 : 2;
             std::vector<park::PoolSquare> squares;
             const auto area = marked(a, b);
             for (std::int32_t row = area[1]; row <= area[3]; ++row)
                 for (std::int32_t col = area[0]; col <= area[2]; ++col)
-                    squares.push_back({ .col = col, .row = row, .kind = kind, .surface = surface, .depth = depth });
+                    squares.push_back({ .col = col, .row = row, .kind = kind, .surface = surface, .depth = depth, .board = dive ? scene.pooling.board : 0, .turn = dive ? scene.pooling.turns : 0 });
             const std::int64_t cost = park::lay_pool(map, prices, squares);
             return { std::move(map), cost };
         }
@@ -185,17 +193,10 @@ namespace rct3::scene
 
         /// Puts the extra or changing room out with the pool tool where the pointer is, when it fits and can be
         /// paid for. A changing room goes on the land the park owns.
-        void update_extra(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<glm::vec2> spot, bool down, std::span<const ui::PlayCommand> commands)
+        void update_extra(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<glm::vec2> spot, bool down)
         {
             PoolTool& t = scene.pooling;
             const park::BuildItem& item = *t.item;
-            for (const ui::PlayCommand c : commands)
-            {
-                if (c == ui::PlayCommand::TurnItemRight)
-                    t.turns = (t.turns + 1) % 4;
-                else if (c == ui::PlayCommand::TurnItemLeft)
-                    t.turns = (t.turns + 3) % 4;
-            }
             const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
             const std::int32_t turn = t.turns;
             const park::PoolExtraFit fit = park::pool_extra_fit(item.pool_extra);
@@ -380,18 +381,33 @@ namespace rct3::scene
         swap_work(scene);
         const auto spot = t.item && !over ? pointed_spot(scene, at, size) : std::nullopt;
         swap_work(scene);
+        for (const ui::PlayCommand c : commands)
+        {
+            if (c == ui::PlayCommand::TurnItemRight)
+                t.turns = (t.turns + 1) % 4;
+            else if (c == ui::PlayCommand::TurnItemLeft)
+                t.turns = (t.turns + 3) % 4;
+        }
         if (t.item && (t.item->kind == park::BuildKind::PoolExtra || t.item->kind == park::BuildKind::PoolRoom))
-            return update_extra(device, scene, assets, spot, down, commands);
+            return update_extra(device, scene, assets, spot, down);
         const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
         if (std::exchange(t.redraw, false))
             pools_changed(device, scene, assets);
         const bool dragging = t.item && down && (t.corner || tile);
+        // A spa pool or a high diving board goes on the square pressed; dragging up or down raises or lowers the
+        // board.
+        const bool single = t.item && (t.item->symbol == park::kPoolJacuzzi || t.item->symbol == park::kPoolHighDive);
         if (dragging)
         {
             if (!t.corner)
+            {
                 t.corner = tile;
+                t.press_y = at.y;
+            }
             if (tile)
-                t.other = tile;
+                t.other = single ? t.corner : tile;
+            if (single && t.item->symbol == park::kPoolHighDive && t.press_y)
+                t.board = std::clamp(park::kBoardLevel + static_cast<std::int32_t>((*t.press_y - at.y) / kPixelsPerBoardUnit), park::kBoardLevel, kHighestBoard);
         }
         // The work is the drag's, else the square under the pointer. As it changes it is laid into the pools to
         // be seen, when it may be done; letting go keeps it.
@@ -402,15 +418,21 @@ namespace rct3::scene
         // biggest parks); rebuild only the squares touched once the ground mesh is in chunks and objects can be
         // added to the built ones.
         const bool letting_go = !dragging && t.corner && t.other;
-        if (working != t.working && (letting_go || !scene.object_build.valid()))
+        if ((working != t.working || t.board != t.worked_board || t.turns != t.worked_turns) && (letting_go || !scene.object_build.valid()))
         {
             bool changed = put_back(scene);
             t.working = working;
+            t.worked_board = t.board;
+            t.worked_turns = t.turns;
             if (working)
             {
                 auto [map, cost] = marked_pools(scene, working->first, working->second);
                 t.cost = cost;
-                t.ok = allowed(scene, marked(working->first, working->second), cost);
+                // A high diving board faces water.
+                const auto [dc, dr] = kFacing[static_cast<std::size_t>(t.turns & 3)];
+                const auto faced = map.at(working->first.col + dc, working->first.row + dr);
+                t.faces = t.item->symbol != park::kPoolHighDive || (faced && faced->kind == park::PoolKind::Water);
+                t.ok = t.faces && allowed(scene, marked(working->first, working->second), cost);
                 if (t.ok)
                 {
                     lay_work(scene, std::move(map));
@@ -439,10 +461,11 @@ namespace rct3::scene
                 t.dug.clear();
                 scene.supports.stale = true;
             }
-            else if (allowed(scene, marked(*t.corner, *t.other), 0))
+            else if (t.faces && allowed(scene, marked(*t.corner, *t.other), 0))
                 simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(kNoMoney) });
             t.corner.reset();
             t.other.reset();
+            t.press_y.reset();
         }
         const auto marks = working ? std::optional(marked(working->first, working->second)) : std::nullopt;
         draw_marks(device, scene, marks, park::TilePart::Whole, !working || t.ok);

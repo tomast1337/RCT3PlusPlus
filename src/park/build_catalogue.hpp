@@ -105,6 +105,8 @@ namespace rct3::park
     inline constexpr std::string_view kPoolDelete = "Pool_DeleteArea";
     /// The tool laying spa pools, listed with the extras.
     inline constexpr std::string_view kPoolJacuzzi = "SceneryItem_Jacuzzi";
+    /// The tool laying high diving boards, listed with the extras.
+    inline constexpr std::string_view kPoolHighDive = "SegmentTypeHighDive";
     /// The overlay of the pool type, whose pieces pools are built of.
     inline constexpr std::string_view kPoolOverlay = "Pool/Default/Default_Stub";
 

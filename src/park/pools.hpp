@@ -41,8 +41,9 @@ namespace rct3::park
     enum class PoolKind : std::uint8_t
     {
         Water,
-        Tile,    ///< Paved
-        Jacuzzi, ///< A spa pool, on a paved square
+        Tile,     ///< Paved
+        Jacuzzi,  ///< A spa pool, on a paved square
+        HighDive, ///< A high diving board, on a paved square, facing the water at its side `turn`
     };
 
     struct PoolSquare
@@ -52,7 +53,12 @@ namespace rct3::park
         PoolKind kind = PoolKind::Water;
         std::int32_t surface = 0; ///< Whole units, as placed objects' heights
         std::int32_t depth = 2;   ///< Whole units: 1 shallow, 2 normal, 3 deep
+        std::int32_t board = 0;   ///< A high diving board's height over the surface, whole units
+        std::int32_t turn = 0;    ///< The side a high diving board faces
     };
+
+    /// A high diving board climbs in levels of this many units: a stretch of ladder and a board at each.
+    inline constexpr std::int32_t kBoardLevel = 3;
 
     /// What an extra takes of its square, from the words of its pool extra setting.
     struct PoolExtraFit

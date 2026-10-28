@@ -260,8 +260,13 @@ namespace rct3::scene
         /// The pools before the work was laid into them to be seen, and the ground it dug, to put back.
         std::optional<park::PoolMap> before;
         std::vector<std::pair<save::Tile, std::array<float, 4>>> dug;
-        bool redraw = false;    ///< The pools were put back away from the frame and are drawn on the next
-        std::int32_t turns = 0; ///< Of an extra or changing room, quarter turns from the turn keys
+        bool redraw = false;                    ///< The pools were put back away from the frame and are drawn on the next
+        std::int32_t turns = 0;                 ///< Of an extra, changing room or high diving board, quarter turns from the turn keys
+        std::optional<float> press_y;           ///< Where on the screen the drag began
+        std::int32_t board = park::kBoardLevel; ///< A high diving board's height, from the drag
+        std::int32_t worked_board = 0;          ///< And the turn and height of the work shown
+        std::int32_t worked_turns = 0;
+        bool faces = true; ///< The work shown is no high diving board facing away from the water
         /// The extra or changing room where it would go, drawn see-through, and whether it may go there.
         std::optional<save::PlacedObject> ghost_of;
         bool ghost_ok = false;

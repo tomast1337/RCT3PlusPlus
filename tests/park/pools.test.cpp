@@ -11,7 +11,7 @@ namespace
 {
 
     /// An invented price list, shaped like a pool type's.
-    constexpr std::array<std::int32_t, 18> kPrices { 0, 0, 100, 300, 50, -200, 70, 10, -60, -5, 0, 0, 900, -800, 0, 0, 0, 0 };
+    constexpr std::array<std::int32_t, 18> kPrices { 0, 0, 100, 300, 50, -200, 70, 10, -60, -5, 0, 0, 900, -800, 0, 0, 40, -30 };
 
     /// A pool of `cols` by `rows` water squares, ringed by paved squares, its corner at (0, 0).
     PoolMap ringed(std::int32_t cols, std::int32_t rows)
@@ -111,6 +111,23 @@ TEST_CASE("pools: a spa pool tops its paved stack")
     const PoolMap map { { { .col = 0, .row = 0, .kind = PoolKind::Jacuzzi, .surface = 0, .depth = 2 } } };
     const auto pieces = pool_pieces(map, map.squares[0]);
     CHECK(pieces[2].symbol == "Jacuzzi");
+}
+
+TEST_CASE("pools: a high diving board climbs from its paved stack in levels, a board at each")
+{
+    const PoolMap map;
+    std::vector<std::pair<std::string_view, std::int32_t>> above;
+    for (const PoolPiece& p : pool_pieces(map, { .kind = PoolKind::HighDive, .surface = 4, .depth = 2, .board = 10, .turn = 1 }))
+        if (p.height > 4 || p.symbol.starts_with("DB"))
+        {
+            above.emplace_back(p.symbol, p.height);
+            CHECK(p.turn == 3);
+        }
+    using Piece = std::pair<std::string_view, std::int32_t>;
+    CHECK(above == std::vector<Piece> { { "DBBase", 4 }, { "DBMidBoard", 6 }, { "DBMid", 7 }, { "DBMidBoard", 9 }, { "DBMid", 10 }, { "DBTopBoard", 12 } });
+    // Its climb is paid by the unit, in whole levels.
+    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::HighDive, .depth = 2, .board = 10 }) == 70 + 2 * 10 + 9 * 40);
+    CHECK(pool_refund(kPrices, { .kind = PoolKind::HighDive, .depth = 2, .board = 10 }) == -60 - 2 * 5 - 9 * 30);
 }
 
 TEST_CASE("pools: each square costs its kind's price and its depth's")

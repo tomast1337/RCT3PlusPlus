@@ -490,7 +490,7 @@ namespace rct3::simulation
                 todo.pop_back();
                 if (s.kind == park::PoolKind::Water)
                     complex.water.push_back(middle(s.col, s.row, static_cast<float>(s.surface) + park::kPoolBrim));
-                else
+                else if (s.kind == park::PoolKind::Tile) // Not the squares a spa pool or diving board stands on
                     complex.paved.push_back(middle(s.col, s.row, static_cast<float>(s.surface)));
                 for (const auto [dc, dr] : kSides)
                     if (const auto next = squares.find({ s.col + dc, s.row + dr }); next != squares.end() && complex_of.try_emplace(next->first, complexes.size() - 1).second)

@@ -139,3 +139,39 @@ TEST_CASE("planting a tree seeds trees beyond the edge round it alone")
         CHECK(t.symbol == "Palm");
     CHECK(more.front().id > first.back().id);
 }
+
+TEST_CASE("a park's own list of trees beyond the edge copies the plants it names, where it names")
+{
+    const save::TerrainGrid g = flat(20, 3);
+    ObjectModels models;
+    models.emplace("Things/Things|Pine", plant());
+    ObjectModel bench = plant();
+    bench.sway = 0;
+    models.emplace("Things/Things|Bench", bench);
+    std::vector<save::PlacedObject> objects { placed(1, "Pine"), placed(2, "Bench") };
+    objects[0].rotation = 1;
+    objects[0].colours = { 4, 5, 6 };
+    const std::vector<save::SkirtTree> listed {
+        { .scenery_ref = 1, .position = { -10, 50, 20 } }, { .scenery_ref = 2, .position = { -10, 0, 30 } }, // Not a plant
+        { .scenery_ref = 9, .position = { -10, 0, 40 } },                                                    // No such item
+        { .scenery_ref = 1, .position = { 40, 0, 40 } },                                                     // On the map
+        { .scenery_ref = 1, .position = { 100, 0, 60 } },
+    };
+    const auto trees = listed_off_map_trees(listed, objects, models, g, land_rings(g));
+    REQUIRE(trees.size() == 2);
+    CHECK(trees[0].id == 3);
+    CHECK(trees[1].id == 4);
+    for (const save::PlacedObject& t : trees)
+    {
+        CHECK(t.symbol == "Pine");
+        CHECK(t.colours == objects[0].colours);
+        CHECK(t.rotation == 0);
+        CHECK(t.free_standing());
+    }
+    const glm::vec3 first = object_transform(trees[0], Positioning { }, g)[3];
+    CHECK(std::abs(first.x - -10) <= 2);
+    CHECK(std::abs(first.z - 20) <= 2);
+    CHECK(first.y == doctest::Approx(3 - kTreeSink)); // On the land, whatever height the list gives
+    const glm::vec3 second = object_transform(trees[1], Positioning { }, g)[3];
+    CHECK(std::abs(second.x - 100) <= 2);
+}

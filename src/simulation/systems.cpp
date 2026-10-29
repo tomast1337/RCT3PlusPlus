@@ -271,8 +271,6 @@ namespace rct3::simulation
             const glm::vec3 b = lane_point(paths, s.to, s.lane_to);
             pose.position = glm::mix(a, b, s.progress.value);
             pose.position.y = paths.surface(s.from, s.to, { pose.position.x, pose.position.z });
-            if (glm::distance(a, b) > 0.01f)
-                pose.heading.value = std::atan2(b.x - a.x, b.z - a.z);
         }
 
         /// Where a party waits for those busy at an attraction: the nearest footpath tile to its way out `from`,
@@ -1962,7 +1960,18 @@ namespace rct3::simulation
                     if (stride.to == at)
                         stride.lane_to = stride.lane_from;
                     else if (!ringed)
+                    {
                         stride.lane_to = new_lane(dice, stride.lane_from, party_slot(r, movers[i]));
+                        // Turning on the next tile: across its inside corner, not out round its middle.
+                        if (!stride.route.empty())
+                        {
+                            const glm::vec3 in = paths.centre(stride.to) - paths.centre(at);
+                            const glm::vec3 out = paths.centre(stride.route.front()) - paths.centre(stride.to);
+                            const glm::vec2 inside = glm::vec2(out.x, out.z) / std::max(glm::length(glm::vec2(out.x, out.z)), 0.001f) - glm::vec2(in.x, in.z) / std::max(glm::length(glm::vec2(in.x, in.z)), 0.001f);
+                            if (glm::length(inside) > 0.5f)
+                                stride.lane_to = glm::clamp(stride.lane_to + glm::normalize(inside) * kTuning.walking.corner_cut.value, -kLaneReach, kLaneReach);
+                        }
+                    }
                     walk_on(paths, stride, left);
                     place(paths, stride, pose);
                 }
@@ -2119,7 +2128,14 @@ namespace rct3::simulation
                     const bool ringed = r.get<Errand>(me.who).kind == ErrandKind::Waiting && r.get<Stride>(me.who).route.empty();
                     if ((member != nullptr && r.get<Party>(member->party).huddle > 0) || ringed || r.any_of<Linger, Gesture>(me.who))
                         continue; // Standing still, in the others' way
-                    steps[i] = away / glm::length(away) * std::min(length, most);
+                    // Only aside, never back against where they face nor turning them: as much as their walk allows.
+                    const Stride& stride = r.get<Stride>(me.who);
+                    if (stride.from == stride.to)
+                        continue;
+                    const float facing = r.get<Pose>(me.who).heading.value;
+                    const glm::vec2 side { std::cos(facing), -std::sin(facing) };
+                    const float room = std::min(most, kTuning.walking.swerve * (r.all_of<Mood>(me.who) ? gait_pace(stride.speed, r.get<Mood>(me.who).energy, stride.gait) : stride.speed).value * dt);
+                    steps[i] = side * std::clamp(glm::dot(away / glm::length(away), side) * std::min(length, most), -room, room);
                 }
             });
             share(workers, bodies.size(), [&](std::size_t begin, std::size_t end) {
@@ -2134,6 +2150,20 @@ namespace rct3::simulation
                     place(paths, stride, r.get<Pose>(bodies[i].who));
                 }
             });
+        }
+
+        // Walkers turn half way towards the way they moved this tick, so a step aside every other tick does not
+        // swing them to and fro, and no faster than turn_rate.
+        for (const auto [e, stride, pose] : r.view<const Stride, Pose>().each())
+        {
+            const auto* errand = r.try_get<Errand>(e);
+            const bool walks = errand != nullptr ? errand->kind == ErrandKind::Wandering || errand->kind == ErrandKind::Heading || errand->kind == ErrandKind::Following || errand->kind == ErrandKind::Waiting || errand->kind == ErrandKind::Queueing : r.all_of<Staff>(e);
+            const glm::vec2 moved { pose.position.x - pose.was.x, pose.position.z - pose.was.z };
+            if (!walks || glm::dot(moved, moved) < 0.0001f)
+                continue;
+            const float turn = std::remainder(std::atan2(moved.x, moved.y) - pose.was_heading.value, 2 * glm::pi<float>()) / 2;
+            const float most = kTuning.walking.turn_rate * dt;
+            pose.heading.value = pose.was_heading.value + std::clamp(turn, -most, most);
         }
 
         phase.emplace("Arrivals");

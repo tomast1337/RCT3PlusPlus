@@ -279,6 +279,8 @@ namespace rct3::simulation
             return std::pair { target[to], std::move(walk) };
         };
         came[from] = from;
+        // One standing in a queue may walk out along their own line.
+        const auto own_line = [&](NodeId n) { return nodes_[from].queue && nodes_[n].queue && nodes_[n].line == nodes_[from].line; };
         if (corners_ || linked)
         {
             // Steps across squares and links are longer, so the shortest walk is found by length; ties go to the
@@ -298,7 +300,7 @@ namespace rct3::simulation
                 if (so_far > length[at])
                     continue;
                 const auto step = [&](NodeId n, float cost) {
-                    if (n == kNoNode || (nodes_[n].queue && target[n] == kNotTarget && !(linked && links_.contains(n))) || so_far + cost >= length[n] || !may_step(at, n, who))
+                    if (n == kNoNode || (nodes_[n].queue && target[n] == kNotTarget && !(linked && links_.contains(n)) && !own_line(n)) || so_far + cost >= length[n] || !may_step(at, n, who))
                         return;
                     length[n] = so_far + cost;
                     came[n] = at;
@@ -321,7 +323,7 @@ namespace rct3::simulation
                         open.emplace(length[l.to], l.to);
                     }
                     // From a queue come to only for its link, nowhere else.
-                    if (nodes_[at].queue && at != from)
+                    if (nodes_[at].queue && at != from && !own_line(at))
                         continue;
                 }
                 for (const NodeId n : nodes_[at].next)
@@ -340,11 +342,41 @@ namespace rct3::simulation
             open.pop_front();
             for (const NodeId n : nodes_[at].next)
             {
-                if (n == kNoNode || came[n] != kNoNode || (nodes_[n].queue && target[n] == kNotTarget) || !may_step(at, n, who))
+                if (n == kNoNode || came[n] != kNoNode || (nodes_[n].queue && target[n] == kNotTarget && !own_line(n)) || !may_step(at, n, who))
                     continue;
                 came[n] = at;
                 if (target[n] != kNotTarget)
                     return walk_to(n);
+                open.push_back(n);
+            }
+        }
+        return std::nullopt;
+    }
+
+    std::optional<std::vector<NodeId>> PathNetwork::way_out(NodeId from) const
+    {
+        if (!nodes_[from].queue)
+            return std::vector<NodeId> { };
+        std::vector<NodeId> came(nodes_.size(), kNoNode);
+        std::deque<NodeId> open { from };
+        came[from] = from;
+        while (!open.empty())
+        {
+            const NodeId at = open.front();
+            open.pop_front();
+            for (const NodeId n : nodes_[at].next)
+            {
+                if (n == kNoNode || came[n] != kNoNode || !may_step(at, n, Walker::Guest) || (nodes_[n].queue && nodes_[n].line != nodes_[from].line))
+                    continue;
+                came[n] = at;
+                if (!nodes_[n].queue)
+                {
+                    std::vector<NodeId> walk;
+                    for (NodeId s = n; s != from; s = came[s])
+                        walk.push_back(s);
+                    std::ranges::reverse(walk);
+                    return walk;
+                }
                 open.push_back(n);
             }
         }

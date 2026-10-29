@@ -53,6 +53,7 @@ namespace rct3::simulation::tuning
         Distance huddle_radius { 0.7f };  ///< Of the ring a party stands in
         Distance ring_gap { 0.9f };       ///< Between neighbours standing in a ring, so a big party's ring is wider
         Seconds regroup { 3 };            ///< A party stands together once all are back, before going on
+        Seconds retry_way { 5 };          ///< Chosen by eye: how long one who found no way back to their party waits before looking again
         std::size_t gather_reach = 24;    ///< Tiles looked at for one a party can wait on of its own
         Distance personal_space { 0.6f }; ///< People walking nearer one another than this step apart
         Pace step_aside { 1.5f };         ///< Fastest anyone steps apart from others

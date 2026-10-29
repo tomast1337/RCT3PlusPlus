@@ -20,12 +20,12 @@ namespace rct3::scene
 
         SupportWatch::Seen seen(const ParkScene& scene, const save::PlacedObject& o)
         {
-            return { o.symbol, o.overlay, o.col, o.row, o.rotation, o.base_height, o.hidden, park::support_tiles(o, scene.models) };
+            return { o.symbol, o.overlay, o.col, o.row, o.rotation, o.base_height, o.hidden, o.support_set, park::support_tiles(o, scene.models) };
         }
 
         bool same(const SupportWatch::Seen& s, const save::PlacedObject& o)
         {
-            return s.symbol == o.symbol && s.overlay == o.overlay && s.col == o.col && s.row == o.row && s.rotation == o.rotation && s.base_height == o.base_height && s.hidden == o.hidden;
+            return s.symbol == o.symbol && s.overlay == o.overlay && s.col == o.col && s.row == o.row && s.rotation == o.rotation && s.base_height == o.base_height && s.hidden == o.hidden && s.support_set == o.support_set;
         }
 
         std::vector<std::pair<int, int>> ground_paths(const ParkScene& scene)

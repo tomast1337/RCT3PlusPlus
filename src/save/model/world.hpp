@@ -306,6 +306,7 @@ namespace rct3::save
         bool force_absolute_height = false;
         bool hidden = false;
         bool fixture = false;         ///< Built by the park itself (fences round rides, queues and the park), not stored; not clicked
+        std::string support_set { };  ///< Support set its columns are built from in place of its model's; not stored
         std::int32_t break_flags = 0; ///< Raw bit set; individual bits not confirmed
         float break_time = 0;
         std::uint32_t behaviour_count = 0;

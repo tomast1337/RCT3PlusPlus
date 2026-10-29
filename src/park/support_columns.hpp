@@ -3,7 +3,8 @@
 // Support columns under raised items: coaster track, raised paths and queues, raised rides and anything else
 // whose scenery item asks for them. A park does not keep them: they are built when it loads, and again on the
 // tiles where something is built, taken away or changed, as placed objects, from what each item asks for
-// (support_footprint.hpp) and the pieces of the support set its group names (support_sets.hpp).
+// (support_footprint.hpp) and the pieces of the support set its group names (support_sets.hpp), or of the set the
+// placed object names in its place.
 //
 // One rule for every item, tile by tile. The items on a tile are taken by their undersides, the highest first.
 // A square that wants a column gets one under the middle of the tile, from the item's underside down to what is

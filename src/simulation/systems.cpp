@@ -2235,22 +2235,67 @@ namespace rct3::simulation
             }
             const bool cools = shop.serve == Serve::Cold && mood.heat.value >= kTuning.needs.want.value;
             if (!chose && !cools && (umbrella ? !weather.rain || r.all_of<Umbrella>(guest) : need != nullptr ? *need < kTuning.needs.want.value : wallet.cash.value >= kTuning.facilities.low_cash.value))
-                return false; // Came along without wanting anything
+            {
+                // Came along without wanting anything.
+                if (meal)
+                    think(r, guest, shop.product == Product::Food ? ThoughtKind::NotHungry : ThoughtKind::NotThirsty, at, now);
+                else if (umbrella && r.all_of<Umbrella>(guest))
+                    think(r, guest, ThoughtKind::AlreadyGot, at, now);
+                return false;
+            }
+            // Food or drink they pick off the menu: one of its kind they can afford at no more than it is worth to
+            // them, any of those; a stall with no menu sells one thing at its price.
+            const Money worth = shop.product == Product::Food ? kTuning.eating.food_worth : kTuning.eating.drink_worth;
+            std::size_t ware = shop.menu.size();
+            Money price = attraction.price;
+            if (meal && !shop.menu.empty())
+            {
+                std::size_t fair = 0, affordable = 0;
+                for (const Ware& w : shop.menu)
+                    if (w.product == shop.product && w.price.value <= wallet.cash.value)
+                        ++affordable, fair += w.price.value <= worth.value ? 1 : 0;
+                if (fair > 0)
+                    for (std::size_t pick = random::below(r.get<Dice>(guest).state, static_cast<std::uint32_t>(fair)), k = 0; k < shop.menu.size(); ++k)
+                    {
+                        const Ware& w = shop.menu[k];
+                        if (w.product == shop.product && w.price.value <= wallet.cash.value && w.price.value <= worth.value && pick-- == 0)
+                        {
+                            ware = k;
+                            price = w.price;
+                            break;
+                        }
+                    }
+                else if (affordable > 0 && attraction.open)
+                {
+                    mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
+                    think(r, guest, ThoughtKind::NotPaying, at, now);
+                    return false;
+                }
+                else
+                    price = std::ranges::min(shop.menu, { }, [](const Ware& w) { return w.price.value; }).price;
+            }
+            else if (meal && price.value > worth.value && price.value <= wallet.cash.value && attraction.open)
+            {
+                mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
+                think(r, guest, ThoughtKind::NotPaying, at, now);
+                return false;
+            }
             Money Wallet::* const on = shop.product == Product::Drink ? &Wallet::spent_drink : shop.product == Product::Food ? &Wallet::spent_food : umbrella ? &Wallet::spent_souvenirs : nullptr;
-            if (!attraction.open || wallet.cash.value < attraction.price.value || !pay(r, guest, attraction.price, on))
+            if (!attraction.open || wallet.cash.value < price.value || !pay(r, guest, price, on))
             {
                 mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
                 if (attraction.open)
                     think(r, guest, ThoughtKind::CantAfford, at, now);
                 return false;
             }
-            attraction.income.value += attraction.price.value;
+            if (meal && price.value <= kTuning.eating.good_value.value * static_cast<float>(worth.value))
+                think(r, guest, ThoughtKind::GoodValue, at, now);
+            attraction.income.value += price.value;
             ++attraction.customers;
             if (meal)
             {
                 // Eaten or drunk a bite at a time from now on, in the hand: an empty still in it goes in a pocket,
                 // or on the path when both are full.
-                // shortcut: the first ware of the kind; upgrade when guests pick from the menu.
                 std::uint8_t pocketed = 0;
                 if (auto* old = r.try_get<Carried>(guest))
                 {
@@ -2258,8 +2303,7 @@ namespace rct3::simulation
                         free_hand(r, guest, *old, r.get<Stride>(guest).to);
                     pocketed = r.all_of<Carried>(guest) ? old->pocketed : 0;
                 }
-                const auto ware = std::ranges::find(shop.menu, shop.product, &Ware::product);
-                r.emplace_or_replace<Carried>(guest, Carried { .stall = at, .ware = static_cast<std::uint8_t>(ware == shop.menu.end() ? 0 : ware - shop.menu.begin()), .kind = std::uint8_t { shop.product == Product::Drink }, .food = shop.product == Product::Food, .bites = kTuning.eating.bites, .fill = { *need / kTuning.eating.bites }, .pocketed = pocketed });
+                r.emplace_or_replace<Carried>(guest, Carried { .stall = at, .ware = static_cast<std::uint8_t>(ware), .kind = std::uint8_t { shop.product == Product::Drink }, .food = shop.product == Product::Food, .bites = kTuning.eating.bites, .fill = { *need / kTuning.eating.bites }, .pocketed = pocketed });
             }
             else if (need != nullptr)
                 *need = 0;

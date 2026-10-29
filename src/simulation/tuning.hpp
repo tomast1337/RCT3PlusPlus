@@ -137,6 +137,10 @@ namespace rct3::simulation::tuning
     {
         std::uint8_t bites = 6; ///< Chosen by eye: in which a guest eats or drinks something up
         Seconds bite { 2.5f };  ///< Chosen by eye: between bites
+        // Chosen by eye: over the stalls' usual prices in the saves, so only prices raised past them put guests off.
+        Money food_worth { 500 };   ///< Most a guest pays for something to eat
+        Money drink_worth { 300 };  ///< Most a guest pays for a drink
+        Share good_value { 0.35f }; ///< Chosen by eye: of its worth, at or under which a guest thinks a price good value
     };
 
     /// Nausea and being sick.

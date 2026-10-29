@@ -440,6 +440,9 @@ namespace rct3::simulation
     {
         Product product = Product::Drink;
         Serve serve = Serve::Any;
+        /// From the middle of its entrance tile towards the stall, along x and z, one long; buyers stand at
+        /// its counter that way. Zero when not known: they stand in the tile's middle.
+        glm::vec2 counter { 0.0f };
     };
 
     /// Where a ride without trains is in its cycle. It loads standing still, starts, runs its loops, stops, and

@@ -2,6 +2,7 @@
 #include "simulation/components.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
+#include "simulation/tuning.hpp"
 
 #include <algorithm>
 #include <doctest/doctest.h>
@@ -40,7 +41,7 @@ TEST_CASE("a guest bins their rubbish, and a full bin overflows onto the path")
         const auto g = park.guest({ 0, 0 }, { .thirst = 0.9f, .happiness = 1 });
         auto& r = park.world().registry;
         CHECK(park.run_until([&] { return r.all_of<Rubbish>(g); }, 5));
-        park.run_seconds(kConsumeSeconds + 1);
+        park.run_seconds(kConsumeSeconds + kTuning.facilities.served.value + 1);
         CHECK_FALSE(r.all_of<Rubbish>(g));
         CHECK(r.get<Bin>(bin).contents == (room > 0 ? 1 : 0));
         CHECK(litter(park) == (room > 0 ? 0 : 1));

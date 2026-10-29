@@ -592,7 +592,10 @@ namespace rct3::simulation
             auto& r = world.registry;
             const entt::entity e = r.create();
             r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = stall.base.name, .entrance = entrance, .price = sale->price, .open = stall.base.state == save::AttractionState::Open, .saved = stall.base.id });
-            r.emplace<Shop>(e, sale->shop);
+            const PathTileSpot& tile = world.paths.nodes()[entrance].tile;
+            Shop shop = sale->shop;
+            shop.counter = { static_cast<float>(stall.base.spot->col - tile.col), static_cast<float>(stall.base.spot->row - tile.row) };
+            r.emplace<Shop>(e, shop);
             ++added;
         }
         return added;
@@ -605,7 +608,9 @@ namespace rct3::simulation
             if (a.saved == stall.base.id && sale)
             {
                 a.price = Money { sale->price };
-                world.registry.emplace_or_replace<Shop>(e, sale->shop);
+                auto& shop = world.registry.get_or_emplace<Shop>(e);
+                shop.product = sale->shop.product;
+                shop.serve = sale->shop.serve;
             }
     }
 

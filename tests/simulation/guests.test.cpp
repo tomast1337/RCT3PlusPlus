@@ -788,6 +788,24 @@ TEST_CASE("at a stall those who buy stay at the counter while the rest of their 
     CHECK(r.get<Attraction>(stand).customers == 2);
 }
 
+TEST_CASE("a lone buyer stands at the stall's counter facing it while served, then goes on")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    const auto stand = park.shop("Drinks", Product::Drink, { 6, 0 }, 100);
+    auto& r = park.world().registry;
+    r.get<Shop>(stand).counter = { 0, 1 }; // The stall stands beside the path, towards +z
+    const auto guest = park.guest({ 0, 0 }, { .thirst = 0.9f });
+    REQUIRE(park.run_until([&] { return r.get<Attraction>(stand).customers == 1; }, 60));
+    CHECK(r.get<Errand>(guest).kind == ErrandKind::Buying);
+    const glm::vec3 off = r.get<Pose>(guest).position - park.world().paths.centre(r.get<Attraction>(stand).entrance);
+    CHECK(off.z > 1);                                          // At the stall's edge of the tile
+    CHECK(std::abs(r.get<Pose>(guest).heading.value) < 0.01f); // Facing the stall
+    park.run_seconds(kTuning.facilities.served.value / 2);
+    CHECK(r.get<Errand>(guest).kind == ErrandKind::Buying);
+    CHECK(park.run_until([&] { return r.get<Errand>(guest).kind == ErrandKind::Wandering; }, kTuning.facilities.served.value));
+}
+
 TEST_CASE("while one of a party sits on a bench the others wait nearby, and all go on once they are up")
 {
     Sandbox park;

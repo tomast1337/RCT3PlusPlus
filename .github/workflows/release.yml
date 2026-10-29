@@ -1,0 +1,121 @@
+# Release: pushing a tag named v* builds the game for Linux and Windows and publishes a GitHub release with
+#
+#   rct3pp-<tag>-linux-x86_64.tar.gz    the game binary, README, LICENSE and the icons
+#   rct3pp-<tag>-windows-x86_64.zip     the game binary, README and LICENSE
+#   rct3pp-tools-<tag>-linux-x86_64.tar.gz   the command line tools (ovl-dump, sim-run, ...), shipped apart
+#
+# No tests run here: ci.yml covers them on every push and pull request.
+# macOS is not built yet.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    container:
+      image: gcc:16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install GLFW, Vulkan and slangc
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends libglfw3-dev libvulkan-dev
+          curl -fsSL -o slang.tar.gz https://github.com/shader-slang/slang/releases/download/v2026.18.2/slang-2026.18.2-linux-x86_64.tar.gz
+          mkdir -p /opt/slang && tar -xzf slang.tar.gz -C /opt/slang
+          echo "/opt/slang/bin" >> "$GITHUB_PATH"
+
+      - name: Build
+        run: |
+          g++ -std=c++26 -o nob nob.cpp
+          ./nob build --release
+          ./nob app --release
+
+      - name: Package
+        run: |
+          name=rct3pp-${GITHUB_REF_NAME}-linux-x86_64
+          mkdir -p "$name/icons" dist
+          cp build/release/rct3pp README.md LICENSE "$name/"
+          cp assets/icon/* "$name/icons/"
+          tar -czf "dist/$name.tar.gz" "$name"
+          tools=rct3pp-tools-${GITHUB_REF_NAME}-linux-x86_64
+          mkdir -p "$tools"
+          for t in tools/*/; do cp "build/release/$(basename "$t")" "$tools/"; done
+          cp LICENSE "$tools/"
+          tar -czf "dist/$tools.tar.gz" "$tools"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/*
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-glfw
+            mingw-w64-ucrt-x86_64-vulkan-devel
+            unzip
+            zip
+
+      - name: Install slangc
+        run: |
+          curl -fsSL -o slang.zip https://github.com/shader-slang/slang/releases/download/v2026.18.2/slang-2026.18.2-windows-x86_64.zip
+          mkdir -p /opt/slang && unzip -q slang.zip -d /opt/slang
+          echo "$(cygpath -w /opt/slang/bin)" >> "$GITHUB_PATH"
+
+      - name: Build
+        run: |
+          g++ -std=c++26 -o nob nob.cpp
+          ./nob app --release
+
+      - name: Package
+        run: |
+          name=rct3pp-${GITHUB_REF_NAME}-windows-x86_64
+          mkdir -p "$name" dist
+          cp build/release/rct3pp.exe README.md LICENSE "$name/"
+          zip -qr "dist/$name.zip" "$name"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*
+
+  # Publishes whatever built, so a failing platform does not hold back the others.
+  publish:
+    needs: [linux, windows]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes

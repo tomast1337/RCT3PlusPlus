@@ -344,6 +344,16 @@ namespace rct3::simulation
             return { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
         }
 
+        /// Where on its entrance tile `guest` stands at stall `shop`'s counter: at the tile's edge towards the
+        /// stall, at one of a few places along it, by who they are.
+        glm::vec2 counter_lane(const Shop& shop, entt::entity guest)
+        {
+            constexpr float kReach = 1.2f;                                       ///< Chosen by eye: just short of kLaneReach
+            constexpr std::array<float, 4> kPlaces { -0.9f, -0.3f, 0.3f, 0.9f }; ///< Chosen by eye: along the counter
+            const glm::vec2 across { -shop.counter.y, shop.counter.x };
+            return shop.counter * kReach + across * kPlaces[entt::to_integral(guest) % kPlaces.size()];
+        }
+
         /// Whether a guest is still eating what they bought.
         bool eating(const entt::registry& r, entt::entity guest)
         {
@@ -1825,6 +1835,9 @@ namespace rct3::simulation
                 {
                     auto [errand, stride, pose, dice, needs, mood, wallet] = movers_view.get(movers[i]);
                     stride.fresh = false;
+                    // Served at a counter; a party member's turn there ends with the party (5.).
+                    if (errand.kind == ErrandKind::Buying && !r.all_of<Member>(movers[i]) && (errand.rest == 0 || --errand.rest == 0))
+                        errand = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
                     if (errand.kind != ErrandKind::Wandering && errand.kind != ErrandKind::Heading && errand.kind != ErrandKind::Waiting)
                         continue;
                     if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
@@ -1883,6 +1896,12 @@ namespace rct3::simulation
                         {
                             const auto [place, of] = place_in_party(r, movers[i]);
                             stride.lane_to = ring_lane(place, of);
+                            ringed = true;
+                        }
+                        // The last step to a stall: up to its counter.
+                        if (const auto* shop = stride.route.empty() && errand.kind == ErrandKind::Heading ? r.try_get<Shop>(errand.target) : nullptr)
+                        {
+                            stride.lane_to = counter_lane(*shop, movers[i]);
                             ringed = true;
                         }
                     }
@@ -2233,14 +2252,28 @@ namespace rct3::simulation
             auto& errand = r.get<Errand>(guest);
             if (auto* shop = r.try_get<Shop>(arrived[i]))
             {
-                errand = { ErrandKind::Wandering, entt::null, ticks(kConsumeSeconds) };
-                // In a party, those who bought stay at the counter a moment; the others wait nearby (5.).
-                const Errand served { .kind = ErrandKind::Buying, .target = arrived[i], .rest = ticks(kTuning.facilities.served.value) };
-                if (buy(guest, arrived[i], *shop, !r.all_of<Member>(guest)) && r.all_of<Member>(guest))
-                    errand = served;
+                errand = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
+                // Those who bought stand at the counter a moment, facing the stall, and pay; the rest of a party
+                // waits nearby (5.).
+                const auto served = [&](entt::entity m) {
+                    r.get<Errand>(m) = { .kind = ErrandKind::Buying, .target = arrived[i], .rest = ticks(kTuning.facilities.served.value) };
+                    auto& stride = r.get<Stride>(m);
+                    const NodeId at = r.get<Attraction>(arrived[i]).entrance;
+                    stride.route.clear();
+                    stride.from = at;
+                    stride.to = at;
+                    stride.progress.value = 1;
+                    stride.lane_from = stride.lane_to = counter_lane(*shop, m);
+                    auto& pose = r.get<Pose>(m);
+                    if (glm::length(shop->counter) > 0)
+                        pose.heading.value = std::atan2(shop->counter.x, shop->counter.y);
+                    place(paths, stride, pose);
+                };
+                if (buy(guest, arrived[i], *shop, !r.all_of<Member>(guest)))
+                    served(guest);
                 for (const entt::entity m : followers)
                     if (buy(m, arrived[i], *shop, false))
-                        r.get<Errand>(m) = served;
+                        served(m);
             }
             else if (r.all_of<ParkGate>(arrived[i]))
             {

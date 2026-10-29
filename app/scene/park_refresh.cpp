@@ -164,8 +164,15 @@ namespace rct3::scene
             return kChatMotions[turn % kChatMotions.size()];
         }
 
-        /// What vendors do: take the money from a rider handing over their ticket within kServeReach, else stand
-        /// bored, now and then stacking the shelves.
+        /// How long a guest at a stall's counter has been there, by what is left of their turn.
+        float served_for(const simulation::Errand& errand)
+        {
+            return simulation::kTuning.facilities.served.value - static_cast<float>(errand.rest) * simulation::kTickSeconds;
+        }
+
+        /// What vendors do: serve a guest at their counter within kServeReach, then take their money; take the
+        /// money from a rider handing over their ticket; else stand bored, now and then stacking the shelves.
+        const std::int32_t kServeMotion = park::motion_number("serve").value_or(park::motion::kIdle);
         const std::int32_t kTakeMoneyMotion = park::motion_number("takemoney").value_or(park::motion::kIdle);
         const std::int32_t kBoredMotion = park::motion_number("idlebored").value_or(park::motion::kIdle);
         const std::int32_t kShelvesMotion = park::motion_number("idlestackshelfs").value_or(park::motion::kIdle);
@@ -176,6 +183,13 @@ namespace rct3::scene
         /// The motion of vendor `shown`, standing at `at`, and how far into it they are.
         std::pair<std::int32_t, float> vendor_motion(const ParkScene& scene, const ShownPerson& shown, const glm::vec3& at)
         {
+            for (const auto [g, errand, pose] : scene.sim.registry.view<const simulation::Errand, const simulation::Pose>().each())
+                if (errand.kind == simulation::ErrandKind::Buying && glm::distance(pose.position, at) < kServeReach)
+                {
+                    const float served = served_for(errand);
+                    const float half = simulation::kTuning.facilities.served.value / 2;
+                    return served < half ? std::pair { kServeMotion, served } : std::pair { kTakeMoneyMotion, served - half };
+                }
             for (const auto [g, walk, pose] : scene.sim.registry.view<const simulation::RideWalk, const simulation::Pose>().each())
                 if (!walk.off && walk.next == 1 && walk.pause.value > 0 && glm::distance(pose.position, at) < kServeReach)
                     return { kTakeMoneyMotion, simulation::kTuning.queues.ticket.value - walk.pause.value };
@@ -490,6 +504,13 @@ namespace rct3::scene
                 pose.motion = kTicketMotion;
                 pose.time = simulation::kTuning.queues.ticket.value - ride_walk->pause.value;
             }
+            // At a stall's counter: waiting while served, then paying.
+            if (kind == simulation::ErrandKind::Buying && !walking)
+                if (const float paying = served_for(r.get<simulation::Errand>(shown.guest)) - simulation::kTuning.facilities.served.value / 2; paying >= 0)
+                {
+                    pose.motion = kTicketMotion;
+                    pose.time = paying;
+                }
             gestured(r.try_get<simulation::Gesture>(shown.guest));
             // An umbrella held up in the rain.
             // shortcut: put away, out of sight, when dry; draw it carried closed if guests should be seen

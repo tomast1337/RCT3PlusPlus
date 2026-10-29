@@ -166,13 +166,17 @@ namespace rct3::simulation
         [[nodiscard]] std::optional<const PathLink&> link_between(NodeId from, NodeId to) const;
 
         /// The nodes after `from` on a shortest walk to `to`, ending with `to`; empty when `from` is `to`, none
-        /// when no walk reaches it. Queues are only entered at `to`, never walked through. Only steps `who` may take.
+        /// when no walk reaches it. Queues are only entered at `to`, never walked through, but one starting in a queue
+        /// may walk out along its line. Only steps `who` may take.
         /// Given a `purse`, the way may also take links, as many as their tolls together fit it; a link shows in
         /// the walk as a step from its start to its end.
         [[nodiscard]] std::optional<std::vector<NodeId>> route(NodeId from, NodeId to, Walker who = Walker::Guest, std::optional<std::int64_t> purse = std::nullopt) const;
         /// Like route, to whichever of `targets` is nearest: its place in `targets` (the first, where several
         /// share a node) and the walk there. One search, however many targets.
         [[nodiscard]] std::optional<std::pair<std::size_t, std::vector<NodeId>>> route_nearest(NodeId from, std::span<const NodeId> targets, Walker who = Walker::Guest, std::optional<std::int64_t> purse = std::nullopt) const;
+        /// From a queue tile, the walk along its line to the nearest tile off the queue a guest may step onto, as
+        /// route gives it; empty when `from` is no queue, none when the line leads nowhere.
+        [[nodiscard]] std::optional<std::vector<NodeId>> way_out(NodeId from) const;
 
     private:
         static std::uint64_t key(int col, int row);

@@ -3102,14 +3102,19 @@ namespace rct3::simulation
                         continue; // Sitting it out
                     // Those going to wait, and those done, who walk over to the others.
                     const bool still = errand.kind == ErrandKind::Waiting && stride.route.empty() && (stride.progress.value >= 1 || stride.from == stride.to);
-                    const bool joins = errand.kind == ErrandKind::Following || (m == party.leader && errand.kind == ErrandKind::Wandering) || (still && stride.to != spot);
+                    // One who found no way over waits a while before looking again (rest counts it down).
+                    const bool joins = errand.kind == ErrandKind::Following || (m == party.leader && errand.kind == ErrandKind::Wandering) || (still && stride.to != spot && errand.rest == 0);
                     if (!joins)
                     {
                         back = back && still;
                         continue;
                     }
                     const NodeId at = stride.progress.value < 0.5f ? stride.from : stride.to;
-                    stride.route = paths.route(at, spot).value_or(std::vector<NodeId> { });
+                    // No way over (behind a no-entry sign): at least off the queue, to wait beside it.
+                    auto way = paths.route(at, spot);
+                    if (!way)
+                        way = paths.way_out(at);
+                    stride.route = std::move(way).value_or(std::vector<NodeId> { });
                     stride.from = at;
                     stride.to = at;
                     stride.progress.value = 1;
@@ -3117,6 +3122,8 @@ namespace rct3::simulation
                     back = back && stride.route.empty();
                     if (errand.kind != ErrandKind::Waiting)
                         errand = { .kind = ErrandKind::Waiting, .target = busy_at, .off = off_at };
+                    if (stride.route.empty() && at != spot)
+                        errand.rest = ticks(kTuning.walking.retry_way.value);
                 }
                 if (!back)
                     party.huddle = 0;

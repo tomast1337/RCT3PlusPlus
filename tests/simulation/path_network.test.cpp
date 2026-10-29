@@ -230,6 +230,32 @@ TEST_CASE("a queue joins a path beside it only at its ends, never along its side
     CHECK(p.nodes()[side].next[3] == kNoNode);
 }
 
+TEST_CASE("one standing in a queue walks out along its line, never through another queue")
+{
+    PathNetwork p;
+    // A path along row 0; a queue line 7 from (0, 1) up to (0, 3), open only along its length, its head at row 1.
+    const NodeId path = p.add({ 0, 0, 0 });
+    const NodeId far = p.add({ 1, 0, 0 });
+    std::array<NodeId, 3> line { };
+    for (int k = 0; k < 3; ++k)
+    {
+        line[k] = p.add({ 0, k + 1, 0 }, true, std::nullopt, 7);
+        p.set_corners(line[k], { 0.0f, 0.0f, 0.0f, 0.0f }, 0b1010);
+    }
+    // Another line beside it, 8, that the walk out must not cut through.
+    const NodeId other = p.add({ 1, 2, 0 }, true, std::nullopt, 8);
+    p.set_corners(other, { 0.0f, 0.0f, 0.0f, 0.0f }, 0b1010);
+    const auto out = p.route(line[2], far);
+    REQUIRE(out);
+    CHECK(*out == std::vector<NodeId> { line[1], line[0], path, far });
+    CHECK_FALSE(p.route(other, far)); // Its own line leads nowhere
+    CHECK_FALSE(p.way_out(other));
+    // Kept from the far tile by a no-entry sign, it still finds the way off the queue.
+    p.set_no_entry(far, 2, true);
+    CHECK_FALSE(p.route(line[2], far));
+    CHECK(p.way_out(line[2]) == std::vector<NodeId> { line[1], line[0], path });
+}
+
 TEST_CASE("a wall between two tiles parts them, a queue keeps its own sides, and taking it away joins them again")
 {
     PathNetwork p;

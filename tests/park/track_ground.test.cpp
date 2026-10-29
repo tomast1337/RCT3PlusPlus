@@ -127,3 +127,23 @@ TEST_CASE("a piece, ride or stall under enough ground all round hollows its tile
     models.begin()->second.category = std::to_underlying(ItemCategory::SmallScenery);
     CHECK(buried_hollows(pieces, models, g).empty());
 }
+
+TEST_CASE("an item lies buried only under enough ground on every tile it fills")
+{
+    save::TerrainGrid g = owned_grid(5, 3);
+    auto [pieces, models] = one_piece();
+    CHECK_FALSE(lies_buried(pieces, models, g));
+    g.at(2, 1).corners.fill(4 + kGroundCover);
+    CHECK(lies_buried(pieces, models, g));
+    // Partly buried, its top in the ground.
+    g.at(2, 1).corners[3] = 4.5f;
+    CHECK_FALSE(lies_buried(pieces, models, g));
+    // Two squares, one of them under too little ground.
+    g.at(2, 1).corners.fill(4 + kGroundCover);
+    models.begin()->second.solid.push_back(std::array<std::int32_t, 2> { 0, 4 });
+    models.begin()->second.squares = { 1, 2 };
+    CHECK_FALSE(lies_buried(pieces, models, g));
+    for (save::TerrainCell& c : g.cells)
+        c.corners.fill(4 + kGroundCover);
+    CHECK(lies_buried(pieces, models, g));
+}

@@ -38,4 +38,8 @@ namespace rct3::park
     /// that lie under the ground.
     [[nodiscard]] std::vector<GroundOpening> buried_hollows(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
 
+    /// Whether `objects` lie wholly under the ground: each tile they fill with its ground at least kGroundCover over
+    /// their top there, so that each hollows a cave (buried_hollows).
+    [[nodiscard]] bool lies_buried(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
+
 } // namespace rct3::park

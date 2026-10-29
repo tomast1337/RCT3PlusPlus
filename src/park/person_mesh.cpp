@@ -284,7 +284,9 @@ namespace rct3::park
                 add_set(runs, library, person.look.head, person, 0);
                 add_set(runs, library, person.look.body, person, 1);
                 add_set(runs, library, person.look.legs, person, 2);
-                if (person.held != nullptr)
+                if (person.held != nullptr && person.look.body == nullptr)
+                    add_held(runs, *person.held, person.world);
+                else if (person.held != nullptr)
                     if (const auto hand = left_hand(library, person))
                         add_held(runs, *person.held, glm::translate(person.world, *hand));
             }

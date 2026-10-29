@@ -46,7 +46,8 @@ namespace rct3::park
         std::int32_t motion = 0;           ///< By number (see person_motions.hpp)
         float time = 0;                    ///< Seconds into the motion
         glm::mat4 world { 1.0f };          ///< Model to park
-        const ObjectModel* held = nullptr; ///< Held in the left hand, drawn at its finest level in its own picture
+        const ObjectModel* held = nullptr; ///< Held in the left hand, drawn at its finest level in its own picture;
+                                           ///< with no body, lying on its own at `world` (litter on a path)
     };
 
     /// How far a person's texture coordinates move to reach cell `colour`.

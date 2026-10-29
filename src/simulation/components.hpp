@@ -253,6 +253,7 @@ namespace rct3::simulation
         RainKeepsMeOff = 32,
         Vandalism = 14,
         Vomit = 15,
+        HaventFinished = 23, ///< At a stall while still eating or drinking
         Sick = 20,
         VerySick = 21,
         Broke = 24,
@@ -436,13 +437,23 @@ namespace rct3::simulation
         Hot,  ///< Wanted most on cold days
     };
 
-    struct Shop
+    /// One thing a stall sells.
+    struct Ware
     {
         Product product = Product::Drink;
+        Serve serve = Serve::Any;
+        Money price { };
+        std::string symbol { }; ///< Of the item a guest carries away, as `Burger:cid`; empty when not known
+    };
+
+    struct Shop
+    {
+        Product product = Product::Drink; ///< What it is visited for: its first ware's
         Serve serve = Serve::Any;
         /// From the middle of its entrance tile towards the stall, along x and z, one long; buyers stand at
         /// its counter that way. Zero when not known: they stand in the tile's middle.
         glm::vec2 counter { 0.0f };
+        std::vector<Ware> menu { }; ///< Its food, drink and umbrellas; empty: one ware of `product` at its attraction's price
     };
 
     /// Where a ride without trains is in its cycle. It loads standing still, starts, runs its loops, stops, and
@@ -598,11 +609,17 @@ namespace rct3::simulation
         bool vomit = false; ///< Left by a sick guest
     };
 
-    /// What a guest is left holding once they have eaten or drunk what they bought.
-    struct Rubbish
+    /// Food or drink a guest carries from a stall, in their left hand: eaten or drunk a bite at a time, then
+    /// held as an empty (a wrapper, a cup) until they are rid of it.
+    struct Carried
     {
-        std::uint8_t kind = 0; ///< As Litter::kind, once dropped
-        Seconds held { };      ///< Since they bought it, eating or drinking first
+        entt::entity stall = entt::null; ///< Where it came from, for what it looks like
+        std::uint8_t ware = 0;           ///< Its place on that stall's menu
+        std::uint8_t kind = 0;           ///< As Litter::kind, once dropped
+        bool food = true;                ///< Else drink
+        std::uint8_t bites = 0;          ///< Left; none once it is an empty
+        Share fill { };                  ///< Of their hunger or thirst each bite takes away
+        Seconds since { };               ///< Since the last bite, or since it was finished
     };
 
     enum class PathItemKind : std::uint8_t

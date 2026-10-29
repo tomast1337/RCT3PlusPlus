@@ -3,12 +3,14 @@
 
 #include "core/maybe.hpp"
 #include "logging/log.hpp"
+#include "ovl/carried_item.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/texture.hpp"
 #include "ovl/texture_pixels.hpp"
 #include "park/asset_index.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/build_catalogue.hpp"
+#include "park/carried_goods.hpp"
 #include "park/chain_lifts.hpp"
 #include "park/enclosures.hpp"
 #include "park/ground_paths.hpp"
@@ -177,27 +179,61 @@ namespace rct3::scene
         /// The umbrella shapes, in the order of ParkScene::umbrellas.
         constexpr std::array<std::string_view, 2> kUmbrellaShapes { "UmbrellaOpen", "KidsUmbrellaOpen" };
 
-        /// Reads the umbrellas guests carry and uploads their pictures with the people's.
-        void load_umbrellas(render::Device& device, ParkScene& scene, const config::GameInstall& install)
+        /// Reads the umbrellas guests carry, and the food and drink as stalls hand it over and as its empty is
+        /// left, and uploads their pictures with the people's.
+        void load_carried_models(render::Device& device, ParkScene& scene, const config::GameInstall& install)
         {
-            const std::string folder = install.find(kCarriedFolder).value_or(std::filesystem::path(kCarriedFolder)).filename().string();
+            const auto found = install.find(kCarriedFolder);
+            const std::string folder = found.value_or(std::filesystem::path(kCarriedFolder)).filename().string();
             const std::array<std::string_view, 1> folders { folder };
             const park::AssetIndex index = park::AssetIndex::scan(install.root(), folders);
             park::ModelLoader loader(index);
             std::vector<park::ObjectBatch> batches;
+            const auto add_pictures = [&](const std::optional<park::ObjectModel>& model) {
+                if (model)
+                    for (const park::ModelPart& part : model->levels.front().parts)
+                        batches.push_back({ park::painted_name(part.texture, part.slots, { }), part.texture, { }, part.blend, 0, 0 });
+            };
             for (std::size_t i = 0; i < kUmbrellaShapes.size(); ++i)
             {
                 scene.umbrellas[i] = loader.load_shape(kUmbrellaShapes[i], kCarriedOverlay);
-                if (scene.umbrellas[i])
-                    for (const park::ModelPart& part : scene.umbrellas[i]->levels.front().parts)
-                        batches.push_back({ park::painted_name(part.texture, part.slots, { }), part.texture, { }, part.blend, 0, 0 });
+                add_pictures(scene.umbrellas[i]);
             }
+            // Each item's shape, and what it leaves, by name, with the overlay they are in.
+            struct Item
+            {
+                std::string shape, remains, overlay;
+            };
+            std::map<std::string, Item, std::less<>> items;
+            constexpr std::string_view kCommonEnding = ".common.ovl";
+            for (const std::filesystem::path& path : found ? park::carried_overlays(*found) : std::vector<std::filesystem::path> { })
+            {
+                const auto overlay = ovl::Overlay::load(path);
+                if (!overlay)
+                    continue;
+                const std::string file = path.filename().string();
+                const std::string name = std::format("{}/{}", folder, std::string_view(file).substr(0, file.size() - kCommonEnding.size()));
+                for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+                    for (const ovl::CarriedItemEntry& e : part ? ovl::read_carried_items(*overlay, *part) : std::vector<ovl::CarriedItemEntry> { })
+                        if (e.item && !e.item->shapes[0].empty())
+                            items.emplace(std::string(e.name), Item { std::string(e.item->shapes[0]), std::string(e.item->remains), name });
+            }
+            const auto shape_of = [&](std::string_view item) -> std::optional<park::ObjectModel> {
+                const auto it = items.find(item);
+                if (it == items.end())
+                    return std::nullopt;
+                auto model = loader.load_shape(it->second.shape, it->second.overlay);
+                add_pictures(model);
+                return model;
+            };
+            for (const auto& [item, look] : items)
+                scene.carried_looks.emplace(std::format("{}:cid", item), CarriedLook { shape_of(item), look.remains.empty() ? std::nullopt : shape_of(look.remains) });
             auto pictures = park::paint_batches(batches, loader.pictures());
             fit_texture_detail(scene, pictures);
             if (auto uploaded = ui::upload_textures(device, pictures))
                 scene.people_textures.merge(*uploaded);
             else
-                logging::logger("park").warning("umbrella pictures: {}", uploaded.error());
+                logging::logger("park").warning("carried item pictures: {}", uploaded.error());
         }
 
         /// Reads the models of the park's guests and staff and uploads their pictures.
@@ -345,7 +381,7 @@ namespace rct3::scene
                 logging::logger("park").warning("people pictures: {}", uploaded.error());
             logging::logger("park").info("{} people shown, {} pictures", scene.shown_people.size(), library.pictures().size());
             scene.person_models.emplace(std::move(library));
-            load_umbrellas(device, scene, install);
+            load_carried_models(device, scene, install);
         }
 
         /// The sky from the install, ready to draw; a sky that cannot be read is left out.

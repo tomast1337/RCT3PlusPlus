@@ -131,6 +131,13 @@ namespace rct3::scene
         const std::array<std::int32_t, kGaits> kGaitMotions { park::motion::kWalk, park::motion_number("run").value_or(park::motion::kWalk), park::motion_number("walktired").value_or(park::motion::kWalk), park::motion_number("walksick").value_or(park::motion::kWalk), park::motion_number("walktoilet").value_or(park::motion::kWalk) };
         /// How guests walk holding an umbrella up, as the game's motions name it.
         const std::int32_t kUmbrellaMotion = park::motion_number("walkumbrella").value_or(park::motion::kWalk);
+        /// How guests carry food or drink: walking with it held up, taking a bite or a sip on the way, and
+        /// standing holding it, as the game's motions name them.
+        const std::int32_t kCarryMotion = park::motion_number("walkumbrella").value_or(park::motion::kWalk);
+        const std::int32_t kEatMotion = park::motion_number("walkeatlhand").value_or(park::motion::kWalk);
+        const std::int32_t kDrinkMotion = park::motion_number("walkdrinklhand").value_or(park::motion::kWalk);
+        const std::int32_t kHoldMotion = park::motion_number("holditem").value_or(park::motion::kIdle);
+        constexpr float kBiteSeconds = 1.5f; ///< Chosen by eye: how long a bite or a sip shows
         /// How a guest hands over their ticket at a ride's entrance, as the game's motions name it.
         const std::int32_t kTicketMotion = park::motion_number("handticket").value_or(park::motion::kIdle);
         /// How a person picked up hangs, enjoying it or cross, as the game's motions name it.
@@ -511,7 +518,25 @@ namespace rct3::scene
                     pose.motion = kTicketMotion;
                     pose.time = paying;
                 }
+            const bool idle = pose.motion == park::motion::kIdle;
             gestured(r.try_get<simulation::Gesture>(shown.guest));
+            // Food or drink from a stall in their left hand, or its empty once it is gone.
+            if (const auto* carried = r.try_get<simulation::Carried>(shown.guest))
+            {
+                const auto* shop = r.valid(carried->stall) ? r.try_get<simulation::Shop>(carried->stall) : nullptr;
+                const auto look = shop != nullptr && carried->ware < shop->menu.size() ? scene.carried_looks.find(shop->menu[carried->ware].symbol) : scene.carried_looks.end();
+                const auto* model = look == scene.carried_looks.end() ? nullptr : carried->bites > 0 ? &look->second.full : &look->second.empty;
+                pose.held = model != nullptr && *model ? &**model : nullptr;
+                const bool biting = carried->bites > 0 && carried->since.value < kBiteSeconds;
+                if (pose.held != nullptr && walking && way == 0 && !r.all_of<simulation::Gesture>(shown.guest))
+                {
+                    pose.motion = biting ? (carried->food ? kEatMotion : kDrinkMotion) : kCarryMotion;
+                    if (biting)
+                        pose.time = carried->since.value;
+                }
+                else if (pose.held != nullptr && idle && !r.all_of<simulation::Gesture>(shown.guest))
+                    pose.motion = kHoldMotion;
+            }
             // An umbrella held up in the rain.
             // shortcut: put away, out of sight, when dry; draw it carried closed if guests should be seen
             // with one then.

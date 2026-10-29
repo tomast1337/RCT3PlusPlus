@@ -53,6 +53,9 @@ namespace rct3::simulation::tuning
         Distance huddle_radius { 0.7f };  ///< Of the ring a party stands in
         Distance ring_gap { 0.9f };       ///< Between neighbours standing in a ring, so a big party's ring is wider
         Seconds regroup { 3 };            ///< A party stands together once all are back, before going on
+        Distance corner_cut { 0.8f };     ///< Chosen by eye: how far towards the inside of a turn a walker going somewhere takes the tile they turn on
+        float turn_rate = 6.0f;           ///< Chosen by eye: fastest a walker turns to face where they go, radians a second
+        float swerve = 0.5f;              ///< Chosen by eye: most a walker steps aside from others for each unit walked on
         Seconds retry_way { 5 };          ///< Chosen by eye: how long one who found no way back to their party waits before looking again
         std::size_t gather_reach = 24;    ///< Tiles looked at for one a party can wait on of its own
         Distance personal_space { 0.6f }; ///< People walking nearer one another than this step apart

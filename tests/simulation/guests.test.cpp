@@ -504,18 +504,71 @@ TEST_CASE("two people kept close in one cell are pushed apart every second tick"
     const float space = kTuning.walking.personal_space.value;
     const glm::vec3 centre = park.world().paths.centre(west);
     const glm::vec2 middle = (glm::floor(glm::vec2 { centre.x, centre.z } / space) + 0.5f) * space - glm::vec2 { centre.x, centre.z };
-    const auto stand = [&](glm::vec2 lane) { return Stride { .from = west, .to = east, .progress = 0, .speed = 0, .lane_from = lane, .lane_to = lane }; };
+    // Both setting off east, side by side across the path, so the push is aside.
+    const auto stand = [&](glm::vec2 lane) { return Stride { .from = west, .to = east, .progress = 0, .speed = 0.01f, .lane_from = lane, .lane_to = lane }; };
     std::vector<bool> pushed;
     for (int t = 0; t < 6; ++t)
     {
-        r.get<Stride>(a) = stand(middle - glm::vec2 { 0.2f, 0 });
-        r.get<Stride>(b) = stand(middle + glm::vec2 { 0.2f, 0 });
+        r.get<Stride>(a) = stand(middle - glm::vec2 { 0, 0.2f });
+        r.get<Stride>(b) = stand(middle + glm::vec2 { 0, 0.2f });
+        r.get<Pose>(a).heading.value = r.get<Pose>(b).heading.value = glm::half_pi<float>();
         park.run(1);
-        pushed.push_back(r.get<Stride>(a).lane_from != middle - glm::vec2 { 0.2f, 0 });
-        CHECK(pushed.back() == (r.get<Stride>(b).lane_from != middle + glm::vec2 { 0.2f, 0 })); // One cell, so the same ticks
+        pushed.push_back(r.get<Stride>(a).lane_from != middle - glm::vec2 { 0, 0.2f });
+        CHECK(pushed.back() == (r.get<Stride>(b).lane_from != middle + glm::vec2 { 0, 0.2f })); // One cell, so the same ticks
     }
     for (std::size_t t = 1; t < pushed.size(); ++t)
         CHECK(pushed[t] != pushed[t - 1]);
+}
+
+TEST_CASE("a walker turns a corner across its inside, turning no faster than turn_rate")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 3, 0 }).path({ 3, 1 }, { 3, 3 });
+    const auto g = park.guest({ 1, 0 });
+    auto& r = park.world().registry;
+    const auto at = [&](int c, int row) { return *park.world().paths.find({ c, row, 0 }); };
+    r.get<Errand>(g) = Errand { .kind = ErrandKind::Wandering, .rest = 1000 };
+    r.get<Stride>(g) = Stride { .from = at(1, 0), .to = at(2, 0), .progress = 0, .route = { at(3, 0), at(3, 1), at(3, 2), at(3, 3) } };
+    r.get<Pose>(g).heading.value = glm::half_pi<float>(); // Facing +x, the way they set off
+    const glm::vec2 inside = glm::normalize(glm::vec2 { -1.0f, 1.0f });
+    bool turned = false;
+    for (int t = 0; t < 60 && r.get<Stride>(g).to != at(3, 3); ++t)
+    {
+        const float was = r.get<Pose>(g).heading.value;
+        park.run(1);
+        const auto& s = r.get<Stride>(g);
+        CHECK(std::abs(std::remainder(r.get<Pose>(g).heading.value - was, 2 * glm::pi<float>())) <= kTuning.walking.turn_rate * kTickSeconds + 1e-4f);
+        if (s.fresh && s.from == at(3, 0))
+        {
+            CHECK(glm::dot(s.lane_from, inside) > 0.2f);
+            turned = true;
+        }
+    }
+    CHECK(turned);
+}
+
+TEST_CASE("one walking close behind another is pushed aside, never back against the way they face")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    const auto a = park.guest({ 0, 0 });
+    const auto b = park.guest({ 0, 0 });
+    auto& r = park.world().registry;
+    const auto at = [&](int c) { return *park.world().paths.find({ c, 0, 0 }); };
+    for (const auto g : { a, b })
+    {
+        r.get<Errand>(g) = Errand { .kind = ErrandKind::Wandering, .rest = 1000 };
+        r.get<Pose>(g).heading.value = glm::half_pi<float>();
+    }
+    r.get<Stride>(a) = Stride { .from = at(0), .to = at(1), .progress = 0, .speed = 1.3f, .route = { at(2), at(3), at(4), at(5) } };
+    r.get<Stride>(b) = Stride { .from = at(0), .to = at(1), .progress = 0.05f, .speed = 0.6f, .route = { at(2), at(3), at(4), at(5) } };
+    for (int t = 0; t < 20; ++t)
+    {
+        const float was = r.get<Pose>(a).position.x;
+        park.run(1);
+        CHECK(r.get<Pose>(a).position.x >= was - 1e-4f);
+        CHECK(std::abs(std::remainder(r.get<Pose>(a).heading.value - glm::half_pi<float>(), 2 * glm::pi<float>())) < glm::radians(45.0f));
+    }
 }
 
 TEST_CASE("between steps a pose is drawn part way, turning the short way round")

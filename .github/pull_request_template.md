@@ -16,4 +16,3 @@
       addresses, and no absolute paths, in the code, tests, docs or this description
       ([CLEAN_ROOM.md](../CLEAN_ROOM.md))
 - [ ] Values borrowed from another project name their source at the place of use
-- [ ] Commits are signed off (`git commit -s`)

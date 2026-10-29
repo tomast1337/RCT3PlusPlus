@@ -214,6 +214,9 @@ TEST_CASE("a door paves its tile, opening onto the ride in front and the path be
     CHECK(pavings[0].links == std::vector { save::Tile { 2, 3 }, save::Tile { 4, 3 } });
     CHECK_FALSE(pavings[1].entrance);
     CHECK(pavings[1].source == save::Tile { 5, 4 });
+    // Each door's columns take the style of its paving.
+    CHECK(pavings[0].owner == 8);
+    CHECK(pavings[1].owner == 9);
 
     coaster.base.demolished = true;
     CHECK(ride_pavings(rides, two_wide, nothing).empty());
@@ -232,6 +235,7 @@ TEST_CASE("a flat ride paves its footprint, opening onto its doors and looking l
     CHECK(floor.tiles == std::vector { save::Tile { 2, 2 }, save::Tile { 3, 2 } });
     CHECK(floor.source == save::Tile { 2, 4 });
     CHECK(floor.links == std::vector { save::Tile { 2, 3 }, save::Tile { 1, 2 } });
+    CHECK(floor.owner == 7);
 
     // Nothing when the footprint is unknown.
     CHECK(ride_pavings(rides, nothing, nothing).size() == 2);

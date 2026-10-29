@@ -273,27 +273,34 @@ namespace rct3::simulation
             pose.position.y = paths.surface(s.from, s.to, { pose.position.x, pose.position.z });
         }
 
-        /// Where a party waits for those busy at an attraction: the nearest footpath tile to its way out `from`,
-        /// never `from` itself while there is another, that is not a queue, has no queue beside it and is not
-        /// `taken` by another party; failing that the nearest that is not a queue; failing that `from`.
-        NodeId gather_spot(const PathNetwork& paths, NodeId from, const std::vector<bool>& taken)
+        /// Where a party waits for those busy at an attraction. `starts` holds first their way out, then where the
+        /// others stand. The spot is a footpath tile every one of `starts` walks to (past no-entry signs only the way
+        /// they allow) that is not a queue, has no queue beside it and is not `taken` by another party: the nearest
+        /// such to the way out, never the way out itself while there is another; failing that the nearest to one of
+        /// the others; failing that the nearest tile off the queues to the way out; failing that the way out.
+        NodeId gather_spot(const PathNetwork& paths, const std::vector<bool>& taken, std::span<const NodeId> starts)
         {
             const auto& nodes = paths.nodes();
-            std::vector<NodeId> seen { from };
+            const NodeId from = starts.front();
+            const auto reached = [&](NodeId n) { return std::ranges::all_of(starts, [&](NodeId s) { return s == n || paths.route(s, n).has_value(); }); };
             NodeId fallback = kNoNode;
-            for (std::size_t k = 0; k < seen.size() && seen.size() <= kTuning.walking.gather_reach; ++k)
+            for (const NodeId origin : starts)
             {
-                const NodeId n = seen[k];
-                if (n != from)
+                std::vector<NodeId> seen { origin };
+                for (std::size_t k = 0; k < seen.size() && seen.size() <= kTuning.walking.gather_reach; ++k)
                 {
-                    const bool by_queue = std::ranges::any_of(nodes[n].next, [&](NodeId m) { return m != kNoNode && nodes[m].queue; });
-                    if (!by_queue && !taken[n])
-                        return n;
-                    fallback = fallback == kNoNode ? n : fallback;
+                    const NodeId n = seen[k];
+                    if (n != from && !nodes[n].queue)
+                    {
+                        const bool by_queue = std::ranges::any_of(nodes[n].next, [&](NodeId m) { return m != kNoNode && nodes[m].queue; });
+                        if (!by_queue && !taken[n] && reached(n))
+                            return n;
+                        fallback = fallback == kNoNode ? n : fallback;
+                    }
+                    for (const NodeId m : nodes[n].next)
+                        if (m != kNoNode && !nodes[m].queue && !nodes[m].removed && !std::ranges::contains(seen, m) && paths.may_step(n, m, Walker::Guest))
+                            seen.push_back(m);
                 }
-                for (const NodeId m : nodes[n].next)
-                    if (m != kNoNode && !nodes[m].queue && !nodes[m].removed && !std::ranges::contains(seen, m))
-                        seen.push_back(m);
             }
             return fallback == kNoNode ? from : fallback;
         }
@@ -3117,13 +3124,24 @@ namespace rct3::simulation
             }
             if (near != kNoNode && party.gather >= taken.size())
             {
-                party.gather = gather_spot(paths, near, taken);
+                // Where each one comes from: the way out for those still busy, else the tile they are on.
+                std::vector<NodeId> starts { near };
+                for (const entt::entity m : party.members)
+                {
+                    const ErrandKind kind = r.get<Errand>(m).kind;
+                    const auto& stride = r.get<Stride>(m);
+                    const NodeId at = stride.progress.value < 0.5f ? stride.from : stride.to;
+                    if (kind != ErrandKind::Queueing && kind != ErrandKind::Riding && kind != ErrandKind::Swimming && kind != ErrandKind::Buying && !r.all_of<Linger>(m) && at < paths.nodes().size() && !std::ranges::contains(starts, at))
+                        starts.push_back(at);
+                }
+                party.gather = gather_spot(paths, taken, starts);
                 taken[party.gather] = true;
             }
             if (busy_at != entt::null || (waiting && party.gather < taken.size()))
             {
                 const NodeId spot = party.gather;
                 bool back = busy_at == entt::null; // All standing with the others, or where they cannot leave
+                bool cut_off = false;              // One off the queues finds no way to the spot: look for another
                 for (const entt::entity m : party.members)
                 {
                     auto& errand = r.get<Errand>(m);
@@ -3142,6 +3160,7 @@ namespace rct3::simulation
                     const NodeId at = stride.progress.value < 0.5f ? stride.from : stride.to;
                     // No way over (behind a no-entry sign): at least off the queue, to wait beside it.
                     auto way = paths.route(at, spot);
+                    cut_off = cut_off || (!way && !paths.nodes()[at].queue);
                     if (!way)
                         way = paths.way_out(at);
                     stride.route = std::move(way).value_or(std::vector<NodeId> { });
@@ -3155,6 +3174,8 @@ namespace rct3::simulation
                     if (stride.route.empty() && at != spot)
                         errand.rest = ticks(kTuning.walking.retry_way.value);
                 }
+                if (cut_off)
+                    party.gather = kNoNode; // Chosen again next tick from where they all are now
                 if (!back)
                     party.huddle = 0;
                 else if (party.huddle == 0)

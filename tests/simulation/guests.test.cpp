@@ -1092,3 +1092,28 @@ TEST_CASE("a guest going far rides from one station of a ride to another when th
     CHECK(r.get<Wallet>(guest).cash.value == 800);
     CHECK_FALSE(r.all_of<Crossing>(guest));
 }
+
+TEST_CASE("a party waits on a tile every member can walk to, not behind a no-entry sign at the ride's exit")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 }).path({ 3, 1 }, { 3, 2 });
+    // The exit comes out at the end of a spur whose mouth bars guests coming in from the main path.
+    const auto ride = park.flat_ride("Spinner", { 6, 0 }, 0, { .capacity = 4, .cycle_seconds = 30, .exit = glm::ivec2 { 3, 2 } });
+    auto& paths = park.world().paths;
+    const NodeId mouth = *paths.find({ 3, 1, 0 });
+    const NodeId main = *paths.find({ 3, 0, 0 });
+    paths.set_no_entry(mouth, 3, true);
+    const auto leader = park.guest({ 6, 0 });
+    const auto queasy = park.guest({ 6, 0 }, { .nausea = 0.9f }); // Too sick to ride
+    const auto party = park.party({ leader, queasy });
+    auto& r = park.world().registry;
+    r.get<Errand>(leader) = { ErrandKind::Heading, ride, 0 };
+    REQUIRE(park.run_until([&] { return r.get<Errand>(queasy).kind == ErrandKind::Waiting && r.get<Party>(party).gather < paths.nodes().size(); }, 10));
+    CHECK(r.get<Party>(party).gather == main);
+    CHECK(park.run_until(
+        [&] {
+            const auto& s = r.get<Stride>(queasy);
+            return s.route.empty() && s.from == main && s.to == main;
+        },
+        30));
+}

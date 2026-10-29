@@ -17,6 +17,7 @@
 #include "park/ride_fences.hpp"
 #include "park/ride_placement.hpp"
 #include "park/support_columns.hpp"
+#include "park/track_ground.hpp"
 #include "park/water_fill.hpp"
 #include "scene/enclosure_tools.hpp"
 #include "scene/park_footpaths.hpp"
@@ -88,6 +89,7 @@ namespace rct3::scene
         /// How far under an object's top the pointer may meet its box and still count as on the top.
         constexpr float kTopSlack = 0.05f;
         constexpr std::int32_t kClimbReach = 24; ///< How far, in height units, an item raised with Shift climbs to find room
+        constexpr std::int32_t kDigReach = 64;   ///< How far, in height units, a ride lowered with Shift goes under the ground. Chosen by eye
         /// The placing panel's tabs' places on its ring; the first is left for one that finds the item in its list.
         constexpr int kTurnSlot = 1;
         constexpr int kColourSlot = 2;
@@ -497,10 +499,16 @@ namespace rct3::scene
                 v.colour *= tint;
             ghost_textures(device, scene, p.ghost_mesh);
         };
-        // While Shift is held the height follows the pointer up and down, not below the ground.
+        // While Shift is held the height follows the pointer up and down: scenery not below the ground, a ride also
+        // down into it, to lie buried.
         const auto follow_lift = [&](const park::Ray& ray) {
             if (const auto height = lifted_height(ray, p.lift->at, p.lift->height))
-                p.site->height = std::max(p.ground, *height);
+                p.site->height = std::max(p.step == RidePlacing::Step::Ride ? p.ground - kDigReach : p.ground, *height);
+        };
+        // Lowered into the ground, the ghost must lie wholly under it, under enough ground for a cave.
+        const auto buried = [&] {
+            const auto o = ghost_object(p);
+            return o && load_object_model(scene, p.models, assets, *o) && park::lies_buried(std::span { &*o, 1 }, scene.models, scene.grid);
         };
         if (p.step == RidePlacing::Step::Scenery)
         {
@@ -622,9 +630,11 @@ namespace rct3::scene
             p.problem = park::site_problem(*p.site, scene.grid, scene.footpaths.paths, p.solids);
             if (p.problem == park::SiteProblem::None)
                 p.problem = park::water_problem(*p.site, p.item->water_only, scene.footpaths.water.bodies);
-            // Raised, it stands over the ground as it is, so none may rise into it.
+            // Raised, it stands over the ground as it is, so none may rise into it; lowered, it lies wholly under it.
             if (p.problem == park::SiteProblem::None && p.site->height > p.ground)
                 p.problem = park::ground_problem(*p.site, scene.grid);
+            else if (p.problem == park::SiteProblem::None && p.site->height < p.ground && !buried())
+                p.problem = park::SiteProblem::IntoGround;
             p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
             show_ghost();
             return;
@@ -788,9 +798,10 @@ namespace rct3::scene
         }
         if (p.step == RidePlacing::Step::Ride)
         {
-            // Raised with Shift, it stands over the ground as it is; else the ground is levelled for it, paid with it,
-            // and the scenery standing there seated again. Taken away, it leaves the ground levelled.
-            const bool levels = p.site->height <= p.ground;
+            // Raised or lowered with Shift, it stands over the ground as it is or lies buried in it; else the ground is
+            // levelled for it, paid with it, and the scenery standing there seated again. Taken away, it leaves the
+            // ground levelled.
+            const bool levels = p.site->height == p.ground;
             const auto price = p.item->price + (levels ? p.levelling_cost : 0);
             if (levels)
             {
@@ -878,8 +889,8 @@ namespace rct3::scene
         }
         else
         {
-            // The door stands on ground levelled to the ride's height, as the ride does.
-            if (p.site->height <= p.ground)
+            // The door stands on ground levelled to the ride's height, as the ride does, unless it lies buried.
+            if (p.site->height == p.ground || (p.site->height < p.ground && !park::lies_buried(std::span { &*o, 1 }, scene.models, scene.grid)))
                 park::level_ground(scene.grid, park::RideSite { p.door->col, p.door->row, 0, p.site->height, { 1, 1 } });
             logging::logger("park").info("placed {} at {},{}", o->symbol, p.door->col, p.door->row);
             if (!p.stations.empty())

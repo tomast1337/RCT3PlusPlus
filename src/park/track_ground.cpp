@@ -82,13 +82,13 @@ namespace rct3::park
     std::vector<GroundOpening> buried_hollows(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
     {
         constexpr std::array kHollowing { ItemCategory::TrackPiece, ItemCategory::Ride, ItemCategory::RideEntrance, ItemCategory::RideExit, ItemCategory::Stall, ItemCategory::ParkEntrance };
-        std::vector<save::PlacedObject> track;
-        std::ranges::copy_if(objects, std::back_inserter(track), [&](const save::PlacedObject& o) {
+        std::vector<save::PlacedObject> buried;
+        std::ranges::copy_if(objects, std::back_inserter(buried), [&](const save::PlacedObject& o) {
             const auto model = models.find(model_ref(o));
             return model != models.end() && std::ranges::contains(kHollowing, model->second.category, [](ItemCategory c) { return std::to_underlying(c); });
         });
         std::vector<GroundOpening> hollows;
-        for (const auto& [key, spans] : solid_tiles(track, models, grid).tiles)
+        for (const auto& [key, spans] : solid_tiles(buried, models, grid).tiles)
         {
             const auto col = static_cast<std::int32_t>(key & 0xFFFF);
             const auto row = static_cast<std::int32_t>(key >> 16);
@@ -101,6 +101,16 @@ namespace rct3::park
             }
         }
         return hollows;
+    }
+
+    bool lies_buried(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
+    {
+        const SolidTiles solids = solid_tiles(objects, models, grid);
+        return !solids.tiles.empty() && std::ranges::all_of(solids.tiles, [&](const auto& tile) {
+            const auto col = static_cast<std::int32_t>(tile.first & 0xFFFF);
+            const auto row = static_cast<std::int32_t>(tile.first >> 16);
+            return grid.contains(col, row) && std::ranges::all_of(tile.second, [&](const SolidSpan& s) { return grid.at(col, row).min_height() >= s.high + kGroundCover; });
+        });
     }
 
 } // namespace rct3::park

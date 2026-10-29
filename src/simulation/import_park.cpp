@@ -399,7 +399,17 @@ namespace rct3::simulation
                     for (const std::size_t k : park::edge_corners(side))
                         corners[k] = side == ahead ? *up : *down;
         }
-        world.paths.set_corners(id, corners);
+        // A queue joins only across the two ends its line passes through.
+        std::uint8_t open = 0b1111;
+        if (path.queue)
+        {
+            open = 0;
+            // path_decks counts the sides from +row, the network from +col: the same sides, each pair swapped.
+            for (std::uint8_t side = 0; side < 4; ++side)
+                if (park::edge_height(path, grid, side ^ 1U))
+                    open |= static_cast<std::uint8_t>(1U << side);
+        }
+        world.paths.set_corners(id, corners, open);
         world.paths.keep_staff_off(id, kept_from_staff(world, grid, id));
         return id;
     }

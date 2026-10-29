@@ -436,6 +436,41 @@ TEST_CASE("walkers stand on a ramp's slope and on the ground's own tilt under a 
     CHECK(world.paths.surface(up, up, { 11.0f, 5.0f }) == doctest::Approx(2.75f));
 }
 
+TEST_CASE("a queue joins the paths beside it only at its open ends, not along its railings")
+{
+    simulation::SimWorld world;
+    save::TerrainGrid grid;
+    grid.width = 4;
+    grid.height = 4;
+    grid.tile_size_x = 4;
+    grid.tile_size_z = 4;
+    grid.cells.resize(16);
+    save::WorldModel model;
+    model.terrain = grid;
+    simulation::import_paths(world, model.paths, model.terrain);
+    const auto lay = [&](std::uint8_t col, std::uint8_t row) {
+        save::PathTile p;
+        p.kind = save::PathKind::Ground;
+        p.col = col;
+        p.row = row;
+        return simulation::add_path(world, p, grid);
+    };
+    // A ground queue on (1, 1) running along the columns: its ends face (0, 1) and (2, 1).
+    save::PathTile q;
+    q.kind = save::PathKind::Queue;
+    q.col = 1;
+    q.row = 1;
+    q.elevation = save::PathElevation { .slope = save::kSlopeOnGround };
+    q.queue = save::PathQueueInfo { .start_direction = 0, .end_direction = 1 };
+    const auto queue = simulation::add_path(world, q, grid);
+    const auto front = lay(0, 1);
+    const auto beside = lay(1, 0);
+    const auto& next = world.paths.nodes()[queue].next;
+    CHECK(next[2] == front);               // Across its open end
+    CHECK(next[3] == simulation::kNoNode); // Across its railing
+    CHECK(world.paths.nodes()[beside].next[1] == simulation::kNoNode);
+}
+
 TEST_CASE("rides whose stations stand side by side on one level are linked, others not")
 {
     simulation::SimWorld world;

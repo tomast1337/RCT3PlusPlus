@@ -2,7 +2,10 @@
 //
 // The footpaths as the simulation walks them: one node per path tile, joined to the path tiles beside it.
 // A tile is a column, a row and a level (height in steps); tiles side by side join when their levels differ
-// by at most `max_step`, which is how slopes join a flat path to a higher one.
+// by at most `max_step`, which is how slopes join a flat path to a higher one. Tiles join only where their
+// surfaces meet along the edge between them, within kEdgeGap at both its ends: a raised path running past a
+// lower one, or the side of a ramp, does not join it. A queue tile joins only across its two open ends, the
+// sides its line comes in and goes out by; its railings close the rest.
 //
 // Where four footpath tiles at one level make a full 2 by 2 square, each joined to the two beside it, a walk
 // may also cut across it from corner to opposite corner, at its true length. Queues never take part.
@@ -36,6 +39,10 @@ namespace rct3::simulation
 
     using NodeId = std::uint32_t;
     inline constexpr NodeId kNoNode = ~NodeId { 0 };
+    /// Most a path's surface may stand above or below its neighbour's at the ends of their shared edge and
+    /// still join it. Chosen by eye: a quarter of a level absorbs rounding in saved heights, while a ramp's side
+    /// or a raised path beside the ground is off by at least a whole level at one end.
+    inline constexpr float kEdgeGap = 0.25f;
 
     /// Who walks: guests keep to the no-entry signs, staff to the tiles not kept from them.
     enum class Walker : std::uint8_t
@@ -63,6 +70,7 @@ namespace rct3::simulation
         bool removed = false;        ///< Its tile was taken away
         std::uint8_t no_entry = 0;   ///< Sides guests may not come in across, bit k for side k as `next` numbers them
         bool staff_kept_off = false; ///< Staff do not step onto it
+        std::uint8_t open = 0b1111;  ///< Sides it may join across, bit k for side k as `next` numbers them; a queue only its two ends
         /// World heights of the path's surface at the tile's corners: low col low row, high col low row, low col
         /// high row, high col high row. Between them it is two flat triangles, split from the second corner to
         /// the third, as the ground is.
@@ -117,11 +125,9 @@ namespace rct3::simulation
         {
             nodes_[node].line = line;
         }
-        /// Gives a node's tile a surface that is not flat at its height: a ramp, or ground that is not level.
-        void set_corners(NodeId node, std::array<float, 4> corners)
-        {
-            nodes_[node].corners = corners;
-        }
+        /// Gives a node's tile a surface that is not flat at its height (a ramp, or ground that is not level) and
+        /// the sides it may join across (`open`, as PathNode::open); joins its tile again to suit.
+        void set_corners(NodeId node, std::array<float, 4> corners, std::uint8_t open = 0b1111);
         /// Bars side `side` (as `next` numbers them) of a node's tile to guests coming in, or lifts the bar.
         void set_no_entry(NodeId node, std::size_t side, bool barred)
         {

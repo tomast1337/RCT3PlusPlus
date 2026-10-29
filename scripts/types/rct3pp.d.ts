@@ -376,9 +376,10 @@ declare namespace people {
      *  map they stand on, in tiles. For those the simulation walks, also where they are (tiles, and world height
      *  `up`) and what they are at ("waiting": for the rest of their party, standing with the others; "buying":
      *  at a stall's counter while they wait; "thrown": by a crash, still in the air), how they go on foot
-     *  (`gait`) and, seated on a ride, how they react to it and the ride's place in rides.list (`ride`). A seller has the id of the object of the stall
+     *  (`gait`), what they carry from a stall (`carrying`: food or drink still being had, or its empty) and,
+     *  seated on a ride, how they react to it and the ride's place in rides.list (`ride`). A seller has the id of the object of the stall
      *  or ride entrance they serve at as `post`. */
-    function list(): { name: string; staff: boolean; post?: number; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; state?: "walking" | "queueing" | "riding" | "waiting" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; ride?: number }[];
+    function list(): { name: string; staff: boolean; post?: number; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; state?: "walking" | "queueing" | "riding" | "waiting" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

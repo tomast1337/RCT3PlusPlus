@@ -24,7 +24,7 @@ TEST_CASE("nausea fades, slower while the guest is still eating")
     const auto fasting = park.guest({ 0, 0 }, { .nausea = 0.5f });
     const auto eating = park.guest({ 0, 0 }, { .nausea = 0.5f });
     auto& r = park.world().registry;
-    r.emplace<Rubbish>(eating, Rubbish { .kind = 0, .held = -1000 }); // Eating all along
+    r.emplace<Carried>(eating, Carried { .bites = 200 }); // Eating all along
     park.run_seconds(60);
     CHECK(r.get<Mood>(fasting).nausea.value < 0.5f);
     CHECK(r.get<Mood>(eating).nausea.value > r.get<Mood>(fasting).nausea.value);

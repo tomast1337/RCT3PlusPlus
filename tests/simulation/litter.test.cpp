@@ -18,19 +18,26 @@ namespace
     }
 } // namespace
 
-TEST_CASE("a guest with no bin near carries their cup a while, then drops it on the path")
+TEST_CASE("a guest drinks up a bite at a time, then carries their cup a while and drops it with no bin near")
 {
     Sandbox park;
     park.path({ 0, 0 }, { 0, 0 });
     park.shop("Drinks", Product::Drink, { 0, 0 }, 100);
     const auto g = park.guest({ 0, 0 }, { .thirst = 0.9f, .happiness = 1 });
     auto& r = park.world().registry;
-    CHECK(park.run_until([&] { return r.all_of<Rubbish>(g); }, 5));
-    CHECK(park.run_until([&] { return litter(park) == 1; }, kConsumeSeconds + 65));
-    CHECK_FALSE(r.all_of<Rubbish>(g));
+    CHECK(park.run_until([&] { return r.all_of<Carried>(g); }, 5));
+    CHECK(r.get<Needs>(g).thirst.value > 0.8f); // Not drunk yet
+    const float drinking = static_cast<float>(kTuning.eating.bites) * kTuning.eating.bite.value;
+    park.run_seconds(drinking / 2);
+    CHECK(r.get<Needs>(g).thirst.value < 0.8f);
+    CHECK(r.get<Needs>(g).thirst.value > 0.1f);
+    CHECK(park.run_until([&] { return r.get<Carried>(g).bites == 0; }, drinking));
+    CHECK(r.get<Needs>(g).thirst.value < 0.05f);
+    CHECK(park.run_until([&] { return litter(park) == 1; }, kTuning.litter.carry.value + 5));
+    CHECK_FALSE(r.all_of<Carried>(g));
 }
 
-TEST_CASE("a guest bins their rubbish, and a full bin overflows onto the path")
+TEST_CASE("a guest bins their empty, and a full bin overflows onto the path")
 {
     for (const float room : { 40.0f, 0.0f })
     {
@@ -40,9 +47,9 @@ TEST_CASE("a guest bins their rubbish, and a full bin overflows onto the path")
         const auto bin = park.item(PathItemKind::Bin, { 0, 0 }, room);
         const auto g = park.guest({ 0, 0 }, { .thirst = 0.9f, .happiness = 1 });
         auto& r = park.world().registry;
-        CHECK(park.run_until([&] { return r.all_of<Rubbish>(g); }, 5));
-        park.run_seconds(kConsumeSeconds + kTuning.facilities.served.value + 1);
-        CHECK_FALSE(r.all_of<Rubbish>(g));
+        CHECK(park.run_until([&] { return r.all_of<Carried>(g); }, 5));
+        // Binned on the tick it is finished, standing by the bin.
+        CHECK(park.run_until([&] { return !r.all_of<Carried>(g); }, 60));
         CHECK(r.get<Bin>(bin).contents == (room > 0 ? 1 : 0));
         CHECK(litter(park) == (room > 0 ? 0 : 1));
     }

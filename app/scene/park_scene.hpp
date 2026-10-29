@@ -136,6 +136,14 @@ namespace rct3::scene
     inline constexpr float kLowReliability = 0.4f;        ///< Under it the player is told once, and again after it climbs back.
 
     /// A ride the player has been told is broken down.
+    /// How a guest's food or drink looks in their hand: as handed over, and as the empty left once it is gone;
+    /// either missing when its shape is.
+    struct CarriedLook
+    {
+        std::optional<park::ObjectModel> full;
+        std::optional<park::ObjectModel> empty;
+    };
+
     struct BrokenRide
     {
         entt::entity ride = entt::null;
@@ -609,6 +617,8 @@ namespace rct3::scene
         std::map<const park::PartSet*, std::array<float, kGaits>> walk_paces; ///< Of each legs set measured so far, 0 for none
         /// Umbrellas guests hold up, for adults and teens, then for children; empty when missing.
         std::array<std::optional<park::ObjectModel>, 2> umbrellas;
+        /// What guests carry from stalls, by its carried item's symbol (as `Burger:cid`).
+        std::map<std::string, CarriedLook, std::less<>> carried_looks;
         std::vector<ShownPerson> shown_people;
         std::vector<Outfit> wardrobe;                  ///< What guests coming in at the gate wear
         std::unordered_set<entt::entity> known_guests; ///< The simulated guests the shown people were made for

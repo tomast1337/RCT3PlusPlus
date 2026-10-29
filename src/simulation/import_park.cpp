@@ -79,6 +79,7 @@ namespace rct3::simulation
 
         /// The first item of a stall that is a drink, food or umbrella, by its name or else its kind's symbol (custom
         /// stalls keep only a placeholder name); where neither tells, by the stall's own symbol, at its first item's price.
+        /// Its shop's menu holds every such item.
         struct Sale
         {
             Shop shop;
@@ -86,16 +87,23 @@ namespace rct3::simulation
         };
         std::optional<Sale> sale_of(const save::Stall& stall)
         {
+            std::optional<Sale> sale;
+            std::vector<Ware> menu;
             for (const save::StallItem& item : stall.items)
             {
-                if (const auto product = product_named(item.name))
-                    return Sale { { *product, serve_named(item.name) }, item.price };
-                if (const auto product = product_named(item.kind_symbol))
-                    return Sale { { *product, serve_named(item.kind_symbol) }, item.price };
+                const std::string_view name = product_named(item.name) ? std::string_view(item.name) : std::string_view(item.kind_symbol);
+                const auto product = product_named(name);
+                if (!product)
+                    continue;
+                menu.push_back({ *product, serve_named(name), { item.price }, item.kind_symbol });
+                if (!sale)
+                    sale = Sale { { *product, serve_named(name) }, item.price };
             }
-            if (const auto product = product_named(stall.base.symbol); product && !stall.items.empty())
-                return Sale { { *product, serve_named(stall.base.symbol) }, stall.items.front().price };
-            return std::nullopt;
+            if (const auto product = product_named(stall.base.symbol); !sale && product && !stall.items.empty())
+                sale = Sale { { *product, serve_named(stall.base.symbol) }, stall.items.front().price };
+            if (sale)
+                sale->shop.menu = std::move(menu);
+            return sale;
         }
         /// The footpath node on the tile `o` stands on, or on one beside it.
         std::optional<NodeId> path_by(const PathNetwork& paths, const save::PlacedObject& o)
@@ -611,6 +619,7 @@ namespace rct3::simulation
                 auto& shop = world.registry.get_or_emplace<Shop>(e);
                 shop.product = sale->shop.product;
                 shop.serve = sale->shop.serve;
+                shop.menu = std::move(sale->shop.menu);
             }
     }
 

@@ -17,7 +17,7 @@ TEST_CASE("a thirsty guest walks to the drink stand and buys a drink")
     auto& r = park.world().registry;
 
     CHECK(park.run_until([&] { return r.get<Attraction>(stand).customers == 1; }, 120));
-    CHECK(r.get<Needs>(guest).thirst.value < 0.05f);
+    CHECK(r.all_of<Carried>(guest)); // To drink a bite at a time
     CHECK(r.get<Wallet>(guest).cash.value == 850);
     CHECK(r.get<Attraction>(stand).income.value == 150);
     // On the stand's tile, wherever on it they walked.
@@ -25,6 +25,20 @@ TEST_CASE("a thirsty guest walks to the drink stand and buys a drink")
     CHECK(std::max(std::abs(off.x), std::abs(off.z)) <= kLaneReach + 0.01f);
     // Nine tiles of four units at an adult's walk, give or take the first thought.
     CHECK(park.world().tick < ticks(40));
+}
+
+TEST_CASE("a hungry guest still eating does not go for more")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto food = park.shop("Food", Product::Food, { 4, 0 }, 100);
+    const auto guest = park.guest({ 0, 0 }, { .hunger = 0.9f });
+    auto& r = park.world().registry;
+    r.emplace<Carried>(guest, Carried { .bites = 200 }); // Eating all along
+    park.run_seconds(60);
+    CHECK(r.get<Attraction>(food).customers == 0);
+    r.get<Carried>(guest).bites = 0; // Finished
+    CHECK(park.run_until([&] { return r.get<Attraction>(food).customers == 1; }, 60));
 }
 
 TEST_CASE("a guest goes for what they need most")
@@ -37,7 +51,7 @@ TEST_CASE("a guest goes for what they need most")
     auto& r = park.world().registry;
     CHECK(park.run_until([&] { return r.get<Attraction>(food).customers == 1; }, 60));
     CHECK(r.get<Attraction>(drinks).customers == 0);
-    CHECK(r.get<Needs>(guest).hunger.value < 0.05f);
+    CHECK(r.get<Carried>(guest).food);
 }
 
 TEST_CASE("a guest picks the nearer of two stands")
@@ -595,7 +609,7 @@ TEST_CASE("a party walks together, goes where its neediest wants, and each buys 
         CHECK((r.get<Stride>(child).to == r.get<Stride>(parent).to || r.get<Stride>(child).to == r.get<Stride>(parent).from));
     }
     CHECK(park.run_until([&] { return r.get<Attraction>(stand).customers == 1; }, 60));
-    CHECK(r.get<Needs>(child).thirst.value < 0.05f);
+    CHECK(r.all_of<Carried>(child));
     CHECK(r.get<Wallet>(child).cash.value == 900);
     CHECK(r.get<Wallet>(parent).cash.value == 1000); // Not thirsty, so bought nothing
 }

@@ -357,8 +357,15 @@ namespace rct3::simulation
         /// Whether a guest is still eating what they bought.
         bool eating(const entt::registry& r, entt::entity guest)
         {
-            const auto* rubbish = r.try_get<Rubbish>(guest);
-            return rubbish != nullptr && rubbish->kind == 0 && rubbish->held.value < kConsumeSeconds;
+            const auto* carried = r.try_get<Carried>(guest);
+            return carried != nullptr && carried->food && carried->bites > 0;
+        }
+
+        /// Whether a guest is still eating or drinking what they bought.
+        bool munching(const entt::registry& r, entt::entity guest)
+        {
+            const auto* carried = r.try_get<Carried>(guest);
+            return carried != nullptr && carried->bites > 0;
         }
 
         /// A guest is sick on the path tile `at`, and feels better for it. Returns the mess.
@@ -435,7 +442,7 @@ namespace rct3::simulation
         void leave(entt::registry& r, entt::entity guest)
         {
             ++r.ctx().emplace<Turnstile>().out[static_cast<std::size_t>(age_of(r, guest))];
-            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Rubbish, RideWalk, Crossing, Swimmer>(guest);
+            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Carried, RideWalk, Crossing, Swimmer>(guest);
             r.emplace<Left>(guest);
         }
 
@@ -1026,11 +1033,10 @@ namespace rct3::simulation
                 }
                 if (std::ranges::any_of(items(at), [&](entt::entity i) { return r.get<PathItem>(i).broken; }))
                     mood.happiness.value = clamp01(mood.happiness.value - kTuning.vandals.gloom.value * dt);
-                if (auto* rubbish = r.try_get<Rubbish>(g))
+                if (auto* rubbish = r.try_get<Carried>(g); rubbish != nullptr && rubbish->bites == 0)
                 {
-                    const bool finished = rubbish->held.value < kConsumeSeconds && rubbish->held.value + dt >= kConsumeSeconds;
-                    rubbish->held.value += dt;
-                    if (rubbish->held.value >= kConsumeSeconds)
+                    const bool finished = rubbish->since.value == 0;
+                    rubbish->since.value += dt;
                     {
                         const auto bin = std::ranges::find_if(items(at), [&](entt::entity i) { return r.all_of<Bin>(i) && !r.get<PathItem>(i).broken; });
                         bool gone = true;
@@ -1045,12 +1051,12 @@ namespace rct3::simulation
                             else
                                 drop(at, rubbish->kind);
                         }
-                        else if (rubbish->held.value >= kConsumeSeconds + kTuning.litter.carry.value)
+                        else if (rubbish->since.value >= kTuning.litter.carry.value)
                             drop(at, rubbish->kind);
                         else
                             gone = false;
                         if (gone)
-                            r.remove<Rubbish>(g);
+                            r.remove<Carried>(g);
                     }
                 }
                 if (mood.happiness.value < kTuning.vandals.mood.value && !guarded[at] && random::chance(dice.state, kTuning.vandals.breaking.value * dt))
@@ -1730,6 +1736,14 @@ namespace rct3::simulation
                     mood.nausea.value = clamp01(mood.nausea.value - kTuning.sickness.settle.value * dt / (eating(r, guests[i]) ? kTuning.sickness.full_stomach.value : 1));
                     needs.thirst.value = clamp01(needs.thirst.value + kTuning.needs.thirst.value * thirst * dt);
                     needs.hunger.value = clamp01(needs.hunger.value + kTuning.needs.hunger.value * hunger * dt);
+                    // A bite now and then of what they bought, until it is gone.
+                    if (auto* carried = r.try_get<Carried>(guests[i]); carried != nullptr && carried->bites > 0 && (carried->since.value += dt) >= kTuning.eating.bite.value)
+                    {
+                        float& need = carried->food ? needs.hunger.value : needs.thirst.value;
+                        need = clamp01(need - carried->fill.value);
+                        carried->since.value = 0;
+                        --carried->bites;
+                    }
                     if (weather.rain && !sheltered(guests[i]))
                         mood.wet.value = clamp01(mood.wet.value + kTuning.weather.wetting.value * (weather.storm ? 2 : 1) * dt);
                     else
@@ -1935,6 +1949,9 @@ namespace rct3::simulation
                                     feel.heat.value = std::max(feel.heat.value, r.get<Mood>(m).heat.value);
                                 }
                             }
+                            // Not more to eat or drink while still at what they have.
+                            if (munching(r, movers[i]))
+                                want.hunger.value = want.thirst.value = 0;
                             auto goal = going_home(r, paths, movers[i], at, dice, night, weather.storm, cash_machine, world.tick);
                             if (!goal)
                                 goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kTuning.night.daring.value : 0, taste_of(r, movers[i]), weather.temperature.value);
@@ -2202,6 +2219,12 @@ namespace rct3::simulation
             auto& needs = r.get<Needs>(guest);
             float* need = shop.product == Product::Drink ? &needs.thirst.value : shop.product == Product::Food ? &needs.hunger.value : shop.product == Product::Toilet ? &needs.bladder.value : shop.product == Product::FirstAid ? &mood.nausea.value : nullptr;
             const bool umbrella = shop.product == Product::Umbrella;
+            const bool meal = shop.product == Product::Food || shop.product == Product::Drink;
+            if (meal && munching(r, guest))
+            {
+                think(r, guest, ThoughtKind::HaventFinished, at, now);
+                return false;
+            }
             const bool cools = shop.serve == Serve::Cold && mood.heat.value >= kTuning.needs.want.value;
             if (!chose && !cools && (umbrella ? !weather.rain || r.all_of<Umbrella>(guest) : need != nullptr ? *need < kTuning.needs.want.value : wallet.cash.value >= kTuning.facilities.low_cash.value))
                 return false; // Came along without wanting anything
@@ -2215,7 +2238,14 @@ namespace rct3::simulation
             }
             attraction.income.value += attraction.price.value;
             ++attraction.customers;
-            if (need != nullptr)
+            if (meal)
+            {
+                // Eaten or drunk a bite at a time from now on. Something they still held is dropped.
+                // shortcut: the first ware of the kind; upgrade when guests pick from the menu.
+                const auto ware = std::ranges::find(shop.menu, shop.product, &Ware::product);
+                r.emplace_or_replace<Carried>(guest, Carried { .stall = at, .ware = static_cast<std::uint8_t>(ware == shop.menu.end() ? 0 : ware - shop.menu.begin()), .kind = std::uint8_t { shop.product == Product::Drink }, .food = shop.product == Product::Food, .bites = kTuning.eating.bites, .fill = { *need / kTuning.eating.bites } });
+            }
+            else if (need != nullptr)
                 *need = 0;
             else if (umbrella)
                 r.emplace_or_replace<Umbrella>(guest);
@@ -2233,8 +2263,6 @@ namespace rct3::simulation
                 mood.happiness.value = clamp01(mood.happiness.value + kTuning.needs.treat.value);
             if (shop.serve == Serve::Cold)
                 mood.heat.value = 0;
-            if (shop.product == Product::Drink || shop.product == Product::Food)
-                r.emplace_or_replace<Rubbish>(guest, Rubbish { .kind = std::uint8_t { shop.product == Product::Drink } });
             return true;
         };
         for (std::size_t i = 0; i < movers.size(); ++i)

@@ -34,7 +34,6 @@ namespace rct3::simulation
     class Workers;
 
     inline constexpr float kTickSeconds = 0.25f; ///< Simulated time a step covers
-    inline constexpr float kConsumeSeconds = 10; ///< A guest spends with what they bought before moving on; our own figure
     /// Farthest a guest walks off a path tile's middle, along x and z.
     /// shortcut: one width for every path, from how evenly saved guests spread to about this either side of
     /// the middle; upgrade when paths of other widths are modelled.

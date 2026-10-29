@@ -132,6 +132,13 @@ namespace rct3::simulation::tuning
         PerSecond sight_cheer = PerSecond::over({ 300 }); ///< Happiness while watching
     };
 
+    /// Guests eating and drinking what they bought.
+    struct Eating
+    {
+        std::uint8_t bites = 6; ///< Chosen by eye: in which a guest eats or drinks something up
+        Seconds bite { 2.5f };  ///< Chosen by eye: between bites
+    };
+
     /// Nausea and being sick.
     struct Sickness
     {
@@ -441,6 +448,7 @@ namespace rct3::simulation::tuning
         Gestures gestures;
         Queues queues;
         Facilities facilities;
+        Eating eating;
         Sickness sickness;
         Weather weather;
         Night night;

@@ -11,7 +11,8 @@ TEST_CASE("path tiles side by side join, unless their levels are more than a ste
 {
     PathNetwork p;
     const NodeId a = p.add({ 0, 0, 0 });
-    const NodeId b = p.add({ 1, 0, 1 }); // A slope up
+    const NodeId b = p.add({ 1, 0, 1 }, false, 0.5f); // A slope up
+    p.set_corners(b, { 0.0f, 1.0f, 0.0f, 1.0f });
     const NodeId c = p.add({ 2, 0, 3 }); // Too high to join
     const NodeId d = p.add({ 0, 1, 0 });
     CHECK(p.nodes()[a].next[0] == b);
@@ -185,6 +186,48 @@ TEST_CASE("a walker stands on the path's surface under their feet, wherever acro
     p.set_corners(bank, { 0.0f, 0.0f, 1.0f, 1.0f });
     CHECK(p.surface(bank, bank, { 2.0f, 5.0f }) == doctest::Approx(0.25f));
     CHECK(p.surface(bank, bank, { 2.0f, 7.0f }) == doctest::Approx(0.75f));
+}
+
+TEST_CASE("footpaths join only where their surfaces meet along the edge between them")
+{
+    PathNetwork p;
+    p.max_step = 2;
+    // A ramp along +col from level 0 to 1, a flat path at its top, and a ground path along its side.
+    const NodeId foot = p.add({ 0, 0, 0 }, false, 0.0f);
+    const NodeId ramp = p.add({ 1, 0, 0 }, false, 0.5f);
+    const NodeId top = p.add({ 2, 0, 1 }, false, 1.0f);
+    const NodeId side = p.add({ 1, 1, 0 }, false, 0.0f);
+    p.set_corners(ramp, { 0.0f, 1.0f, 0.0f, 1.0f });
+    CHECK(p.nodes()[ramp].next[0] == top);
+    CHECK(p.nodes()[ramp].next[2] == foot);
+    CHECK(p.nodes()[ramp].next[1] == kNoNode); // Its high end stands a level above the path beside it
+    CHECK(p.nodes()[side].next[3] == kNoNode);
+    // A second ramp beside it, alike, makes it a wide ramp walkers may cross.
+    const NodeId twin = p.add({ 1, -1, 0 }, false, 0.5f);
+    p.set_corners(twin, { 0.0f, 1.0f, 0.0f, 1.0f });
+    CHECK(p.nodes()[ramp].next[3] == twin);
+    // A raised path two levels over the ground path beside it does not join it either.
+    const NodeId deck = p.add({ 2, 1, 2 }, false, 2.0f);
+    CHECK(p.nodes()[deck].next[2] == kNoNode);
+    // Ground that tilts across both tiles alike still joins: their shared corners match.
+    const NodeId a = p.add({ 5, 5, 0 }, false, 0.5f);
+    const NodeId b = p.add({ 6, 5, 0 }, false, 0.5f);
+    p.set_corners(a, { 0.0f, 0.0f, 1.0f, 1.0f });
+    p.set_corners(b, { 0.0f, 0.0f, 1.0f, 1.0f });
+    CHECK(p.nodes()[a].next[0] == b);
+}
+
+TEST_CASE("a queue joins a path beside it only at its ends, never along its side")
+{
+    PathNetwork p;
+    // A queue running along the columns, open at its -col and +col ends, with paths at its end and beside it.
+    const NodeId queue = p.add({ 1, 0, 0 }, true);
+    p.set_corners(queue, { 0.0f, 0.0f, 0.0f, 0.0f }, 0b0101);
+    const NodeId end = p.add({ 0, 0, 0 });
+    const NodeId side = p.add({ 1, 1, 0 });
+    CHECK(p.nodes()[queue].next[2] == end);
+    CHECK(p.nodes()[queue].next[1] == kNoNode);
+    CHECK(p.nodes()[side].next[3] == kNoNode);
 }
 
 TEST_CASE("a wall between two tiles parts them, a queue keeps its own sides, and taking it away joins them again")

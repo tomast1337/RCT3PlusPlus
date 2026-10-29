@@ -95,6 +95,15 @@ namespace rct3::simulation
             }
             if (best == kNoNode || nodes_[best].next[(side + 2) % 4] != kNoNode)
                 continue;
+            if ((nodes_[id].open >> side & 1U) == 0 || (nodes_[best].open >> ((side + 2) % 4) & 1U) == 0)
+                continue;
+            // The corners either side of the shared edge, this tile's first, by side.
+            constexpr std::array<std::array<std::size_t, 4>, 4> kMeet { { { 1, 3, 0, 2 }, { 2, 3, 0, 1 }, { 0, 2, 1, 3 }, { 0, 1, 2, 3 } } };
+            const auto& m = kMeet[side];
+            const auto& a = nodes_[id].corners;
+            const auto& b = nodes_[best].corners;
+            if (std::abs(a[m[0]] - b[m[2]]) > kEdgeGap || std::abs(a[m[1]] - b[m[3]]) > kEdgeGap)
+                continue;
             const float low = std::min(nodes_[id].height, nodes_[best].height);
             const bool walled = !nodes_[id].queue && !nodes_[best].queue && std::any_of(walls_first, walls_last, [&](const auto& w) { return w.second.side == side && low >= w.second.low && low < w.second.high; });
             if (walled)
@@ -102,6 +111,13 @@ namespace rct3::simulation
             nodes_[id].next[side] = best;
             nodes_[best].next[(side + 2) % 4] = id;
         }
+    }
+
+    void PathNetwork::set_corners(NodeId node, std::array<float, 4> corners, std::uint8_t open)
+    {
+        nodes_[node].corners = corners;
+        nodes_[node].open = open;
+        rejoin(nodes_[node].tile.col, nodes_[node].tile.row);
     }
 
     void PathNetwork::rejoin(int col, int row)

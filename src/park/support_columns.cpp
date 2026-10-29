@@ -339,7 +339,8 @@ namespace rct3::park
                 const SupportFootprint& f = *c.footprint;
                 if (!f.wants_supports || f.by_points || !c.square->wants_column || c.square->kind == kNoSupport || (f.alternate_tiles && !odd_tile) || !c.object->base_height)
                     continue;
-                const FoundSet found = find_support_set(sets, models.at(model_key(*c.object)).support_group, turned(c.square->kind, c.object->rotation));
+                const std::string& group = c.object->support_set.empty() ? models.at(model_key(*c.object)).support_group : c.object->support_set;
+                const FoundSet found = find_support_set(sets, group, turned(c.square->kind, c.object->rotation));
                 if (found.set == nullptr)
                     continue;
                 const auto base = column_base(std::span(covered).subspan(i + 1), ground_paths, grid, tile, c.object, static_cast<float>(c.low), *found.set, std::nullopt, true);
@@ -358,7 +359,7 @@ namespace rct3::park
         for (const auto& [object, model] : by_points)
         {
             const SupportFootprint& f = *model->supports;
-            const FoundSet found = find_support_set(sets, model->support_group, kRoundSupport);
+            const FoundSet found = find_support_set(sets, object->support_set.empty() ? model->support_group : object->support_set, kRoundSupport);
             if (found.set == nullptr || !object->base_height)
                 continue;
             const SupportSet& set = *found.set;

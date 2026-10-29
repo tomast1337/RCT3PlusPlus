@@ -44,3 +44,13 @@ TEST_CASE("style overlays are told by their ending, whatever its case")
     CHECK_FALSE(is_style_overlay("Gravel_Stub.unique.ovl"));
     CHECK_FALSE(is_style_overlay("Gravel_Flat.common.ovl"));
 }
+
+TEST_CASE("a style's support set is the first one its pieces name")
+{
+    ovl::PathType path;
+    path.items.resize(3);
+    path.items[1].group = "gravelposts";
+    path.items[2].group = "other";
+    CHECK(path_style(path).support_group == "gravelposts");
+    CHECK(queue_style(ovl::QueueType { }).support_group.empty());
+}

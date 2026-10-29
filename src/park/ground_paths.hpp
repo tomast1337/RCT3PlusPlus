@@ -113,6 +113,7 @@ namespace rct3::park
         std::optional<save::Tile> source { }; ///< The tile whose path sets the style
         bool entrance = false;                ///< A queue at `source` runs on through it, straight
         std::vector<save::Tile> links { };    ///< The tiles beside it that it joins
+        std::uint64_t owner = 0;              ///< The placed object that paves it, whose columns take its style's supports
     };
 
     /// The path style paving takes while its source holds no path: the first of the game's path styles.

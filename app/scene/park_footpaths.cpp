@@ -36,7 +36,9 @@
 #include <map>
 #include <set>
 #include <span>
+#include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 
 namespace rct3::scene
@@ -361,6 +363,20 @@ namespace rct3::scene
             const auto found = std::ranges::find(read, name, &park::PathStyle::name);
             return found != read.end() ? &*found : nullptr;
         };
+        // Once placed, a ride, stall or door stands on the supports of the style it is paved in, as the path it
+        // opens onto does; only its ghost shows the set its own item names.
+        std::unordered_map<std::uint64_t, std::string> sets;
+        for (const park::PavedTile& t : laid)
+        {
+            const std::uint64_t owner = f.pavings[t.paving].owner;
+            if (const park::PathStyle* style = owner != 0 ? style_named(t.path.surface_name) : nullptr)
+                sets.try_emplace(owner, style->support_group);
+        }
+        for (save::PlacedObject& o : scene.objects)
+        {
+            if (const auto set = sets.find(o.id); set != sets.end())
+                o.support_set = set->second;
+        }
         std::uint64_t id = 0;
         for (const save::PathTile& p : f.paths)
             id = std::max(id, p.id);

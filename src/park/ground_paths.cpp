@@ -127,13 +127,13 @@ namespace rct3::park
                         continue;
                     const save::Tile at { door->col, door->row };
                     const save::Tile behind = step(at, turned_x(door->direction + 2));
-                    out.push_back({ .tiles = { at }, .height = door->height, .source = behind, .entrance = entrance, .links = { step(at, turned_x(door->direction)), behind } });
+                    out.push_back({ .tiles = { at }, .height = door->height, .source = behind, .entrance = entrance, .links = { step(at, turned_x(door->direction)), behind }, .owner = door->object });
                 }
             }
             if (ride.kind == save::RideKind::Special && ride.stations.empty() && ride.base.spot)
             {
                 // A facility without doors (toilets and the like) opens onto every side, in the plain style.
-                Paving under { .tiles = footprint_of(*ride.base.spot), .height = ride.base.spot->height };
+                Paving under { .tiles = footprint_of(*ride.base.spot), .height = ride.base.spot->height, .owner = ride.base.spot->object };
                 for (const save::Tile tile : under.tiles)
                 {
                     for (std::int32_t side = 0; side < 4; ++side)
@@ -149,8 +149,8 @@ namespace rct3::park
             }
             // A flat ride's floor, or a tracked ride's base's, opens onto its first station's doors and looks like
             // the path its exit lets out onto.
-            const auto pave = [&](std::vector<save::Tile> tiles, std::int32_t height) {
-                Paving floor { .tiles = std::move(tiles), .height = height };
+            const auto pave = [&](std::vector<save::Tile> tiles, std::int32_t height, std::uint64_t owner) {
+                Paving floor { .tiles = std::move(tiles), .height = height, .owner = owner };
                 if (floor.tiles.empty())
                     return;
                 if (!ride.stations.empty())
@@ -168,13 +168,13 @@ namespace rct3::park
                 out.push_back(std::move(floor));
             };
             if (ride.kind == save::RideKind::Flat && ride.base.spot)
-                pave(footprint_of(*ride.base.spot), ride.base.spot->height);
+                pave(footprint_of(*ride.base.spot), ride.base.spot->height, ride.base.spot->object);
             if (ride.track)
             {
                 for (const save::TrackPiece& piece : ride.track->pieces)
                 {
                     if (piece.scenery != 0)
-                        pave(floor_of({ piece.scenery, piece.tile_x, piece.tile_z, piece.height, piece.direction }), piece.height);
+                        pave(floor_of({ piece.scenery, piece.tile_x, piece.tile_z, piece.height, piece.direction }), piece.height, piece.scenery);
                 }
             }
         }
@@ -182,7 +182,7 @@ namespace rct3::park
         {
             if (stall.base.demolished || !stall.base.spot)
                 continue;
-            Paving under { .tiles = footprint_of(*stall.base.spot), .height = stall.base.spot->height };
+            Paving under { .tiles = footprint_of(*stall.base.spot), .height = stall.base.spot->height, .owner = stall.base.spot->object };
             // A stall serves the side it faces, opening onto the tiles there. Facings point at -row, -col, +row, +col.
             const glm::vec2 front = turned_x(stall.base.facing + 3);
             for (const save::Tile tile : under.tiles)

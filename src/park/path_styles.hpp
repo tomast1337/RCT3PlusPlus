@@ -33,6 +33,8 @@ namespace rct3::park
         /// The describing overlay, as a park names the overlay of a placed piece: relative to the install,
         /// without its ".common.ovl" ending. Empty when not read from a folder.
         std::string overlay;
+        /// The support set its pieces name. What a ride, stall or door paved in it stands on once placed, too.
+        std::string support_group { };
     };
 
     /// The install's folders of path styles and of queue styles, relative to its root.

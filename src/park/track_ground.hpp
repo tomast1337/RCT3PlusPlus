@@ -8,7 +8,8 @@
 //
 // A piece in a tunnel hollows the ground round each of its squares, up to the square's top, as a tunnel path
 // does (path_tunnels.hpp): it opens where the ground beside it lies lower, as at a cut or a cliff, and is
-// lined. Nothing in a park's file marks such a piece, so saved parks' tunnels are found the same way.
+// lined. A ride, stall or ride door buried the same way hollows a cave round it alike. Nothing in a park's file
+// marks such a piece, so saved parks' tunnels and caves are found the same way.
 //
 // A cut may not reach what the land tools may not move (ground_holds.hpp), land the park does not own
 // outright, or a tile holding water or beside one that does: then the piece may not stand. A tile round it that
@@ -33,7 +34,8 @@ namespace rct3::park
     /// tiles they pass into, and when `smooth` the tiles round those sloped down to meet them.
     [[nodiscard]] GroundCuts ground_cuts(std::span<const save::PlacedObject> items, const ObjectModels& models, const save::TerrainGrid& grid, bool smooth);
 
-    /// The hollows of the pieces of track among `objects` (their models loaded) that lie in tunnels.
-    [[nodiscard]] std::vector<GroundOpening> track_hollows(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
+    /// The hollows of the pieces of track, rides, stalls and ride doors among `objects` (their models loaded)
+    /// that lie under the ground.
+    [[nodiscard]] std::vector<GroundOpening> buried_hollows(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
 
 } // namespace rct3::park

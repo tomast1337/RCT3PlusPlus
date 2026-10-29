@@ -1035,9 +1035,9 @@ namespace rct3::scene
         }
         begin(ParkLoadStage::Scene);
         // The ground was drawn before the fences, walls and track were known; drawn again if one parts two paths
-        // or track lies in a tunnel.
+        // or track, a ride or a stall lies under the ground.
         scene.footpaths.walls = park::edge_walls(scene.objects, scene.models, scene.grid);
-        scene.footpaths.pavings_stale = scene.footpaths.pavings_stale || !park::track_hollows(scene.objects, scene.models, scene.grid).empty() || std::ranges::any_of(scene.footpaths.paths, [&](const save::PathTile& p) {
+        scene.footpaths.pavings_stale = scene.footpaths.pavings_stale || !park::buried_hollows(scene.objects, scene.models, scene.grid).empty() || std::ranges::any_of(scene.footpaths.paths, [&](const save::PathTile& p) {
                                             return !p.elevation && std::ranges::any_of(std::array<std::uint8_t, 4> { 0, 1, 2, 3 }, [&](std::uint8_t side) {
                                                 const auto edge = park::edge_height(p, scene.grid, side);
                                                 return edge && park::walled(scene.footpaths.walls, { p.col, p.row }, side, *edge);

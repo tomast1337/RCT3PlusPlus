@@ -336,7 +336,7 @@ namespace rct3::scene
             with.push_back(t.path);
         // Tunnels of paths and of track.
         std::vector<park::GroundOpening> hollows = profiling::section("Hollows", [&] { return park::tunnel_hollows(f.paths, scene.grid); });
-        std::ranges::copy(profiling::section("TrackHollows", [&] { return park::track_hollows(scene.objects, scene.models, scene.grid); }), std::back_inserter(hollows));
+        std::ranges::copy(profiling::section("BuriedHollows", [&] { return park::buried_hollows(scene.objects, scene.models, scene.grid); }), std::back_inserter(hollows));
         park::GroundPathMap paths = profiling::section("PathMap", [&] { return park::ground_path_map(with, scene.grid); });
         paths.walls = f.walls;
         park::seal_pavings(paths, laid, f.pavings);

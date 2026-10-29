@@ -55,6 +55,11 @@ namespace rct3::park
             const float z1 = grid.world_z(h.row + 1);
             // Ceiling, facing down.
             quad(cliff, { glm::vec3 { x0, h.high, z0 }, { x1, h.high, z0 }, { x1, h.high, z1 }, { x0, h.high, z1 } }, { 0, -1, 0 }, true);
+            // Floor, facing up, unless another hollow of the tile reaches under it: the ground below is not drawn
+            // from inside.
+            const auto [here, here_end] = by_tile.equal_range({ h.col, h.row });
+            if (std::none_of(here, here_end, [&](const auto& other) { return other.second != &h && other.second->low < h.low && h.low <= other.second->high; }))
+                quad(cliff, { glm::vec3 { x0, h.low, z0 }, { x0, h.low, z1 }, { x1, h.low, z1 }, { x1, h.low, z0 } }, { 0, 1, 0 }, true);
             // Sides as the builder's headings: towards higher rows, higher columns, lower rows, lower columns.
             constexpr std::array<std::array<int, 2>, 4> kStep { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } };
             // The neighbour's corners on the shared edge, in the terrain's corner order.
@@ -63,9 +68,6 @@ namespace rct3::park
             {
                 const int col = h.col + kStep[side][0];
                 const int row = h.row + kStep[side][1];
-                const auto [first, last] = by_tile.equal_range({ col, row });
-                if (std::any_of(first, last, [&](const auto& other) { return other.second->low < h.high && h.low < other.second->high; }))
-                    continue;
                 // Open where the ground beyond is lower than the hollow's top: that is the tunnel's mouth.
                 if (grid.contains(col, row))
                 {
@@ -73,17 +75,39 @@ namespace rct3::park
                     if (std::min(corners[kFacing[side][0]], corners[kFacing[side][1]]) < h.high)
                         continue;
                 }
+                // Walled where no hollow beyond meets it: a neighbouring hollow higher or lower, as on a slope,
+                // leaves the step between them walled.
+                std::vector<std::pair<float, float>> beyond;
+                const auto [first, last] = by_tile.equal_range({ col, row });
+                for (auto it = first; it != last; ++it)
+                    beyond.emplace_back(it->second->low, it->second->high);
+                std::ranges::sort(beyond);
+                std::vector<std::pair<float, float>> bare;
+                float from = h.low;
+                for (const auto& [low, high] : beyond)
+                {
+                    if (low > from)
+                        bare.emplace_back(from, std::min(low, h.high));
+                    from = std::max(from, high);
+                }
+                if (from < h.high)
+                    bare.emplace_back(from, h.high);
                 const bool along_x = side % 2 == 0;
                 const float x = side == 1 ? x1 : x0;
                 const float z = side == 0 ? z1 : z0;
                 const glm::vec3 inward { -static_cast<float>(kStep[side][0]), 0, -static_cast<float>(kStep[side][1]) };
                 const glm::vec3 a = along_x ? glm::vec3 { x0, 0, z } : glm::vec3 { x, 0, z0 };
                 const glm::vec3 b = along_x ? glm::vec3 { x1, 0, z } : glm::vec3 { x, 0, z1 };
-                std::array<glm::vec3, 4> wall { glm::vec3 { a.x, h.low, a.z }, { b.x, h.low, b.z }, { b.x, h.high, b.z }, { a.x, h.high, a.z } };
-                // Wound to face into the hollow.
-                if (glm::dot(glm::cross(wall[1] - wall[0], wall[2] - wall[0]), inward) < 0)
-                    std::swap(wall[1], wall[3]);
-                quad(cliff, wall, inward, along_x);
+                for (const auto& [low, high] : bare)
+                {
+                    if (high <= low)
+                        continue;
+                    std::array<glm::vec3, 4> wall { glm::vec3 { a.x, low, a.z }, { b.x, low, b.z }, { b.x, high, b.z }, { a.x, high, a.z } };
+                    // Wound to face into the hollow.
+                    if (glm::dot(glm::cross(wall[1] - wall[0], wall[2] - wall[0]), inward) < 0)
+                        std::swap(wall[1], wall[3]);
+                    quad(cliff, wall, inward, along_x);
+                }
             }
         }
         for (auto& [paint, vertices] : by_paint)

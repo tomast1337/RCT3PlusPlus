@@ -3,7 +3,8 @@
 // The room tunnel paths take in the ground. Each tunnel piece (footpath_builder.hpp) hollows out its tile from
 // just under its lowest point to kTunnelHeight over its highest. The ground's walls along that tile's edges
 // leave the hollow open, so a tunnel opens where it meets a slope or a cliff, and the hollow is lined: a
-// ceiling over it, and a wall on each side where neither another hollow nor open air lies beyond. The lining is
+// ceiling over it, a floor under it, and a wall on each side where neither another hollow nor open air lies beyond (beside a hollow
+// higher or lower, the step between them is walled). The lining is
 // painted with the tunnel pictures of the tile's cliff face (ground_textures.hpp), each repeating once a tile.
 //
 // A piece flagged as a tunnel whose ground was lowered since no longer has ground over it; it hollows nothing.

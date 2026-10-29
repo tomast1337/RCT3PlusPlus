@@ -272,10 +272,10 @@ namespace rct3::simulation::tuning
     {
         std::size_t dirty_path = 3;                      ///< Pieces of litter on a tile that make guests on it glum
         PerSecond dirt_gloom = PerSecond::over({ 900 }); ///< Happiness lost on a dirty path
-        Seconds carry { 60 };                            ///< A guest looks for a bin this long before dropping their rubbish
-        Chance litterbug_chance { 0.03 };                ///< Of dropping it at once, for a happy guest
-        Seconds old { 400 };                             ///< Litter lying this long counts against the park's rating
-        Chance grumpy_chance { 0.3 };                    ///< Added as happiness falls to nothing
+        /// An empty is held this long before it goes in a pocket, or on the path when they are full. Fitted to the
+        /// saves: after five minutes, parks have about as much litter lying about as their saves had.
+        Seconds carry { 60 };
+        Seconds old { 400 }; ///< Litter lying this long counts against the park's rating
     };
 
     /// Vandals and guards.

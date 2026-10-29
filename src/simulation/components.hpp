@@ -610,9 +610,11 @@ namespace rct3::simulation
     };
 
     /// Food or drink a guest carries from a stall, in their left hand: eaten or drunk a bite at a time, then
-    /// held as an empty (a wrapper, a cup) until they are rid of it.
+    /// held as an empty (a wrapper, a cup) until they are rid of it: in a bin, in a pocket, or on the path.
     struct Carried
     {
+        static constexpr std::uint8_t kPockets = 2; ///< As saved guests have: a left and a right one
+
         entt::entity stall = entt::null; ///< Where it came from, for what it looks like
         std::uint8_t ware = 0;           ///< Its place on that stall's menu
         std::uint8_t kind = 0;           ///< As Litter::kind, once dropped
@@ -620,6 +622,8 @@ namespace rct3::simulation
         std::uint8_t bites = 0;          ///< Left; none once it is an empty
         Share fill { };                  ///< Of their hunger or thirst each bite takes away
         Seconds since { };               ///< Since the last bite, or since it was finished
+        bool held = true;                ///< In hand; else only empties in their pockets are left
+        std::uint8_t pocketed = 0;       ///< Empties in their pockets, up to kPockets
     };
 
     enum class PathItemKind : std::uint8_t
@@ -650,13 +654,14 @@ namespace rct3::simulation
     /// How a guest shows what they feel, standing a moment where they are.
     enum class GestureKind : std::uint8_t
     {
-        Cheer,   ///< Jumping for joy off a ride they loved
-        Laugh,   ///< Off a ride they loved
-        Nod,     ///< Off a ride they liked well enough
-        Grumble, ///< Shaking their head at a ride too tame for them
-        Dizzy,   ///< Reeling off a ride too wild for them
-        Retch,   ///< Being sick
-        Down,    ///< Knocked over, lying on the ground till they get up
+        Cheer,    ///< Jumping for joy off a ride they loved
+        Laugh,    ///< Off a ride they loved
+        Nod,      ///< Off a ride they liked well enough
+        Grumble,  ///< Shaking their head at a ride too tame for them
+        Dizzy,    ///< Reeling off a ride too wild for them
+        Retch,    ///< Being sick
+        Down,     ///< Knocked over, lying on the ground till they get up
+        HandOver, ///< Putting their rubbish in a bin
     };
 
     struct Gesture

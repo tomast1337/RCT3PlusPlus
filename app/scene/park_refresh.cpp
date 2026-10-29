@@ -438,7 +438,7 @@ namespace rct3::scene
                 if (gesture == nullptr)
                     return;
                 // By the names the people's meshes give these motions, in GestureKind's order.
-                constexpr std::array<std::string_view, 7> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop" };
+                constexpr std::array<std::string_view, 8> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop", "handticket" };
                 pose.motion = park::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(park::motion::kIdle);
                 pose.time = simulation::kTuning.gestures.shown.value - gesture->left.value + scene.sim_time;
                 // Knocked over, they go down, lie there, and get up for the last of it.
@@ -525,7 +525,7 @@ namespace rct3::scene
             {
                 const auto* shop = r.valid(carried->stall) ? r.try_get<simulation::Shop>(carried->stall) : nullptr;
                 const auto look = shop != nullptr && carried->ware < shop->menu.size() ? scene.carried_looks.find(shop->menu[carried->ware].symbol) : scene.carried_looks.end();
-                const auto* model = look == scene.carried_looks.end() ? nullptr : carried->bites > 0 ? &look->second.full : &look->second.empty;
+                const auto* model = look == scene.carried_looks.end() || !carried->held ? nullptr : carried->bites > 0 ? &look->second.full : &look->second.empty;
                 pose.held = model != nullptr && *model ? &**model : nullptr;
                 const bool biting = carried->bites > 0 && carried->since.value < kBiteSeconds;
                 if (pose.held != nullptr && walking && way == 0 && !r.all_of<simulation::Gesture>(shown.guest))

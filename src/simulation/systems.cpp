@@ -365,7 +365,20 @@ namespace rct3::simulation
         bool munching(const entt::registry& r, entt::entity guest)
         {
             const auto* carried = r.try_get<Carried>(guest);
-            return carried != nullptr && carried->bites > 0;
+            return carried != nullptr && carried->held && carried->bites > 0;
+        }
+
+        /// Frees a guest's hand of the empty in it: into a pocket, or onto path tile `at` when both are full.
+        /// Their carried rubbish is gone once nothing is left of it.
+        void free_hand(entt::registry& r, entt::entity guest, Carried& carried, NodeId at)
+        {
+            if (carried.pocketed < Carried::kPockets)
+                ++carried.pocketed;
+            else
+                r.emplace<Litter>(r.create(), Litter { at, carried.kind, 0 });
+            carried.held = false;
+            if (carried.pocketed == 0)
+                r.remove<Carried>(guest);
         }
 
         /// A guest is sick on the path tile `at`, and feels better for it. Returns the mess.
@@ -904,11 +917,6 @@ namespace rct3::simulation
                 const auto found = litter_at.find(node);
                 return found != litter_at.end() ? found->second.size() : 0;
             };
-            const auto drop = [&](NodeId node, std::uint8_t kind) {
-                const entt::entity e = r.create();
-                r.emplace<Litter>(e, Litter { node, kind, 0 });
-                litter_at[node].push_back(e);
-            };
             // The tiles guards keep vandals off: theirs and those a few steps along the paths from it.
             auto& guarded = buffers.guarded;
             guarded.assign(paths.nodes().size(), false);
@@ -1033,31 +1041,31 @@ namespace rct3::simulation
                 }
                 if (std::ranges::any_of(items(at), [&](entt::entity i) { return r.get<PathItem>(i).broken; }))
                     mood.happiness.value = clamp01(mood.happiness.value - kTuning.vandals.gloom.value * dt);
-                if (auto* rubbish = r.try_get<Carried>(g); rubbish != nullptr && rubbish->bites == 0)
+                // Empties go in a bin with room on their tile, all they have, as many as fit; one held too long goes
+                // in a pocket, or on the path once both are full.
+                if (auto* rubbish = r.try_get<Carried>(g); rubbish != nullptr && (rubbish->bites == 0 || !rubbish->held))
                 {
-                    const bool finished = rubbish->since.value == 0;
-                    rubbish->since.value += dt;
+                    const bool in_hand = rubbish->held && rubbish->bites == 0;
+                    if (in_hand)
+                        rubbish->since.value += dt;
+                    const auto bin = std::ranges::find_if(items(at), [&](entt::entity i) { return r.all_of<Bin>(i) && !r.get<PathItem>(i).broken && r.get<Bin>(i).contents + 1 <= r.get<Bin>(i).capacity; });
+                    if (bin != items(at).end())
                     {
-                        const auto bin = std::ranges::find_if(items(at), [&](entt::entity i) { return r.all_of<Bin>(i) && !r.get<PathItem>(i).broken; });
-                        bool gone = true;
-                        if (finished && random::chance(dice.state, kTuning.litter.litterbug_chance.value + kTuning.litter.grumpy_chance.value * (1 - mood.happiness.value)))
-                            drop(at, rubbish->kind);
-                        else if (bin != items(at).end())
+                        auto& b = r.get<Bin>(*bin);
+                        for (bool hand = in_hand; (hand || rubbish->pocketed > 0) && b.contents + 1 <= b.capacity; hand = false)
                         {
-                            // A full bin overflows onto the path.
-                            auto& b = r.get<Bin>(*bin);
-                            if (b.contents + 1 <= b.capacity)
-                                b.contents += 1;
+                            b.contents += 1;
+                            if (hand)
+                                rubbish->held = false;
                             else
-                                drop(at, rubbish->kind);
+                                --rubbish->pocketed;
                         }
-                        else if (rubbish->since.value >= kTuning.litter.carry.value)
-                            drop(at, rubbish->kind);
-                        else
-                            gone = false;
-                        if (gone)
+                        r.emplace_or_replace<Gesture>(g, GestureKind::HandOver, kTuning.gestures.shown.value);
+                        if (!rubbish->held && rubbish->pocketed == 0)
                             r.remove<Carried>(g);
                     }
+                    else if (in_hand && rubbish->since.value >= kTuning.litter.carry.value)
+                        free_hand(r, g, *rubbish, at);
                 }
                 if (mood.happiness.value < kTuning.vandals.mood.value && !guarded[at] && random::chance(dice.state, kTuning.vandals.breaking.value * dt))
                 {
@@ -2240,10 +2248,18 @@ namespace rct3::simulation
             ++attraction.customers;
             if (meal)
             {
-                // Eaten or drunk a bite at a time from now on. Something they still held is dropped.
+                // Eaten or drunk a bite at a time from now on, in the hand: an empty still in it goes in a pocket,
+                // or on the path when both are full.
                 // shortcut: the first ware of the kind; upgrade when guests pick from the menu.
+                std::uint8_t pocketed = 0;
+                if (auto* old = r.try_get<Carried>(guest))
+                {
+                    if (old->held)
+                        free_hand(r, guest, *old, r.get<Stride>(guest).to);
+                    pocketed = r.all_of<Carried>(guest) ? old->pocketed : 0;
+                }
                 const auto ware = std::ranges::find(shop.menu, shop.product, &Ware::product);
-                r.emplace_or_replace<Carried>(guest, Carried { .stall = at, .ware = static_cast<std::uint8_t>(ware == shop.menu.end() ? 0 : ware - shop.menu.begin()), .kind = std::uint8_t { shop.product == Product::Drink }, .food = shop.product == Product::Food, .bites = kTuning.eating.bites, .fill = { *need / kTuning.eating.bites } });
+                r.emplace_or_replace<Carried>(guest, Carried { .stall = at, .ware = static_cast<std::uint8_t>(ware == shop.menu.end() ? 0 : ware - shop.menu.begin()), .kind = std::uint8_t { shop.product == Product::Drink }, .food = shop.product == Product::Food, .bites = kTuning.eating.bites, .fill = { *need / kTuning.eating.bites }, .pocketed = pocketed });
             }
             else if (need != nullptr)
                 *need = 0;

@@ -797,7 +797,7 @@ namespace rct3::scene
                             person["ride"] = on - park.ride_entities.begin();
                     }
                     // Food or drink from a stall in hand, or its empty.
-                    if (const auto* carried = r.try_get<simulation::Carried>(p.guest))
+                    if (const auto* carried = r.try_get<simulation::Carried>(p.guest); carried != nullptr && carried->held)
                         person["carrying"] = carried->bites == 0 ? "empty" : carried->food ? "food" : "drink";
                 }
                 out.push_back(std::move(person));

@@ -41,6 +41,46 @@ TEST_CASE("a hungry guest still eating does not go for more")
     CHECK(park.run_until([&] { return r.get<Attraction>(food).customers == 1; }, 60));
 }
 
+TEST_CASE("at a stall a guest picks something off its menu they think worth its price")
+{
+    for (const bool dear : { false, true })
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 4, 0 });
+        const auto stall = park.shop("Food", Product::Food, { 4, 0 }, 100);
+        auto& r = park.world().registry;
+        // A dear one, and a cheap one unless the whole menu is dear.
+        const Money cheap { dear ? kTuning.eating.food_worth.value + 100 : 120 };
+        r.get<Shop>(stall).menu = { { Product::Food, Serve::Any, { kTuning.eating.food_worth.value + 200 }, "Big" }, { Product::Food, Serve::Any, cheap, "Small" } };
+        const auto guest = park.guest({ 0, 0 }, { .hunger = 0.9f });
+        const auto thought = [&](ThoughtKind kind) { return r.all_of<Thoughts>(guest) && std::ranges::any_of(r.get<Thoughts>(guest).recent, [&](const Thought& t) { return t.kind == kind; }); };
+        park.run_seconds(30);
+        CHECK(r.all_of<Carried>(guest) == !dear);
+        CHECK(thought(ThoughtKind::NotPaying) == dear);
+        if (!dear)
+        {
+            CHECK(r.get<Carried>(guest).ware == 1);
+            CHECK(r.get<Wallet>(guest).cash.value == 5000 - 120);
+            CHECK(r.get<Attraction>(stall).income.value == 120);
+            CHECK(thought(ThoughtKind::GoodValue));
+        }
+    }
+}
+
+TEST_CASE("a guest along at a food stall without being hungry says so")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto stall = park.shop("Food", Product::Food, { 4, 0 }, 100);
+    const auto parent = park.guest({ 0, 0 }, { .hunger = 0.9f });
+    const auto child = park.guest({ 0, 0 });
+    park.party({ parent, child });
+    auto& r = park.world().registry;
+    CHECK(park.run_until([&] { return r.get<Attraction>(stall).customers == 1; }, 60));
+    park.run_seconds(1);
+    CHECK(std::ranges::any_of(r.get<Thoughts>(child).recent, [](const Thought& t) { return t.kind == ThoughtKind::NotHungry; }));
+}
+
 TEST_CASE("a guest goes for what they need most")
 {
     Sandbox park;

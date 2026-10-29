@@ -253,7 +253,12 @@ namespace rct3::simulation
         RainKeepsMeOff = 32,
         Vandalism = 14,
         Vomit = 15,
+        NotHungry = 10,      ///< Along at a food stall without wanting anything
+        NotThirsty = 11,     ///< Along at a drink stall without wanting anything
+        AlreadyGot = 22,     ///< Along at an umbrella stall with one already
         HaventFinished = 23, ///< At a stall while still eating or drinking
+        GoodValue = 26,      ///< Bought something well under what it is worth to them
+        NotPaying = 27,      ///< Put off by a price over what it is worth to them
         Sick = 20,
         VerySick = 21,
         Broke = 24,

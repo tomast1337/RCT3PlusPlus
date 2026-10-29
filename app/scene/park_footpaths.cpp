@@ -105,6 +105,9 @@ namespace rct3::scene
                 railings.emplace(p.queue->fence_symbol, p.queue->fence_overlay);
         }
         std::unordered_set<std::uint64_t> out(scene.footpaths.paving_decks.begin(), scene.footpaths.paving_decks.end());
+        // A ride's fence stands on its floor's rim: it holds up nothing and is not in the way of the ride's columns.
+        for (const auto& [_, pieces] : scene.ride_fence_pieces)
+            out.insert(pieces.begin(), pieces.end());
         for (const save::PlacedObject& o : scene.objects)
         {
             if ((o.owner_ref != o.id && platforms.contains(o.owner_ref)) || (o.fixture && railings.contains({ o.symbol, o.overlay })))

@@ -176,16 +176,18 @@ namespace rct3::scene
         constexpr std::string_view kUniformFolder = "StaffUniforms";
         constexpr std::string_view kCarriedFolder = "CarriedItems";
         constexpr std::string_view kCarriedOverlay = "CarriedItems/MainCarriedItems";
+        constexpr std::string_view kLitterFolder = "Objects/Litter";
         /// The umbrella shapes, in the order of ParkScene::umbrellas.
         constexpr std::array<std::string_view, 2> kUmbrellaShapes { "UmbrellaOpen", "KidsUmbrellaOpen" };
 
-        /// Reads the umbrellas guests carry, and the food and drink as stalls hand it over and as its empty is
-        /// left, and uploads their pictures with the people's.
+        /// Reads the umbrellas guests carry, the food and drink as stalls hand it over and as its empty is left,
+        /// and the litter and sick on the paths, and uploads their pictures with the people's.
         void load_carried_models(render::Device& device, ParkScene& scene, const config::GameInstall& install)
         {
             const auto found = install.find(kCarriedFolder);
             const std::string folder = found.value_or(std::filesystem::path(kCarriedFolder)).filename().string();
-            const std::array<std::string_view, 1> folders { folder };
+            const std::string litter = install.find(kLitterFolder).value_or(install.root() / kLitterFolder).lexically_relative(install.root()).generic_string();
+            const std::array<std::string_view, 2> folders { folder, litter };
             const park::AssetIndex index = park::AssetIndex::scan(install.root(), folders);
             park::ModelLoader loader(index);
             std::vector<park::ObjectBatch> batches;
@@ -198,6 +200,12 @@ namespace rct3::scene
             {
                 scene.umbrellas[i] = loader.load_shape(kUmbrellaShapes[i], kCarriedOverlay);
                 add_pictures(scene.umbrellas[i]);
+            }
+            constexpr std::array<std::string_view, 2> kLitterShapes { "Litter", "Puke" };
+            for (std::size_t i = 0; i < kLitterShapes.size(); ++i)
+            {
+                scene.litter_looks[i] = loader.load_shape(kLitterShapes[i], std::format("{}/Litter", litter));
+                add_pictures(scene.litter_looks[i]);
             }
             // Each item's shape, and what it leaves, by name, with the overlay they are in.
             struct Item

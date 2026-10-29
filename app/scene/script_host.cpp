@@ -341,6 +341,20 @@ namespace rct3::scene
                 items.push_back({ { "object", item.object }, { "kind", kKinds.at(std::to_underlying(item.kind)) }, { "broken", item.broken } });
             return items;
         });
+        engine_.define("park.litter", [this](const Json&) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            Json pieces = Json::array();
+            const auto& g = park_->grid;
+            for (const auto [e, piece] : park_->sim.registry.view<const simulation::Litter>().each())
+                if (piece.node < park_->sim.paths.nodes().size())
+                {
+                    // The middle of its tile, in tiles as people's places are.
+                    const glm::vec3 at = park_->sim.paths.centre(piece.node);
+                    pieces.push_back({ { "col", (at.x - g.origin_x) / g.tile_size_x }, { "row", (at.z - g.origin_z) / g.tile_size_z }, { "sick", piece.vomit } });
+                }
+            return pieces;
+        });
         engine_.define("park.breakPathItems", [this](const Json&) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");

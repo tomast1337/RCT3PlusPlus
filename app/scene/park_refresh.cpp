@@ -29,6 +29,7 @@
 #include <future>
 #include <inplace_vector>
 #include <map>
+#include <numbers>
 #include <ranges>
 #include <span>
 #include <string>
@@ -222,6 +223,24 @@ namespace rct3::scene
                     continue;
                 pose->level = static_cast<std::size_t>(levels[i]);
                 placed.push_back(*pose);
+            }
+            // Litter and sick lying on the paths, with what moves: each piece somewhere about its tile, turned its
+            // own way.
+            if (moving && simulate)
+            {
+                constexpr float kSpread = 1.2f; ///< Chosen by eye: farthest a piece lies from its tile's middle, in world units
+                for (const auto [e, piece] : scene.sim.registry.view<const simulation::Litter>().each())
+                {
+                    const auto& model = scene.litter_looks[piece.vomit ? 1 : 0];
+                    if (!model || piece.node >= scene.sim.paths.nodes().size())
+                        continue;
+                    const auto seed = static_cast<std::uint32_t>(entt::to_integral(e)) * 2654435761u;
+                    const glm::vec2 off = (glm::vec2(seed & 0xffu, seed >> 8 & 0xffu) / 255.0f * 2.0f - 1.0f) * kSpread;
+                    const glm::vec3 at = scene.sim.paths.centre(piece.node) + glm::vec3(off.x, 0.0f, off.y);
+                    if (!maybe_in_view(view, at))
+                        continue;
+                    placed.push_back({ .world = glm::rotate(glm::translate(glm::mat4(1.0f), at), static_cast<float>(seed >> 16 & 0xffu) / 255.0f * 2.0f * std::numbers::pi_v<float>, glm::vec3(0.0f, 1.0f, 0.0f)), .held = &*model });
+                }
             }
             return placed;
         }

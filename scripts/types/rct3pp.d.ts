@@ -90,6 +90,8 @@ declare namespace park {
     function dropParties(parties: number, seed?: number): { col: number; row: number; guests: number }[];
     /** The things guests use on the paths: benches, bins, signs and sights, by the placed object each stands as. */
     function pathItems(): { object: number; kind: "bin" | "bench" | "sign" | "sight" | "photo spot"; broken: boolean }[];
+    /** The litter and sick lying on the paths, each by the middle of the path tile it lies on, in tiles. */
+    function litter(): { col: number; row: number; sick: boolean }[];
     /** Breaks every bench, bin and sign at once, as vandals would; how many it broke. */
     function breakPathItems(): number;
     /** Sets a handyman walking from the path on tile `col`, `row`, who is not drawn; whether there was a path. */

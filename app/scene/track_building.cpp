@@ -894,7 +894,7 @@ namespace rct3::scene
             // again; the ground is built again for that, or for the tunnel it lies in.
             // shortcut: the cut costs nothing, upgrade when the original's price for moving ground is matched.
             const std::span<const save::PlacedObject> ghost(&b.ghost->object, 1);
-            if (!park::track_hollows(ghost, scene.models, scene.grid).empty())
+            if (!park::buried_hollows(ghost, scene.models, scene.grid).empty())
                 scene.footpaths.pavings_stale = true;
             if (park::GroundCuts cuts = park::ground_cuts(ghost, scene.models, scene.grid, b.smooth_cuts); !cuts.footprint.empty())
             {
@@ -1139,7 +1139,7 @@ namespace rct3::scene
                 if (c != nullptr)
                     refund_piece(scene, *c, ride, last, scene.objects[found->second]);
                 // Its tunnel closes; the ground it cut stays cut.
-                if (!park::track_hollows(std::span(&scene.objects[found->second], 1), scene.models, scene.grid).empty())
+                if (!park::buried_hollows(std::span(&scene.objects[found->second], 1), scene.models, scene.grid).empty())
                     scene.footpaths.pavings_stale = true;
                 scene.objects[found->second].hidden = true;
             }

@@ -106,20 +106,24 @@ TEST_CASE("a smooth cut slopes the tiles round it down to meet it, leaving the f
     CHECK(cuts_cost(smooth, g) == std::lround(4 * 2 * kShapeCost + 4 * 2 * 2 * kShapeCost + 4 * 2 * kShapeCost));
 }
 
-TEST_CASE("a piece under enough ground all round hollows its tile up to its top, other items never do")
+TEST_CASE("a piece, ride or stall under enough ground all round hollows its tile up to its top, scenery never does")
 {
     save::TerrainGrid g = owned_grid(5, 3);
     auto [pieces, models] = one_piece();
     g.at(2, 1).corners.fill(4 + kGroundCover);
-    const auto hollows = track_hollows(pieces, models, g);
+    const auto hollows = buried_hollows(pieces, models, g);
     REQUIRE(hollows.size() == 1);
     CHECK(hollows[0].col == 2);
     CHECK(hollows[0].row == 1);
     CHECK(hollows[0].low < 0);
     CHECK(hollows[0].high == doctest::Approx(4));
     g.at(2, 1).corners[0] = 4.5f;
-    CHECK(track_hollows(pieces, models, g).empty());
+    CHECK(buried_hollows(pieces, models, g).empty());
     g.at(2, 1).corners.fill(4 + kGroundCover);
     models.begin()->second.category = std::to_underlying(ItemCategory::Stall);
-    CHECK(track_hollows(pieces, models, g).empty());
+    CHECK(buried_hollows(pieces, models, g).size() == 1);
+    models.begin()->second.category = std::to_underlying(ItemCategory::Ride);
+    CHECK(buried_hollows(pieces, models, g).size() == 1);
+    models.begin()->second.category = std::to_underlying(ItemCategory::SmallScenery);
+    CHECK(buried_hollows(pieces, models, g).empty());
 }

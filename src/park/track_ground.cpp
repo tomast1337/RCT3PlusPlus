@@ -6,6 +6,7 @@
 #include "park/path_tunnels.hpp"
 
 #include <algorithm>
+#include <array>
 #include <iterator>
 #include <limits>
 #include <unordered_map>
@@ -78,12 +79,13 @@ namespace rct3::park
         return out;
     }
 
-    std::vector<GroundOpening> track_hollows(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
+    std::vector<GroundOpening> buried_hollows(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
     {
+        constexpr std::array kHollowing { ItemCategory::TrackPiece, ItemCategory::Ride, ItemCategory::RideEntrance, ItemCategory::RideExit, ItemCategory::Stall, ItemCategory::ParkEntrance };
         std::vector<save::PlacedObject> track;
         std::ranges::copy_if(objects, std::back_inserter(track), [&](const save::PlacedObject& o) {
             const auto model = models.find(model_ref(o));
-            return model != models.end() && model->second.category == std::to_underlying(ItemCategory::TrackPiece);
+            return model != models.end() && std::ranges::contains(kHollowing, model->second.category, [](ItemCategory c) { return std::to_underlying(c); });
         });
         std::vector<GroundOpening> hollows;
         for (const auto& [key, spans] : solid_tiles(track, models, grid).tiles)

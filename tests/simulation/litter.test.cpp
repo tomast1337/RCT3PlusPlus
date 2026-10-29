@@ -18,7 +18,7 @@ namespace
     }
 } // namespace
 
-TEST_CASE("a guest drinks up a bite at a time, then carries their cup a while and drops it with no bin near")
+TEST_CASE("a guest drinks up a bite at a time, then holds their cup a while before pocketing it")
 {
     Sandbox park;
     park.path({ 0, 0 }, { 0, 0 });
@@ -33,25 +33,43 @@ TEST_CASE("a guest drinks up a bite at a time, then carries their cup a while an
     CHECK(r.get<Needs>(g).thirst.value > 0.1f);
     CHECK(park.run_until([&] { return r.get<Carried>(g).bites == 0; }, drinking));
     CHECK(r.get<Needs>(g).thirst.value < 0.05f);
-    CHECK(park.run_until([&] { return litter(park) == 1; }, kTuning.litter.carry.value + 5));
-    CHECK_FALSE(r.all_of<Carried>(g));
+    CHECK(r.get<Carried>(g).held);
+    CHECK(park.run_until([&] { return !r.get<Carried>(g).held; }, kTuning.litter.carry.value + 5));
+    CHECK(r.get<Carried>(g).pocketed == 1);
+    CHECK(litter(park) == 0);
 }
 
-TEST_CASE("a guest bins their empty, and a full bin overflows onto the path")
+TEST_CASE("an empty in hand goes in a pocket when buying more, and on the path once both are full")
 {
-    for (const float room : { 40.0f, 0.0f })
+    for (const std::uint8_t pocketed : { std::uint8_t { 0 }, Carried::kPockets })
     {
         Sandbox park;
         park.path({ 0, 0 }, { 0, 0 });
         park.shop("Drinks", Product::Drink, { 0, 0 }, 100);
-        const auto bin = park.item(PathItemKind::Bin, { 0, 0 }, room);
         const auto g = park.guest({ 0, 0 }, { .thirst = 0.9f, .happiness = 1 });
         auto& r = park.world().registry;
-        CHECK(park.run_until([&] { return r.all_of<Carried>(g); }, 5));
-        // Binned on the tick it is finished, standing by the bin.
-        CHECK(park.run_until([&] { return !r.all_of<Carried>(g); }, 60));
-        CHECK(r.get<Bin>(bin).contents == (room > 0 ? 1 : 0));
-        CHECK(litter(park) == (room > 0 ? 0 : 1));
+        r.emplace<Carried>(g, Carried { .kind = 0, .food = true, .pocketed = pocketed });
+        CHECK(park.run_until([&] { return r.get<Carried>(g).bites > 0; }, 5));
+        CHECK(r.get<Carried>(g).pocketed == (pocketed == 0 ? 1 : Carried::kPockets));
+        CHECK(litter(park) == (pocketed == 0 ? 0 : 1));
+    }
+}
+
+TEST_CASE("a guest puts every empty they have in a bin on their tile, while it has room")
+{
+    for (const float room : { 40.0f, 2.0f, 0.0f })
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 0, 0 });
+        const auto bin = park.item(PathItemKind::Bin, { 0, 0 }, room);
+        const auto g = park.guest({ 0, 0 });
+        auto& r = park.world().registry;
+        r.emplace<Carried>(g, Carried { .pocketed = Carried::kPockets });
+        park.run_seconds(1);
+        CHECK(r.get<Bin>(bin).contents == std::min(room, 3.0f));
+        CHECK(r.all_of<Carried>(g) == (room < 3));
+        CHECK(r.all_of<Gesture>(g) == (room > 0));
+        CHECK(litter(park) == 0); // A full bin is passed by
     }
 }
 

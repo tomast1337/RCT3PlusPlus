@@ -97,3 +97,21 @@ TEST_CASE("weeks are counted from the calendar's start, and a new week rates the
     REQUIRE(s.rating);
     CHECK(*s.rating == doctest::Approx((0.9f + 0.212f) / 2));
 }
+
+TEST_CASE("the date counts its months and years from the calendar's start")
+{
+    save::ParkModel park;
+    park.has_clock = true;
+    // Started part way into an absolute month, and run for a year, a month and a week since.
+    park.clock.zero_time = 1000;
+    park.clock.time = 1000 + save::GameClock::kUnitsPerYear + save::GameClock::kUnitsPerMonth + save::GameClock::kUnitsPerWeek;
+    simulation::ParkState s = simulation::park_state(&park, save::WorldModel { });
+    CHECK(s.date.year == 1);
+    CHECK(s.date.month == 1);
+    CHECK(s.date.week == 1);
+
+    // Moving on keeps counting from the start.
+    simulation::pass_time(s, simulation::kSecondsPerHour * 4);
+    CHECK(s.date.week == 2);
+    CHECK(s.date.month == 1);
+}

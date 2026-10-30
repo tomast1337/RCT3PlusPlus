@@ -606,6 +606,8 @@ namespace rct3::park
         // A setting's words, such as " EnableNoEntry QueueSign".
         model.no_entry = std::ranges::any_of(item->parameters, [](const ovl::SceneryItemParameter& p) { return std::ranges::any_of(std::views::split(p.value, ' '), [](const auto word) { return strings::equals_ignoring_case(std::string_view(word), "EnableNoEntry"); }); });
         model.ground_height = (item->flags & ovl::kItemOnGroundHeight) != 0;
+        model.level_paths_only = (item->flags & ovl::kItemLevelPathsOnly) != 0;
+        model.holds_ground = (item->flags & ovl::kItemHoldsGround) != 0;
         // Buildings, rides and path pieces carry the bit too but stay rigid; only plants bend.
         model.fits_ground = (item->flags & ovl::kItemFitsGround) != 0 && item->type <= std::to_underlying(ItemCategory::Flowers);
         if ((item->flags & ovl::kItemFenceOutline) != 0 && item->squares.size() == static_cast<std::size_t>(model.squares[0]) * static_cast<std::size_t>(model.squares[1]))
@@ -774,6 +776,8 @@ namespace rct3::park
         // shortcut: marked parts of pieces that are no lift stay still; upgrade if such a piece is seen moving its
         // picture in the game.
         const bool lift = section != nullptr && (section->flags[0] & kPieceChain) != 0;
+        model.fenced_round = section != nullptr && (section->ground & ovl::TrackSection::kFencedRound) != 0;
+        model.paved_under = section != nullptr && (section->ground & ovl::TrackSection::kPavedUnder) != 0;
         for (ModelLevel& level : model.levels)
             for (ModelPart& part : level.parts)
                 part.chain = part.chain && lift;

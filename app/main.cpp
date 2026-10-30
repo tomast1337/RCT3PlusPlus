@@ -60,6 +60,7 @@
 #include "scene/widget_demo.hpp"
 #include "simulation/park_messages.hpp"
 #include "simulation/ratings.hpp"
+#include "simulation/weather_cycle.hpp"
 #include "strings/unicode.hpp"
 #include "ui/inspect.hpp"
 #include "ui/key_map.hpp"
@@ -762,7 +763,7 @@ int main(int argc, char** argv)
     rct3::scene::ParkGame park_game; ///< What that park is played as
     std::uint64_t park_log_from = 0; ///< The log's last entry before the park loading now began; 0 before ///< Asked for this frame; its loading screen shows first
     bool quit = false;
-    bool screenshot = false;           ///< Asked for this frame; read from the screen as the frame ends
+    bool screenshot = false;           ///< Asked for this frame; read from the screen as the frame ends. The player's show the park without its interface
     std::filesystem::path script_shot; ///< Where the screenshot a script asked for goes; empty for the user's folder
     // Writes a screenshot or photo to the user's folder for it, and tells the player where it went.
     const auto save_picture = [&](rct3::render::ScreenPixels pixels, config::UserFolder into, std::string_view prefix, std::string_view told) {
@@ -987,6 +988,9 @@ int main(int argc, char** argv)
                 park->saves.game_saves = front->saves.game_saves;
             }
             park->game = park_game;
+            // A career scenario's weather follows its setting.
+            if (!park_game.career.empty())
+                park->park.climate = rct3::simulation::career_climate(park_game.scenario).value_or(park->park.climate);
             // Outside a sandbox the day keeps the park's hours, whatever mode the file asks for.
             if (!park_game.sandbox && park->day.mode != rct3::simulation::DayMode::ParkHours)
             {
@@ -1287,7 +1291,7 @@ int main(int argc, char** argv)
                         if (widgets)
                             rct3::scene::draw_widget_demo(*device, *widgets);
                         else if (park && front)
-                            rct3::scene::draw_park_scene(*device, *park, front->assets);
+                            rct3::scene::draw_park_scene(*device, *park, front->assets, !screenshot || !script_shot.empty());
                         else if (park_to_load && front)
                         {
                             // Warnings from here on are this load's.

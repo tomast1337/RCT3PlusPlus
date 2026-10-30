@@ -22,6 +22,7 @@
 #include "save/model/world.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -58,6 +59,25 @@ namespace rct3::park
         TunnelCeiling, ///< Its ceiling, likewise
     };
 
+    /// The tiles from column `col` and row `row` up to, not including, `end_col` and `end_row`.
+    struct TileRect
+    {
+        int col = 0;
+        int row = 0;
+        int end_col = 0;
+        int end_row = 0;
+
+        [[nodiscard]] bool contains(int c, int r) const
+        {
+            return c >= col && c < end_col && r >= row && r < end_row;
+        }
+        /// This one with `n` more tiles round each side.
+        [[nodiscard]] TileRect grown(int n) const
+        {
+            return { col - n, row - n, end_col + n, end_row + n };
+        }
+    };
+
     /// A run of `count` indices from `first` painted with one surface or cliff face.
     struct GroundBatch
     {
@@ -92,7 +112,8 @@ namespace rct3::park
         float high = 0;
     };
 
-    [[nodiscard]] TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water, std::span<const GroundOpening> openings = { });
+    /// The ground of the tiles of `area`, or of all of them, with the walls on their right and far edges.
+    [[nodiscard]] TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water, std::span<const GroundOpening> openings = { }, std::optional<TileRect> area = std::nullopt);
 
     /// How far above the pool's surface height its water stands: just under the top of the rim piece there,
     /// which rises a fifth of a unit.

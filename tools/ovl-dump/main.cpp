@@ -607,7 +607,7 @@ namespace
                 out.info("  {:<32} type {:d} name {} text {} splines {} sections {}", name.c_str(), r.info.type_id, std::string(r.name).c_str(), std::string(r.info.name_text).c_str(), std::string(r.splines[0]).c_str(), std::string(r.track_sections[0]).c_str());
                 out.info("    car rotation {} car facing {} most trains {}", r.rules.car_rotation, r.rules.car_facing, r.rules.most_trains ? std::format("{}", *r.rules.most_trains) : "any");
                 if (const auto& d = r.operating)
-                    out.info("    mode {:d} allowed 0x{:x} launch {:g} [{:g}, {:g}] lift {:g} [{:g}, {:g}] brake {:g} block {:g} fixed {:g} cost {:d}", d->mode, d->allowed_modes, d->launch_speed, d->launch_min, d->launch_max, d->lift_speed, d->lift_min, d->lift_max, d->brake_speed, d->block_brake_speed, d->fixed_speed.value_or(-1), d->cost);
+                    out.info("    mode {:d} allowed 0x{:x} launch {:g} [{:g}, {:g}] lift {:g} [{:g}, {:g}] brake {:g} ({:g} N) block {:g} ({:g} N) fixed {:g} cost {:d}", d->mode, d->allowed_modes, d->launch_speed, d->launch_min, d->launch_max, d->lift_speed, d->lift_min, d->lift_max, d->brake_speed, d->brake_force, d->block_brake_speed, d->block_brake_force, d->fixed_speed.value_or(-1), d->cost);
                 if (const auto& d = r.operating)
                     for (const std::string_view train : d->trains)
                         out.info("    train {}", train);
@@ -631,7 +631,7 @@ namespace
                     continue;
                 }
                 const auto& i = item.ride->info;
-                out.info("  {:<32} type {:d} text {} icon {} sid {}", name.c_str(), i.type_id, std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str());
+                out.info("  {:<32} type {:d} text {} icon {} sid {} seating {}", name.c_str(), i.type_id, std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str(), item.ride->seating ? std::format("{}", *item.ride->seating) : "-");
             }
         }
         if (opt.sta)

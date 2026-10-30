@@ -85,6 +85,8 @@ namespace rct3::simulation
                         if (stop.entrance != kNoNode)
                             out.push_back({ e, AttractionKind::Ride, Product::Drink, stop.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash });
                 }
+                else if (r.all_of<PoolDoor>(e))
+                    out.push_back({ e, AttractionKind::Pool, Product::Drink, a.entrance, a.price.value, 0, 0, Serve::Any, false });
             }
             return out;
         }
@@ -192,6 +194,10 @@ namespace rct3::simulation
                 if (auto found = shop(want.product, false))
                     return found;
             }
+            // A swim, when they wish for one and it is warm enough.
+            if (needs.swim.value >= kTuning.needs.want.value && temperature >= kTuning.pools.coldest.value)
+                if (auto found = nearest_offer(paths, at, offers, wallet, [](const Offer& o) { return o.kind == AttractionKind::Pool; }))
+                    return found;
             if (mood.nausea.value >= kTuning.needs.max_nausea.value || !random::chance(dice.state, kTuning.needs.ride_chance.value))
                 return std::nullopt;
             const float wildest = std::min(mood.tolerance.value + kTuning.sickness.wildest.value, taste.most.value) + daring;
@@ -264,32 +270,37 @@ namespace rct3::simulation
             const glm::vec3 a = lane_point(paths, s.from, s.lane_from);
             const glm::vec3 b = lane_point(paths, s.to, s.lane_to);
             pose.position = glm::mix(a, b, s.progress.value);
-            pose.position.y = paths.height_between(s.from, s.to, s.progress.value);
-            if (glm::distance(a, b) > 0.01f)
-                pose.heading.value = std::atan2(b.x - a.x, b.z - a.z);
+            pose.position.y = paths.surface(s.from, s.to, { pose.position.x, pose.position.z });
         }
 
-        /// Where a party waits for those busy at an attraction: the nearest footpath tile to its way out `from`,
-        /// never `from` itself while there is another, that is not a queue, has no queue beside it and is not
-        /// `taken` by another party; failing that the nearest that is not a queue; failing that `from`.
-        NodeId gather_spot(const PathNetwork& paths, NodeId from, const std::vector<bool>& taken)
+        /// Where a party waits for those busy at an attraction. `starts` holds first their way out, then where the
+        /// others stand. The spot is a footpath tile every one of `starts` walks to (past no-entry signs only the way
+        /// they allow) that is not a queue, has no queue beside it and is not `taken` by another party: the nearest
+        /// such to the way out, never the way out itself while there is another; failing that the nearest to one of
+        /// the others; failing that the nearest tile off the queues to the way out; failing that the way out.
+        NodeId gather_spot(const PathNetwork& paths, const std::vector<bool>& taken, std::span<const NodeId> starts)
         {
             const auto& nodes = paths.nodes();
-            std::vector<NodeId> seen { from };
+            const NodeId from = starts.front();
+            const auto reached = [&](NodeId n) { return std::ranges::all_of(starts, [&](NodeId s) { return s == n || paths.route(s, n).has_value(); }); };
             NodeId fallback = kNoNode;
-            for (std::size_t k = 0; k < seen.size() && seen.size() <= kTuning.walking.gather_reach; ++k)
+            for (const NodeId origin : starts)
             {
-                const NodeId n = seen[k];
-                if (n != from)
+                std::vector<NodeId> seen { origin };
+                for (std::size_t k = 0; k < seen.size() && seen.size() <= kTuning.walking.gather_reach; ++k)
                 {
-                    const bool by_queue = std::ranges::any_of(nodes[n].next, [&](NodeId m) { return m != kNoNode && nodes[m].queue; });
-                    if (!by_queue && !taken[n])
-                        return n;
-                    fallback = fallback == kNoNode ? n : fallback;
+                    const NodeId n = seen[k];
+                    if (n != from && !nodes[n].queue)
+                    {
+                        const bool by_queue = std::ranges::any_of(nodes[n].next, [&](NodeId m) { return m != kNoNode && nodes[m].queue; });
+                        if (!by_queue && !taken[n] && reached(n))
+                            return n;
+                        fallback = fallback == kNoNode ? n : fallback;
+                    }
+                    for (const NodeId m : nodes[n].next)
+                        if (m != kNoNode && !nodes[m].queue && !nodes[m].removed && !std::ranges::contains(seen, m) && paths.may_step(n, m, Walker::Guest))
+                            seen.push_back(m);
                 }
-                for (const NodeId m : nodes[n].next)
-                    if (m != kNoNode && !nodes[m].queue && !nodes[m].removed && !std::ranges::contains(seen, m))
-                        seen.push_back(m);
             }
             return fallback == kNoNode ? from : fallback;
         }
@@ -333,11 +344,41 @@ namespace rct3::simulation
             return { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
         }
 
+        /// Where on its entrance tile `guest` stands at stall `shop`'s counter: at the tile's edge towards the
+        /// stall, at one of a few places along it, by who they are.
+        glm::vec2 counter_lane(const Shop& shop, entt::entity guest)
+        {
+            constexpr float kReach = 1.2f;                                       ///< Chosen by eye: just short of kLaneReach
+            constexpr std::array<float, 4> kPlaces { -0.9f, -0.3f, 0.3f, 0.9f }; ///< Chosen by eye: along the counter
+            const glm::vec2 across { -shop.counter.y, shop.counter.x };
+            return shop.counter * kReach + across * kPlaces[entt::to_integral(guest) % kPlaces.size()];
+        }
+
         /// Whether a guest is still eating what they bought.
         bool eating(const entt::registry& r, entt::entity guest)
         {
-            const auto* rubbish = r.try_get<Rubbish>(guest);
-            return rubbish != nullptr && rubbish->kind == 0 && rubbish->held.value < kConsumeSeconds;
+            const auto* carried = r.try_get<Carried>(guest);
+            return carried != nullptr && carried->food && carried->bites > 0;
+        }
+
+        /// Whether a guest is still eating or drinking what they bought.
+        bool munching(const entt::registry& r, entt::entity guest)
+        {
+            const auto* carried = r.try_get<Carried>(guest);
+            return carried != nullptr && carried->held && carried->bites > 0;
+        }
+
+        /// Frees a guest's hand of the empty in it: into a pocket, or onto path tile `at` when both are full.
+        /// Their carried rubbish is gone once nothing is left of it.
+        void free_hand(entt::registry& r, entt::entity guest, Carried& carried, NodeId at)
+        {
+            if (carried.pocketed < Carried::kPockets)
+                ++carried.pocketed;
+            else
+                r.emplace<Litter>(r.create(), Litter { at, carried.kind, 0 });
+            carried.held = false;
+            if (carried.pocketed == 0)
+                r.remove<Carried>(guest);
         }
 
         /// A guest is sick on the path tile `at`, and feels better for it. Returns the mess.
@@ -414,7 +455,7 @@ namespace rct3::simulation
         void leave(entt::registry& r, entt::entity guest)
         {
             ++r.ctx().emplace<Turnstile>().out[static_cast<std::size_t>(age_of(r, guest))];
-            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Rubbish, RideWalk, Crossing>(guest);
+            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Carried, RideWalk, Crossing, Swimmer>(guest);
             r.emplace<Left>(guest);
         }
 
@@ -422,6 +463,12 @@ namespace rct3::simulation
         {
             const auto* found = r.ctx().find<Weather>();
             return found != nullptr ? *found : Weather { };
+        }
+
+        /// Whether a pool is cleaned with a harsh fluid while there is little dirt in it for the fluid to take.
+        bool harsh(const SwimPool* pool, const PoolTank* tank)
+        {
+            return pool != nullptr && tank != nullptr && tank->fluid == PoolFluid::Harsh && tank->left.value > 0 && pool->dirt.value < kTuning.pools.good.value / 2;
         }
 
         /// The guest thinks `kind` about `about` at `now` (seconds into the run), unless they thought it lately.
@@ -545,6 +592,19 @@ namespace rct3::simulation
                 hands = random::chance(dice, k.floating.value * dt);
         }
         return hands ? RideReaction::HandsUp : RideReaction::Calm;
+    }
+
+    RideReaction react_flat(RideReaction now, bool running, Share happiness, float over, const Leanings& leanings, random::RandomState& dice, float dt)
+    {
+        const auto& k = kTuning.reactions;
+        if (!running)
+            return RideReaction::Waiting;
+        if (over > k.too_wild.value && leanings.eyes < k.hide_eyes.value)
+            return RideReaction::CoverEyes;
+        if (now == RideReaction::HandsUp)
+            return now;
+        const bool thrilled = happiness.value > k.thrilled.value || over > -k.suits.value;
+        return thrilled && leanings.hands >= k.timid.value && random::chance(dice, k.hands_up.value * dt) ? RideReaction::HandsUp : RideReaction::Calm;
     }
 
     Pose between_steps(const Pose& pose, float along)
@@ -724,11 +784,13 @@ namespace rct3::simulation
             const entt::entity guest = members.emplace_back(r.create());
             r.emplace<Visitor>(guest, age, is_female, std::string { }, world.tick);
             r.emplace<Pose>(guest, paths.centre(at), 0.0f);
-            r.emplace<Needs>(guest);
+            // Some come wishing for a swim already, the more the more they like pools.
+            const auto liking = static_cast<float>(random::between(dice, double { kTuning.pools.least_liking.value }, double { kTuning.pools.most_liking.value }));
+            r.emplace<Needs>(guest, Needs { .swim = { liking * static_cast<float>(random::unit(dice)) } });
             r.emplace<Mood>(guest, Mood { .happiness = kTuning.arrivals.mood, .energy = { 1 }, .tolerance = age == AgeGroup::Teen ? kTuning.arrivals.teen_tolerance : Mood { }.tolerance });
             const auto spread = [&] { return static_cast<float>(random::between(dice, -1.0, 1.0)) * kTuning.parties.taste_spread.value; };
             const float least = std::clamp(band.least.value + spread(), 0.0f, 1.0f);
-            r.emplace<Taste>(guest, least, std::clamp(band.most.value + spread(), least, 1.0f));
+            r.emplace<Taste>(guest, least, std::clamp(band.most.value + spread(), least, 1.0f), liking);
             // Around the park's averages, each on its own.
             const auto* draw = r.ctx().find<Draw>();
             const auto around = [&](Money average, Money fallback) { return Money { std::llround(static_cast<double>(average.value > 0 ? average.value : fallback.value) * (1 + random::between(dice, -1.0, 1.0) * kTuning.arrivals.cash_spread.value)) }; };
@@ -855,11 +917,6 @@ namespace rct3::simulation
                 const auto found = litter_at.find(node);
                 return found != litter_at.end() ? found->second.size() : 0;
             };
-            const auto drop = [&](NodeId node, std::uint8_t kind) {
-                const entt::entity e = r.create();
-                r.emplace<Litter>(e, Litter { node, kind, 0 });
-                litter_at[node].push_back(e);
-            };
             // The tiles guards keep vandals off: theirs and those a few steps along the paths from it.
             auto& guarded = buffers.guarded;
             guarded.assign(paths.nodes().size(), false);
@@ -887,6 +944,7 @@ namespace rct3::simulation
 
             // Guests: glum on dirty or vandalised paths, binning or dropping their rubbish, and the angriest breaking things.
             const auto guests_view = r.view<const Errand, const Stride, Mood, Dice, const Needs>();
+            const bool pool_open = std::ranges::any_of(r.view<const PoolDoor, const Attraction>().each(), [](const auto& room) { return std::get<2>(room).open; });
             auto& seated = buffers.seated;
             seated.assign(paths.nodes().size(), 0);
             for (const auto [g, linger, stride] : r.view<const Linger, const Stride>().each())
@@ -932,6 +990,9 @@ namespace rct3::simulation
                     about(ThoughtKind::Thunder, weather.storm);
                     about(ThoughtKind::GoHome, errand.kind == ErrandKind::Heading && r.valid(errand.target) && r.all_of<ParkGate>(errand.target));
                     about(ThoughtKind::Cold, weather.temperature.value < kTuning.weather.cold.value);
+                    const bool swim = needs.swim.value >= kTuning.needs.want.value;
+                    about(ThoughtKind::NoPools, swim && !pool_open);
+                    about(ThoughtKind::TooColdForPools, swim && pool_open && weather.temperature.value < kTuning.pools.coldest.value);
                     about(ThoughtKind::Vandalism, std::ranges::any_of(items(stride.from), [&](entt::entity i) { return r.get<PathItem>(i).broken; }));
                     const auto here = litter_at.find(stride.from);
                     about(ThoughtKind::Vomit, here != litter_at.end() && std::ranges::any_of(here->second, [&](entt::entity l) { return r.get<Litter>(l).vomit; }));
@@ -980,32 +1041,31 @@ namespace rct3::simulation
                 }
                 if (std::ranges::any_of(items(at), [&](entt::entity i) { return r.get<PathItem>(i).broken; }))
                     mood.happiness.value = clamp01(mood.happiness.value - kTuning.vandals.gloom.value * dt);
-                if (auto* rubbish = r.try_get<Rubbish>(g))
+                // Empties go in a bin with room on their tile, all they have, as many as fit; one held too long goes
+                // in a pocket, or on the path once both are full.
+                if (auto* rubbish = r.try_get<Carried>(g); rubbish != nullptr && (rubbish->bites == 0 || !rubbish->held))
                 {
-                    const bool finished = rubbish->held.value < kConsumeSeconds && rubbish->held.value + dt >= kConsumeSeconds;
-                    rubbish->held.value += dt;
-                    if (rubbish->held.value >= kConsumeSeconds)
+                    const bool in_hand = rubbish->held && rubbish->bites == 0;
+                    if (in_hand)
+                        rubbish->since.value += dt;
+                    const auto bin = std::ranges::find_if(items(at), [&](entt::entity i) { return r.all_of<Bin>(i) && !r.get<PathItem>(i).broken && r.get<Bin>(i).contents + 1 <= r.get<Bin>(i).capacity; });
+                    if (bin != items(at).end())
                     {
-                        const auto bin = std::ranges::find_if(items(at), [&](entt::entity i) { return r.all_of<Bin>(i) && !r.get<PathItem>(i).broken; });
-                        bool gone = true;
-                        if (finished && random::chance(dice.state, kTuning.litter.litterbug_chance.value + kTuning.litter.grumpy_chance.value * (1 - mood.happiness.value)))
-                            drop(at, rubbish->kind);
-                        else if (bin != items(at).end())
+                        auto& b = r.get<Bin>(*bin);
+                        for (bool hand = in_hand; (hand || rubbish->pocketed > 0) && b.contents + 1 <= b.capacity; hand = false)
                         {
-                            // A full bin overflows onto the path.
-                            auto& b = r.get<Bin>(*bin);
-                            if (b.contents + 1 <= b.capacity)
-                                b.contents += 1;
+                            b.contents += 1;
+                            if (hand)
+                                rubbish->held = false;
                             else
-                                drop(at, rubbish->kind);
+                                --rubbish->pocketed;
                         }
-                        else if (rubbish->held.value >= kConsumeSeconds + kTuning.litter.carry.value)
-                            drop(at, rubbish->kind);
-                        else
-                            gone = false;
-                        if (gone)
-                            r.remove<Rubbish>(g);
+                        r.emplace_or_replace<Gesture>(g, GestureKind::HandOver, kTuning.gestures.shown.value);
+                        if (!rubbish->held && rubbish->pocketed == 0)
+                            r.remove<Carried>(g);
                     }
+                    else if (in_hand && rubbish->since.value >= kTuning.litter.carry.value)
+                        free_hand(r, g, *rubbish, at);
                 }
                 if (mood.happiness.value < kTuning.vandals.mood.value && !guarded[at] && random::chance(dice.state, kTuning.vandals.breaking.value * dt))
                 {
@@ -1036,7 +1096,8 @@ namespace rct3::simulation
 
             // Free mechanics: the nearest by the paths goes to a broken ride, else to one due an inspection.
             const auto spot = [&](entt::entity ride) {
-                const NodeId exit = r.get<CycleRide>(ride).exit;
+                const auto* cycle = r.try_get<CycleRide>(ride);
+                const NodeId exit = cycle != nullptr ? cycle->exit : kNoNode;
                 return exit != kNoNode ? exit : r.get<Attraction>(ride).entrance;
             };
             std::vector<entt::entity> free;
@@ -1067,7 +1128,7 @@ namespace rct3::simulation
                 upkeep.mechanic = *who;
                 free.erase(who);
             };
-            const auto rides = sorted(r.view<const Upkeep, const CycleRide>());
+            const auto rides = sorted(r.view<const Upkeep, const Attraction>()); // Rides, and pools' changing rooms
             for (const bool broken : { true, false })
                 for (const entt::entity ride : rides)
                 {
@@ -1108,6 +1169,13 @@ namespace rct3::simulation
                         upkeep.since_inspection.value = 0;
                         upkeep.called = false;
                         upkeep.mechanic = entt::null;
+                        // A changing room's tank filled up again, the park paying for the fluid.
+                        if (auto* tank = r.try_get<PoolTank>(staff.ride))
+                        {
+                            const auto price = kTuning.pools.refill[std::to_underlying(tank->fluid)].value;
+                            r.ctx().emplace<Supplies>().paid.value += std::llround(static_cast<double>(price) * (1 - tank->left.value));
+                            tank->left.value = 1;
+                        }
                         staff.ride = entt::null;
                     }
                     continue;
@@ -1231,6 +1299,11 @@ namespace rct3::simulation
             }
         }
     } // namespace
+
+    std::size_t dirt_step(const SwimPool& pool)
+    {
+        return std::min(static_cast<std::size_t>(pool.dirt.value * 6), std::size_t { 5 });
+    }
 
     float Upkeep::downtime_share() const
     {
@@ -1366,9 +1439,10 @@ namespace rct3::simulation
             const auto* member = r.try_get<Member>(guest);
             const bool follows = member != nullptr && r.valid(member->party) && r.get<Party>(member->party).leader != guest;
             errand = follows ? Errand { ErrandKind::Following, entt::null, 0 } : Errand { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
-            r.remove<RideWalk>(guest);
-            // Out of the queue at its entrance, riders off at its exit; those on their way walk on from where they are.
-            if (was == ErrandKind::Queueing && entrance != kNoNode)
+            r.remove<RideWalk, Swimmer>(guest);
+            // Out of the queue at its entrance, riders off at its exit, swimmers out at the door; those on their
+            // way walk on from where they are.
+            if ((was == ErrandKind::Queueing || was == ErrandKind::Swimming) && entrance != kNoNode)
                 stop_at(world.paths, entrance, stride, pose);
             else if (was == ErrandKind::Riding && exit != kNoNode)
                 stop_at(world.paths, exit, stride, pose);
@@ -1445,7 +1519,7 @@ namespace rct3::simulation
         if (!r.valid(person) || r.any_of<Left, Held, Dropped, RideWalk>(person) || !r.all_of<Errand, Stride, Pose, Dice>(person))
             return false;
         Errand& errand = r.get<Errand>(person);
-        if (errand.kind == ErrandKind::Riding)
+        if (errand.kind == ErrandKind::Riding || errand.kind == ErrandKind::Swimming)
             return false;
         step_out(r, person);
         auto& dice = r.get<Dice>(person).state;
@@ -1670,6 +1744,14 @@ namespace rct3::simulation
                     mood.nausea.value = clamp01(mood.nausea.value - kTuning.sickness.settle.value * dt / (eating(r, guests[i]) ? kTuning.sickness.full_stomach.value : 1));
                     needs.thirst.value = clamp01(needs.thirst.value + kTuning.needs.thirst.value * thirst * dt);
                     needs.hunger.value = clamp01(needs.hunger.value + kTuning.needs.hunger.value * hunger * dt);
+                    // A bite now and then of what they bought, until it is gone.
+                    if (auto* carried = r.try_get<Carried>(guests[i]); carried != nullptr && carried->bites > 0 && (carried->since.value += dt) >= kTuning.eating.bite.value)
+                    {
+                        float& need = carried->food ? needs.hunger.value : needs.thirst.value;
+                        need = clamp01(need - carried->fill.value);
+                        carried->since.value = 0;
+                        --carried->bites;
+                    }
                     if (weather.rain && !sheltered(guests[i]))
                         mood.wet.value = clamp01(mood.wet.value + kTuning.weather.wetting.value * (weather.storm ? 2 : 1) * dt);
                     else
@@ -1683,6 +1765,11 @@ namespace rct3::simulation
                     if (mood.heat.value >= kTuning.needs.want.value)
                         mood.happiness.value = clamp01(mood.happiness.value - kTuning.weather.heat_gloom.value * dt);
                     needs.bladder.value = clamp01(needs.bladder.value + kTuning.needs.bladder.value * dt);
+                    // Swimming eases the wish to swim over a stay; out of the pool it grows as they like pools.
+                    if (const auto* errand = r.try_get<Errand>(guests[i]); errand != nullptr && errand->kind == ErrandKind::Swimming)
+                        needs.swim.value = clamp01(needs.swim.value - dt / kTuning.pools.stay.value);
+                    else if (const auto* taste = r.try_get<Taste>(guests[i]))
+                        needs.swim.value = clamp01(needs.swim.value + kTuning.pools.longing.value * taste->pools.value * dt);
                     mood.energy.value = clamp01(mood.energy.value - kTuning.needs.tiring.value * dt);
                     if (std::max({ needs.thirst.value, needs.hunger.value, needs.bladder.value }) >= kTuning.needs.pressing.value)
                         mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.gloom.value * dt);
@@ -1770,6 +1857,9 @@ namespace rct3::simulation
                 {
                     auto [errand, stride, pose, dice, needs, mood, wallet] = movers_view.get(movers[i]);
                     stride.fresh = false;
+                    // Served at a counter; a party member's turn there ends with the party (5.).
+                    if (errand.kind == ErrandKind::Buying && !r.all_of<Member>(movers[i]) && (errand.rest == 0 || --errand.rest == 0))
+                        errand = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
                     if (errand.kind != ErrandKind::Wandering && errand.kind != ErrandKind::Heading && errand.kind != ErrandKind::Waiting)
                         continue;
                     if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
@@ -1830,6 +1920,12 @@ namespace rct3::simulation
                             stride.lane_to = ring_lane(place, of);
                             ringed = true;
                         }
+                        // The last step to a stall: up to its counter.
+                        if (const auto* shop = stride.route.empty() && errand.kind == ErrandKind::Heading ? r.try_get<Shop>(errand.target) : nullptr)
+                        {
+                            stride.lane_to = counter_lane(*shop, movers[i]);
+                            ringed = true;
+                        }
                     }
                     else if (errand.kind != ErrandKind::Wandering)
                     {
@@ -1854,13 +1950,16 @@ namespace rct3::simulation
                                 for (const entt::entity m : r.get<Party>(member->party).members)
                                 {
                                     const Needs& n = r.get<Needs>(m);
-                                    want = { std::max(want.hunger.value, n.hunger.value), std::max(want.thirst.value, n.thirst.value), std::max(want.bladder.value, n.bladder.value) };
+                                    want = { std::max(want.hunger.value, n.hunger.value), std::max(want.thirst.value, n.thirst.value), std::max(want.bladder.value, n.bladder.value), std::max(want.swim.value, n.swim.value) };
                                     feel.nausea.value = std::max(feel.nausea.value, r.get<Mood>(m).nausea.value);
                                     feel.tolerance.value = std::min(feel.tolerance.value, r.get<Mood>(m).tolerance.value);
                                     feel.wet.value = std::max(feel.wet.value, r.get<Mood>(m).wet.value);
                                     feel.heat.value = std::max(feel.heat.value, r.get<Mood>(m).heat.value);
                                 }
                             }
+                            // Not more to eat or drink while still at what they have.
+                            if (munching(r, movers[i]))
+                                want.hunger.value = want.thirst.value = 0;
                             auto goal = going_home(r, paths, movers[i], at, dice, night, weather.storm, cash_machine, world.tick);
                             if (!goal)
                                 goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kTuning.night.daring.value : 0, taste_of(r, movers[i]), weather.temperature.value);
@@ -1912,7 +2011,18 @@ namespace rct3::simulation
                     if (stride.to == at)
                         stride.lane_to = stride.lane_from;
                     else if (!ringed)
+                    {
                         stride.lane_to = new_lane(dice, stride.lane_from, party_slot(r, movers[i]));
+                        // Turning on the next tile: across its inside corner, not out round its middle.
+                        if (!stride.route.empty())
+                        {
+                            const glm::vec3 in = paths.centre(stride.to) - paths.centre(at);
+                            const glm::vec3 out = paths.centre(stride.route.front()) - paths.centre(stride.to);
+                            const glm::vec2 inside = glm::vec2(out.x, out.z) / std::max(glm::length(glm::vec2(out.x, out.z)), 0.001f) - glm::vec2(in.x, in.z) / std::max(glm::length(glm::vec2(in.x, in.z)), 0.001f);
+                            if (glm::length(inside) > 0.5f)
+                                stride.lane_to = glm::clamp(stride.lane_to + glm::normalize(inside) * kTuning.walking.corner_cut.value, -kLaneReach, kLaneReach);
+                        }
+                    }
                     walk_on(paths, stride, left);
                     place(paths, stride, pose);
                 }
@@ -2069,7 +2179,14 @@ namespace rct3::simulation
                     const bool ringed = r.get<Errand>(me.who).kind == ErrandKind::Waiting && r.get<Stride>(me.who).route.empty();
                     if ((member != nullptr && r.get<Party>(member->party).huddle > 0) || ringed || r.any_of<Linger, Gesture>(me.who))
                         continue; // Standing still, in the others' way
-                    steps[i] = away / glm::length(away) * std::min(length, most);
+                    // Only aside, never back against where they face nor turning them: as much as their walk allows.
+                    const Stride& stride = r.get<Stride>(me.who);
+                    if (stride.from == stride.to)
+                        continue;
+                    const float facing = r.get<Pose>(me.who).heading.value;
+                    const glm::vec2 side { std::cos(facing), -std::sin(facing) };
+                    const float room = std::min(most, kTuning.walking.swerve * (r.all_of<Mood>(me.who) ? gait_pace(stride.speed, r.get<Mood>(me.who).energy, stride.gait) : stride.speed).value * dt);
+                    steps[i] = side * std::clamp(glm::dot(away / glm::length(away), side) * std::min(length, most), -room, room);
                 }
             });
             share(workers, bodies.size(), [&](std::size_t begin, std::size_t end) {
@@ -2086,6 +2203,20 @@ namespace rct3::simulation
             });
         }
 
+        // Walkers turn half way towards the way they moved this tick, so a step aside every other tick does not
+        // swing them to and fro, and no faster than turn_rate.
+        for (const auto [e, stride, pose] : r.view<const Stride, Pose>().each())
+        {
+            const auto* errand = r.try_get<Errand>(e);
+            const bool walks = errand != nullptr ? errand->kind == ErrandKind::Wandering || errand->kind == ErrandKind::Heading || errand->kind == ErrandKind::Following || errand->kind == ErrandKind::Waiting || errand->kind == ErrandKind::Queueing : r.all_of<Staff>(e);
+            const glm::vec2 moved { pose.position.x - pose.was.x, pose.position.z - pose.was.z };
+            if (!walks || glm::dot(moved, moved) < 0.0001f)
+                continue;
+            const float turn = std::remainder(std::atan2(moved.x, moved.y) - pose.was_heading.value, 2 * glm::pi<float>()) / 2;
+            const float most = kTuning.walking.turn_rate * dt;
+            pose.heading.value = pose.was_heading.value + std::clamp(turn, -most, most);
+        }
+
         phase.emplace("Arrivals");
         // 3. Arrivals, in entity order. A leader's followers arrive with them.
         // Whether `guest` bought something at stall `at`, from their own cash: a party pays together only for rides.
@@ -2096,20 +2227,85 @@ namespace rct3::simulation
             auto& needs = r.get<Needs>(guest);
             float* need = shop.product == Product::Drink ? &needs.thirst.value : shop.product == Product::Food ? &needs.hunger.value : shop.product == Product::Toilet ? &needs.bladder.value : shop.product == Product::FirstAid ? &mood.nausea.value : nullptr;
             const bool umbrella = shop.product == Product::Umbrella;
+            const bool meal = shop.product == Product::Food || shop.product == Product::Drink;
+            if (meal && munching(r, guest))
+            {
+                think(r, guest, ThoughtKind::HaventFinished, at, now);
+                return false;
+            }
             const bool cools = shop.serve == Serve::Cold && mood.heat.value >= kTuning.needs.want.value;
             if (!chose && !cools && (umbrella ? !weather.rain || r.all_of<Umbrella>(guest) : need != nullptr ? *need < kTuning.needs.want.value : wallet.cash.value >= kTuning.facilities.low_cash.value))
-                return false; // Came along without wanting anything
+            {
+                // Came along without wanting anything.
+                if (meal)
+                    think(r, guest, shop.product == Product::Food ? ThoughtKind::NotHungry : ThoughtKind::NotThirsty, at, now);
+                else if (umbrella && r.all_of<Umbrella>(guest))
+                    think(r, guest, ThoughtKind::AlreadyGot, at, now);
+                return false;
+            }
+            // Food or drink they pick off the menu: one of its kind they can afford at no more than it is worth to
+            // them, any of those; a stall with no menu sells one thing at its price.
+            const Money worth = shop.product == Product::Food ? kTuning.eating.food_worth : kTuning.eating.drink_worth;
+            std::size_t ware = shop.menu.size();
+            Money price = attraction.price;
+            if (meal && !shop.menu.empty())
+            {
+                std::size_t fair = 0, affordable = 0;
+                for (const Ware& w : shop.menu)
+                    if (w.product == shop.product && w.price.value <= wallet.cash.value)
+                        ++affordable, fair += w.price.value <= worth.value ? 1 : 0;
+                if (fair > 0)
+                    for (std::size_t pick = random::below(r.get<Dice>(guest).state, static_cast<std::uint32_t>(fair)), k = 0; k < shop.menu.size(); ++k)
+                    {
+                        const Ware& w = shop.menu[k];
+                        if (w.product == shop.product && w.price.value <= wallet.cash.value && w.price.value <= worth.value && pick-- == 0)
+                        {
+                            ware = k;
+                            price = w.price;
+                            break;
+                        }
+                    }
+                else if (affordable > 0 && attraction.open)
+                {
+                    mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
+                    think(r, guest, ThoughtKind::NotPaying, at, now);
+                    return false;
+                }
+                else
+                    price = std::ranges::min(shop.menu, { }, [](const Ware& w) { return w.price.value; }).price;
+            }
+            else if (meal && price.value > worth.value && price.value <= wallet.cash.value && attraction.open)
+            {
+                mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
+                think(r, guest, ThoughtKind::NotPaying, at, now);
+                return false;
+            }
             Money Wallet::* const on = shop.product == Product::Drink ? &Wallet::spent_drink : shop.product == Product::Food ? &Wallet::spent_food : umbrella ? &Wallet::spent_souvenirs : nullptr;
-            if (!attraction.open || wallet.cash.value < attraction.price.value || !pay(r, guest, attraction.price, on))
+            if (!attraction.open || wallet.cash.value < price.value || !pay(r, guest, price, on))
             {
                 mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
                 if (attraction.open)
                     think(r, guest, ThoughtKind::CantAfford, at, now);
                 return false;
             }
-            attraction.income.value += attraction.price.value;
+            if (meal && price.value <= kTuning.eating.good_value.value * static_cast<float>(worth.value))
+                think(r, guest, ThoughtKind::GoodValue, at, now);
+            attraction.income.value += price.value;
             ++attraction.customers;
-            if (need != nullptr)
+            if (meal)
+            {
+                // Eaten or drunk a bite at a time from now on, in the hand: an empty still in it goes in a pocket,
+                // or on the path when both are full.
+                std::uint8_t pocketed = 0;
+                if (auto* old = r.try_get<Carried>(guest))
+                {
+                    if (old->held)
+                        free_hand(r, guest, *old, r.get<Stride>(guest).to);
+                    pocketed = r.all_of<Carried>(guest) ? old->pocketed : 0;
+                }
+                r.emplace_or_replace<Carried>(guest, Carried { .stall = at, .ware = static_cast<std::uint8_t>(ware), .kind = std::uint8_t { shop.product == Product::Drink }, .food = shop.product == Product::Food, .bites = kTuning.eating.bites, .fill = { *need / kTuning.eating.bites }, .pocketed = pocketed });
+            }
+            else if (need != nullptr)
                 *need = 0;
             else if (umbrella)
                 r.emplace_or_replace<Umbrella>(guest);
@@ -2127,8 +2323,6 @@ namespace rct3::simulation
                 mood.happiness.value = clamp01(mood.happiness.value + kTuning.needs.treat.value);
             if (shop.serve == Serve::Cold)
                 mood.heat.value = 0;
-            if (shop.product == Product::Drink || shop.product == Product::Food)
-                r.emplace_or_replace<Rubbish>(guest, Rubbish { .kind = std::uint8_t { shop.product == Product::Drink } });
             return true;
         };
         for (std::size_t i = 0; i < movers.size(); ++i)
@@ -2146,14 +2340,28 @@ namespace rct3::simulation
             auto& errand = r.get<Errand>(guest);
             if (auto* shop = r.try_get<Shop>(arrived[i]))
             {
-                errand = { ErrandKind::Wandering, entt::null, ticks(kConsumeSeconds) };
-                // In a party, those who bought stay at the counter a moment; the others wait nearby (5.).
-                const Errand served { .kind = ErrandKind::Buying, .target = arrived[i], .rest = ticks(kTuning.facilities.served.value) };
-                if (buy(guest, arrived[i], *shop, !r.all_of<Member>(guest)) && r.all_of<Member>(guest))
-                    errand = served;
+                errand = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
+                // Those who bought stand at the counter a moment, facing the stall, and pay; the rest of a party
+                // waits nearby (5.).
+                const auto served = [&](entt::entity m) {
+                    r.get<Errand>(m) = { .kind = ErrandKind::Buying, .target = arrived[i], .rest = ticks(kTuning.facilities.served.value) };
+                    auto& stride = r.get<Stride>(m);
+                    const NodeId at = r.get<Attraction>(arrived[i]).entrance;
+                    stride.route.clear();
+                    stride.from = at;
+                    stride.to = at;
+                    stride.progress.value = 1;
+                    stride.lane_from = stride.lane_to = counter_lane(*shop, m);
+                    auto& pose = r.get<Pose>(m);
+                    if (glm::length(shop->counter) > 0)
+                        pose.heading.value = std::atan2(shop->counter.x, shop->counter.y);
+                    place(paths, stride, pose);
+                };
+                if (buy(guest, arrived[i], *shop, !r.all_of<Member>(guest)))
+                    served(guest);
                 for (const entt::entity m : followers)
                     if (buy(m, arrived[i], *shop, false))
-                        r.get<Errand>(m) = served;
+                        served(m);
             }
             else if (r.all_of<ParkGate>(arrived[i]))
             {
@@ -2162,6 +2370,28 @@ namespace rct3::simulation
                 for (const entt::entity m : followers)
                     leave(r, m);
                 leave(r, guest);
+            }
+            else if (r.all_of<PoolDoor>(arrived[i]))
+            {
+                // Each pays at the door and goes in to change; those of the party who would rather not wait (5.).
+                const auto swim = [&](entt::entity g) {
+                    auto& attraction = r.get<Attraction>(arrived[i]);
+                    if (!attraction.open || !pay(r, g, attraction.price, &Wallet::spent_rides))
+                    {
+                        if (attraction.open)
+                            think(r, g, ThoughtKind::CantAfford, arrived[i], now);
+                        r.get<Errand>(g) = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
+                        return;
+                    }
+                    attraction.income.value += attraction.price.value;
+                    ++attraction.customers;
+                    r.get<Errand>(g) = { .kind = ErrandKind::Swimming, .target = arrived[i] };
+                    r.emplace_or_replace<Swimmer>(g, Swimmer { .changing = kTuning.pools.changing, .left = kTuning.pools.stay });
+                };
+                swim(guest);
+                for (const entt::entity m : followers)
+                    if (r.get<Needs>(m).swim.value >= kTuning.needs.want.value / 2 && random::chance(r.get<Dice>(m).state, kTuning.walking.join_chance.value))
+                        swim(m);
             }
             else if (auto* ride = r.try_get<CycleRide>(arrived[i]))
             {
@@ -2212,6 +2442,127 @@ namespace rct3::simulation
                 for (const entt::entity m : followers)
                     if (r.get<Mood>(m).nausea.value < kTuning.needs.max_nausea.value && random::chance(r.get<Dice>(m).state, kTuning.walking.join_chance.value))
                         join(m);
+            }
+        }
+
+        phase.emplace("Pools");
+        // Changing rooms use up their cleaning fluid while open, cleaning their pool, and call for a mechanic to
+        // fill the tank when it runs low.
+        for (const entt::entity e : sorted(r.view<PoolDoor, PoolTank>()))
+        {
+            const auto& door = r.get<PoolDoor>(e);
+            auto& tank = r.get<PoolTank>(e);
+            auto& upkeep = r.get_or_emplace<Upkeep>(e);
+            upkeep.since_inspection.value += dt;
+            if (tank.left.value < kTuning.pools.refill_at.value)
+                upkeep.called = true;
+            if (!r.get<Attraction>(e).open || tank.left.value <= 0)
+                continue;
+            tank.left.value = std::max(tank.left.value - kTuning.pools.tank_use.value * dt, 0.0f);
+            if (auto* pool = r.valid(door.pool) ? r.try_get<SwimPool>(door.pool) : nullptr)
+                pool->dirt.value = std::max(pool->dirt.value - kTuning.pools.cleaning[std::to_underlying(tank.fluid)].value * dt, 0.0f);
+        }
+
+        phase.emplace("Swimming");
+        // Swimmers change out of sight in the room, then swim from spot to spot in the water and now and then walk
+        // the paved squares round it, resting between; their time up, they go back and change again, and come out
+        // at the door.
+        for (const entt::entity g : sorted(r.view<Swimmer>()))
+        {
+            auto& swimmer = r.get<Swimmer>(g);
+            auto& pose = r.get<Pose>(g);
+            auto& errand = r.get<Errand>(g);
+            const auto* door = r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr;
+            auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<SwimPool>(door->pool) : nullptr;
+            if (errand.kind != ErrandKind::Swimming || pool == nullptr || pool->water.empty())
+            {
+                r.remove<Swimmer>(g);
+                continue;
+            }
+            auto& dice = r.get<Dice>(g).state;
+            if (swimmer.changing.value > 0)
+            {
+                pose.position = door->room;
+                if ((swimmer.changing.value -= dt) > 0)
+                    continue;
+                if (swimmer.changed)
+                {
+                    // Dressed again: out at the door, thinking of the water, the party going on together behind
+                    // its leader.
+                    const auto* tank = r.try_get<PoolTank>(errand.target);
+                    if (harsh(pool, tank))
+                        think(r, g, ThoughtKind::PoolOvercleaned, errand.target, now);
+                    else if (pool->dirt.value >= kTuning.pools.bad.value)
+                        think(r, g, ThoughtKind::PoolBad, errand.target, now);
+                    else if (pool->dirt.value < kTuning.pools.good.value)
+                        think(r, g, ThoughtKind::PoolGood, errand.target, now);
+                    const NodeId out = r.get<Attraction>(errand.target).entrance;
+                    const auto* member = r.try_get<Member>(g);
+                    const bool follows = member != nullptr && r.valid(member->party) && r.get<Party>(member->party).leader != g;
+                    errand = follows ? Errand { ErrandKind::Following, entt::null, 0 } : Errand { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
+                    r.remove<Swimmer>(g);
+                    if (out != kNoNode)
+                        stop_at(paths, out, r.get<Stride>(g), pose);
+                    continue;
+                }
+                swimmer.changed = true;
+                pose.position = door->poolside;
+                swimmer.goal = door->poolside;
+                swimmer.to_spa = false;
+            }
+            // Across the ground, at the water's surface over a square of water and on the paving elsewhere.
+            const glm::vec2 to { swimmer.goal.x - pose.position.x, swimmer.goal.z - pose.position.z };
+            const float way = glm::length(to);
+            const float pace = (swimmer.in_water ? kTuning.pools.swim.value : r.get<Stride>(g).speed.value) * dt;
+            const bool there = way <= pace;
+            if (!there)
+                pose.heading.value = std::atan2(to.x, to.y);
+            const glm::vec2 at = there ? glm::vec2 { swimmer.goal.x, swimmer.goal.z } : glm::vec2 { pose.position.x, pose.position.z } + to * (pace / way);
+            const float half = paths.tile_size / 2;
+            const auto within = [&](const glm::vec3& w) { return std::abs(at.x - w.x) <= half && std::abs(at.y - w.z) <= half; };
+            const auto water = std::ranges::find_if(pool->water, within);
+            const bool in_spa = swimmer.to_spa && within(swimmer.goal);
+            swimmer.in_water = water != pool->water.end() || in_spa;
+            pose.position = { at.x, in_spa ? swimmer.goal.y : water != pool->water.end() ? water->y : door->poolside.y, at.y };
+            // In the water they dirty it, the less the more water there is, and enjoy it the cleaner it is.
+            if (swimmer.in_water)
+            {
+                pool->dirt.value = std::min(pool->dirt.value + kTuning.pools.dirtying.value * dt / static_cast<float>(pool->water.size()), 1.0f);
+                const float liking = harsh(pool, r.try_get<PoolTank>(errand.target)) ? -0.5f : 1 - 2 * pool->dirt.value / kTuning.pools.bad.value;
+                auto& happiness = r.get<Mood>(g).happiness.value;
+                happiness = std::clamp(happiness + kTuning.pools.cheer.value * liking * dt, 0.0f, 1.0f);
+            }
+            swimmer.left.value -= dt;
+            if (!there)
+                continue;
+            if (swimmer.left.value <= 0)
+            {
+                // Back at the room's side of the pool: in to change.
+                if (glm::distance(pose.position, door->poolside) < 0.01f)
+                    swimmer.changing = kTuning.pools.changing;
+                else
+                {
+                    swimmer.goal = door->poolside;
+                    swimmer.to_spa = false;
+                }
+                continue;
+            }
+            if ((swimmer.idle.value -= dt) > 0)
+                continue;
+            swimmer.idle.value = static_cast<float>(random::between(dice, double { kTuning.pools.shortest_rest.value }, double { kTuning.pools.longest_rest.value }));
+            // shortcut: swimmers go straight from spot to spot, over the pool's walls; upgrade with ladders and
+            // steps as ways in and out.
+            const bool out = !pool->paved.empty() && random::chance(dice, kTuning.pools.poolside.value);
+            const bool extra = out && pool->spa.size() + pool->extras.size() > 0 && random::chance(dice, kTuning.pools.extra.value);
+            const std::size_t pick = random::below(dice, extra ? pool->spa.size() + pool->extras.size() : out ? pool->paved.size() : pool->water.size());
+            swimmer.to_spa = extra && pick < pool->spa.size();
+            if (extra)
+                swimmer.goal = swimmer.to_spa ? pool->spa[pick] : pool->extras[pick - pool->spa.size()];
+            else
+            {
+                // Within a quarter tile of a square's middle: the water's cut corners leave no less.
+                const float spread = 0.25f * paths.tile_size;
+                swimmer.goal = (out ? pool->paved : pool->water)[pick] + glm::vec3 { static_cast<float>(random::between(dice, -1.0, 1.0)) * spread, 0, static_cast<float>(random::between(dice, -1.0, 1.0)) * spread };
             }
         }
 
@@ -2377,7 +2728,6 @@ namespace rct3::simulation
                         stride.progress.value = static_cast<float>(behind) - stride.along.value;
                         auto& pose = r.get<Pose>(queue[k]);
                         pose.position = glm::mix(paths.centre(line[behind]), paths.centre(line[ahead]), stride.progress.value);
-                        pose.position.y = paths.height_between(line[behind], line[ahead], stride.progress.value);
                         // To one side of the line, across the way it runs here (on a tile's middle, the way on to the front).
                         const std::size_t from = ahead != behind ? behind : std::min(behind + 1, line.size() - 1);
                         const std::size_t to = ahead != behind ? ahead : (behind > 0 ? behind - 1 : 0);
@@ -2389,6 +2739,7 @@ namespace rct3::simulation
                             pose.position.z += way.x * stride.side.value;
                             pose.heading.value = std::atan2(way.x, way.y);
                         }
+                        pose.position.y = paths.surface(line[behind], line[ahead], { pose.position.x, pose.position.z });
                     }
                 }
             }
@@ -2666,6 +3017,20 @@ namespace rct3::simulation
                 const RidePhase was = ride.phase;
                 if (advance_cycle(ride, dt, held || sailing))
                     unload(ride.riders, 0);
+                // Its riders react to the ride while it runs.
+                for (const entt::entity guest : ride.riders)
+                    if (const auto* mood = r.valid(guest) && !r.all_of<RideWalk>(guest) ? r.try_get<Mood>(guest) : nullptr)
+                    {
+                        enum : std::uint64_t
+                        {
+                            Hands = 21,
+                            Eyes = 23
+                        };
+                        const auto* taste = r.try_get<Taste>(guest);
+                        const float over = ride.intensity.value - (taste != nullptr ? taste->most.value : 1.0f);
+                        auto& thrill = r.get_or_emplace<Thrill>(guest);
+                        thrill.reaction = react_flat(thrill.reaction, ride.phase == RidePhase::Running, mood->happiness, over, Leanings { .hands = fixed_share(guest, Hands), .eyes = fixed_share(guest, Eyes) }, r.get<Dice>(guest).state, dt);
+                    }
                 if (boats != nullptr && water != nullptr && was != RidePhase::Running && ride.phase == RidePhase::Running)
                     // shortcut: every boat casts off at once from one spot, empty ones too, and a transport boat's
                     // riders stay on past its other docks back to the one they boarded at; upgrade when each boat
@@ -2866,6 +3231,11 @@ namespace rct3::simulation
                     off_at = errand.off;
                     near = exit_of(r, busy_at, off_at);
                 }
+                else if (errand.kind == ErrandKind::Swimming && r.valid(errand.target) && r.all_of<Attraction>(errand.target))
+                {
+                    busy_at = errand.target;
+                    near = r.get<Attraction>(errand.target).entrance;
+                }
                 else if (errand.kind == ErrandKind::Buying || (r.all_of<Linger>(m) && r.get<Linger>(m).at == PathItemKind::Bench))
                 {
                     busy_at = errand.kind == ErrandKind::Buying ? errand.target : m;
@@ -2875,13 +3245,24 @@ namespace rct3::simulation
             }
             if (near != kNoNode && party.gather >= taken.size())
             {
-                party.gather = gather_spot(paths, near, taken);
+                // Where each one comes from: the way out for those still busy, else the tile they are on.
+                std::vector<NodeId> starts { near };
+                for (const entt::entity m : party.members)
+                {
+                    const ErrandKind kind = r.get<Errand>(m).kind;
+                    const auto& stride = r.get<Stride>(m);
+                    const NodeId at = stride.progress.value < 0.5f ? stride.from : stride.to;
+                    if (kind != ErrandKind::Queueing && kind != ErrandKind::Riding && kind != ErrandKind::Swimming && kind != ErrandKind::Buying && !r.all_of<Linger>(m) && at < paths.nodes().size() && !std::ranges::contains(starts, at))
+                        starts.push_back(at);
+                }
+                party.gather = gather_spot(paths, taken, starts);
                 taken[party.gather] = true;
             }
             if (busy_at != entt::null || (waiting && party.gather < taken.size()))
             {
                 const NodeId spot = party.gather;
                 bool back = busy_at == entt::null; // All standing with the others, or where they cannot leave
+                bool cut_off = false;              // One off the queues finds no way to the spot: look for another
                 for (const entt::entity m : party.members)
                 {
                     auto& errand = r.get<Errand>(m);
@@ -2890,14 +3271,20 @@ namespace rct3::simulation
                         continue; // Sitting it out
                     // Those going to wait, and those done, who walk over to the others.
                     const bool still = errand.kind == ErrandKind::Waiting && stride.route.empty() && (stride.progress.value >= 1 || stride.from == stride.to);
-                    const bool joins = errand.kind == ErrandKind::Following || (m == party.leader && errand.kind == ErrandKind::Wandering) || (still && stride.to != spot);
+                    // One who found no way over waits a while before looking again (rest counts it down).
+                    const bool joins = errand.kind == ErrandKind::Following || (m == party.leader && errand.kind == ErrandKind::Wandering) || (still && stride.to != spot && errand.rest == 0);
                     if (!joins)
                     {
                         back = back && still;
                         continue;
                     }
                     const NodeId at = stride.progress.value < 0.5f ? stride.from : stride.to;
-                    stride.route = paths.route(at, spot).value_or(std::vector<NodeId> { });
+                    // No way over (behind a no-entry sign): at least off the queue, to wait beside it.
+                    auto way = paths.route(at, spot);
+                    cut_off = cut_off || (!way && !paths.nodes()[at].queue);
+                    if (!way)
+                        way = paths.way_out(at);
+                    stride.route = std::move(way).value_or(std::vector<NodeId> { });
                     stride.from = at;
                     stride.to = at;
                     stride.progress.value = 1;
@@ -2905,7 +3292,11 @@ namespace rct3::simulation
                     back = back && stride.route.empty();
                     if (errand.kind != ErrandKind::Waiting)
                         errand = { .kind = ErrandKind::Waiting, .target = busy_at, .off = off_at };
+                    if (stride.route.empty() && at != spot)
+                        errand.rest = ticks(kTuning.walking.retry_way.value);
                 }
+                if (cut_off)
+                    party.gather = kNoNode; // Chosen again next tick from where they all are now
                 if (!back)
                     party.huddle = 0;
                 else if (party.huddle == 0)

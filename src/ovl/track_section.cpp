@@ -82,6 +82,7 @@ namespace rct3::ovl
                 if (layout >= 2)
                 {
                     s.group = record->text(0x104);
+                    s.ground = record->u32(0x128);
                     for (std::size_t end = 0; end < 2; ++end)
                     {
                         const auto list = [&](std::size_t at) { return strings(space, refs, record->u32(at + end * 8), record->u32(at + end * 8 + 4)); };

@@ -34,7 +34,6 @@ namespace rct3::simulation
     class Workers;
 
     inline constexpr float kTickSeconds = 0.25f; ///< Simulated time a step covers
-    inline constexpr float kConsumeSeconds = 10; ///< A guest spends with what they bought before moving on; our own figure
     /// Farthest a guest walks off a path tile's middle, along x and z.
     /// shortcut: one width for every path, from how evenly saved guests spread to about this either side of
     /// the middle; upgrade when paths of other widths are modelled.
@@ -68,6 +67,12 @@ namespace rct3::simulation
     /// them; throwing up their hands when `happiness` thrills them or floating over a hill, more readily in
     /// the `front` car, and keeping them up till the forces grow too strong. Drawn with `dice`.
     [[nodiscard]] RideReaction react(RideReaction now, const Felt& feel, bool running, bool lifted, Share happiness, float over, const Leanings& leanings, bool front, random::RandomState& dice, float dt);
+
+    /// How a flat ride's rider reacting as `now` reacts `dt` seconds on, the ride `running` its cycle or not:
+    /// waiting while it stands; covering their eyes on a ride `over` (intensity past what they like) too wild
+    /// for them; otherwise throwing up their hands, once and for the rest of the run, when `happiness` thrills
+    /// them or the ride suits them. Drawn with `dice`.
+    [[nodiscard]] RideReaction react_flat(RideReaction now, bool running, Share happiness, float over, const Leanings& leanings, random::RandomState& dice, float dt);
 
     /// Keeps a train this far behind the back of the one in front, metres; our own figure.
     inline constexpr float kBlockGap = 4.0f;

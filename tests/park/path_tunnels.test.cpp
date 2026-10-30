@@ -74,7 +74,7 @@ TEST_CASE("the walls round a hollowed tile leave the hollow open")
     CHECK(std::ranges::all_of(open, [](glm::vec3 p) { return p.y >= kTunnelHeight - 0.001f; }));
 }
 
-TEST_CASE("a tunnel is lined with a ceiling, and walls where earth lies beyond")
+TEST_CASE("a tunnel is lined with a ceiling, a floor, and walls where earth lies beyond")
 {
     // Two tunnel tiles in a row under a plateau, the row's ends opening onto low ground.
     save::TerrainGrid g = flat(4, 3);
@@ -83,16 +83,45 @@ TEST_CASE("a tunnel is lined with a ceiling, and walls where earth lies beyond")
             raise(g, col, row, 6);
     const std::vector<GroundOpening> hollows { { 1, 1, 0, kTunnelHeight }, { 2, 1, 0, kTunnelHeight } };
     const TerrainMesh lining = tunnel_lining(hollows, g);
-    // Two ceilings and the two long sides of each tile; the ends are the mouths, the middle is shared.
-    CHECK(lining.indices.size() == 6 * (2 + 4));
+    // Two ceilings, two floors and the two long sides of each tile; the ends are the mouths, the middle is shared.
+    CHECK(lining.indices.size() == 6 * (2 + 2 + 4));
     REQUIRE(lining.batches.size() == 2);
     CHECK(lining.batches[0].paint == GroundPaint::TunnelWall);
     CHECK(lining.batches[1].paint == GroundPaint::TunnelCeiling);
     CHECK(lining.batches[0].index == 2);
     const auto ceiling = std::ranges::count_if(lining.vertices, [](const GroundVertex& v) { return v.normal.y < 0; });
     CHECK(ceiling == 12);
+    CHECK(std::ranges::count_if(lining.vertices, [](const GroundVertex& v) { return v.normal.y > 0; }) == 12);
     // Side walls face into the hollow.
     for (const GroundVertex& v : lining.vertices)
         if (v.normal.y == 0)
             CHECK((v.position.z - 6) * v.normal.z < 0);
+}
+
+TEST_CASE("neighbouring hollows at different heights wall the step between them")
+{
+    save::TerrainGrid g = flat(4, 3);
+    for (int col = 0; col < 4; ++col)
+        for (int row = 0; row < 3; ++row)
+            raise(g, col, row, 20);
+    // The second tile's hollow lies 2 higher, as a slope's next piece does: each side of their shared edge walls
+    // the part of its hollow the other leaves bare.
+    const std::vector<GroundOpening> hollows { { 1, 1, 0, 4 }, { 2, 1, 2, 6 } };
+    const TerrainMesh lining = tunnel_lining(hollows, g);
+    std::vector<std::pair<float, float>> shared;
+    for (std::size_t i = 0; i < lining.indices.size(); i += 6)
+    {
+        const GroundVertex& v = lining.vertices[lining.indices[i]];
+        if (v.normal.y != 0 || v.position.x != 8 || v.normal.x == 0)
+            continue;
+        float low = v.position.y, high = v.position.y;
+        for (std::size_t k = i; k < i + 6; ++k)
+        {
+            low = std::min(low, lining.vertices[lining.indices[k]].position.y);
+            high = std::max(high, lining.vertices[lining.indices[k]].position.y);
+        }
+        shared.emplace_back(low, high);
+    }
+    std::ranges::sort(shared);
+    CHECK(shared == std::vector<std::pair<float, float>> { { 0, 2 }, { 4, 6 } });
 }

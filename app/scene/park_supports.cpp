@@ -3,10 +3,13 @@
 
 #include "logging/log.hpp"
 #include "park/support_columns.hpp"
+#include "profiling/profiler.hpp"
+#include "scene/park_refresh.hpp"
 #include "scene/park_scene.hpp"
 
 #include <algorithm>
 #include <chrono>
+#include <optional>
 #include <set>
 
 namespace rct3::scene
@@ -17,12 +20,12 @@ namespace rct3::scene
 
         SupportWatch::Seen seen(const ParkScene& scene, const save::PlacedObject& o)
         {
-            return { o.symbol, o.overlay, o.col, o.row, o.rotation, o.base_height, o.hidden, park::support_tiles(o, scene.models) };
+            return { o.symbol, o.overlay, o.col, o.row, o.rotation, o.base_height, o.hidden, o.support_set, park::support_tiles(o, scene.models) };
         }
 
         bool same(const SupportWatch::Seen& s, const save::PlacedObject& o)
         {
-            return s.symbol == o.symbol && s.overlay == o.overlay && s.col == o.col && s.row == o.row && s.rotation == o.rotation && s.base_height == o.base_height && s.hidden == o.hidden;
+            return s.symbol == o.symbol && s.overlay == o.overlay && s.col == o.col && s.row == o.row && s.rotation == o.rotation && s.base_height == o.base_height && s.hidden == o.hidden && s.support_set == o.support_set;
         }
 
         std::vector<std::pair<int, int>> ground_paths(const ParkScene& scene)
@@ -66,10 +69,14 @@ namespace rct3::scene
     void refresh_supports(ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         SupportWatch& w = scene.supports;
-        if (!w.stale)
+        // Not while the objects' mesh build reads them: they are looked at once it is done, and no new build
+        // starts while they are stale (refresh_objects), so the frame does not wait for one.
+        if (!w.stale || (scene.object_build.valid() && !ready(scene.object_build)))
             return;
         w.stale = false;
         auto started = std::chrono::steady_clock::now();
+        std::optional<profiling::Scope> diff_zone;
+        diff_zone.emplace("Diff");
 
         // The tiles where anything that holds up columns or is in their way changed.
         std::set<park::SupportTile> tiles;
@@ -107,9 +114,10 @@ namespace rct3::scene
         if (tiles.empty() || sets == nullptr)
             return;
 
+        diff_zone.reset();
         // The time waited for the objects' mesh build in hand is not the supports'.
         const auto waited = std::chrono::steady_clock::now();
-        wait_for_build(scene);
+        profiling::section("Wait", [&] { wait_for_build(scene); });
         started += std::chrono::steady_clock::now() - waited;
         // The old pieces go. Their places in the objects are kept for new ones, so no other object moves.
         std::vector<std::size_t> spare;
@@ -130,7 +138,8 @@ namespace rct3::scene
         std::uint64_t last = 0;
         for (const save::PlacedObject& o : scene.objects)
             last = std::max(last, o.id);
-        park::BuiltSupports built = park::support_columns(scene.objects, scene.models, scene.footpaths.paths, scene.grid, *sets, last, supports_passed(scene), tiles);
+        place_objects(scene); // Their models, kept
+        park::BuiltSupports built = profiling::section("Columns", [&] { return park::support_columns(scene.objects, scene.models, scene.footpaths.paths, scene.grid, *sets, last, supports_passed(scene), tiles, scene.places.models); });
         for (std::size_t i = 0; i < built.pieces.size(); ++i)
         {
             save::PlacedObject& piece = built.pieces[i];

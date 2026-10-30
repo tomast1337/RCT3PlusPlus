@@ -8,8 +8,9 @@
 // goes in, beside it; the doors take the fence's colours. The ground under the ride is paved (park/ground_paths.hpp).
 //
 // A ride placed with both is run by the simulation from the first frame its entrance has a path behind it.
-// A tracked ride's entrance or exit, asked for from its window, is placed the same way beside its station;
-// with both, it runs on the track built for it as the flat rides do.
+// A tracked ride's entrance or exit, asked for from its window or brought by a design, is placed the same way
+// beside its station, walled and paved as a flat ride's; with both, it runs on the track built for it as the
+// flat rides do. A new ride of either kind takes its theme's fence.
 //
 // Scenery picked in the lists is placed the same way, one item a click until the tool is put away: centred
 // on the tile pointed at, in the quarter of it pointed at for quarter-tile items, on the ground or on top of
@@ -82,8 +83,10 @@ namespace rct3::scene
         std::optional<Lift> lift;
         park::SiteProblem problem = park::SiteProblem::None;
         bool affordable = true;
-        std::size_t ride = 0;             ///< Of the scene's rides, once placed
-        std::vector<std::uint64_t> fence; ///< Of that ride, its fence pieces, built again as each door goes in
+        park::Flatten flatten = park::Flatten::Off; ///< How a ride's ground is levelled, as the panel's tabs set it
+        park::GroundCuts levelling;                 ///< The ground levelled under the ride pointed at, when it may be
+        std::int64_t levelling_cost = 0;            ///< In hundredths
+        std::size_t ride = 0;                       ///< Of the scene's rides, once placed
         park::ObjectMesh ghost_mesh;
         std::array<std::int32_t, 3> colours { }; ///< Of the scenery: its own when picked, then those the player paints
         std::string panel_item;                  ///< The scenery the placing panel is set up for
@@ -96,6 +99,7 @@ namespace rct3::scene
         std::uint32_t preview_pixels = 0;
         std::map<std::string, TrackModels, std::less<>> models;
         park::SolidTiles solids;
+        park::GroundHolds holds;                              ///< What keeps the ground still, worked out with the solids
         std::size_t solids_of = static_cast<std::size_t>(-1); ///< The scene's object count when worked out
         std::vector<std::size_t> unjoined;                    ///< Rides placed here that the simulation does not run yet
         std::vector<std::size_t> unjoined_stalls;             ///< The same of the stalls placed here
@@ -103,6 +107,8 @@ namespace rct3::scene
         std::optional<std::vector<std::string>> trick_names;
         /// Of a tracked ride getting a door: its station pieces, which the door stands beside
         std::vector<save::TrackPiece> stations;
+        /// Of those, a base standing on ground of its own (a tower's): the ground it covers, which the door goes round
+        std::optional<park::RideSite> base;
     };
 
     /// The point of the ground under `at`, in a view of `size`, in tile units: column and row with fractions.
@@ -125,6 +131,8 @@ namespace rct3::scene
     /// ride beside its `stations`, of a placed flat ride (no stations) round its ground; one placed before moves.
     /// False without stations on a tracked ride or a door in the item.
     bool start_door_placing(ParkScene& scene, std::size_t ride, const park::BuildItem& item, std::vector<save::TrackPiece> stations, bool exit);
+    /// Gives the new ride `ride` the fence of `item` (its theme's), in the fence's own colours.
+    void take_fence(ParkScene& scene, const ui::InterfaceAssets& assets, save::Ride& ride, const park::BuildItem& item);
     /// Adds `door`, whose model is loaded, as the entrance (or `exit`) of station `station` of the tracked ride
     /// `ride`, standing at `height`, in place of the one it had.
     void place_station_door(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t station, const save::PlacedObject& door, std::int32_t height, bool exit);

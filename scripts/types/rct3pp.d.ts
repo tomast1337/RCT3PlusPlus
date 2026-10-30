@@ -90,6 +90,8 @@ declare namespace park {
     function dropParties(parties: number, seed?: number): { col: number; row: number; guests: number }[];
     /** The things guests use on the paths: benches, bins, signs and sights, by the placed object each stands as. */
     function pathItems(): { object: number; kind: "bin" | "bench" | "sign" | "sight" | "photo spot"; broken: boolean }[];
+    /** The litter and sick lying on the paths, each by the middle of the path tile it lies on, in tiles. */
+    function litter(): { col: number; row: number; sick: boolean }[];
     /** Breaks every bench, bin and sign at once, as vandals would; how many it broke. */
     function breakPathItems(): number;
     /** Sets a handyman walking from the path on tile `col`, `row`, who is not drawn; whether there was a path. */
@@ -103,6 +105,10 @@ declare namespace park {
     function weather(): string;
     /** Sets the weather now, by one of the names weather() gives. */
     function setWeather(name: string): void;
+    /** Sets the park's temperature, in degrees, which the weather then drifts on from. */
+    function setTemperature(degrees: number): void;
+    /** How the weather shows now (rain and gloom 0 to 1, a lightning flash), the forecast, the climate's number and the temperature. */
+    function weatherLook(): { rain: number; gloom: number; flash: number; forecast: string; climate: number; temperature: number };
     /** The calendar, in units of 90 a week and 360 a month. */
     function date(): number;
     /** Moves the calendar to `units`; the clock of the day runs on as it was. */
@@ -176,13 +182,17 @@ declare namespace map {
     function size(): { width: number; height: number };
     /** Undefined off the map. */
     function tile(col: number, row: number): Tile | undefined;
-    /** The middle of a tile on the view, or with fractions that point of it; undefined when it is not in sight. */
+    /** The middle of a tile on the view (on a pool square, at its surface), or with fractions that point of it;
+     *  undefined when it is not in sight. */
     function screen(col: number, row: number): { x: number; y: number } | undefined;
     function paths(): PathPiece[];
+    /** The tiles the rides and stalls pave: their doors, floors and the ground under stalls. */
+    function pavings(): { col: number; row: number; height: number }[];
     /** The tiles with support columns standing on them, and how many pieces each has. */
     function supports(): { col: number; row: number; pieces: number }[];
-    /** The placed objects that are shown: scenery, rides' parts, supports, fences and the rest. */
-    function objects(): { symbol: string; overlay: string; col: number; row: number }[];
+    /** The placed objects that are shown: scenery, rides' parts, supports, fences and the rest, with the whole-unit
+     * height stored for each (null when unset). */
+    function objects(): { symbol: string; overlay: string; col: number; row: number; height: number | null }[];
     function water(): Lake[];
     /** The waterfalls: the middle of the edge each pours over and where its water lands, in tiles, the levels of
      *  the lakes it joins and how wide it is in world units. */
@@ -238,11 +248,18 @@ declare namespace build {
      * state: 1 joined from the left track, 2 the left alone, 3 joined from the right, 4 the right alone; 0 on
      * other rides. Undefined while the panel is shut. */
     function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; arrows: boolean; ghostAt: { col: number; row: number; height: number } | null; clashes: boolean; unowned: boolean; ghostDoors: number; completing: boolean; proposed: number; complaint: string; testing: boolean; testAt: number | null; testWrecks: number; designs: string[]; selected: number | null; split: number } | undefined;
+    /** What building gave to be heard: how many thumps of something put down were asked for since the park opened
+     * (several close together are heard as one), and while a shaping stroke goes the loudness of its rumble, 0..1. */
+    function sounds(): { thumps: number; rumble: number | null };
     /** Puts the placing tool or the enclosure tool away, as a right click does. */
     function stop(): void;
-    /** What is being placed, what keeps it from where the pointer is, and whether a stall's facing arrow shows;
-     * undefined while nothing is. */
-    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water" | "under water" | "off path" | "off enclosure"; affordable: boolean; ghost: boolean; arrow: boolean; site?: { col: number; row: number; turns: number; height: number } } | undefined;
+    /** While an enclosure drag is held: what letting go would cost in hundredths (below 0 when it pays back),
+     * and how many tiles it would take in or out; undefined otherwise. */
+    function enclosing(): { cost: number; tiles: number } | undefined;
+    /** What is being placed, what keeps it from where the pointer is, whether a stall's facing arrow shows, and
+     * how the ground under a ride or stall is levelled and what that costs, in hundredths; undefined while nothing
+     * is. */
+    function placing(): { step: "ride" | "entrance" | "exit" | "scenery"; problem: "none" | "not owned" | "path" | "blocked" | "off water" | "under water" | "off path" | "off enclosure" | "into ground"; affordable: boolean; flatten: "off" | "sharp" | "smooth"; levelling: number; ghost: boolean; arrow: boolean; site?: { col: number; row: number; turns: number; height: number } } | undefined;
 }
 
 /** A place a ride's part stands: its lowest tile, and the quarter turn it faces. */
@@ -338,6 +355,8 @@ interface StallInfo {
     shown: boolean;
     /** Whether it was pulled down; it keeps its place in the list. */
     demolished: boolean;
+    /** Whether its building moves: stalls whose models have a motion play it round and round, open or not. */
+    moving: boolean;
     /** Whether the simulation runs it, once a path runs past the tile it faces. The rest are there only when
      * it does: the price it sells at, in hundredths, and whether it is open to guests there. */
     joined: boolean;
@@ -359,9 +378,10 @@ declare namespace people {
      *  map they stand on, in tiles. For those the simulation walks, also where they are (tiles, and world height
      *  `up`) and what they are at ("waiting": for the rest of their party, standing with the others; "buying":
      *  at a stall's counter while they wait; "thrown": by a crash, still in the air), how they go on foot
-     *  (`gait`) and, seated on a coaster, how they react to it. A seller has the id of the object of the stall
+     *  (`gait`), what they carry from a stall (`carrying`: food or drink still being had, or its empty) and,
+     *  seated on a ride, how they react to it and the ride's place in rides.list (`ride`). A seller has the id of the object of the stall
      *  or ride entrance they serve at as `post`. */
-    function list(): { name: string; staff: boolean; post?: number; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; state?: "walking" | "queueing" | "riding" | "waiting" | "buying" | "held" | "dropped" | "thrown" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained" }[];
+    function list(): { name: string; staff: boolean; post?: number; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; state?: "walking" | "queueing" | "riding" | "waiting" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

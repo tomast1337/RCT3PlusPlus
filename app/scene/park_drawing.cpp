@@ -18,6 +18,8 @@
 #include "scene/park_setup.hpp"
 #include "scene/park_view.hpp"
 #include "scene/park_water.hpp"
+#include "scene/pool_tools.hpp"
+#include "ui/screens/pool_panel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -69,6 +71,23 @@ namespace rct3::scene
                 draw.light = light;
                 device.draw(draw);
             }
+        }
+
+        /// Whether the box from `low` to `high` may be seen through `transform`: not when all its corners lie
+        /// beyond the same side of the view, or behind it.
+        bool box_in_view(const glm::mat4& transform, const glm::vec3& low, const glm::vec3& high)
+        {
+            std::array<int, 5> beyond { };
+            for (int k = 0; k < 8; ++k)
+            {
+                const glm::vec4 p = transform * glm::vec4((k & 1) != 0 ? high.x : low.x, (k & 2) != 0 ? high.y : low.y, (k & 4) != 0 ? high.z : low.z, 1.0f);
+                beyond[0] += p.x < -p.w ? 1 : 0;
+                beyond[1] += p.x > p.w ? 1 : 0;
+                beyond[2] += p.y < -p.w ? 1 : 0;
+                beyond[3] += p.y > p.w ? 1 : 0;
+                beyond[4] += p.w <= 0 ? 1 : 0;
+            }
+            return std::ranges::none_of(beyond, [](int n) { return n == 8; });
         }
 
         /// Which parts of the world a draw shows: a reflection leaves some out, as the options ask.
@@ -145,26 +164,31 @@ namespace rct3::scene
             // Land, cliffs and tunnels, as against the paths and queues drawn on the ground.
             const auto earth = [](const park::GroundBatch& batch) { return batch.paint == park::GroundPaint::Surface || batch.paint == park::GroundPaint::Cliff || batch.paint == park::GroundPaint::TunnelWall || batch.paint == park::GroundPaint::TunnelCeiling; };
             const auto draw_ground = [&](render::PipelineHandle pipeline, auto&& wanted) {
-                for (const park::GroundBatch& batch : scene.batches)
+                for (const GroundChunk& chunk : scene.ground_chunks)
                 {
-                    if (!wanted(batch))
+                    if (!chunk.vertices || !box_in_view(transform, chunk.low, chunk.high))
                         continue;
-                    const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
-                    render::DrawCommand draw;
-                    draw.pipeline = pipeline;
-                    draw.vertices = { scene.ground_vertices };
-                    draw.indices = { scene.ground_indices };
-                    draw.index_type = render::IndexType::U32;
-                    draw.first = batch.first;
-                    draw.count = batch.count;
-                    draw.transform = transform;
-                    draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
-                    draw.filter = render::Filter::Linear;
-                    draw.address = render::AddressMode::Repeat;
-                    draw.light = light;
-                    draw.extra_textures[0] = scene.variation;
-                    draw.extra_textures[1] = relief_of(scene.ground_textures, park::ground_key(batch.paint, batch.index));
-                    device.draw(draw);
+                    for (const park::GroundBatch& batch : chunk.batches)
+                    {
+                        if (!wanted(batch))
+                            continue;
+                        const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
+                        render::DrawCommand draw;
+                        draw.pipeline = pipeline;
+                        draw.vertices = { chunk.vertices };
+                        draw.indices = { chunk.indices };
+                        draw.index_type = render::IndexType::U32;
+                        draw.first = batch.first;
+                        draw.count = batch.count;
+                        draw.transform = transform;
+                        draw.texture = texture != scene.ground_textures.end() ? texture->second.handle : scene.blank;
+                        draw.filter = render::Filter::Linear;
+                        draw.address = render::AddressMode::Repeat;
+                        draw.light = light;
+                        draw.extra_textures[0] = scene.variation;
+                        draw.extra_textures[1] = relief_of(scene.ground_textures, park::ground_key(batch.paint, batch.index));
+                        device.draw(draw);
+                    }
                 }
             };
             if (parts.terrain)
@@ -260,6 +284,7 @@ namespace rct3::scene
                 draw_raised_footpath_ghost(device, scene, transform, light);
                 draw_ride_placing_ghost(device, scene, transform, light);
                 draw_structure_ghost(device, scene, transform, light);
+                draw_pool_ghost(device, scene, transform, light);
             }
             // Last, so what it hides is drawn first and shows through it.
             if (parts.terrain && parts.faded_ground)
@@ -411,7 +436,7 @@ namespace rct3::scene
 
         /// Draws into the round view of `panel`, by `draw` given the view's transform: into `target`, made again
         /// when the view's size in pixels (`pixels`) changes, cleared to `back`.
-        template<typename Draw> void draw_view(render::Device& device, ParkScene& scene, ui::InfoPanel& panel, render::TextureHandle& target, std::uint32_t& pixels, std::string_view label, render::Color back, Draw&& draw)
+        template<typename Panel, typename Draw> void draw_view(render::Device& device, ParkScene& scene, Panel& panel, render::TextureHandle& target, std::uint32_t& pixels, std::string_view label, render::Color back, Draw&& draw)
         {
             const float scale = scale_for(device, scene);
             const auto wanted = static_cast<std::uint32_t>(std::lround(ui::info_panel::kView * scale));
@@ -521,7 +546,7 @@ namespace rct3::scene
         return scale_for(device, scene);
     }
 
-    void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+    void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool interface)
     {
         profiling::section("Flow", [&] { roll_flow(device, scene); });
         if (!scene.footpaths.waterfalls.empty() || !scene.waterfall_mesh.indices.empty())
@@ -538,6 +563,8 @@ namespace rct3::scene
         // The item being placed, alone on the disc's grey, lit as the park is.
         // shortcut: its see-through parts are drawn in the mesh's order, not after the rest; sort them if a
         // preview shows a part hidden behind glass.
+        if (auto pools = scene.desktop->root().find_as<ui::PoolPanel>("pool_panel"); pools && pools->showing() && scene.pooling.item && !scene.pooling.preview.indices.empty())
+            draw_view(device, scene, *pools, scene.pooling.preview_target, scene.pooling.preview_pixels, "pool view", render::hex("#7f7f7f"), [&] { draw_ghost_mesh(device, scene, scene.pooling.preview, park::view_projection(scene.pooling.preview_camera, 1), scene.light, true); });
         if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName); placing && placing->showing() && !scene.placing.preview_mesh.indices.empty())
             profiling::section("PlacingView", [&] { draw_view(device, scene, *placing, scene.placing.preview_target, scene.placing.preview_pixels, "placing view", render::hex("#7f7f7f"), [&] { draw_ghost_mesh(device, scene, scene.placing.preview_bones.empty() ? scene.placing.preview_mesh : scene.placing.preview_moving.mesh, park::view_projection(scene.placing.preview_camera, 1), scene.light, true); }); });
         if (!scene.photos.empty() && !scene.photo_reading)
@@ -606,6 +633,11 @@ namespace rct3::scene
             scene.occlusion.before = false;
         if (scene.show_scenery)
             profiling::section("Particles", [&] { draw_park_particles(device, scene.particles, view_projection, eye, scene.camera.target, scene.light); });
+        if (scene.weather_look.rain > 0 && !scene.water.eye_in)
+        {
+            const float lit = std::max({ scene.light.sky.r, scene.light.sky.g, scene.light.sky.b });
+            profiling::section("Rain", [&] { draw_park_rain(device, scene.rain, { .view_projection = view_projection, .eye = eye, .amount = scene.weather_look.rain, .wind = scene.park.wind, .seconds = scene.clock, .light = lit }); });
+        }
         LightShafts shafts;
         if (scene.light_shafts)
         {
@@ -620,6 +652,8 @@ namespace rct3::scene
         if (!scene.lens.water.drops.empty())
             profiling::section("LensDrops", [&] { draw_park_lens(device, scene.lens); });
 
+        if (!interface)
+            return;
         const profiling::Scope zone("Interface");
         scene.list.clear();
         scene.list.set_scale(scale_for(device, scene));

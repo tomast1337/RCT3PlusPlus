@@ -10,12 +10,14 @@
 #include "park/enclosures.hpp"
 #include "park/item_category.hpp"
 #include "park/object_pick.hpp"
+#include "park/object_placement.hpp"
 #include "park/off_map_trees.hpp"
 #include "park/path_decks.hpp"
 #include "park/path_furniture.hpp"
 #include "park/ride_fences.hpp"
 #include "park/ride_placement.hpp"
 #include "park/support_columns.hpp"
+#include "park/track_ground.hpp"
 #include "park/water_fill.hpp"
 #include "scene/enclosure_tools.hpp"
 #include "scene/park_footpaths.hpp"
@@ -30,6 +32,8 @@
 #include <cmath>
 #include <format>
 #include <numbers>
+#include <tuple>
+#include <unordered_map>
 
 namespace rct3::scene
 {
@@ -85,9 +89,12 @@ namespace rct3::scene
         /// How far under an object's top the pointer may meet its box and still count as on the top.
         constexpr float kTopSlack = 0.05f;
         constexpr std::int32_t kClimbReach = 24; ///< How far, in height units, an item raised with Shift climbs to find room
+        constexpr std::int32_t kDigReach = 64;   ///< How far, in height units, a ride lowered with Shift goes under the ground. Chosen by eye
         /// The placing panel's tabs' places on its ring; the first is left for one that finds the item in its list.
         constexpr int kTurnSlot = 1;
         constexpr int kColourSlot = 2;
+        constexpr int kSmoothSlot = 3;
+        constexpr int kSharpSlot = 4;
 
         /// The object the ghost shows: the ride, or the entrance or exit pointed at.
         std::optional<save::PlacedObject> ghost_object(const RidePlacing& p)
@@ -152,33 +159,27 @@ namespace rct3::scene
         /// the doors in the fence's colours.
         void fence_ride(ParkScene& scene, const ui::InterfaceAssets& assets, save::Ride& ride)
         {
-            std::vector<std::uint64_t>& fence = scene.placing.fence;
+            std::vector<std::uint64_t>& fence = scene.ride_fence_pieces[ride.base.id];
             for (save::PlacedObject& o : scene.objects)
             {
                 if (std::ranges::contains(fence, o.id))
                     o.hidden = true;
             }
             fence.clear();
-            if (scene.placing.item)
-            {
-                ride.fence_symbol = scene.placing.item->fence;
-                ride.fence_overlay = scene.placing.item->fence_overlay;
-            }
-            const park::ObjectModel* item = nullptr;
+            std::unordered_map<std::uint64_t, const save::PlacedObject*> placed;
             for (const save::PlacedObject& o : scene.objects)
-            {
-                if (ride.base.spot && o.id == ride.base.spot->object)
-                {
-                    const auto found = scene.models.find(park::model_ref(o));
-                    item = found != scene.models.end() ? &found->second : nullptr;
-                }
-            }
-            std::vector<save::PlacedObject> pieces = park::ride_fences(ride, item, last_id(scene));
+                placed.emplace(o.id, &o);
+            std::vector<save::PlacedObject> pieces = park::ride_fences(
+                ride,
+                [&](std::uint64_t object) -> const park::ObjectModel* {
+                    const auto o = placed.find(object);
+                    const auto found = o != placed.end() ? scene.models.find(park::model_ref(*o->second)) : scene.models.end();
+                    return found != scene.models.end() ? &found->second : nullptr;
+                },
+                last_id(scene));
             if (pieces.empty() || !load_object_model(scene, scene.placing.models, assets, pieces.front()))
                 return;
-            const auto& colours = scene.models.at(park::model_key(pieces.front())).default_colours;
-            for (std::size_t i = 0; i < ride.fence_colours.size(); ++i)
-                ride.fence_colours[i] = static_cast<std::uint8_t>(colours[i]);
+            const std::array<std::int32_t, 3> colours { ride.fence_colours[0], ride.fence_colours[1], ride.fence_colours[2] };
             // The doors are painted as the fence is.
             for (save::PlacedObject& o : scene.objects)
             {
@@ -229,6 +230,8 @@ namespace rct3::scene
                     return false;
                 scene.ride_entities.resize(scene.rides.rides.size(), entt::null);
                 scene.ride_entities[i] = added.front();
+                if (const auto seating = assets.install ? simulation::ride_seatings(one, [&](std::string_view path) { return assets.install->find(path); }).front() : std::nullopt)
+                    scene.ride_seatings[added.front()] = static_cast<std::uint8_t>(*seating);
                 if (const auto show = std::ranges::find(scene.shows, ride.base.id, &save::RideShow::ride); show != scene.shows.end())
                     stage_show(scene, *show);
                 seat_flat_ride(device, scene, i);
@@ -294,15 +297,23 @@ namespace rct3::scene
             const std::array squares { static_cast<std::int32_t>(item.width), static_cast<std::int32_t>(item.length) };
             p.site = park::RideSite { .col = spot.col, .row = spot.row, .turns = spot.direction & 3, .height = spot.height, .span = spot.direction % 2 == 0 ? squares : std::array { squares[1], squares[0] } };
             p.ground = park::ride_site({ spot.col + (p.site->span[0] - 1) / 2, spot.row + (p.site->span[1] - 1) / 2 }, squares, p.site->turns, scene.grid).height;
-            p.fence.clear();
-            const auto model = std::ranges::find(scene.objects, spot.object, &save::PlacedObject::id);
-            const auto found = model != scene.objects.end() ? scene.models.find(park::model_ref(*model)) : scene.models.end();
-            for (const save::PlacedObject& was : park::ride_fences(r, found != scene.models.end() ? &found->second : nullptr, 0))
-            {
-                const auto panel = std::ranges::find_if(scene.objects, [&](const save::PlacedObject& o) { return !o.hidden && o.fixture && o.symbol == was.symbol && o.overlay == was.overlay && o.col == was.col && o.row == was.row && o.rotation == was.rotation && o.base_height == was.base_height; });
-                if (panel != scene.objects.end())
-                    p.fence.push_back(panel->id);
-            }
+        }
+        // A station standing on a base of its own (a tower's) takes its doors round the ground the base covers.
+        p.base.reset();
+        for (const save::TrackPiece& piece : stations)
+        {
+            const auto o = std::ranges::find(scene.objects, piece.scenery, &save::PlacedObject::id);
+            const auto model = piece.scenery != 0 && o != scene.objects.end() ? scene.models.find(park::model_ref(*o)) : scene.models.end();
+            if (model == scene.models.end() || model->second.squares == std::array { 1, 1 })
+                continue;
+            save::PlacedObject at;
+            at.col = piece.tile_x;
+            at.row = piece.tile_z;
+            at.rotation = piece.direction;
+            const save::Tile a = park::square_tile(at, model->second.squares, 0, 0);
+            const save::Tile b = park::square_tile(at, model->second.squares, model->second.squares[0] - 1, model->second.squares[1] - 1);
+            p.base = park::RideSite { .col = std::min(a.col, b.col), .row = std::min(a.row, b.row), .height = piece.height, .span = { std::abs(a.col - b.col) + 1, std::abs(a.row - b.row) + 1 } };
+            break;
         }
         p.door.reset();
         p.ghost_mesh = { };
@@ -378,6 +389,40 @@ namespace rct3::scene
                     ghost_textures(device, scene, p.preview_moving.mesh);
                 }
             };
+            // The panel's tabs: turning, painting scenery and, under a ride or stall that stands on dry ground,
+            // levelling it smoothly or sharply.
+            const bool levelled = !scenery && !p.item->water_only;
+            const auto placing_tabs = [&] {
+                std::vector<ui::InfoTab> tabs;
+                // Walls and other items that turn to the pointer have nothing to turn.
+                const auto positioning = static_cast<park::Positioning>(scene.models.at(park::model_key(alone)).positioning);
+                if (!scenery || !park::snapped_turns(positioning, { }))
+                {
+                    ui::InfoTab& turn = tabs.emplace_back();
+                    turn.icon = "IconAttractionEditorRotate";
+                    turn.help = assets.strings->get("ATE_TT_Rotate");
+                    turn.slot = kTurnSlot;
+                    turn.action = true;
+                }
+                for (const ui::SceneryTabInfo& t : ui::scenery_tabs({ .colour_slots = park::colour_slots(scene.models.at(park::model_key(alone))), .colours = p.colours }))
+                {
+                    // A ride takes its own colours when placed.
+                    if (t.tab != ui::SceneryTab::Colour || !scenery)
+                        continue;
+                    ui::InfoTab& colour = tabs.emplace_back();
+                    colour.icon = t.icon;
+                    colour.help = assets.strings->get(t.help);
+                    colour.slot = kColourSlot;
+                    colour.paints = t.paints;
+                }
+                for (const auto& [flatten, name, slot] : { std::tuple { park::Flatten::Smooth, "Smooth", kSmoothSlot }, std::tuple { park::Flatten::Sharp, "Sharp", kSharpSlot } })
+                {
+                    if (!levelled)
+                        break;
+                    tabs.push_back(ui::InfoTab { .icon = std::format("TerrainFlattener_{}{}", name, p.flatten == flatten ? "On" : "Off"), .help = std::u16string(assets.strings->get(std::format("TerrainFlattener_{}_ToolTip", name))), .slot = slot, .choices = { }, .action = true, .paints = { }, .colours = 0 });
+                }
+                return tabs;
+            };
             if (p.panel_item != alone.symbol && load_object_model(scene, p.models, assets, alone))
             {
                 // A new pick starts in the item's own colours.
@@ -385,38 +430,24 @@ namespace rct3::scene
                 p.colours = scene.models.at(park::model_key(alone)).default_colours;
                 show_alone();
                 if (panel)
-                {
-                    std::vector<ui::InfoTab> tabs;
-                    // Walls and other items that turn to the pointer have nothing to turn.
-                    const auto positioning = static_cast<park::Positioning>(scene.models.at(park::model_key(alone)).positioning);
-                    if (!scenery || !park::snapped_turns(positioning, { }))
-                    {
-                        ui::InfoTab& turn = tabs.emplace_back();
-                        turn.icon = "IconAttractionEditorRotate";
-                        turn.help = assets.strings->get("ATE_TT_Rotate");
-                        turn.slot = kTurnSlot;
-                        turn.action = true;
-                    }
-                    for (const ui::SceneryTabInfo& t : ui::scenery_tabs({ .colour_slots = park::colour_slots(scene.models.at(park::model_key(alone))), .colours = p.colours }))
-                    {
-                        // A ride takes its own colours when placed.
-                        if (t.tab != ui::SceneryTab::Colour || !scenery)
-                            continue;
-                        ui::InfoTab& colour = tabs.emplace_back();
-                        colour.icon = t.icon;
-                        colour.help = assets.strings->get(t.help);
-                        colour.slot = kColourSlot;
-                        colour.paints = t.paints;
-                    }
-                    const std::size_t none = tabs.size();
-                    panel->show(std::move(tabs), none);
-                }
+                    panel->show(placing_tabs(), placing_tabs().size());
             }
             if (panel && panel->showing() && p.panel_item == alone.symbol)
             {
-                // Each press of the tab turns it a quarter, always the same way.
-                if (panel->take_action())
-                    p.turns = (p.turns + 1) % 4;
+                // Each press of the turn tab turns it a quarter, always the same way. Of the levelling tabs, at most
+                // one is lit; pressing the lit one puts it out.
+                if (const auto pressed = panel->take_action())
+                {
+                    const std::size_t smooth = placing_tabs().size() - (levelled ? 2 : 0);
+                    if (*pressed < smooth)
+                        p.turns = (p.turns + 1) % 4;
+                    else
+                    {
+                        const park::Flatten picked = *pressed == smooth ? park::Flatten::Smooth : park::Flatten::Sharp;
+                        p.flatten = p.flatten == picked ? park::Flatten::Off : picked;
+                        panel->show(placing_tabs(), placing_tabs().size());
+                    }
+                }
                 if (const auto paint = panel->take_paint())
                 {
                     const auto slots = ui::scenery_paint_slots({ .colour_slots = park::colour_slots(scene.models.at(park::model_key(alone))), .colours = p.colours });
@@ -445,6 +476,7 @@ namespace rct3::scene
         if (p.solids_of != scene.objects.size())
         {
             p.solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
+            p.holds = park::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
             p.solids_of = scene.objects.size();
         }
         const auto show_ghost = [&] {
@@ -467,10 +499,16 @@ namespace rct3::scene
                 v.colour *= tint;
             ghost_textures(device, scene, p.ghost_mesh);
         };
-        // While Shift is held the height follows the pointer up and down, not below the ground.
+        // While Shift is held the height follows the pointer up and down: scenery not below the ground, a ride also
+        // down into it, to lie buried.
         const auto follow_lift = [&](const park::Ray& ray) {
             if (const auto height = lifted_height(ray, p.lift->at, p.lift->height))
-                p.site->height = std::max(p.ground, *height);
+                p.site->height = std::max(p.step == RidePlacing::Step::Ride ? p.ground - kDigReach : p.ground, *height);
+        };
+        // Lowered into the ground, the ghost must lie wholly under it, under enough ground for a cave.
+        const auto buried = [&] {
+            const auto o = ghost_object(p);
+            return o && load_object_model(scene, p.models, assets, *o) && park::lies_buried(std::span { &*o, 1 }, scene.models, scene.grid);
         };
         if (p.step == RidePlacing::Step::Scenery)
         {
@@ -482,10 +520,7 @@ namespace rct3::scene
             {
                 ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
                 if (scene.pick_boxes_of != scene.objects.size())
-                {
-                    scene.pick_boxes = park::pick_boxes(scene.objects, scene.models, scene.grid, scene.fitted);
-                    scene.pick_boxes_of = scene.objects.size();
-                }
+                    place_objects(scene);
                 auto object = park::pick_object(*ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return scene.show_scenery && !scene.objects[i].hidden; });
                 if (object)
                 {
@@ -510,7 +545,7 @@ namespace rct3::scene
             if (park::on_paths(positioning))
             {
                 p.lift.reset();
-                const auto spot = hit ? park::furniture_spot(scene.footpaths.paths, scene.grid, *hit, positioning, p.turns) : std::nullopt;
+                const auto spot = hit ? park::furniture_spot(scene.footpaths.paths, scene.grid, *hit, positioning, p.turns, model != scene.models.end() && model->second.level_paths_only) : std::nullopt;
                 if (!spot)
                 {
                     p.site.reset();
@@ -523,7 +558,7 @@ namespace rct3::scene
                 p.ground = spot->raised ? park::ride_site({ spot->tile.col, spot->tile.row }, squares, 0, scene.grid).height : spot->height;
                 p.absolute = spot->raised;
                 const save::PlacedObject o = *ghost_object(p);
-                p.problem = !park::on_owned_land(o, squares, scene.grid) ? park::SiteProblem::NotOwned : park::furniture_taken(scene.objects, scene.models, o, positioning) ? park::SiteProblem::Blocked : park::SiteProblem::None;
+                p.problem = !park::on_owned_land(o, squares, scene.grid) ? park::SiteProblem::NotOwned : spot->refused || park::furniture_taken(scene.objects, scene.models, o, positioning) ? park::SiteProblem::Blocked : park::SiteProblem::None;
                 p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
                 show_ghost();
                 return;
@@ -595,6 +630,11 @@ namespace rct3::scene
             p.problem = park::site_problem(*p.site, scene.grid, scene.footpaths.paths, p.solids);
             if (p.problem == park::SiteProblem::None)
                 p.problem = park::water_problem(*p.site, p.item->water_only, scene.footpaths.water.bodies);
+            // Raised, it stands over the ground as it is, so none may rise into it; lowered, it lies wholly under it.
+            if (p.problem == park::SiteProblem::None && p.site->height > p.ground)
+                p.problem = park::ground_problem(*p.site, scene.grid);
+            else if (p.problem == park::SiteProblem::None && p.site->height < p.ground && !buried())
+                p.problem = park::SiteProblem::IntoGround;
             p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
             show_ghost();
             return;
@@ -613,6 +653,9 @@ namespace rct3::scene
         {
             const std::array squares { static_cast<std::int32_t>(p.item->width), static_cast<std::int32_t>(p.item->length) };
             p.site = park::ride_site({ tile->col, tile->row }, squares, p.turns, scene.grid);
+            // Unless the ground is levelled for it, it stands clear of the ground.
+            if (p.flatten == park::Flatten::Off)
+                p.site->height = park::clear_height(*p.site, scene.grid);
             p.ground = p.site->height;
             // A ride that goes only on water floats on it, the lake's floor left as it is.
             if (const auto surface = park::water_surface(scene.footpaths.water.bodies, *tile); p.item->water_only && surface)
@@ -627,13 +670,21 @@ namespace rct3::scene
             p.problem = park::site_problem(*p.site, scene.grid, paths, p.solids);
             if (p.problem == park::SiteProblem::None)
                 p.problem = park::water_problem(*p.site, p.item->water_only, scene.footpaths.water.bodies);
-            p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
+            // The ground under it is levelled, unless a tile of its footprint may not be; then, as when it is not
+            // levelled, the ground may not rise over its base. A tile round it that may not be levelled stays.
+            p.levelling = p.item->water_only ? park::GroundCuts { } : park::levelled_ground(*p.site, p.flatten, scene.grid);
+            (void)park::allow_cuts(p.levelling, scene.grid, p.holds, scene.footpaths.water.bodies);
+            p.levelling_cost = park::cuts_cost(p.levelling, scene.grid);
+            if (p.problem == park::SiteProblem::None && p.levelling.footprint.empty())
+                p.problem = park::ground_problem(*p.site, scene.grid);
+            p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price + p.levelling_cost;
         }
         else
         {
             if (!p.stations.empty())
             {
-                p.door = park::station_door_spot(p.stations, { tile->col, tile->row });
+                p.door = p.base ? park::door_spot(*p.base, { tile->col, tile->row }) : park::station_door_spot(p.stations, { tile->col, tile->row });
+                p.door->height = p.base ? p.base->height : p.door->height;
                 p.ground = park::ride_site({ p.door->col, p.door->row }, { 1, 1 }, 0, scene.grid).height;
                 p.site = park::RideSite { p.door->col, p.door->row, 0, p.door->height, { 1, 1 } };
             }
@@ -650,6 +701,18 @@ namespace rct3::scene
             p.affordable = true;
         }
         show_ghost();
+    }
+
+    void take_fence(ParkScene& scene, const ui::InterfaceAssets& assets, save::Ride& ride, const park::BuildItem& item)
+    {
+        ride.fence_symbol = item.fence;
+        ride.fence_overlay = item.fence_overlay;
+        const save::PlacedObject panel { .symbol = item.fence, .overlay = item.fence_overlay };
+        if (item.fence.empty() || !load_object_model(scene, scene.placing.models, assets, panel))
+            return;
+        const auto& colours = scene.models.at(park::model_key(panel)).default_colours;
+        for (std::size_t i = 0; i < ride.fence_colours.size(); ++i)
+            ride.fence_colours[i] = static_cast<std::uint8_t>(colours[i]);
     }
 
     void place_station_door(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t station_index, const save::PlacedObject& door, std::int32_t height, bool exit)
@@ -678,6 +741,8 @@ namespace rct3::scene
         (exit ? station.exit : station.entrance) = object;
         (exit ? station.exit_spot : station.entrance_spot) = save::PlacementSpot { object, door.col, door.row, height, static_cast<std::uint8_t>(door.rotation) };
         update_platforms(scene, ride, assets);
+        fence_ride(scene, assets, r);
+        refresh_pavings(scene);
         if (station.entrance != 0 && station.exit != 0 && !std::ranges::contains(p.unjoined, ride))
             p.unjoined.push_back(ride);
     }
@@ -691,6 +756,7 @@ namespace rct3::scene
         if (!o || p.problem != park::SiteProblem::None || !p.affordable || !scene.models.contains(park::model_key(*o)))
             return true;
         wait_for_build(scene);
+        ++scene.built;
         if (p.step == RidePlacing::Step::Scenery)
         {
             // The tool stays out for the next one, as in the game.
@@ -712,14 +778,16 @@ namespace rct3::scene
                     scene.signs.push_back({ .object_ref = id });
             }
             animate_scenery(device, scene, scene.objects.size() - 1);
-            // The woods beyond the edge grow with the park's: more trees call for more groves there.
-            if (scene.off_map_stream && park::is_plant(scene.objects.back(), scene.models) && park::off_map_groves(scene.objects, scene.models, scene.grid) > scene.off_map_groves)
+            // The woods beyond the edge grow with the park's: a tree planted near it seeds some there.
+            if (scene.off_map_stream && park::is_plant(scene.objects.back(), scene.models))
             {
-                std::vector<save::PlacedObject> trees = park::off_map_trees(scene.objects, scene.models, scene.grid, park::land_rings(scene.grid, scene.footpaths.water), *scene.off_map_stream, scene.off_map_groves);
-                scene.off_map_groves = park::off_map_groves(scene.objects, scene.models, scene.grid);
-                logging::logger("park").info("{} more trees beyond the edge", trees.size());
-                scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
-                objects_changed(scene);
+                std::vector<save::PlacedObject> trees = park::off_map_trees(scene.objects, scene.objects.size() - 1, scene.models, scene.grid, park::land_rings(scene.grid, scene.footpaths.water), *scene.off_map_stream);
+                if (!trees.empty())
+                {
+                    logging::logger("park").info("{} more trees beyond the edge", trees.size());
+                    scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
+                    objects_changed(scene);
+                }
             }
             if (scene.park.cash)
                 *scene.park.cash -= p.item->price;
@@ -730,13 +798,22 @@ namespace rct3::scene
         }
         if (p.step == RidePlacing::Step::Ride)
         {
-            // Raised with Shift, it stands over the ground as it is.
-            if (p.site->height <= p.ground)
-                park::level_ground(scene.grid, *p.site);
+            // Raised or lowered with Shift, it stands over the ground as it is or lies buried in it; else the ground is
+            // levelled for it, paid with it, and the scenery standing there seated again. Taken away, it leaves the
+            // ground levelled.
+            const bool levels = p.site->height == p.ground;
+            const auto price = p.item->price + (levels ? p.levelling_cost : 0);
+            if (levels)
+            {
+                park::make_cuts(scene.grid, p.levelling);
+                if (park::seat_followers(scene.objects, p.holds, scene.models, scene.grid, { p.site->col - 1, p.site->row - 1 }, { p.site->col + p.site->span[0], p.site->row + p.site->span[1] }))
+                    objects_changed(scene);
+            }
             if (p.item->stall)
             {
                 p.ride = scene.rides.stalls.size();
                 const std::uint64_t object = add_object(scene, *o);
+                animate_scenery(device, scene, scene.objects.size() - 1);
                 save::Stall& stall = scene.rides.stalls.emplace_back();
                 stall.base.id = last_id(scene) + 1;
                 stall.base.symbol = std::format("{}:sta", p.item->symbol);
@@ -755,8 +832,8 @@ namespace rct3::scene
                 for (const park::BuildItem::Goods& g : p.item->goods)
                     stall.items.push_back({ .kind_symbol = std::format("{}:cid", g.item), .price = g.price, .name = "%ME%" });
                 if (scene.park.cash)
-                    *scene.park.cash -= p.item->price;
-                float_money(scene, site_point(scene, *p.site), -p.item->price);
+                    *scene.park.cash -= price;
+                float_money(scene, site_point(scene, *p.site), -price);
                 logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
                 p.unjoined_stalls.push_back(p.ride);
                 // One stall a pick: the tool goes away and the stall's window opens, as in the game.
@@ -801,10 +878,10 @@ namespace rct3::scene
             ride.base.spot = save::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turns) };
             ride.base.facing = static_cast<std::uint8_t>(p.site->turns);
             if (scene.park.cash)
-                *scene.park.cash -= p.item->price;
-            float_money(scene, site_point(scene, *p.site), -p.item->price);
+                *scene.park.cash -= price;
+            float_money(scene, site_point(scene, *p.site), -price);
             logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
-            p.fence.clear();
+            take_fence(scene, assets, ride, *p.item);
             fence_ride(scene, assets, ride);
             p.step = RidePlacing::Step::Entrance;
             // Its window opens at once, on the tab last used, while its doors are placed.
@@ -812,8 +889,8 @@ namespace rct3::scene
         }
         else
         {
-            // The door stands on ground levelled to the ride's height, as the ride does.
-            if (p.site->height <= p.ground)
+            // The door stands on ground levelled to the ride's height, as the ride does, unless it lies buried.
+            if (p.site->height == p.ground || (p.site->height < p.ground && !park::lies_buried(std::span { &*o, 1 }, scene.models, scene.grid)))
                 park::level_ground(scene.grid, park::RideSite { p.door->col, p.door->row, 0, p.site->height, { 1, 1 } });
             logging::logger("park").info("placed {} at {},{}", o->symbol, p.door->col, p.door->row);
             if (!p.stations.empty())
@@ -827,7 +904,6 @@ namespace rct3::scene
                     stop_ride_placing(scene);
                 p.door.reset();
                 p.ghost_mesh = { };
-                refresh_pavings(scene);
                 rebuild_ground(device, scene, assets);
                 return true;
             }

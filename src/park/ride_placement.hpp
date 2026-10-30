@@ -11,6 +11,7 @@
 // across one of the sides its track does not run through, at the piece's height and facing it.
 #pragma once
 
+#include "park/ground_holds.hpp"
 #include "park/path_clearance.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -36,8 +37,6 @@ namespace rct3::park
         std::array<std::int32_t, 2> span { 1, 1 }; ///< Columns and rows covered, after the turn
     };
 
-    /// The site of a ride of `squares` (along its own X and Z) turned `turns` quarter turns, centred on the
-    /// tile `col`, `row`.
     /// The name a new ride of `symbol` takes: its kind's name and the lowest number no other ride of its kind
     /// has, in the form the park keeps such names ("%ME% 2").
     [[nodiscard]] std::string numbered_name(std::span<const save::Ride> rides, std::string_view symbol);
@@ -59,6 +58,8 @@ namespace rct3::park
     /// loop, and a trick with none lasts nothing. All are offered and researched.
     [[nodiscard]] std::vector<save::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds);
 
+    /// The site of a ride of `squares` (along its own X and Z) turned `turns` quarter turns, centred on `tile`,
+    /// at the mean height of the corners of the tiles it covers, to the nearest whole unit.
     [[nodiscard]] RideSite ride_site(save::Tile tile, std::array<std::int32_t, 2> squares, std::int32_t turns, const save::TerrainGrid& grid);
 
     enum class SiteProblem : std::uint8_t
@@ -71,6 +72,7 @@ namespace rct3::park
         UnderWater,   ///< Any other ride, below the water on a tile
         OffPath,      ///< Scenery that stands only on paths, away from them
         OffEnclosure, ///< An animal house not wholly inside one animal enclosure
+        IntoGround,   ///< A ride standing over the ground as it is, with the ground of a tile rising over its base
     };
 
     /// What keeps a ride from `site` for the water of `bodies`, if anything: one `water_only` needs water under
@@ -80,6 +82,28 @@ namespace rct3::park
 
     /// What keeps a ride from `site`, if anything.
     [[nodiscard]] SiteProblem site_problem(const RideSite& site, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles& solids);
+
+    /// What keeps a ride standing over the ground as it is, without levelling it, from `site`: the ground of a
+    /// tile rising over its base.
+    [[nodiscard]] SiteProblem ground_problem(const RideSite& site, const save::TerrainGrid& grid);
+
+    /// How the ground under a ride being placed is levelled for it: not at all, the ride raised to stand clear of
+    /// it; sharply, only the footprint's own tiles, leaving cliffs round it; or smoothly, the tiles round it
+    /// sloping down or up to it.
+    enum class Flatten : std::uint8_t
+    {
+        Off,
+        Sharp,
+        Smooth,
+    };
+
+    /// The whole-unit height a ride on `site` stands clear of the ground at: its footprint's highest corner.
+    [[nodiscard]] std::int32_t clear_height(const RideSite& site, const save::TerrainGrid& grid);
+
+    /// The ground under `site` levelled to its height, as the tiles that change: the footprint's own tiles, each
+    /// corner at the height, and, levelling smoothly, the tiles round it, those of their corners on the
+    /// footprint's edge at the height and the rest as they are.
+    [[nodiscard]] GroundCuts levelled_ground(const RideSite& site, Flatten flatten, const save::TerrainGrid& grid);
 
     /// Levels the ground under `site` to its height.
     void level_ground(save::TerrainGrid& grid, const RideSite& site);

@@ -24,6 +24,8 @@ namespace rct3::ovl
         float lift_speed = 0;                 ///< Lift chain speed
         float brake_speed = 0;                ///< Speed brakes slow trains to
         float block_brake_speed = 0;          ///< Speed a train leaves a block brake at
+        float brake_force = 0;                ///< Newtons each car over a brake is held back with
+        float block_brake_force = 0;          ///< Newtons each car over a block brake is pushed with while slower than its speed
         std::optional<float> fixed_speed;     ///< The one speed of rides that never vary it, such as transport rides
         float lift_min = 0, lift_max = 0;     ///< Range the player may set the lift speed in
         float launch_min = 0, launch_max = 0; ///< Range the player may set the launch speed in

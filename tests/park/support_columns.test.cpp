@@ -139,6 +139,10 @@ TEST_CASE("a column under track on the ground: deep foot, middles lined up on th
     CHECK(built.fitted.empty());
     CHECK(built.pieces.front().id == 101);
     CHECK(built.pieces.front().force_absolute_height);
+    // Models handed in by index stand for those looked up; none handed in means none.
+    const std::vector<const ObjectModel*> found { &park.models.at(model_key(park.objects[0])) };
+    CHECK(stack(support_columns(park.objects, park.models, { }, flat_grid(8, 2), girders(), 100, { }, std::nullopt, found).pieces, 3, 3) == stack(built.pieces, 3, 3));
+    CHECK(support_columns(park.objects, park.models, { }, flat_grid(8, 2), girders(), 100, { }, std::nullopt, std::vector<const ObjectModel*> { nullptr }).pieces.empty());
 }
 
 TEST_CASE("a column needs room above the ground and no ground path under it")
@@ -332,4 +336,17 @@ TEST_CASE("an item's support tiles are under its footprint and where its points'
     f.points = { p };
     const save::PlacedObject& o = park.add("Beside", f, 5, 5, 10);
     CHECK(support_tiles(o, park.models) == std::vector<SupportTile> { { 5, 5 }, { 6, 5 } });
+}
+
+TEST_CASE("a placed object that names a support set gets its columns from that set, not its model's")
+{
+    Park park;
+    SupportSets sets = girders();
+    for (const auto& [symbol, levels] : { std::pair { "Post1", 1 }, std::pair { "Post4", 4 } })
+        add_support_piece(sets, "posts", kSupportMiddleType, symbol, levels);
+    park.add("Straight", track_square(), 3, 3, 6).support_set = "posts";
+    using Stack = std::vector<std::pair<std::string, std::int32_t>>;
+    CHECK(stack(support_columns(park.objects, park.models, { }, flat_grid(8, 0), sets, 100).pieces, 3, 3) == Stack { { "Post4", 0 }, { "Post1", 4 }, { "Post1", 5 } });
+    park.objects.front().support_set.clear();
+    CHECK(stack(support_columns(park.objects, park.models, { }, flat_grid(8, 0), sets, 100).pieces, 3, 3).front().first == "DeepFoot");
 }

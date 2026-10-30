@@ -2,7 +2,10 @@
 //
 // The footpaths as the simulation walks them: one node per path tile, joined to the path tiles beside it.
 // A tile is a column, a row and a level (height in steps); tiles side by side join when their levels differ
-// by at most `max_step`, which is how slopes join a flat path to a higher one.
+// by at most `max_step`, which is how slopes join a flat path to a higher one. Tiles join only where their
+// surfaces meet along the edge between them, within kEdgeGap at both its ends: a raised path running past a
+// lower one, or the side of a ramp, does not join it. A queue tile joins only across its two open ends, the
+// sides its line comes in and goes out by; its railings close the rest.
 //
 // Where four footpath tiles at one level make a full 2 by 2 square, each joined to the two beside it, a walk
 // may also cut across it from corner to opposite corner, at its true length. Queues never take part.
@@ -36,6 +39,10 @@ namespace rct3::simulation
 
     using NodeId = std::uint32_t;
     inline constexpr NodeId kNoNode = ~NodeId { 0 };
+    /// Most a path's surface may stand above or below its neighbour's at the ends of their shared edge and
+    /// still join it. Chosen by eye: a quarter of a level absorbs rounding in saved heights, while a ramp's side
+    /// or a raised path beside the ground is off by at least a whole level at one end.
+    inline constexpr float kEdgeGap = 0.25f;
 
     /// Who walks: guests keep to the no-entry signs, staff to the tiles not kept from them.
     enum class Walker : std::uint8_t
@@ -61,9 +68,13 @@ namespace rct3::simulation
         bool covered = false;        ///< Under a roof that keeps the rain off
         bool shaded = false;         ///< Out of the sun: under a roof or trees
         bool removed = false;        ///< Its tile was taken away
-        bool sloped = false;         ///< A ramp, whose height at its middle is halfway between its ends
         std::uint8_t no_entry = 0;   ///< Sides guests may not come in across, bit k for side k as `next` numbers them
         bool staff_kept_off = false; ///< Staff do not step onto it
+        std::uint8_t open = 0b1111;  ///< Sides it may join across, bit k for side k as `next` numbers them; a queue only its two ends
+        /// World heights of the path's surface at the tile's corners: low col low row, high col low row, low col
+        /// high row, high col high row. Between them it is two flat triangles, split from the second corner to
+        /// the third, as the ground is.
+        std::array<float, 4> corners { };
         /// The node beside this one on each side (+col, +row, -col, -row), or kNoNode.
         std::array<NodeId, 4> next { kNoNode, kNoNode, kNoNode, kNoNode };
         /// The node a step across a square of paths reaches at each corner (+col +row, -col +row, -col -row,
@@ -114,11 +125,9 @@ namespace rct3::simulation
         {
             nodes_[node].line = line;
         }
-        /// Marks a node's tile as a ramp.
-        void set_sloped(NodeId node, bool sloped)
-        {
-            nodes_[node].sloped = sloped;
-        }
+        /// Gives a node's tile a surface that is not flat at its height (a ramp, or ground that is not level) and
+        /// the sides it may join across (`open`, as PathNode::open); joins its tile again to suit.
+        void set_corners(NodeId node, std::array<float, 4> corners, std::uint8_t open = 0b1111);
         /// Bars side `side` (as `next` numbers them) of a node's tile to guests coming in, or lifts the bar.
         void set_no_entry(NodeId node, std::size_t side, bool barred)
         {
@@ -142,8 +151,9 @@ namespace rct3::simulation
         [[nodiscard]] std::optional<NodeId> nearest(glm::vec3 at) const;
         /// The middle of a node's tile in world space.
         [[nodiscard]] glm::vec3 centre(NodeId node) const;
-        /// The height of the path a fraction `t` of the way from the middle of `from`'s tile to the middle of `to`'s.
-        [[nodiscard]] float height_between(NodeId from, NodeId to, float t) const;
+        /// The height of the path's surface under world point `at` (x and z) on a walk from `from` to `to`: on
+        /// whichever of their tiles holds it, else on the path tile there nearest them in height.
+        [[nodiscard]] float surface(NodeId from, NodeId to, glm::vec2 at) const;
 
         /// Adds a link; a queue tile it starts from is entered on the way only to take it.
         void link(const PathLink& link);
@@ -156,13 +166,17 @@ namespace rct3::simulation
         [[nodiscard]] std::optional<const PathLink&> link_between(NodeId from, NodeId to) const;
 
         /// The nodes after `from` on a shortest walk to `to`, ending with `to`; empty when `from` is `to`, none
-        /// when no walk reaches it. Queues are only entered at `to`, never walked through. Only steps `who` may take.
+        /// when no walk reaches it. Queues are only entered at `to`, never walked through, but one starting in a queue
+        /// may walk out along its line. Only steps `who` may take.
         /// Given a `purse`, the way may also take links, as many as their tolls together fit it; a link shows in
         /// the walk as a step from its start to its end.
         [[nodiscard]] std::optional<std::vector<NodeId>> route(NodeId from, NodeId to, Walker who = Walker::Guest, std::optional<std::int64_t> purse = std::nullopt) const;
         /// Like route, to whichever of `targets` is nearest: its place in `targets` (the first, where several
         /// share a node) and the walk there. One search, however many targets.
         [[nodiscard]] std::optional<std::pair<std::size_t, std::vector<NodeId>>> route_nearest(NodeId from, std::span<const NodeId> targets, Walker who = Walker::Guest, std::optional<std::int64_t> purse = std::nullopt) const;
+        /// From a queue tile, the walk along its line to the nearest tile off the queue a guest may step onto, as
+        /// route gives it; empty when `from` is no queue, none when the line leads nowhere.
+        [[nodiscard]] std::optional<std::vector<NodeId>> way_out(NodeId from) const;
 
     private:
         static std::uint64_t key(int col, int row);

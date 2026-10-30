@@ -1,5 +1,7 @@
 # rct3++
 
+<p align="center"><img src="assets/icon/panda.svg" alt="rct3++ panda" width="200"></p>
+
 An open-source reimplementation of RollerCoaster Tycoon 3 Complete Edition, in C++26.
 
 rct3++ is a reimplementation, not a decompilation. It reads the game's data, save and scenario files from
@@ -31,7 +33,6 @@ Where our knowledge comes from:
   the code says so.
 - **Our own model**, where measuring is not practical. rct3++ does not aim to match the original number
   for number.
-- **Open-source work** under a compatible licence, such as OpenRCT2, credited where it is used.
 
 We do not accept contributions based on decompiling, disassembling or debugging the game's executables, or
 on leaked source or documents. See the clean-room standards in the [Code of Conduct](CODE_OF_CONDUCT.md)

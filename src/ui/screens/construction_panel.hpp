@@ -117,6 +117,7 @@ namespace rct3::ui
         int most = 0;
         int decimals = 0;
         std::u16string unit;
+        int step = 1;
     };
 
     /// What a picture button shows.

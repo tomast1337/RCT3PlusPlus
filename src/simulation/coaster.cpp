@@ -13,14 +13,16 @@ namespace rct3::simulation
     {
         constexpr float kGravity = 9.81f;
         // Our model's losses, picked so the laps of saved parks' tested coasters come out near their test times.
-        constexpr float kRolling = 0.003f;   ///< Of the train's weight
-        constexpr float kAir = 0.0004f;      ///< Times speed squared, per metre of the train's mass
-        constexpr float kStep = 0.05f;       ///< Seconds per part step, short enough for the steepest drops
-        constexpr float kStuck = 4;          ///< Seconds all but stopped before the track's tyres take over
-        constexpr float kLaunchLeast = 0.5f; ///< Metres of platform left that a launch is still sized over
-        constexpr float kBuildUp = 3;        ///< Passes a swinging train's pushes take to build up to full, and to die down
-        constexpr float kBounce = 0.8f;      ///< Each push back up a tower is this much of the one before
-        constexpr float kTopHold = 3;        ///< Seconds a drop tower's train is held at the top
+        constexpr float kRolling = 0.003f;    ///< Of the train's weight
+        constexpr float kAir = 0.0004f;       ///< Times speed squared, per metre of the train's mass
+        constexpr float kStep = 0.05f;        ///< Seconds per part step, short enough for the steepest drops
+        constexpr float kStuck = 4;           ///< Seconds all but stopped before the track's tyres take over
+        constexpr float kLaunchLeast = 0.5f;  ///< Metres of platform left that a launch is still sized over
+        constexpr float kBuildUp = 3;         ///< Passes a swinging train's pushes take to build up to full, and to die down
+        constexpr float kBounce = 0.8f;       ///< Each push back up a tower is this much of the one before
+        constexpr float kTopHold = 3;         ///< Seconds a drop tower's train is held at the top
+        constexpr float kStationBrake = 3;    ///< m/s² a station's brakes slow an arriving train by. Chosen by eye
+        constexpr float kStationCreep = 0.5f; ///< m/s an arriving train is brought the last of the way in at. Chosen by eye
 
         std::size_t point_at(const Coaster& c, float d)
         {
@@ -217,19 +219,16 @@ namespace rct3::simulation
                     c.speed = std::copysign(c.station_speed, c.start - c.at);
                 else if (under == Stretch::Station)
                 {
-                    // A shuttle's train rolls through the station on its passes before the last.
+                    // A shuttle's train rolls through the station on its passes before the last. Others are carried
+                    // through by its tyres and, coming in, slowed with the room left to where they stop.
                     if (!open)
-                        c.speed = c.station_speed;
+                    {
+                        const float stop = c.next_stop < c.stops.size() ? c.stops[c.next_stop] : c.length();
+                        const float most = std::max(std::sqrt(2 * kStationBrake * std::max(stop - c.travelled, 0.0f)), kStationCreep);
+                        c.speed = std::clamp(c.speed, std::min(c.station_speed, most), most);
+                    }
                 }
-                else if (under == Stretch::Brake)
-                {
-                    // shortcut: brakes take the speed down at once, upgrade if a train should slow along them.
-                    const std::size_t at = point_at(c, c.at);
-                    // A brake set to nothing would stop the train for good; it lets it through.
-                    if (at < c.brake_speeds.size() && c.brake_speeds[at] > 0)
-                        c.speed = std::min(c.speed, c.brake_speeds[at]);
-                }
-                else
+                else if (under != Stretch::Brake)
                 {
                     // shortcut: a train stalled in a dip is pushed on as if by tyres until it outruns them, upgrade if
                     // valleys should roll it back for good.
@@ -241,6 +240,42 @@ namespace rct3::simulation
                     if (pace > c.station_speed)
                         c.slow = 0;
                 }
+                // Each car over a brake or block brake slows the train while it is faster than that brake's speed,
+                // down to it and no further, whichever way it goes; each over a block brake pushes it on while it is
+                // slower. A brake set to nothing lets it through.
+                const int cars = std::max(c.cars, 1);
+                const float car = c.train_length / static_cast<float>(cars);
+                float pull = 0;
+                float push = 0;
+                float least = 0;
+                float most = 0;
+                bool blocked = false;
+                for (int k = 0; k < cars; ++k)
+                {
+                    const std::size_t i = point_at(c, wrap(c, c.at - (static_cast<float>(k) + 0.5f) * car));
+                    const bool block = c.kinds[i] == Stretch::BlockBrake;
+                    if ((!block && c.kinds[i] != Stretch::Brake) || i >= c.brake_speeds.size() || c.brake_speeds[i] <= 0)
+                        continue;
+                    blocked = blocked || block;
+                    if (std::abs(c.speed) > c.brake_speeds[i])
+                    {
+                        pull += c.brake_pull / static_cast<float>(cars);
+                        least = std::max(least, c.brake_speeds[i]);
+                    }
+                    else if (block && !open)
+                    {
+                        push += c.boost_pull / static_cast<float>(cars);
+                        most = std::max(most, c.brake_speeds[i]);
+                    }
+                }
+                if (pull > 0)
+                    c.speed = std::copysign(std::max(std::abs(c.speed) - pull * dt, least), c.speed);
+                else if (push > 0)
+                    c.speed = std::min(c.speed + push * dt, most);
+                // Held on a block brake for the block ahead to clear, the brakes bring it to a stop where its room
+                // runs out.
+                if (blocked && std::isfinite(room))
+                    c.speed = std::min(c.speed, std::sqrt(2 * c.brake_pull * std::max(room, 0.0f)));
                 // A drop tower's train is held where its first climb tops out, then let fall.
                 if (c.shuttle == Shuttle::Drop && c.passed == 0 && c.push == 0 && c.travelled > 0 && c.speed <= 0 && c.held < kTopHold)
                 {

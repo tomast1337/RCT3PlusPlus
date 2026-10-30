@@ -80,6 +80,7 @@ namespace rct3::simulation
         Share hunger { };
         Share thirst { };
         Share bladder { };
+        Share swim { }; ///< Wish to go swimming, grown by how much they like pools
     };
 
     struct Mood
@@ -163,6 +164,7 @@ namespace rct3::simulation
     {
         Share least { };
         Share most { 1 };
+        Share pools { 0.5f }; ///< How much they like swimming, which their wish to swim grows by
     };
 
     /// A guest carrying an umbrella, up while it rains.
@@ -223,6 +225,7 @@ namespace rct3::simulation
         Following, ///< Walking beside their party's leader, who chooses where to go
         Waiting,   ///< For the rest of their party, on a tile near where those still busy are
         Buying,    ///< At the stall `target`, served for `rest` ticks while the rest of their party waits
+        Swimming,  ///< At the pool whose changing room is `target`, changing or in the pool (see Swimmer)
     };
 
     struct Errand
@@ -250,6 +253,12 @@ namespace rct3::simulation
         RainKeepsMeOff = 32,
         Vandalism = 14,
         Vomit = 15,
+        NotHungry = 10,      ///< Along at a food stall without wanting anything
+        NotThirsty = 11,     ///< Along at a drink stall without wanting anything
+        AlreadyGot = 22,     ///< Along at an umbrella stall with one already
+        HaventFinished = 23, ///< At a stall while still eating or drinking
+        GoodValue = 26,      ///< Bought something well under what it is worth to them
+        NotPaying = 27,      ///< Put off by a price over what it is worth to them
         Sick = 20,
         VerySick = 21,
         Broke = 24,
@@ -269,7 +278,12 @@ namespace rct3::simulation
         PickedUpHappy = 71,
         PickedUpNeutral = 72,
         PickedUpSad = 73,
-        BeenInjured = 163, ///< Thrown from a crashed ride, or knocked over by its blast
+        BeenInjured = 163,     ///< Thrown from a crashed ride, or knocked over by its blast
+        PoolGood = 179,        ///< Out of a pool kept clean
+        PoolBad = 180,         ///< Out of a dirty one
+        PoolOvercleaned = 181, ///< Out of one cleaned with too harsh a fluid
+        NoPools = 182,         ///< Wanting a swim in a park with no pool open
+        TooColdForPools = 198,
     };
 
     struct Thought
@@ -342,6 +356,7 @@ namespace rct3::simulation
     {
         Shop,
         Ride,
+        Pool, ///< A changing room of a pool, where guests pay to swim
     };
 
     struct Attraction
@@ -355,6 +370,57 @@ namespace rct3::simulation
         Money income { };     ///< Taken so far
         std::uint32_t customers = 0;
         std::uint64_t saved = 0; ///< The saved park's own id of it; 0 when not from a save
+    };
+
+    /// A pool complex: the squares its swimmers go to, each spot the middle of a square at its surface.
+    struct SwimPool
+    {
+        std::vector<glm::vec3> water { };
+        std::vector<glm::vec3> paved { };
+        std::vector<glm::vec3> spa { };    ///< Where swimmers sit in the spa pools, at the spa's water
+        std::vector<glm::vec3> extras { }; ///< The paved squares with an extra on them, loungers and showers
+        Share dirt { };                    ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
+    };
+
+    /// How dirty a pool looks, in the six steps the pool's window names, cleanest first.
+    [[nodiscard]] std::size_t dirt_step(const SwimPool& pool);
+
+    /// The cleaning fluids a changing room may keep its pool clean with, mildest first.
+    enum class PoolFluid : std::uint8_t
+    {
+        Mild,
+        Strong,
+        Harsh, ///< Cleans fast, but stings swimmers' eyes in a pool with little dirt to clean
+    };
+
+    /// A changing room's cleaning fluid, on its PoolDoor: which, and what is left of it. Mechanics inspecting the
+    /// room fill it up again, at the fluid's price.
+    struct PoolTank
+    {
+        PoolFluid fluid = PoolFluid::Mild;
+        Share left { 1 };
+    };
+
+    /// A changing room of a pool complex, on its Attraction, whose entrance is the path tile at its door.
+    struct PoolDoor
+    {
+        entt::entity pool = entt::null; ///< Its SwimPool
+        std::int32_t col = 0;           ///< Its tile
+        std::int32_t row = 0;
+        glm::vec3 room { 0.0f };     ///< The middle of its tile, at the pool's surface
+        glm::vec3 poolside { 0.0f }; ///< The middle of the paved square it opens on
+    };
+
+    /// A guest at a pool, from paying at its changing room until they come out of it again.
+    struct Swimmer
+    {
+        Seconds changing { };    ///< Still to spend changing, out of sight in the room
+        bool changed = false;    ///< Into their swimwear
+        Seconds left { };        ///< In the pool still; then they go back to change
+        glm::vec3 goal { 0.0f }; ///< Where they swim or walk to next
+        bool in_water = false;   ///< Swimming, or sitting in a spa pool; else on the paved squares round the water
+        bool to_spa = false;     ///< The goal is a seat in a spa pool
+        Seconds idle { };        ///< Floating, or standing, before going on
     };
 
     /// What a shop sells, or what a facility does for its guests.
@@ -376,10 +442,23 @@ namespace rct3::simulation
         Hot,  ///< Wanted most on cold days
     };
 
-    struct Shop
+    /// One thing a stall sells.
+    struct Ware
     {
         Product product = Product::Drink;
         Serve serve = Serve::Any;
+        Money price { };
+        std::string symbol { }; ///< Of the item a guest carries away, as `Burger:cid`; empty when not known
+    };
+
+    struct Shop
+    {
+        Product product = Product::Drink; ///< What it is visited for: its first ware's
+        Serve serve = Serve::Any;
+        /// From the middle of its entrance tile towards the stall, along x and z, one long; buyers stand at
+        /// its counter that way. Zero when not known: they stand in the tile's middle.
+        glm::vec2 counter { 0.0f };
+        std::vector<Ware> menu { }; ///< Its food, drink and umbrellas; empty: one ware of `product` at its attraction's price
     };
 
     /// Where a ride without trains is in its cycle. It loads standing still, starts, runs its loops, stops, and
@@ -535,11 +614,21 @@ namespace rct3::simulation
         bool vomit = false; ///< Left by a sick guest
     };
 
-    /// What a guest is left holding once they have eaten or drunk what they bought.
-    struct Rubbish
+    /// Food or drink a guest carries from a stall, in their left hand: eaten or drunk a bite at a time, then
+    /// held as an empty (a wrapper, a cup) until they are rid of it: in a bin, in a pocket, or on the path.
+    struct Carried
     {
-        std::uint8_t kind = 0; ///< As Litter::kind, once dropped
-        Seconds held { };      ///< Since they bought it, eating or drinking first
+        static constexpr std::uint8_t kPockets = 2; ///< As saved guests have: a left and a right one
+
+        entt::entity stall = entt::null; ///< Where it came from, for what it looks like
+        std::uint8_t ware = 0;           ///< Its place on that stall's menu
+        std::uint8_t kind = 0;           ///< As Litter::kind, once dropped
+        bool food = true;                ///< Else drink
+        std::uint8_t bites = 0;          ///< Left; none once it is an empty
+        Share fill { };                  ///< Of their hunger or thirst each bite takes away
+        Seconds since { };               ///< Since the last bite, or since it was finished
+        bool held = true;                ///< In hand; else only empties in their pockets are left
+        std::uint8_t pocketed = 0;       ///< Empties in their pockets, up to kPockets
     };
 
     enum class PathItemKind : std::uint8_t
@@ -570,13 +659,14 @@ namespace rct3::simulation
     /// How a guest shows what they feel, standing a moment where they are.
     enum class GestureKind : std::uint8_t
     {
-        Cheer,   ///< Jumping for joy off a ride they loved
-        Laugh,   ///< Off a ride they loved
-        Nod,     ///< Off a ride they liked well enough
-        Grumble, ///< Shaking their head at a ride too tame for them
-        Dizzy,   ///< Reeling off a ride too wild for them
-        Retch,   ///< Being sick
-        Down,    ///< Knocked over, lying on the ground till they get up
+        Cheer,    ///< Jumping for joy off a ride they loved
+        Laugh,    ///< Off a ride they loved
+        Nod,      ///< Off a ride they liked well enough
+        Grumble,  ///< Shaking their head at a ride too tame for them
+        Dizzy,    ///< Reeling off a ride too wild for them
+        Retch,    ///< Being sick
+        Down,     ///< Knocked over, lying on the ground till they get up
+        HandOver, ///< Putting their rubbish in a bin
     };
 
     struct Gesture
@@ -595,7 +685,7 @@ namespace rct3::simulation
         Strained,  ///< Pressed hard into their seat or sideways
     };
 
-    /// A guest seated on a coaster's train, and how they react to the ride now.
+    /// A guest seated on a ride, and how they react to it now.
     struct Thrill
     {
         RideReaction reaction = RideReaction::Waiting;
@@ -730,6 +820,12 @@ namespace rct3::simulation
     {
         Money paid { };
         double owed = 0; ///< Hundredths earned and not yet paid, under one
+    };
+
+    /// What the park has paid for supplies, such as pools' cleaning fluid, kept in the registry's context.
+    struct Supplies
+    {
+        Money paid { };
     };
 
     /// What guests have paid the park for rides, shops and entry, kept in the registry's context.

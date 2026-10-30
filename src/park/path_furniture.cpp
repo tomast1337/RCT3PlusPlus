@@ -21,7 +21,7 @@ namespace rct3::park
         constexpr std::int32_t kSameLevel = 2; ///< Units between two items' bases that still clash
     } // namespace
 
-    std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, Positioning positioning, std::int32_t turns)
+    std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, Positioning positioning, std::int32_t turns, bool level_only)
     {
         if (grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
             return std::nullopt;
@@ -61,8 +61,18 @@ namespace rct3::park
         if (path == nullptr)
             return std::nullopt;
         FurnitureSpot spot { .tile = tile, .turns = turns & 3, .height = static_cast<std::int32_t>(std::lround(middle)), .raised = path->elevation.has_value() };
+        // A queue on the ground stores a slope of its own, but lies on the land as a ground path does.
+        const std::uint8_t slope = path->elevation ? path->elevation->slope : 0;
+        const bool sloped = slope != 0 && slope != save::kSlopeOnGround;
         if (positioning == Positioning::PathCentre)
+        {
+            spot.refused = sloped;
             return spot;
+        }
+        // On a sloped deck an item kept to level paths may stand only at an end of the slope, without falling back.
+        const bool ends_only = level_only && sloped;
+        // The stored direction runs along columns (0, 1) or rows (2, 3); sides 1 and 3 face along columns.
+        const auto at_end = [&](std::uint8_t side) { return (side % 2 == 1) == (path->direction < 2); };
 
         // Whether a path across `side` meets this one's edge there.
         const auto joined = [&](std::uint8_t side) {
@@ -87,9 +97,10 @@ namespace rct3::park
         {
             if (!any || away[side] < away[*any])
                 any = side;
-            if (joined(side) == wants_joined && (!best || away[side] < away[*best]))
+            if (joined(side) == wants_joined && (!ends_only || at_end(side)) && (!best || away[side] < away[*best]))
                 best = side;
         }
+        spot.refused = ends_only && !best;
         const std::uint8_t side = best.value_or(*any);
         spot.turns = kTurnsFacing[side];
         if (edges[side])

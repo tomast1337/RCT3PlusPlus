@@ -5,7 +5,9 @@
 // The track is known by its height along its length and by which stretches are lift chains and stations.
 // Gravity pulls the train along the slope under its whole length; rolling and the air hold it back. A lift
 // chain carries it up at no less than the ride's lift speed, and the station's tyres push it at the ride's
-// station speed, slowing it there too when it comes back. Brakes slow it to their speed and no further. A ride
+// station speed, slowing it there too when it comes back. Brakes slow it down to their speed and no further,
+// each car over one braking it, so a short run of brakes may not bring a fast train all the way down. Block brakes
+// do the same and push a slower train up to their speed; one held for the block ahead brakes it to a stop. A ride
 // with a fixed speed moves at that speed everywhere. On a shuttle the train runs back and forth between the
 // track's ends, counting its passes through the station. A train that runs off either end of a track with two
 // ends, a shuttle's or an unfinished circuit's, crashes. The speeds are the ride's own, as its park keeps them.
@@ -31,7 +33,7 @@ namespace rct3::simulation
         Plain,
         Chain,
         Station,
-        BlockBrake, ///< Rolled over as plain track; ends a block
+        BlockBrake, ///< Slows or pushes the train to the stretch's brake speed; ends a block, where a train may be held
         Launch,     ///< Goes on pushing a launched train as hard as its platform began to
         Brake,      ///< Slows the train to the stretch's brake speed
     };
@@ -53,7 +55,12 @@ namespace rct3::simulation
         std::vector<glm::vec3> points;   ///< Where each point is; may be empty, when only the heights are known
         std::vector<glm::vec3> ups;      ///< Up for the track at each point, leaning with its bank; empty for straight up
         std::vector<Stretch> kinds;      ///< Of the stretch from each point to the next
-        std::vector<float> brake_speeds; ///< Of each brake stretch, by its first point; unread elsewhere
+        std::vector<float> brake_speeds; ///< Of each brake stretch, by its first point; 0 or less elsewhere
+        /// How hard brakes slow a train that is wholly on them, in m/s²: their force over the train's mass. A
+        /// train partly on them is slowed as much less as it has fewer cars over them.
+        float brake_pull = 10;
+        /// How hard block brakes push a train wholly on them, in m/s², while it is slower than their speed.
+        float boost_pull = 20;
         float lift_speed = 2;
         float station_speed = 2;
         std::optional<float> fixed_speed;

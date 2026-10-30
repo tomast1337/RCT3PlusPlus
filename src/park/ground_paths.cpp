@@ -110,7 +110,7 @@ namespace rct3::park
         return map;
     }
 
-    std::vector<Paving> ride_pavings(const save::RideModel& rides, const FootprintOf& footprint_of)
+    std::vector<Paving> ride_pavings(const save::RideModel& rides, const FootprintOf& footprint_of, const FootprintOf& floor_of)
     {
         const auto step = [](save::Tile tile, glm::vec2 way) { return save::Tile { tile.col + static_cast<int>(std::lround(way.x)), tile.row + static_cast<int>(std::lround(way.y)) }; };
         std::vector<Paving> out;
@@ -127,13 +127,13 @@ namespace rct3::park
                         continue;
                     const save::Tile at { door->col, door->row };
                     const save::Tile behind = step(at, turned_x(door->direction + 2));
-                    out.push_back({ .tiles = { at }, .height = door->height, .source = behind, .entrance = entrance, .links = { step(at, turned_x(door->direction)), behind } });
+                    out.push_back({ .tiles = { at }, .height = door->height, .source = behind, .entrance = entrance, .links = { step(at, turned_x(door->direction)), behind }, .owner = door->object });
                 }
             }
             if (ride.kind == save::RideKind::Special && ride.stations.empty() && ride.base.spot)
             {
                 // A facility without doors (toilets and the like) opens onto every side, in the plain style.
-                Paving under { .tiles = footprint_of(*ride.base.spot), .height = ride.base.spot->height };
+                Paving under { .tiles = footprint_of(*ride.base.spot), .height = ride.base.spot->height, .owner = ride.base.spot->object };
                 for (const save::Tile tile : under.tiles)
                 {
                     for (std::int32_t side = 0; side < 4; ++side)
@@ -147,31 +147,42 @@ namespace rct3::park
                     out.push_back(std::move(under));
                 continue;
             }
-            if (ride.kind != save::RideKind::Flat || !ride.base.spot)
-                continue;
-            // A flat ride's floor opens onto its first station's doors and looks like the path its exit lets out onto.
-            Paving floor { .tiles = footprint_of(*ride.base.spot), .height = ride.base.spot->height };
-            if (floor.tiles.empty())
-                continue;
-            if (!ride.stations.empty())
-            {
-                const save::Station& first = ride.stations.front();
-                for (const auto& door : { first.exit_spot, first.entrance_spot })
+            // A flat ride's floor, or a tracked ride's base's, opens onto its first station's doors and looks like
+            // the path its exit lets out onto.
+            const auto pave = [&](std::vector<save::Tile> tiles, std::int32_t height, std::uint64_t owner) {
+                Paving floor { .tiles = std::move(tiles), .height = height, .owner = owner };
+                if (floor.tiles.empty())
+                    return;
+                if (!ride.stations.empty())
                 {
-                    if (!door)
-                        continue;
-                    if (!floor.source)
-                        floor.source = step({ door->col, door->row }, turned_x(door->direction + 2));
-                    floor.links.push_back({ door->col, door->row });
+                    const save::Station& first = ride.stations.front();
+                    for (const auto& door : { first.exit_spot, first.entrance_spot })
+                    {
+                        if (!door)
+                            continue;
+                        if (!floor.source)
+                            floor.source = step({ door->col, door->row }, turned_x(door->direction + 2));
+                        floor.links.push_back({ door->col, door->row });
+                    }
+                }
+                out.push_back(std::move(floor));
+            };
+            if (ride.kind == save::RideKind::Flat && ride.base.spot)
+                pave(footprint_of(*ride.base.spot), ride.base.spot->height, ride.base.spot->object);
+            if (ride.track)
+            {
+                for (const save::TrackPiece& piece : ride.track->pieces)
+                {
+                    if (piece.scenery != 0)
+                        pave(floor_of({ piece.scenery, piece.tile_x, piece.tile_z, piece.height, piece.direction }), piece.height, piece.scenery);
                 }
             }
-            out.push_back(std::move(floor));
         }
         for (const save::Stall& stall : rides.stalls)
         {
             if (stall.base.demolished || !stall.base.spot)
                 continue;
-            Paving under { .tiles = footprint_of(*stall.base.spot), .height = stall.base.spot->height };
+            Paving under { .tiles = footprint_of(*stall.base.spot), .height = stall.base.spot->height, .owner = stall.base.spot->object };
             // A stall serves the side it faces, opening onto the tiles there. Facings point at -row, -col, +row, +col.
             const glm::vec2 front = turned_x(stall.base.facing + 3);
             for (const save::Tile tile : under.tiles)
@@ -384,17 +395,18 @@ namespace rct3::park
 
     } // namespace
 
-    TerrainMesh ground_path_mesh(const GroundPathMap& map, const save::TerrainGrid& grid)
+    TerrainMesh ground_path_mesh(const GroundPathMap& map, const save::TerrainGrid& grid, std::optional<TileRect> area)
     {
         TerrainMesh mesh;
         if (map.width != grid.width || map.height != grid.height || map.tiles.size() != grid.cells.size())
             return mesh;
 
+        const TileRect tiles = area.value_or(TileRect { 0, 0, grid.width, grid.height });
         Builder b;
         bool any = false;
-        for (int row = 0; row < grid.height; ++row)
+        for (int row = std::max(tiles.row, 0); row < std::min(tiles.end_row, grid.height); ++row)
         {
-            for (int col = 0; col < grid.width; ++col)
+            for (int col = std::max(tiles.col, 0); col < std::min(tiles.end_col, grid.width); ++col)
             {
                 const std::int16_t style = map.tiles[static_cast<std::size_t>(row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(col)];
                 if (style == kNoPath)

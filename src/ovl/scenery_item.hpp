@@ -69,6 +69,11 @@ namespace rct3::ovl
         float priority = 0;        ///< Unconfirmed. 10 in files seen.
     };
 
+    /// SceneryItem::flags bit of path items that stand only on level paths: benches and most signs.
+    inline constexpr std::uint32_t kItemLevelPathsOnly = 1u << 0;
+    /// SceneryItem::flags bit set on flat rides, stalls, shops and a few animated statues: the ground under them
+    /// is not reshaped.
+    inline constexpr std::uint32_t kItemHoldsGround = 1u << 3;
     /// SceneryItem::flags bit of items whose shape bends to fit the ground under it (plants, rocks, benches).
     inline constexpr std::uint32_t kItemFitsGround = 1u << 12;
     /// SceneryItem::flags bit of items that stand at the ground's height where they are; without it an item

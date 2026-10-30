@@ -67,9 +67,13 @@ namespace rct3::ovl
         std::string_view icon;      ///< "gsi" item
         /// Piece names as stored, 89 slots. A name can appear several times.
         std::vector<std::string_view> piece_names;
-        /// 18 integers after the names. They look like price and refund pairs (positive and negative values
-        /// of the same size) after a few leading zeros. Unconfirmed.
-        std::array<std::int32_t, 18> unknown_values { };
+        /// The price list after the names, in hundredths: what a square costs to lay, and what taking it up
+        /// again gives back (below zero). By index: 0 and 1 unknown, zero in the only file seen; 2 a water
+        /// square, plus 3 for each unit of its depth; 4 and 5 the same when taken up; 6 a paved square (also
+        /// a spa pool's, a ramp's and a high dive's), plus 7 per unit of depth; 8 and 9 their refund; 10 a
+        /// square of pool path, 11 its refund; 12 a spa pool on top of its paved square, 13 its refund; 14 a
+        /// ramp for each step it climbs, 15 its refund; 16 a high dive for each step, 17 its refund.
+        std::array<std::int32_t, 18> prices { };
         std::array<float, 4> unknown_floats { }; ///< 0.1, 0.2, 1.0, 0.9 in the only file seen. Unconfirmed.
         std::vector<std::string_view> splines;   ///< 36 "spl" items, some repeated
         std::vector<SceneryItem> items;          ///< 58 seen

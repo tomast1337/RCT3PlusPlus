@@ -69,7 +69,8 @@ namespace rct3::simulation
             }
         }
 
-        bool coaster_goal_met(const save::CoasterTarget& target, std::span<const GoalRide> rides)
+        /// How many rides of the group a coaster goal names reach its figure; none when one that must does not.
+        std::optional<std::int32_t> coasters_passing(const save::CoasterTarget& target, std::span<const GoalRide> rides)
         {
             const RideGroup group = (target.flags & save::CoasterTarget::kPoolSlides) != 0 ? RideGroup::PoolSlide : RideGroup::Coaster;
             std::int32_t passing = 0;
@@ -84,35 +85,15 @@ namespace rct3::simulation
                 if (passes)
                     ++passing;
                 else if ((target.flags & save::CoasterTarget::kEveryRide) != 0)
-                    return false;
+                    return std::nullopt;
             }
-            return passing >= target.rides;
+            return passing;
         }
 
-        bool met_now(const save::Condition& c, const ParkFigures& f)
+        /// Goals on last month's takings already cover a month, so they hold for one month less.
+        bool counts_last_month(save::ConditionKind kind) noexcept
         {
-            const auto compare = [&](std::int64_t now) { return c.value && (c.greater_than.value_or(true) ? now >= *c.value : now <= *c.value); };
-            switch (c.kind)
-            {
-                case save::ConditionKind::ParkValue:
-                    return compare(f.park_value);
-                case save::ConditionKind::ParkGuests:
-                    return compare(f.guests);
-                case save::ConditionKind::ParkRating:
-                    return compare(f.rating);
-                case save::ConditionKind::RideIncome:
-                    return compare(f.ride_income);
-                case save::ConditionKind::ShopProfit:
-                    return compare(f.shop_profit);
-                case save::ConditionKind::RepayLoan:
-                    return f.loan == 0;
-                case save::ConditionKind::Coaster:
-                    return c.coaster && coaster_goal_met(*c.coaster, f.rides);
-                case save::ConditionKind::Vip:
-                    return c.vip && c.vip->met; // Judged as the VIP leaves (vip.hpp)
-                default:
-                    return false;
-            }
+            return kind == save::ConditionKind::RideIncome || kind == save::ConditionKind::ShopProfit || kind == save::ConditionKind::PoolIncome;
         }
     } // namespace
 
@@ -129,12 +110,55 @@ namespace rct3::simulation
             case RepayLoan:
             case Coaster:
             case Vip:
+            case AnimalHealth:
+            case Dung:
                 return true;
             default:
-                // shortcut: goals about things the simulation does not have yet (items bought, pools,
-                // animals) are never met, so a level that sets one cannot be won; judge them as those parts arrive.
+                // shortcut: goals about things the simulation does not have yet (items bought, pools, animals of a
+                // species, galleries, animal sales and releases) are never met, so a level that sets one cannot be won;
+                // judge them as those parts arrive.
                 return false;
         }
+    }
+
+    GoalReading read_goal(const save::Condition& c, const ParkFigures& f)
+    {
+        const auto compare = [&](std::int64_t now) { return GoalReading { now, c.value && (c.greater_than.value_or(true) ? now >= *c.value : now <= *c.value) }; };
+        switch (c.kind)
+        {
+            case save::ConditionKind::ParkValue:
+                return compare(f.park_value);
+            case save::ConditionKind::ParkGuests:
+                return compare(f.guests);
+            case save::ConditionKind::ParkRating:
+                return compare(f.rating);
+            case save::ConditionKind::RideIncome:
+                return compare(f.ride_income);
+            case save::ConditionKind::ShopProfit:
+                return compare(f.shop_profit);
+            case save::ConditionKind::AnimalHealth:
+                return compare(f.animal_health);
+            case save::ConditionKind::Dung:
+                return compare(f.dung);
+            case save::ConditionKind::RepayLoan:
+                return { f.loan, f.loan == 0 };
+            case save::ConditionKind::Coaster:
+            {
+                if (!c.coaster)
+                    return { };
+                const std::optional<std::int32_t> passing = coasters_passing(*c.coaster, f.rides);
+                return { passing.value_or(0), passing >= c.coaster->rides };
+            }
+            case save::ConditionKind::Vip:
+                return { std::nullopt, c.vip && c.vip->met }; // Judged as the VIP leaves (vip.hpp)
+            default:
+                return { };
+        }
+    }
+
+    float months_held(const save::Condition& c, float time) noexcept
+    {
+        return c.has(save::ConditionFlag::TimerRunning) ? std::max(0.0f, time - c.start_time) / save::GameClock::kUnitsPerMonth : 0.0f;
     }
 
     RideGroup ride_group(std::uint32_t kind) noexcept
@@ -203,7 +227,7 @@ namespace rct3::simulation
             any = true;
             if (c.completed)
                 continue;
-            const bool met = met_now(c, figures);
+            const bool met = read_goal(c, figures).met;
             if (!met)
                 c.consistency_flags &= ~std::to_underlying(TimerRunning); // A break starts the count again.
             else if (!c.has(TimerRunning))
@@ -211,7 +235,8 @@ namespace rct3::simulation
                 c.consistency_flags |= std::to_underlying(TimerRunning);
                 c.start_time = time;
             }
-            const bool held = met && time - c.start_time >= static_cast<float>(std::max(c.months_to_hold, 0)) * save::GameClock::kUnitsPerMonth;
+            const std::int32_t months = c.months_to_hold - (counts_last_month(c.kind) ? 1 : 0);
+            const bool held = met && time - c.start_time >= static_cast<float>(std::max(months, 0)) * save::GameClock::kUnitsPerMonth;
             if (c.has(HasDeadline) && judged(c.kind))
             {
                 const float deadline = c.next_check_time;
@@ -315,8 +340,9 @@ namespace rct3::simulation
                     *park.cash += id == 1 ? p.large_cash.value : p.small_cash.value;
                 break;
             case 4:
+                park.rating_bonus += p.rating_bonus.value;
                 if (park.rating)
-                    *park.rating = std::min(*park.rating + p.rating_bonus.value, 1.0f);
+                    *park.rating = std::min(*park.rating + p.rating_bonus.value / static_cast<float>(kMaxRating), 1.0f);
                 break;
             case 5:
                 finance.interest_rate_percent /= 2;

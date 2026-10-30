@@ -12,8 +12,8 @@
 //    only on water are not fenced round, and some rides are fenced round the outline of their solid ground
 //    squares instead of their whole rectangle.
 //
-// Tracked rides only get the walls of their entrances and exits here. A few of their pieces (tower and dark
-// ride bases) are fenced round like flat rides in the game, which this does not do yet.
+// A tracked ride's pieces that stand on ground of their own (a tower's or a house's base) are fenced round the
+// same way, their gaps at the first station's doors; its other pieces are not fenced.
 #pragma once
 
 #include "park/object_models.hpp"
@@ -21,13 +21,17 @@
 #include "save/model/world.hpp"
 
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 namespace rct3::park
 {
 
-    /// Placed fence pieces round `ride`. `item` is the model of the object a flat ride is built from, if it was
-    /// found; without it the ride is not fenced round. New objects take ids after `last_id`.
-    [[nodiscard]] std::vector<save::PlacedObject> ride_fences(const save::Ride& ride, const ObjectModel* item, std::uint64_t last_id);
+    /// The model of the placed object of that id, if it was found.
+    using ModelOf = std::function<const ObjectModel*(std::uint64_t object)>;
+
+    /// Placed fence pieces round `ride`. `model_of` gives the models of the object a flat ride is built from and
+    /// of its track pieces' objects; one not found is not fenced round. New objects take ids after `last_id`.
+    [[nodiscard]] std::vector<save::PlacedObject> ride_fences(const save::Ride& ride, const ModelOf& model_of, std::uint64_t last_id);
 
 } // namespace rct3::park

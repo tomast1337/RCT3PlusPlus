@@ -125,6 +125,39 @@ namespace rct3::park
         return object_transform(object, static_cast<Positioning>(model->positioning), grid, model->squares, model->ground_height);
     }
 
+    std::vector<std::size_t> update_places(ObjectPlaces& places, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
+    {
+        const std::size_t had = places.models.size();
+        const bool more_models = models.size() != places.model_count;
+        places.keys.resize(objects.size());
+        places.models.resize(objects.size(), nullptr);
+        places.transforms.resize(objects.size());
+        places.model_count = models.size();
+        std::vector<std::size_t> changed;
+        for (std::size_t i = 0; i < objects.size(); ++i)
+        {
+            const save::PlacedObject& o = objects[i];
+            std::string& key = places.keys[i];
+            // The key as model_key would build it, compared without building it.
+            const bool renamed = i >= had || key.size() != o.overlay.size() + 1 + o.symbol.size() || !key.starts_with(o.overlay) || key[o.overlay.size()] != '|' || !key.ends_with(o.symbol);
+            const ObjectModel* model = i < had ? places.models[i] : nullptr;
+            if (renamed || (!model && more_models))
+            {
+                if (renamed)
+                    key = model_key(o);
+                const auto found = models.find(model_ref(o));
+                model = found != models.end() ? &found->second : nullptr;
+            }
+            const glm::mat4 transform = placed_transform(o, model, grid, fitted);
+            if (i < had && model == places.models[i] && transform == places.transforms[i])
+                continue;
+            places.models[i] = model;
+            places.transforms[i] = transform;
+            changed.push_back(i);
+        }
+        return changed;
+    }
+
     std::vector<glm::vec3> object_anchors(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
     {
         std::vector<glm::vec3> anchors;
@@ -137,17 +170,24 @@ namespace rct3::park
         return anchors;
     }
 
-    std::vector<Lamp> object_lamps(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, std::span<const glm::mat4> places)
+    std::vector<Lamp> object_lamps(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, std::span<const glm::mat4> places, std::span<const ObjectModel* const> found)
     {
         std::vector<Lamp> lamps;
         for (std::size_t i = 0; i < objects.size(); ++i)
         {
             const save::PlacedObject& object = objects[i];
-            const auto model = models.find(model_ref(object));
-            if (object.hidden || model == models.end() || model->second.lights.empty())
+            if (object.hidden)
                 continue;
-            const glm::mat4 placed = i < places.size() ? places[i] : placed_transform(object, &model->second, grid, fitted);
-            for (const ModelLight& light : model->second.lights)
+            const ObjectModel* model = i < found.size() ? found[i] : nullptr;
+            if (i >= found.size())
+            {
+                const auto at = models.find(model_ref(object));
+                model = at != models.end() ? &at->second : nullptr;
+            }
+            if (!model || model->lights.empty())
+                continue;
+            const glm::mat4 placed = i < places.size() ? places[i] : placed_transform(object, model, grid, fitted);
+            for (const ModelLight& light : model->lights)
             {
                 glm::vec3 colour = light.colour;
                 if (light.colour_slot)
@@ -161,16 +201,23 @@ namespace rct3::park
         return lamps;
     }
 
-    std::vector<PlacedEffect> object_effects(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, std::span<const glm::mat4> places)
+    std::vector<PlacedEffect> object_effects(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, std::span<const glm::mat4> places, std::span<const ObjectModel* const> found)
     {
         std::vector<PlacedEffect> effects;
         for (std::size_t i = 0; i < objects.size(); ++i)
         {
-            const auto model = models.find(model_ref(objects[i]));
-            if (objects[i].hidden || model == models.end() || model->second.effects.empty())
+            if (objects[i].hidden)
                 continue;
-            const glm::mat4 placed = i < places.size() ? places[i] : placed_transform(objects[i], &model->second, grid, fitted);
-            for (const ModelEffect& e : model->second.effects)
+            const ObjectModel* model = i < found.size() ? found[i] : nullptr;
+            if (i >= found.size())
+            {
+                const auto at = models.find(model_ref(objects[i]));
+                model = at != models.end() ? &at->second : nullptr;
+            }
+            if (!model || model->effects.empty())
+                continue;
+            const glm::mat4 placed = i < places.size() ? places[i] : placed_transform(objects[i], model, grid, fitted);
+            for (const ModelEffect& e : model->effects)
             {
                 const glm::vec3 up = glm::normalize(glm::mat3(placed) * e.up);
                 const glm::vec3 side = glm::normalize(glm::cross(up, std::abs(up.y) < 0.9f ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0)));

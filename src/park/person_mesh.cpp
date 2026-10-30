@@ -200,6 +200,22 @@ namespace rct3::park
         return std::nullopt;
     }
 
+    float motion_seconds(const PersonLibrary& library, const PlacedPerson& person)
+    {
+        const PartSet* body = person.look.body;
+        if (body == nullptr)
+            return 0;
+        const std::size_t level = std::min(person.level, kPersonLevels - 1);
+        for (const std::size_t piece : (person.look.swimwear ? body->swim_levels : body->levels)[level].fixed)
+        {
+            const PieceModel& model = library.piece(piece);
+            const auto& animations = model.mesh.animations;
+            if (const std::size_t index = model.motions[person.motion]; index < animations.size() && !animations[index].times.empty())
+                return animations[index].times.back();
+        }
+        return 0;
+    }
+
     std::optional<glm::vec3> socket_point(const PieceModel& socket, const PlacedPerson& person)
     {
         // The socket's triangle, posed as a piece would be, at the person's own place.
@@ -268,7 +284,9 @@ namespace rct3::park
                 add_set(runs, library, person.look.head, person, 0);
                 add_set(runs, library, person.look.body, person, 1);
                 add_set(runs, library, person.look.legs, person, 2);
-                if (person.held != nullptr)
+                if (person.held != nullptr && person.look.body == nullptr)
+                    add_held(runs, *person.held, person.world);
+                else if (person.held != nullptr)
                     if (const auto hand = left_hand(library, person))
                         add_held(runs, *person.held, glm::translate(person.world, *hand));
             }

@@ -20,7 +20,7 @@ TEST_CASE("guests use toilets, cash machines and first aid when they need them")
         CHECK(park.run_until([&] { return r.get<Needs>(g).bladder.value < 0.1f; }, 60));
         CHECK(r.get<Attraction>(toilet).customers == 1);
         CHECK(r.get<Wallet>(g).cash.value == 5000 - 20);
-        CHECK_FALSE(r.all_of<Rubbish>(g)); // Nothing to throw away
+        CHECK_FALSE(r.all_of<Carried>(g)); // Nothing to carry away
     }
     {
         Sandbox park;

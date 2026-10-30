@@ -126,3 +126,63 @@ TEST_CASE("taking a lake away takes the waterfalls pouring from or into it")
     CHECK(falls[0].top.x == 18);
     CHECK_FALSE(remove_lake(water, falls, grid, { 0, 0 }));
 }
+
+TEST_CASE("shaping the ground under or beside a lake takes it away, and only that lake")
+{
+    const save::TerrainGrid was = valley();
+    save::WaterLayer water;
+    water.bodies.push_back(*fill_water(was, { 1, 0 }, 2, any));
+    water.bodies.push_back(*fill_water(was, { 4, 0 }, 1.5f, any)); // Lower than the edge it will get
+    std::vector<save::Waterfall> falls(1);
+    falls[0].top = { 6, 2, 2 }; // Over tile 1
+
+    // Raising the ridge between them leaks nothing.
+    save::TerrainGrid grid = was;
+    grid.at(3, 0).corners = { 6, 6, 6, 6 };
+    CHECK_FALSE(drain_moved(water, falls, was, grid));
+    CHECK(water.bodies.size() == 2);
+
+    // Lowering it under the first lake's level opens that lake's side; the second stays.
+    grid.at(3, 0).corners = { 1.5f, 1.5f, 1.5f, 1.5f };
+    CHECK(drain_moved(water, falls, was, grid));
+    REQUIRE(water.bodies.size() == 1);
+    CHECK(holds(water.bodies[0], { 4, 0 }));
+    CHECK(falls.empty()); // It poured from the lake taken
+
+    // Moving the ground under the second takes it too.
+    grid = was;
+    grid.at(4, 0).corners = { 0, 1, 1, 1 };
+    CHECK(drain_moved(water, falls, was, grid));
+    CHECK(water.bodies.empty());
+}
+
+TEST_CASE("shaping the ground beside a waterfall takes it away with its lakes")
+{
+    const save::TerrainGrid was = valley();
+    save::WaterLayer water;
+    water.bodies.push_back(*fill_water(was, { 1, 0 }, 2, any));
+    std::vector<save::Waterfall> falls(1);
+    falls[0].lip_left = falls[0].lip_right = { 20, 4, 2 }; // On tile 5's edge
+    falls[0].top = { 6, 2, 2 };                            // Over tile 1
+    falls[0].bottom = { 22, 0, 2 };
+    save::TerrainGrid grid = was;
+    grid.at(5, 0).corners = { 5, 5, 5, 5 };
+    CHECK(drain_moved(water, falls, was, grid));
+    CHECK(falls.empty());
+    CHECK(water.bodies.empty());
+}
+
+TEST_CASE("taking a lake away puts back the ground its waterfalls cut")
+{
+    save::TerrainGrid grid = valley();
+    const save::TerrainGrid was = grid;
+    save::WaterLayer water;
+    water.bodies.push_back(*fill_water(grid, { 1, 0 }, 2, any));
+    std::vector<save::Waterfall> falls(1);
+    falls[0].top = { 6, 2, 2 }; // Over tile 1
+    falls[0].carved = { { .tile = { 3, 0 }, .corners = was.at(3, 0).corners } };
+    grid.at(3, 0).corners = { 1, 1, 1, 1 };
+    CHECK(remove_lake(water, falls, grid, { 1, 0 }));
+    CHECK(falls.empty());
+    CHECK(grid.at(3, 0).corners == was.at(3, 0).corners);
+}

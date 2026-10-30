@@ -68,6 +68,11 @@ namespace rct3::ovl
         std::string_view partner;
         /// The group the piece is in, such as "station", for the ride's piece patterns. Version 4 and 5 files only.
         std::string_view group;
+        /// What a piece standing on ground of its own (a tower's or a house's base) does with that ground:
+        /// kFencedRound, kPavedUnder. 0 for every other piece. Version 4 and 5 files only.
+        std::uint32_t ground = 0;
+        static constexpr std::uint32_t kPavedUnder = 0x8;   ///< Its footprint is paved as a flat ride's floor is
+        static constexpr std::uint32_t kFencedRound = 0x10; ///< Its footprint is fenced round as a flat ride's is
         /// Join tags of the start and of the end.
         std::array<JoinTags, 2> tags;
         /// Every reference in the record, in file order, including those above.

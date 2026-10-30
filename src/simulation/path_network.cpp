@@ -37,7 +37,8 @@ namespace rct3::simulation
         if (const auto found = find(tile))
             return *found;
         const auto id = static_cast<NodeId>(nodes_.size());
-        nodes_.push_back({ .tile = tile, .queue = queue, .height = height.value_or(static_cast<float>(tile.level) * level_height), .line = line });
+        const float middle = height.value_or(static_cast<float>(tile.level) * level_height);
+        nodes_.push_back({ .tile = tile, .queue = queue, .height = middle, .line = line, .corners = { middle, middle, middle, middle } });
         by_tile_.emplace(key(tile.col, tile.row), id);
         join_sides(id);
         // The squares the new tile closes, seen from each tile round it.
@@ -94,6 +95,15 @@ namespace rct3::simulation
             }
             if (best == kNoNode || nodes_[best].next[(side + 2) % 4] != kNoNode)
                 continue;
+            if ((nodes_[id].open >> side & 1U) == 0 || (nodes_[best].open >> ((side + 2) % 4) & 1U) == 0)
+                continue;
+            // The corners either side of the shared edge, this tile's first, by side.
+            constexpr std::array<std::array<std::size_t, 4>, 4> kMeet { { { 1, 3, 0, 2 }, { 2, 3, 0, 1 }, { 0, 2, 1, 3 }, { 0, 1, 2, 3 } } };
+            const auto& m = kMeet[side];
+            const auto& a = nodes_[id].corners;
+            const auto& b = nodes_[best].corners;
+            if (std::abs(a[m[0]] - b[m[2]]) > kEdgeGap || std::abs(a[m[1]] - b[m[3]]) > kEdgeGap)
+                continue;
             const float low = std::min(nodes_[id].height, nodes_[best].height);
             const bool walled = !nodes_[id].queue && !nodes_[best].queue && std::any_of(walls_first, walls_last, [&](const auto& w) { return w.second.side == side && low >= w.second.low && low < w.second.high; });
             if (walled)
@@ -101,6 +111,13 @@ namespace rct3::simulation
             nodes_[id].next[side] = best;
             nodes_[best].next[(side + 2) % 4] = id;
         }
+    }
+
+    void PathNetwork::set_corners(NodeId node, std::array<float, 4> corners, std::uint8_t open)
+    {
+        nodes_[node].corners = corners;
+        nodes_[node].open = open;
+        rejoin(nodes_[node].tile.col, nodes_[node].tile.row);
     }
 
     void PathNetwork::rejoin(int col, int row)
@@ -180,15 +197,21 @@ namespace rct3::simulation
         return best;
     }
 
-    float PathNetwork::height_between(NodeId from, NodeId to, float t) const
+    float PathNetwork::surface(NodeId from, NodeId to, glm::vec2 at) const
     {
-        const PathNode& a = nodes_[from];
-        const PathNode& b = nodes_[to];
-        if (a.sloped == b.sloped)
-            return std::lerp(a.height, b.height, t);
-        // A ramp meets a flat tile at the flat tile's height, on the edge halfway between their middles.
-        const float edge = a.sloped ? b.height : a.height;
-        return t < 0.5f ? std::lerp(a.height, edge, t * 2) : std::lerp(edge, b.height, t * 2 - 1);
+        const float x = (at.x - origin.x) / tile_size;
+        const float z = (at.y - origin.y) / tile_size;
+        const PathTileSpot spot { static_cast<int>(std::floor(x)), static_cast<int>(std::floor(z)) };
+        const auto holds = [&](NodeId n) { return nodes_[n].tile.col == spot.col && nodes_[n].tile.row == spot.row; };
+        NodeId on = holds(to) ? to : from;
+        if (!holds(on))
+            on = nearest({ at.x, (nodes_[from].height + nodes_[to].height) / 2, at.y }).value_or(from);
+        const auto& c = nodes_[on].corners;
+        const float fx = std::clamp(x - static_cast<float>(nodes_[on].tile.col), 0.0f, 1.0f);
+        const float fz = std::clamp(z - static_cast<float>(nodes_[on].tile.row), 0.0f, 1.0f);
+        if (fx + fz <= 1)
+            return c[0] + fx * (c[1] - c[0]) + fz * (c[2] - c[0]);
+        return c[3] + (1 - fx) * (c[2] - c[3]) + (1 - fz) * (c[1] - c[3]);
     }
 
     glm::vec3 PathNetwork::centre(NodeId node) const
@@ -256,6 +279,8 @@ namespace rct3::simulation
             return std::pair { target[to], std::move(walk) };
         };
         came[from] = from;
+        // One standing in a queue may walk out along their own line.
+        const auto own_line = [&](NodeId n) { return nodes_[from].queue && nodes_[n].queue && nodes_[n].line == nodes_[from].line; };
         if (corners_ || linked)
         {
             // Steps across squares and links are longer, so the shortest walk is found by length; ties go to the
@@ -275,7 +300,7 @@ namespace rct3::simulation
                 if (so_far > length[at])
                     continue;
                 const auto step = [&](NodeId n, float cost) {
-                    if (n == kNoNode || (nodes_[n].queue && target[n] == kNotTarget && !(linked && links_.contains(n))) || so_far + cost >= length[n] || !may_step(at, n, who))
+                    if (n == kNoNode || (nodes_[n].queue && target[n] == kNotTarget && !(linked && links_.contains(n)) && !own_line(n)) || so_far + cost >= length[n] || !may_step(at, n, who))
                         return;
                     length[n] = so_far + cost;
                     came[n] = at;
@@ -298,7 +323,7 @@ namespace rct3::simulation
                         open.emplace(length[l.to], l.to);
                     }
                     // From a queue come to only for its link, nowhere else.
-                    if (nodes_[at].queue && at != from)
+                    if (nodes_[at].queue && at != from && !own_line(at))
                         continue;
                 }
                 for (const NodeId n : nodes_[at].next)
@@ -317,11 +342,41 @@ namespace rct3::simulation
             open.pop_front();
             for (const NodeId n : nodes_[at].next)
             {
-                if (n == kNoNode || came[n] != kNoNode || (nodes_[n].queue && target[n] == kNotTarget) || !may_step(at, n, who))
+                if (n == kNoNode || came[n] != kNoNode || (nodes_[n].queue && target[n] == kNotTarget && !own_line(n)) || !may_step(at, n, who))
                     continue;
                 came[n] = at;
                 if (target[n] != kNotTarget)
                     return walk_to(n);
+                open.push_back(n);
+            }
+        }
+        return std::nullopt;
+    }
+
+    std::optional<std::vector<NodeId>> PathNetwork::way_out(NodeId from) const
+    {
+        if (!nodes_[from].queue)
+            return std::vector<NodeId> { };
+        std::vector<NodeId> came(nodes_.size(), kNoNode);
+        std::deque<NodeId> open { from };
+        came[from] = from;
+        while (!open.empty())
+        {
+            const NodeId at = open.front();
+            open.pop_front();
+            for (const NodeId n : nodes_[at].next)
+            {
+                if (n == kNoNode || came[n] != kNoNode || !may_step(at, n, Walker::Guest) || (nodes_[n].queue && nodes_[n].line != nodes_[from].line))
+                    continue;
+                came[n] = at;
+                if (!nodes_[n].queue)
+                {
+                    std::vector<NodeId> walk;
+                    for (NodeId s = n; s != from; s = came[s])
+                        walk.push_back(s);
+                    std::ranges::reverse(walk);
+                    return walk;
+                }
                 open.push_back(n);
             }
         }

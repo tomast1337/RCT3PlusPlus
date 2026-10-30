@@ -127,10 +127,14 @@ namespace rct3::park
         std::string support_group;                       ///< The set of supports it stands on, or the set a support belongs to
         std::int32_t lowest_level = 0;                   ///< Lowest level its footprint takes, from its base height
         bool water_only = false;                         ///< A ride that stands only on water
+        bool fenced_round = false;                       ///< A track piece fenced round its footprint, a tower's base
+        bool paved_under = false;                        ///< A track piece whose footprint is paved, a tower's base
         bool photo_spot = false;                         ///< A path item guests stop at to have their photo taken
         bool no_entry = false;                           ///< A sign that can be set to forbid entry
         bool ground_height = true;                       ///< On the ground, it stands at the ground's height there
         bool fits_ground = false;                        ///< A plant on the ground, its shape bends to follow it
+        bool level_paths_only = false;                   ///< A path item kept off the sides of sloped paths
+        bool holds_ground = false;                       ///< A ride, stall or the like the ground under is not reshaped
         std::array<std::int32_t, 3> default_colours { }; ///< Colours it takes when nothing names its own
         /// For rides fenced round an outline, not their whole footprint: per square, row by row (X fastest),
         /// whether it is inside the outline. Empty for every other item.

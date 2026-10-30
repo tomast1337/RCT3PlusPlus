@@ -86,6 +86,7 @@ namespace rct3::park
         switch (positioning)
         {
             case Positioning::Edge:
+            case Positioning::Corner: // Its origin is on its +X edge too, the piece reaching round to the next
                 anchor += x * kEdgeOffset;
                 break;
             case Positioning::Half:

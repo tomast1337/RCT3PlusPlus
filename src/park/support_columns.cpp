@@ -262,7 +262,7 @@ namespace rct3::park
         return low <= cell.max_height() && low + rise >= cell.min_height();
     }
 
-    BuiltSupports support_columns(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, const SupportSets& sets, std::uint64_t last_id, const std::unordered_set<std::uint64_t>& passed, std::optional<const std::set<SupportTile>&> tiles)
+    BuiltSupports support_columns(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, const SupportSets& sets, std::uint64_t last_id, const std::unordered_set<std::uint64_t>& passed, std::optional<const std::set<SupportTile>&> tiles, std::span<const ObjectModel* const> found)
     {
         std::set<Tile> ground_paths;
         for (const save::PathTile& p : paths)
@@ -276,15 +276,19 @@ namespace rct3::park
         // on what is under each, so the tiles under all their points are looked at.
         std::vector<std::pair<const save::PlacedObject*, const ObjectModel*>> by_points;
         std::set<Tile> needed;
-        const auto model_of = [&](const save::PlacedObject& o) -> const ObjectModel* {
+        const auto model_of = [&](std::size_t i) -> const ObjectModel* {
+            const save::PlacedObject& o = objects[i];
             if (o.hidden || passed.contains(o.id) || o.overlay == kSupportOverlay)
                 return nullptr;
+            if (i < found.size())
+                return found[i] != nullptr && found[i]->supports ? found[i] : nullptr;
             const auto model = models.find(model_ref(o));
             return model != models.end() && model->second.supports ? &model->second : nullptr;
         };
-        for (const save::PlacedObject& o : objects)
+        for (std::size_t i = 0; i < objects.size(); ++i)
         {
-            const ObjectModel* m = model_of(o);
+            const save::PlacedObject& o = objects[i];
+            const ObjectModel* m = model_of(i);
             if (m == nullptr || !m->supports->by_points || !m->supports->wants_supports)
                 continue;
             const SupportFootprint& f = *m->supports;
@@ -299,9 +303,10 @@ namespace rct3::park
 
         // What covers each tile, by underside, highest first.
         Covering covering;
-        for (const save::PlacedObject& o : objects)
+        for (std::size_t n = 0; n < objects.size(); ++n)
         {
-            const ObjectModel* m = model_of(o);
+            const save::PlacedObject& o = objects[n];
+            const ObjectModel* m = model_of(n);
             if (m == nullptr)
                 continue;
             const SupportFootprint& f = *m->supports;
@@ -334,7 +339,8 @@ namespace rct3::park
                 const SupportFootprint& f = *c.footprint;
                 if (!f.wants_supports || f.by_points || !c.square->wants_column || c.square->kind == kNoSupport || (f.alternate_tiles && !odd_tile) || !c.object->base_height)
                     continue;
-                const FoundSet found = find_support_set(sets, models.at(model_key(*c.object)).support_group, turned(c.square->kind, c.object->rotation));
+                const std::string& group = c.object->support_set.empty() ? models.at(model_key(*c.object)).support_group : c.object->support_set;
+                const FoundSet found = find_support_set(sets, group, turned(c.square->kind, c.object->rotation));
                 if (found.set == nullptr)
                     continue;
                 const auto base = column_base(std::span(covered).subspan(i + 1), ground_paths, grid, tile, c.object, static_cast<float>(c.low), *found.set, std::nullopt, true);
@@ -353,7 +359,7 @@ namespace rct3::park
         for (const auto& [object, model] : by_points)
         {
             const SupportFootprint& f = *model->supports;
-            const FoundSet found = find_support_set(sets, model->support_group, kRoundSupport);
+            const FoundSet found = find_support_set(sets, object->support_set.empty() ? model->support_group : object->support_set, kRoundSupport);
             if (found.set == nullptr || !object->base_height)
                 continue;
             const SupportSet& set = *found.set;

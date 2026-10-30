@@ -25,6 +25,7 @@
 #include "ui/screens/message_drawer.hpp"
 #include "ui/screens/options_dialog.hpp"
 #include "ui/screens/park_bar.hpp"
+#include "ui/screens/pool_panel.hpp"
 #include "ui/screens/ride_camera_panel.hpp"
 #include "ui/screens/tool_row.hpp"
 #include "ui/screens/tutorial_guide.hpp"
@@ -860,6 +861,19 @@ namespace rct3::ui::game_skins
         s.tab_face = kMenuButtonSmall;
         s.close_icon = kCloseIcon;
         s.size = spinner_style(p);
+        s.bottom = kOverToolRow;
+        return s;
+    }
+
+    /// The round panel in the bottom-left corner that builds swimming pools, drawn like the land panel.
+    [[nodiscard]] inline PoolPanelStyle pool_panel_style(const Palette& p)
+    {
+        PoolPanelStyle s;
+        s.text_colour = p.text_on_band;
+        s.coded = info_panel_style(p).coded;
+        s.tab_face = kMenuButtonSmall;
+        s.close_icon = kCloseIcon;
+        s.height = spinner_style(p);
         s.bottom = kOverToolRow;
         return s;
     }

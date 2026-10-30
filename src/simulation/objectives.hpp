@@ -46,14 +46,29 @@ namespace rct3::simulation
     /// How the park stands, in the units the goals' targets are kept in.
     struct ParkFigures
     {
-        std::int64_t park_value = 0;  ///< Hundredths of the currency unit
-        std::int32_t guests = 0;      ///< In the park now
-        std::int32_t rating = 0;      ///< 0 to 1000
-        std::int64_t loan = 0;        ///< Hundredths
-        std::int64_t ride_income = 0; ///< Last month's, hundredths
-        std::int64_t shop_profit = 0; ///< Last month's, hundredths
+        std::int64_t park_value = 0;    ///< Hundredths of the currency unit
+        std::int32_t guests = 0;        ///< In the park now
+        std::int32_t rating = 0;        ///< 0 to 1000
+        std::int64_t loan = 0;          ///< Hundredths
+        std::int64_t ride_income = 0;   ///< Last month's, hundredths
+        std::int64_t shop_profit = 0;   ///< Last month's, hundredths
+        std::int32_t animal_health = 0; ///< The animals' average, 0 to 100; 0 with no animals
+        std::int32_t dung = 0;          ///< Piles of dung lying in the park
         std::span<const GoalRide> rides { };
     };
+
+    /// How a goal stands against the park's figures.
+    struct GoalReading
+    {
+        std::optional<std::int64_t> now { }; ///< The park's figure, in the goal's units; none for goals without one
+        bool met = false;                    ///< Met as the park stands, however long it has held
+    };
+
+    /// Reads goal `c` against `figures`. A goal the simulation cannot judge reads as unmet with no figure.
+    [[nodiscard]] GoalReading read_goal(const save::Condition& c, const ParkFigures& figures);
+
+    /// Months goal `c` has been met without a break at calendar `time`; 0 while it is not.
+    [[nodiscard]] float months_held(const save::Condition& c, float time) noexcept;
 
     /// What the park took on rides and in shops in the last whole calendar month.
     struct Takings
@@ -63,7 +78,7 @@ namespace rct3::simulation
         std::int64_t rides = 0, shops = 0;               ///< Last month's; 0 until a month has ended
     };
 
-    /// Moves `takings` on to calendar `time`, given all the park has taken on rides and in shops so far.
+    /// Moves `takings` on to calendar `time` (counted from the calendar's start), given all the park has taken on rides and in shops so far.
     void count_takings(Takings& takings, float time, std::int64_t rides_so_far, std::int64_t shops_so_far);
 
     /// Whether the simulation can tell if a goal of `kind` is met. Those it cannot are never met.

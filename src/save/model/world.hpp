@@ -13,7 +13,7 @@
 //    corner heights except across a cliff, where they may differ.
 //  - A water triangle uses corners 0,1,2 of its tile (triangle 0) or 3,2,1 (triangle 1).
 //  - Object references are ids of objects in the same save; 0 or an id that is not found means "none".
-//  - Values whose meaning is not confirmed (slope ids, break flags, climate id, camera orientation) are kept
+//  - Values whose meaning is not confirmed (slope ids, break flags, camera orientation) are kept
 //    as the stored integers or floats.
 #pragma once
 
@@ -306,9 +306,11 @@ namespace rct3::save
         bool force_absolute_height = false;
         bool hidden = false;
         bool fixture = false;         ///< Built by the park itself (fences round rides, queues and the park), not stored; not clicked
+        std::string support_set { };  ///< Support set its columns are built from in place of its model's; not stored
         std::int32_t break_flags = 0; ///< Raw bit set; individual bits not confirmed
         float break_time = 0;
         std::uint32_t behaviour_count = 0;
+        float motion_time = 0; ///< Seconds into the motion its model plays, so like objects do not move in step
 
         [[nodiscard]] bool free_standing() const noexcept
         {
@@ -335,7 +337,44 @@ namespace rct3::save
         std::int32_t depth = 0;   ///< Whole units
     };
 
+    /// A square of a pool complex, of any kind, as the game keeps it.
+    struct PoolSegmentState
+    {
+        std::uint64_t id = 0;
+        std::int32_t col = 0;
+        std::int32_t row = 0;
+        std::int32_t type = 0;    ///< 0 water, 1 paved, 2 stairs, 3 high diving board, 4 spa pool, 5 to 7 paths
+        std::int32_t surface = 0; ///< Whole units, as placed objects' heights
+        std::int32_t depth = 0;
+        std::int32_t special = 0; ///< A high diving board's height over the surface
+        std::int32_t complex = 0; ///< Its pool complex, by index
+    };
+
+    /// A pool complex's own settings.
+    struct PoolComplexState
+    {
+        std::int32_t index = 0;
+        std::int64_t ticket = 0; ///< Hundredths
+        std::string name { };    ///< As stored; "%ME%" and a number for the default
+    };
+
+    /// A changing room: the placed object it is, the pool square it opens on, and its settings.
+    struct ChangingRoomState
+    {
+        std::uint64_t object_ref = 0;
+        std::uint64_t segment = 0; ///< A PoolSegmentState's id
+        bool open = false;
+        std::int32_t fluid = 0; ///< The cleaning fluid picked, as stored
+    };
+
     /// A waterfall: water pouring from a higher lake over a cliff edge into a lower one.
+    /// A tile's corners as they were before something cut into the ground there.
+    struct CarvedTile
+    {
+        Tile tile { };
+        std::array<float, 4> corners { };
+    };
+
     struct Waterfall
     {
         WorldPoint3 lip_left { };  ///< One end of the edge the water pours over, at the upper lake's level
@@ -343,6 +382,8 @@ namespace rct3::save
         WorldPoint3 top { };       ///< A point of the upper lake behind the edge; its height is that lake's level
         WorldPoint3 bottom { };    ///< Where the water lands; its height is the lower lake's level
         WorldPoint3 flow { };      ///< Unit direction the water runs across the ground, from `top` to `bottom`
+        /// Of one the player made: the ground its spillway was cut from, as it was, put back when it goes.
+        std::vector<CarvedTile> carved { };
     };
 
     /// The park's animal enclosures: which enclosure each tile belongs to, and what fence each is built with.
@@ -399,7 +440,7 @@ namespace rct3::save
         std::int32_t raw_type = 0;
         WeatherType forecast = WeatherType::Unknown;
         std::int32_t raw_forecast = 0;
-        std::int32_t climate = 0; ///< Opaque id, meaning not confirmed
+        std::int32_t climate = 0; ///< The scenario editor's climate, by its place in the editor's list
         float temperature = 0;    ///< Degrees Celsius
         float forecast_temperature = 0;
         float forecast_delay = 0;
@@ -478,6 +519,9 @@ namespace rct3::save
         std::vector<SignState> signs { };
         std::vector<std::uint64_t> benches { }; ///< The placed objects that are benches guests can sit on
         std::vector<PoolWater> pool_water { };
+        std::vector<PoolSegmentState> pool_segments { }; ///< Every square of the pools, water and the rest
+        std::vector<PoolComplexState> pool_complexes { };
+        std::vector<ChangingRoomState> changing_rooms { };
         std::vector<Waterfall> waterfalls { };
         EnclosureMap enclosures { };
         std::optional<Weather> weather { };

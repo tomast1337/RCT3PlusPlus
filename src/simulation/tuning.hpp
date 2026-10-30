@@ -53,6 +53,10 @@ namespace rct3::simulation::tuning
         Distance huddle_radius { 0.7f };  ///< Of the ring a party stands in
         Distance ring_gap { 0.9f };       ///< Between neighbours standing in a ring, so a big party's ring is wider
         Seconds regroup { 3 };            ///< A party stands together once all are back, before going on
+        Distance corner_cut { 0.8f };     ///< Chosen by eye: how far towards the inside of a turn a walker going somewhere takes the tile they turn on
+        float turn_rate = 6.0f;           ///< Chosen by eye: fastest a walker turns to face where they go, radians a second
+        float swerve = 0.5f;              ///< Chosen by eye: most a walker steps aside from others for each unit walked on
+        Seconds retry_way { 5 };          ///< Chosen by eye: how long one who found no way back to their party waits before looking again
         std::size_t gather_reach = 24;    ///< Tiles looked at for one a party can wait on of its own
         Distance personal_space { 0.6f }; ///< People walking nearer one another than this step apart
         Pace step_aside { 1.5f };         ///< Fastest anyone steps apart from others
@@ -76,22 +80,24 @@ namespace rct3::simulation::tuning
         Factor bursting_pace { 1.1 };
     };
 
-    /// Riders on coasters reacting to the ride.
+    /// Riders reacting to the ride, on coasters and flat rides.
     struct Reactions
     {
-        Share thrilled { 0.85f };                     ///< Happiness over which a rider throws their hands up
+        Share thrilled { 0.7f };                      ///< Chosen by eye: happiness over which a rider throws their hands up
         Frequency hands_up = Frequency::every({ 1 }); ///< A thrilled rider's chance of raising them, a second
         Frequency floating = Frequency::every({ 2 }); ///< Any rider's, floating over a hill
         float airtime = 0.3f;                         ///< Up through their seat, in g, under which riders float
         float strain = 3.5f;                          ///< g up through their seat a rider braces against
         float strain_across = 1.2f;                   ///< And sideways
         float hands_down = 4.5f;                      ///< g, up or sideways, that brings raised hands down
-        /// Of riders, the share never raising their hands, in the front car and behind it.
-        Share timid_front { 0.3f };
-        Share timid { 0.5f };
+        /// Chosen by eye, for about a coaster rider in four under way with their hands up: of riders, the share
+        /// never raising their hands, in the front car and behind it.
+        Share timid_front { 0.15f };
+        Share timid { 0.3f };
         Share stoic { 0.3f };     ///< Of riders, the share who never brace or tense up
         Share too_wild { 0.15f }; ///< Ride intensity past what a rider likes that has them cover their eyes
         Share hide_eyes { 0.5f }; ///< Of riders it is too wild for, the share who cover them
+        Share suits { 0.5f };     ///< Chosen by eye: intensity short of what a flat ride's rider likes most that still thrills them
         float diving = -0.5f;     ///< Of the track's way, the drop under which a car heads down
         float still = 0.5f;       ///< m/s under which a train counts as standing, held at a brake or block
     };
@@ -124,6 +130,17 @@ namespace rct3::simulation::tuning
         Seconds watch { 15 };
         Seconds served { 4 };                             ///< A party member at a stall's counter while the others wait
         PerSecond sight_cheer = PerSecond::over({ 300 }); ///< Happiness while watching
+    };
+
+    /// Guests eating and drinking what they bought.
+    struct Eating
+    {
+        std::uint8_t bites = 6; ///< Chosen by eye: in which a guest eats or drinks something up
+        Seconds bite { 2.5f };  ///< Chosen by eye: between bites
+        // Chosen by eye: over the stalls' usual prices in the saves, so only prices raised past them put guests off.
+        Money food_worth { 500 };   ///< Most a guest pays for something to eat
+        Money drink_worth { 300 };  ///< Most a guest pays for a drink
+        Share good_value { 0.35f }; ///< Chosen by eye: of its worth, at or under which a guest thinks a price good value
     };
 
     /// Nausea and being sick.
@@ -259,10 +276,10 @@ namespace rct3::simulation::tuning
     {
         std::size_t dirty_path = 3;                      ///< Pieces of litter on a tile that make guests on it glum
         PerSecond dirt_gloom = PerSecond::over({ 900 }); ///< Happiness lost on a dirty path
-        Seconds carry { 60 };                            ///< A guest looks for a bin this long before dropping their rubbish
-        Chance litterbug_chance { 0.03 };                ///< Of dropping it at once, for a happy guest
-        Seconds old { 400 };                             ///< Litter lying this long counts against the park's rating
-        Chance grumpy_chance { 0.3 };                    ///< Added as happiness falls to nothing
+        /// An empty is held this long before it goes in a pocket, or on the path when they are full. Fitted to the
+        /// saves: after five minutes, parks have about as much litter lying about as their saves had.
+        Seconds carry { 60 };
+        Seconds old { 400 }; ///< Litter lying this long counts against the park's rating
     };
 
     /// Vandals and guards.
@@ -352,7 +369,8 @@ namespace rct3::simulation::tuning
     {
         Money large_cash { 1'500'000 };
         Money small_cash { 250'000 };
-        Share rating_bonus { 0.05f }; ///< Added to the park's rating
+        RatingPoints rating_bonus { 80 };     ///< Chosen by eye: added to the park's rating at once, and to each week's score
+        RatingPoints rating_bonus_fade { 4 }; ///< Chosen by eye: taken off that bonus each week, so it is gone in five months
     };
 
     /// Trains crashing off the end of their track.
@@ -398,6 +416,33 @@ namespace rct3::simulation::tuning
         Seconds dwell { 15 };    ///< A train stands at each station on the way
     };
 
+    /// Swimming pools.
+    struct Pools
+    {
+        PerSecond longing = PerSecond::over({ 1500 }); ///< Wish to swim grown in a guest who likes pools fully; slower as they like them less
+        Share least_liking { 0.1f };                   ///< Guests like pools from this much to `most_liking`, as saved guests do
+        Share most_liking { 0.9f };
+        Degrees coldest { 18 };      ///< Under which guests will not swim
+        Seconds stay { 300 };        ///< In the pool, out of their clothes: the longest saved swimmers have left
+        Seconds changing { 20 };     ///< In the changing room, each way
+        Pace swim { 0.7f };          ///< Across the water
+        Seconds shortest_rest { 3 }; ///< Floating or standing between swims
+        Seconds longest_rest { 15 };
+        Chance poolside { 0.2 };                    ///< Of going to the paved squares next rather than the water
+        Chance extra { 0.3 };                       ///< Of going to a spa pool or an extra next, of those that go on from the water
+        float spa_water = 0.0f;                     ///< A spa pool's water over the paving round it, in height units
+        PerSecond cheer = PerSecond::over({ 600 }); ///< Happiness gained while swimming in clean water; lost in dirty
+        /// Dirt a swimmer brings to a pool of one square of water in a second; less in bigger pools.
+        PerSecond dirtying = PerSecond::over({ 1200 });
+        /// Dirt a room's fluid takes out of its pool in a second, by fluid, while the tank has any.
+        std::array<PerSecond, 3> cleaning { PerSecond::over({ 1500 }), PerSecond::over({ 700 }), PerSecond::over({ 300 }) };
+        PerSecond tank_use = PerSecond::over({ 1800 });                                 ///< Of a full tank, while the room is open
+        Share refill_at { 0.25f };                                                      ///< Left in the tank when a mechanic is called to fill it
+        std::array<Money, 3> refill { Money { 2000 }, Money { 4000 }, Money { 8000 } }; ///< A full tank, by fluid
+        Share good { 2.0f / 6 };                                                        ///< Dirt under which swimmers think the pool clean
+        Share bad { 3.0f / 6 };                                                         ///< And from which dirty
+    };
+
     struct Tuning
     {
         Needs needs;
@@ -407,6 +452,7 @@ namespace rct3::simulation::tuning
         Gestures gestures;
         Queues queues;
         Facilities facilities;
+        Eating eating;
         Sickness sickness;
         Weather weather;
         Night night;
@@ -426,6 +472,7 @@ namespace rct3::simulation::tuning
         Vips vips;
         Transport transport;
         Holding holding;
+        Pools pools;
     };
 
 } // namespace rct3::simulation::tuning

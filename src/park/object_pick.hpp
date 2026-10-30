@@ -48,8 +48,12 @@ namespace rct3::park
         glm::vec3 park_low { 0.0f }, park_high { 0.0f };
     };
 
-    /// The boxes of those of `objects` that have a model with a shape.
+    /// The boxes of those of `objects` that have a model with a shape, by rising object index.
     [[nodiscard]] std::vector<PickBox> pick_boxes(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted);
+
+    /// Brings `boxes`, by rising object index, up to date with `places`: the objects in `changed` (by index,
+    /// rising) get theirs worked out again, if their model has a shape, and the others keep the ones they had.
+    void update_pick_boxes(std::vector<PickBox>& boxes, const ObjectPlaces& places, std::span<const std::size_t> changed);
 
     /// The nearest of `boxes` for whose object `wanted` holds (by index) that `ray` passes through before it
     /// reaches the ground.

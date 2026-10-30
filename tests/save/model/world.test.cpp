@@ -255,7 +255,7 @@ namespace
             { "PathQueue", queue },
             { "PathTile", path_base },
             { "PathTypeDatabaseEntry", { { "SystemName", "string", 0, { } } } },
-            { "SceneryItem", { { "SceneryItemDataField", "struct", data_size, data }, refa("DATABASEENTRY"), refa("Owner"), colours("FlexiColourField"), i32a("BREAKFLAGS"), { "IsHidden", "bool", 1, { } }, { "BehaviourArray", "array", 0, { refa("BehaviourReference") } } } },
+            { "SceneryItem", { { "SceneryItemDataField", "struct", data_size, data }, refa("DATABASEENTRY"), refa("Owner"), colours("FlexiColourField"), i32a("BREAKFLAGS"), { "IsHidden", "bool", 1, { } }, { "BehaviourArray", "array", 0, { refa("BehaviourReference") } }, { "AnimInfoList", "list", 0, { { "AutoLoop", "bool", 1, { } }, i32a("CurrentAnimation"), f32a("CurrentAnimationTime"), { "MarkedForDeletion", "bool", 1, { } } } } } },
             { "SIDDatabaseEntry", { { "SYMBOLNAME", "string", 0, { } }, { "OVERLAYFILENAME", "string", 0, { } } } },
             { "Weather", { i32a("Type"), i32a("ForecastType"), f32a("Temperature"), f32a("ThunderTime"), { "FogSetting", "struct", 24, { rgb("FColourValue"), f32a("Far"), f32a("Near"), f32a("ShadowDamper") } } } },
             { "Sky", { i32a("BackgroundSave") } },
@@ -300,7 +300,7 @@ namespace
         return { cls, id, p };
     }
 
-    Obj scenery_obj(std::uint64_t id, std::int32_t col, std::int32_t row, std::int32_t height, std::uint64_t def, std::uint64_t owner, bool with_adjust = true, std::uint32_t behaviours = 0)
+    Obj scenery_obj(std::uint64_t id, std::int32_t col, std::int32_t row, std::int32_t height, std::uint64_t def, std::uint64_t owner, bool with_adjust = true, std::uint32_t behaviours = 0, std::optional<float> motion = std::nullopt)
     {
         Bytes p;
         p.i32(2).i32(1).i32(height);
@@ -313,6 +313,11 @@ namespace
         for (std::uint32_t i = 0; i < behaviours; ++i)
             list.u64(900 + i);
         p.blob(list);
+        Bytes motions;
+        motions.u32(motion ? 1 : 0);
+        if (motion)
+            motions.u8(1).i32(0).f32(*motion).u8(0);
+        p.blob(motions);
         return { kScenery, id, p };
     }
 
@@ -662,7 +667,7 @@ TEST_CASE("load_world: a complete synthetic save")
             path_obj(kPathQueue, 210, 0, 1, 2, 0, 12, 0, 3, 70),
             { kQueueLine, 500, queue_line },
             entry_obj(70, u"Tree_01"),
-            scenery_obj(300, 1, 1, 6, 70, 300, true, 2),
+            scenery_obj(300, 1, 1, 6, 70, 300, true, 2, 2.5f),
             scenery_obj(400, 2, 1, -32768, 70, 300),
             { kWeather, 3, weather },
             { kSky, 4, Bytes().i32(5) },
@@ -731,6 +736,8 @@ TEST_CASE("load_world: a complete synthetic save")
     CHECK(o.colours[2] == 2);
     CHECK(o.break_flags == 35);
     CHECK(o.behaviour_count == 2);
+    CHECK(o.motion_time == 2.5f);
+    CHECK(w.objects[1].motion_time == 0.0f); // nothing playing
     CHECK_FALSE(o.hidden);
     CHECK_FALSE(w.objects[1].base_height.has_value()); // sentinel
     CHECK_FALSE(w.objects[1].free_standing());

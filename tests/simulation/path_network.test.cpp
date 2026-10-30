@@ -11,7 +11,8 @@ TEST_CASE("path tiles side by side join, unless their levels are more than a ste
 {
     PathNetwork p;
     const NodeId a = p.add({ 0, 0, 0 });
-    const NodeId b = p.add({ 1, 0, 1 }); // A slope up
+    const NodeId b = p.add({ 1, 0, 1 }, false, 0.5f); // A slope up
+    p.set_corners(b, { 0.0f, 1.0f, 0.0f, 1.0f });
     const NodeId c = p.add({ 2, 0, 3 }); // Too high to join
     const NodeId d = p.add({ 0, 1, 0 });
     CHECK(p.nodes()[a].next[0] == b);
@@ -165,18 +166,94 @@ TEST_CASE("a tile taken away is joined to nothing and found by nothing; one laid
     CHECK(p.route(*p.find({ 0, 0, 0 }), *p.find({ 2, 0, 0 }))->size() == 2);
 }
 
-TEST_CASE("a walk down a ramp onto a sunken tile bends at the edge, not above the low floor")
+TEST_CASE("a walker stands on the path's surface under their feet, wherever across the tile they walk")
+{
+    PathNetwork p; // Tiles 4 across, from the origin
+    const NodeId top = p.add({ 0, 0, 0 }, false, 0.0f);
+    const NodeId ramp = p.add({ 1, 0, -1 }, false, -1.0f);
+    const NodeId floor = p.add({ 2, 0, -2 }, false, -2.0f);
+    p.set_corners(ramp, { 0.0f, -2.0f, 0.0f, -2.0f }); // Falls two units towards higher columns
+    // Down the ramp: a quarter of the way in, its middle, three quarters, whatever the side of the path.
+    CHECK(p.surface(top, ramp, { 5.0f, 2.0f }) == doctest::Approx(-0.5f));
+    CHECK(p.surface(top, ramp, { 6.0f, 0.5f }) == doctest::Approx(-1.0f));
+    CHECK(p.surface(ramp, floor, { 7.0f, 3.5f }) == doctest::Approx(-1.5f));
+    // Still on the tile above, or already on the floor below, it is flat.
+    CHECK(p.surface(top, ramp, { 3.9f, 2.0f }) == doctest::Approx(0.0f));
+    CHECK(p.surface(ramp, floor, { 8.5f, 2.0f }) == doctest::Approx(-2.0f));
+
+    // Ground that rises across the path: one walking its high side stands higher than one on its low side.
+    const NodeId bank = p.add({ 0, 1, 0 }, false, 0.5f);
+    p.set_corners(bank, { 0.0f, 0.0f, 1.0f, 1.0f });
+    CHECK(p.surface(bank, bank, { 2.0f, 5.0f }) == doctest::Approx(0.25f));
+    CHECK(p.surface(bank, bank, { 2.0f, 7.0f }) == doctest::Approx(0.75f));
+}
+
+TEST_CASE("footpaths join only where their surfaces meet along the edge between them")
 {
     PathNetwork p;
-    const NodeId top = p.add({ 0, 0, 0 }, false, 0.0f);
-    const NodeId ramp = p.add({ 1, 0, -1 }, false, -1.0f); // Falls two units across the tile
-    const NodeId floor = p.add({ 2, 0, -2 }, false, -2.0f);
-    p.set_sloped(ramp, true);
-    CHECK(p.height_between(top, ramp, 0.5f) == doctest::Approx(0.0f));
-    CHECK(p.height_between(top, ramp, 0.75f) == doctest::Approx(-0.5f));
-    CHECK(p.height_between(ramp, floor, 0.5f) == doctest::Approx(-2.0f));
-    CHECK(p.height_between(floor, ramp, 0.25f) == doctest::Approx(-2.0f));
-    CHECK(p.height_between(top, floor, 0.5f) == doctest::Approx(-1.0f)); // Two flat tiles: a straight line
+    p.max_step = 2;
+    // A ramp along +col from level 0 to 1, a flat path at its top, and a ground path along its side.
+    const NodeId foot = p.add({ 0, 0, 0 }, false, 0.0f);
+    const NodeId ramp = p.add({ 1, 0, 0 }, false, 0.5f);
+    const NodeId top = p.add({ 2, 0, 1 }, false, 1.0f);
+    const NodeId side = p.add({ 1, 1, 0 }, false, 0.0f);
+    p.set_corners(ramp, { 0.0f, 1.0f, 0.0f, 1.0f });
+    CHECK(p.nodes()[ramp].next[0] == top);
+    CHECK(p.nodes()[ramp].next[2] == foot);
+    CHECK(p.nodes()[ramp].next[1] == kNoNode); // Its high end stands a level above the path beside it
+    CHECK(p.nodes()[side].next[3] == kNoNode);
+    // A second ramp beside it, alike, makes it a wide ramp walkers may cross.
+    const NodeId twin = p.add({ 1, -1, 0 }, false, 0.5f);
+    p.set_corners(twin, { 0.0f, 1.0f, 0.0f, 1.0f });
+    CHECK(p.nodes()[ramp].next[3] == twin);
+    // A raised path two levels over the ground path beside it does not join it either.
+    const NodeId deck = p.add({ 2, 1, 2 }, false, 2.0f);
+    CHECK(p.nodes()[deck].next[2] == kNoNode);
+    // Ground that tilts across both tiles alike still joins: their shared corners match.
+    const NodeId a = p.add({ 5, 5, 0 }, false, 0.5f);
+    const NodeId b = p.add({ 6, 5, 0 }, false, 0.5f);
+    p.set_corners(a, { 0.0f, 0.0f, 1.0f, 1.0f });
+    p.set_corners(b, { 0.0f, 0.0f, 1.0f, 1.0f });
+    CHECK(p.nodes()[a].next[0] == b);
+}
+
+TEST_CASE("a queue joins a path beside it only at its ends, never along its side")
+{
+    PathNetwork p;
+    // A queue running along the columns, open at its -col and +col ends, with paths at its end and beside it.
+    const NodeId queue = p.add({ 1, 0, 0 }, true);
+    p.set_corners(queue, { 0.0f, 0.0f, 0.0f, 0.0f }, 0b0101);
+    const NodeId end = p.add({ 0, 0, 0 });
+    const NodeId side = p.add({ 1, 1, 0 });
+    CHECK(p.nodes()[queue].next[2] == end);
+    CHECK(p.nodes()[queue].next[1] == kNoNode);
+    CHECK(p.nodes()[side].next[3] == kNoNode);
+}
+
+TEST_CASE("one standing in a queue walks out along its line, never through another queue")
+{
+    PathNetwork p;
+    // A path along row 0; a queue line 7 from (0, 1) up to (0, 3), open only along its length, its head at row 1.
+    const NodeId path = p.add({ 0, 0, 0 });
+    const NodeId far = p.add({ 1, 0, 0 });
+    std::array<NodeId, 3> line { };
+    for (int k = 0; k < 3; ++k)
+    {
+        line[k] = p.add({ 0, k + 1, 0 }, true, std::nullopt, 7);
+        p.set_corners(line[k], { 0.0f, 0.0f, 0.0f, 0.0f }, 0b1010);
+    }
+    // Another line beside it, 8, that the walk out must not cut through.
+    const NodeId other = p.add({ 1, 2, 0 }, true, std::nullopt, 8);
+    p.set_corners(other, { 0.0f, 0.0f, 0.0f, 0.0f }, 0b1010);
+    const auto out = p.route(line[2], far);
+    REQUIRE(out);
+    CHECK(*out == std::vector<NodeId> { line[1], line[0], path, far });
+    CHECK_FALSE(p.route(other, far)); // Its own line leads nowhere
+    CHECK_FALSE(p.way_out(other));
+    // Kept from the far tile by a no-entry sign, it still finds the way off the queue.
+    p.set_no_entry(far, 2, true);
+    CHECK_FALSE(p.route(line[2], far));
+    CHECK(p.way_out(line[2]) == std::vector<NodeId> { line[1], line[0], path });
 }
 
 TEST_CASE("a wall between two tiles parts them, a queue keeps its own sides, and taking it away joins them again")

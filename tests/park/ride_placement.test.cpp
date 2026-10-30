@@ -46,6 +46,26 @@ TEST_CASE("a ride's footprint is centred on the tile under the pointer, turned, 
     CHECK(ride_site({ 6, 6 }, { 1, 1 }, 0, grid).height == 6);
 }
 
+TEST_CASE("a ride stands at the mean height of the ground under its whole footprint, halves rounded up")
+{
+    save::TerrainGrid grid = owned_land();
+    CHECK(ride_site({ 6, 6 }, { 3, 3 }, 0, grid).height == 2); // Pointed at the hill, among flat tiles
+    grid.at(1, 2).corners = { 3, 3, 3, 3 };
+    CHECK(ride_site({ 1, 1 }, { 1, 2 }, 0, grid).height == 3);
+}
+
+TEST_CASE("a ride raised over the ground may not have the ground of any tile rise over its base")
+{
+    const save::TerrainGrid grid = owned_land();
+    RideSite site = ride_site({ 6, 6 }, { 3, 3 }, 0, grid);
+    site.height = 3;
+    CHECK(ground_problem(site, grid) == SiteProblem::IntoGround);
+    site.height = 7;
+    CHECK(ground_problem(site, grid) == SiteProblem::None);
+    site = ride_site({ 2, 2 }, { 3, 3 }, 0, grid);
+    CHECK(ground_problem(site, grid) == SiteProblem::None); // On the ground is not in it
+}
+
 TEST_CASE("a ride needs owned land clear of paths and of solid things above its base")
 {
     save::TerrainGrid grid = owned_land();
@@ -262,4 +282,36 @@ TEST_CASE("an item moved on a stall's menu takes its new place, the others closi
     CHECK(order() == "DCAB");
     park::move_item(stall, 9, 0);
     CHECK(order() == "DCAB");
+}
+
+TEST_CASE("a ride on ground left as it is stands clear of its footprint's highest corner")
+{
+    const save::TerrainGrid grid = owned_land();
+    const RideSite site = ride_site({ 6, 6 }, { 3, 3 }, 0, grid);
+    CHECK(clear_height(site, grid) == 7);
+    CHECK(clear_height(ride_site({ 2, 2 }, { 3, 3 }, 0, grid), grid) == 2);
+}
+
+TEST_CASE("levelling sharply sets the footprint's own corners; smoothly, also the corners round it on its edge")
+{
+    save::TerrainGrid grid = owned_land();
+    for (save::TerrainCell& c : grid.cells)
+        c.corners = { 4, 4, 4, 4 };
+    RideSite site = ride_site({ 3, 3 }, { 1, 1 }, 0, grid);
+    CHECK(levelled_ground(site, Flatten::Sharp, grid).footprint.empty()); // Already level
+    site.height = 2;
+    CHECK(levelled_ground(site, Flatten::Off, grid).footprint.empty());
+    const GroundCuts sharp = levelled_ground(site, Flatten::Sharp, grid);
+    REQUIRE(sharp.footprint.size() == 1);
+    CHECK(sharp.footprint[0].corners == std::array { 2.0f, 2.0f, 2.0f, 2.0f });
+    CHECK(sharp.rim.empty());
+    const GroundCuts smooth = levelled_ground(site, Flatten::Smooth, grid);
+    REQUIRE(smooth.rim.size() == 8);
+    for (const GroundCut& cut : smooth.rim)
+    {
+        if (cut.tile == save::Tile { 4, 3 }) // East of it: its west corners meet the footprint
+            CHECK(cut.corners == std::array { 2.0f, 4.0f, 2.0f, 4.0f });
+        if (cut.tile == save::Tile { 2, 2 }) // North-west: only the corner it shares
+            CHECK(cut.corners == std::array { 4.0f, 4.0f, 4.0f, 2.0f });
+    }
 }

@@ -37,6 +37,10 @@ namespace rct3::scene
         constexpr float kWaterfallLevel = 0.6f; ///< Of full loudness.
         constexpr float kWaterfallNear = 10;    ///< World units from where it lands a waterfall is heard full loud.
         constexpr float kWaterfallFar = 90;     ///< And no longer heard.
+        constexpr float kRainLevel = 0.5f;      ///< Of full loudness, a downpour. Chosen by eye, as the next
+        constexpr float kThunderLevel = 0.9f;
+        constexpr float kThumpLevel = 0.6f; ///< Chosen by eye: clear over the park without drowning it
+        constexpr float kThumpGap = 0.4f;   ///< Chosen by eye: seconds before another thump, so a burst of pieces is one
 
         void silence_trains(audio::AudioEngine& engine, ParkSounds& sounds)
         {
@@ -106,6 +110,16 @@ namespace rct3::scene
         s.explosions = main(kExplosions);
         constexpr std::array<std::string_view, 2> kBurning { "CoasterBurn01", "CoasterBurn02" };
         s.burning = main(kBurning);
+        constexpr std::array<std::string_view, 3> kRain { "Rain1", "Rain4", "Rain5" };
+        for (std::size_t i = 0; i < kRain.size(); ++i)
+            if (auto found = main(std::span(&kRain[i], 1)); !found.empty())
+                s.rain[i] = std::move(found.front());
+        constexpr std::array<std::string_view, 2> kThunder { "Thunder1", "Thunder2" };
+        s.thunder = main(kThunder);
+        constexpr std::array<std::string_view, 2> kThumps { "EarthThump1", "EarthThump2" };
+        s.thumps = main(kThumps);
+        constexpr std::array<std::string_view, 3> kRumbles { "EarthMove1", "EarthMove2", "EarthMove3" };
+        s.rumbles = main(kRumbles);
         constexpr std::array<std::string_view, 2> kWaterfall { "Waterfall3", "Waterfall4" };
         s.waterfall = load_named(install, "Sounds/Waterfall/Waterfall.common.ovl", kWaterfall);
         for (std::size_t set = 1; set < audio::kTrackSoundSets; ++set)
@@ -135,6 +149,23 @@ namespace rct3::scene
         engine.set_listener(eye, glm::normalize(scene.camera.target - eye), glm::vec3(0.0f, 1.0f, 0.0f));
         engine.set_muffled(scene.water.eye_in.has_value());
 
+        // Building, heard paused too, as the player builds then: a thump for what was put down.
+        sounds.since_thump += elapsed;
+        if (scene.built != std::exchange(sounds.built_heard, scene.built) && sounds.since_thump >= kThumpGap)
+        {
+            play_any(engine, sounds.thumps, sounds.random, { .volume = kThumpLevel });
+            sounds.since_thump = 0;
+        }
+        if (!scene.land.rumble)
+        {
+            engine.stop(sounds.rumble);
+            sounds.rumbling = false;
+        }
+        else if (!std::exchange(sounds.rumbling, true))
+            sounds.rumble = play_any(engine, sounds.rumbles, sounds.random, { .volume = *scene.land.rumble });
+        else
+            engine.set_voice_volume(sounds.rumble, *scene.land.rumble);
+
         // The chatter: two clips overlapping, each started again with another when it ends, heard from where the
         // people about the camera's point stand, however far the eye.
         std::size_t near = 0;
@@ -158,6 +189,26 @@ namespace rct3::scene
                 engine.set_voice_place(voice, crowd);
             }
         }
+        // The rain's loop for the weather, as loud as the rain shows hard; a stroke's thunder when it comes.
+        {
+            using save::WeatherType;
+            const WeatherType w = scene.park.weather;
+            const std::size_t loop = w == WeatherType::LightRain ? 0 : w == WeatherType::HeavyRain ? 1 : w == WeatherType::Thunderstorm ? 2 : sounds.rain.size();
+            const float level = quiet || scene.water.eye_in ? 0.0f : kRainLevel * scene.weather_look.rain;
+            for (std::size_t i = 0; i < sounds.rain.size(); ++i)
+            {
+                audio::VoiceHandle& voice = sounds.rain_voices[i];
+                if (i != loop || level <= 0 || !sounds.rain[i])
+                    engine.stop(voice);
+                else if (engine.is_playing(voice))
+                    engine.set_voice_volume(voice, level);
+                else if (const auto played = engine.play(*sounds.rain[i], { .volume = level, .loop = true }))
+                    voice = *played;
+            }
+            if (scene.thunder && !quiet)
+                play_any(engine, sounds.thunder, sounds.random, { .volume = kThunderLevel });
+        }
+
         // Each waterfall's roar, a loop heard from where its water lands; the falls take the clips in turn.
         const auto& falls = scene.footpaths.waterfalls;
         for (std::size_t i = falls.size(); i < sounds.waterfall_voices.size(); ++i)
@@ -376,6 +427,9 @@ namespace rct3::scene
         for (const auto& [_, voice] : sounds.fires)
             engine.stop(voice);
         sounds.fires.clear();
+        for (const audio::VoiceHandle voice : sounds.rain_voices)
+            engine.stop(voice);
+        engine.stop(sounds.rumble);
         silence_trains(engine, sounds);
     }
 

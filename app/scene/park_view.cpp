@@ -89,7 +89,7 @@ namespace rct3::scene
 
     void draw_view_lines(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {
-        for (const ViewLines* lines : { &scene.grid_lines, &scene.contour_lines, &scene.land_marks, &scene.delete_marks, &scene.enclosure_marks })
+        for (const ViewLines* lines : { &scene.grid_lines, &scene.contour_lines, &scene.land_marks, &scene.delete_marks, &scene.enclosure_marks, &scene.pool_marks })
         {
             if (lines->count == 0)
                 continue;
@@ -112,6 +112,7 @@ namespace rct3::scene
         drop(device, scene.grid_lines);
         drop(device, scene.contour_lines);
         drop(device, scene.land_marks);
+        drop(device, scene.pool_marks);
     }
 
     glm::vec3 tile_point(const save::TerrainGrid& grid, save::Tile tile)
@@ -121,9 +122,9 @@ namespace rct3::scene
         return { x, grid.height_at(x, z).value_or(0), z };
     }
 
-    void float_money(ParkScene& scene, glm::vec3 at, std::int64_t amount)
+    void float_money(ParkScene& scene, glm::vec3 at, std::int64_t amount, bool zero)
     {
-        if (!scene.show_money || amount == 0)
+        if (!scene.show_money || (amount == 0 && !zero))
             return;
         const auto near = std::ranges::find_if(scene.money, [&](const FloatingMoney& m) { return m.age < kMoneyMerge && (m.amount > 0) == (amount > 0) && glm::distance(m.at, at) <= kMoneyReach; });
         if (near != scene.money.end())
@@ -148,21 +149,29 @@ namespace rct3::scene
         for (FloatingMoney& m : scene.money)
             m.age += elapsed;
         std::erase_if(scene.money, [](const FloatingMoney& m) { return m.age >= ui::kMoneyFloatLife; });
-        if (!scene.show_money || size.x <= 0 || size.y <= 0)
+        if (size.x <= 0 || size.y <= 0)
             return { };
         const glm::mat4 view = park::view_projection(scene.camera, size.x / size.y);
         std::vector<ui::MoneyFloat> shown;
-        for (const FloatingMoney& m : scene.money)
-        {
+        const auto show = [&](const FloatingMoney& m) {
             // Off the screen it waits unseen, as a label would.
             const glm::vec4 clip = view * glm::vec4(m.at.x, m.at.y + kLabelLift, m.at.z, 1.0f);
             if (clip.w <= 0)
-                continue;
+                return;
             const glm::vec2 ndc = glm::vec2(clip) / clip.w;
             if (std::abs(ndc.x) > 1 || std::abs(ndc.y) > 1)
-                continue;
+                return;
             shown.push_back({ { (ndc.x + 1) / 2 * size.x, (1 - ndc.y) / 2 * size.y }, ui::money_text(currency, std::abs(m.amount)), m.amount > 0, m.age });
-        }
+        };
+        if (scene.show_money)
+            for (const FloatingMoney& m : scene.money)
+                show(m);
+        // What letting go of an enclosure drag would cost stands at the pointer's end of it, still, until then.
+        if (const EnclosureTool& t = scene.enclosing; t.marked && t.other && t.marked->cost != 0)
+            show({ tile_point(scene.grid, *t.other), -t.marked->cost, 0 });
+        // So does what the pool tool's work costs, or pays back.
+        if (const PoolTool& t = scene.pooling; t.item && t.working && t.ok && t.cost != 0)
+            show({ tile_point(scene.grid, t.working->second), -t.cost, 0 });
         return shown;
     }
 

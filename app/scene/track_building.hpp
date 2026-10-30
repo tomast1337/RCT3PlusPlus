@@ -90,6 +90,7 @@ namespace rct3::scene
         /// Settings the next piece is built with, where it has them.
         int holding_time = 5; ///< Seconds
         int car_turn = 0;     ///< Degrees
+        int brake_speed = 0;  ///< Whole m/s for brakes and block brakes; 0 until set, so they take the ride's
         std::uint8_t facing = 0;
         std::optional<save::RideColours> colours; ///< Painted in the ring's colour tab; else as the piece before
         /// A track with no pieces yet starts on the tile the pointer was last over, turned `turns` quarters.
@@ -120,6 +121,7 @@ namespace rct3::scene
         bool off_water = false;      ///< The ghost's piece stands only on water, and some of it is on dry land
         bool clashes = false;        ///< The ghost's piece (or any of a design) takes room a solid item or a path takes, or is off owned land
         bool unowned = false;        ///< Of those, it stands off land the park owns
+        bool in_ground = false;      ///< Of those, it cuts into the ground
         std::size_t ghost_doors = 0; ///< The design's doors the ghost shows with its track
         std::string complaint;       ///< String key: why the track was last not finished; cleared by the next action
         bool arm = false;            ///< The ride's riders sit on arms, whose angles its pieces hold
@@ -150,8 +152,9 @@ namespace rct3::scene
         /// The design's ride, whose settings and colours the ride takes once the design is laid whole.
         std::optional<save::Ride> design_ride;
         /// What the round panel's tabs were last shown for: whether the first piece was still to lay, the
-        /// ride's state, and whether the construction strip was hidden.
-        std::optional<std::tuple<bool, save::AttractionState, bool>> tabs_for;
+        /// ride's state, whether the construction strip was hidden, and whether cuts were smooth.
+        std::optional<std::tuple<bool, save::AttractionState, bool, bool>> tabs_for;
+        bool smooth_cuts = false; ///< Whether ground the track passes into is cut smoothly, not sharply
         std::string preview_item; ///< The piece shown on the round panel's disc
         /// Auto-complete: while it looks for a way, the way nearest the station so far shows as the ghost; the way
         /// it found shows until a second click on the button lays it, or any other action turns it down.
@@ -252,6 +255,14 @@ namespace rct3::scene
 
     /// Hands the scene's objects to the mesh builder again after a change, once a build reading them is done.
     void objects_changed(ParkScene& scene);
+
+    /// Puts `pieces` in the place of the objects `ids` names, which then names the pieces. A piece the same as
+    /// one standing keeps it, with its id and its place among the objects; the others take the places of those
+    /// that went, so the objects after them do not move. Whether any object changed.
+    bool replace_fixtures(ParkScene& scene, std::vector<std::uint64_t>& ids, std::vector<save::PlacedObject> pieces);
+
+    /// Brings the objects' places and pick boxes up to date, working out again only the objects that changed.
+    void place_objects(const ParkScene& scene);
 
     /// Waits for a mesh build that is reading the objects, before they change.
     void wait_for_build(ParkScene& scene);

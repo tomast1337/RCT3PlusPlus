@@ -2,6 +2,7 @@
 #include "simulation/park_state.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/tuning.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -42,6 +43,10 @@ namespace rct3::simulation
             s.forecast = world.weather->forecast;
             s.temperature = world.weather->temperature;
             s.wind = std::clamp(world.weather->wind_speed, 0.0f, 1.0f);
+            s.climate = world.weather->climate;
+            // The file's time until the next change is in calendar units as ours is.
+            s.weather_hold = std::max(world.weather->forecast_delay, 0.0f);
+            s.wind_change = std::isfinite(world.weather->wind_acceleration) ? std::clamp(world.weather->wind_acceleration, -1.0f, 1.0f) : 0.0f;
         }
         return s;
     }
@@ -60,7 +65,7 @@ namespace rct3::simulation
             return 0;
         const std::int64_t before = week_of(state.time, state.zero_time);
         state.time += seconds / kSecondsPerHour * kCalendarUnitsPerHour;
-        state.date = save::GameClock::split(state.time);
+        state.date = save::GameClock::date_at(state.time, state.zero_time);
         return static_cast<std::int32_t>(std::max<std::int64_t>(0, week_of(state.time, state.zero_time) - before));
     }
 
@@ -73,7 +78,8 @@ namespace rct3::simulation
         in.guests = state.guests;
         const RatingParts parts = rate_park(in);
         state.rating_parts = parts;
-        state.rating = next_rating(state.rating, parts.total);
+        state.rating = next_rating(state.rating, parts.total + static_cast<std::int32_t>(state.rating_bonus));
+        state.rating_bonus = std::max(0.0f, state.rating_bonus - kTuning.prizes.rating_bonus_fade.value);
     }
 
     Weather guest_weather(const ParkState& state)

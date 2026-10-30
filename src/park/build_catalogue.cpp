@@ -6,12 +6,15 @@
 #include "ovl/animated_ride.hpp"
 #include "ovl/enclosure_fence.hpp"
 #include "ovl/integer_value.hpp"
+#include "ovl/piece_set.hpp"
+#include "ovl/room_type.hpp"
 #include "ovl/scenery_item.hpp"
 #include "ovl/special_attraction.hpp"
 #include "ovl/stall.hpp"
 #include "ovl/text.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "park/item_category.hpp"
+#include "park/pools.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 
@@ -42,6 +45,12 @@ namespace rct3::park
         constexpr std::string_view kFenceEnding = "_Stub";
         constexpr std::string_view kEnclosureDeleteText = "EnclosureDeleteTool_TT";
         constexpr std::string_view kEnclosureDeleteIcon = "GUI2_DeleteSelection";
+        constexpr std::string_view kPoolPanelText = "Pool_PoolPanel";
+        constexpr std::string_view kPoolRoomText = "Pool_ChangingRoomPanel";
+        constexpr std::string_view kPoolExtraText = "Pool_ExtraPanel";
+        constexpr std::string_view kJacuzziIcon = "Icon_Default_Jacuzzi";
+        constexpr std::string_view kHighDiveIcon = "Icon_Default_HighDive";
+        constexpr std::string_view kStairsIcon = "Icon_Default_SpiralStairs";
         /// The overlays of shelters, animal species and toys.
         constexpr std::array<std::string_view, 3> kAnimalOverlays = { "Enclosures/Shelters/Shelters", "WildAnimals/WildAnimals", "WildAnimals/Items/Items" };
 
@@ -150,6 +159,7 @@ namespace rct3::park
                 item.name_text = e.fence->name_text;
                 item.icon = e.fence->icon;
                 item.price = e.fence->fence_cost;
+                item.refund = e.fence->fence_refund;
                 item.strength = e.fence->strength;
                 items.push_back(std::move(item));
             }
@@ -418,6 +428,83 @@ namespace rct3::park
                     items.push_back(attraction_item(*shop, BuildKind::Shop, e.name, path, info, placed_as(info.style, e.name)));
             }
             add_enclosure_items(overlay, *part, path, placed, items);
+            for (const auto& e : ovl::read_pool_types(overlay, *part))
+            {
+                if (!e.pool)
+                    continue;
+                // The pool panel picks these by symbol and shows the editor's own pictures; the icons here are
+                // for scripts and lists that name them.
+                const auto tool = [&](std::string_view symbol, std::optional<PoolSquare> square) -> BuildItem& {
+                    BuildItem& item = items.emplace_back();
+                    item.list = BuildList::Pools;
+                    item.kind = BuildKind::PoolSquare;
+                    item.symbol = symbol;
+                    item.overlay = path;
+                    item.name_text = symbol;
+                    item.icon = square ? std::string(e.pool->icon) : std::string(kEnclosureDeleteIcon);
+                    item.group_icon = e.pool->icon;
+                    item.group_text = kPoolPanelText;
+                    item.price = square ? static_cast<std::int32_t>(pool_build_cost(e.pool->prices, *square)) : 0;
+                    item.pool_prices.assign(e.pool->prices.begin(), e.pool->prices.end());
+                    return item;
+                };
+                for (std::int32_t depth = 1; depth <= 3; ++depth)
+                    tool(kPoolWater[static_cast<std::size_t>(depth - 1)], PoolSquare { .kind = PoolKind::Water, .depth = depth });
+                tool(kPoolTiles, PoolSquare { .kind = PoolKind::Tile, .depth = 2 });
+                tool(kPoolDelete, std::nullopt);
+                tool(kPoolPath, PoolSquare { .kind = PoolKind::Path, .depth = 0 });
+                tool(kPoolPathSlope, PoolSquare { .kind = PoolKind::PathSlope, .depth = 0 });
+                tool(kPoolPathStairs, PoolSquare { .kind = PoolKind::PathStairs, .depth = 0 });
+                // The extras laid as squares, one at a time: the spa pool, the high diving board and the spiral
+                // staircase.
+                BuildItem& jacuzzi = tool(kPoolJacuzzi, PoolSquare { .kind = PoolKind::Jacuzzi, .depth = 2 });
+                jacuzzi.icon = kJacuzziIcon;
+                jacuzzi.group_icon = kJacuzziIcon;
+                jacuzzi.group_text = kPoolExtraText;
+                BuildItem& dive = tool(kPoolHighDive, PoolSquare { .kind = PoolKind::HighDive, .depth = 2, .board = kBoardLevel });
+                dive.icon = kHighDiveIcon;
+                dive.group_icon = kJacuzziIcon;
+                dive.group_text = kPoolExtraText;
+                BuildItem& stairs = tool(kPoolStairs, PoolSquare { .kind = PoolKind::Stairs, .depth = 2, .board = kLowestStairs });
+                stairs.icon = kStairsIcon;
+                stairs.group_icon = kJacuzziIcon;
+                stairs.group_text = kPoolExtraText;
+                // The extras are the scenery items of the pool type's overlay that say where in a pool they go.
+                for (const auto& [name, item] : placed)
+                {
+                    const auto words = std::ranges::find(item->parameters, std::string_view("PoolExtra"), &ovl::SceneryItemParameter::name);
+                    if (words == item->parameters.end() || item->icon.empty())
+                        continue;
+                    BuildItem& extra = items.emplace_back();
+                    extra.list = BuildList::Pools;
+                    extra.kind = BuildKind::PoolExtra;
+                    extra.symbol = name;
+                    extra.overlay = path;
+                    extra.name_text = item->name_text;
+                    extra.icon = item->icon;
+                    extra.group_icon = kJacuzziIcon;
+                    extra.group_text = kPoolExtraText;
+                    extra.price = item->cost;
+                    extra.pool_extra = words->value;
+                }
+            }
+            // Changing rooms are placed as the scenery item they name, and show its icon.
+            // shortcut: built free; the room's own price is not read yet, take it once its field is known.
+            for (const auto& e : ovl::read_changing_rooms(overlay, *part))
+            {
+                const ovl::SceneryItem* room = e.room ? placed_as(e.room->scenery_item, e.name) : nullptr;
+                if (room == nullptr || room->icon.empty())
+                    continue;
+                BuildItem& item = items.emplace_back();
+                item.list = BuildList::Pools;
+                item.kind = BuildKind::PoolRoom;
+                item.symbol = e.room->scenery_item.empty() ? e.name : e.room->scenery_item;
+                item.overlay = path;
+                item.name_text = e.room->name_text.empty() ? room->name_text : e.room->name_text;
+                item.icon = room->icon;
+                item.group_icon = room->icon;
+                item.group_text = kPoolRoomText;
+            }
             for (const auto& e : ovl::read_stalls(overlay, *part))
             {
                 if (!e.stall)
@@ -559,7 +646,7 @@ namespace rct3::park
                 del.strength = -1; // listed before the weakest fence
             }
         }
-        for (const std::string_view overlay : kAnimalOverlays)
+        for (const std::string_view overlay : { kAnimalOverlays[0], kAnimalOverlays[1], kAnimalOverlays[2], kPoolOverlay })
         {
             if (const auto file = find(root, std::string(overlay) + std::string(kCommonEnding)))
                 read_file(root, *file, items);
@@ -613,6 +700,9 @@ namespace rct3::park
             case BuildKind::EnclosureFence:
             case BuildKind::Shelter:
             case BuildKind::AnimalToy:
+            case BuildKind::PoolSquare:
+            case BuildKind::PoolExtra:
+            case BuildKind::PoolRoom:
                 return true; // parks list these without saying whether they may be built
             default:
             {

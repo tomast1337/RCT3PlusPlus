@@ -30,11 +30,13 @@
 #include "park/object_mesh.hpp"
 #include "park/object_pick.hpp"
 #include "park/person_mesh.hpp"
+#include "park/pools.hpp"
 #include "park/ride_cars.hpp"
 #include "park/sky_mesh.hpp"
 #include "park/terrain_mesh.hpp"
 #include "park/track_course.hpp"
 #include "park/track_rules.hpp"
+#include "park/weather_look.hpp"
 #include "random/generator.hpp"
 #include "render/device.hpp"
 #include "save/model/park.hpp"
@@ -49,6 +51,7 @@
 #include "scene/park_map_view.hpp"
 #include "scene/park_occlusion.hpp"
 #include "scene/park_particles.hpp"
+#include "scene/park_rain.hpp"
 #include "scene/park_supports.hpp"
 #include "scene/park_water.hpp"
 #include "scene/ride_placing.hpp"
@@ -56,6 +59,7 @@
 #include "scene/structure_tools.hpp"
 #include "scene/track_building.hpp"
 #include "scene/zoo_animals.hpp"
+#include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/objectives.hpp"
 #include "simulation/park_graphs.hpp"
@@ -132,6 +136,14 @@ namespace rct3::scene
     inline constexpr float kLowReliability = 0.4f;        ///< Under it the player is told once, and again after it climbs back.
 
     /// A ride the player has been told is broken down.
+    /// How a guest's food or drink looks in their hand: as handed over, and as the empty left once it is gone;
+    /// either missing when its shape is.
+    struct CarriedLook
+    {
+        std::optional<park::ObjectModel> full;
+        std::optional<park::ObjectModel> empty;
+    };
+
     struct BrokenRide
     {
         entt::entity ride = entt::null;
@@ -206,6 +218,16 @@ namespace rct3::scene
         std::optional<save::Tile> other;  ///< And the opposite corner, where it is now or ended
         bool dragging = false;
         std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
+        std::vector<bool> kept { };                       ///< Tiles the drag may not take in or out, row by row; filled as it begins
+        /// What letting go would do: the enclosures it would leave, and what that costs (below 0 when the fence
+        /// taken down pays back more than any put up), for the columns and rows marked.
+        struct Marked
+        {
+            std::array<std::int32_t, 4> area { };
+            save::EnclosureMap enclosures { };
+            std::int64_t cost = 0;
+        };
+        std::optional<Marked> marked { };
     };
 
     /// The enclosure list's fence tool out (scene/enclosure_tools.hpp): a drag marks tiles into an enclosure, or
@@ -216,6 +238,55 @@ namespace rct3::scene
         std::optional<save::Tile> corner;                 ///< Of the area marked, where the drag began
         std::optional<save::Tile> other;                  ///< And the opposite corner, where it is now
         std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
+        std::vector<bool> kept { };                       ///< Tiles the drag may not take in or out, row by row; filled as it begins
+        /// What letting go would do: the enclosures it would leave, and what that costs (below 0 when the fence
+        /// taken down pays back more than any put up), for the columns and rows marked.
+        struct Marked
+        {
+            std::array<std::int32_t, 4> area { };
+            save::EnclosureMap enclosures { };
+            std::int64_t cost = 0;
+        };
+        std::optional<Marked> marked { };
+    };
+
+    /// The pool list's tool out (scene/pool_tools.hpp): a drag lays squares of a pool, or takes them up; a
+    /// click puts an extra in.
+    struct PoolTool
+    {
+        std::optional<park::BuildItem> item;              ///< The tool picked; none while put away
+        std::optional<save::Tile> corner;                 ///< Of the area marked, where the drag began
+        std::optional<save::Tile> other;                  ///< And the opposite corner, where it is now
+        std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
+        std::int32_t drawn_look = -1;                     ///< And how: the part of the tile marked, and the colour
+        std::optional<std::int32_t> height;               ///< Of the surface, when the pool panel does not snap it to the ground
+        bool grid = false;                                ///< The pool panel's grid switch, as last seen
+        park::PoolEdge edge = park::PoolEdge::Straight;   ///< The pool panel's edge setting, for the squares laid
+        /// The squares worked on now, from where the drag began to where it is, or the square under the pointer.
+        std::optional<std::pair<save::Tile, save::Tile>> working;
+        std::int64_t cost = 0; ///< Of the work, below zero for money back
+        bool ok = false;       ///< Whether the work may be done
+        /// The pools before the work was laid into them to be seen, and the ground it dug, to put back.
+        std::optional<park::PoolMap> before;
+        std::vector<std::pair<save::Tile, std::array<float, 4>>> dug;
+        bool redraw = false;                    ///< The pools were put back away from the frame and are drawn on the next
+        std::int32_t turns = 0;                 ///< Of an extra, changing room or high diving board, quarter turns from the turn keys
+        std::optional<float> press_y;           ///< Where on the screen the drag began
+        std::int32_t board = park::kBoardLevel; ///< A high diving board's or a staircase's height, from the drag
+        std::int32_t worked_board = 0;          ///< And the turn and height of the work shown
+        std::int32_t worked_turns = 0;
+        bool faces = true; ///< The work shown is no high diving board facing away from the water
+        /// The extra or changing room where it would go, drawn see-through, and whether it may go there.
+        std::optional<save::PlacedObject> ghost_of;
+        bool ghost_ok = false;
+        park::ObjectMesh ghost;
+        /// The extra or changing room alone, for the pool panel's disc, and the view of it there.
+        std::string preview_of;
+        park::ObjectMesh preview;
+        park::ParkCamera preview_camera;
+        render::TextureHandle preview_target;
+        std::uint32_t preview_pixels = 0;
+        std::optional<std::size_t> room_placed; ///< Of the pools' rooms, one just placed, its window to open
     };
 
     /// An amount of money floating up from a point of the park (scene/park_view.hpp).
@@ -272,11 +343,13 @@ namespace rct3::scene
         float speed = 1;      ///< How fast its motion plays
         /// Ground its legs cover in a second of each way of going on foot (by simulation::Gait); 0 unknown
         std::array<float, kGaits> paces { };
-        bool walking = false;            ///< Walkers stand still in their stride until people move
-        bool staff = false;              ///< A member of staff rather than a guest
-        std::size_t saved = 0;           ///< Of the guests or of the staff in the saved people
-        entt::entity guest = entt::null; ///< The simulated guest it shows, for guests the simulation walks
-        std::uint32_t thoughts_seen = 0; ///< Of the simulated guest's thoughts, those already in the saved person
+        bool walking = false;                     ///< Walkers stand still in their stride until people move
+        bool staff = false;                       ///< A member of staff rather than a guest
+        std::size_t saved = 0;                    ///< Of the guests or of the staff in the saved people
+        entt::entity guest = entt::null;          ///< The simulated guest it shows, for guests the simulation walks
+        std::uint32_t thoughts_seen = 0;          ///< Of the simulated guest's thoughts, those already in the saved person
+        const park::PartSet* swim_body = nullptr; ///< Worn in place of the body and legs at a pool, if any
+        const park::PartSet* swim_legs = nullptr;
     };
 
     /// A head, body or legs that a guest coming in at the gate may wear.
@@ -288,6 +361,7 @@ namespace rct3::scene
         save::Sex sex = save::Sex::Male;
         std::uint8_t section = 0; ///< As a part group's
         std::uint8_t vip = 0;     ///< The celebrity it dresses, by the number VIP goals give them; 0 for guests'
+        bool swim = false;        ///< Swimwear, worn at a pool in place of the clothes of its section
     };
 
     /// A photo of a player's guest to draw: where from, and the start of its file name.
@@ -297,15 +371,28 @@ namespace rct3::scene
         std::string name;
     };
 
+    /// Tiles across a square of the ground built and drawn on its own: a change builds again only the
+    /// squares it reaches. Chosen by eye: small enough to build in a few milliseconds, few enough to draw.
+    inline constexpr int kGroundChunk = 32;
+
+    /// One square of the ground, or the land round the park.
+    struct GroundChunk
+    {
+        render::BufferHandle vertices;
+        render::BufferHandle indices;
+        std::vector<park::GroundBatch> batches { };
+        glm::vec3 low { 0.0f }; ///< Corners of the box round it
+        glm::vec3 high { 0.0f };
+        std::vector<park::WaterVertex> water { }; ///< Its lakes' surfaces, with the rest drawn as one
+    };
+
     struct ParkScene
     {
         save::TerrainGrid grid;
         random::Seed seed;
         random::RandomState gameplay; ///< For the simulation; to be kept with a saved park
         park::ParkCamera camera;
-        std::vector<park::GroundBatch> batches;
-        render::BufferHandle ground_vertices;
-        render::BufferHandle ground_indices;
+        std::vector<GroundChunk> ground_chunks; ///< kGroundChunk tiles square, row by row, then the land round the park
         render::PipelineHandle ground_pipeline;
         /// The ground drawn see-through while building under it: its depth alone, then its colour faded over
         /// what is behind, so only its nearest layer shows.
@@ -313,10 +400,14 @@ namespace rct3::scene
         render::PipelineHandle ground_faded_pipeline;
         ParkWater water;
         ParkGlow glow;
-        ParkLens lens;             ///< Water on the camera's lens
-        ParkParticles particles;   ///< The effects scenery and rides show
-        bool bloom = false;        ///< The Bloom option: glow round bright parts
-        bool light_shafts = false; ///< The Light shafts option
+        ParkLens lens;                                          ///< Water on the camera's lens
+        ParkParticles particles;                                ///< The effects scenery and rides show
+        ParkRain rain;                                          ///< Rain falling round the camera
+        park::WeatherLook weather_look;                         ///< How the weather shows now
+        random::RandomState weather_dice = random::seeded({ }); ///< Looks only: when lightning strikes
+        bool thunder = false;                                   ///< A stroke's thunder is to be heard this frame
+        bool bloom = false;                                     ///< The Bloom option: glow round bright parts
+        bool light_shafts = false;                              ///< The Light shafts option
         ParkOcclusion occlusion;
         bool ambient_occlusion = false; ///< The Ambient occlusion option
         int surface_detail = 0;         ///< The Surface detail option (render::SceneLight::surface_detail)
@@ -335,13 +426,19 @@ namespace rct3::scene
         render::TextureHandle variation; ///< Noise the ground's shade wanders by (park/ground_variation.hpp)
         std::vector<save::PlacedObject> objects;
         park::ObjectModels models;
-        park::ModelPictures pictures;                ///< For painting the batches new levels bring
-        park::Leans leans;                           ///< Of the built pieces that follow a slope
-        park::Fitted fitted;                         ///< Of the built pieces placed off the tile grid
-        park::Broken broken_objects;                 ///< Path items vandals have broken, drawn so
-        std::vector<std::uint64_t> fence_panels;     ///< The objects of the fence round the park's land, as last built
+        park::ModelPictures pictures;            ///< For painting the batches new levels bring
+        park::Leans leans;                       ///< Of the built pieces that follow a slope
+        park::Fitted fitted;                     ///< Of the built pieces placed off the tile grid
+        park::Broken broken_objects;             ///< Path items vandals have broken, drawn so
+        std::vector<std::uint64_t> fence_panels; ///< The objects of the fence round the park's land, as last built
+        /// By ride id, the objects of the fence the park built round the ride and beside its doors, as last built.
+        std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> ride_fence_pieces;
         save::EnclosureMap enclosures;               ///< The animal enclosures' tiles and fences
         std::vector<std::uint64_t> enclosure_panels; ///< The objects of their fences, as last built
+        park::PoolMap pools;                         ///< The swimming pools the player laid
+        std::size_t pools_seen = 0;                  ///< A fingerprint of `pools` as the simulation last took them in
+        std::vector<std::uint64_t> pool_pieces;      ///< Their pieces' objects, as last built
+        std::size_t saved_pool_water = 0;            ///< footpaths.pools of the park's own file; the pools' follow
         std::size_t entrance_centred = 0;            ///< Of the park's entrances, the one the view last went to
         std::vector<glm::vec3> anchors;
         std::vector<park::Lamp> lamps; ///< The objects' lamps at full strength; packed again when `lamps_due`
@@ -351,9 +448,11 @@ namespace rct3::scene
         render::TextureHandle lamp_texture; ///< render::SceneLight::lamps
         std::uint32_t lamp_rows = 0;        ///< Of that texture
         float lamp_strength = -1;           ///< The strength it was packed with
-        /// The boxes the objects are clicked in, worked out again when objects are added.
+        /// Where the objects stand, and the boxes they are clicked in, brought up to date (place_objects) after a
+        /// change or when objects are added.
+        mutable park::ObjectPlaces places;
         mutable std::vector<park::PickBox> pick_boxes;
-        mutable std::size_t pick_boxes_of = 0; ///< How many objects they were worked out for
+        mutable std::size_t pick_boxes_of = 0; ///< How many objects they were brought up to date for
         park::LevelPlan levels;                ///< Those the object buffers hold
         /// Of a level's distance, how far before its edge objects start blending into the next; 0 jumps. Set
         /// from the options each frame, and handed to each build.
@@ -454,9 +553,11 @@ namespace rct3::scene
         std::vector<std::optional<park::TrackCourse>> courses; ///< By ride, of those whose track is known whole
         std::vector<park::TrackRules> track_rules;             ///< By ride, what its kind asks of its track; defaults past the end
         std::vector<entt::entity> ride_entities;
-        std::vector<simulation::RideGroup> ride_groups; ///< By ride, for the scenario's coaster goals and the awards
-        std::int32_t awards_month = -1;                 ///< The calendar month the awards were last looked at in
-        simulation::Takings takings;                    ///< Last month's, for the scenario's goals on money
+        std::vector<simulation::RideGroup> ride_groups;     ///< By ride, for the scenario's coaster goals and the awards
+        std::int32_t awards_month = -1;                     ///< The calendar month the awards were last looked at in
+        simulation::Takings takings;                        ///< Last month's, for the scenario's goals on money
+        std::int64_t goals_day = -1;                        ///< The calendar day the scenario's goals were last checked on
+        std::vector<simulation::GoalReading> goal_readings; ///< By place in the park's goals, as last checked
         /// The park's running totals as the week began, for its weekly graphs; unset until a week has ended.
         struct
         {
@@ -477,6 +578,17 @@ namespace rct3::scene
         std::map<std::size_t, std::vector<std::string>> train_choices;
         /// The object each simulated flat ride stands as, the one with seats, by its place in `objects`.
         std::map<entt::entity, std::size_t> ride_seats;
+        /// How the riders of each simulated flat ride sit, where its item says (see park::rider_motions).
+        std::map<entt::entity, std::uint8_t> ride_seatings;
+        /// A rider's last change of reaction as their pose shows it: from what to what, and scene.park_clock then.
+        struct RiderTurn
+        {
+            simulation::RideReaction was = simulation::RideReaction::Waiting;
+            simulation::RideReaction now = simulation::RideReaction::Waiting;
+            float since = 0;
+        };
+        /// Of the riders posed last, by guest.
+        std::map<entt::entity, RiderTurn> rider_turns;
         /// A flat ride its bones move, or scenery its bones move on its own (animatronics): drawn apart from the
         /// other objects, a piece per bone.
         struct BonedRide
@@ -505,6 +617,10 @@ namespace rct3::scene
         std::map<const park::PartSet*, std::array<float, kGaits>> walk_paces; ///< Of each legs set measured so far, 0 for none
         /// Umbrellas guests hold up, for adults and teens, then for children; empty when missing.
         std::array<std::optional<park::ObjectModel>, 2> umbrellas;
+        /// How litter and sick look lying on the paths; either missing when its shape is.
+        std::array<std::optional<park::ObjectModel>, 2> litter_looks;
+        /// What guests carry from stalls, by its carried item's symbol (as `Burger:cid`).
+        std::map<std::string, CarriedLook, std::less<>> carried_looks;
         std::vector<ShownPerson> shown_people;
         std::vector<Outfit> wardrobe;                  ///< What guests coming in at the gate wear
         std::unordered_set<entt::entity> known_guests; ///< The simulated guests the shown people were made for
@@ -558,6 +674,7 @@ namespace rct3::scene
         std::uint32_t vandalism_seen = 0;           ///< Breaks the park has been charged for
         std::uint32_t vandalism_warnings_seen = 0;  ///< Warnings already posted as messages
         std::int64_t wages_seen = 0;                ///< Of the staff's pay, what has come out of the park's cash
+        std::int64_t supplies_seen = 0;             ///< Of what supplies cost, what has come out of the park's cash
         std::int64_t receipts_seen = 0;             ///< Of what guests have paid, what has gone into the park's cash
         std::vector<BrokenRide> broken_rides;       ///< Rides the player has been told are broken down
         std::vector<entt::entity> unreliable_rides; ///< Rides the player has been told are unreliable, until they recover
@@ -604,6 +721,7 @@ namespace rct3::scene
         ViewLines contour_lines;                                    ///< Likewise the contours
         ViewLines delete_marks;                                     ///< The tiles the area delete tool marked
         ViewLines enclosure_marks;                                  ///< The tiles the enclosure tool marks
+        ViewLines pool_marks;                                       ///< The squares the pool tool marks
         ViewLines land_marks;                                       ///< What the land tool out would work on
         park::ParkCamera view_camera;                               ///< Of the info panel's round view, turning slowly round the attraction
         render::TextureHandle view_target;                          ///< The round view is drawn into
@@ -642,6 +760,9 @@ namespace rct3::scene
         float since_hover_pick = 0;                                 ///< Seconds since that was looked at
         bool leave = false;
         bool message_alert = false;
+        std::uint32_t built = 0;                                        ///< Things put down so far, each heard as a thump (park_sounds.hpp)
+        std::optional<std::size_t> pool_complex_asked;                  ///< Of the pools' rooms, one whose complex the player was asked to sell
+        std::optional<ui::SceneryTab> room_tab;                         ///< Last open in a changing room's window
         std::vector<park::AttractionRef> demolish_asked;                ///< Waiting on the question whether to pull them down
         std::vector<std::string> prizes;                                ///< Text keys told one box at a time, oldest first: prizes won, deletes refused
         std::vector<ui::ToolItem> window_requests;                      ///< Files menu items that open a window the owner opens (park_windows.hpp)
@@ -651,7 +772,6 @@ namespace rct3::scene
         std::size_t own_objects = 0;                                    ///< `objects` from the file; those after it were made on loading or built since
         std::unordered_set<std::uint64_t> placed;                       ///< Scenery the player put down since loading, by id; saved with the park
         std::optional<random::RandomState> off_map_stream;              ///< Where the trees beyond the edge left their stream; none when not grown
-        std::size_t off_map_groves = 0;                                 ///< Groves grown beyond the edge
         bool modelled_plants = true;                                    ///< Trees and plants modelled, not flat, as the options were on loading
         std::unordered_map<std::uint64_t, std::pair<int, int>> columns; ///< Support pieces built, by id, and the tile their column stands on
         SupportWatch supports;                                          ///< How the park stood when its supports were last built
@@ -663,6 +783,7 @@ namespace rct3::scene
         ParkFootpaths footpaths;                                        ///< The path panel's styles and the paths laid with it
         TrackBuilding building;                                         ///< The construction panel's ride and the piece it would build
         EnclosureTool enclosing;                                        ///< The enclosure list's fence tool out, or an animal
+        PoolTool pooling;                                               ///< The pool list's tool out
         DeleteTools deleting;                                           ///< The delete menu's tool out
         LandTools land;                                                 ///< The land menu's shape and paint tools
         RidePlacing placing;                                            ///< The ride picked in a build list, while it is placed
@@ -711,7 +832,8 @@ namespace rct3::scene
     /// The colour to clear to before drawing the park.
     [[nodiscard]] render::Color park_background(const ParkScene& scene);
 
-    void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
+    /// Draws the park, then its interface over it unless `interface` is false (a screenshot of the park alone).
+    void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool interface);
 
     /// The park as it stands, in our own format (see parkfile/saved_park.hpp): the original park it started
     /// from and the player's changes. Guests, staff and the simulation are not kept.

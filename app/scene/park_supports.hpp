@@ -40,6 +40,7 @@ namespace rct3::scene
             std::int32_t rotation = 0;
             std::optional<std::int32_t> base_height;
             bool hidden = false;
+            std::string support_set;
             std::vector<std::pair<int, int>> tiles; ///< Whose columns it may change
         };
         std::unordered_map<std::uint64_t, Seen> objects; ///< By id; support pieces left out

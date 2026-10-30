@@ -3,7 +3,8 @@
 // Support columns under raised items: coaster track, raised paths and queues, raised rides and anything else
 // whose scenery item asks for them. A park does not keep them: they are built when it loads, and again on the
 // tiles where something is built, taken away or changed, as placed objects, from what each item asks for
-// (support_footprint.hpp) and the pieces of the support set its group names (support_sets.hpp).
+// (support_footprint.hpp) and the pieces of the support set its group names (support_sets.hpp), or of the set the
+// placed object names in its place.
 //
 // One rule for every item, tile by tile. The items on a tile are taken by their undersides, the highest first.
 // A square that wants a column gets one under the middle of the tile, from the item's underside down to what is
@@ -79,7 +80,8 @@ namespace rct3::park
 
     /// Placed support pieces under the items among `objects` whose models ask for them, on `tiles` only when
     /// given. Items in `passed` are left out, as if not there. New objects take ids after `last_id`. `models`
-    /// must hold the support sets' tops, caps and beams, whose shapes give their sizes.
-    [[nodiscard]] BuiltSupports support_columns(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, const SupportSets& sets, std::uint64_t last_id, const std::unordered_set<std::uint64_t>& passed = { }, std::optional<const std::set<SupportTile>&> tiles = std::nullopt);
+    /// must hold the support sets' tops, caps and beams, whose shapes give their sizes. Each object has the model
+    /// `found` gives by index when given (ObjectPlaces::models), else the one `models` has.
+    [[nodiscard]] BuiltSupports support_columns(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, const SupportSets& sets, std::uint64_t last_id, const std::unordered_set<std::uint64_t>& passed = { }, std::optional<const std::set<SupportTile>&> tiles = std::nullopt, std::span<const ObjectModel* const> found = { });
 
 } // namespace rct3::park

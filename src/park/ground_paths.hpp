@@ -113,6 +113,7 @@ namespace rct3::park
         std::optional<save::Tile> source { }; ///< The tile whose path sets the style
         bool entrance = false;                ///< A queue at `source` runs on through it, straight
         std::vector<save::Tile> links { };    ///< The tiles beside it that it joins
+        std::uint64_t owner = 0;              ///< The placed object that paves it, whose columns take its style's supports
     };
 
     /// The path style paving takes while its source holds no path: the first of the game's path styles.
@@ -125,10 +126,10 @@ namespace rct3::park
     using FootprintOf = std::function<std::vector<save::Tile>(const save::PlacementSpot& spot)>;
 
     /// What the attractions of `rides` pave: every door, every stall's and facility's footprint, every flat ride's
-    /// floor.
+    /// floor and the floor of every tracked ride's base (a tower's or a house's).
     /// `footprint_of` gives the tiles a ride or stall stands on, only the squares it really fills; nothing when
-    /// unknown.
-    [[nodiscard]] std::vector<Paving> ride_pavings(const save::RideModel& rides, const FootprintOf& footprint_of);
+    /// unknown. `floor_of` gives the tiles a track piece paves under it: a base's footprint, nothing for the rest.
+    [[nodiscard]] std::vector<Paving> ride_pavings(const save::RideModel& rides, const FootprintOf& footprint_of, const FootprintOf& floor_of);
 
     /// One tile of paving laid as a path, and the paving it belongs to.
     struct PavedTile
@@ -162,6 +163,7 @@ namespace rct3::park
 
     /// The ground paths as triangles over the terrain. Batches use GroundPaint::PathA or PathB with the style
     /// index; they go over the ground with the same blending, after it.
-    [[nodiscard]] TerrainMesh ground_path_mesh(const GroundPathMap& map, const save::TerrainGrid& grid);
+    /// Only those on the tiles of `area` when given.
+    [[nodiscard]] TerrainMesh ground_path_mesh(const GroundPathMap& map, const save::TerrainGrid& grid, std::optional<TileRect> area = std::nullopt);
 
 } // namespace rct3::park

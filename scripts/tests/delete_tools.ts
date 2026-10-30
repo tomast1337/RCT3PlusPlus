@@ -4,7 +4,7 @@
 // before pulling it down, a bench on the road and a bare piece of road go at once with no question, road under a
 // bin takes the bin along, and the tool stays out until it is picked again. With the area tool, a drag marks
 // tiles; Clear forgets them, and Delete takes the road and the bench there at once and asks about the stall
-// standing there.
+// standing there. A bench's own panel pulls it down as well.
 //
 //   ./nob script scripts/tests/delete_tools.ts -- --no-audio
 
@@ -80,6 +80,7 @@ expect(stalls.list()[stall].demolished, "the stall pulled down");
 await click(bench.col, bench.row, 0.01, 0.016);
 expect(ui.find("demolish_question") === undefined, "no question for a bench");
 expect(park.pathItems().length === items - 1, `the bench gone (${items} then ${park.pathItems().length})`);
+await screenshot("delete_bench"); // What it cost to pull down floats up, even when nothing
 const pieces = map.paths().length;
 const cash = park.cash() ?? 0;
 await click(bare.col, bare.row);
@@ -90,6 +91,7 @@ expect(!map.paths().some((p) => p.col === bare.col && p.row === bare.row), "no r
 await click(binned.col, binned.row, 0, -0.01);
 expect(map.paths().length === pieces - 2, "the road under the bin gone");
 expect(park.pathItems().length === items - 2, `the bin gone with it, not left standing (${park.pathItems().length} left)`);
+await screenshot("delete_binned_road"); // One sum floats up for the road and its bin together
 
 // Picking the tool again puts it away; a click on the road then leaves it be.
 if (!ui.find("tools/Delete/GUI2_DeleteSingleItem"))
@@ -99,6 +101,19 @@ await frames(2);
 await click(road[3].col, road[3].row);
 expect(map.paths().length === pieces - 2, "the road kept once the tool is put away");
 await screenshot("delete_tool");
+
+// A bench's own panel pulls it down too, paid for as the tool does.
+expect(build.pick("Style/Vanilla/Style", "Bench"), "a bench in the scenery lists");
+await frames(2);
+await click(road[5].col, road[5].row);
+build.stop();
+const placed = park.pathItems().length;
+await click(road[5].col, road[5].row, 0.01, 0.016);
+expect(ui.find("info") !== undefined, "the bench's panel open");
+await ui.click("info/Attraction_General_Delete");
+await frames(3);
+expect(park.pathItems().length === placed - 1, `the bench pulled down from its panel (${placed} then ${park.pathItems().length})`);
+await screenshot("destroy_bench");
 
 // The area tool: a stall beside the road and a bench on it, then the road there and both marked.
 expect(build.pick("Style/Vanilla/Style", "Bench"), "a bench in the scenery lists");

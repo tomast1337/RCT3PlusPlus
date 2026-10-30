@@ -46,7 +46,8 @@ namespace rct3::park
         std::int32_t motion = 0;           ///< By number (see person_motions.hpp)
         float time = 0;                    ///< Seconds into the motion
         glm::mat4 world { 1.0f };          ///< Model to park
-        const ObjectModel* held = nullptr; ///< Held in the left hand, drawn at its finest level in its own picture
+        const ObjectModel* held = nullptr; ///< Held in the left hand, drawn at its finest level in its own picture;
+                                           ///< with no body, lying on its own at `world` (litter on a path)
     };
 
     /// How far a person's texture coordinates move to reach cell `colour`.
@@ -58,6 +59,9 @@ namespace rct3::park
 
     /// Where the left hand of `person` is, in their own space; nothing when their body has no socket for it.
     [[nodiscard]] std::optional<glm::vec3> left_hand(const PersonLibrary& library, const PlacedPerson& person);
+
+    /// How long `person`'s motion lasts, played once through, seconds; 0 when their body has none.
+    [[nodiscard]] float motion_seconds(const PersonLibrary& library, const PlacedPerson& person);
 
     /// How fast the walk of `legs` (a legs piece), or its other way of going on foot `motion` (a run, a tired
     /// walk), carries a walker along, in park units for each second of the motion: the speed at which a foot

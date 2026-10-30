@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Places a stall as a player would, on the game's blank landscape: picked, turned once with the placing panel's
-// tab to face the road in from the park's entrance, refused on the road itself, then placed on the grass beside
-// it. The tool must go away, the stall's window open, and the new stall sell everything its kind offers, closed;
+// tab to face the road in from the park's entrance, refused on the road itself (a click there builds nothing and is
+// silent), then placed on the grass beside it, with a thump. Its panel's levelling tabs light one at a time, none at first. The tool must go away, the stall's window open, and the new stall sell everything its kind offers, closed;
 // the park must run it, as it faces the road. Its window then takes items off its menu and puts them back.
+// A drink stall, whose model has a motion, then plays it as soon as it stands, closed.
 //
 //   ./nob script scripts/tests/stall_placing.ts -- --no-audio
 
@@ -38,10 +39,20 @@ async function hover(col: number, row: number): Promise<{ x: number; y: number; 
 
 expect(build.pick(kind.overlay, kind.symbol), `${kind.symbol} picked`);
 await frames(2);
+expect(build.placing()?.flatten === "off", "the ground left as it is at first");
+for (const [tab, after] of [["SharpOff", "sharp"], ["SmoothOff", "smooth"], ["SmoothOn", "off"]]) {
+    await ui.click(`placing/TerrainFlattener_${tab}`);
+    await frames(2);
+    expect(build.placing()?.flatten === after, `the ground levelled ${after} after ${tab}, not ${build.placing()?.flatten}`);
+}
 // A quarter turn from where it starts faces it the way of falling columns, to the road west of it.
 await ui.click("placing/IconAttractionEditorRotate");
 const onRoad = await hover(road!.col, road!.row);
 expect(onRoad.problem === "path", `the stall refused on the road, not ${onRoad.problem}`);
+const thumps = build.sounds().thumps;
+await pointer.click(onRoad.x, onRoad.y);
+await frames(2);
+expect(build.sounds().thumps === thumps && build.placing() !== undefined, "a click on the road building nothing, silent");
 const grass = await hover(road!.col + 1, road!.row);
 expect(grass.problem === "none", `the stall placeable beside the road, not ${grass.problem}`);
 expect(build.placing()?.arrow === true, "an arrow on the side the stall serves from");
@@ -49,6 +60,7 @@ await screenshot("stall_arrow");
 await pointer.click(grass.x, grass.y);
 await frames(3);
 expect(build.placing() === undefined, "the tool put away once the stall stands");
+expect(build.sounds().thumps === thumps + 1, `a thump as the stall went down (${build.sounds().thumps - thumps})`);
 const placed = stalls.list().filter((s) => s.symbol === `${kind.symbol}:sta`);
 expect(placed.length === 1, `one ${kind.symbol} in the park, not ${placed.length}`);
 const stall = placed[0];
@@ -56,6 +68,7 @@ log("placed", JSON.stringify(stall));
 expect(stall.site?.col === road!.col + 1 && stall.site?.row === road!.row && stall.site?.direction === 1, `it on the tile beside the road, facing it (${JSON.stringify(stall.site)})`);
 expect(stall.name === "%ME% 1", `it named after its kind, not ${stall.name}`);
 expect(!stall.open, "it built closed");
+expect(!stall.moving, "a stall whose model has no motion standing still");
 expect(JSON.stringify(stall.items.map((i) => ({ item: i.item, price: i.price }))) === JSON.stringify(kind.goods.map((g) => ({ item: `${g.item}:cid`, price: g.price }))), "it selling all its kind's goods at their prices");
 expect(stall.shown && ui.find("info") !== undefined, "its window open");
 // The road runs past the tile it faces, so the park runs it at once, closed.
@@ -121,4 +134,23 @@ expect(stalls.setState(at, "open") == null && menu().selling === true, "it opene
 camera.look({ col: road!.col + 1.5, row: road!.row + 0.5 }, { col: road!.col + 1.5, row: road!.row + 4.5, up: 8 });
 await frames(300);
 await screenshot("stall_placing");
+
+// A drink stall's model has a motion of its own: it plays at once, round and round, closed as it is built.
+const drinks = build.stalls()!.find((s) => s.symbol === "DrinkStall");
+expect(drinks !== undefined, "the drink stall to pick");
+expect(build.pick(drinks!.overlay, drinks!.symbol), "the drink stall picked");
+await frames(2);
+camera.look({ col: road!.col + 0.5, row: road!.row - 4.5 }, { col: road!.col + 0.5, row: road!.row + 6.5, up: 25 });
+await frames(3);
+const spot = await hover(road!.col + 1, road!.row - 2);
+expect(spot.problem === "none", `the drink stall placeable up the road, not ${spot.problem}`);
+await pointer.click(spot.x, spot.y);
+await frames(3);
+const drink = stalls.list().find((s) => s.symbol === "DrinkStall:sta");
+expect(drink !== undefined && !drink.open && drink.moving, `the drink stall moving, closed (${JSON.stringify(drink)})`);
+camera.look({ col: road!.col + 1.5, row: road!.row - 1.5, up: 1.5 }, { col: road!.col - 2, row: road!.row - 1.5, up: 4 });
+await frames(30);
+await screenshot("drink_stall_a");
+await frames(45);
+await screenshot("drink_stall_b");
 quit(0);

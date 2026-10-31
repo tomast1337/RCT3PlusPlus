@@ -1861,6 +1861,7 @@ namespace rct3::scene
                 draw.filter = render::Filter::Linear;
                 draw.address = render::AddressMode::Repeat;
                 draw.light = steady ? light : ghost_light(light, scene.clock);
+                draw.light.cut_clear = batch.paint == park::GroundPaint::PathA || batch.paint == park::GroundPaint::PathB || batch.paint == park::GroundPaint::Queue;
                 device.draw(draw);
             }
         }

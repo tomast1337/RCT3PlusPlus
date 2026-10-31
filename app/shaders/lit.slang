@@ -328,6 +328,9 @@ float4 fragment_main(LitVaryings f) : SV_Target
         color.rgb *= variation(f.world);
     if (detail >= 1)
         color.rgb *= grain(f.uv);
+    static const float kClear = 0.25; // Chosen by eye: the faint rim of a path's edge still blends in
+    if ((flags & 64u) != 0u && color.a < kClear)
+        discard;
     if (kMode == 1)
     {
         if (color.a < 0.5)

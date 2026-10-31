@@ -185,6 +185,7 @@ namespace rct3::scene
                         draw.filter = render::Filter::Linear;
                         draw.address = render::AddressMode::Repeat;
                         draw.light = light;
+                        draw.light.cut_clear = !earth(batch); // The grass round a path's shape stays clear of its depth
                         draw.extra_textures[0] = scene.variation;
                         draw.extra_textures[1] = relief_of(scene.ground_textures, park::ground_key(batch.paint, batch.index));
                         device.draw(draw);

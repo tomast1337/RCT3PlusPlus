@@ -338,6 +338,9 @@ namespace rct3::render
         /// The Lit shaders only: a ghost's look. The vertex colour alone, times `sky`, with no other light and no
         /// haze; the texture gives only its alpha, and the surface shows more see-through where it faces the eye.
         bool ghost = false;
+        /// The Lit shaders only: nearly clear pixels left out, so a blended picture with clear parts (a path laid
+        /// on the grass) writes no depth there for the shading and shadows that read it.
+        bool cut_clear = false;
     };
 
     /// What the Water shader needs besides its light and pictures.

@@ -640,7 +640,7 @@ namespace rct3::scene
         add_textures(device, scene, scene.car_meshes.mesh.batches);
     }
 
-    void replace_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index)
+    void drop_ride_cars(ParkScene& scene, std::size_t ride_index)
     {
         // Each car's place once the ride's own are gone, by its place now.
         std::vector<std::optional<std::size_t>> kept(scene.cars.size());
@@ -670,6 +670,11 @@ namespace rct3::scene
         }
         if (scene.riding)
             scene.riding = kept[*scene.riding];
+    }
+
+    void replace_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index)
+    {
+        drop_ride_cars(scene, ride_index);
         add_ride_cars(device, scene, install, ride_index, 1);
         board_tracked_ride(device, scene, install, ride_index);
     }
@@ -1282,7 +1287,7 @@ namespace rct3::scene
                         scene.ride_seatings[e] = static_cast<std::uint8_t>(*seating);
                 for (const auto kind : simulation::ride_kinds(scene.rides, [&](std::string_view path) { return install.find(path); }))
                     scene.ride_groups.push_back(kind ? simulation::ride_group(*kind) : simulation::RideGroup::Other);
-                simulation::import_boats(scene.sim, scene.rides, scene.ride_entities, scene.courses, scene.grid, world->water.bodies, park::solid_tiles(scene.objects, scene.models, scene.grid));
+                simulation::import_boats(scene.sim, scene.rides, scene.ride_entities, scene.courses, scene.grid, world->water.bodies, boat_obstacles(scene));
                 // Each kind of boat handles as its train sets it.
                 for (std::size_t k = 0; k < scene.cars.size(); ++k)
                     if (const std::size_t ride = scene.car_spots[k].ride; ride < scene.ride_entities.size() && scene.ride_entities[ride] != entt::null)

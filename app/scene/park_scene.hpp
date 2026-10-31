@@ -888,6 +888,9 @@ namespace rct3::scene
     /// without a kept place are left out.
     void add_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t from, std::size_t count);
 
+    /// Takes the scene's cars of ride `ride_index` (of scene.rides) away.
+    void drop_ride_cars(ParkScene& scene, std::size_t ride_index);
+
     /// Has the scene's cars of ride `ride_index` (of scene.rides) be its trains' cars as they are now: those it had
     /// go and its trains' cars are added where they stand, boarded as board_tracked_ride boards them.
     void replace_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index);

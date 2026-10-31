@@ -1552,8 +1552,20 @@ namespace rct3::scene
         const auto& course = index < scene.courses.size() ? scene.courses[index] : std::nullopt;
         const auto fits = scene.car_fits.find(index);
         const auto coaster = course ? simulation::coaster_of(*course, ride) : std::nullopt;
-        if (!coaster || fits == scene.car_fits.end() || ride.trains.empty())
+        // Boats wait along their dock back from where they set off, at its end.
+        const bool boats = course && (ride.mode == save::OperatingMode::Boat || ride.mode == save::OperatingMode::WaterTransport);
+        if ((!coaster && !boats) || fits == scene.car_fits.end() || ride.trains.empty())
             return;
+        if (!coaster)
+        {
+            float front = course->length();
+            for (save::Train& train : ride.trains)
+            {
+                park::stand_train(*course, train, fits->second, std::max(front, 0.0f));
+                front -= train.length + park::kTrainGap;
+            }
+            return;
+        }
         // Spread over its stations; those with no room are left out, as the game does.
         const std::vector<float> fronts = park::train_fronts(*course, coaster->start, ride.trains.front().length, static_cast<int>(ride.trains.size()), ride.options.block_sectioned);
         const auto kept = static_cast<std::int32_t>(fronts.size());
@@ -1564,6 +1576,25 @@ namespace rct3::scene
             park::stand_train(*course, ride.trains[t], fits->second, fronts[t]);
     }
 
+    park::SolidTiles boat_obstacles(const ParkScene& scene)
+    {
+        return park::solid_tiles(scene.objects, scene.models, scene.grid);
+    }
+
+    void ready_boats(ParkScene& scene, std::size_t index)
+    {
+        const entt::entity e = index < scene.ride_entities.size() ? scene.ride_entities[index] : entt::null;
+        if (e == entt::null || index >= scene.courses.size())
+            return;
+        save::RideModel one;
+        one.rides.push_back(scene.rides.rides[index]);
+        simulation::import_boats(scene.sim, one, std::span(&e, 1), std::span(&scene.courses[index], 1), scene.grid, scene.footpaths.water.bodies, boat_obstacles(scene));
+        auto* boats = scene.sim.registry.try_get<simulation::Boats>(e);
+        for (std::size_t k = 0; boats && k < scene.cars.size(); ++k)
+            if (const auto model = scene.car_spots[k].ride == index ? scene.models.find(park::model_ref(scene.cars[k])) : scene.models.end(); model != scene.models.end() && model->second.boat_handling.turn_most > 0)
+                boats->handling = model->second.boat_handling;
+    }
+
     bool set_trains(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars)
     {
         save::Ride& ride = scene.rides.rides[index];
@@ -1571,6 +1602,8 @@ namespace rct3::scene
         auto& r = scene.sim.registry;
         const auto* fleet = e != entt::null ? r.try_get<simulation::Trains>(e) : nullptr;
         if (fleet && std::ranges::any_of(fleet->riders, [](const auto& riders) { return !riders.empty(); }))
+            return false;
+        if (const auto* cycle = e != entt::null && r.all_of<simulation::Boats>(e) ? r.try_get<simulation::CycleRide>(e) : nullptr; cycle && !cycle->riders.empty())
             return false;
         ready_trains(scene, install, index);
         // One with none, as the game leaves a closed ride, gets the first its kind offers; counts never set are
@@ -1596,6 +1629,12 @@ namespace rct3::scene
             r.get<simulation::CycleRide>(e).capacity = static_cast<std::uint32_t>(ride.seats.size() / std::max<std::size_t>(ride.trains.size(), 1));
         }
         replace_ride_cars(device, scene, install, index);
+        // Boats all go back to the dock, as many as the ride now has.
+        if (e != entt::null && r.all_of<simulation::Boats>(e))
+        {
+            r.get<simulation::CycleRide>(e).capacity = static_cast<std::uint32_t>(ride.seats.size());
+            ready_boats(scene, index);
+        }
         return true;
     }
 
@@ -2316,9 +2355,10 @@ namespace rct3::scene
         ghost_trains(scene, *b.ride, true);
         // A test of a track that is not yet a circuit, of a ride the park does not run yet: no train runs it, so a
         // ghost of its first train does, crashing off its end. Once the park runs the ride, its own trains test it.
+        // Boats sail off the end of theirs instead.
         const save::Ride& tested = scene.rides.rides.at(*b.ride);
         const auto& course = *b.ride < scene.courses.size() ? scene.courses[*b.ride] : std::nullopt;
-        const bool testable = tested.base.state == save::AttractionState::Testing && course && !course->closed && std::ranges::contains(course->kinds, park::CourseKind::Station) && !tested.trains.empty() && scene.car_fits.contains(*b.ride) && assets.install && (*b.ride >= scene.ride_entities.size() || scene.ride_entities[*b.ride] == entt::null);
+        const bool testable = tested.base.state == save::AttractionState::Testing && course && !course->closed && std::ranges::contains(course->kinds, park::CourseKind::Station) && !tested.trains.empty() && tested.mode != save::OperatingMode::Boat && tested.mode != save::OperatingMode::WaterTransport && scene.car_fits.contains(*b.ride) && assets.install && (*b.ride >= scene.ride_entities.size() || scene.ride_entities[*b.ride] == entt::null);
         if (!testable)
             b.test.reset();
         else if (!b.test)

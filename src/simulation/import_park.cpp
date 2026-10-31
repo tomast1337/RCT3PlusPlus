@@ -1039,8 +1039,9 @@ namespace rct3::simulation
             };
             // Tested or open, a tracked ride's trains run its track without doors or paths, round a whole circuit, a
             // shuttle's track, or an unfinished one to its end, as a test run needs neither; guests come once its doors
-            // are on the paths (relink_attractions).
-            const bool runs_alone = coaster != nullptr && ride.base.state != save::AttractionState::Closed;
+            // are on the paths (relink_attractions). Boats that sail off their dock test the same way.
+            const bool boats = ride.mode == save::OperatingMode::Boat || ride.mode == save::OperatingMode::WaterTransport;
+            const bool runs_alone = (coaster != nullptr || boats) && ride.base.state != save::AttractionState::Closed;
             auto links = timing && !ride.stations.empty() && ride.stations.front().entrance_spot ? ride_links(world.paths, ride.stations.front()) : std::nullopt;
             if (!timing || (!links && !runs_alone))
             {
@@ -1150,19 +1151,14 @@ namespace rct3::simulation
     void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::SolidTiles& solids)
     {
         auto& r = world.registry;
+        bool any = false;
         for (std::size_t i = 0; i < std::min({ rides.rides.size(), added.size(), courses.size() }); ++i)
         {
             const save::Ride& ride = rides.rides[i];
             const auto& course = courses[i];
             if ((ride.mode != save::OperatingMode::Boat && ride.mode != save::OperatingMode::WaterTransport) || !r.valid(added[i]) || r.all_of<Trains>(added[i]) || !course || course->points.empty() || ride.trains.empty())
                 continue;
-            if (!r.ctx().contains<WaterTiles>())
-                r.ctx().emplace<WaterTiles>(water_tiles(grid, water, solids));
-            // The dock's own water stays open, whatever stands over it.
-            auto& tiles = r.ctx().get<WaterTiles>();
-            const glm::ivec2 dock = tiles.tile_of({ course->points.front().x, course->points.front().z });
-            if (dock.x >= 0 && dock.y >= 0 && dock.x < tiles.cols && dock.y < tiles.rows)
-                tiles.level[static_cast<std::size_t>(dock.y) * static_cast<std::size_t>(tiles.cols) + static_cast<std::size_t>(dock.x)] = water_tiles(grid, water).at(dock.x, dock.y);
+            any = true;
             const glm::vec3 leave = course->points.back();
             const glm::vec3 heading = park::course_direction(*course, course->length());
             Boats boats { .dock = { .leave = { leave.x, leave.z }, .heading = { heading.x, heading.z }, .enter = { course->points.front().x, course->points.front().z } } };
@@ -1175,8 +1171,30 @@ namespace rct3::simulation
             boats.boats.resize(ride.trains.size());
             for (Boat& boat : boats.boats)
                 boat.at = boats.dock.enter;
-            r.emplace<Boats>(added[i], std::move(boats));
+            // A ride given boats again keeps how its boats handle.
+            if (const auto* had = r.try_get<Boats>(added[i]))
+                boats.handling = had->handling;
+            r.emplace_or_replace<Boats>(added[i], std::move(boats));
         }
+        if (any)
+            boat_water(world, grid, water, solids);
+    }
+
+    void boat_water(SimWorld& world, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::SolidTiles& solids)
+    {
+        auto& r = world.registry;
+        if (r.view<const Boats>().empty())
+            return;
+        // Each dock's own water stays open, whatever stands over it.
+        WaterTiles tiles = water_tiles(grid, water, solids);
+        const WaterTiles open = water_tiles(grid, water);
+        for (const auto [_, boats] : r.view<const Boats>().each())
+        {
+            const glm::ivec2 dock = tiles.tile_of(boats.dock.enter);
+            if (dock.x >= 0 && dock.y >= 0 && dock.x < tiles.cols && dock.y < tiles.rows)
+                tiles.level[static_cast<std::size_t>(dock.y) * static_cast<std::size_t>(tiles.cols) + static_cast<std::size_t>(dock.x)] = open.at(dock.x, dock.y);
+        }
+        r.ctx().insert_or_assign(std::move(tiles));
     }
 
     void link_stations(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid)

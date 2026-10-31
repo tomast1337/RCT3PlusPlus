@@ -240,6 +240,7 @@ namespace rct3::scene
                 seat_flat_ride(device, scene, i);
                 if (assets.install && ride.kind == save::RideKind::Tracked)
                     replace_ride_cars(device, scene, *assets.install, i);
+                ready_boats(scene, i);
                 logging::logger("park").info("{} joins the paths", ride.base.name);
                 return true;
             });

@@ -1046,6 +1046,8 @@ namespace rct3::scene
                 simulation::pull_down(scene.sim, e);
                 break;
             }
+        if (ride)
+            drop_ride_cars(scene, ref.index);
         if (ride && ref.index < scene.ride_entities.size())
             scene.ride_entities[ref.index] = entt::null;
         base->state = save::AttractionState::Closed;
@@ -2026,9 +2028,11 @@ namespace rct3::scene
             const auto& course = ride < scene.courses.size() ? scene.courses[ride] : std::nullopt;
             const save::Ride& r = scene.rides.rides[ride];
             const auto coaster = course ? simulation::coaster_of(*course, r) : std::nullopt;
-            if (!assets.install || r.base.demolished || r.base.state == save::AttractionState::Closed || r.mode == save::OperatingMode::MiniGolf || !coaster)
+            // Boats sail off a dock that is only station, which no train could run round.
+            const bool boats = (r.mode == save::OperatingMode::Boat || r.mode == save::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, park::CourseKind::Station);
+            if (!assets.install || r.base.demolished || r.base.state == save::AttractionState::Closed || r.mode == save::OperatingMode::MiniGolf || (!coaster && !boats))
                 continue;
-            const bool ghosted = !coaster->closed && coaster->shuttle == simulation::Shuttle::None && scene.building.ride == ride;
+            const bool ghosted = coaster && !coaster->closed && coaster->shuttle == simulation::Shuttle::None && scene.building.ride == ride;
             if (set_trains(device, scene, *assets.install, ride, r.train_count, r.cars_per_train) && !ghosted && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
                 scene.placing.unjoined.push_back(ride);
             if (auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName); info && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && scene.shown->index == ride)

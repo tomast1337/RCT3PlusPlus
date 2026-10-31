@@ -2,6 +2,7 @@
 #include "simulation/boat.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
 
 #include <array>
@@ -229,4 +230,36 @@ TEST_CASE("a rowing boat rows with both oars on a straight and with those that t
     CHECK(simulation::stroke(-simulation::kRowRound / 2) == simulation::Stroke::Both);
     CHECK(simulation::stroke(1) == simulation::Stroke::Left);
     CHECK(simulation::stroke(-1) == simulation::Stroke::Right);
+}
+
+TEST_CASE("a boat ride given boats again has them all back at its dock, as many as its trains, on the water as it is now")
+{
+    simulation::SimWorld world;
+    auto& r = world.registry;
+    const entt::entity ride = r.create();
+    save::RideModel rides;
+    rides.rides.push_back({ .mode = save::OperatingMode::Boat, .trains = { save::Train { }, save::Train { } } });
+    // A dock of one 4 m station piece on the second tile of a lake three tiles long.
+    const park::TrackCourse course { .points = { { 4, 5, 2 }, { 8, 5, 2 } }, .distance = { 0, 4 }, .kinds = { park::CourseKind::Station, park::CourseKind::Station } };
+    const save::TerrainGrid grid { .width = 3, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
+    save::WaterBody body { .level = 5 };
+    for (std::uint8_t col = 0; col < 2; ++col)
+        body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
+    const std::optional<park::TrackCourse> courses[] { course };
+    simulation::import_boats(world, rides, std::span(&ride, 1), courses, grid, std::span(&body, 1));
+    REQUIRE(r.all_of<simulation::Boats>(ride));
+    CHECK(r.get<simulation::Boats>(ride).boats.size() == 2);
+    CHECK_FALSE(r.ctx().get<simulation::WaterTiles>().at(2, 0));
+
+    // Out on the water, its boats handling their own way; then a third boat, and the lake dug a tile longer.
+    r.get<simulation::Boats>(ride).boats.front().at = { 6, 2 };
+    r.get<simulation::Boats>(ride).handling.turn_most = 3;
+    rides.rides.front().trains.emplace_back();
+    body.tris.insert(body.tris.end(), { { 2, 0, 0, 0b111 }, { 2, 0, 1, 0b111 } });
+    simulation::import_boats(world, rides, std::span(&ride, 1), courses, grid, std::span(&body, 1));
+    const auto& boats = r.get<simulation::Boats>(ride);
+    CHECK(boats.boats.size() == 3);
+    CHECK(std::ranges::all_of(boats.boats, [&](const simulation::Boat& b) { return b.at == boats.dock.enter; }));
+    CHECK(boats.handling.turn_most == 3);
+    CHECK(r.ctx().get<simulation::WaterTiles>().at(2, 0));
 }

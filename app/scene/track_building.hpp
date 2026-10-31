@@ -24,6 +24,7 @@
 #include "park/moving_meshes.hpp"
 #include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
+#include "park/path_clearance.hpp"
 #include "park/ride_cars.hpp"
 #include "park/track_choice.hpp"
 #include "park/track_completion.hpp"
@@ -191,9 +192,16 @@ namespace rct3::scene
     void ready_trains(ParkScene& scene, const config::GameInstall& install, std::size_t index);
 
     /// Stands the trains of the tracked ride `index` at its station: the first's front where trains set off, each
-    /// other queued behind the one before. Nothing for a ride whose cars are not fitted (car_fits) or whose course
-    /// runs no train.
+    /// other queued behind the one before; boats back along their dock from its end. Nothing for a ride whose cars
+    /// are not fitted (car_fits) or whose course runs no train.
     void stand_trains(ParkScene& scene, std::size_t index);
+
+    /// Gives the boat ride `index`, once the park runs it, a boat for each of its trains, all at its dock, sailing
+    /// on the park's water as it is now and handling as its boats' kind does.
+    void ready_boats(ParkScene& scene, std::size_t index);
+
+    /// What boats cannot sail through or under: what stands in the park's water or hangs low over it.
+    [[nodiscard]] park::SolidTiles boat_obstacles(const ParkScene& scene);
 
     /// Gives the tracked ride `index` new trains as fit_trains does (its kind's first when it has none), stood at
     /// its station, and has the park run them and draw their cars. False, and nothing changed, while riders are

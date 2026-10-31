@@ -26,6 +26,7 @@
 #include "scene/park_view.hpp"
 #include "scene/track_building.hpp"
 #include "simulation/import_park.hpp"
+#include "simulation/systems.hpp"
 #include "ui/screens/scenery_info.hpp"
 
 #include <algorithm>
@@ -34,6 +35,7 @@
 #include <numbers>
 #include <tuple>
 #include <unordered_map>
+#include <utility>
 
 namespace rct3::scene
 {
@@ -203,13 +205,27 @@ namespace rct3::scene
             std::erase_if(p.unjoined, [&](std::size_t i) {
                 if (i >= scene.rides.rides.size() || scene.rides.rides[i].base.demolished)
                     return true;
-                // One the park runs already has its doors moved: its guests find them from the paths.
+                save::Ride& ride = scene.rides.rides[i];
+                // One the park runs already has its doors moved: its guests find them from the paths. Closed, it is
+                // taken on again once a station of it more has an entrance, so its trains stop there too.
+                // shortcut: an open ride gets no new stop till the park is loaded again; upgrade when stops can be added
+                // to a running ride.
                 if (i < scene.ride_entities.size() && scene.ride_entities[i] != entt::null)
                 {
-                    (void)simulation::relink_attractions(scene.sim, scene.rides);
-                    return true;
+                    const entt::entity e = scene.ride_entities[i];
+                    const auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(e);
+                    const auto entrances = std::ranges::count_if(ride.stations, [](const save::Station& s) { return s.entrance_spot.has_value(); });
+                    if (ride.base.state != save::AttractionState::Closed || cycle == nullptr || std::cmp_less_equal(entrances, cycle->stops.size() + 1))
+                    {
+                        (void)simulation::relink_attractions(scene.sim, scene.rides);
+                        return true;
+                    }
+                    scene.ride_cars.erase(e);
+                    scene.ride_seats.erase(e);
+                    scene.ride_seatings.erase(e);
+                    simulation::pull_down(scene.sim, e);
+                    scene.ride_entities[i] = entt::null;
                 }
-                save::Ride& ride = scene.rides.rides[i];
                 // A tracked ride runs its train round the course it was built with. Trains made here stand at its
                 // station, from where they run up to it in turn.
                 const auto& course = i < scene.courses.size() ? scene.courses[i] : std::nullopt;

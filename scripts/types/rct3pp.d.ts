@@ -298,8 +298,10 @@ interface RideInfo {
     /** Rides with a track: where each of its cars stands now. */
     cars?: MapPoint[];
     site: Spot | null;
+    /** Its first station's doors; `stations` has every station's. */
     entrance: Spot | null;
     exit: Spot | null;
+    stations: { entrance: Spot | null; exit: Spot | null }[];
     /** Whether it was pulled down; it keeps its place in the list. */
     demolished: boolean;
     /** Samples in its graphs: its last lap's, a tenth of a second each. */
@@ -318,6 +320,8 @@ interface RideInfo {
     cycleSeconds?: number;
     queue?: number;
     queueLine?: number;
+    /** Rides with several stations: the stations after the first its trains stop at for riders. */
+    stops?: number;
     riders?: number;
     /** Excitement, intensity and nausea, 0..1. */
     ratings?: [number, number, number];

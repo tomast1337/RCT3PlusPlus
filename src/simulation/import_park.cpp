@@ -1082,15 +1082,14 @@ namespace rct3::simulation
                     std::vector<std::pair<float, Stop>> others;
                     for (std::size_t k = 1; k < ride.stations.size(); ++k)
                     {
-                        // A ride whose first station no path reaches takes guests at none (relink_attractions)
+                        // A station no path reaches yet is stopped at empty till one does (relink_attractions).
                         const auto run = run_of(ride.stations[k]);
-                        auto station = links && run && *run != *first ? ride_links(world.paths, ride.stations[k]) : std::nullopt;
-                        // shortcut: a train runs past a station no path reaches, upgrade if it should stop there empty
-                        if (!station)
+                        if (!run || *run == *first)
                             continue;
+                        auto station = ride_links(world.paths, ride.stations[k]);
                         const float on = std::fmod(runs[*run].end - start + length, length);
                         if (std::ranges::none_of(others, [&](const auto& o) { return o.first == on; }))
-                            others.push_back({ on, Stop { .entrance = station->entrance, .line = std::move(station->line), .exit = station->exit, .saved = k } });
+                            others.push_back({ on, station ? Stop { .entrance = station->entrance, .line = std::move(station->line), .exit = station->exit, .saved = k } : Stop { .saved = k } });
                     }
                     std::ranges::sort(others, { }, &std::pair<float, Stop>::first);
                     stopping->start = start;

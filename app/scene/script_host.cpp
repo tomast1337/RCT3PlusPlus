@@ -813,6 +813,10 @@ namespace rct3::scene
                     // Food or drink from a stall in hand, or its empty.
                     if (const auto* carried = r.try_get<simulation::Carried>(p.guest); carried != nullptr && carried->held)
                         person["carrying"] = carried->bites == 0 ? "empty" : carried->food ? "food" : "drink";
+                    // A gesture they make now, by the motion it shows.
+                    constexpr std::array<std::string_view, 8> kGestures { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdown", "handticket" };
+                    if (const auto* gesture = r.try_get<simulation::Gesture>(p.guest))
+                        person["gesture"] = kGestures[std::to_underlying(gesture->kind)];
                 }
                 out.push_back(std::move(person));
             }

@@ -794,6 +794,7 @@ namespace rct3::scene
                         : r.all_of<simulation::Dropped>(p.guest)           ? (r.get<simulation::Dropped>(p.guest).sliding      ? "sliding"
                                                                                   : r.get<simulation::Dropped>(p.guest).thrown ? "thrown"
                                                                                                                                : "dropped")
+                        : r.all_of<simulation::Lost>(p.guest)              ? "lost"
                         : errand == nullptr                                ? "still"
                         : errand->kind == simulation::ErrandKind::Riding   ? "riding"
                         : errand->kind == simulation::ErrandKind::Queueing ? "queueing"
@@ -801,6 +802,9 @@ namespace rct3::scene
                         : errand->kind == simulation::ErrandKind::Buying   ? "buying"
                         : errand->kind == simulation::ErrandKind::Swimming ? "swimming"
                                                                            : "walking";
+                    // Their party, as a number shared by its members, while they are with it.
+                    if (const auto* member = r.try_get<simulation::Member>(p.guest))
+                        person["party"] = entt::to_integral(member->party);
                     // How they go on foot, and seated on a ride (by its place in rides.list) how they react to it.
                     constexpr std::array<std::string_view, 5> kGaits { "walk", "run", "weary", "queasy", "bursting" };
                     constexpr std::array<std::string_view, 5> kReactions { "waiting", "calm", "hands up", "covering eyes", "strained" };

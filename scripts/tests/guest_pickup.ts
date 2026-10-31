@@ -33,6 +33,8 @@ const tileOf = (p: { col?: number; row?: number }) => `${Math.floor(p.col!)},${M
 await until(() => people.list().some((p) => !p.staff && p.state === "walking"), 600, "a guest walking");
 const who = people.list().findIndex((p) => !p.staff && p.state === "walking");
 const state = () => people.list()[who].state;
+/** Back on their feet: walking on, or, one of a party, waiting for or walking back to it. */
+const onFoot = () => state() === "walking" || state() === "waiting" || state() === "lost";
 const guest = people.list()[who];
 camera.look({ col: guest.col!, row: guest.row! }, { col: guest.col! + 5, row: guest.row! + 5, up: 25 });
 await frames(10);
@@ -113,7 +115,7 @@ await pointer.click(over.x, over.y);
 await until(() => state() !== "held", 30, "the guest let go");
 await frames(3);
 await screenshot("falling");
-await until(() => state() === "walking", 300, "the guest walking again");
+await until(() => onFoot(), 300, "the guest walking again");
 expect(tileOf(people.list()[who]) === `${target!.col},${target!.row}`, "the guest walking on from where they were put");
 
 // A right click puts them back.
@@ -121,13 +123,13 @@ const before = tileOf(people.list()[who]);
 await pickUp();
 await dropAt(target!.col + 0.5, target!.row + 0.5);
 await until(() => state() !== "held", 30, "let go");
-await until(() => state() === "walking", 300, "walking");
+await until(() => onFoot(), 300, "walking");
 await pickUp();
 const away = map.screen(target!.col, target!.row)!;
 pointer.move(away.x, away.y);
 await frames(5);
 await pointer.click(away.x, away.y, "right");
-await until(() => state() === "walking", 300, "the guest put back and walking");
+await until(() => onFoot(), 300, "the guest put back and walking");
 log("put back", before, tileOf(people.list()[who]));
 
 // Bare land of the park near a path: they walk to the nearest path.
@@ -146,7 +148,7 @@ if (bare !== undefined) {
     await dropAt(bare.col, bare.row);
     await until(() => state() !== "held", 30, "the guest let go over bare land");
     await screenshot("bare_land");
-    await until(() => state() === "walking", 3000, `the guest at a path, walking (${JSON.stringify(people.list()[who])})`);
+    await until(() => onFoot(), 3000, `the guest at a path, walking (${JSON.stringify(people.list()[who])})`);
     expect(onPath.has(tileOf(people.list()[who])), `the guest walking on a path after landing on bare land, not at ${tileOf(people.list()[who])}`);
 }
 else
@@ -169,7 +171,7 @@ if (wet !== undefined) {
     expect(state() === "held", "the guest still held over water");
     await screenshot("over_water");
     await pointer.click(0.5, 0.5, "right");
-    await until(() => state() === "walking", 300, "the guest put back from over the water");
+    await until(() => onFoot(), 300, "the guest put back from over the water");
 }
 else
     log("no water in sight");

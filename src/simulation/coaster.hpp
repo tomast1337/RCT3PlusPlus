@@ -88,6 +88,7 @@ namespace rct3::simulation
         // The train
         bool running = false;
         float at = 0;              ///< Distance of the front of the train
+        float was_at = 0;          ///< Where the front was when the last step began, for drawing between steps
         float travelled = 0;       ///< Since it set off
         std::size_t next_stop = 0; ///< Of `stops`, the next it comes to; past one, it stands there until set off
         float speed = 0;           ///< Along the track
@@ -162,6 +163,9 @@ namespace rct3::simulation
     /// The lap recorded into `lap`, newest sample first as saved and no more than kLapSamples, and starts the
     /// next.
     [[nodiscard]] save::RideGraphs end_lap(LapRecorder& lap);
+
+    /// Where `coaster`'s front is drawn `along` (0 to 1) through its last step, between where it began and ended it.
+    [[nodiscard]] float between_drives(const Coaster& coaster, float along);
 
     /// The station `coaster`'s train stands at, if it stands at one: 0 at its start, k at the k-th of its stops.
     [[nodiscard]] std::optional<std::size_t> standing_at(const Coaster& coaster);

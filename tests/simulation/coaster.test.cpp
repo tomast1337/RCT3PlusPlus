@@ -582,3 +582,15 @@ TEST_CASE("a turn banked to suit the train's speed presses riders into their sea
     CHECK(std::abs(flat.lateral.back()) == doctest::Approx(9.81f).epsilon(0.02));
     CHECK(flat.vertical.back() == doctest::Approx(9.81f).epsilon(0.02));
 }
+
+TEST_CASE("a train is drawn between where its last step began and ended, the short way round the end")
+{
+    Coaster c = hill();
+    c.was_at = 10;
+    c.at = 14;
+    CHECK(between_drives(c, 0.5f) == doctest::Approx(12));
+    CHECK(between_drives(c, 2) == doctest::Approx(14)); // Never past where the step ended
+    c.was_at = c.length() - 1;
+    c.at = 1;
+    CHECK(between_drives(c, 0.5f) == doctest::Approx(c.length()));
+}

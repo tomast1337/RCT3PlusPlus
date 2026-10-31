@@ -3,8 +3,9 @@
 // Builds a coaster of two stations on the game's blank landscape: its first station, two straights, a second
 // station, a straight, then auto-complete closes the circuit. Each station takes its own entrance and exit, placed
 // beside it from the ride's window, and a path behind each door joins them to the park. Its trains stop at both
-// stations, doors or not: two trains stand one at each, and tested they stop at the second before it has doors.
-// Opened, a train stands at each station. Saved and loaded again, both stations keep their doors.
+// stations, doors or not: two trains stand one at each, and tested they stop at the second before it has doors,
+// their cars drawn moving smoothly through the stations. Opened with doors at both, a train stands at each. Saved
+// and loaded again, both stations keep their doors.
 //
 //   ./nob script scripts/tests/station_doors.ts -- --no-audio
 
@@ -191,11 +192,13 @@ expect(Math.min(apart, whole - apart) > Math.max(spread[0].length, spread[1].len
 camera.look({ col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 0.5 }, { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 16.5, up: 22 });
 await frames(10);
 await screenshot("two_trains");
-// Tested, the trains stop at the second station, doors or not.
+// Tested, the trains stop at both stations, the second without doors, and are drawn moving on smoothly.
 expect(rides.setState(ride, "testing") == null, "the ride tested");
 const tested = await watch(60 * 60);
 log("tested", JSON.stringify(tested));
-expect(tested.stood[1] > 0, "a train stopped at the second station while tested, without doors");
+expect(tested.stood[0] > 0 && tested.stood[1] > 0, `trains stopped at both stations while tested, the second without doors, not ${JSON.stringify(tested.stood)}`);
+expect(tested.back === 0, `no car drawn turning back, not ${tested.back} times`);
+expect(tested.change < 0.02, `no car's drawn step changing by more than 0.02 of a tile a frame, not ${tested.change.toFixed(3)}`);
 // The second station's doors, placed once it is closed again (its window offers doors only then): the park keeps
 // running it as it is, its guests coming once a path reaches them.
 expect(rides.setState(ride, "closed") == null, "the ride closed");
@@ -207,11 +210,6 @@ log("stations", JSON.stringify(doors()));
 expect(doors().length === 2 && doors().every((s) => s.entrance !== null && s.exit !== null), `an entrance and an exit at both stations, not ${JSON.stringify(doors())}`);
 expect(rides.list()[ride].stops === 1, "still a stop at the second station");
 await pathsBehind(1);
-// Tested again with both stations' doors, each is stopped at.
-expect(rides.setState(ride, "testing") == null, "the ride tested again");
-const run = await watch(60 * 60);
-log("tested with doors", JSON.stringify(run));
-expect(run.stood[0] > 0 && run.stood[1] > 0, `trains stopped at both stations, not ${JSON.stringify(run.stood)}`);
 // Open, a train stands at each station for its riders.
 expect(rides.setState(ride, "open") == null, `the ride opened, not refused with ${rides.setState(ride, "open")}`);
 await until(() => (rides.list()[ride].trainsAt ?? []).map((t) => t.station).sort().join() === "0,1", 60 * 120, "a train standing at each station once open");

@@ -406,6 +406,15 @@ namespace rct3::simulation
         return c.travelled == 0 ? 0 : c.next_stop;
     }
 
+    float between_drives(const Coaster& c, float along)
+    {
+        float moved = c.at - c.was_at;
+        // Round the end of a closed course, the short way.
+        if (const float length = c.length(); c.closed && length > 0)
+            moved -= length * std::round(moved / length);
+        return c.was_at + moved * std::clamp(along, 0.0f, 1.0f);
+    }
+
     std::optional<float> lap_seconds(Coaster c, float most)
     {
         c.stops.clear();

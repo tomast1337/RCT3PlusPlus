@@ -2976,6 +2976,7 @@ namespace rct3::simulation
                 for (std::size_t t = 0; t < fleet->trains.size(); ++t)
                 {
                     Coaster& train = fleet->trains[t];
+                    train.was_at = train.at;
                     if (upkeep.broken && upkeep.kind == Breakdown::EmergencyStop)
                         continue; // Halted on the track till fixed
                     // A crashed train is off the track till its wrecks are gone, and back in the station once the
@@ -2986,6 +2987,7 @@ namespace rct3::simulation
                             continue;
                         train.crashed = false;
                         train.at = train.start;
+                        train.was_at = train.at;
                         train.travelled = 0;
                         train.speed = 0;
                         train.slow = 0;

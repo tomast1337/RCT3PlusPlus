@@ -674,8 +674,8 @@ namespace rct3::scene
             else if (fleet && spot.train < fleet->trains.size() && scene.courses[spot.ride])
             {
                 const simulation::Coaster& train = fleet->trains[spot.train];
-                // Between ticks, on as far as the train's speed takes it, from where the park kept it.
-                const float at = train.at + (train.running ? train.speed * scene.sim_time : 0.0f);
+                // Between where its last step began and ended, from where the park kept it.
+                const float at = simulation::between_drives(train, scene.sim_time / simulation::kTickSeconds);
                 moved[i] = at - scene.rides.rides[spot.ride].trains[spot.train].distance;
                 place = park::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, moved[i]);
                 // Crashed, each car flies on and tumbles as its wreck does from where it left the track, and is

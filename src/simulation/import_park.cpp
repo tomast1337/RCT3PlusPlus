@@ -881,6 +881,8 @@ namespace rct3::simulation
         }
         if (out.trains.empty())
             out.trains.push_back(coaster);
+        for (Coaster& train : out.trains)
+            train.was_at = train.at;
         out.riders.resize(out.trains.size());
         return out;
     }

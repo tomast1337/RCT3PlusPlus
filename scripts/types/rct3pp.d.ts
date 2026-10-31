@@ -109,6 +109,8 @@ declare namespace park {
     function setTemperature(degrees: number): void;
     /** How the weather shows now (rain and gloom 0 to 1, a lightning flash), the forecast, the climate's number and the temperature. */
     function weatherLook(): { rain: number; gloom: number; flash: number; forecast: string; climate: number; temperature: number };
+    /** Sets the time of day, as a fraction of a day from midnight (0.5 is noon), shown at once. */
+    function setTime(fraction: number): void;
     /** The calendar, in units of 90 a week and 360 a month. */
     function date(): number;
     /** Moves the calendar to `units`; the clock of the day runs on as it was. */
@@ -300,8 +302,9 @@ interface RideInfo {
     platforms?: string[];
     /** Rides with a track: each piece's arm angles in degrees, base first, or null where it holds none. */
     arms?: (number[] | null)[];
-    /** Rides with a track: where each of its cars stands now, and the way it faces (radians round the vertical, 0 along +row). */
-    cars?: (MapPoint & { facing: number })[];
+    /** Rides with a track: where each of its cars stands now, and the way it faces (radians round the vertical, 0 along +row).
+     *  A rowing boat out on the water: the oars it rows with, both or those turning it to its left or right. */
+    cars?: (MapPoint & { facing: number; stroke?: "both" | "left" | "right" })[];
     site: Spot | null;
     /** Its first station's doors; `stations` has every station's. */
     entrance: Spot | null;

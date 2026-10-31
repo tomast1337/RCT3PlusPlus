@@ -933,7 +933,10 @@ namespace rct3::scene
                         const float col = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
                         const float row = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
                         // Facing: radians round the vertical its +Z points, 0 along +Z.
-                        cars.push_back({ { "col", col }, { "row", row }, { "up", at.y - park.grid.height_at(at.x, at.z).value_or(0) }, { "facing", std::atan2(park.car_places[k][2].x, park.car_places[k][2].z) } });
+                        Json car = { { "col", col }, { "row", row }, { "up", at.y - park.grid.height_at(at.x, at.z).value_or(0) }, { "facing", std::atan2(park.car_places[k][2].x, park.car_places[k][2].z) } };
+                        if (const auto boned = std::ranges::find(park.boned_cars, k, &ParkScene::BonedCar::car); boned != park.boned_cars.end() && boned->stroke)
+                            car["stroke"] = std::array { "both", "left", "right" }[std::to_underlying(*boned->stroke)];
+                        cars.push_back(std::move(car));
                     }
                     one["cars"] = std::move(cars);
                 }

@@ -2,8 +2,9 @@
 //
 // Hired boats out on a park's water: each frame a boat moves on and turns a little, never jumping from one
 // step of the simulation to the next; boats of one ride keep clear of each other (bumper boats bump, but never
-// sink into one another); and every boat keeps to the water. A boat is pictured out on the water. Give it a park
-// the game saved with a boat hire ride (rowing boats, swans, canoes, bumper boats, jet skis and the like):
+// sink into one another); and every boat keeps to the water. Rowing boats row with both oars, or with those that
+// turn them the way they turn. A boat is pictured out on the water, a rowing boat close up mid-stroke. Give it a
+// park the game saved with a boat hire ride (rowing boats, swans, canoes, bumper boats, jet skis and the like):
 //
 //   ./nob script scripts/tests/boats.ts -- --no-intro --no-audio --seed 1 --park PARK
 
@@ -40,6 +41,7 @@ let worst_change = 0;
 let closest = Infinity;
 let off_water = 0;
 let moving = 0;
+const strokes = new Map<string, { frames: number; turned: number }>(); // By stroke: frames rowed, radians turned meanwhile
 const last = hires.map(({ i }) => cars(i));
 const last_step: ({ x: number; z: number } | undefined)[][] = hires.map(({ i }) => cars(i).map(() => undefined));
 for (let n = 0; n < kFrames; ++n) {
@@ -52,8 +54,12 @@ for (let n = 0; n < kFrames; ++n) {
             if (Math.hypot(step.x, step.z) > 1 || Math.hypot(c.col - docked[k][b].col, c.row - docked[k][b].row) < 1)
                 continue; // Leaving or back at its dock
             ++moving;
-            let turn = Math.abs(c.facing - was.facing);
-            turn = Math.min(turn, 2 * Math.PI - turn);
+            const turned = Math.atan2(Math.sin(c.facing - was.facing), Math.cos(c.facing - was.facing));
+            const turn = Math.abs(turned);
+            if (c.stroke) {
+                const rowed = strokes.get(c.stroke) ?? { frames: 0, turned: 0 };
+                strokes.set(c.stroke, { frames: rowed.frames + 1, turned: rowed.turned + turned });
+            }
             worst_turn = Math.max(worst_turn, turn);
             const before = last_step[k][b];
             if (before)
@@ -73,6 +79,22 @@ expect(worst_turn < kMostTurn, `no boat turning more than ${kMostTurn} in a fram
 expect(worst_change < kMostChange, `no boat's step jumping by ${kMostChange} m or more, not ${worst_change.toFixed(3)}`);
 expect(closest > 1.5, `boats keeping clear of each other, not ${closest.toFixed(2)} m apart`);
 expect(off_water < moving / 50, `boats keeping to the water, ${off_water} frames off it`);
+
+// Rowing, turning to its right (the way a boat's +X points, so facing grows) pulls the oars that turn it so, and
+// to its left the others. A stroke is rowed to its end before the next, so this holds over many, not each frame.
+if (strokes.size > 0) {
+    log("strokes", [...strokes].map(([k, v]) => `${k} ${v.frames} frames turning ${v.turned.toFixed(2)}`).join(", "));
+    expect((strokes.get("both")?.frames ?? 0) > 0, "boats rowing with both oars");
+    expect((strokes.get("left")?.turned ?? 0) <= 0 && (strokes.get("right")?.turned ?? 0) >= 0, "boats rowing with the oars that turn them the way they turn");
+    park.setTime(0.5);
+    await frames(2);
+    const rowing = hires.flatMap(({ i }) => cars(i).filter((c) => c.stroke))[0];
+    if (rowing) {
+        camera.look(rowing, { col: rowing.col + 0.4, row: rowing.row + 0.6, up: (rowing.up ?? 0) + 8 });
+        await frames(3);
+        await screenshot("rowing_oars");
+    }
+}
 
 // Pictured out on the water.
 const out = hires.flatMap(({ i }, k) => cars(i).filter((c, b) => Math.hypot(c.col - docked[k][b].col, c.row - docked[k][b].row) > 2))[0];

@@ -1438,7 +1438,8 @@ namespace rct3::simulation
                 start_walking(world, e, *at);
                 auto& stride = r.get<Stride>(e);
                 stride.along.value = static_cast<float>(on->second.second);
-                r.get<Errand>(e) = { .kind = ErrandKind::Queueing, .target = on->second.first, .station = stations.at(*at) };
+                // Off back where they got on: not every station of the ride need have a way out.
+                r.get<Errand>(e) = { .kind = ErrandKind::Queueing, .target = on->second.first, .station = stations.at(*at), .off = stations.at(*at) };
                 waiting.emplace_back(on->second.second, e);
             }
             ++started;

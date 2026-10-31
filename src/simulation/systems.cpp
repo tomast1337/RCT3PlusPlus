@@ -2453,7 +2453,7 @@ namespace rct3::simulation
                 const auto& line = station == 0 ? ride->line : ride->stops[station - 1].line;
                 std::vector<std::size_t> offs;
                 for (std::size_t k = 0; k <= ride->stops.size(); ++k)
-                    if (k != station && (k == 0 || ride->stops[k - 1].exit != kNoNode))
+                    if (k != station && (k == 0 ? exit_of(r, arrived[i], 0) != kNoNode : ride->stops[k - 1].exit != kNoNode))
                         offs.push_back(k);
                 auto off = static_cast<std::uint8_t>(offs.empty() ? station : offs.size() == 1 ? offs[0] : offs[random::below(r.get<Dice>(guest).state, offs.size())]);
                 // Riding across the park: off where their way goes on.

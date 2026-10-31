@@ -1167,6 +1167,38 @@ TEST_CASE("on a ride with two stations, riders get on at either and off at the o
     CHECK(r.get<Attraction>(ride).customers == 2);
 }
 
+TEST_CASE("on a ride whose first station has no way to the paths, riders get off where they got on")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 9, 0 });
+    const auto ride = park.flat_ride("Railway", { 1, 0 }, 100, { .capacity = 4, .cycle_seconds = 1000, .exit = glm::ivec2 { 2, 0 } });
+    auto& r = park.world().registry;
+    const auto& paths = park.world().paths;
+    const NodeId far_in = *paths.find({ 8, 0, 0 });
+    const NodeId far_out = *paths.find({ 7, 0, 0 });
+    r.get<CycleRide>(ride).stops.push_back({ .entrance = far_in, .exit = far_out, .saved = 1 });
+    Coaster track;
+    track.distance = { 0, 100 };
+    track.height = { 0, 0 };
+    track.kinds = { Stretch::Plain, Stretch::Plain };
+    track.fixed_speed = 10;
+    track.stops = { 40 };
+    r.emplace<Trains>(ride, Trains { { track }, { { } } });
+    // One gets on at the first station; then it loses its way to the paths.
+    const auto first = park.guest({ 1, 0 }, { .cash = 1000 });
+    r.get<Errand>(first) = { ErrandKind::Heading, ride, 0 };
+    REQUIRE(park.run_until([&] { return r.get<Errand>(first).kind == ErrandKind::Riding; }, 10));
+    r.get<CycleRide>(ride).exit = kNoNode;
+    r.get<Attraction>(ride).entrance = kNoNode;
+    const auto guest = park.guest({ 8, 0 }, { .cash = 1000 });
+    r.get<Errand>(guest) = { ErrandKind::Heading, ride, 0 };
+    REQUIRE(park.run_until([&] { return r.get<Errand>(guest).kind == ErrandKind::Queueing; }, 10));
+    CHECK(r.get<Errand>(guest).off == 1);
+    CHECK(park.run_until([&] { return r.get<Errand>(guest).kind == ErrandKind::Riding; }, 30));
+    CHECK(park.run_until([&] { return r.get<Errand>(guest).kind != ErrandKind::Riding; }, 60));
+    CHECK(r.get<Stride>(guest).from == far_out);
+}
+
 TEST_CASE("a guest going far rides from one station of a ride to another when that is sooner, and walks on")
 {
     Sandbox park;

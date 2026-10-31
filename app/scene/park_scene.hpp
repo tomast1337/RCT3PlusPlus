@@ -549,6 +549,16 @@ namespace rct3::scene
             glm::mat4 seats { 1.0f };
         };
         std::vector<ArmCar> arm_cars;
+        /// A car whose bones move as it goes, as a rowing boat's oars do: its place in `cars`, drawn apart from
+        /// the other cars, a piece per bone, and the stroke it rows. Each stroke is rowed to its end before the next.
+        struct BonedCar
+        {
+            std::size_t car = 0;
+            park::MovingMeshes mesh;
+            std::optional<simulation::Stroke> stroke; ///< None while it rests
+            float since = 0;                          ///< scene.park_clock when the stroke began
+        };
+        std::vector<BonedCar> boned_cars;
         std::vector<glm::mat4> car_mesh_places;                ///< car_places, then each arm car's joints from the base out
         std::vector<std::optional<park::TrackCourse>> courses; ///< By ride, of those whose track is known whole
         std::vector<park::TrackRules> track_rules;             ///< By ride, what its kind asks of its track; defaults past the end

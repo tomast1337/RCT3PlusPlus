@@ -181,6 +181,9 @@ namespace rct3::park
         std::array<std::optional<glm::mat4>, 3> ride_eyes;
         ovl::RideCameraTuning ride_look; ///< How they move, as the car's train sets it
         ovl::BoatHandling boat_handling; ///< How it handles out on open water, as the car's train sets it
+        /// Of a rowing boat whose rig moves its oars: its motions rowing straight on, turning to its left and to
+        /// its right (ovl::RideCar::rowing).
+        std::optional<std::array<std::size_t, 3>> rowing;
         /// Of a flat ride, the walkways its riders take to and from their seats, model space; empty for most.
         Walkways walkways;
         /// The lamps it carries, from the finest level that marks any (see model_lights.hpp). A lamp on a bone

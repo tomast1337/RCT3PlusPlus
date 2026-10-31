@@ -947,6 +947,8 @@ namespace rct3::park
         model.ride_eyes = { bone_of(car->visual, "nosecamera").or_else([&] { return front; }), front, bone_of(car->visual, "camerarear") };
         model.ride_look = found->camera;
         model.boat_handling = found->boat;
+        if (model.rig && std::ranges::all_of(car->rowing, [&](std::int32_t m) { return m >= 0 && std::cmp_less(m, model.rig->motions.size()); }))
+            model.rowing = { static_cast<std::size_t>(car->rowing[0]), static_cast<std::size_t>(car->rowing[1]), static_cast<std::size_t>(car->rowing[2]) };
         constexpr std::uint8_t kRideSeating = 35; ///< The seating number that leaves it to the ride
         if (const auto seating = static_cast<std::uint8_t>(car->kind & 0xff); seating != kRideSeating)
             model.seating = seating;

@@ -770,6 +770,32 @@ namespace rct3::scene
             joints += arm.joints.size();
         scene.car_mesh_places.resize(scene.car_places.size() + joints);
         std::ranges::copy(scene.car_places, scene.car_mesh_places.begin());
+        // Cars their bones move are drawn apart. A boat out on the water rows, with the oars its turn calls for; one
+        // on a course rows with both while its train moves.
+        for (ParkScene::BonedCar& boned : scene.boned_cars)
+        {
+            scene.car_mesh_places[boned.car] = glm::mat4(0.0f);
+            const park::ObjectModel& model = scene.models.at(park::model_ref(scene.cars[boned.car]));
+            const park::CarSpot spot = scene.car_spots[boned.car];
+            const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
+            const auto* boats = ride != entt::null ? scene.sim.registry.try_get<simulation::Boats>(ride) : nullptr;
+            const simulation::Boat* boat = boats && spot.train < boats->boats.size() && boats->boats[spot.train].state != simulation::Sailing::Docked ? &boats->boats[spot.train] : nullptr;
+            const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
+            const bool coursing = fleet && spot.train < fleet->trains.size() && fleet->trains[spot.train].running && fleet->trains[spot.train].speed != 0;
+            const auto motion = [&](simulation::Stroke stroke) { return (*model.rowing)[std::to_underlying(stroke)]; };
+            const float length = boned.stroke ? model.rig->motions[motion(*boned.stroke)].seconds : 0.0f;
+            if (!boned.stroke || scene.park_clock - boned.since >= length)
+            {
+                // On from the end of the last stroke, unless that is long past (the car rested, or was not drawn).
+                boned.since = boned.stroke && scene.park_clock - boned.since < 2 * length ? boned.since + length : scene.park_clock;
+                boned.stroke = boat ? std::optional(simulation::stroke(boat->turning)) : coursing ? std::optional(simulation::Stroke::Both) : std::nullopt;
+            }
+            const std::vector<glm::mat4> moves = park::bone_moves(*model.rig, boned.stroke ? motion(*boned.stroke) : model.rig->motions.size(), scene.park_clock - boned.since);
+            std::vector<glm::mat4> places(moves.size());
+            for (std::size_t b = 0; b < places.size(); ++b)
+                places[b] = scene.car_places[boned.car] * moves[b];
+            park::move_meshes(boned.mesh, places);
+        }
         auto joint_place = scene.car_mesh_places.begin() + static_cast<std::ptrdiff_t>(scene.car_places.size());
         for (ParkScene::ArmCar& arm : scene.arm_cars)
         {

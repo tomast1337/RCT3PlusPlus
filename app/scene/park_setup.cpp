@@ -625,6 +625,13 @@ namespace rct3::scene
         for (std::size_t i = first; i < scene.cars.size(); ++i)
             if (const auto model = scene.models.find(park::model_ref(scene.cars[i])); model != scene.models.end() && !model->second.arm_joints.empty())
                 scene.arm_cars.push_back({ .car = i, .joints = model->second.arm_joints });
+            else if (model != scene.models.end() && model->second.rowing)
+            {
+                ParkScene::BonedCar& boned = scene.boned_cars.emplace_back();
+                boned.car = i;
+                boned.mesh = park::boned_meshes(scene.cars[i], model->second, scene.grid).first;
+                add_textures(device, scene, boned.mesh.mesh.batches);
+            }
         // Arms' joints follow the cars, each where its car stands until the cars are next placed.
         scene.car_mesh_places = scene.car_places;
         for (const ParkScene::ArmCar& arm : scene.arm_cars)
@@ -652,6 +659,9 @@ namespace rct3::scene
         std::erase_if(scene.arm_cars, [&](const ParkScene::ArmCar& arm) { return !kept[arm.car]; });
         for (ParkScene::ArmCar& arm : scene.arm_cars)
             arm.car = *kept[arm.car];
+        std::erase_if(scene.boned_cars, [&](const ParkScene::BonedCar& boned) { return !kept[boned.car]; });
+        for (ParkScene::BonedCar& boned : scene.boned_cars)
+            boned.car = *kept[boned.car];
         for (auto& [_, cars] : scene.ride_cars)
         {
             std::erase_if(cars, [&](std::size_t car) { return !kept[car]; });

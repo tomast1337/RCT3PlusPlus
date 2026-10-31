@@ -51,6 +51,8 @@ namespace rct3::ovl
                 for (std::size_t i = 0; i < car.wheels.size(); ++i)
                     car.wheels[i] = record->ref(0xA4 + 8 * i, "svd");
                 car.axles = { record->ref(0xC4, "svd"), record->ref(0xC8, "svd") };
+                for (std::size_t i = 0; i < car.rowing.size(); ++i)
+                    car.rowing[i] = record->i32(0x7C + 4 * i);
                 car.references = record->references(static_cast<std::uint32_t>(size));
                 car.record = record->bytes();
                 item.car = std::move(car);

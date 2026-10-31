@@ -230,7 +230,11 @@ namespace rct3::scene
             if (scene.show_scenery && parts.scenery)
                 profiling::section("LedSigns", [&] { draw_led_signs(device, scene, transform, light); });
             if (scene.show_scenery && parts.scenery)
-                profiling::section("Cars", [&] { draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; }); });
+                profiling::section("Cars", [&] {
+                    draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; });
+                    for (const ParkScene::BonedCar& boned : scene.boned_cars)
+                        draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; });
+                });
             if (scene.show_scenery && parts.scenery && !scene.drawn_animals.crated.empty())
                 profiling::section("Crates", [&] { draw_transient(device, scene, scene.drawn_animals.crates.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; }); });
             const auto draw_rides = [&](auto&& pipeline_of) {
@@ -245,6 +249,8 @@ namespace rct3::scene
                     draw_objects(park::PartBlend::DepthOnly);
                     draw_transient(device, scene, scene.fresh_objects, scene.object_textures, transform, light, depth_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; });
                     draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, depth_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; });
+                    for (const ParkScene::BonedCar& boned : scene.boned_cars)
+                        draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, depth_pipeline, [](const park::ObjectBatch&) { return render::AddressMode::Repeat; });
                     draw_rides(depth_pipeline);
                 });
             if (parts.water)

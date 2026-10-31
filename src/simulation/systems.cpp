@@ -265,6 +265,18 @@ namespace rct3::simulation
             s.progress.value = length > 0 ? std::min(left / length, 1.0f) : 1;
         }
 
+        /// Walkers turn half way towards the way they moved this tick, so a step aside every other tick does not
+        /// swing them to and fro, and no faster than turn_rate.
+        void face_moved(Pose& pose, float dt)
+        {
+            const glm::vec2 moved { pose.position.x - pose.was.x, pose.position.z - pose.was.z };
+            if (glm::dot(moved, moved) < 0.0001f)
+                return;
+            const float turn = std::remainder(std::atan2(moved.x, moved.y) - pose.was_heading.value, 2 * glm::pi<float>()) / 2;
+            const float most = kTuning.walking.turn_rate * dt;
+            pose.heading.value = pose.was_heading.value + std::clamp(turn, -most, most);
+        }
+
         void place(const PathNetwork& paths, const Stride& s, Pose& pose)
         {
             const glm::vec3 a = lane_point(paths, s.from, s.lane_from);
@@ -1297,6 +1309,10 @@ namespace rct3::simulation
                 walk_on(paths, stride, left);
                 place(paths, stride, pose);
             }
+            // They walk after everyone else has turned this tick; those let go face as they are put down.
+            for (const entt::entity e : staff_view)
+                if (!r.any_of<Held, Dropped>(e))
+                    face_moved(staff_view.get<Pose>(e), dt);
         }
     } // namespace
 
@@ -2219,18 +2235,11 @@ namespace rct3::simulation
             });
         }
 
-        // Walkers turn half way towards the way they moved this tick, so a step aside every other tick does not
-        // swing them to and fro, and no faster than turn_rate.
         for (const auto [e, stride, pose] : r.view<const Stride, Pose>().each())
         {
             const auto* errand = r.try_get<Errand>(e);
-            const bool walks = errand != nullptr ? errand->kind == ErrandKind::Wandering || errand->kind == ErrandKind::Heading || errand->kind == ErrandKind::Following || errand->kind == ErrandKind::Waiting || errand->kind == ErrandKind::Queueing : r.all_of<Staff>(e);
-            const glm::vec2 moved { pose.position.x - pose.was.x, pose.position.z - pose.was.z };
-            if (!walks || glm::dot(moved, moved) < 0.0001f)
-                continue;
-            const float turn = std::remainder(std::atan2(moved.x, moved.y) - pose.was_heading.value, 2 * glm::pi<float>()) / 2;
-            const float most = kTuning.walking.turn_rate * dt;
-            pose.heading.value = pose.was_heading.value + std::clamp(turn, -most, most);
+            if (errand != nullptr ? errand->kind == ErrandKind::Wandering || errand->kind == ErrandKind::Heading || errand->kind == ErrandKind::Following || errand->kind == ErrandKind::Waiting || errand->kind == ErrandKind::Queueing : r.all_of<Staff>(e))
+                face_moved(pose, dt);
         }
 
         phase.emplace("Arrivals");

@@ -591,6 +591,21 @@ TEST_CASE("two people kept close in one cell are pushed apart every second tick"
         CHECK(pushed[t] != pushed[t - 1]);
 }
 
+TEST_CASE("staff on their rounds turn to face the way they walk")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    const auto e = park.staff(StaffRole::Other, { 0, 0 });
+    auto& r = park.world().registry;
+    const auto at = [&](int c) { return *park.world().paths.find({ c, 0, 0 }); };
+    r.get<Stride>(e) = Stride { .from = at(0), .to = at(1), .progress = 0, .route = { at(2), at(3), at(4), at(5) } };
+    r.get<Pose>(e).heading.value = -glm::half_pi<float>(); // Facing -x, back against the way they set off
+    const float start = r.get<Pose>(e).position.x;
+    park.run(4);
+    CHECK(r.get<Pose>(e).position.x > start);
+    CHECK(std::abs(std::remainder(r.get<Pose>(e).heading.value - glm::half_pi<float>(), 2 * glm::pi<float>())) < glm::radians(30.0f));
+}
+
 TEST_CASE("a walker turns a corner across its inside, turning no faster than turn_rate")
 {
     Sandbox park;

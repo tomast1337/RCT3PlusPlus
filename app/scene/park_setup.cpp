@@ -1272,7 +1272,13 @@ namespace rct3::scene
                         scene.ride_seatings[e] = static_cast<std::uint8_t>(*seating);
                 for (const auto kind : simulation::ride_kinds(scene.rides, [&](std::string_view path) { return install.find(path); }))
                     scene.ride_groups.push_back(kind ? simulation::ride_group(*kind) : simulation::RideGroup::Other);
-                simulation::import_boats(scene.sim, scene.rides, scene.ride_entities, scene.courses, scene.grid, world->water.bodies);
+                simulation::import_boats(scene.sim, scene.rides, scene.ride_entities, scene.courses, scene.grid, world->water.bodies, park::solid_tiles(scene.objects, scene.models, scene.grid));
+                // Each kind of boat handles as its train sets it.
+                for (std::size_t k = 0; k < scene.cars.size(); ++k)
+                    if (const std::size_t ride = scene.car_spots[k].ride; ride < scene.ride_entities.size() && scene.ride_entities[ride] != entt::null)
+                        if (auto* boats = scene.sim.registry.try_get<simulation::Boats>(scene.ride_entities[ride]))
+                            if (const auto model = scene.models.find(park::model_ref(scene.cars[k])); model != scene.models.end() && model->second.boat_handling.turn_most > 0)
+                                boats->handling = model->second.boat_handling;
                 simulation::link_stations(scene.sim, scene.ride_entities, scene.courses, scene.grid);
                 for (const save::RideShow& show : scene.shows)
                     stage_show(scene, show);

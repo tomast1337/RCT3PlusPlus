@@ -1117,7 +1117,7 @@ namespace rct3::simulation
         return added;
     }
 
-    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water)
+    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::SolidTiles& solids)
     {
         auto& r = world.registry;
         for (std::size_t i = 0; i < std::min({ rides.rides.size(), added.size(), courses.size() }); ++i)
@@ -1127,11 +1127,19 @@ namespace rct3::simulation
             if ((ride.mode != save::OperatingMode::Boat && ride.mode != save::OperatingMode::WaterTransport) || !r.valid(added[i]) || r.all_of<Trains>(added[i]) || !course || course->points.empty() || ride.trains.empty())
                 continue;
             if (!r.ctx().contains<WaterTiles>())
-                r.ctx().emplace<WaterTiles>(water_tiles(grid, water));
+                r.ctx().emplace<WaterTiles>(water_tiles(grid, water, solids));
+            // The dock's own water stays open, whatever stands over it.
+            auto& tiles = r.ctx().get<WaterTiles>();
+            const glm::ivec2 dock = tiles.tile_of({ course->points.front().x, course->points.front().z });
+            if (dock.x >= 0 && dock.y >= 0 && dock.x < tiles.cols && dock.y < tiles.rows)
+                tiles.level[static_cast<std::size_t>(dock.y) * static_cast<std::size_t>(tiles.cols) + static_cast<std::size_t>(dock.x)] = water_tiles(grid, water).at(dock.x, dock.y);
             const glm::vec3 leave = course->points.back();
             const glm::vec3 heading = park::course_direction(*course, course->length());
             Boats boats { .dock = { .leave = { leave.x, leave.z }, .heading = { heading.x, heading.z }, .enter = { course->points.front().x, course->points.front().z } } };
             boats.roams = ride.mode == save::OperatingMode::Boat;
+            if (ride.options.fixed_speed > 0)
+                boats.top = ride.options.fixed_speed;
+            boats.bumps = contains(ride.base.symbol, "bumperboat");
             for (const glm::vec3& stop : course->other_stations)
                 boats.calls.emplace_back(stop.x, stop.z);
             boats.boats.resize(ride.trains.size());

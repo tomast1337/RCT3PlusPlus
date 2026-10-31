@@ -32,6 +32,25 @@ TEST_CASE("only tiles wholly under water float a boat")
     CHECK_FALSE(water.at(2, 0));
 }
 
+TEST_CASE("a rock in the water or a low bridge over it closes its tile to boats, a high one or a fence does not")
+{
+    save::TerrainGrid grid { .width = 5, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
+    save::WaterBody body { .level = 5 };
+    for (std::uint8_t col = 0; col < 5; ++col)
+        body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
+    park::SolidTiles solids;
+    solids.tiles[0] = { { .low = 2, .high = 6 } };                             // A rock standing up out of it
+    solids.tiles[1] = { { .low = 5.5f, .high = 6 } };                          // A low bridge
+    solids.tiles[2] = { { .low = 9, .high = 10 } };                            // A high one
+    solids.tiles[3] = { { .low = 2, .high = 6, .room = park::edge_room(0) } }; // A fence along its edge
+    const auto water = simulation::water_tiles(grid, std::span { &body, 1 }, solids);
+    CHECK_FALSE(water.at(0, 0));
+    CHECK_FALSE(water.at(1, 0));
+    CHECK(water.at(2, 0));
+    CHECK(water.at(3, 0));
+    CHECK(water.at(4, 0));
+}
+
 TEST_CASE("a boat's way goes round land, never cutting a corner past it")
 {
     // A wall down the middle with a gap at the bottom.
@@ -53,7 +72,7 @@ TEST_CASE("a boat roams the lake, keeps to the water and docks once its time is 
     float seconds = 0;
     for (; seconds < 300 && !docked; seconds += 0.5f)
     {
-        docked = simulation::sail(boat, water, dock, 3, 40, 0.5f, dice);
+        docked = simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 40, 0.5f, dice);
         const glm::ivec2 t = water.tile_of(boat.at);
         // Turns are wide, so it may stray half a tile past the middles it steers by.
         const bool near_water = water.at(t.x, t.y) || water.at(water.tile_of(boat.at + glm::vec2 { 2, 0 }).x, t.y) || water.at(water.tile_of(boat.at - glm::vec2 { 2, 0 }).x, t.y) || water.at(t.x, water.tile_of(boat.at + glm::vec2 { 0, 2 }).y) || water.at(t.x, water.tile_of(boat.at - glm::vec2 { 0, 2 }).y);
@@ -99,7 +118,7 @@ TEST_CASE("a transport boat makes straight for each dock in turn and home, witho
     float seconds = 0;
     for (; seconds < 600 && !docked; seconds += 0.5f)
     {
-        docked = simulation::sail(boat, water, dock, 3, 1e9f, 0.5f, dice);
+        docked = simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
         for (std::size_t k = 0; k < calls.size(); ++k)
             nearest[k] = std::min(nearest[k], glm::distance(boat.at, calls[k]));
         // Round the island, not over it, though a wide turn may graze a corner.
@@ -109,4 +128,96 @@ TEST_CASE("a transport boat makes straight for each dock in turn and home, witho
     CHECK(nearest[0] < 3);
     CHECK(nearest[1] < 3);
     CHECK(seconds < 120); // Some 110 m of water at up to 3 m/s
+}
+
+TEST_CASE("a boat slows in a hard turn and gains speed again once its mark lies ahead")
+{
+    const auto water = lake(20, 20);
+    const simulation::Dock dock { .leave = { 40, 40 }, .heading = { 1, 0 }, .enter = { 40, 40 } };
+    simulation::Boat boat;
+    simulation::cast_off(boat, dock);
+    boat.speed = 3;
+    boat.marks = { { 40, 70 } }; // Off its side, far
+    auto dice = random::seeded(random::Seed { 1 });
+    simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
+    CHECK(boat.speed < 2.5f);
+    CHECK(boat.turning == doctest::Approx(simulation::kMostBoats.turn_most));
+    for (int i = 0; i < 6; ++i)
+        simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
+    const float lined_up = boat.speed;
+    for (int i = 0; i < 6; ++i)
+        simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
+    CHECK(boat.speed > lined_up);
+}
+
+TEST_CASE("a boat leans into its turn, no further than its handling lets it, and upright again on a straight")
+{
+    const auto water = lake(20, 20);
+    const simulation::Dock dock { .leave = { 40, 40 }, .heading = { 1, 0 }, .enter = { 40, 40 } };
+    const ovl::BoatHandling ski { .turn_most = 2, .turn_gain = 3, .speed_up = 2, .speed_gain = 0.5f, .turn_slow = 30, .brake = 5, .lean_gain = 0.9f, .lean_most = 0.3f };
+    simulation::Boat boat;
+    simulation::cast_off(boat, dock);
+    boat.marks = { { 40, 70 } };
+    auto dice = random::seeded(random::Seed { 1 });
+    simulation::sail(boat, water, dock, ski, 3, 1e9f, 0.25f, dice);
+    CHECK(boat.turning > 0);
+    CHECK(boat.lean > 0);
+    for (int i = 0; i < 8; ++i)
+        simulation::sail(boat, water, dock, ski, 3, 1e9f, 0.25f, dice);
+    CHECK(boat.lean <= ski.lean_most);
+    boat.marks = { boat.at + boat.heading * 40.0f };
+    for (int i = 0; i < 12; ++i)
+        simulation::sail(boat, water, dock, ski, 3, 1e9f, 0.25f, dice);
+    CHECK(std::abs(boat.lean) < 0.05f);
+}
+
+TEST_CASE("a boat is drawn between where its last sail began and ended, turning smoothly")
+{
+    simulation::Boat boat { .at = { 2, 0 }, .heading = { 0, 1 }, .lean = 0.2f, .was = { 0, 0 }, .was_heading = { 1, 0 }, .was_lean = 0 };
+    const auto half = simulation::between_sails(boat, 0.5f);
+    CHECK(half.at.x == doctest::Approx(1));
+    CHECK(half.heading.x == doctest::Approx(std::sqrt(0.5f)));
+    CHECK(half.heading.y == doctest::Approx(std::sqrt(0.5f)));
+    CHECK(half.lean == doctest::Approx(0.1f));
+    CHECK(simulation::between_sails(boat, 1).at == boat.at);
+}
+
+TEST_CASE("two boats heading at each other steer round and never touch")
+{
+    const auto water = lake(20, 20);
+    const simulation::Dock dock { .leave = { 40, 40 }, .heading = { 1, 0 }, .enter = { 40, 40 } };
+    std::array<simulation::Boat, 2> fleet;
+    simulation::cast_off(fleet[0], { .leave = { 20, 40 }, .heading = { 1, 0 }, .enter = { 20, 40 } });
+    simulation::cast_off(fleet[1], { .leave = { 60, 40.5f }, .heading = { -1, 0 }, .enter = { 60, 40 } });
+    fleet[0].marks = { { 70, 40 } };
+    fleet[1].marks = { { 10, 40 } };
+    auto dice = random::seeded(random::Seed { 1 });
+    float closest = 1e9f;
+    for (int i = 0; i < 160; ++i)
+    {
+        for (auto& boat : fleet)
+            simulation::sail(boat, water, dock, simulation::kMostBoats, 2, 1e9f, 0.25f, dice, fleet);
+        closest = std::min(closest, glm::distance(fleet[0].at, fleet[1].at));
+    }
+    CHECK(fleet[0].at.x > 50); // Past each other
+    CHECK(fleet[1].at.x < 30);
+    CHECK(closest > 1.8f); // Never closer than their hulls touch at
+}
+
+TEST_CASE("bumper boats run into each other and bounce off")
+{
+    const auto water = lake(20, 20);
+    const simulation::Dock dock { .leave = { 40, 40 }, .heading = { 1, 0 }, .enter = { 40, 40 } };
+    std::array<simulation::Boat, 2> fleet;
+    simulation::cast_off(fleet[0], { .leave = { 36, 40 }, .heading = { 1, 0 }, .enter = { 36, 40 } });
+    simulation::cast_off(fleet[1], { .leave = { 44, 40 }, .heading = { -1, 0 }, .enter = { 44, 40 } });
+    fleet[0].marks = { { 70, 40 } };
+    fleet[1].marks = { { 10, 40 } };
+    auto dice = random::seeded(random::Seed { 1 });
+    for (int i = 0; i < 16; ++i)
+        for (auto& boat : fleet)
+            simulation::sail(boat, water, dock, simulation::kMostBoats, 2, 1e9f, 0.25f, dice, fleet, true);
+    CHECK(fleet[0].at.x < 40); // Thrown back the way it came
+    CHECK(fleet[1].at.x > 40);
+    CHECK(glm::distance(fleet[0].at, fleet[1].at) >= 1.9f);
 }

@@ -366,8 +366,9 @@ namespace rct3::simulation::tuning
     /// Boats that leave their dock for open water.
     struct Boats
     {
-        Seconds trip { 75 };     ///< Out on the water before they turn for home
-        Pace top_speed { 2.5f }; ///< Rowed or driven
+        Seconds trip { 75 };          ///< Out on the water before they turn for home
+        Pace top_speed { 2.5f };      ///< Rowed or driven
+        Distance clear_of_dock { 4 }; ///< Chosen by eye: how far out a boat gets before the next casts off
     };
 
     /// What the prizes for winning a scenario level give.

@@ -587,6 +587,10 @@ namespace rct3::simulation
         Dock dock { };
         bool roams = true;                ///< Hired boats roam; transport boats go from dock to dock
         std::vector<glm::vec2> calls { }; ///< The ride's other docks, in the order its boats call at them
+        ovl::BoatHandling handling = kMostBoats;
+        std::optional<float> top { }; ///< m/s its boats go at most, as the ride is set; the tuning's when none
+        bool bumps = false;           ///< Its boats bounce off each other rather than keep clear
+        std::size_t launched = 0;     ///< Of its boats, how many have cast off since its cycle began
     };
 
     struct Trains

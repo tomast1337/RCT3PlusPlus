@@ -3097,7 +3097,7 @@ namespace rct3::simulation
                 if (boats != nullptr && water != nullptr)
                     for (Boat& boat : boats->boats)
                     {
-                        sail(boat, *water, boats->dock, kTuning.boats.top_speed.value, ride.run.value, dt, r.get<Dice>(e).state);
+                        sail(boat, *water, boats->dock, boats->handling, boats->top.value_or(kTuning.boats.top_speed.value), ride.run.value, dt, r.get<Dice>(e).state, boats->boats, boats->bumps);
                         sailing = sailing || boat.state != Sailing::Docked;
                     }
                 const RidePhase was = ride.phase;
@@ -3117,12 +3117,14 @@ namespace rct3::simulation
                         auto& thrill = r.get_or_emplace<Thrill>(guest);
                         thrill.reaction = react_flat(thrill.reaction, ride.phase == RidePhase::Running, mood->happiness, over, Leanings { .hands = fixed_share(guest, Hands), .eyes = fixed_share(guest, Eyes) }, r.get<Dice>(guest).state, dt);
                     }
+                // Its boats cast off one after another, each once the one before is clear of the dock.
+                // shortcut: empty boats go too, and a transport boat's riders stay on past its other docks back to
+                // the one they boarded at; upgrade when each boat loads on its own and riders get off where they choose.
                 if (boats != nullptr && water != nullptr && was != RidePhase::Running && ride.phase == RidePhase::Running)
-                    // shortcut: every boat casts off at once from one spot, empty ones too, and a transport boat's
-                    // riders stay on past its other docks back to the one they boarded at; upgrade when each boat
-                    // loads and leaves on its own and riders get off where they choose.
-                    for (Boat& boat : boats->boats)
-                        cast_off(boat, boats->dock, boats->roams, boats->calls);
+                    boats->launched = 0;
+                if (boats != nullptr && water != nullptr && ride.phase == RidePhase::Running && boats->launched < boats->boats.size())
+                    if (boats->launched == 0 || glm::distance(boats->boats[boats->launched - 1].at, boats->dock.leave) > kTuning.boats.clear_of_dock.value)
+                        cast_off(boats->boats[boats->launched++], boats->dock, boats->roams, boats->calls);
             }
             // On a ride with ways on, riders walk to their seats one by one past the ticket spot, the next
             // stepping up once the one ahead has handed over their ticket.

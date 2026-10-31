@@ -14,15 +14,22 @@ namespace rct3::simulation
     namespace
     {
         // Picked to look right on a park lake.
-        constexpr float kStep = 0.1f;     ///< Seconds per part step
-        constexpr float kTurnRate = 1.2f; ///< Radians a second at most
-        constexpr float kReached = 2.5f;  ///< Metres from a mark that count as there
-        constexpr float kGiveUp = 12;     ///< Seconds on one mark before it picks another
-        constexpr float kSlowest = 1;     ///< m/s it keeps to, however hard it turns
-        constexpr float kSpeedUp = 0.8f;  ///< m/s² towards the speed it wants
-        constexpr int kReach = 6;         ///< Tiles away it may pick its next mark
-        constexpr int kTries = 20;        ///< Picks before it settles for any water
-        constexpr float kSlowNear = 6;    ///< Metres from its last mark it starts to slow
+        constexpr float kStep = 0.1f;       ///< Seconds per part step
+        constexpr float kReached = 2.5f;    ///< Metres from a mark that count as there
+        constexpr float kGiveUp = 12;       ///< Seconds on one mark before it picks another
+        constexpr float kSlowest = 1;       ///< m/s it keeps to, however hard it turns
+        constexpr int kReach = 6;           ///< Tiles away it may pick its next mark
+        constexpr int kTries = 20;          ///< Picks before it settles for any water
+        constexpr float kSlowNear = 6;      ///< Metres from its last mark it starts to brake
+        constexpr float kAhead = 0.5f;      ///< Radians off its bow its mark may lie for it to speed up
+        constexpr float kLookAhead = 4;     ///< Metres ahead it looks for water to go on in
+        constexpr float kLookWide = 0.5f;   ///< Radians either side of its bow it looks too
+        constexpr float kBeam = 2;          ///< Metres to its side it looks for water to turn round in
+        constexpr float kLeanSettle = 0.5f; ///< Seconds its lean takes to follow its turn
+        constexpr float kHull = 2;          ///< Metres apart two boats' middles touch at
+        constexpr float kKeepClear = 10;    ///< Metres ahead it starts to steer round another boat
+        constexpr float kDodge = 2;         ///< Radians it steers off its mark, at most, to keep clear
+        constexpr float kBounce = 0.6f;     ///< Of its speed a bumping boat keeps through a bump
 
         float angle_between(glm::vec2 from, glm::vec2 to)
         {
@@ -66,7 +73,7 @@ namespace rct3::simulation
         return { origin_x + (static_cast<float>(tile.x) + 0.5f) * tile_size, origin_z + (static_cast<float>(tile.y) + 0.5f) * tile_size };
     }
 
-    WaterTiles water_tiles(const save::TerrainGrid& grid, std::span<const save::WaterBody> bodies)
+    WaterTiles water_tiles(const save::TerrainGrid& grid, std::span<const save::WaterBody> bodies, const park::SolidTiles& solids)
     {
         WaterTiles w { .cols = grid.width, .rows = grid.height, .origin_x = grid.origin_x, .origin_z = grid.origin_z, .tile_size = grid.tile_size_x > 0 ? grid.tile_size_x : 4 };
         w.level.assign(static_cast<std::size_t>(std::max(grid.width, 0)) * static_cast<std::size_t>(std::max(grid.height, 0)), std::nullopt);
@@ -80,6 +87,17 @@ namespace rct3::simulation
             for (std::size_t i = 0; i < under.size(); ++i)
                 if (under[i] == 0b11)
                     w.level[i] = body.level;
+        }
+        // Closed where rocks, scenery and the like stand in the water or hang lower over it than a boat clears;
+        // what stands only along a tile's edges a boat slips past.
+        constexpr float kUnder = 1; ///< Metres under the surface something may reach up from
+        constexpr float kClear = 1; ///< Metres over the surface a boat needs
+        for (const auto& [key, spans] : solids.tiles)
+        {
+            const int col = static_cast<int>(key & 0xFFFF), row = static_cast<int>(key >> 16);
+            const auto level = w.at(col, row);
+            if (level && std::ranges::any_of(spans, [&](const park::SolidSpan& s) { return (s.room & park::kWholeTile) != 0 && s.low < *level + kClear && *level - kUnder < s.high; }))
+                w.level[static_cast<std::size_t>(row) * static_cast<std::size_t>(w.cols) + static_cast<std::size_t>(col)] = std::nullopt;
         }
         return w;
     }
@@ -124,6 +142,12 @@ namespace rct3::simulation
         return way;
     }
 
+    BoatPose between_sails(const Boat& boat, float along)
+    {
+        const float turn = angle_between(boat.was_heading, boat.heading);
+        return { glm::mix(boat.was, boat.at, along), turned(boat.was_heading, turn * along), glm::mix(boat.was_lean, boat.lean, along) };
+    }
+
     void cast_off(Boat& boat, const Dock& dock, bool roams, std::span<const glm::vec2> calls)
     {
         boat.at = dock.leave;
@@ -137,12 +161,24 @@ namespace rct3::simulation
         boat.calls.push_back(dock.enter);
         boat.out = 0;
         boat.on_mark = 0;
+        boat.turning = 0;
+        boat.lean = 0;
+        boat.was = boat.at;
+        boat.was_heading = boat.heading;
+        boat.was_lean = 0;
     }
 
-    bool sail(Boat& boat, const WaterTiles& water, const Dock& dock, float top, float roam, float seconds, random::RandomState& dice)
+    bool sail(Boat& boat, const WaterTiles& water, const Dock& dock, const ovl::BoatHandling& handling, float top, float roam, float seconds, random::RandomState& dice, std::span<const Boat> fleet, bool bumps)
     {
         if (boat.state == Sailing::Docked)
             return false;
+        boat.was = boat.at;
+        boat.was_heading = boat.heading;
+        boat.was_lean = boat.lean;
+        const auto wet = [&](glm::vec2 p) {
+            const glm::ivec2 t = water.tile_of(p);
+            return water.at(t.x, t.y).has_value();
+        };
         const int steps = static_cast<int>(std::ceil(seconds / kStep));
         for (int step = 0; step < steps; ++step)
         {
@@ -189,25 +225,64 @@ namespace rct3::simulation
                 }
                 boat.on_mark = 0;
             }
-            // Steer for the mark, turning only so fast, slower in a hard turn and near the last mark.
-            float want = top;
-            if (!boat.marks.empty())
+            // Steer for the mark, turning only so fast; turned round, the long way when only that side has water.
+            float off = 0;
+            if (!boat.marks.empty() && boat.marks.front() != boat.at)
             {
-                const glm::vec2 to = boat.marks.front() - boat.at;
-                if (glm::length(to) > 0)
+                off = angle_between(boat.heading, glm::normalize(boat.marks.front() - boat.at));
+                const glm::vec2 left = turned(boat.heading, glm::half_pi<float>());
+                if (std::abs(off) > 0.75f * glm::pi<float>())
                 {
-                    const float turn = angle_between(boat.heading, glm::normalize(to));
-                    boat.heading = glm::normalize(turned(boat.heading, std::clamp(turn, -kTurnRate * dt, kTurnRate * dt)));
-                    want *= 1 - 0.6f * std::min(std::abs(turn) / 3.1416f, 1.0f);
+                    const bool wet_left = wet(boat.at + left * kBeam), wet_right = wet(boat.at - left * kBeam);
+                    if (off > 0 && !wet_left && wet_right)
+                        off -= glm::two_pi<float>();
+                    else if (off < 0 && !wet_right && wet_left)
+                        off += glm::two_pi<float>();
                 }
-                if (boat.marks.size() == 1)
-                    want = std::min(want, top * glm::distance(boat.at, boat.marks.front()) / kSlowNear);
             }
-            else
-                want = 0;
-            want = std::max(want, boat.marks.empty() ? 0.0f : kSlowest);
-            boat.speed += std::clamp(want - boat.speed, -kSpeedUp * dt, kSpeedUp * dt);
+            // Another boat close ahead: it steers off to the side away from it, the harder the closer.
+            if (!bumps)
+                for (const Boat& other : fleet)
+                {
+                    const glm::vec2 to = other.at - boat.at;
+                    const float apart = glm::length(to);
+                    if (&other == &boat || other.state == Sailing::Docked || apart >= kKeepClear || apart <= 0 || glm::dot(to, boat.heading) <= 0)
+                        continue;
+                    const float side = boat.heading.x * to.y - boat.heading.y * to.x; // Over 0 on its left
+                    off += (side > 0 ? -kDodge : kDodge) * (1 - apart / kKeepClear);
+                }
+            boat.turning = std::clamp(handling.turn_gain * off, -handling.turn_most, handling.turn_most);
+            boat.heading = glm::normalize(turned(boat.heading, boat.turning * dt));
+            boat.lean += (std::clamp(handling.lean_gain * boat.turning, -handling.lean_most, handling.lean_most) - boat.lean) * std::min(dt / kLeanSettle, 1.0f);
+            // It gains speed only with its mark ahead, loses it the more it must turn, and brakes near its last mark
+            // and for each way ahead that runs out of water.
+            const float want = boat.marks.empty() ? 0.0f : top;
+            float push = std::abs(off) < kAhead ? (want - boat.speed) * handling.speed_gain : 0.0f;
+            push = std::clamp(push - handling.turn_slow * std::abs(off), -2 * handling.speed_up, handling.speed_up);
+            if (boat.marks.size() == 1 && glm::distance(boat.at, boat.marks.front()) < kSlowNear)
+                push -= handling.brake;
+            for (const float side : { -kLookWide, 0.0f, kLookWide })
+                if (!wet(boat.at + turned(boat.heading, side) * kLookAhead))
+                    push -= handling.brake;
+            boat.speed = std::max(boat.speed + push * dt, boat.marks.empty() ? 0.0f : kSlowest);
             boat.at += boat.heading * boat.speed * dt;
+            // Touching another boat, it is pushed clear, onto water only; a bumping boat heading into it bounces off.
+            for (const Boat& other : fleet)
+            {
+                const glm::vec2 away = boat.at - other.at;
+                const float apart = glm::length(away);
+                if (&other == &boat || other.state == Sailing::Docked || apart >= kHull)
+                    continue;
+                // Two boats on the very same spot, as they are leaving the dock together, part to either side.
+                const glm::vec2 out = apart > 0.01f ? away / apart : turned(boat.heading, &boat < &other ? glm::half_pi<float>() : -glm::half_pi<float>());
+                if (const glm::vec2 to = boat.at + out * (kHull - apart) / 2.0f; wet(to))
+                    boat.at = to;
+                if (bumps && glm::dot(boat.heading, out) < 0)
+                {
+                    boat.heading = glm::normalize(boat.heading - 2 * glm::dot(boat.heading, out) * out);
+                    boat.speed *= kBounce;
+                }
+            }
         }
         return false;
     }

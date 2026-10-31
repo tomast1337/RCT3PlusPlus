@@ -46,9 +46,10 @@ namespace rct3::ovl
             item.unknown_2c = i32(b, 0x2c);
             item.unknown_30 = u32(b, 0x30);
             for (std::size_t i = 0; i < 3; ++i)
-                item.offset[i] = f32(b, 0x34 + i * 4);
-            for (std::size_t i = 0; i < 4; ++i)
-                item.amounts[i] = u32(b, 0x40 + i * 4);
+                item.effects[i] = f32(b, 0x34 + i * 4);
+            item.cost = u32(b, 0x40);
+            for (std::size_t i = 0; i < 3; ++i)
+                item.worth[i] = u32(b, 0x44 + i * 4);
             item.unknown_50 = f32(b, 0x50);
             item.unknown_54 = i32(b, 0x54);
             item.unknown_58 = u32(b, 0x58);
@@ -91,9 +92,9 @@ namespace rct3::ovl
             extra.unknown_00 = fields::u32(b, 0);
             extra.name_text = refs.find(address + 4, kTextTag);
             extra.icon = refs.find(address + 8, kIconTag);
-            extra.unknown_0c = fields::u32(b, 0x0c);
+            extra.cost = fields::u32(b, 0x0c);
             for (std::size_t i = 0; i < 3; ++i)
-                extra.offset[i] = fields::f32(b, 0x10 + i * 4);
+                extra.effects[i] = fields::f32(b, 0x10 + i * 4);
             return extra;
         }
 

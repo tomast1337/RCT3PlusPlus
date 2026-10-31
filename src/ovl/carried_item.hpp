@@ -21,9 +21,9 @@ namespace rct3::ovl
         std::uint32_t unknown_00 = 0; ///< Zero in every file seen.
         std::string_view name_text;   ///< "txt" item
         std::string_view icon;        ///< "gsi" item
-        std::uint32_t unknown_0c = 0; ///< Zero in all but one extra, which holds 4. Unconfirmed.
-        /// Three floats that look like an offset (values around +-0.1 and 0.3). Unconfirmed.
-        std::array<float, 3> offset { };
+        std::uint32_t cost = 0;       ///< In hundredths, to the stall for each item it goes on at the usual amount
+        /// What it adds to the item's food, drink and nausea at the usual amount (values around +-0.1 and 0.3).
+        std::array<float, 3> effects { };
     };
 
     struct CarriedItemExtraEntry
@@ -53,11 +53,13 @@ namespace rct3::ovl
         std::uint32_t flags = 0;      ///< Bit mask, 21 distinct values seen, none of them explained
         std::int32_t unknown_2c = 0;  ///< -1 in most items, otherwise 3, 12 or 48
         std::uint32_t unknown_30 = 0; ///< 1, 2, 4, 6, 8, 16 or 36 seen
-        /// Three floats. The first two are small and signed (-0.8 to 0.8 seen) and look like an offset, the
-        /// third is 0 in nearly every item and up to 50 in a few. Unconfirmed.
-        std::array<float, 3> offset { };
-        /// Four integers, 0 to 6000 seen. Unconfirmed.
-        std::array<std::uint32_t, 4> amounts { };
+        /// How much it feeds, quenches and sickens: food and drink -0.8 to 0.8 seen, nausea 0 in nearly every
+        /// item and up to 50 in a few.
+        std::array<float, 3> effects { };
+        std::uint32_t cost = 0; ///< In hundredths, to the stall for each one sold
+        /// What guests will pay for it, in hundredths: three figures, for different weather (which is which
+        /// is not read).
+        std::array<std::uint32_t, 3> worth { };
         float unknown_50 = 0;         ///< 0, or 0.01
         std::int32_t unknown_54 = 0;  ///< -1 in most items, otherwise 1 or 2
         std::uint32_t unknown_58 = 0; ///< 0, or 7 in one item

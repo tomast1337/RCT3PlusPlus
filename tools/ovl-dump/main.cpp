@@ -928,7 +928,7 @@ namespace
                 }
                 const auto& it = *entry.item;
                 const std::string text(it.name_text), remains(it.remains);
-                out.info("  {:<28} flags {:08x} extras {:d} text {} remains '{}'", name.c_str(), it.flags, it.extras.size(), text.c_str(), remains.c_str());
+                out.info("  {:<28} flags {:08x} extras {:d} text {} remains '{}' food {} drink {} nausea {} cost {} worth {} {} {}", name.c_str(), it.flags, it.extras.size(), text.c_str(), remains.c_str(), it.effects[0], it.effects[1], it.effects[2], it.cost, it.worth[0], it.worth[1], it.worth[2]);
             }
         }
         if (g_scenery.ced)
@@ -947,7 +947,8 @@ namespace
                     continue;
                 }
                 const std::string text(entry.extra->name_text), icon(entry.extra->icon);
-                out.info("  {:<28} text {} icon {}", name.c_str(), text.c_str(), icon.c_str());
+                const auto& x = *entry.extra;
+                out.info("  {:<28} text {} icon {} cost {} food {} drink {} nausea {}", name.c_str(), text.c_str(), icon.c_str(), x.cost, x.effects[0], x.effects[1], x.effects[2]);
             }
         }
     }

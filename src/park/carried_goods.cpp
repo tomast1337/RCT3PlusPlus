@@ -27,7 +27,7 @@ namespace rct3::park
             {
                 if (!e.item)
                     continue;
-                CarriedKind k { std::format("{}:cid", e.name), std::string(e.item->name_text), std::string(e.item->icon), { }, !e.item->texture.empty() };
+                CarriedKind k { std::format("{}:cid", e.name), std::string(e.item->name_text), std::string(e.item->icon), { }, !e.item->texture.empty(), e.item->effects, e.item->cost };
                 for (const std::string_view extra : e.item->extras)
                     k.extras.push_back(std::format("{}:ced", extra));
                 kinds.items.push_back(std::move(k));
@@ -35,7 +35,7 @@ namespace rct3::park
             for (const ovl::CarriedItemExtraEntry& e : ovl::read_carried_item_extras(overlay, *part))
             {
                 if (e.extra)
-                    kinds.extras.push_back({ std::format("{}:ced", e.name), std::string(e.extra->name_text), std::string(e.extra->icon), { }, false });
+                    kinds.extras.push_back({ std::format("{}:ced", e.name), std::string(e.extra->name_text), std::string(e.extra->icon), { }, false, e.extra->effects, e.extra->cost });
             }
         }
     }

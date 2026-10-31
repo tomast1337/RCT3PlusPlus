@@ -6,6 +6,8 @@
 
 #include "ovl/overlay.hpp"
 
+#include <array>
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -16,17 +18,20 @@ namespace rct3::park
     /// A carried item or an extra.
     struct CarriedKind
     {
-        std::string symbol;              ///< With its tag, as `Burger:cid` or `Ketchup:ced`
-        std::string name_text;           ///< Key of its name among the game's texts
-        std::string icon;                ///< Skin
-        std::vector<std::string> extras; ///< Of an item, with their tags, in its own order
-        bool paintable = false;          ///< Of an item, whether it takes the player's colours
+        std::string symbol { };              ///< With its tag, as `Burger:cid` or `Ketchup:ced`
+        std::string name_text { };           ///< Key of its name among the game's texts
+        std::string icon { };                ///< Skin
+        std::vector<std::string> extras { }; ///< Of an item, with their tags, in its own order
+        bool paintable = false;              ///< Of an item, whether it takes the player's colours
+        /// How much it feeds, quenches and sickens; of an extra, what it adds to an item's at the usual amount.
+        std::array<float, 3> effects { };
+        std::int64_t cost = 0; ///< In hundredths, to the stall: of an item each one sold, of an extra each one it goes on
     };
 
     struct CarriedKinds
     {
-        std::vector<CarriedKind> items;
-        std::vector<CarriedKind> extras;
+        std::vector<CarriedKind> items { };
+        std::vector<CarriedKind> extras { };
     };
 
     /// Adds what `overlay` holds to `kinds`.

@@ -165,9 +165,10 @@ TEST_CASE("carried items expose their fields and extras")
     CHECK(it.flags == 0x201);
     CHECK(it.unknown_2c == -1);
     CHECK(it.unknown_30 == 6);
-    CHECK(it.offset[0] == 0.25f);
-    CHECK(it.offset[1] == -0.5f);
-    CHECK(it.amounts == std::array<std::uint32_t, 4> { 50, 0, 0, 170 });
+    CHECK(it.effects[0] == 0.25f);
+    CHECK(it.effects[1] == -0.5f);
+    CHECK(it.cost == 50);
+    CHECK(it.worth == std::array<std::uint32_t, 3> { 0, 0, 170 });
     CHECK(it.unknown_50 == 0.01f);
     CHECK(it.unknown_54 == -1);
     REQUIRE(it.extras.size() == 2);
@@ -252,10 +253,10 @@ TEST_CASE("carried item extras")
     const auto& e = *extras[0].extra;
     CHECK(e.name_text == "SauceName");
     CHECK(e.icon == "SauceIcon");
-    CHECK(e.unknown_0c == 4);
-    CHECK(e.offset[0] == 0.1f);
-    CHECK(e.offset[1] == -0.1f);
-    CHECK(e.offset[2] == 0.3f);
+    CHECK(e.cost == 4);
+    CHECK(e.effects[0] == 0.1f);
+    CHECK(e.effects[1] == -0.1f);
+    CHECK(e.effects[2] == 0.3f);
     REQUIRE(extras[1].extra.has_value());
     CHECK(extras[1].extra->name_text.empty());
 

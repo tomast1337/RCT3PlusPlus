@@ -24,7 +24,9 @@ TEST_CASE("ride trains list their cars")
     bytes.resize(0x38, std::byte { 0 });
     put(bytes, { std::bit_cast<std::uint32_t>(6.0f), std::bit_cast<std::uint32_t>(0.25f) });
     bytes.resize(0x68, std::byte { 0 });
-    put(bytes, { std::bit_cast<std::uint32_t>(0.75f) });
+    put(bytes, { std::bit_cast<std::uint32_t>(0.75f), std::bit_cast<std::uint32_t>(2.0f) });
+    bytes.resize(0x88, std::byte { 0 });
+    put(bytes, { std::bit_cast<std::uint32_t>(0.3f) });
     bytes.resize(200, std::byte { 0 });
     const auto overlay = make_record_overlay(1, pool, "Test:rit", bytes, { { 0x08, "Front:ric" }, { 0x10, "Back:ric" } });
     const auto items = read_ride_trains(overlay, overlay.common());
@@ -44,6 +46,8 @@ TEST_CASE("ride trains list their cars")
     CHECK(t.camera.look_ahead == 6.0f);
     CHECK(t.camera.sway_per_g == 0.25f);
     CHECK(t.camera.look_tilt == 0.75f);
+    CHECK(t.boat.turn_most == 2.0f);
+    CHECK(t.boat.lean_most == 0.3f);
 }
 
 TEST_CASE("a name field of -1 gives an empty name")

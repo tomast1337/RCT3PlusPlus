@@ -36,6 +36,21 @@ namespace rct3::ovl
         float look_tilt = 0;   ///< How far looking ahead into a turn leans the view into it, 0 to 1
     };
 
+    /// How a boat of this train handles off its track, out on open water. Turns in radians, speeds in metres a
+    /// second. Most boats the game ships share one set (turning at most 1 a second, leaning at most 0.2); jet skis
+    /// turn and lean harder, bumper boats turn quicker and never lean.
+    struct BoatHandling
+    {
+        float turn_most = 0;  ///< Radians a second it turns at most
+        float turn_gain = 0;  ///< Radians a second it turns per radian its mark lies off its bow
+        float speed_up = 0;   ///< m/s² it speeds up by at most; it slows by up to twice that
+        float speed_gain = 0; ///< m/s² it speeds up by per m/s short of the speed it wants
+        float turn_slow = 0;  ///< m/s² it slows by per radian its mark lies off its bow
+        float brake = 0;      ///< m/s² it slows by near the end of its way and per stretch of water ahead it cannot go on
+        float lean_gain = 0;  ///< Radians it leans per radian a second it turns
+        float lean_most = 0;  ///< And the most it leans
+    };
+
     struct RideTrain
     {
         std::string_view name;         ///< Name string stored in the item. Empty in version 4 and 5 files.
@@ -55,6 +70,7 @@ namespace rct3::ovl
         /// texture references, which are not interpreted.
         std::span<const std::byte> record;
         RideCameraTuning camera; ///< Thirteen numbers from byte 56 of the record
+        BoatHandling boat;       ///< Eight numbers from byte 108, right after the camera's
     };
 
     struct RideTrainItem

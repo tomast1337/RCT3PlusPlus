@@ -946,6 +946,7 @@ namespace rct3::park
         const std::optional<glm::mat4> front = bone_of(car->visual, "camerafront");
         model.ride_eyes = { bone_of(car->visual, "nosecamera").or_else([&] { return front; }), front, bone_of(car->visual, "camerarear") };
         model.ride_look = found->camera;
+        model.boat_handling = found->boat;
         constexpr std::uint8_t kRideSeating = 35; ///< The seating number that leaves it to the ride
         if (const auto seating = static_cast<std::uint8_t>(car->kind & 0xff); seating != kRideSeating)
             model.seating = seating;

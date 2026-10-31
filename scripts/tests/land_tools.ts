@@ -3,6 +3,7 @@
 // The land tools on the game's blank landscape: digs a pit with Shape ground, heard rumbling while the stroke
 // goes, paints round it with Paint ground, fills it with Water by clicking its wall and takes the lake away again,
 // by clicking it and by digging under it, then raises the ground under a tree planted there, which rises with it.
+// Every height brush works both ways: a crater dragged up builds a mound, a mountain dragged down digs a pit.
 //
 //   ./nob script scripts/tests/land_tools.ts -- --no-intro --no-audio --no-simulate --seed 1
 
@@ -154,7 +155,7 @@ const hill_before = high(hill_at, row);
 
 await pick("Land_Brush_Height");
 
-await until(() => ui.find("land_panel/Land_Brush_Height_Raise") !== undefined, 60, "the land panel's raise tab");
+await until(() => ui.find("land_panel/Land_Brush_Height_Raise") !== undefined, 60, "the land panel's brush tab");
 
 await ui.click("land_panel/Land_Brush_Height_Raise");
 
@@ -177,7 +178,6 @@ camera.look({ col: crater_at + 0.5, row: row + 0.5 }, { col: crater_at - 3, row:
 
 await frames(2);
 const crater_before = low(crater_at, row);
-await ui.click("land_panel/Land_Brush_Height_Lower");
 await until(() => ui.find("land_panel/body/Land_Brush_Height_Lower_Crater") !== undefined, 60, "the crater brush");
 await ui.click("land_panel/body/Land_Brush_Height_Lower_Crater");
 
@@ -190,6 +190,28 @@ log("crater:", crater_before, "->", low(crater_at, row));
 await screenshot("crater");
 
 expect(low(crater_at, row) < crater_before, "the crater to sink");
+
+// Every brush works both ways: a crater dragged up builds a mound, a mountain dragged down digs a pit.
+const mound_at = row + 4;
+camera.look({ col: crater_at + 0.5, row: mound_at + 0.5 }, { col: crater_at - 3, row: mound_at - 6, up: 40 });
+await frames(2);
+const mound_before = high(crater_at, mound_at);
+const [mx, my] = on_view(crater_at, mound_at);
+await pointer.drag([mx, my], [mx, my - 0.15], 40);
+log("mound:", mound_before, "->", high(crater_at, mound_at));
+await screenshot("crater_up");
+expect(high(crater_at, mound_at) > mound_before, "the crater dragged up to build a mound");
+
+const pit_at = row - 4;
+camera.look({ col: crater_at + 0.5, row: pit_at + 0.5 }, { col: crater_at - 3, row: pit_at - 6, up: 40 });
+await frames(2);
+const pit_before = low(crater_at, pit_at);
+await ui.click("land_panel/body/Land_Brush_Height_Raise_Mountain");
+const [ux, uy] = on_view(crater_at, pit_at);
+await pointer.drag([ux, uy], [ux, uy + 0.15], 40);
+log("mountain down:", pit_before, "->", low(crater_at, pit_at));
+await screenshot("mountain_down");
+expect(low(crater_at, pit_at) < pit_before, "the mountain dragged down to dig a pit");
 
 // Smoothing: averaging wears the hill down while the button is held.
 camera.look({ col: hill_at + 0.5, row: row + 0.5 }, { col: hill_at - 3, row: row - 6, up: 40 });

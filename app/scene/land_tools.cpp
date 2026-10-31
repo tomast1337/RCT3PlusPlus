@@ -69,9 +69,8 @@ namespace rct3::scene
             float_money(scene, tile_point(scene.grid, tile), -cost);
         }
 
-        /// The raising and lowering brushes, by their place in the panel's tabs.
-        constexpr std::size_t kRaiseTab = 2;
-        constexpr std::size_t kLowerTab = 3;
+        /// The raising and lowering brushes' tab, by its place in the panel.
+        constexpr std::size_t kBrushTab = 2;
         constexpr std::size_t kSmoothTab = 1;
         constexpr std::size_t kCliffTab = 1; ///< Of painting
         constexpr std::size_t kTileTab = 0;
@@ -94,8 +93,8 @@ namespace rct3::scene
         constexpr std::array kSmoothTools {
             SmoothTool { park::GroundSmoothing::Average }, SmoothTool { park::GroundSmoothing::Level, Level::Pointer }, SmoothTool { park::GroundSmoothing::Level, Level::Press }, SmoothTool { park::GroundSmoothing::WholeUnits }, SmoothTool { park::GroundSmoothing::JoinEdges }, SmoothTool { park::GroundSmoothing::TileEdges },
         };
-        constexpr std::array kRaiseShapes { park::GroundShape::Ridge, park::GroundShape::Mountain, park::GroundShape::Mesa, park::GroundShape::Hill };
-        constexpr std::array kLowerShapes { park::GroundShape::Canyon, park::GroundShape::Trough, park::GroundShape::Crater };
+        /// The brushes' tab, in its order: those that raise when dragged up, then those that lower when dragged down.
+        constexpr std::array kShapeBrushes { park::GroundShape::Ridge, park::GroundShape::Mountain, park::GroundShape::Mesa, park::GroundShape::Hill, park::GroundShape::Canyon, park::GroundShape::Trough, park::GroundShape::Crater };
 
         std::uint32_t tile_key(save::Tile t)
         {
@@ -325,11 +324,6 @@ namespace rct3::scene
             set_view_lines(device, scene.land_marks, mesh);
         }
 
-        bool lowers(park::GroundShape shape)
-        {
-            return std::ranges::contains(kLowerShapes, shape);
-        }
-
         void brush_shape(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
         {
             LandTools& l = scene.land;
@@ -349,7 +343,9 @@ namespace rct3::scene
                 l.before = park::corner_heights(scene.grid, [&](save::Tile t) { return shapeable(scene, t); });
             }
             const float steps = (l.press_y - at.y) / park::kSlopeDragStep;
-            const float amount = std::round(std::max(lowers(*l.shape) ? -steps : steps, 0.0f) * 4) / 4; // In quarter units
+            // A lowering brush digs as the pointer goes down; the other way, each brush makes its shape upside down.
+            const bool lowers = park::shape_share(*l.shape, 0) < 0;
+            const float amount = std::round((lowers ? -steps : steps) * 4) / 4; // In quarter units
             if (amount == l.amount)
                 return;
             auto trial = try_shape(scene, scene.grid, [&](save::TerrainGrid& g) { return park::shape_ground(g, l.before, *l.shape, l.middle, static_cast<float>(l.brush) / 2, l.along, amount); });
@@ -646,16 +642,14 @@ namespace rct3::scene
             {
                 tabs.push_back(tab_of(strings, "Land_Vertex", 2, { "Land_Vertex_Neighbour", "Land_Vertex_Neighbour2", "Land_Vertex_Freeform", "Land_Vertex_Freeform2", "Land_Vertex_Quantised1", "Land_Vertex_Quantised2" }, kTileShapings.size() * 2));
                 tabs.push_back(tab_of(strings, "Land_Brush_Height_Smooth", 3, { "Land_Brush_Height_Smooth_Average", "Land_Brush_Height_Smooth_FlatMove", "Land_Brush_Height_Smooth_Flat", "Land_Brush_Height_Smooth_Flat1", "Land_Brush_Height_Smooth_Round", "Land_Brush_Height_Smooth_Square" }, kSmoothTools.size()));
-                tabs.push_back(tab_of(strings, "Land_Brush_Height_Raise", 4, { "Land_Brush_Height_Raise_Ridge", "Land_Brush_Height_Raise_Mountain", "Land_Brush_Height_Raise_Mesa", "Land_Brush_Height_Raise_Hill" }, kRaiseShapes.size()));
-                tabs.push_back(tab_of(strings, "Land_Brush_Height_Lower", 5, { "Land_Brush_Height_Lower_Canyon", "Land_Brush_Height_Lower_Ditch", "Land_Brush_Height_Lower_Crater" }, kLowerShapes.size()));
+                ui::LandTab brushes = tab_of(strings, "Land_Brush_Height_Raise", 4, { "Land_Brush_Height_Raise_Ridge", "Land_Brush_Height_Raise_Mountain", "Land_Brush_Height_Raise_Mesa", "Land_Brush_Height_Raise_Hill", "Land_Brush_Height_Lower_Canyon", "Land_Brush_Height_Lower_Ditch", "Land_Brush_Height_Lower_Crater" }, kShapeBrushes.size());
+                brushes.help = std::u16string(strings.get("Rct3pp_LandShapeHelp"));
+                tabs.push_back(std::move(brushes));
                 chosen = { kTileTab, l.tile_tool };
                 if (l.smoothing)
                     chosen = { kSmoothTab, *l.smoothing };
                 else if (l.shape)
-                {
-                    const auto raise = std::ranges::find(kRaiseShapes, *l.shape);
-                    chosen = raise != kRaiseShapes.end() ? ui::LandPick { kRaiseTab, static_cast<std::size_t>(raise - kRaiseShapes.begin()) } : ui::LandPick { kLowerTab, static_cast<std::size_t>(std::ranges::find(kLowerShapes, *l.shape) - kLowerShapes.begin()) };
-                }
+                    chosen = { kBrushTab, static_cast<std::size_t>(std::ranges::find(kShapeBrushes, *l.shape) - kShapeBrushes.begin()) };
             }
             panel->show(std::move(tabs), chosen, l.brush, park::kLargestBrush);
         }
@@ -773,10 +767,8 @@ namespace rct3::scene
                     l.smoothing = pick->tool;
                 if (pick->tab == kTileTab && pick->tool < kTileShapings.size() * 2)
                     l.tile_tool = pick->tool;
-                if (pick->tab == kRaiseTab && pick->tool < kRaiseShapes.size())
-                    l.shape = kRaiseShapes[pick->tool];
-                else if (pick->tab == kLowerTab && pick->tool < kLowerShapes.size())
-                    l.shape = kLowerShapes[pick->tool];
+                if (pick->tab == kBrushTab && pick->tool < kShapeBrushes.size())
+                    l.shape = kShapeBrushes[pick->tool];
                 else
                     l.shape.reset();
             }

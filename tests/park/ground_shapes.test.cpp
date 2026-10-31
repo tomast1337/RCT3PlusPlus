@@ -64,6 +64,18 @@ TEST_CASE("a hill raises the corner points round its middle, shared by the tiles
     CHECK(point(g, 5, 5) == doctest::Approx(3));
 }
 
+TEST_CASE("a negative amount turns the shape over: a mountain digs a pit, a crater builds a mound")
+{
+    save::TerrainGrid g = flat(10);
+    const CornerHeights before = corner_heights(g, anywhere);
+    const float dug = shape_ground(g, before, GroundShape::Mountain, { 5, 5 }, 3, { 1, 0 }, -2);
+    CHECK(point(g, 5, 5) == doctest::Approx(0));
+    CHECK(dug == doctest::Approx(shape_ground(g, before, GroundShape::Mountain, { 5, 5 }, 3, { 1, 0 }, 2))); // Paid alike
+
+    shape_ground(g, before, GroundShape::Crater, { 5, 5 }, 3, { 1, 0 }, -2);
+    CHECK(point(g, 5, 5) == doctest::Approx(4));
+}
+
 TEST_CASE("held corner points stay: land refused, and the edge of a cliff")
 {
     save::TerrainGrid g = flat(10);

@@ -14,9 +14,10 @@
 // refused keeps its corners for the rest of the stroke. Scenery standing on the ground moves with it. A lake on
 // ground that moves, or beside ground that sinks under its level, goes, as does a waterfall beside it.
 //
-// Raising and lowering: press on the ground and move the pointer up to raise a ridge, mountain, mesa or hill
-// there, or down to sink a canyon, trough or crater, a height unit for each kSlopeDragStep moved
-// (park/ground_shapes.hpp). The shape is as wide as the brush's number, centred where the pointer pressed;
+// Raising and lowering, one tab: press on the ground and move the pointer up to raise a ridge, mountain, mesa or
+// hill there, or down to sink a canyon, trough or crater, a height unit for each kSlopeDragStep moved
+// (park/ground_shapes.hpp). Moved the other way, each makes its shape upside down: a mountain dragged down digs
+// a pit, a crater dragged up builds a mound. The shape is as wide as the brush's number, centred where the pointer pressed;
 // a ridge runs across the view. Ground the park does not own outright or that what stands on it holds stays,
 // as do cliff edges. Each unit of ground moved is paid for, once.
 //

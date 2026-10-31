@@ -6,6 +6,7 @@
 // again.
 #pragma once
 
+#include "park/carried_goods.hpp"
 #include "park/edge_walls.hpp"
 #include "park/object_models.hpp"
 #include "park/overhead.hpp"
@@ -61,10 +62,12 @@ namespace rct3::simulation
     /// that still stands keeps its swimmers; those of a room gone come out at its door. Call after import_paths.
     void import_pools(SimWorld& world, const park::PoolMap& pools);
     /// Adds a shop for every stall of `rides` that sells a drink or food and stands beside a path; returns how
-    /// many were added. Call after import_paths.
-    std::size_t import_stalls(SimWorld& world, const save::RideModel& rides);
-    /// Has the shop of `stall`, when it runs, sell what its menu now sells first, at that item's price.
-    void restock(SimWorld& world, const save::Stall& stall);
+    /// many were added. Its wares take the extras `kinds` says their items can, where the stall puts them on.
+    /// Call after import_paths.
+    std::size_t import_stalls(SimWorld& world, const save::RideModel& rides, const park::CarriedKinds& kinds = { });
+    /// Has the shop of `stall`, when it runs, sell what its menu now sells first, at that item's price, with
+    /// its extras as import_stalls puts them on.
+    void restock(SimWorld& world, const save::Stall& stall, const park::CarriedKinds& kinds = { });
 
     /// How many a ride carries at once and how long one ride lasts: starting, `loops` of running, and stopping,
     /// in seconds. A ride timed by a whole lap runs one loop of it.

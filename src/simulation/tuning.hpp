@@ -141,6 +141,11 @@ namespace rct3::simulation::tuning
         Money food_worth { 500 };   ///< Most a guest pays for something to eat
         Money drink_worth { 300 };  ///< Most a guest pays for a drink
         Share good_value { 0.35f }; ///< Chosen by eye: of its worth, at or under which a guest thinks a price good value
+        /// Chosen by eye: by an extra's level (none, a little, some, more, loads, as the guest likes), how much of
+        /// its usual amount goes on.
+        std::array<float, 6> extra_amounts { 0.0f, 0.5f, 1.0f, 1.5f, 2.0f, 1.0f };
+        std::uint8_t toppings_noticed = 2; ///< Chosen by eye: extras an item must take for a guest to remark on them
+        Chance topping_thought { 0.15 };   ///< Chosen by eye: of remarking on its extras, none or all, on buying it
     };
 
     /// Nausea and being sick.

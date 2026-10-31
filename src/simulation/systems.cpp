@@ -2304,6 +2304,21 @@ namespace rct3::simulation
                     pocketed = r.all_of<Carried>(guest) ? old->pocketed : 0;
                 }
                 r.emplace_or_replace<Carried>(guest, Carried { .stall = at, .ware = static_cast<std::uint8_t>(ware), .kind = std::uint8_t { shop.product == Product::Drink }, .food = shop.product == Product::Food, .bites = kTuning.eating.bites, .fill = { *need / kTuning.eating.bites }, .pocketed = pocketed });
+                if (ware < shop.menu.size())
+                {
+                    // Its extras feed, quench or upset them the more (or, as salt does, leave them thirstier), and
+                    // now and then they remark on getting none of them or all.
+                    const Ware& w = shop.menu[ware];
+                    needs.hunger.value = clamp01(needs.hunger.value - w.topping[0]);
+                    needs.thirst.value = clamp01(needs.thirst.value - w.topping[1]);
+                    mood.nausea.value = clamp01(mood.nausea.value + w.topping[2]);
+                    if (w.extras >= kTuning.eating.toppings_noticed && (w.topped == 0 || w.topped == w.extras) && random::chance(r.get<Dice>(guest).state, kTuning.eating.topping_thought.value))
+                    {
+                        const bool none = w.topped == 0;
+                        mood.happiness.value = clamp01(mood.happiness.value + (none ? -kTuning.needs.treat.value : kTuning.needs.treat.value));
+                        think(r, guest, none ? ThoughtKind::StingyToppings : ThoughtKind::MassesOfToppings, at, now);
+                    }
+                }
             }
             else if (need != nullptr)
                 *need = 0;

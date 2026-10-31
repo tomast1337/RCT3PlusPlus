@@ -80,14 +80,18 @@ namespace rct3::simulation
 
         /// The first item of a stall that is a drink, food or umbrella, by its name or else its kind's symbol (custom
         /// stalls keep only a placeholder name); where neither tells, by the stall's own symbol, at its first item's price.
-        /// Its shop's menu holds every such item.
+        /// Its shop's menu holds every such item, each with the extras of `kinds` that go on it.
         struct Sale
         {
             Shop shop;
             std::int64_t price = 0;
         };
-        std::optional<Sale> sale_of(const save::Stall& stall)
+        std::optional<Sale> sale_of(const save::Stall& stall, const park::CarriedKinds& kinds)
         {
+            const auto kind_of = [](std::span<const park::CarriedKind> of, std::string_view symbol) {
+                const auto it = std::ranges::find_if(of, [&](const park::CarriedKind& k) { return strings::equals_ignoring_case(k.symbol, symbol); });
+                return it == of.end() ? nullptr : &*it;
+            };
             std::optional<Sale> sale;
             std::vector<Ware> menu;
             for (const save::StallItem& item : stall.items)
@@ -96,7 +100,23 @@ namespace rct3::simulation
                 const auto product = product_named(name);
                 if (!product)
                     continue;
-                menu.push_back({ *product, serve_named(name), { item.price }, item.kind_symbol });
+                Ware& ware = menu.emplace_back(Ware { *product, serve_named(name), { item.price }, item.kind_symbol });
+                // An extra goes on when the stall offers it and it is ticked on the item, or the guest picks.
+                if (const park::CarriedKind* kind = kind_of(kinds.items, item.kind_symbol))
+                {
+                    ware.extras = static_cast<std::uint8_t>(std::min<std::size_t>(kind->extras.size(), 32));
+                    for (std::size_t i = 0; i < ware.extras; ++i)
+                    {
+                        const auto offered = std::ranges::find_if(stall.extras, [&](const save::StallExtra& e) { return strings::equals_ignoring_case(e.kind_symbol, kind->extras[i]); });
+                        const std::int32_t level = offered == stall.extras.end() ? save::StallExtra::kNone : offered->level;
+                        if (level <= save::StallExtra::kNone || std::cmp_greater_equal(level, kTuning.eating.extra_amounts.size()) || (level != save::StallExtra::kGuestChoice && (item.extras >> i & 1) == 0))
+                            continue;
+                        ++ware.topped;
+                        if (const park::CarriedKind* extra = kind_of(kinds.extras, kind->extras[i]))
+                            for (std::size_t e = 0; e < ware.topping.size(); ++e)
+                                ware.topping[e] += extra->effects[e] * kTuning.eating.extra_amounts[static_cast<std::size_t>(level)];
+                    }
+                }
                 if (!sale)
                     sale = Sale { { *product, serve_named(name) }, item.price };
             }
@@ -637,12 +657,12 @@ namespace rct3::simulation
         r.destroy(gone.begin(), gone.end());
     }
 
-    std::size_t import_stalls(SimWorld& world, const save::RideModel& rides)
+    std::size_t import_stalls(SimWorld& world, const save::RideModel& rides, const park::CarriedKinds& kinds)
     {
         std::size_t added = 0;
         for (const save::Stall& stall : rides.stalls)
         {
-            const auto sale = sale_of(stall);
+            const auto sale = sale_of(stall, kinds);
             if (!sale || !stall.base.spot)
                 continue;
             const NodeId entrance = beside(world.paths, *stall.base.spot, stall.base.facing, false);
@@ -660,9 +680,9 @@ namespace rct3::simulation
         return added;
     }
 
-    void restock(SimWorld& world, const save::Stall& stall)
+    void restock(SimWorld& world, const save::Stall& stall, const park::CarriedKinds& kinds)
     {
-        const auto sale = sale_of(stall);
+        const auto sale = sale_of(stall, kinds);
         for (const auto [e, a] : world.registry.view<Attraction>().each())
             if (a.saved == stall.base.id && sale)
             {

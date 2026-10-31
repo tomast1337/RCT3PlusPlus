@@ -253,12 +253,14 @@ namespace rct3::simulation
         RainKeepsMeOff = 32,
         Vandalism = 14,
         Vomit = 15,
-        NotHungry = 10,      ///< Along at a food stall without wanting anything
-        NotThirsty = 11,     ///< Along at a drink stall without wanting anything
-        AlreadyGot = 22,     ///< Along at an umbrella stall with one already
-        HaventFinished = 23, ///< At a stall while still eating or drinking
-        GoodValue = 26,      ///< Bought something well under what it is worth to them
-        NotPaying = 27,      ///< Put off by a price over what it is worth to them
+        NotHungry = 10,        ///< Along at a food stall without wanting anything
+        NotThirsty = 11,       ///< Along at a drink stall without wanting anything
+        AlreadyGot = 22,       ///< Along at an umbrella stall with one already
+        HaventFinished = 23,   ///< At a stall while still eating or drinking
+        GoodValue = 26,        ///< Bought something well under what it is worth to them
+        StingyToppings = 59,   ///< Bought something that came without any of the extras it takes
+        MassesOfToppings = 60, ///< Bought something that came with every extra it takes
+        NotPaying = 27,        ///< Put off by a price over what it is worth to them
         Sick = 20,
         VerySick = 21,
         Broke = 24,
@@ -448,7 +450,11 @@ namespace rct3::simulation
         Product product = Product::Drink;
         Serve serve = Serve::Any;
         Money price { };
-        std::string symbol { }; ///< Of the item a guest carries away, as `Burger:cid`; empty when not known
+        std::string symbol { };  ///< Of the item a guest carries away, as `Burger:cid`; empty when not known
+        std::uint8_t extras = 0; ///< How many extras (toppings, sauces, ice) its item can take
+        std::uint8_t topped = 0; ///< How many of those go on it
+        /// What those add to how much it feeds, quenches and sickens, each by how much of it goes on.
+        std::array<float, 3> topping { };
     };
 
     struct Shop

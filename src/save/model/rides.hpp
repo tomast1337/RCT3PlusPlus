@@ -499,6 +499,9 @@ namespace rct3::save
         ObjectId id = 0;
         ObjectId extra_asset = 0;    ///< Extra-kind asset entry
         std::string kind_symbol { }; ///< That entry's symbol, as `Ketchup:ced`; empty when unresolved
+        static constexpr std::int32_t kNone = 0;
+        static constexpr std::int32_t kSome = 2;        ///< What a new stall starts at
+        static constexpr std::int32_t kGuestChoice = 5; ///< On every item that takes it, as much as the guest wants
         /// How much of it goes on: 0 none, then a little, some, lots, loads, and 5 as the guest picks.
         std::int32_t level = 0;
     };

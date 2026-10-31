@@ -95,6 +95,32 @@ TEST_CASE("a stall's food and drink is cold or hot by its name, and plain otherw
     CHECK(served == std::vector { simulation::Serve::Any, simulation::Serve::Cold, simulation::Serve::Cold, simulation::Serve::Hot });
 }
 
+TEST_CASE("a stall's ware takes the extras ticked on it or left to the guest, as much as the stall puts on")
+{
+    simulation::SimWorld world;
+    world.paths.add({ 0, 0, 0 });
+    const park::CarriedKinds kinds {
+        .items = { { .symbol = "Burger:cid", .extras = { "Ketchup:ced", "Cheese:ced", "Onion:ced" } } },
+        .extras = { { .symbol = "Ketchup:ced", .effects = { 0.1f, 0, 0 } }, { .symbol = "Cheese:ced", .effects = { 0.2f, -0.1f, 0 } }, { .symbol = "Onion:ced", .effects = { 0.4f, 0, 0 } } },
+    };
+    save::RideModel rides;
+    save::Stall& s = rides.stalls.emplace_back();
+    s.base.spot = save::PlacementSpot { .col = 0, .row = 1 };
+    s.items.push_back({ .kind_symbol = "Burger:cid", .price = 200, .name = "%ME%", .extras = 0b011 }); // Ketchup and cheese ticked
+    s.extras = { { .kind_symbol = "ketchup:ced", .level = save::StallExtra::kNone }, { .kind_symbol = "Cheese:ced", .level = 4 }, { .kind_symbol = "Onion:ced", .level = save::StallExtra::kGuestChoice } };
+    REQUIRE(simulation::import_stalls(world, rides, kinds) == 1);
+    const auto& menu = world.registry.get<simulation::Shop>(world.registry.view<simulation::Shop>().front()).menu;
+    REQUIRE(menu.size() == 1);
+    const simulation::Ware& w = menu.front();
+    const auto& amount = simulation::kTuning.eating.extra_amounts;
+    CHECK(w.extras == 3);
+    CHECK(w.topped == 2); // Ketchup ticked but not offered; onion as the guest likes though not ticked
+    CHECK(w.topping[0] == doctest::Approx(0.2f * amount[4] + 0.4f * amount[5]));
+    CHECK(w.topping[1] == doctest::Approx(-0.1f * amount[4]));
+    simulation::restock(world, s, { });
+    CHECK(world.registry.get<simulation::Shop>(world.registry.view<simulation::Shop>().front()).menu.front().extras == 0); // Kinds unknown: no extras
+}
+
 TEST_CASE("a ride comes over with its queue line, from the entrance back to the paths, and its exit")
 {
     simulation::SimWorld world;

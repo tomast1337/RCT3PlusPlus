@@ -289,6 +289,11 @@ interface RideInfo {
     /** Ridden by the park on a track: the trains it runs, and how many are under way now. */
     running?: number;
     moving?: number;
+    /** Ridden by the park on a track: each train's front along the track (metres), its length, and the station it
+     * stands at (0 the first, k the k-th stop after it), null while under way. */
+    trainsAt?: { front: number; length: number; station: number | null }[];
+    /** Ridden by the park on a track: the length of its track, metres. */
+    trackLength?: number;
     /** Rides with a track: each piece's name, in track order. */
     track?: string[];
     /** Rides with a track: the platform pieces of its stations, in track order. */

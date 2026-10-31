@@ -95,6 +95,13 @@ namespace rct3::park
     /// or block brake; at least one.
     [[nodiscard]] int trains_fitting(const TrackCourse& course, std::span<const CarFit> fits, bool blocks, std::optional<std::uint32_t> cap);
 
+    /// Where the fronts of `count` trains `length` long stand on closed `course`, the first at `start` (a station's
+    /// end): one at each station's end in turn on round the track, then more queued kTrainGap behind those, a station
+    /// at a time; then likewise at the ends of its other blocks (lift tops, block brakes). Kept a block apart
+    /// (`blocks`), each block takes one. Trains with no room behind a block's end before the next block back are left
+    /// out, so there may be fewer than `count`; never none.
+    [[nodiscard]] std::vector<float> train_fronts(const TrackCourse& course, float start, float length, int count, bool blocks);
+
     /// The most cars, `fewest` or more, a train may have and still stand along each station of `course`, where
     /// `lengths` holds by count the length of a train of one car, of two, and so on up to the most it may have:
     /// 0 when even `fewest` do not fit, the most when the course has no station.

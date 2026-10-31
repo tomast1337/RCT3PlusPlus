@@ -7,6 +7,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <limits>
 #include <unordered_map>
+#include <utility>
 
 namespace rct3::park
 {
@@ -23,6 +24,30 @@ namespace rct3::park
             const auto after = std::ranges::upper_bound(course.distance, distance);
             const auto i = static_cast<std::size_t>(std::max<std::ptrdiff_t>(after - course.distance.begin() - 1, 0));
             return { std::min(i, course.points.size() - 1), distance };
+        }
+
+        struct BlockEnd
+        {
+            float at = 0;         ///< Along the course
+            bool station = false; ///< A station's run ends it
+        };
+
+        /// Where `course`'s blocks end: each run of station, lift or block brake (not plain brakes or launches)
+        /// where it gives way to other track.
+        std::vector<BlockEnd> block_ends(const TrackCourse& course)
+        {
+            std::vector<BlockEnd> ends;
+            if (course.kinds.size() < 2)
+                return ends;
+            const auto ends_block = [](CourseKind k) { return k != CourseKind::Plain && k != CourseKind::Launch && k != CourseKind::Brake; };
+            const std::size_t last = course.kinds.size() - 1; // The last kind is past the track's end
+            for (std::size_t i = 0; i < last; ++i)
+            {
+                const CourseKind next = i + 1 < last ? course.kinds[i + 1] : course.kinds.front();
+                if (ends_block(course.kinds[i]) && next != course.kinds[i])
+                    ends.push_back({ .at = course.distance[i + 1], .station = course.kinds[i] == CourseKind::Station });
+            }
+            return ends;
         }
     } // namespace
 
@@ -235,18 +260,52 @@ namespace rct3::park
         if (cap)
             most = std::min(most, static_cast<int>(*cap));
         if (blocks && course.kinds.size() > 1)
-        {
-            const auto ends_block = [](CourseKind k) { return k != CourseKind::Plain && k != CourseKind::Launch && k != CourseKind::Brake; };
-            const std::size_t last = course.kinds.size() - 1; // The last kind is past the track's end
-            int count = 0;
-            for (std::size_t i = 0; i < last; ++i)
-            {
-                const CourseKind next = i + 1 < last ? course.kinds[i + 1] : course.kinds.front();
-                count += ends_block(course.kinds[i]) && next != course.kinds[i] ? 1 : 0;
-            }
-            most = std::min(most, count - 1);
-        }
+            most = std::min(most, static_cast<int>(block_ends(course).size()) - 1);
         return std::max(most, 1);
+    }
+
+    std::vector<float> train_fronts(const TrackCourse& course, float start, float length, int count, bool blocks)
+    {
+        const float whole = course.length();
+        if (count < 1)
+            return { };
+        if (whole <= 0)
+            return { start };
+        // Each block end by how far on from `start` it is; the start is a station's end, whether found or not.
+        struct Spot
+        {
+            float ahead = 0;
+            bool station = false;
+            float room = 0; ///< Track behind it, back to the block end before
+            float used = 0; ///< Of that, taken by trains queued there
+        };
+        constexpr float kSame = 0.01f; // Metres apart that count as one place
+        std::vector<Spot> spots { { .ahead = 0, .station = true } };
+        for (const BlockEnd& end : block_ends(course))
+            if (const float ahead = std::fmod(std::fmod(end.at - start, whole) + whole, whole); ahead > kSame && ahead < whole - kSame)
+                spots.push_back({ .ahead = ahead, .station = end.station });
+        std::ranges::sort(spots, { }, &Spot::ahead);
+        for (std::size_t i = 0; i < spots.size(); ++i)
+            spots[i].room = i == 0 ? whole - spots.back().ahead : spots[i].ahead - spots[i - 1].ahead;
+        // Stations first, a train at each in turn going on round the track, then queued behind those there; then the
+        // other block ends the same way. Kept a block apart, a block takes one. A train with room nowhere is left out.
+        std::vector<float> fronts;
+        for (const bool stations : { true, false })
+            for (bool placed = true; placed && std::cmp_less(fronts.size(), count);)
+            {
+                placed = false;
+                for (Spot& spot : spots)
+                {
+                    if (spot.station != stations || std::cmp_greater_equal(fronts.size(), count) || (blocks && spot.used > 0) || spot.used + length + kTrainGap > spot.room)
+                        continue;
+                    fronts.push_back(std::fmod(start + spot.ahead - spot.used + whole, whole));
+                    spot.used += length + kTrainGap;
+                    placed = true;
+                }
+            }
+        if (fronts.empty())
+            fronts.push_back(start);
+        return fronts;
     }
 
     int cars_fitting(const TrackCourse& course, std::span<const float> lengths, int fewest)

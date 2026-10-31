@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <doctest/doctest.h>
+#include <vector>
 
 using namespace rct3;
 
@@ -154,6 +155,33 @@ TEST_CASE("as many trains run as fill half the course with gaps between them, wi
     CHECK(park::trains_fitting(c, fits, true, std::nullopt) == 1);
     c.kinds = { park::CourseKind::Station, park::CourseKind::Chain, park::CourseKind::BlockBrake, park::CourseKind::Plain };
     CHECK(park::trains_fitting(c, fits, true, std::nullopt) == 2);
+}
+
+TEST_CASE("several trains stand at the stations first, then queued behind them or a block apart")
+{
+    // A closed 100 m course: a station ending at 10, a lift ending at 40, a second station ending at 60.
+    park::TrackCourse c;
+    for (int i = 0; i <= 10; ++i)
+    {
+        c.points.push_back({ static_cast<float>(i) * 10, 0, 0 });
+        c.distance.push_back(static_cast<float>(i) * 10);
+        c.kinds.push_back(park::CourseKind::Plain);
+    }
+    c.closed = true;
+    c.kinds[0] = park::CourseKind::Station;
+    c.kinds[3] = park::CourseKind::Chain;
+    c.kinds[5] = park::CourseKind::Station;
+    // One at each station from the first; then queued 8 + 2 behind each in turn.
+    CHECK(park::train_fronts(c, 10, 8, 2, false) == std::vector<float> { 10, 60 });
+    CHECK(park::train_fronts(c, 10, 8, 4, false) == std::vector<float> { 10, 60, 0, 50 });
+    // Behind the second station only 20 m to the lift top: room for two. Behind the first, 50 to the second: five.
+    // The lift top then takes what is left, back to the first station's end.
+    CHECK(park::train_fronts(c, 10, 8, 9, false).size() == 9);
+    CHECK(park::train_fronts(c, 10, 8, 20, false).size() == 2 + 5 + 3);
+    // A block apart, one at each block end: the stations, then the lift top.
+    CHECK(park::train_fronts(c, 10, 8, 5, true) == std::vector<float> { 10, 60, 40 });
+    // Starting from the second station puts the first train there.
+    CHECK(park::train_fronts(c, 60, 8, 2, false) == std::vector<float> { 60, 10 });
 }
 
 TEST_CASE("a train has as many cars as fit along its shortest station, within what its kind allows")

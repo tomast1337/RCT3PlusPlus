@@ -835,6 +835,7 @@ namespace rct3::simulation
             train.at = length > 0 ? std::fmod(std::fmod(saved.distance, length) + length, length) : 0;
             train.travelled = length > 0 ? std::fmod(train.at - train.start + length, length) : 0;
             constexpr float kAtStart = 0.5f; // Metres off the start that still count as standing at it
+            constexpr float kStill = 0.1f;   // Metres a second that still count as standing
             if (train.travelled < kAtStart || train.travelled > length - kAtStart)
             {
                 train.at = train.start;
@@ -842,6 +843,14 @@ namespace rct3::simulation
             }
             train.running = train.travelled > 0;
             train.next_stop = static_cast<std::size_t>(std::ranges::count_if(train.stops, [&](float stop) { return stop < train.travelled; }));
+            // One still at another of its stations stands there, as one that has stopped at it does.
+            if (const auto stop = std::ranges::find_if(train.stops, [&](float s) { return std::abs(s - train.travelled) < kAtStart; }); stop != train.stops.end() && std::abs(saved.speed) < kStill)
+            {
+                train.travelled = *stop;
+                train.at = std::fmod(train.start + *stop, length);
+                train.next_stop = static_cast<std::size_t>(stop - train.stops.begin()) + 1;
+                train.running = false;
+            }
             train.launched = train.travelled >= train.train_length;
             train.speed = train.running ? saved.speed : 0;
             out.trains.push_back(train);

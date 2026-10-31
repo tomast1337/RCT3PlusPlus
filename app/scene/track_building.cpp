@@ -1552,14 +1552,16 @@ namespace rct3::scene
         const auto& course = index < scene.courses.size() ? scene.courses[index] : std::nullopt;
         const auto fits = scene.car_fits.find(index);
         const auto coaster = course ? simulation::coaster_of(*course, ride) : std::nullopt;
-        if (!coaster || fits == scene.car_fits.end())
+        if (!coaster || fits == scene.car_fits.end() || ride.trains.empty())
             return;
-        float front = coaster->start;
-        for (save::Train& train : ride.trains)
-        {
-            park::stand_train(*course, train, fits->second, std::fmod(front + course->length(), course->length()));
-            front -= train.length + park::kTrainGap;
-        }
+        // Spread over its stations; those with no room are left out, as the game does.
+        const std::vector<float> fronts = park::train_fronts(*course, coaster->start, ride.trains.front().length, static_cast<int>(ride.trains.size()), ride.options.block_sectioned);
+        const auto kept = static_cast<std::int32_t>(fronts.size());
+        ride.trains.resize(fronts.size());
+        std::erase_if(ride.seats, [&](const auto& seat) { return seat.train >= kept; });
+        ride.train_count = kept;
+        for (std::size_t t = 0; t < fronts.size(); ++t)
+            park::stand_train(*course, ride.trains[t], fits->second, fronts[t]);
     }
 
     bool set_trains(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars)

@@ -425,6 +425,15 @@ namespace rct3::scene
 
     } // namespace
 
+    std::string_view slide_motion(float heading, glm::vec2 drift, bool staff)
+    {
+        if (staff)
+            return "dangleangry"; // Staff meshes have no sliding motions
+        const float ahead = glm::length(drift) > 0 ? glm::dot(glm::vec2 { std::sin(heading), std::cos(heading) }, glm::normalize(drift)) : 0.0f;
+        constexpr float kFacing = 0.5f; ///< Chosen by eye: how squarely they face down or up the slope to slide on their front or back
+        return ahead > kFacing ? "frontslide" : ahead < -kFacing ? "backslide" : "sitslide";
+    }
+
     std::optional<park::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate)
     {
         const ShownPerson& shown = scene.shown_people[i];
@@ -475,6 +484,12 @@ namespace rct3::scene
             if (const auto* held = r.try_get<simulation::Held>(shown.guest); held != nullptr || r.all_of<simulation::Dropped>(shown.guest))
             {
                 const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
+                if (const auto* drop = held == nullptr ? &r.get<simulation::Dropped>(shown.guest) : nullptr; drop != nullptr && drop->sliding)
+                {
+                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+                    pose.motion = park::motion_number(slide_motion(at.heading.value, drop->drift, shown.staff)).value_or(park::motion::kIdle);
+                    return pose;
+                }
                 const bool falling = held == nullptr && now.position.y > r.get<simulation::Dropped>(shown.guest).ground;
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), held != nullptr ? now.position : at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
                 pose.motion = held != nullptr ? (held->happy ? kDangleHappyMotion : kDangleCrossMotion) : falling ? kDangleCrossMotion : park::motion::kWalk;

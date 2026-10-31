@@ -791,7 +791,9 @@ namespace rct3::scene
                     person["row"] = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
                     person["up"] = at.y;
                     person["state"] = r.all_of<simulation::Held>(p.guest)  ? "held"
-                        : r.all_of<simulation::Dropped>(p.guest)           ? (r.get<simulation::Dropped>(p.guest).thrown ? "thrown" : "dropped")
+                        : r.all_of<simulation::Dropped>(p.guest)           ? (r.get<simulation::Dropped>(p.guest).sliding      ? "sliding"
+                                                                                  : r.get<simulation::Dropped>(p.guest).thrown ? "thrown"
+                                                                                                                               : "dropped")
                         : errand == nullptr                                ? "still"
                         : errand->kind == simulation::ErrandKind::Riding   ? "riding"
                         : errand->kind == simulation::ErrandKind::Queueing ? "queueing"
@@ -817,6 +819,9 @@ namespace rct3::scene
                     constexpr std::array<std::string_view, 8> kGestures { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdown", "handticket" };
                     if (const auto* gesture = r.try_get<simulation::Gesture>(p.guest))
                         person["gesture"] = kGestures[std::to_underlying(gesture->kind)];
+                    // Sliding down a slope, the motion they slide in.
+                    if (const auto* drop = r.try_get<simulation::Dropped>(p.guest); drop != nullptr && drop->sliding)
+                        person["slide"] = slide_motion(r.get<simulation::Pose>(p.guest).heading.value, drop->drift, p.staff);
                 }
                 out.push_back(std::move(person));
             }

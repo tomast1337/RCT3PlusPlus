@@ -944,6 +944,8 @@ namespace rct3::scene
                 (void)simulation::add_path(scene.sim, p, scene.grid);
             (void)simulation::relink_attractions(scene.sim, scene.rides);
             simulation::import_pools(scene.sim, scene.pools);
+            // Boats keep out from under the paths laid low over their water.
+            simulation::boat_water(scene.sim, scene.grid, scene.footpaths.water.bodies, boat_obstacles(scene));
         }
 
         /// Lays the paths of the stroke just ended.

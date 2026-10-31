@@ -27,6 +27,19 @@ namespace rct3::park
         return category != std::to_underlying(ItemCategory::Fence) && !in(ItemCategory::EnclosureFence, ItemCategory::EnclosureView) && !in(ItemCategory::SupportColumn, ItemCategory::SupportCap) && !in(ItemCategory::PathPiece, ItemCategory::GuestSpawn) && !in(ItemCategory::LitterBin, ItemCategory::PathFeature);
     }
 
+    void add_path_decks(SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    {
+        for (const save::PathTile& path : paths)
+        {
+            std::optional<float> deck;
+            for (std::uint8_t side = 0; side < 4; ++side)
+                if (const auto at = edge_height(path, grid, side); at && (!deck || *at < *deck))
+                    deck = at;
+            if (deck)
+                solids.tiles[static_cast<std::uint32_t>(path.row) << 16 | path.col].push_back({ .low = *deck, .high = *deck });
+        }
+    }
+
     SolidTiles solid_tiles(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
     {
         SolidTiles out;

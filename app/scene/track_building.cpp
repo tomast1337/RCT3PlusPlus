@@ -1578,7 +1578,9 @@ namespace rct3::scene
 
     park::SolidTiles boat_obstacles(const ParkScene& scene)
     {
-        return park::solid_tiles(scene.objects, scene.models, scene.grid);
+        park::SolidTiles solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
+        park::add_path_decks(solids, scene.footpaths.paths, scene.grid);
+        return solids;
     }
 
     void ready_boats(ParkScene& scene, std::size_t index)

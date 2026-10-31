@@ -200,7 +200,8 @@ namespace rct3::scene
     /// on the park's water as it is now and handling as its boats' kind does.
     void ready_boats(ParkScene& scene, std::size_t index);
 
-    /// What boats cannot sail through or under: what stands in the park's water or hangs low over it.
+    /// What boats cannot sail through or under: what stands in the park's water or hangs low over it, paths' decks
+    /// among them.
     [[nodiscard]] park::SolidTiles boat_obstacles(const ParkScene& scene);
 
     /// Gives the tracked ride `index` new trains as fit_trains does (its kind's first when it has none), stood at

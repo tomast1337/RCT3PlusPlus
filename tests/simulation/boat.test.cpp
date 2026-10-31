@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/boat.hpp"
 
+#include "park/path_clearance.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
@@ -50,6 +51,23 @@ TEST_CASE("a rock in the water or a low bridge over it closes its tile to boats,
     CHECK(water.at(2, 0));
     CHECK(water.at(3, 0));
     CHECK(water.at(4, 0));
+}
+
+TEST_CASE("a path bridge low over the water closes its tiles to boats, a high one leaves them open")
+{
+    save::TerrainGrid grid { .width = 3, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
+    grid.cells.resize(3);
+    save::WaterBody body { .level = 2 };
+    for (std::uint8_t col = 0; col < 3; ++col)
+        body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
+    const auto bridge = [](std::uint8_t col, std::int32_t height) { return save::PathTile { .kind = save::PathKind::Flying, .col = col, .row = 0, .elevation = save::PathElevation { .quantised_height = height } }; };
+    const std::array paths { bridge(0, 2), bridge(1, 6) };
+    park::SolidTiles solids;
+    park::add_path_decks(solids, paths, grid);
+    const auto water = simulation::water_tiles(grid, std::span { &body, 1 }, solids);
+    CHECK_FALSE(water.at(0, 0)); // Its deck on the water
+    CHECK(water.at(1, 0));       // Four metres over it
+    CHECK(water.at(2, 0));
 }
 
 TEST_CASE("a boat's way goes round land, never cutting a corner past it")

@@ -70,6 +70,10 @@ namespace rct3::park
     /// The solid squares of `objects` that are shown and block paths, by the tile under each.
     [[nodiscard]] SolidTiles solid_tiles(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
 
+    /// Adds to `solids` the deck of each of `paths`, as thin as a sheet at its tile's lowest edge, for what passes
+    /// under paths rather than along them, as boats do.
+    void add_path_decks(SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+
     /// Whether something in `solids` fills `spot` between `low` and `high` and the headroom over it. What
     /// stands only along the tile's edges never does.
     [[nodiscard]] bool blocked(const SolidTiles& solids, save::Tile spot, float low, float high);

@@ -90,20 +90,55 @@ const cars = () => rides.list()[ride].cars!;
 const docked = cars();
 log("boats", docked.length, "trains", rides.list()[ride].trains, JSON.stringify(docked));
 
+// A path from the west shore out over the lake south of the dock, laid at the shore's height after the boats are out.
+// Boats keep off its tiles when it is less than a metre over the water, and may pass under it when higher.
+const lane = middle!.row + 3;
+let shore = middle!.col;
+while (shore > middle!.col - 20 && water(shore, lane) !== undefined)
+    --shore;
+const laid = map.paths().length;
+if (water(shore, lane) === undefined && water(shore - 1, lane) === undefined) {
+    await ui.click("tools/Paths/Obj_Paths");
+    await until(() => ui.find("footpaths/route") !== undefined, 120, "the path panel");
+    await ui.toggle("footpaths/follow", false);
+    await ui.toggle("footpaths/route", false);
+    camera.look({ col: shore + 0.5, row: lane + 0.5 }, { col: shore + 0.5, row: lane + 10.5, up: 25 });
+    await frames(5);
+    const from = map.screen(shore - 1, lane)!;
+    const to = map.screen(shore, lane)!;
+    await pointer.drag([from.x, from.y], [to.x, to.y], 10);
+    for (let n = 0; n < middle!.col + 3 - shore; ++n)
+        await ui.click("footpaths/body/Path_Straight");
+    await ui.click("footpaths/close");
+    await frames(5);
+}
+log("bridge", JSON.stringify(map.paths().slice(laid)));
+const bridge = map.paths().slice(laid).filter((p) => p.raised && water(p.col, p.row) !== undefined);
+expect(bridge.length > 0, "a path laid out over the lake");
+
 await ui.click("bar/Top_FastForward");
 await until(() => cars().some((c, b) => Math.hypot(c.col - docked[b].col, c.row - docked[b].row) > 2), 60 * 120, "a boat out on the water");
 await ui.click("bar/Top_Play");
+// Paths over the water a boat cannot pass under: their decks less than a metre over its surface.
+const low_paths = new Set(map.paths().filter((p) => {
+    const level = water(p.col, p.row);
+    return level !== undefined && p.raised && (p.height ?? 0) < level + 1;
+}).map((p) => `${p.col},${p.row}`));
+log("paths low over the water", low_paths.size, "bridge clear of the water by", (bridge[0].height ?? 0) - water(bridge[0].col, bridge[0].row)!);
 let off_water = 0;
+let under_paths = 0;
 let seen = 0;
 for (let n = 0; n < 60 * 10; ++n) {
     await frames(1);
     for (const c of cars()) {
         ++seen;
         off_water += water(Math.floor(c.col), Math.floor(c.row)) !== undefined ? 0 : 1;
+        under_paths += low_paths.has(`${Math.floor(c.col)},${Math.floor(c.row)}`) ? 1 : 0;
     }
 }
-log("boat frames", seen, "off water", off_water);
+log("boat frames", seen, "off water", off_water, "under low paths", under_paths);
 expect(off_water < seen / 50, `boats keeping to the water, ${off_water} of ${seen} off it`);
+expect(under_paths === 0, `boats keeping out from under low paths, ${under_paths} frames under one`);
 const out = cars().find((c, b) => Math.hypot(c.col - docked[b].col, c.row - docked[b].row) > 2) ?? cars()[0];
 camera.look({ col: out.col, row: out.row }, { col: out.col + 1, row: out.row + 3, up: 12 });
 await frames(30);

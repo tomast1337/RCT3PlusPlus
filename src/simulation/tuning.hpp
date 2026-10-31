@@ -57,6 +57,7 @@ namespace rct3::simulation::tuning
         float turn_rate = 6.0f;           ///< Chosen by eye: fastest a walker turns to face where they go, radians a second
         float swerve = 0.5f;              ///< Chosen by eye: most a walker steps aside from others for each unit walked on
         Seconds retry_way { 5 };          ///< Chosen by eye: how long one who found no way back to their party waits before looking again
+        Seconds lost_wait { 20 };         ///< Chosen by eye: how long one cut off from their party stands lost before being put with them
         std::size_t gather_reach = 24;    ///< Tiles looked at for one a party can wait on of its own
         Distance personal_space { 0.6f }; ///< People walking nearer one another than this step apart
         Pace step_aside { 1.5f };         ///< Fastest anyone steps apart from others

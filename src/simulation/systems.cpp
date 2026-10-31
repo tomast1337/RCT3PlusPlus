@@ -443,7 +443,7 @@ namespace rct3::simulation
             const double chance = fed_up + (night && age_of(r, guest) != AgeGroup::Teen ? kTuning.leaving.night.value : 0) + (storm ? kTuning.leaving.storm.value : 0);
             if (vip == nullptr && (chance == 0 || !random::chance(dice.state, chance * kTuning.needs.idle.value)))
                 return std::nullopt;
-            if (const auto* member = r.try_get<Member>(guest); member != nullptr && std::ranges::any_of(r.get<Party>(member->party).members, [&](entt::entity m) { return m != guest && r.get<Errand>(m).kind != ErrandKind::Following; }))
+            if (const auto* member = r.try_get<Member>(guest); member != nullptr && (!r.get<Party>(member->party).away.empty() || std::ranges::any_of(r.get<Party>(member->party).members, [&](entt::entity m) { return m != guest && r.get<Errand>(m).kind != ErrandKind::Following; })))
                 return std::nullopt;
             for (const auto [gate, at_gate] : r.view<const ParkGate>().each())
                 if (auto walk = paths.route(at, at_gate.node, Walker::Guest, r.get<Wallet>(guest).cash.value))
@@ -1454,37 +1454,29 @@ namespace rct3::simulation
 
     namespace
     {
-        /// Takes `person` out of what they were doing on foot: out of the queue they stood in, out of their party,
-        /// and, a mechanic, off the job in hand.
+        /// Takes `person` out of what they were doing on foot: out of the queue they stood in, away from their party
+        /// till they land (rejoin), and, a mechanic, off the job in hand.
         void step_out(entt::registry& r, entt::entity person)
         {
             const Errand& errand = r.get<Errand>(person);
             if (errand.kind == ErrandKind::Queueing && r.valid(errand.target))
                 if (auto* ride = r.try_get<CycleRide>(errand.target))
                     std::erase(ride->queue, person);
-            // Out of their party: the next member leads, and one left on their own goes about alone.
+            // The next member leads meanwhile; the others wait for them (5.).
             if (const auto* member = r.try_get<Member>(person); member != nullptr && r.valid(member->party))
             {
-                const entt::entity e = member->party;
-                Party& party = r.get<Party>(e);
+                Party& party = r.get<Party>(member->party);
                 std::erase(party.members, person);
-                if (party.leader == person && !party.members.empty())
+                party.away.push_back(person);
+                if (party.leader == person)
                 {
-                    party.leader = party.members.front();
-                    if (Errand& next = r.get<Errand>(party.leader); next.kind == ErrandKind::Following)
-                        next = { ErrandKind::Wandering, entt::null, 0 };
-                }
-                if (party.members.size() < 2)
-                {
-                    for (const entt::entity m : party.members)
-                    {
-                        r.remove<Member>(m);
-                        if (Errand& alone = r.get<Errand>(m); alone.kind == ErrandKind::Following || alone.kind == ErrandKind::Waiting || alone.kind == ErrandKind::Buying)
-                            alone = { ErrandKind::Wandering, entt::null, 0 };
-                    }
-                    r.destroy(e);
+                    party.leader = party.members.empty() ? entt::null : party.members.front();
+                    if (party.leader != entt::null)
+                        if (Errand& next = r.get<Errand>(party.leader); next.kind == ErrandKind::Following)
+                            next = { ErrandKind::Wandering, entt::null, 0 };
                 }
             }
+            r.remove<Lost>(person);
             r.remove<Member>(person);
             // A mechanic drops the job in hand, and another is sent.
             if (auto* staff = r.try_get<Staff>(person))
@@ -2720,6 +2712,19 @@ namespace rct3::simulation
             r.remove<Dropped>(e);
             start_walking(world, e, node);
             r.get<Dice>(e) = dice;
+            // Back with their party, if it is still in the park: they walk over to where it waits (5.), or lead it.
+            for (const auto [p, party] : r.view<Party>().each())
+            {
+                if (std::erase(party.away, e) == 0)
+                    continue;
+                party.members.push_back(e);
+                r.emplace<Member>(e, p);
+                if (party.leader == entt::null)
+                    party.leader = e;
+                else
+                    r.get<Errand>(e) = { .kind = ErrandKind::Waiting };
+                break;
+            }
         }
 
         phase.emplace("Rides");
@@ -3288,6 +3293,9 @@ namespace rct3::simulation
         for (const entt::entity e : sorted(r.view<Party>()))
         {
             Party& party = r.get<Party>(e);
+            std::erase_if(party.away, [&](entt::entity m) { return !r.valid(m) || !r.any_of<Held, Dropped>(m); }); // Gone some other way
+            if (party.members.empty())
+                continue;
             entt::entity busy_at = entt::null; // The ride, stall or bench sitter keeping them
             NodeId near = kNoNode;             // And the tile the rest wait by
             std::uint8_t off_at = 0;           // The station those on a ride get off at
@@ -3315,6 +3323,13 @@ namespace rct3::simulation
                 }
                 waiting = waiting || errand.kind == ErrandKind::Waiting;
             }
+            // One held up or fallen away from them: they wait near the leader till that one lands and comes over.
+            if (!party.away.empty() && party.leader != entt::null && busy_at == entt::null)
+            {
+                busy_at = party.away.front();
+                const auto& lead = r.get<Stride>(party.leader);
+                near = lead.progress.value < 0.5f ? lead.from : lead.to;
+            }
             if (near != kNoNode && party.gather >= taken.size())
             {
                 // Where each one comes from: the way out for those still busy, else the tile they are on.
@@ -3335,25 +3350,53 @@ namespace rct3::simulation
                 const NodeId spot = party.gather;
                 bool back = busy_at == entt::null; // All standing with the others, or where they cannot leave
                 bool cut_off = false;              // One off the queues finds no way to the spot: look for another
+                NodeId come_to = kNoNode;          // Or the tile of one the others can walk to, though not back
                 for (const entt::entity m : party.members)
                 {
                     auto& errand = r.get<Errand>(m);
                     auto& stride = r.get<Stride>(m);
                     if (r.all_of<Linger>(m))
                         continue; // Sitting it out
+                    // Lost long enough, they are put with the others: the one place this happens.
+                    // shortcut: put there in plain view; look for a moment the camera is elsewhere if it shows.
+                    if (auto* lost = r.try_get<Lost>(m); lost != nullptr && (lost->left == 0 || --lost->left == 0))
+                    {
+                        r.remove<Lost>(m);
+                        stride.route.clear();
+                        stride.from = spot;
+                        stride.to = spot;
+                        stride.progress.value = 1;
+                        stride.lane_from = stride.lane_to = glm::vec2 { 0.0f };
+                        place(paths, stride, r.get<Pose>(m));
+                        errand = { .kind = ErrandKind::Waiting, .target = busy_at, .off = off_at };
+                    }
                     // Those going to wait, and those done, who walk over to the others.
                     const bool still = errand.kind == ErrandKind::Waiting && stride.route.empty() && (stride.progress.value >= 1 || stride.from == stride.to);
                     // One who found no way over waits a while before looking again (rest counts it down).
                     const bool joins = errand.kind == ErrandKind::Following || (m == party.leader && errand.kind == ErrandKind::Wandering) || (still && stride.to != spot && errand.rest == 0);
                     if (!joins)
                     {
-                        back = back && still;
+                        back = back && still && !r.all_of<Lost>(m);
                         continue;
                     }
                     const NodeId at = stride.progress.value < 0.5f ? stride.from : stride.to;
-                    // No way over (behind a no-entry sign): at least off the queue, to wait beside it.
+                    // No way over (behind a no-entry sign): at least off the queue, to wait beside it. Off it, if the
+                    // others can walk to them they come; else they are lost, and stand looking about for a while.
                     auto way = paths.route(at, spot);
-                    cut_off = cut_off || (!way && !paths.nodes()[at].queue);
+                    const bool over = way || paths.nodes()[at].queue; // On the way, or where they cannot leave: as good as back
+                    if (way)
+                        r.remove<Lost>(m);
+                    else if (!paths.nodes()[at].queue)
+                    {
+                        cut_off = true;
+                        if (paths.route(spot, at))
+                            come_to = at;
+                        else if (!r.all_of<Lost>(m))
+                        {
+                            r.emplace<Lost>(m, ticks(kTuning.walking.lost_wait.value));
+                            think(r, m, ThoughtKind::Lost, entt::null, now);
+                        }
+                    }
                     if (!way)
                         way = paths.way_out(at);
                     stride.route = std::move(way).value_or(std::vector<NodeId> { });
@@ -3361,14 +3404,18 @@ namespace rct3::simulation
                     stride.to = at;
                     stride.progress.value = 1;
                     stride.lane_to = stride.lane_from;
-                    back = back && stride.route.empty();
+                    back = back && stride.route.empty() && over;
                     if (errand.kind != ErrandKind::Waiting)
                         errand = { .kind = ErrandKind::Waiting, .target = busy_at, .off = off_at };
                     if (stride.route.empty() && at != spot)
                         errand.rest = ticks(kTuning.walking.retry_way.value);
                 }
-                if (cut_off)
-                    party.gather = kNoNode; // Chosen again next tick from where they all are now
+                // The others go over to the one they can reach; else, while some are busy, a spot is chosen again
+                // next tick from where they all are now.
+                if (come_to != kNoNode)
+                    party.gather = come_to;
+                else if (cut_off && busy_at != entt::null)
+                    party.gather = kNoNode;
                 if (!back)
                     party.huddle = 0;
                 else if (party.huddle == 0)

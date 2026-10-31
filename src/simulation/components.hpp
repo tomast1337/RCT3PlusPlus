@@ -244,6 +244,7 @@ namespace rct3::simulation
     /// files hold the words for each.
     enum class ThoughtKind : std::int32_t
     {
+        Lost = 1, ///< Cut off from their party
         Tired = 2,
         Litter = 3,
         Hungry = 4,
@@ -312,6 +313,7 @@ namespace rct3::simulation
         std::vector<entt::entity> members { }; ///< The leader among them
         std::uint32_t huddle = 0;              ///< Ticks left standing together in a ring, chatting (once all are back, too)
         NodeId gather = kNoNode;               ///< The tile it waits on for those still busy, none of another party's
+        std::vector<entt::entity> away { };    ///< Members out of it for now (held up, falling, thrown, sliding), back on landing
     };
 
     struct Member
@@ -712,8 +714,15 @@ namespace rct3::simulation
         std::optional<GestureKind> gesture { }; ///< Shown once off, on the paths
     };
 
-    /// A person the player has picked up, hanging under the cursor: out of the simulation's walking, queueing
-    /// and parties till let go. Where they hang is the player's to move (Pose).
+    /// A party member with no way over to the others: they stand looking about for `left` ticks, then are put
+    /// with them.
+    struct Lost
+    {
+        std::uint32_t left = 0;
+    };
+
+    /// A person the player has picked up, hanging under the cursor: out of the simulation's walking and
+    /// queueing till let go, their party waiting for them. Where they hang is the player's to move (Pose).
     struct Held
     {
         Distance height { }; ///< Over the ground under them

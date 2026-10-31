@@ -1206,3 +1206,41 @@ TEST_CASE("a party waits on a tile every member can walk to, not behind a no-ent
         },
         30));
 }
+
+TEST_CASE("one let go where they find no way to their party is lost a while, then put with it; one it can reach it walks to")
+{
+    for (const bool one_way : { false, true })
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 6, 0 }).path({ 3, 1 }, { 3, 2 }).path({ 10, 0 }, { 12, 0 });
+        // A spur whose mouth bars guests coming in from the main path, and a stretch of path joined to nothing.
+        auto& paths = park.world().paths;
+        paths.set_no_entry(*paths.find({ 3, 1, 0 }), 3, true);
+        const auto a = park.guest({ 3, 2 });
+        const auto b = park.guest({ 3, 2 });
+        const auto c = park.guest({ 3, 2 });
+        const auto party = park.party({ a, b, c });
+        auto& r = park.world().registry;
+        REQUIRE(pick_up(park.world(), c));
+        const NodeId drop = *paths.find({ one_way ? 6 : 11, 0, 0 });
+        REQUIRE(let_go(park.world(), c, paths.centre(drop)));
+        const auto together = [&] { return std::ranges::all_of(r.get<Party>(party).members, [&](entt::entity m) { return r.get<Stride>(m).to == r.get<Stride>(a).to; }) && r.get<Party>(party).members.size() == 3; };
+        if (one_way)
+        {
+            // They can walk down to the main path but not back up: the others come to them.
+            CHECK(park.run_until([&] { return together() && r.get<Stride>(a).to == drop; }, 60));
+            CHECK_FALSE(r.all_of<Lost>(c));
+        }
+        else
+        {
+            CHECK(park.run_until([&] { return r.all_of<Lost>(c); }, 30));
+            CHECK(std::ranges::any_of(r.get<Thoughts>(c).recent, [](const Thought& t) { return t.kind == ThoughtKind::Lost; }));
+            park.run_seconds(5);
+            CHECK(r.all_of<Lost>(c)); // Standing lost a while, the others waiting
+            CHECK(r.get<Errand>(a).kind == ErrandKind::Waiting);
+            CHECK(park.run_until([&] { return !r.all_of<Lost>(c) && together(); }, 30));
+        }
+        // Then on together behind the leader.
+        CHECK(park.run_until([&] { return r.get<Errand>(c).kind == ErrandKind::Following; }, 30));
+    }
+}

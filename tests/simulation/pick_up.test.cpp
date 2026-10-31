@@ -53,46 +53,57 @@ TEST_CASE("a rider cannot be picked up, and a guest picked up thinks of it")
     CHECK(r.get<Held>(walker).height.value >= 3);
 }
 
-TEST_CASE("a party member waiting by a ride, picked up, leaves the wait and the party, and the rider goes on alone")
+TEST_CASE("a party member picked up or sliding away stays in the party, which waits for them, and they walk back to it")
 {
-    Sandbox park;
-    park.path({ 0, 0 }, { 6, 0 });
-    const auto ride = park.flat_ride("Spinner", { 6, 0 }, 0, { .capacity = 4, .cycle_seconds = 20, .exit = glm::ivec2 { 3, 0 } });
-    const auto leader = park.guest({ 6, 0 });
-    const auto queasy = park.guest({ 6, 0 }, { .nausea = 0.9f }); // Too sick to ride
-    const auto party = park.party({ leader, queasy });
-    auto& r = park.world().registry;
-    r.get<Errand>(leader) = { ErrandKind::Heading, ride, 0 };
-    park.run(2);
-    REQUIRE(r.get<Errand>(queasy).kind == ErrandKind::Waiting);
-    REQUIRE(pick_up(park.world(), queasy));
-    CHECK_FALSE(r.valid(party));
-    CHECK_FALSE(r.any_of<Member>(leader));
-    CHECK_FALSE(r.any_of<Member, Errand>(queasy));
-    // Off the ride, the leader goes about alone rather than waiting for anyone.
-    CHECK(park.run_until([&] { return r.get<Errand>(leader).kind == ErrandKind::Wandering; }, 60));
-    park.run_seconds(5);
-    CHECK(r.get<Errand>(leader).kind != ErrandKind::Waiting);
+    for (const bool held : { true, false })
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 8, 0 });
+        const auto a = park.guest({ 0, 0 });
+        const auto b = park.guest({ 0, 0 });
+        const auto c = park.guest({ 0, 0 });
+        const auto party = park.party({ a, b, c });
+        auto& r = park.world().registry;
+        park.run(2);
+        REQUIRE(held ? pick_up(park.world(), c) : slide(park.world(), c));
+        CHECK(r.get<Party>(party).members == std::vector<entt::entity> { a, b });
+        CHECK(r.get<Party>(party).away == std::vector<entt::entity> { c });
+        CHECK_FALSE(r.any_of<Member>(c));
+        park.run_seconds(3);
+        CHECK(r.get<Errand>(a).kind == ErrandKind::Waiting);
+        CHECK(r.get<Errand>(b).kind == ErrandKind::Waiting);
+        if (held)
+        {
+            const glm::vec3 ground = park.world().paths.centre(*park.world().paths.nearest({ 30, 0, 1 }));
+            r.get<Pose>(c).position = ground + glm::vec3 { 0, r.get<Held>(c).height.value, 0 };
+            REQUIRE(let_go(park.world(), c, ground));
+        }
+        CHECK(park.run_until([&] { return r.all_of<Member>(c); }, 60));
+        CHECK(r.get<Party>(party).away.empty());
+        // Together on one tile, then on again behind the leader.
+        CHECK(park.run_until([&] { return r.get<Errand>(c).kind == ErrandKind::Following; }, 120));
+        CHECK(r.get<Stride>(c).to == r.get<Stride>(a).to);
+    }
 }
 
-TEST_CASE("a party's leader picked up hands the lead to the next, whom the rest follow")
+TEST_CASE("a party's leader picked up hands the lead to the next, whom the rest wait with, and comes back to follow")
 {
     Sandbox park;
     park.path({ 0, 0 }, { 8, 0 });
     const auto a = park.guest({ 0, 0 });
     const auto b = park.guest({ 0, 0 });
-    const auto c = park.guest({ 0, 0 });
-    const auto party = park.party({ a, b, c });
+    const auto party = park.party({ a, b });
     auto& r = park.world().registry;
     REQUIRE(pick_up(park.world(), a));
     REQUIRE(r.valid(party));
     CHECK(r.get<Party>(party).leader == b);
-    CHECK(r.get<Party>(party).members == std::vector<entt::entity> { b, c });
-    CHECK(r.get<Errand>(b).kind == ErrandKind::Wandering);
-    CHECK(r.get<Errand>(c).kind == ErrandKind::Following);
-    CHECK_FALSE(r.any_of<Member>(a));
-    park.run_seconds(30); // Walking on without them
-    CHECK(r.get<Party>(party).members.size() == 2);
+    CHECK(r.get<Party>(party).members == std::vector<entt::entity> { b });
+    park.run_seconds(30); // Waiting, not going on alone
+    CHECK(r.get<Errand>(b).kind == ErrandKind::Waiting);
+    const glm::vec3 ground = park.world().paths.centre(*park.world().paths.nearest({ 30, 0, 1 }));
+    REQUIRE(let_go(park.world(), a, ground));
+    CHECK(park.run_until([&] { return r.all_of<Member>(a) && r.get<Errand>(a).kind == ErrandKind::Following; }, 120));
+    CHECK(r.get<Party>(party).leader == b);
 }
 
 TEST_CASE("a person let go of falls to the ground and walks on from the nearest path")

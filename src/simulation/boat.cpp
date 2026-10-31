@@ -148,6 +148,11 @@ namespace rct3::simulation
         return { glm::mix(boat.was, boat.at, along), turned(boat.was_heading, turn * along), glm::mix(boat.was_lean, boat.lean, along) };
     }
 
+    Stroke stroke(float turning)
+    {
+        return turning > kRowRound ? Stroke::Left : turning < -kRowRound ? Stroke::Right : Stroke::Both;
+    }
+
     void cast_off(Boat& boat, const Dock& dock, bool roams, std::span<const glm::vec2> calls)
     {
         boat.at = dock.leave;

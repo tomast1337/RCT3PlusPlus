@@ -221,3 +221,12 @@ TEST_CASE("bumper boats run into each other and bounce off")
     CHECK(fleet[1].at.x > 40);
     CHECK(glm::distance(fleet[0].at, fleet[1].at) >= 1.9f);
 }
+
+TEST_CASE("a rowing boat rows with both oars on a straight and with those that turn it in a turn")
+{
+    CHECK(simulation::stroke(0) == simulation::Stroke::Both);
+    CHECK(simulation::stroke(simulation::kRowRound / 2) == simulation::Stroke::Both);
+    CHECK(simulation::stroke(-simulation::kRowRound / 2) == simulation::Stroke::Both);
+    CHECK(simulation::stroke(1) == simulation::Stroke::Left);
+    CHECK(simulation::stroke(-1) == simulation::Stroke::Right);
+}

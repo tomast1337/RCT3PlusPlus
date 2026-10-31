@@ -83,6 +83,20 @@ namespace rct3::simulation
     };
     [[nodiscard]] BoatPose between_sails(const Boat& boat, float along);
 
+    /// The oars a rowing boat pulls on: both while it keeps more or less straight, or those that turn it.
+    enum class Stroke : std::uint8_t
+    {
+        Both,  ///< Straight on
+        Left,  ///< Turning to its left
+        Right, ///< Turning to its right
+    };
+
+    inline constexpr float kRowRound = 0.2f; ///< Chosen by eye: radians a second a boat turns before it rows round
+
+    /// The stroke for a boat turning `turning` radians a second, positive from +x towards +y. That turns it to
+    /// its left, as boats' models put their right at +X.
+    [[nodiscard]] Stroke stroke(float turning);
+
     /// Where a boat leaves its dock and where it comes back in.
     struct Dock
     {

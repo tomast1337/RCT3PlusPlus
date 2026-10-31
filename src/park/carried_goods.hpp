@@ -25,7 +25,8 @@ namespace rct3::park
         bool paintable = false;              ///< Of an item, whether it takes the player's colours
         /// How much it feeds, quenches and sickens; of an extra, what it adds to an item's at the usual amount.
         std::array<float, 3> effects { };
-        std::int64_t cost = 0; ///< In hundredths, to the stall: of an item each one sold, of an extra each one it goes on
+        std::int64_t cost = 0;                 ///< In hundredths, to the stall: of an item each one sold, of an extra each one it goes on
+        std::array<std::int64_t, 3> worth { }; ///< Of an item, most a guest pays for it, mild, cold and hot; in hundredths
     };
 
     struct CarriedKinds

@@ -67,6 +67,22 @@ TEST_CASE("at a stall a guest picks something off its menu they think worth its 
     }
 }
 
+TEST_CASE("a drink worth more in the cold sells on a cold day and not a mild one")
+{
+    for (const bool cold : { false, true })
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 4, 0 });
+        const auto stall = park.shop("Drinks", Product::Drink, { 4, 0 }, 150);
+        auto& r = park.world().registry;
+        r.ctx().emplace<Weather>(Weather { .temperature = cold ? kTuning.weather.cold.value - 1 : kTuning.weather.cold.value + 1 });
+        r.get<Shop>(stall).menu = { { .product = Product::Drink, .price = { 150 }, .symbol = "Cocoa", .cost = { 40 }, .worth = { Money { 120 }, Money { 160 }, Money { 100 } } } };
+        const auto guest = park.guest({ 0, 0 }, { .thirst = 0.9f });
+        park.run_seconds(30);
+        CHECK(r.all_of<Carried>(guest) == cold);
+    }
+}
+
 TEST_CASE("a guest along at a food stall without being hungry says so")
 {
     Sandbox park;

@@ -27,7 +27,7 @@ namespace rct3::park
             {
                 if (!e.item)
                     continue;
-                CarriedKind k { std::format("{}:cid", e.name), std::string(e.item->name_text), std::string(e.item->icon), { }, !e.item->texture.empty(), e.item->effects, e.item->cost };
+                CarriedKind k { std::format("{}:cid", e.name), std::string(e.item->name_text), std::string(e.item->icon), { }, !e.item->texture.empty(), e.item->effects, e.item->cost, { e.item->worth[0], e.item->worth[1], e.item->worth[2] } };
                 for (const std::string_view extra : e.item->extras)
                     k.extras.push_back(std::format("{}:ced", extra));
                 kinds.items.push_back(std::move(k));

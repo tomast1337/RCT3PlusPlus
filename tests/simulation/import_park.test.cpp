@@ -8,6 +8,7 @@
 #include "simulation/tuning.hpp"
 
 #include <array>
+#include <cmath>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -95,13 +96,13 @@ TEST_CASE("a stall's food and drink is cold or hot by its name, and plain otherw
     CHECK(served == std::vector { simulation::Serve::Any, simulation::Serve::Cold, simulation::Serve::Cold, simulation::Serve::Hot });
 }
 
-TEST_CASE("a stall's ware takes the extras ticked on it or left to the guest, as much as the stall puts on")
+TEST_CASE("a stall's ware takes the extras ticked on it or left to the guest, as much as the stall puts on, and their cost")
 {
     simulation::SimWorld world;
     world.paths.add({ 0, 0, 0 });
     const park::CarriedKinds kinds {
-        .items = { { .symbol = "Burger:cid", .extras = { "Ketchup:ced", "Cheese:ced", "Onion:ced" } } },
-        .extras = { { .symbol = "Ketchup:ced", .effects = { 0.1f, 0, 0 } }, { .symbol = "Cheese:ced", .effects = { 0.2f, -0.1f, 0 } }, { .symbol = "Onion:ced", .effects = { 0.4f, 0, 0 } } },
+        .items = { { .symbol = "Burger:cid", .extras = { "Ketchup:ced", "Cheese:ced", "Onion:ced" }, .cost = 50, .worth = { 200, 240, 170 } } },
+        .extras = { { .symbol = "Ketchup:ced", .effects = { 0.1f, 0, 0 } }, { .symbol = "Cheese:ced", .effects = { 0.2f, -0.1f, 0 }, .cost = 4 }, { .symbol = "Onion:ced", .effects = { 0.4f, 0, 0 } } },
     };
     save::RideModel rides;
     save::Stall& s = rides.stalls.emplace_back();
@@ -117,6 +118,12 @@ TEST_CASE("a stall's ware takes the extras ticked on it or left to the guest, as
     CHECK(w.topped == 2); // Ketchup ticked but not offered; onion as the guest likes though not ticked
     CHECK(w.topping[0] == doctest::Approx(0.2f * amount[4] + 0.4f * amount[5]));
     CHECK(w.topping[1] == doctest::Approx(-0.1f * amount[4]));
+    // The cheese costs the stall, and is worth that much more to guests.
+    const std::int64_t cheese = std::llround(4 * amount[4]);
+    CHECK(w.cost.value == 50 + cheese);
+    CHECK(w.worth[0].value == 200 + cheese);
+    CHECK(w.worth[1].value == 240 + cheese);
+    CHECK(w.worth[2].value == 170 + cheese);
     simulation::restock(world, s, { });
     CHECK(world.registry.get<simulation::Shop>(world.registry.view<simulation::Shop>().front()).menu.front().extras == 0); // Kinds unknown: no extras
 }

@@ -113,9 +113,18 @@ namespace rct3::simulation
                             continue;
                         ++ware.topped;
                         if (const park::CarriedKind* extra = kind_of(kinds.extras, kind->extras[i]))
+                        {
+                            const float amount = kTuning.eating.extra_amounts[static_cast<std::size_t>(level)];
                             for (std::size_t e = 0; e < ware.topping.size(); ++e)
-                                ware.topping[e] += extra->effects[e] * kTuning.eating.extra_amounts[static_cast<std::size_t>(level)];
+                                ware.topping[e] += extra->effects[e] * amount;
+                            ware.cost.value += std::llround(static_cast<double>(extra->cost) * amount);
+                        }
                     }
+                    // What the extras cost the stall, guests will pay the more for; an item with no worth of its
+                    // own keeps none.
+                    for (std::size_t w = 0; w < ware.worth.size(); ++w)
+                        ware.worth[w].value = kind->worth[w] > 0 ? kind->worth[w] + ware.cost.value : 0;
+                    ware.cost.value += kind->cost;
                 }
                 if (!sale)
                     sale = Sale { { *product, serve_named(name) }, item.price };

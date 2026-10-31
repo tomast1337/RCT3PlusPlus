@@ -57,8 +57,8 @@ namespace rct3::ovl
         /// item and up to 50 in a few.
         std::array<float, 3> effects { };
         std::uint32_t cost = 0; ///< In hundredths, to the stall for each one sold
-        /// What guests will pay for it, in hundredths: three figures, for different weather (which is which
-        /// is not read).
+        /// What guests will pay for it, in hundredths: in mild weather, in the cold and in the heat (ice creams
+        /// are worth most in the third, hot drinks in the second).
         std::array<std::uint32_t, 3> worth { };
         float unknown_50 = 0;         ///< 0, or 0.01
         std::int32_t unknown_54 = 0;  ///< -1 in most items, otherwise 1 or 2

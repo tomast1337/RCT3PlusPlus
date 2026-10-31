@@ -2244,8 +2244,12 @@ namespace rct3::simulation
                 return false;
             }
             // Food or drink they pick off the menu: one of its kind they can afford at no more than it is worth to
-            // them, any of those; a stall with no menu sells one thing at its price.
-            const Money worth = shop.product == Product::Food ? kTuning.eating.food_worth : kTuning.eating.drink_worth;
+            // them, any of those; a stall with no menu sells one thing at its price. What a thing is worth is its
+            // item's for the weather, more in the cold for a hot drink and in the heat for an ice cream; where that
+            // is not known, the same for every food or drink.
+            const std::size_t band = weather.temperature.value < kTuning.weather.cold.value ? 1 : weather.temperature.value >= kTuning.weather.hot.value ? 2 : 0;
+            const Money flat_worth = shop.product == Product::Food ? kTuning.eating.food_worth : kTuning.eating.drink_worth;
+            const auto worth_of = [&](const Ware& w) { return w.worth[band].value > 0 ? w.worth[band] : flat_worth; };
             std::size_t ware = shop.menu.size();
             Money price = attraction.price;
             if (meal && !shop.menu.empty())
@@ -2253,12 +2257,12 @@ namespace rct3::simulation
                 std::size_t fair = 0, affordable = 0;
                 for (const Ware& w : shop.menu)
                     if (w.product == shop.product && w.price.value <= wallet.cash.value)
-                        ++affordable, fair += w.price.value <= worth.value ? 1 : 0;
+                        ++affordable, fair += w.price.value <= worth_of(w).value ? 1 : 0;
                 if (fair > 0)
                     for (std::size_t pick = random::below(r.get<Dice>(guest).state, static_cast<std::uint32_t>(fair)), k = 0; k < shop.menu.size(); ++k)
                     {
                         const Ware& w = shop.menu[k];
-                        if (w.product == shop.product && w.price.value <= wallet.cash.value && w.price.value <= worth.value && pick-- == 0)
+                        if (w.product == shop.product && w.price.value <= wallet.cash.value && w.price.value <= worth_of(w).value && pick-- == 0)
                         {
                             ware = k;
                             price = w.price;
@@ -2274,7 +2278,7 @@ namespace rct3::simulation
                 else
                     price = std::ranges::min(shop.menu, { }, [](const Ware& w) { return w.price.value; }).price;
             }
-            else if (meal && price.value > worth.value && price.value <= wallet.cash.value && attraction.open)
+            else if (meal && price.value > flat_worth.value && price.value <= wallet.cash.value && attraction.open)
             {
                 mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
                 think(r, guest, ThoughtKind::NotPaying, at, now);
@@ -2288,7 +2292,7 @@ namespace rct3::simulation
                     think(r, guest, ThoughtKind::CantAfford, at, now);
                 return false;
             }
-            if (meal && price.value <= kTuning.eating.good_value.value * static_cast<float>(worth.value))
+            if (meal && price.value <= kTuning.eating.good_value.value * static_cast<float>((ware < shop.menu.size() ? worth_of(shop.menu[ware]) : flat_worth).value))
                 think(r, guest, ThoughtKind::GoodValue, at, now);
             attraction.income.value += price.value;
             ++attraction.customers;

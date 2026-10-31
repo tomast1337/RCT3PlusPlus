@@ -455,6 +455,9 @@ namespace rct3::simulation
         std::uint8_t topped = 0; ///< How many of those go on it
         /// What those add to how much it feeds, quenches and sickens, each by how much of it goes on.
         std::array<float, 3> topping { };
+        Money cost { }; ///< Of its stock, with the extras going on, to the park for each one sold
+        /// Most a guest pays for it, with those extras, in mild weather, the cold and the heat; none when not known.
+        std::array<Money, 3> worth { };
     };
 
     struct Shop

@@ -295,8 +295,8 @@ interface RideInfo {
     platforms?: string[];
     /** Rides with a track: each piece's arm angles in degrees, base first, or null where it holds none. */
     arms?: (number[] | null)[];
-    /** Rides with a track: where each of its cars stands now. */
-    cars?: MapPoint[];
+    /** Rides with a track: where each of its cars stands now, and the way it faces (radians round the vertical, 0 along +row). */
+    cars?: (MapPoint & { facing: number })[];
     site: Spot | null;
     /** Its first station's doors; `stations` has every station's. */
     entrance: Spot | null;

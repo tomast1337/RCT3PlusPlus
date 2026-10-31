@@ -932,7 +932,8 @@ namespace rct3::scene
                         const glm::vec3 at = park.car_places[k][3];
                         const float col = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
                         const float row = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
-                        cars.push_back({ { "col", col }, { "row", row }, { "up", at.y - park.grid.height_at(at.x, at.z).value_or(0) } });
+                        // Facing: radians round the vertical its +Z points, 0 along +Z.
+                        cars.push_back({ { "col", col }, { "row", row }, { "up", at.y - park.grid.height_at(at.x, at.z).value_or(0) }, { "facing", std::atan2(park.car_places[k][2].x, park.car_places[k][2].z) } });
                     }
                     one["cars"] = std::move(cars);
                 }

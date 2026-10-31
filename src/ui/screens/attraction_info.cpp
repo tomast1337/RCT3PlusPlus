@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/attraction_info.hpp"
 
+#include "simulation/tuning.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 #include "ui/screens/stall_menu.hpp"
@@ -721,7 +722,7 @@ namespace rct3::ui
             return text;
         }
 
-        void items(InfoPage& page, const AttractionFacts& f, const StringTable& strings)
+        void items(InfoPage& page, const AttractionFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             const save::Stall& stall = *f.stall;
             const auto name_of = [&](std::span<const park::CarriedKind> kinds, std::string_view symbol) {
@@ -763,13 +764,18 @@ namespace rct3::ui
                 l.icon = k != nullptr ? k->icon : std::string { };
                 l.price = static_cast<int>(std::clamp<std::int64_t>(item.price, 0, kMostRidePrice));
                 l.ticked = item.extras;
-                // shortcut: the profit is shown unknown, as the item's own cost is not read; upgrade once it is.
-                l.help = filled(filled(text(strings, "StallItemLine_Profit"), u"%NAME%", l.name), u"%PROFIT%", missing());
+                // Each one sold makes its price less its own cost and that of the extras going on it, by how much
+                // of each goes on.
+                std::optional<std::int64_t> cost = k != nullptr ? std::optional(k->cost) : std::nullopt;
                 if (k != nullptr)
                 {
-                    for (const std::string& extra : k->extras)
+                    for (std::size_t x = 0; x < k->extras.size(); ++x)
                     {
+                        const std::string& extra = k->extras[x];
                         const auto offered = std::ranges::find_if(stall.extras, [&](const save::StallExtra& e) { return strings::equals_ignoring_case(e.kind_symbol, extra); });
+                        const park::CarriedKind* added = carried(f.carried_extras, extra);
+                        if (offered != stall.extras.end() && added != nullptr && offered->level > save::StallExtra::kNone && std::cmp_less(offered->level, simulation::kTuning.eating.extra_amounts.size()) && (offered->level == save::StallExtra::kGuestChoice || (x < 32 && (item.extras >> x & 1) != 0)))
+                            *cost += std::llround(static_cast<double>(added->cost) * simulation::kTuning.eating.extra_amounts[static_cast<std::size_t>(offered->level)]);
                         l.extras.push_back(offered == stall.extras.end() ? std::nullopt : std::optional(static_cast<std::size_t>(offered - stall.extras.begin())));
                         l.tick_help.push_back(filled(filled(text(strings, "StallItemLine_Check"), u"%EXTRA%", name_of(f.carried_extras, extra)), u"%ITEM%", l.name));
                     }
@@ -778,6 +784,7 @@ namespace rct3::ui
                     if (k->paintable)
                         l.paints = { item.colours[0] };
                 }
+                l.help = filled(filled(text(strings, "StallItemLine_Profit"), u"%NAME%", l.name), u"%PROFIT%", cost ? money_text(units.currency, item.price - *cost) : missing());
                 m.lines.push_back(std::move(l));
             }
             page.menu = std::move(m);
@@ -1080,7 +1087,7 @@ namespace rct3::ui
                 break;
             case AttractionTab::Items:
                 if (f.stall)
-                    items(page, f, strings);
+                    items(page, f, strings, units);
                 break;
             case AttractionTab::Thoughts:
                 if (f.ride)

@@ -35,16 +35,16 @@ Suggested messages:
 
 ## Clean room
 
-Read [CLEAN_ROOM.md](CLEAN_ROOM.md) before touching anything derived from the game. Summary:
+Read [CLEAN_ROOM.md](CLEAN_ROOM.md) before touching anything to do with the game's files. Summary:
 
-- No game assets, no decompiler output, no hex dumps from real files, no recovered binary addresses or
-  function names, no copied code from other projects in this repository (vendored libraries in `third_party/` keep their
-  own license files).
+- No game files or anything extracted from them, no byte dumps from real files, no code, names or
+  addresses taken from the game's program, no copied code from other projects (vendored libraries in
+  `third_party/` keep their own license files).
 - Tests build their inputs in code (see `tests/ovl_header_test.cpp`). Never commit files from the game
   install.
-- Game-derived notes and scratch output go in `local/`, which is git-ignored. Never reference it from
+- `local/` is git-ignored and holds fuzz corpora and other generated output. Never reference it from
   tracked files.
-- Before suggesting a commit, review the diff for game-derived content as described in CLEAN_ROOM.md.
+- Before suggesting a commit, review the diff as described in CLEAN_ROOM.md.
 
 ## Design
 

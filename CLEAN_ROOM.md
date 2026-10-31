@@ -7,50 +7,58 @@ our own code. Contributions follow the same rules.
 
 ## The rule
 
-If it exists because of the game, and not because we wrote it, it stays out of git.
+If something exists because of the game, and not because we made it, it is not part of this project.
 
-Original code, original prose and synthetic test data are in. Everything below is out.
+The project is made of original code, original writing and invented test data. Its numbers come from the
+game's data and save files, from measuring the original game in play, or from our own design, and each
+one says which.
 
-## Never put in the repository
+## Not accepted
 
-**Assets and game data**
-- Any file from the game install: `.ovl`, `.dat`, `.ftx`, `.shs`, `.chk`, textures, models, sounds, fonts,
-  GUI skins, text tables, scenario and save files. Includes "just a small one" and truncated copies.
-- Extracted or converted forms of them: PNG/WAV/OBJ exports, atlases, string tables, symbol name lists,
+**Game files and anything made from them**
+- Files from the game install: `.ovl`, `.dat`, `.ftx`, `.shs`, `.chk`, textures, models, sounds, fonts,
+  interface skins, text tables, scenarios and saves, including small or truncated copies.
+- Extracted or converted forms of them: image, sound or model exports, atlases, string tables, name lists,
   glyph maps, palettes.
-- Hex dumps, `od`/`xxd` output or byte arrays copied from a real file, even short ones. Header bytes of a
-  real file are still a copy of the file.
+- Byte dumps or byte arrays copied from a real file, however short.
 - Screenshots or recordings of the original game.
 
-**Derived documentation**
-- Decompiler or disassembler output of any kind: listings, pseudocode, call graphs, structure dumps,
-  names or addresses recovered from the game's program.
-- Copied text from game manuals, in-game text, or the original developer's documentation or SDK.
-- Long verbatim quotes from other projects' docs or code. Link to them instead.
+**Copied or derived text and code**
+- Code, names or addresses taken from the game's program.
+- Text from the game, its manuals, or its developer's documentation or tools.
+- Long quotes from other projects' code or documentation. Link to them instead.
 
-**Local paths and environment**
-- Absolute paths into the game install or the user's home directory.
-- Steam IDs, product keys, account names, emails of people who are not contributors.
+**Personal details**
+- Absolute paths into a game install or a home directory.
+- Account names, product keys, and contact details of people who are not contributors.
 
-## What is fine
+## Accepted
 
-- Our own prose describing a file layout: field offsets, sizes, meanings, version differences, written in
-  our words, with sample values only where they are needed to be unambiguous.
-- Original code that parses those layouts.
-- Synthetic fixtures built in code (see `tests/ovl_header_test.cpp`): invented strings and numbers shaped
-  like the format, not taken from a real file.
-- Loader and format names that are part of the file format itself (for example the type tags a parser must
-  recognise). Keep these to what the parser needs.
+- Descriptions of file layouts in our own words: field offsets, sizes, meanings and version differences,
+  with example values only where they are needed to be unambiguous.
+- Original code that reads and writes those layouts.
+- Test data built in code from invented values shaped like the format (see `tests/ovl_header_test.cpp`).
+- Type tags and other names that are part of a file format and that a parser must recognise.
 
-When unsure whether something is a description or a copy: if you would have to look at the game file to
-produce it character for character, it is a copy.
+If you could only produce something character for character by looking at a game file, it is a copy.
+
+## Marking where a number comes from
+
+- **Data and save files:** say which file the value comes from.
+- **Measured in play:** describe an experiment anyone can repeat, and approximate the value from it.
+- **Our own design:** say what the value does. Matching the original exactly is not a goal.
+
+```cpp
+constexpr float kQueueStep = 0.8f; ///< Approximation: timed guests shuffling along a 20-tile queue in-game
+constexpr float kHuddleRadius = 0.7f; ///< Chosen by eye: a party of four stands apart
+```
 
 ## Other open-source projects
 
 OpenRCT2 (GPL-3.0, <https://github.com/OpenRCT2/OpenRCT2>) re-implements a game whose simulation is close to
-ours, and its licence is compatible with ours. We may take inspiration from how it models the park, and
-borrow simulation values (rates, thresholds, weights) where they fit. We do not copy its code or its
-structure. Anything borrowed, even one constant, carries a comment that names the source exactly:
+ours, and its licence is compatible with ours. We may take ideas from how it models the park and borrow
+simulation values (rates, thresholds, weights) where they fit. We do not copy its code or its structure.
+Anything borrowed, even one constant, names its source where it is used:
 
 ```cpp
 // Taken from OpenRCT2 (GPL-3.0), src/openrct2/<path>, <function or constant name>.
@@ -58,48 +66,22 @@ structure. Anything borrowed, even one constant, carries a comment that names th
 
 The same goes for any other project: credit at the place of use, and only under a compatible licence.
 
-## Values only the program knows
+## Local output
 
-Some numbers are not in any data or save file, only inside the game's program: speeds, rates, thresholds,
-timings. Treat them as unknown. Do not take them from the executable, even as a check.
+`local/` at the repository root is git-ignored and holds fuzz corpora, crash inputs and other generated
+output. Tracked files never refer to it: a tracked file must build and read correctly without it.
 
-- Measure the behaviour in the running game instead: an experiment anyone can repeat (build this, time
-  that, count those), and approximate the value from the result.
-- Or design the behaviour ourselves, when measuring is not practical. Matching the original exactly is not a goal.
-- Mark it in the code, saying where it came from:
+## Before you commit
 
-```cpp
-constexpr float kQueueStep = 0.8f; ///< Approximation: timed guests shuffling along a 20-tile queue in-game
-constexpr float kHuddleRadius = 0.7f; ///< Chosen by eye: a party of four stands apart
-```
+1. Read every added file and hunk in `git diff`, not only the code.
+2. Check for long hex numbers and byte runs (`git diff | grep -nE '0x[0-9a-fA-F]{6,}'`), absolute paths,
+   game file extensions, and long literal arrays or strings in tests.
+3. Anything that fails these checks stays out of the commit.
 
-Values read from data or save files are fine to use; say which file they come from.
+`.gitignore` blocks common game file extensions as a safety net. Do not rely on it, and do not add
+exceptions for them.
 
-## Where game-derived material goes
+## If something gets in
 
-`local/` at the repository root is git-ignored and is for short-lived scratch: dumps, exports and anything
-else game-derived that you need while working. It exists on one machine only.
-
-- Agents may create and write files in `local/` freely.
-- Agents must not reference `local/` contents from tracked files: no `#include`,
-  no doc links, no paths, no pasted excerpts. A tracked file must build and read correctly on a machine
-  where it is absent.
-- `.gitignore` also blocks common game extensions as a safety net. Do not rely on it, and do not add
-  negations (`!pattern`) for them.
-
-## Before suggesting a commit
-
-Agents do not commit (see `AGENTS.md`), but they must check what they are handing over:
-
-1. `git status` and `git diff`: read every added file and hunk, not only the code.
-2. Search the diff for game-derived content:
-   - `git diff | grep -nE '0x[0-9a-fA-F]{6,}'` for binary addresses and byte runs.
-   - Look for absolute paths (`/Games`, `/home`, `steamapps`) and file extensions listed above.
-   - Look for long literal arrays or strings in tests.
-3. If any of it is game-derived, move it to `local/` and rewrite the tracked text in your own words.
-4. Say what you checked when you suggest the commit message.
-
-## If something leaked
-
-Stop and tell the maintainer before doing anything else. Do not try to fix it by committing a deletion:
-the content stays in history and the history needs rewriting. Do not push.
+Tell the maintainer before doing anything else. A deleting commit does not remove it: it stays in history,
+which has to be rewritten. Do not push.

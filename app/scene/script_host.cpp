@@ -310,6 +310,16 @@ namespace rct3::scene
             const auto& registry = park_->sim.registry;
             return Json(std::ranges::distance(registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>)));
         });
+        engine_.define("park.gates", [this](const Json&) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            // The path tiles under the park's entrances.
+            Json tiles = Json::array();
+            if (const auto* under = park_->sim.registry.ctx().find<simulation::EntrancePaths>())
+                for (const simulation::NodeId n : under->nodes)
+                    tiles.push_back({ { "col", park_->sim.paths.nodes()[n].tile.col }, { "row", park_->sim.paths.nodes()[n].tile.row } });
+            return tiles;
+        });
         engine_.define("park.dropParties", [this](const Json& a) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
@@ -802,6 +812,9 @@ namespace rct3::scene
                         : errand->kind == simulation::ErrandKind::Buying   ? "buying"
                         : errand->kind == simulation::ErrandKind::Swimming ? "swimming"
                                                                            : "walking";
+                    // On their way out of the park.
+                    if (errand != nullptr && errand->kind == simulation::ErrandKind::Heading && r.valid(errand->target) && r.all_of<simulation::ParkGate>(errand->target))
+                        person["leaving"] = true;
                     // Their party, as a number shared by its members, while they are with it.
                     if (const auto* member = r.try_get<simulation::Member>(p.guest))
                         person["party"] = entt::to_integral(member->party);

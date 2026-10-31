@@ -2,8 +2,9 @@
 //
 // Builds a coaster of two stations on the game's blank landscape: its first station, two straights, a second
 // station, a straight, then auto-complete closes the circuit. Each station takes its own entrance and exit, placed
-// beside it from the ride's window; once the second has its doors the park's trains stop there too, and a path
-// behind each door joins them to the park. Saved and loaded again, both stations keep their doors.
+// beside it from the ride's window, and a path behind each door joins them to the park. Its trains stop at both
+// stations, doors or not: two trains stand one at each, and tested they stop at the second before it has doors.
+// Opened, a train stands at each station. Saved and loaded again, both stations keep their doors.
 //
 //   ./nob script scripts/tests/station_doors.ts -- --no-audio
 
@@ -83,6 +84,8 @@ async function placeDoor(station: Tile, step: "entrance" | "exit"): Promise<void
     if (build.placing()?.step !== step) {
         rides.show(ride);
         await frames(5);
+        await ui.click("info/Guest_Rides");
+        await frames(3);
         await ui.click(`info/body/Attraction_General_${step === "entrance" ? "Entrance" : "Exit"}`);
         await frames(3);
     }
@@ -102,6 +105,50 @@ async function placeDoor(station: Tile, step: "entrance" | "exit"): Promise<void
         }
     }
     throw new Error(`no tile beside ${JSON.stringify(station)} for the ${step}`);
+}
+
+/** Clicks the up or down arrow of the number box `key` on the vehicles tab of the ride's window. */
+async function step(key: string, up: boolean): Promise<void> {
+    rides.show(ride);
+    await frames(5);
+    await ui.click("info/Attraction_Vehicles");
+    await frames(5);
+    const box = ui.find(`info/body/${key}`);
+    expect(box !== undefined, `the ${key} box`);
+    const quarter = (box!.bottom - box!.top) / 4;
+    await pointer.click(box!.right - 0.002, up ? box!.top + quarter : box!.bottom - quarter);
+    await frames(10);
+}
+
+/** Watches the ride for `count` frames: frames a train stood at each station, and the most a car's drawn step
+ * changed from one frame to the next, or turned back. */
+async function watch(count: number): Promise<{ stood: number[]; change: number; back: number }> {
+    const stood = [0, 0];
+    let change = 0;
+    let back = 0;
+    let last: { col: number; row: number }[] = [];
+    let steps: { dc: number; dr: number }[] = [];
+    for (let n = 0; n < count; ++n) {
+        await frames(1);
+        const r = rides.list()[ride];
+        for (const t of r.trainsAt ?? [])
+            if (t.station !== null && t.station < stood.length)
+                ++stood[t.station];
+        const cars = r.cars ?? [];
+        const now = cars.map((c, k) => ({ dc: c.col - (last[k]?.col ?? c.col), dr: c.row - (last[k]?.row ?? c.row) }));
+        if (last.length === cars.length && steps.length === cars.length)
+            for (let k = 0; k < cars.length; ++k) {
+                const a = steps[k];
+                const b = now[k];
+                change = Math.max(change, Math.hypot(b.dc - a.dc, b.dr - a.dr));
+                // Turned back: a step against the one before, both more than a hundredth of a tile.
+                if (Math.hypot(a.dc, a.dr) > 0.01 && Math.hypot(b.dc, b.dr) > 0.01 && a.dc * b.dc + a.dr * b.dr < 0)
+                    ++back;
+            }
+        last = cars.map((c) => ({ col: c.col, row: c.row }));
+        steps = now;
+    }
+    return { stood, change, back };
 }
 
 const doors = () => rides.list()[ride].stations;
@@ -126,21 +173,48 @@ async function pathsBehind(k: number): Promise<void> {
     build.stop();
 }
 
-// The first station's doors, on the paths: the park runs the ride, stopping nowhere else.
+// The first station's doors, on the paths: the park runs the ride, stopping at the second station too.
 await placeDoor(first, "entrance");
 await placeDoor(first, "exit");
 await pathsBehind(0);
 await until(() => rides.list()[ride].joined, 300, "the ride run by the park");
-expect(rides.list()[ride].stops === 0, `no second stop before its doors, not ${rides.list()[ride].stops}`);
-// The second station's: the closed ride is taken on again, its trains stopping there too, its guests coming once a
-// path reaches the doors.
+expect(rides.list()[ride].stops === 1, `a stop at the second station before its doors, not ${rides.list()[ride].stops}`);
+// Two trains: one at each station, apart.
+await step("AttractionVehicleDialogLabelNumTrains", true);
+const spread = rides.list()[ride].trainsAt ?? [];
+log("two trains", JSON.stringify(spread), "track", rides.list()[ride].trackLength);
+expect(spread.length === 2, `two trains, not ${spread.length}`);
+expect(spread.map((t) => t.station).sort().join() === "0,1", `a train standing at each station, not ${JSON.stringify(spread)}`);
+const whole = rides.list()[ride].trackLength!;
+const apart = (((spread[0].front - spread[1].front) % whole) + whole) % whole;
+expect(Math.min(apart, whole - apart) > Math.max(spread[0].length, spread[1].length), `the trains apart, not ${apart.toFixed(1)} m`);
+camera.look({ col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 0.5 }, { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 16.5, up: 22 });
+await frames(10);
+await screenshot("two_trains");
+// Tested, the trains stop at the second station, doors or not.
+expect(rides.setState(ride, "testing") == null, "the ride tested");
+const tested = await watch(60 * 60);
+log("tested", JSON.stringify(tested));
+expect(tested.stood[1] > 0, "a train stopped at the second station while tested, without doors");
+// The second station's doors, placed once it is closed again (its window offers doors only then): the park keeps
+// running it as it is, its guests coming once a path reaches them.
+expect(rides.setState(ride, "closed") == null, "the ride closed");
+await frames(5);
 await placeDoor(second, "entrance");
 await placeDoor(second, "exit");
 build.stop();
 log("stations", JSON.stringify(doors()));
 expect(doors().length === 2 && doors().every((s) => s.entrance !== null && s.exit !== null), `an entrance and an exit at both stations, not ${JSON.stringify(doors())}`);
-await until(() => rides.list()[ride].stops === 1, 300, "the trains stopping at the second station");
+expect(rides.list()[ride].stops === 1, "still a stop at the second station");
 await pathsBehind(1);
+// Tested again with both stations' doors, each is stopped at.
+expect(rides.setState(ride, "testing") == null, "the ride tested again");
+const run = await watch(60 * 60);
+log("tested with doors", JSON.stringify(run));
+expect(run.stood[0] > 0 && run.stood[1] > 0, `trains stopped at both stations, not ${JSON.stringify(run.stood)}`);
+// Open, a train stands at each station for its riders.
+expect(rides.setState(ride, "open") == null, `the ride opened, not refused with ${rides.setState(ride, "open")}`);
+await until(() => (rides.list()[ride].trainsAt ?? []).map((t) => t.station).sort().join() === "0,1", 60 * 120, "a train standing at each station once open");
 camera.look({ col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 0.5 }, { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 16.5, up: 22 });
 await frames(30);
 await screenshot("two_stations");

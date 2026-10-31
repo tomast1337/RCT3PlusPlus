@@ -251,6 +251,25 @@ namespace rct3::simulation
             return links;
         }
 
+        /// Of `platforms`, the one with track nearest `station`'s entrance, its points taken by `points`; none
+        /// for a station without one.
+        std::optional<std::size_t> nearest_platform(const PathNetwork& paths, const save::Station& station, const auto& platforms, auto points)
+        {
+            if (!station.entrance_spot)
+                return std::nullopt;
+            const glm::vec2 at = paths.origin + (glm::vec2(station.entrance_spot->col, station.entrance_spot->row) + 0.5f) * paths.tile_size;
+            std::optional<std::size_t> best;
+            float nearest = std::numeric_limits<float>::max();
+            for (std::size_t k = 0; k < platforms.size(); ++k)
+                for (const glm::vec3& p : std::invoke(points, platforms[k]))
+                    if (const float d = glm::distance(at, glm::vec2(p.x, p.z)); d < nearest)
+                    {
+                        nearest = d;
+                        best = k;
+                    }
+            return best;
+        }
+
         /// The path node, not a queue, nearest `at` anywhere in the park.
         // shortcut: guests saved in a pool, on a ride we do not bring over or in its queue step out to the nearest
         // path, as nothing moves them there; upgrade when swimming and those rides are simulated.
@@ -556,6 +575,11 @@ namespace rct3::simulation
                 const auto ride = std::ranges::find(rides.rides, attraction.saved, [](const save::Ride& x) { return x.base.id; });
                 if (ride == rides.rides.end() || ride->stations.empty())
                     continue;
+                // A station given doors since takes the stop nearest them.
+                for (std::size_t k = 1; k < ride->stations.size(); ++k)
+                    if (std::ranges::none_of(cycle->stops, [&](const Stop& stop) { return stop.saved == k; }))
+                        if (const auto near = nearest_platform(world.paths, ride->stations[k], cycle->stops, &Stop::platform); near && cycle->stops[*near].saved == Stop::kNone)
+                            cycle->stops[*near].saved = k;
                 for (Stop& stop : cycle->stops)
                 {
                     const auto links = stop.saved < ride->stations.size() && stop.queue.empty() ? ride_links(world.paths, ride->stations[stop.saved]) : std::nullopt;
@@ -1049,8 +1073,11 @@ namespace rct3::simulation
                 cycle.room = *guests[i];
             std::optional<Coaster> stopping = coaster != nullptr ? std::optional(*coaster) : std::nullopt;
             // A circuit with more than one station: its trains set off from the first station and stop at each of
-            // the others in turn, each found as the run of station track nearest its entrance.
-            if (stopping && stopping->shuttle == Shuttle::None && stopping->closed && ride.stations.size() > 1 && stopping->points.size() == stopping->kinds.size())
+            // the others in turn, doors or not, as the game's do (opening wants doors at every station; a test run
+            // stops at each all the same). Each station is the run of station track nearest its entrance.
+            // shortcut: an open ride whose kind needs no doors at every station stops empty at one without them,
+            // where the game's runs past; upgrade if such a tracked ride turns up.
+            if (stopping && stopping->shuttle == Shuttle::None && stopping->closed && stopping->points.size() == stopping->kinds.size())
             {
                 struct Run
                 {
@@ -1069,38 +1096,30 @@ namespace rct3::simulation
                     if (k + 1 < kinds.size() && kinds[k + 1] != Stretch::Station)
                         runs.back().end = stopping->distance[k + 1];
                 }
-                const auto run_of = [&](const save::Station& station) -> std::optional<std::size_t> {
-                    if (!station.entrance_spot)
-                        return std::nullopt;
-                    const glm::vec2 at = world.paths.origin + (glm::vec2(station.entrance_spot->col, station.entrance_spot->row) + 0.5f) * world.paths.tile_size;
-                    std::optional<std::size_t> best;
-                    float nearest = std::numeric_limits<float>::max();
-                    for (std::size_t k = 0; k < runs.size(); ++k)
-                        for (const glm::vec3& p : runs[k].points)
-                            if (const float d = glm::distance(at, glm::vec2(p.x, p.z)); d < nearest)
-                            {
-                                nearest = d;
-                                best = k;
-                            }
-                    return best && runs[*best].end >= 0 ? best : std::nullopt;
-                };
-                if (const auto first = run_of(ride.stations.front()))
+                std::erase_if(runs, [](const Run& run) { return run.end < 0; });
+                const auto first = runs.size() > 1 && !ride.stations.empty() ? nearest_platform(world.paths, ride.stations.front(), runs, &Run::points) : std::nullopt;
+                if (first)
                 {
                     const float start = runs[*first].end;
                     const float length = stopping->length();
                     std::vector<std::pair<float, Stop>> others;
-                    for (std::size_t k = 1; k < ride.stations.size(); ++k)
-                    {
-                        // A station no path reaches yet is stopped at empty till one does (relink_attractions).
-                        const auto run = run_of(ride.stations[k]);
-                        if (!run || *run == *first)
-                            continue;
-                        auto station = ride_links(world.paths, ride.stations[k]);
-                        const float on = std::fmod(runs[*run].end - start + length, length);
-                        if (std::ranges::none_of(others, [&](const auto& o) { return o.first == on; }))
-                            others.push_back({ on, station ? Stop { .entrance = station->entrance, .line = std::move(station->line), .exit = station->exit, .saved = k } : Stop { .saved = k } });
-                    }
+                    for (std::size_t k = 0; k < runs.size(); ++k)
+                        if (k != *first)
+                            others.push_back({ std::fmod(runs[k].end - start + length, length), Stop { .platform = runs[k].points } });
                     std::ranges::sort(others, { }, &std::pair<float, Stop>::first);
+                    // A station no path reaches yet is stopped at empty till one does (relink_attractions).
+                    for (std::size_t k = 1; k < ride.stations.size(); ++k)
+                        if (const auto run = nearest_platform(world.paths, ride.stations[k], others, [](const auto& o) -> const auto& { return o.second.platform; }))
+                            if (Stop& stop = others[*run].second; stop.saved == Stop::kNone)
+                            {
+                                stop.saved = k;
+                                if (auto station = ride_links(world.paths, ride.stations[k]))
+                                {
+                                    stop.entrance = station->entrance;
+                                    stop.line = std::move(station->line);
+                                    stop.exit = station->exit;
+                                }
+                            }
                     stopping->start = start;
                     stopping->at = start;
                     for (auto& [on, stop] : others)

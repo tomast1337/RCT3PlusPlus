@@ -24,6 +24,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <string>
 #include <vector>
@@ -491,7 +492,9 @@ namespace rct3::simulation
         NodeId exit = kNoNode;               ///< Where riders get off; none lets no one off here
         std::vector<entt::entity> queue { }; ///< Guests waiting, first in line first
         Seconds loading { };                 ///< The train standing here has been loading
-        std::size_t saved = 0;               ///< Its place among the saved ride's stations
+        static constexpr std::size_t kNone = std::numeric_limits<std::size_t>::max();
+        std::size_t saved = kNone;           ///< Its place among the saved ride's stations; kNone till it has doors
+        std::vector<glm::vec3> platform { }; ///< Points along its station track
     };
 
     struct CycleRide

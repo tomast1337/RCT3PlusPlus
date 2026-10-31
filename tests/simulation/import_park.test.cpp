@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/import_park.hpp"
 
+#include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_people.hpp"
 #include "simulation/systems.hpp"
@@ -403,7 +404,7 @@ TEST_CASE("paths laid and taken away come and go from the network; walkers and r
     CHECK_FALSE(world.paths.route(at(1), at(3)));
 }
 
-TEST_CASE("paths on the ground and the guests on them follow the ground when it moves")
+TEST_CASE("paths on the ground and the people on them follow the ground when it moves")
 {
     simulation::SimWorld world;
     save::TerrainGrid grid;
@@ -438,12 +439,20 @@ TEST_CASE("paths on the ground and the guests on them follow the ground when it 
     r.emplace<simulation::Gesture>(reeling, simulation::GestureKind::Dizzy, simulation::Seconds { 0.5f });
     const entt::entity riding = guest(at(1, 0));
     r.emplace<simulation::Thrill>(riding);
+    // A handyman on the path, and a keeper on the bare ground of (3, 0).
+    const entt::entity handyman = r.create();
+    r.emplace<simulation::Staff>(handyman);
+    r.emplace<simulation::Pose>(handyman, simulation::Pose { .position = world.paths.centre(at(1, 0)) });
+    r.emplace<simulation::Stride>(handyman, simulation::Stride { .from = at(1, 0), .to = at(1, 0) });
+    const entt::entity keeper = r.create();
+    r.emplace<simulation::KeeperDuty>(keeper);
+    r.emplace<simulation::Pose>(keeper, simulation::Pose { .position = { 14.0f, 0.0f, 2.0f } });
 
-    // The ground under all three tiles rises two units.
+    // The ground under all four tiles rises two units.
     const save::TerrainGrid was = grid;
     for (auto& cell : grid.cells)
         cell.corners = { 2.0f, 2.0f, 2.0f, 2.0f };
-    simulation::follow_ground(world, laid, was, grid, { 0, 0 }, { 2, 0 });
+    simulation::follow_ground(world, laid, was, grid, { 0, 0 }, { 3, 0 });
     CHECK_FALSE(world.paths.find({ 1, 0, 0 }));
     const simulation::NodeId raised = at(1, 2);
     CHECK(world.paths.nodes()[raised].height == doctest::Approx(2.0f));
@@ -454,6 +463,9 @@ TEST_CASE("paths on the ground and the guests on them follow the ground when it 
     CHECK(r.get<simulation::Gesture>(reeling).left.value == doctest::Approx(0.5f));
     CHECK(r.get<simulation::Pose>(riding).position.y == doctest::Approx(0.0f));
     CHECK_FALSE(r.all_of<simulation::Gesture>(riding));
+    CHECK(r.get<simulation::Pose>(handyman).position.y == doctest::Approx(2.0f));
+    CHECK_FALSE(r.all_of<simulation::Gesture>(handyman));
+    CHECK(r.get<simulation::Pose>(keeper).position.y == doctest::Approx(2.0f));
 }
 
 TEST_CASE("walkers stand on a ramp's slope and on the ground's own tilt under a path")

@@ -8,6 +8,7 @@
 #include "park/path_decks.hpp"
 #include "park/queue_fences.hpp"
 #include "park/terrain_mesh.hpp"
+#include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park_state.hpp"
@@ -470,15 +471,14 @@ namespace rct3::simulation
             world.paths.set_height(*node, spot.level, height);
             (void)add_path(world, p, grid); // Lays its corners on the new ground and joins it again
         }
-        // Guests walking or standing on those paths keep to them; any free to, reel while the ground moves.
+        // People walking or standing on those paths keep to them; guests free to, reel while the ground moves. Staff
+        // have no motion for it, so they only keep to the paths.
         auto& r = world.registry;
         const auto& nodes = world.paths.nodes();
         constexpr float kFelt = 0.01f; ///< Chosen by eye: the least rise or fall under their feet they react to
-        // shortcut: staff and keepers stay at their height till they next step, and do not reel; move them too if
-        // it shows.
         for (const auto [e, stride, pose] : r.view<const Stride, Pose>(entt::exclude<Held, Dropped, Swimmer, RideWalk, Thrill>).each())
         {
-            if (!r.all_of<Visitor>(e) || stride.from >= nodes.size() || stride.to >= nodes.size())
+            if (stride.from >= nodes.size() || stride.to >= nodes.size())
                 continue;
             const PathTileSpot& at = nodes[stride.from].tile;
             if (!inside(at.col, at.row) && !inside(nodes[stride.to].tile.col, nodes[stride.to].tile.row))
@@ -489,8 +489,21 @@ namespace rct3::simulation
             pose.position.y += rise;
             pose.was.y += rise;
             // Already reeling, they play it through rather than start again each step of the stroke.
-            if (!r.any_of<Linger, Gesture>(e))
+            if (r.all_of<Visitor>(e) && !r.any_of<Linger, Gesture>(e))
                 r.emplace<Gesture>(e, GestureKind::Dizzy, kTuning.gestures.shown.value);
+        }
+        // Keepers about their enclosures stand on the ground itself.
+        for (const auto [e, duty, pose] : r.view<const KeeperDuty, Pose>().each())
+        {
+            const int col = static_cast<int>(std::floor((pose.position.x - grid.origin_x) / grid.tile_size_x));
+            const int row = static_cast<int>(std::floor((pose.position.z - grid.origin_z) / grid.tile_size_z));
+            if (!inside(col, row))
+                continue;
+            if (const auto ground = grid.height_at(pose.position.x, pose.position.z))
+            {
+                pose.was.y += *ground - pose.position.y;
+                pose.position.y = *ground;
+            }
         }
     }
 

@@ -46,7 +46,7 @@ namespace rct3::simulation
     void remove_path(SimWorld& world, const save::PathTile& path, const save::TerrainGrid& grid);
 
     /// The ground of tiles `first` to `last` went from `was` to `grid`: the paths laid on it there follow it, and so
-    /// do the guests on them, who reel a moment as it moves under their feet.
+    /// do the people on them and keepers on the ground; guests reel a moment as it moves under their feet.
     void follow_ground(SimWorld& world, std::span<const save::PathTile> paths, const save::TerrainGrid& was, const save::TerrainGrid& grid, save::Tile first, save::Tile last);
 
     /// Has each imported ride and stall of `rides` find its entrance on the paths again, and each ride its

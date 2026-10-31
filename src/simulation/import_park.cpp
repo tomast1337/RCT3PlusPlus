@@ -456,6 +456,44 @@ namespace rct3::simulation
         r.destroy(swept.begin(), swept.end());
     }
 
+    void follow_ground(SimWorld& world, std::span<const save::PathTile> paths, const save::TerrainGrid& was, const save::TerrainGrid& grid, save::Tile first, save::Tile last)
+    {
+        const auto inside = [&](int col, int row) { return col >= first.col && col <= last.col && row >= first.row && row <= last.row; };
+        for (const save::PathTile& p : paths)
+        {
+            if (!inside(p.col, p.row) || !(park::is_ground_queue(p) || (!p.elevation && p.kind == save::PathKind::Ground)))
+                continue;
+            const auto node = world.paths.find(node_spot(world.paths, p, was).first);
+            if (!node)
+                continue;
+            const auto [spot, height] = node_spot(world.paths, p, grid);
+            world.paths.set_height(*node, spot.level, height);
+            (void)add_path(world, p, grid); // Lays its corners on the new ground and joins it again
+        }
+        // Guests walking or standing on those paths keep to them; any free to, reel while the ground moves.
+        auto& r = world.registry;
+        const auto& nodes = world.paths.nodes();
+        constexpr float kFelt = 0.01f; ///< Chosen by eye: the least rise or fall under their feet they react to
+        // shortcut: staff and keepers stay at their height till they next step, and do not reel; move them too if
+        // it shows.
+        for (const auto [e, stride, pose] : r.view<const Stride, Pose>(entt::exclude<Held, Dropped, Swimmer, RideWalk, Thrill>).each())
+        {
+            if (!r.all_of<Visitor>(e) || stride.from >= nodes.size() || stride.to >= nodes.size())
+                continue;
+            const PathTileSpot& at = nodes[stride.from].tile;
+            if (!inside(at.col, at.row) && !inside(nodes[stride.to].tile.col, nodes[stride.to].tile.row))
+                continue;
+            const float rise = world.paths.surface(stride.from, stride.to, { pose.position.x, pose.position.z }) - pose.position.y;
+            if (std::abs(rise) < kFelt)
+                continue;
+            pose.position.y += rise;
+            pose.was.y += rise;
+            // Already reeling, they play it through rather than start again each step of the stroke.
+            if (!r.any_of<Linger, Gesture>(e))
+                r.emplace<Gesture>(e, GestureKind::Dizzy, kTuning.gestures.shown.value);
+        }
+    }
+
     std::size_t relink_attractions(SimWorld& world, const save::RideModel& rides)
     {
         auto& r = world.registry;

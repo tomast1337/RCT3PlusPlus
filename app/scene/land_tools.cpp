@@ -205,6 +205,7 @@ namespace rct3::scene
             rebuild_ground(device, scene, assets, touched);
             if (!step)
                 return;
+            simulation::follow_ground(scene.sim, scene.footpaths.paths, was, scene.grid, (*step)[0], (*step)[1]);
             if (l.rumble)
                 l.rumble = 1.0f;
             if (!l.stirred)

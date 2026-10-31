@@ -125,6 +125,13 @@ namespace rct3::simulation
         {
             nodes_[node].line = line;
         }
+        /// Moves a node to `level` with its middle at `height`, as when the ground under it rose or sank; set its
+        /// corners after, which joins it again.
+        void set_height(NodeId node, int level, float height)
+        {
+            nodes_[node].tile.level = level;
+            nodes_[node].height = height;
+        }
         /// Gives a node's tile a surface that is not flat at its height (a ramp, or ground that is not level) and
         /// the sides it may join across (`open`, as PathNode::open); joins its tile again to suit.
         void set_corners(NodeId node, std::array<float, 4> corners, std::uint8_t open = 0b1111);

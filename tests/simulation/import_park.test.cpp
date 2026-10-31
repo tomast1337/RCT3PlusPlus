@@ -403,6 +403,59 @@ TEST_CASE("paths laid and taken away come and go from the network; walkers and r
     CHECK_FALSE(world.paths.route(at(1), at(3)));
 }
 
+TEST_CASE("paths on the ground and the guests on them follow the ground when it moves")
+{
+    simulation::SimWorld world;
+    save::TerrainGrid grid;
+    grid.width = 4;
+    grid.height = 1;
+    grid.tile_size_x = 4;
+    grid.tile_size_z = 4;
+    grid.cells.resize(4);
+    save::WorldModel model;
+    model.terrain = grid;
+    simulation::import_paths(world, model.paths, model.terrain);
+    std::vector<save::PathTile> laid;
+    for (int c = 0; c <= 2; ++c)
+    {
+        save::PathTile& p = laid.emplace_back();
+        p.kind = save::PathKind::Ground;
+        p.col = static_cast<std::uint8_t>(c);
+        (void)simulation::add_path(world, p, grid);
+    }
+    const auto at = [&](int c, int level) { return *world.paths.find({ c, 0, level }); };
+    auto& r = world.registry;
+    // One guest stands on (1, 0), another reels already, a third rides and is left be.
+    const auto guest = [&](simulation::NodeId on) {
+        const entt::entity g = r.create();
+        r.emplace<simulation::Visitor>(g);
+        r.emplace<simulation::Pose>(g, simulation::Pose { .position = world.paths.centre(on) });
+        r.emplace<simulation::Stride>(g, simulation::Stride { .from = on, .to = on });
+        return g;
+    };
+    const entt::entity standing = guest(at(1, 0));
+    const entt::entity reeling = guest(at(1, 0));
+    r.emplace<simulation::Gesture>(reeling, simulation::GestureKind::Dizzy, simulation::Seconds { 0.5f });
+    const entt::entity riding = guest(at(1, 0));
+    r.emplace<simulation::Thrill>(riding);
+
+    // The ground under all three tiles rises two units.
+    const save::TerrainGrid was = grid;
+    for (auto& cell : grid.cells)
+        cell.corners = { 2.0f, 2.0f, 2.0f, 2.0f };
+    simulation::follow_ground(world, laid, was, grid, { 0, 0 }, { 2, 0 });
+    CHECK_FALSE(world.paths.find({ 1, 0, 0 }));
+    const simulation::NodeId raised = at(1, 2);
+    CHECK(world.paths.nodes()[raised].height == doctest::Approx(2.0f));
+    CHECK(world.paths.nodes()[raised].next[0] == at(2, 2));
+    CHECK(world.paths.nodes()[raised].next[2] == at(0, 2));
+    CHECK(r.get<simulation::Pose>(standing).position.y == doctest::Approx(2.0f));
+    CHECK(r.get<simulation::Gesture>(standing).kind == simulation::GestureKind::Dizzy);
+    CHECK(r.get<simulation::Gesture>(reeling).left.value == doctest::Approx(0.5f));
+    CHECK(r.get<simulation::Pose>(riding).position.y == doctest::Approx(0.0f));
+    CHECK_FALSE(r.all_of<simulation::Gesture>(riding));
+}
+
 TEST_CASE("walkers stand on a ramp's slope and on the ground's own tilt under a path")
 {
     simulation::SimWorld world;

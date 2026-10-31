@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ride_placement.hpp"
 
+#include <algorithm>
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -314,4 +315,23 @@ TEST_CASE("levelling sharply sets the footprint's own corners; smoothly, also th
         if (cut.tile == save::Tile { 2, 2 }) // North-west: only the corner it shares
             CHECK(cut.corners == std::array { 4.0f, 4.0f, 4.0f, 2.0f });
     }
+}
+
+TEST_CASE("a stall offers each extra its items take once, at the usual amount, keeping those it has")
+{
+    const std::vector<park::CarriedKind> kinds {
+        { .symbol = "Burger:cid", .extras = { "Ketchup:ced", "Cheese:ced" } },
+        { .symbol = "Fries:cid", .extras = { "ketchup:ced", "Salt:ced" } },
+        { .symbol = "Cola:cid" },
+    };
+    save::Stall stall;
+    stall.items = { { .kind_symbol = "burger:cid" }, { .kind_symbol = "Fries:cid" }, { .kind_symbol = "Cola:cid" }, { .kind_symbol = "Unknown:cid" } };
+    stall.extras = { { .kind_symbol = "Cheese:ced", .level = save::StallExtra::kGuestChoice } };
+    park::offer_extras(stall, kinds);
+    REQUIRE(stall.extras.size() == 3);
+    CHECK(stall.extras[0].level == save::StallExtra::kGuestChoice);
+    CHECK(stall.extras[1].kind_symbol == "Ketchup:ced");
+    CHECK(stall.extras[1].level == save::StallExtra::kSome);
+    CHECK(stall.extras[2].kind_symbol == "Salt:ced");
+    CHECK(std::ranges::all_of(stall.items, [](const save::StallItem& i) { return i.extras == 0; }));
 }

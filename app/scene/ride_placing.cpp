@@ -246,7 +246,7 @@ namespace rct3::scene
                     return true;
                 save::RideModel one;
                 one.stalls.push_back(scene.rides.stalls[i]);
-                return simulation::import_stalls(scene.sim, one) > 0;
+                return simulation::import_stalls(scene.sim, one, scene.carried) > 0;
             });
         }
 
@@ -831,6 +831,8 @@ namespace rct3::scene
                 // cap it so once carried items' price limits are read.
                 for (const park::BuildItem::Goods& g : p.item->goods)
                     stall.items.push_back({ .kind_symbol = std::format("{}:cid", g.item), .price = g.price, .name = "%ME%" });
+                // And the extras those take, at the usual amount, on none of them yet.
+                park::offer_extras(stall, scene.carried.items);
                 if (scene.park.cash)
                     *scene.park.cash -= price;
                 float_money(scene, site_point(scene, *p.site), -price);

@@ -11,6 +11,7 @@
 // across one of the sides its track does not run through, at the piece's height and facing it.
 #pragma once
 
+#include "park/carried_goods.hpp"
 #include "park/ground_holds.hpp"
 #include "park/path_clearance.hpp"
 #include "save/model/rides.hpp"
@@ -46,6 +47,9 @@ namespace rct3::park
     /// items in the same order at the same prices, names, colours and extras, and the same level of each extra
     /// both offer. An item a stall already sold keeps its takings.
     void copy_menu(std::span<save::Stall> stalls, std::size_t from);
+    /// Adds to `stall`'s extras each one an item on its menu can take and it does not offer yet, at the usual
+    /// amount, by the item kinds of `items` (of carried items, as CarriedKinds holds them).
+    void offer_extras(save::Stall& stall, std::span<const CarriedKind> items);
     /// Moves item `from` of `stall`'s menu to place `to` among the others, the last place when past them.
     void move_item(save::Stall& stall, std::size_t from, std::size_t to);
 

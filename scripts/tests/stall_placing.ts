@@ -2,7 +2,7 @@
 //
 // Places a stall as a player would, on the game's blank landscape: picked, turned once with the placing panel's
 // tab to face the road in from the park's entrance, refused on the road itself (a click there builds nothing and is
-// silent), then placed on the grass beside it, with a thump. Its panel's levelling tabs light one at a time, none at first. The tool must go away, the stall's window open, and the new stall sell everything its kind offers, closed;
+// silent), then placed on the grass beside it, with a thump. Its panel's levelling tabs light one at a time, none at first. The tool must go away, the stall's window open, and the new stall sell everything its kind offers, closed, offering the extras those take;
 // the park must run it, as it faces the road. Its window then takes items off its menu and puts them back.
 // A drink stall, whose model has a motion, then plays it as soon as it stands, closed.
 //
@@ -70,6 +70,8 @@ expect(stall.name === "%ME% 1", `it named after its kind, not ${stall.name}`);
 expect(!stall.open, "it built closed");
 expect(!stall.moving, "a stall whose model has no motion standing still");
 expect(JSON.stringify(stall.items.map((i) => ({ item: i.item, price: i.price }))) === JSON.stringify(kind.goods.map((g) => ({ item: `${g.item}:cid`, price: g.price }))), "it selling all its kind's goods at their prices");
+// Burgers take extras: the stall offers each at the usual amount, ticked on none of its items yet.
+expect(stall.extras.length > 0 && stall.extras.every((e) => e.level === 2) && stall.items.every((i) => i.extras === 0), `it offering its items' extras, some of each, on none yet (${JSON.stringify(stall.extras)})`);
 expect(stall.shown && ui.find("info") !== undefined, "its window open");
 // The road runs past the tile it faces, so the park runs it at once, closed.
 await frames(2);

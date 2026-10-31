@@ -632,7 +632,7 @@ namespace rct3::scene
             return f;
         }
 
-        /// Reads what stalls sell, for their menus, and adds its pictures to the interface's.
+        /// Adds the pictures of what stalls sell, for their menus, to the interface's.
         void load_carried(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets)
         {
             scene.carried_read = true;
@@ -641,11 +641,7 @@ namespace rct3::scene
                 return;
             std::vector<std::string> files;
             for (const std::filesystem::path& path : park::carried_overlays(*folder))
-            {
-                if (const auto overlay = ovl::Overlay::load(path))
-                    park::add_carried_kinds(*overlay, scene.carried);
                 files.push_back(std::format("{}/{}", folder->filename().string(), path.filename().string()));
-            }
             const std::vector<std::string_view> names(files.begin(), files.end());
             const std::size_t skins = ui::add_extra_skins(device, assets, names);
             logging::logger("park").info("{} carried items, {} extras, {} pictures", scene.carried.items.size(), scene.carried.extras.size(), skins);
@@ -1458,7 +1454,9 @@ namespace rct3::scene
                     // upgrade once it is.
                     if (s.items.empty() && s.base.state == save::AttractionState::Open)
                         set_attraction_state(scene, s.base, save::AttractionState::Closed);
-                    simulation::restock(scene.sim, s);
+                    // An item put on brings the extras it takes.
+                    park::offer_extras(s, scene.carried.items);
+                    simulation::restock(scene.sim, s, scene.carried);
                 }
                 // The menu's rows follow what changed; a price typed in stays as it is.
                 if (!ui::listed(change.id, ItemPrice))

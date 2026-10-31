@@ -219,6 +219,7 @@ namespace rct3::scene
                 const auto overlay = ovl::Overlay::load(path);
                 if (!overlay)
                     continue;
+                park::add_carried_kinds(*overlay, scene.carried);
                 const std::string file = path.filename().string();
                 const std::string name = std::format("{}/{}", folder, std::string_view(file).substr(0, file.size() - kCommonEnding.size()));
                 for (const auto part : { maybe(&overlay->common()), overlay->unique() })
@@ -1234,7 +1235,7 @@ namespace rct3::scene
                 };
                 const auto placed = kept != nullptr ? parkfile::place_guests(scene.sim, *kept) : std::vector<entt::entity> { };
                 const auto guests = kept != nullptr ? by_look(scene.people.guests.size(), placed, kept->guests) : simulation::import_guests(scene.sim, scene.people);
-                simulation::import_stalls(scene.sim, scene.rides);
+                simulation::import_stalls(scene.sim, scene.rides, scene.carried);
                 simulation::import_pools(scene.sim, scene.pools);
                 const auto timings = simulation::flat_ride_timings(scene.rides, scene.objects, [&](const save::PlacedObject& o) -> const park::ObjectModel* {
                     const auto found = scene.models.find(park::model_ref(o));

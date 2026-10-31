@@ -91,6 +91,19 @@ namespace rct3::park
         }
     }
 
+    void offer_extras(save::Stall& stall, std::span<const CarriedKind> items)
+    {
+        for (const save::StallItem& item : stall.items)
+        {
+            const auto kind = std::ranges::find_if(items, [&](const CarriedKind& k) { return strings::equals_ignoring_case(k.symbol, item.kind_symbol); });
+            if (kind == items.end())
+                continue;
+            for (const std::string& extra : kind->extras)
+                if (std::ranges::none_of(stall.extras, [&](const save::StallExtra& e) { return strings::equals_ignoring_case(e.kind_symbol, extra); }))
+                    stall.extras.push_back({ .kind_symbol = extra, .level = save::StallExtra::kSome });
+        }
+    }
+
     void move_item(save::Stall& stall, std::size_t from, std::size_t to)
     {
         if (from >= stall.items.size())

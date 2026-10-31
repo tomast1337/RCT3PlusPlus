@@ -2921,7 +2921,7 @@ namespace rct3::scene
                         *scene.park.cash -= payroll->paid.value - scene.wages_seen;
                     scene.wages_seen = payroll->paid.value;
                 }
-                // So are pools' cleaning fluids.
+                // So are pools' cleaning fluids and stalls' stock.
                 if (const auto* supplies = scene.sim.registry.ctx().find<simulation::Supplies>())
                 {
                     if (scene.park.cash)

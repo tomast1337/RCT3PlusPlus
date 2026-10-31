@@ -2296,6 +2296,9 @@ namespace rct3::simulation
                 think(r, guest, ThoughtKind::GoodValue, at, now);
             attraction.income.value += price.value;
             ++attraction.customers;
+            // The park pays for the stock each one sold took, its extras with it.
+            if (ware < shop.menu.size())
+                r.ctx().emplace<Supplies>().paid.value += shop.menu[ware].cost.value;
             if (meal)
             {
                 // Eaten or drunk a bite at a time from now on, in the hand: an empty still in it goes in a pocket,

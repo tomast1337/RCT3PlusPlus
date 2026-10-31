@@ -831,7 +831,8 @@ namespace rct3::simulation
         double owed = 0; ///< Hundredths earned and not yet paid, under one
     };
 
-    /// What the park has paid for supplies, such as pools' cleaning fluid, kept in the registry's context.
+    /// What the park has paid for supplies, such as pools' cleaning fluid and stalls' stock, kept in the registry's
+    /// context.
     struct Supplies
     {
         Money paid { };

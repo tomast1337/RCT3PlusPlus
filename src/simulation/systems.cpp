@@ -3370,9 +3370,10 @@ namespace rct3::simulation
                     auto& stride = r.get<Stride>(m);
                     if (r.all_of<Linger>(m))
                         continue; // Sitting it out
-                    // Lost long enough, they are put with the others: the one place this happens.
+                    // Lost long enough, they are put with the others once there is a spot to wait on: the one place
+                    // this happens.
                     // shortcut: put there in plain view; look for a moment the camera is elsewhere if it shows.
-                    if (auto* lost = r.try_get<Lost>(m); lost != nullptr && (lost->left == 0 || --lost->left == 0))
+                    if (auto* lost = r.try_get<Lost>(m); lost != nullptr && (lost->left == 0 || --lost->left == 0) && spot < paths.nodes().size())
                     {
                         r.remove<Lost>(m);
                         stride.route.clear();

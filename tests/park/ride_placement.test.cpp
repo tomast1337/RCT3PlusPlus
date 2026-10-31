@@ -147,6 +147,40 @@ TEST_CASE("a tracked ride's entrance stands beside its station, across the track
     CHECK(station_door_spot(stations, { 9, 4 }) == DoorSpot { 9, 4, 2, 3 });
 }
 
+TEST_CASE("a door goes to the station it stands beside, each station taking its own entrance and exit")
+{
+    // A circuit along x: a station of three pieces over the track's end and start, and one of two further on.
+    const auto piece = [](std::int32_t x) {
+        save::TrackPiece p;
+        p.tile_x = x;
+        p.tile_z = 4;
+        p.height = 2;
+        return p;
+    };
+    const std::vector stations { piece(1), piece(2), piece(6), piece(7), piece(0) };
+    const auto beside = [](std::int32_t x) { return DoorSpot { x, 5, 3, 2 }; };
+    const auto spot = [](const DoorSpot& d) { return save::PlacementSpot { 1, d.col, d.row, d.height, d.direction }; };
+    // Nothing kept yet: the first station, whichever run it stands beside.
+    CHECK(door_station(stations, { }, beside(7)) == 0);
+    // A station whose door stands beside the same run takes the other door, wherever along the run it was kept,
+    // on either side of the track; the run over the circuit's end is one run.
+    std::vector<save::Station> saved(1);
+    saved[0].entrance_spot = spot(beside(6));
+    CHECK(door_station(stations, saved, beside(7)) == 0);
+    CHECK(door_station(stations, saved, DoorSpot { 7, 3, 1, 2 }) == 0);
+    CHECK(door_station(stations, saved, beside(1)) == 1);
+    saved.resize(2);
+    saved[1].exit_spot = spot(beside(0));
+    CHECK(door_station(stations, saved, beside(2)) == 1);
+    // One kept beside the run comes before a station kept without doors (as a file may have), which takes a
+    // run none is kept beside.
+    saved.resize(3);
+    std::swap(saved[1], saved[2]);
+    CHECK(door_station(stations, saved, beside(1)) == 2);
+    saved[2] = { };
+    CHECK(door_station(stations, saved, beside(1)) == 1);
+}
+
 TEST_CASE("a station piece's platform is capped where the station ends and has stairs where its doors are")
 {
     save::TrackPiece along_x;

@@ -134,6 +134,12 @@ namespace rct3::park
     /// track does not run through, facing the piece; nothing without stations.
     [[nodiscard]] std::optional<DoorSpot> station_door_spot(std::span<const save::TrackPiece> stations, save::Tile tile);
 
+    /// Which of `saved` (a tracked ride's stations) a door at `door`, beside one of `stations` (its station pieces
+    /// in track order), belongs to: the one that has a door beside the same run of station pieces, else the first
+    /// without doors, else a new one after the last (its index is the count). A run reaching the end of a circuit
+    /// goes on from its start. The first station given a door stays the first, where trains set off.
+    [[nodiscard]] std::size_t door_station(std::span<const save::TrackPiece> stations, std::span<const save::Station> saved, const DoorSpot& door);
+
     /// The platform piece (its "sid" name) a station piece of the platform type `type` takes: the type, then
     /// "start" where the station begins (the piece before it is no station), "end" where it ends, "startEnd"
     /// for both and "middle" for neither; then "1stairLeft" or "1stairRight" for a door beside it on the left or

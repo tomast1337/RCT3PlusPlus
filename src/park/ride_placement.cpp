@@ -358,6 +358,38 @@ namespace rct3::park
         return best;
     }
 
+    std::size_t door_station(std::span<const save::TrackPiece> stations, std::span<const save::Station> saved, const DoorSpot& door)
+    {
+        // A piece goes on from the one before when it stands on the next tile along that one's track.
+        const auto follows = [](const save::TrackPiece& a, const save::TrackPiece& b) {
+            const bool along_x = a.direction % 2 == 0;
+            return a.height == b.height && std::abs(b.tile_x - a.tile_x) == (along_x ? 1 : 0) && std::abs(b.tile_z - a.tile_z) == (along_x ? 0 : 1);
+        };
+        const auto run_of = [&](std::int32_t col, std::int32_t row, std::uint8_t direction) -> std::optional<std::size_t> {
+            std::size_t run = 0;
+            std::optional<std::size_t> found;
+            for (std::size_t k = 0; k < stations.size(); ++k)
+            {
+                if (k > 0 && !follows(stations[k - 1], stations[k]))
+                    ++run;
+                const save::TrackPiece& p = stations[k];
+                const bool along_x = p.direction % 2 == 0;
+                for (const std::int32_t side : { -1, 1 })
+                    if (!found && col == (along_x ? p.tile_x : p.tile_x + side) && row == (along_x ? p.tile_z + side : p.tile_z) && direction == (along_x ? (side > 0 ? 3 : 1) : (side > 0 ? 0 : 2)))
+                        found = run;
+            }
+            if (found && run > 0 && *found == run && follows(stations.back(), stations.front()))
+                return 0;
+            return found;
+        };
+        const auto run = run_of(door.col, door.row, door.direction);
+        const auto at_run = [&](const std::optional<save::PlacementSpot>& spot) { return spot && run_of(spot->col, spot->row, spot->direction) == run; };
+        for (std::size_t k = 0; k < saved.size(); ++k)
+            if (at_run(saved[k].entrance_spot) || at_run(saved[k].exit_spot))
+                return k;
+        return static_cast<std::size_t>(std::ranges::find_if(saved, [](const save::Station& s) { return !s.entrance_spot && !s.exit_spot; }) - saved.begin());
+    }
+
     std::string platform_symbol(std::string_view type, const save::TrackPiece& piece, bool station_before, bool station_after, std::span<const DoorSpot> doors)
     {
         bool left = false, right = false;

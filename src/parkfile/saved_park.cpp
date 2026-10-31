@@ -47,11 +47,12 @@ namespace rct3::parkfile
             if (ride.track)
                 for (const save::TrackPiece& piece : ride.track->pieces)
                     built.insert(piece.scenery);
-            for (const auto& spot : { ride.base.spot, ride.stations.empty() ? std::nullopt : ride.stations.front().entrance_spot, ride.stations.empty() ? std::nullopt : ride.stations.front().exit_spot })
-            {
-                if (spot)
-                    built.insert(spot->object);
-            }
+            if (ride.base.spot)
+                built.insert(ride.base.spot->object);
+            for (const save::Station& station : ride.stations)
+                for (const auto& spot : { station.entrance_spot, station.exit_spot })
+                    if (spot)
+                        built.insert(spot->object);
         }
         for (const save::Stall& stall : rides.stalls)
         {

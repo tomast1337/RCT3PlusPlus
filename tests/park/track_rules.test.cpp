@@ -104,6 +104,14 @@ TEST_CASE("entrances and exits are counted as the ride's door rules say")
     // One per station.
     CHECK(open_refusal(two, rules_with([](TrackRules& r) { r.entrances = 0; }), kOpen, false) == "CantOpenRideMissingEntrance");
     CHECK(open_refusal(two, rules_with([](TrackRules& r) { r.exits = 0; }), kOpen, false) == "CantOpenRideMissingExit");
+    // A second station on the course, given no doors yet, counts as one too.
+    using K = CourseKind;
+    TrackCourse course;
+    course.points.resize(5);
+    course.distance = { 0, 6, 10, 16, 20 };
+    course.kinds = { K::Station, K::Plain, K::Station, K::Plain, K::Plain };
+    CHECK_FALSE(open_refusal(ride(6, 1), rules_with([](TrackRules& r) { r.entrances = 0; }), kOpen, false));
+    CHECK(open_refusal(ride(6, 1), rules_with([](TrackRules& r) { r.entrances = 0; }), kOpen, false, course) == "CantOpenRideMissingEntrance");
     // None anywhere.
     save::Ride bare = ride(6, 1);
     bare.stations[0] = { .entrance = 1 };

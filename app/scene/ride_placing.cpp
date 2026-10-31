@@ -183,7 +183,7 @@ namespace rct3::scene
             // The doors are painted as the fence is.
             for (save::PlacedObject& o : scene.objects)
             {
-                if (!ride.stations.empty() && (o.id == ride.stations.front().entrance || o.id == ride.stations.front().exit))
+                if (std::ranges::any_of(ride.stations, [&](const save::Station& s) { return o.id == s.entrance || o.id == s.exit; }))
                     o.colours = colours;
             }
             for (save::PlacedObject& piece : pieces)
@@ -687,6 +687,11 @@ namespace rct3::scene
                 p.door->height = p.base ? p.base->height : p.door->height;
                 p.ground = park::ride_site({ p.door->col, p.door->row }, { 1, 1 }, 0, scene.grid).height;
                 p.site = park::RideSite { p.door->col, p.door->row, 0, p.door->height, { 1, 1 } };
+                // The other door kept at the station this one goes to keeps its tile.
+                const auto& kept = scene.rides.rides.at(p.ride).stations;
+                const std::size_t k = p.base ? 0 : park::door_station(p.stations, kept, *p.door);
+                const auto& other = k >= kept.size() ? std::nullopt : p.step == RidePlacing::Step::Exit ? kept[k].entrance_spot : kept[k].exit_spot;
+                p.entrance = other ? std::optional(park::DoorSpot { other->col, other->row, other->direction, other->height }) : std::nullopt;
             }
             else
                 p.door = park::door_spot(*p.site, { tile->col, tile->row });
@@ -897,12 +902,12 @@ namespace rct3::scene
             logging::logger("park").info("placed {} at {},{}", o->symbol, p.door->col, p.door->row);
             if (!p.stations.empty())
             {
-                // shortcut: doors placed by hand go to the ride's first station, wherever along the track they stand;
-                // give each its own station's once rides of several stations are built here.
-                place_station_door(scene, assets, p.ride, 0, *o, p.site->height, p.step == RidePlacing::Step::Exit);
-                // The entrance down, the exit follows when the ride has none, as in the game.
+                // Each door goes to the station it stands beside; a station on a base of its own is the only one.
+                const std::size_t k = p.base ? 0 : park::door_station(p.stations, scene.rides.rides.at(p.ride).stations, *p.door);
+                place_station_door(scene, assets, p.ride, k, *o, p.site->height, p.step == RidePlacing::Step::Exit);
+                // The entrance down, the exit follows when its station has none, as in the game.
                 const auto& doors = scene.rides.rides.at(p.ride).stations;
-                if (p.step == RidePlacing::Step::Exit || doors.empty() || doors.front().exit_spot || !start_door_placing(scene, p.ride, park::BuildItem(*p.item), std::vector(p.stations), true))
+                if (p.step == RidePlacing::Step::Exit || k >= doors.size() || doors[k].exit_spot || !start_door_placing(scene, p.ride, park::BuildItem(*p.item), std::vector(p.stations), true))
                     stop_ride_placing(scene);
                 p.door.reset();
                 p.ghost_mesh = { };

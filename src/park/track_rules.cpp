@@ -123,7 +123,9 @@ namespace rct3::park
             return std::nullopt;
         const auto door = [&](std::uint32_t rule, auto built, std::string_view which) -> std::optional<std::string> {
             const auto placed = static_cast<std::size_t>(std::ranges::count_if(ride.stations, built));
-            const bool enough = rule == 0 ? placed >= ride.stations.size() : rule == 2 || rule == 3 ? placed > 0 : true;
+            // A station built with no door yet is kept with the track's course, not among the ride's stations.
+            const std::size_t stations = std::max(ride.stations.size(), course ? station_runs(*course).size() + course->other_stations.size() : 0);
+            const bool enough = rule == 0 ? placed >= stations : rule == 2 || rule == 3 ? placed > 0 : true;
             if (enough)
                 return std::nullopt;
             return std::format("CantOpenRide{}{}", rule == 0 ? "Missing" : "No", which);

@@ -186,6 +186,11 @@ namespace rct3::simulation
     /// to the nearest path to go on from. False, and still held, where there are no paths to walk to.
     bool let_go(SimWorld& world, entt::entity person, glm::vec3 ground);
 
+    /// The ground under `person`, on foot, grew too steep: they slide down it, keeping to the ground, till it
+    /// levels out enough to stop them, fall over, get up and walk to the nearest path. False, and nothing done,
+    /// for one not on foot: riding, swimming, seated, in a booth, held or already falling.
+    bool slide(SimWorld& world, entt::entity person);
+
     /// Advances `world` by one tick, sharing work out over `workers` when given.
     void step(SimWorld& world, std::optional<Workers&> workers = std::nullopt);
 

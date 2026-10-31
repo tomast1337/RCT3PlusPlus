@@ -57,4 +57,8 @@ namespace rct3::simulation
     /// Moves `wreck` on by `seconds` through `around`.
     WreckEvent fly(Wreck& wreck, float seconds, const WreckSurroundings& around);
 
+    /// How the ground given by `ground` (see WreckSurroundings) rises at `at`: its rise over run along x and z,
+    /// pointing uphill; a cliff on one side of it is left out. Flat when no ground is given.
+    [[nodiscard]] glm::vec2 slope(const std::function<float(glm::vec2)>& ground, glm::vec2 at);
+
 } // namespace rct3::simulation

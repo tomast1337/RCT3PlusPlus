@@ -401,6 +401,15 @@ namespace rct3::simulation::tuning
         Chance happy { 0.6 };    ///< Of a held person enjoying it; the rest hang there cross
     };
 
+    /// People on foot whose ground the land tools tip too steep: they slide down it, fall over, and get up.
+    struct Slides
+    {
+        float steep = 0.3f;    ///< Chosen by eye: rise over run of the ground past which those on it slide; a ground path tile tipped as far as it may go is past it
+        float grip = 0.25f;    ///< Chosen by eye: the ground's rub on a slider, as a share of their weight
+        Pace settled { 0.3f }; ///< Chosen by eye: a slider slower than this, on ground no steeper than `steep`, stops
+        Seconds longest { 8 }; ///< Chosen by eye: the longest a slide lasts, however steep the ground goes on
+    };
+
     /// Guests of honour (VIPs) judging the park on their visit; the tolerances and targets they are weighed
     /// against come from the scenario.
     struct Vips
@@ -477,6 +486,7 @@ namespace rct3::simulation::tuning
         Vips vips;
         Transport transport;
         Holding holding;
+        Slides slides;
         Pools pools;
     };
 

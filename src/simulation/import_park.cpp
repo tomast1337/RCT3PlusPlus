@@ -505,6 +505,9 @@ namespace rct3::simulation
         auto& r = world.registry;
         const auto& nodes = world.paths.nodes();
         constexpr float kFelt = 0.01f; ///< Chosen by eye: the least rise or fall under their feet they react to
+        // Ground tipped past steep under their feet sends them sliding down it.
+        const auto steepness = [](const save::TerrainGrid& g, glm::vec3 p) { return glm::length(slope([&g](glm::vec2 q) { return g.height_at(q.x, q.y).value_or(0.0f); }, { p.x, p.z })); };
+        std::vector<entt::entity> sliding;
         for (const auto [e, stride, pose] : r.view<const Stride, Pose>(entt::exclude<Held, Dropped, Swimmer, RideWalk, Thrill>).each())
         {
             if (stride.from >= nodes.size() || stride.to >= nodes.size())
@@ -512,6 +515,8 @@ namespace rct3::simulation
             const PathTileSpot& at = nodes[stride.from].tile;
             if (!inside(at.col, at.row) && !inside(nodes[stride.to].tile.col, nodes[stride.to].tile.row))
                 continue;
+            if (const float now = steepness(grid, pose.position); now > kTuning.slides.steep && now > steepness(was, pose.position))
+                sliding.push_back(e);
             const float rise = world.paths.surface(stride.from, stride.to, { pose.position.x, pose.position.z }) - pose.position.y;
             if (std::abs(rise) < kFelt)
                 continue;
@@ -521,6 +526,8 @@ namespace rct3::simulation
             if (r.all_of<Visitor>(e) && !r.any_of<Linger, Gesture>(e))
                 r.emplace<Gesture>(e, GestureKind::Dizzy, kTuning.gestures.shown.value);
         }
+        for (const entt::entity e : sliding)
+            (void)slide(world, e); // Those it cannot move (seated, riding) stay where they are
         // Keepers about their enclosures stand on the ground itself.
         for (const auto [e, duty, pose] : r.view<const KeeperDuty, Pose>().each())
         {

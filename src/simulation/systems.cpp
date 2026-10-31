@@ -1497,6 +1497,26 @@ namespace rct3::simulation
             }
         }
 
+        /// The path under `ground`, else the nearest one a person there may walk on; nothing without paths.
+        /// shortcut: off the paths they walk straight to it, over whatever lies between; route round scenery once
+        /// the ground is walkable.
+        std::optional<NodeId> path_to_rejoin(const PathNetwork& paths, glm::vec3 ground)
+        {
+            std::optional<NodeId> node = paths.nearest(ground);
+            const auto& nodes = paths.nodes();
+            if (node && !nodes[*node].queue && !nodes[*node].removed && std::abs(nodes[*node].height - ground.y) <= 1)
+                return node;
+            node.reset();
+            float best = std::numeric_limits<float>::max();
+            for (NodeId n = 0; n < nodes.size(); ++n)
+                if (const float d = glm::distance(paths.centre(n), ground); !nodes[n].queue && !nodes[n].removed && d < best)
+                {
+                    best = d;
+                    node = n;
+                }
+            return node;
+        }
+
         /// Throws `person`, on foot or just let out of a crashed ride, from `at` at `velocity`: they fly, land
         /// knocked over, lie there a while, then walk to `node` and go on from there.
         void throw_person(entt::registry& r, entt::entity person, glm::vec3 at, glm::vec3 velocity, NodeId node)
@@ -1540,26 +1560,30 @@ namespace rct3::simulation
         entt::registry& r = world.registry;
         if (!r.valid(person) || !r.all_of<Held, Pose>(person))
             return false;
-        // The path under them, else the nearest one they may walk on.
-        // shortcut: off the paths they walk straight to it, over whatever lies between; route round
-        // scenery once the ground is walkable.
-        std::optional<NodeId> node = world.paths.nearest(ground);
-        const auto& nodes = world.paths.nodes();
-        if (!node || nodes[*node].queue || nodes[*node].removed || std::abs(nodes[*node].height - ground.y) > 1)
-        {
-            node.reset();
-            float best = std::numeric_limits<float>::max();
-            for (NodeId n = 0; n < nodes.size(); ++n)
-                if (const float d = glm::distance(world.paths.centre(n), ground); !nodes[n].queue && !nodes[n].removed && d < best)
-                {
-                    best = d;
-                    node = n;
-                }
-        }
+        const std::optional<NodeId> node = path_to_rejoin(world.paths, ground);
         if (!node)
             return false;
         r.remove<Held>(person);
         r.emplace<Dropped>(person, Dropped { .ground = ground.y, .node = *node });
+        return true;
+    }
+
+    bool slide(SimWorld& world, entt::entity person)
+    {
+        entt::registry& r = world.registry;
+        if (!r.valid(person) || r.any_of<Linger, Swimmer>(person) || !r.all_of<Errand>(person))
+            return false;
+        if (const ErrandKind kind = r.get<Errand>(person).kind; kind == ErrandKind::Riding || kind == ErrandKind::Swimming)
+            return false;
+        if (const auto* staff = r.try_get<Staff>(person); staff != nullptr && staff->role == StaffRole::Vendor)
+            return false;
+        const Pose& pose = r.get<Pose>(person);
+        throw_person(r, person, pose.position, { }, r.get<Stride>(person).to);
+        auto* drop = r.try_get<Dropped>(person);
+        if (drop == nullptr)
+            return false;
+        drop->thrown = false;
+        drop->sliding = true;
         return true;
     }
 
@@ -2636,6 +2660,32 @@ namespace rct3::simulation
         {
             auto& drop = r.get<Dropped>(e);
             auto& pose = r.get<Pose>(e);
+            // Sliding, the slope pulls them down it and the ground's rub slows them, till they stop on gentler
+            // ground, fall over and look for the nearest path.
+            if (drop.sliding)
+            {
+                const auto& slides = kTuning.slides;
+                const float gravity = kTuning.holding.gravity;
+                const glm::vec2 rise = surroundings != nullptr ? slope(surroundings->ground, { pose.position.x, pose.position.z }) : glm::vec2 { };
+                const float lean = 1 + glm::dot(rise, rise); // The steeper, the less of their weight presses on the ground
+                drop.drift -= rise * (gravity / lean * dt);
+                const float speed = glm::length(drop.drift);
+                const float rub = slides.grip * gravity / lean * dt;
+                drop.drift = speed > rub ? drop.drift * (1 - rub / speed) : glm::vec2 { };
+                pose.position += glm::vec3 { drop.drift.x, 0, drop.drift.y } * dt;
+                drop.ground = surroundings != nullptr && surroundings->ground ? surroundings->ground({ pose.position.x, pose.position.z }) : pose.position.y;
+                pose.position.y = drop.ground;
+                if ((glm::length(drop.drift) < slides.settled.value && glm::length(rise) <= slides.steep) || (drop.slid.value += dt) >= slides.longest.value)
+                {
+                    drop.sliding = false;
+                    drop.drift = { };
+                    drop.node = path_to_rejoin(paths, pose.position).value_or(drop.node);
+                    // Staff have no motion for lying down, so they only stand up again.
+                    if (r.all_of<Visitor>(e))
+                        r.emplace_or_replace<Gesture>(e, GestureKind::Down, kTuning.crashes.knocked);
+                }
+                continue;
+            }
             if (drop.thrown || pose.position.y > drop.ground)
             {
                 drop.fall.value += kTuning.holding.gravity * dt;

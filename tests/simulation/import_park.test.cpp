@@ -501,6 +501,52 @@ TEST_CASE("paths on the ground and the people on them follow the ground when it 
     CHECK(r.get<simulation::Pose>(keeper).position.y == doctest::Approx(2.0f));
 }
 
+TEST_CASE("people on foot whose ground the land tips too steep start sliding down it")
+{
+    simulation::SimWorld world;
+    save::TerrainGrid grid;
+    grid.width = 3;
+    grid.height = 1;
+    grid.tile_size_x = 4;
+    grid.tile_size_z = 4;
+    grid.cells.resize(3);
+    save::WorldModel model;
+    model.terrain = grid;
+    simulation::import_paths(world, model.paths, model.terrain);
+    std::vector<save::PathTile> laid;
+    for (int c = 0; c <= 2; ++c)
+    {
+        save::PathTile& p = laid.emplace_back();
+        p.kind = save::PathKind::Ground;
+        p.col = static_cast<std::uint8_t>(c);
+        (void)simulation::add_path(world, p, grid);
+    }
+    auto& r = world.registry;
+    const auto person = [&](int col) {
+        const simulation::NodeId on = *world.paths.find({ col, 0, 0 });
+        const entt::entity g = r.create();
+        r.emplace<simulation::Visitor>(g);
+        r.emplace<simulation::Errand>(g);
+        r.emplace<simulation::Pose>(g, simulation::Pose { .position = world.paths.centre(on) });
+        r.emplace<simulation::Stride>(g, simulation::Stride { .from = on, .to = on });
+        return g;
+    };
+    const entt::entity on_steep = person(1);
+    const entt::entity on_gentle = person(2);
+    const entt::entity seated = person(1);
+    r.emplace<simulation::Linger>(seated);
+
+    // Tile (1, 0) tips three units down along +x; (2, 0) half a unit.
+    const save::TerrainGrid was = grid;
+    grid.cells[1].corners = { 3.0f, 0.0f, 3.0f, 0.0f };
+    grid.cells[2].corners = { 0.5f, 0.0f, 0.5f, 0.0f };
+    simulation::follow_ground(world, laid, was, grid, { 0, 0 }, { 2, 0 });
+    REQUIRE(r.all_of<simulation::Dropped>(on_steep));
+    CHECK(r.get<simulation::Dropped>(on_steep).sliding);
+    CHECK_FALSE(r.all_of<simulation::Dropped>(on_gentle));
+    CHECK_FALSE(r.all_of<simulation::Dropped>(seated));
+}
+
 TEST_CASE("walkers stand on a ramp's slope and on the ground's own tilt under a path")
 {
     simulation::SimWorld world;

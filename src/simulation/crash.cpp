@@ -62,4 +62,19 @@ namespace rct3::simulation
         return event;
     }
 
+    glm::vec2 slope(const std::function<float(glm::vec2)>& ground, glm::vec2 at)
+    {
+        constexpr float kReach = 0.1f; ///< Chosen by eye: how far either side of the point the ground is measured
+        if (!ground)
+            return { };
+        // Of the rise towards each side, the gentler, so a cliff edge beside the point is not taken for a slope.
+        const float here = ground(at);
+        const auto rise = [&](glm::vec2 way) {
+            const float ahead = ground(at + way * kReach) - here;
+            const float behind = here - ground(at - way * kReach);
+            return (std::abs(ahead) < std::abs(behind) ? ahead : behind) / kReach;
+        };
+        return { rise({ 1, 0 }), rise({ 0, 1 }) };
+    }
+
 } // namespace rct3::simulation

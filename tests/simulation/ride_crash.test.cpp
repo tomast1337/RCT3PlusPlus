@@ -186,3 +186,25 @@ TEST_CASE("the park forgets a crash after a while")
     park.run_seconds(2);
     CHECK(r.get<Wrecks>(ride).since.value == -1);
 }
+
+TEST_CASE("a guest on ground grown too steep slides down it along the ground, falls over, then gets up and walks to a path")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    auto& r = park.world().registry;
+    const auto g = park.guest({ 1, 0 }, { .nausea = 0.7f }); // Too queasy to queue for a ride, so on foot
+    // The ground falls away along +x from just behind them, then levels out four units on.
+    const float x0 = r.get<Pose>(g).position.x;
+    r.ctx().insert_or_assign(WreckSurroundings { .ground = [x0](glm::vec2 p) { return -0.8f * std::clamp(p.x - x0 + 1, 0.0f, 5.0f); } });
+    REQUIRE(slide(park.world(), g));
+    REQUIRE(r.all_of<Dropped>(g));
+    CHECK(r.get<Dropped>(g).sliding);
+    CHECK_FALSE(r.any_of<Errand, Stride>(g));
+    CHECK(park.run_until([&] { return !r.get<Dropped>(g).sliding; }, 20));
+    CHECK(r.get<Pose>(g).position.x > x0 + 3); // Down the slope
+    CHECK(r.get<Pose>(g).position.y == doctest::Approx(-4.0f));
+    REQUIRE(r.all_of<Gesture>(g));
+    CHECK(r.get<Gesture>(g).kind == GestureKind::Down);
+    CHECK(park.run_until([&] { return !r.all_of<Dropped>(g); }, 60));
+    CHECK(r.all_of<Errand, Stride>(g));
+}

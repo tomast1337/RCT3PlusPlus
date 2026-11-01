@@ -423,6 +423,13 @@ namespace rct3::simulation::tuning
         std::int32_t reach = 3; ///< Tiles round them they see a themed area in
     };
 
+    /// The park inspector's rounds.
+    struct Inspector
+    {
+        Seconds gap { 20 };    ///< Chosen by eye: walking about between visits
+        Seconds again { 600 }; ///< Chosen by eye: before they visit the same attraction again
+    };
+
     /// Rides with more than one station as ways across the park: a guest going far may ride from one station
     /// to another when that is sooner than walking, counting the wait in its queue and the ride.
     struct Transport
@@ -486,6 +493,7 @@ namespace rct3::simulation::tuning
         Prizes prizes;
         Crashes crashes;
         Vips vips;
+        Inspector inspector;
         Transport transport;
         Holding holding;
         Slides slides;

@@ -114,6 +114,14 @@ namespace rct3::simulation
             return std::pair { wanted[found->first], std::move(found->second) };
         }
 
+        /// Most a guest pays for `ware`: its item's worth for the weather, more in the cold for a hot drink and in
+        /// the heat for an ice cream; `flat` where that is not known.
+        Money worth_of(const Ware& ware, Money flat, float temperature)
+        {
+            const std::size_t band = temperature < kTuning.weather.cold.value ? 1 : temperature >= kTuning.weather.hot.value ? 2 : 0;
+            return ware.worth[band].value > 0 ? ware.worth[band] : flat;
+        }
+
         /// How many guests a ride's queue `line` holds; no limit for a ride guests walk straight into.
         std::size_t queue_room(const std::vector<NodeId>& line)
         {
@@ -955,7 +963,7 @@ namespace rct3::simulation
             }
 
             // Guests: glum on dirty or vandalised paths, binning or dropping their rubbish, and the angriest breaking things.
-            const auto guests_view = r.view<const Errand, const Stride, Mood, Dice, const Needs>();
+            const auto guests_view = r.view<const Errand, const Stride, Mood, Dice, const Needs>(entt::exclude<Staff>); // Not an inspector on a visit
             const bool pool_open = std::ranges::any_of(r.view<const PoolDoor, const Attraction>().each(), [](const auto& room) { return std::get<2>(room).open; });
             auto& seated = buffers.seated;
             seated.assign(paths.nodes().size(), 0);
@@ -1153,8 +1161,20 @@ namespace rct3::simulation
             for (const entt::entity e : sorted(staff_view))
             {
                 auto [staff, stride, pose, dice] = staff_view.get(e);
+                // An inspector on a visit walks, queues and rides as a guest (above); let go, back on their rounds.
+                if (r.all_of<Needs>(e))
+                {
+                    if (r.get<Errand>(e).kind != ErrandKind::Wandering)
+                        continue;
+                    r.remove<Needs, Mood, Wallet, Thrill, Thoughts, Crossing>(e);
+                    r.get<Errand>(e) = { };
+                    stride.route.clear();
+                }
                 if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
                     continue;
+                Rounds* rounds = staff.role == StaffRole::Inspector ? &r.get_or_emplace<Rounds>(e) : nullptr;
+                if (rounds != nullptr)
+                    rounds->gap.value -= dt;
                 if (staff.ride != entt::null && !r.valid(staff.ride))
                     staff.ride = entt::null;
                 care_for(staff, (staff.busy.value > 0 && !staff.resting) || staff.ride != entt::null, dt);
@@ -1259,6 +1279,65 @@ namespace rct3::simulation
                 };
                 stride.from = at;
                 stride.lane_from = stride.lane_to;
+                // A free inspector goes to the next attraction of their next task: the first in the park's order
+                // that is open, has a way to its entrance and was not visited lately. A stall's prices they judge
+                // as they set off, against what guests pay for each thing today.
+                if (rounds != nullptr && rounds->gap.value <= 0)
+                {
+                    rounds->gap = kTuning.inspector.gap;
+                    std::erase_if(rounds->seen, [&](const auto& seen) { return !r.valid(seen.first) || now - seen.second >= kTuning.inspector.again.value; });
+                    constexpr std::array<std::int32_t, 3> kTasks { kFlatRidesTask, kTrackedRidesTask, kRefreshmentsTask };
+                    std::size_t task = kTasks.size();
+                    for (std::size_t k = 0; k < kTasks.size() && task == kTasks.size(); ++k)
+                        if ((staff.tasks & kTasks[(rounds->task + k) % kTasks.size()]) != 0)
+                            task = (rounds->task + k) % kTasks.size();
+                    rounds->task = static_cast<std::uint8_t>((task + 1) % kTasks.size());
+                    bool visiting = false;
+                    for (const entt::entity a : task < kTasks.size() ? sorted(r.view<const Attraction>()) : std::vector<entt::entity> { })
+                    {
+                        const Attraction& attraction = r.get<Attraction>(a);
+                        const auto* shop = r.try_get<Shop>(a);
+                        const bool of_task = shop != nullptr ? task == 2 && (shop->product == Product::Food || shop->product == Product::Drink) : r.all_of<CycleRide>(a) && task == (r.all_of<Trains>(a) ? 1u : 0u);
+                        if (!of_task || !attraction.open || attraction.entrance == kNoNode || std::ranges::contains(rounds->seen, a, &std::pair<entt::entity, float>::first))
+                            continue;
+                        auto way = paths.route(at, attraction.entrance, Walker::Guest);
+                        if (!way)
+                            continue;
+                        rounds->seen.emplace_back(a, now);
+                        if (shop != nullptr)
+                        {
+                            bool dear = false;
+                            bool cheap = false;
+                            const auto judge = [&](Money price, Money worth) {
+                                dear = dear || price.value > worth.value; // Guests would not pay it
+                                cheap = cheap || static_cast<float>(price.value) <= kTuning.eating.good_value.value * static_cast<float>(worth.value);
+                            };
+                            const auto flat = [](Product p) { return p == Product::Food ? kTuning.eating.food_worth : kTuning.eating.drink_worth; };
+                            if (shop->menu.empty())
+                                judge(attraction.price, flat(shop->product));
+                            for (const Ware& w : shop->menu)
+                                if (w.product == Product::Food || w.product == Product::Drink)
+                                    judge(w.price, worth_of(w, flat(w.product), weather.temperature.value));
+                            auto& findings = r.ctx().emplace<Findings>().found;
+                            if (dear)
+                                findings.emplace_back(Finding::TooDear, a);
+                            if (cheap)
+                                findings.emplace_back(Finding::TooCheap, a);
+                        }
+                        r.emplace_or_replace<Needs>(e);
+                        r.emplace_or_replace<Mood>(e);
+                        r.emplace_or_replace<Wallet>(e);
+                        r.get<Errand>(e) = { ErrandKind::Heading, a, 0 };
+                        stride.route = std::move(*way);
+                        stride.to = at;
+                        stride.progress.value = 1;
+                        place(paths, stride, pose);
+                        visiting = true;
+                        break;
+                    }
+                    if (visiting)
+                        continue;
+                }
                 if (staff.ride != entt::null)
                 {
                     // On the way to a ride, or there and setting to work.
@@ -2271,9 +2350,8 @@ namespace rct3::simulation
             // them, any of those; a stall with no menu sells one thing at its price. What a thing is worth is its
             // item's for the weather, more in the cold for a hot drink and in the heat for an ice cream; where that
             // is not known, the same for every food or drink.
-            const std::size_t band = weather.temperature.value < kTuning.weather.cold.value ? 1 : weather.temperature.value >= kTuning.weather.hot.value ? 2 : 0;
             const Money flat_worth = shop.product == Product::Food ? kTuning.eating.food_worth : kTuning.eating.drink_worth;
-            const auto worth_of = [&](const Ware& w) { return w.worth[band].value > 0 ? w.worth[band] : flat_worth; };
+            const auto worth = [&](const Ware& w) { return worth_of(w, flat_worth, weather.temperature.value); };
             std::size_t ware = shop.menu.size();
             Money price = attraction.price;
             if (meal && !shop.menu.empty())
@@ -2281,12 +2359,12 @@ namespace rct3::simulation
                 std::size_t fair = 0, affordable = 0;
                 for (const Ware& w : shop.menu)
                     if (w.product == shop.product && w.price.value <= wallet.cash.value)
-                        ++affordable, fair += w.price.value <= worth_of(w).value ? 1 : 0;
+                        ++affordable, fair += w.price.value <= worth(w).value ? 1 : 0;
                 if (fair > 0)
                     for (std::size_t pick = random::below(r.get<Dice>(guest).state, static_cast<std::uint32_t>(fair)), k = 0; k < shop.menu.size(); ++k)
                     {
                         const Ware& w = shop.menu[k];
-                        if (w.product == shop.product && w.price.value <= wallet.cash.value && w.price.value <= worth_of(w).value && pick-- == 0)
+                        if (w.product == shop.product && w.price.value <= wallet.cash.value && w.price.value <= worth(w).value && pick-- == 0)
                         {
                             ware = k;
                             price = w.price;
@@ -2316,7 +2394,7 @@ namespace rct3::simulation
                     think(r, guest, ThoughtKind::CantAfford, at, now);
                 return false;
             }
-            if (meal && price.value <= kTuning.eating.good_value.value * static_cast<float>((ware < shop.menu.size() ? worth_of(shop.menu[ware]) : flat_worth).value))
+            if (meal && price.value <= kTuning.eating.good_value.value * static_cast<float>((ware < shop.menu.size() ? worth(shop.menu[ware]) : flat_worth).value))
                 think(r, guest, ThoughtKind::GoodValue, at, now);
             attraction.income.value += price.value;
             ++attraction.customers;
@@ -2403,7 +2481,8 @@ namespace rct3::simulation
                         pose.heading.value = std::atan2(shop->counter.x, shop->counter.y);
                     place(paths, stride, pose);
                 };
-                if (buy(guest, arrived[i], *shop, !r.all_of<Member>(guest)))
+                // An inspector only stands at the counter a while; they judged its prices on the way.
+                if (r.all_of<Staff>(guest) || buy(guest, arrived[i], *shop, !r.all_of<Member>(guest)))
                     served(guest);
                 for (const entt::entity m : followers)
                     if (buy(m, arrived[i], *shop, false))
@@ -3199,15 +3278,22 @@ namespace rct3::simulation
                         const entt::entity guest = queue[i];
                         if (!r.valid(guest))
                             continue;
-                        if (!attraction.open || !pay(r, guest, attraction.price, &Wallet::spent_rides))
+                        // An inspector rides free, telling the player when they queued for ages.
+                        const bool inspector = r.all_of<Staff>(guest);
+                        if (!attraction.open || (!inspector && !pay(r, guest, attraction.price, &Wallet::spent_rides)))
                         {
                             if (attraction.open)
                                 think(r, guest, ThoughtKind::CantAfford, e, now);
                             r.get<Errand>(guest) = after_ride(r, guest, e);
                             continue;
                         }
-                        attraction.income.value += attraction.price.value;
-                        ++attraction.customers;
+                        if (!inspector)
+                        {
+                            attraction.income.value += attraction.price.value;
+                            ++attraction.customers;
+                        }
+                        else if (r.get<Errand>(guest).queued.value >= kLongQueue)
+                            r.ctx().emplace<Findings>().found.emplace_back(Finding::LongQueue, e);
                         r.get<Errand>(guest).kind = ErrandKind::Riding;
                         if (const std::size_t seat = riders->size(); walk_on && seat < walks->on.size())
                         {

@@ -27,6 +27,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace rct3::simulation
@@ -765,6 +766,9 @@ namespace rct3::simulation
         Other,    ///< Walks the paths, nothing more yet
         Vendor,   ///< Sells at a stall or a ride's entrance, standing at their post off the paths
         Keeper,   ///< Looks after an animal enclosure, inside it off the paths
+        /// Goes round the attractions in turn: rides them and stands at stalls, as a guest would but free, and
+        /// tells the player what is wrong with them (see Rounds)
+        Inspector,
     };
 
     /// A handyman's tasks among the task flags, numbered as saved parks number them.
@@ -775,6 +779,11 @@ namespace rct3::simulation
     inline constexpr std::int32_t kLeaveBrokenTask = 1 << 3;
     /// What a handyman does when the park says nothing: every task of the game's.
     inline constexpr std::int32_t kEveryTask = 0b111;
+    /// An inspector's tasks among the task flags, numbered as saved parks number them: the kinds of attraction
+    /// they go round, taken in this order.
+    inline constexpr std::int32_t kFlatRidesTask = 1 << 0;
+    inline constexpr std::int32_t kTrackedRidesTask = 1 << 1;
+    inline constexpr std::int32_t kRefreshmentsTask = 1 << 2; ///< Food and drink stalls
 
     struct Staff
     {
@@ -875,6 +884,30 @@ namespace rct3::simulation
     struct Photos
     {
         std::vector<Photo> taken;
+    };
+
+    /// Where an inspector is in their rounds. On a visit they carry a guest's Needs, Mood and Wallet, and the
+    /// guests' code walks, queues and rides them; let go, they are staff again.
+    struct Rounds
+    {
+        std::uint8_t task = 0; ///< The next of their tasks to look at, 0 flat rides, 1 tracked rides, 2 stalls
+        Seconds gap { };       ///< Before they next look for somewhere to go
+        /// The attractions visited, with when (seconds into the run).
+        std::vector<std::pair<entt::entity, float>> seen { };
+    };
+
+    /// What an inspector found wrong.
+    enum class Finding : std::uint8_t
+    {
+        TooDear,   ///< Something at a stall costs more than guests pay for it
+        TooCheap,  ///< Something at a stall sells for far less than it is worth
+        LongQueue, ///< They queued for ages at a ride
+    };
+
+    /// The inspectors' findings, oldest first, in the registry's context, for the park to tell the player.
+    struct Findings
+    {
+        std::vector<std::pair<Finding, entt::entity>> found { }; ///< With the attraction
     };
 
     struct Vandalism

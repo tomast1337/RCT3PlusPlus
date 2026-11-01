@@ -2266,7 +2266,13 @@ namespace rct3::scene
                 const auto items = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready ? std::span(scene.build.items.get()) : std::span<const park::BuildItem> { };
                 std::string overlay = scene.rides.rides.at(ride).base.overlay_path;
                 std::ranges::replace(overlay, '\\', '/');
-                const auto kind = std::ranges::find_if(items, [&](const park::BuildItem& i) { return !i.entrance.empty() && strings::equals_ignoring_case(i.overlay, overlay); });
+                // A theme's flat rides share its overlay; the symbol, before its type tag, tells them apart.
+                const std::string_view symbol = scene.rides.rides[ride].base.symbol;
+                const std::string_view name = symbol.substr(0, symbol.find(':'));
+                const auto in_overlay = [&](const park::BuildItem& i) { return !i.entrance.empty() && strings::equals_ignoring_case(i.overlay, overlay); };
+                auto kind = std::ranges::find_if(items, [&](const park::BuildItem& i) { return in_overlay(i) && strings::equals_ignoring_case(i.symbol, name); });
+                if (kind == items.end())
+                    kind = std::ranges::find_if(items, in_overlay);
                 const auto any = std::ranges::find_if(items, [](const park::BuildItem& i) { return !i.entrance.empty(); });
                 const auto item = kind != items.end() || scene.rides.rides[ride].kind == save::RideKind::Flat ? kind : any;
                 return item != items.end() && start_door_placing(scene, ride, *item, station_pieces(scene, ride, assets), exit);

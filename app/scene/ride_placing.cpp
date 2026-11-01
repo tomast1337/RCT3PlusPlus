@@ -939,8 +939,8 @@ namespace rct3::scene
             }
             else
             {
-                const bool running = p.ride < scene.ride_entities.size() && scene.ride_entities[p.ride] != entt::null;
-                if (doors.entrance_spot && doors.exit_spot && !running && !std::ranges::contains(p.unjoined, p.ride))
+                // One the park runs already finds its moved door from the paths there (join_rides).
+                if (doors.entrance_spot && doors.exit_spot && !std::ranges::contains(p.unjoined, p.ride))
                     p.unjoined.push_back(p.ride);
                 stop_ride_placing(scene);
             }

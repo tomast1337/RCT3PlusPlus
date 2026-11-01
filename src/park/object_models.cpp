@@ -822,6 +822,27 @@ namespace rct3::park
         return model;
     }
 
+    CarFit fit_car(const CarPoints& points)
+    {
+        CarFit fit;
+        // Lengths run along the line from its rear to its front, which a few cars have askew in their model.
+        fit.length = glm::distance(points.front, points.rear);
+        const glm::vec3 back = fit.length > 0 ? (points.front - points.rear) / fit.length : glm::vec3 { 0, 0, 1 };
+        const auto behind = [&](const glm::vec3& at) { return glm::dot(points.front - at, back); };
+        const glm::vec3 middle { 0, 0, (points.front.z + points.rear.z) / 2 };
+        const glm::vec3 front_wheels = points.wheels[0].value_or(middle), rear_wheels = points.wheels[1].value_or(middle);
+        fit.front_wheels = behind(front_wheels);
+        fit.rear_wheels = behind(rear_wheels);
+        fit.on_track = (front_wheels + rear_wheels) / 2.0f;
+        fit.link_front = points.link_front ? behind(*points.link_front) : 0;
+        fit.link_rear = points.link_rear ? behind(*points.link_rear) : fit.length;
+        const int links = (points.link_front ? 1 : 0) + (points.link_rear ? 1 : 0);
+        if (links > 0)
+            fit.link_height = ((points.link_front ? points.link_front->y : 0) + (points.link_rear ? points.link_rear->y : 0)) / static_cast<float>(links) - fit.on_track.y;
+        fit.link = points.link;
+        return fit;
+    }
+
     std::optional<ObjectModel> ModelLoader::load_car(std::string_view train, std::string_view overlay, std::size_t slot)
     {
         const std::string hint = index_.overlay(overlay).value_or(std::string(overlay));
@@ -871,17 +892,30 @@ namespace rct3::park
                 }
             return pieces;
         };
-        // Where a piece's finest shape has the bone `bone`, in its own space.
+        // Where a piece's shapes, finest first, have the bone `bone`, in its own space: a bone of a rigged shape, or
+        // the named point of a fixed one.
         const auto bone_of = [&](std::string_view name, std::string_view bone) -> std::optional<glm::mat4> {
             const auto file = name.empty() ? std::nullopt : files_->holding(tagged(name, kVisualTag), car_file->first);
             const ovl::SceneryVisual* piece = file ? visual_in(*file->second, name) : nullptr;
-            if (piece == nullptr || piece->lods.empty() || piece->lods.front().mesh_type != static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape))
+            if (piece == nullptr)
                 return std::nullopt;
-            const auto shape_file = files_->holding(tagged(piece->lods.front().bone_shape, kBoneTag), file->first);
-            if (const ovl::BoneShape* shape = shape_file ? bone_in(*shape_file->second, piece->lods.front().bone_shape) : nullptr)
-                for (const ovl::Bone& b : shape->bones)
-                    if (strings::equals_ignoring_case(b.name, bone))
-                        return column_matrix(b.world);
+            for (const ovl::SceneryVisualLod& lod : piece->lods)
+                if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape))
+                {
+                    const auto shape_file = files_->holding(tagged(lod.bone_shape, kBoneTag), file->first);
+                    if (const ovl::BoneShape* shape = shape_file ? bone_in(*shape_file->second, lod.bone_shape) : nullptr)
+                        for (const ovl::Bone& b : shape->bones)
+                            if (strings::equals_ignoring_case(b.name, bone))
+                                return column_matrix(b.world);
+                }
+                else if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::StaticShape))
+                {
+                    const auto shape_file = files_->holding(tagged(lod.static_shape, kStaticTag), file->first);
+                    if (const ovl::StaticShape* shape = shape_file ? static_in(*shape_file->second, lod.static_shape) : nullptr)
+                        for (const ovl::ShapeEffect& e : shape->effects)
+                            if (strings::equals_ignoring_case(e.name, bone))
+                                return column_matrix(e.transform);
+                }
             return std::nullopt;
         };
         const glm::mat4 rest { 1.0f };
@@ -924,14 +958,10 @@ namespace rct3::park
         const auto car_front = bone_of(car->visual, "carfront"), car_rear = bone_of(car->visual, "carrear");
         if (car_front && car_rear)
         {
-            CarFit& fit = model.car_fit.emplace();
-            const float front_z = (*car_front)[3].z;
-            fit.length = front_z - (*car_rear)[3].z;
             // By axle: on an axle piece, the middle of the wheel bones that piece has, else the axle's own place;
-            // without one, the middle of the car's wheel bones for that axle; else the car's middle.
-            const glm::vec3 middle { 0, 0, front_z - fit.length / 2 };
-            std::array<glm::vec3, 2> wheels { middle, middle };
-            for (std::size_t i = 0; i < wheels.size(); ++i)
+            // without one, the middle of the car's wheel bones for that axle.
+            CarPoints points { .front = glm::vec3((*car_front)[3]), .rear = glm::vec3((*car_rear)[3]), .link = slot == kLinkSlot };
+            for (std::size_t i = 0; i < points.wheels.size(); ++i)
             {
                 glm::vec3 sum { 0.0f };
                 int found = 0;
@@ -958,19 +988,13 @@ namespace rct3::park
                     for (std::size_t k = 2 * i; k < 2 * i + 2; ++k)
                         count(car->visual, kWheelBones[k], glm::mat4(1.0f));
                 if (found > 0)
-                    wheels[i] = sum / static_cast<float>(found);
+                    points.wheels[i] = sum / static_cast<float>(found);
             }
-            fit.front_wheels = front_z - wheels[0].z;
-            fit.rear_wheels = front_z - wheels[1].z;
-            fit.on_track = (wheels[0] + wheels[1]) / 2.0f;
-            // Where links couple on, and how high.
-            const auto link_front = bone_of(car->visual, "linkfront"), link_rear = bone_of(car->visual, "linkrear");
-            fit.link_front = link_front ? front_z - (*link_front)[3].z : 0;
-            fit.link_rear = link_rear ? front_z - (*link_rear)[3].z : fit.length;
-            const int links = (link_front ? 1 : 0) + (link_rear ? 1 : 0);
-            if (links > 0)
-                fit.link_height = ((link_front ? (*link_front)[3].y : 0) + (link_rear ? (*link_rear)[3].y : 0)) / static_cast<float>(links) - fit.on_track.y;
-            fit.link = slot == kLinkSlot;
+            if (const auto link = bone_of(car->visual, "linkfront"))
+                points.link_front = glm::vec3((*link)[3]);
+            if (const auto link = bone_of(car->visual, "linkrear"))
+                points.link_rear = glm::vec3((*link)[3]);
+            model.car_fit = fit_car(points);
         }
         else if (slot == kLinkSlot && !model.levels.empty())
         {

@@ -120,6 +120,21 @@ namespace rct3::park
         bool link = false;
     };
 
+    /// A car's named points in its own space: its front and rear, by axle where its wheels are (none: midway along
+    /// the car), and where links couple on (none: its front and its rear).
+    struct CarPoints
+    {
+        glm::vec3 front { 0.0f };
+        glm::vec3 rear { 0.0f };
+        std::array<std::optional<glm::vec3>, 2> wheels { };
+        std::optional<glm::vec3> link_front { };
+        std::optional<glm::vec3> link_rear { };
+        bool link = false; ///< A link (kLinkSlot)
+    };
+
+    /// How a car with these points sits on its track, its lengths taken along the line from its rear to its front.
+    [[nodiscard]] CarFit fit_car(const CarPoints& points);
+
     /// The cameras a car may have: on its nose, which only the train's first car shows, at its front seat
     /// and at its rear seat. The rear one never looks ahead.
     enum class RideEye : std::uint8_t

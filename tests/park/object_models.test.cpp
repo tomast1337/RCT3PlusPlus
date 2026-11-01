@@ -72,3 +72,27 @@ TEST_CASE("only the chrome style that reads no texture of its own is drawn as ch
     CHECK_FALSE(chrome_style("SIOpaque"));
     CHECK_FALSE(chrome_style(""));
 }
+
+TEST_CASE("a car's lengths run along the line from its rear to its front, even askew in its model")
+{
+    // Front and rear 2 apart, along (0.6, 0, 0.8); wheels 0.5 in from either end, 0.2 up.
+    const CarFit fit = fit_car({ .front = { 0.6f, 0, 0.8f }, .rear = { -0.6f, 0, -0.8f }, .wheels = { glm::vec3 { 0.3f, 0.2f, 0.4f }, glm::vec3 { -0.3f, 0.2f, -0.4f } } });
+    CHECK(fit.length == doctest::Approx(2));
+    CHECK(fit.front_wheels == doctest::Approx(0.5f));
+    CHECK(fit.rear_wheels == doctest::Approx(1.5f));
+    CHECK(fit.on_track.y == doctest::Approx(0.2f));
+    CHECK(fit.link_front == 0);
+    CHECK(fit.link_rear == doctest::Approx(2));
+    CHECK_FALSE(fit.link);
+}
+
+TEST_CASE("a car without wheel points stands on its middle, and its links couple on where it says")
+{
+    const CarFit fit = fit_car({ .front = { 0, 0.5f, 1 }, .rear = { 0, 0.5f, -1 }, .link_front = glm::vec3 { 0, 0.5f, 0.8f }, .link_rear = glm::vec3 { 0, 0.5f, -0.9f } });
+    CHECK(fit.front_wheels == doctest::Approx(1));
+    CHECK(fit.rear_wheels == doctest::Approx(1));
+    CHECK(fit.on_track.z == doctest::Approx(0));
+    CHECK(fit.link_front == doctest::Approx(0.2f));
+    CHECK(fit.link_rear == doctest::Approx(1.9f));
+    CHECK(fit.link_height == doctest::Approx(0.5f));
+}

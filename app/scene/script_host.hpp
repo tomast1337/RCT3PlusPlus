@@ -26,6 +26,9 @@
 //                       one; resolves once it is written
 //   quit(code)          leaves the game with `code` (also when the script ends: 0, or 1 when it failed)
 //   park.open(path)     opens the park at `path` in the game's folder and waits until it shows
+//   park.advance(seconds)  runs the park on `seconds` of its time without drawing them, a step of its
+//                       simulation at a time; park.advanceUntil(check, seconds, what) a park second at a time
+//                       until check() holds
 //   career.start(i, game)  starts scenario `i` of the first career of `game` (0 the original, the default),
 //                       made when there is none, as its map's New does; scripts start careers this way because
 //                       the front screen's menus fly in. park.ready() waits for the park
@@ -133,6 +136,11 @@ namespace rct3::scene
         {
             return std::exchange(keys_, { });
         }
+        /// The park seconds the script asked to run on without drawing since the last call.
+        [[nodiscard]] float take_advance()
+        {
+            return std::exchange(advance_, 0.0f);
+        }
         /// Stops the script, as failed with `why`.
         void fail(const std::string& why);
         /// Once for each screenshot asked for: the file to write it to, or an empty path for the user's
@@ -169,6 +177,7 @@ namespace rct3::scene
         std::optional<std::string> open_;
         std::optional<std::pair<int, std::size_t>> career_;
         std::optional<int> quit_;
+        float advance_ = 0;
         const render::Device* device_ = nullptr; ///< While a tick runs
         ParkScene* park_ = nullptr;
         FrontEndScene* front_ = nullptr;

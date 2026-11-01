@@ -67,3 +67,18 @@ ui.click = async (path) => {
 park.ready = async () => {
     while (!park.loaded()) await frames(1);
 };
+{
+    // The park runs on as the frame starts, before it is drawn.
+    const run = park.advance;
+    park.advance = async (seconds) => {
+        run(seconds);
+        await frames(1);
+    };
+}
+park.advanceUntil = async (check, seconds = 60, what = "the wait") => {
+    for (let i = 0; i < seconds; ++i) {
+        if (check()) return;
+        await park.advance(1);
+    }
+    if (!check()) throw new Error(`${what} timed out after ${seconds} park seconds`);
+};

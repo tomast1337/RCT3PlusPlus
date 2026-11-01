@@ -77,6 +77,12 @@ declare namespace park {
     /** Opens the park at `path` in the game's folder, such as "Campaigns/Base/BlankLandscape.dat", and waits until it shows. */
     function open(path: string): Promise<void>;
     function loaded(): boolean;
+    /** Runs the park on `seconds` of its own time, whatever its speed, without drawing them: a step of its
+     *  simulation at a time, as frames would run them; nothing while paused. Resolves a frame later, drawn as it is then. */
+    function advance(seconds: number): Promise<void>;
+    /** Runs the park on a second of its time a frame until `check` returns true; throws, naming `what`, after
+     *  `seconds` park seconds (60). */
+    function advanceUntil(check: () => boolean, seconds?: number, what?: string): Promise<void>;
     /** Waits until a park is open. */
     function ready(): Promise<void>;
     /** Hundredths of the currency; undefined in a park without money. */

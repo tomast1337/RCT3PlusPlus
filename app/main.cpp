@@ -58,8 +58,10 @@
 #include "scene/startup_screen.hpp"
 #include "scene/ui_demo.hpp"
 #include "scene/widget_demo.hpp"
+#include "simulation/game_speed.hpp"
 #include "simulation/park_messages.hpp"
 #include "simulation/ratings.hpp"
+#include "simulation/systems.hpp"
 #include "simulation/weather_cycle.hpp"
 #include "strings/unicode.hpp"
 #include "ui/inspect.hpp"
@@ -1190,6 +1192,16 @@ int main(int argc, char** argv)
                             input.commands = play_commands;
                         }
                         const rct3::ui::KeyboardState no_keys;
+                        // A script running the park on: a step of its simulation an update, each as a frame that is
+                        // not drawn, with the pointer still and no keys.
+                        if (const float ahead = script ? script->take_advance() : 0; ahead > 0)
+                        {
+                            rct3::scene::ParkInput still = input;
+                            still.pointer.wheel = { };
+                            still.commands.clear();
+                            for (float left = ahead; left > 0 && rct3::simulation::time_factor(park->park.speed) > 0; left -= rct3::simulation::kTickSeconds)
+                                rct3::scene::update_park_scene(*device, *park, front->assets, front->live->options, still, no_keys, std::min(left, rct3::simulation::kTickSeconds) / rct3::simulation::time_factor(park->park.speed));
+                        }
                         prof::section("Park", [&] { rct3::scene::update_park_scene(*device, *park, front->assets, front->live->options, input, ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys, static_cast<float>(delta)); });
                         rct3::scene::update_park_windows(*device, *park, *front);
                         auto park_requests = rct3::scene::take_park_window_requests(*park, *front);

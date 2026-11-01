@@ -279,6 +279,12 @@ namespace rct3::scene
             const render::FrameStats stats = device_->stats();
             return { { "buffers", stats.buffers }, { "pipelines", stats.pipelines }, { "textures", stats.textures } };
         });
+        engine_.define("park.advance", [this](const Json& a) {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            advance_ += std::max(0.0f, number(a, 0));
+            return Json(nullptr);
+        });
         engine_.define("park.loaded", [this](const Json&) { return Json(park_ != nullptr); });
         engine_.define("park.cash", [this](const Json&) -> Json {
             if (park_ == nullptr)

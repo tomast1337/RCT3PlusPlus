@@ -683,6 +683,7 @@ namespace rct3::scene
         bool shown_closed = false;                  ///< The park closed the ride shown, as a crash does, so its page shows again
         std::uint32_t vandalism_seen = 0;           ///< Breaks the park has been charged for
         std::uint32_t vandalism_warnings_seen = 0;  ///< Warnings already posted as messages
+        bool themes_judged = false;                 ///< The attractions' fit with their scenery judged once since the park opened
         std::int64_t wages_seen = 0;                ///< Of the staff's pay, what has come out of the park's cash
         std::int64_t supplies_seen = 0;             ///< Of what supplies cost, what has come out of the park's cash
         std::int64_t receipts_seen = 0;             ///< Of what guests have paid, what has gone into the park's cash

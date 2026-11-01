@@ -53,10 +53,15 @@ namespace rct3::ui
             { 0, "StaffTasks_InspectRides", "StaffTasks_InspectRidesHelp" },
             { 1, "StaffTasks_FixRides", "StaffTasks_FixRidesHelp" },
         } };
-        constexpr std::array<Task, 3> kInspectorTasks { {
+        constexpr std::array<Task, 8> kInspectorTasks { {
             { 0, "StaffTasks_Evaluate_FlatRides", "StaffTasks_Evaluate_FlatRidesHelp" },
             { 1, "StaffTasks_Evaluate_RollerCoasters", "StaffTasks_Evaluate_RollerCoastersHelp" },
             { 2, "StaffTasks_Evaluate_FoodDrinkStalls", "StaffTasks_Evaluate_FoodDrinkStallsHelp" },
+            { 3, "StaffTasks_Evaluate_SouvenirStalls", "StaffTasks_Evaluate_SouvenirStallsHelp" },
+            { 4, "StaffTasks_Evaluate_Vista", "StaffTasks_Evaluate_VistaHelp" },
+            { 5, "StaffTasks_Evaluate_Staff", "StaffTasks_Evaluate_StaffHelp" },
+            { 6, "StaffTasks_Evaluate_Pools", "StaffTasks_Evaluate_PoolsHelp" },
+            { 7, "StaffTasks_Evaluate_ViewingGalleries", "StaffTasks_Evaluate_ViewingGalleriesHelp" },
         } };
         constexpr std::array<Task, 2> kKeeperTasks { {
             { 0, "AnimalKeeper_ClearDung", "AnimalKeeper_ClearDungTT" },

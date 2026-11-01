@@ -1790,6 +1790,17 @@ namespace rct3::scene
             return { .park = &scene.park_model, .state = &scene.park, .people = &scene.people, .rides = &scene.rides, .broken_items = broken.items, .replace_cost = broken.cost, .goals = scene.goal_readings };
         }
 
+        /// Marks the simulated rides and stalls that do not fit the scenery round them, for the park's inspector.
+        // shortcut: judged as the park opens and each month, so a ride or stall placed since waits till then; judge
+        // on placing too if players notice.
+        void judge_themes(ParkScene& scene)
+        {
+            const std::vector<std::uint64_t> off = simulation::off_theme_attractions(scene.rides, scene.objects, scene.build.items.get());
+            for (auto [e, attraction] : scene.sim.registry.view<simulation::Attraction>().each())
+                attraction.off_theme = attraction.saved != 0 && std::ranges::contains(off, attraction.saved);
+            scene.themes_judged = true;
+        }
+
         /// The attraction whose saved id is `id`, as messages name their subject.
         std::optional<park::AttractionRef> attraction_with(const ParkScene& scene, std::uint64_t id)
         {
@@ -2676,7 +2687,10 @@ namespace rct3::scene
                     f.coaster_dangers = scene.park_model.awards.dangerous_coaster_events.value_or(0);
                     f.pool_dangers = scene.park_model.awards.dangerous_pool_events.value_or(0);
                     if (scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                    {
                         f.themed = simulation::themed_attractions(scene.rides, scene.objects, scene.build.items.get());
+                        judge_themes(scene);
+                    }
                     if (!f.downtime.empty())
                         f.reliability /= static_cast<float>(f.downtime.size());
                     std::array<bool, 4> kinds { };
@@ -2871,13 +2885,41 @@ namespace rct3::scene
                     for (; scene.vandalism_warnings_seen < vandalism->warnings; ++scene.vandalism_warnings_seen)
                         simulation::post(scene.park.messages, { .text_key = "Thought_PI_Park_Vandalism1" });
                 }
-                // What the park's inspector found wrong, each told about the attraction they found it at.
+                if (!scene.themes_judged && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                    judge_themes(scene);
+                // What the park's inspector found wrong, each told about the attraction or worker they found it at,
+                // or about the guests.
                 if (auto* findings = scene.sim.registry.ctx().find<simulation::Findings>())
                 {
-                    constexpr std::array<std::string_view, 3> kKeys { "Thought_PI_Stall_TooExpensive1", "Thought_PI_Stall_TooCheap1", "Thought_PI_Ride_LongQueueTime1" }; // By Finding
+                    using enum simulation::Finding;
+                    constexpr std::array<std::string_view, 14> kKeys { // By Finding
+                                                                       "Thought_PI_Stall_TooExpensive1", "Thought_PI_Stall_TooCheap1", "Thought_PI_Ride_LongQueueTime1", "Thought_PI_Ride_NoPathToEntrance1", "Thought_PI_General_NoMaintenanceManNear1", "Thought_PI_Vista_InappropriateStyle1", "Thought_PI_Staff_Lazy1", "Thought_PI_Staff_Unhappy1", "Thought_PI_PoolDirty1", "Thought_PI_PoolVeryDirty1",
+                                                                       "Thought_PI_Guests_Hungry1",      "Thought_PI_Guests_Thirsty1", "Thought_PI_Guests_Tired1",       "Thought_PI_Guests_Toilet1"
+                    };
+                    const auto& r = scene.sim.registry;
                     for (const auto& [finding, at] : findings->found)
-                        if (const auto* attraction = scene.sim.registry.valid(at) ? scene.sim.registry.try_get<simulation::Attraction>(at) : nullptr)
-                            simulation::post(scene.park.messages, { .text_key = std::string(kKeys[std::to_underlying(finding)]), .subject = attraction->saved, .panel = ui::message_panel(finding == simulation::Finding::LongQueue ? ui::AttractionTab::Mode : ui::AttractionTab::Items) });
+                    {
+                        simulation::ParkMessage message { .text_key = std::string(kKeys[std::to_underlying(finding)]) };
+                        if (const auto* attraction = r.valid(at) ? r.try_get<simulation::Attraction>(at) : nullptr)
+                        {
+                            const bool stall = r.all_of<simulation::Shop>(at);
+                            if (finding == NoPath && stall)
+                                message.text_key = "Thought_PI_Stall_NoPathToGetTo1";
+                            if (attraction->saved != 0)
+                                message.subject = attraction->saved;
+                            // A pool's changing room, by the pool complex's name.
+                            if (const auto* door = r.try_get<simulation::PoolDoor>(at))
+                                if (const auto room = std::ranges::find_if(scene.pools.rooms, [&](const auto& room) { return room.col == door->col && room.row == door->row; }); room != scene.pools.rooms.end())
+                                    message.subject_name = room->complex_name;
+                            message.panel = ui::message_panel(finding == TooDear || finding == TooCheap ? ui::AttractionTab::Items : finding == NoMechanic ? ui::AttractionTab::Maintenance : ui::AttractionTab::Mode);
+                        }
+                        // shortcut: a worker is named but cannot be gone to from the message; add it once messages open people.
+                        else if (const auto shown = std::ranges::find(scene.shown_people, at, &ShownPerson::guest); r.valid(at) && shown != scene.shown_people.end() && shown->staff && shown->saved < scene.people.staff.size())
+                            message.subject_name = strings::to_utf8(ui::person_name({ .staff = &scene.people.staff[shown->saved] }, *assets.strings));
+                        else if (r.valid(at))
+                            continue; // Gone since
+                        simulation::post(scene.park.messages, std::move(message));
+                    }
                     findings->found.clear();
                 }
                 // What is broken looks it, and looks whole again once mended.

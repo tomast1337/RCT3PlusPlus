@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The park inspector goes round the park's attractions. On the game's blank landscape, whose inspector walks the
-// road, a small flat ride and a burger stall are built by the road and opened, the stall's burger priced far above
-// what guests pay for one. Then:
+// road, a small flat ride, a burger stall and an umbrella stall are built by the road and opened, the burger and
+// the umbrella priced far above what guests pay. Then:
 //
 //   - the inspector queues for the ride and rides it;
-//   - the inspector tells the player the stall's items are too expensive, and goes and stands at its counter.
+//   - the inspector tells the player the burger stall's items are too expensive, and goes and stands at its
+//     counter;
+//   - they tell the same of the umbrella stall.
 //
 //   ./nob script scripts/tests/inspector.ts -- --no-audio
 //
@@ -13,7 +15,7 @@
 //          E       b       E entrance
 //          |       |
 //   =====================  road
-//            S             S stall, facing the road
+//            S       U     S burger stall, U umbrella stall, facing the road
 
 export {};
 
@@ -67,26 +69,31 @@ await place("exit", right + 1, last);
 await ui.click("info/close");
 const ride = rides.list().length - 1;
 
-// The stall south of the road.
-const burger = build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.symbol.toLowerCase().includes("burger"));
-expect(burger !== undefined, "a plain burger stall");
-const stallCol = gate.col + 2;
-await look(stallCol, road + 1, 40);
-expect(build.pick(burger!.overlay, burger!.symbol), `${burger!.symbol} picked`);
-await place("ride", stallCol, road + 1);
-if (ui.find("info") !== undefined)
-    await ui.click("info/close");
-const stall = stalls.list().findIndex((s) => s.symbol === `${burger!.symbol}:sta`);
-expect(stall >= 0, "the stall placed");
-// Facings 0 to 3 put a stall's front towards -row, -col, +row and +col.
+// The stalls south of the road, and one away from it. Facings 0 to 3 put a stall's front towards -row, -col, +row
+// and +col.
 const kFront: [number, number][] = [
     [0, -1],
     [-1, 0],
     [0, 1],
     [1, 0],
 ];
-const site = stalls.list()[stall].site!;
-const front: [number, number] = [site.col + kFront[site.direction & 3][0], site.row + kFront[site.direction & 3][1]];
+async function placeStall(named: string, c: number, r: number): Promise<{ index: number; front: [number, number] }> {
+    const kind = build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.symbol.toLowerCase().includes(named));
+    expect(kind !== undefined, `a plain ${named} stall`);
+    await look(c, r, 40);
+    expect(build.pick(kind!.overlay, kind!.symbol), `${kind!.symbol} picked`);
+    const before = stalls.list().length;
+    await place("ride", c, r);
+    if (ui.find("info") !== undefined)
+        await ui.click("info/close");
+    expect(stalls.list().length === before + 1, `the ${named} stall placed`);
+    const index = before;
+    const site = stalls.list()[index].site!;
+    return { index, front: [site.col + kFront[site.direction & 3][0], site.row + kFront[site.direction & 3][1]] };
+}
+const burger = await placeStall("burger", gate.col + 2, road + 1);
+const umbrella = await placeStall("umbrella", right + 2, road + 1);
+const stall = burger.index;
 
 // Paths: the road from the gate, the way to the entrance, the way from the exit, and to the stall's front.
 await ui.click("tools/Paths/Obj_Paths");
@@ -118,15 +125,18 @@ await route([gate.col, gate.row + 1], [gate.col, road]);
 await route([gate.col + 1, road], [right + 4, road]);
 await route([col, last + 2], [col, road - 1]);
 await route([right + 2, last], [right + 2, road - 1]);
-if (!has(...front))
-    await route(front, [front[0], road]);
+for (const front of [burger.front, umbrella.front])
+    if (!has(...front))
+        await route(front, [front[0], road]);
 await ui.click("footpaths/close");
 await frames(3);
 
-// The burger priced far above what anyone pays for one.
+// The burger and the umbrella priced far above what anyone pays for them.
 stalls.setPrice(stall, 0, 2000);
 expect(stalls.list()[stall].items[0].price === 2000, `the burger at 20.00, not ${JSON.stringify(stalls.list()[stall].items)}`);
-expect(stalls.setState(stall, "open") == null, "the stall opened");
+stalls.setPrice(umbrella.index, 0, 9000);
+for (const s of [stall, umbrella.index])
+    expect(stalls.setState(s, "open") == null, `stall ${s} opened`);
 const why = rides.setState(ride, "open");
 expect(why == null, `the ride opened, not kept closed by ${why}`);
 await park.advanceUntil(() => rides.list()[ride].joined === true && stalls.list()[stall].joined === true, 10, "the ride and the stall run by the park");
@@ -136,7 +146,7 @@ people.show(people.list().findIndex((p) => p.role === "inspector"));
 await until(() => ui.find("info/Staff_Tools") !== undefined, 120, "the inspector's window");
 await ui.click("info/Staff_Tools");
 await frames(2);
-for (const task of ["FlatRides", "RollerCoasters", "FoodDrinkStalls"])
+for (const task of ["FlatRides", "RollerCoasters", "FoodDrinkStalls", "SouvenirStalls", "Staff"])
     await ui.toggle(`info/body/StaffTasks_Evaluate_${task}`, true);
 await ui.click("info/close");
 
@@ -158,7 +168,12 @@ camera.look({ col: counter.col!, row: counter.row! }, { col: counter.col! + 3, r
 await frames(10);
 await screenshot("inspector_at_stall");
 
-// The message, in the drawer: a double press opens it.
+// The umbrellas too dear.
+const dear = () => new Set(park.messages().filter((m) => m.key === "Thought_PI_Stall_TooExpensive1").map((m) => m.name)).size;
+await park.advanceUntil(() => dear() >= 2, 1800, "the inspector's word on the umbrellas");
+log("messages", JSON.stringify(park.messages()));
+
+// The messages, in the drawer: a double press opens it.
 for (let tries = 0; tries < 3; ++tries) {
     const d = ui.find("messages")!;
     if (d.bottom - d.top > (d.right - d.left) / 2)
@@ -167,5 +182,5 @@ for (let tries = 0; tries < 3; ++tries) {
     await pointer.click(d.x, d.y);
     await frames(30);
 }
-await screenshot("inspector_message");
+await screenshot("inspector_messages");
 quit(0);

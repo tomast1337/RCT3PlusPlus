@@ -203,6 +203,54 @@ TEST_CASE("a ride's door joins only the path on the tile behind it, near its hei
     }
 }
 
+TEST_CASE("a stall joins only the path on the tile in front of it, near its height")
+{
+    // Facings 0 to 3 put a stall's front towards -row, -col, +row and +col.
+    constexpr std::array<std::array<int, 2>, 4> kFront { { { 0, -1 }, { -1, 0 }, { 0, 1 }, { 1, 0 } } };
+    for (std::uint8_t facing = 0; facing < 4; ++facing)
+    {
+        CAPTURE(facing);
+        const auto [fc, fr] = kFront[facing];
+        simulation::SimWorld world;
+        // Paths on its other three sides, and one in front three levels up.
+        for (std::uint8_t side = 1; side < 4; ++side)
+            world.paths.add({ 5 + kFront[(facing + side) % 4][0], 5 + kFront[(facing + side) % 4][1], 0 });
+        world.paths.add({ 5 + fc, 5 + fr, 3 });
+        save::RideModel rides;
+        save::Stall& stall = rides.stalls.emplace_back();
+        stall.base.id = 7;
+        stall.base.facing = facing;
+        stall.base.spot = save::PlacementSpot { .col = 5, .row = 5 };
+        stall.items.push_back({ .price = 100, .name = "Cola" });
+        CHECK(simulation::import_stalls(world, rides) == 0);
+
+        // A path laid in front a level up, as a ramp's middle may lie, joins it.
+        const auto front = world.paths.add({ 5 + fc, 5 + fr, 1 });
+        REQUIRE(simulation::import_stalls(world, rides) == 1);
+        CHECK(world.registry.get<simulation::Attraction>(world.registry.view<simulation::Shop>().front()).entrance == front);
+    }
+}
+
+TEST_CASE("a toilet or other facility joins a path on any side of it, near its height")
+{
+    for (const auto [dc, dr] : { std::pair { 1, 0 }, std::pair { 0, -1 }, std::pair { -1, 0 }, std::pair { 0, 1 } })
+    {
+        CAPTURE(dc);
+        CAPTURE(dr);
+        simulation::SimWorld world;
+        world.paths.add({ 5 + dc, 5 + dr, 3 });
+        world.paths.add({ 6, 6, 0 }); // Corner to corner: not beside it
+        save::RideModel rides;
+        save::Ride& toilet = rides.rides.emplace_back();
+        toilet.kind = save::RideKind::Special;
+        toilet.base.spot = save::PlacementSpot { .col = 5, .row = 5 };
+        const auto kind_of = [](const save::Ride&) -> std::optional<std::uint32_t> { return 11; };
+        CHECK(simulation::import_facilities(world, rides, kind_of) == 0);
+        world.paths.add({ 5 + dc, 5 + dr, 0 });
+        CHECK(simulation::import_facilities(world, rides, kind_of) == 1);
+    }
+}
+
 TEST_CASE("a path laid to a busy ride's exit lets its riders out at once; its way in waits for the queue")
 {
     simulation::SimWorld world;

@@ -160,31 +160,6 @@ namespace rct3::simulation
             return under != nullptr && std::ranges::contains(under->nodes, n);
         }
 
-        /// The path node beside `spot` nearest its height, trying the side `facing` first; queue tiles only with
-        /// `queues`, otherwise footpaths only. kNoNode when none touches it.
-        NodeId beside(const PathNetwork& paths, const save::PlacementSpot& spot, std::uint8_t facing, bool queues)
-        {
-            NodeId found = kNoNode;
-            int gap = 0;
-            constexpr std::array<std::array<int, 2>, 4> kSides { { { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 } } };
-            for (int k = 0; k < 4; ++k)
-            {
-                const auto& [dc, dr] = kSides[static_cast<std::size_t>((facing + k) % 4)];
-                for (const PathNode& n : paths.nodes())
-                {
-                    if (n.removed || n.queue != queues || n.tile.col != spot.col + dc || n.tile.row != spot.row + dr)
-                        continue;
-                    const int g = std::abs(n.tile.level - spot.height);
-                    if (found == kNoNode || g < gap)
-                    {
-                        found = *paths.find(n.tile);
-                        gap = g;
-                    }
-                }
-            }
-            return found;
-        }
-
         /// The tiles of the queue line `front` belongs to, from `front` back along the line to its far end.
         // shortcut: follows the first way on at a fork, upgrade if lines that split are ever met.
         std::vector<NodeId> queue_line(const PathNetwork& paths, NodeId front)
@@ -234,20 +209,20 @@ namespace rct3::simulation
             NodeId exit = kNoNode;
         };
 
-        /// The path node behind the ride door `door`, on the tile away from the ride, nearest its height and no
-        /// further off than a path that sets the door's paving; queue tiles only with `queues`, otherwise
-        /// footpaths only. kNoNode when none: a path beside the door, across its side fences, does not join it.
-        NodeId behind_door(const PathNetwork& paths, const save::PlacementSpot& door, bool queues)
+        /// The path node on the tile next to `spot` the way `way` (a step of turned_x), nearest its height and no
+        /// further off than a path that sets a paving's style; queue tiles only with `queues`, otherwise footpaths
+        /// only. kNoNode when none: a ride door or a stall joins only the path on the side it opens to, not one
+        /// beside it.
+        NodeId path_at(const PathNetwork& paths, const save::PlacementSpot& spot, glm::vec2 way, bool queues)
         {
-            const glm::vec2 way = park::turned_x(door.direction + 2);
-            const int col = door.col + static_cast<int>(way.x);
-            const int row = door.row + static_cast<int>(way.y);
+            const int col = spot.col + static_cast<int>(way.x);
+            const int row = spot.row + static_cast<int>(way.y);
             NodeId found = kNoNode;
             int gap = 0;
             for (NodeId n = 0; n < paths.nodes().size(); ++n)
             {
                 const PathNode& node = paths.nodes()[n];
-                const int g = std::abs(node.tile.level - door.height);
+                const int g = std::abs(node.tile.level - spot.height);
                 if (node.removed || node.queue != queues || node.tile.col != col || node.tile.row != row || static_cast<float>(g) > park::kPavingReach)
                     continue;
                 if (found == kNoNode || g < gap)
@@ -257,6 +232,19 @@ namespace rct3::simulation
                 }
             }
             return found;
+        }
+
+        /// The path behind the ride door `door`, on the tile away from the ride.
+        NodeId behind_door(const PathNetwork& paths, const save::PlacementSpot& door, bool queues)
+        {
+            return path_at(paths, door, park::turned_x(door.direction + 2), queues);
+        }
+
+        /// The path in front of a stall facing `facing`, on the side it serves; facings point at -row, -col, +row,
+        /// +col.
+        NodeId stall_front(const PathNetwork& paths, const save::PlacementSpot& spot, std::int32_t facing)
+        {
+            return path_at(paths, spot, park::turned_x(facing + 3), false);
         }
 
         /// Guests line up on the queue that reaches the entrance, or walk straight in from a path; none when
@@ -633,7 +621,7 @@ namespace rct3::simulation
             const auto stall = std::ranges::find(rides.stalls, attraction.saved, [](const save::Stall& x) { return x.base.id; });
             if (stall == rides.stalls.end() || !stall->base.spot)
                 continue;
-            const NodeId entrance = beside(world.paths, *stall->base.spot, stall->base.facing, false);
+            const NodeId entrance = stall_front(world.paths, *stall->base.spot, stall->base.facing);
             if (entrance == kNoNode || entrance == attraction.entrance)
                 continue;
             attraction.entrance = entrance;
@@ -736,7 +724,7 @@ namespace rct3::simulation
             const auto sale = sale_of(stall, kinds);
             if (!sale || !stall.base.spot)
                 continue;
-            const NodeId entrance = beside(world.paths, *stall.base.spot, stall.base.facing, false);
+            const NodeId entrance = stall_front(world.paths, *stall.base.spot, stall.base.facing);
             if (entrance == kNoNode)
                 continue;
             auto& r = world.registry;
@@ -944,7 +932,11 @@ namespace rct3::simulation
                 continue;
             const auto kind = kind_of(ride);
             const auto product = kind ? facility_of(*kind) : std::nullopt;
-            const NodeId entrance = product ? beside(world.paths, *ride.base.spot, ride.base.facing, false) : kNoNode;
+            // A facility opens onto every side.
+            // shortcut: guests go in from the first side found with a path, upgrade if a facility ever needs several ways in.
+            NodeId entrance = kNoNode;
+            for (std::int32_t side = 0; product && side < 4 && entrance == kNoNode; ++side)
+                entrance = path_at(world.paths, *ride.base.spot, park::turned_x(side), false);
             if (entrance == kNoNode)
                 continue;
             auto& r = world.registry;

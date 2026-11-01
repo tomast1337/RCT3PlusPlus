@@ -62,8 +62,8 @@ namespace rct3::simulation
     /// an attraction at the path tile before its door, at its complex's ticket price, open as it is. A room
     /// that still stands keeps its swimmers; those of a room gone come out at its door. Call after import_paths.
     void import_pools(SimWorld& world, const park::PoolMap& pools);
-    /// Adds a shop for every stall of `rides` that sells a drink or food and stands beside a path; returns how
-    /// many were added. Its wares take the extras `kinds` says their items can, where the stall puts them on.
+    /// Adds a shop for every stall of `rides` that sells a drink or food and has a path on the tile in front of
+    /// it, near its height; a path beside it does not count. Returns how many were added. Its wares take the extras `kinds` says their items can, where the stall puts them on.
     /// Call after import_paths.
     std::size_t import_stalls(SimWorld& world, const save::RideModel& rides, const park::CarriedKinds& kinds = { });
     /// Has the shop of `stall`, when it runs, sell what its menu now sells first, at that item's price, with
@@ -150,8 +150,8 @@ namespace rct3::simulation
     /// kinds guests do not use yet.
     [[nodiscard]] std::optional<Product> facility_of(std::uint32_t kind);
     /// The park's toilets, cash machines and first aid rooms, as shops guests go to by their needs; `kind_of`
-    /// gives a special attraction's kind from the game's files. Returns how many came over. Call after
-    /// import_paths.
+    /// gives a special attraction's kind from the game's files. One opens onto all four sides and joins a path
+    /// on any tile next to it, near its height. Returns how many came over. Call after import_paths.
     std::size_t import_facilities(SimWorld& world, const save::RideModel& rides, const std::function<std::optional<std::uint32_t>(const save::Ride&)>& kind_of);
     /// The objects `sight_of` gives a kind (Sight for fountains, effects and animatronics, or PhotoSpot), each
     /// on the path tile it stands on or one beside it, for guests to stop at. Returns how many came over. Call

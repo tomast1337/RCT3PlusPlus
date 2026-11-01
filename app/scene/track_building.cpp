@@ -235,6 +235,73 @@ namespace rct3::scene
             return park::LaidPiece { static_cast<std::size_t>(&*shape - c->pieces.data()), last.reversed };
         }
 
+        /// The colours a new track starts in, as its kind's file sets them.
+        save::RideColours starting_colours(const ParkScene& scene, const TrackBuilding& b)
+        {
+            const park::PieceCatalogue* c = catalogue(b);
+            const park::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::TrackRules { };
+            return c != nullptr ? park::starting_colours(rules, c->pieces) : save::RideColours { };
+        }
+
+        /// The colours the next piece is built in: as painted, else as the last piece, else as a new track starts.
+        save::RideColours next_colours(const ParkScene& scene, const TrackBuilding& b)
+        {
+            const save::Ride& ride = scene.rides.rides.at(*b.ride);
+            return b.colours.value_or(ride.track && !ride.track->pieces.empty() ? ride.track->pieces.back().colours : starting_colours(scene, b));
+        }
+
+        /// Whether `shape` stands beside a platform.
+        bool has_platform(const park::PieceShape& shape)
+        {
+            return (shape.record.flags & park::kPieceStation) != 0 || shape.record.role == park::kRoleStation;
+        }
+
+        /// What the ride's station pieces take their platforms from: its platform type's file as a park names it,
+        /// the platform pieces in it, and its doors. Nothing when it has no platform type, or its file is missing.
+        struct Platforms
+        {
+            std::string overlay;
+            std::span<const std::string> names;
+            std::vector<park::DoorSpot> doors;
+        };
+        std::optional<Platforms> ride_platforms(TrackBuilding& b, const save::Ride& ride, const ui::InterfaceAssets& assets)
+        {
+            if (ride.platform_type.empty() || !assets.install)
+                return std::nullopt;
+            Platforms p { .overlay = std::format("Tracks/Platforms/{}/{}", ride.platform_style, ride.platform_type), .names = { }, .doors = { } };
+            auto found = b.platform_names.find(p.overlay);
+            if (found == b.platform_names.end())
+            {
+                const auto file = assets.install->find(std::format("{}.common.ovl", p.overlay));
+                if (!file)
+                    return std::nullopt;
+                const auto loaded = ovl::Overlay::load(*file);
+                if (!loaded)
+                    return std::nullopt;
+                // By name in any case: types are not spelt as their pieces.
+                std::vector<std::string> names;
+                for (const auto part : { maybe(&loaded->common()), loaded->unique() })
+                    for (const auto& symbol : part ? part->symbols : std::vector<ovl::Symbol> { })
+                        if (const ovl::SymbolName n = ovl::split_symbol_name(symbol.name); n.tag == "sid")
+                            names.emplace_back(n.name);
+                found = b.platform_names.emplace(p.overlay, std::move(names)).first;
+            }
+            p.names = found->second;
+            for (const save::Station& s : ride.stations)
+                for (const auto& spot : { s.entrance_spot, s.exit_spot })
+                    if (spot)
+                        p.doors.push_back({ spot->col, spot->row, spot->direction, spot->height });
+            return p;
+        }
+
+        /// Where a station piece of `shape` stands, from which of its neighbours are stations and whether it has any.
+        park::PlatformPlace platform_place(const park::PieceShape& shape, bool station_before, bool station_after, bool track_before, bool track_after)
+        {
+            // A piece whose platform stands alone takes no part in a longer station.
+            const bool alone = (shape.record.flags & park::kPiecePlatformAlone) != 0;
+            return { .station_before = !alone && station_before, .station_after = !alone && station_after, .track_before = track_before, .track_after = track_after, .run = shape.record.platform_run, .side = shape.record.side };
+        }
+
         /// The catalogue's piece a track piece is, laid as it is.
         std::optional<park::LaidPiece> laid_piece(const park::PieceCatalogue& c, const save::TrackPiece& piece)
         {
@@ -463,6 +530,7 @@ namespace rct3::scene
             b.unowned = false;
             b.in_ground = false;
             b.ghost_doors = 0;
+            b.ghost_platform.clear();
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             const bool starting = opening(ride);
             b.backward = false;
@@ -561,6 +629,8 @@ namespace rct3::scene
                 return;
             save::PlacedObject& o = b.ghost->object;
             o.overlay = b.overlay;
+            const save::RideColours paint = next_colours(scene, b);
+            o.colours = { paint[0], paint[1], paint[2] };
             if (!load_object_model(scene, b.models, assets, o))
                 return;
             b.off_water = off_water(scene, b, assets, o);
@@ -602,6 +672,34 @@ namespace rct3::scene
             b.in_ground = whole && !refused && cut_refused(scene, std::span(shown).first(pieces));
             b.clashes = !whole || refused.has_value() || b.in_ground;
             b.unowned = refused && refused->unowned;
+            // A station piece shows its platform, as it will stand once laid between its neighbours.
+            // shortcut: a design's ghost shows none; upgrade by laying its platforms along it the same way.
+            const auto kit = has_platform(shape) && b.design.empty() ? ride_platforms(b, ride, assets) : std::nullopt;
+            if (kit)
+            {
+                const auto station = [&](std::size_t i) {
+                    const auto s = park::shape_named(*c, ride.track->pieces[i].symbol);
+                    return ride.track->pieces[i].platform.has_value() || (s && has_platform(*s));
+                };
+                const auto around = b.selected ? park::piece_neighbours(*ride.track, *b.selected) : std::nullopt;
+                // Built on from the open end the piece follows the last piece, or goes before the first when the
+                // track is built back from it.
+                const std::optional<std::size_t> before = around ? std::optional(around->before) : starting ? std::nullopt : std::optional(b.backward ? 0 : ride.track->pieces.size() - 1);
+                const std::optional<std::size_t> after = around ? std::optional(around->after) : std::nullopt;
+                const park::PlatformPlace place = platform_place(shape, before && station(*before), after && station(*after), before.has_value(), after.has_value());
+                const save::TrackPiece laid { .tile_x = o.col, .tile_z = o.row, .height = o.base_height.value_or(0), .direction = static_cast<std::uint8_t>(o.rotation) };
+                if (const auto name = park::platform_symbol(ride.platform_type, laid, place, kit->doors, kit->names))
+                {
+                    save::PlacedObject platform = o;
+                    platform.overlay = kit->overlay;
+                    platform.symbol = *name;
+                    if (load_object_model(scene, b.models, assets, platform))
+                    {
+                        b.ghost_platform = platform.symbol;
+                        shown.push_back(std::move(platform));
+                    }
+                }
+            }
             // Ghost track is held up as built track is, its supports ghosts too.
             if (const park::SupportSets* sets = support_sets(scene, assets))
             {
@@ -825,21 +923,6 @@ namespace rct3::scene
             if (*b.ride < scene.courses.size())
                 scene.courses[*b.ride] = park::track_course(ride, scene.objects, scene.models, scene.grid, scene.fitted, [&](const save::TrackPiece& p, const save::PlacedObject&) { return park::shape_named(*c, p.symbol); });
             update_platforms(scene, *b.ride, assets);
-        }
-
-        /// The colours a new track starts in, as its kind's file sets them.
-        save::RideColours starting_colours(const ParkScene& scene, const TrackBuilding& b)
-        {
-            const park::PieceCatalogue* c = catalogue(b);
-            const park::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::TrackRules { };
-            return c != nullptr ? park::starting_colours(rules, c->pieces) : save::RideColours { };
-        }
-
-        /// The colours the next piece is built in: as painted, else as the last piece, else as a new track starts.
-        save::RideColours next_colours(const ParkScene& scene, const TrackBuilding& b)
-        {
-            const save::Ride& ride = scene.rides.rides.at(*b.ride);
-            return b.colours.value_or(ride.track && !ride.track->pieces.empty() ? ride.track->pieces.back().colours : starting_colours(scene, b));
         }
 
         /// Adds the ghost to the park and to the ride's track, paid for if the park has the money, or `forced`
@@ -1760,30 +1843,14 @@ namespace rct3::scene
         save::Ride& ride = scene.rides.rides.at(ride_index);
         const auto overlay = ride_track_overlay(scene, ride_index);
         const auto c = overlay ? load_catalogue(scene.building, *overlay, assets) : std::nullopt;
-        if (!c || !ride.track || ride.platform_type.empty() || !assets.install)
+        const auto kit = c && ride.track ? ride_platforms(scene.building, ride, assets) : std::nullopt;
+        if (!kit)
             return;
-        // The platform pieces its type's file holds, by name in any case: types are not spelt as their pieces.
-        const std::string platforms = std::format("Tracks/Platforms/{}/{}", ride.platform_style, ride.platform_type);
-        const auto file = assets.install->find(std::format("{}.common.ovl", platforms));
-        if (!file)
-            return;
-        const auto loaded = ovl::Overlay::load(*file);
-        if (!loaded)
-            return;
-        std::vector<std::string> names;
-        for (const auto part : { maybe(&loaded->common()), loaded->unique() })
-            for (const auto& symbol : part ? part->symbols : std::vector<ovl::Symbol> { })
-                if (const ovl::SymbolName n = ovl::split_symbol_name(symbol.name); n.tag == "sid")
-                    names.emplace_back(n.name);
-        std::vector<park::DoorSpot> doors;
-        for (const save::Station& s : ride.stations)
-            for (const auto& spot : { s.entrance_spot, s.exit_spot })
-                if (spot)
-                    doors.push_back({ spot->col, spot->row, spot->direction, spot->height });
+        const std::string& platforms = kit->overlay;
         auto& pieces = ride.track->pieces;
         const auto station = [&](std::size_t i) {
             const auto shape = park::shape_named(*c, pieces[i].symbol);
-            return pieces[i].platform.has_value() || (shape && ((shape->record.flags & park::kPieceStation) != 0 || shape->record.role == park::kRoleStation));
+            return pieces[i].platform.has_value() || (shape && has_platform(*shape));
         };
         wait_for_build(scene);
         bool changed = false;
@@ -1792,18 +1859,12 @@ namespace rct3::scene
             if (!station(i))
                 continue;
             const auto shape = park::shape_named(*c, pieces[i].symbol);
-            const bool alone = shape && (shape->record.flags & park::kPiecePlatformAlone) != 0;
-            const park::PlatformPlace place {
-                .station_before = !alone && (i > 0 ? station(i - 1) : ride.track->circuit && station(pieces.size() - 1)),
-                .station_after = !alone && (i + 1 < pieces.size() ? station(i + 1) : ride.track->circuit && station(0)),
-                // shortcut: the open end being built on counts as the track's end, which only the aquarium's
-                // platforms show; upgrade by leaving that end open while the construction panel is on it.
-                .track_before = i > 0 || ride.track->circuit,
-                .track_after = i + 1 < pieces.size() || ride.track->circuit,
-                .run = shape ? std::string_view(shape->record.platform_run) : std::string_view { },
-                .side = shape ? shape->record.side : 0,
-            };
-            const auto name = park::platform_symbol(ride.platform_type, pieces[i], place, doors, names);
+            if (!shape)
+                continue;
+            // shortcut: the open end being built on counts as the track's end, which only the aquarium's platforms
+            // show; upgrade by leaving that end open while the construction panel is on it.
+            const park::PlatformPlace place = platform_place(*shape, i > 0 ? station(i - 1) : ride.track->circuit && station(pieces.size() - 1), i + 1 < pieces.size() ? station(i + 1) : ride.track->circuit && station(0), i > 0 || ride.track->circuit, i + 1 < pieces.size() || ride.track->circuit);
+            const auto name = park::platform_symbol(ride.platform_type, pieces[i], place, kit->doors, kit->names);
             if (!name)
             {
                 // Its type has no platform for it there, as some have none without stairs.

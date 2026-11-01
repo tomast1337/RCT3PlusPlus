@@ -737,6 +737,7 @@ namespace rct3::scene
                      { "clashes", b.clashes },
                      { "unowned", b.unowned },
                      { "ghostDoors", b.ghost_doors },
+                     { "ghostPlatform", b.ghost_platform },
                      { "completing", b.completing.has_value() },
                      { "proposed", b.proposed.size() },
                      { "complaint", b.complaint },

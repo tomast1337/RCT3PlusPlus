@@ -84,6 +84,8 @@ namespace rct3::scene
         std::string overlay;             ///< The ride's track overlay, as its objects name it
         std::map<std::string, park::PieceCatalogue, std::less<>> catalogues;
         std::map<std::string, TrackModels, std::less<>> models;
+        /// The platform pieces of each platform type's file, by the file as a park names it, read once.
+        std::map<std::string, std::vector<std::string>, std::less<>> platform_names;
         std::optional<park::TrackTip> tip; ///< None while the track is a closed circuit
         /// The track is built on before its first piece, as a giant slide is from its bottom up to its top.
         bool backward = false;
@@ -125,6 +127,7 @@ namespace rct3::scene
         bool unowned = false;        ///< Of those, it stands off land the park owns
         bool in_ground = false;      ///< Of those, it cuts into the ground
         std::size_t ghost_doors = 0; ///< The design's doors the ghost shows with its track
+        std::string ghost_platform;  ///< The platform piece the ghost shows beside its station piece, if any
         std::string complaint;       ///< String key: why the track was last not finished; cleared by the next action
         bool arm = false;            ///< The ride's riders sit on arms, whose angles its pieces hold
         /// The piece whose arm angles the arm strip shows, by id; it shows them again when this changes.

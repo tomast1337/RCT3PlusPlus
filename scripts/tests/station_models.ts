@@ -4,7 +4,8 @@
 // corkscrew coaster on the game's blank landscape: each new track starts on its kind's plain station, in the
 // colours of the first piece its ride file lists (all 0, 0, 0 for these kinds), and each station piece stands in
 // its platform model, of the type its ride's train names (or its kind's, when the train names none), capped at the
-// station's two ends and painted as its piece. The steel coaster's park is saved and loaded again, and its
+// station's two ends and painted as its piece. Before each station piece is placed, its ghost shows the platform it
+// will stand in there. The steel coaster's park is saved and loaded again, and its
 // platforms are still there.
 //
 //   ./nob script scripts/tests/station_models.ts -- --no-audio
@@ -17,7 +18,7 @@ function expect(ok: boolean, what: string): void {
 }
 
 /** Builds a station of `kind` and gives its ride's place in rides.list(). */
-async function station(overlay: string, kind: string): Promise<number> {
+async function station(overlay: string, kind: string, type: RegExp): Promise<number> {
     await park.open("Campaigns/Base/BlankLandscape.dat");
     await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
     expect(build.pick(overlay, kind, "designs"), `a ${kind} to build`);
@@ -38,6 +39,9 @@ async function station(overlay: string, kind: string): Promise<number> {
     // A new track starts on its plain station, not an inverted one.
     const first = build.construction()?.piece ?? "";
     expect(/^station/i.test(first), `a new ${kind} to start on its station, not ${first}`);
+    // Its ghost shows the platform it will stand in before it is placed.
+    const alone = build.construction()?.ghostPlatform ?? "";
+    expect(type.test(alone) && /startEnd/i.test(alone), `the ${kind} ghost station in a platform alone, not "${alone}"`);
     await pointer.click(p.x, p.y);
     await frames(30);
     // Then the plain station among the pictured pieces, clicked again to build it, up to five pieces.
@@ -50,6 +54,14 @@ async function station(overlay: string, kind: string): Promise<number> {
             await ui.click(button);
             await frames(10);
             if (/^station/i.test(build.construction()?.piece ?? "")) {
+                // After a station piece, the ghost's platform ends the station.
+                const ghost = build.construction()?.ghostPlatform ?? "";
+                expect(type.test(ghost) && /end/i.test(ghost) && !/start/i.test(ghost), `the ${kind} ghost station's platform to end the station, not "${ghost}"`);
+                if (kind === "Corkscrew" && laid() === 4) {
+                    view();
+                    await frames(30);
+                    await screenshot("Corkscrew_ghost");
+                }
                 await ui.click(button);
                 await frames(10);
                 break;
@@ -85,7 +97,7 @@ for (const [overlay, kind, type] of [
     ["tracks/TrackedRides/HauntedMansion/HauntedMansion", "HauntedMansion", /^noplatform/i],
     ["tracks/coasters/Corkscrew/Corkscrew", "Corkscrew", /^standard/i],
 ] as [string, string, RegExp][]) {
-    const ride = await station(overlay, kind);
+    const ride = await station(overlay, kind, type);
     check(ride, kind, type);
     expect(rides.list()[ride].track!.every((piece) => !/^inv/i.test(piece)), `an upright ${kind} station`);
     view();
@@ -99,7 +111,7 @@ for (const [overlay, kind, type] of [
     }
 }
 
-const ride = await station("tracks/coasters/LoopingRC/LoopingRC", "LoopingRC");
+const ride = await station("tracks/coasters/LoopingRC/LoopingRC", "LoopingRC", /^standard/i);
 const platforms = check(ride, "LoopingRC", /^standard/i);
 view();
 await frames(30);

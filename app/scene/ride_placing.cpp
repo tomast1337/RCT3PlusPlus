@@ -252,6 +252,14 @@ namespace rct3::scene
                 one.stalls.push_back(scene.rides.stalls[i]);
                 return simulation::import_stalls(scene.sim, one, scene.carried) > 0;
             });
+            // A facility serves from a path on any side.
+            std::erase_if(p.unjoined_facilities, [&](const std::pair<std::size_t, std::uint32_t>& f) {
+                if (f.first >= scene.rides.rides.size() || scene.rides.rides[f.first].base.demolished)
+                    return true;
+                save::RideModel one;
+                one.rides.push_back(scene.rides.rides[f.first]);
+                return simulation::import_facilities(scene.sim, one, [&](const save::Ride&) { return std::optional(f.second); }) > 0;
+            });
         }
 
         /// The middle of `site` at its height, where what it cost floats up from.
@@ -266,8 +274,8 @@ namespace rct3::scene
     {
         // An animal house is placed as scenery is, inside an enclosure.
         const bool scenery = (item.kind == park::BuildKind::Scenery || item.kind == park::BuildKind::Shelter) && !item.symbol.empty();
-        // A stall is placed whole as a flat ride is, without doors.
-        const bool whole = item.kind == park::BuildKind::FlatRide || (item.kind == park::BuildKind::Shop && item.stall);
+        // A stall or a facility is placed whole as a flat ride is, without doors.
+        const bool whole = item.kind == park::BuildKind::FlatRide || item.kind == park::BuildKind::Shop;
         if (!scenery && (!whole || item.scenery.empty() || item.width == 0 || item.length == 0))
             return false;
         RidePlacing& p = scene.placing;
@@ -855,6 +863,33 @@ namespace rct3::scene
                 return true;
             }
             p.ride = scene.rides.rides.size();
+            if (p.item->kind == park::BuildKind::Shop)
+            {
+                // A facility (a toilet, a cash machine and the like): a special attraction, opening onto every side.
+                const std::uint64_t object = add_object(scene, *o);
+                save::Ride& facility = scene.rides.rides.emplace_back();
+                facility.kind = save::RideKind::Special;
+                facility.base.id = last_id(scene) + 1;
+                facility.base.symbol = std::format("{}:sat", p.item->symbol);
+                facility.base.overlay_path = p.item->overlay;
+                facility.base.name = park::numbered_name(scene.rides.rides, facility.base.symbol);
+                // Built closed, as a stall is; it opens from its window.
+                facility.base.state = save::AttractionState::Closed;
+                facility.base.flags = save::AttractionCommon::kNeverOpened;
+                facility.base.placement = object;
+                facility.base.spot = save::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turns) };
+                facility.base.facing = static_cast<std::uint8_t>(p.site->turns);
+                if (scene.park.cash)
+                    *scene.park.cash -= price;
+                float_money(scene, site_point(scene, *p.site), -price);
+                logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
+                p.unjoined_facilities.emplace_back(p.ride, p.item->type);
+                scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, p.ride };
+                stop_ride_placing(scene);
+                refresh_pavings(scene);
+                rebuild_ground(device, scene, assets);
+                return true;
+            }
             save::Ride& ride = scene.rides.rides.emplace_back();
             ride.kind = save::RideKind::Flat;
             const std::uint64_t object = add_object(scene, *o);

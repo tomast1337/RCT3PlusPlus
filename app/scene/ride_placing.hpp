@@ -99,10 +99,11 @@ namespace rct3::scene
         std::uint32_t preview_pixels = 0;
         std::map<std::string, TrackModels, std::less<>> models;
         park::SolidTiles solids;
-        park::GroundHolds holds;                              ///< What keeps the ground still, worked out with the solids
-        std::size_t solids_of = static_cast<std::size_t>(-1); ///< The scene's object count when worked out
-        std::vector<std::size_t> unjoined;                    ///< Rides placed here that the simulation does not run yet
-        std::vector<std::size_t> unjoined_stalls;             ///< The same of the stalls placed here
+        park::GroundHolds holds;                                                ///< What keeps the ground still, worked out with the solids
+        std::size_t solids_of = static_cast<std::size_t>(-1);                   ///< The scene's object count when worked out
+        std::vector<std::size_t> unjoined;                                      ///< Rides placed here that the simulation does not run yet
+        std::vector<std::size_t> unjoined_stalls;                               ///< The same of the stalls placed here
+        std::vector<std::pair<std::size_t, std::uint32_t>> unjoined_facilities; ///< The same of the facilities placed here, with their kinds
         /// Every show trick the game names, read from its main file when the first show ride is placed.
         std::optional<std::vector<std::string>> trick_names;
         /// Of a tracked ride getting a door: its station pieces, which the door stands beside

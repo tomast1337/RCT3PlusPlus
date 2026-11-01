@@ -37,6 +37,8 @@ namespace rct3::parkfile
     std::vector<save::PlacedObject> kept_objects(std::span<const save::PlacedObject> objects, std::size_t own, const std::unordered_set<std::uint64_t>& placed, std::span<const save::PathTile> paths, const save::RideModel& rides)
     {
         std::unordered_set<std::uint64_t> built = placed;
+        // A station piece's platform model is owned by its platform record, which the ride keeps.
+        std::unordered_set<std::uint64_t> platforms;
         for (const save::PathTile& p : paths)
         {
             if (p.elevation)
@@ -46,7 +48,11 @@ namespace rct3::parkfile
         {
             if (ride.track)
                 for (const save::TrackPiece& piece : ride.track->pieces)
+                {
                     built.insert(piece.scenery);
+                    if (piece.platform)
+                        platforms.insert(piece.platform->id);
+                }
             if (ride.base.spot)
                 built.insert(ride.base.spot->object);
             for (const save::Station& station : ride.stations)
@@ -62,7 +68,7 @@ namespace rct3::parkfile
         std::vector<save::PlacedObject> kept;
         for (std::size_t i = 0; i < objects.size(); ++i)
         {
-            if (i < own || built.contains(objects[i].id))
+            if (i < own || built.contains(objects[i].id) || platforms.contains(objects[i].owner_ref))
                 kept.push_back(objects[i]);
         }
         return kept;

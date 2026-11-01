@@ -53,6 +53,11 @@ namespace rct3::ui
             { 0, "StaffTasks_InspectRides", "StaffTasks_InspectRidesHelp" },
             { 1, "StaffTasks_FixRides", "StaffTasks_FixRidesHelp" },
         } };
+        constexpr std::array<Task, 3> kInspectorTasks { {
+            { 0, "StaffTasks_Evaluate_FlatRides", "StaffTasks_Evaluate_FlatRidesHelp" },
+            { 1, "StaffTasks_Evaluate_RollerCoasters", "StaffTasks_Evaluate_RollerCoastersHelp" },
+            { 2, "StaffTasks_Evaluate_FoodDrinkStalls", "StaffTasks_Evaluate_FoodDrinkStallsHelp" },
+        } };
         constexpr std::array<Task, 2> kKeeperTasks { {
             { 0, "AnimalKeeper_ClearDung", "AnimalKeeper_ClearDungTT" },
             { 1, "AnimalKeeper_FillTroughs", "AnimalKeeper_FillTroughsTT" },
@@ -74,6 +79,8 @@ namespace rct3::ui
                     return kMechanicTasks;
                 case AnimalKeeper:
                     return kKeeperTasks;
+                case ParkInspector:
+                    return kInspectorTasks;
                 default:
                     return { };
             }

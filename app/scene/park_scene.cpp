@@ -2871,6 +2871,15 @@ namespace rct3::scene
                     for (; scene.vandalism_warnings_seen < vandalism->warnings; ++scene.vandalism_warnings_seen)
                         simulation::post(scene.park.messages, { .text_key = "Thought_PI_Park_Vandalism1" });
                 }
+                // What the park's inspector found wrong, each told about the attraction they found it at.
+                if (auto* findings = scene.sim.registry.ctx().find<simulation::Findings>())
+                {
+                    constexpr std::array<std::string_view, 3> kKeys { "Thought_PI_Stall_TooExpensive1", "Thought_PI_Stall_TooCheap1", "Thought_PI_Ride_LongQueueTime1" }; // By Finding
+                    for (const auto& [finding, at] : findings->found)
+                        if (const auto* attraction = scene.sim.registry.valid(at) ? scene.sim.registry.try_get<simulation::Attraction>(at) : nullptr)
+                            simulation::post(scene.park.messages, { .text_key = std::string(kKeys[std::to_underlying(finding)]), .subject = attraction->saved, .panel = ui::message_panel(finding == simulation::Finding::LongQueue ? ui::AttractionTab::Mode : ui::AttractionTab::Items) });
+                    findings->found.clear();
+                }
                 // What is broken looks it, and looks whole again once mended.
                 park::Broken broken;
                 for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())

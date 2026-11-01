@@ -16,6 +16,7 @@
 #include "scene/pool_tools.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
+#include "simulation/import_park.hpp"
 #include "simulation/park_messages.hpp"
 #include "simulation/systems.hpp"
 #include "strings/unicode.hpp"
@@ -772,6 +773,15 @@ namespace rct3::scene
             const auto refused = change_stall_state(park, a[0].get<std::size_t>(), open ? save::AttractionState::Open : save::AttractionState::Closed);
             return refused ? Json(*refused) : Json(nullptr);
         });
+        engine_.define("stalls.setPrice", [this](const Json& a) {
+            ParkScene& park = park_of(park_);
+            if (a.size() != 3 || !a[0].is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size() || !a[1].is_number_unsigned() || a[1].get<std::size_t>() >= park.rides.stalls[a[0].get<std::size_t>()].items.size() || !a[2].is_number_integer())
+                throw std::invalid_argument("stalls.setPrice takes a stall's place in stalls.list(), an item's place in its menu and hundredths");
+            save::Stall& stall = park.rides.stalls[a[0].get<std::size_t>()];
+            stall.items[a[1].get<std::size_t>()].price = a[2].get<std::int64_t>();
+            simulation::restock(park.sim, stall, park.carried);
+            return Json(nullptr);
+        });
         engine_.define("rides.show", [this](const Json& a) {
             ParkScene& park = park_of(park_);
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.rides.size())
@@ -813,8 +823,12 @@ namespace rct3::scene
                 // A seller's post: the object of the stall or ride entrance they serve at.
                 if (const auto* work = p.staff && p.saved < park.people.staff.size() ? std::get_if<save::VendorWork>(&park.people.staff[p.saved].work) : nullptr; work != nullptr)
                     person["post"] = work->scenery_item.id;
-                // Where the simulation has them, and what of: walking the paths, held by the player, or let go.
                 const auto& r = park.sim.registry;
+                // A worker's job, in StaffRole's order.
+                constexpr std::array<std::string_view, 7> kRoles { "handyman", "mechanic", "guard", "other", "vendor", "keeper", "inspector" };
+                if (const auto* staff = r.valid(p.guest) ? r.try_get<simulation::Staff>(p.guest) : nullptr)
+                    person["role"] = kRoles[std::to_underlying(staff->role)];
+                // Where the simulation has them, and what of: walking the paths, held by the player, or let go.
                 if (r.valid(p.guest) && !r.all_of<simulation::Left>(p.guest) && r.all_of<simulation::Pose>(p.guest))
                 {
                     const auto* errand = r.try_get<simulation::Errand>(p.guest);

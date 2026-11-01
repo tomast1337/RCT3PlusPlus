@@ -419,6 +419,8 @@ declare namespace stalls {
     /** Puts stall `i` of list() in `state`, as its window's open-or-close tab does. Null once changed, else the
      *  string key of why it stays as it was (nothing on its menu). */
     function setState(i: number, state: "closed" | "open"): string | null;
+    /** Sets the price of item `item` on stall `i`'s menu, in hundredths, as its window's items page does. */
+    function setPrice(i: number, item: number, hundredths: number): void;
 }
 
 declare namespace people {
@@ -431,9 +433,9 @@ declare namespace people {
      *  (`gait`), what they carry from a stall (`carrying`: food or drink still being had, or its empty) and,
      *  seated on a ride, how they react to it and the ride's place in rides.list (`ride`), and a gesture they make
      *  now by the motion it shows (`gesture`, such as "dizzy" or "laugh"). A seller has the id of the object of the stall
-     *  or ride entrance they serve at as `post`. Members of one party share its number, `party`, while they are with it,
+     *  or ride entrance they serve at as `post`; a worker the simulation runs, their job as `role`. Members of one party share its number, `party`, while they are with it,
      *  and those on their way out of the park are `leaving`. */
-    function list(): { name: string; staff: boolean; post?: number; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
+    function list(): { name: string; staff: boolean; post?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

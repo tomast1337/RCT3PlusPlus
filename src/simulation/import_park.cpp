@@ -5,6 +5,7 @@
 #include "ovl/tracked_ride.hpp"
 #include "park/ground_paths.hpp"
 #include "park/ground_queues.hpp"
+#include "park/object_placement.hpp"
 #include "park/path_decks.hpp"
 #include "park/queue_fences.hpp"
 #include "park/terrain_mesh.hpp"
@@ -233,6 +234,31 @@ namespace rct3::simulation
             NodeId exit = kNoNode;
         };
 
+        /// The path node behind the ride door `door`, on the tile away from the ride, nearest its height and no
+        /// further off than a path that sets the door's paving; queue tiles only with `queues`, otherwise
+        /// footpaths only. kNoNode when none: a path beside the door, across its side fences, does not join it.
+        NodeId behind_door(const PathNetwork& paths, const save::PlacementSpot& door, bool queues)
+        {
+            const glm::vec2 way = park::turned_x(door.direction + 2);
+            const int col = door.col + static_cast<int>(way.x);
+            const int row = door.row + static_cast<int>(way.y);
+            NodeId found = kNoNode;
+            int gap = 0;
+            for (NodeId n = 0; n < paths.nodes().size(); ++n)
+            {
+                const PathNode& node = paths.nodes()[n];
+                const int g = std::abs(node.tile.level - door.height);
+                if (node.removed || node.queue != queues || node.tile.col != col || node.tile.row != row || static_cast<float>(g) > park::kPavingReach)
+                    continue;
+                if (found == kNoNode || g < gap)
+                {
+                    found = n;
+                    gap = g;
+                }
+            }
+            return found;
+        }
+
         /// Guests line up on the queue that reaches the entrance, or walk straight in from a path; none when
         /// neither reaches it.
         std::optional<RideLinks> ride_links(const PathNetwork& paths, const save::Station& station)
@@ -241,13 +267,13 @@ namespace rct3::simulation
                 return std::nullopt;
             const save::PlacementSpot& at = *station.entrance_spot;
             RideLinks links;
-            if (const NodeId front = beside(paths, at, at.direction, true); front != kNoNode && station.queue_line != 0 && paths.nodes()[front].line == station.queue_line)
+            if (const NodeId front = behind_door(paths, at, true); front != kNoNode && station.queue_line != 0 && paths.nodes()[front].line == station.queue_line)
                 links.line = queue_line(paths, front);
-            links.entrance = links.line.empty() ? beside(paths, at, at.direction, false) : links.line.back();
+            links.entrance = links.line.empty() ? behind_door(paths, at, false) : links.line.back();
             if (links.entrance == kNoNode)
                 return std::nullopt;
             if (station.exit_spot)
-                links.exit = beside(paths, *station.exit_spot, station.exit_spot->direction, false);
+                links.exit = behind_door(paths, *station.exit_spot, false);
             return links;
         }
 
@@ -580,23 +606,28 @@ namespace rct3::simulation
                     if (std::ranges::none_of(cycle->stops, [&](const Stop& stop) { return stop.saved == k; }))
                         if (const auto near = nearest_platform(world.paths, ride->stations[k], cycle->stops, &Stop::platform); near && cycle->stops[*near].saved == Stop::kNone)
                             cycle->stops[*near].saved = k;
+                // The way in changes only while no one queues on it; the way out at once, so riders already
+                // aboard leave by a path laid to the exit while the ride is busy.
+                const auto relink = [&](const save::Station& station, NodeId& entrance, std::vector<NodeId>& line, NodeId& exit, bool queued) {
+                    const auto links = ride_links(world.paths, station);
+                    if (!links)
+                        return;
+                    if (!queued && (links->entrance != entrance || links->line != line))
+                    {
+                        entrance = links->entrance;
+                        line = links->line;
+                        ++changed;
+                    }
+                    if (links->exit != exit)
+                    {
+                        exit = links->exit;
+                        ++changed;
+                    }
+                };
                 for (Stop& stop : cycle->stops)
-                {
-                    const auto links = stop.saved < ride->stations.size() && stop.queue.empty() ? ride_links(world.paths, ride->stations[stop.saved]) : std::nullopt;
-                    if (!links || (links->entrance == stop.entrance && links->line == stop.line && links->exit == stop.exit))
-                        continue;
-                    stop.entrance = links->entrance;
-                    stop.line = links->line;
-                    stop.exit = links->exit;
-                    ++changed;
-                }
-                const auto links = cycle->queue.empty() ? ride_links(world.paths, ride->stations.front()) : std::nullopt;
-                if (!links || (links->entrance == attraction.entrance && links->line == cycle->line && links->exit == cycle->exit))
-                    continue;
-                attraction.entrance = links->entrance;
-                cycle->line = links->line;
-                cycle->exit = links->exit;
-                ++changed;
+                    if (stop.saved < ride->stations.size())
+                        relink(ride->stations[stop.saved], stop.entrance, stop.line, stop.exit, !stop.queue.empty());
+                relink(ride->stations.front(), attraction.entrance, cycle->line, cycle->exit, !cycle->queue.empty());
                 continue;
             }
             const auto stall = std::ranges::find(rides.stalls, attraction.saved, [](const save::Stall& x) { return x.base.id; });

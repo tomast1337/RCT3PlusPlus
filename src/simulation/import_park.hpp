@@ -52,8 +52,8 @@ namespace rct3::simulation
     void follow_ground(SimWorld& world, std::span<const save::PathTile> paths, const save::TerrainGrid& was, const save::TerrainGrid& grid, save::Tile first, save::Tile last);
 
     /// Has each imported ride and stall of `rides` find its entrance on the paths again, and each ride its
-    /// queue line at each of its stations, after paths changed. A station with guests in its queue keeps its line
-    /// until the queue empties.
+    /// queue line and exit at each of its stations, after paths changed or its doors moved. A station with guests
+    /// in its queue keeps its entrance and line until the queue empties; its exit follows at once.
     /// Returns how many changed.
     std::size_t relink_attractions(SimWorld& world, const save::RideModel& rides);
 

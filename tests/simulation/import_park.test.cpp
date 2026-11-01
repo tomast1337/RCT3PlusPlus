@@ -147,8 +147,8 @@ TEST_CASE("a ride comes over with its queue line, from the entrance back to the 
     ride.ticket_price = 150;
     ride.assessment = { .valid = true, .excitement = 5, .intensity = 2, .nausea = 12 };
     save::Station& station = ride.stations.emplace_back();
-    station.entrance_spot = save::PlacementSpot { .col = 6, .row = 0 };
-    station.exit_spot = save::PlacementSpot { .col = 4, .row = 1 };
+    station.entrance_spot = save::PlacementSpot { .col = 6, .row = 0, .direction = 2 }; // Its back to (5, 0)
+    station.exit_spot = save::PlacementSpot { .col = 4, .row = 1, .direction = 3 };     // Its back to (4, 2)
     station.queue_line = 7;
     const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 12, .run = 40 } };
 
@@ -166,6 +166,72 @@ TEST_CASE("a ride comes over with its queue line, from the entrance back to the 
     CHECK(cycle.excitement.value == doctest::Approx(0.5f));
     CHECK(cycle.nausea.value == 1);                               // Ratings past 10 count as 10
     CHECK_FALSE(world.registry.all_of<simulation::Departure>(e)); // A flat ride's saved settings are not its own
+}
+
+TEST_CASE("a ride's door joins only the path on the tile behind it, near its height")
+{
+    // Facings 0 to 3 put a door's back towards +col, -row, -col and +row.
+    constexpr std::array<std::array<int, 2>, 4> kBehind { { { 1, 0 }, { 0, -1 }, { -1, 0 }, { 0, 1 } } };
+    for (std::uint8_t facing = 0; facing < 4; ++facing)
+    {
+        CAPTURE(facing);
+        const auto [bc, br] = kBehind[facing];
+        simulation::SimWorld world;
+        world.paths.add({ 2 + bc, 2 + br, 0 });
+        // Round the exit at (8, 8): paths on its other three sides, and one behind it three levels up.
+        for (std::uint8_t side = 1; side < 4; ++side)
+            world.paths.add({ 8 + kBehind[(facing + side) % 4][0], 8 + kBehind[(facing + side) % 4][1], 0 });
+        world.paths.add({ 8 + bc, 8 + br, 3 });
+
+        save::RideModel rides;
+        save::Ride& ride = rides.rides.emplace_back();
+        ride.kind = save::RideKind::Flat;
+        ride.base.id = 5;
+        save::Station& station = ride.stations.emplace_back();
+        station.entrance_spot = save::PlacementSpot { .col = 2, .row = 2, .direction = facing };
+        station.exit_spot = save::PlacementSpot { .col = 8, .row = 8, .direction = facing };
+        const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 4, .run = 30 } };
+        const auto e = simulation::import_rides(world, rides, timings).front();
+        REQUIRE(world.registry.valid(e));
+        CHECK(world.registry.get<simulation::Attraction>(e).entrance == *world.paths.find({ 2 + bc, 2 + br, 0 }));
+        CHECK(world.registry.get<simulation::CycleRide>(e).exit == simulation::kNoNode);
+
+        // A path laid behind it a level up, as a ramp's middle may lie, joins it.
+        const auto behind = world.paths.add({ 8 + bc, 8 + br, 1 });
+        CHECK(simulation::relink_attractions(world, rides) == 1);
+        CHECK(world.registry.get<simulation::CycleRide>(e).exit == behind);
+    }
+}
+
+TEST_CASE("a path laid to a busy ride's exit lets its riders out at once; its way in waits for the queue")
+{
+    simulation::SimWorld world;
+    const auto in = world.paths.add({ 0, 1, 0 });
+    save::RideModel rides;
+    save::Ride& ride = rides.rides.emplace_back();
+    ride.kind = save::RideKind::Flat;
+    ride.base.id = 6;
+    save::Station& station = ride.stations.emplace_back();
+    station.entrance_spot = save::PlacementSpot { .col = 1, .row = 1, .direction = 2 }; // Its back to (0, 1)
+    station.exit_spot = save::PlacementSpot { .col = 3, .row = 1, .direction = 0 };     // Its back to (4, 1)
+    const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 4, .run = 30 } };
+    const auto e = simulation::import_rides(world, rides, timings).front();
+    REQUIRE(world.registry.valid(e));
+    auto& cycle = world.registry.get<simulation::CycleRide>(e);
+    CHECK(cycle.exit == simulation::kNoNode);
+
+    // Someone queues; the path to the entrance is laid again and one is laid to the exit.
+    cycle.queue.push_back(world.registry.create());
+    world.paths.remove(in);
+    const auto again = world.paths.add({ 0, 1, 0 });
+    const auto out = world.paths.add({ 4, 1, 0 });
+    CHECK(simulation::relink_attractions(world, rides) == 1);
+    CHECK(cycle.exit == out);
+    CHECK(world.registry.get<simulation::Attraction>(e).entrance == in);
+
+    cycle.queue.clear();
+    CHECK(simulation::relink_attractions(world, rides) == 1);
+    CHECK(world.registry.get<simulation::Attraction>(e).entrance == again);
 }
 
 TEST_CASE("a tracked ride leaves the station as its saved operating settings say")
@@ -192,7 +258,7 @@ TEST_CASE("boats for hire carry their riders out and back, though their dock is 
     ride.kind = save::RideKind::Tracked;
     ride.mode = save::OperatingMode::Boat;
     ride.seats.resize(8); // Four boats of two
-    ride.stations.emplace_back().entrance_spot = save::PlacementSpot { .col = 4, .row = 0 };
+    ride.stations.emplace_back().entrance_spot = save::PlacementSpot { .col = 4, .row = 0, .direction = 2 };
     const auto added = simulation::import_rides(world, rides, { });
     REQUIRE(world.registry.valid(added[0]));
     const auto& cycle = world.registry.get<simulation::CycleRide>(added[0]);
@@ -248,7 +314,7 @@ TEST_CASE("guests the park had on a ride are put back on it, as many as it seats
     save::Ride& ride = rides.rides.emplace_back();
     ride.kind = save::RideKind::Flat;
     ride.base.id = 42;
-    ride.stations.emplace_back().entrance_spot = save::PlacementSpot { .col = 4, .row = 0 };
+    ride.stations.emplace_back().entrance_spot = save::PlacementSpot { .col = 4, .row = 0, .direction = 2 };
     const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 2, .run = 40 } };
     const auto added = simulation::import_rides(world, rides, timings);
     REQUIRE(world.registry.valid(added[0]));
@@ -393,14 +459,13 @@ TEST_CASE("paths laid and taken away come and go from the network; walkers and r
     save::Ride& ride = rides.rides.emplace_back();
     ride.kind = save::RideKind::Flat;
     ride.base.id = 42;
-    ride.stations.emplace_back().entrance_spot = save::PlacementSpot { .col = 5, .row = 1 };
+    ride.stations.emplace_back().entrance_spot = save::PlacementSpot { .col = 5, .row = 1, .direction = 1 }; // Its back to (5, 0)
     const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 4, .run = 30 } };
     const auto at = [&](int c) { return *world.paths.find({ c, 0, 0 }); };
     // Imported while a stub path reaches the entrance, then the stub goes and a path is laid to it later.
     save::PathTile stub;
     stub.kind = save::PathKind::Ground;
     stub.col = 5;
-    stub.row = 2;
     (void)simulation::add_path(world, stub, grid);
     const auto e = simulation::import_rides(world, rides, timings).front();
     REQUIRE(world.registry.valid(e));

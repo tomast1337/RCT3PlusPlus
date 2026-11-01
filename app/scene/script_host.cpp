@@ -1009,10 +1009,12 @@ namespace rct3::scene
                         one["running"] = fleet->trains.size();
                         one["moving"] = std::ranges::count_if(fleet->trains, [](const simulation::Coaster& c) { return c.running; });
                         Json at = Json::array();
-                        for (const simulation::Coaster& c : fleet->trains)
+                        for (std::size_t t = 0; t < fleet->trains.size(); ++t)
                         {
+                            const simulation::Coaster& c = fleet->trains[t];
                             const auto standing = simulation::standing_at(c);
-                            at.push_back({ { "front", c.at }, { "length", c.train_length }, { "station", standing ? Json(*standing) : Json(nullptr) } });
+                            const auto held = simulation::held_in_station(c);
+                            at.push_back({ { "front", c.at }, { "length", c.train_length }, { "station", standing ? Json(*standing) : Json(nullptr) }, { "held", held ? Json(*held) : Json(nullptr) }, { "riders", t < fleet->riders.size() ? fleet->riders[t].size() : 0 } });
                         }
                         one["trainsAt"] = std::move(at);
                         one["trackLength"] = fleet->trains.empty() ? 0.0f : fleet->trains.front().length();

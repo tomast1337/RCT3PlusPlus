@@ -633,6 +633,16 @@ namespace rct3::scene
                     rides.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price }, { "doors", !item.entrance.empty() && !item.exit.empty() }, { "water", item.water_only }, { "fence", item.fence } });
             return rides;
         });
+        engine_.define("build.facilities", [this](const Json&) -> Json {
+            const auto items = build_items(park_of(park_));
+            if (!items)
+                return nullptr;
+            Json facilities = Json::array();
+            for (const park::BuildItem& item : *items)
+                if (item.kind == park::BuildKind::Shop && !item.stall)
+                    facilities.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price }, { "kind", item.type } });
+            return facilities;
+        });
         engine_.define("build.stalls", [this](const Json&) -> Json {
             const auto items = build_items(park_of(park_));
             if (!items)
@@ -966,6 +976,16 @@ namespace rct3::scene
                 }
                 const entt::entity e = i < park.ride_entities.size() ? park.ride_entities[i] : entt::null;
                 const auto& registry = park.sim.registry;
+                // A facility is run as a shop: where it serves from and how many it has served.
+                if (ride.kind == save::RideKind::Special)
+                    for (const auto [_, a] : registry.view<const simulation::Attraction>().each())
+                        if (a.saved == ride.base.id)
+                        {
+                            one["joined"] = true;
+                            one["customers"] = a.customers;
+                            if (a.entrance < park.sim.paths.nodes().size())
+                                one["servedFrom"] = { { "col", park.sim.paths.nodes()[a.entrance].tile.col }, { "row", park.sim.paths.nodes()[a.entrance].tile.row } };
+                        }
                 if (e != entt::null && registry.valid(e))
                 {
                     one["joined"] = true;

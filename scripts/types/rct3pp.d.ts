@@ -230,6 +230,19 @@ interface FlatRideItem {
     fence: string;
 }
 
+interface FacilityItem {
+    overlay: string;
+    symbol: string;
+    /** String key of its name. */
+    name: string;
+    width: number;
+    length: number;
+    /** Hundredths of the currency. */
+    price: number;
+    /** Its attraction kind: 11 toilet, 12 cash machine, 13 first aid, others not run by the park. */
+    kind: number;
+}
+
 interface StallItem {
     overlay: string;
     symbol: string;
@@ -248,6 +261,9 @@ declare namespace build {
     function flatRides(): FlatRideItem[] | undefined;
     /** The install's stalls; undefined while the lists are still being read. Picked as rides are. */
     function stalls(): StallItem[] | undefined;
+    /** The install's facilities (toilets, cash machines, first aid, information); undefined while the lists are
+     * still being read. Picked as rides are. */
+    function facilities(): FacilityItem[] | undefined;
     /** Starts placing a ride; false when there is no such ride. A ride built piece by piece opens its
      * construction panel on the next frame, for a custom track; with "designs" it also opens the window of its
      * kind's saved designs ("design_browser"), as picking it in its build list does when it has some. An
@@ -328,6 +344,8 @@ interface RideInfo {
     /** Whether the simulation runs it. The rest are there only when it does. */
     joined: boolean;
     customers?: number;
+    /** A facility: the path tile it serves from. */
+    servedFrom?: { col: number; row: number };
     /** Hundredths of the currency. */
     price?: number;
     open?: boolean;

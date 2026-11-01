@@ -3,7 +3,7 @@
 // Each thought has a face before it: grinning when glad, plain when neither, red when put out. Guests dropped in the
 // game's Chequered Flag go round until one has a few thoughts; their window's thoughts page shows a face before
 // each. Then three messages telling thoughts are posted, a glad one, a plain one and a complaint, and the message
-// drawer shows each with its face.
+// drawer shows each with its face, and the guest list a face by how happy each guest is.
 //
 //   ./nob script scripts/tests/thought_moods.ts -- --no-audio
 
@@ -47,4 +47,38 @@ for (const key of ["Thought_ThisIsGoodValue1", "Thought_NeutralMusic1", "Thought
 await frames(120);
 expect(park.messages().length >= 3, "the messages posted");
 await screenshot("message_faces");
+
+// The guest list: each guest's row starts with the face of how happy they are, from the lowest third of the scale
+// to the highest.
+const bands = () => {
+    const happiness = people.list().flatMap((p) => (p.staff || p.happiness === undefined ? [] : [p.happiness]));
+    return [happiness.filter((h) => h < 1 / 3).length, happiness.filter((h) => h >= 1 / 3 && h <= 2 / 3).length, happiness.filter((h) => h > 2 / 3).length];
+};
+log("bands", JSON.stringify(bands()));
+await park.advanceUntil(() => bands().every((n) => n > 0), 1800, "guests in each third of happiness");
+log("bands", JSON.stringify(bands()));
+await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+await until(() => ui.find("tools/Management/Man_Guests") !== undefined, 120, "the management menu");
+await ui.click("tools/Management/Man_Guests");
+await until(() => ui.find("Man_GuestsHelp") !== undefined, 120, "the guest list");
+await frames(5);
+const tableOf = (path: string): string | undefined => {
+    for (const child of ui.children(path) ?? []) {
+        const at = `${path}/${child}`;
+        if (child === "table")
+            return at;
+        const found = tableOf(at);
+        if (found !== undefined)
+            return found;
+    }
+    return undefined;
+};
+const table = ui.find(tableOf("Man_GuestsHelp")!)!;
+// Sorted by happiness one way and then the other, so both ends of the scale show. Of the table's 456 units across
+// and 408 down, the happiness heading's middle is 124 from the right, left of the cash column and the scroll bar.
+for (const shot of ["guest_list_least_happy", "guest_list_most_happy"]) {
+    await pointer.click(table.right - ((table.right - table.left) * 124) / 456, table.top + ((table.bottom - table.top) * 10) / 408);
+    await frames(5);
+    await screenshot(shot);
+}
 quit(0);

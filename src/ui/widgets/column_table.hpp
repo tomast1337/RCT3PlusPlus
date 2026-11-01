@@ -35,7 +35,8 @@ namespace rct3::ui
     {
         std::vector<std::u16string> cells;
         std::vector<std::optional<double>> keys;
-        std::size_t id = 0; ///< The owner's, to know which thing the row is about after sorting
+        std::size_t id = 0;   ///< The owner's, to know which thing the row is about after sorting
+        std::string icon { }; ///< Skin before the first column's text, such as a guest's mood
     };
 
     struct ColumnTableStyle

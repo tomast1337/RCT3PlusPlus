@@ -311,6 +311,13 @@ namespace rct3::ui
         return it->mood;
     }
 
+    Mood happiness_mood(float happiness)
+    {
+        if (happiness > 2.0f / 3)
+            return Mood::Happy;
+        return happiness < 1.0f / 3 ? Mood::Sad : Mood::Neutral;
+    }
+
     std::string mood_icon(Mood mood)
     {
         constexpr std::array<std::string_view, 3> kIcons { "Guest_Thought_Neutral", "Guest_Thought_Happy", "Guest_Thought_Sad" };

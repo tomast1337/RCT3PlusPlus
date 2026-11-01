@@ -2957,10 +2957,21 @@ namespace rct3::scene
                         scene.photos.push_back({ park::framed(points, yaw, kPhotoPitch, kPhotoClosest), std::format("{} at photo spot_", name.empty() ? "Guest" : name) });
                     }
                 }
-                // Their money into the saved guests, for the Cash tab to show.
+                // Their money and mood into the saved guests, for their windows and the guest list to show.
                 for (const ShownPerson& p : scene.shown_people)
-                    if (const auto* wallet = p.staff || p.saved >= scene.people.guests.size() || !scene.sim.registry.valid(p.guest) ? nullptr : scene.sim.registry.try_get<simulation::Wallet>(p.guest))
-                        scene.people.guests[p.saved].cash = parkfile::kept_cash(*wallet);
+                {
+                    if (p.staff || p.saved >= scene.people.guests.size() || !scene.sim.registry.valid(p.guest))
+                        continue;
+                    save::Guest& kept = scene.people.guests[p.saved];
+                    if (const auto* wallet = scene.sim.registry.try_get<simulation::Wallet>(p.guest))
+                        kept.cash = parkfile::kept_cash(*wallet);
+                    if (const auto* mood = scene.sim.registry.try_get<simulation::Mood>(p.guest))
+                    {
+                        kept.mood_now.happiness = mood->happiness.value;
+                        kept.mood_now.energy = mood->energy.value;
+                        kept.mood_now.nausea = mood->nausea.value;
+                    }
+                }
                 // New thoughts go into the guests' saved thoughts, newest first, for their windows to show.
                 for (ShownPerson& p : scene.shown_people)
                 {

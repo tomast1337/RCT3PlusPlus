@@ -53,3 +53,13 @@ TEST_CASE("each mood has its own face")
     CHECK(mood_icon(Mood::Neutral) != mood_icon(Mood::Sad));
     CHECK(mood_icon(Mood::Neutral) != mood_icon(Mood::Happy));
 }
+
+TEST_CASE("happiness in thirds: sad at the bottom, happy at the top")
+{
+    CHECK(happiness_mood(0) == Mood::Sad);
+    CHECK(happiness_mood(0.3f) == Mood::Sad);
+    CHECK(happiness_mood(0.34f) == Mood::Neutral);
+    CHECK(happiness_mood(0.66f) == Mood::Neutral);
+    CHECK(happiness_mood(0.67f) == Mood::Happy);
+    CHECK(happiness_mood(1) == Mood::Happy);
+}

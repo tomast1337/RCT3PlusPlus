@@ -832,6 +832,8 @@ namespace rct3::scene
                             thoughts.push_back(t.id);
                     person["thoughts"] = std::move(thoughts);
                 }
+                if (!p.staff && saved != nullptr)
+                    person["happiness"] = park.people.guests[p.saved].mood_now.happiness;
                 const auto& r = park.sim.registry;
                 // A worker's job, in StaffRole's order.
                 constexpr std::array<std::string_view, 7> kRoles { "handyman", "mechanic", "guard", "other", "vendor", "keeper", "inspector" };

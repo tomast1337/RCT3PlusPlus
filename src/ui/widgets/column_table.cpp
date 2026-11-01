@@ -231,7 +231,14 @@ namespace rct3::ui
                     continue;
                 for (std::size_t c = 0; c < columns.size() && c < rows[i].cells.size(); ++c)
                 {
-                    const Rect text = cell(row, c);
+                    Rect text = cell(row, c);
+                    // The icon is a square the row's height less a margin, its text after it.
+                    if (c == 0 && !rows[i].icon.empty())
+                    {
+                        const float side = style.row_height - 4;
+                        draw_skin(context.list, context.skins.find(rows[i].icon), { text.x0, row.y0 + 2, text.x0 + side, row.y0 + 2 + side });
+                        text.x0 += side + style.cell_indent;
+                    }
                     if (context.list.push_clip(text))
                         draw_text(context.list, *font, rows[i].cells[c], text, { style.text_colour, columns[c].align, Align::Centre, false });
                     context.list.pop_clip();

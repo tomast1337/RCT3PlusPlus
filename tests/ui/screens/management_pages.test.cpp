@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/management_pages.hpp"
 
+#include "ui/thought_text.hpp"
+
 #include <algorithm>
 #include <doctest/doctest.h>
 #include <utility>
@@ -198,6 +200,18 @@ TEST_CASE("the guest statistics average over the guests in the park")
     const ManagementPage page = management_page(ManagementTopic::Guests, 2, { .people = &people }, s, kUnits);
     CHECK(value_of(page, u"Number of guests:") == u"2");
     CHECK(value_of(page, u"Average happiness:") == u"40 %");
+}
+
+TEST_CASE("each guest's row has the face of how happy they are")
+{
+    const StringTable s = test_strings();
+    save::PeopleModel people;
+    people.guests = { guest("Ann", 0.1f), guest("Bob", 0.5f), guest("Cy", 0.9f) };
+    const ManagementPage page = management_page(ManagementTopic::Guests, 0, { .people = &people }, s, kUnits);
+    REQUIRE(page.rows.size() == 3);
+    CHECK(page.rows[0].icon == mood_icon(Mood::Sad));
+    CHECK(page.rows[1].icon == mood_icon(Mood::Neutral));
+    CHECK(page.rows[2].icon == mood_icon(Mood::Happy));
 }
 
 TEST_CASE("the families tab lists the player's groups with their leader and members")

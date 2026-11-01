@@ -35,6 +35,9 @@ namespace rct3::ui
     [[nodiscard]] Mood thought_mood(std::int32_t id);
     /// The mood of the thought whose text `key` is, such as "Thought_ImLost2"; none for a key of no thought.
     [[nodiscard]] std::optional<Mood> key_mood(std::string_view key);
+    /// How someone as happy as `happiness` (0 to 1) feels: the scale cut in thirds, sad in the lowest and happy in the
+    /// highest.
+    [[nodiscard]] Mood happiness_mood(float happiness);
     /// The skin of the face standing for `mood`.
     [[nodiscard]] std::string mood_icon(Mood mood);
 

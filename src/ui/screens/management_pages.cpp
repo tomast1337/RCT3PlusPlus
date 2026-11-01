@@ -6,6 +6,7 @@
 #include "strings/unicode.hpp"
 #include "ui/save_text.hpp"
 #include "ui/screens/person_info.hpp"
+#include "ui/thought_text.hpp"
 
 #include <algorithm>
 #include <array>
@@ -15,6 +16,7 @@
 #include <span>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 namespace rct3::ui
 {
@@ -57,6 +59,8 @@ namespace rct3::ui
         constexpr std::array<std::string_view, 8> kJobNames = {
             "HandymanName", "MechanicName", "SecurityGuardName", "EntertainerName", "VendorName", "AnimalKeeperName", "LifeguardName", "ParkInspectorName",
         };
+        /// A worker's face by their mood, in the order of Mood: neither, happy, sad.
+        constexpr std::array<std::string_view, 3> kStaffMoods = { "Staff_MoodOKIcon", "Staff_MoodHappyIcon", "Staff_MoodSadIcon" };
         constexpr std::array<TabSpec, 4> kGuestTabs = { {
             { "Guest_Member", "GuestList_IndividualGuests" },
             { "Guest_Group", "GuestList_Summarized" },
@@ -431,7 +435,7 @@ namespace rct3::ui
                     const PersonFacts facts = staff_facts(f, s);
                     const auto kind = static_cast<std::size_t>(s.kind);
                     const std::u16string job = kind < kJobNames.size() ? text(strings, kJobNames.at(kind)) : std::u16string(kDash);
-                    page.rows.push_back({ { person_name(facts, strings), job, person_doing(facts, strings), std::u16string(kDash) }, { std::nullopt, static_cast<double>(s.kind), std::nullopt, std::nullopt }, management_row_id({ ManagementRow::Kind::Staff, i }) });
+                    page.rows.push_back({ { person_name(facts, strings), job, person_doing(facts, strings), std::u16string(kDash) }, { std::nullopt, static_cast<double>(s.kind), std::nullopt, std::nullopt }, management_row_id({ ManagementRow::Kind::Staff, i }), std::string(kStaffMoods[std::to_underlying(happiness_mood(s.happiness))]) });
                 }
             }
             const std::array<std::pair<std::string_view, std::string_view>, 5> hire = { {
@@ -473,7 +477,7 @@ namespace rct3::ui
             {
                 const save::Guest& g = f.people->guests[i];
                 const PersonFacts facts = guest_facts(f, g);
-                page.rows.push_back({ { person_name(facts, strings), person_doing(facts, strings), share(g.mood_now.happiness), money(units, g.cash.current) }, { std::nullopt, std::nullopt, g.mood_now.happiness, static_cast<double>(g.cash.current) }, management_row_id({ ManagementRow::Kind::Guest, i }) });
+                page.rows.push_back({ { person_name(facts, strings), person_doing(facts, strings), share(g.mood_now.happiness), money(units, g.cash.current) }, { std::nullopt, std::nullopt, g.mood_now.happiness, static_cast<double>(g.cash.current) }, management_row_id({ ManagementRow::Kind::Guest, i }), mood_icon(happiness_mood(g.mood_now.happiness)) });
             }
         }
 

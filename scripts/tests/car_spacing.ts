@@ -49,8 +49,9 @@ function apart(a: Car, b: Car): number {
 }
 
 const problems: string[] = [];
-// Coasters with links between their cars, and ones whose wheels ride on separate axles.
-for (const kind of ["Giga", "HyperTwist", "LoopingRC", "Drifting", "Reverser"]) {
+// Coasters with links between their cars, ones whose wheels ride on separate axles, and one whose front car is a
+// fixed shape with named points.
+for (const kind of ["Giga", "HyperTwist", "LoopingRC", "Drifting", "Reverser", "Stormrunner"]) {
     const ride = await lay(kind);
     // Tested, its train is drawn waiting in the station.
     expect(rides.setState(ride, "testing") == null, `${kind} tested`);
@@ -74,12 +75,13 @@ for (const kind of ["Giga", "HyperTwist", "LoopingRC", "Drifting", "Reverser"]) 
         }
     }
     log(`${kind}: cars apart (tiles) ${gaps.map((g) => g.toFixed(3)).join(" ")}`);
-    // None of these cars is longer than 4.4 m with its link: nose to tail, no two stand more than 1.3 tiles apart.
-    if (gaps.some((g) => g > 1.3))
+    // None of these cars is longer than 4.4 m with its link: nose to tail, no two stand more than 1.3 tiles apart,
+    // nor on top of each other.
+    if (gaps.some((g) => g > 1.3 || g < 0.1))
         problems.push(`${kind}'s cars nose to tail, not ${gaps.map((g) => g.toFixed(2))} tiles apart`);
     const front = cars[0];
     const middle = cars[Math.min(2 * step, cars.length - 1)];
-    camera.look({ col: (front.col + middle.col) / 2, row: (front.row + middle.row) / 2, up: front.up ?? 0 }, { col: front.col + 1.2, row: front.row + 1.6, up: (front.up ?? 0) + 2.5 });
+    camera.look({ col: (front.col + middle.col) / 2, row: (front.row + middle.row) / 2, up: front.up ?? 0 }, { col: front.col + 2, row: front.row + 3, up: (front.up ?? 0) + 4 });
     await frames(40);
     await screenshot(`${kind}_train`);
 }

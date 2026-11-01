@@ -251,6 +251,32 @@ TEST_CASE("a toilet or other facility joins a path on any side of it, near its h
     }
 }
 
+TEST_CASE("a facility follows the paths beside it as they change; one pulled down is left out")
+{
+    simulation::SimWorld world;
+    const auto west = world.paths.add({ 4, 5, 0 });
+    save::RideModel rides;
+    save::Ride& toilet = rides.rides.emplace_back();
+    toilet.kind = save::RideKind::Special;
+    toilet.base.id = 9;
+    toilet.base.spot = save::PlacementSpot { .col = 5, .row = 5 };
+    const auto kind_of = [](const save::Ride&) -> std::optional<std::uint32_t> { return 11; };
+    REQUIRE(simulation::import_facilities(world, rides, kind_of) == 1);
+    const auto e = world.registry.view<simulation::Shop>().front();
+    CHECK(world.registry.get<simulation::Attraction>(e).entrance == west);
+
+    // Its path taken away and one laid on another side: it serves from that one. A corner path never counts.
+    world.paths.remove(west);
+    world.paths.add({ 6, 6, 0 });
+    CHECK(simulation::relink_attractions(world, rides) == 0);
+    const auto south = world.paths.add({ 5, 6, 0 });
+    CHECK(simulation::relink_attractions(world, rides) == 1);
+    CHECK(world.registry.get<simulation::Attraction>(e).entrance == south);
+
+    rides.rides.front().base.demolished = true;
+    CHECK(simulation::import_facilities(world, rides, kind_of) == 0);
+}
+
 TEST_CASE("a path laid to a busy ride's exit lets its riders out at once; its way in waits for the queue")
 {
     simulation::SimWorld world;

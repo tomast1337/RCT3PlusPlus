@@ -240,6 +240,16 @@ namespace rct3::simulation
             return path_at(paths, door, park::turned_x(door.direction + 2), queues);
         }
 
+        /// The path a facility such as a toilet opens onto: it opens onto every side, so the first side with a path.
+        // shortcut: guests go in from the first side found with a path, upgrade if a facility ever needs several ways in.
+        NodeId facility_door(const PathNetwork& paths, const save::PlacementSpot& spot)
+        {
+            NodeId entrance = kNoNode;
+            for (std::int32_t side = 0; side < 4 && entrance == kNoNode; ++side)
+                entrance = path_at(paths, spot, park::turned_x(side), false);
+            return entrance;
+        }
+
         /// The path in front of a stall facing `facing`, on the side it serves; facings point at -row, -col, +row,
         /// +col.
         NodeId stall_front(const PathNetwork& paths, const save::PlacementSpot& spot, std::int32_t facing)
@@ -618,10 +628,14 @@ namespace rct3::simulation
                 relink(ride->stations.front(), attraction.entrance, cycle->line, cycle->exit, !cycle->queue.empty());
                 continue;
             }
+            // A stall, or a facility standing on its own.
             const auto stall = std::ranges::find(rides.stalls, attraction.saved, [](const save::Stall& x) { return x.base.id; });
-            if (stall == rides.stalls.end() || !stall->base.spot)
-                continue;
-            const NodeId entrance = stall_front(world.paths, *stall->base.spot, stall->base.facing);
+            const auto facility = std::ranges::find(rides.rides, attraction.saved, [](const save::Ride& x) { return x.base.id; });
+            NodeId entrance = kNoNode;
+            if (stall != rides.stalls.end() && stall->base.spot)
+                entrance = stall_front(world.paths, *stall->base.spot, stall->base.facing);
+            else if (facility != rides.rides.end() && facility->kind == save::RideKind::Special && facility->base.spot)
+                entrance = facility_door(world.paths, *facility->base.spot);
             if (entrance == kNoNode || entrance == attraction.entrance)
                 continue;
             attraction.entrance = entrance;
@@ -928,15 +942,11 @@ namespace rct3::simulation
         std::size_t added = 0;
         for (const save::Ride& ride : rides.rides)
         {
-            if (ride.kind != save::RideKind::Special || !ride.base.spot)
+            if (ride.kind != save::RideKind::Special || !ride.base.spot || ride.base.demolished)
                 continue;
             const auto kind = kind_of(ride);
             const auto product = kind ? facility_of(*kind) : std::nullopt;
-            // A facility opens onto every side.
-            // shortcut: guests go in from the first side found with a path, upgrade if a facility ever needs several ways in.
-            NodeId entrance = kNoNode;
-            for (std::int32_t side = 0; product && side < 4 && entrance == kNoNode; ++side)
-                entrance = path_at(world.paths, *ride.base.spot, park::turned_x(side), false);
+            const NodeId entrance = product ? facility_door(world.paths, *ride.base.spot) : kNoNode;
             if (entrance == kNoNode)
                 continue;
             auto& r = world.registry;

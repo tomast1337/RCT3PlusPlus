@@ -51,7 +51,7 @@ namespace rct3::simulation
     /// those on foot whose ground grew steeper than tuning::Slides::steep slide down it (slide).
     void follow_ground(SimWorld& world, std::span<const save::PathTile> paths, const save::TerrainGrid& was, const save::TerrainGrid& grid, save::Tile first, save::Tile last);
 
-    /// Has each imported ride and stall of `rides` find its entrance on the paths again, and each ride its
+    /// Has each imported ride, stall and facility of `rides` find its entrance on the paths again, and each ride its
     /// queue line and exit at each of its stations, after paths changed or its doors moved. A station with guests
     /// in its queue keeps its entrance and line until the queue empties; its exit follows at once.
     /// Returns how many changed.

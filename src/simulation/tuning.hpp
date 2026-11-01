@@ -426,8 +426,17 @@ namespace rct3::simulation::tuning
     /// The park inspector's rounds.
     struct Inspector
     {
-        Seconds gap { 20 };    ///< Chosen by eye: walking about between visits
-        Seconds again { 600 }; ///< Chosen by eye: before they visit the same attraction again
+        Seconds gap { 20 };            ///< Chosen by eye: walking about between visits
+        Seconds again { 600 };         ///< Chosen by eye: before they visit the same attraction again
+        Seconds quiet { 1920 };        ///< Chosen by eye: before they tell the player the same of the same thing again
+        Share crowd { 0.3f };          ///< Chosen by eye: of the guests, how many must want one thing for them to say so
+        Distance mechanic_near { 40 }; ///< Chosen by eye: how near a broken ride a mechanic must be for them to say nothing
+        Distance watch_near { 4 };     ///< Chosen by eye: how near a worker they stand to watch them
+        Seconds watch { 15 };          ///< Chosen by eye: how long they watch
+        Seconds chase { 120 };         ///< Chosen by eye: how long they go after a worker before giving up
+        Share lazy { 0.6f };           ///< Chosen by eye: laziness past which they call a worker lazy
+        Share unhappy { 0.3f };        ///< Chosen by eye: happiness under which they call a worker unhappy
+        Share filthy { 0.8f };         ///< Chosen by eye: pool dirt from which they call it dangerous; dirty from pools.bad
     };
 
     /// Rides with more than one station as ways across the park: a guest going far may ride from one station

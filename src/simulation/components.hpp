@@ -27,6 +27,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -372,8 +373,9 @@ namespace rct3::simulation
         NodeId entrance = kNoNode; ///< The path node guests go to for it
         Money price { };
         bool open = true;
-        bool testing = false; ///< A ride run empty to try it out, guests kept off
-        Money income { };     ///< Taken so far
+        bool testing = false;   ///< A ride run empty to try it out, guests kept off
+        bool off_theme = false; ///< Unlike the scenery round it, as the park last judged
+        Money income { };       ///< Taken so far
         std::uint32_t customers = 0;
         std::uint64_t saved = 0; ///< The saved park's own id of it; 0 when not from a save
     };
@@ -779,11 +781,16 @@ namespace rct3::simulation
     inline constexpr std::int32_t kLeaveBrokenTask = 1 << 3;
     /// What a handyman does when the park says nothing: every task of the game's.
     inline constexpr std::int32_t kEveryTask = 0b111;
-    /// An inspector's tasks among the task flags, numbered as saved parks number them: the kinds of attraction
-    /// they go round, taken in this order.
+    /// An inspector's tasks among the task flags, numbered as saved parks number them, taken in this order.
     inline constexpr std::int32_t kFlatRidesTask = 1 << 0;
     inline constexpr std::int32_t kTrackedRidesTask = 1 << 1;
-    inline constexpr std::int32_t kRefreshmentsTask = 1 << 2; ///< Food and drink stalls
+    inline constexpr std::int32_t kRefreshmentsTask = 1 << 2; ///< Food and drink stalls, and how hungry, thirsty, tired and bursting the guests are
+    inline constexpr std::int32_t kSouvenirsTask = 1 << 3;
+    inline constexpr std::int32_t kVistasTask = 1 << 4; ///< Rides and stalls that do not fit the scenery round them
+    inline constexpr std::int32_t kStaffTask = 1 << 5;  ///< Watching a worker at work
+    inline constexpr std::int32_t kPoolsTask = 1 << 6;
+    /// Viewing galleries, which parks here do not have yet: the task is passed over.
+    inline constexpr std::int32_t kGalleriesTask = 1 << 7;
 
     struct Staff
     {
@@ -886,28 +893,44 @@ namespace rct3::simulation
         std::vector<Photo> taken;
     };
 
+    /// What an inspector found wrong.
+    enum class Finding : std::uint8_t
+    {
+        TooDear,    ///< Something at a stall costs more than guests pay for it
+        TooCheap,   ///< Something at a stall sells for far less than it is worth
+        LongQueue,  ///< They queued for ages at a ride
+        NoPath,     ///< The attraction's entrance is on no path
+        NoMechanic, ///< A broken ride with no mechanic near
+        OffTheme,   ///< A ride or stall unlike the scenery round it
+        Lazy,       ///< A worker they watched (the finding's entity)
+        Unhappy,    ///< Likewise
+        DirtyPool,  ///< At the changing room of a pool they swam in
+        FilthyPool,
+        Hungry, ///< Many of the guests; with no entity, as are the next three
+        Thirsty,
+        Tired,
+        Bursting, ///< Needing the toilet
+    };
+
     /// Where an inspector is in their rounds. On a visit they carry a guest's Needs, Mood and Wallet, and the
     /// guests' code walks, queues and rides them; let go, they are staff again.
     struct Rounds
     {
-        std::uint8_t task = 0; ///< The next of their tasks to look at, 0 flat rides, 1 tracked rides, 2 stalls
+        std::uint8_t task = 0; ///< The next of their tasks to look at, by its bit among the task flags
         Seconds gap { };       ///< Before they next look for somewhere to go
-        /// The attractions visited, with when (seconds into the run).
+        /// The attractions visited and workers watched, with when (seconds into the run).
         std::vector<std::pair<entt::entity, float>> seen { };
-    };
-
-    /// What an inspector found wrong.
-    enum class Finding : std::uint8_t
-    {
-        TooDear,   ///< Something at a stall costs more than guests pay for it
-        TooCheap,  ///< Something at a stall sells for far less than it is worth
-        LongQueue, ///< They queued for ages at a ride
+        entt::entity watching = entt::null; ///< The worker they are after, or watching
+        float chased_from = 0;              ///< When they set off after them
+        float watched_from = -1;            ///< When they came close enough to watch; -1 not yet
+        /// What they told the player about what, with when: not told again for a while.
+        std::vector<std::tuple<entt::entity, Finding, float>> told { };
     };
 
     /// The inspectors' findings, oldest first, in the registry's context, for the park to tell the player.
     struct Findings
     {
-        std::vector<std::pair<Finding, entt::entity>> found { }; ///< With the attraction
+        std::vector<std::pair<Finding, entt::entity>> found { }; ///< With the attraction or worker
     };
 
     struct Vandalism

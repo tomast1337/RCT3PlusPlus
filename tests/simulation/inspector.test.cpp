@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "park/pools.hpp"
 #include "simulation/components.hpp"
+#include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
+#include "simulation/tuning.hpp"
 
 #include <algorithm>
 #include <doctest/doctest.h>
@@ -14,6 +17,12 @@ namespace
     {
         const auto* findings = r.ctx().find<Findings>();
         return findings != nullptr && std::ranges::contains(findings->found, std::pair { finding, at });
+    }
+
+    std::size_t times_found(const entt::registry& r, Finding finding)
+    {
+        const auto* findings = r.ctx().find<Findings>();
+        return findings == nullptr ? 0 : static_cast<std::size_t>(std::ranges::count(findings->found, finding, &std::pair<Finding, entt::entity>::first));
     }
 } // namespace
 
@@ -94,4 +103,134 @@ TEST_CASE("an inspector who queued for ages at a ride says so")
     CHECK_FALSE(found(r, Finding::LongQueue, ride));
     CHECK(park.run_until([&] { return r.get<Errand>(inspector).kind == ErrandKind::Riding; }, kLongQueue + 60));
     CHECK(found(r, Finding::LongQueue, ride));
+}
+
+TEST_CASE("an inspector judges a souvenir stall's prices against what its items are worth")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    auto& r = park.world().registry;
+    const auto stall = park.shop("Umbrellas", Product::Umbrella, { 4, 0 }, 900);
+    r.get<Shop>(stall).menu = { { .product = Product::Umbrella, .price = { 900 }, .worth = { Money { 600 }, Money { 600 }, Money { 600 } } } };
+    const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });
+    r.get<Staff>(inspector).tasks = kSouvenirsTask;
+    CHECK(park.run_until([&] { return r.get<Errand>(inspector).kind == ErrandKind::Buying; }, 60));
+    CHECK(found(r, Finding::TooDear, stall));
+    CHECK(r.get<Attraction>(stall).customers == 0);
+}
+
+TEST_CASE("an inspector tells of a ride or stall unlike its scenery without going to it")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    auto& r = park.world().registry;
+    const auto fits = park.shop("Fits", Product::Food, { 3, 0 }, 100);
+    const auto odd = park.flat_ride("Odd", { 6, 0 }, 300);
+    r.get<Attraction>(odd).off_theme = true;
+    const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });
+    r.get<Staff>(inspector).tasks = kVistasTask;
+    CHECK(park.run_until([&] { return found(r, Finding::OffTheme, odd); }, 60));
+    CHECK_FALSE(found(r, Finding::OffTheme, fits));
+    CHECK_FALSE(r.all_of<Needs>(inspector));
+}
+
+TEST_CASE("an inspector goes after a worker, watches them and tells if they are lazy or unhappy")
+{
+    for (const bool good : { true, false })
+    {
+        CAPTURE(good);
+        Sandbox park;
+        park.path({ 0, 0 }, { 8, 0 });
+        auto& r = park.world().registry;
+        const auto worker = park.staff(StaffRole::Handyman, { 8, 0 });
+        r.get<Staff>(worker).laziness = { good ? 0.0f : 0.9f };
+        r.get<Staff>(worker).happiness = { good ? 1.0f : 0.1f };
+        const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });
+        r.get<Staff>(inspector).tasks = kStaffTask;
+        const auto watching = [&] { return r.all_of<Rounds>(inspector) ? r.get<Rounds>(inspector).watching : entt::null; };
+        CHECK(park.run_until([&] { return watching() == worker; }, 60));
+        CHECK(park.run_until([&] { return watching() == entt::null; }, kTuning.inspector.chase.value + kTuning.inspector.watch.value));
+        CHECK(found(r, Finding::Lazy, worker) == !good);
+        CHECK(found(r, Finding::Unhappy, worker) == !good);
+    }
+}
+
+TEST_CASE("an inspector swims free in a pool and tells how dirty it is")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    rct3::park::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = rct3::park::PoolKind::Tile });
+    for (std::int32_t row = 3; row < 5; ++row)
+        for (std::int32_t col = 4; col < 7; ++col)
+            pools.squares.push_back({ .col = col, .row = row });
+    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    const entt::entity room = r.view<const PoolDoor>().front();
+    auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room).pool);
+    const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });
+    r.get<Staff>(inspector).tasks = kPoolsTask;
+    CHECK(park.run_until([&] { return r.all_of<Swimmer>(inspector); }, 60));
+    CHECK(park.run_until(
+        [&] {
+            pool.dirt = { kTuning.inspector.filthy.value + 0.1f }; // Held where it is
+            return !r.all_of<Needs>(inspector);
+        },
+        kTuning.pools.stay.value + 2 * kTuning.pools.changing.value + 120));
+    CHECK(found(r, Finding::FilthyPool, room));
+    CHECK(r.get<Attraction>(room).income.value == 0);
+}
+
+TEST_CASE("an inspector looking at the food and drink says what many of the guests want")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    auto& r = park.world().registry;
+    for (int i = 0; i < 3; ++i)
+        park.guest({ 6, 0 }, { .hunger = 0.9f });
+    park.guest({ 6, 0 }, { .thirst = 0.9f });
+    const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });
+    r.get<Staff>(inspector).tasks = kRefreshmentsTask;
+    CHECK(park.run_until([&] { return times_found(r, Finding::Hungry) > 0; }, 30));
+    CHECK(found(r, Finding::Hungry, entt::null));
+    CHECK(times_found(r, Finding::Thirsty) == 0);
+}
+
+TEST_CASE("an inspector tells of a broken ride with no mechanic near, and of an attraction off the paths")
+{
+    for (const bool mechanic : { false, true })
+    {
+        CAPTURE(mechanic);
+        Sandbox park;
+        park.path({ 0, 0 }, { 6, 0 });
+        auto& r = park.world().registry;
+        const auto ride = park.flat_ride("Broken", { 6, 0 }, 300);
+        r.emplace_or_replace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = -1 });
+        r.get<Attraction>(ride).open = false;
+        const auto stall = park.shop("Lost", Product::Food, { 3, 0 }, 100);
+        r.get<Attraction>(stall).entrance = kNoNode;
+        if (mechanic)
+            park.staff(StaffRole::Mechanic, { 6, 0 });
+        const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });
+        r.get<Staff>(inspector).tasks = kFlatRidesTask | kRefreshmentsTask;
+        park.run_seconds(3 * kTuning.inspector.gap.value);
+        CHECK(found(r, Finding::NoMechanic, ride) == !mechanic);
+        CHECK(found(r, Finding::NoPath, stall));
+    }
+}
+
+TEST_CASE("an inspector tells the same of the same attraction only once in a while")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    auto& r = park.world().registry;
+    const auto stall = park.shop("Food", Product::Food, { 4, 0 }, kTuning.eating.food_worth.value + 100);
+    const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });
+    r.get<Staff>(inspector).tasks = kRefreshmentsTask;
+    park.run_seconds(kTuning.inspector.again.value * 2.5f);
+    CHECK(times_found(r, Finding::TooDear) == 1);
+    park.run_seconds(kTuning.inspector.quiet.value);
+    CHECK(times_found(r, Finding::TooDear) == 2);
+    CHECK(found(r, Finding::TooDear, stall));
 }

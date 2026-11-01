@@ -142,69 +142,99 @@ namespace rct3::simulation
         }
     }
 
+    namespace
+    {
+        constexpr float kEnough = 96; ///< Fitted: tiles of the theme's scenery, its own counted in, that carry it
+
+        /// A ride or stall, with its own theme (empty for none) and the tiles of each theme's scenery round it.
+        struct Surroundings
+        {
+            std::uint64_t id = 0;
+            std::string own { };
+            std::map<std::string, float, std::less<>> tiles { };
+        };
+
+        std::vector<Surroundings> surroundings(const save::RideModel& rides, std::span<const save::PlacedObject> objects, std::span<const park::BuildItem> catalogue)
+        {
+            constexpr float kReach = 6; ///< Fitted: tiles round a ride or stall its scenery counts within
+            constexpr float kOwn = 8;   ///< Fitted: a ride or stall of the theme counts as this many tiles of its scenery
+            // Overlays in one spelling: either slash, any case.
+            const auto key = [](std::string_view s) {
+                std::string out(s);
+                for (char& c : out)
+                    c = c == '\\' ? '/' : strings::ascii_lower(c);
+                return out;
+            };
+            std::map<std::string, std::string, std::less<>> theme_of;
+            std::map<std::string, float, std::less<>> tiles_of; // Footprint of each item, by overlay and symbol
+            for (const park::BuildItem& item : catalogue)
+            {
+                if (item.style_index > 0 && !item.style.empty())
+                    theme_of.try_emplace(key(item.overlay), item.style);
+                tiles_of.try_emplace(key(item.overlay) + '|' + key(item.symbol), static_cast<float>(std::max(1u, item.width * item.length)));
+            }
+            struct Spot
+            {
+                float col = 0, row = 0;
+                std::string_view theme;
+                save::ObjectId object = 0;
+                std::uint64_t id = 0;
+            };
+            std::vector<Spot> attractions;
+            const auto add = [&](const save::AttractionCommon& base, std::span<const save::Station> stations) {
+                std::optional<save::PlacementSpot> spot = base.spot;
+                // Rides with a track stand where guests go in.
+                for (const save::Station& station : stations)
+                    if (!spot && station.entrance_spot)
+                        spot = station.entrance_spot;
+                if (!spot || base.demolished)
+                    return;
+                const auto theme = theme_of.find(key(base.overlay_path));
+                attractions.push_back({ static_cast<float>(spot->col), static_cast<float>(spot->row), theme != theme_of.end() ? std::string_view(theme->second) : std::string_view { }, spot->object, base.id });
+            };
+            for (const save::Ride& ride : rides.rides)
+                add(ride.base, ride.stations);
+            for (const save::Stall& stall : rides.stalls)
+                add(stall.base, { });
+            // Each ride and stall's tiles of each theme's scenery round it, its own theme first.
+            std::vector<Surroundings> tiles(attractions.size());
+            for (std::size_t i = 0; i < attractions.size(); ++i)
+            {
+                tiles[i] = { .id = attractions[i].id, .own = std::string(attractions[i].theme) };
+                if (!attractions[i].theme.empty())
+                    tiles[i].tiles[tiles[i].own] = kOwn;
+            }
+            for (const save::PlacedObject& o : objects)
+            {
+                const auto theme = o.hidden || o.fixture ? theme_of.end() : theme_of.find(key(o.overlay));
+                if (theme == theme_of.end() || std::ranges::contains(attractions, o.id, &Spot::object))
+                    continue;
+                const auto size = tiles_of.find(key(o.overlay) + '|' + key(std::string_view(o.symbol).substr(0, o.symbol.find(':'))));
+                for (std::size_t i = 0; i < attractions.size(); ++i)
+                    if (std::hypot(static_cast<float>(o.col) - attractions[i].col, static_cast<float>(o.row) - attractions[i].row) <= kReach)
+                        tiles[i].tiles[theme->second] += size != tiles_of.end() ? size->second : 1;
+            }
+            return tiles;
+        }
+    } // namespace
+
     std::map<std::string, std::int32_t, std::less<>> themed_attractions(const save::RideModel& rides, std::span<const save::PlacedObject> objects, std::span<const park::BuildItem> catalogue)
     {
-        constexpr float kReach = 6;   ///< Fitted: tiles round a ride or stall its scenery counts within
-        constexpr float kOwn = 8;     ///< Fitted: a ride or stall of the theme counts as this many tiles of its scenery
-        constexpr float kEnough = 96; ///< Fitted: tiles of the theme's scenery, its own counted in, that carry it
-        // Overlays in one spelling: either slash, any case.
-        const auto key = [](std::string_view s) {
-            std::string out(s);
-            for (char& c : out)
-                c = c == '\\' ? '/' : strings::ascii_lower(c);
-            return out;
-        };
-        std::map<std::string, std::string, std::less<>> theme_of;
-        std::map<std::string, float, std::less<>> tiles_of; // Footprint of each item, by overlay and symbol
-        for (const park::BuildItem& item : catalogue)
-        {
-            if (item.style_index > 0 && !item.style.empty())
-                theme_of.try_emplace(key(item.overlay), item.style);
-            tiles_of.try_emplace(key(item.overlay) + '|' + key(item.symbol), static_cast<float>(std::max(1u, item.width * item.length)));
-        }
-        struct Spot
-        {
-            float col = 0, row = 0;
-            std::string_view theme;
-            save::ObjectId object = 0;
-        };
-        std::vector<Spot> attractions;
-        const auto add = [&](const save::AttractionCommon& base, std::span<const save::Station> stations) {
-            std::optional<save::PlacementSpot> spot = base.spot;
-            // Rides with a track stand where guests go in.
-            for (const save::Station& station : stations)
-                if (!spot && station.entrance_spot)
-                    spot = station.entrance_spot;
-            if (!spot || base.demolished)
-                return;
-            const auto theme = theme_of.find(key(base.overlay_path));
-            attractions.push_back({ static_cast<float>(spot->col), static_cast<float>(spot->row), theme != theme_of.end() ? std::string_view(theme->second) : std::string_view { }, spot->object });
-        };
-        for (const save::Ride& ride : rides.rides)
-            add(ride.base, ride.stations);
-        for (const save::Stall& stall : rides.stalls)
-            add(stall.base, { });
-        // Each ride and stall's tiles of each theme's scenery round it, its own theme first.
-        std::vector<std::map<std::string_view, float>> tiles(attractions.size());
-        for (std::size_t i = 0; i < attractions.size(); ++i)
-            if (!attractions[i].theme.empty())
-                tiles[i][attractions[i].theme] = kOwn;
-        for (const save::PlacedObject& o : objects)
-        {
-            const auto theme = o.hidden || o.fixture ? theme_of.end() : theme_of.find(key(o.overlay));
-            if (theme == theme_of.end() || std::ranges::contains(attractions, o.id, &Spot::object))
-                continue;
-            const auto size = tiles_of.find(key(o.overlay) + '|' + key(std::string_view(o.symbol).substr(0, o.symbol.find(':'))));
-            for (std::size_t i = 0; i < attractions.size(); ++i)
-                if (std::hypot(static_cast<float>(o.col) - attractions[i].col, static_cast<float>(o.row) - attractions[i].row) <= kReach)
-                    tiles[i][theme->second] += size != tiles_of.end() ? size->second : 1;
-        }
         std::map<std::string, std::int32_t, std::less<>> themed;
-        for (const auto& round : tiles)
-            for (const auto& [theme, n] : round)
+        for (const Surroundings& round : surroundings(rides, objects, catalogue))
+            for (const auto& [theme, n] : round.tiles)
                 if (n >= kEnough)
-                    ++themed[std::string(theme)];
+                    ++themed[theme];
         return themed;
+    }
+
+    std::vector<std::uint64_t> off_theme_attractions(const save::RideModel& rides, std::span<const save::PlacedObject> objects, std::span<const park::BuildItem> catalogue)
+    {
+        std::vector<std::uint64_t> off;
+        for (const Surroundings& round : surroundings(rides, objects, catalogue))
+            if (const auto most = std::ranges::max_element(round.tiles, { }, [](const auto& t) { return t.second; }); most != round.tiles.end() && most->second >= kEnough && most->first != round.own)
+                off.push_back(round.id);
+        return off;
     }
 
     std::vector<std::int32_t> award_month(save::Awards& awards, const AwardFigures& figures, random::RandomState& dice)

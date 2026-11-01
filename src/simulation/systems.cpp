@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <functional>
 #include <limits>
@@ -502,6 +503,17 @@ namespace rct3::simulation
             if (thoughts.recent.size() > kTuning.thoughts.kept)
                 thoughts.recent.pop_back();
             ++thoughts.had;
+        }
+
+        /// The inspector tells the player `finding` about `about` at `now`, unless they told it lately.
+        void tell(entt::registry& r, entt::entity inspector, Finding finding, entt::entity about, float now)
+        {
+            auto& told = r.get_or_emplace<Rounds>(inspector).told;
+            std::erase_if(told, [&](const auto& t) { return now - std::get<2>(t) >= kTuning.inspector.quiet.value; });
+            if (std::ranges::any_of(told, [&](const auto& t) { return std::get<0>(t) == about && std::get<1>(t) == finding; }))
+                return;
+            told.emplace_back(about, finding, now);
+            r.ctx().emplace<Findings>().found.emplace_back(finding, about);
         }
 
         /// An entity's own random numbers, from the run's seed.
@@ -1279,27 +1291,90 @@ namespace rct3::simulation
                 };
                 stride.from = at;
                 stride.lane_from = stride.lane_to;
-                // A free inspector goes to the next attraction of their next task: the first in the park's order
-                // that is open, has a way to its entrance and was not visited lately. A stall's prices they judge
-                // as they set off, against what guests pay for each thing today.
-                if (rounds != nullptr && rounds->gap.value <= 0)
+                // A free inspector takes their next task. For a kind of attraction, the first in the park's order
+                // that is open, has a way to its entrance and was not looked at lately: a stall's prices they judge
+                // as they set off, against what guests pay for each thing today, then they visit it as a guest.
+                // For staff, the first worker they can reach, whom they go after and watch.
+                if (rounds != nullptr && rounds->gap.value <= 0 && rounds->watching == entt::null)
                 {
                     rounds->gap = kTuning.inspector.gap;
                     std::erase_if(rounds->seen, [&](const auto& seen) { return !r.valid(seen.first) || now - seen.second >= kTuning.inspector.again.value; });
-                    constexpr std::array<std::int32_t, 3> kTasks { kFlatRidesTask, kTrackedRidesTask, kRefreshmentsTask };
-                    std::size_t task = kTasks.size();
-                    for (std::size_t k = 0; k < kTasks.size() && task == kTasks.size(); ++k)
-                        if ((staff.tasks & kTasks[(rounds->task + k) % kTasks.size()]) != 0)
-                            task = (rounds->task + k) % kTasks.size();
-                    rounds->task = static_cast<std::uint8_t>((task + 1) % kTasks.size());
+                    constexpr int kTasks = 8;
+                    std::int32_t task = 0;
+                    for (int k = 0; k < kTasks && task == 0; ++k)
+                        if (const std::int32_t bit = 1 << ((rounds->task + k) % kTasks); (staff.tasks & bit) != 0)
+                            task = bit;
+                    if (task != 0)
+                        rounds->task = static_cast<std::uint8_t>((std::countr_zero(static_cast<std::uint32_t>(task)) + 1) % kTasks);
+                    const auto been = [&](entt::entity x) { return std::ranges::contains(rounds->seen, x, &std::pair<entt::entity, float>::first); };
+                    // With the food and drink, whatever many of the guests want most.
+                    if (task == kRefreshmentsTask)
+                    {
+                        std::array<std::size_t, 4> wanting { }; // Hungry, thirsty, tired, bursting
+                        std::size_t guests = 0;
+                        for (const auto [g, needs, mood, visitor] : r.view<const Needs, const Mood, const Visitor>(entt::exclude<Left>).each())
+                        {
+                            ++guests;
+                            wanting[0] += needs.hunger.value >= kTuning.needs.want.value ? 1 : 0;
+                            wanting[1] += needs.thirst.value >= kTuning.needs.want.value ? 1 : 0;
+                            wanting[2] += mood.energy.value < kTuning.facilities.tired.value ? 1 : 0;
+                            wanting[3] += needs.bladder.value >= kTuning.needs.want.value ? 1 : 0;
+                        }
+                        const auto most = std::ranges::max_element(wanting);
+                        if (static_cast<float>(*most) > kTuning.inspector.crowd.value * static_cast<float>(guests) && std::ranges::count(wanting, *most) == 1)
+                            tell(r, e, static_cast<Finding>(std::to_underlying(Finding::Hungry) + (most - wanting.begin())), entt::null, now);
+                    }
                     bool visiting = false;
-                    for (const entt::entity a : task < kTasks.size() ? sorted(r.view<const Attraction>()) : std::vector<entt::entity> { })
+                    for (const entt::entity w : task == kStaffTask ? sorted(staff_view) : std::vector<entt::entity> { })
+                    {
+                        const StaffRole role = r.get<Staff>(w).role;
+                        // Not other inspectors, nor those at posts off the paths or held by the player.
+                        if (w == e || role == StaffRole::Inspector || role == StaffRole::Vendor || role == StaffRole::Keeper || r.any_of<Held, Dropped>(w) || been(w))
+                            continue;
+                        auto way = paths.route(at, r.get<Stride>(w).to, Walker::Staff);
+                        if (!way)
+                            continue;
+                        rounds->seen.emplace_back(w, now);
+                        rounds->watching = w;
+                        rounds->chased_from = now;
+                        rounds->watched_from = -1;
+                        stride.route = std::move(*way);
+                        break;
+                    }
+                    for (const entt::entity a : task != 0 && task != kStaffTask ? sorted(r.view<const Attraction>()) : std::vector<entt::entity> { })
                     {
                         const Attraction& attraction = r.get<Attraction>(a);
                         const auto* shop = r.try_get<Shop>(a);
-                        const bool of_task = shop != nullptr ? task == 2 && (shop->product == Product::Food || shop->product == Product::Drink) : r.all_of<CycleRide>(a) && task == (r.all_of<Trains>(a) ? 1u : 0u);
-                        if (!of_task || !attraction.open || attraction.entrance == kNoNode || std::ranges::contains(rounds->seen, a, &std::pair<entt::entity, float>::first))
+                        const bool refreshments = shop != nullptr && (shop->product == Product::Food || shop->product == Product::Drink);
+                        const bool rides = r.all_of<CycleRide>(a) && task == (r.all_of<Trains>(a) ? kTrackedRidesTask : kFlatRidesTask);
+                        const bool of_task = task == kRefreshmentsTask ? refreshments : task == kSouvenirsTask ? shop != nullptr && shop->product == Product::Umbrella : task == kPoolsTask ? r.all_of<PoolDoor>(a) : task == kVistasTask ? attraction.off_theme : rides;
+                        if (!of_task || been(a))
                             continue;
+                        // A broken ride: whether a mechanic is near.
+                        if (const auto* upkeep = r.try_get<Upkeep>(a); upkeep != nullptr && upkeep->broken)
+                        {
+                            bool near = attraction.entrance == kNoNode;
+                            for (const auto [m, worker, walk, at_m, _] : staff_view.each())
+                                near = near || (worker.role == StaffRole::Mechanic && glm::distance(at_m.position, paths.centre(attraction.entrance)) <= kTuning.inspector.mechanic_near.value);
+                            if (!near)
+                                tell(r, e, Finding::NoMechanic, a, now);
+                            continue;
+                        }
+                        if (!attraction.open)
+                            continue;
+                        // Rides and stalls that do not fit their scenery are told from afar.
+                        if (task == kVistasTask)
+                        {
+                            rounds->seen.emplace_back(a, now);
+                            tell(r, e, Finding::OffTheme, a, now);
+                            break;
+                        }
+                        if (attraction.entrance == kNoNode)
+                        {
+                            rounds->seen.emplace_back(a, now);
+                            tell(r, e, Finding::NoPath, a, now);
+                            continue;
+                        }
                         auto way = paths.route(at, attraction.entrance, Walker::Guest);
                         if (!way)
                             continue;
@@ -1309,20 +1384,20 @@ namespace rct3::simulation
                             bool dear = false;
                             bool cheap = false;
                             const auto judge = [&](Money price, Money worth) {
+                                if (worth.value <= 0)
+                                    return;                               // Nothing to judge it by
                                 dear = dear || price.value > worth.value; // Guests would not pay it
                                 cheap = cheap || static_cast<float>(price.value) <= kTuning.eating.good_value.value * static_cast<float>(worth.value);
                             };
-                            const auto flat = [](Product p) { return p == Product::Food ? kTuning.eating.food_worth : kTuning.eating.drink_worth; };
+                            const auto flat = [](Product p) { return p == Product::Food ? kTuning.eating.food_worth : p == Product::Drink ? kTuning.eating.drink_worth : Money { }; };
                             if (shop->menu.empty())
                                 judge(attraction.price, flat(shop->product));
                             for (const Ware& w : shop->menu)
-                                if (w.product == Product::Food || w.product == Product::Drink)
-                                    judge(w.price, worth_of(w, flat(w.product), weather.temperature.value));
-                            auto& findings = r.ctx().emplace<Findings>().found;
+                                judge(w.price, worth_of(w, flat(w.product), weather.temperature.value));
                             if (dear)
-                                findings.emplace_back(Finding::TooDear, a);
+                                tell(r, e, Finding::TooDear, a, now);
                             if (cheap)
-                                findings.emplace_back(Finding::TooCheap, a);
+                                tell(r, e, Finding::TooCheap, a, now);
                         }
                         r.emplace_or_replace<Needs>(e);
                         r.emplace_or_replace<Mood>(e);
@@ -1338,7 +1413,45 @@ namespace rct3::simulation
                     if (visiting)
                         continue;
                 }
-                if (staff.ride != entt::null)
+                if (rounds != nullptr && rounds->watching != entt::null)
+                {
+                    // After a worker along the paths, then a while beside them; what they saw told as they go back to
+                    // their rounds. They give up on one they cannot catch.
+                    const entt::entity w = rounds->watching;
+                    const bool there = r.valid(w) && r.all_of<Staff, Pose, Stride>(w);
+                    const bool near = there && (glm::distance(pose.position, r.get<Pose>(w).position) <= kTuning.inspector.watch_near.value || r.get<Stride>(w).to == at);
+                    if (near && rounds->watched_from < 0)
+                        rounds->watched_from = now;
+                    const bool watched = rounds->watched_from >= 0 && now - rounds->watched_from >= kTuning.inspector.watch.value;
+                    if (watched && there)
+                    {
+                        const Staff& worker = r.get<Staff>(w);
+                        if (worker.laziness.value > kTuning.inspector.lazy.value)
+                            tell(r, e, Finding::Lazy, w, now);
+                        if (worker.happiness.value < kTuning.inspector.unhappy.value)
+                            tell(r, e, Finding::Unhappy, w, now);
+                    }
+                    if (!near && there && !watched && stride.route.empty())
+                        if (auto way = paths.route(at, r.get<Stride>(w).to, Walker::Staff))
+                            stride.route = std::move(*way);
+                    const bool chasing = there && !watched && !near && !stride.route.empty() && (rounds->watched_from >= 0 || now - rounds->chased_from < kTuning.inspector.chase.value);
+                    if (chasing)
+                    {
+                        stride.to = stride.route.front();
+                        stride.route.erase(stride.route.begin());
+                        stride.progress.value = 0;
+                        stride.lane_to = new_lane(dice, stride.lane_from);
+                    }
+                    else
+                    {
+                        if (!near || watched || !there)
+                            rounds->watching = entt::null;
+                        stride.route.clear();
+                        stride.to = at;
+                        stride.progress.value = 1;
+                    }
+                }
+                else if (staff.ride != entt::null)
                 {
                     // On the way to a ride, or there and setting to work.
                     if (!stride.route.empty())
@@ -2507,15 +2620,19 @@ namespace rct3::simulation
                 // Each pays at the door and goes in to change; those of the party who would rather not wait (5.).
                 const auto swim = [&](entt::entity g) {
                     auto& attraction = r.get<Attraction>(arrived[i]);
-                    if (!attraction.open || !pay(r, g, attraction.price, &Wallet::spent_rides))
+                    const bool inspector = r.all_of<Staff>(g);
+                    if (!attraction.open || (!inspector && !pay(r, g, attraction.price, &Wallet::spent_rides)))
                     {
                         if (attraction.open)
                             think(r, g, ThoughtKind::CantAfford, arrived[i], now);
                         r.get<Errand>(g) = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
                         return;
                     }
-                    attraction.income.value += attraction.price.value;
-                    ++attraction.customers;
+                    if (!inspector)
+                    {
+                        attraction.income.value += attraction.price.value;
+                        ++attraction.customers;
+                    }
                     r.get<Errand>(g) = { .kind = ErrandKind::Swimming, .target = arrived[i] };
                     r.emplace_or_replace<Swimmer>(g, Swimmer { .changing = kTuning.pools.changing, .left = kTuning.pools.stay });
                 };
@@ -2621,6 +2738,8 @@ namespace rct3::simulation
                     // Dressed again: out at the door, thinking of the water, the party going on together behind
                     // its leader.
                     const auto* tank = r.try_get<PoolTank>(errand.target);
+                    if (r.all_of<Staff>(g) && pool->dirt.value >= kTuning.pools.bad.value)
+                        tell(r, g, pool->dirt.value >= kTuning.inspector.filthy.value ? Finding::FilthyPool : Finding::DirtyPool, errand.target, now);
                     if (harsh(pool, tank))
                         think(r, g, ThoughtKind::PoolOvercleaned, errand.target, now);
                     else if (pool->dirt.value >= kTuning.pools.bad.value)
@@ -3293,7 +3412,7 @@ namespace rct3::simulation
                             ++attraction.customers;
                         }
                         else if (r.get<Errand>(guest).queued.value >= kLongQueue)
-                            r.ctx().emplace<Findings>().found.emplace_back(Finding::LongQueue, e);
+                            tell(r, guest, Finding::LongQueue, e, now);
                         r.get<Errand>(guest).kind = ErrandKind::Riding;
                         if (const std::size_t seat = riders->size(); walk_on && seat < walks->on.size())
                         {

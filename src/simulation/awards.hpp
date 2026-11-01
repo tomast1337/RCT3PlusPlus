@@ -71,6 +71,10 @@ namespace rct3::simulation
     /// theme name, as AwardFigures::themed.
     [[nodiscard]] std::map<std::string, std::int32_t, std::less<>> themed_attractions(const save::RideModel& rides, std::span<const save::PlacedObject> objects, std::span<const park::BuildItem> catalogue);
 
+    /// The saved ids of the rides and stalls whose scenery round them carries a theme other than their own (or
+    /// any, for one of none), counted as themed_attractions counts it.
+    [[nodiscard]] std::vector<std::uint64_t> off_theme_attractions(const save::RideModel& rides, std::span<const save::PlacedObject> objects, std::span<const park::BuildItem> catalogue);
+
     /// Whether the park earns award `kind` this month. `dice` draws the luck some awards leave to chance.
     [[nodiscard]] bool award_earned(std::int32_t kind, const AwardFigures& figures, std::uint32_t lately, random::RandomState& dice);
 

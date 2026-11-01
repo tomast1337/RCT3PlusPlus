@@ -207,7 +207,7 @@ namespace rct3::particles
                     if (!e.particle)
                         return std::unexpected(EffectError::Unreferable);
                 }
-                effect.emitters[emitter_at.at(id)] = std::move(e);
+                effect.emitters[emitter_at.at(id)] = e;
                 continue;
             }
             Particle p {

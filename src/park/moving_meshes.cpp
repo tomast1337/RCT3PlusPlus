@@ -143,9 +143,10 @@ namespace rct3::park
                         if (skin.weights[k] == 0 || skin.bones[k] >= places.size())
                             continue;
                         const float w = static_cast<float>(skin.weights[k]) / 255.0f;
-                        const float* from = &places[skin.bones[k]][0][0];
-                        for (std::size_t e = 0; e < 16; ++e)
-                            m[e] += w * from[e];
+                        const glm::mat4& from = places[skin.bones[k]];
+                        for (glm::length_t col = 0; col < 4; ++col)
+                            for (glm::length_t row = 0; row < 4; ++row)
+                                m[col * 4 + row] += w * from[col][row];
                         total += w;
                     }
                     if (total > 0)

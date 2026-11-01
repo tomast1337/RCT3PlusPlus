@@ -352,9 +352,9 @@ int main(int argc, char** argv)
     const std::int64_t fee = park_model && park_model->has_finance ? park_model->finance.entrance_fee : 0;
     const auto& draw = world.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(world_model->pool_water.size()), .rating = state.rating, .guest_cash = { park_model && park_model->has_finance ? park_model->finance.average_guest_cash : 0 }, .guest_bank = { park_model && park_model->has_finance ? park_model->finance.average_guest_bank_funds : 0 } });
     if (weather == "rain" || weather == "storm")
-        sky = { .rain = true, .storm = weather == "storm", .temperature = 15 };
+        sky = simulation::Weather { .rain = true, .storm = weather == "storm", .temperature = 15 };
     else if (weather == "hot" || weather == "cold")
-        sky = { .sunny = weather == "hot", .temperature = weather == "hot" ? 35.0f : 2.0f };
+        sky = simulation::Weather { .sunny = weather == "hot", .temperature = weather == "hot" ? 35.0f : 2.0f };
     out.info("weather: {}{}{}, {:.0f} degrees; {:.1f} guests an hour come in", sky.rain ? "rain" : "dry", sky.storm ? " (storm)" : "", sky.sunny ? ", sunny" : "", static_cast<double>(sky.temperature.value), simulation::arrivals_per_second(sky) * 3600);
     const std::uint32_t ideal = simulation::ideal_guests(world);
     const std::int64_t fair = simulation::fair_entrance_fee(world);

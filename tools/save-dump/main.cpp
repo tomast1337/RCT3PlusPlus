@@ -112,7 +112,7 @@ namespace
                 {
                     if (++shown > 8)
                     {
-                        out.info("{:{}}...", "", indent + 2);
+                        out.info("{}...", std::string(static_cast<std::size_t>(indent + 2), ' '));
                         break;
                     }
                     print_value(item, indent + 2, nullptr);
@@ -127,7 +127,7 @@ namespace
                     const auto n = std::string(v.names()[i]);
                     print_value(v.items()[i], indent + 2, n.c_str());
                 }
-                out.info("{:{}}}}", "", indent);
+                out.info("{}}}", std::string(static_cast<std::size_t>(indent), ' '));
                 return;
             }
         }

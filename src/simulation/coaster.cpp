@@ -327,7 +327,6 @@ namespace rct3::simulation
                 const float kept = std::clamp(to, std::min(c.train_length, c.length()), c.length());
                 if (kept != to)
                 {
-                    moved = kept - c.at;
                     c.at = kept;
                     c.crashed = true;
                     c.running = false;

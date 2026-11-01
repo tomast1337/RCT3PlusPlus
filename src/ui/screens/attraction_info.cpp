@@ -634,7 +634,7 @@ namespace rct3::ui
                 // The numbers up the left follow the first series shown; whole numbers on a scale of ten or more.
                 if (series.shown && page.graph_axis.empty() && !series.values.empty())
                     for (const float v : axis_values(series.full, series.centred))
-                        page.graph_axis.push_back(ascii(std::format("{:.{}f} ", v, series.full >= 10 ? 0 : 1)) + unit);
+                        page.graph_axis.push_back(ascii(series.full >= 10 ? std::format("{:.0f} ", v) : std::format("{:.1f} ", v)) + unit);
                 ticks[i] = tick(id, key, series.name, series.shown);
                 ticks[i].series = i;
                 ticks[i].column = i < 2 ? 0 : 1; // Speed and altitude down the left, the forces down the right

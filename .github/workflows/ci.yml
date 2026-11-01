@@ -111,4 +111,9 @@ jobs:
         run: ./nob format --check
 
       - name: Static analysis
-        run: ./nob tidy
+        # The image keeps Debian's GCC 14 beside its own GCC 16, and clang-tidy picks the older one's headers
+        # unless told which to use.
+        run: |
+          printf '#!/bin/sh\nexec clang-tidy --extra-arg=--gcc-install-dir=%s "$@"\n' "$(dirname "$(g++ -print-libgcc-file-name)")" > /usr/local/bin/clang-tidy-gcc
+          chmod +x /usr/local/bin/clang-tidy-gcc
+          CLANGTIDY=clang-tidy-gcc ./nob tidy

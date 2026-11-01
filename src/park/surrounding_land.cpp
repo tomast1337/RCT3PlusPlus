@@ -228,6 +228,8 @@ namespace rct3::park
 
         const std::vector<EdgePoint> edge = edge_points(grid);
         const std::size_t n = edge.size();
+        if (n == 0)
+            return mesh;
         const std::vector<float> distances = ring_distances();
         const std::size_t rings = distances.size();
         const auto at = [&](std::size_t k, std::size_t i) { return k * n + i % n; };

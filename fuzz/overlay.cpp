@@ -238,12 +238,12 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     {
         if (!entry.item)
             continue;
-        sink += entry.item->extras.size() + entry.item->flags + entry.item->amounts[0];
+        sink += entry.item->extras.size() + entry.item->flags + entry.item->cost;
     }
     for (const auto& entry : rct3::ovl::read_carried_item_extras(*overlay, part))
     {
         if (entry.extra)
-            sink += entry.extra->unknown_0c;
+            sink += entry.extra->cost;
     }
     for (const auto& entry : rct3::ovl::read_research_categories(*overlay, part))
     {
@@ -275,7 +275,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     {
         if (!entry.pool)
             continue;
-        sink += entry.pool->items.size() + entry.pool->splines.size() + static_cast<std::size_t>(entry.pool->unknown_values[3] > 0);
+        sink += entry.pool->items.size() + entry.pool->splines.size() + static_cast<std::size_t>(entry.pool->prices[3] > 0);
     }
     for (const auto& entry : rct3::ovl::read_enclosure_types(*overlay, part))
     {

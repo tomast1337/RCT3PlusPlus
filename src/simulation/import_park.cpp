@@ -763,7 +763,7 @@ namespace rct3::simulation
                 auto& shop = world.registry.get_or_emplace<Shop>(e);
                 shop.product = sale->shop.product;
                 shop.serve = sale->shop.serve;
-                shop.menu = std::move(sale->shop.menu);
+                shop.menu = sale->shop.menu;
             }
     }
 

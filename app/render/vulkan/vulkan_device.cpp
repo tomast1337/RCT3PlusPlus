@@ -1203,8 +1203,8 @@ namespace rct3::render::vulkan
         vkCmdSetViewport(cmd, 0, 1, &viewport);
         vkCmdSetScissor(cmd, 0, 1, &rendering.renderArea);
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, present_pipeline_);
-        constexpr std::size_t kLinearClamp = static_cast<std::size_t>(Filter::Linear) * 2 + static_cast<std::size_t>(AddressMode::Clamp);
-        const std::array<VkDescriptorSet, 2> sets { screen_.set, sampler_sets_[kLinearClamp] };
+        const std::size_t sampler = static_cast<std::size_t>(smooth_scaling_ ? Filter::Linear : Filter::Nearest) * 2 + static_cast<std::size_t>(AddressMode::Clamp);
+        const std::array<VkDescriptorSet, 2> sets { screen_.set, sampler_sets_[sampler] };
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, 2, sets.data(), 0, nullptr);
         // Curve: each channel raised to a power, 1 at the middle setting, from 2 (darker) to 1/2 (lighter).
         const glm::vec4 curve { std::exp2(1.0f - 2.0f * std::clamp(brightness_, 0.0f, 1.0f)), 0, 0, 0 };

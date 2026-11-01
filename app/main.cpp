@@ -1283,6 +1283,7 @@ int main(int argc, char** argv)
                         const auto level = static_cast<std::size_t>(front->live->options.choice(config::GameOption::AntiAliasing));
                         device->set_samples(level > 0 && level <= sample_levels.size() ? sample_levels[level - 1] : 1);
                         device->set_render_scale(front->live->options.get(config::GameOption::RenderScale) / 100);
+                        device->set_smooth_scaling(front->live->options.get(config::GameOption::SmoothScaling) != 0);
                         device->set_brightness(front->live->options.get(config::GameOption::Brightness));
                     }
                     prof::section("BeginFrame", [&] { device->begin_frame(); });

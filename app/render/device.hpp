@@ -113,6 +113,12 @@ namespace rct3::render
             return render_scale_;
         }
 
+        /// Whether the stretch blends neighbouring pixels (smooth) or shows each as a sharp block.
+        void set_smooth_scaling(bool smooth)
+        {
+            smooth_scaling_ = smooth;
+        }
+
         /// How bright the stretched screen shows: 0.5 as drawn, lower darker, higher brighter. Screenshots are
         /// taken before it, as drawn.
         void set_brightness(float brightness)
@@ -196,6 +202,7 @@ namespace rct3::render
 
     protected:
         float render_scale_ = 1;
+        bool smooth_scaling_ = true;
         float brightness_ = 0.5f;
 
     private:

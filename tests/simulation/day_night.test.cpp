@@ -57,6 +57,31 @@ TEST_CASE("in the dark a family heads for the gate and goes home, together")
     CHECK_FALSE(r.all_of<Errand>(child));
 }
 
+TEST_CASE("a party member held up as the others walk out of the gate stays on alone")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    auto& r = park.world().registry;
+    r.emplace<ParkGate>(r.create(), ParkGate { park.world().paths.find({ 0, 0, 0 }).value() });
+    r.ctx().emplace<Daylight>(Daylight { 22.0f / 24 });
+    const auto parent = park.guest({ 5, 0 });
+    const auto child = park.guest({ 5, 0 });
+    park.party({ parent, child });
+    // The child stops following just as the parent heads out, as one back from a fall would.
+    CHECK(park.run_until(
+        [&] {
+            if (r.all_of<Left>(parent))
+                return true;
+            if (r.get<Errand>(parent).kind == ErrandKind::Heading && r.all_of<Errand>(child))
+                r.get<Errand>(child).kind = ErrandKind::Waiting;
+            return false;
+        },
+        3600));
+    park.run_seconds(5);
+    CHECK_FALSE(r.all_of<Left>(child));
+    CHECK_FALSE(r.all_of<Member>(child));
+}
+
 TEST_CASE("guests done with the park go home by day: the broke with no cash machine, the miserable; content ones stay")
 {
     Sandbox park;

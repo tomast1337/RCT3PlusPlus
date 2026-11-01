@@ -2413,7 +2413,13 @@ namespace rct3::simulation
             else if (r.all_of<ParkGate>(arrived[i]))
             {
                 if (const auto* member = r.try_get<Member>(guest))
+                {
+                    // Members not walking out with them (busy, or just back from a fall) stay on alone.
+                    for (const entt::entity m : r.get<Party>(member->party).members)
+                        if (m != guest && !std::ranges::contains(followers, m))
+                            r.remove<Member>(m);
                     r.destroy(member->party);
+                }
                 for (const entt::entity m : followers)
                     leave(r, m);
                 leave(r, guest);

@@ -53,6 +53,7 @@ namespace rct3::park
     // first, station pieces the second, and nearly every piece of later files the third.
     inline constexpr std::uint32_t kRoleBrakes = 1;     ///< PieceRecord::role of brakes
     inline constexpr std::uint32_t kRoleBlockBrake = 2; ///< PieceRecord::role of a block brake
+    inline constexpr std::uint32_t kRoleStation = 3;    ///< PieceRecord::role of a station piece, flagged one or not
     /// Roles of a rotating tower's pieces (base, shaft, caps): marked as chain, though nothing pulls a train up them
     inline constexpr std::uint32_t kRoleTowerFirst = 91;
     inline constexpr std::uint32_t kRoleTowerLast = 95;
@@ -154,6 +155,7 @@ namespace rct3::park
         std::uint32_t side = 0;         ///< Of side by side tracks; ends meet only ends of the same side
         std::string partner;            ///< Of side by side tracks: the other half of a joined piece, by name
         std::string group;              ///< For the ride's piece patterns
+        std::string platform_run;       ///< As ovl::TrackSection::platform_run
     };
 
     struct PieceShape

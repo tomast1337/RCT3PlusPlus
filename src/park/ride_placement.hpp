@@ -140,11 +140,26 @@ namespace rct3::park
     /// goes on from its start. The first station given a door stays the first, where trains set off.
     [[nodiscard]] std::size_t door_station(std::span<const save::TrackPiece> stations, std::span<const save::Station> saved, const DoorSpot& door);
 
-    /// The platform piece (its "sid" name) a station piece of the platform type `type` takes: the type, then
-    /// "start" where the station begins (the piece before it is no station), "end" where it ends, "startEnd"
-    /// for both and "middle" for neither; then "1stairLeft" or "1stairRight" for a door beside it on the left or
-    /// right of the way the track runs, "2stair" for doors on both sides.
-    [[nodiscard]] std::string platform_symbol(std::string_view type, const save::TrackPiece& piece, bool station_before, bool station_after, std::span<const DoorSpot> doors);
+    /// Where a station piece stands, as the name of its platform piece tells.
+    struct PlatformPlace
+    {
+        bool station_before = false; ///< The piece before it along the track is a station piece too
+        bool station_after = false;  ///< The piece after it is
+        bool track_before = false;   ///< Any piece comes before it
+        bool track_after = false;    ///< Any piece comes after it
+        std::string_view run { };    ///< Its section's own word for its place in the station; mostly empty
+        std::uint32_t side = 0;      ///< Of side by side tracks: 1 the left track, 2 the right
+    };
+
+    /// The platform piece of `names` (the "sid" names in the platform type `type`'s file, matched ignoring case) a
+    /// station piece takes, at `place` with doors at `doors`. Its name is the type, then where it is in the station
+    /// ("start" where the piece before it is no station piece, "end" where the piece after it is none, "startEnd" for
+    /// both, "middle" for neither, or the section's own word), its stairs ("1stairLeft" or "1stairRight" for a door
+    /// beside it on that side of the way the track runs, "2stair" for both), where it is on the track ("trackStart"
+    /// with no piece before it, "trackEnd", "trackStartEnd"), and "_L" or "_R" on side by side tracks. Without that
+    /// piece, the first there is of the name without the track's part, without the station's part, or without
+    /// both; then the same as a "middle". Nothing when none of them is there.
+    [[nodiscard]] std::optional<std::string_view> platform_symbol(std::string_view type, const save::TrackPiece& piece, const PlatformPlace& place, std::span<const DoorSpot> doors, std::span<const std::string> names);
 
     /// What keeps an entrance or exit from `door`, if anything. `taken`: a door already placed for the ride.
     [[nodiscard]] SiteProblem door_problem(const RideSite& site, const DoorSpot& door, std::optional<DoorSpot> taken, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles& solids);

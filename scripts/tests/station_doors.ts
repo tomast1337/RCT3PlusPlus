@@ -5,7 +5,7 @@
 // beside it from the ride's window, and a path behind each door joins them to the park. Its trains stop at both
 // stations, doors or not: two trains stand one at each, and tested they stop at the second before it has doors,
 // their cars drawn moving smoothly through the stations. Opened with doors at both, a train stands at each. Saved
-// and loaded again, both stations keep their doors.
+// and loaded again, both stations keep their doors and the platforms their pieces stand in.
 //
 //   ./nob script scripts/tests/station_doors.ts -- --no-audio
 
@@ -219,6 +219,10 @@ await screenshot("two_stations");
 
 // Saved and loaded again.
 const saved = JSON.stringify(doors());
+// Each station piece of both stations stands in its platform, with stairs beside the doors.
+const platforms = rides.list()[ride].platforms ?? [];
+log("platforms", JSON.stringify(platforms));
+expect(platforms.length === 2 && platforms.every((p) => /stair/i.test(p)), `a platform with stairs on both station pieces, not ${JSON.stringify(platforms)}`);
 await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
 await ui.click("tools/Files/File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
@@ -235,6 +239,7 @@ await ui.click("park_files/content/open");
 await until(() => park.loaded() && rides.list().length > ride, 1200, "the park back after loading");
 await until(() => rides.list()[ride].joined && (rides.list()[ride].stops ?? 0) > 0, 600, "the second station stopped at after loading");
 expect(JSON.stringify(doors()) === saved, `both stations' doors back after loading, not ${JSON.stringify(doors())}`);
+expect(JSON.stringify(rides.list()[ride].platforms) === JSON.stringify(platforms), `both stations' platforms back after loading, not ${JSON.stringify(rides.list()[ride].platforms)}`);
 camera.look({ col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 0.5 }, { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 16.5, up: 22 });
 await frames(30);
 await screenshot("two_stations_loaded");

@@ -53,6 +53,9 @@ namespace rct3::ovl
         /// the water running down the piece, on slides and water rides. Empty on dry pieces.
         std::array<std::string_view, 2> water_splines;
         std::array<float, 3> scale { }; ///< 1, 1, 1 in nearly all items
+        /// Names the run part of its station platform's name in place of the start, middle or end its place in
+        /// the station gives it. Empty in nearly all items.
+        std::string_view platform_run;
         /// Names the start and the end of the piece join by: an end only meets an end of the same name,
         /// ignoring case, and an unnamed end only an unnamed one. Nearly all are unnamed; a tower's base
         /// starts "bottom" and its top ends "top", which no piece starts with. Version 4 and 5 files only.

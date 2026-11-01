@@ -1760,7 +1760,7 @@ namespace rct3::scene
         auto& pieces = ride.track->pieces;
         const auto station = [&](std::size_t i) {
             const auto shape = park::shape_named(*c, pieces[i].symbol);
-            return pieces[i].platform.has_value() || (shape && (shape->record.flags & park::kPieceStation) != 0);
+            return pieces[i].platform.has_value() || (shape && ((shape->record.flags & park::kPieceStation) != 0 || shape->record.role == park::kRoleStation));
         };
         wait_for_build(scene);
         bool changed = false;
@@ -1770,12 +1770,24 @@ namespace rct3::scene
                 continue;
             const auto shape = park::shape_named(*c, pieces[i].symbol);
             const bool alone = shape && (shape->record.flags & park::kPiecePlatformAlone) != 0;
-            const bool before = !alone && (i > 0 ? station(i - 1) : ride.track->circuit && station(pieces.size() - 1));
-            const bool after = !alone && (i + 1 < pieces.size() ? station(i + 1) : ride.track->circuit && station(0));
-            const std::string want = park::platform_symbol(ride.platform_type, pieces[i], before, after, doors);
-            const auto name = std::ranges::find_if(names, [&](const std::string& n) { return strings::equals_ignoring_case(n, want); });
-            if (name == names.end())
+            const park::PlatformPlace place {
+                .station_before = !alone && (i > 0 ? station(i - 1) : ride.track->circuit && station(pieces.size() - 1)),
+                .station_after = !alone && (i + 1 < pieces.size() ? station(i + 1) : ride.track->circuit && station(0)),
+                // shortcut: the open end being built on counts as the track's end, which only the aquarium's
+                // platforms show; upgrade by leaving that end open while the construction panel is on it.
+                .track_before = i > 0 || ride.track->circuit,
+                .track_after = i + 1 < pieces.size() || ride.track->circuit,
+                .run = shape ? std::string_view(shape->record.platform_run) : std::string_view { },
+                .side = shape ? shape->record.side : 0,
+            };
+            const auto name = park::platform_symbol(ride.platform_type, pieces[i], place, doors, names);
+            if (!name)
+            {
+                // Its type has no platform for it there, as some have none without stairs.
+                hide_platform(scene, pieces[i]);
+                changed = changed || pieces[i].platform.has_value();
                 continue;
+            }
             const auto objects = object_indices(scene);
             const auto piece_object = objects.find(pieces[i].scenery);
             auto platform = pieces[i].platform ? std::ranges::find_if(scene.objects, [&](const save::PlacedObject& o) { return o.owner_ref == pieces[i].platform->id && o.id != pieces[i].platform->id; }) : scene.objects.end();

@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <doctest/doctest.h>
+#include <string>
 #include <vector>
 
 using namespace rct3;
@@ -187,19 +188,90 @@ TEST_CASE("a station piece's platform is capped where the station ends and has s
     along_x.tile_x = 4;
     along_x.tile_z = 4;
     along_x.height = 3;
-    CHECK(platform_symbol("deck", along_x, false, true, { }) == "deckstart");
-    CHECK(platform_symbol("deck", along_x, true, false, { }) == "deckend");
-    CHECK(platform_symbol("deck", along_x, false, false, { }) == "deckstartEnd");
+    const std::vector<std::string> names { "deckStart", "deckmiddle", "deckend", "deckstartEnd", "deckmiddle1stairLeft", "deckend1stairRight", "deckstartEnd2stair" };
+    const PlatformPlace middle { .station_before = true, .station_after = true, .track_before = true, .track_after = true };
+    const auto start = [&] {
+        PlatformPlace p = middle;
+        p.station_before = false;
+        return p;
+    }();
+    const auto end = [&] {
+        PlatformPlace p = middle;
+        p.station_after = false;
+        return p;
+    }();
+    const auto alone = [&] {
+        PlatformPlace p = start;
+        p.station_after = false;
+        return p;
+    }();
+    // Matched ignoring case, given as the file spells it.
+    CHECK(platform_symbol("deck", along_x, start, { }, names) == "deckStart");
+    CHECK(platform_symbol("deck", along_x, end, { }, names) == "deckend");
+    CHECK(platform_symbol("deck", along_x, alone, { }, names) == "deckstartEnd");
     // Left of the way it runs is +z, right is -z; a door at another height is not beside it.
     const std::vector<DoorSpot> left { { 4, 5, 3, 3 } }, right { { 4, 3, 1, 3 } }, both { { 4, 5, 3, 3 }, { 4, 3, 1, 3 } }, above { { 4, 5, 3, 4 } };
-    CHECK(platform_symbol("deck", along_x, true, true, left) == "deckmiddle1stairLeft");
-    CHECK(platform_symbol("deck", along_x, true, false, right) == "deckend1stairRight");
-    CHECK(platform_symbol("deck", along_x, false, false, both) == "deckstartEnd2stair");
-    CHECK(platform_symbol("deck", along_x, true, true, above) == "deckmiddle");
+    CHECK(platform_symbol("deck", along_x, middle, left, names) == "deckmiddle1stairLeft");
+    CHECK(platform_symbol("deck", along_x, end, right, names) == "deckend1stairRight");
+    CHECK(platform_symbol("deck", along_x, alone, both, names) == "deckstartEnd2stair");
+    CHECK(platform_symbol("deck", along_x, middle, above, names) == "deckmiddle");
     // Turned a quarter, its left is +x.
     save::TrackPiece along_z = along_x;
     along_z.direction = 1;
-    CHECK(platform_symbol("deck", along_z, true, true, std::vector<DoorSpot> { { 5, 4, 0, 3 } }) == "deckmiddle1stairLeft");
+    CHECK(platform_symbol("deck", along_z, middle, std::vector<DoorSpot> { { 5, 4, 0, 3 } }, names) == "deckmiddle1stairLeft");
+}
+
+TEST_CASE("a station piece takes the nearest platform its type has, or none")
+{
+    const save::TrackPiece piece;
+    const PlatformPlace middle { .station_before = true, .station_after = true, .track_before = true, .track_after = true };
+    const auto start = [&] {
+        PlatformPlace p = middle;
+        p.station_before = false;
+        return p;
+    }();
+    const std::vector<DoorSpot> right { { 0, -1, 1, 0 } };
+    SUBCASE("a type with middles only gives one to the station's ends")
+    {
+        const std::vector<std::string> names { "hallmiddle", "hallmiddle1stairRight" };
+        CHECK(platform_symbol("hall", piece, start, { }, names) == "hallmiddle");
+        CHECK(platform_symbol("hall", piece, start, right, names) == "hallmiddle1stairRight");
+    }
+    SUBCASE("a type that names no place in the station, and caps the track's ends")
+    {
+        const std::vector<std::string> names { "tank", "tank1stairRight", "tankTrackEnd", "tank1stairRightTrackStart" };
+        CHECK(platform_symbol("tank", piece, middle, { }, names) == "tank");
+        CHECK(platform_symbol("tank", piece, start, right, names) == "tank1stairRight");
+        auto first = start;
+        first.track_before = false;
+        CHECK(platform_symbol("tank", piece, first, right, names) == "tank1stairRightTrackStart");
+        auto last = middle;
+        last.track_after = false;
+        CHECK(platform_symbol("tank", piece, last, { }, names) == "tankTrackEnd");
+    }
+    SUBCASE("a type with platforms for the station's ends only where the track ends there")
+    {
+        const std::vector<std::string> names { "deckstart", "deckstarttrackStart" };
+        auto first = start;
+        first.track_before = false;
+        CHECK(platform_symbol("deck", piece, first, { }, names) == "deckstarttrackStart");
+        CHECK(platform_symbol("deck", piece, start, { }, names) == "deckstart");
+    }
+    SUBCASE("a section's own word for its place, and the side of side by side tracks")
+    {
+        const std::vector<std::string> names { "liftAlt", "liftmiddle_L", "liftmiddle_R" };
+        auto own = start;
+        own.run = "Alt";
+        CHECK(platform_symbol("lift", piece, own, { }, names) == "liftAlt");
+        auto right_track = middle;
+        right_track.side = 2;
+        CHECK(platform_symbol("lift", piece, right_track, { }, names) == "liftmiddle_R");
+    }
+    SUBCASE("none where its type has no platform for it")
+    {
+        const std::vector<std::string> names { "rapidsmiddle1stairLeft" };
+        CHECK_FALSE(platform_symbol("rapids", piece, middle, { }, names));
+    }
 }
 
 TEST_CASE("a ride that stands only on water needs water under every tile, and others no water over their base")

@@ -12,6 +12,8 @@
 #include <format>
 #include <numeric>
 #include <optional>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace rct3::park
@@ -390,7 +392,7 @@ namespace rct3::park
         return static_cast<std::size_t>(std::ranges::find_if(saved, [](const save::Station& s) { return !s.entrance_spot && !s.exit_spot; }) - saved.begin());
     }
 
-    std::string platform_symbol(std::string_view type, const save::TrackPiece& piece, bool station_before, bool station_after, std::span<const DoorSpot> doors)
+    std::optional<std::string_view> platform_symbol(std::string_view type, const save::TrackPiece& piece, const PlatformPlace& place, std::span<const DoorSpot> doors, std::span<const std::string> names)
     {
         bool left = false, right = false;
         for (const DoorSpot& d : doors)
@@ -403,8 +405,18 @@ namespace rct3::park
             right = right || turn == 1;
         }
         const std::string_view stairs = left && right ? "2stair" : left ? "1stairLeft" : right ? "1stairRight" : "";
-        const std::string_view run = station_before && station_after ? "middle" : station_after ? "start" : station_before ? "end" : "startEnd";
-        return std::format("{}{}{}", type, run, stairs);
+        const bool before = place.station_before, after = place.station_after;
+        const std::string_view run = !place.run.empty() ? place.run : before && after ? "middle" : after ? "start" : before ? "end" : "startEnd";
+        const std::string_view track = !place.track_before && !place.track_after ? "trackStartEnd" : !place.track_before ? "trackStart" : !place.track_after ? "trackEnd" : "";
+        const std::string_view side = place.side == 1 ? "_L" : place.side == 2 ? "_R" : "";
+        for (const std::string_view r : { run, std::string_view("middle") })
+            for (const auto& [with_run, with_track] : { std::pair { true, true }, { true, false }, { false, true }, { false, false } })
+            {
+                const std::string want = std::format("{}{}{}{}{}", type, with_run ? r : "", stairs, with_track ? track : "", side);
+                if (const auto found = std::ranges::find_if(names, [&](const std::string& n) { return strings::equals_ignoring_case(n, want); }); found != names.end())
+                    return *found;
+            }
+        return std::nullopt;
     }
 
     SiteProblem door_problem(const RideSite& site, const DoorSpot& door, std::optional<DoorSpot> taken, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles& solids)

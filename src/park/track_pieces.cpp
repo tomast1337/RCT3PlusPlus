@@ -232,6 +232,7 @@ namespace rct3::park
             r.side = section.side;
             r.partner = section.partner.substr(0, section.partner.find(':'));
             r.group = section.group;
+            r.platform_run = section.platform_run;
             lines.push_back(*line);
         }
         return PieceCatalogue { std::move(overlay), shape_pieces(records, lines) };

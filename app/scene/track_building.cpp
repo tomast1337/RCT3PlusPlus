@@ -1518,6 +1518,14 @@ namespace rct3::scene
             save::Train& train = ride.trains.front();
             train.symbol = std::format("{}:rit", train_name);
             train.overlay_path = path;
+            // Its stations take the platforms its train names, where the train names some; else its kind's.
+            // shortcut: a train naming none keeps the platforms of the train before it; upgrade by keeping the
+            // kind's own platform type apart if a ride offers trains of both sorts.
+            const auto car_file = ovl::Overlay::load(*file);
+            for (const auto part : car_file ? std::array { maybe(&car_file->common()), car_file->unique() } : std::array<std::optional<const ovl::Part&>, 2> { })
+                for (const ovl::RideTrainItem& t : part ? ovl::read_ride_trains(*car_file, *part) : std::vector<ovl::RideTrainItem> { })
+                    if (t.train && !t.train->platform.empty() && strings::equals_ignoring_case(t.name, train_name))
+                        ride.platform_type = t.train->platform;
             // As many cars as its kind usually has, and the fewest and most it may have.
             const ui::TrainLimits& limits = scene.train_limits[index] = train_limits_of(install, train_name);
             return fit_trains(scene, install, index, 1, limits.usual_cars);
@@ -1707,6 +1715,8 @@ namespace rct3::scene
                     ride.options.block_brake_off_speed = o.block_brake_speed;
                     ride.options.fixed_speed = o.fixed_speed.value_or(-1);
                 }
+        // Its riders sit on arms.
+        const bool arm = !train_name.empty() && use_train(scene, *assets.install, index, train_name).value_or(false);
         // Its platforms come from the folder of tracks/Platforms that has its type.
         std::error_code error;
         const auto platform_folders = assets.install->find("Tracks/Platforms");
@@ -1715,8 +1725,6 @@ namespace rct3::scene
                 ride.platform_style = it->path().filename().string();
         if (ride.platform_style.empty())
             ride.platform_type.clear();
-        // Its riders sit on arms.
-        const bool arm = !train_name.empty() && use_train(scene, *assets.install, index, train_name).value_or(false);
         if (!ride.trains.empty())
             logging::logger("park").info("new {} runs {} with {} seats, lift {} m/s", item.symbol, train_name, ride.seats.size(), ride.options.lift_speed);
         // The simulation takes it on once its entrance and exit are placed beside its station (ride_placing.hpp).
@@ -1806,8 +1814,10 @@ namespace rct3::scene
                 scene.objects.push_back(std::move(o));
                 platform = scene.objects.end() - 1;
             }
-            if (platform->symbol == *name && !platform->hidden)
+            if (platform->symbol == *name && platform->overlay == platforms && !platform->hidden)
                 continue;
+            // A new train may bring another platform type.
+            platform->overlay = platforms;
             platform->symbol = *name;
             platform->hidden = false;
             (void)load_object_model(scene, scene.building.models, assets, *platform);

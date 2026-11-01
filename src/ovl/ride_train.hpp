@@ -71,6 +71,9 @@ namespace rct3::ovl
         std::span<const std::byte> record;
         RideCameraTuning camera; ///< Thirteen numbers from byte 56 of the record
         BoatHandling boat;       ///< Eight numbers from byte 108, right after the camera's
+        /// The station platform type its ride's stations are built with, right after the fixed part; empty when
+        /// the ride's own type applies.
+        std::string_view platform;
     };
 
     struct RideTrainItem

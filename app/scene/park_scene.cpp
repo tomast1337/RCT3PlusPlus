@@ -1507,7 +1507,10 @@ namespace rct3::scene
                 const auto at = std::ranges::find_if(choices, [&](const std::string& c) { return strings::equals_ignoring_case(c, now); });
                 if (choices.size() > 1)
                     if (use_train(scene, *assets.install, ref.index, choices[at == choices.end() ? 0 : static_cast<std::size_t>(at - choices.begin() + 1) % choices.size()]))
+                    {
                         (void)set_trains(device, scene, *assets.install, ref.index, ride->train_count, ride->cars_per_train);
+                        update_platforms(scene, ref.index, assets);
+                    }
             }
             else if (change.id == ui::control_id(Circuits))
             {

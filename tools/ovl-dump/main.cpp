@@ -585,7 +585,7 @@ namespace
                 std::string line = std::format("  {:<32} cars", name);
                 for (const auto car : item.train->cars)
                     line += std::format(" {}", car.empty() ? std::string_view("-") : car);
-                out.info("{}", line);
+                out.info("{} platform {}", line, item.train->platform.empty() ? std::string_view("-") : item.train->platform);
             }
         }
         if (opt.trr)

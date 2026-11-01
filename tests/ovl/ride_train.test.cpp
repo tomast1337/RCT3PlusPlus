@@ -62,3 +62,17 @@ TEST_CASE("a name field of -1 gives an empty name")
     REQUIRE(items[0].train.has_value());
     CHECK(items[0].train->name.empty());
 }
+
+TEST_CASE("a train names its station platform type after its fixed part")
+{
+    Pool pool;
+    const auto platform = pool.add("Stony");
+    pool.add("Test:rit");
+    std::vector<std::byte> bytes(184, std::byte { 0 });
+    put(bytes, { platform });
+    bytes.resize(200, std::byte { 0 });
+    const auto overlay = make_record_overlay(1, pool, "Test:rit", bytes);
+    const auto items = read_ride_trains(overlay, overlay.common());
+    REQUIRE(items[0].train.has_value());
+    CHECK(items[0].train->platform == "Stony");
+}

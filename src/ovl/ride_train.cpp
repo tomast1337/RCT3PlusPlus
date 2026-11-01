@@ -43,6 +43,9 @@ namespace rct3::ovl
                 train.camera = { .look_ahead = real(0), .sway_per_g = real(1), .sway_most = real(2), .sway_settle = real(3), .shake_from = real(4), .shake = real(5), .shake_across = real(6), .shake_up = real(7), .chain_shake = real(8), .chain_shake_across = real(9), .chain_shake_up = real(10), .turn_settle = real(11), .look_tilt = real(12) };
                 const auto boat = [&](std::size_t i) { return record->real(0x6c + i * 4); };
                 train.boat = { .turn_most = boat(0), .turn_gain = boat(1), .speed_up = boat(2), .speed_gain = boat(3), .turn_slow = boat(4), .brake = boat(5), .lean_gain = boat(6), .lean_most = boat(7) };
+                // Most trains go on with the name of the station platform type they stop at.
+                if (const auto longer = ItemRecord::open(space, refs, symbol.data, kFixedSize + 4))
+                    train.platform = longer->text(kFixedSize);
                 item.train = std::move(train);
             }
             items.push_back(std::move(item));

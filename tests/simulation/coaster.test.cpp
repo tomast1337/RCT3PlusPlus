@@ -508,6 +508,38 @@ TEST_CASE("a train on a circuit with another station stops there, and goes on ro
     CHECK(*lap == doctest::Approx(25).epsilon(0.02));
 }
 
+TEST_CASE("a train held up by the block ahead a hair short of the station's end has come in, not still under way")
+{
+    Coaster c = hill();
+    c.fixed_speed = 4;
+    c.running = true;
+    c.travelled = 95;
+    c.at = 5;
+    CHECK(drive(c, 2, 5 - 1e-4f)); // Its room ends at the station's end, as a block end ahead does
+    CHECK_FALSE(c.running);
+    CHECK(standing_at(c) == 0);
+}
+
+TEST_CASE("a train held up in the station by the one ahead is where its riders get off, short of the station's end")
+{
+    const auto held_at = [](float travelled) {
+        Coaster c = hill();
+        c.fixed_speed = 4;
+        c.running = true;
+        c.travelled = travelled;
+        c.at = std::fmod(c.start + travelled, c.length());
+        drive(c, 1, 3); // Held 3 m on
+        return c;
+    };
+    Coaster in = held_at(90); // Its front at the station's start
+    CHECK(in.running);
+    CHECK(in.travelled == doctest::Approx(93));
+    CHECK(held_in_station(in) == 0);
+    CHECK_FALSE(held_in_station(held_at(80))); // Still on the track before it
+    drive(in, 0.25f);                          // Moving up again
+    CHECK_FALSE(held_in_station(in));
+}
+
 TEST_CASE("a lap's graphs take a sample each tenth of a second, newest first when the lap ends")
 {
     Coaster c;

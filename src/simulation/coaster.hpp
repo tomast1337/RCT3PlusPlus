@@ -167,8 +167,17 @@ namespace rct3::simulation
     /// Where `coaster`'s front is drawn `along` (0 to 1) through its last step, between where it began and ended it.
     [[nodiscard]] float between_drives(const Coaster& coaster, float along);
 
+    /// Metres short of a place on the track that a train's front counts as there: so a train held up by the block
+    /// ahead right at the station's end has come in, lets its riders off and loads, and a block's end is reached.
+    inline constexpr float kArrived = 0.01f;
+
     /// The station `coaster`'s train stands at, if it stands at one: 0 at its start, k at the k-th of its stops.
     [[nodiscard]] std::optional<std::size_t> standing_at(const Coaster& coaster);
+
+    /// The station `coaster`'s running train is held up in by the train ahead, short of where it stops there, as
+    /// standing_at numbers them. Its riders get off there, as they would at its end. Nothing while it moves, or when
+    /// held anywhere else.
+    [[nodiscard]] std::optional<std::size_t> held_in_station(const Coaster& coaster);
 
     /// How long a lap of `coaster` takes from a standing start, without stopping on the way, by driving a copy of
     /// it; nothing if the train

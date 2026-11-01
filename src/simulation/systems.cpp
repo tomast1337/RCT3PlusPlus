@@ -1697,9 +1697,8 @@ namespace rct3::simulation
         if (!train.blocks || length <= 0)
             return room;
         // Block ends: where a run of station, lift or block brake (not plain brakes) gives way to other track. A train stopped on one
-        // (within a centimetre) still counts it as ahead.
-        constexpr float kOn = 0.01f;
-        const auto ahead = [&](float d) { return std::fmod(std::fmod(d - train.at + kOn, length) + length, length) - kOn; };
+        // (within kArrived) still counts it as ahead.
+        const auto ahead = [&](float d) { return std::fmod(std::fmod(d - train.at + kArrived, length) + length, length) - kArrived; };
         // Only the nearest two ends ahead matter: the next, and the one closing the block beyond it.
         std::array<float, 2> ends { };
         std::array<float, 2> ends_ahead { std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity() };
@@ -2837,7 +2836,8 @@ namespace rct3::simulation
             }
             const auto* walks = r.try_get<RideWalks>(e);
             // Those getting off at `station`: where they meant to, or back where they got on.
-            const auto unload = [&](std::vector<entt::entity>& riders, std::size_t station) {
+            // `shift`: from where the train stands at the station's end to where it stands now.
+            const auto unload = [&](std::vector<entt::entity>& riders, std::size_t station, glm::vec3 shift = glm::vec3(0.0f)) {
                 std::vector<bool> off(riders.size());
                 float side_ahead = 0;
                 for (std::size_t seat = 0; seat < riders.size(); ++seat)
@@ -2887,6 +2887,7 @@ namespace rct3::simulation
                     if (station == 0 && walks != nullptr && seat < walks->off.size() && !walks->off[seat].empty())
                     {
                         RideWalk walk { .points = walks->off[seat], .off = true, .gesture = gesture };
+                        walk.points.front() += shift;
                         walk.points.push_back(paths.centre(exit_of(r, e)));
                         // Each to a side of the way out as in a queue, so a load spills out abreast, not in one file:
                         // from past the seat, across the way on from each point, back to the middle on the path.
@@ -3038,13 +3039,17 @@ namespace rct3::simulation
                         }
                     }
                     const auto stop = round ? std::optional<std::size_t> { 0 } : was_running ? standing_at(train) : std::nullopt;
-                    if (stop && (round || *stop > 0))
+                    // Held up in a station behind the train ahead, its riders get off where it stands, every car at
+                    // once; it then moves up to load at the station's end.
+                    const auto held = stop ? std::nullopt : held_in_station(train);
+                    if ((stop && (round || *stop > 0)) || (held && !fleet->riders[t].empty()))
                     {
                         // Stopped at a station: hands down for getting off.
                         for (const entt::entity guest : fleet->riders[t])
                             if (auto* thrill = r.valid(guest) ? r.try_get<Thrill>(guest) : nullptr)
                                 thrill->reaction = RideReaction::Waiting;
-                        unload(fleet->riders[t], *stop);
+                        const float end = !held || *held == 0 ? train.start : train.start + train.stops[*held - 1];
+                        unload(fleet->riders[t], stop.value_or(held.value_or(0)), held ? track_point(train, train.at) - track_point(train, end) : glm::vec3(0.0f));
                     }
                     // Run off its track, the train's cars fly on as wrecks, throwing out their riders, and the ride
                     // closes. Guests who see it think it a disaster. A ghost's crash is only shown: it is not the

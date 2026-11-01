@@ -367,7 +367,7 @@ namespace rct3::simulation
             c.travelled += moved;
             c.launched = c.launched || c.travelled >= c.train_length;
             // At another station, it stops there to let riders off and on.
-            if (c.next_stop < c.stops.size() && c.travelled >= c.stops[c.next_stop])
+            if (c.next_stop < c.stops.size() && c.travelled >= c.stops[c.next_stop] - kArrived)
             {
                 c.travelled = c.stops[c.next_stop++];
                 c.at = wrap(c, c.start + c.travelled);
@@ -384,7 +384,7 @@ namespace rct3::simulation
                 c.speed = 0;
             }
             // Rolled back past where it set off, it is back in the station and stops there, its run over.
-            if (c.travelled >= c.length() || c.travelled < 0)
+            if (c.travelled >= c.length() - kArrived || c.travelled < 0)
             {
                 c.at = c.start;
                 c.travelled = 0;
@@ -404,6 +404,20 @@ namespace rct3::simulation
         if (c.running || c.crashed)
             return std::nullopt;
         return c.travelled == 0 ? 0 : c.next_stop;
+    }
+
+    std::optional<std::size_t> held_in_station(const Coaster& c)
+    {
+        if (!c.running || c.crashed || c.speed != 0 || c.shuttle != Shuttle::None || c.distance.size() < 2)
+            return std::nullopt;
+        const bool stop = c.next_stop < c.stops.size();
+        const float end = stop ? c.stops[c.next_stop] : c.length();
+        // Station all the way from its front to where it stops.
+        constexpr float kStride = 0.5f; // Metres between the points looked at; shorter than any piece
+        for (float d = c.travelled; d < end; d += kStride)
+            if (c.kinds[point_at(c, wrap(c, c.start + d))] != Stretch::Station)
+                return std::nullopt;
+        return stop ? c.next_stop + 1 : 0;
     }
 
     float between_drives(const Coaster& c, float along)

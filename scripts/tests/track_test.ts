@@ -131,9 +131,7 @@ const from = build.construction()?.testAt ?? 0;
 await frames(60);
 expect((build.construction()?.testAt ?? 0) > from, "the test train moving along the track");
 await screenshot("testing");
-await ui.click("bar/Top_SuperFastForward");
-await until(() => (build.construction()?.testWrecks ?? 0) > 0, 18000, "the test train crashed off the gap");
-await ui.click("bar/Top_Play");
+await park.advanceUntil(() => (build.construction()?.testWrecks ?? 0) > 0, 1500, "the test train crashed off the gap");
 await frames(20);
 await screenshot("ghost_crash");
 expect((rides.list()[ride].crashes ?? 0) === 0, "the test train's crash not the park's");
@@ -171,9 +169,7 @@ expect(build.construction()?.ride === ride, "the construction panel back on the 
 // Tested again while the panel has it, the park's own train runs to the gap and crashes off it, but as a ghost: no
 // crash counted.
 expect(rides.setState(ride, "testing") == null, "the ride the park runs tested");
-await ui.click("bar/Top_SuperFastForward");
-await until(() => (rides.list()[ride].wrecks ?? []).length > 0, 18000, "the park's train crashed off the gap");
-await ui.click("bar/Top_Play");
+await park.advanceUntil(() => (rides.list()[ride].wrecks ?? []).length > 0, 1500, "the park's train crashed off the gap");
 expect((rides.list()[ride].crashes ?? 0) === 0, "no crash counted while the panel has the ride");
 expect(rides.setState(ride, "closed") == null, "the ride closed once more");
 await frames(3);

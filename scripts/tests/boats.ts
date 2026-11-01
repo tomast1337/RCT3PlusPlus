@@ -31,9 +31,7 @@ const tile = (c: { col: number; row: number }) => map.tile(Math.floor(c.col), Ma
 const water_at = (c: { col: number; row: number }) => tile(c)?.water !== undefined;
 const docked = hires.map(({ i }) => cars(i));
 // Out on the water: the first boat to leave its dock.
-await ui.click("bar/Top_FastForward");
-await until(() => hires.some(({ i }, k) => cars(i).some((c, b) => Math.hypot(c.col - docked[k][b].col, c.row - docked[k][b].row) > 2)), 60 * 600, "a boat out on the water");
-await ui.click("bar/Top_Play");
+await park.advanceUntil(() => hires.some(({ i }, k) => cars(i).some((c, b) => Math.hypot(c.col - docked[k][b].col, c.row - docked[k][b].row) > 2)), 1200, "a boat out on the water");
 
 const kTile = 4; // Metres a tile
 let worst_turn = 0;

@@ -212,7 +212,7 @@ expect(rides.list()[ride].stops === 1, "still a stop at the second station");
 await pathsBehind(1);
 // Open, a train stands at each station for its riders.
 expect(rides.setState(ride, "open") == null, `the ride opened, not refused with ${rides.setState(ride, "open")}`);
-await until(() => (rides.list()[ride].trainsAt ?? []).map((t) => t.station).sort().join() === "0,1", 60 * 120, "a train standing at each station once open");
+await park.advanceUntil(() => (rides.list()[ride].trainsAt ?? []).map((t) => t.station).sort().join() === "0,1", 120, "a train standing at each station once open");
 camera.look({ col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 0.5 }, { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 16.5, up: 22 });
 await frames(30);
 await screenshot("two_stations");

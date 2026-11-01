@@ -25,7 +25,7 @@ const clear = (col: number, row: number) => {
 
 // One of a party of guests walking the paths.
 const inParty = () => people.list().findIndex((p) => !p.staff && p.state === "walking" && p.party !== undefined && people.list().filter((q) => q.party === p.party).length > 1);
-await until(() => inParty() >= 0, 600, "a party walking");
+await park.advanceUntil(() => inParty() >= 0, 10, "a party walking");
 const who = inParty();
 const party = people.list()[who].party!;
 const me = () => people.list()[who];
@@ -67,14 +67,14 @@ pointer.move(over.x, over.y);
 await frames(10);
 await pointer.click(over.x, over.y);
 await until(() => me().state !== "held", 30, "the guest let go");
-await until(() => me().party === party, 600, `the guest back in their party (${JSON.stringify(me())})`);
+await park.advanceUntil(() => me().party === party, 10, `the guest back in their party (${JSON.stringify(me())})`);
 const apart = Math.max(...others().map((o) => Math.hypot(o.col! - me().col!, o.row! - me().row!)));
 log("put down", apart.toFixed(1), "tiles from the furthest of their party");
 await screenshot("put_down_far");
 
 // They find each other: all on one or neighbouring tiles.
 const spread = () => Math.max(...others().map((o) => Math.hypot(o.col! - me().col!, o.row! - me().row!)));
-await until(() => spread() < 1.5 && me().state !== "lost", 6000, `the party together again (${spread().toFixed(1)} tiles apart, ${me().state})`);
+await park.advanceUntil(() => spread() < 1.5 && me().state !== "lost", 100, `the party together again (${spread().toFixed(1)} tiles apart, ${me().state})`);
 log("together after", apart.toFixed(1), "tiles apart; states", me().state, others().map((o) => o.state).join(","));
 await screenshot("together");
 expect(others().length > 0 && me().party === party, "still one party");

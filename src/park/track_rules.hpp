@@ -80,6 +80,10 @@ namespace rct3::park
     /// Whether `rules` let the ride build `piece`.
     [[nodiscard]] bool lists_piece(const TrackRules& rules, std::string_view piece);
 
+    /// The colours a new ride's track starts in: the default colours of the first piece its kind lists, or of the
+    /// first of `pieces` when it lists none.
+    [[nodiscard]] save::RideColours starting_colours(const TrackRules& rules, std::span<const PieceShape> pieces);
+
     /// The rules a ride file's item stores, with names copied out of the file. A ride whose special pieces
     /// fill only the first two slots, a stack of them, is built back from its station.
     [[nodiscard]] TrackRules track_rules(const ovl::TrackedRide& ride);

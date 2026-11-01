@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Builds a station of five pieces for a steel coaster, a wooden coaster, the mini railway, the haunted hotel and the
-// corkscrew coaster on the game's blank landscape: each new track starts on its kind's plain station, and each
-// station piece stands in its platform model, of the type its ride's train names (or its kind's, when the train
-// names none), capped at the station's two ends. The steel coaster's park is saved and loaded again, and its
+// corkscrew coaster on the game's blank landscape: each new track starts on its kind's plain station, in the
+// colours of the first piece its ride file lists (all 0, 0, 0 for these kinds), and each station piece stands in
+// its platform model, of the type its ride's train names (or its kind's, when the train names none), capped at the
+// station's two ends and painted as its piece. The steel coaster's park is saved and loaded again, and its
 // platforms are still there.
 //
 //   ./nob script scripts/tests/station_models.ts -- --no-audio
@@ -72,6 +73,9 @@ function check(ride: number, kind: string, type: RegExp): string[] {
     const platforms = built.platforms ?? [];
     expect(platforms.length === 5 && platforms.every((p) => type.test(p)), `a ${type} platform model on each ${kind} station piece, not ${JSON.stringify(platforms)}`);
     expect(/start/i.test(platforms[0]) && /middle/i.test(platforms[2]) && /end/i.test(platforms[4]), `the ${kind} station capped at both ends, not ${JSON.stringify(platforms)}`);
+    const colours = JSON.stringify(built.trackColours);
+    expect(colours === JSON.stringify(Array(5).fill([0, 0, 0])), `the ${kind} track in its first listed piece's colours, not ${colours}`);
+    expect(JSON.stringify(built.platformColours) === colours, `the ${kind} platforms in the track's colours, not ${JSON.stringify(built.platformColours)}`);
     return platforms;
 }
 

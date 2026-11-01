@@ -246,3 +246,17 @@ TEST_CASE("a ride builds only the pieces its file lists")
     CHECK_FALSE(lists_piece(rules, "InvStation"));
     CHECK(lists_piece(TrackRules { }, "InvStation")); // a file listing none takes all its overlay's pieces
 }
+
+TEST_CASE("a new track starts in the colours of the first piece its ride lists")
+{
+    ovl::TrackedRide upright;
+    upright.pieces = { "Straight", "Station" };
+    const TrackRules rules = track_rules(upright);
+    // The overlay's own order differs from the ride's list.
+    std::vector<PieceShape> set { piece("InvStraight"), piece("Station"), piece("STRAIGHT") };
+    set[0].record.colours = { 9, 9, 9 };
+    set[2].record.colours = { 4, 5, 6 };
+    CHECK(starting_colours(rules, set) == save::RideColours { 4, 5, 6 });
+    CHECK(starting_colours(TrackRules { }, set) == save::RideColours { 9, 9, 9 });
+    CHECK(starting_colours(rules, { }) == save::RideColours { });
+}

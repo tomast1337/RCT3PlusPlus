@@ -150,12 +150,13 @@ namespace rct3::park
         std::uint32_t role = 0; ///< As ovl::TrackSection::role
         std::array<std::int32_t, 2> squares { 1, 1 };
         Positioning positioning = Positioning::Tile;
-        std::int32_t cost = 0;          ///< As the scenery item stores it
-        std::array<PieceJoin, 2> joins; ///< Of its start and its end, laid as drawn
-        std::uint32_t side = 0;         ///< Of side by side tracks; ends meet only ends of the same side
-        std::string partner;            ///< Of side by side tracks: the other half of a joined piece, by name
-        std::string group;              ///< For the ride's piece patterns
-        std::string platform_run;       ///< As ovl::TrackSection::platform_run
+        std::int32_t cost = 0;                   ///< As the scenery item stores it
+        std::array<std::uint8_t, 3> colours { }; ///< The scenery item's default colours
+        std::array<PieceJoin, 2> joins;          ///< Of its start and its end, laid as drawn
+        std::uint32_t side = 0;                  ///< Of side by side tracks; ends meet only ends of the same side
+        std::string partner;                     ///< Of side by side tracks: the other half of a joined piece, by name
+        std::string group;                       ///< For the ride's piece patterns
+        std::string platform_run;                ///< As ovl::TrackSection::platform_run
     };
 
     struct PieceShape

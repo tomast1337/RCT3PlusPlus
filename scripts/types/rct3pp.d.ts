@@ -325,8 +325,12 @@ interface RideInfo {
     trackLength?: number;
     /** Rides with a track: each piece's name, in track order. */
     track?: string[];
+    /** Rides with a track: each piece's three colours (palette places), in track order. */
+    trackColours?: number[][];
     /** Rides with a track: the platform pieces of its stations, in track order. */
     platforms?: string[];
+    /** Rides with a track: the three colours of each of `platforms`. */
+    platformColours?: number[][];
     /** Rides with a track: each piece's arm angles in degrees, base first, or null where it holds none. */
     arms?: (number[] | null)[];
     /** Rides with a track: where each of its cars stands now, and the way it faces (radians round the vertical, 0 along +row).

@@ -947,12 +947,21 @@ namespace rct3::scene
                     for (const save::TrackPiece& p : ride.track->pieces)
                         symbols.push_back(p.symbol);
                     one["track"] = std::move(symbols);
+                    Json track_colours = Json::array();
+                    for (const save::TrackPiece& p : ride.track->pieces)
+                        track_colours.push_back(std::vector<int>(p.colours.begin(), p.colours.end()));
+                    one["trackColours"] = std::move(track_colours);
                     Json platforms = Json::array();
+                    Json platform_colours = Json::array();
                     for (const save::TrackPiece& p : ride.track->pieces)
                         for (const save::PlacedObject& o : p.platform ? park.objects : std::vector<save::PlacedObject> { })
                             if (o.owner_ref == p.platform->id && o.id != p.platform->id && !o.hidden)
+                            {
                                 platforms.push_back(o.symbol);
+                                platform_colours.push_back(std::vector<int>(o.colours.begin(), o.colours.end()));
+                            }
                     one["platforms"] = std::move(platforms);
+                    one["platformColours"] = std::move(platform_colours);
                     Json arms = Json::array();
                     for (const save::TrackPiece& p : ride.track->pieces)
                         arms.push_back(p.arm_angles ? Json(std::vector<float>(p.arm_angles->begin(), p.arm_angles->end())) : Json(nullptr));

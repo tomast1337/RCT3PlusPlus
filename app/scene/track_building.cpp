@@ -827,10 +827,19 @@ namespace rct3::scene
             update_platforms(scene, *b.ride, assets);
         }
 
-        /// The colours the next piece is built in: as painted, else as the last piece, else as the cars.
-        save::RideColours next_colours(const save::Ride& ride, const TrackBuilding& b)
+        /// The colours a new track starts in, as its kind's file sets them.
+        save::RideColours starting_colours(const ParkScene& scene, const TrackBuilding& b)
         {
-            return b.colours.value_or(ride.track && !ride.track->pieces.empty() ? ride.track->pieces.back().colours : ride.car_colours);
+            const park::PieceCatalogue* c = catalogue(b);
+            const park::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::TrackRules { };
+            return c != nullptr ? park::starting_colours(rules, c->pieces) : save::RideColours { };
+        }
+
+        /// The colours the next piece is built in: as painted, else as the last piece, else as a new track starts.
+        save::RideColours next_colours(const ParkScene& scene, const TrackBuilding& b)
+        {
+            const save::Ride& ride = scene.rides.rides.at(*b.ride);
+            return b.colours.value_or(ride.track && !ride.track->pieces.empty() ? ride.track->pieces.back().colours : starting_colours(scene, b));
         }
 
         /// Adds the ghost to the park and to the ride's track, paid for if the park has the money, or `forced`
@@ -878,9 +887,8 @@ namespace rct3::scene
             }
             else
             {
-                // A new ride's track starts in its model's colours, as its cars do.
-                piece.colours = ride.car_colours;
-                object.colours = { ride.car_colours[0], ride.car_colours[1], ride.car_colours[2] };
+                piece.colours = starting_colours(scene, b);
+                object.colours = { piece.colours[0], piece.colours[1], piece.colours[2] };
             }
             if (b.colours)
             {
@@ -2198,8 +2206,7 @@ namespace rct3::scene
         const bool whole = !panel->visible;
         if (const auto paint = placing->take_paint(); paint && paint->pot < std::tuple_size_v<save::RideColours>)
         {
-            const save::Ride& ride = scene.rides.rides.at(*b.ride);
-            save::RideColours colours = next_colours(ride, b);
+            save::RideColours colours = next_colours(scene, b);
             colours.at(paint->pot) = static_cast<std::uint8_t>(paint->colour);
             b.colours = colours;
             b.tabs_for.reset();
@@ -2226,8 +2233,7 @@ namespace rct3::scene
             tabs[Rotate].help = assets.strings->get("ATE_TT_Rotate");
             if (one_piece)
                 tabs[Construction].icon = "Attraction_Construction_Disabled";
-            const save::Ride& ride = scene.rides.rides.at(*b.ride);
-            const save::RideColours colours = next_colours(ride, b);
+            const save::RideColours colours = next_colours(scene, b);
             tabs[Colour].icon = "Attraction_Colour";
             tabs[Colour].help = assets.strings->get("Scenery_SetFlexiColours");
             tabs[Colour].paints = { colours.begin(), colours.end() };

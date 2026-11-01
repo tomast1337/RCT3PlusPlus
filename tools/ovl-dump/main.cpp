@@ -1178,8 +1178,8 @@ namespace
                 }
                 out.info(
                     "  {:<32} v{:d}{} type {:d} positioning {:d} flags {:08x} squares {:d}x{:d} ({:d} without masks) masks {:d} cost {:d} visuals {:d} "
-                    "sounds {:d} params {:d} nodes {:d}",
-                    name.c_str(), it.version, it.compact ? " compact" : "", it.type, static_cast<unsigned>(it.positioning), it.flags, it.x_squares, it.z_squares, without_masks, masks, it.cost, it.visuals.size(), it.sounds.size(), it.parameters.size(), it.nodes.size());
+                    "sounds {:d} params {:d} nodes {:d} colours {} {} {}",
+                    name.c_str(), it.version, it.compact ? " compact" : "", it.type, static_cast<unsigned>(it.positioning), it.flags, it.x_squares, it.z_squares, without_masks, masks, it.cost, it.visuals.size(), it.sounds.size(), it.parameters.size(), it.nodes.size(), it.default_colours[0], it.default_colours[1], it.default_colours[2]);
                 for (const auto& sq : it.squares)
                     out.info("    square flags {:03x} levels {:d}..{:d}", sq.flags, sq.min_height, sq.max_height);
                 for (const auto& p : it.parameters)

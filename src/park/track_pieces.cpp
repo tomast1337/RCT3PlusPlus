@@ -224,6 +224,8 @@ namespace rct3::park
             r.squares = { static_cast<std::int32_t>(item->second.x_squares), static_cast<std::int32_t>(item->second.z_squares) };
             r.positioning = static_cast<Positioning>(item->second.positioning);
             r.cost = item->second.cost;
+            for (std::size_t k = 0; k < r.colours.size(); ++k)
+                r.colours[k] = static_cast<std::uint8_t>(item->second.default_colours[k]);
             const auto join = [&](std::string_view name, const ovl::JoinTags& tags, std::uint32_t width) {
                 const auto copied = [](const std::vector<std::string_view>& names) { return std::vector<std::string>(names.begin(), names.end()); };
                 return PieceJoin { std::string(name), copied(tags.offers), copied(tags.needs), copied(tags.forbids), width };

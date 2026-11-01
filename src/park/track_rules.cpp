@@ -75,6 +75,12 @@ namespace rct3::park
         return rules.pieces.empty() || std::ranges::any_of(rules.pieces, [&](const std::string& p) { return strings::equals_ignoring_case(p, piece); });
     }
 
+    save::RideColours starting_colours(const TrackRules& rules, std::span<const PieceShape> pieces)
+    {
+        const auto first = std::ranges::find_if(pieces, [&](const PieceShape& p) { return rules.pieces.empty() || strings::equals_ignoring_case(p.record.name, rules.pieces.front()); });
+        return first != pieces.end() ? first->record.colours : save::RideColours { };
+    }
+
     TrackRules load_track_rules(const std::filesystem::path& file, std::string_view symbol)
     {
         const std::string_view name = symbol.substr(0, symbol.find(':'));

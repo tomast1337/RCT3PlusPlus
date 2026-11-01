@@ -4,6 +4,7 @@
 #include "simulation/awards.hpp"
 #include "strings/unicode.hpp"
 #include "ui/text_layout.hpp"
+#include "ui/thought_text.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -35,6 +36,8 @@ namespace rct3::ui
         constexpr float kIconLeft = 18;
         constexpr float kIconSize = 18;
         constexpr float kTextLeft = 42;
+        constexpr float kMoodSize = 12;  ///< A thought's face, at kTextLeft
+        constexpr float kMoodShift = 16; ///< Of the text, past the face
         constexpr float kTextRight = 468;
         constexpr float kRowPadding = 4; ///< Added to the text's height; the text starts half of it down
         constexpr float kEmptyRow = 18;
@@ -112,7 +115,8 @@ namespace rct3::ui
         for (const auto& m : messages.list)
         {
             const std::string& icon = m.award ? style.award : m.text_key.starts_with(kGoalKeys) ? style.objective : m.text_key.starts_with(kInspectorKeys) ? style.inspector : style.locate;
-            out.push_back({ .serial = m.serial, .text = message_text(m, strings), .icon = icon, .clickable = m.award.has_value() });
+            const auto mood = key_mood(m.text_key);
+            out.push_back({ .serial = m.serial, .text = message_text(m, strings), .icon = icon, .mood = mood ? mood_icon(*mood) : std::string { }, .clickable = m.award.has_value() });
         }
         return out;
     }
@@ -248,7 +252,7 @@ namespace rct3::ui
             float height = kEmptyRow;
             if (font)
             {
-                if (const auto lines = break_lines(*font, m.text, kTextRight - kTextLeft).size(); lines > 0)
+                if (const auto lines = break_lines(*font, m.text, kTextRight - kTextLeft - (m.mood.empty() ? 0 : kMoodShift)).size(); lines > 0)
                     height = static_cast<float>(lines) * font->line_height() + kRowPadding;
             }
             row_heights_.push_back(height);
@@ -331,8 +335,15 @@ namespace rct3::ui
             context.list.fill({ r.x0 + kStripeLeft, top, r.x0 + kStripeRight, bottom }, even ? style_.stripe : style_.stripe_alt);
             if (!messages_[i].icon.empty())
                 draw_skin(context.list, context.skins.find(messages_[i].icon), { r.x0 + kIconLeft, top, r.x0 + kIconLeft + kIconSize, top + kIconSize });
+            float text_left = kTextLeft;
+            if (!messages_[i].mood.empty())
+            {
+                const float y = top + kRowPadding / 2 + 1;
+                draw_skin(context.list, context.skins.find(messages_[i].mood), { r.x0 + kTextLeft, y, r.x0 + kTextLeft + kMoodSize, y + kMoodSize });
+                text_left += kMoodShift;
+            }
             if (font)
-                draw_text(context.list, *font, messages_[i].text, { r.x0 + kTextLeft, top + kRowPadding / 2, r.x0 + kTextRight, bottom }, { style_.text_colour, Align::Start, Align::Start, true });
+                draw_text(context.list, *font, messages_[i].text, { r.x0 + text_left, top + kRowPadding / 2, r.x0 + kTextRight, bottom }, { style_.text_colour, Align::Start, Align::Start, true });
             bottom = top;
         }
     }

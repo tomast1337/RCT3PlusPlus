@@ -823,6 +823,15 @@ namespace rct3::scene
                 // A seller's post: the object of the stall or ride entrance they serve at.
                 if (const auto* work = p.staff && p.saved < park.people.staff.size() ? std::get_if<save::VendorWork>(&park.people.staff[p.saved].work) : nullptr; work != nullptr)
                     person["post"] = work->scenery_item.id;
+                // The thoughts their window lists, by number, in the order kept.
+                if (saved != nullptr)
+                {
+                    Json thoughts = Json::array();
+                    for (const save::Thought& t : saved->thoughts)
+                        if (!t.empty())
+                            thoughts.push_back(t.id);
+                    person["thoughts"] = std::move(thoughts);
+                }
                 const auto& r = park.sim.registry;
                 // A worker's job, in StaffRole's order.
                 constexpr std::array<std::string_view, 7> kRoles { "handyman", "mechanic", "guard", "other", "vendor", "keeper", "inspector" };

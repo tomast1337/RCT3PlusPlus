@@ -51,6 +51,7 @@ namespace rct3::ui
         std::uint64_t serial = 0; ///< Grows with each new message; see simulation::ParkMessage
         std::u16string text { };
         std::string icon { };   ///< Skin before the text
+        std::string mood { };   ///< A thought's face between the icon and the text, for a message telling a thought
         bool clickable = false; ///< A click on the icon leads to what the message is about
     };
 
@@ -71,6 +72,7 @@ namespace rct3::ui
 
     /// The drawer's messages, oldest first, each with the icon its kind has: an award's, a goal's, the inspector's,
     /// else the camera. Only an award's icon is clickable; the owner gives messages about an attraction theirs.
+    /// A message whose text is a thought, such as the inspector's reports, also has that thought's face.
     [[nodiscard]] std::vector<DrawerMessage> drawer_messages(const simulation::ParkMessages& messages, const StringTable& strings, const MessageDrawerStyle& style);
 
     /// The drawer's back and lip over `rect`, the drawer's own rectangle, without its messages.

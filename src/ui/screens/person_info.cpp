@@ -284,7 +284,7 @@ namespace rct3::ui
                 if (page.lines.size() == kListLines)
                     break;
                 if (std::u16string said = thought_text(strings, t->id, t->variant, attraction_called(f, t->about.id, strings)); !said.empty())
-                    page.lines.push_back({ std::move(said), { } });
+                    page.lines.push_back({ .label = std::move(said), .value = { }, .icon = mood_icon(thought_mood(t->id)) });
             }
         }
 

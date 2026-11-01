@@ -181,6 +181,8 @@ namespace rct3::ui
         inline constexpr float kPaintSize = 26;    ///< Of a page's pots
         inline constexpr float kNumberWidth = 70;  ///< Of a page's spinners
         inline constexpr float kChoiceWidth = 140; ///< Of a page's lists
+        inline constexpr float kLineIcon = 12;     ///< Of the picture before a line, such as a thought's face
+        inline constexpr float kLineIconGap = 4;   ///< Between that picture and the line's text
     } // namespace info_panel
 
     struct InfoLine
@@ -191,6 +193,7 @@ namespace rct3::ui
         std::string name = { };            ///< Its widgets' name: the label's string key, to find where it is made by
         std::optional<float> bar { };      ///< 0 to 1: its value sits on a bar filled that far
         Color bar_colour = hex("#40c040"); ///< The bar's filled part
+        std::string icon = { };            ///< Skin before the label, such as a thought's face
     };
 
     struct InfoSeries

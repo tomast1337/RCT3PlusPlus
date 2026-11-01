@@ -266,9 +266,15 @@ namespace rct3::ui
                     y += info_panel::kLineHeight;
                     right = false;
                 }
-                // A line without a value is text across the whole page.
+                // A line without a value is text across the whole page, after its picture if it has one.
                 const float label_width = l.value.empty() ? info_panel::kPageWidth : info_panel::kValueColumn;
-                Label& label = line(keyed_name(l.name, "label", i), l.label, 0, label_width, FontRole::Small);
+                float label_left = 0;
+                if (!l.icon.empty())
+                {
+                    body_->add<Panel>(keyed_name(l.name, "icon", i), l.icon).placement = top_left(0, y + (info_panel::kLineHeight - info_panel::kLineIcon) / 2, info_panel::kLineIcon, info_panel::kLineIcon);
+                    label_left = info_panel::kLineIcon + info_panel::kLineIconGap;
+                }
+                Label& label = line(keyed_name(l.name, "label", i), l.label, label_left, label_width - label_left, FontRole::Small);
                 // A bar goes under its value, so it is made first; place_page puts it where the value goes.
                 Panel* bar = l.bar ? &body_->add<Panel>(keyed_name(l.name, "bar", i), std::string { }) : nullptr;
                 Panel* filled = l.bar ? &body_->add<Panel>(keyed_name(l.name, "filled", i), std::string { }) : nullptr;

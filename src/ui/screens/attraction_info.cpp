@@ -669,7 +669,7 @@ namespace rct3::ui
                 if (page.lines.size() == kThoughtLines)
                     break;
                 if (std::u16string said = thought_text(strings, t->thought, t->variant, page.title); !said.empty())
-                    page.lines.push_back({ std::move(said), { } });
+                    page.lines.push_back({ .label = std::move(said), .value = { }, .icon = mood_icon(thought_mood(t->thought)) });
             }
         }
 

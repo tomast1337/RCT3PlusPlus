@@ -5,6 +5,7 @@
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/park_bar.hpp"
+#include "ui/thought_text.hpp"
 
 #include <doctest/doctest.h>
 #include <vector>
@@ -123,6 +124,19 @@ TEST_CASE("every message has an icon for its kind; only an award's leads somewhe
     CHECK(shown[3].icon == style.locate);
     for (std::size_t i = 1; i < shown.size(); ++i)
         CHECK_FALSE(shown[i].clickable);
+}
+
+TEST_CASE("a message telling a thought has the thought's face; others have none")
+{
+    StringTable strings;
+    const MessageDrawerStyle style = game_skins::message_drawer_style(kGamePalette);
+    simulation::ParkMessages messages;
+    simulation::post(messages, { .text_key = "Thought_PI_Stall_TooExpensive1", .subject = 3 });
+    simulation::post(messages, { .text_key = "RideFixedMessage", .subject = 7 });
+    const std::vector<DrawerMessage> shown = drawer_messages(messages, strings, style);
+    REQUIRE(shown.size() == 2);
+    CHECK(shown[0].mood == mood_icon(Mood::Sad));
+    CHECK(shown[1].mood.empty());
 }
 
 TEST_CASE("the drawer hides behind the bar, reached through the notch in its middle")

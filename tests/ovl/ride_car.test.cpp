@@ -8,7 +8,7 @@
 using namespace rct3::test;
 using rct3::ovl::read_ride_cars;
 
-TEST_CASE("ride cars expose their names, kind, visual, moving part, wheels and axles")
+TEST_CASE("ride cars expose their names, kind, visual, moving part, wheels, wheel turns and axles")
 {
     constexpr std::uint32_t sizes[] = { 0, 240, 0, 0, 292, 336 };
     for (std::uint32_t version : { 1u, 4u, 5u })
@@ -25,6 +25,7 @@ TEST_CASE("ride cars expose their names, kind, visual, moving part, wheels and a
         std::vector<std::byte> bytes;
         put(bytes, { name, display, 11, 0 });
         bytes.resize(sizes[version], std::byte { 0 });
+        bytes[0xB0] = std::byte { 1 }; // The front left wheel's piece turned half round
         const auto overlay = make_record_overlay(version, pool, "Test:ric", bytes, { { 0x0C, "testcar:svd" }, { 0x14, "tub:svd" }, { 0xAC, "rimfl:svd" }, { 0xC8, "axler:svd" } });
         const auto items = read_ride_cars(overlay, overlay.common());
         REQUIRE(items.size() == 1);
@@ -38,6 +39,7 @@ TEST_CASE("ride cars expose their names, kind, visual, moving part, wheels and a
         CHECK(car.part == "tub");
         CHECK(car.wheels[0].empty());
         CHECK(car.wheels[1] == "rimfl");
+        CHECK(car.wheels_turned == std::array { false, true, false, false });
         CHECK(car.axles[0].empty());
         CHECK(car.axles[1] == "axler");
         REQUIRE(car.references.size() == 4);

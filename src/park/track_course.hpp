@@ -89,6 +89,10 @@ namespace rct3::park
     /// Track left clear between trains queued one behind another, in metres.
     inline constexpr float kTrainGap = 2;
 
+    /// How long a train of cars fitted as `fits` (by car) is, front to rear: its cars' lengths, a link's being the
+    /// track from the rear of the car ahead of it to the front of the car behind, as stand_train stands them.
+    [[nodiscard]] float train_length(std::span<const CarFit> fits);
+
     /// How many trains of cars fitted as `fits` (by car) `course` takes: as many as fill half of it queued
     /// kTrainGap apart, so they have room to run (our own rule), no more than `cap` where the ride's kind sets
     /// one, and when kept a block apart (`blocks`) one fewer than it has blocks, each ending at a station, lift
@@ -110,7 +114,8 @@ namespace rct3::park
     /// Stands `train`'s cars nose to tail back along `course` from `front`, each fitted as `fits` has it (by
     /// car; a car past its end fits as the last): its front `length` behind the car before, its wheels on the
     /// track that far behind its front, and its on_track point midway between them, the car pointing from its
-    /// rear wheels to its front ones. Sets each car's distance (its front), length, wheels and place and turn
+    /// rear wheels to its front ones. A link between two cars reaches its length back along the track from where
+    /// the car ahead couples on, at the height they couple at, and the car behind couples on where it ends. Sets each car's distance (its front), length, wheels and place and turn
     /// as the park keeps them, and the train's distance (its front) and length. Nothing without fits.
     void stand_train(const TrackCourse& course, save::Train& train, std::span<const CarFit> fits, float front);
 

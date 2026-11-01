@@ -239,6 +239,13 @@ namespace rct3::park
             frame[3] = glm::vec4((front + rear) / 2.0f, 1);
             return frame;
         }
+        /// Track from the rear of the car ahead of `link` to the front of the car behind it: from where the one couples
+        /// on, the link's reach on, less how far back from its front the other couples on. Below zero where the cars'
+        /// ends overlap.
+        float link_gap(const CarFit& ahead, const CarFit& link, const CarFit& behind)
+        {
+            return ahead.link_rear - ahead.length + link.length - behind.link_front;
+        }
     } // namespace
 
     glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, Axles saved_at, float by)
@@ -251,12 +258,17 @@ namespace rct3::park
         return to * back * saved;
     }
 
+    float train_length(std::span<const CarFit> fits)
+    {
+        float length = 0;
+        for (std::size_t k = 0; k < fits.size(); ++k)
+            length += k > 0 && k + 1 < fits.size() && fits[k].link ? link_gap(fits[k - 1], fits[k], fits[k + 1]) : fits[k].length;
+        return length;
+    }
+
     int trains_fitting(const TrackCourse& course, std::span<const CarFit> fits, bool blocks, std::optional<std::uint32_t> cap)
     {
-        float train = kTrainGap;
-        for (const CarFit& fit : fits)
-            train += fit.length;
-        int most = static_cast<int>(course.length() / 2 / train);
+        int most = static_cast<int>(course.length() / 2 / (train_length(fits) + kTrainGap));
         if (cap)
             most = std::min(most, static_cast<int>(*cap));
         if (blocks && course.kinds.size() > 1)
@@ -326,22 +338,38 @@ namespace rct3::park
         train.distance = front;
         train.length = 0;
         float at = front;
+        const auto fit_of = [&](std::size_t k) -> const CarFit& { return fits[std::min(k, fits.size() - 1)]; };
         for (std::size_t k = 0; k < train.cars.size(); ++k)
         {
             save::Car& car = train.cars[k];
-            const CarFit& fit = fits[std::min(k, fits.size() - 1)];
+            const CarFit& fit = fit_of(k);
             car.distance = at;
-            car.length = fit.length;
-            car.front_wheel_distance = at - fit.front_wheels;
-            car.rear_wheel_distance = at - fit.rear_wheels;
-            const glm::mat4 place = glm::translate(frame_at(course, { car.front_wheel_distance, car.rear_wheel_distance }), -fit.on_track);
+            glm::mat4 frame;
+            if (fit.link && k > 0 && k + 1 < train.cars.size())
+            {
+                // From where the car ahead couples on back along the track, lifted to the height the cars couple at.
+                const CarFit& ahead = fit_of(k - 1);
+                const CarFit& behind = fit_of(k + 1);
+                car.length = link_gap(ahead, fit, behind);
+                car.front_wheel_distance = train.cars[k - 1].distance - ahead.link_rear;
+                car.rear_wheel_distance = car.front_wheel_distance - fit.length;
+                frame = glm::translate(frame_at(course, { car.front_wheel_distance, car.rear_wheel_distance }), { 0, (ahead.link_height + behind.link_height) / 2, 0 });
+            }
+            else
+            {
+                car.length = fit.length;
+                car.front_wheel_distance = at - fit.front_wheels;
+                car.rear_wheel_distance = at - fit.rear_wheels;
+                frame = frame_at(course, { car.front_wheel_distance, car.rear_wheel_distance });
+            }
+            const glm::mat4 place = glm::translate(frame, -fit.on_track);
             car.position = { place[3].x, place[3].y, place[3].z };
             const glm::quat turn = glm::quat_cast(glm::mat3(place));
             const glm::vec3 axis = glm::angle(turn) > 0 ? glm::axis(turn) * glm::angle(turn) : glm::vec3(0.0f);
             car.orientation = { axis.x, axis.y, axis.z };
             car.position_valid = true;
-            at -= fit.length;
-            train.length += fit.length;
+            at -= car.length;
+            train.length += car.length;
         }
     }
 

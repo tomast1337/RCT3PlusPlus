@@ -22,7 +22,9 @@
 #include <cmath>
 #include <cstdint>
 #include <format>
+#include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <limits>
 #include <map>
 #include <ranges>
 #include <span>
@@ -897,16 +899,19 @@ namespace rct3::park
             model.seats = std::max(model.seats, part->seats);
         }
 
-        // Axles on the car's axle bones, and wheels on its wheel bones or else on their axle's ends. A piece
-        // with no place to go is left off.
+        // Axles on the car's axle bones, and wheels on its wheel bones or else on their axle's ends. Only where a
+        // bone is counts: each piece keeps the car's way round however its bone is turned, but a wheel whose car
+        // marks it turned is turned half round, as where one side's wheels serve the other side too. A piece with
+        // no place to go is left off.
+        const auto at = [](const glm::mat4& bone) { return glm::translate(glm::mat4(1.0f), glm::vec3(bone[3])); };
         constexpr std::array<std::string_view, 2> kAxleBones { "axelf", "axelr" };
         constexpr std::array<std::string_view, 4> kWheelBones { "wheelfr", "wheelfl", "wheelrr", "wheelrl" };
         constexpr std::array<std::string_view, 2> kAxleEnds { "wheelr", "wheell" };
         std::array<std::optional<glm::mat4>, 2> axles;
         for (std::size_t i = 0; i < axles.size(); ++i)
             if (!car->axles[i].empty())
-                if ((axles[i] = bone_of(car->visual, kAxleBones[i])))
-                    add(car->axles[i], *axles[i]);
+                if (const auto bone = bone_of(car->visual, kAxleBones[i]))
+                    add(car->axles[i], *(axles[i] = at(*bone)));
         for (std::size_t i = 0; i < car->wheels.size(); ++i)
         {
             std::optional<glm::mat4> place = car->wheels[i].empty() ? std::nullopt : bone_of(car->visual, kWheelBones[i]);
@@ -914,34 +919,71 @@ namespace rct3::park
                 if (const auto end = bone_of(car->axles[i / 2], kAxleEnds[i % 2]))
                     place = *axles[i / 2] * *end;
             if (place)
-                add(car->wheels[i], *place);
+                add(car->wheels[i], car->wheels_turned[i] ? glm::rotate(at(*place), glm::pi<float>(), { 0, 1, 0 }) : at(*place));
         }
-        if (const auto front = bone_of(car->visual, "carfront"), rear = bone_of(car->visual, "carrear"); front && rear)
+        const auto car_front = bone_of(car->visual, "carfront"), car_rear = bone_of(car->visual, "carrear");
+        if (car_front && car_rear)
         {
             CarFit& fit = model.car_fit.emplace();
-            const float front_z = (*front)[3].z;
-            fit.length = front_z - (*rear)[3].z;
-            // By axle, the middle of the wheels it has bones for, on the car or at its axle's ends.
-            std::array<glm::vec3, 2> sum { };
-            std::array<int, 2> found { };
-            for (std::size_t i = 0; i < kWheelBones.size(); ++i)
-            {
-                std::optional<glm::mat4> wheel = bone_of(car->visual, kWheelBones[i]);
-                if (!wheel && axles[i / 2])
-                    if (const auto end = bone_of(car->axles[i / 2], kAxleEnds[i % 2]))
-                        wheel = *axles[i / 2] * *end;
-                if (wheel)
-                {
-                    sum[i / 2] += glm::vec3((*wheel)[3]);
-                    ++found[i / 2];
-                }
-            }
+            const float front_z = (*car_front)[3].z;
+            fit.length = front_z - (*car_rear)[3].z;
+            // By axle: on an axle piece, the middle of the wheel bones that piece has, else the axle's own place;
+            // without one, the middle of the car's wheel bones for that axle; else the car's middle.
             const glm::vec3 middle { 0, 0, front_z - fit.length / 2 };
-            const glm::vec3 front_wheels = found[0] > 0 ? sum[0] / static_cast<float>(found[0]) : middle;
-            const glm::vec3 rear_wheels = found[1] > 0 ? sum[1] / static_cast<float>(found[1]) : middle;
-            fit.front_wheels = front_z - front_wheels.z;
-            fit.rear_wheels = front_z - rear_wheels.z;
-            fit.on_track = (front_wheels + rear_wheels) / 2.0f;
+            std::array<glm::vec3, 2> wheels { middle, middle };
+            for (std::size_t i = 0; i < wheels.size(); ++i)
+            {
+                glm::vec3 sum { 0.0f };
+                int found = 0;
+                const auto count = [&](std::string_view piece, std::string_view bone, const glm::mat4& place) {
+                    if (const auto wheel = bone_of(piece, bone))
+                    {
+                        sum += glm::vec3(place * (*wheel)[3]);
+                        ++found;
+                    }
+                };
+                if (axles[i])
+                {
+                    for (const std::string_view bone : kWheelBones)
+                        count(car->axles[i], bone, *axles[i]);
+                    for (const std::string_view bone : kAxleEnds)
+                        count(car->axles[i], bone, *axles[i]);
+                    if (found == 0)
+                    {
+                        sum = glm::vec3((*axles[i])[3]);
+                        found = 1;
+                    }
+                }
+                else
+                    for (std::size_t k = 2 * i; k < 2 * i + 2; ++k)
+                        count(car->visual, kWheelBones[k], glm::mat4(1.0f));
+                if (found > 0)
+                    wheels[i] = sum / static_cast<float>(found);
+            }
+            fit.front_wheels = front_z - wheels[0].z;
+            fit.rear_wheels = front_z - wheels[1].z;
+            fit.on_track = (wheels[0] + wheels[1]) / 2.0f;
+            // Where links couple on, and how high.
+            const auto link_front = bone_of(car->visual, "linkfront"), link_rear = bone_of(car->visual, "linkrear");
+            fit.link_front = link_front ? front_z - (*link_front)[3].z : 0;
+            fit.link_rear = link_rear ? front_z - (*link_rear)[3].z : fit.length;
+            const int links = (link_front ? 1 : 0) + (link_rear ? 1 : 0);
+            if (links > 0)
+                fit.link_height = ((link_front ? (*link_front)[3].y : 0) + (link_rear ? (*link_rear)[3].y : 0)) / static_cast<float>(links) - fit.on_track.y;
+            fit.link = slot == kLinkSlot;
+        }
+        else if (slot == kLinkSlot && !model.levels.empty())
+        {
+            // A link without bones at its ends reaches as far as its finest shape does, front to back.
+            float low = std::numeric_limits<float>::max(), high = std::numeric_limits<float>::lowest();
+            for (const ModelPart& part : model.levels.front().parts)
+                for (const ModelVertex& vertex : part.vertices)
+                {
+                    low = std::min(low, vertex.position.z);
+                    high = std::max(high, vertex.position.z);
+                }
+            if (low <= high)
+                model.car_fit = CarFit { .length = high - low, .front_wheels = 0, .rear_wheels = high - low, .on_track = { 0, 0, (low + high) / 2 }, .link_front = 0, .link_rear = high - low, .link_height = 0, .link = true };
         }
         const std::optional<glm::mat4> front = bone_of(car->visual, "camerafront");
         model.ride_eyes = { bone_of(car->visual, "nosecamera").or_else([&] { return front; }), front, bone_of(car->visual, "camerarear") };

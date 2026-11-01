@@ -33,6 +33,9 @@ namespace rct3::ovl
         std::string_view part;
         /// "svd" items of the wheels: front right, front left, rear right, rear left; empty where it has none.
         std::array<std::string_view, 4> wheels;
+        /// By wheel, whether its piece is drawn turned half round about the car's up, as where one side's wheel
+        /// piece also serves the other side (the word after each wheel's reference is not 0).
+        std::array<bool, 4> wheels_turned { };
         /// "svd" items of the front and rear axles, which may carry the wheels; empty where it has none.
         std::array<std::string_view, 2> axles;
         /// Of the visual's animations, by number, the ones a rowing boat rows by: straight on with both oars,

@@ -99,6 +99,9 @@ namespace rct3::park
         std::optional<Billboard> billboard;
     };
 
+    /// The slot of a train's car designs that holds the link coupling its cars, where it has one.
+    inline constexpr std::size_t kLinkSlot = 5;
+
     /// How a car sits on its track, in its own space, where it faces +z.
     struct CarFit
     {
@@ -107,6 +110,14 @@ namespace rct3::park
         float rear_wheels = 0;  ///< How far behind its front its rear wheels are
         /// The point midway between its front and rear wheels, which stands on the track.
         glm::vec3 on_track { 0.0f };
+        /// How far behind its front a link ahead of it couples on, and one behind it: its bones named
+        /// "linkfront" and "linkrear", or else its front and its rear.
+        float link_front = 0;
+        float link_rear = 0;
+        float link_height = 0; ///< How high over its on_track point those bones are, on average
+        /// A link (kLinkSlot) between the cars either side: `length` is how far along the track it reaches from
+        /// where the car ahead couples on to where the car behind does, and its on_track point stands midway.
+        bool link = false;
     };
 
     /// The cameras a car may have: on its nose, which only the train's first car shows, at its front seat

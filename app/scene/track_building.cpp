@@ -1549,11 +1549,12 @@ namespace rct3::scene
         std::array<bool, 6> filled { };
         for (std::size_t slot = 0; slot < designs.size(); ++slot)
             filled[slot] = (designs[slot] = loader.load_car(name, path, slot)).has_value();
-        const auto length_of = [&](const std::vector<std::size_t>& slots) {
-            float length = 0;
+        // How each car of a train filling `slots` sits, by car; one without a model of its own takes no room.
+        const auto fits_of = [&](const std::vector<std::size_t>& slots) {
+            std::vector<park::CarFit> fits;
             for (const std::size_t slot : slots)
-                length += designs[slot] && designs[slot]->car_fit ? designs[slot]->car_fit->length : 0;
-            return length;
+                fits.push_back(designs[slot] && designs[slot]->car_fit ? *designs[slot]->car_fit : park::CarFit { });
+            return fits;
         };
         // On a course with a station, as many cars as its shortest station takes, as in the game; where even the
         // fewest its kind allows do not fit, that many all the same, so that any circuit runs.
@@ -1564,7 +1565,7 @@ namespace rct3::scene
             const int fewest = std::min(limits != scene.train_limits.end() ? limits->second.fewest_cars : 1, cars);
             std::vector<float> lengths;
             for (int n = 1; n <= cars; ++n)
-                lengths.push_back(length_of(park::car_slots(n, filled)));
+                lengths.push_back(park::train_length(fits_of(park::car_slots(n, filled))));
             const int fit = park::cars_fitting(*course, lengths, fewest);
             cars = fit > 0 ? fit : fewest;
         }
@@ -1572,11 +1573,9 @@ namespace rct3::scene
         while (cars < 2 && std::ranges::none_of(park::car_slots(cars, filled), [&](std::size_t slot) { return designs[slot] && designs[slot]->seats > 0; }))
             ++cars;
         const std::vector<std::size_t> slots = park::car_slots(cars, filled);
-        std::vector<park::CarFit>& fits = scene.car_fits[index];
-        fits.clear();
-        for (const std::size_t slot : slots)
-            if (designs[slot] && designs[slot]->car_fit)
-                fits.push_back(*designs[slot]->car_fit);
+        std::vector<park::CarFit>& fits = scene.car_fits[index] = fits_of(slots);
+        if (std::ranges::none_of(slots, [&](std::size_t slot) { return designs[slot] && designs[slot]->car_fit; }))
+            fits.clear(); // Nothing to stand them by
         // As many trains as the course takes; a shuttle runs one.
         if (const auto coaster = course ? simulation::coaster_of(*course, ride) : std::nullopt; coaster && coaster->shuttle != simulation::Shuttle::None)
             trains = 1;
@@ -1598,7 +1597,7 @@ namespace rct3::scene
                 for (std::uint32_t seat = 0; seated && seat < seated->seats; ++seat)
                     ride.seats.push_back({ .car = static_cast<std::int32_t>(car), .seat = static_cast<std::int32_t>(seat), .train = t });
             }
-            train.length = length_of(slots);
+            train.length = park::train_length(fits);
         }
         ride.train_count = trains;
         ride.cars_per_train = cars;

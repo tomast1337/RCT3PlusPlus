@@ -185,7 +185,13 @@ namespace rct3::park
         std::vector<PieceShape> pieces;
     };
 
-    /// The catalogue of the track overlay whose common file is `file`, named `overlay` as a park names it.
+    /// The other common files in the folder of the track overlay whose common file is `file` that hold sections, by
+    /// the loaders their headers list, in name order: a set's pieces may come in further files beside its own, as
+    /// an expansion's do, which its rides do not name.
+    [[nodiscard]] std::vector<std::filesystem::path> piece_files_beside(const std::filesystem::path& file);
+
+    /// The catalogue of the track overlay whose common file is `file`, named `overlay` as a park names it, with the
+    /// sections of the other overlays in its folder that hold any (its own come first where names repeat).
     /// Sections whose splines or scenery item are missing are left out.
     [[nodiscard]] std::expected<PieceCatalogue, std::string> load_piece_catalogue(const std::filesystem::path& file, std::string overlay);
 

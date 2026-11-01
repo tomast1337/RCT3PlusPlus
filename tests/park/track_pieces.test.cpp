@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track_pieces.hpp"
 
+#include "../ovl/builder.hpp"
 #include "../ovl/record_file.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <doctest/doctest.h>
+#include <filesystem>
 #include <format>
+#include <fstream>
 #include <vector>
 
 using namespace rct3;
@@ -295,4 +298,32 @@ TEST_CASE("a ride's file names the track overlay its pieces come from")
     pool.add("Ride:trr");
     const ovl::Overlay ride = test::make_record_overlay(5, pool, "Ride:trr", std::vector<std::byte>(16));
     CHECK(named_overlays(ride, "rides/Ride/Ride") == std::vector<std::string> { "rides/Pieces/Pieces", "Icons/Icons" });
+}
+
+TEST_CASE("a track set's pieces are also looked for in the files beside it whose loaders include sections")
+{
+    namespace fs = std::filesystem;
+    const fs::path dir = fs::temp_directory_path() / "rct3pp_piece_files_beside";
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    // The header of a file whose one loader has the tag `tag`.
+    const auto write = [&](const std::string& name, const std::string& tag) {
+        test::Builder b;
+        b.raw("FGRK", 4);
+        b.u8(0x02), b.u8(0), b.u8(0), b.u8(0);
+        b.u32(5), b.u32(0x10);
+        b.u16(0), b.u16(0); // No stream block
+        b.u32(0), b.u32(0); // No references
+        b.u32(1);
+        b.str("FGDK"), b.str("Loader"), b.u32(1), b.str(tag);
+        b.u32(0), b.u32(1);
+        std::ofstream(dir / name, std::ios::binary).write(reinterpret_cast<const char*>(b.bytes.data()), static_cast<std::streamsize>(b.bytes.size()));
+    };
+    write("Set.common.ovl", "tks");
+    write("Set_More.common.ovl", "tks");
+    write("Bend_data.common.ovl", "shs");
+    write("Set_More.unique.ovl", "tks");
+    std::ofstream(dir / "Broken.common.ovl") << "not an overlay";
+    CHECK(piece_files_beside(dir / "Set.common.ovl") == std::vector { dir / "Set_More.common.ovl" });
+    fs::remove_all(dir);
 }

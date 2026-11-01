@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <bit>
 #include <cmath>
+#include <fstream>
 #include <iterator>
 #include <map>
 #include <numbers>
@@ -173,31 +174,62 @@ namespace rct3::park
         return out;
     }
 
+    std::vector<std::filesystem::path> piece_files_beside(const std::filesystem::path& file)
+    {
+        constexpr std::string_view kCommon = ".common.ovl";
+        constexpr std::size_t kHeaderBytes = 64 * 1024; ///< Ample for an OVL header and its loader table
+        std::vector<std::filesystem::path> beside;
+        std::error_code error;
+        for (auto it = std::filesystem::directory_iterator(file.parent_path(), error); !error && it != std::filesystem::directory_iterator(); it.increment(error))
+        {
+            const std::string name = it->path().filename().string();
+            if (it->path() == file || name.size() <= kCommon.size() || !strings::equals_ignoring_case(std::string_view(name).substr(name.size() - kCommon.size()), kCommon))
+                continue;
+            std::ifstream in(it->path(), std::ios::binary);
+            std::vector<char> head(kHeaderBytes);
+            in.read(head.data(), static_cast<std::streamsize>(head.size()));
+            head.resize(static_cast<std::size_t>(in.gcount()));
+            const auto header = ovl::parse_header(std::as_bytes(std::span(head)));
+            if (header && std::ranges::any_of(header->loaders, [](const ovl::Loader& l) { return l.tag == "tks"; }))
+                beside.push_back(it->path());
+        }
+        std::ranges::sort(beside);
+        return beside;
+    }
+
     std::expected<PieceCatalogue, std::string> load_piece_catalogue(const std::filesystem::path& file, std::string overlay)
     {
-        auto loaded = ovl::Overlay::load(file);
-        if (!loaded)
-            return std::unexpected(std::string(ovl::to_string(loaded.error())));
+        auto first = ovl::Overlay::load(file);
+        if (!first)
+            return std::unexpected(std::string(ovl::to_string(first.error())));
+        std::vector<ovl::Overlay> loaded;
+        loaded.push_back(std::move(*first));
+        for (const std::filesystem::path& path : piece_files_beside(file))
+            if (auto more = ovl::Overlay::load(path))
+                loaded.push_back(std::move(*more));
         // Sections name their splines and items in any case.
         std::map<std::string, ovl::Spline, strings::LessIgnoringCase> splines;
         std::map<std::string, ovl::SceneryItem, strings::LessIgnoringCase> items;
         std::vector<ovl::TrackSectionItem> sections;
-        for (const auto part : { maybe(&loaded->common()), loaded->unique() })
-        {
-            if (!part)
-                continue;
-            for (ovl::SplineItem& s : ovl::read_splines(*loaded, *part))
+        for (const ovl::Overlay& o : loaded)
+            for (const auto part : { maybe(&o.common()), o.unique() })
             {
-                if (s.spline)
-                    splines.try_emplace(std::string(s.name), std::move(*s.spline));
+                if (!part)
+                    continue;
+                for (ovl::SplineItem& s : ovl::read_splines(o, *part))
+                {
+                    if (s.spline)
+                        splines.try_emplace(std::string(s.name), std::move(*s.spline));
+                }
+                for (ovl::SceneryItemEntry& e : ovl::read_scenery_items(o, *part))
+                {
+                    if (e.item)
+                        items.try_emplace(std::string(e.name), std::move(*e.item));
+                }
+                for (ovl::TrackSectionItem& t : ovl::read_track_sections(o, *part))
+                    if (std::ranges::none_of(sections, [&](const ovl::TrackSectionItem& had) { return strings::equals_ignoring_case(had.name, t.name); }))
+                        sections.push_back(std::move(t));
             }
-            for (ovl::SceneryItemEntry& e : ovl::read_scenery_items(*loaded, *part))
-            {
-                if (e.item)
-                    items.try_emplace(std::string(e.name), std::move(*e.item));
-            }
-            std::ranges::move(ovl::read_track_sections(*loaded, *part), std::back_inserter(sections));
-        }
         std::vector<PieceRecord> records;
         std::vector<PieceLine> lines;
         for (const ovl::TrackSectionItem& t : sections)

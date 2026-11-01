@@ -585,7 +585,7 @@ namespace rct3::scene
             {
                 // Ground queues keep an elevation too, with the on-ground slope.
                 const bool raised = p.elevation && p.elevation->slope != save::kSlopeOnGround;
-                paths.push_back({ { "col", p.col }, { "row", p.row }, { "raised", raised }, { "queue", p.kind == save::PathKind::Queue } });
+                paths.push_back({ { "col", p.col }, { "row", p.row }, { "raised", raised }, { "queue", p.kind == save::PathKind::Queue }, { "style", p.surface_name } });
                 if (raised)
                     paths.back()["height"] = p.elevation->quantised_height;
             }
@@ -593,9 +593,14 @@ namespace rct3::scene
         });
         engine_.define("map.pavings", [this](const Json&) {
             Json tiles = Json::array();
-            for (const park::Paving& p : park_of(park_).footpaths.pavings)
+            const ParkFootpaths& f = park_of(park_).footpaths;
+            const std::vector<park::PavedTile> laid = park::lay_pavings(f.paths, f.pavings, park_->grid);
+            for (const park::Paving& p : f.pavings)
                 for (const save::Tile t : p.tiles)
-                    tiles.push_back({ { "col", t.col }, { "row", t.row }, { "height", p.height } });
+                {
+                    const auto paved = std::ranges::find_if(laid, [&](const park::PavedTile& l) { return l.path.col == t.col && l.path.row == t.row; });
+                    tiles.push_back({ { "col", t.col }, { "row", t.row }, { "height", p.height }, { "style", paved != laid.end() ? paved->path.surface_name : "" } });
+                }
             return tiles;
         });
         engine_.define("map.supports", [this](const Json&) {
@@ -1002,6 +1007,9 @@ namespace rct3::scene
                         one["queue"] = c->queue.size();
                         one["queueLine"] = c->line.size();
                         one["stops"] = c->stops.size();
+                        // The path tile its first station lets riders out onto.
+                        if (c->exit != simulation::kNoNode)
+                            one["exitAt"] = { { "col", park.sim.paths.nodes()[c->exit].tile.col }, { "row", park.sim.paths.nodes()[c->exit].tile.row } };
                         // A tracked ride's riders are aboard its trains.
                         std::size_t riders = c->riders.size();
                         if (const auto* fleet = registry.try_get<simulation::Trains>(e))

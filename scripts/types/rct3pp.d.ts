@@ -178,6 +178,8 @@ interface PathPiece {
     /** Off the ground, on supports. */
     raised: boolean;
     queue: boolean;
+    /** The path style it is laid in. */
+    style: string;
     /** Of a raised piece, in the game's height steps. */
     height?: number;
 }
@@ -196,8 +198,9 @@ declare namespace map {
      *  undefined when it is not in sight. */
     function screen(col: number, row: number): { x: number; y: number } | undefined;
     function paths(): PathPiece[];
-    /** The tiles the rides and stalls pave: their doors, floors and the ground under stalls. */
-    function pavings(): { col: number; row: number; height: number }[];
+    /** The tiles the rides and stalls pave: their doors, floors and the ground under stalls, and the path style
+     *  each is paved in (empty where a path covers it). */
+    function pavings(): { col: number; row: number; height: number; style: string }[];
     /** The tiles with support columns standing on them, and how many pieces each has. */
     function supports(): { col: number; row: number; pieces: number }[];
     /** The placed objects that are shown: scenery, rides' parts, supports, fences and the rest, with the whole-unit
@@ -338,6 +341,8 @@ interface RideInfo {
     queueLine?: number;
     /** Rides with several stations: the stations after the first its trains stop at for riders. */
     stops?: number;
+    /** The path tile its first station lets riders out onto; absent while no path joins its exit. */
+    exitAt?: { col: number; row: number };
     riders?: number;
     /** Excitement, intensity and nausea, 0..1. */
     ratings?: [number, number, number];

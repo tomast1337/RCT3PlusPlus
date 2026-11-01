@@ -507,6 +507,8 @@ namespace rct3::scene
                     b.candidates = park::pieces_after(c->pieces, b.tip->end, turned);
                 }
             }
+            // Only the pieces its kind lists, not others of the same track overlay.
+            std::erase_if(b.candidates, [&](const park::LaidPiece& l) { return !park::lists_piece(rules, c->pieces[l.index].record.name); });
             // Only pieces that can be laid there, so a piece offered one way round is not hidden by the other.
             if (!starting)
                 std::erase_if(b.candidates, [&](const park::LaidPiece& l) { return !park::place_after(*b.tip, c->pieces[l.index], l.reversed, scene.grid); });
@@ -516,6 +518,9 @@ namespace rct3::scene
                     const park::PieceRecord& r = c->pieces[l.index].record;
                     return park::split_joined(b.split) == r.partner.empty() || (starting && r.side != park::split_side(b.split));
                 });
+            // A track being begun starts on its station, as the panel picks the station before the player picks.
+            if (std::exchange(b.station_first, false) && starting)
+                b.choice = park::opening_choice(c->pieces, b.candidates);
             b.choice = park::settle_choice(c->pieces, b.candidates, b.choice);
             b.picked = park::chosen_piece(c->pieces, b.candidates, b.choice);
             if (starting && !b.design.empty())
@@ -630,9 +635,9 @@ namespace rct3::scene
             std::optional<park::LaidPiece> laid;
         };
 
-        /// Every piece of `c` with a use of its own, stations first, then in the file's order, once for each
-        /// name and marks; those `o` offers where the track ends are offered.
-        std::vector<ListedPiece> listed_pieces(const ui::StringTable& strings, const park::PieceCatalogue& c, const park::ChoiceOptions& o)
+        /// Every piece of `c` with a use of its own that `rules` let the ride build, stations first, then in the
+        /// file's order, once for each name and marks; those `o` offers where the track ends are offered.
+        std::vector<ListedPiece> listed_pieces(const ui::StringTable& strings, const park::PieceCatalogue& c, const park::TrackRules& rules, const park::ChoiceOptions& o)
         {
             const auto shown_as = [&](const park::PieceShape& p) {
                 ui::NamedPiece n { .name = piece_name(strings, p.record.name), .offered = false };
@@ -660,7 +665,7 @@ namespace rct3::scene
             {
                 for (const park::PieceShape& p : c.pieces)
                 {
-                    if (p.use != use)
+                    if (p.use != use || !park::lists_piece(rules, p.record.name))
                         continue;
                     ui::NamedPiece n = shown_as(p);
                     if (std::ranges::none_of(list, [&](const ListedPiece& l) { return same(l.shown, n); }))
@@ -720,7 +725,7 @@ namespace rct3::scene
                 if ((o.any_toggles & bit) != 0)
                     v.toggles.at(i) = state_of((b.choice.toggles & o.toggles & bit) != 0, (o.toggles & bit) != 0);
             }
-            for (ListedPiece& l : listed_pieces(*assets.strings, *c, o))
+            for (ListedPiece& l : listed_pieces(*assets.strings, *c, rules, o))
             {
                 if (l.laid && b.choice.named == l.laid)
                     v.named_on = v.named.size();
@@ -1061,9 +1066,11 @@ namespace rct3::scene
                 const park::LaidPiece start { static_cast<std::size_t>(&*shape - c->pieces.data()), first.reversed };
                 // shortcut: the way found may cross itself, as only what stands already is in its way; keep the pieces
                 // laid in thought in its way too if a found way does.
-                b.completing = park::start_completion(c->pieces, *b.tip, *last, park::start_of(scene.objects[object->second], *shape, first.reversed, scene.grid), start, scene.grid, [&scene, &b, &assets, taken = taken_room(scene, b)](save::PlacedObject o) {
+                const park::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::TrackRules { };
+                b.completing = park::start_completion(c->pieces, *b.tip, *last, park::start_of(scene.objects[object->second], *shape, first.reversed, scene.grid), start, scene.grid, [&scene, &b, &assets, c, rules, taken = taken_room(scene, b)](save::PlacedObject o) {
                     o.overlay = b.overlay;
-                    return !off_water(scene, b, assets, o) && !clashes(scene, taken, o);
+                    const bool listed = std::ranges::any_of(c->pieces, [&](const park::PieceShape& p) { return p.record.item == o.symbol && park::lists_piece(rules, p.record.name); });
+                    return listed && !off_water(scene, b, assets, o) && !clashes(scene, taken, o);
                 });
                 return;
             }
@@ -1982,6 +1989,7 @@ namespace rct3::scene
         b.ride = ride;
         b.overlay = std::move(overlay);
         b.choice = { };
+        b.station_first = true;
         b.selected.reset();
         b.aim.reset();
         b.turns = 0;
@@ -2301,7 +2309,8 @@ namespace rct3::scene
                     break;
                 case Named:
                 {
-                    const std::vector<ListedPiece> list = listed_pieces(*assets.strings, *c, park::choice_options(c->pieces, b.candidates, b.choice));
+                    const park::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::TrackRules { };
+                    const std::vector<ListedPiece> list = listed_pieces(*assets.strings, *c, rules, park::choice_options(c->pieces, b.candidates, b.choice));
                     if (event->index < list.size() && list[event->index].laid)
                         b.choice.named = list[event->index].laid;
                     break;

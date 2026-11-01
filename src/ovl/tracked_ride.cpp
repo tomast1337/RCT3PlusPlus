@@ -64,6 +64,25 @@ namespace rct3::ovl
             return d;
         }
 
+        /// The pieces the ride lists: a pointer at 0x04 of the ride parameters to a list of "tks" references.
+        /// The count is at 0x00, or at 0x130 when 0x00 holds -1, as in later items.
+        std::vector<std::string_view> read_pieces(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, std::uint32_t version)
+        {
+            std::vector<std::string_view> out;
+            const auto r = ItemRecord::open(space, refs, address + (version == 1 ? 0x50 : 0), 0x134);
+            if (!r)
+                return out;
+            constexpr std::uint32_t kMostPieces = 4096; // A bound against a stray count
+            const std::uint32_t count = std::min(r->u32(0x00) == 0xFFFFFFFF ? r->u32(0x130) : r->u32(0x00), kMostPieces);
+            const auto list = count == 0 ? std::nullopt : ItemRecord::open(space, refs, r->u32(0x04), std::size_t { count } * 4);
+            for (std::uint32_t i = 0; list && i < count; ++i)
+            {
+                if (const std::string_view name = list->ref(i * 4, "tks"); !name.empty())
+                    out.push_back(name);
+            }
+            return out;
+        }
+
         /// A piece test as an entry stores it: a word whose low byte is the kind and next byte the flags (0x1
         /// negate, 0x2 forward, 0x4 backward, 0x8 first, 0x10 last), then the group's name or the piece.
         PieceTest piece_test(const ItemRecord& entry, std::size_t at)
@@ -146,13 +165,13 @@ namespace rct3::ovl
                     ride.info = detail::read_attraction(*record, kFields, version);
                     ride.operating = read_operating(space, refs, symbol.data, version);
                     ride.guests = detail::read_ride_guests(space, refs, symbol.data + 0x38);
+                    ride.pieces = read_pieces(space, refs, symbol.data, version);
                     item.ride = ride;
                 }
             }
             else if (const auto record = ItemRecord::open(space, refs, symbol.data, kLaterSize))
             {
                 TrackedRide ride;
-                ride.name = record->text(0x04);
                 for (std::size_t i = 0; i < ride.track_sections.size(); ++i)
                 {
                     ride.track_sections[i] = record->ref(0xD4 + i * 4, "tks");
@@ -166,6 +185,7 @@ namespace rct3::ovl
                     ride.guests = detail::read_ride_guests(space, refs, fields);
                 ride.operating = read_operating(space, refs, symbol.data, version);
                 ride.rules = read_rules(space, refs, symbol.data, fields, version);
+                ride.pieces = read_pieces(space, refs, symbol.data, version);
                 item.ride = std::move(ride);
             }
             items.push_back(std::move(item));

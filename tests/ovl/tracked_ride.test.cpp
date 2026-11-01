@@ -36,21 +36,24 @@ TEST_CASE("version 1 tracked rides start with the attraction fields")
     CHECK(i.value_c == 2500);
 }
 
-TEST_CASE("version 5 tracked rides give a name, track sections and splines")
+TEST_CASE("version 5 tracked rides give the pieces they list, track sections and splines")
 {
     Pool pool;
-    const auto name = pool.add("Coaster");
     pool.add("Coaster:trr");
     pool.add("Lift:tks");
+    pool.add("Straight:tks");
     pool.add("Path:spl");
+    constexpr std::uint32_t list = 0x140; // within the record, past its fixed part
     std::vector<std::byte> bytes;
-    put(bytes, { 0xFFFFFFFF, name });
+    put(bytes, { 0xFFFFFFFF, pool.base() + list });
     bytes.resize(0x130, std::byte { 0 });
-    const auto overlay = make_record_overlay(5, pool, "Coaster:trr", bytes, { { 0xD8, "Lift:tks" }, { 0x114, "Path:spl" }, { 0x120, "Path:spl" } });
+    put(bytes, { 2u });
+    bytes.resize(list + 8, std::byte { 0 });
+    const auto overlay = make_record_overlay(5, pool, "Coaster:trr", bytes, { { 0xD8, "Lift:tks" }, { 0x114, "Path:spl" }, { 0x120, "Path:spl" }, { list, "Straight:tks" }, { list + 4, "Lift:tks" } });
     const auto items = read_tracked_rides(overlay, overlay.common());
     REQUIRE(items[0].ride.has_value());
     const auto& r = *items[0].ride;
-    CHECK(r.name == "Coaster");
+    CHECK(r.pieces == std::vector<std::string_view> { "Straight", "Lift" });
     CHECK(r.track_sections[0].empty());
     CHECK(r.track_sections[1] == "Lift");
     CHECK(r.splines[0] == "Path");

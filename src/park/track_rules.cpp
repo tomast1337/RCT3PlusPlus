@@ -64,9 +64,15 @@ namespace rct3::park
             for (const ovl::PatternEntry& e : pattern)
                 copied.push_back({ piece_test(e.when), piece_test(e.becomes) });
         }
+        rules.pieces.assign(ride.pieces.begin(), ride.pieces.end());
         const auto& slots = ride.track_sections;
         rules.builds_back = !slots[0].empty() && !slots[1].empty() && slots[2].empty() && slots[3].empty();
         return rules;
+    }
+
+    bool lists_piece(const TrackRules& rules, std::string_view piece)
+    {
+        return rules.pieces.empty() || std::ranges::any_of(rules.pieces, [&](const std::string& p) { return strings::equals_ignoring_case(p, piece); });
     }
 
     TrackRules load_track_rules(const std::filesystem::path& file, std::string_view symbol)

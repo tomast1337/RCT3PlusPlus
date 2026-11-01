@@ -109,6 +109,7 @@ namespace rct3::scene
         std::optional<Lift> lift;
         std::vector<park::LaidPiece> candidates;
         park::TrackChoice choice;
+        bool station_first = false; ///< The choice is still to be set to the station of a track being begun
         std::optional<park::LaidPiece> picked;
         std::optional<park::PiecePlacement> ghost;
         /// A piece between two others clicked in the park, by place in the ride's track: the panel offers what

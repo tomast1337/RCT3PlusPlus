@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Builds a station of five pieces for a steel coaster, a wooden coaster, the mini railway and the haunted hotel on
-// the game's blank landscape: each station piece stands in its platform model, of the type its ride's train names
-// (or its kind's, when the train names none), capped at the station's two ends. The steel coaster's park is saved
-// and loaded again, and its platforms are still there.
+// Builds a station of five pieces for a steel coaster, a wooden coaster, the mini railway, the haunted hotel and the
+// corkscrew coaster on the game's blank landscape: each new track starts on its kind's plain station, and each
+// station piece stands in its platform model, of the type its ride's train names (or its kind's, when the train
+// names none), capped at the station's two ends. The steel coaster's park is saved and loaded again, and its
+// platforms are still there.
 //
 //   ./nob script scripts/tests/station_models.ts -- --no-audio
 
@@ -33,24 +34,26 @@ async function station(overlay: string, kind: string): Promise<number> {
     const p = map.screen(at.col, at.row)!;
     pointer.move(p.x, p.y);
     await frames(10);
-    // The plain station among the pictured pieces, clicked again to build it.
-    let special: string | undefined;
-    for (let i = 0; i < 8 && special === undefined; ++i) {
-        const button = `placing/body/construction/special${i}`;
-        if (ui.find(button) === undefined)
-            continue;
-        await ui.click(button);
-        await frames(10);
-        if (/^station/i.test(build.construction()?.piece ?? ""))
-            special = button;
-    }
-    expect(special !== undefined, `a ${kind} station piece to build`);
-    await frames(20);
+    // A new track starts on its plain station, not an inverted one.
+    const first = build.construction()?.piece ?? "";
+    expect(/^station/i.test(first), `a new ${kind} to start on its station, not ${first}`);
     await pointer.click(p.x, p.y);
     await frames(30);
-    for (let n = 0; n < 4; ++n) {
-        await ui.click(special!);
-        await frames(10);
+    // Then the plain station among the pictured pieces, clicked again to build it, up to five pieces.
+    const laid = () => rides.list()[ride].track?.length ?? 0;
+    for (let tries = 0; tries < 12 && laid() < 5; ++tries) {
+        for (let i = 0; i < 8 && laid() < 5; ++i) {
+            const button = `placing/body/construction/special${i}`;
+            if (ui.find(button) === undefined)
+                continue;
+            await ui.click(button);
+            await frames(10);
+            if (/^station/i.test(build.construction()?.piece ?? "")) {
+                await ui.click(button);
+                await frames(10);
+                break;
+            }
+        }
     }
     build.stop();
     await ui.click("placing/close");
@@ -60,7 +63,7 @@ async function station(overlay: string, kind: string): Promise<number> {
 
 // The middle of the map, where the station starts.
 let at = { col: 0, row: 0 };
-const view = () => camera.look({ col: at.col + 2.5, row: at.row + 0.5 }, { col: at.col - 1, row: at.row + 5, up: 4 });
+const view = () => camera.look({ col: at.col + 2.5, row: at.row + 0.5 }, { col: at.col + 0.5, row: at.row + 3, up: 3.5 });
 
 function check(ride: number, kind: string, type: RegExp): string[] {
     const built = rides.list()[ride];
@@ -76,12 +79,20 @@ for (const [overlay, kind, type] of [
     ["tracks/coasters/WoodenRC/WoodenRC", "WoodenRC", /^wooden/i],
     ["tracks/TrackedRides/MinRail/MinRail", "MinRail", /^standard/i],
     ["tracks/TrackedRides/HauntedMansion/HauntedMansion", "HauntedMansion", /^noplatform/i],
+    ["tracks/coasters/Corkscrew/Corkscrew", "Corkscrew", /^standard/i],
 ] as [string, string, RegExp][]) {
     const ride = await station(overlay, kind);
     check(ride, kind, type);
+    expect(rides.list()[ride].track!.every((piece) => !/^inv/i.test(piece)), `an upright ${kind} station`);
     view();
     await frames(30);
     await screenshot(kind);
+    // The mini railway's rails up close, on its platforms.
+    if (kind === "MinRail") {
+        camera.look({ col: at.col + 2, row: at.row + 0.5 }, { col: at.col + 1, row: at.row + 1.5, up: 4 });
+        await frames(30);
+        await screenshot("MinRail_close");
+    }
 }
 
 const ride = await station("tracks/coasters/LoopingRC/LoopingRC", "LoopingRC");

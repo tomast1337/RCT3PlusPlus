@@ -236,3 +236,13 @@ TEST_CASE("a walk-through opens only when its exit comes after its entrance")
     r.track->circuit = true;
     CHECK_FALSE(open_refusal(r, walk, kOpen, false));
 }
+
+TEST_CASE("a ride builds only the pieces its file lists")
+{
+    ovl::TrackedRide upright;
+    upright.pieces = { "Straight", "Station" };
+    const TrackRules rules = track_rules(upright);
+    CHECK(lists_piece(rules, "station"));
+    CHECK_FALSE(lists_piece(rules, "InvStation"));
+    CHECK(lists_piece(TrackRules { }, "InvStation")); // a file listing none takes all its overlay's pieces
+}

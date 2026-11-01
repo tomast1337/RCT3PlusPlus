@@ -86,10 +86,12 @@ namespace rct3::ovl
         /// The fields shared by all attractions: at the start of version 1 items, further on in later ones,
         /// past the list of track sections.
         AttractionInfo info;
-        std::string_view name; ///< Name string stored in the item, version 4 and 5 files only
         /// "tks" items for the four special track sections of the ride, such as its lift hill and station.
         /// Empty slots are normal. Version 4 and 5 files only.
         std::array<std::string_view, 4> track_sections;
+        /// "tks" items of every piece the ride may build, in the item's order. Its track overlay can hold
+        /// more, kept for other rides of the same set.
+        std::vector<std::string_view> pieces;
         /// "spl" items, version 4 and 5 files only. Version 4 files have three.
         std::array<std::string_view, 4> splines;
         /// Nothing when the item is too short to hold them.

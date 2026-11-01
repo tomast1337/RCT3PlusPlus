@@ -72,7 +72,13 @@ namespace rct3::park
         bool one_piece = false;
         bool car_rotation = false; ///< The player sets how far the cars turn on each piece
         bool car_facing = false;   ///< The player sets which way the cars face on each piece, or lets them spin
+        /// The pieces it may build, by name. Its track overlay can hold more, for other kinds that share it, as
+        /// inverted pieces beside an upright coaster's. Empty: all of the overlay's.
+        std::vector<std::string> pieces;
     };
+
+    /// Whether `rules` let the ride build `piece`.
+    [[nodiscard]] bool lists_piece(const TrackRules& rules, std::string_view piece);
 
     /// The rules a ride file's item stores, with names copied out of the file. A ride whose special pieces
     /// fill only the first two slots, a stack of them, is built back from its station.

@@ -180,3 +180,16 @@ TEST_CASE("a piece already built is picked again by its shape, or by name when i
     CHECK(choice_of(all, { 1, true }).curve == -2);
     CHECK(choice_of(all, { 6, false }).named == LaidPiece { 6, false });
 }
+
+TEST_CASE("a track being begun starts on its first station, laid as drawn")
+{
+    const std::vector<PieceShape> all = pieces();
+    const std::vector<LaidPiece> starts { { 0, false }, { 6, true }, { 6, false }, { 5, false } };
+    const TrackChoice opening = opening_choice(all, starts);
+    REQUIRE(opening.named);
+    CHECK(opening.named->index == 6);
+    CHECK_FALSE(opening.named->reversed);
+    CHECK(settle_choice(all, starts, opening) == opening);
+    // With no station to start on, the plain picks.
+    CHECK(opening_choice(all, std::vector<LaidPiece> { { 0, false }, { 5, false } }) == TrackChoice { });
+}

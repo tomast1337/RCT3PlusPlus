@@ -181,6 +181,12 @@ namespace rct3::park
         return nearest(all, choice, [](const Offer&) { return true; });
     }
 
+    TrackChoice opening_choice(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates)
+    {
+        const auto station = std::ranges::find_if(candidates, [&](const LaidPiece& c) { return c.index < pieces.size() && pieces[c.index].use == PieceUse::Station && !c.reversed; });
+        return station != candidates.end() ? TrackChoice { .named = *station } : TrackChoice { };
+    }
+
     TrackChoice choice_of(std::span<const PieceShape> pieces, LaidPiece laid)
     {
         const std::vector<Offer> one = offers(pieces, std::span(&laid, 1));

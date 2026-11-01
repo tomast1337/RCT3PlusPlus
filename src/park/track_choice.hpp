@@ -88,6 +88,10 @@ namespace rct3::park
     /// nothing fits at all.
     [[nodiscard]] TrackChoice settle_choice(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice);
 
+    /// The picks a track being begun starts with: the first station of `candidates` laid as drawn, or the plain
+    /// picks when none is a station.
+    [[nodiscard]] TrackChoice opening_choice(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates);
+
     /// The picks that name `laid`, as a piece already built is shown when picked again: its curve, slope, bank
     /// and toggles, or the piece itself when it is picked by name.
     [[nodiscard]] TrackChoice choice_of(std::span<const PieceShape> pieces, LaidPiece laid);

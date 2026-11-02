@@ -3213,7 +3213,7 @@ namespace rct3::scene
                     const bool stall = upkeep.break_in.value >= 0;
                     const auto tell = [&](std::string_view key) {
                         if (stall)
-                            simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = attraction.saved != 0 ? std::optional(attraction.saved) : std::nullopt, .subject_name = attraction.name, .panel = ui::message_panel(ui::AttractionTab::View) });
+                            simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = attraction.saved != 0 ? std::optional(attraction.saved) : std::nullopt, .panel = ui::message_panel(ui::AttractionTab::View) }); // Named once shown, as the window names it
                         else
                             simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = ui::message_panel(ui::AttractionTab::Maintenance), .field_key = std::string(ui::breakdown_key(static_cast<save::BreakdownKind>(std::to_underlying(upkeep.kind)))) });
                     };
@@ -3255,6 +3255,9 @@ namespace rct3::scene
                         scene.broken_rides.push_back({ e });
                     else
                         scene.broken_rides.erase(told);
+                    // Its window, if open, shows it broken down or mended.
+                    if (auto panel = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); panel && panel->visible && scene.shown && scene.shown == attraction_with(scene, attraction.saved))
+                        show_info_page(scene, *panel, assets, options);
                     if (stall)
                     {
                         tell(!upkeep.broken ? "RideFixedMessage" : cash ? "CashMachineBrokenMessage" : "FoodStallBrokenMessage");

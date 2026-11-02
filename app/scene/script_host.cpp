@@ -678,12 +678,14 @@ namespace rct3::scene
                 for (const ParkScene::BonedRide& boned : park.boned_rides)
                     if (const auto owner = boned.object < park.objects.size() ? park.attractions.find(park.objects[boned.object].id) : park.attractions.end(); owner != park.attractions.end() && owner->second == park::AttractionRef { park::AttractionRef::Kind::Stall, i })
                         one["moving"] = true;
-                for (const auto [_, a] : park.sim.registry.view<const simulation::Attraction>().each())
+                for (const auto [e, a] : park.sim.registry.view<const simulation::Attraction>().each())
                     if (a.saved == stall.base.id)
                     {
+                        const auto* upkeep = park.sim.registry.try_get<simulation::Upkeep>(e);
                         one["joined"] = true;
                         one["price"] = a.price.value;
                         one["selling"] = a.open;
+                        one["broken"] = upkeep != nullptr && upkeep->broken;
                     }
                 stalls.push_back(std::move(one));
             }
@@ -789,6 +791,20 @@ namespace rct3::scene
                 throw std::invalid_argument("rides.show takes a ride's place in rides.list()");
             park.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, a[0].get<std::size_t>() };
             return Json(nullptr);
+        });
+        engine_.define("stalls.breakDown", [this](const Json& a) -> Json {
+            ParkScene& park = park_of(park_);
+            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size())
+                throw std::invalid_argument("stalls.breakDown takes a stall's place in stalls.list()");
+            auto& r = park.sim.registry;
+            for (auto [e, attraction, upkeep] : r.view<simulation::Attraction, simulation::Upkeep>().each())
+                if (attraction.saved == park.rides.stalls[a[0].get<std::size_t>()].base.id && upkeep.break_in.value >= 0 && !upkeep.broken)
+                {
+                    upkeep.broken = true;
+                    attraction.open = false;
+                    return Json(true);
+                }
+            return Json(false);
         });
         engine_.define("stalls.show", [this](const Json& a) {
             ParkScene& park = park_of(park_);

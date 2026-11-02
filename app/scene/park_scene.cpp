@@ -15,6 +15,7 @@
 #include "park/object_models.hpp"
 #include "park/object_pick.hpp"
 #include "park/object_placement.hpp"
+#include "park/person_motions.hpp"
 #include "park/ride_placement.hpp"
 #include "park/sky_look.hpp"
 #include "park/tile_shaping.hpp"
@@ -74,6 +75,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 
@@ -1617,6 +1619,81 @@ namespace rct3::scene
             scene.since_people_levels = kObjectRebuildInterval;
         }
 
+        /// Hires a worker for job `kind` from the staff window and returns their place in shown_people, to be
+        /// handed to the pointer as the game hands them; nothing where none can be hired. A keeper goes to an
+        /// animal house picked at random instead, which dresses them with the other keepers.
+        std::optional<std::size_t> hire(ParkScene& scene, save::StaffKind kind)
+        {
+            using enum save::StaffKind;
+            if (!scene.simulate || kind == Vendor || kind == LifeGuard || kind == ParkInspector)
+                return std::nullopt;
+            auto& r = scene.sim.registry;
+            if (kind == AnimalKeeper)
+            {
+                const auto houses = r.view<const simulation::AnimalHouse>();
+                std::vector<entt::entity> homes(houses.begin(), houses.end());
+                if (!homes.empty())
+                {
+                    const entt::entity home = homes[random::below(scene.looks, homes.size())];
+                    (void)simulation::add_keeper(scene.sim, home, r.get<const simulation::AnimalHouse>(home).troughs);
+                }
+                return std::nullopt;
+            }
+            const auto type = kind == Handyman ? save::PersonType::Handyman : kind == Mechanic ? save::PersonType::Mechanic : kind == SecurityGuard ? save::PersonType::SecurityGuard : save::PersonType::Entertainer;
+            const auto role = kind == Handyman ? simulation::StaffRole::Handyman : kind == Mechanic ? simulation::StaffRole::Mechanic : kind == SecurityGuard ? simulation::StaffRole::Guard : simulation::StaffRole::Other;
+            // Each entertainer the next costume in turn, as the game gives them out.
+            std::vector<std::uint8_t> costumes;
+            for (const Outfit& o : scene.wardrobe)
+                if (o.type == type && !std::ranges::contains(costumes, o.costume))
+                    costumes.push_back(o.costume);
+            std::ranges::sort(costumes);
+            const std::uint8_t costume = costumes.empty() ? 0 : costumes[scene.costumes_given++ % costumes.size()];
+            std::array<const Outfit*, 3> worn { };
+            for (const Outfit& o : scene.wardrobe)
+                if (o.type == type && o.costume == costume && !o.swim && o.section < worn.size() && worn[o.section] == nullptr)
+                    worn[o.section] = &o;
+            // On a walkway picked at random, as the game puts them on one of the park's paths.
+            std::vector<simulation::NodeId> walkways;
+            for (simulation::NodeId n = 0; n < scene.sim.paths.nodes().size(); ++n)
+                if (const simulation::PathNode& node = scene.sim.paths.nodes()[n]; !node.removed && !node.queue && !node.staff_kept_off)
+                    walkways.push_back(n);
+            if (std::ranges::contains(worn, nullptr) || walkways.empty())
+                return std::nullopt;
+            const entt::entity e = simulation::add_staff(scene.sim, role, walkways[random::below(scene.looks, walkways.size())]);
+            scene.known_guests.insert(e);
+            change_people(scene);
+            std::int32_t number = 0;
+            for (const save::Staff& s : scene.people.staff)
+                if (s.kind == kind)
+                    number = std::max(number, s.type_id);
+            const simulation::Staff& worker = r.get<const simulation::Staff>(e);
+            const glm::vec3 at = r.get<const simulation::Pose>(e).position;
+            save::Staff& kept = scene.people.staff.emplace_back();
+            kept.kind = kind;
+            kept.type_id = number + 1;
+            kept.wage_level = worker.wage_level;
+            kept.training = worker.training;
+            kept.happiness = worker.happiness.value;
+            kept.task_flags = worker.tasks;
+            kept.person.type = type;
+            kept.person.sub_type = costume;
+            kept.person.name = std::format("%ME% {}", kept.type_id); // As the game names them, after their job
+            kept.person.position = { at.x, at.y, at.z };
+            save::Appearance& a = kept.person.appearance;
+            a.head = { worn[0]->id };
+            a.body = { worn[1]->id };
+            a.legs = { worn[2]->id };
+            ShownPerson& shown = scene.shown_people.emplace_back(ShownPerson { .walking = true, .staff = true, .saved = scene.people.staff.size() - 1, .guest = e });
+            shown.pose.look.head = worn[0]->set;
+            shown.pose.look.body = worn[1]->set;
+            shown.pose.look.legs = worn[2]->set;
+            for (std::size_t i = 0; i < shown.pose.look.colours.size(); ++i)
+                shown.pose.look.colours[i] = a.palettes[i] = static_cast<std::uint8_t>(random::below(scene.looks, kColourCells));
+            shown.pose.motion = park::motion::kWalk;
+            shown.pose.world = glm::translate(glm::mat4(1.0f), at);
+            return scene.shown_people.size() - 1;
+        }
+
         /// After a person of `shown_people` is renamed `name`: the name the game keeps for its guest camera cheat
         /// puts the view with them, from their eyes.
         void name_cheats(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t shown, std::u16string_view name)
@@ -1709,7 +1786,21 @@ namespace rct3::scene
                 (void)show();
             }
             else if (change.id == ui::person_control(Costume))
+            {
                 person->sub_type = static_cast<std::uint8_t>(change.value);
+                // They change into it, where the install has it.
+                std::array<const Outfit*, 3> worn { };
+                for (const Outfit& o : scene.wardrobe)
+                    if (o.type == save::PersonType::Entertainer && o.costume == person->sub_type && o.section < worn.size())
+                        worn[o.section] = &o;
+                if (!std::ranges::contains(worn, nullptr))
+                {
+                    change_people(scene);
+                    park::PersonLook& look = scene.shown_people[shown].pose.look;
+                    std::tie(look.head, look.body, look.legs) = std::tuple(worn[0]->set, worn[1]->set, worn[2]->set);
+                    std::tie(person->appearance.head, person->appearance.body, person->appearance.legs) = std::tuple(save::PeopleRef { worn[0]->id }, save::PeopleRef { worn[1]->id }, save::PeopleRef { worn[2]->id });
+                }
+            }
             else if (change.id >= ui::person_control(Task))
             {
                 staff->task_flags ^= 1 << (change.id - ui::person_control(Task));
@@ -1787,7 +1878,7 @@ namespace rct3::scene
         ui::ManagementFacts management_facts(const ParkScene& scene)
         {
             const auto broken = simulation::replacement(scene.sim, [&](std::uint64_t object) { return replace_price(scene, object); });
-            return { .park = &scene.park_model, .state = &scene.park, .people = &scene.people, .rides = &scene.rides, .broken_items = broken.items, .replace_cost = broken.cost, .goals = scene.goal_readings };
+            return { .park = &scene.park_model, .state = &scene.park, .people = &scene.people, .rides = &scene.rides, .broken_items = broken.items, .replace_cost = broken.cost, .goals = scene.goal_readings, .animal_houses = !scene.sim.registry.view<simulation::AnimalHouse>().empty() };
         }
 
         /// Marks the simulated rides and stalls that do not fit the scenery round them, for the park's inspector.
@@ -3407,6 +3498,24 @@ namespace rct3::scene
         const ManagementAsks asks = update_management_windows(desktop, facts, *assets.strings, info_units(assets, options));
         if (asks.row && info)
             open_row(scene, *info, *asks.row, assets, options);
+        // A worker hired is handed to the pointer at once, to be put down where the player likes; whoever was
+        // held before goes back first.
+        if (const auto hired = asks.hire ? hire(scene, *asks.hire) : std::nullopt)
+        {
+            (void)hold_person(scene, { }, { }, false, true);
+            (void)pick_up_person(scene, *hired);
+        }
+        if (asks.sack && asks.sack->kind == ui::ManagementRow::Kind::Staff)
+        {
+            const auto sacked = std::ranges::find_if(scene.shown_people, [&](const ShownPerson& p) { return p.staff && p.saved == asks.sack->index; });
+            if (sacked != scene.shown_people.end())
+            {
+                const auto shown = static_cast<std::size_t>(sacked - scene.shown_people.begin());
+                if (info && scene.shown_person == shown)
+                    info->hide();
+                fire(scene, shown);
+            }
+        }
         // Each listed ride that may take the state takes it; the others stay as they are.
         for (const ui::ManagementRow& r : asks.listed)
         {

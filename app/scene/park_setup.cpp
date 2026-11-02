@@ -4,6 +4,7 @@
 #include "core/maybe.hpp"
 #include "logging/log.hpp"
 #include "ovl/carried_item.hpp"
+#include "ovl/costume.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/texture.hpp"
 #include "ovl/texture_pixels.hpp"
@@ -68,6 +69,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <charconv>
 #include <chrono>
 #include <cstddef>
 #include <filesystem>
@@ -81,6 +83,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <unordered_map>
 #include <utility>
 
@@ -316,6 +319,16 @@ namespace rct3::scene
             save::PeopleObjectId next_id = save::PeopleObjectId { 1 } << 32;
             for (const save::PartGroup& g : scene.people.part_groups)
                 next_id = std::max(next_id, g.id + 1);
+            // The id of the park's part group of `symbol`: a group the park already has keeps its id; symbols are
+            // matched in any case.
+            const auto group = [&](std::string_view symbol, std::size_t section, std::size_t sex, std::size_t type) {
+                const auto same = [&](const save::PartGroup& g) { return std::ranges::equal(g.symbol, symbol, [](char a, char b) { return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b)); }); };
+                const auto known = std::ranges::find_if(scene.people.part_groups, same);
+                if (known != scene.people.part_groups.end())
+                    return known->id;
+                scene.people.part_groups.push_back({ .id = next_id, .symbol = std::string(symbol), .section = static_cast<std::uint8_t>(section), .sex = static_cast<std::uint8_t>(sex), .type = static_cast<std::uint8_t>(type) });
+                return next_id++;
+            };
             std::error_code error;
             for (const auto& age : std::filesystem::directory_iterator(*folder, error))
             {
@@ -332,11 +345,19 @@ namespace rct3::scene
                     type = std::to_underlying(save::PersonType::Special);
                     sex = vip;
                 }
-                // Animal keepers, hired with each animal house, wear their own.
-                const bool keeper = name == "AnimalKeeper";
+                // Workers wear their job's own clothes, one set to a job: animal keepers, hired with each animal
+                // house, and those hired from the staff window.
+                constexpr std::array<std::pair<std::string_view, save::PersonType>, 4> kUniforms { {
+                    { "AnimalKeeper", save::PersonType::AnimalKeeper },
+                    { "HM", save::PersonType::Handyman },
+                    { "Maintenance", save::PersonType::Mechanic },
+                    { "SecurityGuard", save::PersonType::SecurityGuard },
+                } };
+                const auto uniform = std::ranges::find(kUniforms, name, &std::pair<std::string_view, save::PersonType>::first);
+                const bool keeper = uniform != kUniforms.end();
                 if (keeper)
                 {
-                    type = std::to_underlying(save::PersonType::AnimalKeeper);
+                    type = std::to_underlying(uniform->second);
                     sex = std::to_underlying(save::Sex::Male);
                 }
                 // Vendors, hired with stalls and ride entrances, wear their own; men's and women's share a folder.
@@ -368,14 +389,31 @@ namespace rct3::scene
                     const park::PartSet* part = section != kSections.end() || swim ? as_pointer(library.part_set(symbol)) : nullptr;
                     if (part == nullptr)
                         continue;
-                    // A group the park already has keeps its id; symbols are matched in any case.
-                    const auto same = [&](const save::PartGroup& g) { return std::ranges::equal(g.symbol, symbol, [](char a, char b) { return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b)); }); };
-                    const auto known = std::ranges::find_if(scene.people.part_groups, same);
-                    const save::PeopleObjectId id = known != scene.people.part_groups.end() ? known->id : next_id++;
-                    if (known == scene.people.part_groups.end())
-                        scene.people.part_groups.push_back({ .id = id, .symbol = std::string(symbol), .section = number, .sex = static_cast<std::uint8_t>(worn_by), .type = static_cast<std::uint8_t>(type) });
-                    scene.wardrobe.push_back({ id, part, static_cast<save::PersonType>(type), vip != 0 ? save::Sex::Male : static_cast<save::Sex>(worn_by), number, vip, swim });
+                    scene.wardrobe.push_back({ group(symbol, number, worn_by, type), part, static_cast<save::PersonType>(type), vip != 0 ? save::Sex::Male : static_cast<save::Sex>(worn_by), number, vip, swim });
                 }
+            }
+            // Entertainers' costumes: each names its head, body and legs. The costumes' numbers are those the
+            // saves give an entertainer's sub type, which the costume menu lists in the same order.
+            const std::filesystem::path costumes = *folder / "Entertainers";
+            for (const auto& file : std::filesystem::directory_iterator(costumes, error))
+            {
+                if (!file.path().string().ends_with(".common.ovl"))
+                    continue;
+                const auto overlay = ovl::Overlay::load(file.path());
+                if (!overlay)
+                    continue;
+                for (const ovl::Part* part : { &overlay->common(), as_pointer(overlay->unique()) })
+                    for (const ovl::CostumeEntry& c : part != nullptr ? ovl::read_costumes(*overlay, *part) : std::vector<ovl::CostumeEntry> { })
+                    {
+                        // shortcut: a costume's number is read from the digits ending its name, as the install numbers them; read it from elsewhere if a costume ever lacks them.
+                        const auto digits = std::ranges::find_if(c.name, [](char ch) { return ch >= '0' && ch <= '9'; });
+                        unsigned number = 0;
+                        if (!c.costume || c.costume->sections.size() < 3 || std::from_chars(std::to_address(digits), c.name.data() + c.name.size(), number).ec != std::errc { } || number > 255)
+                            continue;
+                        for (std::uint8_t k = 0; k < 3; ++k)
+                            if (const park::PartSet* set = as_pointer(library.part_set(c.costume->sections[k])))
+                                scene.wardrobe.push_back({ .id = group(c.costume->sections[k], k, 0, std::to_underlying(save::PersonType::Entertainer)), .set = set, .type = save::PersonType::Entertainer, .section = k, .costume = static_cast<std::uint8_t>(number) });
+                    }
             }
             library.close_files();
             park::GroundImages shrunk; // Copied only when they are shrunk; the library keeps its own

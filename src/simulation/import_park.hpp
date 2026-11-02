@@ -145,6 +145,8 @@ namespace rct3::simulation
     /// A seller hired with a stall or a ride's entrance placed since, standing at `at` in their booth, paid as
     /// other new staff are.
     entt::entity add_vendor(SimWorld& world, glm::vec3 at);
+    /// A worker in `role` hired since, walking from path node `at`, paid as other new staff are.
+    entt::entity add_staff(SimWorld& world, StaffRole role, NodeId at);
 
     /// The facility of a special attraction's kind, as its item in the game's files stores it; nothing for
     /// kinds guests do not use yet.

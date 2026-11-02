@@ -41,6 +41,8 @@ namespace rct3::scene
         /// Put every attraction in `listed` in this state (ui::kOpenCloseAllButton)
         std::optional<save::AttractionState> state_all;
         std::vector<ui::ManagementRow> listed;
+        std::optional<save::StaffKind> hire;   ///< Hire a worker for this job (ui::kHireButtons)
+        std::optional<ui::ManagementRow> sack; ///< Sack this worker, the staff list's selected row (ui::kSackButton)
     };
 
     /// Writes the open windows' pages again where the player picked a tab or where it is time to, and returns

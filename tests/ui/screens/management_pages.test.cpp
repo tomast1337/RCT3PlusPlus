@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/management_pages.hpp"
 
+#include "simulation/staff_care.hpp"
 #include "ui/thought_text.hpp"
 
 #include <algorithm>
@@ -190,6 +191,27 @@ TEST_CASE("the staff tabs list one job each, the first everyone but the vendors"
     const ManagementPage vendors = management_page(ManagementTopic::Staff, 5, facts, s, kUnits);
     REQUIRE(vendors.rows.size() == 1);
     CHECK(management_row(vendors.rows[0].id) == ManagementRow { ManagementRow::Kind::Staff, 3 });
+}
+
+TEST_CASE("the staff window hires each job, sacks the selected worker and shows wages")
+{
+    const StringTable s = test_strings();
+    save::PeopleModel people;
+    save::Staff low;
+    low.wage_level = 0;
+    people.staff = { low, save::Staff { } };
+    people.staff[1].wage_level = 2;
+    const ManagementPage page = management_page(ManagementTopic::Staff, 0, { .people = &people }, s, kUnits);
+    REQUIRE(page.buttons.size() == kHireButtons.size() + 1);
+    CHECK(page.buttons[0].enabled);
+    CHECK_FALSE(page.buttons[4].enabled); // No animal house to hire a keeper to
+    CHECK(page.buttons[kSackButton].enabled);
+    CHECK(management_page(ManagementTopic::Staff, 0, { .people = &people, .animal_houses = true }, s, kUnits).buttons[4].enabled);
+    // Nobody to sack on an empty tab.
+    CHECK_FALSE(management_page(ManagementTopic::Staff, 2, { .people = &people }, s, kUnits).buttons[kSackButton].enabled);
+    REQUIRE(page.rows.size() == 2);
+    CHECK(page.rows[0].cells[3] == money(rct3::simulation::wage_at(0)));
+    CHECK(page.rows[1].keys[3] > page.rows[0].keys[3]);
 }
 
 TEST_CASE("the guest statistics average over the guests in the park")

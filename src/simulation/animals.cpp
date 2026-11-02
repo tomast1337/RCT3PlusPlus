@@ -77,9 +77,14 @@ namespace rct3::simulation
 
     entt::entity add_animal_house(SimWorld& world, const AnimalHouse& house, glm::vec3 at)
     {
+        const entt::entity home = world.registry.create();
+        world.registry.emplace<AnimalHouse>(home, house);
+        return add_keeper(world, home, at);
+    }
+
+    entt::entity add_keeper(SimWorld& world, entt::entity home, glm::vec3 at)
+    {
         auto& r = world.registry;
-        const entt::entity home = r.create();
-        r.emplace<AnimalHouse>(home, house);
         const entt::entity keeper = r.create();
         Staff staff { .role = StaffRole::Keeper };
         set_wage_level(staff, staff.wage_level); // Paid as other new staff are

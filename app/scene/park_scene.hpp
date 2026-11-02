@@ -362,6 +362,7 @@ namespace rct3::scene
         std::uint8_t section = 0; ///< As a part group's
         std::uint8_t vip = 0;     ///< The celebrity it dresses, by the number VIP goals give them; 0 for guests'
         bool swim = false;        ///< Swimwear, worn at a pool in place of the clothes of its section
+        std::uint8_t costume = 0; ///< The entertainer's costume it belongs to, by the save's sub type number
     };
 
     /// A photo of a player's guest to draw: where from, and the start of its file name.
@@ -634,6 +635,7 @@ namespace rct3::scene
         std::vector<ShownPerson> shown_people;
         std::vector<Outfit> wardrobe;                  ///< What guests coming in at the gate wear
         std::unordered_set<entt::entity> known_guests; ///< The simulated guests the shown people were made for
+        std::size_t costumes_given = 0;                ///< To entertainers hired, each the next costume in turn
         random::RandomState looks;                     ///< For the colours of people's clothes left to pick
         park::ObjectLevels people_levels;              ///< Of each shown person, as the still people's mesh holds them
         park::ObjectMesh still_people;

@@ -1377,6 +1377,16 @@ namespace rct3::simulation
         return e;
     }
 
+    entt::entity add_staff(SimWorld& world, StaffRole role, NodeId at)
+    {
+        const entt::entity e = world.registry.create();
+        Staff staff { .role = role };
+        set_wage_level(staff, staff.wage_level);
+        world.registry.emplace<Staff>(e, staff);
+        start_walking(world, e, at);
+        return e;
+    }
+
     Departure departure_of(const save::OperatingOptions& options)
     {
         const bool listed = options.wait_for_load >= 0 && options.wait_for_load <= static_cast<std::int32_t>(LoadWait::Any);

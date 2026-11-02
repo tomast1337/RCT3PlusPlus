@@ -149,6 +149,9 @@ namespace rct3::simulation
     /// A house for `house` and a keeper for it, standing at `at`. Returns the keeper.
     entt::entity add_animal_house(SimWorld& world, const AnimalHouse& house, glm::vec3 at);
 
+    /// Another keeper for the house `home`, standing at `at`. Returns them.
+    entt::entity add_keeper(SimWorld& world, entt::entity home, glm::vec3 at);
+
     /// `animal` in its crate at `at`. Returns it.
     entt::entity add_animal(SimWorld& world, const Animal& animal, glm::vec3 at);
 

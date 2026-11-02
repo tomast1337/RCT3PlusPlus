@@ -325,18 +325,19 @@ namespace rct3::simulation::tuning
     /// How content and lazy staff are, and their pay and training.
     struct Staff
     {
-        Money lowest_wage { 50 };                  ///< An hour at level 0; each level adds half as much
-        Seconds load_window { 600 };               ///< Over how long their share of time at work is judged
-        Share content_base { 0.45f };              ///< Happiness of an untrained worker on the lowest wage
-        Share content_per_training { 0.1f };       ///< More for each level of training
-        Share content_per_wage { 0.1f };           ///< More for each wage level
-        Share overworked { 0.85f };                ///< Of time at work, past which they feel overworked
-        Share bored { 0.15f };                     ///< Below which they feel idle
-        float overwork_gloom = 2;                  ///< Happiness lost for each share past overworked
-        float bored_gloom = 3;                     ///< And for each share below idle
-        PerSecond mood = PerSecond::over({ 900 }); ///< How fast happiness goes to where it is heading
-        Share lazy_below { 0.5f };                 ///< Happiness below which laziness grows
-        PerSecond lazy = PerSecond::over({ 600 }); ///< Laziness grown for each share below that, untrained
+        Money lowest_wage { 50 };                           ///< An hour at level 0; each level adds half as much
+        Seconds load_window { 600 };                        ///< Over how long their share of time at work is judged
+        Share content_base { 0.45f };                       ///< Happiness of an untrained worker on the lowest wage
+        Share content_per_training { 0.1f };                ///< More for each level of training
+        Share content_per_wage { 0.1f };                    ///< More for each wage level
+        Share overworked { 0.85f };                         ///< Of time at work, past which they feel overworked
+        Share bored { 0.15f };                              ///< Below which they feel idle
+        float overwork_gloom = 2;                           ///< Happiness lost for each share past overworked
+        float bored_gloom = 3;                              ///< And for each share below idle
+        PerSecond mood = PerSecond::over({ 900 });          ///< How fast happiness goes to where it is heading
+        PerSecond lonely_gloom = PerSecond::over({ 1800 }); ///< Chosen by eye: happiness an untrained entertainer loses with no guests near
+        Share lazy_below { 0.5f };                          ///< Happiness below which laziness grows
+        PerSecond lazy = PerSecond::over({ 600 });          ///< Laziness grown for each share below that, untrained
         PerSecond lazy_fade = PerSecond::over({ 3600 });
         Share lazy_after_warning { 0.3f };                                                       ///< Laziness at which a warning is deserved
         Share warning_gloom { 0.2f };                                                            ///< Happiness a warning not deserved takes away
@@ -433,19 +434,19 @@ namespace rct3::simulation::tuning
     /// Entertainers' shows and the crowds round them.
     struct Shows
     {
-        Seconds look { 3 };                       ///< Chosen by eye: between an entertainer's looks for a crowd
-        Distance reach { 6 };                     ///< Chosen by eye: how far off guests notice a show, or a VIP
-        Distance near { 1 };                      ///< Chosen by eye: closer than this, a guest walks on by
-        Distance ring { 2.4f };                   ///< Chosen by eye: how far from the entertainer the crowd stands
-        Frequency join = Frequency::every({ 2 }); ///< Chosen by eye: a free guest in reach stopping to watch, shared by their party
-        Share keen { 0.3f };                      ///< Chosen by eye: of starting a show with guests near, untrained, content and not lazy
-        Share keen_per_training { 0.15f };        ///< Chosen by eye: more for each level of training
-        Share poor_lazy { 0.7f };                 ///< Chosen by eye: laziness from which a show is a poor one, as when miserable
-        std::int32_t moves = 3;                   ///< Chosen by eye: moves in a show of an untrained entertainer; each level adds one
-        Seconds gap { 20 };                       ///< Chosen by eye: rest after a show before the next
-        Share cheer { 0.08f };                    ///< Chosen by eye: happiness a good show gives each in the crowd
-        Share poor_gloom { 0.03f };               ///< Chosen by eye: happiness an entertainer loses over a poor show
-        Seconds clap { 2.5f };                    ///< Chosen by eye: the crowd claps for
+        Seconds look { 3 };                          ///< Chosen by eye: between an entertainer's looks for a crowd
+        Distance reach { 6 };                        ///< Chosen by eye: how far off guests notice a show, or a VIP
+        Distance near { 1 };                         ///< Chosen by eye: closer than this, a guest walks on by
+        Distance ring { 2.4f };                      ///< Chosen by eye: how far from the entertainer the crowd stands
+        Frequency join = Frequency::every({ 0.5f }); ///< Chosen by eye: a free guest in reach stopping to watch, shared by their party; soon, as shows are short
+        Share keen { 0.3f };                         ///< Chosen by eye: of starting a show with guests near, untrained, content and not lazy
+        Share keen_per_training { 0.15f };           ///< Chosen by eye: more for each level of training
+        Share poor_lazy { 0.7f };                    ///< Chosen by eye: laziness from which a show is a poor one, as when miserable
+        std::int32_t moves = 5;                      ///< Chosen by eye: moves in a show of an untrained entertainer, long enough to draw a crowd; each level adds one
+        Seconds gap { 20 };                          ///< Chosen by eye: rest after a show before the next
+        Share cheer { 0.08f };                       ///< Chosen by eye: happiness a good show gives each in the crowd
+        Share poor_gloom { 0.03f };                  ///< Chosen by eye: happiness an entertainer loses over a poor show
+        Seconds clap { 2.5f };                       ///< Chosen by eye: the crowd claps for
         /// How long each ShowMove plays, in its order: the lengths of the motions in the costumes' meshes, which
         /// every costume has alike.
         std::array<Seconds, 9> move_length { Seconds { 1.33f }, Seconds { 2.67f }, Seconds { 1.73f }, Seconds { 1.97f }, Seconds { 1.63f }, Seconds { 5.0f }, Seconds { 1.27f }, Seconds { 1.9f }, Seconds { 2.0f } };

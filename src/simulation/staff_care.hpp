@@ -40,7 +40,8 @@ namespace rct3::simulation
     /// A warning: laziness gone if they had grown lazy, else unhappier.
     void warn(Staff& staff);
 
-    /// `seconds` more of their mood: `working` whether they were at a job then.
+    /// `seconds` more of their mood: `working` whether they were at a job then, or for an entertainer, whether there
+    /// were guests near to entertain; with none, an entertainer only grows glummer, the less so the better trained.
     void care_for(Staff& staff, bool working, float seconds);
 
     /// How many times as long a job takes them.

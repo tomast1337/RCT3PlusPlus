@@ -117,8 +117,9 @@ namespace rct3::park
     {
         if (choice.named)
             return contains(candidates, *choice.named) ? choice.named : std::nullopt;
+        const std::vector<Offer> all = offers(pieces, candidates);
         const Offer* best = nullptr;
-        for (const Offer& o : offers(pieces, candidates))
+        for (const Offer& o : all)
         {
             if (matches(o, choice) && (best == nullptr || std::pair { toggles_apart(o, choice), o.laid.reversed } < std::pair { toggles_apart(*best, choice), best->laid.reversed }))
                 best = &o;

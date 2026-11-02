@@ -689,6 +689,7 @@ namespace rct3::scene
         bool shown_closed = false;                  ///< The park closed the ride shown, as a crash does, so its page shows again
         std::uint32_t vandalism_seen = 0;           ///< Breaks the park has been charged for
         std::uint32_t vandalism_warnings_seen = 0;  ///< Warnings already posted as messages
+        bool chairs_changed = true;                 ///< The placed objects changed since lifeguards were last seated in their chairs
         bool themes_judged = false;                 ///< The attractions' fit with their scenery judged once since the park opened
         std::int64_t wages_seen = 0;                ///< Of the staff's pay, what has come out of the park's cash
         std::optional<std::int64_t> ledger_month;   ///< Months into the calendar the newest ledger period is for (simulation::ledger_month)

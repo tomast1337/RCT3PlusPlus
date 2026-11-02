@@ -155,6 +155,137 @@ TEST_CASE("animals: an animal leaves dung now and then, which its keeper clears"
     CHECK(dung() <= 1); // Cleared, bar what was just left
 }
 
+TEST_CASE("animals: a keeper counts the troughs they fill and the dung they clear")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    (void)animal_at_home(world, ground);
+    auto& r = world.registry;
+    const entt::entity keeper = r.view<KeeperDuty>().front();
+    const auto houses = r.view<AnimalHouse>();
+    houses.get<AnimalHouse>(houses.front()).food = { 0.1f };
+    run(world, ground, kAnimalRates.dung.value * 3 + 60);
+    CHECK(r.get<Staff>(keeper).filled >= 1);
+    CHECK(r.get<Staff>(keeper).cleared >= 1);
+}
+
+TEST_CASE("animals: a keeper told off filling troughs leaves them, and one told off clearing dung leaves it")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    (void)animal_at_home(world, ground);
+    auto& r = world.registry;
+    const entt::entity keeper = r.view<KeeperDuty>().front();
+    r.get<Staff>(keeper).tasks = 0;
+    const auto houses = r.view<AnimalHouse>();
+    houses.get<AnimalHouse>(houses.front()).food = { 0.1f };
+    run(world, ground, kAnimalRates.dung.value * 3 + 60);
+    CHECK(houses.get<AnimalHouse>(houses.front()).food.value < 0.2f);
+    CHECK(r.view<const Dung>().size() >= 2);
+    CHECK(r.get<Staff>(keeper).filled == 0);
+    CHECK(r.get<Staff>(keeper).cleared == 0);
+}
+
+TEST_CASE("animals: a keeper fills another house in their enclosure, but not one beyond their patrol")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    auto& r = world.registry;
+    const entt::entity keeper = add_animal_house(world, { .object = 1, .enclosure = 0, .troughs = { 0.5f, 0, 0.5f } }, { 1, 0, 1 });
+    const entt::entity other = r.get<KeeperDuty>(add_animal_house(world, { .object = 2, .enclosure = 0, .troughs = { 3.5f, 0, 3.5f } }, { 3, 0, 3 })).house;
+    r.destroy(*std::ranges::find_if(r.view<KeeperDuty>(), [&](entt::entity k) { return k != keeper; }));
+    r.get<AnimalHouse>(other).food = { 0.1f };
+    world.paths.tile_size = 1;
+    r.emplace<Patrol>(keeper, Patrol { .tiles = { { 0, 0 } } });
+    run(world, ground, 40);
+    CHECK(r.get<AnimalHouse>(other).food.value < 0.2f);
+    r.get<Patrol>(keeper).tiles.push_back({ 3, 3 });
+    run(world, ground, 40);
+    CHECK(r.get<AnimalHouse>(other).food.value > 0.8f);
+}
+
+namespace
+{
+    /// Hires the park an inspector and returns the Findings left after `seconds` of the animals.
+    std::vector<std::pair<Finding, entt::entity>> found_after(SimWorld& world, const AnimalGround& ground, float seconds, std::int32_t tasks = 0)
+    {
+        auto& r = world.registry;
+        if (std::ranges::none_of(r.view<const Staff>(), [&](entt::entity e) { return r.get<const Staff>(e).role == StaffRole::Inspector; }))
+            r.emplace<Staff>(r.create(), Staff { .role = StaffRole::Inspector, .tasks = tasks });
+        r.ctx().erase<Findings>();
+        run(world, ground, seconds);
+        return r.ctx().contains<Findings>() ? r.ctx().get<Findings>().found : std::vector<std::pair<Finding, entt::entity>> { };
+    }
+} // namespace
+
+TEST_CASE("animals: the inspector tells of a house due its filling with no keeper set to fill it")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    (void)animal_at_home(world, ground);
+    auto& r = world.registry;
+    const entt::entity house = r.view<AnimalHouse>().front();
+    r.get<AnimalHouse>(house).food = { 0.1f };
+    r.get<Staff>(r.view<KeeperDuty>().front()).tasks = kClearDungTask;
+    CHECK(std::ranges::contains(found_after(world, ground, 1), std::pair { Finding::NoKeeperCanReach, house }));
+}
+
+TEST_CASE("animals: the inspector tells of a house its keepers' patrols all leave out")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    (void)animal_at_home(world, ground);
+    auto& r = world.registry;
+    const entt::entity house = r.view<AnimalHouse>().front();
+    r.get<AnimalHouse>(house).food = { 0.1f };
+    world.paths.tile_size = 1;
+    r.emplace<Patrol>(r.view<KeeperDuty>().front(), Patrol { .tiles = { { 0, 0 } } });
+    CHECK(std::ranges::contains(found_after(world, ground, 1), std::pair { Finding::KeeperBadZones, house }));
+}
+
+TEST_CASE("animals: without an inspector nobody tells of an unfilled house")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    (void)animal_at_home(world, ground);
+    auto& r = world.registry;
+    r.get<AnimalHouse>(r.view<AnimalHouse>().front()).food = { 0.1f };
+    r.get<Staff>(r.view<KeeperDuty>().front()).tasks = 0;
+    run(world, ground, 1);
+    CHECK(!r.ctx().contains<Findings>());
+}
+
+TEST_CASE("animals: the inspector tells of an animal that keeps finding its food trough empty")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    const entt::entity e = animal_at_home(world, ground);
+    auto& r = world.registry;
+    r.get<Staff>(r.view<KeeperDuty>().front()).tasks = 0;
+    r.get<AnimalHouse>(r.view<AnimalHouse>().front()).food = { };
+    r.get<Animal>(e).hunger = { 0.9f };
+    CHECK(std::ranges::contains(found_after(world, ground, 120), std::pair { Finding::TroughsEmpty, e }));
+}
+
+TEST_CASE("animals: an inspector watching the galleries tells of an enclosure deep in dung")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    (void)animal_at_home(world, ground);
+    auto& r = world.registry;
+    r.get<Staff>(r.view<KeeperDuty>().front()).tasks = 0;
+    for (int i = 0; i <= kAnimalRates.dung_limit; ++i)
+    {
+        const entt::entity d = r.create();
+        r.emplace<Dung>(d, Dung { .enclosure = 0 });
+        r.emplace<Pose>(d, Pose { .position = { 1, 0, 1 } });
+    }
+    const entt::entity house = r.view<AnimalHouse>().front();
+    CHECK(!std::ranges::contains(found_after(world, ground, 1), std::pair { Finding::TooMuchDung, house }));
+    r.get<Staff>(*std::ranges::find_if(r.view<const Staff>(), [&](entt::entity s) { return r.get<const Staff>(s).role == StaffRole::Inspector; })).tasks = kGalleriesTask;
+    CHECK(std::ranges::contains(found_after(world, ground, 1), std::pair { Finding::TooMuchDung, house }));
+}
+
 TEST_CASE("animals: with empty troughs and no keeper to fill them, a starving animal sickens")
 {
     SimWorld world;

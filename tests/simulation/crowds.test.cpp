@@ -145,13 +145,17 @@ TEST_CASE("guests near an entertainer's show gather round, facing them, and clap
     CHECK(r.get<Show>(stage.star).gap.value > 0);
 }
 
-TEST_CASE("after a poor show the crowd shakes their heads, no happier, and the entertainer is glummer")
+TEST_CASE("after a poor show children cry or take fright, the rest look bored, none happier, and the entertainer is glummer")
 {
     Stage stage(1, 0.9f);
     auto& r = stage.park.world().registry;
+    for (std::size_t i = 0; i < stage.guests.size(); i += 2)
+        r.get<Visitor>(stage.guests[i]).age = AgeGroup::Child;
     REQUIRE(stage.park.run_until([&] { return stage.performing(); }, 60));
     CHECK(r.get<Show>(stage.star).poor);
-    REQUIRE(stage.park.run_until([&] { return !stage.watching().empty(); }, 10));
+    // Children and grown-ups both in the crowd.
+    const auto children = [&] { return std::ranges::count_if(stage.watching(), [&](entt::entity g) { return r.get<Visitor>(g).age == AgeGroup::Child; }); };
+    REQUIRE(stage.park.run_until([&] { return children() > 0 && children() < std::ssize(stage.watching()); }, 10));
     const auto crowd = stage.watching();
     std::vector<float> happy;
     for (const entt::entity g : crowd)
@@ -161,7 +165,10 @@ TEST_CASE("after a poor show the crowd shakes their heads, no happier, and the e
     for (std::size_t i = 0; i < crowd.size(); ++i)
     {
         REQUIRE(r.all_of<Gesture>(crowd[i]));
-        CHECK(r.get<Gesture>(crowd[i]).kind == GestureKind::Grumble);
+        const GestureKind kind = r.get<Gesture>(crowd[i]).kind;
+        const bool upset = kind == GestureKind::Cry || kind == GestureKind::Horror;
+        CHECK(upset == (r.get<Visitor>(crowd[i]).age == AgeGroup::Child));
+        CHECK((upset || kind == GestureKind::Grumble || kind == GestureKind::LookWatch || kind == GestureKind::Disapproval));
         CHECK(r.get<Mood>(crowd[i]).happiness.value <= happy[i]);
         CHECK(thought(r, crowd[i], ThoughtKind::BoringEntertainer));
     }

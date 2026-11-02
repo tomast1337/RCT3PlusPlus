@@ -881,7 +881,7 @@ namespace rct3::scene
                     if (const auto* carried = r.try_get<simulation::Carried>(p.guest); carried != nullptr && carried->held)
                         person["carrying"] = carried->bites == 0 ? "empty" : carried->food ? "food" : "drink";
                     // A gesture they make now, by the motion it shows.
-                    constexpr std::array<std::string_view, 9> kGestures { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdown", "handticket", "applause" };
+                    constexpr std::array<std::string_view, 13> kGestures { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdown", "handticket", "applause", "lookwatch", "disapproval", "cry", "horror" };
                     if (const auto* gesture = r.try_get<simulation::Gesture>(p.guest))
                         person["gesture"] = kGestures[std::to_underlying(gesture->kind)];
                     // Stopped round someone: an entertainer's show, or a VIP for an autograph; or walking after the VIP.

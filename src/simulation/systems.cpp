@@ -1564,7 +1564,13 @@ namespace rct3::simulation
                         auto& mood = r.get<Mood>(g);
                         auto& dice = r.get<Dice>(g).state;
                         if (*poor)
-                            r.emplace_or_replace<Gesture>(g, GestureKind::Grumble, kTuning.gestures.shown.value);
+                        {
+                            // Children cry or take fright; the rest shake their heads, look at their watches or fold their arms.
+                            constexpr std::array kUpset { GestureKind::Cry, GestureKind::Horror };
+                            constexpr std::array kBored { GestureKind::Grumble, GestureKind::LookWatch, GestureKind::Disapproval };
+                            const bool child = r.all_of<Visitor>(g) && r.get<Visitor>(g).age == AgeGroup::Child;
+                            r.emplace_or_replace<Gesture>(g, child ? kUpset[random::below(dice, kUpset.size())] : kBored[random::below(dice, kBored.size())], kTuning.gestures.shown.value);
+                        }
                         else
                         {
                             constexpr std::array kGlad { GestureKind::Clap, GestureKind::Clap, GestureKind::Cheer, GestureKind::Laugh };

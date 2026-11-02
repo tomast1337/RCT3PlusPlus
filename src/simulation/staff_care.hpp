@@ -6,7 +6,7 @@
 // the better trained: a lazy one takes longer over each job and stops to rest now and then. A warning shakes
 // laziness off, but upsets someone who was working well. Every so often they think about it all: idle or
 // worked off their feet, paid too little for it, tired, keen, glad or miserable; one miserable for long
-// thinks of quitting.
+// thinks of quitting, once, and if it goes on longer still, quits.
 #pragma once
 
 #include "save/model/people.hpp"
@@ -51,6 +51,9 @@ namespace rct3::simulation
     /// What they think now, at most one thought about their work and one about how they feel; counts the
     /// thoughts in a row they have been miserable.
     [[nodiscard]] std::vector<ThoughtKind> staff_thoughts(Staff& staff);
+
+    /// Whether their last thought was the one that made them quit: true once, however long they stay miserable.
+    [[nodiscard]] bool quits(const Staff& staff);
 
     inline constexpr float kRestSeconds = 20; ///< A rest a lazy staff member takes
 

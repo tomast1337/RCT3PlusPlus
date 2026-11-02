@@ -929,6 +929,9 @@ namespace rct3::simulation
         Thirsty,
         Tired,
         Bursting, ///< Needing the toilet
+        // Not the inspector's: a worker's own news (staff_care.hpp), with the worker
+        WantsToQuit,
+        Quit, ///< The park lets them go once told
     };
 
     /// Where an inspector is in their rounds. On a visit they carry a guest's Needs, Mood and Wallet, and the
@@ -946,7 +949,8 @@ namespace rct3::simulation
         std::vector<std::tuple<entt::entity, Finding, float>> told { };
     };
 
-    /// The inspectors' findings, oldest first, in the registry's context, for the park to tell the player.
+    /// The inspectors' findings and the workers' own news, oldest first, in the registry's context, for the park
+    /// to tell the player.
     struct Findings
     {
         std::vector<std::pair<Finding, entt::entity>> found { }; ///< With the attraction or worker

@@ -197,7 +197,8 @@ TEST_CASE("a worker's statistics show when they were hired, their mood, warnings
     REQUIRE(line(stats, u"Glum") != nullptr);
     CHECK(line(stats, u"Glum")->icon == "Staff_MoodSadIcon");
     CHECK(value(stats, u"Told off:") == u"2");
-    CHECK(stats.controls.at(0).text == money_text(units.currency, 250));
+    CHECK(stats.controls.at(0).text.ends_with(money_text(units.currency, 250)));
+    CHECK(stats.controls.at(0).text.starts_with(u" ")); // Set off from the level
     CHECK(stats.controls.at(1).help == u"Costs " + money_text(units.currency, 5000) + u".");
 }
 

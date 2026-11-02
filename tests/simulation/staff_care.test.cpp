@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/staff_care.hpp"
 
+#include <algorithm>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -100,10 +101,36 @@ TEST_CASE("staff think about their work and how they feel")
         CHECK(staff_thoughts(sad) == std::vector { StaffMiserable });
         for (int i = 0; i < 100 && staff_thoughts(sad) != std::vector { StaffWantToQuit }; ++i)
             ;
-        CHECK(staff_thoughts(sad) == std::vector { StaffWantToQuit });
+        CHECK(sad.miserable > 1);
         sad.happiness.value = 0.6f;
         CHECK(staff_thoughts(sad) == std::vector { StaffMotivated });
         CHECK(sad.miserable == 0);
+    }
+}
+
+TEST_CASE("a miserable worker thinks of quitting once a stretch, then quits once")
+{
+    using enum ThoughtKind;
+    Staff sad { .happiness = 0.1f, .load = 0.5f };
+    int wanted = 0;
+    int quit = 0;
+    for (int i = 0; i < 200; ++i)
+    {
+        wanted += static_cast<int>(std::ranges::count(staff_thoughts(sad), StaffWantToQuit));
+        quit += quits(sad) ? 1 : 0;
+        CHECK(!(quit == 1 && wanted == 0)); // Thought of it before quitting
+    }
+    CHECK(wanted == 1);
+    CHECK(quit == 1);
+
+    SUBCASE("cheered up and miserable again, they think of it again")
+    {
+        sad.happiness.value = 0.6f;
+        (void)staff_thoughts(sad);
+        sad.happiness.value = 0.1f;
+        for (int i = 0; i < 200; ++i)
+            wanted += static_cast<int>(std::ranges::count(staff_thoughts(sad), StaffWantToQuit));
+        CHECK(wanted == 2);
     }
 }
 

@@ -83,7 +83,7 @@ namespace rct3::simulation
         else if (staff.load.value > t.overworked.value)
             out.push_back(staff.wage_level == 0 ? ThoughtKind::StaffUnderpaid : ThoughtKind::StaffTooBusy);
         staff.miserable = staff.happiness.value < t.miserable.value ? staff.miserable + 1 : 0;
-        if (staff.miserable > t.quit_after)
+        if (staff.miserable == t.quit_after + 1) // Once a miserable stretch
             out.push_back(ThoughtKind::StaffWantToQuit);
         else if (staff.miserable > 0)
             out.push_back(ThoughtKind::StaffMiserable);
@@ -94,6 +94,11 @@ namespace rct3::simulation
         else if (staff.laziness.value <= t.keen.value)
             out.push_back(ThoughtKind::StaffMotivated);
         return out;
+    }
+
+    bool quits(const Staff& staff)
+    {
+        return staff.miserable == kTuning.staff.quit_after + kTuning.staff.leave_after + 1;
     }
 
     float work_slowdown(const Staff& staff)

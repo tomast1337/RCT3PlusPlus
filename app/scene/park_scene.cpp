@@ -544,6 +544,7 @@ namespace rct3::scene
             {
                 w->paths_swept = staff.swept;
                 w->bins_emptied = staff.emptied;
+                w->gardens_watered = staff.watered;
             }
             else if (auto* m = std::get_if<save::MechanicWork>(&saved.work))
             {
@@ -940,6 +941,9 @@ namespace rct3::scene
                     if (sign != scene.signs.end() && sign->kind == 1)
                         scene.sim.paths.set_no_entry(item.node, simulation::no_entry_side(scene.objects[index]), false);
                 }
+            for (const auto [e, bed] : r.view<const simulation::FlowerBed>().each())
+                if (bed.object == id)
+                    gone.push_back(e);
             r.destroy(gone.begin(), gone.end());
             std::erase_if(scene.bins, [&](const save::BinState& b) { return b.object_ref == id; });
             std::erase_if(scene.signs, [&](const save::SignState& s) { return s.object_ref == id; });
@@ -3928,6 +3932,8 @@ namespace rct3::scene
         for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())
             if (item.broken && item.object != 0)
                 saved.broken_items.push_back(item.object);
+        for (const auto [e, bed] : scene.sim.registry.view<const simulation::FlowerBed>().each())
+            saved.flower_beds.push_back({ .object_ref = bed.object, .water = bed.water });
         if (!scene.park_model.objectives.objectives.empty())
             saved.goals = parkfile::SavedGoals { .objectives = scene.park_model.objectives, .max_loan = scene.park_model.finance.max_loan, .interest_rate_percent = scene.park_model.finance.interest_rate_percent };
         return parkfile::write_saved_park(saved);

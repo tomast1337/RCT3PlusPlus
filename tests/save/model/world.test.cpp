@@ -205,6 +205,7 @@ namespace
         kDesignScenery,
         kWaterfall,
         kEnclosures,
+        kFlowerBed,
     };
 
     Attr u8a(const char* n)
@@ -270,6 +271,7 @@ namespace
             { "SceneryItemPlacementSingle", { colours("FlexiColourField"), refa("Owner"), refa("SIDDatabaseEntry"), refa("SceneryItem"), { "SceneryItemDataField", "struct", 20, { i32a("CORNER"), i32a("DIRECTION"), i32a("HEIGHT"), i32a("POSX"), i32a("POSZ") } } } },
             { "WaterfallBody", { { "Dir", "vector3", 12, { } }, { "HiWaterPos", "vector3", 12, { } }, { "LoWaterPos", "vector3", 12, { } }, { "StartPosLeft", "vector3", 12, { } }, { "StartPosRight", "vector3", 12, { } } } },
             { "EnclosureManager", { i32a("Cols"), { "Regions", "list", 0, { refa("Entry"), { "Valid", "bool", 1, { } } } }, i32a("Rows"), { "Tiles", "list", 0, { i32a("BrokenState"), i32a("Region") } } } },
+            { "WaterableBehaviour", { refa("\"SceneryItem\""), f32a("Capacity"), f32a("CurrentWater") } },
         };
     }
 
@@ -827,6 +829,24 @@ TEST_CASE("load_world: litter bins and signs keep the object they belong to")
     CHECK(l->world->signs[0].object_ref == 301);
     CHECK(l->world->signs[0].text == "Welcome");
     CHECK(l->world->benches == std::vector<std::uint64_t> { 300 });
+}
+
+TEST_CASE("load_world: flower beds keep their object and the water they hold")
+{
+    const auto l = load(
+        schema(),
+        {
+            terrain_obj(1, make_terrain_3x2()),
+            scenery_obj(300, 0, 0, 3, 0, 300),
+            scenery_obj(301, 1, 0, 3, 0, 301),
+            { kFlowerBed, 400, Bytes().u64(300).f32(50.0f).f32(12.5f) },
+            { kFlowerBed, 401, Bytes().u64(301).f32(50.0f).f32(-1.0f) },
+        });
+    REQUIRE(l->world);
+    REQUIRE(l->world->flower_beds.size() == 2);
+    CHECK(l->world->flower_beds[0].object_ref == 300);
+    CHECK(l->world->flower_beds[0].water == 12.5f);
+    CHECK(l->world->flower_beds[1].water < 0); // Never watered
 }
 
 TEST_CASE("load_world: a saved design's scenery is read as placed objects")

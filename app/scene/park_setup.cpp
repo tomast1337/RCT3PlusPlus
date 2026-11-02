@@ -1372,6 +1372,10 @@ namespace rct3::scene
                         benches.push_back(o.id);
                 }
                 simulation::import_path_items(scene.sim, scene.objects, scene.bins, benches, scene.signs);
+                simulation::import_flower_beds(scene.sim, scene.objects, saved && !saved->flower_beds.empty() ? saved->flower_beds : world->flower_beds, [&](const save::PlacedObject& o) {
+                    const auto model = scene.models.find(park::model_ref(o));
+                    return model != scene.models.end() ? model->second.water_capacity : std::nullopt;
+                });
                 // What vandals broke stays broken until mended.
                 for (auto [e, item] : scene.sim.registry.view<simulation::PathItem>().each())
                     item.broken = scene.broken_objects.contains(item.object);

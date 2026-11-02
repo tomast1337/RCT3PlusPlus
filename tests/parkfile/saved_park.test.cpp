@@ -114,6 +114,14 @@ TEST_CASE("a saved park reads back as written")
     REQUIRE(falls->waterfalls);
     REQUIRE(falls->waterfalls->size() == 1);
     CHECK(falls->waterfalls->front().bottom.y == 3.0f);
+    CHECK(falls->flower_beds.empty());
+
+    hidden.flower_beds = { { .object_ref = 42, .water = 7.5f } };
+    const auto beds = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
+    REQUIRE(beds);
+    REQUIRE(beds->flower_beds.size() == 1);
+    CHECK(beds->flower_beds.front().object_ref == 42);
+    CHECK(beds->flower_beds.front().water == 7.5f);
 }
 
 TEST_CASE("a saved park keeps its day mode")

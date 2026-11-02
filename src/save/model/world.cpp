@@ -83,6 +83,8 @@ namespace rct3::save
             constexpr std::string_view kBinClass = "LitterBinBehaviour";
             constexpr std::string_view kSignClass = "SignBehaviour";
             constexpr std::string_view kBenchClass = "ParkBenchBehaviour";
+            constexpr std::string_view kFlowerBedClass = "WaterableBehaviour";
+            constexpr std::string_view kFlowerBedWater = "CurrentWater";
             constexpr std::string_view kBehaviourOwner = "\"SceneryItem\""; ///< The quotes are part of the stored name
             constexpr std::string_view kBinCapacity = "Capacity";
             constexpr std::string_view kBinContents = "Contents";
@@ -497,6 +499,7 @@ namespace rct3::save
             QueueLine,
             Scenery,
             Bin,
+            FlowerBed,
             Sign,
             Bench,
             Weather,
@@ -889,6 +892,8 @@ namespace rct3::save
                 kinds[i] = Kind::Scenery;
             else if (name == names::kBinClass)
                 kinds[i] = Kind::Bin;
+            else if (name == names::kFlowerBedClass)
+                kinds[i] = Kind::FlowerBed;
             else if (name == names::kSignClass)
                 kinds[i] = Kind::Sign;
             else if (name == names::kBenchClass)
@@ -1036,6 +1041,9 @@ namespace rct3::save
                         });
                     break;
                 }
+                case Kind::FlowerBed:
+                    m.flower_beds.push_back({ .object_ref = get_ref(o.find(names::kBehaviourOwner)).value_or(0), .water = float_or(o.find(names::kFlowerBedWater), -1) });
+                    break;
                 case Kind::Sign:
                 {
                     m.signs.push_back(

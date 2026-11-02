@@ -794,6 +794,8 @@ namespace rct3::scene
                 else if (*kind == simulation::PathItemKind::Sign)
                     scene.signs.push_back({ .object_ref = id });
             }
+            if (model.water_capacity)
+                simulation::add_flower_bed(scene.sim, scene.objects.back(), *model.water_capacity, std::nullopt);
             animate_scenery(device, scene, scene.objects.size() - 1);
             // The woods beyond the edge grow with the park's: a tree planted near it seeds some there.
             if (scene.off_map_stream && park::is_plant(scene.objects.back(), scene.models))

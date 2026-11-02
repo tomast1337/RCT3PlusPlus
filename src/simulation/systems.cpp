@@ -1155,6 +1155,14 @@ namespace rct3::simulation
             if (paths.nodes().empty())
                 return;
             const auto staff_view = r.view<Staff, Stride, Pose, Dice>();
+            // Flower beds dry out; a claim on one lasts while its handyman is there to water it.
+            const auto beds = r.view<FlowerBed>();
+            for (const auto [b, bed] : beds.each())
+            {
+                bed.water = std::max(bed.water - bed.capacity * dt / kTuning.handymen.dry.value, 0.0f);
+                if (bed.handyman != entt::null && (!r.valid(bed.handyman) || !r.all_of<Staff>(bed.handyman) || (r.get<Staff>(bed.handyman).tasks & kWaterGardensTask) == 0))
+                    bed.handyman = entt::null;
+            }
 
             // Free mechanics: the nearest by the paths goes to a broken ride, else to one due an inspection.
             const auto spot = [&](entt::entity ride) {
@@ -1348,6 +1356,7 @@ namespace rct3::simulation
                 const bool sweeps = tidies && (staff.tasks & kSweepTask) != 0;
                 const bool mends = tidies && (staff.tasks & kLeaveBrokenTask) == 0;
                 const bool empties = tidies && (staff.tasks & kEmptyBinsTask) != 0;
+                const bool waters = tidies && (staff.tasks & kWaterGardensTask) != 0;
                 const auto job = [&] {
                     if (sweeps && litter_on(at) > 0)
                     {
@@ -1376,6 +1385,16 @@ namespace rct3::simulation
                             return kTuning.handymen.empty.value;
                         }
                     }
+                    // Only a bed gone dry is watered, and it is filled to the brim.
+                    for (auto [b, bed] : beds.each())
+                        if (waters && bed.node == at && bed.water <= 0 && (bed.handyman == entt::null || bed.handyman == e))
+                        {
+                            bed.water = bed.capacity;
+                            bed.handyman = entt::null;
+                            ++staff.watered;
+                            staff.job = StaffJob::Water;
+                            return kTuning.handymen.water.value;
+                        }
                     return 0.0f;
                 };
                 stride.from = at;
@@ -1588,6 +1607,46 @@ namespace rct3::simulation
                     staff.job = StaffJob::Watch;
                     stride.to = at;
                     stride.progress.value = 1;
+                }
+                else if ([&] {
+                             // A free handyman makes for the nearest dry bed in reach no one else is going to, and keeps
+                             // their claim on it until they water it.
+                             if (!waters)
+                                 return false;
+                             entt::entity mine = entt::null;
+                             for (const auto [b, bed] : beds.each())
+                                 if (bed.handyman == e)
+                                     mine = b;
+                             if (mine == entt::null)
+                             {
+                                 float best = kTuning.handymen.garden_reach;
+                                 for (const auto [b, bed] : beds.each())
+                                     if (bed.water <= 0 && bed.handyman == entt::null && bed.node < paths.nodes().size() && !paths.nodes()[bed.node].removed && (patrol == nullptr || patrol->covers(paths.nodes()[bed.node].tile)))
+                                         if (const float d = glm::distance(paths.centre(bed.node), paths.centre(at)); d <= best)
+                                         {
+                                             best = d;
+                                             mine = b;
+                                         }
+                                 if (mine == entt::null)
+                                     return false;
+                                 stride.route.clear();
+                             }
+                             auto& bed = r.get<FlowerBed>(mine);
+                             // shortcut: a bed no path reaches is routed to again at each step; keep a failed one aside
+                             // for a while if parks with many show up slow.
+                             if (stride.route.empty() || stride.route.back() != bed.node)
+                             {
+                                 auto way = paths.route(at, bed.node, Walker::Staff);
+                                 stride.route = way ? std::move(*way) : std::vector<NodeId> { };
+                             }
+                             bed.handyman = stride.route.empty() ? entt::null : e;
+                             return !stride.route.empty();
+                         }())
+                {
+                    stride.to = stride.route.front();
+                    stride.route.erase(stride.route.begin());
+                    stride.progress.value = 0;
+                    stride.lane_to = new_lane(dice, stride.lane_from);
                 }
                 else if (!inside && back_to(*patrol, at))
                 {

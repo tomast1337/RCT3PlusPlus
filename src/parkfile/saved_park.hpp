@@ -34,6 +34,8 @@
 //              it; their enclosures are read again from the original park.
 //   "POOL" v3  park::PoolMap: the swimming pools the player laid, their extras and changing rooms; their
 //              pieces are built again on loading. Only when there are any.
+//   "BEDS" v1  std::vector<save::FlowerBedState>: how much water each flower bed holds. Only when there are any;
+//              without it, the beds' water is read again from the original park.
 //
 // The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
 #pragma once
@@ -189,6 +191,7 @@ namespace rct3::parkfile
         std::optional<simulation::DayMode> day_mode;            ///< None in saves made before the mode was kept
         std::optional<SavedAnimals> animals;                    ///< None in saves made before animals were kept
         std::optional<park::PoolMap> pools;                     ///< The pools the player laid; none when they laid none
+        std::vector<save::FlowerBedState> flower_beds;          ///< Their water, as the simulation has it
     };
 
     /// A guest's wallet as their saved page keeps it, each sum held to the page's range.

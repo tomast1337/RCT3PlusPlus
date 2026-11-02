@@ -131,6 +131,13 @@ namespace rct3::simulation
     /// A path item of `kind` standing as `object` does, on the path tile under its tile's middle at the level
     /// nearest its base: a bin comes empty, holding kNewBinPieces. entt::null off the paths or for a hidden object.
     entt::entity add_path_item(SimWorld& world, const save::PlacedObject& object, PathItemKind kind);
+    /// A flower bed standing as `object` does, holding `capacity` of water when full and `water` now (full when
+    /// none, or negative as a bed never watered is saved), watered from a path tile on or beside its tile.
+    /// entt::null with no path there or for a hidden object.
+    entt::entity add_flower_bed(SimWorld& world, const save::PlacedObject& object, float capacity, std::optional<float> water);
+    /// The flower beds among `objects`, those `capacity_of` gives a capacity, each with the water `beds` saves
+    /// for it. Returns how many came over. Call after import_paths.
+    std::size_t import_flower_beds(SimWorld& world, std::span<const save::PlacedObject> objects, std::span<const save::FlowerBedState> beds, const std::function<std::optional<float>(const save::PlacedObject&)>& capacity_of);
     /// What a bin the player places holds, in pieces of rubbish, as the bins saved in the game's parks do.
     inline constexpr float kNewBinPieces = 40;
     /// A piece of rubbish in a saved bin's measure.

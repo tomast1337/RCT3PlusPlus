@@ -104,6 +104,8 @@ declare namespace park {
     function breakPathItems(): number;
     /** Drops `pieces` pieces of litter (1 to 50) on the path nearest tile `col`, `row`; whether there was a path. */
     function dropLitter(col: number, row: number, pieces: number): boolean;
+    /** Empties every flower bed of its water; how many there are. */
+    function dryFlowerBeds(): number;
     /** Sets a handyman walking from the path on tile `col`, `row`, who is not drawn; whether there was a path. */
     function addHandyman(col: number, row: number): boolean;
     /** Posts a message with the text `key`, about ride `ride` of rides.list() if given, naming tab number `tab`

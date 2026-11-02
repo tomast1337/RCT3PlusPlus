@@ -397,6 +397,14 @@ namespace rct3::scene
                 park_->sim.registry.emplace<simulation::Litter>(park_->sim.registry.create(), simulation::Litter { .node = *at });
             return Json(true);
         });
+        engine_.define("park.dryFlowerBeds", [this](const Json&) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            const auto beds = park_->sim.registry.view<simulation::FlowerBed>();
+            for (auto [e, bed] : beds.each())
+                bed.water = 0;
+            return Json(beds.size());
+        });
         engine_.define("park.addHandyman", [this](const Json& a) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");

@@ -19,6 +19,7 @@
 #include "strings/ascii.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <cstdint>
 #include <format>
@@ -607,6 +608,19 @@ namespace rct3::park
         model.photo_spot = std::ranges::contains(item->parameters, std::string_view { "VistaPoint" }, &ovl::SceneryItemParameter::name);
         // A setting's words, such as " EnableNoEntry QueueSign".
         model.no_entry = std::ranges::any_of(item->parameters, [](const ovl::SceneryItemParameter& p) { return std::ranges::any_of(std::views::split(p.value, ' '), [](const auto word) { return strings::equals_ignoring_case(std::string_view(word), "EnableNoEntry"); }); });
+        // A flower bed's setting, such as "Capacity 300.0": the water it holds when full.
+        if (const auto bed = std::ranges::find(item->parameters, std::string_view { "Waterable" }, &ovl::SceneryItemParameter::name); bed != item->parameters.end())
+        {
+            auto words = bed->value | std::views::split(' ') | std::views::transform([](const auto w) { return std::string_view(w); }) | std::views::filter([](std::string_view w) { return !w.empty(); });
+            for (auto w = words.begin(); w != words.end(); ++w)
+                if (strings::equals_ignoring_case(*w, "Capacity") && std::next(w) != words.end())
+                {
+                    const std::string_view number = *std::next(w);
+                    float capacity = 0;
+                    if (const auto [_, error] = std::from_chars(number.data(), number.data() + number.size(), capacity); error == std::errc { } && capacity > 0)
+                        model.water_capacity = capacity;
+                }
+        }
         model.ground_height = (item->flags & ovl::kItemOnGroundHeight) != 0;
         model.level_paths_only = (item->flags & ovl::kItemLevelPathsOnly) != 0;
         model.holds_ground = (item->flags & ovl::kItemHoldsGround) != 0;

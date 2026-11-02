@@ -327,6 +327,13 @@ namespace rct3::save
         std::optional<float> last_emptied { }; ///< Park time, as the clock counts it; empty when never emptied
     };
 
+    /// How much water a flower bed placed in the park holds.
+    struct FlowerBedState
+    {
+        std::uint64_t object_ref = 0; ///< The placed object that is the bed
+        float water = 0;              ///< In its scenery data's measure; below 0 for a bed never watered, which starts full
+    };
+
     /// A square of a pool that holds water. Its pieces stand in a stack from the floor up to the rim: the rim
     /// piece at the surface height, the floor `depth` below it.
     struct PoolWater
@@ -517,6 +524,7 @@ namespace rct3::save
         std::vector<PlacedObject> objects { };
         std::vector<BinState> bins { };
         std::vector<SignState> signs { };
+        std::vector<FlowerBedState> flower_beds { };
         std::vector<std::uint64_t> benches { }; ///< The placed objects that are benches guests can sit on
         std::vector<PoolWater> pool_water { };
         std::vector<PoolSegmentState> pool_segments { }; ///< Every square of the pools, water and the rest

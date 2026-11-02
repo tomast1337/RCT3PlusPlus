@@ -88,6 +88,7 @@ namespace rct3::simulation
         {
             staff.swept = w->paths_swept;
             staff.emptied = w->bins_emptied;
+            staff.watered = w->gardens_watered;
         }
         else if (const auto* m = std::get_if<save::MechanicWork>(&saved.work))
         {

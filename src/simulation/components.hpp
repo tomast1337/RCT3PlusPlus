@@ -684,6 +684,16 @@ namespace rct3::simulation
         std::uint64_t object = 0; ///< The placed object it stands as, 0 for none
     };
 
+    /// A flower bed beside a path. It dries out, and a handyman waters it once dry.
+    struct FlowerBed
+    {
+        NodeId node = kNoNode;              ///< The path it is watered from
+        std::uint64_t object = 0;           ///< The placed object it stands as
+        float capacity = 0;                 ///< Water it holds when full, as its scenery data gives it
+        float water = 0;                    ///< In the same measure as `capacity`
+        entt::entity handyman = entt::null; ///< The one on the way to water it
+    };
+
     /// A guest stopped on the path a while: sitting on a bench, or watching a sight.
     struct Linger
     {
@@ -835,6 +845,7 @@ namespace rct3::simulation
 
     /// A handyman's tasks among the task flags, numbered as saved parks number them.
     inline constexpr std::int32_t kSweepTask = 1 << 0;
+    inline constexpr std::int32_t kWaterGardensTask = 1 << 1;
     inline constexpr std::int32_t kEmptyBinsTask = 1 << 2;
     /// Our own task, kept the other way round: set, a handyman leaves broken path items alone. Parks the game
     /// saved never set it, so their handymen mend.
@@ -893,6 +904,7 @@ namespace rct3::simulation
         // Work done since they were hired, as their window counts it.
         std::int32_t swept = 0;
         std::int32_t emptied = 0;
+        std::int32_t watered = 0;
         std::int32_t fixed = 0;
         std::int32_t inspected = 0;
         std::int32_t cleared = 0; ///< Dung, by a keeper

@@ -1343,6 +1343,28 @@ namespace rct3::simulation
         return e;
     }
 
+    entt::entity add_flower_bed(SimWorld& world, const save::PlacedObject& o, float capacity, std::optional<float> water)
+    {
+        const auto at = o.hidden ? std::nullopt : path_by(world.paths, o);
+        if (!at)
+            return entt::null;
+        const entt::entity e = world.registry.create();
+        world.registry.emplace<FlowerBed>(e, FlowerBed { .node = *at, .object = o.id, .capacity = capacity, .water = water && *water >= 0 ? std::min(*water, capacity) : capacity });
+        return e;
+    }
+
+    std::size_t import_flower_beds(SimWorld& world, std::span<const save::PlacedObject> objects, std::span<const save::FlowerBedState> beds, const std::function<std::optional<float>(const save::PlacedObject&)>& capacity_of)
+    {
+        std::size_t added = 0;
+        for (const save::PlacedObject& o : objects)
+            if (const auto capacity = capacity_of(o))
+            {
+                const auto saved = std::ranges::find(beds, o.id, &save::FlowerBedState::object_ref);
+                added += add_flower_bed(world, o, *capacity, saved != beds.end() ? std::optional(saved->water) : std::nullopt) != entt::null ? 1 : 0;
+            }
+        return added;
+    }
+
     std::vector<entt::entity> import_staff(SimWorld& world, const save::PeopleModel& people)
     {
         auto& r = world.registry;

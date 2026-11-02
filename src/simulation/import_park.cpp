@@ -1049,6 +1049,7 @@ namespace rct3::simulation
             .broken = broken,
             .since_inspection = { std::max(ride.base.time_since_inspection, 0.0f) },
             .inspect_every = interval >= 0 && std::cmp_less(interval, kIntervals.size()) ? Seconds { kIntervals[static_cast<std::size_t>(interval)] } : Upkeep { }.inspect_every,
+            .called = ride.base.mechanic_asked,
             .kind = broken ? static_cast<Breakdown>(std::to_underlying(ride.breakdown.current)) : Breakdown::None,
             .last = static_cast<Breakdown>(std::to_underlying(ride.breakdown.last)),
             .downtime = ride.breakdown.downtime_windows,

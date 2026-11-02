@@ -114,6 +114,9 @@ namespace rct3::parkfile
         glm::vec3 position { 0.0f };
         float heading = 0;
         std::optional<simulation::Patrol> patrol { };
+        std::uint32_t mended = 0;    ///< Broken path items mended
+        float think = 0;             ///< Seconds to their next thought
+        std::uint32_t miserable = 0; ///< Thoughts in a row had while miserable, towards quitting
     };
 
     struct SavedPeople
@@ -131,11 +134,15 @@ namespace rct3::parkfile
         float interest_rate_percent = 0;
     };
 
-    /// An animal house, and which of SavedPeople::staff keeps it; -1 for none.
+    /// An animal house, and which of SavedPeople::staff keeps it; -1 for none, with the job they are at.
     struct SavedAnimalHouse
     {
         simulation::AnimalHouse house { };
         std::int32_t keeper = -1;
+        simulation::KeeperJob job = simulation::KeeperJob::Idle;
+        glm::vec3 goal { 0.0f };
+        std::int32_t target = -1; ///< Of SavedAnimals::dung while clearing, of SavedAnimals::animals while catching; -1 none
+        float busy = 0;           ///< Seconds
     };
 
     /// An animal, standing where it stood.

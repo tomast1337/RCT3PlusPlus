@@ -3127,7 +3127,8 @@ namespace rct3::scene
                     const auto* thoughts = p.guest == entt::null || !scene.sim.registry.valid(p.guest) || p.saved >= (p.staff ? scene.people.staff.size() : scene.people.guests.size()) ? nullptr : scene.sim.registry.try_get<simulation::Thoughts>(p.guest);
                     if (thoughts == nullptr || thoughts->had == p.thoughts_seen)
                         continue;
-                    auto& slots = p.staff ? scene.people.staff[p.saved].person.thoughts : scene.people.guests[p.saved].person.thoughts;
+                    save::Person& person = p.staff ? scene.people.staff[p.saved].person : scene.people.guests[p.saved].person;
+                    auto& slots = person.thoughts;
                     for (std::size_t k = std::min<std::size_t>(thoughts->had - p.thoughts_seen, thoughts->recent.size()); k-- > 0;)
                     {
                         const simulation::Thought& t = thoughts->recent[k];
@@ -3185,6 +3186,7 @@ namespace rct3::scene
                     ride.breakdown.saved_downtime_percent.reset();
                     using enum save::RepairStatus;
                     ride.base.repair_status = !upkeep->broken ? Fine : upkeep->mechanic == entt::null ? MechanicCalled : MechanicOnTheWay;
+                    ride.base.mechanic_asked = upkeep->called;
                     ride.base.flags = upkeep->broken ? ride.base.flags | save::AttractionCommon::kBrokenDown : ride.base.flags & ~save::AttractionCommon::kBrokenDown;
                 }
                 // A crash closes its ride, counts as dangerous for the awards, and is remembered a while.
@@ -3617,17 +3619,19 @@ namespace rct3::scene
             look.colours = { p.pose.look.colours.at(ui::kUpperPalette), p.pose.look.colours.at(ui::kUpperPalette + 1) };
             if (const auto* patrol = scene.sim.registry.valid(p.guest) ? scene.sim.registry.try_get<simulation::Patrol>(p.guest) : nullptr)
                 look.patrol_tiles = patrol->tiles.size();
+            look.painting_patrol = p.guest != entt::null && p.guest == shown_staff(scene) && scene.painting_patrol;
         }
         const ui::ManagementFacts facts = management_facts(scene);
         const ManagementAsks asks = update_management_windows(desktop, facts, *assets.strings, info_units(assets, options));
         if (asks.row && info)
             open_row(scene, *info, *asks.row, assets, options);
-        // A worker hired is handed to the pointer at once, to be put down where the player likes; whoever was
-        // held before goes back first.
+        // A worker hired is handed to the pointer at once, to be put down where the player likes, or given back
+        // to go to the park's entrance; whoever was held before goes back first.
         if (const auto hired = asks.staff.hire ? hire(scene, *asks.staff.hire) : std::nullopt)
         {
             (void)hold_person(scene, { }, { }, false, true);
-            (void)pick_up_person(scene, *hired);
+            if (pick_up_person(scene, *hired))
+                scene.holding->from = simulation::entrance_drop(scene.sim).value_or(scene.holding->from);
         }
         // The staff window names workers by their place in the park's staff; the scene by the person shown.
         const auto shown_worker = [&](std::size_t staff) -> std::optional<std::size_t> {

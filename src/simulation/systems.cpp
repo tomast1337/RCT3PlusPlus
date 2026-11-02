@@ -2107,6 +2107,25 @@ namespace rct3::simulation
         return true;
     }
 
+    std::optional<glm::vec3> entrance_drop(const SimWorld& world)
+    {
+        const auto gates = world.registry.view<const ParkGate>();
+        if (gates.empty())
+            return std::nullopt;
+        const glm::vec3 gate = world.paths.centre(gates.get<const ParkGate>(gates.front()).node);
+        std::optional<glm::vec3> best;
+        for (NodeId n = 0; n < world.paths.nodes().size(); ++n)
+        {
+            const PathNode& node = world.paths.nodes()[n];
+            if (node.removed || node.queue || node.staff_kept_off)
+                continue;
+            const glm::vec3 at = world.paths.centre(n);
+            if (!best || glm::distance(at, gate) < glm::distance(*best, gate))
+                best = at;
+        }
+        return best;
+    }
+
     bool slide(SimWorld& world, entt::entity person)
     {
         entt::registry& r = world.registry;

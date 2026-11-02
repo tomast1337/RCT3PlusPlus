@@ -186,6 +186,10 @@ namespace rct3::simulation
     /// to the nearest path to go on from. False, and still held, where there are no paths to walk to.
     bool let_go(SimWorld& world, entt::entity person, glm::vec3 ground);
 
+    /// Where a worker just hired goes when the player gives them back without putting them down: the middle of
+    /// the walkway staff may use nearest the park's entrance. None without an entrance or such a walkway.
+    [[nodiscard]] std::optional<glm::vec3> entrance_drop(const SimWorld& world);
+
     /// The ground under `person`, on foot, grew too steep: they slide down it, keeping to the ground, till it
     /// levels out enough to stop them, fall over, get up and walk to the nearest path. False, and nothing done,
     /// for one not on foot: riding, swimming, seated, in a booth, held or already falling.

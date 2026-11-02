@@ -328,7 +328,7 @@ namespace rct3::scene
     struct HeldPerson
     {
         entt::entity who = entt::null;
-        glm::vec3 from { 0.0f };       ///< Where they were picked up, to put them back
+        glm::vec3 from { 0.0f };       ///< Where they go if given back: where picked up, or a hire to the entrance
         std::optional<glm::vec3> spot; ///< The ground or path under the pointer
         bool allowed = false;          ///< They may be let go there
     };

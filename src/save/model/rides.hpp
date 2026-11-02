@@ -131,6 +131,7 @@ namespace rct3::save
         float popularity = 0;
         float satisfaction = 0;
         RepairStatus repair_status = RepairStatus::Fine;
+        bool mechanic_asked = false;           ///< rct3++'s own saves: the player called a mechanic to inspect it, not yet come
         float time_since_inspection = -1;      ///< Seconds; -1 never
         float time_since_breakdown = -1;       ///< Seconds; -1 never
         float time_since_crash = -1;           ///< Seconds; -1 never

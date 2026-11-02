@@ -743,7 +743,9 @@ namespace rct3::simulation
                 continue;
             auto& r = world.registry;
             const entt::entity e = r.create();
-            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = stall.base.name, .entrance = entrance, .price = sale->price, .open = stall.base.state == save::AttractionState::Open, .saved = stall.base.id });
+            const bool broken = (stall.base.flags & save::AttractionCommon::kBrokenDown) != 0;
+            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = stall.base.name, .entrance = entrance, .price = sale->price, .open = stall.base.state == save::AttractionState::Open && !broken, .saved = stall.base.id });
+            r.emplace<Upkeep>(e, Upkeep { .broken = broken, .inspect_every = { -1 }, .break_in = { 0 } });
             const PathTileSpot& tile = world.paths.nodes()[entrance].tile;
             Shop shop = sale->shop;
             shop.counter = { static_cast<float>(stall.base.spot->col - tile.col), static_cast<float>(stall.base.spot->row - tile.row) };
@@ -951,8 +953,13 @@ namespace rct3::simulation
                 continue;
             auto& r = world.registry;
             const entt::entity e = r.create();
-            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = ride.base.name, .entrance = entrance, .price = std::max<std::int64_t>(ride.ticket_price, 0), .open = ride.base.state == save::AttractionState::Open, .saved = ride.base.id });
+            // Cash machines break down as stalls do; toilets and first aid do not.
+            const bool breaks = *product == Product::CashMachine;
+            const bool broken = breaks && (ride.base.flags & save::AttractionCommon::kBrokenDown) != 0;
+            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = ride.base.name, .entrance = entrance, .price = std::max<std::int64_t>(ride.ticket_price, 0), .open = ride.base.state == save::AttractionState::Open && !broken, .saved = ride.base.id });
             r.emplace<Shop>(e, *product);
+            if (breaks)
+                r.emplace<Upkeep>(e, Upkeep { .broken = broken, .inspect_every = { -1 }, .break_in = { 0 } });
             ++added;
         }
         return added;

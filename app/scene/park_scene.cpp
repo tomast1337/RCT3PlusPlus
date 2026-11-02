@@ -1657,7 +1657,7 @@ namespace rct3::scene
                 return std::nullopt;
             }
             const auto type = kind == Handyman ? save::PersonType::Handyman : kind == Mechanic ? save::PersonType::Mechanic : kind == SecurityGuard ? save::PersonType::SecurityGuard : save::PersonType::Entertainer;
-            const auto role = kind == Handyman ? simulation::StaffRole::Handyman : kind == Mechanic ? simulation::StaffRole::Mechanic : kind == SecurityGuard ? simulation::StaffRole::Guard : simulation::StaffRole::Other;
+            const auto role = kind == Handyman ? simulation::StaffRole::Handyman : kind == Mechanic ? simulation::StaffRole::Mechanic : kind == SecurityGuard ? simulation::StaffRole::Guard : simulation::StaffRole::Entertainer;
             // Each entertainer the next costume in turn, as the game gives them out.
             std::vector<std::uint8_t> costumes;
             for (const Outfit& o : scene.wardrobe)

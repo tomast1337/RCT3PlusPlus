@@ -44,11 +44,11 @@ await frames(5);
 await screenshot("staff_menu");
 
 const staff = () => people.list().filter((p) => p.staff);
-const hires: [string, "handyman" | "mechanic" | "guard" | "other"][] = [
+const hires: [string, "handyman" | "mechanic" | "guard" | "entertainer"][] = [
     ["Staff_HireMaintenanceIcon", "handyman"],
     ["Staff_HireMechanicIcon", "mechanic"],
     ["Staff_HireSecurityIcon", "guard"],
-    ["Staff_HireEntertainerIcon", "other"],
+    ["Staff_HireEntertainerIcon", "entertainer"],
 ];
 const before = staff().length;
 for (const [button, role] of hires) {
@@ -67,10 +67,10 @@ for (const [button, role] of hires) {
     const at = map.screen(free!.col + 0.5, free!.row + 0.5)!;
     pointer.move(at.x, at.y);
     await frames(5);
-    await pointer.click(at.x, at.y, role === "other" ? "right" : undefined);
+    await pointer.click(at.x, at.y, role === "entertainer" ? "right" : undefined);
     await until(() => staff()[count].state !== "held", 60, `the ${role} let go`);
     // Put back, they walk across the ground to where they were made, which may be far off.
-    if (role !== "other")
+    if (role !== "entertainer")
         await until(() => staff()[count].state === "walking", 600, `the ${role} walking`);
 }
 expect(staff().length === before + hires.length, "every hire kept");

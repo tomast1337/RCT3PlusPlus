@@ -93,9 +93,14 @@ namespace rct3::scene
             const bool picked = window->take_tab().has_value();
             if (picked || window->page_age() >= kRefresh)
                 show(*window, topic, facts, strings, units);
-            // Hiring and the other buttons do nothing yet.
             const bool park_page = topic == ui::ManagementTopic::ParkOperations && window->tab() == 0;
-            if (const auto button = window->take_button(); button && park_page)
+            const auto button = window->take_button();
+            if (button && topic == ui::ManagementTopic::Staff && *button < ui::kHireButtons.size())
+                asks.hire = ui::kHireButtons[*button];
+            const auto table = window->table();
+            if (button && topic == ui::ManagementTopic::Staff && *button == ui::kSackButton && table && table->selected())
+                asks.sack = ui::management_row(table->rows.at(*table->selected()).id);
+            if (button && park_page)
             {
                 asks.replace_broken = *button == ui::kReplaceBrokenButton;
                 asks.centre_entrance = *button == ui::kCentreEntranceButton;

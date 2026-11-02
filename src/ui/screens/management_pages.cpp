@@ -3,6 +3,7 @@
 
 #include "simulation/awards.hpp"
 #include "simulation/objectives.hpp"
+#include "simulation/staff_care.hpp"
 #include "strings/unicode.hpp"
 #include "ui/save_text.hpp"
 #include "ui/screens/person_info.hpp"
@@ -415,13 +416,13 @@ namespace rct3::ui
 
         // ----- staff -----
 
-        void staff_list(ManagementPage& page, std::size_t tab, const ManagementFacts& f, const StringTable& strings)
+        void staff_list(ManagementPage& page, std::size_t tab, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             page.columns = {
                 { text(strings, "Staff_ColumnHeader_Name"), 0, Align::Start, true },
                 { text(strings, "Staff_ColumnHeader_Jobs"), 90, Align::Start, true },
                 { text(strings, "Staff_ColumnHeader_Activity"), 0, Align::Start, true },
-                { text(strings, "Staff_ColumnHeader_Wage"), 50, Align::End, false },
+                { text(strings, "Staff_ColumnHeader_Wage"), 60, Align::End, true },
             };
             page.sort = 1;
             if (f.people != nullptr)
@@ -435,18 +436,24 @@ namespace rct3::ui
                     const PersonFacts facts = staff_facts(f, s);
                     const auto kind = static_cast<std::size_t>(s.kind);
                     const std::u16string job = kind < kJobNames.size() ? text(strings, kJobNames.at(kind)) : std::u16string(kDash);
-                    page.rows.push_back({ { person_name(facts, strings), job, person_doing(facts, strings), std::u16string(kDash) }, { std::nullopt, static_cast<double>(s.kind), std::nullopt, std::nullopt }, management_row_id({ ManagementRow::Kind::Staff, i }), std::string(kStaffMoods[std::to_underlying(happiness_mood(s.happiness))]) });
+                    const std::int64_t wage = simulation::wage_at(s.wage_level);
+                    page.rows.push_back({ { person_name(facts, strings), job, person_doing(facts, strings), money(units, wage) }, { std::nullopt, static_cast<double>(s.kind), std::nullopt, static_cast<double>(wage) }, management_row_id({ ManagementRow::Kind::Staff, i }), std::string(kStaffMoods[std::to_underlying(happiness_mood(s.happiness))]) });
                 }
             }
-            const std::array<std::pair<std::string_view, std::string_view>, 5> hire = { {
+            constexpr std::array<std::pair<std::string_view, std::string_view>, kHireButtons.size()> hire = { {
                 { "Staff_HireMaintenanceIcon", "Staff_Hire_Maintenance" },
                 { "Staff_HireMechanicIcon", "Staff_Hire_Mechanic" },
                 { "Staff_HireSecurityIcon", "Staff_Hire_Security" },
                 { "Staff_HireEntertainerIcon", "Staff_Hire_Entertainer" },
                 { "Staff_HireAnimalKeeperIcon", "Staff_Hire_AnimalKeeper" },
             } };
-            for (const auto& [icon, help] : hire)
-                page.buttons.push_back(stub(icon, { }, text(strings, help)));
+            for (std::size_t i = 0; i < hire.size(); ++i)
+            {
+                // A keeper is hired to an animal house.
+                const bool can = kHireButtons[i] != save::StaffKind::AnimalKeeper || f.animal_houses;
+                page.buttons.push_back({ std::string(hire[i].first), { }, text(strings, hire[i].second), can });
+            }
+            page.buttons.push_back({ "Staff_SackIconLarge", { }, text(strings, "StaffWindow_SackHelp"), !page.rows.empty() });
         }
 
         // ----- guests -----
@@ -938,7 +945,7 @@ namespace rct3::ui
                     finance_graphs(page, facts, strings, units);
                 break;
             case ManagementTopic::Staff:
-                staff_list(page, std::min(tab, kStaffTabs.size() - 1), facts, strings);
+                staff_list(page, std::min(tab, kStaffTabs.size() - 1), facts, strings, units);
                 break;
             case ManagementTopic::Guests:
                 if (tab == 0)

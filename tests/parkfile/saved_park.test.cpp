@@ -2,6 +2,7 @@
 #include "parkfile/saved_park.hpp"
 
 #include "parkfile/binary.hpp"
+#include "simulation/import_park.hpp"
 #include "simulation/units.hpp"
 
 #include <doctest/doctest.h>
@@ -215,7 +216,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     r.emplace<Member>(ann, party);
     r.emplace<Member>(bob, party);
     const entt::entity sweeper = r.create();
-    r.emplace<Staff>(sweeper, Staff { .role = StaffRole::Handyman, .wage = 900, .training = 1, .laziness = 0.25f });
+    r.emplace<Staff>(sweeper, Staff { .role = StaffRole::Handyman, .wage = 900, .training = 1, .laziness = 0.25f, .mended = 5, .think = { 12.5f }, .miserable = 3 });
     r.emplace<Pose>(sweeper, Pose { .position = { 3, 0, 4 } });
     r.emplace<Patrol>(sweeper, Patrol { { { 1, 2 }, { 3, 4 } }, 7 });
 
@@ -237,6 +238,10 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     REQUIRE(people.staff[0].patrol);
     CHECK(people.staff[0].patrol->tiles == std::vector<glm::ivec2> { { 1, 2 }, { 3, 4 } });
     CHECK(people.staff[0].patrol->zone == 7);
+    // How far they are towards quitting, their next thought and what they mended.
+    CHECK(people.staff[0].mended == 5);
+    CHECK(people.staff[0].think == 12.5f);
+    CHECK(people.staff[0].miserable == 3);
 
     SimWorld loaded;
     auto& l = loaded.registry;
@@ -281,6 +286,7 @@ TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animal
     const entt::entity dung = r.create();
     r.emplace<Dung>(dung, Dung { 0 });
     r.emplace<Pose>(dung, Pose { .position = { 2, 0, 3 } });
+    r.get<KeeperDuty>(keeper) = { .house = r.get<KeeperDuty>(keeper).house, .job = KeeperJob::Clearing, .goal = { 2, 0, 3 }, .target = dung, .busy = { 4 } };
     save::EnclosureMap map { .cols = 2, .rows = 1, .tiles = { 0, -1 }, .fences = { "Wood" } };
 
     parkfile::SavedPark park = small_park();
@@ -309,6 +315,12 @@ TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animal
     CHECK(animals.get<const Animal>(animals.front()).hunger.value == 0.25f);
     CHECK(animals.get<const Pose>(animals.front()).position == glm::vec3 { 3, 0, 1 });
     CHECK(l.view<const Dung>().size() == 1);
+    // The keeper goes on clearing the same dung.
+    const KeeperDuty& duty = l.get<KeeperDuty>(keeper2);
+    CHECK(duty.job == KeeperJob::Clearing);
+    CHECK(duty.goal == glm::vec3 { 2, 0, 3 });
+    CHECK(duty.target == l.view<const Dung>().front());
+    CHECK(duty.busy.value == 4);
 }
 
 TEST_CASE("a save keeps the pools, their extras and changing rooms")
@@ -328,4 +340,26 @@ TEST_CASE("a save keeps the pools, their extras and changing rooms")
     const park::PoolRoom& r = read->pools->rooms[0];
     CHECK((r.symbol == "Hut" && r.overlay == "Style/Own" && r.col == 2 && r.row == 4 && r.turn == 1 && r.ticket == 250 && r.open));
     CHECK_FALSE(parkfile::read_saved_park(parkfile::write_saved_park(small_park()))->pools);
+}
+
+TEST_CASE("a save keeps a person's switches and a ride's call for a mechanic")
+{
+    parkfile::SavedPark park = small_park();
+    save::PeopleModel model;
+    model.guests.resize(1);
+    model.guests[0].person.thoughts_to_console = true;
+    model.staff.resize(1);
+    model.staff[0].person.highlight = true;
+    const simulation::SimWorld world;
+    park.people = parkfile::keep_people(world, model, { });
+    park.rides.rides.resize(1);
+    park.rides.rides[0].base.mechanic_asked = true;
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+    REQUIRE(read->people);
+    CHECK(read->people->model.guests[0].person.thoughts_to_console);
+    CHECK_FALSE(read->people->model.guests[0].person.highlight);
+    CHECK(read->people->model.staff[0].person.highlight);
+    REQUIRE(read->rides.rides.size() == 1);
+    CHECK(simulation::upkeep_of(read->rides.rides[0]).called);
 }

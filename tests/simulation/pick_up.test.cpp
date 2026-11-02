@@ -146,3 +146,17 @@ TEST_CASE("a mechanic picked up drops their job, and another is sent")
     CHECK(r.get<Staff>(sent).ride == entt::null);
     CHECK(park.run_until([&] { return r.get<Upkeep>(ride).mechanic == (sent == first ? second : first); }, 30));
 }
+
+TEST_CASE("a hire given back goes to the walkway staff may use nearest the park's entrance")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    SimWorld& world = park.world();
+    CHECK_FALSE(entrance_drop(world)); // No entrance
+    const NodeId gate = *world.paths.find({ 0, 0, 0 });
+    world.registry.emplace<ParkGate>(world.registry.create(), gate);
+    world.paths.keep_staff_off(gate, true); // Under the entrance
+    const auto drop = entrance_drop(world);
+    REQUIRE(drop);
+    CHECK(*drop == world.paths.centre(*world.paths.find({ 1, 0, 0 })));
+}

@@ -16,6 +16,7 @@
 #include "scene/pool_tools.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
+#include "simulation/crowds.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/park_messages.hpp"
 #include "simulation/systems.hpp"
@@ -836,7 +837,7 @@ namespace rct3::scene
                     person["happiness"] = park.people.guests[p.saved].mood_now.happiness;
                 const auto& r = park.sim.registry;
                 // A worker's job, in StaffRole's order.
-                constexpr std::array<std::string_view, 7> kRoles { "handyman", "mechanic", "guard", "other", "vendor", "keeper", "inspector" };
+                constexpr std::array<std::string_view, 8> kRoles { "handyman", "mechanic", "guard", "other", "vendor", "keeper", "inspector", "entertainer" };
                 if (const auto* staff = r.valid(p.guest) ? r.try_get<simulation::Staff>(p.guest) : nullptr)
                     person["role"] = kRoles[std::to_underlying(staff->role)];
                 // Where the simulation has them, and what of: walking the paths, held by the player, or let go.
@@ -880,9 +881,18 @@ namespace rct3::scene
                     if (const auto* carried = r.try_get<simulation::Carried>(p.guest); carried != nullptr && carried->held)
                         person["carrying"] = carried->bites == 0 ? "empty" : carried->food ? "food" : "drink";
                     // A gesture they make now, by the motion it shows.
-                    constexpr std::array<std::string_view, 8> kGestures { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdown", "handticket" };
+                    constexpr std::array<std::string_view, 9> kGestures { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdown", "handticket", "applause" };
                     if (const auto* gesture = r.try_get<simulation::Gesture>(p.guest))
                         person["gesture"] = kGestures[std::to_underlying(gesture->kind)];
+                    // Stopped round someone: an entertainer's show, or a VIP for an autograph.
+                    if (const auto* watching = r.try_get<simulation::Watching>(p.guest))
+                        person["watching"] = watching->autograph ? "autograph" : "show";
+                    // An entertainer in a show, the move they make now.
+                    if (const auto* show = r.try_get<simulation::Show>(p.guest); show != nullptr && !show->moves.empty())
+                    {
+                        constexpr std::array<std::string_view, 9> kMoves { "wave", "idle1", "idle2", "dancelevel1", "dancelevel2", "dancelevel3", "falloverin", "falloverout", "dejection" };
+                        person["show"] = kMoves[std::to_underlying(simulation::show_move_at(*show).first)];
+                    }
                     // Sliding down a slope, the motion they slide in.
                     if (const auto* drop = r.try_get<simulation::Dropped>(p.guest); drop != nullptr && drop->sliding)
                         person["slide"] = slide_motion(r.get<simulation::Pose>(p.guest).heading.value, drop->drift, p.staff);

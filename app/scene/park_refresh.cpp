@@ -16,6 +16,7 @@
 #include "scene/park_view.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
+#include "simulation/crowds.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
@@ -460,15 +461,35 @@ namespace rct3::scene
                 std::tie(pose.motion, pose.time) = vendor_motion(scene, shown, glm::vec3(pose.world[3]));
                 return pose;
             }
+            // An entertainer in a show, standing where they began it: each move as their costume names its motion.
+            if (const auto* show = r.try_get<simulation::Show>(shown.guest); show != nullptr && !show->moves.empty() && !r.any_of<simulation::Held, simulation::Dropped>(shown.guest))
+            {
+                // In ShowMove's order.
+                constexpr std::array<std::string_view, 9> kShowMotions { "wave", "idle1", "idle2", "dancelevel1", "dancelevel2", "dancelevel3", "falloverin", "falloverout", "dejection" };
+                const auto [move, into] = simulation::show_move_at(*show);
+                pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+                pose.motion = park::motion_number(kShowMotions[std::to_underlying(move)]).value_or(park::motion::kIdle);
+                pose.time = into + scene.sim_time;
+                return pose;
+            }
             pose.time = shown.saved_time + clock * shown.speed;
             // A gesture they make, as their mesh names its motion.
             const auto gestured = [&](const simulation::Gesture* gesture) {
                 if (gesture == nullptr)
                     return;
                 // By the names the people's meshes give these motions, in GestureKind's order.
-                constexpr std::array<std::string_view, 8> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop", "handticket" };
+                constexpr std::array<std::string_view, 9> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop", "handticket", "applause" };
                 pose.motion = park::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(park::motion::kIdle);
                 pose.time = simulation::kTuning.gestures.shown.value - gesture->left.value + scene.sim_time;
+                // Clapping: hands up, clapping a while, hands down for the last of it.
+                constexpr float kClapEnds = 0.33f; ///< Seconds the applause motions take to raise and lower the hands
+                if (gesture->kind == simulation::GestureKind::Clap)
+                {
+                    const float into = simulation::kTuning.shows.clap.value - gesture->left.value + scene.sim_time;
+                    const float left = gesture->left.value - scene.sim_time;
+                    pose.motion = park::motion_number(into < kClapEnds ? "applausein" : left < kClapEnds ? "applauseout" : "applause").value_or(park::motion::kIdle);
+                    pose.time = into < kClapEnds ? into : left < kClapEnds ? kClapEnds - left : into - kClapEnds;
+                }
                 // Knocked over, they go down, lie there, and get up for the last of it.
                 constexpr float kGettingUp = 1.5f; ///< Seconds of it a knocked over guest takes getting up
                 if (gesture->kind == simulation::GestureKind::Down)
@@ -527,7 +548,8 @@ namespace rct3::scene
                 return std::nullopt; // Seated riders go with their cars (pose_riders); the rest wait out of sight
             const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
             const bool at_ticket = ride_walk != nullptr && !ride_walk->off && ride_walk->next == 1 && ride_walk->pause.value > 0;
-            const bool walking = !at_ticket && (ride_walk != nullptr || stride.from != stride.to || now.was != now.position);
+            const bool watching = r.all_of<simulation::Watching>(shown.guest); // Mid-step, stopped to watch
+            const bool walking = !at_ticket && (ride_walk != nullptr || (stride.from != stride.to && !watching) || now.was != now.position);
             // Out on the paths they go in their gait, running or dragging their feet; on the way on to a ride
             // or in its queue they walk.
             const bool own_gait = kind == simulation::ErrandKind::Wandering || kind == simulation::ErrandKind::Heading || kind == simulation::ErrandKind::Waiting || kind == simulation::ErrandKind::Following;

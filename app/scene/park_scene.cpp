@@ -563,7 +563,7 @@ namespace rct3::scene
             if (p.staff && p.saved < scene.people.staff.size())
             {
                 f.staff = &scene.people.staff[p.saved];
-                simulation::Staff pay { .training = f.staff->training };
+                simulation::Staff pay { .role = simulation::staff_role(f.staff->kind), .training = f.staff->training };
                 simulation::set_wage_level(pay, f.staff->wage_level);
                 f.wage = pay.wage.value;
                 f.training_cost = simulation::training_cost(pay);
@@ -1657,7 +1657,7 @@ namespace rct3::scene
                 return std::nullopt;
             }
             const auto type = kind == Handyman ? save::PersonType::Handyman : kind == Mechanic ? save::PersonType::Mechanic : kind == SecurityGuard ? save::PersonType::SecurityGuard : save::PersonType::Entertainer;
-            const auto role = kind == Handyman ? simulation::StaffRole::Handyman : kind == Mechanic ? simulation::StaffRole::Mechanic : kind == SecurityGuard ? simulation::StaffRole::Guard : simulation::StaffRole::Entertainer;
+            const auto role = simulation::staff_role(kind);
             // Each entertainer the next costume in turn, as the game gives them out.
             std::vector<std::uint8_t> costumes;
             for (const Outfit& o : scene.wardrobe)
@@ -1805,7 +1805,10 @@ namespace rct3::scene
                 if (scene.park.cash && *scene.park.cash < cost)
                     return false;
                 if (simulation::train(care) && scene.park.cash)
+                {
                     *scene.park.cash -= cost;
+                    simulation::ledger_month(scene.park_model.finance, scene.ledger_month, scene.park.date).staff_training += static_cast<std::int32_t>(cost);
+                }
                 return show();
             }
             if (change.id == ui::person_control(Wage))
@@ -3126,7 +3129,10 @@ namespace rct3::scene
                 if (const auto* payroll = scene.sim.registry.ctx().find<simulation::Payroll>())
                 {
                     if (scene.park.cash)
+                    {
                         *scene.park.cash -= payroll->paid.value - scene.wages_seen;
+                        simulation::ledger_month(scene.park_model.finance, scene.ledger_month, scene.park.date).staff_wages += static_cast<std::int32_t>(payroll->paid.value - scene.wages_seen);
+                    }
                     scene.wages_seen = payroll->paid.value;
                 }
                 // So are pools' cleaning fluids and stalls' stock.
@@ -3740,7 +3746,22 @@ namespace rct3::scene
         saved.bins = scene.bins;
         saved.signs = scene.signs;
         const simulation::ParkState& park = scene.park;
-        saved.progress = { .cash = park.cash, .loan = park.loan, .rating = park.rating, .rating_parts = park.rating_parts, .time = park.time, .zero_time = park.zero_time, .date = park.date, .weather = park.weather, .forecast = park.forecast, .temperature = park.temperature, .day_time = scene.day.time, .climate = park.climate, .weather_hold = park.weather_hold, .wind = park.wind, .wind_change = park.wind_change };
+        saved.progress = { .cash = park.cash,
+                           .loan = park.loan,
+                           .rating = park.rating,
+                           .rating_parts = park.rating_parts,
+                           .time = park.time,
+                           .zero_time = park.zero_time,
+                           .date = park.date,
+                           .weather = park.weather,
+                           .forecast = park.forecast,
+                           .temperature = park.temperature,
+                           .day_time = scene.day.time,
+                           .climate = park.climate,
+                           .weather_hold = park.weather_hold,
+                           .wind = park.wind,
+                           .wind_change = park.wind_change,
+                           .ledger = { scene.park_model.finance.ledger.begin(), scene.park_model.finance.ledger.begin() + static_cast<std::ptrdiff_t>(std::min(scene.park_model.finance.ledger_periods_loaded, save::kLedgerPeriods)) } };
         saved.camera = scene.camera;
         std::unordered_map<entt::entity, std::int32_t> looks;
         for (const ShownPerson& p : scene.shown_people)

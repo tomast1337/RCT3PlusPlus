@@ -325,7 +325,20 @@ namespace rct3::simulation::tuning
     /// How content and lazy staff are, and their pay and training.
     struct Staff
     {
-        Money lowest_wage { 50 };                           ///< An hour at level 0; each level adds half as much
+        /// A month's wage in hundredths for each job, in StaffRole's order, at wage levels 0, 1 (as hired) and 2 (after a
+        /// raise); paid a quarter each week. Levels 1 and 2 of handymen, mechanics, guards and entertainers are the wages
+        /// the game's staff window shows. Chosen by eye: level 0, and vendors' and keepers' wages (keepers below guards).
+        /// Lifeguards (Other) and park inspectors are not paid.
+        std::array<std::array<std::int64_t, 3>, 8> wages { {
+            { 3000, 3500, 4200 }, // Handyman
+            { 5000, 5500, 6500 }, // Mechanic
+            { 1200, 1500, 2000 }, // Guard
+            { 0, 0, 0 },          // Other
+            { 300, 400, 500 },    // Vendor
+            { 1000, 1300, 1600 }, // Keeper
+            { 0, 0, 0 },          // Inspector
+            { 3400, 4000, 4800 }, // Entertainer
+        } };
         Seconds load_window { 600 };                        ///< Over how long their share of time at work is judged
         Share content_base { 0.45f };                       ///< Happiness of an untrained worker on the lowest wage
         Share content_per_training { 0.1f };                ///< More for each level of training

@@ -1232,6 +1232,11 @@ namespace rct3::scene
                 scene.park.weather_hold = p.weather_hold;
                 scene.park.wind = p.wind;
                 scene.park.wind_change = p.wind_change;
+                if (!p.ledger.empty())
+                {
+                    std::ranges::copy(p.ledger | std::views::take(save::kLedgerPeriods), scene.park_model.finance.ledger.begin());
+                    scene.park_model.finance.ledger_periods_loaded = std::min(p.ledger.size(), save::kLedgerPeriods);
+                }
             }
         }
         // Under everything else, as part of the park.

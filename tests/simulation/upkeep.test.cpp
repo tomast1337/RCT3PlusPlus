@@ -3,9 +3,12 @@
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/import_park.hpp"
+#include "simulation/park_state.hpp"
 #include "simulation/sandbox.hpp"
+#include "simulation/staff_care.hpp"
 #include "simulation/systems.hpp"
 
+#include <algorithm>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -76,14 +79,42 @@ TEST_CASE("a mechanic the player calls inspects the ride before it is due")
     CHECK_FALSE(r.get<Upkeep>(ride).called);
 }
 
-TEST_CASE("staff are paid their wage by the game hour")
+TEST_CASE("staff are paid a quarter of their monthly wage as each week ends, vendors and keepers too, inspectors not")
 {
     Sandbox park;
     park.path({ 0, 0 }, { 2, 0 });
-    for (int i = 0; i < 2; ++i)
-        park.world().registry.get<Staff>(park.staff(StaffRole::Handyman, { 0, 0 })).wage.value = 100;
-    park.run_seconds(kSecondsPerHour);
-    CHECK(park.world().registry.ctx().get<Payroll>().paid.value == doctest::Approx(200).epsilon(0.02));
+    auto& r = park.world().registry;
+    set_wage_level(r.get<Staff>(park.staff(StaffRole::Handyman, { 0, 0 })), 1);
+    (void)add_vendor(park.world(), { 0, 0, 0 });
+    // A keeper and an inspector, paid or not wherever they are.
+    for (const StaffRole role : { StaffRole::Keeper, StaffRole::Inspector })
+    {
+        Staff s { .role = role };
+        set_wage_level(s, kMostWageLevel - (role == StaffRole::Keeper));
+        const entt::entity e = r.create();
+        r.emplace<Staff>(e, s);
+    }
+    const float week = kSecondsPerHour * rct3::save::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
+    park.run_seconds(week * 0.9f);
+    CHECK(r.ctx().get<Payroll>().paid.value == 0);
+    park.run_seconds(week * 0.2f);
+    CHECK(r.ctx().get<Payroll>().paid.value == (wage_at(StaffRole::Handyman, 1) + wage_at(StaffRole::Vendor, 1) + wage_at(StaffRole::Keeper, 1)) / 4);
+}
+
+TEST_CASE("a vendor's mood moves as other staff's do, but they never quit")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 2, 0 });
+    auto& r = park.world().registry;
+    const entt::entity vendor = add_vendor(park.world(), { 0, 0, 0 });
+    set_wage_level(r.get<Staff>(vendor), 0);
+    r.get<Staff>(vendor).training = 0;
+    // No guest ever comes by: idle, they grow unhappy and think so.
+    park.run_seconds(3 * 3600);
+    CHECK(r.get<Staff>(vendor).happiness.value < 0.5f);
+    REQUIRE(r.all_of<Thoughts>(vendor));
+    const auto* findings = r.ctx().find<Findings>();
+    CHECK((findings == nullptr || std::ranges::none_of(findings->found, [&](const auto& f) { return f.second == vendor; })));
 }
 
 TEST_CASE("a saved ride brings its reliability, breakdown and inspections")

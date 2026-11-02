@@ -861,8 +861,8 @@ namespace rct3::simulation
         std::int32_t tasks = kEveryTask; ///< Task flags, as save::Staff keeps them
         Seconds busy { };                ///< Left at the job in hand
         entt::entity ride = entt::null;  ///< The ride a mechanic is going to, or working on, to repair or inspect
-        Money wage { };                  ///< A game hour
-        std::int32_t wage_level = 2;     ///< 0 to 2, what `wage` follows (staff_care.hpp)
+        Money wage { };                  ///< A month
+        std::int32_t wage_level = 1;     ///< 0 to 2, what `wage` follows (staff_care.hpp); 1 as hired
         std::int32_t training = 3;       ///< 0 untrained to 3; a hire's is set by hired_training (staff_care.hpp)
         std::int32_t warnings = 0;
         Share happiness { 1 };
@@ -933,7 +933,7 @@ namespace rct3::simulation
     struct Payroll
     {
         Money paid { };
-        double owed = 0; ///< Hundredths earned and not yet paid, under one
+        Seconds week { }; ///< Into the week, paid as it ends
     };
 
     /// What the park has paid for supplies, such as pools' cleaning fluid and stalls' stock, kept in the registry's

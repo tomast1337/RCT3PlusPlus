@@ -21,8 +21,11 @@ namespace rct3::simulation
     inline constexpr std::int32_t kMostTraining = 3;
     inline constexpr std::int32_t kMostWageLevel = 2;
 
-    /// Hundredths a game hour at `level`, 0 to 2.
-    [[nodiscard]] std::int64_t wage_at(std::int32_t level);
+    /// The job a saved staff member of `kind` does in the simulation.
+    [[nodiscard]] StaffRole staff_role(save::StaffKind kind);
+
+    /// Hundredths a month for `role` at `level`, 0 to 2.
+    [[nodiscard]] std::int64_t wage_at(StaffRole role, std::int32_t level);
 
     /// Sets the wage level, clamped to 0 to 2, and the wage with it.
     void set_wage_level(Staff& staff, std::int32_t level);

@@ -1343,9 +1343,7 @@ namespace rct3::simulation
         {
             const save::Person& p = people.staff[i].person;
             const glm::vec3 position { p.position.x, p.position.y, p.position.z };
-            using enum save::StaffKind;
-            const save::StaffKind kind = people.staff[i].kind;
-            const StaffRole role = kind == Handyman ? StaffRole::Handyman : kind == Mechanic ? StaffRole::Mechanic : kind == SecurityGuard ? StaffRole::Guard : kind == Vendor ? StaffRole::Vendor : kind == AnimalKeeper ? StaffRole::Keeper : kind == ParkInspector ? StaffRole::Inspector : kind == Entertainer ? StaffRole::Entertainer : StaffRole::Other;
+            const StaffRole role = staff_role(people.staff[i].kind);
             // A vendor stays in their booth, a keeper in their enclosure (import_animal_houses gives them their work).
             const bool walks = role != StaffRole::Vendor && role != StaffRole::Keeper;
             auto at = world.paths.nearest(position);

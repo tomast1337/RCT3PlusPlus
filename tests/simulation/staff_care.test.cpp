@@ -20,14 +20,43 @@ namespace
 
 TEST_CASE("training and pay make staff content")
 {
-    Staff untrained { .training = 0 };
+    Staff untrained { .role = StaffRole::Handyman, .training = 0 };
     set_wage_level(untrained, 0);
-    Staff trained { .training = kMostTraining };
+    Staff trained { .role = StaffRole::Handyman, .training = kMostTraining };
     set_wage_level(trained, kMostWageLevel);
     live(untrained, 0.5f, 10);
     live(trained, 0.5f, 10);
     CHECK(trained.happiness.value > untrained.happiness.value + 0.3f);
     CHECK(trained.wage.value > untrained.wage.value);
+}
+
+TEST_CASE("each job has its own monthly wage at each level; inspectors and lifeguards are not paid")
+{
+    // As the game's staff window shows them, as hired and after a raise.
+    CHECK(wage_at(StaffRole::Handyman, 1) == 3500);
+    CHECK(wage_at(StaffRole::Handyman, 2) == 4200);
+    CHECK(wage_at(StaffRole::Mechanic, 1) == 5500);
+    CHECK(wage_at(StaffRole::Mechanic, 2) == 6500);
+    CHECK(wage_at(StaffRole::Guard, 1) == 1500);
+    CHECK(wage_at(StaffRole::Guard, 2) == 2000);
+    CHECK(wage_at(StaffRole::Entertainer, 1) == 4000);
+    CHECK(wage_at(StaffRole::Entertainer, 2) == 4800);
+    for (const StaffRole role : { StaffRole::Handyman, StaffRole::Mechanic, StaffRole::Guard, StaffRole::Vendor, StaffRole::Keeper, StaffRole::Entertainer })
+    {
+        CHECK(wage_at(role, 0) > 0);
+        CHECK(wage_at(role, 0) < wage_at(role, 1));
+        CHECK(wage_at(role, 1) < wage_at(role, 2));
+        CHECK(wage_at(role, 5) == wage_at(role, kMostWageLevel));
+    }
+    CHECK(wage_at(StaffRole::Keeper, 1) < wage_at(StaffRole::Guard, 1));
+    CHECK(wage_at(StaffRole::Inspector, 2) == 0);
+    CHECK(wage_at(StaffRole::Other, 2) == 0);
+    CHECK(staff_role(rct3::save::StaffKind::LifeGuard) == StaffRole::Other);
+    // Training leaves the wage alone.
+    Staff s { .role = StaffRole::Mechanic, .training = 0 };
+    set_wage_level(s, 1);
+    REQUIRE(train(s));
+    CHECK(s.wage.value == 5500);
 }
 
 TEST_CASE("overwork and idleness both make staff unhappy, and unhappy staff grow lazy")

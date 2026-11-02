@@ -1677,6 +1677,7 @@ namespace rct3::scene
             if (std::ranges::contains(worn, nullptr) || walkways.empty())
                 return std::nullopt;
             const entt::entity e = simulation::add_staff(scene.sim, role, walkways[random::below(scene.looks, walkways.size())]);
+            r.get<simulation::Staff>(e).training = simulation::hired_training(scene.park.cash.has_value());
             scene.known_guests.insert(e);
             change_people(scene);
             std::int32_t number = 0;
@@ -1750,6 +1751,11 @@ namespace rct3::scene
             if (change.id == ui::person_control(PatrolPaint))
             {
                 scene.painting_patrol = change.value != 0;
+                return false;
+            }
+            if (change.id == ui::person_control(PatrolEdit))
+            {
+                scene.painting_patrol = !scene.painting_patrol;
                 return false;
             }
             if (const entt::entity e = shown_staff(scene); e != entt::null && change.id == ui::person_control(PatrolClear))

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // A worker's window as the park runs: they think about their work and how they feel, and those thoughts
-// show on their Thoughts tab; the Statistics tab shows the day they were hired, their mood as a face, their
-// laziness, warnings and pay, and training them costs the park what the button says.
+// show on their Thoughts tab; the Statistics tab, a list that scrolls, shows the day they were hired, their
+// pay with arrows to change it, their laziness and their mood as a face; the Details tab has a row of round
+// buttons, the last one training them for what it says, its squares filling a level at a time.
 //
 //   ./nob script scripts/tests/staff_mood.ts -- --no-audio
 
@@ -30,9 +31,25 @@ const tab = (part: string) => ui.children("info")!.find((t) => t.toLowerCase().i
 await ui.click(`info/${tab("thoughts")}`);
 await frames(10);
 await screenshot("staff_thoughts");
+await ui.click(`info/${tab("tools")}`);
+await frames(10);
+await screenshot("staff_tasks");
 await ui.click(`info/${tab("stats")}`);
 await frames(10);
 await screenshot("staff_stats");
+// Scrolled to its bottom with the wheel over it.
+const bar = ui.find("info/scroll");
+expect(bar !== undefined, "a scroll bar beside the statistics");
+pointer.move(bar!.left - 0.05, bar!.y); // Over the lines, in shares of the screen
+for (let i = 0; i < 5; ++i) {
+    pointer.wheel(-1);
+    await frames(2);
+}
+await frames(5);
+await screenshot("staff_stats_bottom");
+await ui.click(`info/${tab("infoicon")}`);
+await frames(10);
+await screenshot("staff_details");
 
 /** Finds the control named `name` wherever the window holds it. */
 const find = (path: string, name: string): string | undefined => {
@@ -46,7 +63,7 @@ const find = (path: string, name: string): string | undefined => {
     }
     return undefined;
 };
-const train = find("info", "Rct3pp_Train");
+const train = find("info", "StaffWindow_TrainHelp");
 const cash = park.cash();
 if (train !== undefined && cash !== undefined) {
     park.setCash(1000000);
@@ -77,3 +94,14 @@ const quit = told("StaffMessage_Resigned");
 expect(thinking.length === new Set(thinking).size, `each worker told thinking of quitting once, got ${thinking.join(", ")}`);
 expect(quit.length === new Set(quit).size && quit.every((n) => thinking.includes(n)), `one message each that they quit, after thinking of it, got ${quit.join(", ")}`);
 expect(ui.find("info") === undefined, "their window closed");
+
+// A handyman's tasks: each a line with its toggle, pressed in while it is on.
+const sweeper = people.list().findIndex((p) => p.role === "handyman");
+if (sweeper >= 0) {
+    people.show(sweeper);
+    await until(() => ui.find("info") !== undefined, 120, "the handyman's window");
+    await ui.click(`info/${tab("tools")}`);
+    await frames(10);
+    expect(find("info", "StaffTasks_SweepPaths") !== undefined, "a toggle for sweeping paths");
+    await screenshot("handyman_tasks");
+}

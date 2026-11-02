@@ -177,7 +177,6 @@ TEST_CASE("a worker's statistics show when they were hired, their mood, warnings
 {
     StringTable s = table();
     s.add("Employee_DateHired", u"Since:");
-    s.add("StaffWindow_Happiness_Sad", u"Glum");
     s.add("StaffWindow_SortBy_Warnings", u"Told off:");
     s.add("StaffWindow_TrainingText1", u"Costs %AMOUNT%.");
     s.add("Year", u"Year");
@@ -194,12 +193,17 @@ TEST_CASE("a worker's statistics show when they were hired, their mood, warnings
     f.training_cost = 5000;
     const InfoPage stats = person_page(PersonTab::Stats, f, s, units);
     CHECK(value(stats, u"Since:").ends_with(u", Year 3"));
-    REQUIRE(line(stats, u"Glum") != nullptr);
-    CHECK(line(stats, u"Glum")->icon == "Staff_MoodSadIcon");
+    const auto mood = std::ranges::find(stats.lines, std::string("Guest_Happiness"), &InfoLine::name);
+    REQUIRE(mood != stats.lines.end());
+    CHECK(mood->value_icon == "Staff_MoodSadIcon");
     CHECK(value(stats, u"Told off:") == u"2");
-    CHECK(stats.controls.at(0).text.ends_with(money_text(units.currency, 250)));
-    CHECK(stats.controls.at(0).text.starts_with(u" ")); // Set off from the level
-    CHECK(stats.controls.at(1).help == u"Costs " + money_text(units.currency, 5000) + u".");
+    REQUIRE(stats.controls.size() == 1); // The training is bought on the Details tab
+    CHECK(stats.controls[0].shown == money_text(units.currency, 250));
+    const InfoPage general = person_page(PersonTab::General, f, s, units);
+    const auto train = std::ranges::find(general.controls, person_control(PersonControl::Train), &InfoControl::id);
+    REQUIRE(train != general.controls.end());
+    CHECK(train->help.ends_with(u"Costs " + money_text(units.currency, 5000) + u"."));
+    CHECK(train->icon == "Staff_Training0IconLarge");
 }
 
 TEST_CASE("each job has its own tabs, and its controls are written from the save")
@@ -227,22 +231,26 @@ TEST_CASE("each job has its own tabs, and its controls are written from the save
     CHECK(work.controls[1].label == u"Mend");
     CHECK(work.controls[1].id == person_control(PersonControl::Task, 1));
     CHECK(work.controls[1].value == 1);
+    CHECK(work.controls[1].icon == "Staff_TaskButtonRepair");
 
     const InfoPage general = person_page(PersonTab::General, staff(p), s, units);
-    REQUIRE(general.controls.size() == 4);
+    // The name, then the row of buttons in the game's order.
+    REQUIRE(general.controls.size() == 7);
     CHECK(general.controls[0].kind == InfoControlKind::Text);
-    CHECK(general.controls[1].id == person_control(PersonControl::PickUp));
-    CHECK(general.controls[2].id == person_control(PersonControl::Sack));
-    CHECK(general.controls[3].id == person_control(PersonControl::Warn));
+    const std::array order { PersonControl::PickUp, PersonControl::ToConsole, PersonControl::Highlight, PersonControl::Warn, PersonControl::Sack, PersonControl::Train };
+    for (std::size_t i = 0; i < order.size(); ++i)
+        CHECK(general.controls[i + 1].id == person_control(order[i]));
+    CHECK(general.controls[4].enabled);
     mechanic.warnings = kMostWarnings;
-    CHECK(person_page(PersonTab::General, staff(p), s, units).controls.size() == 3);
+    CHECK_FALSE(person_page(PersonTab::General, staff(p), s, units).controls[4].enabled);
+    mechanic.training = 2;
+    CHECK(person_page(PersonTab::General, staff(p), s, units).controls[6].icon == "Staff_Training2IconLarge");
+    mechanic.training = kMostTraining;
+    CHECK_FALSE(person_page(PersonTab::General, staff(p), s, units).controls[6].enabled); // Fully trained
 
     const InfoPage stats = person_page(PersonTab::Stats, staff(p), s, units);
-    REQUIRE(stats.controls.size() == 2);
+    REQUIRE(stats.controls.size() == 1);
     CHECK(stats.controls[0].value == 2);
-    CHECK(stats.controls[1].id == person_control(PersonControl::Train));
-    mechanic.training = kMostTraining;
-    CHECK(person_page(PersonTab::Stats, staff(p), s, units).controls.size() == 1); // Fully trained: no Train
 
     mechanic.kind = save::StaffKind::Entertainer;
     mechanic.person.sub_type = 3;

@@ -154,11 +154,12 @@ namespace rct3::ui
         inline constexpr float kStripOverlap = 13; ///< Of the strip under the disc
         inline constexpr float kStripExtra = 40;   ///< Of the strip's width beyond its content's
         inline constexpr float kStripNarrowest = 136;
-        inline constexpr float kStripHeight = 130; ///< Of the strip, whatever its content
-        inline constexpr float kBodyLeft = 24;     ///< Of the content, from the strip's left edge, past the paper's margin
-        inline constexpr float kBodyTop = 22;      ///< From the strip's top edge, below its band
-        inline constexpr float kBodyBottom = 12;   ///< From the strip's bottom edge
-        inline constexpr float kPageWidth = 360;   ///< Of a page of lines
+        inline constexpr float kStripHeight = 130;                                ///< Of the strip, whatever its content
+        inline constexpr float kBodyLeft = 24;                                    ///< Of the content, from the strip's left edge, past the paper's margin
+        inline constexpr float kBodyTop = 22;                                     ///< From the strip's top edge, below its band
+        inline constexpr float kBodyBottom = 12;                                  ///< From the strip's bottom edge
+        inline constexpr float kBodyView = kStripHeight - kBodyTop - kBodyBottom; ///< Of the content in sight
+        inline constexpr float kPageWidth = 360;                                  ///< Of a page of lines
         inline constexpr float kLineHeight = 15;
         inline constexpr float kBarWidth = 130;     ///< Of a line's bar
         inline constexpr float kValueColumn = 185;  ///< From the page's left edge to where values start
@@ -178,11 +179,14 @@ namespace rct3::ui
         inline constexpr float kScreenMargin = 4;   ///< Kept between the colours and the screen's edges
         inline constexpr float kControlHeight = 15; ///< Of a row holding a control
         inline constexpr float kTickSize = 13;
-        inline constexpr float kPaintSize = 26;    ///< Of a page's pots
-        inline constexpr float kNumberWidth = 70;  ///< Of a page's spinners
-        inline constexpr float kChoiceWidth = 140; ///< Of a page's lists
-        inline constexpr float kLineIcon = 12;     ///< Of the picture before a line, such as a thought's face
-        inline constexpr float kLineIconGap = 4;   ///< Between that picture and the line's text
+        inline constexpr float kPaintSize = 26;               ///< Of a page's pots
+        inline constexpr float kNumberWidth = 70;             ///< Of a page's spinners
+        inline constexpr float kChoiceWidth = 140;            ///< Of a page's lists
+        inline constexpr float kLineIcon = 12;                ///< Of the picture before a line, such as a thought's face
+        inline constexpr float kLineIconGap = 4;              ///< Between that picture and the line's text
+        inline constexpr float kToggleSize = kLineHeight;     ///< A task's toggle, on a line of its own
+        inline constexpr float kScrollStep = 2 * kLineHeight; ///< Down the page for a notch of the wheel
+        inline constexpr float kScrollGap = 2;                ///< Between the scroll bar and the paper's end
     } // namespace info_panel
 
     struct InfoLine
@@ -194,6 +198,7 @@ namespace rct3::ui
         std::optional<float> bar { };      ///< 0 to 1: its value sits on a bar filled that far
         Color bar_colour = hex("#40c040"); ///< The bar's filled part
         std::string icon = { };            ///< Skin before the label, such as a thought's face
+        std::string value_icon = { };      ///< Skin in the value column, such as a mood's face
     };
 
     struct InfoSeries
@@ -219,7 +224,7 @@ namespace rct3::ui
     {
         Number, ///< A spinner
         Choice, ///< A list to pick from
-        Tick,   ///< A tick box, ticked when the value is not 0
+        Tick,   ///< A tick box, ticked when the value is not 0; with an icon, a toggle of that skin family instead
         Button, ///< Pressed for its value, which is 0
         Paint,  ///< Pots of colours, each opening the colours to pick from
         Text,   ///< A line to type in, told when Enter is pressed
@@ -241,8 +246,11 @@ namespace rct3::ui
         int decimals = 0;                  ///< Of a number shown with a point, such as money in hundredths
         std::vector<std::u16string> items; ///< Of a list
         std::u16string text;               ///< On a button, typed, or a number's unit after it
-        std::string icon;                  ///< A button's picture, instead of text
-        std::vector<std::size_t> paints;   ///< The colour of each pot
+        /// A number's value in words, such as money, in the value column with only the arrows after it, its row
+        /// a line high like the lines'; empty to type the number in a field.
+        std::u16string shown;
+        std::string icon;                ///< A button's picture, instead of text
+        std::vector<std::size_t> paints; ///< The colour of each pot
         bool enabled = true;
         /// On the row of the control before it, after it, instead of on a row of its own.
         bool beside = false;
@@ -286,6 +294,7 @@ namespace rct3::ui
         /// A stall's menu, under the controls; its changes come as the controls' do, by StallMenuView::ids.
         std::optional<StallMenuView> menu { };
         float menu_height = 0;
+        bool bare = false; ///< Straight on the strip, with no paper under it, as a worker's details are
     };
 
     /// A widget's name from the string key of what it shows and its part, such as "Park_Name_value", so a search
@@ -434,6 +443,8 @@ namespace rct3::ui
             return true;
         }
         [[nodiscard]] bool covers(Point p) const override;
+        /// Scrolls a page taller than the strip.
+        bool on_wheel(Point notches) override;
         void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
 
@@ -454,6 +465,8 @@ namespace rct3::ui
         void open_palette(std::size_t tab, std::size_t pot);
         void open_page_palette(std::size_t control, std::size_t pot);
         void read_controls();
+        /// Moves the page's widgets up by `by`, on from where they are.
+        void scroll_by(float by);
 
         InfoPanelStyle style_;
         std::vector<Button*> tabs_;
@@ -495,7 +508,9 @@ namespace rct3::ui
             std::size_t column = 0;
             float y = 0;
             float height = 0;
+            Label* shown = nullptr; ///< InfoControl::shown, when it has one
         };
+        std::vector<Widget*> value_icons_; ///< InfoLine::value_icon's, put in the value column by place_page
         std::vector<ControlRow> control_rows_;
         float page_width_ = 0;
         bool measured_ = false; ///< Whether place_page has run with the fonts since the page was shown
@@ -505,7 +520,9 @@ namespace rct3::ui
         bool tucked_ = false; ///< The strip put away by the player
         bool paper_ = false;  ///< The page sits on paper
         bool plain_paper_ = false;
-        bool striped_ = false; ///< Its lines are striped; a note alone sits in a plain box down the paper
+        bool striped_ = false;     ///< Its lines are striped; a note alone sits in a plain box down the paper
+        float scroll_ = 0;         ///< How far the page's widgets are moved up; the bar's position, once followed
+        ScrollBar* bar_ = nullptr; ///< Beside a page taller than the strip
         Widget* body_ = nullptr;
         Label* title_ = nullptr; ///< The page's, in the band
         Label* view_text_ = nullptr;

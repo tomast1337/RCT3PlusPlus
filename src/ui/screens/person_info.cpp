@@ -35,6 +35,8 @@ namespace rct3::ui
             { PersonTab::Stats, 2, "Guest_Stats", "Staff_Stats" },
         } };
         constexpr std::string_view kPaintIcon = "Attraction_Colour";
+        /// The Train button's picture by the levels bought: a square filled for each.
+        constexpr std::array<std::string_view, 4> kTrainingIcons { "Staff_Training0IconLarge", "Staff_Training1IconLarge", "Staff_Training2IconLarge", "Staff_Training3IconLarge" };
 
         /// A job's task: its flag bit and words.
         struct Task
@@ -42,32 +44,33 @@ namespace rct3::ui
             int bit = 0;
             std::string_view label;
             std::string_view help;
+            std::string_view icon; ///< The toggle's skin family, pressed in while the task is on
             bool inverted = false; ///< The bit is set when the task is off
         };
         // Mending is our own task (simulation::kLeaveBrokenTask), on in every park the game saved.
         constexpr std::array<Task, 4> kHandymanTasks { {
-            { 0, "StaffTasks_SweepPaths", "StaffTasks_SweepPathsHelp" },
-            { 1, "StaffTasks_WaterGardens", "StaffTasks_WaterGardensHelp" },
-            { 2, "StaffTasks_EmptyBins", "StaffTasks_EmptyBinsHelp" },
-            { 3, "Rct3pp_MendPathItems", "Rct3pp_MendPathItemsHelp", true },
+            { 0, "StaffTasks_SweepPaths", "StaffTasks_SweepPathsHelp", "Staff_TaskButtonShovel" },
+            { 1, "StaffTasks_WaterGardens", "StaffTasks_WaterGardensHelp", "Staff_TaskButtonWater" },
+            { 2, "StaffTasks_EmptyBins", "StaffTasks_EmptyBinsHelp", "Staff_TaskButtonBins" },
+            { 3, "Rct3pp_MendPathItems", "Rct3pp_MendPathItemsHelp", "Staff_TaskButtonRepair", true },
         } };
         constexpr std::array<Task, 2> kMechanicTasks { {
-            { 0, "StaffTasks_InspectRides", "StaffTasks_InspectRidesHelp" },
-            { 1, "StaffTasks_FixRides", "StaffTasks_FixRidesHelp" },
+            { 0, "StaffTasks_InspectRides", "StaffTasks_InspectRidesHelp", "Staff_TaskButtonInspect" },
+            { 1, "StaffTasks_FixRides", "StaffTasks_FixRidesHelp", "Staff_TaskButtonRepair" },
         } };
         constexpr std::array<Task, 8> kInspectorTasks { {
-            { 0, "StaffTasks_Evaluate_FlatRides", "StaffTasks_Evaluate_FlatRidesHelp" },
-            { 1, "StaffTasks_Evaluate_RollerCoasters", "StaffTasks_Evaluate_RollerCoastersHelp" },
-            { 2, "StaffTasks_Evaluate_FoodDrinkStalls", "StaffTasks_Evaluate_FoodDrinkStallsHelp" },
-            { 3, "StaffTasks_Evaluate_SouvenirStalls", "StaffTasks_Evaluate_SouvenirStallsHelp" },
-            { 4, "StaffTasks_Evaluate_Vista", "StaffTasks_Evaluate_VistaHelp" },
-            { 5, "StaffTasks_Evaluate_Staff", "StaffTasks_Evaluate_StaffHelp" },
-            { 6, "StaffTasks_Evaluate_Pools", "StaffTasks_Evaluate_PoolsHelp" },
-            { 7, "StaffTasks_Evaluate_ViewingGalleries", "StaffTasks_Evaluate_ViewingGalleriesHelp" },
+            { 0, "StaffTasks_Evaluate_FlatRides", "StaffTasks_Evaluate_FlatRidesHelp", "Staff_TaskButtonEvalFlatRides" },
+            { 1, "StaffTasks_Evaluate_RollerCoasters", "StaffTasks_Evaluate_RollerCoastersHelp", "Staff_TaskButtonEvalCoasters" },
+            { 2, "StaffTasks_Evaluate_FoodDrinkStalls", "StaffTasks_Evaluate_FoodDrinkStallsHelp", "Staff_TaskButtonEvalFoodDrinkStalls" },
+            { 3, "StaffTasks_Evaluate_SouvenirStalls", "StaffTasks_Evaluate_SouvenirStallsHelp", "Staff_TaskButtonEvalSouvenirStalls" },
+            { 4, "StaffTasks_Evaluate_Vista", "StaffTasks_Evaluate_VistaHelp", "Staff_TaskButtonEvalVistas" },
+            { 5, "StaffTasks_Evaluate_Staff", "StaffTasks_Evaluate_StaffHelp", "Staff_TaskButtonEvalStaff" },
+            { 6, "StaffTasks_Evaluate_Pools", "StaffTasks_Evaluate_PoolsHelp", "Staff_TaskButtonEvalPools" },
+            { 7, "StaffTasks_Evaluate_ViewingGalleries", "StaffTasks_Evaluate_ViewingGalleriesHelp", "Staff_TaskButtonEvalViewingGalleries" },
         } };
         constexpr std::array<Task, 2> kKeeperTasks { {
-            { 0, "AnimalKeeper_ClearDung", "AnimalKeeper_ClearDungTT" },
-            { 1, "AnimalKeeper_FillTroughs", "AnimalKeeper_FillTroughsTT" },
+            { 0, "AnimalKeeper_ClearDung", "AnimalKeeper_ClearDungTT", "Staff_TaskButtonShovel" },
+            { 1, "AnimalKeeper_FillTroughs", "AnimalKeeper_FillTroughsTT", "Staff_TaskButtonRefilTroughs" },
         } };
 
         /// The costumes in the order of an entertainer's saved costume number.
@@ -286,7 +289,7 @@ namespace rct3::ui
                 if (page.lines.size() == kListLines)
                     break;
                 if (std::u16string said = thought_text(strings, t->id, t->variant, attraction_called(f, t->about.id, strings)); !said.empty())
-                    page.lines.push_back({ .label = std::move(said), .value = { }, .icon = mood_icon(thought_mood(t->id)) });
+                    page.lines.push_back({ .label = u"\"" + said + u"\"", .value = { }, .icon = mood_icon(thought_mood(t->id)) });
             }
         }
 
@@ -370,33 +373,7 @@ namespace rct3::ui
             // Staff a scenario starts with were hired before its calendar began: they show its first month.
             const save::CalendarDate hired = save::GameClock::date_at(s.person.start_time, f.zero_time);
             add(page, strings, "Employee_DateHired", date_text(strings, 0, hired.month, static_cast<std::int32_t>(hired.year + 1)));
-            // How they feel, as a face and in words, as the staff list shows it.
-            constexpr std::array<std::string_view, 3> kFaces { "Staff_MoodOKIcon", "Staff_MoodHappyIcon", "Staff_MoodSadIcon" };                         // By Mood
-            constexpr std::array<std::string_view, 3> kWords { "StaffWindow_Happiness_OK", "StaffWindow_Happiness_Happy", "StaffWindow_Happiness_Sad" }; // By Mood
-            const auto mood = std::to_underlying(happiness_mood(s.happiness));
-            page.lines.push_back({ .label = text(strings, kWords[mood]), .value = { }, .half = true, .name = "StaffWindow_MoodHelp", .icon = std::string(kFaces[mood]) });
-            add_half(page, strings, "StaffWindow_LazinessColumnHelp", percent(s.laziness));
-            add_half(page, strings, "StaffWindow_SortBy_Warnings", count(s.warnings));
-            if (const auto* w = std::get_if<save::HandymanWork>(&s.work))
-            {
-                add_half(page, strings, "Handyman_PathsSwept", count(w->paths_swept));
-                add_half(page, strings, "Handyman_GardensWatered", count(w->gardens_watered));
-                add_half(page, strings, "Handyman_BinsEmptied", count(w->bins_emptied));
-                add_half(page, strings, "Handyman_GrassMown", count(w->grass_mown));
-                if (items_mended)
-                    add_half(page, strings, "Rct3pp_ItemsMended", count(static_cast<std::int32_t>(*items_mended)));
-            }
-            else if (const auto* m = std::get_if<save::MechanicWork>(&s.work))
-            {
-                add_half(page, strings, "Mechanic_RidesInspected", count(m->objects_inspected));
-                add_half(page, strings, "Mechanic_RidesFixed", count(m->objects_fixed));
-            }
-            else if (const auto* k = std::get_if<save::KeeperWork>(&s.work))
-            {
-                add_half(page, strings, "AnimalKeeper_DungCleared", count(k->dung_cleared));
-                add_half(page, strings, "AnimalKeeper_TroughsFilled", count(k->troughs_filled));
-            }
-            // The level, and what it pays an hour.
+            // The wage as money, stepped a level at a time by the arrows after it.
             InfoControl wage;
             wage.id = person_control(PersonControl::Wage);
             wage.name = "Employee_Wage";
@@ -405,25 +382,33 @@ namespace rct3::ui
             wage.value = std::clamp(s.wage_level, 0, 2);
             wage.maximum = 2;
             if (f.wage)
-            {
-                // Set off from the level, in a box wide enough for both.
-                wage.text = u"   " + money_text(units.currency, *f.wage);
-                wage.width = 2 * info_panel::kNumberWidth;
-            }
+                wage.shown = money_text(units.currency, *f.wage);
             page.controls.push_back(std::move(wage));
-            add_half(page, strings, "Rct3pp_Training", ascii(std::format("{}/{}", std::clamp(s.training, 0, kMostTraining), kMostTraining)));
-            if (s.training < kMostTraining)
+            page.controls_after = page.lines.size();
+            add(page, strings, "StaffWindow_LazinessColumnHelp", percent(s.laziness));
+            // How they feel, as a face, as the staff list shows it.
+            constexpr std::array<std::string_view, 3> kFaces { "Staff_MoodOKIcon", "Staff_MoodHappyIcon", "Staff_MoodSadIcon" }; // By Mood
+            const auto mood = std::to_underlying(happiness_mood(s.happiness));
+            page.lines.push_back({ .label = text(strings, "Guest_Happiness"), .value = { }, .name = "Guest_Happiness", .value_icon = std::string(kFaces[mood]) });
+            add(page, strings, "StaffWindow_SortBy_Warnings", count(s.warnings));
+            if (const auto* w = std::get_if<save::HandymanWork>(&s.work))
             {
-                InfoControl train;
-                train.id = person_control(PersonControl::Train);
-                train.name = "Rct3pp_Train";
-                train.kind = InfoControlKind::Button;
-                train.label = text(strings, "Rct3pp_Train");
-                train.text = train.label;
-                train.help = text(strings, "StaffWindow_TrainingText1");
-                if (const auto at = train.help.find(u"%AMOUNT%"); at != std::u16string::npos)
-                    train.help.replace(at, std::u16string_view(u"%AMOUNT%").size(), money_text(units.currency, f.training_cost));
-                page.controls.push_back(std::move(train));
+                add(page, strings, "Handyman_PathsSwept", count(w->paths_swept));
+                add(page, strings, "Handyman_GardensWatered", count(w->gardens_watered));
+                add(page, strings, "Handyman_BinsEmptied", count(w->bins_emptied));
+                add(page, strings, "Handyman_GrassMown", count(w->grass_mown));
+                if (items_mended)
+                    add(page, strings, "Rct3pp_ItemsMended", count(static_cast<std::int32_t>(*items_mended)));
+            }
+            else if (const auto* m = std::get_if<save::MechanicWork>(&s.work))
+            {
+                add(page, strings, "Mechanic_RidesInspected", count(m->objects_inspected));
+                add(page, strings, "Mechanic_RidesFixed", count(m->objects_fixed));
+            }
+            else if (const auto* k = std::get_if<save::KeeperWork>(&s.work))
+            {
+                add(page, strings, "AnimalKeeper_DungCleared", count(k->dung_cleared));
+                add(page, strings, "AnimalKeeper_TroughsFilled", count(k->troughs_filled));
             }
         }
 
@@ -445,29 +430,38 @@ namespace rct3::ui
             b.name = "PickUp";
             b.kind = InfoControlKind::Button;
             b.icon = "Staff_MovePincerLarge";
-            b.label = text(strings, help);
+            b.help = text(strings, help);
             return b;
         }
 
-        void staff_general(InfoPage& page, const PersonFacts& f, const StringTable& strings)
+        void staff_general(InfoPage& page, const PersonFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             const save::Staff& s = *f.staff;
+            page.bare = true;
             page.controls.push_back(name_control(f, strings));
-            const auto button = [&](PersonControl id, std::string_view icon, std::string_view help) {
-                InfoControl b;
-                b.id = person_control(id);
-                b.name = icon;
-                b.kind = InfoControlKind::Button;
-                b.icon = icon;
-                b.label = text(strings, help);
-                page.controls.push_back(std::move(b));
-            };
+            // One row of round buttons under the name.
             page.controls.push_back(pick_up_control(strings, "Employee_Name_Pincer"));
-            if (s.kind == save::StaffKind::ParkInspector)
-                return;
-            button(PersonControl::Sack, "Staff_SackIconLarge", "StaffWindow_SackHelp");
-            if (s.warnings < kMostWarnings)
-                button(PersonControl::Warn, "Staff_WarnIconLarge", "StaffWindow_DisciplineHelp");
+            const auto button = [&](PersonControl id, std::string_view icon, std::string_view help, bool enabled = true) -> InfoControl& { return page.controls.emplace_back(InfoControl { .id = person_control(id), .name = std::string(icon), .kind = InfoControlKind::Button, .icon = std::string(icon), .enabled = enabled, .beside = true, .help = text(strings, help) }); };
+            button(PersonControl::ToConsole, "Person_StateToConsoleLarge_Off", "Employee_Name_ThoughtsToConsole", false);
+            button(PersonControl::Highlight, "Person_AvatarStyleHighlight_Off", "Guest_ShowHighlightAbove", false);
+            if (f.patrol_tiles)
+                button(PersonControl::PatrolEdit, "Staff_PatrolAreaLarge", "StaffWindow_EditPatrolAreaHelp");
+            if (s.kind != save::StaffKind::ParkInspector)
+            {
+                button(PersonControl::Warn, "Staff_WarnIconLarge", "StaffWindow_DisciplineHelp", s.warnings < kMostWarnings);
+                button(PersonControl::Sack, "Staff_SackIconLarge", "StaffWindow_SackHelp");
+            }
+            // Its squares fill a level at a time, as the training is bought.
+            const int level = std::clamp(s.training, 0, kMostTraining);
+            InfoControl& train = button(PersonControl::Train, kTrainingIcons[static_cast<std::size_t>(level)], "StaffWindow_TrainHelp", level < kMostTraining);
+            train.name = "StaffWindow_TrainHelp";
+            if (level < kMostTraining)
+            {
+                std::u16string cost = text(strings, "StaffWindow_TrainingText1");
+                if (const auto at = cost.find(u"%AMOUNT%"); at != std::u16string::npos)
+                    cost.replace(at, std::u16string_view(u"%AMOUNT%").size(), money_text(units.currency, f.training_cost));
+                train.help += u" " + cost;
+            }
         }
 
         void staff_tasks(InfoPage& page, const save::Staff& s, const StringTable& strings)
@@ -479,6 +473,8 @@ namespace rct3::ui
                 tick.name = t.label;
                 tick.kind = InfoControlKind::Tick;
                 tick.label = text(strings, t.label);
+                tick.icon = t.icon;
+                tick.help = text(strings, t.help);
                 tick.value = ((s.task_flags >> t.bit) & 1) != (t.inverted ? 1 : 0);
                 page.controls.push_back(std::move(tick));
             }
@@ -631,7 +627,7 @@ namespace rct3::ui
                     page.controls.push_back(pick_up_control(strings, "Guest_Name_Pincer"));
                 }
                 else if (facts.staff != nullptr)
-                    staff_general(page, facts, strings);
+                    staff_general(page, facts, strings, units);
                 break;
             case PersonTab::Thoughts:
                 thoughts(page, facts, strings);
@@ -669,6 +665,7 @@ namespace rct3::ui
                     staff_tasks(page, *facts.staff, strings);
                 if (facts.patrol_tiles)
                     patrol(page, facts, strings);
+                page.controls_after = 0; // The tasks first, as the game lists them alone
                 break;
             case PersonTab::Costume:
                 if (facts.staff != nullptr)

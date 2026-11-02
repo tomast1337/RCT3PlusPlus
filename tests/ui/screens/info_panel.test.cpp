@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <doctest/doctest.h>
+#include <format>
 
 using namespace rct3::ui;
 
@@ -547,4 +548,34 @@ TEST_CASE("turned the other way, the panel stands in the bottom-left corner with
     CHECK((tab.x0 + tab.x1) / 2 - (d.x0 + d.x1) / 2 == doctest::Approx(-info_tab_offset(0).x));
     // With no page there is no strip to take the pointer.
     CHECK_FALSE(panel.covers({ d.x1 + 40, (d.y0 + d.y1) / 2 }));
+}
+
+TEST_CASE("a page taller than the strip scrolls with the wheel, and its bar shows")
+{
+    Fixture f;
+    f.panel->show(three(), 0);
+    InfoPage page;
+    for (int i = 0; i < 20; ++i)
+        page.lines.push_back({ .label = u"line", .value = u"1", .name = std::format("row{}", i) });
+    f.panel->show_page(page);
+    f.desktop.update({ });
+    const auto bar = f.desktop.root().find_as<ScrollBar>("info/scroll");
+    REQUIRE(bar);
+    CHECK(static_cast<const Widget&>(*bar).visible);
+    const auto first = f.desktop.root().find("info/body/row0_label");
+    REQUIRE(first);
+    const float top = first->rect().y0;
+    PointerState s;
+    s.position = Fixture::middle(f.desktop.root().find("info/body")->rect());
+    f.desktop.update(s);
+    s.wheel = { 0, -2 };
+    f.desktop.update(s);
+    s.wheel = { };
+    f.desktop.update(s);
+    CHECK(first->rect().y0 == doctest::Approx(top - 2 * info_panel::kScrollStep));
+    // Shown again as the park runs, it stays scrolled.
+    f.panel->show(three(), 0);
+    f.panel->show_page(page);
+    f.desktop.update(s);
+    CHECK(f.desktop.root().find("info/body/row0_label")->rect().y0 == doctest::Approx(top - 2 * info_panel::kScrollStep));
 }

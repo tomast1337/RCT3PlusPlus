@@ -63,6 +63,21 @@ TEST_CASE("an inspector keeps to their tasks and comes back to an attraction onl
     CHECK_FALSE(found(r, Finding::TooCheap, stall)); // Never went to the stall
 }
 
+TEST_CASE("an inspector never visits a kind of attraction the player switched off")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    auto& r = park.world().registry;
+    const auto ride = park.flat_ride("Twister", { 3, 0 }, 300, { .cycle_seconds = 10 });
+    const auto stall = park.shop("Food", Product::Food, { 6, 0 }, 100);
+    const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });
+    // Everything but the flat rides, the nearest attraction, as the staff window's switch leaves it.
+    r.get<Staff>(inspector).tasks = ~kFlatRidesTask;
+    const auto visiting = [&](entt::entity at) { return r.all_of<Needs>(inspector) && r.get<Errand>(inspector).target == at; };
+    CHECK(park.run_until([&] { return visiting(stall); }, 60));
+    CHECK_FALSE(park.run_until([&] { return visiting(ride); }, kTuning.inspector.again.value * 3));
+}
+
 TEST_CASE("an inspector judges a stall's prices against what guests pay, then stands at its counter")
 {
     struct Case

@@ -2,7 +2,7 @@
 //
 // Hiring staff from the staff window. Each hire button makes a worker of its job and hands them to the pointer,
 // as the pick-up button does; a click on a path puts them down there to walk on, a right click lets them go
-// back to where they were made. The list shows them with their wage, and the sack button lets the selected one go.
+// back to where they were made. The list shows them, and an unfolded row's sack button lets its worker go.
 // Screenshots: the window with its hire buttons, and the list after hiring.
 //
 //   ./nob script scripts/tests/staff_hire.ts -- --no-audio
@@ -82,12 +82,15 @@ const cash = park.cash();
 await park.advance(20);
 log("cash", cash, "->", park.cash());
 
-// The first row selected, then sacked.
-const table = ui.find(under("Staff_Title", "table")!)!;
-await pointer.click(table.left + (table.right - table.left) * 0.3, table.top + (table.bottom - table.top) * 0.09);
-await frames(3);
+// The first row unfolded, then its worker sacked from the discipline button.
+const list = `${under("Staff_Title", "table")!}/view/content`;
+const row = `${list}/${ui.children(list)![0]}`;
+await ui.click(`${row}/Expand`);
+await until(() => ui.find(`${row}/Discipline`) !== undefined, 30, "the row unfolded");
+await ui.click(`${row}/Discipline`);
+await until(() => ui.find(`${row}/Sack`) !== undefined, 30, "the sack button");
 const count = staff().length;
-await ui.click(under("Staff_Title", "Staff_SackIconLarge")!);
-await until(() => staff().length === count - 1, 60, "the selected worker sacked");
+await ui.click(`${row}/Sack`);
+await until(() => staff().length === count - 1, 60, "the worker sacked");
 await frames(60);
 await screenshot("staff_sacked");

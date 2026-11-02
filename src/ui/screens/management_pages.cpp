@@ -3,7 +3,6 @@
 
 #include "simulation/awards.hpp"
 #include "simulation/objectives.hpp"
-#include "simulation/staff_care.hpp"
 #include "strings/unicode.hpp"
 #include "ui/save_text.hpp"
 #include "ui/screens/person_info.hpp"
@@ -42,26 +41,6 @@ namespace rct3::ui
             { "FinancialSummaryTabIcon", "FinancialSummary_MonthlySummaryHelp" },
             { "CashGraphTabIcon", "FinancialSummary_GraphsHelp" },
         } };
-        /// The first lists everyone; each of the others one job.
-        constexpr std::array<TabSpec, 8> kStaffTabs = { {
-            { "Staff_JobsTabIcon", "Staff_Title" },
-            { "Staff_JobIsMaintenanceIcon", "HandymanName" },
-            { "Staff_JobIsMechanicIcon", "MechanicName" },
-            { "Staff_JobIsSecurityIcon", "SecurityGuardName" },
-            { "Staff_JobIsEntertainerIcon", "EntertainerName" },
-            { "Staff_JobIsVendorIcon", "VendorName" },
-            { "Staff_JobIsParkInspectorIcon", "ParkInspectorName" },
-            { "Staff_JobIsAnimalKeeperIcon", "AnimalKeeperName" },
-        } };
-        constexpr std::array<save::StaffKind, 7> kStaffTabKinds = {
-            save::StaffKind::Handyman, save::StaffKind::Mechanic, save::StaffKind::SecurityGuard, save::StaffKind::Entertainer, save::StaffKind::Vendor, save::StaffKind::ParkInspector, save::StaffKind::AnimalKeeper,
-        };
-        /// The name of each job, in the order of save::StaffKind.
-        constexpr std::array<std::string_view, 8> kJobNames = {
-            "HandymanName", "MechanicName", "SecurityGuardName", "EntertainerName", "VendorName", "AnimalKeeperName", "LifeguardName", "ParkInspectorName",
-        };
-        /// A worker's face by their mood, in the order of Mood: neither, happy, sad.
-        constexpr std::array<std::string_view, 3> kStaffMoods = { "Staff_MoodOKIcon", "Staff_MoodHappyIcon", "Staff_MoodSadIcon" };
         constexpr std::array<TabSpec, 4> kGuestTabs = { {
             { "Guest_Member", "GuestList_IndividualGuests" },
             { "Guest_Group", "GuestList_Summarized" },
@@ -169,11 +148,6 @@ namespace rct3::ui
         PersonFacts guest_facts(const ManagementFacts& f, const save::Guest& g)
         {
             return { .guest = &g, .people = f.people, .rides = f.rides };
-        }
-
-        PersonFacts staff_facts(const ManagementFacts& f, const save::Staff& s)
-        {
-            return { .staff = &s, .people = f.people, .rides = f.rides };
         }
 
         /// Adds a weekly series to a page's graph, on a scale up to `full` (its own when 0), its numbers counts or
@@ -412,48 +386,6 @@ namespace rct3::ui
             if (page.graph.empty())
                 page.note = text(strings, kNotRead);
             month_ticks(page, strings, f.state);
-        }
-
-        // ----- staff -----
-
-        void staff_list(ManagementPage& page, std::size_t tab, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
-        {
-            page.columns = {
-                { text(strings, "Staff_ColumnHeader_Name"), 0, Align::Start, true },
-                { text(strings, "Staff_ColumnHeader_Jobs"), 90, Align::Start, true },
-                { text(strings, "Staff_ColumnHeader_Activity"), 0, Align::Start, true },
-                { text(strings, "Staff_ColumnHeader_Wage"), 60, Align::End, true },
-            };
-            page.sort = 1;
-            if (f.people != nullptr)
-            {
-                for (std::size_t i = 0; i < f.people->staff.size(); ++i)
-                {
-                    const save::Staff& s = f.people->staff[i];
-                    // Vendors stay out of the list of everyone, as the game hides them until their job is asked for.
-                    if (tab > 0 ? s.kind != kStaffTabKinds.at(tab - 1) : s.kind == save::StaffKind::Vendor)
-                        continue;
-                    const PersonFacts facts = staff_facts(f, s);
-                    const auto kind = static_cast<std::size_t>(s.kind);
-                    const std::u16string job = kind < kJobNames.size() ? text(strings, kJobNames.at(kind)) : std::u16string(kDash);
-                    const std::int64_t wage = simulation::wage_at(s.wage_level);
-                    page.rows.push_back({ { person_name(facts, strings), job, person_doing(facts, strings), money(units, wage) }, { std::nullopt, static_cast<double>(s.kind), std::nullopt, static_cast<double>(wage) }, management_row_id({ ManagementRow::Kind::Staff, i }), std::string(kStaffMoods[std::to_underlying(happiness_mood(s.happiness))]) });
-                }
-            }
-            constexpr std::array<std::pair<std::string_view, std::string_view>, kHireButtons.size()> hire = { {
-                { "Staff_HireMaintenanceIcon", "Staff_Hire_Maintenance" },
-                { "Staff_HireMechanicIcon", "Staff_Hire_Mechanic" },
-                { "Staff_HireSecurityIcon", "Staff_Hire_Security" },
-                { "Staff_HireEntertainerIcon", "Staff_Hire_Entertainer" },
-                { "Staff_HireAnimalKeeperIcon", "Staff_Hire_AnimalKeeper" },
-            } };
-            for (std::size_t i = 0; i < hire.size(); ++i)
-            {
-                // A keeper is hired to an animal house.
-                const bool can = kHireButtons[i] != save::StaffKind::AnimalKeeper || f.animal_houses;
-                page.buttons.push_back({ std::string(hire[i].first), { }, text(strings, hire[i].second), can });
-            }
-            page.buttons.push_back({ "Staff_SackIconLarge", { }, text(strings, "StaffWindow_SackHelp"), !page.rows.empty() });
         }
 
         // ----- guests -----
@@ -906,8 +838,6 @@ namespace rct3::ui
                 return tabs(kParkTabs, strings);
             case ManagementTopic::Finances:
                 return tabs(kFinanceTabs, strings);
-            case ManagementTopic::Staff:
-                return tabs(kStaffTabs, strings);
             case ManagementTopic::Guests:
                 return tabs(kGuestTabs, strings);
             case ManagementTopic::Attractions:
@@ -916,6 +846,8 @@ namespace rct3::ui
                 return tabs(kObjectiveTabs, strings);
             case ManagementTopic::Research:
                 return tabs(kResearchTabs, strings);
+            case ManagementTopic::Staff: // A window of its own (staff_roster.hpp)
+                return { };
             case ManagementTopic::Challenges:
             case ManagementTopic::Count_:
                 break;
@@ -944,8 +876,7 @@ namespace rct3::ui
                 else
                     finance_graphs(page, facts, strings, units);
                 break;
-            case ManagementTopic::Staff:
-                staff_list(page, std::min(tab, kStaffTabs.size() - 1), facts, strings, units);
+            case ManagementTopic::Staff: // A window of its own (staff_roster.hpp)
                 break;
             case ManagementTopic::Guests:
                 if (tab == 0)

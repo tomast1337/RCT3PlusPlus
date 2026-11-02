@@ -71,6 +71,7 @@
 #include "ui/key_map.hpp"
 #include "ui/park_cursor.hpp"
 #include "ui/screens/attraction_info.hpp"
+#include "ui/screens/management_pages.hpp"
 #include "ui/screens/options_session.hpp"
 #include "ui/screens/park_bar.hpp"
 #include "ui/screens/party_info.hpp"
@@ -633,6 +634,7 @@ namespace rct3::scene
         /// What guests carry from stalls, by its carried item's symbol (as `Burger:cid`).
         std::map<std::string, CarriedLook, std::less<>> carried_looks;
         std::vector<ShownPerson> shown_people;
+        std::vector<ui::StaffLook> staff_looks;        ///< Of each worker, for the staff window; filled each frame
         std::vector<Outfit> wardrobe;                  ///< What guests coming in at the gate wear
         std::unordered_set<entt::entity> known_guests; ///< The simulated guests the shown people were made for
         std::size_t costumes_given = 0;                ///< To entertainers hired, each the next costume in turn

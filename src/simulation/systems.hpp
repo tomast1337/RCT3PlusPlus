@@ -165,6 +165,9 @@ namespace rct3::simulation
     /// Ticks in `seconds` of simulated time, rounded up.
     [[nodiscard]] std::uint32_t ticks(float seconds);
 
+    /// The inspector tells the player `finding` about `about` at `now`, unless they told it lately.
+    void tell(entt::registry& r, entt::entity inspector, Finding finding, entt::entity about, float now);
+
     /// Gives guest `guest` what it needs to walk, standing on path node `at` with nothing to do. Its dice are
     /// seeded from the world's seed and its id, so the same park always plays out the same way.
     void start_walking(SimWorld& world, entt::entity guest, NodeId at);

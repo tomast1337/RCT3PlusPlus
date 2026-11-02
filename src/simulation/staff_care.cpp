@@ -19,6 +19,11 @@ namespace rct3::simulation
         return kind == Handyman ? StaffRole::Handyman : kind == Mechanic ? StaffRole::Mechanic : kind == SecurityGuard ? StaffRole::Guard : kind == Vendor ? StaffRole::Vendor : kind == AnimalKeeper ? StaffRole::Keeper : kind == ParkInspector ? StaffRole::Inspector : kind == Entertainer ? StaffRole::Entertainer : StaffRole::Other;
     }
 
+    bool walks_paths(StaffRole role)
+    {
+        return role != StaffRole::Vendor && role != StaffRole::Keeper && role != StaffRole::Other;
+    }
+
     std::int64_t wage_at(StaffRole role, std::int32_t level)
     {
         return kTuning.staff.wages.at(std::to_underlying(role))[static_cast<std::size_t>(std::clamp(level, 0, kMostWageLevel))];
@@ -88,6 +93,11 @@ namespace rct3::simulation
         {
             staff.fixed = m->objects_fixed;
             staff.inspected = m->objects_inspected;
+        }
+        else if (const auto* k = std::get_if<save::KeeperWork>(&saved.work))
+        {
+            staff.cleared = k->dung_cleared;
+            staff.filled = k->troughs_filled;
         }
     }
 

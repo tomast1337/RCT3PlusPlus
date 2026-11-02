@@ -191,8 +191,8 @@ namespace rct3::parkfile
         {
             const SavedWorker& w = people.staff[i];
             const auto at = world.paths.nearest(w.position);
-            // A vendor stays in their booth, a keeper in their enclosure.
-            const bool walks = w.role != StaffRole::Vendor && w.role != StaffRole::Keeper;
+            // A vendor stays in their booth, a keeper in their enclosure, a lifeguard in their chair.
+            const bool walks = walks_paths(w.role);
             if (walks && (!at || world.paths.nodes()[*at].queue))
                 continue;
             const entt::entity e = r.create();

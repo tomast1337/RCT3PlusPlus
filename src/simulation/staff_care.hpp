@@ -24,6 +24,10 @@ namespace rct3::simulation
     /// The job a saved staff member of `kind` does in the simulation.
     [[nodiscard]] StaffRole staff_role(save::StaffKind kind);
 
+    /// Whether staff doing `role` walk the paths: not vendors at their post, keepers in their enclosure, or
+    /// lifeguards in their chair.
+    [[nodiscard]] bool walks_paths(StaffRole role);
+
     /// Hundredths a month for `role` at `level`, 0 to 2.
     [[nodiscard]] std::int64_t wage_at(StaffRole role, std::int32_t level);
 

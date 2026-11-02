@@ -145,6 +145,8 @@ namespace rct3::simulation
     /// A seller hired with a stall or a ride's entrance placed since, standing at `at` in their booth, paid as
     /// other new staff are.
     entt::entity add_vendor(SimWorld& world, glm::vec3 at);
+    /// A lifeguard come with a lifeguard chair placed since, sitting in it at `at`, facing `heading`; unpaid.
+    entt::entity add_lifeguard(SimWorld& world, glm::vec3 at, Radians heading);
     /// A worker in `role` hired since, walking from path node `at`, paid as other new staff are.
     entt::entity add_staff(SimWorld& world, StaffRole role, NodeId at);
 

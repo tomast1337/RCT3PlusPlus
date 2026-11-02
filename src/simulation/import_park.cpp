@@ -1352,8 +1352,11 @@ namespace rct3::simulation
             const save::Person& p = people.staff[i].person;
             const glm::vec3 position { p.position.x, p.position.y, p.position.z };
             const StaffRole role = staff_role(people.staff[i].kind);
-            // A vendor stays in their booth, a keeper in their enclosure (import_animal_houses gives them their work).
-            const bool walks = role != StaffRole::Vendor && role != StaffRole::Keeper;
+            // A vendor stays in their booth, a keeper in their enclosure (import_animal_houses gives them their work), a
+            // lifeguard in their chair, where the park left them. A lifeguard comes and goes with their chair.
+            const bool walks = walks_paths(role);
+            if (const auto* guard = std::get_if<save::LifeGuardWork>(&people.staff[i].work); guard != nullptr && guard->chair.is_none())
+                continue;
             auto at = world.paths.nearest(position);
             if (!at || world.paths.nodes()[*at].queue)
                 at = walkway_near(world.paths, position);
@@ -1381,6 +1384,17 @@ namespace rct3::simulation
         set_wage_level(staff, staff.wage_level);
         r.emplace<Staff>(e, staff);
         r.emplace<Pose>(e, Pose { .position = at, .was = at });
+        return e;
+    }
+
+    entt::entity add_lifeguard(SimWorld& world, glm::vec3 at, Radians heading)
+    {
+        auto& r = world.registry;
+        const entt::entity e = r.create();
+        Staff staff { .role = StaffRole::Other };
+        set_wage_level(staff, staff.wage_level);
+        r.emplace<Staff>(e, staff);
+        r.emplace<Pose>(e, Pose { .position = at, .heading = heading, .was = at, .was_heading = heading });
         return e;
     }
 

@@ -459,6 +459,18 @@ namespace rct3::scene
                 pose.time = walking && shown.paces[0] > 0 ? at.walked.value / shown.paces[0] : shown.saved_time + clock * shown.speed;
                 return pose;
             }
+            // A lifeguard sits in their chair, looking about now and then.
+            if (const auto* staff = r.try_get<simulation::Staff>(shown.guest); staff != nullptr && staff->role == simulation::StaffRole::Other && !r.all_of<simulation::Stride>(shown.guest))
+            {
+                constexpr float kLookSeconds = 6;     ///< Chosen by eye: how long a lifeguard keeps to one idle motion
+                constexpr std::size_t kLookEvery = 3; ///< Chosen by eye: one idle motion in so many looks about them
+                const float turn = scene.park_clock / kLookSeconds + static_cast<float>(entt::to_integral(shown.guest));
+                const auto whole = static_cast<std::size_t>(turn);
+                pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+                pose.motion = park::motion_number(whole % kLookEvery == 0 ? "lifeguardidle01" : "lifeguardidlestandard").value_or(park::motion::kIdle);
+                pose.time = (turn - static_cast<float>(whole)) * kLookSeconds;
+                return pose;
+            }
             if (const auto* staff = r.try_get<simulation::Staff>(shown.guest); staff != nullptr && staff->role == simulation::StaffRole::Vendor)
             {
                 std::tie(pose.motion, pose.time) = vendor_motion(scene, shown, glm::vec3(pose.world[3]));
@@ -953,21 +965,26 @@ namespace rct3::scene
                     look.colours[i] = a.palettes[i] = static_cast<std::uint8_t>(random::below(scene.looks, kColourCells));
                 shown.pose.motion = park::motion::kWalk;
             }
-            // Keepers hired with animal houses since, in the keepers' clothes.
-            for (const auto [e, staff, duty] : r.view<const simulation::Staff, const simulation::KeeperDuty>().each())
+            // Keepers hired with animal houses since, and lifeguards come with lifeguard chairs, in their jobs' clothes.
+            for (const auto [e, staff, at] : r.view<const simulation::Staff, const simulation::Pose>(entt::exclude<simulation::Stride>).each())
             {
-                if (!scene.simulate || !scene.known_guests.insert(e).second)
+                const bool keeper = r.all_of<simulation::KeeperDuty>(e);
+                if (!scene.simulate || (!keeper && staff.role != simulation::StaffRole::Other) || !scene.known_guests.insert(e).second)
                     continue;
+                const auto type = keeper ? save::PersonType::AnimalKeeper : save::PersonType::LifeGuard;
                 std::array<const Outfit*, 3> worn { };
                 for (const Outfit& o : scene.wardrobe)
-                    if (o.type == save::PersonType::AnimalKeeper && !o.swim && worn[o.section] == nullptr)
+                    if (o.type == type && !o.swim && worn[o.section] == nullptr)
                         worn[o.section] = &o;
                 if (std::ranges::contains(worn, nullptr))
                     continue;
                 save::Staff& kept = scene.people.staff.emplace_back();
-                kept.kind = save::StaffKind::AnimalKeeper;
-                kept.person.type = save::PersonType::AnimalKeeper;
-                kept.person.name = std::format("Keeper {}", scene.people.staff.size());
+                kept.kind = keeper ? save::StaffKind::AnimalKeeper : save::StaffKind::LifeGuard;
+                kept.person.type = type;
+                kept.person.name = std::format("{} {}", keeper ? "Keeper" : "Lifeguard", scene.people.staff.size());
+                kept.task_flags = staff.tasks;
+                if (keeper)
+                    kept.work = save::KeeperWork { };
                 save::Appearance& a = kept.person.appearance;
                 a.head = { worn[0]->id };
                 a.body = { worn[1]->id };
@@ -976,8 +993,8 @@ namespace rct3::scene
                 shown.pose.look.head = worn[0]->set;
                 shown.pose.look.body = worn[1]->set;
                 shown.pose.look.legs = worn[2]->set;
-                shown.pose.motion = park::motion::kWalk;
-                shown.pose.world = glm::translate(glm::mat4(1.0f), r.get<simulation::Pose>(e).position); // Where they stand while the park is still
+                shown.pose.motion = keeper ? park::motion::kWalk : park::motion::kIdle;
+                shown.pose.world = glm::translate(glm::mat4(1.0f), at.position); // Where they stand while the park is still
             }
             // Sellers, as the game keeps them: one stands at each stall and ride entrance whose model has a place
             // for them, from when it is built, and goes when it is pulled down or moved.

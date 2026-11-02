@@ -2,6 +2,7 @@
 #include "simulation/systems.hpp"
 
 #include "profiling/profiler.hpp"
+#include "simulation/animals.hpp"
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 #include "simulation/crowds.hpp"
@@ -507,24 +508,6 @@ namespace rct3::simulation
             ++thoughts.had;
         }
 
-        /// The inspector tells the player `finding` about `about` at `now`, unless they told it lately.
-        void tell(entt::registry& r, entt::entity inspector, Finding finding, entt::entity about, float now)
-        {
-            auto& told = r.get_or_emplace<Rounds>(inspector).told;
-            std::erase_if(told, [&](const auto& t) { return now - std::get<2>(t) >= kTuning.inspector.quiet.value; });
-            if (std::ranges::any_of(told, [&](const auto& t) { return std::get<0>(t) == about && std::get<1>(t) == finding; }))
-                return;
-            told.emplace_back(about, finding, now);
-            r.ctx().emplace<Findings>().found.emplace_back(finding, about);
-        }
-
-        /// An entity's own random numbers, from the run's seed.
-        Dice dice_for(const SimWorld& world, entt::entity e)
-        {
-            std::uint64_t mix = world.seed.value ^ (std::uint64_t { entt::to_integral(e) } << 32);
-            return { random::seeded(random::Seed { random::split_mix(mix) }) };
-        }
-
         /// A share, 0 to 1, fixed for each guest, so a queue looks the same every time it is shown.
         float fixed_share(entt::entity e, std::uint64_t salt)
         {
@@ -587,6 +570,16 @@ namespace rct3::simulation
                 be_sick(r, guest, out);
         }
     } // namespace
+
+    void tell(entt::registry& r, entt::entity inspector, Finding finding, entt::entity about, float now)
+    {
+        auto& told = r.get_or_emplace<Rounds>(inspector).told;
+        std::erase_if(told, [&](const auto& t) { return now - std::get<2>(t) >= kTuning.inspector.quiet.value; });
+        if (std::ranges::any_of(told, [&](const auto& t) { return std::get<0>(t) == about && std::get<1>(t) == finding; }))
+            return;
+        told.emplace_back(about, finding, now);
+        r.ctx().emplace<Findings>().found.emplace_back(finding, about);
+    }
 
     Gait pick_gait(AgeGroup age, const Mood& mood, const Needs& needs, random::RandomState& dice)
     {
@@ -1132,20 +1125,29 @@ namespace rct3::simulation
                         payroll.paid.value += staff.wage.value / 4;
             }
             const auto guests_near = [&](glm::vec3 at) { return std::ranges::any_of(r.view<const Visitor, const Pose>(entt::exclude<Left>).each(), [&](const auto& v) { return glm::distance(std::get<2>(v).position, at) <= kTuning.shows.reach.value; }); };
-            // Vendors stay at their post, at work while guests are near; content or not as other staff are, but they never quit.
+            // Vendors stay at their post and lifeguards in their chair, at work while guests are near; keepers in their
+            // enclosure, at work while at a job. Content or not as other staff are; keepers may quit, the others never do.
             for (const auto [e, staff, pose] : r.view<Staff, const Pose>(entt::exclude<Stride>).each())
             {
-                if (staff.role != StaffRole::Vendor)
+                const auto* duty = r.try_get<KeeperDuty>(e);
+                if (staff.role != StaffRole::Vendor && staff.role != StaffRole::Other && duty == nullptr)
                     continue;
-                care_for(staff, guests_near(pose.position), dt);
+                care_for(staff, duty != nullptr ? duty->job != KeeperJob::Idle && duty->job != KeeperJob::Strolling : guests_near(pose.position), dt);
                 if (staff.think.value -= dt; staff.think.value <= 0)
                 {
                     staff.think = kTuning.staff.think;
                     if (!r.all_of<Dice>(e))
                         r.emplace<Dice>(e, dice_for(world, e));
                     for (const ThoughtKind kind : staff_thoughts(staff))
-                        if (kind != ThoughtKind::StaffWantToQuit)
-                            think(r, e, kind, entt::null, now);
+                    {
+                        if (kind == ThoughtKind::StaffWantToQuit && duty == nullptr)
+                            continue;
+                        think(r, e, kind, entt::null, now);
+                        if (kind == ThoughtKind::StaffWantToQuit)
+                            r.ctx().emplace<Findings>().found.emplace_back(Finding::WantsToQuit, e);
+                    }
+                    if (duty != nullptr && quits(staff))
+                        r.ctx().emplace<Findings>().found.emplace_back(Finding::Quit, e);
                 }
             }
 

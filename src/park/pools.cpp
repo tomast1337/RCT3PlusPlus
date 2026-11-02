@@ -265,6 +265,8 @@ namespace rct3::park
                 std::from_chars(word.data(), word.data() + word.size(), fit.step);
                 step_next = false;
             }
+            else if (strings::equals_ignoring_case(word, "LifeGuard"))
+                fit.lifeguard = true;
             else if (strings::equals_ignoring_case(word, "CentralSolid"))
                 fit.paved_middle = true;
             else if (strings::equals_ignoring_case(word, "CentralWater"))

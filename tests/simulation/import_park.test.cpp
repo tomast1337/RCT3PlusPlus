@@ -507,6 +507,39 @@ TEST_CASE("a seller hired with a placed stall stands in their booth, off the pat
     CHECK_FALSE(world.registry.all_of<simulation::Stride>(seller));
 }
 
+TEST_CASE("a saved lifeguard sits where the park left them, off the paths, unless their chair is gone")
+{
+    simulation::SimWorld world;
+    (void)world.paths.add({ 2, 1, 0 });
+    save::PeopleModel people;
+    people.staff.resize(2);
+    for (auto& s : people.staff)
+    {
+        s.kind = save::StaffKind::LifeGuard;
+        s.person.position = { 30, 1, 40 };
+    }
+    people.staff[0].work = save::LifeGuardWork { .chair = { 7 }, .chair_been_set = true };
+    people.staff[1].work = save::LifeGuardWork { };
+    const auto staff = simulation::import_staff(world, people);
+    REQUIRE(staff[0] != entt::null);
+    CHECK(world.registry.get<simulation::Staff>(staff[0]).role == simulation::StaffRole::Other);
+    CHECK_FALSE(world.registry.all_of<simulation::Stride>(staff[0]));
+    CHECK(world.registry.get<simulation::Pose>(staff[0]).position == glm::vec3 { 30, 1, 40 });
+    CHECK(staff[1] == entt::null);
+}
+
+TEST_CASE("a lifeguard come with a placed chair sits in it, unpaid")
+{
+    simulation::SimWorld world;
+    const entt::entity guard = simulation::add_lifeguard(world, { 3, 1, 4 }, { 1.5f });
+    const auto& staff = world.registry.get<simulation::Staff>(guard);
+    CHECK(staff.role == simulation::StaffRole::Other);
+    CHECK(staff.wage.value == 0);
+    CHECK(world.registry.get<simulation::Pose>(guard).position == glm::vec3 { 3, 1, 4 });
+    CHECK(world.registry.get<simulation::Pose>(guard).heading.value == 1.5f);
+    CHECK_FALSE(world.registry.all_of<simulation::Stride>(guard));
+}
+
 TEST_CASE("paths laid and taken away come and go from the network; walkers and rides catch up")
 {
     simulation::SimWorld world;

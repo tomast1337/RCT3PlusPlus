@@ -354,9 +354,10 @@ namespace rct3::scene
                     sex = vip;
                 }
                 // Workers wear their job's own clothes, one set to a job: animal keepers, hired with each animal
-                // house, and those hired from the staff window.
-                constexpr std::array<std::pair<std::string_view, save::PersonType>, 4> kUniforms { {
+                // house, lifeguards, come with each lifeguard chair, and those hired from the staff window.
+                constexpr std::array<std::pair<std::string_view, save::PersonType>, 5> kUniforms { {
                     { "AnimalKeeper", save::PersonType::AnimalKeeper },
+                    { "Lifeguard", save::PersonType::LifeGuard },
                     { "HM", save::PersonType::Handyman },
                     { "Maintenance", save::PersonType::Mechanic },
                     { "SecurityGuard", save::PersonType::SecurityGuard },
@@ -1473,8 +1474,9 @@ namespace rct3::scene
                 {
                     if (!p.staff && p.saved < guests.size() && guests[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(guests[p.saved]))
                         p.guest = guests[p.saved];
-                    // A vendor stands in their booth as saved, serving the riders handing over their tickets.
-                    else if (p.staff && p.saved < staff.size() && staff[p.saved] != entt::null && (scene.sim.registry.all_of<simulation::Stride>(staff[p.saved]) || scene.sim.registry.get<simulation::Staff>(staff[p.saved]).role == simulation::StaffRole::Vendor || scene.sim.registry.all_of<simulation::KeeperDuty>(staff[p.saved])))
+                    // A vendor stands in their booth as saved, serving the riders handing over their tickets, and a
+                    // lifeguard sits in their chair.
+                    else if (p.staff && p.saved < staff.size() && staff[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Staff>(staff[p.saved]))
                     {
                         p.guest = staff[p.saved];
                         scene.known_guests.insert(p.guest); // A keeper is not hired again

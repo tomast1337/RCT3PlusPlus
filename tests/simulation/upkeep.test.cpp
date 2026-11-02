@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/model/rides.hpp"
+#include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/import_park.hpp"
@@ -115,6 +116,36 @@ TEST_CASE("a vendor's mood moves as other staff's do, but they never quit")
     REQUIRE(r.all_of<Thoughts>(vendor));
     const auto* findings = r.ctx().find<Findings>();
     CHECK((findings == nullptr || std::ranges::none_of(findings->found, [&](const auto& f) { return f.second == vendor; })));
+}
+
+TEST_CASE("a lifeguard's mood moves as other staff's do, but they never quit")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 2, 0 });
+    auto& r = park.world().registry;
+    const entt::entity guard = add_lifeguard(park.world(), { 0, 0, 0 }, { });
+    r.get<Staff>(guard).training = 0;
+    park.run_seconds(3 * 3600);
+    CHECK(r.get<Staff>(guard).happiness.value < 0.5f);
+    REQUIRE(r.all_of<Thoughts>(guard));
+    const auto* findings = r.ctx().find<Findings>();
+    CHECK((findings == nullptr || std::ranges::none_of(findings->found, [&](const auto& f) { return f.second == guard; })));
+}
+
+TEST_CASE("an idle keeper grows unhappy and, unhappy enough, quits")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 2, 0 });
+    auto& r = park.world().registry;
+    const entt::entity keeper = add_animal_house(park.world(), { .enclosure = 0 }, { 50, 0, 50 });
+    set_wage_level(r.get<Staff>(keeper), 0);
+    r.get<Staff>(keeper).training = 0;
+    CHECK(park.run_until(
+        [&] {
+            const auto* findings = r.ctx().find<Findings>();
+            return findings != nullptr && std::ranges::contains(findings->found, std::pair { Finding::WantsToQuit, keeper });
+        },
+        12 * 3600));
 }
 
 TEST_CASE("a saved ride brings its reliability, breakdown and inspections")

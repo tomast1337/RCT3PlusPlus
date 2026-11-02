@@ -8,7 +8,11 @@
 // hungry, thirsty and tired, lonely without others of its kind in the enclosure, and now and then leaves dung.
 // It eats and drinks at the troughs of a house in its enclosure, sleeps beside them, and otherwise strolls
 // about. Empty troughs, a long thirst or hunger, and dung piling up wear its health down; it mends otherwise.
-// The keeper fills the troughs again after a while, or sooner once they run low, and clears the dung.
+// The keepers of an enclosure fill its houses' troughs again after a while, or sooner once they run low, and clear
+// its dung, each as their tasks allow; one with a patrol fills only the houses it takes in. Each keeper's window
+// counts the troughs they filled and the dung they cleared. The park's inspector, if it has one, tells the player
+// of a house nobody can fill, of an animal that keeps finding its food trough empty, and of an enclosure deep in
+// dung.
 //
 // An animal standing where there is no enclosure has escaped: one let out of its crate there, or one whose
 // enclosure was taken from under it. The park posts a message as it gets out. It roams about, and a keeper
@@ -103,8 +107,9 @@ namespace rct3::simulation
         Share tiredness { };
         Share loneliness { };
         Share health { 1 };
-        Seconds dung_in { };  ///< Till it next leaves dung
-        bool escaped = false; ///< Out of every enclosure
+        Seconds dung_in { };   ///< Till it next leaves dung
+        int empty_troughs = 0; ///< Times in a row it went hungry to its house and found the food trough empty
+        bool escaped = false;  ///< Out of every enclosure
     };
 
     /// Dung an animal left in its enclosure.
@@ -139,6 +144,7 @@ namespace rct3::simulation
         int stroll_tries = 8;      ///< Spots picked for a stroll before giving up till later
         float roam = 4;            ///< Farthest an escaped animal wanders at a time, in world units
         Seconds catching { 4 };    ///< The keeper shutting an escaped animal in its crate
+        int empty_tries = 3;       ///< Times in a row an animal finds its food trough empty before the inspector tells
     };
 
     inline constexpr AnimalRates kAnimalRates { };
@@ -166,7 +172,8 @@ namespace rct3::simulation
     /// The zoo animals a park was saved with, where they stood, each in the enclosure `enclosure` says its spot is in.
     void import_animals(SimWorld& world, std::span<const save::ZooAnimal> saved, const std::function<std::int32_t(glm::vec2)>& enclosure);
 
-    /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape.
+    /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape, and leaving what the
+    /// park's inspector finds among the Findings.
     void step_animals(SimWorld& world, const AnimalGround& ground, Seconds dt, ParkMessages& messages);
 
 } // namespace rct3::simulation

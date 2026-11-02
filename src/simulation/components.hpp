@@ -824,7 +824,7 @@ namespace rct3::simulation
         Handyman, ///< Sweeps, empties bins and mends what is broken
         Mechanic, ///< Mends what is broken
         Guard,    ///< Keeps vandals off the paths near them
-        Other,    ///< Walks the paths, nothing more yet
+        Other,    ///< A lifeguard: sits in their chair by a pool, off the paths
         Vendor,   ///< Sells at a stall or a ride's entrance, standing at their post off the paths
         Keeper,   ///< Looks after an animal enclosure, inside it off the paths
         /// Goes round the attractions in turn: rides them and stands at stalls, as a guest would but free, and
@@ -842,6 +842,9 @@ namespace rct3::simulation
     /// A mechanic's tasks among the task flags, numbered as saved parks number them.
     inline constexpr std::int32_t kInspectRidesTask = 1 << 0;
     inline constexpr std::int32_t kFixRidesTask = 1 << 1;
+    /// A keeper's tasks among the task flags, numbered as saved parks number them.
+    inline constexpr std::int32_t kClearDungTask = 1 << 0;
+    inline constexpr std::int32_t kFillTroughsTask = 1 << 1;
     /// What a handyman does when the park says nothing: every task of the game's.
     inline constexpr std::int32_t kEveryTask = 0b111;
     /// An inspector's tasks among the task flags, numbered as saved parks number them, taken in this order.
@@ -892,6 +895,8 @@ namespace rct3::simulation
         std::int32_t emptied = 0;
         std::int32_t fixed = 0;
         std::int32_t inspected = 0;
+        std::int32_t cleared = 0; ///< Dung, by a keeper
+        std::int32_t filled = 0;  ///< Troughs, by a keeper
     };
 
     /// How a ride has broken down, numbered as saved parks number breakdowns.
@@ -1003,6 +1008,10 @@ namespace rct3::simulation
         BadZones,           ///< A broken attraction outside every mechanic's patrol, all of them having one
         Breakdowns,         ///< Many of the attractions broken down at once; with no entity
         NoPathToStaff,      ///< A worker they found no way to
+        NoKeeperCanReach,   ///< An animal house wanting its troughs filled that no keeper of its enclosure is set to fill
+        KeeperBadZones,     ///< One that every such keeper has a patrol leaving out
+        TroughsEmpty,       ///< A hungry animal (the finding's entity) finding its house's food trough empty, time and again
+        TooMuchDung,        ///< An animal house whose enclosure has more dung than its animals put up with
         // Not the inspector's: a worker's own news (staff_care.hpp), with the worker
         WantsToQuit,
         Quit, ///< The park lets them go once told

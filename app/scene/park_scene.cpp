@@ -550,6 +550,11 @@ namespace rct3::scene
                 m->objects_fixed = staff.fixed;
                 m->objects_inspected = staff.inspected;
             }
+            else if (auto* k = std::get_if<save::KeeperWork>(&saved.work))
+            {
+                k->dung_cleared = staff.cleared;
+                k->troughs_filled = staff.filled;
+            }
         }
 
         ui::PersonFacts person_facts(const ParkScene& scene, std::size_t shown)
@@ -3027,9 +3032,31 @@ namespace rct3::scene
                 if (auto* findings = scene.sim.registry.ctx().find<simulation::Findings>())
                 {
                     using enum simulation::Finding;
-                    constexpr std::array<std::string_view, 20> kKeys { // By Finding
-                                                                       "Thought_PI_Stall_TooExpensive1", "Thought_PI_Stall_TooCheap1", "Thought_PI_Ride_LongQueueTime1", "Thought_PI_Ride_NoPathToEntrance1", "Thought_PI_General_NoMaintenanceManNear1", "Thought_PI_Vista_InappropriateStyle1", "Thought_PI_Staff_Lazy1",      "Thought_PI_Staff_Unhappy1",       "Thought_PI_PoolDirty1",      "Thought_PI_PoolVeryDirty1",
-                                                                       "Thought_PI_Guests_Hungry1",      "Thought_PI_Guests_Thirsty1", "Thought_PI_Guests_Tired1",       "Thought_PI_Guests_Toilet1",         "Thought_PI_NoMechanicsCanReachRide1",      "Thought_PI_MechanicBadZones1",         "Thought_PI_Park_Breakdowns1", "Thought_PI_Staff_NoPathToGetTo1", "StaffMessage_WantsToResign", "StaffMessage_Resigned"
+                    constexpr std::array<std::string_view, 24> kKeys { // By Finding
+                                                                       "Thought_PI_Stall_TooExpensive1",
+                                                                       "Thought_PI_Stall_TooCheap1",
+                                                                       "Thought_PI_Ride_LongQueueTime1",
+                                                                       "Thought_PI_Ride_NoPathToEntrance1",
+                                                                       "Thought_PI_General_NoMaintenanceManNear1",
+                                                                       "Thought_PI_Vista_InappropriateStyle1",
+                                                                       "Thought_PI_Staff_Lazy1",
+                                                                       "Thought_PI_Staff_Unhappy1",
+                                                                       "Thought_PI_PoolDirty1",
+                                                                       "Thought_PI_PoolVeryDirty1",
+                                                                       "Thought_PI_Guests_Hungry1",
+                                                                       "Thought_PI_Guests_Thirsty1",
+                                                                       "Thought_PI_Guests_Tired1",
+                                                                       "Thought_PI_Guests_Toilet1",
+                                                                       "Thought_PI_NoMechanicsCanReachRide1",
+                                                                       "Thought_PI_MechanicBadZones1",
+                                                                       "Thought_PI_Park_Breakdowns1",
+                                                                       "Thought_PI_Staff_NoPathToGetTo1",
+                                                                       "Thought_PI_NoKeepersCanReachShelter1",
+                                                                       "Thought_PI_AnimalKeepersBadZones1",
+                                                                       "Thought_PI_AnimalHungryFoodTroughsEmpty1",
+                                                                       "Thought_PI_TooMuchDung1",
+                                                                       "StaffMessage_WantsToResign",
+                                                                       "StaffMessage_Resigned"
                     };
                     std::vector<entt::entity> quitting;
                     const auto& r = scene.sim.registry;
@@ -3056,6 +3083,16 @@ namespace rct3::scene
                             if (finding == Quit)
                                 quitting.push_back(at);
                         }
+                        // An animal by its name, an animal house by its scenery item's.
+                        else if (const auto* animal = r.valid(at) ? r.try_get<simulation::Animal>(at) : nullptr)
+                            message.subject_name = animal->name;
+                        else if (const auto* house = r.valid(at) ? r.try_get<simulation::AnimalHouse>(at) : nullptr)
+                        {
+                            const auto placed = std::ranges::find(scene.objects, house->object, &save::PlacedObject::id);
+                            if (placed != scene.objects.end() && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                                if (const auto item = std::ranges::find(scene.build.items.get(), placed->symbol, &park::BuildItem::symbol); item != scene.build.items.get().end())
+                                    message.subject_name = strings::to_utf8(assets.strings->get(item->name_text));
+                        }
                         else if (r.valid(at))
                             continue; // Gone since
                         simulation::post(scene.park.messages, std::move(message));
@@ -3069,6 +3106,47 @@ namespace rct3::scene
                             if (auto panel = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); panel && scene.shown_person == i)
                                 panel->hide();
                             fire(scene, i);
+                        }
+                }
+                // One lifeguard sits in each lifeguard chair, come with it and gone with it, as the game has them.
+                if (scene.chairs_changed && scene.anchors.size() == scene.objects.size() && scene.places.transforms.size() == scene.objects.size() && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                {
+                    scene.chairs_changed = false;
+                    std::unordered_set<std::string_view> chair_symbols;
+                    for (const park::BuildItem& item : scene.build.items.get())
+                        if (park::pool_extra_fit(item.pool_extra).lifeguard)
+                            chair_symbols.insert(item.symbol);
+                    const save::TerrainGrid& g = scene.grid;
+                    const auto tile_of = [&g](glm::vec3 p) { return glm::ivec2 { static_cast<int>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((p.z - g.origin_z) / g.tile_size_z)) }; };
+                    std::vector<std::size_t> chairs;
+                    for (std::size_t i = 0; i < scene.objects.size(); ++i)
+                        if (!scene.objects[i].hidden && chair_symbols.contains(scene.objects[i].symbol))
+                            chairs.push_back(i);
+                    auto& r = scene.sim.registry;
+                    std::vector<entt::entity> lifeguards;
+                    for (const auto [e, staff] : r.view<const simulation::Staff>(entt::exclude<simulation::Stride>).each())
+                        if (staff.role == simulation::StaffRole::Other)
+                            lifeguards.push_back(e);
+                    const auto seated = [&](entt::entity e, std::size_t chair) { return tile_of(r.get<simulation::Pose>(e).position) == glm::ivec2 { scene.objects[chair].col, scene.objects[chair].row }; };
+                    for (const entt::entity e : lifeguards)
+                    {
+                        if (std::ranges::any_of(chairs, [&](std::size_t c) { return seated(e, c); }))
+                            continue;
+                        if (const auto shown = std::ranges::find(scene.shown_people, e, &ShownPerson::guest); shown != scene.shown_people.end())
+                        {
+                            const auto i = static_cast<std::size_t>(shown - scene.shown_people.begin());
+                            if (auto panel = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); panel && scene.shown_person == i)
+                                panel->hide();
+                            fire(scene, i);
+                        }
+                        else
+                            r.destroy(e);
+                    }
+                    for (const std::size_t c : chairs)
+                        if (std::ranges::none_of(lifeguards, [&](entt::entity e) { return r.valid(e) && seated(e, c); }))
+                        {
+                            const glm::mat4& m = scene.places.transforms[c];
+                            (void)simulation::add_lifeguard(scene.sim, scene.anchors[c], { std::atan2(m[2][0], m[2][2]) });
                         }
                 }
                 // What is broken looks it, and looks whole again once mended.

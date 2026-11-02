@@ -38,7 +38,7 @@ namespace rct3::ui
             if (!shows_job(jobs, s.kind))
                 continue;
             const PersonFacts person { .staff = &s, .people = facts.people, .rides = facts.rides };
-            simulation::Staff pay { .training = s.training };
+            simulation::Staff pay { .role = simulation::staff_role(s.kind), .training = s.training };
             simulation::set_wage_level(pay, s.wage_level);
             const StaffLook look = i < facts.staff_looks.size() ? facts.staff_looks[i] : StaffLook { };
             // Staff a scenario starts with were hired before its calendar began: they show its first month.

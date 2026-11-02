@@ -87,7 +87,7 @@ TEST_CASE("each sort puts the staff in its own order, ties in the order of the j
     CHECK(sorted(RosterSort::Job) == List { u"Cid", u"Bea", u"Al" });
     CHECK(sorted(RosterSort::Name) == List { u"Al", u"Bea", u"Cid" });
     CHECK(sorted(RosterSort::Tasks) == List { u"Cid", u"Al", u"Bea" });
-    CHECK(sorted(RosterSort::Wage) == List { u"Cid", u"Al", u"Bea" }); // Cid and Al tie: the handyman first
+    CHECK(sorted(RosterSort::Wage) == List { u"Bea", u"Cid", u"Al" }); // By the money: a mechanic on the lowest level earns more than a guard on the highest
     CHECK(sorted(RosterSort::Happiness) == List { u"Bea", u"Al", u"Cid" });
     CHECK(sorted(RosterSort::Warnings) == List { u"Bea", u"Al", u"Cid" });
     CHECK(sorted(RosterSort::Training) == List { u"Cid", u"Al", u"Bea" });
@@ -121,5 +121,5 @@ TEST_CASE("a line holds the worker's wage and what their next training costs, no
     CHECK(lines[0].wage_level == 1);
     CHECK(lines[0].training_cost > 0);
     CHECK(lines[1].training_cost == 0);
-    CHECK(lines[0].wage == simulation::wage_at(1));
+    CHECK(lines[0].wage == simulation::wage_at(simulation::StaffRole::Handyman, 1));
 }

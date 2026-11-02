@@ -82,6 +82,7 @@ namespace rct3::parkfile
         float weather_hold = 0;   ///< Calendar units before the forecast arrives
         float wind = 0;
         float wind_change = 0;
+        std::vector<save::LedgerPeriod> ledger; ///< The months' accounts, newest first
     };
 
     /// A guest in the park.

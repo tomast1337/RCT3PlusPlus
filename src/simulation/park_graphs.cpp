@@ -62,4 +62,23 @@ namespace rct3::simulation
         }
     }
 
+    save::LedgerPeriod& ledger_month(save::Finance& finance, std::optional<std::int64_t>& kept, const save::CalendarDate& date)
+    {
+        constexpr auto kMonthsPerYear = static_cast<std::int64_t>(save::GameClock::kUnitsPerYear / save::GameClock::kUnitsPerMonth);
+        const std::int64_t month = date.year * kMonthsPerYear + date.month;
+        auto& ledger = finance.ledger;
+        for (std::int64_t n = std::min<std::int64_t>(month - kept.value_or(month), save::kLedgerPeriods); n > 0; --n)
+        {
+            std::shift_right(ledger.begin(), ledger.end(), 1);
+            // The counters only some parks have stay shown in the months that follow.
+            const save::LedgerPeriod& before = ledger[1];
+            const auto zero = [](std::int32_t) { return 0; };
+            ledger[0] = { .pool_tickets = before.pool_tickets.transform(zero), .billboards = before.billboards.transform(zero), .viewing_gallery_tickets = before.viewing_gallery_tickets.transform(zero), .other_animal_spending = before.other_animal_spending.transform(zero) };
+            finance.ledger_periods_loaded = std::min(finance.ledger_periods_loaded + 1, save::kLedgerPeriods);
+        }
+        kept = std::max(kept.value_or(month), month);
+        finance.ledger_periods_loaded = std::max<std::size_t>(finance.ledger_periods_loaded, 1);
+        return ledger[0];
+    }
+
 } // namespace rct3::simulation

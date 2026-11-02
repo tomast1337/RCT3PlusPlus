@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <utility>
 #include <variant>
 
 namespace rct3::simulation
@@ -12,15 +13,21 @@ namespace rct3::simulation
 
     static_assert(kTuning.staff.training_cost.size() == kMostTraining);
 
-    std::int64_t wage_at(std::int32_t level)
+    StaffRole staff_role(save::StaffKind kind)
     {
-        return kTuning.staff.lowest_wage.value + kTuning.staff.lowest_wage.value / 2 * std::clamp(level, 0, kMostWageLevel);
+        using enum save::StaffKind;
+        return kind == Handyman ? StaffRole::Handyman : kind == Mechanic ? StaffRole::Mechanic : kind == SecurityGuard ? StaffRole::Guard : kind == Vendor ? StaffRole::Vendor : kind == AnimalKeeper ? StaffRole::Keeper : kind == ParkInspector ? StaffRole::Inspector : kind == Entertainer ? StaffRole::Entertainer : StaffRole::Other;
+    }
+
+    std::int64_t wage_at(StaffRole role, std::int32_t level)
+    {
+        return kTuning.staff.wages.at(std::to_underlying(role))[static_cast<std::size_t>(std::clamp(level, 0, kMostWageLevel))];
     }
 
     void set_wage_level(Staff& staff, std::int32_t level)
     {
         staff.wage_level = std::clamp(level, 0, kMostWageLevel);
-        staff.wage.value = wage_at(staff.wage_level);
+        staff.wage.value = wage_at(staff.role, staff.wage_level);
     }
 
     std::int64_t training_cost(const Staff& staff)

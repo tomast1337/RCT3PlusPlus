@@ -6,6 +6,7 @@
 #include "simulation/components.hpp"
 #include "simulation/crowds.hpp"
 #include "simulation/day_clock.hpp"
+#include "simulation/park_state.hpp"
 #include "simulation/staff_care.hpp"
 #include "simulation/tuning.hpp"
 #include "simulation/workers.hpp"
@@ -1117,15 +1118,38 @@ namespace rct3::simulation
                 }
             }
 
+            // Staff are paid as each week ends, a quarter of their monthly wage, those at a post as well as those who walk.
+            // shortcut: the payroll's week runs from when the park was opened, not from the calendar's week; count from
+            // the calendar if the day wages go out ever shows.
+            {
+                constexpr float kSecondsPerWeek = kSecondsPerHour * save::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
+                auto& payroll = r.ctx().emplace<Payroll>();
+                for (payroll.week.value += dt; payroll.week.value >= kSecondsPerWeek; payroll.week.value -= kSecondsPerWeek)
+                    for (const auto [e, staff] : r.view<const Staff>().each())
+                        payroll.paid.value += staff.wage.value / 4;
+            }
+            const auto guests_near = [&](glm::vec3 at) { return std::ranges::any_of(r.view<const Visitor, const Pose>(entt::exclude<Left>).each(), [&](const auto& v) { return glm::distance(std::get<2>(v).position, at) <= kTuning.shows.reach.value; }); };
+            // Vendors stay at their post, at work while guests are near; content or not as other staff are, but they never quit.
+            for (const auto [e, staff, pose] : r.view<Staff, const Pose>(entt::exclude<Stride>).each())
+            {
+                if (staff.role != StaffRole::Vendor)
+                    continue;
+                care_for(staff, guests_near(pose.position), dt);
+                if (staff.think.value -= dt; staff.think.value <= 0)
+                {
+                    staff.think = kTuning.staff.think;
+                    if (!r.all_of<Dice>(e))
+                        r.emplace<Dice>(e, dice_for(world, e));
+                    for (const ThoughtKind kind : staff_thoughts(staff))
+                        if (kind != ThoughtKind::StaffWantToQuit)
+                            think(r, e, kind, entt::null, now);
+                }
+            }
+
             // Staff walk the paths. Handymen sweep, empty bins and mend; mechanics mend; each job keeps them a while.
             if (paths.nodes().empty())
                 return;
             const auto staff_view = r.view<Staff, Stride, Pose, Dice>();
-            auto& payroll = r.ctx().emplace<Payroll>();
-            for (const entt::entity e : sorted(staff_view))
-                payroll.owed += static_cast<double>(staff_view.get<Staff>(e).wage.value) * dt / kSecondsPerHour;
-            payroll.paid.value += static_cast<std::int64_t>(payroll.owed);
-            payroll.owed -= std::floor(payroll.owed);
 
             // Free mechanics: the nearest by the paths goes to a broken ride, else to one due an inspection.
             const auto spot = [&](entt::entity ride) {
@@ -1193,11 +1217,7 @@ namespace rct3::simulation
                 if (staff.ride != entt::null && !r.valid(staff.ride))
                     staff.ride = entt::null;
                 // An entertainer is at work while there are guests near to entertain.
-                const auto audience = [&] {
-                    const glm::vec3 at = pose.position;
-                    return std::ranges::any_of(r.view<const Visitor, const Pose>(entt::exclude<Left>).each(), [&](const auto& v) { return glm::distance(std::get<2>(v).position, at) <= kTuning.shows.reach.value; });
-                };
-                care_for(staff, staff.role == StaffRole::Entertainer ? audience() : (staff.busy.value > 0 && !staff.resting) || staff.ride != entt::null, dt);
+                care_for(staff, staff.role == StaffRole::Entertainer ? guests_near(pose.position) : (staff.busy.value > 0 && !staff.resting) || staff.ride != entt::null, dt);
                 if (staff.think.value -= dt; staff.think.value <= 0)
                 {
                     staff.think = kTuning.staff.think;

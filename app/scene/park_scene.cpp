@@ -1695,6 +1695,11 @@ namespace rct3::scene
             kept.person.type = type;
             kept.person.sub_type = costume;
             kept.person.name = std::format("%ME% {}", kept.type_id); // As the game names them, after their job
+            kept.person.start_time = scene.park.time;                // Hired today, and their work counted from nothing
+            if (kind == save::StaffKind::Handyman)
+                kept.work = save::HandymanWork { };
+            else if (kind == save::StaffKind::Mechanic)
+                kept.work = save::MechanicWork { };
             kept.person.position = { at.x, at.y, at.z };
             save::Appearance& a = kept.person.appearance;
             a.head = { worn[0]->id };

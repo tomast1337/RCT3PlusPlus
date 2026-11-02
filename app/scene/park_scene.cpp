@@ -1768,15 +1768,16 @@ namespace rct3::scene
             }
             if (staff == nullptr)
                 return false;
+            // The details page shows the tools for painting while it goes on.
             if (change.id == ui::person_control(PatrolPaint))
             {
                 scene.painting_patrol = change.value != 0;
-                return false;
+                return true;
             }
             if (change.id == ui::person_control(PatrolEdit))
             {
                 scene.painting_patrol = !scene.painting_patrol;
-                return false;
+                return true;
             }
             if (const entt::entity e = shown_staff(scene); e != entt::null && change.id == ui::person_control(PatrolClear))
             {
@@ -3720,6 +3721,9 @@ namespace rct3::scene
             const auto p = std::ranges::find_if(scene.shown_people, [&](const ShownPerson& p) { return p.staff && p.saved == staff; });
             return p != scene.shown_people.end() ? std::optional(static_cast<std::size_t>(p - scene.shown_people.begin())) : std::nullopt;
         };
+        // A worker's patrol button in the list opens their details, where painting their area is done.
+        if (asks.staff.change && asks.staff.change->second.id == ui::person_control(ui::PersonControl::PatrolPaint))
+            scene.person_tab = ui::PersonTab::General;
         if (const auto who = asks.staff.open ? shown_worker(*asks.staff.open) : std::nullopt; who && info)
             open_person(scene, *info, *who, assets, options);
         if (const auto who = asks.staff.centre ? shown_worker(*asks.staff.centre) : std::nullopt)

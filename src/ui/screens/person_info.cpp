@@ -38,6 +38,9 @@ namespace rct3::ui
         /// The Train button's picture by the levels bought: a square filled for each.
         constexpr std::array<std::string_view, 4> kTrainingIcons { "Staff_Training0IconLarge", "Staff_Training1IconLarge", "Staff_Training2IconLarge", "Staff_Training3IconLarge" };
 
+        constexpr float kPatrolChoiceWidth = 56;  ///< Chosen by eye: a brush or zone list on the patrol row
+        constexpr float kPatrolButtonWidth = 150; ///< Chosen by eye: fill and copy, side by side under them
+
         /// A job's task: its flag bit and words.
         struct Task
         {
@@ -410,6 +413,13 @@ namespace rct3::ui
                 add(page, strings, "AnimalKeeper_DungCleared", count(k->dung_cleared));
                 add(page, strings, "AnimalKeeper_TroughsFilled", count(k->troughs_filled));
             }
+            // The patrol area of one the simulation walks, and the paths no one in their job covers.
+            if (f.patrol_tiles)
+            {
+                add(page, strings, "Rct3pp_PatrolTiles", *f.patrol_tiles > 0 ? ascii(std::to_string(*f.patrol_tiles)) : text(strings, "Rct3pp_PatrolWholePark"));
+                if (f.uncovered_paths > 0)
+                    add(page, strings, "Rct3pp_PatrolUncovered", ascii(std::to_string(f.uncovered_paths)));
+            }
         }
 
         InfoControl name_control(const PersonFacts& f, const StringTable& strings)
@@ -445,6 +455,45 @@ namespace rct3::ui
             button(PersonControl::Highlight, "Guest_ShowHighlightAbove", p.highlight ? "Person_AvatarStyleHighlight_On" : "Person_AvatarStyleHighlight_Off", "Guest_ShowHighlightAbove");
         }
 
+        /// While their patrol area is painted, rows under the buttons: how wide a stroke is, the shared zone
+        /// they are on, then buttons filling the area's box and giving it to the rest of their job.
+        void patrol(InfoPage& page, const PersonFacts& facts, const StringTable& strings)
+        {
+            InfoControl brush;
+            brush.id = person_control(PersonControl::PatrolBrush);
+            brush.name = "Rct3pp_PatrolBrush";
+            brush.kind = InfoControlKind::Choice;
+            brush.label = text(strings, "Rct3pp_PatrolBrush");
+            for (const int across : kPatrolBrushes)
+                brush.items.push_back(ascii(std::format("{0} x {0}", across)));
+            brush.value = facts.patrol_brush;
+            brush.width = kPatrolChoiceWidth;
+            page.controls.push_back(std::move(brush));
+            InfoControl zone;
+            zone.id = person_control(PersonControl::PatrolZone);
+            zone.name = "Rct3pp_PatrolZone";
+            zone.kind = InfoControlKind::Choice;
+            zone.label = text(strings, "Rct3pp_PatrolZone");
+            zone.items.push_back(text(strings, "Rct3pp_PatrolNoZone"));
+            for (std::uint32_t z = 1; z <= kPatrolZones; ++z)
+                zone.items.push_back(ascii(std::to_string(z)));
+            zone.value = static_cast<int>(facts.patrol_zone);
+            zone.width = kPatrolChoiceWidth;
+            zone.beside = true;
+            page.controls.push_back(std::move(zone));
+            for (const auto& [id, key] : { std::pair { PersonControl::PatrolFill, "Rct3pp_PatrolFill" }, std::pair { PersonControl::PatrolCopy, "Rct3pp_PatrolCopy" } })
+            {
+                InfoControl button;
+                button.id = person_control(id);
+                button.name = key;
+                button.kind = InfoControlKind::Button;
+                button.text = text(strings, key);
+                button.width = kPatrolButtonWidth;
+                button.beside = id == PersonControl::PatrolCopy; // A row of their own, under the lists
+                page.controls.push_back(std::move(button));
+            }
+        }
+
         void staff_general(InfoPage& page, const PersonFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             const save::Staff& s = *f.staff;
@@ -453,9 +502,11 @@ namespace rct3::ui
             // One row of round buttons under the name and what they are doing.
             person_buttons(page, f, strings, "Employee_Name_Pincer", "Employee_Name_ThoughtsToConsole");
             const auto button = [&](PersonControl id, std::string_view icon, std::string_view help, bool enabled = true) -> InfoControl& { return page.controls.emplace_back(InfoControl { .id = person_control(id), .name = std::string(icon), .kind = InfoControlKind::Button, .icon = std::string(icon), .enabled = enabled, .beside = true, .help = text(strings, help) }); };
-            // Held down while their area is being painted.
+            // Held down while their area is being painted, with the button that clears it beside it.
             if (f.patrol_tiles)
-                button(PersonControl::PatrolEdit, "Staff_PatrolAreaLarge", "StaffWindow_EditPatrolAreaHelp").value = f.painting_patrol ? 1 : 0;
+                button(PersonControl::PatrolEdit, "Staff_PatrolAreaLarge", f.painting_patrol ? "StaffWindow_FinishEditingPatrolAreaHelp" : "StaffWindow_EditPatrolAreaHelp").value = f.painting_patrol ? 1 : 0;
+            if (f.patrol_tiles && f.painting_patrol)
+                button(PersonControl::PatrolClear, "PathEditor_Freeform", "StaffWindow_ClearPatrolAreaHelp");
             if (s.kind != save::StaffKind::ParkInspector)
             {
                 button(PersonControl::Warn, "Staff_WarnIconLarge", "StaffWindow_DisciplineHelp", s.warnings < kMostWarnings);
@@ -472,6 +523,8 @@ namespace rct3::ui
                     cost.replace(at, std::u16string_view(u"%AMOUNT%").size(), money_text(units.currency, f.training_cost));
                 train.help += u" " + cost;
             }
+            if (f.patrol_tiles && f.painting_patrol)
+                patrol(page, f, strings);
         }
 
         void staff_tasks(InfoPage& page, const save::Staff& s, const StringTable& strings)
@@ -487,49 +540,6 @@ namespace rct3::ui
                 tick.help = text(strings, t.help);
                 tick.value = ((s.task_flags >> t.bit) & 1) != (t.inverted ? 1 : 0);
                 page.controls.push_back(std::move(tick));
-            }
-        }
-
-        void patrol(InfoPage& page, const PersonFacts& facts, const StringTable& strings)
-        {
-            const std::size_t tiles = facts.patrol_tiles.value_or(0);
-            add(page, strings, "Rct3pp_PatrolTiles", tiles > 0 ? ascii(std::to_string(tiles)) : text(strings, "Rct3pp_PatrolWholePark"));
-            if (facts.uncovered_paths > 0)
-                add(page, strings, "Rct3pp_PatrolUncovered", ascii(std::to_string(facts.uncovered_paths)));
-            InfoControl paint;
-            paint.id = person_control(PersonControl::PatrolPaint);
-            paint.name = "Rct3pp_PatrolPaint";
-            paint.kind = InfoControlKind::Tick;
-            paint.label = text(strings, "Rct3pp_PatrolPaint");
-            paint.value = facts.painting_patrol ? 1 : 0;
-            page.controls.push_back(std::move(paint));
-            InfoControl brush;
-            brush.id = person_control(PersonControl::PatrolBrush);
-            brush.name = "Rct3pp_PatrolBrush";
-            brush.kind = InfoControlKind::Choice;
-            brush.label = text(strings, "Rct3pp_PatrolBrush");
-            for (const int across : kPatrolBrushes)
-                brush.items.push_back(ascii(std::format("{0} x {0}", across)));
-            brush.value = facts.patrol_brush;
-            page.controls.push_back(std::move(brush));
-            InfoControl zone;
-            zone.id = person_control(PersonControl::PatrolZone);
-            zone.name = "Rct3pp_PatrolZone";
-            zone.kind = InfoControlKind::Choice;
-            zone.label = text(strings, "Rct3pp_PatrolZone");
-            zone.items.push_back(text(strings, "Rct3pp_PatrolNoZone"));
-            for (std::uint32_t z = 1; z <= kPatrolZones; ++z)
-                zone.items.push_back(ascii(std::to_string(z)));
-            zone.value = static_cast<int>(facts.patrol_zone);
-            page.controls.push_back(std::move(zone));
-            for (const auto [id, key] : { std::pair { PersonControl::PatrolFill, "Rct3pp_PatrolFill" }, std::pair { PersonControl::PatrolClear, "Rct3pp_PatrolClear" }, std::pair { PersonControl::PatrolCopy, "Rct3pp_PatrolCopy" } })
-            {
-                InfoControl button;
-                button.id = person_control(id);
-                button.name = key;
-                button.kind = InfoControlKind::Button;
-                button.label = text(strings, key);
-                page.controls.push_back(std::move(button));
             }
         }
 
@@ -625,7 +635,9 @@ namespace rct3::ui
         InfoPage page;
         if (!facts.person())
             return page;
-        page.title = person_name(facts, strings);
+        // A worker's window has no name over its pages, as the game's: the details page has it in its box.
+        if (facts.staff == nullptr)
+            page.title = person_name(facts, strings);
         switch (tab)
         {
             case PersonTab::General:
@@ -672,9 +684,6 @@ namespace rct3::ui
             case PersonTab::Tasks:
                 if (facts.staff != nullptr)
                     staff_tasks(page, *facts.staff, strings);
-                if (facts.patrol_tiles)
-                    patrol(page, facts, strings);
-                page.controls_after = 0; // The tasks first, as the game lists them alone
                 break;
             case PersonTab::Costume:
                 if (facts.staff != nullptr)

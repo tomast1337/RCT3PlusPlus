@@ -53,11 +53,16 @@ namespace rct3::simulation
     void care_for(Staff& staff, bool working, float seconds)
     {
         staff.load.value += ((working ? 1.0f : 0.0f) - staff.load.value) * std::min(seconds / kTuning.staff.load_window.value, 1.0f);
-        const float overwork = std::max(staff.load.value - kTuning.staff.overworked.value, 0.0f) * kTuning.staff.overwork_gloom;
-        const float boredom = std::max(kTuning.staff.bored.value - staff.load.value, 0.0f) * kTuning.staff.bored_gloom;
+        // An entertainer's work comes in short shows, so their share of time at work is no measure of them.
+        const bool entertainer = staff.role == StaffRole::Entertainer;
+        const float overwork = entertainer ? 0.0f : std::max(staff.load.value - kTuning.staff.overworked.value, 0.0f) * kTuning.staff.overwork_gloom;
+        const float boredom = entertainer ? 0.0f : std::max(kTuning.staff.bored.value - staff.load.value, 0.0f) * kTuning.staff.bored_gloom;
         const float content = std::clamp(kTuning.staff.content_base.value + kTuning.staff.content_per_training.value * static_cast<float>(staff.training) + kTuning.staff.content_per_wage.value * static_cast<float>(staff.wage_level) - overwork - boredom, 0.0f, 1.0f);
         const float step = kTuning.staff.mood.value * seconds;
-        staff.happiness.value = staff.happiness.value < content ? std::min(staff.happiness.value + step, content) : std::max(staff.happiness.value - step, content);
+        if (entertainer && !working)
+            staff.happiness.value = std::max(staff.happiness.value - kTuning.staff.lonely_gloom.value * seconds / static_cast<float>(1 + std::max(staff.training, 0)), 0.0f);
+        else
+            staff.happiness.value = staff.happiness.value < content ? std::min(staff.happiness.value + step, content) : std::max(staff.happiness.value - step, content);
         if (staff.happiness.value < kTuning.staff.lazy_below.value)
             staff.laziness.value += (kTuning.staff.lazy_below.value - staff.happiness.value) * kTuning.staff.lazy.value / static_cast<float>(1 + std::max(staff.training, 0)) * seconds;
         else

@@ -4,6 +4,7 @@
 #include "simulation/components.hpp"
 #include "simulation/objectives.hpp"
 #include "simulation/sandbox.hpp"
+#include "simulation/staff_care.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 #include "simulation/vip.hpp"
@@ -55,6 +56,52 @@ namespace
         return t != nullptr && std::ranges::any_of(t->recent, [&](const Thought& x) { return x.kind == kind; });
     }
 } // namespace
+
+TEST_CASE("an untrained entertainer keeps their spirits while guests are about, and grows miserable with none near")
+{
+    const float content = kTuning.staff.content_base.value; // Untrained, on the lowest wage
+    SUBCASE("guests about")
+    {
+        Stage stage(content, 0);
+        auto& r = stage.park.world().registry;
+        Staff& staff = r.get<Staff>(stage.star);
+        staff.training = 0;
+        set_wage_level(staff, 0);
+        stage.park.run_seconds(1800);
+        CHECK(staff.happiness.value > kTuning.staff.miserable.value);
+        CHECK(staff.miserable == 0);
+    }
+    SUBCASE("no guests near")
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 8, 0 });
+        const entt::entity star = park.staff(StaffRole::Entertainer, { 4, 0 });
+        Staff& staff = park.world().registry.get<Staff>(star);
+        staff.training = 0;
+        set_wage_level(staff, 0);
+        staff.happiness.value = content;
+        park.run_seconds(1800);
+        CHECK(staff.happiness.value < kTuning.staff.miserable.value);
+    }
+}
+
+TEST_CASE("an untrained entertainer's short shows draw parties to watch")
+{
+    Stage stage(0.6f, 0);
+    auto& r = stage.park.world().registry;
+    r.get<Staff>(stage.star).training = 0;
+    stage.park.party({ stage.guests[0], stage.guests[1], stage.guests[2] });
+    stage.park.party({ stage.guests[3], stage.guests[4], stage.guests[5] });
+    for (int show = 0; show < 5; ++show)
+    {
+        CAPTURE(show);
+        REQUIRE(stage.park.run_until([&] { return stage.performing(); }, 120));
+        REQUIRE(r.get<Show>(stage.star).moves.size() == static_cast<std::size_t>(kTuning.shows.moves));
+        CHECK(stage.park.run_until([&] { return !stage.watching().empty() || !stage.performing(); }, 60));
+        CHECK_FALSE(stage.watching().empty());
+        REQUIRE(stage.park.run_until([&] { return !stage.performing(); }, 60));
+    }
+}
 
 TEST_CASE("a better trained entertainer's show has more moves and fancier dances; a miserable or lazy one's is worse")
 {

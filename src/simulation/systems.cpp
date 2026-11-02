@@ -1192,7 +1192,12 @@ namespace rct3::simulation
                     rounds->gap.value -= dt;
                 if (staff.ride != entt::null && !r.valid(staff.ride))
                     staff.ride = entt::null;
-                care_for(staff, (staff.busy.value > 0 && !staff.resting) || staff.ride != entt::null, dt);
+                // An entertainer is at work while there are guests near to entertain.
+                const auto audience = [&] {
+                    const glm::vec3 at = pose.position;
+                    return std::ranges::any_of(r.view<const Visitor, const Pose>(entt::exclude<Left>).each(), [&](const auto& v) { return glm::distance(std::get<2>(v).position, at) <= kTuning.shows.reach.value; });
+                };
+                care_for(staff, staff.role == StaffRole::Entertainer ? audience() : (staff.busy.value > 0 && !staff.resting) || staff.ride != entt::null, dt);
                 if (staff.think.value -= dt; staff.think.value <= 0)
                 {
                     staff.think = kTuning.staff.think;

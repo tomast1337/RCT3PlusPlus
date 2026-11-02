@@ -694,15 +694,19 @@ namespace rct3::simulation
     /// How a guest shows what they feel, standing a moment where they are.
     enum class GestureKind : std::uint8_t
     {
-        Cheer,    ///< Jumping for joy off a ride they loved
-        Laugh,    ///< Off a ride they loved
-        Nod,      ///< Off a ride they liked well enough
-        Grumble,  ///< Shaking their head at a ride too tame for them
-        Dizzy,    ///< Reeling off a ride too wild for them
-        Retch,    ///< Being sick
-        Down,     ///< Knocked over, lying on the ground till they get up
-        HandOver, ///< Putting their rubbish in a bin, or an autograph between a VIP and a fan
-        Clap,     ///< At the end of a good show
+        Cheer,       ///< Jumping for joy off a ride they loved
+        Laugh,       ///< Off a ride they loved
+        Nod,         ///< Off a ride they liked well enough
+        Grumble,     ///< Shaking their head at a ride too tame for them
+        Dizzy,       ///< Reeling off a ride too wild for them
+        Retch,       ///< Being sick
+        Down,        ///< Knocked over, lying on the ground till they get up
+        HandOver,    ///< Putting their rubbish in a bin, or an autograph between a VIP and a fan
+        Clap,        ///< At the end of a good show
+        LookWatch,   ///< Looking at their watch after a poor show
+        Disapproval, ///< Arms folded at a poor show
+        Cry,         ///< A child crying after a poor show
+        Horror,      ///< A child taking fright at a poor show
     };
 
     struct Gesture

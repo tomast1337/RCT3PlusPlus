@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/staff_care.hpp"
 
+#include "simulation/tuning.hpp"
+
 #include <algorithm>
 #include <doctest/doctest.h>
 
@@ -73,6 +75,22 @@ TEST_CASE("training goes up a level at a time, dearer each time, up to fully tra
     CHECK(s.training == kMostTraining);
     CHECK(training_cost(s) == 0);
     CHECK_FALSE(train(s));
+}
+
+TEST_CASE("a park without money hires staff fully trained; where money counts they start untrained")
+{
+    CHECK(hired_training(false) == kMostTraining);
+    CHECK(hired_training(true) == 0);
+}
+
+TEST_CASE("each level of training costs what the tuning says for it")
+{
+    Staff s { .training = 0 };
+    for (std::size_t level = 0; level < kTuning.staff.training_cost.size(); ++level)
+    {
+        CHECK(training_cost(s) == kTuning.staff.training_cost[level].value);
+        CHECK(train(s));
+    }
 }
 
 TEST_CASE("a warning shakes off laziness, but upsets a worker who was not lazy")

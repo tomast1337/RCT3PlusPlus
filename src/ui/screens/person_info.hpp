@@ -101,6 +101,9 @@ namespace rct3::ui
         PatrolCopy,  ///< Gives the area to everyone else in their job
         PatrolFill,  ///< Fills the box round the area
         PatrolZone,  ///< The shared zone they are on, by its number; 0 none
+        PatrolEdit,  ///< Turns painting their patrol area on or off, as PatrolPaint's tick does
+        ToConsole,   ///< Their thoughts to the messages; not built yet, so shown dimmed
+        Highlight,   ///< A marker over them; not built yet, so shown dimmed
         Task,        ///< The first task's tick; the task of flag bit b is this plus b
     };
 

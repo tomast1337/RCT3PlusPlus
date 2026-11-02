@@ -30,6 +30,10 @@ namespace rct3::simulation
     /// What their next level of training costs; 0 once fully trained.
     [[nodiscard]] std::int64_t training_cost(const Staff& staff);
 
+    /// The training a new hire comes with: in a park without money, such as a sandbox, all of it; where money
+    /// counts, none, and the park buys each level.
+    [[nodiscard]] std::int32_t hired_training(bool park_has_money);
+
     /// Trains them one level up; false when they already are fully trained.
     bool train(Staff& staff);
 

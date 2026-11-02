@@ -812,7 +812,7 @@ namespace rct3::simulation
         entt::entity ride = entt::null;  ///< The ride a mechanic is going to, or working on, to repair or inspect
         Money wage { };                  ///< A game hour
         std::int32_t wage_level = 2;     ///< 0 to 2, what `wage` follows (staff_care.hpp)
-        std::int32_t training = 3;       ///< 0 untrained to 3; new staff come fully trained until hiring costs money
+        std::int32_t training = 3;       ///< 0 untrained to 3; a hire's is set by hired_training (staff_care.hpp)
         std::int32_t warnings = 0;
         Share happiness { 1 };
         Share laziness { };          ///< How much longer each job takes, and how often they stop to rest

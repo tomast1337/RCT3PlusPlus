@@ -43,6 +43,7 @@ namespace rct3::ui
         placement = fill();
         body_ = &add<Widget>("body");
         body_->clip_children = true;
+        bar_ = &add<ScrollBar>("scroll", style_.menu.bar, Orientation::Vertical);
         // Over the band along the strip's top, outside the body, which cuts its lines to itself.
         title_ = &add<Label>("title", std::u16string { }, FontRole::Medium);
         title_->style.colour = style_.text_colour;
@@ -97,6 +98,9 @@ namespace rct3::ui
             tab_choices_.push_back(std::move(tabs[i].choices));
             actions_.push_back(tabs[i].action);
         }
+        // Shown again as the park runs, the same page keeps where it was scrolled to.
+        if (!visible || picked != picked_)
+            bar_->position = 0;
         picked_ = picked;
         mark_picked();
         visible = true;
@@ -192,10 +196,12 @@ namespace rct3::ui
         sections_.clear();
         section_list_ = nullptr;
         value_rows_.clear();
+        value_icons_.clear();
         control_rows_.clear();
         measured_ = false;
-        paper_ = !page.lines.empty() || !page.note.empty() || !page.graph.empty() || !page.controls.empty();
-        striped_ = !page.lines.empty();
+        paper_ = !page.bare && (!page.lines.empty() || !page.note.empty() || !page.graph.empty() || !page.controls.empty());
+        // Toggles with pictures, a task's, sit on the stripes as lines do.
+        striped_ = !page.lines.empty() || std::ranges::any_of(page.controls, [](const InfoControl& c) { return c.kind == InfoControlKind::Tick && !c.icon.empty(); });
         const Color ink = paper_ ? style_.paper_text_colour : style_.text_colour;
         float y = 0;
         const auto line = [&](std::string name, const std::u16string& text, float x, float width, FontRole font) -> Label& {
@@ -285,6 +291,12 @@ namespace rct3::ui
                     bar->placement = top_left(0, y + 1, info_panel::kBarWidth, info_panel::kLineHeight - 2);
                     filled->placement = bar->placement;
                 }
+                if (!l.value_icon.empty())
+                {
+                    Panel& face = body_->add<Panel>(keyed_name(l.name, "value_icon", i), l.value_icon);
+                    face.placement = top_left(info_panel::kValueColumn, y + (info_panel::kLineHeight - info_panel::kLineIcon) / 2, info_panel::kLineIcon, info_panel::kLineIcon);
+                    value_icons_.push_back(&face);
+                }
                 Label& value = line(keyed_name(l.name, "value", i), l.value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, FontRole::Small);
                 if (!l.value.empty())
                     value_rows_.push_back({ &label, &value, bar, filled, std::clamp(l.bar.value_or(0), 0.0f, 1.0f) });
@@ -360,10 +372,13 @@ namespace rct3::ui
             const InfoControl& c = page.controls[i];
             const auto column = static_cast<std::size_t>(std::clamp(c.column, 0, 1));
             const bool big = c.kind == InfoControlKind::Paint || !c.icon.empty();
-            const float height = big ? info_panel::kPaintSize : info_panel::kControlHeight;
+            const bool toggle = c.kind == InfoControlKind::Tick && !c.icon.empty();
+            // A toggle's row and a number shown in words take a stripe each, with no gap after.
+            const bool striped = toggle || !c.shown.empty();
+            const float height = striped ? info_panel::kLineHeight : big ? info_panel::kPaintSize : info_panel::kControlHeight;
             const bool joins = c.beside && !control_rows_.empty() && control_rows_.back().column == column;
             const float top = joins ? control_rows_.back().y : bottom[column];
-            bottom[column] = std::max(joins ? bottom[column] : top, top + height + 1);
+            bottom[column] = std::max(joins ? bottom[column] : top, top + height + (striped ? 0 : 1));
             Label& label = line(keyed_name(c.name, "label", i), c.label, 0, 0, FontRole::Small);
             label.style.vertical = Align::Centre;
             if (c.colour)
@@ -382,8 +397,8 @@ namespace rct3::ui
                     n.step = c.step;
                     n.decimals = c.decimals;
                     n.unit = c.text;
-                    n.unit = c.text;
                     n.set_value(c.value);
+                    n.field().visible = c.shown.empty();
                     w = &n;
                     break;
                 }
@@ -397,6 +412,14 @@ namespace rct3::ui
                 }
                 case InfoControlKind::Tick:
                 {
+                    if (toggle)
+                    {
+                        Button& b = body_->add<Button>(name, c.icon);
+                        b.toggle = true;
+                        b.on = c.value != 0;
+                        w = &b;
+                        break;
+                    }
                     Tickbox& t = body_->add<Tickbox>(name, style_.tick_box, style_.tick);
                     t.ticked = c.value != 0;
                     w = &t;
@@ -438,8 +461,14 @@ namespace rct3::ui
             }
             if (!c.enabled)
                 label.style.colour.a /= 2;
+            Label* shown = nullptr;
+            if (!c.shown.empty())
+            {
+                shown = &line(keyed_name(c.name, "value", i), c.shown, 0, 0, FontRole::Small);
+                shown->style.vertical = Align::Centre;
+            }
             controls_.emplace_back(c, w);
-            control_rows_.push_back({ &label, column, top, height });
+            control_rows_.push_back({ &label, column, top, height, shown });
         }
         y = std::max(bottom[0], bottom[1]);
         if (split < page.lines.size())
@@ -461,6 +490,13 @@ namespace rct3::ui
             }
         }
         page_width_ = page.width > 0 ? page.width : info_panel::kPageWidth;
+        // Shown again, as it is as the park runs, the page stays where it was scrolled to while it still reaches.
+        bar_->content = y;
+        bar_->visible = info_panel::kBodyView;
+        bar_->clamp();
+        static_cast<Widget&>(*bar_).visible = bar_->range() > 0; // Its length, `visible`, hides the widget's
+        scroll_ = 0;
+        scroll_by(bar_->position);
         place_page(std::nullopt);
         // An empty page has no strip.
         set_body_size(y > 0 ? page_width_ : 0, y);
@@ -472,8 +508,8 @@ namespace rct3::ui
         // shortcut: without the fonts a label is guessed at 6 units a letter; they are measured on the next update.
         const auto needs = [&](const std::u16string& text) { return text.empty() ? 0.0f : (font ? std::ceil(text_width(*font, text)) : 6.0f * static_cast<float>(text.size())) + 2 * gap; };
         const bool halves = std::ranges::any_of(control_rows_, [](const ControlRow& r) { return r.column == 1; });
-        // The ring's tabs reach over the page's right end.
-        const float end = page_width_ - info_panel::kRingReach;
+        // The ring's tabs reach over the page's right end, and the scroll bar, when shown, sits before them.
+        const float end = page_width_ - info_panel::kRingReach - (static_cast<const Widget&>(*bar_).visible ? bar_->style().thickness + 2 * info_panel::kScrollGap : 0);
         const std::array<std::pair<float, float>, 2> spans { { { 0.0f, halves ? end / 2 - gap : end }, { end / 2 + gap, end } } };
         const auto starts_row = [](const InfoControl& c) { return !c.beside && !c.label.empty() && c.kind != InfoControlKind::Tick && c.kind != InfoControlKind::Words; };
         // The lines' values and the controls starting their rows after a label line up clear of the widest label
@@ -485,6 +521,11 @@ namespace rct3::ui
         for (std::size_t i = 0; i < control_rows_.size(); ++i)
             if (starts_row(controls_[i].first))
                 aligned[control_rows_[i].column] = std::max(aligned[control_rows_[i].column], needs(controls_[i].first.label));
+        for (Widget* face : value_icons_)
+        {
+            face->placement.offsets.x0 = aligned[0];
+            face->placement.offsets.x1 = aligned[0] + info_panel::kLineIcon;
+        }
         for (const ValueRow& r : value_rows_)
         {
             r.label->placement.offsets.x1 = std::max(r.label->placement.offsets.x1, aligned[0]);
@@ -503,7 +544,8 @@ namespace rct3::ui
         for (std::size_t i = 0; i < control_rows_.size(); ++i)
         {
             const auto& [c, w] = controls_[i];
-            const ControlRow& row = control_rows_[i];
+            ControlRow row = control_rows_[i];
+            row.y -= scroll_;
             const auto [x0, x1] = spans[row.column];
             if (!c.beside || i == 0 || control_rows_[i - 1].column != row.column)
                 x = x0;
@@ -539,6 +581,23 @@ namespace rct3::ui
                 }
             }
             const float w_height = c.kind == InfoControlKind::Tick ? info_panel::kTickSize : row.height;
+            if (c.kind == InfoControlKind::Tick && !c.icon.empty())
+            {
+                // Its words on the left, the toggle near the page's end, where it stays whether the bar shows or not.
+                const float at = page_width_ - info_panel::kRingReach - 2 * info_panel::kScrollGap - bar_->style().thickness - info_panel::kToggleSize;
+                label.placement = top_left(x, row.y, std::max(at - x, 0.0f), row.height);
+                w->placement = top_left(at, row.y + (row.height - info_panel::kToggleSize) / 2, info_panel::kToggleSize, info_panel::kToggleSize);
+                continue;
+            }
+            if (row.shown != nullptr)
+            {
+                // As a line: the words in the value column, the arrows after them.
+                label.placement = top_left(x0, row.y, aligned[0], row.height);
+                const float words = needs(row.shown->text);
+                row.shown->placement = top_left(x0 + aligned[0], row.y, words, row.height);
+                w->placement = top_left(x0 + aligned[0] + words, row.y, style_.spinner.arrow_width, row.height);
+                continue;
+            }
             if (c.kind == InfoControlKind::Tick)
             {
                 // The box first, its label after it.
@@ -585,7 +644,12 @@ namespace rct3::ui
                         change_now_ = InfoChange { c.id, static_cast<int>(*d->selected()), 0, { } };
                     break;
                 case InfoControlKind::Tick:
-                    if (auto* t = static_cast<Tickbox*>(w); t->take_change())
+                    if (!c.icon.empty())
+                    {
+                        if (auto* b = static_cast<Button*>(w); b->take_click())
+                            change_now_ = InfoChange { c.id, b->on ? 1 : 0, 0, { } };
+                    }
+                    else if (auto* t = static_cast<Tickbox*>(w); t->take_change())
                         change_now_ = InfoChange { c.id, t->ticked ? 1 : 0, 0, { } };
                     break;
                 case InfoControlKind::Button:
@@ -698,6 +762,29 @@ namespace rct3::ui
         const float hide_x = style_.left ? s.x1 - style_.coded.strip_shadow - info_panel::kHideInset - info_panel::kHideSize : s.x0 + info_panel::kHideInset;
         hide_->placement = top_left(hide_x - r.x0, s.y0 - r.y0 + (style_.coded.band_height - info_panel::kHideSize) / 2, info_panel::kHideSize, info_panel::kHideSize);
         title_->visible = body_->visible = hide_->visible = strip_shown();
+        // Inside the paper's end, beside what is in sight.
+        const float paper_end = s.x0 - r.x0 + info_panel::kBodyLeft + body_width_ - info_panel::kRingReach;
+        bar_->placement = top_left(paper_end - info_panel::kScrollGap - bar_->style().thickness, s.y0 - r.y0 + info_panel::kBodyTop, bar_->style().thickness, info_panel::kBodyView);
+        if (!strip_shown())
+            static_cast<Widget&>(*bar_).visible = false;
+    }
+
+    void InfoPanel::scroll_by(float by)
+    {
+        for (const auto& child : body_->children())
+        {
+            child->placement.offsets.y0 -= by;
+            child->placement.offsets.y1 -= by;
+        }
+        scroll_ += by;
+    }
+
+    bool InfoPanel::on_wheel(Point notches)
+    {
+        if (bar_->range() <= 0 || notches.y == 0)
+            return false;
+        bar_->scroll_by(-notches.y * info_panel::kScrollStep);
+        return true;
     }
 
     void InfoPanel::mark_picked()
@@ -729,6 +816,13 @@ namespace rct3::ui
     void InfoPanel::update(const UpdateContext& context)
     {
         since_view_press_ += context.elapsed;
+        // The page follows its bar, moved by its arrows, its rider or the wheel.
+        if (bar_->position != scroll_)
+        {
+            scroll_by(bar_->position - scroll_);
+            place_page(std::nullopt);
+            measured_ = false;
+        }
         // The parts follow the screen's corner.
         place();
         if (const auto f = context.fonts && !measured_ ? context.fonts->get(FontRole::Small) : std::nullopt)
@@ -811,6 +905,7 @@ namespace rct3::ui
             {
                 picked_ = i;
                 picked_now_ = i;
+                bar_->position = 0; // Another tab's page starts at its top
             }
         }
         for (std::size_t i = 0; i < sections_.size(); ++i)
@@ -866,15 +961,18 @@ namespace rct3::ui
                 const float m = c.paper_margin;
                 const auto across = [&](float from, float width) { return style_.left ? Rect { paper.x1 - from - width, paper.y0, paper.x1 - from, paper.y1 } : Rect { paper.x0 + from, paper.y0, paper.x0 + from + width, paper.y1 }; };
                 plain(across(0, m), { }, c.margin);
-                const float box = striped_ ? std::min(s.y0 + info_panel::kBodyTop + body_height_, paper.y1 - 1) : paper.y1 - info_panel::kLineHeight;
+                const float box = striped_ ? std::min(s.y0 + info_panel::kBodyTop + body_height_ - scroll_, paper.y1 - 1) : paper.y1 - info_panel::kLineHeight;
                 Rect inside = across(m + 4, paper.width() - m - 4);
                 inside.y1 = box;
-                // Every other line, the first included, short of the round corner.
-                for (float y = s.y0 + info_panel::kBodyTop; striped_ && y < box; y += 2 * info_panel::kLineHeight)
+                // Every other line, the first included, short of the round corner, scrolled with the page.
+                const float first = s.y0 + info_panel::kBodyTop;
+                for (float y = first - std::fmod(scroll_, 2 * info_panel::kLineHeight); striped_ && y < box; y += 2 * info_panel::kLineHeight)
                 {
                     const float y1 = std::min(y + info_panel::kLineHeight, box);
+                    if (y1 <= first)
+                        continue;
                     const bool corner = y1 > paper.y1 - c.paper_corner;
-                    plain({ inside.x0 + (style_.left && corner ? c.paper_corner : 0), y == s.y0 + info_panel::kBodyTop ? paper.y0 : y, inside.x1 - (!style_.left && corner ? c.paper_corner : 0), y1 }, { }, c.stripe);
+                    plain({ inside.x0 + (style_.left && corner ? c.paper_corner : 0), y <= first ? paper.y0 : y, inside.x1 - (!style_.left && corner ? c.paper_corner : 0), y1 }, { }, c.stripe);
                 }
                 for (const float from : { m + 1, m + 3 })
                 {

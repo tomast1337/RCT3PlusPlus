@@ -28,6 +28,11 @@ namespace rct3::simulation
         return staff.training >= 0 && staff.training < kMostTraining ? kTuning.staff.training_cost[static_cast<std::size_t>(staff.training)].value : 0;
     }
 
+    std::int32_t hired_training(bool park_has_money)
+    {
+        return park_has_money ? 0 : kMostTraining;
+    }
+
     bool train(Staff& staff)
     {
         if (staff.training >= kMostTraining)

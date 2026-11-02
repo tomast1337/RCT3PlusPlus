@@ -66,6 +66,9 @@ namespace rct3::simulation
         float happiness_sum = 0; ///< Over their looks, for their average
         std::uint32_t looks = 0;
         bool leaving = false;
+        Seconds poll { };             ///< Until they next look for fans about them
+        std::uint32_t fans = 0;       ///< Gathered round them for an autograph now
+        std::uint32_t signatures = 0; ///< Autographs given since their last look round
     };
 
     /// Where an entity stands in the world.
@@ -297,6 +300,8 @@ namespace rct3::simulation
         StaffWantToQuit = 50,
         StaffMiserable = 51,
         StaffUnderpaid = 52,
+        GreatEntertainer = 38,  ///< After watching a good show
+        BoringEntertainer = 39, ///< After watching a poor one
         StaffHappy = 56,
         StaffMotivated = 57,
     };
@@ -696,13 +701,53 @@ namespace rct3::simulation
         Dizzy,    ///< Reeling off a ride too wild for them
         Retch,    ///< Being sick
         Down,     ///< Knocked over, lying on the ground till they get up
-        HandOver, ///< Putting their rubbish in a bin
+        HandOver, ///< Putting their rubbish in a bin, or an autograph between a VIP and a fan
+        Clap,     ///< At the end of a good show
     };
 
     struct Gesture
     {
         GestureKind kind = GestureKind::Nod;
         Seconds left { };
+    };
+
+    /// A guest stopped to watch someone, the star: an entertainer's show, or a VIP they want an autograph from.
+    /// They step across the path to a place on a ring round the star, at `angle` round it, and face them.
+    struct Watching
+    {
+        entt::entity star = entt::null;
+        Radians angle { };
+        bool autograph = false; ///< Waiting for the star, a VIP, to sign for them
+        Seconds waited { };
+    };
+
+    /// What an entertainer does in a show, in turn: the motions their costume has for it.
+    enum class ShowMove : std::uint8_t
+    {
+        Wave,
+        Idle,
+        IdleTwo,
+        DanceOne,
+        DanceTwo,
+        DanceThree,
+        FallOver, ///< Going down, in a poor show
+        GetUp,
+        Dejected, ///< At the end of a poor show
+    };
+
+    /// An entertainer's shows: the one they put on now, if any, and the wait before the next.
+    struct Show
+    {
+        std::vector<ShowMove> moves; ///< Empty between shows
+        Seconds into { };            ///< Since the show began
+        bool poor = false;           ///< Put on miserable or lazy: the crowd goes away unimpressed
+        Seconds gap { };             ///< Before they look for a crowd again
+    };
+
+    /// The VIPs a guest has had an autograph from, so they do not ask again.
+    struct Autographs
+    {
+        std::vector<entt::entity> from;
     };
 
     /// How a rider on a coaster shows what they feel.
@@ -780,6 +825,7 @@ namespace rct3::simulation
         /// Goes round the attractions in turn: rides them and stands at stalls, as a guest would but free, and
         /// tells the player what is wrong with them (see Rounds)
         Inspector,
+        Entertainer, ///< Puts on shows for the guests near them (see Show)
     };
 
     /// A handyman's tasks among the task flags, numbered as saved parks number them.

@@ -430,6 +430,38 @@ namespace rct3::simulation::tuning
         std::int32_t reach = 3; ///< Tiles round them they see a themed area in
     };
 
+    /// Entertainers' shows and the crowds round them.
+    struct Shows
+    {
+        Seconds look { 3 };                       ///< Chosen by eye: between an entertainer's looks for a crowd
+        Distance reach { 6 };                     ///< Chosen by eye: how far off guests notice a show, or a VIP
+        Distance near { 1 };                      ///< Chosen by eye: closer than this, a guest walks on by
+        Distance ring { 2.4f };                   ///< Chosen by eye: how far from the entertainer the crowd stands
+        Frequency join = Frequency::every({ 2 }); ///< Chosen by eye: a free guest in reach stopping to watch, shared by their party
+        Share keen { 0.3f };                      ///< Chosen by eye: of starting a show with guests near, untrained, content and not lazy
+        Share keen_per_training { 0.15f };        ///< Chosen by eye: more for each level of training
+        Share poor_lazy { 0.7f };                 ///< Chosen by eye: laziness from which a show is a poor one, as when miserable
+        std::int32_t moves = 3;                   ///< Chosen by eye: moves in a show of an untrained entertainer; each level adds one
+        Seconds gap { 20 };                       ///< Chosen by eye: rest after a show before the next
+        Share cheer { 0.08f };                    ///< Chosen by eye: happiness a good show gives each in the crowd
+        Share poor_gloom { 0.03f };               ///< Chosen by eye: happiness an entertainer loses over a poor show
+        Seconds clap { 2.5f };                    ///< Chosen by eye: the crowd claps for
+        /// How long each ShowMove plays, in its order: the lengths of the motions in the costumes' meshes, which
+        /// every costume has alike.
+        std::array<Seconds, 9> move_length { Seconds { 1.33f }, Seconds { 2.67f }, Seconds { 1.73f }, Seconds { 1.97f }, Seconds { 1.63f }, Seconds { 5.0f }, Seconds { 1.27f }, Seconds { 1.9f }, Seconds { 2.0f } };
+    };
+
+    /// Guests who want a VIP's autograph.
+    struct Fans
+    {
+        Seconds poll { 4 };     ///< Chosen by eye: between a VIP's looks for fans
+        Chance keen { 0.35 };   ///< Chosen by eye: of a free guest in reach wanting one, shared by their party
+        Distance ring { 1.2f }; ///< Chosen by eye: how far from the VIP fans stand
+        Distance arm { 1.6f };  ///< Chosen by eye: a fan this near is signed for
+        Seconds give_up { 20 }; ///< Chosen by eye: a fan waits this long for a VIP who walks on
+        Share cheer { 0.12f };  ///< Chosen by eye: happiness an autograph gives
+    };
+
     /// The park inspector's rounds.
     struct Inspector
     {
@@ -509,6 +541,8 @@ namespace rct3::simulation::tuning
         Prizes prizes;
         Crashes crashes;
         Vips vips;
+        Shows shows;
+        Fans fans;
         Inspector inspector;
         Transport transport;
         Holding holding;

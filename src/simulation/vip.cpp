@@ -165,8 +165,12 @@ namespace rct3::simulation
                 vip.fireworks = true;
             if ((goal.wishes & T::kThemedArea) != 0 && around.themed && r.all_of<Pose>(guest) && around.themed(r.get<Pose>(guest).position, goal.theme, tune.reach) >= goal.scenery_needed)
                 vip.themed = true;
-            // shortcut: autograph hunters, dung and animals are not simulated, so those tolerances never wear a VIP
-            // down; add them with crowds that gather round VIPs and with animals.
+            // Each autograph signed since the last look wears a VIP who minds hunters down a little.
+            if ((goal.wishes & T::kAutographs) != 0)
+                lose(goal.autograph_tolerance, static_cast<float>(vip.signatures));
+            vip.signatures = 0;
+            // shortcut: dung and animals are not simulated, so those tolerances never wear a VIP down; add them
+            // with animals.
             if (vip.patience.value <= 0 || time - vip.came >= static_cast<float>(goal.months_to_stay) * kMonth)
             {
                 vip.leaving = true;

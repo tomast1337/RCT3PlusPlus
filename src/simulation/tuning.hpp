@@ -342,6 +342,12 @@ namespace rct3::simulation::tuning
         Share warning_gloom { 0.2f };                                                            ///< Happiness a warning not deserved takes away
         Frequency rest = Frequency::every({ 60 });                                               ///< A worker wholly lazy taking a rest
         std::array<Money, 3> training_cost { Money { 5000 }, Money { 10000 }, Money { 20000 } }; ///< For each level from untrained up
+        Seconds think { 15 };                                                                    ///< Between a worker's thoughts, about as often as saved parks' staff think
+        Share tired { 0.5f };                                                                    ///< Chosen by eye: laziness from which they think they are tired
+        Share keen { 0.05f };                                                                    ///< Chosen by eye: laziness up to which they think they are keen
+        Share glad { 0.85f };                                                                    ///< Chosen by eye: happiness from which they think they are happy
+        Share miserable { 0.25f };                                                               ///< Chosen by eye: happiness below which they think they are miserable
+        std::uint32_t quit_after = 20;                                                           ///< Chosen by eye: thoughts in a row miserable before they think of quitting
     };
 
     /// The park rating: each part's share of the 1000, and the shapes inside them.

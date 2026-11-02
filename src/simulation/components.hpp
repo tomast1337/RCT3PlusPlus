@@ -290,6 +290,15 @@ namespace rct3::simulation
         PoolOvercleaned = 181, ///< Out of one cleaned with too harsh a fluid
         NoPools = 182,         ///< Wanting a swim in a park with no pool open
         TooColdForPools = 198,
+        // A worker's (see staff_thought)
+        StaffBored = 47,
+        StaffTooBusy = 48,
+        StaffTired = 49,
+        StaffWantToQuit = 50,
+        StaffMiserable = 51,
+        StaffUnderpaid = 52,
+        StaffHappy = 56,
+        StaffMotivated = 57,
     };
 
     struct Thought
@@ -779,6 +788,9 @@ namespace rct3::simulation
     /// Our own task, kept the other way round: set, a handyman leaves broken path items alone. Parks the game
     /// saved never set it, so their handymen mend.
     inline constexpr std::int32_t kLeaveBrokenTask = 1 << 3;
+    /// A mechanic's tasks among the task flags, numbered as saved parks number them.
+    inline constexpr std::int32_t kInspectRidesTask = 1 << 0;
+    inline constexpr std::int32_t kFixRidesTask = 1 << 1;
     /// What a handyman does when the park says nothing: every task of the game's.
     inline constexpr std::int32_t kEveryTask = 0b111;
     /// An inspector's tasks among the task flags, numbered as saved parks number them, taken in this order.
@@ -803,10 +815,17 @@ namespace rct3::simulation
         std::int32_t training = 3;       ///< 0 untrained to 3; new staff come fully trained until hiring costs money
         std::int32_t warnings = 0;
         Share happiness { 1 };
-        Share laziness { };       ///< How much longer each job takes, and how often they stop to rest
-        Share load { };           ///< Of the recent past, spent at work
-        bool resting = false;     ///< `busy` is a rest, not a job
-        std::uint32_t mended = 0; ///< Broken path items mended since the run began
+        Share laziness { };          ///< How much longer each job takes, and how often they stop to rest
+        Share load { };              ///< Of the recent past, spent at work
+        bool resting = false;        ///< `busy` is a rest, not a job
+        std::uint32_t mended = 0;    ///< Broken path items mended since the run began
+        Seconds think { };           ///< To their next thought
+        std::uint32_t miserable = 0; ///< Thoughts in a row had while miserable
+        // Work done since they were hired, as their window counts it.
+        std::int32_t swept = 0;
+        std::int32_t emptied = 0;
+        std::int32_t fixed = 0;
+        std::int32_t inspected = 0;
     };
 
     /// How a ride has broken down, numbered as saved parks number breakdowns.

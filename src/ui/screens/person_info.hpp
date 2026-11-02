@@ -69,6 +69,10 @@ namespace rct3::ui
         std::size_t uncovered_paths = 0; ///< Path tiles no one in their job has in a patrol, when any has one
         /// Of a handyman the simulation walks, the broken path items they have mended since the park was opened.
         std::optional<std::uint32_t> items_mended { };
+        float zero_time = 0; ///< Where the park's calendar starts, for the day staff were hired
+        /// Of staff: an hour of their pay, and what their next level of training costs (0 once fully trained).
+        std::optional<std::int64_t> wage { };
+        std::int64_t training_cost = 0;
         /// Of a VIP on their visit: their patience and their opinion of the park, each 0..1.
         std::optional<std::pair<float, float>> vip { };
 

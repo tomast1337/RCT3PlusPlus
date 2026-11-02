@@ -718,6 +718,7 @@ namespace rct3::simulation
         entt::entity star = entt::null;
         Radians angle { };
         bool autograph = false; ///< Waiting for the star, a VIP, to sign for them
+        bool chasing = false;   ///< A fan walking after the VIP over the paths, too far off to be signed yet
         Seconds waited { };
     };
 

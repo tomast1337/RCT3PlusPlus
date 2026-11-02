@@ -884,9 +884,9 @@ namespace rct3::scene
                     constexpr std::array<std::string_view, 9> kGestures { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdown", "handticket", "applause" };
                     if (const auto* gesture = r.try_get<simulation::Gesture>(p.guest))
                         person["gesture"] = kGestures[std::to_underlying(gesture->kind)];
-                    // Stopped round someone: an entertainer's show, or a VIP for an autograph.
+                    // Stopped round someone: an entertainer's show, or a VIP for an autograph; or walking after the VIP.
                     if (const auto* watching = r.try_get<simulation::Watching>(p.guest))
-                        person["watching"] = watching->autograph ? "autograph" : "show";
+                        person["watching"] = !watching->autograph ? "show" : watching->chasing ? "chasing" : "autograph";
                     // An entertainer in a show, the move they make now.
                     if (const auto* show = r.try_get<simulation::Show>(p.guest); show != nullptr && !show->moves.empty())
                     {

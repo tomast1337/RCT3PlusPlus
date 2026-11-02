@@ -454,12 +454,14 @@ namespace rct3::simulation::tuning
     /// Guests who want a VIP's autograph.
     struct Fans
     {
-        Seconds poll { 4 };     ///< Chosen by eye: between a VIP's looks for fans
-        Chance keen { 0.35 };   ///< Chosen by eye: of a free guest in reach wanting one, shared by their party
-        Distance ring { 1.2f }; ///< Chosen by eye: how far from the VIP fans stand
-        Distance arm { 1.6f };  ///< Chosen by eye: a fan this near is signed for
-        Seconds give_up { 20 }; ///< Chosen by eye: a fan waits this long for a VIP who walks on
-        Share cheer { 0.12f };  ///< Chosen by eye: happiness an autograph gives
+        Seconds poll { 4 };      ///< Chosen by eye: between a VIP's looks for fans
+        Chance keen { 0.35 };    ///< Chosen by eye: of a free guest in reach wanting one, shared by their party
+        Distance ring { 1.2f };  ///< Chosen by eye: how far from the VIP fans stand
+        Distance arm { 1.6f };   ///< Chosen by eye: a fan this near is signed for
+        Distance close { 4.5f }; ///< Chosen by eye: a fan this near stops to be signed, and the VIP stops for them
+        Seconds give_up { 45 };  ///< Chosen by eye: a fan follows and waits this long, then gives up
+        Distance far { 32 };     ///< Chosen by eye: a fan left this far behind gives up
+        Share cheer { 0.12f };   ///< Chosen by eye: happiness an autograph gives
     };
 
     /// The park inspector's rounds.

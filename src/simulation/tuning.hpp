@@ -348,6 +348,7 @@ namespace rct3::simulation::tuning
         Share glad { 0.85f };                                                                    ///< Chosen by eye: happiness from which they think they are happy
         Share miserable { 0.25f };                                                               ///< Chosen by eye: happiness below which they think they are miserable
         std::uint32_t quit_after = 20;                                                           ///< Chosen by eye: thoughts in a row miserable before they think of quitting
+        std::uint32_t leave_after = 10;                                                          ///< Chosen by eye: more such thoughts, after that, before they quit
     };
 
     /// The park rating: each part's share of the 1000, and the shapes inside them.

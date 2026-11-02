@@ -55,3 +55,25 @@ if (train !== undefined && cash !== undefined) {
     expect(park.cash()! < 1000000, "training paid for");
     await screenshot("staff_trained");
 }
+
+// Warned four times while idle and untrained, they grow miserable: they think of quitting, told once, and
+// in time quit, told once too, gone from the park and their window closed.
+await ui.click(`info/${tab("infoicon")}`);
+await frames(5);
+for (let i = 0; i < 4; ++i) {
+    const warn = find("info", "Staff_WarnIconLarge");
+    if (warn === undefined)
+        break;
+    await ui.click(warn);
+    await frames(2);
+}
+const mechanics = () => people.list().filter((p) => p.role === "mechanic").length;
+const before = mechanics();
+// Other workers of the park may be miserable too, so each name is counted on its own.
+const told = (key: string) => park.messages().filter((m) => m.key === key).map((m) => m.name);
+await park.advanceUntil(() => mechanics() < before, 1800, "the miserable mechanic quitting");
+const thinking = told("StaffMessage_WantsToResign");
+const quit = told("StaffMessage_Resigned");
+expect(thinking.length === new Set(thinking).size, `each worker told thinking of quitting once, got ${thinking.join(", ")}`);
+expect(quit.length === new Set(quit).size && quit.every((n) => thinking.includes(n)), `one message each that they quit, after thinking of it, got ${quit.join(", ")}`);
+expect(ui.find("info") === undefined, "their window closed");

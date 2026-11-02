@@ -3005,10 +3005,11 @@ namespace rct3::scene
                 if (auto* findings = scene.sim.registry.ctx().find<simulation::Findings>())
                 {
                     using enum simulation::Finding;
-                    constexpr std::array<std::string_view, 14> kKeys { // By Finding
-                                                                       "Thought_PI_Stall_TooExpensive1", "Thought_PI_Stall_TooCheap1", "Thought_PI_Ride_LongQueueTime1", "Thought_PI_Ride_NoPathToEntrance1", "Thought_PI_General_NoMaintenanceManNear1", "Thought_PI_Vista_InappropriateStyle1", "Thought_PI_Staff_Lazy1", "Thought_PI_Staff_Unhappy1", "Thought_PI_PoolDirty1", "Thought_PI_PoolVeryDirty1",
-                                                                       "Thought_PI_Guests_Hungry1",      "Thought_PI_Guests_Thirsty1", "Thought_PI_Guests_Tired1",       "Thought_PI_Guests_Toilet1"
+                    constexpr std::array<std::string_view, 16> kKeys { // By Finding
+                                                                       "Thought_PI_Stall_TooExpensive1", "Thought_PI_Stall_TooCheap1", "Thought_PI_Ride_LongQueueTime1", "Thought_PI_Ride_NoPathToEntrance1", "Thought_PI_General_NoMaintenanceManNear1", "Thought_PI_Vista_InappropriateStyle1", "Thought_PI_Staff_Lazy1", "Thought_PI_Staff_Unhappy1", "Thought_PI_PoolDirty1", "Thought_PI_PoolVeryDirty1", "Thought_PI_Guests_Hungry1", "Thought_PI_Guests_Thirsty1", "Thought_PI_Guests_Tired1",
+                                                                       "Thought_PI_Guests_Toilet1",      "StaffMessage_WantsToResign", "StaffMessage_Resigned"
                     };
+                    std::vector<entt::entity> quitting;
                     const auto& r = scene.sim.registry;
                     for (const auto& [finding, at] : findings->found)
                     {
@@ -3028,12 +3029,25 @@ namespace rct3::scene
                         }
                         // shortcut: a worker is named but cannot be gone to from the message; add it once messages open people.
                         else if (const auto shown = std::ranges::find(scene.shown_people, at, &ShownPerson::guest); r.valid(at) && shown != scene.shown_people.end() && shown->staff && shown->saved < scene.people.staff.size())
+                        {
                             message.subject_name = strings::to_utf8(ui::person_name({ .staff = &scene.people.staff[shown->saved] }, *assets.strings));
+                            if (finding == Quit)
+                                quitting.push_back(at);
+                        }
                         else if (r.valid(at))
                             continue; // Gone since
                         simulation::post(scene.park.messages, std::move(message));
                     }
                     findings->found.clear();
+                    // A worker who quits goes as one sacked does, their window with them.
+                    for (const entt::entity e : quitting)
+                        if (const auto shown = std::ranges::find(scene.shown_people, e, &ShownPerson::guest); shown != scene.shown_people.end())
+                        {
+                            const auto i = static_cast<std::size_t>(shown - scene.shown_people.begin());
+                            if (auto panel = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); panel && scene.shown_person == i)
+                                panel->hide();
+                            fire(scene, i);
+                        }
                 }
                 // What is broken looks it, and looks whole again once mended.
                 park::Broken broken;
@@ -3085,8 +3099,7 @@ namespace rct3::scene
                         kept.mood_now.nausea = mood->nausea.value;
                     }
                 }
-                // New thoughts go into the people's saved thoughts, newest first, for their windows to show. A
-                // worker thinking of quitting is told to the player.
+                // New thoughts go into the people's saved thoughts, newest first, for their windows to show.
                 for (ShownPerson& p : scene.shown_people)
                 {
                     const auto* thoughts = p.guest == entt::null || !scene.sim.registry.valid(p.guest) || p.saved >= (p.staff ? scene.people.staff.size() : scene.people.guests.size()) ? nullptr : scene.sim.registry.try_get<simulation::Thoughts>(p.guest);
@@ -3100,8 +3113,6 @@ namespace rct3::scene
                         const auto* about = scene.sim.registry.valid(t.about) ? scene.sim.registry.try_get<simulation::Attraction>(t.about) : nullptr;
                         std::shift_right(slots.begin(), slots.end(), 1);
                         slots[0] = { .about = { about != nullptr ? about->saved : 0 }, .id = std::to_underlying(t.kind), .time = newest + 1, .variant = static_cast<std::int32_t>(t.variant) };
-                        if (p.staff && t.kind == simulation::ThoughtKind::StaffWantToQuit)
-                            simulation::post(scene.park.messages, { .text_key = "Thought_PI_Staff_Unhappy1", .subject_name = strings::to_utf8(ui::person_name({ .staff = &scene.people.staff[p.saved] }, *assets.strings)) });
                     }
                     p.thoughts_seen = thoughts->had;
                 }

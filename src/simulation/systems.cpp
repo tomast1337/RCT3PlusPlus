@@ -1196,7 +1196,13 @@ namespace rct3::simulation
                 {
                     staff.think = kTuning.staff.think;
                     for (const ThoughtKind kind : staff_thoughts(staff))
+                    {
                         think(r, e, kind, entt::null, now);
+                        if (kind == ThoughtKind::StaffWantToQuit)
+                            r.ctx().emplace<Findings>().found.emplace_back(Finding::WantsToQuit, e);
+                    }
+                    if (quits(staff))
+                        r.ctx().emplace<Findings>().found.emplace_back(Finding::Quit, e);
                 }
                 // A lazy one, with nothing to do, stops where they are now and then.
                 if (staff.busy.value == 0 && staff.ride == entt::null && random::chance(dice.state, rest_chance(staff) * dt))

@@ -405,7 +405,11 @@ namespace rct3::ui
             wage.value = std::clamp(s.wage_level, 0, 2);
             wage.maximum = 2;
             if (f.wage)
-                wage.text = money_text(units.currency, *f.wage);
+            {
+                // Set off from the level, in a box wide enough for both.
+                wage.text = u"   " + money_text(units.currency, *f.wage);
+                wage.width = 2 * info_panel::kNumberWidth;
+            }
             page.controls.push_back(std::move(wage));
             add_half(page, strings, "Rct3pp_Training", ascii(std::format("{}/{}", std::clamp(s.training, 0, kMostTraining), kMostTraining)));
             if (s.training < kMostTraining)

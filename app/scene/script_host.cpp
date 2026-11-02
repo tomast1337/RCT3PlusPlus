@@ -385,6 +385,18 @@ namespace rct3::scene
                 }
             return Json(broke);
         });
+        engine_.define("park.dropLitter", [this](const Json& a) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            const simulation::PathNetwork& paths = park_->sim.paths;
+            const glm::vec3 middle { paths.origin.x + (static_cast<float>(number(a, 0)) + 0.5f) * paths.tile_size, 0, paths.origin.y + (static_cast<float>(number(a, 1)) + 0.5f) * paths.tile_size };
+            const auto at = paths.nearest(middle);
+            if (!at)
+                return Json(false);
+            for (int i = 0; i < std::clamp(static_cast<int>(number(a, 2)), 1, 50); ++i)
+                park_->sim.registry.emplace<simulation::Litter>(park_->sim.registry.create(), simulation::Litter { .node = *at });
+            return Json(true);
+        });
         engine_.define("park.addHandyman", [this](const Json& a) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
@@ -854,8 +866,13 @@ namespace rct3::scene
                 const auto& r = park.sim.registry;
                 // A worker's job, in StaffRole's order.
                 constexpr std::array<std::string_view, 8> kRoles { "handyman", "mechanic", "guard", "other", "vendor", "keeper", "inspector", "entertainer" };
+                // What their time at work goes on now, in StaffJob's order.
+                constexpr std::array<std::string_view, 9> kJobs { "none", "sweep", "emptybin", "mend", "water", "fix", "inspect", "watch", "rest" };
                 if (const auto* staff = r.valid(p.guest) ? r.try_get<simulation::Staff>(p.guest) : nullptr)
+                {
                     person["role"] = kRoles[std::to_underlying(staff->role)];
+                    person["job"] = kJobs[std::to_underlying(staff->job)];
+                }
                 // Where the simulation has them, and what of: walking the paths, held by the player, or let go.
                 if (r.valid(p.guest) && !r.all_of<simulation::Left>(p.guest) && r.all_of<simulation::Pose>(p.guest))
                 {

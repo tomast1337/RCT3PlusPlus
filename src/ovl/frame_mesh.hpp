@@ -10,7 +10,8 @@
 // bytes, each mapping 0..255 onto -1..1, with the key padded to whole words.
 //
 // A few meshes carry tracks instead of a shape: sockets where a hat or a held item would sit. Their own
-// triangle is only a placeholder.
+// triangle is only a placeholder. Each key of a socket's track is sixteen bytes: a turn as three floats, a
+// vector along its axis as long as its angle in radians, then where the socket is, packed as a point is.
 #pragma once
 
 #include "ovl/overlay.hpp"
@@ -32,6 +33,13 @@ namespace rct3::ovl
         std::array<float, 2> uv { };
     };
 
+    /// Where a socket is at one key, and how it is turned.
+    struct SocketKey
+    {
+        std::array<float, 3> turn { }; ///< Along the turn's axis, as long as its angle in radians
+        std::array<float, 3> at { };
+    };
+
     struct FrameAnimation
     {
         std::string_view name;
@@ -41,6 +49,8 @@ namespace rct3::ovl
         /// the animation's length, where a repeating animation comes back to its first key.
         std::vector<float> times;
         std::vector<std::byte> keys; ///< `times.size()` keys, back to back, copied out of the file
+        /// For a socket, its first track's key at each of `times`; empty for other meshes.
+        std::vector<SocketKey> sockets;
     };
 
     struct FrameMesh

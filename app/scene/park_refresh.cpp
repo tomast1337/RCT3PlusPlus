@@ -7,6 +7,7 @@
 #include "park/object_pick.hpp"
 #include "park/person_motions.hpp"
 #include "park/ride_cars.hpp"
+#include "park/staff_motions.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -450,9 +451,11 @@ namespace rct3::scene
             // A keeper walks about their enclosure off the paths.
             if (r.all_of<simulation::KeeperDuty>(shown.guest))
             {
-                const bool walking = r.get<simulation::KeeperDuty>(shown.guest).job != simulation::KeeperJob::Idle;
+                const auto job = r.get<simulation::KeeperDuty>(shown.guest).job;
+                const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
+                const bool walking = now.was != now.position;
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = walking ? park::motion::kWalk : park::motion::kIdle;
+                pose.motion = park::motion_number(park::keeper_motion(job, walking)).value_or(walking ? park::motion::kWalk : park::motion::kIdle);
                 pose.time = walking && shown.paces[0] > 0 ? at.walked.value / shown.paces[0] : shown.saved_time + clock * shown.speed;
                 return pose;
             }
@@ -574,6 +577,39 @@ namespace rct3::scene
                     pose.motion = kTicketMotion;
                     pose.time = paying;
                 }
+            // At work where they stand: the job's motions in turn, any tool in hand.
+            const auto* staff = r.try_get<simulation::Staff>(shown.guest);
+            if (staff != nullptr && staff->job != simulation::StaffJob::None && staff->busy.value > 0 && !walking)
+            {
+                const auto* upkeep = r.valid(staff->ride) ? r.try_get<simulation::Upkeep>(staff->ride) : nullptr;
+                const park::WorkLook look = park::work_look(staff->job, upkeep != nullptr ? upkeep->kind : simulation::Breakdown::None);
+                // Played once, the start and the end as long as they last; the rest of the job repeats its loop.
+                const auto once = [&](std::string_view name) -> std::optional<park::Clip> {
+                    const auto number = name.empty() ? std::nullopt : park::motion_number(name);
+                    if (!number)
+                        return std::nullopt;
+                    park::PlacedPerson probe = pose;
+                    probe.motion = *number;
+                    return park::Clip { *number, park::motion_seconds(*scene.person_models, probe) };
+                };
+                const auto start = once(look.start);
+                const auto finish = once(look.finish);
+                const float length = staff->job_length.value;
+                std::vector<park::Clip> clips;
+                if (start)
+                    clips.push_back(*start);
+                clips.push_back({ park::motion_number(look.loop).value_or(park::motion::kIdle), std::max(length - (start ? start->seconds : 0.0f) - (finish ? finish->seconds : 0.0f), 0.0f) });
+                if (finish)
+                    clips.push_back(*finish);
+                const park::Clip step = park::clip_at(clips, std::min(length - staff->busy.value + scene.sim_time, length));
+                pose.motion = step.motion;
+                pose.time = step.seconds;
+                const auto tool = scene.staff_tools.find(look.tool);
+                pose.tool = tool != scene.staff_tools.end() ? &tool->second : nullptr;
+            }
+            // Guards have no plain standing motion; they tap a foot instead.
+            else if (staff != nullptr && staff->role == simulation::StaffRole::Guard && pose.motion == park::motion::kIdle)
+                pose.motion = park::motion_number("tapfoot").value_or(park::motion::kIdle);
             const bool idle = pose.motion == park::motion::kIdle;
             gestured(r.try_get<simulation::Gesture>(shown.guest));
             // Food or drink from a stall in their left hand, or its empty once it is gone.

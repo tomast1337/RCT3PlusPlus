@@ -855,6 +855,20 @@ namespace rct3::simulation
     /// Viewing galleries, which parks here do not have yet: the task is passed over.
     inline constexpr std::int32_t kGalleriesTask = 1 << 7;
 
+    /// What a worker's `busy` time goes on.
+    enum class StaffJob : std::uint8_t
+    {
+        None,     ///< Nothing, or an entertainer standing for a show
+        Sweep,    ///< Litter or sick on the path
+        EmptyBin, ///< A bin on the path
+        Mend,     ///< A broken path item
+        Water,    ///< A flower bed
+        Fix,      ///< A broken-down ride (Staff::ride)
+        Inspect,  ///< A ride (Staff::ride)
+        Watch,    ///< A guard stopped on their rounds, keeping an eye on the paths
+        Rest,     ///< A lazy worker's rest
+    };
+
     struct Staff
     {
         StaffRole role = StaffRole::Other;
@@ -866,12 +880,13 @@ namespace rct3::simulation
         std::int32_t training = 3;       ///< 0 untrained to 3; a hire's is set by hired_training (staff_care.hpp)
         std::int32_t warnings = 0;
         Share happiness { 1 };
-        Share laziness { };          ///< How much longer each job takes, and how often they stop to rest
-        Share load { };              ///< Of the recent past, spent at work
-        bool resting = false;        ///< `busy` is a rest, not a job
-        std::uint32_t mended = 0;    ///< Broken path items mended since the run began
-        Seconds think { };           ///< To their next thought
-        std::uint32_t miserable = 0; ///< Thoughts in a row had while miserable
+        Share laziness { };            ///< How much longer each job takes, and how often they stop to rest
+        Share load { };                ///< Of the recent past, spent at work
+        StaffJob job = StaffJob::None; ///< What `busy` is spent on
+        Seconds job_length { };        ///< `busy` as the job began
+        std::uint32_t mended = 0;      ///< Broken path items mended since the run began
+        Seconds think { };             ///< To their next thought
+        std::uint32_t miserable = 0;   ///< Thoughts in a row had while miserable
         // Work done since they were hired, as their window counts it.
         std::int32_t swept = 0;
         std::int32_t emptied = 0;

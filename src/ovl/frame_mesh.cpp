@@ -29,7 +29,19 @@ namespace rct3::ovl
             return std::bit_cast<float>(u32_at(b, at));
         }
 
-        std::optional<FrameAnimation> read_animation(const AddressSpace& space, std::span<const std::byte> raw, std::size_t key_size)
+        constexpr std::size_t kSocketKeySize = 16;
+
+        /// The point a key packs into `word`, eleven bits across, ten up and eleven along from the top bit down.
+        std::array<float, 3> unpack_point(const FrameAnimation& animation, std::uint32_t word)
+        {
+            const std::array<std::uint32_t, 3> steps { word >> 21, (word >> 11) & 0x3FF, word & 0x7FF };
+            std::array<float, 3> point { };
+            for (std::size_t c = 0; c < 3; ++c)
+                point[c] = animation.offset[c] + static_cast<float>(steps[c]) * animation.scale[c];
+            return point;
+        }
+
+        std::optional<FrameAnimation> read_animation(const AddressSpace& space, std::span<const std::byte> raw, std::size_t key_size, bool socket)
         {
             FrameAnimation animation;
             for (std::size_t c = 0; c < 3; ++c)
@@ -51,6 +63,15 @@ namespace rct3::ovl
             animation.times.resize(keys);
             std::memcpy(animation.times.data(), times->data(), times->size());
             animation.keys.assign(data->begin(), data->end());
+            // A socket without its track still marks a place, by its triangle.
+            if (const auto track = socket ? space.bytes_at(u32_at(raw, 48), keys * kSocketKeySize) : std::nullopt)
+            {
+                for (std::size_t k = 0; k < keys; ++k)
+                {
+                    const std::size_t at = k * kSocketKeySize;
+                    animation.sockets.push_back({ { f32_at(*track, at), f32_at(*track, at + 4), f32_at(*track, at + 8) }, unpack_point(animation, u32_at(*track, at + 12)) });
+                }
+            }
             return animation;
         }
 
@@ -97,7 +118,7 @@ namespace rct3::ovl
                     return std::nullopt;
                 for (std::uint32_t i = 0; i < animations; ++i)
                 {
-                    auto animation = read_animation(space, raw->subspan(std::size_t { i } * kAnimationSize, kAnimationSize), mesh.key_size());
+                    auto animation = read_animation(space, raw->subspan(std::size_t { i } * kAnimationSize, kAnimationSize), mesh.key_size(), mesh.tracks != 0);
                     if (!animation)
                         return std::nullopt;
                     mesh.animations.push_back(std::move(*animation));
@@ -133,12 +154,7 @@ namespace rct3::ovl
         out.points.reserve(mesh.points);
         for (std::uint32_t i = 0; i < mesh.points; ++i)
         {
-            const std::uint32_t word = u32_at(data, std::size_t { i } * 4);
-            const std::array<std::uint32_t, 3> steps { word >> 21, (word >> 11) & 0x3FF, word & 0x7FF };
-            std::array<float, 3> point { };
-            for (std::size_t c = 0; c < 3; ++c)
-                point[c] = animation.offset[c] + static_cast<float>(steps[c]) * animation.scale[c];
-            out.points.push_back(point);
+            out.points.push_back(unpack_point(animation, u32_at(data, std::size_t { i } * 4)));
         }
         out.normals.reserve(mesh.normals);
         const std::size_t normals = std::size_t { mesh.points } * 4;

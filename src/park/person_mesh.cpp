@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <glm/gtc/quaternion.hpp>
 #include <map>
 
 namespace rct3::park
@@ -200,6 +201,35 @@ namespace rct3::park
         return std::nullopt;
     }
 
+    std::optional<glm::mat4> hand_place(const PersonLibrary& library, const PlacedPerson& person)
+    {
+        const PartSet* body = person.look.body;
+        if (body == nullptr)
+            return std::nullopt;
+        const std::size_t level = std::min(person.level, kPersonLevels - 1);
+        for (const std::size_t piece : (person.look.swimwear ? body->swim_levels : body->levels)[level].fixed)
+        {
+            const PieceModel& model = library.piece(piece);
+            if (!model.left_hand || model.mesh.animations.empty())
+                continue;
+            const std::size_t index = model.motions[person.motion];
+            const ovl::FrameAnimation& motion = model.mesh.animations[index < model.mesh.animations.size() ? index : 0];
+            if (motion.sockets.size() != motion.times.size() || motion.times.empty())
+                return std::nullopt;
+            const KeyBlend blend = blend_keys(motion.times, person.time, motion_repeats(person.motion));
+            const auto turn = [](const ovl::SocketKey& key) {
+                const glm::vec3 axis_angle { key.turn[0], key.turn[1], key.turn[2] };
+                const float angle = glm::length(axis_angle);
+                return angle > 1e-6f ? glm::angleAxis(angle, axis_angle / angle) : glm::quat(1, 0, 0, 0);
+            };
+            const ovl::SocketKey& from = motion.sockets[blend.from];
+            const ovl::SocketKey& to = motion.sockets[blend.to];
+            const glm::vec3 at = glm::mix(glm::vec3(from.at[0], from.at[1], from.at[2]), glm::vec3(to.at[0], to.at[1], to.at[2]), blend.along);
+            return glm::translate(glm::mat4(1.0f), at) * glm::mat4_cast(glm::slerp(turn(from), turn(to), blend.along));
+        }
+        return std::nullopt;
+    }
+
     float motion_seconds(const PersonLibrary& library, const PlacedPerson& person)
     {
         const PartSet* body = person.look.body;
@@ -289,6 +319,9 @@ namespace rct3::park
                 else if (person.held != nullptr)
                     if (const auto hand = left_hand(library, person))
                         add_held(runs, *person.held, glm::translate(person.world, *hand));
+                if (person.tool != nullptr)
+                    if (const auto hand = hand_place(library, person))
+                        add_held(runs, *person.tool, person.world * *hand);
             }
         }
     } // namespace

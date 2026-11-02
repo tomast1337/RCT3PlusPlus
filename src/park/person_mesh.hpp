@@ -9,7 +9,8 @@
 // the cell, counting along the bottom row first, then up. The head's skin always takes the skin colour.
 //
 // A person may hold a shape (an umbrella) in their left hand: it stands upright at the point the body's
-// left-hand socket reaches in the person's motion, turned with the person.
+// left-hand socket reaches in the person's motion, turned with the person. A worker's tool (a broom) goes
+// with the socket's turn too, as its track has it.
 #pragma once
 
 #include "park/moving_meshes.hpp"
@@ -48,6 +49,7 @@ namespace rct3::park
         glm::mat4 world { 1.0f };          ///< Model to park
         const ObjectModel* held = nullptr; ///< Held in the left hand, drawn at its finest level in its own picture;
                                            ///< with no body, lying on its own at `world` (litter on a path)
+        const ObjectModel* tool = nullptr; ///< Held in the hand as its socket turns, drawn as `held` is
     };
 
     /// How far a person's texture coordinates move to reach cell `colour`.
@@ -59,6 +61,10 @@ namespace rct3::park
 
     /// Where the left hand of `person` is, in their own space; nothing when their body has no socket for it.
     [[nodiscard]] std::optional<glm::vec3> left_hand(const PersonLibrary& library, const PlacedPerson& person);
+
+    /// How the hand socket of `person` (see PieceModel::left_hand) is placed and turned in their motion, in their
+    /// own space; nothing when their body has no socket, or it has no track.
+    [[nodiscard]] std::optional<glm::mat4> hand_place(const PersonLibrary& library, const PlacedPerson& person);
 
     /// How long `person`'s motion lasts, played once through, seconds; 0 when their body has none.
     [[nodiscard]] float motion_seconds(const PersonLibrary& library, const PlacedPerson& person);

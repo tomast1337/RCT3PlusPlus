@@ -28,7 +28,7 @@ namespace rct3::ui
     {
         if (!enabled)
             return SkinState::Disabled;
-        if (pressed())
+        if (pressed() || kept_down)
             return SkinState::Pressed;
         if (toggle && on)
             return hovered() ? SkinState::DownOver : SkinState::Down;

@@ -370,9 +370,9 @@ namespace rct3::ui
         {
             const save::Staff& s = *f.staff;
             const std::optional<std::uint32_t> items_mended = f.items_mended;
-            // Staff a scenario starts with were hired before its calendar began: they show its first month.
+            // Staff a scenario starts with were hired before its calendar began: they show its first day.
             const save::CalendarDate hired = save::GameClock::date_at(s.person.start_time, f.zero_time);
-            add(page, strings, "Employee_DateHired", date_text(strings, 0, hired.month, static_cast<std::int32_t>(hired.year + 1)));
+            add(page, strings, "Employee_DateHired", date_text(strings, hired.day, hired.month, static_cast<std::int32_t>(hired.year + 1)));
             // The wage as money, stepped a level at a time by the arrows after it.
             InfoControl wage;
             wage.id = person_control(PersonControl::Wage);
@@ -423,15 +423,26 @@ namespace rct3::ui
             return name;
         }
 
-        InfoControl pick_up_control(const StringTable& strings, std::string_view help)
+        /// Under the name, what they are doing; then the round buttons every person has: pick up, their thoughts
+        /// to the messages and the highlight over them, the last two showing on or off.
+        void person_buttons(InfoPage& page, const PersonFacts& f, const StringTable& strings, std::string_view pincer_help, std::string_view console_help)
         {
-            InfoControl b;
-            b.id = person_control(PersonControl::PickUp);
-            b.name = "PickUp";
-            b.kind = InfoControlKind::Button;
-            b.icon = "Staff_MovePincerLarge";
-            b.help = text(strings, help);
-            return b;
+            const save::Person& p = *f.person();
+            InfoControl& doing = page.controls.emplace_back();
+            doing.kind = InfoControlKind::Words;
+            doing.label = person_doing(f, strings);
+            const auto button = [&](PersonControl id, std::string name, std::string icon, std::string_view help) {
+                InfoControl& b = page.controls.emplace_back();
+                b.id = person_control(id);
+                b.name = std::move(name);
+                b.kind = InfoControlKind::Button;
+                b.icon = std::move(icon);
+                b.beside = id != PersonControl::PickUp;
+                b.help = text(strings, help);
+            };
+            button(PersonControl::PickUp, "PickUp", "Staff_MovePincerLarge", pincer_help);
+            button(PersonControl::ToConsole, std::string(console_help), p.thoughts_to_console ? "Staff_ThoughtsToConsoleLarge_On" : "Staff_ThoughtsToConsoleLarge_Off", console_help);
+            button(PersonControl::Highlight, "Guest_ShowHighlightAbove", p.highlight ? "Person_AvatarStyleHighlight_On" : "Person_AvatarStyleHighlight_Off", "Guest_ShowHighlightAbove");
         }
 
         void staff_general(InfoPage& page, const PersonFacts& f, const StringTable& strings, const InfoUnits& units)
@@ -439,13 +450,12 @@ namespace rct3::ui
             const save::Staff& s = *f.staff;
             page.bare = true;
             page.controls.push_back(name_control(f, strings));
-            // One row of round buttons under the name.
-            page.controls.push_back(pick_up_control(strings, "Employee_Name_Pincer"));
+            // One row of round buttons under the name and what they are doing.
+            person_buttons(page, f, strings, "Employee_Name_Pincer", "Employee_Name_ThoughtsToConsole");
             const auto button = [&](PersonControl id, std::string_view icon, std::string_view help, bool enabled = true) -> InfoControl& { return page.controls.emplace_back(InfoControl { .id = person_control(id), .name = std::string(icon), .kind = InfoControlKind::Button, .icon = std::string(icon), .enabled = enabled, .beside = true, .help = text(strings, help) }); };
-            button(PersonControl::ToConsole, "Person_StateToConsoleLarge_Off", "Employee_Name_ThoughtsToConsole", false);
-            button(PersonControl::Highlight, "Person_AvatarStyleHighlight_Off", "Guest_ShowHighlightAbove", false);
+            // Held down while their area is being painted.
             if (f.patrol_tiles)
-                button(PersonControl::PatrolEdit, "Staff_PatrolAreaLarge", "StaffWindow_EditPatrolAreaHelp");
+                button(PersonControl::PatrolEdit, "Staff_PatrolAreaLarge", "StaffWindow_EditPatrolAreaHelp").value = f.painting_patrol ? 1 : 0;
             if (s.kind != save::StaffKind::ParkInspector)
             {
                 button(PersonControl::Warn, "Staff_WarnIconLarge", "StaffWindow_DisciplineHelp", s.warnings < kMostWarnings);
@@ -619,12 +629,11 @@ namespace rct3::ui
         switch (tab)
         {
             case PersonTab::General:
-                page.heading = person_doing(facts, strings);
                 if (facts.guest != nullptr)
                 {
                     guest_general(page, *facts.guest, strings);
                     page.controls.push_back(name_control(facts, strings));
-                    page.controls.push_back(pick_up_control(strings, "Guest_Name_Pincer"));
+                    person_buttons(page, facts, strings, "Guest_Name_Pincer", "Guest_Name_ThoughtsToConsole");
                 }
                 else if (facts.staff != nullptr)
                     staff_general(page, facts, strings, units);

@@ -193,6 +193,7 @@ TEST_CASE("a worker's statistics show when they were hired, their mood, warnings
     f.training_cost = 5000;
     const InfoPage stats = person_page(PersonTab::Stats, f, s, units);
     CHECK(value(stats, u"Since:").ends_with(u", Year 3"));
+    CHECK(value(stats, u"Since:").starts_with(u"1 ")); // The first day of the month
     const auto mood = std::ranges::find(stats.lines, std::string("Guest_Happiness"), &InfoLine::name);
     REQUIRE(mood != stats.lines.end());
     CHECK(mood->value_icon == "Staff_MoodSadIcon");
@@ -234,19 +235,22 @@ TEST_CASE("each job has its own tabs, and its controls are written from the save
     CHECK(work.controls[1].icon == "Staff_TaskButtonRepair");
 
     const InfoPage general = person_page(PersonTab::General, staff(p), s, units);
-    // The name, then the row of buttons in the game's order.
-    REQUIRE(general.controls.size() == 7);
+    // The name, what they are doing under it, then the row of buttons in the game's order.
+    REQUIRE(general.controls.size() == 8);
     CHECK(general.controls[0].kind == InfoControlKind::Text);
+    CHECK(general.controls[1].kind == InfoControlKind::Words);
+    CHECK(general.controls[1].label == person_doing(staff(p), s));
+    CHECK(general.heading.empty());
     const std::array order { PersonControl::PickUp, PersonControl::ToConsole, PersonControl::Highlight, PersonControl::Warn, PersonControl::Sack, PersonControl::Train };
     for (std::size_t i = 0; i < order.size(); ++i)
-        CHECK(general.controls[i + 1].id == person_control(order[i]));
-    CHECK(general.controls[4].enabled);
+        CHECK(general.controls[i + 2].id == person_control(order[i]));
+    CHECK(general.controls[5].enabled);
     mechanic.warnings = kMostWarnings;
-    CHECK_FALSE(person_page(PersonTab::General, staff(p), s, units).controls[4].enabled);
+    CHECK_FALSE(person_page(PersonTab::General, staff(p), s, units).controls[5].enabled);
     mechanic.training = 2;
-    CHECK(person_page(PersonTab::General, staff(p), s, units).controls[6].icon == "Staff_Training2IconLarge");
+    CHECK(person_page(PersonTab::General, staff(p), s, units).controls[7].icon == "Staff_Training2IconLarge");
     mechanic.training = kMostTraining;
-    CHECK_FALSE(person_page(PersonTab::General, staff(p), s, units).controls[6].enabled); // Fully trained
+    CHECK_FALSE(person_page(PersonTab::General, staff(p), s, units).controls[7].enabled); // Fully trained
 
     const InfoPage stats = person_page(PersonTab::Stats, staff(p), s, units);
     REQUIRE(stats.controls.size() == 1);
@@ -306,4 +310,45 @@ TEST_CASE("a member of staff the simulation walks has their patrol area on their
     CHECK(std::ranges::any_of(page.lines, [](const InfoLine& l) { return l.value == u"3"; })); // Paths no one covers
     CHECK(std::ranges::any_of(page.lines, [](const InfoLine& l) { return l.value == u"12"; }));
     CHECK(person_control(PersonControl::Task) > person_control(PersonControl::PatrolClear));
+}
+
+TEST_CASE("a person's thoughts to the messages and highlight buttons show whether they are on")
+{
+    const StringTable s = table();
+    const InfoUnits units { };
+    Park p = sample_park();
+    const auto icon = [&](const PersonFacts& f, PersonControl c) {
+        const InfoPage page = person_page(PersonTab::General, f, s, units);
+        const auto found = std::ranges::find(page.controls, person_control(c), &InfoControl::id);
+        REQUIRE(found != page.controls.end());
+        CHECK(found->enabled);
+        return found->icon;
+    };
+    CHECK(icon(guest(p), PersonControl::ToConsole) == "Staff_ThoughtsToConsoleLarge_Off");
+    CHECK(icon(guest(p), PersonControl::Highlight) == "Person_AvatarStyleHighlight_Off");
+    p.people.guests[0].person.thoughts_to_console = true;
+    p.people.guests[0].person.highlight = true;
+    CHECK(icon(guest(p), PersonControl::ToConsole) == "Staff_ThoughtsToConsoleLarge_On");
+    CHECK(icon(guest(p), PersonControl::Highlight) == "Person_AvatarStyleHighlight_On");
+    CHECK(icon(staff(p), PersonControl::Highlight) == "Person_AvatarStyleHighlight_Off");
+    p.people.staff[0].person.highlight = true;
+    CHECK(icon(staff(p), PersonControl::Highlight) == "Person_AvatarStyleHighlight_On");
+}
+
+TEST_CASE("a worker's patrol area button is held down while their area is painted")
+{
+    const StringTable s = table();
+    const InfoUnits units { };
+    Park p = sample_park();
+    PersonFacts f = staff(p);
+    f.patrol_tiles = 0;
+    const auto patrol = [&] {
+        const InfoPage page = person_page(PersonTab::General, f, s, units);
+        const auto found = std::ranges::find(page.controls, person_control(PersonControl::PatrolEdit), &InfoControl::id);
+        REQUIRE(found != page.controls.end());
+        return found->value;
+    };
+    CHECK(patrol() == 0);
+    f.painting_patrol = true;
+    CHECK(patrol() == 1);
 }

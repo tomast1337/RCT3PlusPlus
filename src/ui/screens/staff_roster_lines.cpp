@@ -41,7 +41,7 @@ namespace rct3::ui
             simulation::Staff pay { .role = simulation::staff_role(s.kind), .training = s.training };
             simulation::set_wage_level(pay, s.wage_level);
             const StaffLook look = i < facts.staff_looks.size() ? facts.staff_looks[i] : StaffLook { };
-            // Staff a scenario starts with were hired before its calendar began: they show its first month.
+            // Staff a scenario starts with were hired before its calendar began: they show its first day.
             const save::CalendarDate hired = save::GameClock::date_at(s.person.start_time, facts.zero_time);
             lines.push_back(
                 {
@@ -59,10 +59,11 @@ namespace rct3::ui
                     .training_cost = simulation::training_cost(pay),
                     .tasks = s.task_flags,
                     .patrol_tiles = look.patrol_tiles,
+                    .painting_patrol = look.painting_patrol,
                     .colours = look.colours,
                     .costume = s.person.sub_type,
                     .hired = s.person.start_time,
-                    .hired_text = date_text(strings, 0, hired.month, static_cast<std::int32_t>(hired.year + 1)),
+                    .hired_text = date_text(strings, hired.day, hired.month, static_cast<std::int32_t>(hired.year + 1)),
                 });
         }
         // Each sort's key, lowest first; keys where the highest come first are turned round.

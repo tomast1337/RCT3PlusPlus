@@ -14,6 +14,9 @@
 // the day's mode; pressing it opens the three modes in an arc below it, and picking one is a request the owner
 // takes with take_day_mode(). The money narrows to make room. A double click on the money asks for the
 // finances, taken with take_finances().
+//
+// At the bar's right end, a button turns on and off the labels floating over the people the player picked to
+// highlight; highlights() tells whether they show.
 #pragma once
 
 #include "save/model/world.hpp"
@@ -51,6 +54,8 @@ namespace rct3::ui
         std::string forecast_arrow;
         /// The day's modes, in the order of simulation::DayMode.
         std::array<std::string, 3> day_mode_icons;
+        /// The highlights button's picture while off and while on.
+        std::array<std::string, 2> highlight_icons;
         Color text_colour = hex("#ffffff");
         Color rating_back = hex("#00000080");
         Color rating_low = hex("#d8402c");  ///< The rating bar's colour at no rating
@@ -147,6 +152,15 @@ namespace rct3::ui
         {
             return *money_;
         }
+        [[nodiscard]] Button& highlight_button() const
+        {
+            return *highlight_;
+        }
+        /// Whether the people picked for it show their highlight.
+        [[nodiscard]] bool highlights() const
+        {
+            return highlight_->on;
+        }
         [[nodiscard]] const Label& date() const
         {
             return *date_;
@@ -197,6 +211,7 @@ namespace rct3::ui
         Panel* arrow_ = nullptr;
         Panel* forecast_ = nullptr;
         Label* date_ = nullptr;
+        Button* highlight_ = nullptr;
     };
 
 } // namespace rct3::ui

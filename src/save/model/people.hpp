@@ -250,6 +250,9 @@ namespace rct3::save
         PeopleRef holder { };         ///< The person's item holder object (MyHolders)
         float time_to_next_think = 0; ///< Seconds
         std::int32_t thinks_to_big_think = 0;
+        // The player's switches on their window, kept in rct3++'s own saves.
+        bool thoughts_to_console = false; ///< Their new thoughts are posted as messages
+        bool highlight = false;           ///< Their name and what they are doing float above them, while the park shows highlights
         [[nodiscard]] std::optional<GuestState> guest_state() const noexcept;
     };
 

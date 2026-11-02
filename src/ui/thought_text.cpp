@@ -324,7 +324,7 @@ namespace rct3::ui
         return std::string(kIcons[std::to_underlying(mood)]);
     }
 
-    std::u16string thought_text(const StringTable& strings, std::int32_t id, std::int64_t variant, std::u16string_view name)
+    std::string thought_text_key(const StringTable& strings, std::int32_t id, std::int64_t variant)
     {
         const std::string key = thought_key(id);
         if (key.empty())
@@ -334,8 +334,15 @@ namespace rct3::ui
             ++count;
         if (count == 0)
             return { };
-        const std::int64_t pick = (variant % count + count) % count + 1;
-        std::u16string text(strings.get(std::format("{}{}", key, pick)));
+        return std::format("{}{}", key, (variant % count + count) % count + 1);
+    }
+
+    std::u16string thought_text(const StringTable& strings, std::int32_t id, std::int64_t variant, std::u16string_view name)
+    {
+        const std::string key = thought_text_key(strings, id, variant);
+        if (key.empty())
+            return { };
+        std::u16string text(strings.get(key));
         for (auto at = text.find(kNameMark); at != std::u16string::npos; at = text.find(kNameMark, at + name.size()))
             text.replace(at, kNameMark.size(), name);
         return text;

@@ -35,10 +35,11 @@ namespace rct3::ui
         constexpr std::string_view kHireFrame = "Staff_HireStaff";
 
         // The info panel's words for the same tasks and costumes, kept here while that panel is reworked apart.
-        constexpr std::array<RosterTask, 3> kHandymanTasks = { {
+        constexpr std::array<RosterTask, 4> kHandymanTasks = { {
             { 0, "Staff_TaskButtonShovel", "StaffTasks_SweepPathsHelp" },
             { 1, "Staff_TaskButtonWater", "StaffTasks_WaterGardensHelp" },
             { 2, "Staff_TaskButtonBins", "StaffTasks_EmptyBinsHelp" },
+            { 3, "Staff_TaskButtonRepair", "Rct3pp_MendPathItemsHelp", true }, // simulation::kLeaveBrokenTask
         } };
         constexpr std::array<RosterTask, 2> kMechanicTasks = { {
             { 0, "Staff_TaskButtonInspect", "StaffTasks_InspectRidesHelp" },
@@ -266,7 +267,10 @@ namespace rct3::ui
 
         // On the right: their patrol and their mood, under them the uniform's colours. The inspector has none.
         if (!inspector && !vendor)
+        {
             r.patrol = &add_icon(p, "Patrol", "Staff_ButtonPatrol", { }, top_right(kIcon + 4, 2, kIcon, kIcon), text(strings, "StaffWindow_EditPatrolAreaHelp"));
+            r.patrol->kept_down = l.painting_patrol; // Held down while their area is being painted
+        }
         if (!inspector)
         {
             const std::string_view mood_help = l.mood == Mood::Happy ? "StaffWindow_Happiness_Happy" : l.mood == Mood::Sad ? "StaffWindow_Happiness_Sad" : "StaffWindow_Happiness_OK";
@@ -293,7 +297,7 @@ namespace rct3::ui
         {
             Button& b = add_icon(p, std::string(t.skin), std::string(t.skin), { }, top_left(tx, y, kTaskSize, kTaskSize), text(strings, t.help));
             b.toggle = true;
-            b.on = (l.tasks & (1 << t.bit)) != 0;
+            b.on = ((l.tasks & (1 << t.bit)) != 0) != t.inverted;
             r.tasks.emplace_back(t.bit, &b);
             tx += kTaskSize + 1;
         }

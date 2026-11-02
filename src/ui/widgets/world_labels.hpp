@@ -15,8 +15,8 @@ namespace rct3::ui
 
     struct WorldLabel
     {
-        Point at; ///< The middle of the label's bottom edge
-        std::u16string text;
+        Point at;            ///< The middle of the label's bottom edge
+        std::u16string text; ///< Its lines split by '\n'
     };
 
     class WorldLabels : public Widget

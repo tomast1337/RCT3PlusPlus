@@ -58,6 +58,7 @@
 #include "ui/screens/tool_menus.hpp"
 #include "ui/screens/tool_row.hpp"
 #include "ui/screens/tutorial_guide.hpp"
+#include "ui/thought_text.hpp"
 #include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/question_box.hpp"
@@ -1746,6 +1747,16 @@ namespace rct3::scene
                 person->name = strings::to_utf8(change.text);
                 return true;
             }
+            if (change.id == ui::person_control(ToConsole))
+            {
+                person->thoughts_to_console = !person->thoughts_to_console;
+                return true;
+            }
+            if (change.id == ui::person_control(Highlight))
+            {
+                person->highlight = !person->highlight;
+                return true;
+            }
             if (staff == nullptr)
                 return false;
             if (change.id == ui::person_control(PatrolPaint))
@@ -3124,6 +3135,10 @@ namespace rct3::scene
                         const auto* about = scene.sim.registry.valid(t.about) ? scene.sim.registry.try_get<simulation::Attraction>(t.about) : nullptr;
                         std::shift_right(slots.begin(), slots.end(), 1);
                         slots[0] = { .about = { about != nullptr ? about->saved : 0 }, .id = std::to_underlying(t.kind), .time = newest + 1, .variant = static_cast<std::int32_t>(t.variant) };
+                        // shortcut: the message names what they thought about but cannot take the view to the
+                        // person; add it once messages open people.
+                        if (std::string key = ui::thought_text_key(*assets.strings, slots[0].id, slots[0].variant); person.thoughts_to_console && !key.empty())
+                            simulation::post(scene.park.messages, { .text_key = std::move(key), .subject = about != nullptr && about->saved != 0 ? std::optional(about->saved) : std::nullopt });
                     }
                     p.thoughts_seen = thoughts->had;
                 }
@@ -3564,6 +3579,23 @@ namespace rct3::scene
         {
             const ui::Rect view = desktop.root().rect();
             heights->labels = height_labels(scene, { view.width(), view.height() });
+            // While the park bar's highlights are on, the people the player picked have their name and what
+            // they are doing floating over them.
+            if (const auto bar = desktop.root().find_as<ui::ParkBar>(kBarName); bar && bar->highlights() && view.width() > 0 && view.height() > 0)
+            {
+                constexpr float kHighlightLift = 2.4f; ///< Chosen by eye: metres over their feet, clear of their head
+                const glm::mat4 camera = park::view_projection(scene.camera, view.width() / view.height());
+                for (const ShownPerson& p : scene.shown_people)
+                {
+                    const ui::PersonFacts f { .guest = p.staff ? nullptr : &scene.people.guests[p.saved], .staff = p.staff ? &scene.people.staff[p.saved] : nullptr, .people = &scene.people, .rides = &scene.rides };
+                    if (!f.person()->highlight)
+                        continue;
+                    const glm::vec4 clip = camera * (p.pose.world * glm::vec4(0, kHighlightLift, 0, 1));
+                    const glm::vec2 ndc = glm::vec2(clip) / clip.w;
+                    if (clip.w > 0 && std::abs(ndc.x) <= 1 && std::abs(ndc.y) <= 1)
+                        heights->labels.push_back({ { (ndc.x + 1) / 2 * view.width(), (1 - ndc.y) / 2 * view.height() }, ui::person_name(f, *assets.strings) + u"\n" + ui::person_doing(f, *assets.strings) });
+                }
+            }
         }
         if (auto money = desktop.root().find_as<ui::MoneyFloaters>(kMoneyName))
         {

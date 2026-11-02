@@ -3,7 +3,8 @@
 // A worker's window as the park runs: they think about their work and how they feel, and those thoughts
 // show on their Thoughts tab; the Statistics tab, a list that scrolls, shows the day they were hired, their
 // pay with arrows to change it, their laziness and their mood as a face; the Details tab has a row of round
-// buttons, the last one training them for what it says, its squares filling a level at a time.
+// buttons, the last one training them for what it says, its squares filling a level at a time. Two of them
+// send their thoughts to the messages and float their name over them while the park bar's highlights are on.
 //
 //   ./nob script scripts/tests/staff_mood.ts -- --no-audio
 
@@ -63,6 +64,20 @@ const find = (path: string, name: string): string | undefined => {
     }
     return undefined;
 };
+
+// Their thoughts go to the messages, and their name floats over them while the park bar's highlights are on.
+const toConsole = find("info", "Employee_Name_ThoughtsToConsole");
+const highlight = find("info", "Guest_ShowHighlightAbove");
+expect(toConsole !== undefined && highlight !== undefined, "the thoughts and highlight buttons");
+await ui.click(toConsole!);
+await ui.click(highlight!);
+await ui.click("bar/highlight");
+await frames(10);
+await screenshot("staff_highlight");
+const thoughts = () => park.messages().filter((m) => m.key.startsWith("Thought_")).length;
+const thoughtsBefore = thoughts();
+await park.advanceUntil(() => thoughts() > thoughtsBefore, 600, "the mechanic's thoughts in the messages");
+await ui.click("bar/highlight");
 const train = find("info", "StaffWindow_TrainHelp");
 const cash = park.cash();
 if (train !== undefined && cash !== undefined) {

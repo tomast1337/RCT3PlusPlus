@@ -233,3 +233,17 @@ TEST_CASE("a double click on the money asks for the finances")
     f.click(f.bar->money());
     CHECK_FALSE(f.bar->take_finances());
 }
+
+TEST_CASE("the bar's last button turns the people's highlights on and off, off at first")
+{
+    Fixture f;
+    CHECK_FALSE(f.bar->highlights());
+    CHECK(f.bar->highlight_button().icon == "Guest_Group_Disabled");
+    f.click(f.bar->highlight_button());
+    f.desktop.update({ });
+    CHECK(f.bar->highlights());
+    CHECK(f.bar->highlight_button().icon == "Guest_Group");
+    f.click(f.bar->highlight_button());
+    f.desktop.update({ });
+    CHECK_FALSE(f.bar->highlights());
+}

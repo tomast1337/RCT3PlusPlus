@@ -23,6 +23,7 @@ namespace rct3::ui
         constexpr std::string_view kGuestsHelp = "Toolbar_TT_GuestsInPark";
         constexpr std::string_view kDayModeHelp = "Toolbar_TT_DayNight";
         constexpr std::string_view kRatingHelp = "Toolbar_TT_ParkRating";
+        constexpr std::string_view kHighlightHelp = "Toolbar_TT_AvatarHighlight";
         // Our own labels: the parts are those of our rating model.
         constexpr std::string_view kRatingHappiness = "Rct3pp_RatingHappiness";
         constexpr std::string_view kRatingRides = "Rct3pp_RatingRides";
@@ -54,6 +55,7 @@ namespace rct3::ui
         constexpr float kWeatherSize = 20;
         constexpr float kArrowWidth = 9;
         constexpr float kDateWidth = 210;
+        constexpr float kEndGap = 7; ///< After the highlights button, at the bar's right end
         constexpr float kRightStart = park_bar::kLeftWidth + park_bar::kDividerWidth;
 
         /// Top of an item `height` tall centred above the frame's lower edge.
@@ -198,8 +200,12 @@ namespace rct3::ui
         x = put(*forecast_, x, kWeatherSize, kWeatherSize);
         date_ = &label("date", Align::Centre);
         put(*date_, x, kDateWidth, park_bar::kHeight - park_bar::kLowerEdge);
-        // shortcut: no fireworks, escaped animals or custom family buttons after the date, at the right end, as the
-        // park has none of them yet; add them when it does.
+        // shortcut: no fireworks or escaped animals buttons before the highlights button, as the park has neither
+        // yet; add them when it does.
+        highlight_ = &add<Button>("highlight", std::string { }, style_.highlight_icons[0]);
+        highlight_->toggle = true;
+        highlight_->tooltip = strings_.get(kHighlightHelp);
+        put(*highlight_, park_bar::kWidth - kEndGap - kSmallIcon, kSmallIcon, kSmallIcon);
 
         show_speed();
         show({ });
@@ -299,6 +305,9 @@ namespace rct3::ui
             // A third click starts a new pair.
             since_money_click_ = since_money_click_ <= kDoubleClick ? kDoubleClick + 1 : 0;
         }
+
+        if (highlight_->take_click())
+            highlight_->icon = style_.highlight_icons[highlight_->on ? 1 : 0];
 
         const simulation::GameSpeed from = asked_.value_or(speed_);
         if (speeds_[0]->take_click())

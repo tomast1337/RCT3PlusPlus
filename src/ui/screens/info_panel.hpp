@@ -239,7 +239,7 @@ namespace rct3::ui
         std::string name; ///< Its widget's name: a string key from where it is made, to find it by
         InfoControlKind kind = InfoControlKind::Number;
         std::u16string label;
-        int value = 0; ///< The number, the item picked, or whether ticked
+        int value = 0; ///< The number, the item picked, whether ticked, or whether a button is held down
         int minimum = 0;
         int maximum = 0;
         int step = 1;

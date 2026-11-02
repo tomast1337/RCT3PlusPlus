@@ -27,6 +27,10 @@ namespace rct3::ui
     /// The start of the language keys of the thought `id`'s texts; empty for no thought or an unknown one.
     [[nodiscard]] std::string thought_key(std::int32_t id);
 
+    /// The language key of the text of the thought `id` said in the way `variant` picks, such as "Thought_ImLost2";
+    /// empty when the language has no text for it.
+    [[nodiscard]] std::string thought_text_key(const StringTable& strings, std::int32_t id, std::int64_t variant);
+
     /// The text of the thought `id` said in the way `variant` picks, about `name`. Empty when the language has
     /// no text for it.
     [[nodiscard]] std::u16string thought_text(const StringTable& strings, std::int32_t id, std::int64_t variant, std::u16string_view name);

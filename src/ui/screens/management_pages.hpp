@@ -61,11 +61,13 @@ namespace rct3::ui
     [[nodiscard]] std::vector<ManagementTab> management_tabs(ManagementTopic topic, const StringTable& strings);
 
     /// What the running park shows of a worker that their save does not hold: the colours they are drawn in
-    /// (upper then lower clothes) and the tiles of their patrol area (0 for none, the whole park).
+    /// (upper then lower clothes), the tiles of their patrol area (0 for none, the whole park) and whether the
+    /// player is painting it.
     struct StaffLook
     {
         std::array<std::uint8_t, 2> colours { };
         std::size_t patrol_tiles = 0;
+        bool painting_patrol = false;
     };
 
     /// What the pages are written from. Any of it may be missing; its values then show as dashes.

@@ -137,3 +137,32 @@ TEST_CASE("the inspector's row unfolds into the kinds of things they look at, wi
     CHECK_FALSE(f.window->content().find("table/view/content/row2/Patrol"));
     CHECK_FALSE(f.window->content().find("table/view/content/row2/Mood"));
 }
+
+TEST_CASE("a handyman's row has the mend switch, lit while they mend")
+{
+    Fixture f;
+    f.people.staff[0].task_flags = 0;
+    f.show();
+    f.button("table/view/content/row0/Expand").click();
+    f.desktop.update({ });
+    Button& mend = f.button("table/view/content/row0/Staff_TaskButtonRepair");
+    CHECK(mend.on); // The bit set means they leave broken things be
+    f.people.staff[0].task_flags = 1 << 3;
+    f.show();
+    CHECK_FALSE(f.button("table/view/content/row0/Staff_TaskButtonRepair").on);
+    f.button("table/view/content/row0/Staff_TaskButtonRepair").click();
+    f.desktop.update({ });
+    const auto asks = f.window->take_asks();
+    REQUIRE(asks.change);
+    CHECK(asks.change->second.id == person_control(PersonControl::Task, 3));
+}
+
+TEST_CASE("a row's patrol button is held down while their area is painted")
+{
+    Fixture f;
+    CHECK_FALSE(f.button("table/view/content/row0/Patrol").kept_down);
+    const std::array<StaffLook, 1> looks { StaffLook { .painting_patrol = true } };
+    f.window->show({ .people = &f.people, .staff_looks = looks }, f.strings, { });
+    f.desktop.update({ });
+    CHECK(f.button("table/view/content/row0/Patrol").kept_down);
+}

@@ -432,6 +432,7 @@ namespace rct3::ui
                     b.text = c.text;
                     b.font = FontRole::Small;
                     b.icon_scale = info_panel::kPaintSize / info_panel::kIconSize;
+                    b.kept_down = c.value != 0;
                     w = &b;
                     break;
                 }

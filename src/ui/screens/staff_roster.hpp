@@ -91,6 +91,7 @@ namespace rct3::ui
         int bit = 0;
         std::string_view skin;
         std::string_view help;
+        bool inverted = false; ///< The bit set means the task is off
     };
 
     /// The switches of the tasks of `kind`, in the order they stand.

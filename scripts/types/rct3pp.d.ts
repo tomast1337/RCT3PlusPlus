@@ -410,10 +410,14 @@ interface StallInfo {
     joined: boolean;
     price?: number;
     selling?: boolean;
+    /** Broken down, shut until a mechanic mends it. */
+    broken?: boolean;
 }
 
 declare namespace stalls {
     function list(): StallInfo[];
+    /** Breaks stall `stall` of list() down at once, as wear would; whether it was run by the park and whole. */
+    function breakDown(stall: number): boolean;
     /** Opens stall `i` of list() in the info panel, as a click on it does. */
     function show(i: number): void;
     /** Puts stall `i` of list() in `state`, as its window's open-or-close tab does. Null once changed, else the

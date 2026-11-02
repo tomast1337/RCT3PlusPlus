@@ -95,13 +95,13 @@ namespace rct3::ui
         Wage,        ///< The wage level, 0 to 2
         Train,       ///< Trains them a level up, for its cost
         Costume,     ///< An entertainer's, by its place in the list
-        PatrolPaint, ///< Ticked while strokes on the ground add or take away tiles of their patrol area
+        PatrolPaint, ///< Value 1 starts painting their patrol area, 0 stops it (the staff list asks for it)
         PatrolClear, ///< Empties it, and their zone's: the whole park again
         PatrolBrush, ///< How many tiles across a stroke paints, by its place in kPatrolBrushes
         PatrolCopy,  ///< Gives the area to everyone else in their job
         PatrolFill,  ///< Fills the box round the area
         PatrolZone,  ///< The shared zone they are on, by its number; 0 none
-        PatrolEdit,  ///< Turns painting their patrol area on or off, as PatrolPaint's tick does
+        PatrolEdit,  ///< Turns painting their patrol area on or off
         ToConsole,   ///< Turns posting their new thoughts as messages on or off
         Highlight,   ///< Turns their name floating over them on or off, shown while the park bar's highlight is on
         Task,        ///< The first task's tick; the task of flag bit b is this plus b

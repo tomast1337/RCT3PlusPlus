@@ -585,7 +585,7 @@ namespace rct3::ui
             if (c.kind == InfoControlKind::Tick && !c.icon.empty())
             {
                 // Its words on the left, the toggle near the page's end, where it stays whether the bar shows or not.
-                const float at = page_width_ - info_panel::kRingReach - 2 * info_panel::kScrollGap - bar_->style().thickness - info_panel::kToggleSize;
+                const float at = page_width_ - info_panel::kRingReach - 2 * info_panel::kScrollGap - bar_->style().thickness - info_panel::kToggleInset - info_panel::kToggleSize;
                 label.placement = top_left(x, row.y, std::max(at - x, 0.0f), row.height);
                 w->placement = top_left(at, row.y + (row.height - info_panel::kToggleSize) / 2, info_panel::kToggleSize, info_panel::kToggleSize);
                 continue;

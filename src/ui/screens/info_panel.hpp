@@ -184,7 +184,8 @@ namespace rct3::ui
         inline constexpr float kChoiceWidth = 140;            ///< Of a page's lists
         inline constexpr float kLineIcon = 12;                ///< Of the picture before a line, such as a thought's face
         inline constexpr float kLineIconGap = 4;              ///< Between that picture and the line's text
-        inline constexpr float kToggleSize = kLineHeight;     ///< A task's toggle, on a line of its own
+        inline constexpr float kToggleSize = 20;              ///< A task's toggle, at its pictures' own size, over its line
+        inline constexpr float kToggleInset = 40;             ///< Chosen by eye: a task's toggle short of the page's end, as the game's sits
         inline constexpr float kScrollStep = 2 * kLineHeight; ///< Down the page for a notch of the wheel
         inline constexpr float kScrollGap = 2;                ///< Between the scroll bar and the paper's end
     } // namespace info_panel

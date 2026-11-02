@@ -271,7 +271,24 @@ TEST_CASE("each job has its own tabs, and its controls are written from the save
     CHECK(person_tabs(staff(p)).size() == 3);
 }
 
-TEST_CASE("a member of staff the simulation walks has their patrol area on their tasks page")
+TEST_CASE("a worker's tasks page holds only their tasks, and no name over it")
+{
+    const StringTable s = table();
+    const InfoUnits units { };
+    const Park p = sample_park();
+    PersonFacts f = staff(p);
+    f.patrol_tiles = 12;
+    f.painting_patrol = true;
+    const InfoPage page = person_page(PersonTab::Tasks, f, s, units);
+    CHECK(page.title.empty());
+    CHECK(page.lines.empty());
+    CHECK(std::ranges::all_of(page.controls, [](const InfoControl& c) { return c.kind == InfoControlKind::Tick && !c.icon.empty(); }));
+    for (const PersonTab tab : { PersonTab::General, PersonTab::Thoughts, PersonTab::Stats })
+        CHECK(person_page(tab, f, s, units).title.empty());
+    CHECK(person_page(PersonTab::General, guest(p), s, units).title == u"Ada");
+}
+
+TEST_CASE("a member of staff the simulation walks has their patrol area on their statistics page")
 {
     StringTable s = table();
     s.add("Rct3pp_PatrolTiles", u"Area:");
@@ -279,36 +296,46 @@ TEST_CASE("a member of staff the simulation walks has their patrol area on their
     const InfoUnits units { };
     Park p = sample_park();
     PersonFacts f = staff(p);
-    const auto without = person_page(PersonTab::Tasks, f, s, units).controls.size();
-
+    CHECK(std::ranges::none_of(person_page(PersonTab::Stats, f, s, units).lines, [](const InfoLine& l) { return l.value == u"All of it"; }));
     f.patrol_tiles = 0;
-    InfoPage page = person_page(PersonTab::Tasks, f, s, units);
-    REQUIRE(page.controls.size() == without + 6);
-    CHECK(page.controls[without].id == person_control(PersonControl::PatrolPaint));
-    CHECK(page.controls[without].value == 0);
-    CHECK(page.controls[without + 1].id == person_control(PersonControl::PatrolBrush));
-    CHECK(page.controls[without + 1].items.size() == kPatrolBrushes.size());
-    CHECK(page.controls[without + 2].id == person_control(PersonControl::PatrolZone));
-    CHECK(page.controls[without + 2].items.size() == kPatrolZones + 1);
-    CHECK(page.controls[without + 2].value == 0);
-    CHECK(page.controls[without + 3].id == person_control(PersonControl::PatrolFill));
-    CHECK(page.controls[without + 4].id == person_control(PersonControl::PatrolClear));
-    CHECK(page.controls[without + 5].id == person_control(PersonControl::PatrolCopy));
-    CHECK(std::ranges::any_of(page.lines, [](const InfoLine& l) { return l.value == u"All of it"; }));
-
-    CHECK(std::ranges::none_of(page.lines, [](const InfoLine& l) { return l.value == u"3"; }));
-
+    CHECK(std::ranges::any_of(person_page(PersonTab::Stats, f, s, units).lines, [](const InfoLine& l) { return l.value == u"All of it"; }));
     f.patrol_tiles = 12;
+    f.uncovered_paths = 3;
+    const InfoPage page = person_page(PersonTab::Stats, f, s, units);
+    CHECK(std::ranges::any_of(page.lines, [](const InfoLine& l) { return l.value == u"12"; }));
+    CHECK(std::ranges::any_of(page.lines, [](const InfoLine& l) { return l.value == u"3"; })); // Paths no one covers
+}
+
+TEST_CASE("while a worker's patrol area is painted, their details page has its tools after the buttons")
+{
+    const StringTable s = table();
+    const InfoUnits units { };
+    Park p = sample_park();
+    PersonFacts f = staff(p);
+    f.patrol_tiles = 12;
+    const auto has = [&](PersonControl c) {
+        const InfoPage page = person_page(PersonTab::General, f, s, units);
+        return std::ranges::contains(page.controls, person_control(c), &InfoControl::id);
+    };
+    CHECK(has(PersonControl::PatrolEdit));
+    for (const PersonControl c : { PersonControl::PatrolClear, PersonControl::PatrolBrush, PersonControl::PatrolZone, PersonControl::PatrolFill, PersonControl::PatrolCopy })
+        CHECK_FALSE(has(c));
     f.painting_patrol = true;
     f.patrol_brush = 2;
-    f.uncovered_paths = 3;
     f.patrol_zone = 4;
-    page = person_page(PersonTab::Tasks, f, s, units);
-    CHECK(page.controls[without + 2].value == 4);
-    CHECK(page.controls[without].value == 1);
-    CHECK(page.controls[without + 1].value == 2);
-    CHECK(std::ranges::any_of(page.lines, [](const InfoLine& l) { return l.value == u"3"; })); // Paths no one covers
-    CHECK(std::ranges::any_of(page.lines, [](const InfoLine& l) { return l.value == u"12"; }));
+    const InfoPage page = person_page(PersonTab::General, f, s, units);
+    const auto at = [&](PersonControl c) { return std::ranges::find(page.controls, person_control(c), &InfoControl::id); };
+    REQUIRE(at(PersonControl::PatrolClear) != page.controls.end());
+    CHECK(at(PersonControl::PatrolClear) == at(PersonControl::PatrolEdit) + 1); // Beside the patrol button
+    CHECK(at(PersonControl::PatrolClear)->icon == "PathEditor_Freeform");
+    REQUIRE(at(PersonControl::PatrolBrush) != page.controls.end());
+    CHECK(at(PersonControl::PatrolBrush)->value == 2);
+    CHECK(at(PersonControl::PatrolBrush)->items.size() == kPatrolBrushes.size());
+    CHECK_FALSE(at(PersonControl::PatrolBrush)->beside); // A row of its own
+    CHECK(at(PersonControl::PatrolZone)->value == 4);
+    CHECK(at(PersonControl::PatrolZone)->items.size() == kPatrolZones + 1);
+    CHECK(at(PersonControl::PatrolFill) != page.controls.end());
+    CHECK(at(PersonControl::PatrolCopy) != page.controls.end());
     CHECK(person_control(PersonControl::Task) > person_control(PersonControl::PatrolClear));
 }
 

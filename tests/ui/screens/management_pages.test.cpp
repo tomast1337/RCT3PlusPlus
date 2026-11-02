@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/management_pages.hpp"
 
-#include "simulation/staff_care.hpp"
 #include "ui/thought_text.hpp"
 
 #include <algorithm>
@@ -68,8 +67,9 @@ TEST_CASE("each management menu item opens its own window, and only those")
     CHECK(management_topic(ToolItem::ParkOperations) == ManagementTopic::ParkOperations);
     CHECK(management_topic(ToolItem::Challenges) == ManagementTopic::Challenges);
     CHECK_FALSE(management_topic(ToolItem::People));
+    // The staff window keeps one list of its own (staff_roster.hpp), without tabs.
     for (std::size_t t = 0; t < kManagementTopicCount; ++t)
-        CHECK_FALSE(management_tabs(static_cast<ManagementTopic>(t), test_strings()).empty());
+        CHECK(management_tabs(static_cast<ManagementTopic>(t), test_strings()).empty() == (static_cast<ManagementTopic>(t) == ManagementTopic::Staff));
 }
 
 TEST_CASE("a row's id gives back what it is about")
@@ -170,48 +170,6 @@ TEST_CASE("a weekly graph has no month marks from before the calendar began")
     const ManagementPage page = management_page(ManagementTopic::ParkOperations, 1, { .park = &park, .state = &state }, s, kUnits);
     REQUIRE(page.graph_ticks.size() == 1);
     CHECK(page.graph_ticks[0].back == 1);
-}
-
-TEST_CASE("the staff tabs list one job each, the first everyone but the vendors")
-{
-    const StringTable s = test_strings();
-    save::PeopleModel people;
-    for (const save::StaffKind kind : { save::StaffKind::Handyman, save::StaffKind::Mechanic, save::StaffKind::Handyman, save::StaffKind::Vendor })
-    {
-        save::Staff member;
-        member.kind = kind;
-        people.staff.push_back(member);
-    }
-    const ManagementFacts facts { .people = &people };
-    CHECK(management_page(ManagementTopic::Staff, 0, facts, s, kUnits).rows.size() == 3);
-    const ManagementPage handymen = management_page(ManagementTopic::Staff, 1, facts, s, kUnits);
-    REQUIRE(handymen.rows.size() == 2);
-    CHECK(management_row(handymen.rows[1].id) == ManagementRow { ManagementRow::Kind::Staff, 2 });
-    CHECK(management_page(ManagementTopic::Staff, 2, facts, s, kUnits).rows.size() == 1);
-    const ManagementPage vendors = management_page(ManagementTopic::Staff, 5, facts, s, kUnits);
-    REQUIRE(vendors.rows.size() == 1);
-    CHECK(management_row(vendors.rows[0].id) == ManagementRow { ManagementRow::Kind::Staff, 3 });
-}
-
-TEST_CASE("the staff window hires each job, sacks the selected worker and shows wages")
-{
-    const StringTable s = test_strings();
-    save::PeopleModel people;
-    save::Staff low;
-    low.wage_level = 0;
-    people.staff = { low, save::Staff { } };
-    people.staff[1].wage_level = 2;
-    const ManagementPage page = management_page(ManagementTopic::Staff, 0, { .people = &people }, s, kUnits);
-    REQUIRE(page.buttons.size() == kHireButtons.size() + 1);
-    CHECK(page.buttons[0].enabled);
-    CHECK_FALSE(page.buttons[4].enabled); // No animal house to hire a keeper to
-    CHECK(page.buttons[kSackButton].enabled);
-    CHECK(management_page(ManagementTopic::Staff, 0, { .people = &people, .animal_houses = true }, s, kUnits).buttons[4].enabled);
-    // Nobody to sack on an empty tab.
-    CHECK_FALSE(management_page(ManagementTopic::Staff, 2, { .people = &people }, s, kUnits).buttons[kSackButton].enabled);
-    REQUIRE(page.rows.size() == 2);
-    CHECK(page.rows[0].cells[3] == money(rct3::simulation::wage_at(0)));
-    CHECK(page.rows[1].keys[3] > page.rows[0].keys[3]);
 }
 
 TEST_CASE("the guest statistics average over the guests in the park")

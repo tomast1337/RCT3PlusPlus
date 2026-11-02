@@ -60,6 +60,14 @@ namespace rct3::ui
     /// The tabs of `topic`'s window, with their names.
     [[nodiscard]] std::vector<ManagementTab> management_tabs(ManagementTopic topic, const StringTable& strings);
 
+    /// What the running park shows of a worker that their save does not hold: the colours they are drawn in
+    /// (upper then lower clothes) and the tiles of their patrol area (0 for none, the whole park).
+    struct StaffLook
+    {
+        std::array<std::uint8_t, 2> colours { };
+        std::size_t patrol_tiles = 0;
+    };
+
     /// What the pages are written from. Any of it may be missing; its values then show as dashes.
     struct ManagementFacts
     {
@@ -71,6 +79,8 @@ namespace rct3::ui
         std::int64_t replace_cost = 0;                      ///< To replace them all at once, hundredths
         std::span<const simulation::GoalReading> goals { }; ///< By place in the park's goals, as last checked
         bool animal_houses = false;                         ///< Whether the park has any, which keepers are hired to
+        std::span<const StaffLook> staff_looks { };         ///< By place in the park's staff; may be short
+        float zero_time = 0;                                ///< Where the park's calendar starts, for hire dates
     };
 
     /// The park operations window's tab of the awards won and fines received.
@@ -92,11 +102,6 @@ namespace rct3::ui
     /// choice picked, by its place among the page's buttons, and those states by the place of their choice.
     inline constexpr std::size_t kOpenCloseAllButton = 0;
     inline constexpr std::array<save::AttractionState, 2> kOpenCloseAllStates = { save::AttractionState::Open, save::AttractionState::Closed };
-
-    /// The buttons under each page of the staff window that hire a worker, by their place among the page's
-    /// buttons, and the job each hires; the button after them sacks the worker whose row is selected.
-    inline constexpr std::array<save::StaffKind, 5> kHireButtons = { save::StaffKind::Handyman, save::StaffKind::Mechanic, save::StaffKind::SecurityGuard, save::StaffKind::Entertainer, save::StaffKind::AnimalKeeper };
-    inline constexpr std::size_t kSackButton = kHireButtons.size();
 
     /// The page of tab `tab` of `topic`'s window.
     [[nodiscard]] ManagementPage management_page(ManagementTopic topic, std::size_t tab, const ManagementFacts& facts, const StringTable& strings, const InfoUnits& units);

@@ -1906,7 +1906,7 @@ namespace rct3::scene
         ui::ManagementFacts management_facts(const ParkScene& scene)
         {
             const auto broken = simulation::replacement(scene.sim, [&](std::uint64_t object) { return replace_price(scene, object); });
-            return { .park = &scene.park_model, .state = &scene.park, .people = &scene.people, .rides = &scene.rides, .broken_items = broken.items, .replace_cost = broken.cost, .goals = scene.goal_readings, .animal_houses = !scene.sim.registry.view<simulation::AnimalHouse>().empty() };
+            return { .park = &scene.park_model, .state = &scene.park, .people = &scene.people, .rides = &scene.rides, .broken_items = broken.items, .replace_cost = broken.cost, .goals = scene.goal_readings, .animal_houses = !scene.sim.registry.view<simulation::AnimalHouse>().empty(), .staff_looks = scene.staff_looks, .zero_time = scene.park.zero_time };
         }
 
         /// Marks the simulated rides and stalls that do not fit the scenery round them, for the park's inspector.
@@ -3536,26 +3536,65 @@ namespace rct3::scene
             scene.camera.target = { picked->x, scene.camera.target.y, picked->y };
             scene.camera = park::on_ground(scene.camera, scene.grid);
         }
+        // What the staff window shows of each worker that the save does not hold: their clothes and patrol.
+        scene.staff_looks.assign(scene.people.staff.size(), { });
+        for (const ShownPerson& p : scene.shown_people)
+        {
+            if (!p.staff || p.saved >= scene.staff_looks.size())
+                continue;
+            ui::StaffLook& look = scene.staff_looks[p.saved];
+            look.colours = { p.pose.look.colours.at(ui::kUpperPalette), p.pose.look.colours.at(ui::kUpperPalette + 1) };
+            if (const auto* patrol = scene.sim.registry.valid(p.guest) ? scene.sim.registry.try_get<simulation::Patrol>(p.guest) : nullptr)
+                look.patrol_tiles = patrol->tiles.size();
+        }
         const ui::ManagementFacts facts = management_facts(scene);
         const ManagementAsks asks = update_management_windows(desktop, facts, *assets.strings, info_units(assets, options));
         if (asks.row && info)
             open_row(scene, *info, *asks.row, assets, options);
         // A worker hired is handed to the pointer at once, to be put down where the player likes; whoever was
         // held before goes back first.
-        if (const auto hired = asks.hire ? hire(scene, *asks.hire) : std::nullopt)
+        if (const auto hired = asks.staff.hire ? hire(scene, *asks.staff.hire) : std::nullopt)
         {
             (void)hold_person(scene, { }, { }, false, true);
             (void)pick_up_person(scene, *hired);
         }
-        if (asks.sack && asks.sack->kind == ui::ManagementRow::Kind::Staff)
+        // The staff window names workers by their place in the park's staff; the scene by the person shown.
+        const auto shown_worker = [&](std::size_t staff) -> std::optional<std::size_t> {
+            const auto p = std::ranges::find_if(scene.shown_people, [&](const ShownPerson& p) { return p.staff && p.saved == staff; });
+            return p != scene.shown_people.end() ? std::optional(static_cast<std::size_t>(p - scene.shown_people.begin())) : std::nullopt;
+        };
+        if (const auto who = asks.staff.open ? shown_worker(*asks.staff.open) : std::nullopt; who && info)
+            open_person(scene, *info, *who, assets, options);
+        if (const auto who = asks.staff.centre ? shown_worker(*asks.staff.centre) : std::nullopt)
         {
-            const auto sacked = std::ranges::find_if(scene.shown_people, [&](const ShownPerson& p) { return p.staff && p.saved == asks.sack->index; });
-            if (sacked != scene.shown_people.end())
+            const glm::vec3 at = scene.shown_people[*who].pose.world[3];
+            scene.camera.target = { at.x, scene.camera.target.y, at.z };
+            scene.camera = park::on_ground(scene.camera, scene.grid);
+        }
+        if (const auto paint = asks.staff.paint; paint && shown_worker(paint->staff))
+            paint_person(scene, *shown_worker(paint->staff), paint->pot, paint->colour);
+        if (const auto change = asks.staff.change; change && shown_worker(change->first))
+        {
+            const std::size_t who = *shown_worker(change->first);
+            if (change->second.id == ui::person_control(ui::PersonControl::Sack))
             {
-                const auto shown = static_cast<std::size_t>(sacked - scene.shown_people.begin());
-                if (info && scene.shown_person == shown)
+                if (info && scene.shown_person == who)
+                {
                     info->hide();
-                fire(scene, shown);
+                    scene.shown_person.reset();
+                }
+                fire(scene, who);
+            }
+            else
+            {
+                // The info panel's changes go to the worker it shows; this one is shown for the change alone,
+                // unless the patrol button opened their panel for painting.
+                const auto kept = std::exchange(scene.shown_person, who);
+                const bool changed = change_person(scene, who, change->second);
+                if (change->second.id != ui::person_control(ui::PersonControl::PatrolPaint))
+                    scene.shown_person = kept;
+                if (changed && info && scene.shown_person == who)
+                    show_info_page(scene, *info, assets, options);
             }
         }
         // Each listed ride that may take the state takes it; the others stay as they are.

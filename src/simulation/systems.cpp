@@ -1542,10 +1542,11 @@ namespace rct3::simulation
                 std::ranges::sort(found);
                 return found;
             };
-            // `guest` and their party stop to watch `star`, each on their own side of them.
+            // `guest` and their party stop to watch `star`, each on their own side of them. A fan goes alone, the
+            // party following them.
             const auto draw_in = [&](entt::entity star, entt::entity guest, bool autograph) {
                 const auto* member = r.try_get<Member>(guest);
-                const std::vector<entt::entity> who = member != nullptr ? r.get<Party>(member->party).members : std::vector { guest };
+                const std::vector<entt::entity> who = member != nullptr && !autograph ? r.get<Party>(member->party).members : std::vector { guest };
                 const glm::vec2 off = flat(r.get<Pose>(guest).position) - flat(r.get<Pose>(star).position);
                 const float angle = std::atan2(off.x, off.y);
                 for (std::size_t k = 0; k < who.size(); ++k)
@@ -1670,21 +1671,46 @@ namespace rct3::simulation
             for (auto [v, vip] : r.view<Vip>().each())
                 vip.fans = 0;
             const auto watchers = r.view<Watching, Stride, Pose>();
-            for (const entt::entity g : sorted(watchers))
+            const auto listed = sorted(watchers);
+            for (const entt::entity g : listed)
             {
                 auto [watching, stride, pose] = watchers.get(g);
                 watching.waited.value += dt;
                 const bool gone = !r.valid(watching.star) || r.any_of<Left>(watching.star) || !r.all_of<Pose>(watching.star);
                 const auto* vip = gone ? nullptr : r.try_get<Vip>(watching.star);
-                if (gone || (watching.autograph && (vip == nullptr || vip->leaving || watching.waited.value >= kTuning.fans.give_up.value)) || (!watching.autograph && r.get_or_emplace<Show>(watching.star).moves.empty()))
+                const float apart = gone ? 0.0f : glm::distance(flat(pose.position), flat(r.get<Pose>(watching.star).position));
+                const bool tired = watching.waited.value >= kTuning.fans.give_up.value || apart >= kTuning.fans.far.value;
+                if (gone || (watching.autograph && (vip == nullptr || vip->leaving || tired)) || (!watching.autograph && r.get_or_emplace<Show>(watching.star).moves.empty()) || stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
                 {
                     r.remove<Watching>(g);
                     continue;
                 }
-                if (watching.autograph)
-                    ++r.get<Vip>(watching.star).fans;
-                if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
+                // A fan too far off walks after the VIP over the paths, to the tile they are on now; the walk is
+                // planned again whenever the VIP moves to another tile. No way there: they give up.
+                watching.chasing = watching.autograph && apart > kTuning.fans.close.value;
+                if (watching.chasing)
+                {
+                    const Stride& at = r.get<Stride>(watching.star);
+                    const NodeId target = at.progress.value < 0.5f ? at.from : at.to;
+                    if (target == stride.to)
+                        stride.route.clear();
+                    else if (stride.route.empty() || stride.route.back() != target)
+                    {
+                        auto way = paths.route(stride.to, target, Walker::Guest, r.get<Wallet>(g).cash.value);
+                        if (!way)
+                        {
+                            r.remove<Watching>(g);
+                            continue;
+                        }
+                        stride.route = std::move(*way);
+                    }
                     continue;
+                }
+                if (watching.autograph)
+                {
+                    stride.route.clear();
+                    ++r.get<Vip>(watching.star).fans;
+                }
                 const glm::vec2 star = flat(r.get<Pose>(watching.star).position);
                 const float ring = watching.autograph ? kTuning.fans.ring.value : kTuning.shows.ring.value;
                 const glm::vec2 want = star + ring * glm::vec2 { std::sin(watching.angle.value), std::cos(watching.angle.value) };
@@ -2299,7 +2325,7 @@ namespace rct3::simulation
                         continue;
                     if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
                         continue; // Off the paths; nothing to walk on
-                    if (r.any_of<Linger, Gesture, Watching>(movers[i]))
+                    if (const auto* watching = r.try_get<Watching>(movers[i]); r.any_of<Linger, Gesture>(movers[i]) || (watching != nullptr && !watching->chasing))
                         continue; // Sitting, watching or showing how they feel
                     if (const auto* vip = r.try_get<Vip>(movers[i]); vip != nullptr && vip->fans > 0 && !vip->leaving)
                         continue; // A VIP stops for the fans round them

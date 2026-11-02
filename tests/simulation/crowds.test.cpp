@@ -224,3 +224,89 @@ TEST_CASE("fans gather round a VIP, who signs for them one at a time; each autog
     CHECK(r.get<Vip>(vip).patience.value == doctest::Approx(std::max(0.0f, 1.0f - static_cast<float>(given) / 4)));
     CHECK(r.get<Vip>(vip).signatures == 0);
 }
+
+namespace
+{
+    /// A VIP let in at the gate on (0, 0) of a long path, walking on to its far end.
+    struct VipWalk
+    {
+        Sandbox park;
+        save::ObjectiveSet set;
+        entt::entity vip = entt::null;
+
+        VipWalk()
+        {
+            using T = save::VipTarget;
+            park.path({ 0, 0 }, { 14, 0 });
+            auto& r = park.world().registry;
+            r.emplace<ParkGate>(r.create(), ParkGate { park.world().paths.find({ 0, 0, 0 }).value() });
+            park.run(1);
+            set.objectives = { { .difficulty = 0 } };
+            set.conditions = { { .kind = save::ConditionKind::Vip, .id = 7, .vip = T { .next_visit = 0, .months_to_stay = 4 } } };
+            ParkMessages messages;
+            advance_vips(park.world(), set, 0, 1, messages, { });
+            vip = *r.view<Vip>().begin();
+            r.get<Vip>(vip).poll.value = 1000; // No fans of their own finding
+            Stride& stride = r.get<Stride>(vip);
+            stride.route = park.world().paths.route(stride.to, park.world().paths.find({ 14, 0, 0 }).value()).value();
+        }
+
+        float tile_of(entt::entity e)
+        {
+            return park.world().registry.get<Pose>(e).position.x / park.world().paths.tile_size;
+        }
+    };
+} // namespace
+
+TEST_CASE("a fan walks after a VIP who walks on, along the paths, and is signed once they catch up")
+{
+    VipWalk walk;
+    auto& r = walk.park.world().registry;
+    REQUIRE(walk.park.run_until([&] { return walk.tile_of(walk.vip) >= 6; }, 60));
+    const entt::entity fan = walk.park.guest({ 0, 0 });
+    r.emplace<Watching>(fan, Watching { .star = walk.vip, .autograph = true });
+    walk.park.run(1);
+    REQUIRE(r.all_of<Watching>(fan));
+    CHECK(r.get<Watching>(fan).chasing);
+    CHECK_FALSE(r.get<Stride>(fan).route.empty());
+    const auto signed_for = [&] {
+        const auto* got = r.try_get<Autographs>(fan);
+        return got != nullptr && std::ranges::contains(got->from, walk.vip);
+    };
+    REQUIRE(walk.park.run_until(signed_for, kTuning.fans.give_up.value));
+    CHECK(walk.tile_of(fan) >= 5); // Followed several tiles
+    CHECK(glm::distance(r.get<Pose>(fan).position, r.get<Pose>(walk.vip).position) <= kTuning.fans.arm.value);
+}
+
+TEST_CASE("a fan gives up on a VIP too far off, out of reach on the paths, or after a while")
+{
+    SUBCASE("too far")
+    {
+        VipWalk walk;
+        auto& r = walk.park.world().registry;
+        REQUIRE(walk.park.run_until([&] { return walk.tile_of(walk.vip) >= 13; }, 120));
+        const entt::entity fan = walk.park.guest({ 0, 0 });
+        r.emplace<Watching>(fan, Watching { .star = walk.vip, .autograph = true });
+        walk.park.run(1);
+        CHECK_FALSE(r.all_of<Watching>(fan));
+    }
+    SUBCASE("no way there")
+    {
+        VipWalk walk;
+        auto& r = walk.park.world().registry;
+        walk.park.path({ 0, 3 }, { 2, 3 }); // Apart from the VIP's path
+        const entt::entity fan = walk.park.guest({ 0, 3 });
+        r.emplace<Watching>(fan, Watching { .star = walk.vip, .autograph = true });
+        walk.park.run(1);
+        CHECK_FALSE(r.all_of<Watching>(fan));
+    }
+    SUBCASE("after a while")
+    {
+        VipWalk walk;
+        auto& r = walk.park.world().registry;
+        const entt::entity fan = walk.park.guest({ 0, 0 });
+        r.emplace<Watching>(fan, Watching { .star = walk.vip, .autograph = true, .waited = kTuning.fans.give_up });
+        walk.park.run(1);
+        CHECK_FALSE(r.all_of<Watching>(fan));
+    }
+}

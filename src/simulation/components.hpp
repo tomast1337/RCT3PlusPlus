@@ -907,7 +907,8 @@ namespace rct3::simulation
     };
 
     /// A ride's wear. Each run wears it a little, and the less reliable it is the likelier a run ends in a
-    /// breakdown, which closes it until a mechanic repairs it. Inspections win some reliability back.
+    /// breakdown, which closes it until a mechanic repairs it. Inspections win some reliability back. Stalls and
+    /// cash machines wear with time instead (`break_in`), and are never inspected.
     struct Upkeep
     {
         Share reliability { 1 };
@@ -924,6 +925,9 @@ namespace rct3::simulation
         std::array<std::uint8_t, 8> downtime { };
         std::uint8_t samples = 0; ///< Taken in the newest window
         Seconds sample_clock { }; ///< Since the last sample
+        /// A stall's or cash machine's wear: what is left before it breaks down, counted down faster the fewer
+        /// guards the park has for its guests. Zero for one to be rolled afresh; negative for rides and pools.
+        Seconds break_in { -1 };
 
         /// Share of the samples in all windows taken while down, 0..1.
         [[nodiscard]] float downtime_share() const;
@@ -979,7 +983,11 @@ namespace rct3::simulation
         Hungry, ///< Many of the guests; with no entity, as are the next three
         Thirsty,
         Tired,
-        Bursting, ///< Needing the toilet
+        Bursting,           ///< Needing the toilet
+        NoMechanicCanReach, ///< A broken attraction no free mechanic has a way to
+        BadZones,           ///< A broken attraction outside every mechanic's patrol, all of them having one
+        Breakdowns,         ///< Many of the attractions broken down at once; with no entity
+        NoPathToStaff,      ///< A worker they found no way to
         // Not the inspector's: a worker's own news (staff_care.hpp), with the worker
         WantsToQuit,
         Quit, ///< The park lets them go once told

@@ -875,6 +875,9 @@ namespace rct3::simulation
             return kind == ErrandKind::Wandering || kind == ErrandKind::Heading || kind == ErrandKind::Following || kind == ErrandKind::Waiting;
         }
 
+        void step_out(entt::registry& r, entt::entity person);
+        std::optional<NodeId> path_to_rejoin(const PathNetwork& paths, glm::vec3 ground);
+
         /// Litter, path items and staff, for one tick: after the guests have walked and bought.
         void tidy(SimWorld& world)
         {
@@ -1164,24 +1167,41 @@ namespace rct3::simulation
                 if (staff.role == StaffRole::Mechanic && staff.ride == entt::null && stride.to < paths.nodes().size())
                     free.push_back(e);
             }
+            // What a mechanic could not be sent to is told by the park's inspector, if it has one.
+            const auto inspectors = r.view<const Staff, const Rounds>();
+            const auto inspector = std::ranges::find_if(inspectors, [&](entt::entity i) { return inspectors.get<const Staff>(i).role == StaffRole::Inspector; });
             const auto send = [&](entt::entity ride, Upkeep& upkeep, std::int32_t task) {
-                // Those whose patrol takes the ride in first, then the nearest.
-                const auto ours = [&](entt::entity m) {
+                // Those whose patrol takes the ride in, the nearest first, then the nearest without one; one with
+                // a patrol keeps to it.
+                const auto patrolled = [&](entt::entity m) {
                     const auto* patrol = r.try_get<Patrol>(m);
-                    return patrol != nullptr && !patrol->tiles.empty() && spot(ride) != kNoNode && patrol->covers(paths.nodes()[spot(ride)].tile);
+                    return patrol != nullptr && !patrol->tiles.empty();
                 };
+                const auto ours = [&](entt::entity m) { return patrolled(m) && spot(ride) != kNoNode && r.get<Patrol>(m).covers(paths.nodes()[spot(ride)].tile); };
                 std::optional<std::vector<NodeId>> best;
                 auto who = free.end();
+                bool asked = false;    // Any free to do it
+                bool zoned_out = true; // Every one of them by their patrol
                 for (auto m = free.begin(); m != free.end(); ++m)
+                {
                     if ((r.get<Staff>(*m).tasks & task) == 0)
                         continue; // Told not to
-                    else if (auto way = paths.route(r.get<Stride>(*m).to, spot(ride), Walker::Staff); way && (!best || std::pair(!ours(*m), way->size()) < std::pair(!ours(*who), best->size())))
+                    asked = true;
+                    zoned_out = zoned_out && patrolled(*m) && !ours(*m);
+                    if (patrolled(*m) && !ours(*m))
+                        continue;
+                    if (auto way = paths.route(r.get<Stride>(*m).to, spot(ride), Walker::Staff); way && (!best || std::pair(!ours(*m), way->size()) < std::pair(!ours(*who), best->size())))
                     {
                         best = std::move(way);
                         who = m;
                     }
+                }
                 if (who == free.end())
+                {
+                    if (asked && spot(ride) != kNoNode && inspector != inspectors.end())
+                        tell(r, *inspector, zoned_out ? Finding::BadZones : Finding::NoMechanicCanReach, ride, now);
                     return;
+                }
                 r.get<Staff>(*who).ride = ride;
                 r.get<Stride>(*who).route = std::move(*best);
                 upkeep.mechanic = *who;
@@ -1211,6 +1231,27 @@ namespace rct3::simulation
                 }
                 if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
                     continue;
+                // Their path taken up from under them: off the job in hand, they stand lost a while, then make
+                // straight for the nearest path.
+                if (paths.nodes()[stride.from].removed && stride.to == stride.from)
+                {
+                    auto* lost = r.try_get<Lost>(e);
+                    if (lost == nullptr)
+                    {
+                        step_out(r, e);
+                        r.emplace<Lost>(e, ticks(kTuning.walking.lost_wait.value));
+                    }
+                    else if (lost->left == 0 || --lost->left == 0)
+                    {
+                        r.remove<Lost>(e);
+                        if (const auto node = path_to_rejoin(paths, pose.position))
+                        {
+                            r.remove<Errand, Stride>(e);
+                            r.emplace<Dropped>(e, Dropped { .ground = pose.position.y, .node = *node });
+                        }
+                    }
+                    continue;
+                }
                 Rounds* rounds = staff.role == StaffRole::Inspector ? &r.get_or_emplace<Rounds>(e) : nullptr;
                 if (rounds != nullptr)
                     rounds->gap.value -= dt;
@@ -1367,6 +1408,20 @@ namespace rct3::simulation
                         if (static_cast<float>(*most) > kTuning.inspector.crowd.value * static_cast<float>(guests) && std::ranges::count(wanting, *most) == 1)
                             tell(r, e, static_cast<Finding>(std::to_underlying(Finding::Hungry) + (most - wanting.begin())), entt::null, now);
                     }
+                    // With the rides, whether many of the attractions that can break are broken down.
+                    if (task == kTrackedRidesTask || task == kFlatRidesTask)
+                    {
+                        std::size_t breakable = 0;
+                        std::size_t broken = 0;
+                        for (const auto [a, upkeep] : r.view<const Upkeep>().each())
+                            if (r.all_of<CycleRide>(a) || upkeep.break_in.value >= 0)
+                            {
+                                ++breakable;
+                                broken += upkeep.broken ? 1 : 0;
+                            }
+                        if (broken > 1 && static_cast<float>(broken) >= kTuning.inspector.breakdowns.value * static_cast<float>(breakable))
+                            tell(r, e, Finding::Breakdowns, entt::null, now);
+                    }
                     bool visiting = false;
                     for (const entt::entity w : task == kStaffTask ? sorted(staff_view) : std::vector<entt::entity> { })
                     {
@@ -1376,7 +1431,10 @@ namespace rct3::simulation
                             continue;
                         auto way = paths.route(at, r.get<Stride>(w).to, Walker::Staff);
                         if (!way)
+                        {
+                            tell(r, e, Finding::NoPathToStaff, w, now);
                             continue;
+                        }
                         rounds->seen.emplace_back(w, now);
                         rounds->watching = w;
                         rounds->chased_from = now;
@@ -2961,6 +3019,37 @@ namespace rct3::simulation
                 for (const entt::entity m : followers)
                     if (r.get<Mood>(m).nausea.value < kTuning.needs.max_nausea.value && random::chance(r.get<Dice>(m).state, kTuning.walking.join_chance.value))
                         join(m);
+            }
+        }
+
+        phase.emplace("Stalls");
+        // Stalls and cash machines wear with time while open, the slower the more guards (by their training) the
+        // park has for its guests, and break down, closing until a mechanic mends them.
+        {
+            float guards = 0;
+            for (const auto [e, staff] : r.view<const Staff>().each())
+                guards += staff.role == StaffRole::Guard ? static_cast<float>(1 + staff.training) / 4 : 0;
+            const auto inside = r.view<const Visitor>(entt::exclude<Left>);
+            const auto guests = static_cast<float>(std::ranges::distance(inside.begin(), inside.end()));
+            const float pace = 1 / (1 + guards * kTuning.wear.guard_guests / std::max(guests, kTuning.wear.guard_guests));
+            for (const entt::entity e : sorted(r.view<Upkeep, Attraction>()))
+            {
+                auto& upkeep = r.get<Upkeep>(e);
+                auto& attraction = r.get<Attraction>(e);
+                if (upkeep.break_in.value < 0 || upkeep.broken || !attraction.open)
+                    continue;
+                if (upkeep.break_in.value == 0)
+                {
+                    if (!r.all_of<Dice>(e))
+                        r.emplace<Dice>(e, dice_for(world, e));
+                    upkeep.break_in.value = static_cast<float>(random::between(r.get<Dice>(e).state, kTuning.wear.stall_shortest.value, kTuning.wear.stall_longest.value));
+                }
+                else if ((upkeep.break_in.value = std::max(upkeep.break_in.value - pace * dt, 0.0f)) == 0)
+                {
+                    upkeep.broken = true;
+                    ++upkeep.breakdowns;
+                    attraction.open = false;
+                }
             }
         }
 

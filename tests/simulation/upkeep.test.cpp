@@ -207,22 +207,6 @@ TEST_CASE("a ride breaking down breaks in one of the ways its sort can, and a sa
     CHECK(upkeep_of(saved).kind == Breakdown::None);
 }
 
-TEST_CASE("a mechanic leaves their patrol for a breakdown, and goes back to it after")
-{
-    Sandbox park;
-    park.path({ 0, 0 }, { 8, 0 });
-    const auto ride = park.flat_ride("Twister", { 8, 0 }, 0, { .capacity = 2, .cycle_seconds = 10 });
-    auto& r = park.world().registry;
-    r.emplace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = -1 });
-    const auto mechanic = park.staff(StaffRole::Mechanic, { 0, 0 });
-    r.emplace<Patrol>(mechanic, Patrol { { { 0, 0 }, { 1, 0 }, { 2, 0 } } });
-    CHECK(park.run_until([&] { return !r.get<Upkeep>(ride).broken; }, 120));
-    const auto& nodes = park.world().paths.nodes();
-    CHECK(park.run_until([&] { return nodes[r.get<Stride>(mechanic).from].tile.col <= 2; }, 120));
-    park.run_seconds(300);
-    CHECK(nodes[r.get<Stride>(mechanic).to].tile.col <= 2);
-}
-
 TEST_CASE("a ride's downtime counts the samples it was down in, window by window")
 {
     Sandbox park;

@@ -2035,10 +2035,12 @@ namespace rct3::scene
         attraction.state = state;
         if (state == save::AttractionState::Open)
             attraction.flags &= ~save::AttractionCommon::kNeverOpened;
-        for (auto [_, a] : scene.sim.registry.view<simulation::Attraction>().each())
+        for (auto [e, a] : scene.sim.registry.view<simulation::Attraction>().each())
             if (a.saved == attraction.id)
             {
-                a.open = state == save::AttractionState::Open;
+                // A broken one stays shut until mended, opening once it is.
+                const auto* upkeep = scene.sim.registry.try_get<simulation::Upkeep>(e);
+                a.open = state == save::AttractionState::Open && (upkeep == nullptr || !upkeep->broken);
                 a.testing = state == save::AttractionState::Testing;
             }
     }
@@ -3014,9 +3016,9 @@ namespace rct3::scene
                 if (auto* findings = scene.sim.registry.ctx().find<simulation::Findings>())
                 {
                     using enum simulation::Finding;
-                    constexpr std::array<std::string_view, 16> kKeys { // By Finding
-                                                                       "Thought_PI_Stall_TooExpensive1", "Thought_PI_Stall_TooCheap1", "Thought_PI_Ride_LongQueueTime1", "Thought_PI_Ride_NoPathToEntrance1", "Thought_PI_General_NoMaintenanceManNear1", "Thought_PI_Vista_InappropriateStyle1", "Thought_PI_Staff_Lazy1", "Thought_PI_Staff_Unhappy1", "Thought_PI_PoolDirty1", "Thought_PI_PoolVeryDirty1", "Thought_PI_Guests_Hungry1", "Thought_PI_Guests_Thirsty1", "Thought_PI_Guests_Tired1",
-                                                                       "Thought_PI_Guests_Toilet1",      "StaffMessage_WantsToResign", "StaffMessage_Resigned"
+                    constexpr std::array<std::string_view, 20> kKeys { // By Finding
+                                                                       "Thought_PI_Stall_TooExpensive1", "Thought_PI_Stall_TooCheap1", "Thought_PI_Ride_LongQueueTime1", "Thought_PI_Ride_NoPathToEntrance1", "Thought_PI_General_NoMaintenanceManNear1", "Thought_PI_Vista_InappropriateStyle1", "Thought_PI_Staff_Lazy1",      "Thought_PI_Staff_Unhappy1",       "Thought_PI_PoolDirty1",      "Thought_PI_PoolVeryDirty1",
+                                                                       "Thought_PI_Guests_Hungry1",      "Thought_PI_Guests_Thirsty1", "Thought_PI_Guests_Tired1",       "Thought_PI_Guests_Toilet1",         "Thought_PI_NoMechanicsCanReachRide1",      "Thought_PI_MechanicBadZones1",         "Thought_PI_Park_Breakdowns1", "Thought_PI_Staff_NoPathToGetTo1", "StaffMessage_WantsToResign", "StaffMessage_Resigned"
                     };
                     std::vector<entt::entity> quitting;
                     const auto& r = scene.sim.registry;
@@ -3034,7 +3036,7 @@ namespace rct3::scene
                             if (const auto* door = r.try_get<simulation::PoolDoor>(at))
                                 if (const auto room = std::ranges::find_if(scene.pools.rooms, [&](const auto& room) { return room.col == door->col && room.row == door->row; }); room != scene.pools.rooms.end())
                                     message.subject_name = room->complex_name;
-                            message.panel = ui::message_panel(finding == TooDear || finding == TooCheap ? ui::AttractionTab::Items : finding == NoMechanic ? ui::AttractionTab::Maintenance : ui::AttractionTab::Mode);
+                            message.panel = ui::message_panel(finding == TooDear || finding == TooCheap ? ui::AttractionTab::Items : (finding == NoMechanic || finding == NoMechanicCanReach || finding == BadZones) && !stall ? ui::AttractionTab::Maintenance : ui::AttractionTab::Mode);
                         }
                         // shortcut: a worker is named but cannot be gone to from the message; add it once messages open people.
                         else if (const auto shown = std::ranges::find(scene.shown_people, at, &ShownPerson::guest); r.valid(at) && shown != scene.shown_people.end() && shown->staff && shown->saved < scene.people.staff.size())
@@ -3206,7 +3208,17 @@ namespace rct3::scene
                 {
                     const auto at = std::ranges::find(scene.ride_entities, e);
                     const auto index = static_cast<std::size_t>(at - scene.ride_entities.begin());
-                    const auto tell = [&](std::string_view key) { simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = ui::message_panel(ui::AttractionTab::Maintenance), .field_key = std::string(ui::breakdown_key(static_cast<save::BreakdownKind>(std::to_underlying(upkeep.kind)))) }); };
+                    // Stalls and cash machines break with time and have no maintenance page: their messages open
+                    // the window, and the window shows the state.
+                    const bool stall = upkeep.break_in.value >= 0;
+                    const auto tell = [&](std::string_view key) {
+                        if (stall)
+                            simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = attraction.saved != 0 ? std::optional(attraction.saved) : std::nullopt, .subject_name = attraction.name, .panel = ui::message_panel(ui::AttractionTab::View) });
+                        else
+                            simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = ui::message_panel(ui::AttractionTab::Maintenance), .field_key = std::string(ui::breakdown_key(static_cast<save::BreakdownKind>(std::to_underlying(upkeep.kind)))) });
+                    };
+                    const auto* shop = scene.sim.registry.try_get<simulation::Shop>(e);
+                    const bool cash = shop != nullptr && shop->product == simulation::Product::CashMachine;
                     const auto unreliable = std::ranges::find(scene.unreliable_rides, e);
                     if ((upkeep.reliability.value < kLowReliability) != (unreliable != scene.unreliable_rides.end()))
                     {
@@ -3222,7 +3234,20 @@ namespace rct3::scene
                     if (upkeep.broken && told != scene.broken_rides.end() && (told->unrepaired += game_seconds) >= kStillBrokenReminder)
                     {
                         told->unrepaired = 0;
-                        tell("RideStillBrokenMessage");
+                        tell(!stall ? "RideStillBrokenMessage" : cash ? "CashMachineStillBrokenMessage" : "FoodStallStillBrokenMessage");
+                    }
+                    // A broken stall's or cash machine's state into the saved one, for its window to show.
+                    if (stall && (upkeep.broken || told != scene.broken_rides.end()))
+                    {
+                        const auto mine = [&](const save::AttractionCommon& base) { return base.id == attraction.saved; };
+                        const auto s = std::ranges::find_if(scene.rides.stalls, mine, &save::Stall::base);
+                        const auto c = std::ranges::find_if(scene.rides.rides, mine, &save::Ride::base);
+                        if (save::AttractionCommon* base = s != scene.rides.stalls.end() ? &s->base : c != scene.rides.rides.end() ? &c->base : nullptr)
+                        {
+                            using enum save::RepairStatus;
+                            base->repair_status = !upkeep.broken ? Fine : upkeep.mechanic == entt::null ? MechanicCalled : MechanicOnTheWay;
+                            base->flags = upkeep.broken ? base->flags | save::AttractionCommon::kBrokenDown : base->flags & ~save::AttractionCommon::kBrokenDown;
+                        }
                     }
                     if (upkeep.broken == (told != scene.broken_rides.end()))
                         continue;
@@ -3230,6 +3255,11 @@ namespace rct3::scene
                         scene.broken_rides.push_back({ e });
                     else
                         scene.broken_rides.erase(told);
+                    if (stall)
+                    {
+                        tell(!upkeep.broken ? "RideFixedMessage" : cash ? "CashMachineBrokenMessage" : "FoodStallBrokenMessage");
+                        continue;
+                    }
                     // Each kind of breakdown has its own message, in the order the kinds are numbered.
                     constexpr std::array<std::string_view, 9> kBroken = { "RideBrokenMessage", "RideBrokenMessageEmergencyStop", "RideBrokenMessageRestraintsFailOpen", "RideBrokenMessageRestraintsFailClose", "RideBrokenMessageDoorsFailOpen", "RideBrokenMessageDoorsFailClose", "RideBrokenMessageStuckLeavingStation", "RideBrokenMessageBrakesFail", "RideBrokenMessageControlFail" };
                     const auto kind = static_cast<std::size_t>(std::to_underlying(upkeep.kind));

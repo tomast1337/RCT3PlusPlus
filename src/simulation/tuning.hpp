@@ -320,6 +320,13 @@ namespace rct3::simulation::tuning
         Share repair_gain { 0.02f };    ///< Reliability a repair wins back
         Share inspect_gain { 0.05f };   ///< And an inspection
         Share flow_smoothing { 0.25f }; ///< Weight of the newest departure in a ride's riders an hour
+        /// Chosen by eye: a stall's or cash machine's time to a breakdown is rolled between these, counted
+        /// down at full speed in a park with no guards.
+        Seconds stall_shortest { 1800 };
+        Seconds stall_longest { 5400 };
+        /// Chosen by eye: guests one fully trained guard looks after, halving how fast stalls wear; with
+        /// fewer guests, each guard counts as looking after this many. Untrained guards count a quarter.
+        float guard_guests = 200;
     };
 
     /// How content and lazy staff are, and their pay and training.
@@ -492,6 +499,7 @@ namespace rct3::simulation::tuning
         Share lazy { 0.6f };           ///< Chosen by eye: laziness past which they call a worker lazy
         Share unhappy { 0.3f };        ///< Chosen by eye: happiness under which they call a worker unhappy
         Share filthy { 0.8f };         ///< Chosen by eye: pool dirt from which they call it dangerous; dirty from pools.bad
+        Share breakdowns { 0.2f };     ///< Chosen by eye: of the attractions that can break, how many broken at once for them to say so
     };
 
     /// Rides with more than one station as ways across the park: a guest going far may ride from one station

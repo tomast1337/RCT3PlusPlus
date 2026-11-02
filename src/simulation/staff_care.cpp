@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <variant>
 
 namespace rct3::simulation
 {
@@ -57,6 +58,42 @@ namespace rct3::simulation
         else
             staff.laziness.value -= kTuning.staff.lazy_fade.value * seconds;
         staff.laziness.value = std::clamp(staff.laziness.value, 0.0f, 1.0f);
+    }
+
+    void take_saved_work(Staff& staff, const save::Staff& saved)
+    {
+        if (const auto* w = std::get_if<save::HandymanWork>(&saved.work))
+        {
+            staff.swept = w->paths_swept;
+            staff.emptied = w->bins_emptied;
+        }
+        else if (const auto* m = std::get_if<save::MechanicWork>(&saved.work))
+        {
+            staff.fixed = m->objects_fixed;
+            staff.inspected = m->objects_inspected;
+        }
+    }
+
+    std::vector<ThoughtKind> staff_thoughts(Staff& staff)
+    {
+        const auto& t = kTuning.staff;
+        std::vector<ThoughtKind> out;
+        if (staff.load.value < t.bored.value)
+            out.push_back(ThoughtKind::StaffBored);
+        else if (staff.load.value > t.overworked.value)
+            out.push_back(staff.wage_level == 0 ? ThoughtKind::StaffUnderpaid : ThoughtKind::StaffTooBusy);
+        staff.miserable = staff.happiness.value < t.miserable.value ? staff.miserable + 1 : 0;
+        if (staff.miserable > t.quit_after)
+            out.push_back(ThoughtKind::StaffWantToQuit);
+        else if (staff.miserable > 0)
+            out.push_back(ThoughtKind::StaffMiserable);
+        else if (staff.laziness.value >= t.tired.value)
+            out.push_back(ThoughtKind::StaffTired);
+        else if (staff.happiness.value >= t.glad.value)
+            out.push_back(ThoughtKind::StaffHappy);
+        else if (staff.laziness.value <= t.keen.value)
+            out.push_back(ThoughtKind::StaffMotivated);
+        return out;
     }
 
     float work_slowdown(const Staff& staff)

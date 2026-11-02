@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/person_info.hpp"
 
+#include "save/model/park.hpp"
 #include "strings/unicode.hpp"
 #include "ui/money_text.hpp"
+#include "ui/save_text.hpp"
 #include "ui/thought_text.hpp"
 
 #include <algorithm>
@@ -361,12 +363,20 @@ namespace rct3::ui
             add(page, strings, "Guest_TimeInPark", time_in_park(g.counters.minutes_in_park));
         }
 
-        void staff_stats(InfoPage& page, const save::Staff& s, std::optional<std::uint32_t> items_mended, const StringTable& strings)
+        void staff_stats(InfoPage& page, const PersonFacts& f, const StringTable& strings, const InfoUnits& units)
         {
-            // The day they were hired is not in the save as read.
-            add(page, strings, "Employee_DateHired", std::u16string(kMissingValue));
-            add_half(page, strings, "Guest_Happiness", percent(s.happiness));
+            const save::Staff& s = *f.staff;
+            const std::optional<std::uint32_t> items_mended = f.items_mended;
+            // Staff a scenario starts with were hired before its calendar began: they show its first month.
+            const save::CalendarDate hired = save::GameClock::date_at(s.person.start_time, f.zero_time);
+            add(page, strings, "Employee_DateHired", date_text(strings, 0, hired.month, static_cast<std::int32_t>(hired.year + 1)));
+            // How they feel, as a face and in words, as the staff list shows it.
+            constexpr std::array<std::string_view, 3> kFaces { "Staff_MoodOKIcon", "Staff_MoodHappyIcon", "Staff_MoodSadIcon" };                         // By Mood
+            constexpr std::array<std::string_view, 3> kWords { "StaffWindow_Happiness_OK", "StaffWindow_Happiness_Happy", "StaffWindow_Happiness_Sad" }; // By Mood
+            const auto mood = std::to_underlying(happiness_mood(s.happiness));
+            page.lines.push_back({ .label = text(strings, kWords[mood]), .value = { }, .half = true, .name = "StaffWindow_MoodHelp", .icon = std::string(kFaces[mood]) });
             add_half(page, strings, "StaffWindow_LazinessColumnHelp", percent(s.laziness));
+            add_half(page, strings, "StaffWindow_SortBy_Warnings", count(s.warnings));
             if (const auto* w = std::get_if<save::HandymanWork>(&s.work))
             {
                 add_half(page, strings, "Handyman_PathsSwept", count(w->paths_swept));
@@ -386,7 +396,7 @@ namespace rct3::ui
                 add_half(page, strings, "AnimalKeeper_DungCleared", count(k->dung_cleared));
                 add_half(page, strings, "AnimalKeeper_TroughsFilled", count(k->troughs_filled));
             }
-            // The money of each level is the job's own, which the save does not hold: the level is shown.
+            // The level, and what it pays an hour.
             InfoControl wage;
             wage.id = person_control(PersonControl::Wage);
             wage.name = "Employee_Wage";
@@ -394,6 +404,8 @@ namespace rct3::ui
             wage.label = text(strings, "Employee_Wage");
             wage.value = std::clamp(s.wage_level, 0, 2);
             wage.maximum = 2;
+            if (f.wage)
+                wage.text = money_text(units.currency, *f.wage);
             page.controls.push_back(std::move(wage));
             add_half(page, strings, "Rct3pp_Training", ascii(std::format("{}/{}", std::clamp(s.training, 0, kMostTraining), kMostTraining)));
             if (s.training < kMostTraining)
@@ -404,6 +416,9 @@ namespace rct3::ui
                 train.kind = InfoControlKind::Button;
                 train.label = text(strings, "Rct3pp_Train");
                 train.text = train.label;
+                train.help = text(strings, "StaffWindow_TrainingText1");
+                if (const auto at = train.help.find(u"%AMOUNT%"); at != std::u16string::npos)
+                    train.help.replace(at, std::u16string_view(u"%AMOUNT%").size(), money_text(units.currency, f.training_cost));
                 page.controls.push_back(std::move(train));
             }
         }
@@ -636,7 +651,7 @@ namespace rct3::ui
                     }
                 }
                 else if (facts.staff != nullptr)
-                    staff_stats(page, *facts.staff, facts.items_mended, strings);
+                    staff_stats(page, facts, strings, units);
                 break;
             case PersonTab::Cash:
                 if (facts.guest != nullptr)

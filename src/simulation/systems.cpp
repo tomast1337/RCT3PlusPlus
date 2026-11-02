@@ -1139,7 +1139,7 @@ namespace rct3::simulation
                 if (staff.role == StaffRole::Mechanic && staff.ride == entt::null && stride.to < paths.nodes().size())
                     free.push_back(e);
             }
-            const auto send = [&](entt::entity ride, Upkeep& upkeep) {
+            const auto send = [&](entt::entity ride, Upkeep& upkeep, std::int32_t task) {
                 // Those whose patrol takes the ride in first, then the nearest.
                 const auto ours = [&](entt::entity m) {
                     const auto* patrol = r.try_get<Patrol>(m);
@@ -1148,7 +1148,9 @@ namespace rct3::simulation
                 std::optional<std::vector<NodeId>> best;
                 auto who = free.end();
                 for (auto m = free.begin(); m != free.end(); ++m)
-                    if (auto way = paths.route(r.get<Stride>(*m).to, spot(ride), Walker::Staff); way && (!best || std::pair(!ours(*m), way->size()) < std::pair(!ours(*who), best->size())))
+                    if ((r.get<Staff>(*m).tasks & task) == 0)
+                        continue; // Told not to
+                    else if (auto way = paths.route(r.get<Stride>(*m).to, spot(ride), Walker::Staff); way && (!best || std::pair(!ours(*m), way->size()) < std::pair(!ours(*who), best->size())))
                     {
                         best = std::move(way);
                         who = m;
@@ -1167,7 +1169,7 @@ namespace rct3::simulation
                     auto& upkeep = r.get<Upkeep>(ride);
                     const bool due = broken ? upkeep.broken : upkeep.called || (upkeep.inspect_every.value >= 0 && upkeep.since_inspection.value >= upkeep.inspect_every.value);
                     if (!free.empty() && due && upkeep.mechanic == entt::null)
-                        send(ride, upkeep);
+                        send(ride, upkeep, broken ? kFixRidesTask : kInspectRidesTask);
                 }
 
             for (const entt::entity e : sorted(staff_view))
@@ -1178,7 +1180,7 @@ namespace rct3::simulation
                 {
                     if (r.get<Errand>(e).kind != ErrandKind::Wandering)
                         continue;
-                    r.remove<Needs, Mood, Wallet, Thrill, Thoughts, Crossing>(e);
+                    r.remove<Needs, Mood, Wallet, Thrill, Crossing>(e);
                     r.get<Errand>(e) = { };
                     stride.route.clear();
                 }
@@ -1190,6 +1192,12 @@ namespace rct3::simulation
                 if (staff.ride != entt::null && !r.valid(staff.ride))
                     staff.ride = entt::null;
                 care_for(staff, (staff.busy.value > 0 && !staff.resting) || staff.ride != entt::null, dt);
+                if (staff.think.value -= dt; staff.think.value <= 0)
+                {
+                    staff.think = kTuning.staff.think;
+                    for (const ThoughtKind kind : staff_thoughts(staff))
+                        think(r, e, kind, entt::null, now);
+                }
                 // A lazy one, with nothing to do, stops where they are now and then.
                 if (staff.busy.value == 0 && staff.ride == entt::null && random::chance(dice.state, rest_chance(staff) * dt))
                 {
@@ -1205,6 +1213,7 @@ namespace rct3::simulation
                     {
                         // Done at the ride: repaired and open again, or inspected.
                         auto& upkeep = r.get<Upkeep>(staff.ride);
+                        ++(upkeep.broken ? staff.fixed : staff.inspected);
                         if (upkeep.broken)
                             r.get<Attraction>(staff.ride).open = true;
                         upkeep.reliability.value = std::min(upkeep.reliability.value + (upkeep.broken ? kTuning.wear.repair_gain.value : kTuning.wear.inspect_gain.value), 1.0f);
@@ -1270,6 +1279,7 @@ namespace rct3::simulation
                         auto& here = litter_at[at];
                         r.destroy(here.back());
                         here.pop_back();
+                        ++staff.swept;
                         return kTuning.handymen.sweep.value;
                     }
                     for (const entt::entity i : items(at))
@@ -1284,6 +1294,7 @@ namespace rct3::simulation
                         if (auto* bin = r.try_get<Bin>(i); empties && bin != nullptr && bin->contents > 0 && bin->contents >= kTuning.handymen.empty_at.value * bin->capacity)
                         {
                             bin->contents = 0;
+                            ++staff.emptied;
                             return kTuning.handymen.empty.value;
                         }
                     }

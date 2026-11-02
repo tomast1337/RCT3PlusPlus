@@ -85,3 +85,36 @@ TEST_CASE("a warning shakes off laziness, but upsets a worker who was not lazy")
     CHECK(good.happiness.value < 0.9f);
     CHECK(good.warnings == 1);
 }
+
+TEST_CASE("staff think about their work and how they feel")
+{
+    const auto thinks = [](Staff s) { return staff_thoughts(s); };
+    using enum ThoughtKind;
+    CHECK(thinks({ .happiness = 1, .load = 0 }) == std::vector { StaffBored, StaffHappy });
+    CHECK(thinks({ .wage_level = 2, .happiness = 0.6f, .load = 1 }) == std::vector { StaffTooBusy, StaffMotivated });
+    CHECK(thinks({ .wage_level = 0, .happiness = 0.6f, .laziness = 0.7f, .load = 1 }) == std::vector { StaffUnderpaid, StaffTired });
+
+    SUBCASE("one miserable for long thinks of quitting, and stops once content again")
+    {
+        Staff sad { .happiness = 0.1f, .load = 0.5f };
+        CHECK(staff_thoughts(sad) == std::vector { StaffMiserable });
+        for (int i = 0; i < 100 && staff_thoughts(sad) != std::vector { StaffWantToQuit }; ++i)
+            ;
+        CHECK(staff_thoughts(sad) == std::vector { StaffWantToQuit });
+        sad.happiness.value = 0.6f;
+        CHECK(staff_thoughts(sad) == std::vector { StaffMotivated });
+        CHECK(sad.miserable == 0);
+    }
+}
+
+TEST_CASE("staff take up the work their save counts")
+{
+    Staff handyman;
+    take_saved_work(handyman, { .work = rct3::save::HandymanWork { .bins_emptied = 4, .paths_swept = 6 } });
+    CHECK(handyman.swept == 6);
+    CHECK(handyman.emptied == 4);
+    Staff mechanic;
+    take_saved_work(mechanic, { .work = rct3::save::MechanicWork { .objects_fixed = 2, .objects_inspected = 1 } });
+    CHECK(mechanic.fixed == 2);
+    CHECK(mechanic.inspected == 1);
+}

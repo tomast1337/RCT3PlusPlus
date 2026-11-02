@@ -531,7 +531,7 @@ namespace rct3::scene
             return ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index].base : nullptr;
         }
 
-        /// What the saved worker's window shows of `staff`'s pay, training and mood.
+        /// What the saved worker's window shows of `staff`'s pay, training, mood and work done.
         void copy_mood(const simulation::Staff& staff, save::Staff& saved)
         {
             saved.wage_level = staff.wage_level;
@@ -539,6 +539,16 @@ namespace rct3::scene
             saved.warnings = staff.warnings;
             saved.happiness = staff.happiness.value;
             saved.laziness = staff.laziness.value;
+            if (auto* w = std::get_if<save::HandymanWork>(&saved.work))
+            {
+                w->paths_swept = staff.swept;
+                w->bins_emptied = staff.emptied;
+            }
+            else if (auto* m = std::get_if<save::MechanicWork>(&saved.work))
+            {
+                m->objects_fixed = staff.fixed;
+                m->objects_inspected = staff.inspected;
+            }
         }
 
         ui::PersonFacts person_facts(const ParkScene& scene, std::size_t shown)
@@ -549,8 +559,15 @@ namespace rct3::scene
             if (shown >= scene.shown_people.size())
                 return f;
             const ShownPerson& p = scene.shown_people[shown];
+            f.zero_time = scene.park.zero_time;
             if (p.staff && p.saved < scene.people.staff.size())
+            {
                 f.staff = &scene.people.staff[p.saved];
+                simulation::Staff pay { .training = f.staff->training };
+                simulation::set_wage_level(pay, f.staff->wage_level);
+                f.wage = pay.wage.value;
+                f.training_cost = simulation::training_cost(pay);
+            }
             else if (!p.staff && p.saved < scene.people.guests.size())
                 f.guest = &scene.people.guests[p.saved];
             if (const entt::entity e = shown_staff(scene); e != entt::null)
@@ -3063,13 +3080,14 @@ namespace rct3::scene
                         kept.mood_now.nausea = mood->nausea.value;
                     }
                 }
-                // New thoughts go into the guests' saved thoughts, newest first, for their windows to show.
+                // New thoughts go into the people's saved thoughts, newest first, for their windows to show. A
+                // worker thinking of quitting is told to the player.
                 for (ShownPerson& p : scene.shown_people)
                 {
-                    const auto* thoughts = p.staff || p.guest == entt::null || p.saved >= scene.people.guests.size() ? nullptr : scene.sim.registry.try_get<simulation::Thoughts>(p.guest);
+                    const auto* thoughts = p.guest == entt::null || !scene.sim.registry.valid(p.guest) || p.saved >= (p.staff ? scene.people.staff.size() : scene.people.guests.size()) ? nullptr : scene.sim.registry.try_get<simulation::Thoughts>(p.guest);
                     if (thoughts == nullptr || thoughts->had == p.thoughts_seen)
                         continue;
-                    auto& slots = scene.people.guests[p.saved].person.thoughts;
+                    auto& slots = p.staff ? scene.people.staff[p.saved].person.thoughts : scene.people.guests[p.saved].person.thoughts;
                     for (std::size_t k = std::min<std::size_t>(thoughts->had - p.thoughts_seen, thoughts->recent.size()); k-- > 0;)
                     {
                         const simulation::Thought& t = thoughts->recent[k];
@@ -3077,6 +3095,8 @@ namespace rct3::scene
                         const auto* about = scene.sim.registry.valid(t.about) ? scene.sim.registry.try_get<simulation::Attraction>(t.about) : nullptr;
                         std::shift_right(slots.begin(), slots.end(), 1);
                         slots[0] = { .about = { about != nullptr ? about->saved : 0 }, .id = std::to_underlying(t.kind), .time = newest + 1, .variant = static_cast<std::int32_t>(t.variant) };
+                        if (p.staff && t.kind == simulation::ThoughtKind::StaffWantToQuit)
+                            simulation::post(scene.park.messages, { .text_key = "Thought_PI_Staff_Unhappy1", .subject_name = strings::to_utf8(ui::person_name({ .staff = &scene.people.staff[p.saved] }, *assets.strings)) });
                     }
                     p.thoughts_seen = thoughts->had;
                 }

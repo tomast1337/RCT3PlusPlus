@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/person_info.hpp"
 
+#include "save/model/park.hpp"
+
 #include <algorithm>
 #include <doctest/doctest.h>
 
@@ -169,6 +171,34 @@ TEST_CASE("a guest without a favourite says so, and a member of staff shows thei
     CHECK(person_page(PersonTab::General, staff(p), s, units).controls.at(0).text == u"Fixer 2");
     // A person who is not there gets an empty page.
     CHECK(person_page(PersonTab::Stats, PersonFacts { }, s, units).title.empty());
+}
+
+TEST_CASE("a worker's statistics show when they were hired, their mood, warnings, pay and the cost of training")
+{
+    StringTable s = table();
+    s.add("Employee_DateHired", u"Since:");
+    s.add("StaffWindow_Happiness_Sad", u"Glum");
+    s.add("StaffWindow_SortBy_Warnings", u"Told off:");
+    s.add("StaffWindow_TrainingText1", u"Costs %AMOUNT%.");
+    s.add("Year", u"Year");
+    const InfoUnits units { };
+    Park p = sample_park();
+    save::Staff& mechanic = p.people.staff[0];
+    mechanic.person.start_time = 1000 + 2 * save::GameClock::kUnitsPerYear + save::GameClock::kUnitsPerMonth;
+    mechanic.happiness = 0.1f;
+    mechanic.warnings = 2;
+    mechanic.training = 0;
+    PersonFacts f = staff(p);
+    f.zero_time = 1000;
+    f.wage = 250;
+    f.training_cost = 5000;
+    const InfoPage stats = person_page(PersonTab::Stats, f, s, units);
+    CHECK(value(stats, u"Since:").ends_with(u", Year 3"));
+    REQUIRE(line(stats, u"Glum") != nullptr);
+    CHECK(line(stats, u"Glum")->icon == "Staff_MoodSadIcon");
+    CHECK(value(stats, u"Told off:") == u"2");
+    CHECK(stats.controls.at(0).text == money_text(units.currency, 250));
+    CHECK(stats.controls.at(1).help == u"Costs " + money_text(units.currency, 5000) + u".");
 }
 
 TEST_CASE("each job has its own tabs, and its controls are written from the save")

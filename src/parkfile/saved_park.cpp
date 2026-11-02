@@ -2,6 +2,7 @@
 #include "parkfile/saved_park.hpp"
 
 #include "parkfile/binary.hpp"
+#include "simulation/staff_care.hpp"
 #include "simulation/systems.hpp"
 
 #include <algorithm>
@@ -196,8 +197,11 @@ namespace rct3::parkfile
                 continue;
             const entt::entity e = r.create();
             // The tasks the player set are on the worker's page.
-            const std::int32_t tasks = w.look >= 0 && static_cast<std::size_t>(w.look) < people.model.staff.size() ? people.model.staff[static_cast<std::size_t>(w.look)].task_flags : kEveryTask;
-            r.emplace<Staff>(e, Staff { .role = w.role, .tasks = tasks, .wage = w.wage, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = w.happiness, .laziness = w.laziness });
+            const bool paged = w.look >= 0 && static_cast<std::size_t>(w.look) < people.model.staff.size();
+            Staff staff { .role = w.role, .tasks = paged ? people.model.staff[static_cast<std::size_t>(w.look)].task_flags : kEveryTask, .wage = w.wage, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = w.happiness, .laziness = w.laziness };
+            if (paged)
+                take_saved_work(staff, people.model.staff[static_cast<std::size_t>(w.look)]);
+            r.emplace<Staff>(e, staff);
             r.emplace<Pose>(e, w.position, w.heading, w.position, w.heading);
             if (w.patrol)
                 r.emplace<Patrol>(e, *w.patrol);

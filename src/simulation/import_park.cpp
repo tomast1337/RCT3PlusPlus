@@ -1357,6 +1357,7 @@ namespace rct3::simulation
             const save::Staff& saved = people.staff[i];
             Staff staff { .role = role, .tasks = saved.task_flags, .training = std::clamp(saved.training, 0, kMostTraining), .warnings = saved.warnings, .happiness = std::clamp(saved.happiness, 0.0f, 1.0f), .laziness = std::clamp(saved.laziness, 0.0f, 1.0f) };
             set_wage_level(staff, saved.wage_level);
+            take_saved_work(staff, saved);
             r.emplace<Staff>(e, staff);
             r.emplace<Pose>(e, position, -p.heading, position, -p.heading); // The original turns the other way
             if (walks)

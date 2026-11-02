@@ -180,17 +180,19 @@ namespace rct3::scene
         constexpr std::string_view kCarriedFolder = "CarriedItems";
         constexpr std::string_view kCarriedOverlay = "CarriedItems/MainCarriedItems";
         constexpr std::string_view kLitterFolder = "Objects/Litter";
+        constexpr std::string_view kToolFolder = "People/Handyman";
         /// The umbrella shapes, in the order of ParkScene::umbrellas.
         constexpr std::array<std::string_view, 2> kUmbrellaShapes { "UmbrellaOpen", "KidsUmbrellaOpen" };
 
         /// Reads the umbrellas guests carry, the food and drink as stalls hand it over and as its empty is left,
-        /// and the litter and sick on the paths, and uploads their pictures with the people's.
+        /// the litter and sick on the paths and the handymen's tools, and uploads their pictures with the people's.
         void load_carried_models(render::Device& device, ParkScene& scene, const config::GameInstall& install)
         {
             const auto found = install.find(kCarriedFolder);
             const std::string folder = found.value_or(std::filesystem::path(kCarriedFolder)).filename().string();
             const std::string litter = install.find(kLitterFolder).value_or(install.root() / kLitterFolder).lexically_relative(install.root()).generic_string();
-            const std::array<std::string_view, 2> folders { folder, litter };
+            const std::string tools = install.find(kToolFolder).value_or(install.root() / kToolFolder).lexically_relative(install.root()).generic_string();
+            const std::array<std::string_view, 3> folders { folder, litter, tools };
             const park::AssetIndex index = park::AssetIndex::scan(install.root(), folders);
             park::ModelLoader loader(index);
             std::vector<park::ObjectBatch> batches;
@@ -204,6 +206,12 @@ namespace rct3::scene
                 scene.umbrellas[i] = loader.load_shape(kUmbrellaShapes[i], kCarriedOverlay);
                 add_pictures(scene.umbrellas[i]);
             }
+            for (const std::string_view tool : { "Brush", "Spunge", "WaterCan" })
+                if (auto model = loader.load_shape(tool, std::format("{}/Tools", tools)))
+                {
+                    add_pictures(model);
+                    scene.staff_tools.emplace(tool, std::move(*model));
+                }
             constexpr std::array<std::string_view, 2> kLitterShapes { "Litter", "Puke" };
             for (std::size_t i = 0; i < kLitterShapes.size(); ++i)
             {

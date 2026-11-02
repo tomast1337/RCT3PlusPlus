@@ -1258,7 +1258,7 @@ namespace rct3::simulation
                 if (staff.ride != entt::null && !r.valid(staff.ride))
                     staff.ride = entt::null;
                 // An entertainer is at work while there are guests near to entertain.
-                care_for(staff, staff.role == StaffRole::Entertainer ? guests_near(pose.position) : (staff.busy.value > 0 && !staff.resting) || staff.ride != entt::null, dt);
+                care_for(staff, staff.role == StaffRole::Entertainer ? guests_near(pose.position) : (staff.busy.value > 0 && staff.job != StaffJob::Rest) || staff.ride != entt::null, dt);
                 if (staff.think.value -= dt; staff.think.value <= 0)
                 {
                     staff.think = kTuning.staff.think;
@@ -1274,14 +1274,14 @@ namespace rct3::simulation
                 // A lazy one, with nothing to do, stops where they are now and then.
                 if (staff.busy.value == 0 && staff.ride == entt::null && random::chance(dice.state, rest_chance(staff) * dt))
                 {
-                    staff.busy.value = kRestSeconds;
-                    staff.resting = true;
+                    staff.busy.value = staff.job_length.value = kRestSeconds;
+                    staff.job = StaffJob::Rest;
                 }
                 if (staff.busy.value > 0)
                 {
                     staff.busy.value = std::max(staff.busy.value - dt, 0.0f);
                     if (staff.busy.value == 0)
-                        staff.resting = false;
+                        staff.job = StaffJob::None;
                     if (staff.busy.value == 0 && staff.ride != entt::null)
                     {
                         // Done at the ride: repaired and open again, or inspected.
@@ -1353,6 +1353,7 @@ namespace rct3::simulation
                         r.destroy(here.back());
                         here.pop_back();
                         ++staff.swept;
+                        staff.job = StaffJob::Sweep;
                         return kTuning.handymen.sweep.value;
                     }
                     for (const entt::entity i : items(at))
@@ -1362,12 +1363,14 @@ namespace rct3::simulation
                         {
                             item.broken = false;
                             ++staff.mended;
+                            staff.job = StaffJob::Mend;
                             return kTuning.handymen.mend.value;
                         }
                         if (auto* bin = r.try_get<Bin>(i); empties && bin != nullptr && bin->contents > 0 && bin->contents >= kTuning.handymen.empty_at.value * bin->capacity)
                         {
                             bin->contents = 0;
                             ++staff.emptied;
+                            staff.job = StaffJob::EmptyBin;
                             return kTuning.handymen.empty.value;
                         }
                     }
@@ -1564,14 +1567,23 @@ namespace rct3::simulation
                     }
                     else
                     {
-                        staff.busy.value = (r.get<Upkeep>(staff.ride).broken ? kTuning.wear.repair.value : kTuning.wear.inspect.value) * work_slowdown(staff);
+                        const bool broken = r.get<Upkeep>(staff.ride).broken;
+                        staff.busy.value = staff.job_length.value = (broken ? kTuning.wear.repair.value : kTuning.wear.inspect.value) * work_slowdown(staff);
+                        staff.job = broken ? StaffJob::Fix : StaffJob::Inspect;
                         stride.to = at;
                         stride.progress.value = 1;
                     }
                 }
                 else if (const float busy = job(); busy > 0)
                 {
-                    staff.busy.value = busy * work_slowdown(staff);
+                    staff.busy.value = staff.job_length.value = busy * work_slowdown(staff);
+                    stride.to = at;
+                    stride.progress.value = 1;
+                }
+                else if (staff.role == StaffRole::Guard && random::chance(dice.state, kWatchChance))
+                {
+                    staff.busy.value = staff.job_length.value = kWatchSeconds;
+                    staff.job = StaffJob::Watch;
                     stride.to = at;
                     stride.progress.value = 1;
                 }
@@ -2020,7 +2032,7 @@ namespace rct3::simulation
                     upkeep->mechanic = entt::null;
                 staff->ride = entt::null;
                 staff->busy = { };
-                staff->resting = false;
+                staff->job = StaffJob::None;
             }
         }
 

@@ -63,6 +63,8 @@ namespace rct3::simulation
     /// Whether their last thought was the one that made them quit: true once, however long they stay miserable.
     [[nodiscard]] bool quits(const Staff& staff);
 
-    inline constexpr float kRestSeconds = 20; ///< A rest a lazy staff member takes
+    inline constexpr float kRestSeconds = 20;   ///< A rest a lazy staff member takes
+    inline constexpr float kWatchSeconds = 6;   ///< Chosen by eye: how long a guard stops on their rounds to keep watch
+    inline constexpr float kWatchChance = 0.1f; ///< Chosen by eye: how often a guard stops so, at each path node
 
 } // namespace rct3::simulation

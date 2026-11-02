@@ -102,6 +102,8 @@ declare namespace park {
     function litter(): { col: number; row: number; sick: boolean }[];
     /** Breaks every bench, bin and sign at once, as vandals would; how many it broke. */
     function breakPathItems(): number;
+    /** Drops `pieces` pieces of litter (1 to 50) on the path nearest tile `col`, `row`; whether there was a path. */
+    function dropLitter(col: number, row: number, pieces: number): boolean;
     /** Sets a handyman walking from the path on tile `col`, `row`, who is not drawn; whether there was a path. */
     function addHandyman(col: number, row: number): boolean;
     /** Posts a message with the text `key`, about ride `ride` of rides.list() if given, naming tab number `tab`
@@ -440,7 +442,7 @@ declare namespace people {
      *  or ride entrance they serve at as `post`; a worker the simulation runs, their job as `role`. Members of one party share its number, `party`, while they are with it,
      *  and those on their way out of the park are `leaving`. `thoughts` are the numbers of the thoughts their window
      *  lists, and a guest's `happiness` (0 to 1) is what their window and the guest list show. */
-    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
+    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

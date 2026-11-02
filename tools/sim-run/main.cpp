@@ -696,7 +696,7 @@ int main(int argc, char** argv)
                 happy += staff.happiness.value;
                 lazy += staff.laziness.value;
                 load += staff.load.value;
-                resting += staff.resting;
+                resting += staff.job == simulation::StaffJob::Rest;
                 ++count;
             }
             const auto mean = [&](float sum) { return static_cast<double>(count > 0 ? sum / static_cast<float>(count) : 0); };

@@ -220,6 +220,7 @@ namespace rct3::save
         std::int32_t month = 0; ///< 0..7
         std::int32_t week = 0;  ///< 0..3
         float into_week = 0.0f; ///< Units elapsed in the week, 0..90
+        std::int32_t day = 1;   ///< Of the month, from 1: the month's units spread over its days (kDaysInMonth)
     };
 
     struct GameClock
@@ -227,6 +228,8 @@ namespace rct3::save
         static constexpr float kUnitsPerWeek = 90.0f;
         static constexpr float kUnitsPerMonth = 360.0f; ///< 4 weeks
         static constexpr float kUnitsPerYear = 2880.0f; ///< 8 months
+        /// Days in each of the calendar's months, March to October, as the real calendar has them.
+        static constexpr std::array<std::int32_t, 8> kDaysInMonth { 31, 30, 31, 30, 31, 31, 30, 31 };
 
         float time = 0.0f;
         float zero_time = 0.0f;

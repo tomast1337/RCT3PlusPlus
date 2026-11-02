@@ -21,6 +21,7 @@
 // --- scenery and placement item types (feat/ovl-scenery-types) ---
 #include "ovl/carried_item.hpp"
 #include "ovl/costume.hpp"
+#include "ovl/frame_mesh.hpp"
 #include "ovl/piece_set.hpp"
 #include "ovl/research_category.hpp"
 #include "ovl/room_type.hpp"
@@ -882,6 +883,7 @@ namespace
         bool chg = false;
         bool vwg = false;
         bool ent = false;
+        bool mms = false;
     };
     SceneryOptions g_scenery;
 
@@ -912,6 +914,8 @@ namespace
             g_scenery.vwg = true;
         else if (std::strcmp(arg, "--ent") == 0)
             g_scenery.ent = true;
+        else if (std::strcmp(arg, "--mms") == 0)
+            g_scenery.mms = true;
         else
             return false;
         return true;
@@ -963,6 +967,16 @@ namespace
 
     void print_research_and_terrain(const char* title, const rct3::ovl::Overlay& overlay, const Part& part)
     {
+        if (g_scenery.mms)
+        {
+            for (const auto& entry : rct3::ovl::read_frame_meshes(overlay, part))
+            {
+                std::string motions;
+                for (const auto& a : entry.mesh ? entry.mesh->animations : std::vector<rct3::ovl::FrameAnimation> { })
+                    motions += std::format(" {}:{:.2f}", a.name, a.times.empty() ? 0.0f : a.times.back());
+                out.info("frame mesh ({}) {}{}", title, std::string(entry.name).c_str(), entry.mesh ? motions.c_str() : " <unreadable>");
+            }
+        }
         if (g_scenery.ent)
         {
             for (const auto& entry : rct3::ovl::read_costumes(overlay, part))
@@ -1454,7 +1468,7 @@ int main(int argc, char** argv)
     if (!path)
     {
         out.error("usage: {} [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--mdl] [--wad] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH", argv[0]);
-        out.error("scenery types: [--sid] [--cid] [--ced] [--rcg] [--ter] [--ptd] [--qtd] [--pty] [--enc] [--chg] [--vwg] [--ent]");
+        out.error("scenery types: [--sid] [--cid] [--ced] [--rcg] [--ter] [--ptd] [--qtd] [--pty] [--enc] [--chg] [--vwg] [--ent] [--mms]");
         return 2;
     }
 

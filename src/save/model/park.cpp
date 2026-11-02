@@ -864,11 +864,13 @@ namespace rct3::save
         const double years = std::floor(u / kUnitsPerYear);
         const double in_year = std::fmod(u, static_cast<double>(kUnitsPerYear));
         const double in_month = std::fmod(in_year, static_cast<double>(kUnitsPerMonth));
+        const auto month = std::min(static_cast<std::int32_t>(in_year / kUnitsPerMonth), 7);
         return CalendarDate {
             .year = years >= 9.0e18 ? std::int64_t { 9'000'000'000'000'000'000 } : static_cast<std::int64_t>(years),
-            .month = static_cast<std::int32_t>(in_year / kUnitsPerMonth),
+            .month = month,
             .week = static_cast<std::int32_t>(in_month / kUnitsPerWeek),
             .into_week = static_cast<float>(std::fmod(in_month, static_cast<double>(kUnitsPerWeek))),
+            .day = static_cast<std::int32_t>(in_month * kDaysInMonth[static_cast<std::size_t>(month)] / kUnitsPerMonth) + 1,
         };
     }
 

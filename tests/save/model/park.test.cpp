@@ -480,6 +480,17 @@ TEST_CASE("park: calendar split")
     CHECK(huge.month < 8);
 }
 
+TEST_CASE("park: calendar day of the month")
+{
+    // A month's units spread over its days: the first day starts the month, the last ends it.
+    CHECK(GameClock::split(0.0f).day == 1);
+    CHECK(GameClock::split(11.0f).day == 1);
+    CHECK(GameClock::split(12.0f).day == 2);             // March: 31 days over 360 units, a day a little under 12
+    CHECK(GameClock::split(359.0f).day == 31);           // March
+    CHECK(GameClock::split(360.0f + 359.0f).day == 30);  // April
+    CHECK(GameClock::split(2880.0f + 180.0f).day == 16); // Half way through March of the next year
+}
+
 TEST_CASE("park: awards, objectives, research")
 {
     Bytes award_cats; // AwardsArray: list of elements, each an array of ids (a single variable child)

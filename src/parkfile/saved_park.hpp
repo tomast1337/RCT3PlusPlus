@@ -141,7 +141,7 @@ namespace rct3::parkfile
         std::int32_t keeper = -1;
         simulation::KeeperJob job = simulation::KeeperJob::Idle;
         glm::vec3 goal { 0.0f };
-        std::int32_t target = -1; ///< Of SavedAnimals::dung while clearing, of SavedAnimals::animals while catching; -1 none
+        std::int32_t target = -1; ///< Of SavedAnimals::dung while clearing, ::animals while catching, ::houses while filling; -1 none
         float busy = 0;           ///< Seconds
     };
 

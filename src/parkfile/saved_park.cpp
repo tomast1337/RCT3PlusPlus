@@ -240,6 +240,9 @@ namespace rct3::parkfile
             places.emplace(e, static_cast<std::int32_t>(out.dung.size()));
             out.dung.push_back({ .enclosure = dung.enclosure, .position = pose.position });
         }
+        std::map<entt::entity, std::int32_t> house_at; // Of what a keeper fills
+        for (const entt::entity e : r.view<const AnimalHouse>())
+            house_at.emplace(e, static_cast<std::int32_t>(house_at.size()));
         for (const auto [e, house] : r.view<const AnimalHouse>().each())
         {
             SavedAnimalHouse& saved = out.houses.emplace_back(SavedAnimalHouse { .house = house });
@@ -247,11 +250,12 @@ namespace rct3::parkfile
             if (keeper == keepers.end())
                 continue;
             const KeeperDuty& duty = *keeper->second.second;
-            const auto target = places.find(duty.target);
+            const auto& at = duty.job == KeeperJob::Filling ? house_at : places;
+            const auto target = at.find(duty.target);
             saved.keeper = keeper->second.first;
             saved.job = duty.job;
             saved.goal = duty.goal;
-            saved.target = target != places.end() ? target->second : -1;
+            saved.target = target != at.end() ? target->second : -1;
             saved.busy = duty.busy.value;
         }
         return out;
@@ -289,9 +293,9 @@ namespace rct3::parkfile
             if (keeper == entt::null || !r.valid(keeper))
                 continue;
             // A job after something no longer there starts over.
-            const std::span<const entt::entity> targets = saved.job == KeeperJob::Clearing ? std::span(dropped) : saved.job == KeeperJob::Catching ? std::span(placed) : std::span<const entt::entity> { };
+            const std::span<const entt::entity> targets = saved.job == KeeperJob::Clearing ? std::span(dropped) : saved.job == KeeperJob::Catching ? std::span(placed) : saved.job == KeeperJob::Filling ? std::span(homes) : std::span<const entt::entity> { };
             const entt::entity target = saved.target >= 0 && static_cast<std::size_t>(saved.target) < targets.size() ? targets[static_cast<std::size_t>(saved.target)] : entt::null;
-            const bool lost = target == entt::null && (saved.job == KeeperJob::Clearing || saved.job == KeeperJob::Catching);
+            const bool lost = target == entt::null && saved.job != KeeperJob::Idle && saved.job != KeeperJob::Strolling;
             r.emplace_or_replace<KeeperDuty>(keeper, lost ? KeeperDuty { .house = homes[i] } : KeeperDuty { .house = homes[i], .job = saved.job, .goal = saved.goal, .target = target, .busy = Seconds { saved.busy } });
             r.emplace_or_replace<Dice>(keeper, dice_for(world, keeper));
         }

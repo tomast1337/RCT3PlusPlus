@@ -323,6 +323,27 @@ TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animal
     CHECK(duty.busy.value == 4);
 }
 
+TEST_CASE("a save keeps the house a keeper is filling the troughs of")
+{
+    using namespace simulation;
+    SimWorld world;
+    auto& r = world.registry;
+    const entt::entity keeper = add_animal_house(world, { .object = 7, .enclosure = 0, .troughs = { 2, 0, 2 } }, { 1, 0, 1 });
+    const entt::entity other = r.get<KeeperDuty>(add_animal_house(world, { .object = 8, .enclosure = 0, .troughs = { 3, 0, 3 } }, { 3, 0, 1 })).house;
+    r.get<KeeperDuty>(keeper) = { .house = r.get<KeeperDuty>(keeper).house, .job = KeeperJob::Filling, .goal = { 3, 0, 3 }, .target = other, .busy = { 2 } };
+    parkfile::SavedPark park = small_park();
+    park.people = parkfile::keep_people(world, { }, { });
+    park.animals = parkfile::keep_animals(world, { });
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+    SimWorld loaded;
+    auto& l = loaded.registry;
+    parkfile::place_animals(loaded, *read->animals, parkfile::place_staff(loaded, *read->people));
+    const auto filling = std::ranges::find_if(l.view<const KeeperDuty>(), [&](entt::entity k) { return l.get<const KeeperDuty>(k).job == KeeperJob::Filling; });
+    REQUIRE(filling != l.view<const KeeperDuty>().end());
+    CHECK(l.get<AnimalHouse>(l.get<const KeeperDuty>(*filling).target).object == 8);
+}
+
 TEST_CASE("a save keeps the pools, their extras and changing rooms")
 {
     parkfile::SavedPark park = small_park();

@@ -153,16 +153,23 @@ namespace rct3::scene
                     const particles::Sprite* sprite = shown.sprites[live.kind[i]];
                     if (live.age[i] < 0 || sprite == nullptr || sprite->frames.empty())
                         continue;
-                    // shortcut: no stretching along the motion, trails or taller drawing yet (VelStretch, BurnLength,
-                    // UpScale); upgrade when fireworks are compared with the original.
+                    // shortcut: no trails or taller drawing yet (BurnLength, UpScale); upgrade when fireworks are
+                    // compared with the original.
                     const particles::Look look = particles::look(shown.run.effect(), live, i);
                     // Added sprites (fire, sparks) are only their colour; their opacity curve is left at 0.
                     if (look.size <= 0 || (sprite->blended ? look.colour.a <= 0 : glm::vec3(look.colour) == glm::vec3(0.0f)))
                         continue;
                     const auto& f = sprite->frames[sprite->frame(live.age[i], live.roll[i] / 6.2832f)];
                     const float half = look.size * shown.size / 2;
-                    const glm::vec3 across = (right * std::cos(live.roll[i]) + up * std::sin(live.roll[i])) * half;
-                    const glm::vec3 along = (up * std::cos(live.roll[i]) - right * std::sin(live.roll[i])) * half;
+                    glm::vec3 across = (right * std::cos(live.roll[i]) + up * std::sin(live.roll[i])) * half;
+                    glm::vec3 along = (up * std::cos(live.roll[i]) - right * std::sin(live.roll[i])) * half;
+                    // Stretched ones (drops of a fountain's stream) lie along their motion as the eye sees it.
+                    if (const glm::vec3 seen = (look.stretch - forward * glm::dot(look.stretch, forward)) * shown.size; glm::dot(seen, seen) > 1e-8f)
+                    {
+                        const glm::vec3 way = glm::normalize(seen);
+                        along = way * (half + glm::length(seen) / 2);
+                        across = glm::cross(forward, way) * half;
+                    }
                     const glm::vec3 p = live.position[i];
                     const glm::vec4 c = sprite->blended ? glm::vec4(glm::vec3(look.colour) * dim, look.colour.a) : glm::vec4(glm::vec3(look.colour), 1.0f);
                     const Corner a { p - across - along, c, { f[0], f[3] } };

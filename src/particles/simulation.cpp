@@ -54,7 +54,7 @@ namespace rct3::particles
         glm::vec4 colour { kind.colour[0].at(t), kind.colour[1].at(t), kind.colour[2].at(t), kind.colour[3].at(t) };
         if (kind.tinted)
             colour *= effect.tint;
-        return { colour, std::lerp(kind.start_size, kind.end_size, t) * particles.scale[i] };
+        return { colour, std::lerp(kind.start_size, kind.end_size, t) * particles.scale[i], kind.stretch > 0 ? particles.velocity[i] * kind.stretch : glm::vec3(0.0f) };
     }
 
     EffectRun::EffectRun(const Effect& effect, random::RandomState random, bool loops, std::size_t capacity, float strength)

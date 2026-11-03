@@ -43,6 +43,7 @@ namespace rct3::particles
     {
         glm::vec4 colour { 1.0f };
         float size = 1;
+        glm::vec3 stretch { 0.0f }; ///< How much longer it is drawn along its motion, as a world vector
     };
 
     /// How particle `i` of `particles` looks now.

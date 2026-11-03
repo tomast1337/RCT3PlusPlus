@@ -424,11 +424,12 @@ namespace rct3::park
         return key;
     }
 
-    PaletteImage water_picture()
+    PaletteImage water_picture(float seconds)
     {
-        // The lakes' colour, its ripple crests a little lighter, in a soft criss-cross.
-        // shortcut: a still picture, moving water would need its own shader; upgrade when fountains get one.
+        // The lakes' colour, its ripple crests a little lighter, in a soft criss-cross whose two sets of waves
+        // run different ways.
         constexpr std::uint32_t kSize = 64;
+        constexpr float kRun = 1.3f; ///< Chosen by eye: radians a second the waves move on
         constexpr int kShades = 16;
         PaletteImage picture;
         picture.width = kSize;
@@ -448,7 +449,7 @@ namespace rct3::park
             for (std::uint32_t x = 0; x < kSize; ++x)
             {
                 // Whole periods across the picture, so it tiles.
-                const float wave = (std::sin(kTurn * 2 * x + std::sin(kTurn * 3 * y)) + std::sin(kTurn * 3 * y + std::sin(kTurn * 2 * x))) * 0.25f + 0.5f;
+                const float wave = (std::sin(kTurn * 2 * x + std::sin(kTurn * 3 * y) + kRun * seconds) + std::sin(kTurn * 3 * y + std::sin(kTurn * 2 * x) - 0.7f * kRun * seconds)) * 0.25f + 0.5f;
                 const std::size_t at = y * kSize + x;
                 picture.indices[at] = static_cast<std::uint8_t>(std::clamp(wave * kShades, 0.0f, kShades - 1.0f));
                 picture.alpha[at] = static_cast<std::uint8_t>(std::clamp(alpha - 20 + wave * 40, 1.0f, 254.0f));

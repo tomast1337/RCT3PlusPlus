@@ -1066,6 +1066,13 @@ namespace rct3::simulation
                         }
                         continue;
                     }
+                    // A free water cannon tempts some passers to fire it a while, one at a time.
+                    const auto cannon = std::ranges::find_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::WaterCannon && !r.get<PathItem>(i).broken; });
+                    if (cannon != items(here).end() && std::ranges::none_of(r.view<const Linger, const Stride>().each(), [&](const auto& other) { return std::get<1>(other).at == PathItemKind::WaterCannon && std::get<2>(other).from == here; }) && random::chance(dice.state, kTuning.surroundings.fire_cannon.value))
+                    {
+                        r.emplace<Linger>(g, PathItemKind::WaterCannon, kTuning.surroundings.firing.value);
+                        continue;
+                    }
                     if ((mood.energy.value < kTuning.facilities.tired.value || mood.nausea.value >= kTuning.needs.want.value) && seated[here] < benches * kTuning.facilities.bench_seats && random::chance(dice.state, kTuning.facilities.sit_chance.value))
                     {
                         r.emplace<Linger>(g, PathItemKind::Bench, kTuning.facilities.sit.value);

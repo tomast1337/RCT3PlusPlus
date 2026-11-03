@@ -589,6 +589,17 @@ namespace rct3::scene
                     pose.motion = kTicketMotion;
                     pose.time = paying;
                 }
+            // Firing a water cannon: taking hold of it, firing a while, letting go.
+            // shortcut: they fire from where they stopped on the tile, not from behind the cannon; upgrade with
+            // the cannon's own aim and spray.
+            if (const auto* linger = r.try_get<simulation::Linger>(shown.guest); linger != nullptr && linger->at == simulation::PathItemKind::WaterCannon && !walking)
+            {
+                constexpr float kCannonEnds = 1.0f; ///< Chosen by eye: seconds of taking hold of the cannon and of letting go
+                const float into = simulation::kTuning.surroundings.firing.value - linger->left.value + scene.sim_time;
+                const float left = linger->left.value - scene.sim_time;
+                pose.motion = park::motion_number(into < kCannonEnds ? "watercannonin" : left < kCannonEnds ? "watercannonout" : "watercannonloop").value_or(park::motion::kIdle);
+                pose.time = into < kCannonEnds ? into : left < kCannonEnds ? kCannonEnds - left : into - kCannonEnds;
+            }
             // At work where they stand: the job's motions in turn, any tool in hand.
             const auto* staff = r.try_get<simulation::Staff>(shown.guest);
             if (staff != nullptr && staff->job != simulation::StaffJob::None && staff->busy.value > 0 && !walking)

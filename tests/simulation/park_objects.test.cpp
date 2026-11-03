@@ -191,3 +191,29 @@ TEST_CASE("guests passing jumping fountains turn to look, and some like them, wi
         return thoughts != nullptr && std::ranges::contains(thoughts->recent, ThoughtKind::JumpingFountainsGood, &Thought::kind);
     }));
 }
+
+TEST_CASE("a guest passing a free water cannon may fire it a while, one at a time")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 1, 0 });
+    park.item(PathItemKind::WaterCannon, { 0, 0 });
+    for (int i = 0; i < 8; ++i)
+        park.guest({ 1, 0 });
+    auto& r = park.world().registry;
+    std::size_t most = 0;
+    entt::entity firing = entt::null;
+    for (int t = 0; t < 3000; ++t)
+    {
+        park.run(1);
+        std::size_t now = 0;
+        for (const auto [g, linger] : r.view<const Linger>().each())
+            if (linger.at == PathItemKind::WaterCannon)
+            {
+                ++now;
+                firing = g;
+            }
+        most = std::max(most, now);
+    }
+    CHECK(most == 1);
+    CHECK(firing != entt::null);
+}

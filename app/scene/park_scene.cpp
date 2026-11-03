@@ -2662,12 +2662,9 @@ namespace rct3::scene
         profiling::section("LensWater", [&] {
             using save::WeatherType;
             const WeatherType w = scene.park.weather;
-            // The car ridden, while its ride goes through water and the view moves with it.
-            std::optional<glm::vec3> splashing;
-            if (scene.riding && *scene.riding < scene.car_spots.size() && scene.ride_view.velocity)
-                if (const std::size_t ride = scene.car_spots[*scene.riding].ride; scene.simulate && ride < scene.ride_entities.size())
-                    if (const auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(scene.ride_entities[ride]); cycle != nullptr && cycle->splash)
-                        splashing = scene.ride_view.velocity;
+            std::optional<std::pair<std::size_t, std::uint32_t>> splashes;
+            if (scene.riding && *scene.riding < scene.car_waters.size())
+                splashes = std::pair { *scene.riding, scene.car_waters[*scene.riding].splashes };
             const LensSurroundings around {
                 .view_projection = park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across),
                 .eye = viewer,
@@ -2678,7 +2675,7 @@ namespace rct3::scene
                     : w == WeatherType::Thunderstorm ? 3
                                                      : 0,
                 .wind = scene.park.wind,
-                .splashing_car = splashing,
+                .car_splashes = splashes,
             };
             // As the game has it, drops are drawn only where refraction is.
             advance_park_lens(scene.lens, around, options.flag(config::GameOption::WaterDroplets) && options.flag(config::GameOption::Refraction), elapsed);

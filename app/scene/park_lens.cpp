@@ -19,10 +19,6 @@ namespace rct3::scene
         constexpr float kWindPush = 0.9f;                               ///< Screen heights a second the strongest wind pushes drops across
         constexpr float kWindSwing = 0.6f;                              ///< Radians the wind's way swings either side of its middle
         constexpr float kWindPeriod = 240.0f;                           ///< Seconds the wind takes to swing round and back
-        constexpr float kSplashFall = 4.0f;                             ///< World units a second the car must be falling, to splash
-        constexpr float kSplashPull = 25.0f;                            ///< And how sharply its fall must stop, world units a second squared
-        constexpr float kSplashRun = 3.0f;                              ///< World units a second the car must run on at
-        constexpr float kSplashRest = 1.5f;                             ///< Seconds between splashes
         constexpr std::size_t kSplashDrops = 40;
         constexpr std::size_t kSplashSheets = 2;
 
@@ -53,11 +49,10 @@ namespace rct3::scene
             lens.was_under = around.under_water;
             lens.last_eye.reset();
             lens.last_ahead.reset();
-            lens.last_rise.reset();
+            lens.car_splashes.reset();
             return;
         }
         lens.clock += seconds;
-        lens.splash_wait = std::max(0.0f, lens.splash_wait - seconds);
 
         // The view's own ways in the world, from the screen's middle and edges.
         const glm::mat4 back = glm::inverse(around.view_projection);
@@ -83,23 +78,10 @@ namespace rct3::scene
             lens.rain_due -= static_cast<float>(whole);
         }
 
-        // A splash: the car ridden was falling fast and the water stopped it short.
-        if (around.splashing_car && seconds > 0)
-        {
-            const float rise = around.splashing_car->y;
-            // It runs on through the water; a car held at the top of a spike stopped short too, but stands still.
-            // shortcut: any sharp stop of a fast fall on a splash ride splashes, water under it or not; check the track
-            // piece's water once pieces say so.
-            const bool running_on = glm::length(glm::vec2 { around.splashing_car->x, around.splashing_car->z }) > kSplashRun;
-            if (lens.last_rise && *lens.last_rise < -kSplashFall && (rise - *lens.last_rise) / seconds > kSplashPull && running_on && lens.splash_wait <= 0 && !around.under_water)
-            {
-                park::wet_lens(water, kSplashDrops, kSplashSheets, around.aspect);
-                lens.splash_wait = kSplashRest;
-            }
-            lens.last_rise = rise;
-        }
-        else
-            lens.last_rise.reset();
+        // A splash of the car ridden (park/car_splashes.hpp).
+        if (around.car_splashes && lens.car_splashes && around.car_splashes->first == lens.car_splashes->first && around.car_splashes->second != lens.car_splashes->second && !around.under_water)
+            park::wet_lens(water, kSplashDrops, kSplashSheets, around.aspect);
+        lens.car_splashes = around.car_splashes;
 
         // The wind keeps to one way, swinging slowly either side of it.
         const float way = kWindSwing * std::sin(lens.clock * 6.2831853f / kWindPeriod);

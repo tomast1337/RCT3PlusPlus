@@ -28,16 +28,18 @@ namespace rct3::scene
         constexpr float kGestureLevel = 0.8f;
         constexpr float kScreamLevel = 0.9f;
         constexpr float kRideLevel = 0.7f;
-        constexpr float kCrashLevel = 1;        ///< Of the game volume, a wreck blowing up
-        constexpr float kLandingLevel = 0.4f;   ///< Of that, one landing
-        constexpr float kFireLevel = 0.5f;      ///< Of that, its fire burning
-        constexpr float kCrashNear = 20;        ///< World units from a wreck it is heard full loud
-        constexpr float kCrashFar = 250;        ///< And no longer heard
-        constexpr float kChainFade = 0.5f;      ///< Seconds the chain's loop takes to come in and to die away
-        constexpr float kWaterfallLevel = 0.6f; ///< Of full loudness.
-        constexpr float kWaterfallNear = 10;    ///< World units from where it lands a waterfall is heard full loud.
-        constexpr float kWaterfallFar = 90;     ///< And no longer heard.
-        constexpr float kRainLevel = 0.5f;      ///< Of full loudness, a downpour. Chosen by eye, as the next
+        constexpr float kCrashLevel = 1;                          ///< Of the game volume, a wreck blowing up
+        constexpr float kLandingLevel = 0.4f;                     ///< Of that, one landing
+        constexpr float kFireLevel = 0.5f;                        ///< Of that, its fire burning
+        constexpr float kCrashNear = 20;                          ///< World units from a wreck it is heard full loud
+        constexpr float kCrashFar = 250;                          ///< And no longer heard
+        constexpr float kChainFade = 0.5f;                        ///< Seconds the chain's loop takes to come in and to die away
+        constexpr std::array kSplashLevels { 0.5f, 0.75f, 1.0f }; ///< Chosen by eye: a splash's loudness by its strength
+        constexpr float kPlumeSeconds = 2.5f;                     ///< Chosen by eye: how long the plume plays after a splash
+        constexpr float kWaterfallLevel = 0.6f;                   ///< Of full loudness.
+        constexpr float kWaterfallNear = 10;                      ///< World units from where it lands a waterfall is heard full loud.
+        constexpr float kWaterfallFar = 90;                       ///< And no longer heard.
+        constexpr float kRainLevel = 0.5f;                        ///< Of full loudness, a downpour. Chosen by eye, as the next
         constexpr float kThunderLevel = 0.9f;
         constexpr float kThumpLevel = 0.6f; ///< Chosen by eye: clear over the park without drowning it
         constexpr float kThumpGap = 0.4f;   ///< Chosen by eye: seconds before another thump, so a burst of pieces is one
@@ -319,6 +321,7 @@ namespace rct3::scene
         {
             std::pair<entt::entity, std::size_t> key;
             std::size_t ride = 0; ///< In scene.rides
+            std::size_t car = 0;  ///< Its first car, in scene.cars
             glm::vec3 at { }, velocity { };
             const simulation::Coaster* train = nullptr;
         };
@@ -333,7 +336,7 @@ namespace rct3::scene
             const auto* fleet = ride != entt::null ? r.try_get<simulation::Trains>(ride) : nullptr;
             if (fleet == nullptr || spot.train >= fleet->trains.size() || !trains.emplace(ride, spot.train).second)
                 continue;
-            heard_trains.push_back({ { ride, spot.train }, spot.ride, at, velocity, &fleet->trains[spot.train] });
+            heard_trains.push_back({ { ride, spot.train }, spot.ride, i, at, velocity, &fleet->trains[spot.train] });
             const std::vector<entt::entity>& riders = fleet->riders[spot.train];
             audio::VoiceHandle& voice = sounds.train_voices[{ ride, spot.train }];
             if (engine.is_playing(voice))
@@ -407,8 +410,21 @@ namespace rct3::scene
             else if (!chained)
                 engine.fade_voice(train.chain, 0, std::max(kChainFade - train.chain_off, 0.0f));
 
-            // Water: a splash as the front enters water, by its speed, then the WaterPlume loop on `train.plume`
-            // for a few seconds. Nothing yet: the track model does not know which pieces are water.
+            // Water: a splash as the first car splashes through water, louder the harder, then the plume loop for a
+            // few seconds.
+            if (t.car < scene.car_waters.size())
+            {
+                const park::CarWater& water = scene.car_waters[t.car];
+                if (train.splashes && water.splashes != *train.splashes)
+                {
+                    if (const auto& splash = sound(WaterSplash); splash && level > 0)
+                        (void)engine.play(*splash, params(level * kSplashLevels[std::min<std::size_t>(water.strength, 2)]));
+                    train.plume_left = kPlumeSeconds;
+                }
+                train.splashes = water.splashes;
+            }
+            train.plume_left = std::max(0.0f, train.plume_left - elapsed);
+            keep(train.plume, sound(WaterPlume), train.plume_left > 0 ? level : 0.0f);
             kept.emplace(t.key, std::move(train));
         }
         silence_trains(engine, sounds); // Trains no longer there

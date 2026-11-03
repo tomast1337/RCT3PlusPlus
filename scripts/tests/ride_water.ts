@@ -3,7 +3,8 @@
 // The water running down a water ride's track (log flumes, splash boats, rapids, water coasters, slides). It
 // flows the way the track runs on every piece, right-hand curves and pieces laid the other way round
 // included. Pictures a right-hand curve close up twice, a quarter of a second apart, so the water can be seen to
-// move on downhill. Give it a park the game saved with an open water ride, such as a log flume:
+// move on downhill, and a car splashing through water. Give it a park the game saved with an open water ride
+// running, such as a log flume:
 //
 //   ./nob script scripts/tests/ride_water.ts -- --no-intro --no-audio --seed 1 --park PARK
 
@@ -31,3 +32,12 @@ await frames(30);
 await screenshot("ride_water_curve");
 await frames(15);
 await screenshot("ride_water_curve_later");
+
+// A car splashing through the water sprays from its splash points: pictured close up.
+const kSprays = /^(splash2|splash4|watersplashbig)$/;
+await until(() => map.effects().some((e) => kSprays.test(e.effect)), 60 * 120, "a car splashing through water");
+const spray = map.effects().find((e) => kSprays.test(e.effect))!;
+log("spray", spray.effect, spray.col, spray.row, spray.up);
+camera.look({ col: spray.col, row: spray.row, up: spray.up }, { col: spray.col + 3, row: spray.row + 2.5, up: spray.up + 4 });
+await frames(6);
+await screenshot("ride_water_splash");

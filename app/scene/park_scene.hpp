@@ -26,6 +26,7 @@
 #include "park/attraction_objects.hpp"
 #include "park/bone_poses.hpp"
 #include "park/camera.hpp"
+#include "park/car_splashes.hpp"
 #include "park/moving_meshes.hpp"
 #include "park/object_mesh.hpp"
 #include "park/object_pick.hpp"
@@ -535,10 +536,11 @@ namespace rct3::scene
         float sim_time = 0;                ///< Park seconds the simulation has still to step
         /// Ride cars, drawn apart from the objects so the simulation can move them round their rides' courses.
         std::vector<save::PlacedObject> cars;
-        std::vector<park::CarSpot> car_spots; ///< By car, as the park kept them
-        park::Fitted saved_cars;              ///< Where the park kept each car, by id
-        std::vector<glm::mat4> car_places;    ///< Where each car stands now, by car
-        std::optional<std::size_t> riding;    ///< The car the view rides along in, of `cars`
+        std::vector<park::CarSpot> car_spots;   ///< By car, as the park kept them
+        park::Fitted saved_cars;                ///< Where the park kept each car, by id
+        std::vector<glm::mat4> car_places;      ///< Where each car stands now, by car
+        std::vector<park::CarWater> car_waters; ///< Of each car, the water it runs through
+        std::optional<std::size_t> riding;      ///< The car the view rides along in, of `cars`
         /// The flat ride (of the park's rides) and the rider seat or fixed camera on it the view looks out from;
         /// never with `riding`.
         std::optional<std::pair<std::size_t, std::size_t>> riding_flat;

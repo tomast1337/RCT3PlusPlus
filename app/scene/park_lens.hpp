@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Water on the camera's lens (the Water droplets option, park/lens_drops.hpp). The lens gets soaked as the eye
-// comes up out of water, splashed when the car ridden through a splash ride hits the water at the foot of a drop,
-// and spotted by the rain while the view looks out into it. Each frame the water is pushed by down as the view
+// comes up out of water, splashed when the car ridden splashes through water (park/car_splashes.hpp), and
+// spotted by the rain while the view looks out into it. Each frame the water is pushed by down as the view
 // sees it, the park's wind, the view turning and the eye flying forward. After the world and its glow are drawn,
 // the screen is copied and each drop drawn over it through that copy (app/shaders/lens_drops.slang); with no
 // water on the lens nothing is copied or drawn.
@@ -11,11 +11,14 @@
 #include "park/lens_drops.hpp"
 #include "render/device.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace rct3::scene
@@ -38,11 +41,11 @@ namespace rct3::scene
         bool was_under = false;              ///< The eye was under water a frame ago
         std::optional<glm::vec3> last_eye;   ///< A frame ago
         std::optional<glm::vec3> last_ahead; ///< The way the view looked a frame ago
-        std::optional<float> last_rise;      ///< How fast the ridden car rose a frame ago, world units a second
-        float rain_due = 0;                  ///< Drops the rain owes the lens, landed once whole
-        float splash_wait = 0;               ///< Seconds before another splash can land
-        float clock = 0;                     ///< Seconds, for the wind's slow turning
-        std::vector<LensCorner> corners;     ///< The drops' quads, kept from frame to frame
+        /// The car ridden a frame ago and the times it had splashed (park::CarWater::splashes)
+        std::optional<std::pair<std::size_t, std::uint32_t>> car_splashes;
+        float rain_due = 0;              ///< Drops the rain owes the lens, landed once whole
+        float clock = 0;                 ///< Seconds, for the wind's slow turning
+        std::vector<LensCorner> corners; ///< The drops' quads, kept from frame to frame
     };
 
     /// What the lens sees of the park this frame.
@@ -54,8 +57,9 @@ namespace rct3::scene
         bool under_water = false;
         int rain = 0;   ///< 0 none, 1 light, 2 heavy, 3 a storm
         float wind = 0; ///< The park's wind, 0 calm to 1 strong
-        /// How the car ridden moves, world units a second, while it rides through splashes; none otherwise.
-        std::optional<glm::vec3> splashing_car;
+        /// The car ridden and the times it has splashed through water (park::CarWater::splashes); none while
+        /// no car is ridden.
+        std::optional<std::pair<std::size_t, std::uint32_t>> car_splashes;
     };
 
     /// Wets the lens as `around` says and moves its water on by `seconds`; all water goes when `on` is false.

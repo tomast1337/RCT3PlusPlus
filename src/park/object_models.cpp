@@ -840,6 +840,7 @@ namespace rct3::park
             return;
         for (ModelLevel& level : model.levels)
             level.parts.push_back(*strip);
+        model.flows = true;
     }
 
     const ovl::StaticShape* ModelLoader::add_static(ModelLevel& level, std::string_view name, std::string_view near)
@@ -1059,6 +1060,16 @@ namespace rct3::park
         model.ride_eyes = { bone_of(car->visual, "nosecamera").or_else([&] { return front; }), front, bone_of(car->visual, "camerarear") };
         model.ride_look = found->camera;
         model.boat_handling = found->boat;
+        constexpr std::array<std::string_view, 3> kStrengths { "low", "med", "high" };
+        for (std::uint8_t strength = 0; strength < kStrengths.size(); ++strength)
+        {
+            if (const auto wake = bone_of(car->visual, std::format("wake{}01", kStrengths[strength])))
+                model.splash_points.push_back({ .position = glm::vec3((*wake)[3]), .strength = strength, .wake = true });
+            constexpr int kMostSplashes = 6; // Numbered from 01; seen up to 06
+            for (int n = 1; n <= kMostSplashes; ++n)
+                if (const auto splash = bone_of(car->visual, std::format("watersplash{}{:02}", kStrengths[strength], n)))
+                    model.splash_points.push_back({ .position = glm::vec3((*splash)[3]), .strength = strength });
+        }
         if (model.rig && std::ranges::all_of(car->rowing, [&](std::int32_t m) { return m >= 0 && std::cmp_less(m, model.rig->motions.size()); }))
             model.rowing = { static_cast<std::size_t>(car->rowing[0]), static_cast<std::size_t>(car->rowing[1]), static_cast<std::size_t>(car->rowing[2]) };
         constexpr std::uint8_t kRideSeating = 35; ///< The seating number that leaves it to the ride

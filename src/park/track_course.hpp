@@ -40,6 +40,7 @@ namespace rct3::park
         std::vector<CourseKind> kinds;             ///< Of the stretch from each point to the next; the last is unused
         std::vector<float> brake_speeds;           ///< Of the brake or block brake from each point, in m/s: 0 where it has none of its own, below 0 off them
         std::vector<float> piece_starts;           ///< Distance at the start of each of the track's pieces
+        std::vector<bool> wet;                     ///< By piece, as piece_starts: runs through open water, not in a tube
         bool closed = false;                       ///< The end joins the start, so cars go round
         bool reverse_lift = false;                 ///< Has the hill a reverse cable lift pulls the train up
         std::size_t first_piece = 0;               ///< Of the track's pieces, the one the course starts on

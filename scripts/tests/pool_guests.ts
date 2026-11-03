@@ -98,6 +98,11 @@ await screenshot("pool_guests_swimming");
 camera.look({ col: c + 5, row: r + 3.5 }, { col: c + 5, row: r + 5.5, up: 1.5 });
 await frames(1800);
 await screenshot("pool_guests_extras");
+// Close up, lying on the lounger.
+await until(() => people.list().some((p) => p.pool_extra === "lounger"), 3000, "a swimmer on the lounger");
+camera.look({ col: c + 4.5, row: r + 3.5 }, { col: c + 6, row: r + 5, up: 1.2 });
+await frames(10);
+await screenshot("pool_guests_lounger");
 
 // The room's window counts the swimmers, and its upkeep shows the water's dirt; the harshest fluid is picked.
 camera.look({ col: c + 3, row: r + 0.5 }, { col: c - 1, row: r + 3, up: 5 });

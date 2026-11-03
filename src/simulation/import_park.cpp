@@ -670,7 +670,7 @@ namespace rct3::simulation
                 else if (s.kind == park::PoolKind::Jacuzzi)
                     complex.spa.push_back(middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.spa_water));
                 else if (s.kind == park::PoolKind::Tile || s.kind == park::PoolKind::Path) // Not a diving board's, a slope or stairs
-                    complex.paved.push_back(middle(s.col, s.row, static_cast<float>(s.surface)));
+                    complex.paved.push_back(middle(s.col, s.row, static_cast<float>(s.surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 });
                 for (const auto [dc, dr] : kSides)
                     if (const auto next = squares.find({ s.col + dc, s.row + dr }); next != squares.end() && complex_of.try_emplace(next->first, complexes.size() - 1).second)
                         todo.push_back(next->second);
@@ -682,9 +682,10 @@ namespace rct3::simulation
             for (const park::PoolExtra& extra : extras)
                 if (const auto square = squares.find({ extra.col, extra.row }); square != squares.end() && square->second->kind == park::PoolKind::Tile)
                 {
-                    const auto [dc, dr] = kSides[static_cast<std::size_t>(extra.turn & 3)];
+                    // Facing along the extra's length, as those on a saved park's loungers lie.
+                    const auto [dc, dr] = kSides[static_cast<std::size_t>((extra.turn + 1) & 3)];
                     const PoolUse use = extra.fit.lounger ? PoolUse::Lounge : extra.fit.shower ? PoolUse::Shower : PoolUse::Stand;
-                    complexes[complex_of.at(square->first)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<float>(square->second->surface)), .heading = { std::atan2(static_cast<float>(dc), static_cast<float>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : std::uint8_t { 1 } });
+                    complexes[complex_of.at(square->first)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<float>(square->second->surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 }, .heading = { std::atan2(static_cast<float>(dc), static_cast<float>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : std::uint8_t { 1 } });
                 }
         // The rooms there were, by tile, and the complexes they opened on.
         std::map<std::pair<std::int32_t, std::int32_t>, entt::entity> rooms;
@@ -718,7 +719,7 @@ namespace rct3::simulation
             attraction.price = { room.ticket };
             attraction.open = room.open;
             r.get_or_emplace<PoolTank>(e).fluid = static_cast<PoolFluid>(std::min<std::uint8_t>(room.fluid, 2));
-            r.emplace_or_replace<PoolDoor>(e, PoolDoor { .pool = pool, .col = room.col, .row = room.row, .room = middle(room.col, room.row, surface), .poolside = middle(square->second->col, square->second->row, surface) });
+            r.emplace_or_replace<PoolDoor>(e, PoolDoor { .pool = pool, .col = room.col, .row = room.row, .room = middle(room.col, room.row, surface), .poolside = middle(square->second->col, square->second->row, surface) + glm::vec3 { 0, kTuning.pools.deck, 0 } });
         }
         // A complex kept keeps its dirt.
         for (std::size_t c = 0; c < complexes.size(); ++c)

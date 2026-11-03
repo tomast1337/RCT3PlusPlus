@@ -89,7 +89,8 @@ if (extra) {
     await until(() => using_it() !== undefined, 20000, `a swimmer on the ${extra.symbol}`);
     await ui.click("bar/Top_Play");
     log("using it", JSON.stringify(using_it()));
-    camera.look({ col: extra.col + 0.5, row: extra.row + 0.5 }, { col: extra.col + 0.5, row: extra.row + 3, up: 1.5 });
+    park.setTime(0.5); // Seen by day
+    camera.look({ col: extra.col + 0.5, row: extra.row + 0.5 }, { col: extra.col + 2, row: extra.row + 2, up: 1.2 });
     await frames(30);
     await screenshot("pool_saved_extra");
 }

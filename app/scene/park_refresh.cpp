@@ -582,17 +582,19 @@ namespace rct3::scene
                     return std::nullopt;
                 const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
                 const bool moving = now.was != now.position;
-                // shortcut: on the paving they keep their clothes, as the swimwear sets drawn out of the water show
-                // only parts of a person; upgrade once the dry swimwear pieces are understood.
-                pose.look.swimwear = swimmer->in_water;
-                if (swimmer->in_water)
+                // shortcut: walking the paving they keep their clothes, as the swimwear sets drawn out of the water
+                // show only parts of a person; upgrade once the dry swimwear pieces are understood. Lying on a
+                // lounger they wear the swimwear, whose pieces alone carry the lying motion.
+                const bool lounging = swimmer->place >= 0 && swimmer->use == simulation::PoolUse::Lounge;
+                pose.look.swimwear = swimmer->in_water || lounging;
+                if (swimmer->in_water || lounging)
                 {
                     pose.look.body = shown.swim_body != nullptr ? shown.swim_body : pose.look.body;
                     pose.look.legs = shown.swim_legs != nullptr ? shown.swim_legs : pose.look.legs;
                 }
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
                 // shortcut: they lie down and get up at once; upgrade with the lounger's motions in and out.
-                pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : swimmer->place >= 0 && swimmer->use == simulation::PoolUse::Lounge ? kLoungeMotion : moving ? park::motion::kWalk : park::motion::kIdle;
+                pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : lounging ? kLoungeMotion : moving ? park::motion::kWalk : park::motion::kIdle;
                 if (!swimmer->in_water && moving && shown.paces[0] > 0)
                     pose.time = at.walked.value / shown.paces[0];
                 return pose;

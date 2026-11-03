@@ -1055,6 +1055,17 @@ namespace rct3::simulation
                     const NodeId here = stride.from;
                     const auto benches = static_cast<std::size_t>(std::ranges::count_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Bench && !r.get<PathItem>(i).broken; }));
                     const auto sight = std::ranges::find_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Sight || r.get<PathItem>(i).kind == PathItemKind::PhotoSpot; });
+                    // Jumping fountains catch a passer's eye for a moment, and often please them.
+                    if (std::ranges::any_of(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Fountain; }) && random::chance(dice.state, kTuning.surroundings.glance.value))
+                    {
+                        r.emplace_or_replace<Gesture>(g, GestureKind::Glance, kTuning.surroundings.glancing.value);
+                        if (random::chance(dice.state, kTuning.surroundings.fountain_thought.value))
+                        {
+                            think(r, g, ThoughtKind::JumpingFountainsGood, entt::null, now);
+                            mood.happiness.value = clamp01(mood.happiness.value + kTuning.surroundings.fountain_cheer.value);
+                        }
+                        continue;
+                    }
                     if ((mood.energy.value < kTuning.facilities.tired.value || mood.nausea.value >= kTuning.needs.want.value) && seated[here] < benches * kTuning.facilities.bench_seats && random::chance(dice.state, kTuning.facilities.sit_chance.value))
                     {
                         r.emplace<Linger>(g, PathItemKind::Bench, kTuning.facilities.sit.value);

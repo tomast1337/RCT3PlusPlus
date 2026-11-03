@@ -255,6 +255,7 @@ namespace rct3::simulation
         Litter = 3,
         ReallyTidy = 6,   ///< No litter or damage round them
         GreatScenery = 8, ///< Plenty of scenery round them
+        JumpingFountainsGood = 189,
         Hungry = 4,
         Thirsty = 5,
         Toilet = 12,
@@ -738,6 +739,7 @@ namespace rct3::simulation
         Disapproval, ///< Arms folded at a poor show
         Cry,         ///< A child crying after a poor show
         Horror,      ///< A child taking fright at a poor show
+        Glance,      ///< Turning to look at jumping fountains passed
     };
 
     struct Gesture

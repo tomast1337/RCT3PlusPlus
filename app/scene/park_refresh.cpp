@@ -1715,7 +1715,7 @@ namespace rct3::scene
         if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid() || scene.supports.stale)
             return; // Stale supports change the objects first (refresh_supports)
         scene.since_rebuild = 0;
-        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, scales = scene.level_scales, supports = scene.show_supports, broken = scene.broken_objects, chains = park::chain_runs(scene.rides)] {
+        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, scales = scene.level_scales, supports = scene.show_supports, broken = scene.broken_objects, chains = park::chain_runs(scene.rides, scene.objects, scene.models)] {
             profiling::register_thread("ObjectWorker");
             auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band, scales, supports, broken, chains); });
             profiling::unregister_thread();

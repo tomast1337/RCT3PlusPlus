@@ -1,14 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/chain_lifts.hpp"
 
+#include "strings/ascii.hpp"
+
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 
 namespace rct3::park
 {
 
-    Chains chain_runs(const save::RideModel& rides)
+    Chains chain_runs(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const ObjectModels& models)
     {
+        std::map<std::uint64_t, const ObjectModel*> by_id;
+        for (const save::Ride& ride : rides.rides)
+            if (ride.track)
+                for (const save::TrackPiece& piece : ride.track->pieces)
+                    by_id.emplace(piece.scenery, nullptr);
+        for (const save::PlacedObject& o : objects)
+            if (const auto at = by_id.find(o.id); at != by_id.end())
+                if (const auto model = models.find(model_ref(o)); model != models.end())
+                    at->second = &model->second;
         Chains runs;
         for (std::size_t r = 0; r < rides.rides.size(); ++r)
         {
@@ -16,8 +28,14 @@ namespace rct3::park
                 continue;
             const auto run = static_cast<std::int32_t>(r + 1);
             for (const save::TrackPiece& piece : rides.rides[r].track->pieces)
-                if (piece.scenery != 0)
-                    runs[piece.scenery] = piece.reversed ? -run : run;
+            {
+                if (piece.scenery == 0)
+                    continue;
+                const auto model = by_id.find(piece.scenery);
+                const std::string_view section = std::string_view(piece.symbol).substr(0, piece.symbol.find(':'));
+                const bool back = model != by_id.end() && model->second != nullptr && std::ranges::any_of(model->second->runs_back, [&](const std::string& s) { return strings::equals_ignoring_case(s, section); });
+                runs[piece.scenery] = piece.reversed != back ? -run : run;
+            }
         }
         return runs;
     }

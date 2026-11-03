@@ -2,8 +2,8 @@
 //
 // The chains moving up lift pieces. A lift piece's chain parts show a chain picture repeated along the track,
 // and the picture slides along them as fast as the ride's lift pulls, for as long as park time runs, whether
-// the ride is open or not. Each ride's chain has one shift; pieces laid against their section's own way take
-// it the other way round.
+// the ride is open or not. Each ride's chain has one shift; pieces laid against their section's own way, or
+// whose section lays its piece from the far end, take it the other way round.
 #pragma once
 
 #include "park/object_mesh.hpp"
@@ -18,8 +18,9 @@ namespace rct3::park
     /// How many times the chain picture repeats along a metre of track, as the lift pieces' meshes lay it out.
     inline constexpr float kChainRepeatsPerMetre = 4;
 
-    /// The chain parts' runs (see Chains) of every ride's track pieces, by the object carrying each piece.
-    [[nodiscard]] Chains chain_runs(const save::RideModel& rides);
+    /// The chain parts' runs (see Chains) of every ride's track pieces, by the object carrying each piece, among
+    /// `objects` drawn with `models`.
+    [[nodiscard]] Chains chain_runs(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const ObjectModels& models);
 
     /// A chain's shift, a share of its picture from 0 up to 1, `seconds` of park time on from `shift` with
     /// its lift pulling at `speed` metres a second.

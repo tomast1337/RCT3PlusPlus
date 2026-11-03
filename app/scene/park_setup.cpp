@@ -1203,7 +1203,7 @@ namespace rct3::scene
             }
         }
         profiling::section("ObjectBuffers", [&] {
-            if (auto built = build_objects(scene, park::eye(scene.camera), { }, scene.blend_band, scene.level_scales, scene.show_supports, { }, park::chain_runs(scene.rides)))
+            if (auto built = build_objects(scene, park::eye(scene.camera), { }, scene.blend_band, scene.level_scales, scene.show_supports, { }, park::chain_runs(scene.rides, scene.objects, scene.models)))
                 show_objects(device, scene, std::move(*built));
         });
         if (auto sky = load_sky(device, install, options, park::background_theme(world->sky_background), scene); !sky)

@@ -346,9 +346,13 @@ namespace rct3::park
             return lookup(entries(f.cars, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::RideCar>(ovl::read_ride_cars(o, p), &ovl::RideCarItem::car); }), name);
         }
 
+        const ByName<ovl::TrackSection>& sections_in(OpenFile& f)
+        {
+            return entries(f.sections, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::TrackSection>(ovl::read_track_sections(o, p), &ovl::TrackSectionItem::section); });
+        }
         const ovl::TrackSection* section_in(OpenFile& f, std::string_view name)
         {
-            return lookup(entries(f.sections, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::TrackSection>(ovl::read_track_sections(o, p), &ovl::TrackSectionItem::section); }), name);
+            return lookup(sections_in(f), name);
         }
         const ovl::Spline* spline_in(OpenFile& f, std::string_view name)
         {
@@ -828,13 +832,24 @@ namespace rct3::park
         for (ModelLevel& level : model.levels)
             for (ModelPart& part : level.parts)
                 part.chain = part.chain && lift;
-        if (section == nullptr || section->water_splines[0].empty() || section->water_splines[1].empty())
+        if (section == nullptr)
+            return;
+        const ovl::Spline* track = section->splines[0].empty() ? nullptr : spline_in(*file, section->splines[0]);
+        // Other sections laying the same piece, a right-hand curve laying the left-hand one's: those whose rails
+        // start at this one's far end run it the other way.
+        const auto position = [](const ovl::SplineNode& n) { return glm::vec3 { n.position[0], n.position[1], n.position[2] }; };
+        for (const auto& [name, other] : sections_in(*file))
+        {
+            const ovl::Spline* rails = track == nullptr || track->nodes.empty() || &other == section || !strings::equals_ignoring_case(other.scenery_item, symbol) ? nullptr : spline_in(*file, other.splines[0]);
+            if (rails != nullptr && !rails->nodes.empty() && glm::distance(position(rails->nodes.front()), position(track->nodes.back())) < glm::distance(position(rails->nodes.front()), position(track->nodes.front())))
+                model.runs_back.emplace_back(name);
+        }
+        if (section->water_splines[0].empty() || section->water_splines[1].empty())
             return;
         const ovl::Spline* left = spline_in(*file, section->water_splines[0]);
         const ovl::Spline* right = spline_in(*file, section->water_splines[1]);
         if (left == nullptr || right == nullptr)
             return;
-        const ovl::Spline* track = section->splines[0].empty() ? nullptr : spline_in(*file, section->splines[0]);
         const auto strip = flow_strip(*left, *right, track != nullptr ? *track : ovl::Spline { }, std::string(kFlowPicture));
         if (!strip)
             return;

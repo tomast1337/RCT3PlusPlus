@@ -165,16 +165,19 @@ namespace rct3::park
 
     struct ObjectModel
     {
-        std::uint16_t positioning = 0;                   ///< How the item sits on its tile (see object_placement.hpp)
-        std::uint32_t category = 0;                      ///< What kind of item it is (see item_category.hpp)
-        std::array<std::int32_t, 2> squares { 1, 1 };    ///< Tiles it covers along its own X and Z
-        float sway = 0;                                  ///< How much it sways in the wind; above 0 for trees and plants only
-        std::string support_group;                       ///< The set of supports it stands on, or the set a support belongs to
-        std::int32_t lowest_level = 0;                   ///< Lowest level its footprint takes, from its base height
-        bool water_only = false;                         ///< A ride that stands only on water
-        bool fenced_round = false;                       ///< A track piece fenced round its footprint, a tower's base
-        bool paved_under = false;                        ///< A track piece whose footprint is paved, a tower's base
-        bool flows = false;                              ///< A track piece water flows along (water_flow.hpp)
+        std::uint16_t positioning = 0;                ///< How the item sits on its tile (see object_placement.hpp)
+        std::uint32_t category = 0;                   ///< What kind of item it is (see item_category.hpp)
+        std::array<std::int32_t, 2> squares { 1, 1 }; ///< Tiles it covers along its own X and Z
+        float sway = 0;                               ///< How much it sways in the wind; above 0 for trees and plants only
+        std::string support_group;                    ///< The set of supports it stands on, or the set a support belongs to
+        std::int32_t lowest_level = 0;                ///< Lowest level its footprint takes, from its base height
+        bool water_only = false;                      ///< A ride that stands only on water
+        bool fenced_round = false;                    ///< A track piece fenced round its footprint, a tower's base
+        bool paved_under = false;                     ///< A track piece whose footprint is paved, a tower's base
+        bool flows = false;                           ///< A track piece water flows along (water_flow.hpp)
+        /// Track sections that lay this piece from its far end, as a right-hand curve lays the left-hand one's:
+        /// its chain and water run the other way on them (chain_lifts.hpp).
+        std::vector<std::string> runs_back;
         PathFeature feature = PathFeature::None;         ///< What a path feature is for
         std::optional<float> water_capacity { };         ///< A flower bed's water when full; none for what is not watered
         bool no_entry = false;                           ///< A sign that can be set to forbid entry

@@ -138,7 +138,7 @@ namespace rct3::scene
             const auto& r = scene.sim.registry;
             const auto* linger = r.try_get<simulation::Linger>(guest);
             const auto* item = linger != nullptr && r.valid(linger->bench) ? r.try_get<simulation::PathItem>(linger->bench) : nullptr;
-            if (item == nullptr)
+            if (item == nullptr || linger->at == simulation::PathItemKind::Sight || linger->at == simulation::PathItemKind::PhotoSpot)
                 return std::nullopt;
             const auto o = std::ranges::find(scene.objects, item->object, &save::PlacedObject::id);
             const auto model = o != scene.objects.end() && !o->hidden ? scene.models.find(park::model_ref(*o)) : scene.models.end();
@@ -172,6 +172,13 @@ namespace rct3::scene
         const std::int32_t kCannonInMotion = park::motion_number("watercannonin").value_or(park::motion::kIdle);
         const std::int32_t kCannonMotion = park::motion_number("watercannonloop").value_or(park::motion::kIdle);
         const std::int32_t kCannonOutMotion = park::motion_number("watercannonout").value_or(park::motion::kIdle);
+        /// How a party poses at a view, as the game's motions name them: one filming the rest, teens slouching.
+        const std::int32_t kVideoInMotion = park::motion_number("videoin").value_or(park::motion::kIdle);
+        const std::int32_t kVideoMotion = park::motion_number("videoloop").value_or(park::motion::kIdle);
+        const std::int32_t kVideoOutMotion = park::motion_number("videoout").value_or(park::motion::kIdle);
+        const std::int32_t kSlouchInMotion = park::motion_number("slouchin").value_or(park::motion::kIdle);
+        const std::int32_t kSlouchMotion = park::motion_number("slouchloop").value_or(park::motion::kIdle);
+        const std::int32_t kSlouchOutMotion = park::motion_number("slouchout").value_or(park::motion::kIdle);
 
         /// What a guest holds of what they carry from a stall: it while there is some left, then its empty; nothing
         /// once only empties in their pockets are left, or when its look is not known.
@@ -816,6 +823,70 @@ namespace rct3::scene
                     pose.time = step.seconds;
                 }
                 return pose;
+            }
+            // At a view: the party in a row on the path behind it, facing out the way it looks, and one of them at the
+            // row's end turned to film the rest. Teens slouch now and then; the rest stand.
+            if (const auto* linger = r.try_get<simulation::Linger>(shown.guest); linger != nullptr && linger->at == simulation::PathItemKind::PhotoSpot)
+            {
+                const auto* item = r.valid(linger->bench) ? r.try_get<simulation::PathItem>(linger->bench) : nullptr;
+                const auto o = item != nullptr ? std::ranges::find(scene.objects, item->object, &save::PlacedObject::id) : scene.objects.end();
+                if (o != scene.objects.end() && !o->hidden)
+                {
+                    constexpr float kRowGap = 0.6f;  ///< Chosen by eye: between two in the row
+                    constexpr float kRowBack = 0.8f; ///< Chosen by eye: from the view to the row
+                    constexpr float kFilming = 1.2f; ///< Chosen by eye: from the row's end to the one filming it
+                    const auto model = scene.models.find(park::model_ref(*o));
+                    const glm::mat4 placed = park::placed_transform(*o, model != scene.models.end() ? &model->second : nullptr, scene.grid, scene.fitted);
+                    // It looks out from the path, from the middle of the path's tile across the item.
+                    const glm::vec3 outward = glm::vec3(placed[3]) - scene.sim.paths.centre(item->node);
+                    const glm::vec3 ahead = glm::length(glm::vec2(outward.x, outward.z)) > 0.01f ? glm::normalize(glm::vec3(outward.x, 0.0f, outward.z)) : glm::normalize(glm::vec3(placed[2].x, 0.0f, placed[2].z));
+                    const glm::vec3 side { ahead.z, 0.0f, -ahead.x };
+                    std::size_t row = 0;    // How many stand in the row, of every party there, those filming not counted
+                    std::size_t before = 0; // Of them, how many stand before this one
+                    for (const auto& [them, l] : r.view<const simulation::Linger>().each())
+                        if (l.bench == linger->bench && !l.camera)
+                        {
+                            ++row;
+                            before += them < shown.guest ? 1 : 0;
+                        }
+                    const glm::vec3 middle = glm::vec3(placed[3]) - ahead * kRowBack;
+                    const float place = static_cast<float>(before) - static_cast<float>(std::max<std::size_t>(row, 1) - 1) / 2;
+                    const float reach = static_cast<float>(std::max<std::size_t>(row, 1) - 1) / 2 * kRowGap; // From the row's middle to its end
+                    const glm::vec3 stand = linger->camera ? middle + side * (reach + kFilming) : middle + side * place * kRowGap;
+                    const float facing = linger->camera ? std::atan2(-side.x, -side.z) : std::atan2(ahead.x, ahead.z);
+                    const float watch = simulation::kTuning.facilities.watch.value;
+                    const float into = watch - linger->left.value + scene.sim_time;
+                    const float off = std::min(into, watch - into);
+                    const float part = std::clamp(off / kStepToSeat, 0.0f, 1.0f);
+                    const float turn = std::remainder(facing - at.heading.value, glm::two_pi<float>());
+                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), glm::mix(at.position, glm::vec3(stand.x, at.position.y, stand.z), part)), at.heading.value + turn * part, glm::vec3(0.0f, 1.0f, 0.0f));
+                    if (off < kStepToSeat)
+                    {
+                        pose.motion = park::motion::kWalk;
+                        if (shown.paces[0] > 0)
+                            pose.time = off * glm::distance(at.position, stand) / kStepToSeat / shown.paces[0];
+                        return pose;
+                    }
+                    const auto length = [&](std::int32_t motion) {
+                        park::PlacedPerson probe = pose;
+                        probe.motion = motion;
+                        return park::motion_seconds(*scene.person_models, probe);
+                    };
+                    const auto* visitor = r.try_get<simulation::Visitor>(shown.guest);
+                    const bool slouch = !linger->camera && visitor != nullptr && visitor->age == simulation::AgeGroup::Teen && entt::to_integral(shown.guest) % 2 == 0;
+                    const std::int32_t in = linger->camera ? kVideoInMotion : slouch ? kSlouchInMotion : park::motion::kIdle;
+                    const std::int32_t out = linger->camera ? kVideoOutMotion : slouch ? kSlouchOutMotion : park::motion::kIdle;
+                    const float stay = watch - 2 * kStepToSeat;
+                    const float begin = in == park::motion::kIdle ? 0.0f : length(in);
+                    const float end = out == park::motion::kIdle ? 0.0f : length(out);
+                    const std::array clips { park::Clip { in, begin }, park::Clip { linger->camera ? kVideoMotion : slouch ? kSlouchMotion : park::motion::kIdle, std::max(stay - begin - end, 0.0f) }, park::Clip { out, end } };
+                    const park::Clip step = park::clip_at(clips, std::min(into - kStepToSeat, stay));
+                    pose.motion = step.motion;
+                    pose.time = step.seconds;
+                    if (!linger->camera)
+                        gestured(r.try_get<simulation::Gesture>(shown.guest));
+                    return pose;
+                }
             }
             // On a bench: a step over to their seat, down onto it, sitting there, turned now and then to talk to one
             // sitting beside them, and up and back to the path.

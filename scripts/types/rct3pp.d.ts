@@ -96,6 +96,8 @@ declare namespace park {
     function guests(): number;
     /** The path tiles under the park's entrances, where guests come in and go out. */
     function gates(): { col: number; row: number }[];
+    /** The path tiles of the park's spawn points, where arriving guests appear and those going home walk off. */
+    function spawns(): { col: number; row: number }[];
     /** Brings `parties` parties of guests in at once, each on a path tile of the park picked at random from
      *  `seed` (1 by default), as if they had walked there from the gate. Where each landed and how many it holds. */
     function dropParties(parties: number, seed?: number): { col: number; row: number; guests: number }[];
@@ -447,9 +449,10 @@ declare namespace people {
      *  seated on a ride, how they react to it and the ride's place in rides.list (`ride`), and a gesture they make
      *  now by the motion it shows (`gesture`, such as "dizzy" or "laugh"). A seller has the id of the object of the stall
      *  or ride entrance they serve at as `post`; a worker the simulation runs, their job as `role`. Members of one party share its number, `party`, while they are with it,
-     *  and those on their way out of the park are `leaving`. `thoughts` are the numbers of the thoughts their window
+     *  those on their way out of the park are `leaving`, and those walking in from a spawn point who have not come
+     *  through the gate yet are `arriving`. `thoughts` are the numbers of the thoughts their window
      *  lists, and a guest's `happiness` (0 to 1) is what their window and the guest list show. */
-    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; bench?: number; seat?: number; rising?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "sitting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; glancing?: boolean; lingering?: PathItemKind; pool_extra?: "lounger" | "shower" | "other"; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
+    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; arriving?: boolean; bench?: number; seat?: number; rising?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "sitting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; glancing?: boolean; lingering?: PathItemKind; pool_extra?: "lounger" | "shower" | "other"; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

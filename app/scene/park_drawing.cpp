@@ -7,6 +7,7 @@
 #include "park/person_motions.hpp"
 #include "park/sun_view.hpp"
 #include "park/water_flow.hpp"
+#include "park/water_jet.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "profiling/profiler.hpp"
 #include "scene/park_footpaths.hpp"
@@ -556,8 +557,15 @@ namespace rct3::scene
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool interface)
     {
         profiling::section("Flow", [&] { roll_flow(device, scene); });
-        if (!scene.footpaths.waterfalls.empty() || !scene.waterfall_mesh.indices.empty())
-            profiling::section("Waterfalls", [&] { park::waterfall_mesh(scene.footpaths.waterfalls, scene.park_clock, scene.waterfall_mesh); });
+        // Jets of water are drawn with the waterfalls, as running water of their picture.
+        if (!scene.footpaths.waterfalls.empty() || !scene.jets.empty() || !scene.waterfall_mesh.indices.empty())
+            profiling::section("Waterfalls", [&] {
+                park::waterfall_mesh(scene.footpaths.waterfalls, scene.park_clock, scene.waterfall_mesh);
+                std::vector<const park::WaterJet*> jets;
+                for (const ParkScene::Jet& jet : scene.jets)
+                    jets.push_back(&jet.water);
+                park::jet_mesh(jets, park::eye(scene.camera, scene.seat), scene.park_clock, scene.waterfall_mesh);
+            });
         profiling::section("LedSigns", [&] { roll_led_signs(device, scene); });
         // A person shows alone on a light ground, turning as the build list's pieces do; the rest in the park.
         if (auto info = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); info && (scene.shown || scene.shown_person || scene.shown_prop || !scene.shown_party.empty()))

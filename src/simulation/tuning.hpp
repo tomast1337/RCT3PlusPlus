@@ -574,6 +574,9 @@ namespace rct3::simulation::tuning
         Share fountain_cheer { 0.02f };  ///< Chosen by eye: happiness from liking them
         Chance fire_cannon { 0.2 };      ///< Chosen by eye: of taking a free water cannon passed
         Seconds firing { 30 };           ///< Chosen by eye: a guest fires one for
+        Distance cannon_reach { 14 };    ///< Chosen by eye: how far off a cannon's firer picks someone to spray
+        Chance retarget { 0.25 };        ///< Chosen by eye: a second, of the firer swinging on to someone else
+        Share soaking { 0.3f };          ///< Chosen by eye: wetness a second for someone the cannon sprays
         Share view_cheer { 0.05f };      ///< Chosen by eye: happiness from a fine view
         std::int32_t earshot = 2;        ///< Chosen by eye: tiles from a loudspeaker within which guests hear it
         Chance music_thought { 0.15 };   ///< Chosen by eye: of liking its music, on each tile walked in earshot

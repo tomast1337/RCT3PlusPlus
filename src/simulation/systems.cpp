@@ -1027,6 +1027,28 @@ namespace rct3::simulation
                     if (linger->at != PathItemKind::Bench)
                     {
                         mood.happiness.value = clamp01(mood.happiness.value + kTuning.facilities.sight_cheer.value * dt);
+                        // Firing a water cannon: now and then they swing it on to another guest in reach, who
+                        // gets soaked while it is on them.
+                        if (linger->at == PathItemKind::WaterCannon && r.all_of<Pose>(g))
+                        {
+                            const glm::vec3 from = r.get<Pose>(g).position;
+                            const float reach = kTuning.surroundings.cannon_reach.value;
+                            const auto in_reach = [&](entt::entity t) { return t != g && r.valid(t) && r.all_of<Pose, Mood, Visitor>(t) && !r.any_of<Staff>(t) && glm::distance(r.get<Pose>(t).position, from) <= reach; };
+                            if (!in_reach(linger->target) || random::chance(dice.state, kTuning.surroundings.retarget.value * dt))
+                            {
+                                std::vector<entt::entity> near;
+                                for (const entt::entity t : r.view<const Pose, const Visitor>())
+                                    if (in_reach(t))
+                                        near.push_back(t);
+                                std::ranges::sort(near);
+                                linger->target = near.empty() ? entt::null : near[random::below(dice.state, near.size())];
+                            }
+                            if (r.valid(linger->target))
+                            {
+                                Mood& soaked = r.get<Mood>(linger->target);
+                                soaked.wet.value = clamp01(soaked.wet.value + kTuning.surroundings.soaking.value * dt);
+                            }
+                        }
                         if (linger->left.value <= 0)
                             r.remove<Linger>(g);
                         continue;

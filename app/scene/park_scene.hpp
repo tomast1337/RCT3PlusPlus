@@ -36,6 +36,7 @@
 #include "park/terrain_mesh.hpp"
 #include "park/track_course.hpp"
 #include "park/track_rules.hpp"
+#include "park/water_jet.hpp"
 #include "park/weather_look.hpp"
 #include "random/generator.hpp"
 #include "render/device.hpp"
@@ -488,9 +489,22 @@ namespace rct3::scene
         /// By the id of each object pipeline above, the same pipeline drawing only the front of one-sided parts.
         std::map<std::uint32_t, render::PipelineHandle> front_only;
         ui::UiTextures object_textures;
-        ovl::RgbaImage flow_picture;                          ///< The flowing water's, still; empty without one (park/water_flow.hpp)
-        std::uint32_t flow_shift = 0;                         ///< Rows it is rolled by on the GPU
-        park::ObjectMesh waterfall_mesh;                      ///< The waterfalls' water, built again each frame as it runs
+        ovl::RgbaImage flow_picture;     ///< The flowing water's, still; empty without one (park/water_flow.hpp)
+        std::uint32_t flow_shift = 0;    ///< Rows it is rolled by on the GPU
+        park::ObjectMesh waterfall_mesh; ///< The waterfalls' water, built again each frame as it runs
+        /// Water a park object shoots: a cannon a guest fires.
+        struct Jet
+        {
+            std::size_t object = 0;                      ///< Its place in `objects`
+            park::WaterJet water { 1.6f, 0.05f, 0.12f }; ///< Chosen by eye: a cannon's, a hose-thick stream that frays
+            float heading = 0;                           ///< Where the cannon points now, round the vertical, 0 along +Z, as Pose's
+            float yaw = 0;                               ///< Its gun's turn from standing, round the vertical
+            float pitch = 0.35f;                         ///< And up
+            float splashed = 0;                          ///< park_clock at its last splash
+            bool fed = false;                            ///< Aimed this frame; one that is not stops
+        };
+        std::vector<Jet> jets;
+        float jets_clock = 0;                                 ///< park_clock when the jets last moved
         render::PipelineHandle waterfall_added_pipeline;      ///< Its pictures with a second added
         render::PipelineHandle waterfall_multiplied_pipeline; ///< And with a second multiplying them
         park::SkyModels sky;

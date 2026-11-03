@@ -367,7 +367,8 @@ namespace rct3::scene
             });
         }
 
-        constexpr float kGateHold = 3; ///< How long a ride's gate stays open after its last rider walks through
+        constexpr float kGateHold = 3;                             ///< How long a ride's gate stays open after its last rider walks through
+        constexpr std::string_view kCannonSplash = "paddlesplash"; ///< Chosen by eye: the effect where a cannon's water lands
 
         /// Turns and moves the bones of the boned flat rides as far into their motions as their rides are, and
         /// the seats they carry.
@@ -409,7 +410,82 @@ namespace rct3::scene
                     playing = park::flat_ride_motion(seconds, length, into ? std::min(*into + scene.sim_time, length) : 0.0f, into.has_value(), idle);
                 }
                 const auto [motion, time] = playing;
-                const std::vector<glm::mat4> moves = park::bone_moves(*model->second.rig, motion, time);
+                std::vector<glm::mat4> moves = park::bone_moves(*model->second.rig, motion, time);
+                // A water cannon a guest fires turns its gun to the guest they spray, or sweeps it about with no
+                // one in reach, and shoots water from its nozzle.
+                if (const auto& aim = model->second.aim_bones; aim && scene.simulate)
+                {
+                    const auto& r = scene.sim.registry;
+                    const std::uint64_t id = scene.objects[boned.object].id;
+                    std::optional<const simulation::Linger&> firing;
+                    for (const auto [e, item] : r.view<const simulation::PathItem>().each())
+                        if (item.object == id)
+                            for (const auto [g, linger, stride] : r.view<const simulation::Linger, const simulation::Stride>().each())
+                                if (linger.at == simulation::PathItemKind::WaterCannon && stride.from == item.node)
+                                    firing = linger;
+                    auto jet = std::ranges::find(scene.jets, boned.object, &ParkScene::Jet::object);
+                    if (firing && jet == scene.jets.end())
+                        jet = scene.jets.insert(scene.jets.end(), ParkScene::Jet { .object = boned.object });
+                    if (jet != scene.jets.end())
+                    {
+                        const park::BoneRig& rig = *model->second.rig;
+                        const auto [turret, nozzle] = *aim;
+                        const glm::vec3 pivot(rig.rest_world[static_cast<std::size_t>(turret)][3]);
+                        const glm::vec3 muzzle(rig.rest_world[static_cast<std::size_t>(nozzle)][3]);
+                        const glm::vec3 ahead = glm::normalize(glm::vec3(muzzle.x - pivot.x, 0, muzzle.z - pivot.z));
+                        constexpr float kSpeed = 11;     ///< Chosen by eye: metres a second the water leaves at
+                        constexpr float kTurn = 2.5f;    ///< Chosen by eye: radians a second the gun turns
+                        constexpr float kHighest = 0.8f; ///< Chosen by eye: most the gun tips up, and down
+                        constexpr float kLowest = -0.35f;
+                        float yaw = 0.7f * std::sin(scene.park_clock * 0.5f + static_cast<float>(boned.object)); // Sweeping about
+                        float pitch = 0.35f;
+                        float ground = boned.placed[3].y;
+                        if (firing && r.valid(firing->target) && r.all_of<simulation::Pose>(firing->target))
+                        {
+                            const glm::vec3 at = simulation::between_steps(r.get<simulation::Pose>(firing->target), scene.sim_time / simulation::kTickSeconds).position;
+                            ground = at.y;
+                            const glm::vec3 local = glm::vec3(glm::inverse(boned.placed) * glm::vec4(at + glm::vec3(0, 1, 0), 1)) - muzzle;
+                            const float across = std::hypot(local.x, local.z);
+                            if (across > 0.5f)
+                            {
+                                yaw = std::atan2(ahead.z * local.x - ahead.x * local.z, ahead.x * local.x + ahead.z * local.z);
+                                // The lower of the two arcs that land on them, else the farthest throw.
+                                const float g = park::kJetGravity;
+                                const float v2 = kSpeed * kSpeed;
+                                const float room = v2 * v2 - g * (g * across * across + 2 * local.y * v2);
+                                pitch = room >= 0 ? std::atan((v2 - std::sqrt(room)) / (g * across)) : std::numbers::pi_v<float> / 4;
+                            }
+                        }
+                        // Let go, the gun stays as it was left.
+                        if (const float seconds = scene.park_clock - scene.jets_clock; firing)
+                        {
+                            jet->yaw += std::clamp(std::remainder(yaw - jet->yaw, 2 * std::numbers::pi_v<float>), -kTurn * seconds, kTurn * seconds);
+                            jet->pitch += std::clamp(std::clamp(pitch, kLowest, kHighest) - jet->pitch, -kTurn * seconds, kTurn * seconds);
+                        }
+                        const glm::mat4 turn = glm::translate(glm::mat4(1.0f), pivot) * glm::rotate(glm::mat4(1.0f), jet->yaw, glm::vec3(0, 1, 0)) * glm::rotate(glm::mat4(1.0f), jet->pitch, glm::cross(ahead, glm::vec3(0, 1, 0))) * glm::translate(glm::mat4(1.0f), -pivot);
+                        for (std::size_t b = 0; b < moves.size(); ++b)
+                            for (std::int32_t up = static_cast<std::int32_t>(b); up >= 0; up = rig.parents[static_cast<std::size_t>(up)])
+                                if (up == turret)
+                                {
+                                    moves[b] = turn * moves[b];
+                                    break;
+                                }
+                        const glm::vec3 way = glm::normalize(glm::mat3(boned.placed) * glm::mat3(turn) * ahead);
+                        jet->heading = std::atan2(way.x, way.z);
+                        if (firing)
+                        {
+                            jet->fed = true;
+                            jet->water.aim(glm::vec3(boned.placed * moves[static_cast<std::size_t>(nozzle)] * glm::vec4(muzzle, 1)), way * kSpeed);
+                        }
+                        // Spray where it lands.
+                        // shortcut: it lands on a level at the sprayed guest's feet, or the cannon's; upgrade with a ground test.
+                        if (const auto land = jet->water.landing([&](glm::vec2) { return ground; }); land && scene.park_clock - jet->splashed > 0.15f)
+                        {
+                            fire_park_particles(scene.particles, kCannonSplash, *land, glm::vec3(0, 1, 0));
+                            jet->splashed = scene.park_clock;
+                        }
+                    }
+                }
                 std::vector<glm::mat4> places(boned.bones.size());
                 for (std::size_t p = 0; p < places.size(); ++p)
                     places[p] = boned.placed * moves[static_cast<std::size_t>(boned.bones[p])];
@@ -423,6 +499,18 @@ namespace rct3::scene
                     if (view_bones[view] >= 0 && static_cast<std::size_t>(view_bones[view]) < moves.size())
                         boned.views[view] = moves[static_cast<std::size_t>(view_bones[view])];
             }
+            // Jets not aimed this frame stop, their water falling on; the spent ones go.
+            const float seconds = scene.park_clock - scene.jets_clock;
+            scene.jets_clock = scene.park_clock;
+            for (ParkScene::Jet& jet : scene.jets)
+            {
+                if (!jet.fed)
+                    jet.water.stop();
+                jet.fed = false;
+                jet.water.advance(seconds);
+            }
+            // A cannon keeps its own, to stay turned as it was left.
+            std::erase_if(scene.jets, [&](const ParkScene::Jet& jet) { return jet.water.finished() && (!std::ranges::contains(scene.boned_rides, jet.object, &ParkScene::BonedRide::object)); });
         }
 
         /// The band and side of each of `owners`' vertices: `side` 0 for objects drawn whole.

@@ -115,7 +115,7 @@ namespace rct3::park
                     const glm::vec3 out = side * std::cos(turn) + lift * std::sin(turn);
                     // Seen edge on, water looks whiter and thicker.
                     const float rim = 1 - std::abs(glm::dot(out, view));
-                    mesh.vertices.push_back({ .position = p + out * jet->radius(drops[i]) * fade, .colour = { 1.0f, 1.0f, 1.0f, (0.35f + 0.6f * rim * rim) * fade }, .uv = { static_cast<float>(k) / kSides, (run - seconds * kPictureSpeed * kPictureLength) / kPictureLength }, .normal = out });
+                    mesh.vertices.push_back({ .position = p + out * jet->radius(drops[i]) * fade, .colour = { 1.0f, 1.0f, 1.0f, (0.6f + 0.4f * rim * rim) * fade }, .uv = { static_cast<float>(k) / kSides, (run - seconds * kPictureSpeed * kPictureLength) / kPictureLength }, .normal = out });
                     mesh.owners.push_back(0);
                 }
                 if (i + 1 < drops.size())

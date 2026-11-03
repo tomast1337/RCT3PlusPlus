@@ -293,6 +293,22 @@ TEST_CASE("a guest passing a free water cannon may fire it a while, one at a tim
     CHECK(firing != entt::null);
 }
 
+TEST_CASE("a water cannon's firer sprays another guest in reach, who gets wet")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 1, 0 });
+    park.item(PathItemKind::WaterCannon, { 0, 0 });
+    const auto firer = park.guest({ 0, 0 });
+    const auto passer = park.guest({ 1, 0 });
+    auto& r = park.world().registry;
+    r.emplace_or_replace<Linger>(firer, PathItemKind::WaterCannon, Seconds { 20 });
+    park.run_seconds(3);
+    REQUIRE(r.all_of<Linger>(firer));
+    CHECK(r.get<Linger>(firer).target == passer);
+    CHECK(r.get<Mood>(passer).wet.value > 0.2f);
+    CHECK(r.get<Mood>(firer).wet.value == 0);
+}
+
 TEST_CASE("a party stops together at a view and likes it with scenery round it, or folds its arms at a bare one")
 {
     for (const bool planted : { true, false })

@@ -28,6 +28,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace rct3::ovl
@@ -200,6 +201,8 @@ namespace rct3::park
         std::optional<BoneRig> rig;
         std::size_t rig_level = 0;
         std::vector<std::int32_t> seat_bones; ///< By seat number, the rig's bone the seat is, when it has one
+        /// Of a water cannon: the rig's bones of its gun, which turns to aim, and of the nozzle at its muzzle.
+        std::optional<std::pair<std::int32_t, std::int32_t>> aim_bones;
         /// Of a flat ride, its own fixed cameras, bones named "camera" and a number: model space, by number,
         /// looking along +Z with +Y up, and the rig's bone each is, when it has one.
         std::vector<glm::mat4> view_places;
@@ -256,6 +259,11 @@ namespace rct3::park
     /// Key of the picture given to parts drawn as water: their texture style is SIWater and the texture they
     /// name is in no file, so the look is ours.
     inline constexpr std::string_view kWaterPicture = "rct3pp:water";
+
+    /// A water cannon's bones: its gun, which turns to aim, and the nozzle the water leaves from, along the
+    /// gun's +x.
+    inline constexpr std::string_view kCannonTurret = "ik_watergunturret";
+    inline constexpr std::string_view kCannonNozzle = "nozzle";
 
     /// Key of the picture given to chrome parts: their look is the surroundings mirrored in them, which the
     /// scene draws from the install's chrome picture, whatever texture they name (most name none in any file).

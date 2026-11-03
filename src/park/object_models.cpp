@@ -203,10 +203,10 @@ namespace rct3::park
         constexpr std::string_view kView = "camera";   ///< And so a fixed camera on a ride
         constexpr std::string_view kVendor = "vendor"; ///< A point or bone so named is where a seller stands
 
-        /// Whether `bone` is named `kind` and a number.
-        bool is_numbered(const ovl::Bone& b, std::string_view kind)
+        /// Whether `name` is `kind` and a number.
+        bool is_numbered(std::string_view name, std::string_view kind)
         {
-            return b.name.size() > kind.size() && strings::equals_ignoring_case(b.name.substr(0, kind.size()), kind) && std::ranges::all_of(b.name.substr(kind.size()), [](char c) { return c >= '0' && c <= '9'; });
+            return name.size() > kind.size() && strings::equals_ignoring_case(name.substr(0, kind.size()), kind) && std::ranges::all_of(name.substr(kind.size()), [](char c) { return c >= '0' && c <= '9'; });
         }
 
         /// The bones named `kind` and a number, by their place in the shape, in number order.
@@ -214,7 +214,7 @@ namespace rct3::park
         {
             std::vector<std::pair<int, std::int32_t>> found;
             for (std::size_t b = 0; b < shape.bones.size(); ++b)
-                if (is_numbered(shape.bones[b], kind))
+                if (is_numbered(shape.bones[b].name, kind))
                     found.emplace_back(std::stoi(std::string(shape.bones[b].name.substr(kind.size()))), static_cast<std::int32_t>(b));
             std::ranges::sort(found);
             std::vector<std::int32_t> out;
@@ -665,6 +665,17 @@ namespace rct3::park
                     continue;
                 if (const auto vendor = std::ranges::find_if(shape->effects, [](const ovl::ShapeEffect& e) { return strings::equals_ignoring_case(e.name, kVendor); }); !model.vendor_place && vendor != shape->effects.end())
                     model.vendor_place = column_matrix(vendor->transform);
+                // A bench's seats, as points named and numbered as a ride's seat bones are, in number order.
+                if (model.seat_places.empty())
+                {
+                    std::vector<std::pair<int, glm::mat4>> seats;
+                    for (const ovl::ShapeEffect& e : shape->effects)
+                        if (int number = 0; is_numbered(e.name, kSeat) && std::from_chars(e.name.data() + kSeat.size(), e.name.data() + e.name.size(), number).ec == std::errc { })
+                            seats.emplace_back(number, column_matrix(e.transform));
+                    std::ranges::sort(seats, { }, &std::pair<int, glm::mat4>::first);
+                    for (const auto& seat : seats)
+                        model.seat_places.push_back(seat.second);
+                }
                 if (model.lights.empty() || model.effects.empty())
                 {
                     std::vector<NamedPlace> places;

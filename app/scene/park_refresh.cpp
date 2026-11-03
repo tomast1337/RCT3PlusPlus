@@ -130,6 +130,31 @@ namespace rct3::scene
             return std::nullopt;
         }
 
+        /// Where a guest sits on a bench in the park: the seat their place on it comes to on its model. Nothing once
+        /// the bench is gone, or when its model has no such seat.
+        /// shortcut: looks for the bench among all the park's objects, upgrade to a lookup if sitters show in profiles.
+        std::optional<glm::mat4> bench_seat(const ParkScene& scene, entt::entity guest)
+        {
+            const auto& r = scene.sim.registry;
+            const auto* linger = r.try_get<simulation::Linger>(guest);
+            const auto* item = linger != nullptr && r.valid(linger->bench) ? r.try_get<simulation::PathItem>(linger->bench) : nullptr;
+            if (item == nullptr)
+                return std::nullopt;
+            const auto o = std::ranges::find(scene.objects, item->object, &save::PlacedObject::id);
+            const auto model = o != scene.objects.end() && !o->hidden ? scene.models.find(park::model_ref(*o)) : scene.models.end();
+            if (model == scene.models.end() || linger->seat >= model->second.seat_places.size())
+                return std::nullopt;
+            return park::placed_transform(*o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[linger->seat];
+        }
+
+        /// How guests sit on a bench, as the game's motions name them: down onto it, sitting, turned to talk to
+        /// someone on the seat to one side or the other, and up again.
+        const std::int32_t kSitDownMotion = park::motion_number("sitbenchin").value_or(park::motion::kIdle);
+        const std::int32_t kSitMotion = park::motion_number("sitbenchloop").value_or(park::motion::kIdle);
+        const std::array<std::int32_t, 2> kSitChatMotions { park::motion_number("sitbenchconvl").value_or(park::motion::kIdle), park::motion_number("sitbenchconvr").value_or(park::motion::kIdle) };
+        const std::int32_t kStandUpMotion = park::motion_number("sitbenchout").value_or(park::motion::kIdle);
+        constexpr float kStepToSeat = 0.8f; ///< Chosen by eye: seconds from the path to the seat and back
+
         /// How guests go on foot in each gait (simulation::Gait), as the game's motions name them.
         const std::array<std::int32_t, kGaits> kGaitMotions { park::motion::kWalk, park::motion_number("run").value_or(park::motion::kWalk), park::motion_number("walktired").value_or(park::motion::kWalk), park::motion_number("walksick").value_or(park::motion::kWalk), park::motion_number("walktoilet").value_or(park::motion::kWalk) };
         /// How guests walk holding an umbrella up, as the game's motions name it.
@@ -556,6 +581,60 @@ namespace rct3::scene
                     pose.time = at.walked.value / shown.paces[0];
                 return pose;
             }
+            // On a bench: a step over to their seat, down onto it, sitting there, turned now and then to talk to one
+            // sitting beside them, and up and back to the path.
+            if (const auto seat = bench_seat(scene, shown.guest))
+            {
+                const auto& linger = r.get<simulation::Linger>(shown.guest);
+                // Of a step between the path and the seat, `part` of the way to the seat.
+                const auto stepping = [&](float part) {
+                    const glm::vec3 to { (*seat)[3] };
+                    const float facing = std::atan2((*seat)[2][0], (*seat)[2][2]);
+                    const float turn = std::remainder(facing - at.heading.value, glm::two_pi<float>());
+                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), glm::mix(at.position, to, part)), at.heading.value + turn * part, glm::vec3(0.0f, 1.0f, 0.0f));
+                    pose.motion = park::motion::kWalk;
+                    if (shown.paces[0] > 0)
+                        pose.time = part * glm::distance(at.position, to) / shown.paces[0];
+                };
+                const auto length = [&](std::int32_t motion) {
+                    park::PlacedPerson probe = pose;
+                    probe.motion = motion;
+                    return park::motion_seconds(*scene.person_models, probe);
+                };
+                pose.world = *seat;
+                if (linger.rising)
+                {
+                    const float up = simulation::kTuning.facilities.rise.value - linger.left.value + scene.sim_time;
+                    const float standing = length(kStandUpMotion);
+                    pose.motion = kStandUpMotion;
+                    pose.time = up;
+                    if (up > standing)
+                        stepping(1 - std::min((up - standing) / kStepToSeat, 1.0f));
+                    return pose;
+                }
+                const float since = linger.sat.value + scene.sim_time;
+                if (since < kStepToSeat)
+                {
+                    stepping(since / kStepToSeat);
+                    return pose;
+                }
+                const float down = since - kStepToSeat;
+                const float sitting = length(kSitDownMotion);
+                pose.motion = down < sitting ? kSitDownMotion : kSitMotion;
+                pose.time = down < sitting ? down : down - sitting;
+                // One on the seat to either side, sat down and not getting up: every other turn they talk.
+                const auto beside = [&](int side) {
+                    return std::ranges::any_of(r.view<const simulation::Linger>().each(), [&](const auto& other) {
+                        const auto& [them, l] = other;
+                        return them != shown.guest && l.bench == linger.bench && l.seat == linger.seat + side && !l.rising && l.sat.value > kStepToSeat;
+                    });
+                };
+                const auto turn = static_cast<std::size_t>(scene.park_clock / kChatTurnSeconds) + entt::to_integral(shown.guest);
+                if (down >= sitting && turn % 2 == 0)
+                    if (const bool before = beside(-1), after = beside(1); before || after)
+                        pose.motion = kSitChatMotions[after && (!before || turn / 2 % 2 == 0) ? 1 : 0];
+                return pose;
+            }
             const auto& stride = r.get<simulation::Stride>(shown.guest);
             const auto kind = r.get<simulation::Errand>(shown.guest).kind;
             const auto* ride_walk = r.try_get<simulation::RideWalk>(shown.guest);
@@ -684,7 +763,7 @@ namespace rct3::scene
     glm::mat4 person_place(const ParkScene& scene, const ShownPerson& shown)
     {
         if (scene.simulate && shown.guest != entt::null)
-            if (const auto seat = seat_place(scene, shown.guest))
+            if (const auto seat = seat_place(scene, shown.guest).or_else([&] { return bench_seat(scene, shown.guest); }))
                 return *seat;
         if (scene.simulate && shown.guest != entt::null)
         {

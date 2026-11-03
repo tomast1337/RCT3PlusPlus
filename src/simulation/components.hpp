@@ -698,6 +698,7 @@ namespace rct3::simulation
         PathItemKind kind = PathItemKind::Bin;
         bool broken = false;      ///< Of no use until a handyman mends it, or the player replaces it
         std::uint64_t object = 0; ///< The placed object it stands as, 0 for none
+        std::uint8_t seats = 2;   ///< On a bench, how many sit on it at once: its model's seats, two on the game's own
     };
 
     /// In the registry's context: how much scenery stands round each path tile, by NodeId, as weighed by
@@ -723,7 +724,11 @@ namespace rct3::simulation
     struct Linger
     {
         PathItemKind at = PathItemKind::Bench;
-        Seconds left { };
+        Seconds left { };                ///< Watching: till they walk on. Sitting: till they may get up, then getting up
+        entt::entity bench = entt::null; ///< The bench they sit on
+        std::uint8_t seat = 0;           ///< Which of its seats, counting as its model numbers them
+        Seconds sat { };                 ///< Since they sat down
+        bool rising = false;             ///< Getting up, for what `left` holds
     };
 
     /// How a guest shows what they feel, standing a moment where they are.

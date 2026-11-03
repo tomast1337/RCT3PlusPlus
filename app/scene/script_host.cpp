@@ -386,6 +386,17 @@ namespace rct3::scene
                 }
             return Json(broke);
         });
+        engine_.define("park.tireGuests", [this](const Json& a) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            std::size_t tired = 0;
+            for (auto [e, mood] : park_->sim.registry.view<simulation::Mood>(entt::exclude<simulation::Staff>).each())
+            {
+                mood.energy.value = std::clamp(static_cast<float>(number(a, 0)), 0.0f, 1.0f);
+                ++tired;
+            }
+            return Json(tired);
+        });
         engine_.define("park.dropLitter", [this](const Json& a) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
@@ -886,7 +897,9 @@ namespace rct3::scene
                 if (r.valid(p.guest) && !r.all_of<simulation::Left>(p.guest) && r.all_of<simulation::Pose>(p.guest))
                 {
                     const auto* errand = r.try_get<simulation::Errand>(p.guest);
-                    const glm::vec3 at = errand != nullptr && errand->kind == simulation::ErrandKind::Riding ? standing : r.get<simulation::Pose>(p.guest).position; // Seated, in their seat
+                    const auto* linger = r.try_get<simulation::Linger>(p.guest);
+                    const auto* sitting = linger != nullptr && linger->at == simulation::PathItemKind::Bench ? linger : nullptr;
+                    const glm::vec3 at = (errand != nullptr && errand->kind == simulation::ErrandKind::Riding) || sitting != nullptr ? standing : r.get<simulation::Pose>(p.guest).position; // Seated, in their seat
                     person["col"] = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
                     person["row"] = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
                     person["up"] = at.y;
@@ -896,12 +909,20 @@ namespace rct3::scene
                                                                                                                                : "dropped")
                         : r.all_of<simulation::Lost>(p.guest)              ? "lost"
                         : errand == nullptr                                ? "still"
+                        : sitting != nullptr                               ? "sitting"
                         : errand->kind == simulation::ErrandKind::Riding   ? "riding"
                         : errand->kind == simulation::ErrandKind::Queueing ? "queueing"
                         : errand->kind == simulation::ErrandKind::Waiting  ? "waiting"
                         : errand->kind == simulation::ErrandKind::Buying   ? "buying"
                         : errand->kind == simulation::ErrandKind::Swimming ? "swimming"
                                                                            : "walking";
+                    // On a bench, the object it stands as, which of its seats, and whether they are getting up.
+                    if (sitting != nullptr && r.valid(sitting->bench))
+                    {
+                        person["bench"] = r.get<simulation::PathItem>(sitting->bench).object;
+                        person["seat"] = sitting->seat;
+                        person["rising"] = sitting->rising;
+                    }
                     // On their way out of the park.
                     if (errand != nullptr && errand->kind == simulation::ErrandKind::Heading && r.valid(errand->target) && r.all_of<simulation::ParkGate>(errand->target))
                         person["leaving"] = true;

@@ -124,9 +124,12 @@ namespace rct3::simulation::tuning
         Money withdraw { 5000 }; ///< A guest draws from one, up to what their bank has left
         Share tired { 0.45f };   ///< Energy below which a guest sits down on a bench they pass
         Chance sit_chance { 0.5 };
-        Seconds sit { 30 };
+        Seconds sit { 30 };                       ///< Least a guest sits before they think of getting up
         PerSecond rest = PerSecond::over({ 60 }); ///< Energy back while sitting
-        std::size_t bench_seats = 3;
+        /// Chosen by eye: once rested, a guest of full energy gets up in about this long; the more worn out, the longer.
+        PerSecond stand = PerSecond::over({ 20 });
+        float chatting = 3;          ///< Chosen by eye: how many times longer one sits on with someone beside them
+        Seconds rise { 2.5f };       ///< Chosen by eye: getting up off a bench and stepping back to the path
         Chance watch_chance { 0.3 }; ///< Of stopping at a sight passed
         Seconds watch { 15 };
         Seconds served { 4 };                             ///< A party member at a stall's counter while the others wait

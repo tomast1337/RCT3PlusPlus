@@ -787,8 +787,10 @@ namespace rct3::scene
             if (const auto wall = park::edge_wall(scene.objects.back(), scene.models, scene.grid))
                 wall_changed(device, scene, assets, *wall, true);
             // Bins and signs are kept with the park; benches are found again by their kind when it loads.
-            if (kind && simulation::add_path_item(scene.sim, scene.objects.back(), *kind) != entt::null)
+            if (const entt::entity item = kind ? simulation::add_path_item(scene.sim, scene.objects.back(), *kind) : entt::null; item != entt::null)
             {
+                if (*kind == simulation::PathItemKind::Bench && !model.seat_places.empty())
+                    scene.sim.registry.get<simulation::PathItem>(item).seats = static_cast<std::uint8_t>(std::min<std::size_t>(model.seat_places.size(), 255));
                 if (*kind == simulation::PathItemKind::Bin)
                     scene.bins.push_back({ .object_ref = id, .capacity = simulation::kNewBinPieces * simulation::kSavedBinPiece });
                 else if (*kind == simulation::PathItemKind::Sign)

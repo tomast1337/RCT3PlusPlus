@@ -557,6 +557,8 @@ namespace rct3::simulation::tuning
         Chance fountain_thought { 0.4 }; ///< Chosen by eye: of liking them, of those who look
         Seconds glancing { 1.2f };       ///< Chosen by eye: a look at them lasts
         Share fountain_cheer { 0.02f };  ///< Chosen by eye: happiness from liking them
+        Chance fire_cannon { 0.2 };      ///< Chosen by eye: of taking a free water cannon passed
+        Seconds firing { 30 };           ///< Chosen by eye: a guest fires one for
     };
 
     struct Tuning

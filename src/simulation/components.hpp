@@ -274,6 +274,7 @@ namespace rct3::simulation
         StingyToppings = 59,   ///< Bought something that came without any of the extras it takes
         MassesOfToppings = 60, ///< Bought something that came with every extra it takes
         NotPaying = 27,        ///< Put off by a price over what it is worth to them
+        NotPayingToilet = 44,  ///< Put off a toilet by a price over what their need makes it worth
         Sick = 20,
         VerySick = 21,
         Broke = 24,

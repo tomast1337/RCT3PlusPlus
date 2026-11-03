@@ -295,8 +295,8 @@ namespace rct3::simulation
         }
 
         /// The path node, not a queue, nearest `at` anywhere in the park.
-        // shortcut: guests saved in a pool, on a ride we do not bring over or in its queue step out to the nearest
-        // path, as nothing moves them there; upgrade when swimming and those rides are simulated.
+        // shortcut: guests saved on a ride we do not bring over or in its queue step out to the nearest path, as
+        // nothing moves them there; upgrade when those rides are simulated.
         std::optional<NodeId> walkway_near(const PathNetwork& paths, glm::vec3 at)
         {
             std::optional<NodeId> best;
@@ -1554,6 +1554,37 @@ namespace rct3::simulation
             ++seated;
         }
         return seated;
+    }
+
+    std::size_t resume_saved_swimmers(SimWorld& world, const save::PeopleModel& people, std::span<const entt::entity> guests)
+    {
+        auto& r = world.registry;
+        const float half = world.paths.tile_size / 2;
+        std::size_t resumed = 0;
+        for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
+        {
+            const save::Guest& saved = people.guests[i];
+            const save::PersonState state = saved.person.state;
+            const entt::entity e = guests[i];
+            if (e == entt::null || (state != save::PersonState::Swimming && state != save::PersonState::Jacuzzi && state != save::PersonState::HighDive))
+                continue;
+            const glm::vec3 at { saved.person.position.x, saved.person.position.y, saved.person.position.z };
+            const auto within = [&](const glm::vec3& w) { return std::abs(at.x - w.x) <= half && std::abs(at.z - w.z) <= half; };
+            for (const auto [door, pool_door] : r.view<const PoolDoor>().each())
+            {
+                const auto* pool = r.valid(pool_door.pool) ? r.try_get<SwimPool>(pool_door.pool) : nullptr;
+                if (pool == nullptr || (std::ranges::none_of(pool->water, within) && std::ranges::none_of(pool->paved, within) && std::ranges::none_of(pool->spa, within)))
+                    continue;
+                r.get<Errand>(e) = { .kind = ErrandKind::Swimming, .target = door };
+                const Seconds left = saved.time_in_pool ? Seconds { std::max(*saved.time_in_pool, 0.0f) } : kTuning.pools.stay;
+                r.emplace_or_replace<Swimmer>(e, Swimmer { .changed = true, .left = left, .goal = at, .in_water = std::ranges::any_of(pool->water, within) || std::ranges::any_of(pool->spa, within), .to_spa = state == save::PersonState::Jacuzzi });
+                auto& pose = r.get<Pose>(e);
+                pose.position = pose.was = at;
+                ++resumed;
+                break;
+            }
+        }
+        return resumed;
     }
 
     std::size_t start_guests(SimWorld& world)

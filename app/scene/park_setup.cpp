@@ -1360,6 +1360,7 @@ namespace rct3::scene
                 else
                 {
                     simulation::board_saved_riders(scene.sim, scene.people, guests, scene.rides, scene.ride_entities);
+                    simulation::resume_saved_swimmers(scene.sim, scene.people, guests);
                     simulation::import_parties(scene.sim, scene.people, guests);
                 }
                 simulation::import_litter(scene.sim, scene.people, scene.park.time);

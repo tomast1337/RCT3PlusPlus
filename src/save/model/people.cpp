@@ -141,6 +141,7 @@ namespace rct3::save
             constexpr std::string_view leaving_closed = "LeavingDueToClosedPark";
             constexpr std::string_view pool_need = "PoolNeed";
             constexpr std::string_view pool_preference = "PoolPreference";
+            constexpr std::string_view time_in_pool = "TimeRemainingInPool";
             constexpr std::string_view price_modifier = "PriceModifier";
             // staff
             constexpr std::string_view staff_type_id = "StaffTypeId";
@@ -780,6 +781,7 @@ namespace rct3::save
             .leaving_due_to_closed_park = flag(get(at::leaving_closed)),
             .pool_need = opt_f32(get(at::pool_need)),
             .pool_preference = opt_f32(get(at::pool_preference)),
+            .time_in_pool = opt_f32(get(at::time_in_pool)),
             .price_modifier = opt_f32(get(at::price_modifier)),
         };
     }

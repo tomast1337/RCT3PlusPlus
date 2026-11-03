@@ -424,6 +424,8 @@ interface StallInfo {
     joined: boolean;
     price?: number;
     selling?: boolean;
+    /** How many guests have bought from it. */
+    customers?: number;
     /** Broken down, shut until a mechanic mends it. */
     broken?: boolean;
 }

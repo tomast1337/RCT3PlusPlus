@@ -193,8 +193,10 @@ namespace rct3::scene
         /// Swimming along, and treading water while still.
         const std::int32_t kSwimMotion = park::motion_number("swimloop").value_or(park::motion::kIdle);
         const std::int32_t kTreadMotion = park::motion_number("swimtreadwaterloop").value_or(park::motion::kIdle);
-        /// Lying on a sun lounger.
+        /// Lying down on a sun lounger, lying there and getting up.
+        const std::int32_t kLieDownMotion = park::motion_number("sunloungerin").value_or(park::motion::kIdle);
         const std::int32_t kLoungeMotion = park::motion_number("sunloungerloop").value_or(park::motion::kIdle);
+        const std::int32_t kGetUpMotion = park::motion_number("sunloungerout").value_or(park::motion::kIdle);
         /// What party members standing together in a ring do, in turns: chatting, laughing, nodding, pointing.
         const std::array<std::int32_t, 4> kChatMotions { park::motion::kIdle, park::motion_number("laugh").value_or(park::motion::kIdle), park::motion_number("nodhead").value_or(park::motion::kIdle), park::motion_number("point").value_or(park::motion::kIdle) };
         constexpr float kChatTurnSeconds = 4; ///< How long one of them keeps at one thing
@@ -765,10 +767,28 @@ namespace rct3::scene
                     pose.look.legs = shown.swim_legs != nullptr ? shown.swim_legs : pose.look.legs;
                 }
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                // shortcut: they lie down and get up at once; upgrade with the lounger's motions in and out.
-                pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : lounging ? kLoungeMotion : moving ? park::motion::kWalk : park::motion::kIdle;
+                pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : moving ? park::motion::kWalk : park::motion::kIdle;
                 if (!swimmer->in_water && moving && shown.paces[0] > 0)
                     pose.time = at.walked.value / shown.paces[0];
+                // Lying down on a lounger, or sitting down in a spa pool as on a bench: down, staying a while, and up
+                // for the last of it.
+                const bool spa = swimmer->to_spa && swimmer->in_water && !moving;
+                if (lounging || spa)
+                {
+                    const auto length = [&](std::int32_t motion) {
+                        park::PlacedPerson probe = pose;
+                        probe.motion = motion;
+                        return park::motion_seconds(*scene.person_models, probe);
+                    };
+                    const float stay = lounging ? simulation::kTuning.pools.lounging.value : swimmer->stayed.value + swimmer->idle.value;
+                    const float into = (lounging ? stay - swimmer->idle.value : swimmer->stayed.value) + scene.sim_time;
+                    const std::int32_t down = lounging ? kLieDownMotion : kSitDownMotion;
+                    const std::int32_t up = lounging ? kGetUpMotion : kStandUpMotion;
+                    const std::array clips { park::Clip { down, length(down) }, park::Clip { lounging ? kLoungeMotion : kSitMotion, std::max(stay - length(down) - length(up), 0.0f) }, park::Clip { up, length(up) } };
+                    const park::Clip step = park::clip_at(clips, std::min(into, stay));
+                    pose.motion = step.motion;
+                    pose.time = step.seconds;
+                }
                 return pose;
             }
             // On a bench: a step over to their seat, down onto it, sitting there, turned now and then to talk to one

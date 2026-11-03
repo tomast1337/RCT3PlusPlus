@@ -496,17 +496,17 @@ namespace rct3::scene
         /// Water a park object shoots: a cannon a guest fires, or a jumping fountain at the next.
         struct Jet
         {
-            std::size_t object = 0;                      ///< Its place in `objects`
-            std::optional<std::size_t> to;               ///< Of a jump, the fountain it lands in, by place in `objects`
-            float pours = 0;                             ///< Of a jump, park_clock until which water leaves the nozzle
-            float lands = 0;                             ///< And when it lands
-            bool landed = false;                         ///< A jump's landing handed on to the next fountain
-            park::WaterJet water { 1.6f, 0.05f, 0.12f }; ///< Chosen by eye: a cannon's, a hose-thick stream that frays
-            float heading = 0;                           ///< Where the cannon points now, round the vertical, 0 along +Z, as Pose's
-            float yaw = 0;                               ///< Its gun's turn from standing, round the vertical
-            float pitch = 0.35f;                         ///< And up
-            float splashed = 0;                          ///< park_clock at its last splash
-            bool fed = false;                            ///< Aimed this frame; one that is not stops
+            std::size_t object = 0;                            ///< Its place in `objects`
+            std::optional<std::size_t> to;                     ///< Of a jump, the fountain it lands in, by place in `objects`
+            float pours = 0;                                   ///< Of a jump, park_clock until which water leaves the nozzle
+            float lands = 0;                                   ///< And when it lands
+            bool landed = false;                               ///< A jump's landing handed on to the next fountain
+            park::WaterJet water { 1.6f, 0.08f, 0.15f, 1.0f }; ///< Chosen by eye: a cannon's, an arm-thick stream that breaks into spray
+            float heading = 0;                                 ///< Where the cannon points now, round the vertical, 0 along +Z, as Pose's
+            float yaw = 0;                                     ///< Its gun's turn from standing, round the vertical
+            float pitch = 0.35f;                               ///< And up
+            float splashed = 0;                                ///< park_clock at its last splash
+            bool fed = false;                                  ///< Aimed this frame; one that is not stops
         };
         std::vector<Jet> jets;
         float jets_clock = 0;                                 ///< park_clock when the jets last moved

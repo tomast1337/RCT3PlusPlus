@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Places a row of jumping fountains and a water cannon along the road in from the blank landscape's entrance,
-// brings guests in, and keeps a close screenshot of each: water jumping from fountain to fountain, and the
+// brings guests in, and keeps screenshots of each, close and far, from the side and above: water jumping from fountain to fountain, and the
 // cannon turned to spray a guest, its jet arcing down to a splash.
 //
 //   ./nob script scripts/tests/water_jets.ts -- --no-audio
@@ -41,21 +41,34 @@ for (const item of items) {
 }
 expect(park.pathItems().filter((i) => i.kind === "fountain").length === 3, "three jumping fountains");
 
+// Each is looked at close and from a usual playing distance, from the side and from above.
+type At = { col: number; row: number };
+function views(at: At, up: number): [string, At & { up: number }][] {
+    return [
+        ["close_side", { col: at.col + 3.5, row: at.row + 0.5, up: up + 1 }],
+        ["close_above", { col: at.col + 1.5, row: at.row + 2, up: up + 8 }],
+        ["far_side", { col: at.col + 10, row: at.row + 3, up: up + 6 }],
+        ["far_above", { col: at.col + 3, row: at.row + 6, up: up + 30 }],
+    ];
+}
+
 const row = road[2];
-camera.look({ col: row.col + 0.5, row: row.row + 0.5 }, { col: row.col + 3, row: row.row + 1.5, up: 7 });
 await park.advance(2);
-for (let i = 0; i < 6; ++i) {
-    await park.advance(0.25);
-    await frames(2);
-    await screenshot(`jumping_${i}`);
+for (const [name, eye] of views(row, 0)) {
+    camera.look({ col: row.col + 0.5, row: row.row + 0.5, up: 1 }, eye);
+    for (let i = 0; i < 3; ++i) {
+        await park.advance(0.3);
+        await frames(2);
+        await screenshot(`jumping_${name}_${i}`);
+    }
 }
 
 park.dropParties(40, 3);
 await park.advanceUntil(() => people.list().some((p) => p.lingering === "water cannon" && p.col !== undefined), 1800, "a guest firing the cannon");
 const cannon = road[7];
-camera.look({ col: cannon.col + 0.5, row: cannon.row + 0.5, up: 1 }, { col: cannon.col + 2, row: cannon.row + 2.5, up: 7 });
-for (let i = 0; i < 3; ++i) {
+for (const [name, eye] of views(cannon, 0)) {
+    camera.look({ col: cannon.col + 0.5, row: cannon.row + 0.5, up: 1 }, eye);
     await park.advance(1);
     await frames(60);
-    await screenshot(`cannon_${i}`);
+    await screenshot(`cannon_${name}`);
 }

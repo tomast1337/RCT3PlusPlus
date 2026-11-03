@@ -76,6 +76,28 @@ TEST_CASE("a stall sells what its items are named, or their kinds are, or its ow
     CHECK(sold == std::vector { simulation::Product::Drink, simulation::Product::Drink, simulation::Product::Food });
 }
 
+TEST_CASE("a stall's item is food or drink by what its kind feeds or quenches, whatever it is called")
+{
+    simulation::SimWorld world;
+    world.paths.add({ 0, 0, 0 });
+    world.paths.add({ 1, 0, 0 });
+    const park::CarriedKinds kinds { .items = { { .symbol = "Nectar:cid", .effects = { 0, 0.3f, 0 } }, { .symbol = "Crumble:cid", .effects = { 0.2f, -0.1f, 0 } } } };
+    save::RideModel rides;
+    for (const auto& [kind, col] : { std::pair { "Nectar:cid", 0 }, std::pair { "Crumble:cid", 1 } })
+    {
+        save::Stall& s = rides.stalls.emplace_back();
+        s.base.symbol = "Odd:sta";
+        s.base.spot = save::PlacementSpot { .col = col, .row = 1 };
+        s.items.push_back({ .kind_symbol = kind, .price = 100, .name = "%ME%" });
+    }
+    REQUIRE(simulation::import_stalls(world, rides, kinds) == 2);
+    std::vector<simulation::Product> sold;
+    for (const auto [_, shop] : world.registry.view<const simulation::Shop>().each())
+        sold.push_back(shop.product);
+    std::ranges::sort(sold);
+    CHECK(sold == std::vector { simulation::Product::Drink, simulation::Product::Food });
+}
+
 TEST_CASE("a stall's food and drink is cold or hot by its name, and plain otherwise")
 {
     simulation::SimWorld world;

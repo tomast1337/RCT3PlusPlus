@@ -102,6 +102,8 @@ namespace rct3::park
         bool water_across = false; ///< "OppositeWater"
         bool whole = false;        ///< "WholeTile"
         bool lifeguard = false;    ///< "LifeGuard": a lifeguard's chair, which a lifeguard comes with
+        bool lounger = false;      ///< "SunLounger": swimmers lie on it
+        bool shower = false;       ///< "Shower": swimmers stand under it
         std::int32_t step = 0;     ///< "HeightStep" and its number: a change of level at its side
     };
 

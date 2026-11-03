@@ -533,6 +533,11 @@ namespace rct3::simulation::tuning
         Seconds longest_rest { 15 };
         Chance poolside { 0.2 };                    ///< Of going to the paved squares next rather than the water
         Chance extra { 0.3 };                       ///< Of going to a spa pool or an extra next, of those that go on from the water
+        std::uint8_t lounger_places = 2;            ///< Swimmers a set of sun loungers takes at once, as the saved parks' do
+        std::uint8_t shower_places = 3;             ///< And a shower
+        Seconds lounging { 45 };                    ///< Chosen by eye: on a lounger
+        Seconds showering { 6 };                    ///< Chosen by eye: under a shower
+        Seconds patience { 20 };                    ///< Chosen by eye: waiting for a place at an extra before going elsewhere
         float spa_water = 0.0f;                     ///< A spa pool's water over the paving round it, in height units
         PerSecond cheer = PerSecond::over({ 600 }); ///< Happiness gained while swimming in clean water; lost in dirty
         /// Dirt a swimmer brings to a pool of one square of water in a second; less in bigger pools.

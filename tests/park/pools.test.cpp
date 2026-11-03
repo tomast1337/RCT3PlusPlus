@@ -304,6 +304,9 @@ TEST_CASE("pools: an extra's words name what it takes of its square")
     CHECK(fit.step == 2);
     CHECK_FALSE(fit.wall);
     CHECK_FALSE(fit.water_middle);
+    CHECK(fit.shower);
+    CHECK_FALSE(fit.lounger);
+    CHECK(pool_extra_fit("CentralSolid WholeTile SunLounger").lounger);
 }
 
 TEST_CASE("pools: an extra fits where its square offers all it takes and no other extra has it")

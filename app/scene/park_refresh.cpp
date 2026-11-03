@@ -189,6 +189,8 @@ namespace rct3::scene
         /// Swimming along, and treading water while still.
         const std::int32_t kSwimMotion = park::motion_number("swimloop").value_or(park::motion::kIdle);
         const std::int32_t kTreadMotion = park::motion_number("swimtreadwaterloop").value_or(park::motion::kIdle);
+        /// Lying on a sun lounger.
+        const std::int32_t kLoungeMotion = park::motion_number("sunloungerloop").value_or(park::motion::kIdle);
         /// What party members standing together in a ring do, in turns: chatting, laughing, nodding, pointing.
         const std::array<std::int32_t, 4> kChatMotions { park::motion::kIdle, park::motion_number("laugh").value_or(park::motion::kIdle), park::motion_number("nodhead").value_or(park::motion::kIdle), park::motion_number("point").value_or(park::motion::kIdle) };
         constexpr float kChatTurnSeconds = 4; ///< How long one of them keeps at one thing
@@ -589,7 +591,8 @@ namespace rct3::scene
                     pose.look.legs = shown.swim_legs != nullptr ? shown.swim_legs : pose.look.legs;
                 }
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : moving ? park::motion::kWalk : park::motion::kIdle;
+                // shortcut: they lie down and get up at once; upgrade with the lounger's motions in and out.
+                pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : swimmer->place >= 0 && swimmer->use == simulation::PoolUse::Lounge ? kLoungeMotion : moving ? park::motion::kWalk : park::motion::kIdle;
                 if (!swimmer->in_water && moving && shown.paces[0] > 0)
                     pose.time = at.walked.value / shown.paces[0];
                 return pose;

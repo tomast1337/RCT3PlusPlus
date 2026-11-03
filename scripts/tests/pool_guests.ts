@@ -2,7 +2,8 @@
 //
 // Guests swim. On the game's blank landscape a pool goes in beside the road, paved round with water in the
 // middle, and a changing room between the road and the pool, opened. On a warm day guests come in: those
-// wishing for a swim pay at the room, change out of sight and swim, in their swimwear.
+// wishing for a swim pay at the room, change out of sight and swim, in their swimwear, and lie on the sun loungers
+// and stand under the shower along the far side.
 //
 //   ./nob script scripts/tests/pool_guests.ts -- --no-intro --no-audio --seed 1
 
@@ -49,6 +50,15 @@ await frames(3);
 const pieces = () => map.objects().filter((o) => o.overlay === kPool);
 expect(pieces().filter((o) => o.symbol === "Base").length === 12, `twelve squares of water, not ${pieces().filter((o) => o.symbol === "Base").length}`);
 
+// Sun loungers and a shower on the paving along the far side; swimmers lie on the one and stand under the other.
+for (const [symbol, col] of [["SunLoungers", c + 4], ["PoolShower", c + 6]] as const) {
+    expect(build.pick(kPool, symbol), `${symbol} in the pool extras`);
+    await frames(3);
+    await pointer.click(...on_view(col + 0.5, r + 3.5));
+    await frames(3);
+    expect(map.objects().some((o) => o.symbol === symbol && o.col === col && o.row === r + 3), `${symbol} on the paving`);
+}
+
 // The changing room between the road and the pool, turned to open on it; placed, its window opens, where the
 // complex opens.
 await until(() => ui.find("pool_panel/Pool_ChangingRoomPanel") !== undefined, 120, "the pool panel");
@@ -85,6 +95,9 @@ if (cash !== undefined)
 camera.look({ col: c + 5, row: r + 1.5 }, { col: c + 5, row: r + 5, up: 2.5 });
 await frames(300);
 await screenshot("pool_guests_swimming");
+camera.look({ col: c + 5, row: r + 3.5 }, { col: c + 5, row: r + 5.5, up: 1.5 });
+await frames(1800);
+await screenshot("pool_guests_extras");
 
 // The room's window counts the swimmers, and its upkeep shows the water's dirt; the harshest fluid is picked.
 camera.look({ col: c + 3, row: r + 0.5 }, { col: c - 1, row: r + 3, up: 5 });

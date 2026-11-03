@@ -197,13 +197,58 @@ TEST_CASE("swimmers sit in the spa pools and stand at the extras now and then")
                 {
                     const glm::vec3 at = r.get<Pose>(g).position;
                     in_spa = in_spa || (swimmer->in_water && glm::distance(at, pool.spa.front()) < 0.01f);
-                    at_extra = at_extra || (!swimmer->in_water && glm::distance(at, pool.extras.front()) < 0.01f);
+                    at_extra = at_extra || (!swimmer->in_water && glm::distance(at, pool.extras.front().at) < 0.01f);
                 }
             return in_spa && at_extra;
         },
         kTuning.pools.stay.value);
     CHECK(in_spa);
     CHECK(at_extra);
+}
+
+TEST_CASE("swimmers lie on loungers and stand under showers, as many as they take, the rest waiting their turn")
+{
+    for (const bool lounger : { true, false })
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 5, 0 });
+        park::PoolMap pools;
+        pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+        pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::Tile });
+        pools.squares.push_back({ .col = 5, .row = 3 });
+        pools.extras.push_back({ .symbol = "Extra", .col = 6, .row = 2, .turn = 1, .fit = { .lounger = lounger, .shower = !lounger } });
+        pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+        import_pools(park.world(), pools);
+        auto& r = park.world().registry;
+        const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
+        REQUIRE(pool.extras.size() == 1);
+        const PoolSpot& spot = pool.extras.front();
+        CHECK(spot.use == (lounger ? PoolUse::Lounge : PoolUse::Shower));
+        const std::size_t places = lounger ? kTuning.pools.lounger_places : kTuning.pools.shower_places;
+        CHECK(spot.places == places);
+        std::vector<entt::entity> guests;
+        for (int i = 0; i < 12; ++i)
+            guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+        std::size_t most = 0, waiting = 0;
+        for (int t = 0; t < 4 * static_cast<int>(kTuning.pools.stay.value); ++t)
+        {
+            park.run_seconds(0.25f);
+            std::size_t using_it = 0, here = 0;
+            for (const entt::entity g : guests)
+                if (const auto* swimmer = r.try_get<Swimmer>(g); swimmer != nullptr && swimmer->spot == 0)
+                {
+                    using_it += swimmer->place >= 0 ? 1 : 0;
+                    here += swimmer->place < 0 && glm::distance(r.get<Pose>(g).position, spot.at) < 0.01f ? 1 : 0;
+                    if (swimmer->place >= 0)
+                        CHECK(swimmer->use == spot.use);
+                }
+            most = std::max(most, using_it);
+            waiting = std::max(waiting, here);
+        }
+        CHECK(most > 0);
+        CHECK(most <= places);
+        CHECK(waiting > 0); // Some came while it was full
+    }
 }
 
 TEST_CASE("swimmers dirty the water, and the room's fluid cleans it while the room is open")

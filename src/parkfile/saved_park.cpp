@@ -326,7 +326,7 @@ namespace rct3::parkfile
         if (park.animals)
             put_chunk(w, "ANML", 1, *park.animals);
         if (park.pools)
-            put_chunk(w, "POOL", 6, *park.pools);
+            put_chunk(w, "POOL", 7, *park.pools);
         return w.take();
     }
 
@@ -399,7 +399,7 @@ namespace rct3::parkfile
             }
             if (tag == "POOL")
             {
-                if (park.pools || (version != 5 && version != 6)) // 6 adds the paths' kinds to 5
+                if (park.pools || version != 7) // 7 adds the loungers and showers to the extras' fit
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.pools.emplace());
             }

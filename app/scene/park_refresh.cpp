@@ -130,8 +130,8 @@ namespace rct3::scene
             return std::nullopt;
         }
 
-        /// Where a guest sits on a bench in the park: the seat their place on it comes to on its model. Nothing once
-        /// the bench is gone, or when its model has no such seat.
+        /// Where a guest sits on a bench in the park, or stands to fire a water cannon: the seat their place on it
+        /// comes to on its model. Nothing once the item is gone, or when its model has no such seat.
         /// shortcut: looks for the bench among all the park's objects, upgrade to a lookup if sitters show in profiles.
         std::optional<glm::mat4> bench_seat(const ParkScene& scene, entt::entity guest)
         {
@@ -156,6 +156,10 @@ namespace rct3::scene
         const std::int32_t kSitEatMotion = park::motion_number("sitbencheatlhand").value_or(park::motion::kIdle);
         const std::int32_t kSitDrinkMotion = park::motion_number("sitbenchdrinkl").value_or(park::motion::kIdle);
         constexpr float kStepToSeat = 0.8f; ///< Chosen by eye: seconds from the path to the seat and back
+        /// How guests fire a water cannon, as the game's motions name them: taking hold, firing, letting go.
+        const std::int32_t kCannonInMotion = park::motion_number("watercannonin").value_or(park::motion::kIdle);
+        const std::int32_t kCannonMotion = park::motion_number("watercannonloop").value_or(park::motion::kIdle);
+        const std::int32_t kCannonOutMotion = park::motion_number("watercannonout").value_or(park::motion::kIdle);
 
         /// What a guest holds of what they carry from a stall: it while there is some left, then its empty; nothing
         /// once only empties in their pockets are left, or when its look is not known.
@@ -620,6 +624,25 @@ namespace rct3::scene
                     return park::motion_seconds(*scene.person_models, probe);
                 };
                 pose.world = *seat;
+                // At a water cannon: a step over behind it, taking hold, firing a while, letting go and a step back.
+                // shortcut: they stand as the cannon rests; upgrade with its swing once the cannon aims.
+                if (linger.at == simulation::PathItemKind::WaterCannon)
+                {
+                    const float firing = simulation::kTuning.surroundings.firing.value;
+                    const float into = firing - linger.left.value + scene.sim_time;
+                    if (const float off = std::min(into, firing - into); off < kStepToSeat)
+                    {
+                        stepping(std::max(off, 0.0f) / kStepToSeat);
+                        return pose;
+                    }
+                    const float hold = length(kCannonInMotion);
+                    const float release = length(kCannonOutMotion);
+                    const std::array clips { park::Clip { kCannonInMotion, hold }, park::Clip { kCannonMotion, std::max(firing - 2 * kStepToSeat - hold - release, 0.0f) }, park::Clip { kCannonOutMotion, release } };
+                    const park::Clip step = park::clip_at(clips, into - kStepToSeat);
+                    pose.motion = step.motion;
+                    pose.time = step.seconds;
+                    return pose;
+                }
                 if (linger.rising)
                 {
                     const float up = simulation::kTuning.facilities.rise.value - linger.left.value + scene.sim_time;
@@ -696,17 +719,6 @@ namespace rct3::scene
                     pose.motion = kTicketMotion;
                     pose.time = paying;
                 }
-            // Firing a water cannon: taking hold of it, firing a while, letting go.
-            // shortcut: they fire from where they stopped on the tile, not from behind the cannon; upgrade with
-            // the cannon's own aim and spray.
-            if (const auto* linger = r.try_get<simulation::Linger>(shown.guest); linger != nullptr && linger->at == simulation::PathItemKind::WaterCannon && !walking)
-            {
-                constexpr float kCannonEnds = 1.0f; ///< Chosen by eye: seconds of taking hold of the cannon and of letting go
-                const float into = simulation::kTuning.surroundings.firing.value - linger->left.value + scene.sim_time;
-                const float left = linger->left.value - scene.sim_time;
-                pose.motion = park::motion_number(into < kCannonEnds ? "watercannonin" : left < kCannonEnds ? "watercannonout" : "watercannonloop").value_or(park::motion::kIdle);
-                pose.time = into < kCannonEnds ? into : left < kCannonEnds ? kCannonEnds - left : into - kCannonEnds;
-            }
             // At work where they stand: the job's motions in turn, any tool in hand.
             const auto* staff = r.try_get<simulation::Staff>(shown.guest);
             if (staff != nullptr && staff->job != simulation::StaffJob::None && staff->busy.value > 0 && !walking)

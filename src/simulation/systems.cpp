@@ -1109,9 +1109,9 @@ namespace rct3::simulation
                     }
                     // A free water cannon tempts some passers to fire it a while, one at a time.
                     const auto cannon = std::ranges::find_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::WaterCannon && !r.get<PathItem>(i).broken; });
-                    if (cannon != items(here).end() && std::ranges::none_of(r.view<const Linger, const Stride>().each(), [&](const auto& other) { return std::get<1>(other).at == PathItemKind::WaterCannon && std::get<2>(other).from == here; }) && random::chance(dice.state, kTuning.surroundings.fire_cannon.value))
+                    if (cannon != items(here).end() && std::ranges::none_of(r.view<const Linger>().each(), [&](const auto& other) { return std::get<1>(other).bench == *cannon; }) && random::chance(dice.state, kTuning.surroundings.fire_cannon.value))
                     {
-                        r.emplace<Linger>(g, PathItemKind::WaterCannon, kTuning.surroundings.firing.value);
+                        r.emplace<Linger>(g, Linger { .at = PathItemKind::WaterCannon, .left = kTuning.surroundings.firing, .bench = *cannon });
                         continue;
                     }
                     // The first free seat of a whole bench on their tile.

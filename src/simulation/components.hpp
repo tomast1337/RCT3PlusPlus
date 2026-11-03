@@ -744,6 +744,7 @@ namespace rct3::simulation
         bool broken = false;      ///< Of no use until a handyman mends it, or the player replaces it
         std::uint64_t object = 0; ///< The placed object it stands as, 0 for none
         std::uint8_t seats = 2;   ///< On a bench, how many sit on it at once: its model's seats, two on the game's own
+        float heading = 0;        ///< Where its model's +X points, round the vertical, 0 along +Z as Pose's: a water cannon's barrel at rest
     };
 
     /// In the registry's context: how much scenery stands round each path tile, by NodeId, as weighed by

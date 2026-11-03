@@ -74,6 +74,22 @@ namespace rct3::park
         return part;
     }
 
+    void flowing_sheet(ModelPart& sheet, const ovl::Spline& track, std::string texture)
+    {
+        sheet.texture = std::move(texture);
+        sheet.blend = PartBlend::Blended;
+        sheet.chain = true;
+        if (sheet.vertices.empty() || track.nodes.empty())
+            return;
+        const auto [low, high] = std::ranges::minmax_element(sheet.vertices, { }, [](const ModelVertex& v) { return v.uv.y; });
+        const glm::vec3 start = vec(track.nodes.front().position);
+        if (glm::distance(high->position, start) >= glm::distance(low->position, start))
+            return;
+        const float ends = low->uv.y + high->uv.y;
+        for (ModelVertex& v : sheet.vertices)
+            v.uv.y = ends - v.uv.y;
+    }
+
     float flow_scroll(float seconds, std::int32_t run)
     {
         // The picture's v goes down by the distance flowed, so it is read further back and moves on along v.

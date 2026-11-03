@@ -6,6 +6,10 @@
 // along it a whole number of times, so pieces laid end to end join without a seam. Its picture runs the way
 // the piece's track runs, whichever end the file lists its water from, and slides that way as the water flows;
 // pieces laid against their section's own way slide it the other way round (flow_scroll).
+//
+// Some water rides' pieces (a water coaster's splash troughs) name no water edges: their model carries the
+// water as a see-through sheet of its own, its picture already running once across and on along the piece.
+// That sheet is given the same flowing water (flowing_sheet).
 #pragma once
 
 #include "ovl/spline.hpp"
@@ -38,6 +42,10 @@ namespace rct3::park
     /// end of the water nearer the start of `track` (the piece's rails). Nothing when the edges do not pair up
     /// node for node or have no length. Its parts are marked `chain`, as their picture slides along them.
     [[nodiscard]] std::optional<ModelPart> flow_strip(const ovl::Spline& left, const ovl::Spline& right, const ovl::Spline& track, std::string texture);
+
+    /// Makes `sheet`, a piece's own see-through water, flowing water textured `texture` as flow_strip's are, its
+    /// picture turned round where it runs from the far end of `track` (the piece's rails).
+    void flowing_sheet(ModelPart& sheet, const ovl::Spline& track, std::string texture);
 
     /// How far along its picture the water of a piece of run `run` (see Chains) is moved after flowing for
     /// `seconds`, from 0 up to 1, added to the picture's v: against the strip's v when the run is negative.

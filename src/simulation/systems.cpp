@@ -975,11 +975,13 @@ namespace rct3::simulation
             // Guests: glum on dirty or vandalised paths, binning or dropping their rubbish, and the angriest breaking things.
             const auto guests_view = r.view<const Errand, const Stride, Mood, Dice, const Needs>(entt::exclude<Staff>); // Not an inspector on a visit
             const bool pool_open = std::ranges::any_of(r.view<const PoolDoor, const Attraction>().each(), [](const auto& room) { return std::get<2>(room).open; });
-            auto& seated = buffers.seated;
-            seated.assign(paths.nodes().size(), 0);
-            for (const auto [g, linger, stride] : r.view<const Linger, const Stride>().each())
-                if (stride.from < seated.size())
-                    seated[stride.from] += linger.at == PathItemKind::Bench;
+            // Who sits on seat `seat` of bench `bench`, if anyone, and whether they are getting up.
+            const auto sitter = [&](entt::entity bench, int seat) -> std::optional<const Linger&> {
+                for (const auto [g, linger] : r.view<const Linger>().each())
+                    if (linger.bench == bench && linger.seat == seat)
+                        return linger;
+                return std::nullopt;
+            };
             for (const entt::entity g : sorted(guests_view))
             {
                 auto [errand, stride, mood, dice, needs] = guests_view.get(g);
@@ -1010,16 +1012,32 @@ namespace rct3::simulation
                 // Sitting rests a guest, watching cheers them; then they walk on.
                 if (auto* linger = r.try_get<Linger>(g))
                 {
-                    if (linger->at == PathItemKind::Bench)
-                    {
-                        mood.energy.value = clamp01(mood.energy.value + kTuning.facilities.rest.value * dt);
-                        mood.nausea.value = clamp01(mood.nausea.value - kTuning.sickness.rest_settle.value * dt);
-                    }
-                    else
-                        mood.happiness.value = clamp01(mood.happiness.value + kTuning.facilities.sight_cheer.value * dt);
                     linger->left.value -= dt;
-                    if (linger->left.value <= 0)
-                        r.remove<Linger>(g);
+                    if (linger->at != PathItemKind::Bench)
+                    {
+                        mood.happiness.value = clamp01(mood.happiness.value + kTuning.facilities.sight_cheer.value * dt);
+                        if (linger->left.value <= 0)
+                            r.remove<Linger>(g);
+                        continue;
+                    }
+                    mood.energy.value = clamp01(mood.energy.value + kTuning.facilities.rest.value * dt);
+                    mood.nausea.value = clamp01(mood.nausea.value - kTuning.sickness.rest_settle.value * dt);
+                    linger->sat.value += dt;
+                    if (linger->rising)
+                    {
+                        if (linger->left.value <= 0)
+                            r.remove<Linger>(g);
+                        continue;
+                    }
+                    // Up once no longer worn out or sick, the more rested the sooner; someone beside them keeps them chatting.
+                    const bool needy = mood.energy.value < kTuning.facilities.tired.value || mood.nausea.value >= kTuning.needs.want.value;
+                    const auto mate = [&](int seat) { return r.valid(linger->bench) && seat >= 0 && sitter(linger->bench, seat) && !sitter(linger->bench, seat)->rising; };
+                    const float chat = mate(linger->seat - 1) || mate(linger->seat + 1) ? kTuning.facilities.chatting : 1;
+                    if (linger->left.value <= 0 && !needy && random::chance(dice.state, kTuning.facilities.stand.value * dt * mood.energy.value / chat))
+                    {
+                        linger->rising = true;
+                        linger->left = kTuning.facilities.rise;
+                    }
                     continue;
                 }
                 // What a guest just come to a tile thinks of themselves and of the path.
@@ -1053,7 +1071,6 @@ namespace rct3::simulation
                 if (errand.kind == ErrandKind::Wandering && stride.fresh)
                 {
                     const NodeId here = stride.from;
-                    const auto benches = static_cast<std::size_t>(std::ranges::count_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Bench && !r.get<PathItem>(i).broken; }));
                     const auto sight = std::ranges::find_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Sight || r.get<PathItem>(i).kind == PathItemKind::PhotoSpot; });
                     // Jumping fountains catch a passer's eye for a moment, and often please them.
                     if (std::ranges::any_of(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Fountain; }) && random::chance(dice.state, kTuning.surroundings.glance.value))
@@ -1073,12 +1090,21 @@ namespace rct3::simulation
                         r.emplace<Linger>(g, PathItemKind::WaterCannon, kTuning.surroundings.firing.value);
                         continue;
                     }
-                    if ((mood.energy.value < kTuning.facilities.tired.value || mood.nausea.value >= kTuning.needs.want.value) && seated[here] < benches * kTuning.facilities.bench_seats && random::chance(dice.state, kTuning.facilities.sit_chance.value))
-                    {
-                        r.emplace<Linger>(g, PathItemKind::Bench, kTuning.facilities.sit.value);
-                        ++seated[here];
-                        continue;
-                    }
+                    // The first free seat of a whole bench on their tile.
+                    const auto seat = [&]() -> std::optional<std::pair<entt::entity, std::uint8_t>> {
+                        for (const entt::entity i : items(here))
+                            if (const auto& item = r.get<PathItem>(i); item.kind == PathItemKind::Bench && !item.broken)
+                                for (std::uint8_t s = 0; s < item.seats; ++s)
+                                    if (!sitter(i, s))
+                                        return std::pair { i, s };
+                        return std::nullopt;
+                    };
+                    if (mood.energy.value < kTuning.facilities.tired.value || mood.nausea.value >= kTuning.needs.want.value)
+                        if (const auto free = seat(); free && random::chance(dice.state, kTuning.facilities.sit_chance.value))
+                        {
+                            r.emplace<Linger>(g, Linger { .at = PathItemKind::Bench, .left = kTuning.facilities.sit, .bench = free->first, .seat = free->second });
+                            continue;
+                        }
                     // Most walk past an effect or animatronic, taking it in as scenery; a view is worth a stop.
                     if (sight != items(here).end() && random::chance(dice.state, r.get<PathItem>(*sight).kind == PathItemKind::Sight ? kTuning.surroundings.stop.value : kTuning.facilities.watch_chance.value))
                     {

@@ -1364,11 +1364,16 @@ namespace rct3::scene
                 }
                 simulation::import_litter(scene.sim, scene.people, scene.park.time);
                 // The benches the game's park lists, and those placed in ours, which it does not.
+                // Each seats as many as its model has seats for.
                 std::vector<std::uint64_t> benches = world->benches;
+                std::unordered_map<std::uint64_t, std::size_t> seats;
                 for (const save::PlacedObject& o : scene.objects)
                 {
                     const auto model = scene.models.find(park::model_ref(o));
-                    if (!o.hidden && model != scene.models.end() && model->second.category == std::to_underlying(park::ItemCategory::Bench) && !std::ranges::contains(benches, o.id))
+                    if (o.hidden || model == scene.models.end() || model->second.category != std::to_underlying(park::ItemCategory::Bench))
+                        continue;
+                    seats[o.id] = model->second.seat_places.size();
+                    if (!std::ranges::contains(benches, o.id))
                         benches.push_back(o.id);
                 }
                 simulation::import_path_items(scene.sim, scene.objects, scene.bins, benches, scene.signs);
@@ -1378,7 +1383,11 @@ namespace rct3::scene
                 });
                 // What vandals broke stays broken until mended.
                 for (auto [e, item] : scene.sim.registry.view<simulation::PathItem>().each())
+                {
                     item.broken = scene.broken_objects.contains(item.object);
+                    if (const auto bench = seats.find(item.object); bench != seats.end() && bench->second > 0)
+                        item.seats = static_cast<std::uint8_t>(std::min<std::size_t>(bench->second, 255));
+                }
                 for (const save::PlacedObject& o : scene.objects)
                     if (const auto wall = park::edge_wall(o, scene.models, scene.grid))
                         simulation::set_wall(scene.sim, *wall, true);

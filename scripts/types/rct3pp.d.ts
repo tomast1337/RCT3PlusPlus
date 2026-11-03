@@ -105,6 +105,8 @@ declare namespace park {
     function litter(): { col: number; row: number; sick: boolean }[];
     /** Breaks every bench, bin and sign at once, as vandals would; how many it broke. */
     function breakPathItems(): number;
+    /** Sets the energy of every guest to `share` (0 to 1), as a long day would; how many guests. */
+    function tireGuests(share: number): number;
     /** Drops `pieces` pieces of litter (1 to 50) on the path nearest tile `col`, `row`; whether there was a path. */
     function dropLitter(col: number, row: number, pieces: number): boolean;
     /** Empties every flower bed of its water; how many there are. */
@@ -438,7 +440,7 @@ declare namespace people {
     /** The people shown in the park, guests and staff, in the order the park keeps them, with the point of the
      *  map they stand on, in tiles. For those the simulation walks, also where they are (tiles, and world height
      *  `up`) and what they are at ("waiting": for the rest of their party, standing with the others; "buying":
-     *  at a stall's counter while they wait; "lost": cut off from their party, standing a while before being put with
+     *  at a stall's counter while they wait; "sitting": on a bench (the id of its object as `bench`), on its seat number `seat`, `rising` once getting up; "lost": cut off from their party, standing a while before being put with
      *  it; "thrown": by a crash, still in the air; "sliding": down ground the land tools tipped too steep, with the
      *  motion they slide in as `slide`), how they go on foot
      *  (`gait`), what they carry from a stall (`carrying`: food or drink still being had, or its empty) and,
@@ -447,7 +449,7 @@ declare namespace people {
      *  or ride entrance they serve at as `post`; a worker the simulation runs, their job as `role`. Members of one party share its number, `party`, while they are with it,
      *  and those on their way out of the park are `leaving`. `thoughts` are the numbers of the thoughts their window
      *  lists, and a guest's `happiness` (0 to 1) is what their window and the guest list show. */
-    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; lingering?: PathItemKind; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
+    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; bench?: number; seat?: number; rising?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "sitting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; lingering?: PathItemKind; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

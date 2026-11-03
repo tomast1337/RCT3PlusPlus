@@ -914,6 +914,40 @@ TEST_CASE("while one of a party sits on a bench the others wait nearby, and all 
     CHECK(r.get<Stride>(sitter).from == r.get<Stride>(others[0]).to);
 }
 
+TEST_CASE("worn out guests take a bench's free seats in turn, no more than it has, and get up once rested")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 1, 0 });
+    const auto bench = park.item(PathItemKind::Bench, { 0, 0 });
+    auto& r = park.world().registry;
+    r.get<PathItem>(bench).seats = 2;
+    for (int i = 0; i < 3; ++i)
+        park.guest({ 1, 0 }, { .energy = 0.1f });
+    std::size_t most = 0;
+    const auto sitting = [&] {
+        most = std::max<std::size_t>(most, r.view<Linger>().size());
+        return r.view<Linger>().size();
+    };
+    REQUIRE(park.run_until([&] { return sitting() == 2; }, 120));
+    std::vector<int> seats;
+    for (const auto [g, linger] : r.view<Linger>().each())
+    {
+        CHECK(linger.bench == bench);
+        seats.push_back(linger.seat);
+    }
+    std::ranges::sort(seats);
+    CHECK(seats == std::vector { 0, 1 });
+    // Rested, one gets up, the third sits down in their place, and all are up again in the end.
+    bool rose = false;
+    CHECK(park.run_until(
+        [&] {
+            rose = rose || std::ranges::any_of(r.view<Linger>().each(), [](const auto& l) { return std::get<1>(l).rising; });
+            return sitting() == 0 && rose;
+        },
+        900));
+    CHECK(most == 2);
+}
+
 TEST_CASE("a party stops now and then to stand in a ring facing in, then walks on")
 {
     Sandbox park;

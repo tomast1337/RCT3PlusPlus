@@ -184,7 +184,7 @@ namespace rct3::simulation::tuning
         PerSecond sweat = PerSecond::over({ 900 });       ///< Heat gained out in the sun on a hot day, more for each degree past `hot`
         PerSecond cooling = PerSecond::over({ 90 });      ///< Heat lost in the shade, on a cooler day, or while wet
         PerSecond heat_gloom = PerSecond::over({ 1200 }); ///< Happiness lost while too hot
-        Share splash { 0.3f };                            ///< Wetness a splashing ride leaves its riders with: damp, not soaked
+        Share splash { 1.0f };                            ///< Wetness a splashing ride leaves its riders with: soaked through
     };
 
     /// Day and night.

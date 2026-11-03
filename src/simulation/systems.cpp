@@ -3847,6 +3847,8 @@ namespace rct3::simulation
                     const float felt = felt_excitement(ride.excitement.value, r.all_of<Trains>(e), age_of(r, guest), night);
                     mood.happiness.value = clamp01(mood.happiness.value + felt * 0.3f);
                     mood.nausea.value = clamp01(mood.nausea.value + ride.nausea.value * 0.2f * (1.5f - mood.tolerance.value) * (eating(r, guest) ? kTuning.sickness.full_stomach.value : 1));
+                    // shortcut: soaked as they get off, not the moment their car splashes (park/car_splashes.hpp);
+                    // upgrade when the simulation follows its cars through the water.
                     if (ride.splash)
                     {
                         mood.wet.value = std::max(mood.wet.value, kTuning.weather.splash.value);

@@ -144,6 +144,14 @@ namespace rct3::park
         Rear,
     };
 
+    /// Which paths an item may stand on, as its scenery data says.
+    struct PathRules
+    {
+        bool level_only = false;  ///< Against a side of a sloped path only at the slope's ends
+        bool off_queues = false;  ///< Never on a queue
+        bool queues_only = false; ///< Only on a queue
+    };
+
     struct ObjectModel
     {
         std::uint16_t positioning = 0;                   ///< How the item sits on its tile (see object_placement.hpp)
@@ -160,7 +168,7 @@ namespace rct3::park
         bool no_entry = false;                           ///< A sign that can be set to forbid entry
         bool ground_height = true;                       ///< On the ground, it stands at the ground's height there
         bool fits_ground = false;                        ///< A plant on the ground, its shape bends to follow it
-        bool level_paths_only = false;                   ///< A path item kept off the sides of sloped paths
+        PathRules path_rules { };                        ///< Which paths a path item may stand on
         bool holds_ground = false;                       ///< A ride, stall or the like the ground under is not reshaped
         std::array<std::int32_t, 3> default_colours { }; ///< Colours it takes when nothing names its own
         /// For rides fenced round an outline, not their whole footprint: per square, row by row (X fastest),

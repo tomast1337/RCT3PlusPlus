@@ -557,7 +557,7 @@ namespace rct3::scene
             if (park::on_paths(positioning))
             {
                 p.lift.reset();
-                const auto spot = hit ? park::furniture_spot(scene.footpaths.paths, scene.grid, *hit, positioning, p.turns, model != scene.models.end() && model->second.level_paths_only) : std::nullopt;
+                const auto spot = hit ? park::furniture_spot(scene.footpaths.paths, scene.grid, *hit, positioning, p.turns, model != scene.models.end() ? model->second.path_rules : park::PathRules { }) : std::nullopt;
                 if (!spot)
                 {
                     p.site.reset();

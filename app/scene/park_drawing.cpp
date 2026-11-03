@@ -160,7 +160,7 @@ namespace rct3::scene
                     draw.address = render::AddressMode::Repeat;
                     draw.light = light;
                     draw.extra_textures[1] = relief_of(textures, batch.texture);
-                    draw.scroll = park::chain_scroll(scene.chain_shifts, batch.chain);
+                    draw.scroll = batch.texture == park::kFlowPicture ? park::flow_scroll(scene.park_clock, batch.chain) : park::chain_scroll(scene.chain_shifts, batch.chain);
                     device.draw(draw);
                 }
             };
@@ -314,25 +314,6 @@ namespace rct3::scene
                 return false;
             drawing.target = *made;
             return true;
-        }
-
-        /// Rolls the flowing water's picture on as the water flows (park/water_flow.hpp). Call inside the screen
-        /// pass; it ends the pass and begins it again keeping what was drawn when the picture moves.
-        void roll_flow(render::Device& device, ParkScene& scene)
-        {
-            const auto texture = scene.object_textures.find(park::kFlowPicture);
-            if (texture == scene.object_textures.end())
-                return;
-            const std::uint32_t shift = park::flow_shift(scene.flow_picture.height, scene.park_clock);
-            if (shift == scene.flow_shift)
-                return;
-            scene.flow_shift = shift;
-            const ovl::RgbaImage rolled = park::flow_rows(scene.flow_picture, shift);
-            device.end_pass();
-            device.update_texture(texture->second.handle, std::as_bytes(std::span(rolled.pixels)));
-            render::PassDesc back;
-            back.clear = false;
-            device.begin_pass(back);
         }
 
         /// Draws the park round the camera from `drawing.sun` into its map, outside any pass.
@@ -558,7 +539,6 @@ namespace rct3::scene
 
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool interface)
     {
-        profiling::section("Flow", [&] { roll_flow(device, scene); });
         // The ripples on the still water of objects (fountain basins, park::kWaterPicture) move on to now.
         if (const auto texture = scene.object_textures.find(park::kWaterPicture); texture != scene.object_textures.end())
         {

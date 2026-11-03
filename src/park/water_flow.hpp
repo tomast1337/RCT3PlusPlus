@@ -3,8 +3,9 @@
 // The water running down slides and water rides. A track piece that carries water names two more splines,
 // the water's left and right edges, in the same space as its rails. The water is a strip between them,
 // sampled a few times along each part of the splines. Its picture runs once across the strip and repeats
-// along it a whole number of times, so pieces laid end to end join without a seam; the scene makes it flow
-// by rolling the picture's rows (flow_rows).
+// along it a whole number of times, so pieces laid end to end join without a seam. Its picture runs the way
+// the piece's track runs, whichever end the file lists its water from, and slides that way as the water flows;
+// pieces laid against their section's own way slide it the other way round (flow_scroll).
 #pragma once
 
 #include "ovl/spline.hpp"
@@ -33,16 +34,14 @@ namespace rct3::park
     /// How far the water moves each second, in park units.
     inline constexpr float kFlowSpeed = 3.0f;
 
-    /// The water between `left` and `right`, textured `texture` and see-through. Nothing when the edges do
-    /// not pair up node for node or have no length.
-    [[nodiscard]] std::optional<ModelPart> flow_strip(const ovl::Spline& left, const ovl::Spline& right, std::string texture);
+    /// The water between `left` and `right`, textured `texture` and see-through, its picture running from the
+    /// end of the water nearer the start of `track` (the piece's rails). Nothing when the edges do not pair up
+    /// node for node or have no length. Its parts are marked `chain`, as their picture slides along them.
+    [[nodiscard]] std::optional<ModelPart> flow_strip(const ovl::Spline& left, const ovl::Spline& right, const ovl::Spline& track, std::string texture);
 
-    /// How many rows a picture `rows` high is rolled once the water has flowed for `seconds`.
-    [[nodiscard]] std::uint32_t flow_shift(std::uint32_t rows, float seconds);
-
-    /// `image` with each row moved `shift` rows higher, wrapping round: the picture moves the way the strip's
-    /// picture runs along the water.
-    [[nodiscard]] ovl::RgbaImage flow_rows(const ovl::RgbaImage& image, std::uint32_t shift);
+    /// How far along its picture the water of a piece of run `run` (see Chains) is moved after flowing for
+    /// `seconds`, from 0 up to 1, added to the picture's v: against the strip's v when the run is negative.
+    [[nodiscard]] float flow_scroll(float seconds, std::int32_t run);
 
     /// The picture of the texture `name` (the flowing water's by default) from the overlay whose common file is
     /// `file`.

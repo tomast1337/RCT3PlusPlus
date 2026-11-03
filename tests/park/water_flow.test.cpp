@@ -25,7 +25,7 @@ namespace
 
 TEST_CASE("a piece's water spans its two edges and its picture repeats a whole number of times along it")
 {
-    const auto part = flow_strip(straight({ 0, 1, -0.5f }, 9, 2), straight({ 0, 1, 0.5f }, 9, 2), "flow");
+    const auto part = flow_strip(straight({ 0, 1, -0.5f }, 9, 2), straight({ 0, 1, 0.5f }, 9, 2), straight({ 0, 0, 0 }, 9, 1), "flow");
     REQUIRE(part.has_value());
     CHECK(part->texture == "flow");
     CHECK(part->blend == PartBlend::Blended);
@@ -43,21 +43,27 @@ TEST_CASE("a piece's water spans its two edges and its picture repeats a whole n
 
 TEST_CASE("water whose edges do not pair up is left out")
 {
-    CHECK_FALSE(flow_strip(straight({ 0, 0, 0 }, 4, 2), straight({ 0, 0, 1 }, 4, 3), "flow"));
-    CHECK_FALSE(flow_strip(straight({ 0, 0, 0 }, 0, 1), straight({ 0, 0, 0 }, 0, 1), "flow"));
+    CHECK_FALSE(flow_strip(straight({ 0, 0, 0 }, 4, 2), straight({ 0, 0, 1 }, 4, 3), { }, "flow"));
+    CHECK_FALSE(flow_strip(straight({ 0, 0, 0 }, 0, 1), straight({ 0, 0, 0 }, 0, 1), { }, "flow"));
 }
 
-TEST_CASE("flowing water rolls its picture's rows, back where it started after one repeat")
+TEST_CASE("water listed from the track's far end still runs its picture the way the track runs")
 {
-    ovl::RgbaImage image { 1, 4, { } };
-    for (std::uint8_t row = 0; row < 4; ++row)
-        image.pixels.insert(image.pixels.end(), { row, 0, 0, 255 });
-    const float repeat = kFlowRepeat / kFlowSpeed;
-    CHECK(flow_shift(4, 0) == 0);
-    CHECK(flow_shift(4, repeat / 4 * 1.01f) == 1);
-    CHECK(flow_shift(4, repeat * 1.0001f) == 0);
-    CHECK(flow_rows(image, 0).pixels == image.pixels);
-    const auto moved = flow_rows(image, 1);
-    CHECK(moved.pixels[4] == 0); // Row 0 has moved to row 1
-    CHECK(moved.pixels[0] == 3);
+    // The water's edges run from x = -9 back to 0, the rails from 0 to -9.
+    const auto part = flow_strip(straight({ -9, 1, -0.5f }, -9, 2), straight({ -9, 1, 0.5f }, -9, 2), straight({ 0, 0, 0 }, 9, 1), "flow");
+    REQUIRE(part.has_value());
+    CHECK(part->vertices.front().position.x == doctest::Approx(-9));
+    CHECK(part->vertices.front().uv.y == doctest::Approx(2));
+    CHECK(part->vertices.back().uv.y == doctest::Approx(0));
+    CHECK(part->chain);
+}
+
+TEST_CASE("flowing water slides its picture on along v, and back along it on pieces laid the other way round")
+{
+    const float quarter = kFlowRepeat / kFlowSpeed / 4;
+    CHECK(flow_scroll(0, 1) == 0);
+    // Adding 0.75 to v reads the picture a quarter further back: it has moved on a quarter.
+    CHECK(flow_scroll(quarter, 1) == doctest::Approx(0.75f));
+    CHECK(flow_scroll(quarter, 0) == doctest::Approx(0.75f));
+    CHECK(flow_scroll(quarter, -3) == doctest::Approx(0.25f));
 }

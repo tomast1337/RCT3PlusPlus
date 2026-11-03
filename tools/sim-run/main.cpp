@@ -200,8 +200,8 @@ int main(int argc, char** argv)
         }
         park::ModelLoader loader(assets);
         for (const save::PlacedObject& o : world_model->objects)
-            if (const auto model = loader.load(o.symbol, o.overlay); model && park::is_sight(model->category))
-                sights.emplace(o.id, model->photo_spot ? simulation::PathItemKind::PhotoSpot : simulation::PathItemKind::Sight);
+            if (const auto model = loader.load(o.symbol, o.overlay); model && simulation::sight_of(model->category, model->feature))
+                sights.emplace(o.id, *simulation::sight_of(model->category, model->feature));
             else if (model && model->category == std::to_underlying(park::ItemCategory::ParkEntrance))
                 gates.emplace(o.id, model->squares);
         for (const save::Ride& ride : rides->rides)

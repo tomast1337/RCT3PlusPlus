@@ -46,13 +46,16 @@ namespace rct3::park
         EnclosureView = 46,  ///< A viewing window set in one
     };
 
-    /// Whether guests stop to watch an item of `category`: animatronics, effects and path features.
-    /// shortcut: path features take in information points and speakers too, which nothing tells apart yet;
-    /// upgrade when the item's own data does.
-    [[nodiscard]] constexpr bool is_sight(std::uint32_t category) noexcept
+    /// What a path feature (ItemCategory::PathFeature) is for, by the setting its item's data names.
+    enum class PathFeature : std::uint8_t
     {
-        return category == static_cast<std::uint32_t>(ItemCategory::Animatronic) || category == static_cast<std::uint32_t>(ItemCategory::PathFeature) || category == static_cast<std::uint32_t>(ItemCategory::Effect);
-    }
+        None,
+        Vista,        ///< A view point, a photo point or an information point
+        Speaker,      ///< A loudspeaker playing music
+        PassportPost, ///< A stamp machine
+        Fountain,     ///< Jumping fountains across the path
+        WaterCannon,  ///< A cannon guests fire at those passing
+    };
 
     /// Whether an item of `category` is a prop the player clicks on to look at by itself, rather than part of
     /// a path, a ride, the supports under them, or something lying about.

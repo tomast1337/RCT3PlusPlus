@@ -605,7 +605,11 @@ namespace rct3::park
         model.water_only = (item->flags & ovl::kItemWaterOnly) != 0;
         for (std::size_t i = 0; i < model.default_colours.size(); ++i)
             model.default_colours[i] = static_cast<std::int32_t>(item->default_colours[i]);
-        model.photo_spot = std::ranges::contains(item->parameters, std::string_view { "VistaPoint" }, &ovl::SceneryItemParameter::name);
+        // A path feature's setting names what it is for.
+        constexpr std::array<std::pair<std::string_view, PathFeature>, 5> kFeatures { { { "VistaPoint", PathFeature::Vista }, { "LoudSpeaker", PathFeature::Speaker }, { "PassportPost", PathFeature::PassportPost }, { "PathFountain", PathFeature::Fountain }, { "WaterCannon", PathFeature::WaterCannon } } };
+        for (const auto& [name, feature] : kFeatures)
+            if (std::ranges::contains(item->parameters, name, &ovl::SceneryItemParameter::name))
+                model.feature = feature;
         // A setting's words, such as " EnableNoEntry QueueSign".
         model.no_entry = std::ranges::any_of(item->parameters, [](const ovl::SceneryItemParameter& p) { return std::ranges::any_of(std::views::split(p.value, ' '), [](const auto word) { return strings::equals_ignoring_case(std::string_view(word), "EnableNoEntry"); }); });
         // A flower bed's setting, such as "Capacity 300.0": the water it holds when full.

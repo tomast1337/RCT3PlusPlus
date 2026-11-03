@@ -164,9 +164,11 @@ namespace rct3::simulation
     /// gives a special attraction's kind from the game's files. One opens onto all four sides and joins a path
     /// on any tile next to it, near its height. Returns how many came over. Call after import_paths.
     std::size_t import_facilities(SimWorld& world, const save::RideModel& rides, const std::function<std::optional<std::uint32_t>(const save::Ride&)>& kind_of);
-    /// The objects `sight_of` gives a kind (Sight for fountains, effects and animatronics, or PhotoSpot), each
-    /// on the path tile it stands on or one beside it, for guests to stop at. Returns how many came over. Call
-    /// after import_paths.
+    /// The kind of path item guests react to that an item of `category` and `feature` stands as: effects and
+    /// animatronics, or a path feature guests know. Nothing for the rest, bins, benches and signs among them.
+    [[nodiscard]] std::optional<PathItemKind> sight_of(std::uint32_t category, park::PathFeature feature);
+    /// The objects `sight_of` gives a kind, each on the path tile it stands on or one beside it, for guests to
+    /// react to. Returns how many came over. Call after import_paths.
     std::size_t import_sights(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<std::optional<PathItemKind>(const save::PlacedObject&)>& sight_of);
     /// The park entrances `squares_of` picks out, giving the tiles each covers along its own X and Z: the first, at
     /// the path tile it stands on or one beside it, as the gate guests come in and leave by; and the path tiles

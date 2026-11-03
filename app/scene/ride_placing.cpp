@@ -783,7 +783,7 @@ namespace rct3::scene
             // What guests use on the paths is theirs at once.
             const park::ObjectModel& model = scene.models.at(park::model_key(*o));
             const auto category = model.category;
-            const auto kind = category == std::to_underlying(park::ItemCategory::LitterBin) ? std::optional(simulation::PathItemKind::Bin) : category == std::to_underlying(park::ItemCategory::Bench) ? std::optional(simulation::PathItemKind::Bench) : category == std::to_underlying(park::ItemCategory::Sign) ? std::optional(simulation::PathItemKind::Sign) : park::is_sight(category) ? std::optional(model.photo_spot ? simulation::PathItemKind::PhotoSpot : simulation::PathItemKind::Sight) : std::nullopt;
+            const auto kind = category == std::to_underlying(park::ItemCategory::LitterBin) ? std::optional(simulation::PathItemKind::Bin) : category == std::to_underlying(park::ItemCategory::Bench) ? std::optional(simulation::PathItemKind::Bench) : category == std::to_underlying(park::ItemCategory::Sign) ? std::optional(simulation::PathItemKind::Sign) : simulation::sight_of(category, model.feature);
             if (const auto wall = park::edge_wall(scene.objects.back(), scene.models, scene.grid))
                 wall_changed(device, scene, assets, *wall, true);
             // Bins and signs are kept with the park; benches are found again by their kind when it loads.

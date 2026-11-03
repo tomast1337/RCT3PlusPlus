@@ -289,8 +289,9 @@ namespace rct3::park
     /// value, small enough not to show.
     inline constexpr float kWaterLift = 0.03f;
 
-    /// A see-through, faintly rippled picture for those parts, in the colour of the park's lakes.
-    [[nodiscard]] PaletteImage water_picture();
+    /// A see-through, faintly rippled picture for those parts, in the colour of the park's lakes, its ripples
+    /// as they are `seconds` on. It tiles at any time.
+    [[nodiscard]] PaletteImage water_picture(float seconds = 0);
 
     /// Loads models through an asset index, reading each overlay once. Keep it while loading a park's models,
     /// then drop it to free the files.

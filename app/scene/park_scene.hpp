@@ -491,6 +491,7 @@ namespace rct3::scene
         ui::UiTextures object_textures;
         ovl::RgbaImage flow_picture;     ///< The flowing water's, still; empty without one (park/water_flow.hpp)
         std::uint32_t flow_shift = 0;    ///< Rows it is rolled by on the GPU
+        std::uint32_t ripple_frame = 0;  ///< Of the still water of objects, the picture shown (park::water_picture)
         park::ObjectMesh waterfall_mesh; ///< The waterfalls' water, built again each frame as it runs
         /// Water a park object shoots: a cannon a guest fires, or a jumping fountain at the next.
         struct Jet

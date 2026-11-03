@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "ovl/texture_image.hpp"
 #include "park/chain_lifts.hpp"
 #include "park/daylight.hpp"
+#include "park/flexi_colours.hpp"
 #include "park/ground_textures.hpp"
 #include "park/object_models.hpp"
 #include "park/person_mesh.hpp"
@@ -557,6 +559,23 @@ namespace rct3::scene
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool interface)
     {
         profiling::section("Flow", [&] { roll_flow(device, scene); });
+        // The ripples on the still water of objects (fountain basins, park::kWaterPicture) move on to now.
+        if (const auto texture = scene.object_textures.find(park::kWaterPicture); texture != scene.object_textures.end())
+        {
+            constexpr float kRate = 12; ///< Chosen by eye: pictures a second, smooth enough for slow ripples
+            if (const auto frame = static_cast<std::uint32_t>(scene.park_clock * kRate); frame != scene.ripple_frame)
+            {
+                scene.ripple_frame = frame;
+                const park::PaletteImage picture = park::water_picture(static_cast<float>(frame) / kRate);
+                // Halved as it was when first uploaded, to fit the texture.
+                const ovl::RgbaImage rippled = ovl::halved(park::paint(picture, { }), ovl::texture_halvings(scene.texture_detail, picture.width, picture.height));
+                device.end_pass();
+                device.update_texture(texture->second.handle, std::as_bytes(std::span(rippled.pixels)));
+                render::PassDesc back;
+                back.clear = false;
+                device.begin_pass(back);
+            }
+        }
         // Jets of water are drawn with the waterfalls, as running water of their picture.
         if (!scene.footpaths.waterfalls.empty() || !scene.jets.empty() || !scene.waterfall_mesh.indices.empty())
             profiling::section("Waterfalls", [&] {

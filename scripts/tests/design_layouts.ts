@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Lays saved designs with pieces whose ends do not quite meet as their shapes are read, a heartline coaster, a
-// log flume and a rapids ride, each on the game's blank landscape. Each is laid whole with its doors, closed
-// round so it can be tested, and looked at from above.
+// log flume and a rapids ride, and a looping coaster whose first piece is above its lowest, each on the game's
+// blank landscape. Each is laid whole with its doors, none of it under the ground, closed round so it can be
+// tested, and looked at from above.
 //
 //   ./nob script scripts/tests/design_layouts.ts -- --no-audio
 
@@ -18,11 +19,13 @@ const designs: [string, string, number, number, string][] = [
     ["tracks/coasters/Heartline/Heartline", "Heartline", 0, 44, "heartline"],
     ["tracks/TrackedRides/LogFlume/LogFlume", "LogFlume", 0, 63, "log_flume"],
     ["tracks/TrackedRides/Rapids/Rapids", "Rapids", 0, 50, "rapids"],
+    ["tracks/coasters/LoopingRC/LoopingRC", "LoopingRC", 1, 110, "looping"],
 ];
 
 for (const [overlay, kind, place, pieces, name] of designs) {
     await park.open("Campaigns/Base/BlankLandscape.dat");
     await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
+    const ground = Math.min(...map.tile(64, 64)!.corners);
     expect(build.pick(overlay, kind, "designs"), `a ${kind} to build`);
     await until(() => ui.find("design_browser") !== undefined, 600, "the designs window");
     await frames(3);
@@ -51,6 +54,8 @@ for (const [overlay, kind, place, pieces, name] of designs) {
     }
     const r = rides.list()[ride];
     expect(r.pieces === pieces, `the ${kind} design laid whole, ${pieces} pieces, not ${r.pieces}`);
+    const heights = map.objects().filter((o) => o.overlay.toLowerCase().startsWith("tracks/") && o.height !== null).map((o) => o.height!);
+    expect(Math.min(...heights) >= ground, `the ${kind} design above the ground, its lowest piece at ${Math.min(...heights)}, not below ${ground}`);
     build.stop();
     await ui.click("placing/close");
     await frames(5);

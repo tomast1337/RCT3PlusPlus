@@ -639,6 +639,15 @@ namespace rct3::scene
                     on.base_height = std::max({ *b.raised, on.base_height.value_or(0), park::ride_site(*b.aim, shape.record.squares, b.turns, scene.grid).height });
                     on.force_absolute_height = true;
                 }
+                // A design stands with its lowest piece where its first would, as it was built on the ground.
+                if (!b.design.empty())
+                {
+                    if (const std::int32_t lift = b.design.front().height - std::ranges::min(b.design, { }, &save::TrackPiece::height).height; lift > 0)
+                    {
+                        on.base_height = on.base_height.value_or(park::ride_site(*b.aim, shape.record.squares, b.turns, scene.grid).height) + lift;
+                        on.force_absolute_height = true;
+                    }
+                }
                 b.tip = park::start_of(on, shape, b.picked->reversed, scene.grid);
             }
             b.ghost = park::place_after(*b.tip, shape, b.picked->reversed, scene.grid);

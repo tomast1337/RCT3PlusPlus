@@ -644,7 +644,7 @@ namespace rct3::simulation
         return changed;
     }
 
-    void import_pools(SimWorld& world, const park::PoolMap& pools)
+    void import_pools(SimWorld& world, const park::PoolMap& pools, std::span<const park::PoolExtra> scenery)
     {
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;
@@ -678,13 +678,14 @@ namespace rct3::simulation
         }
         // Swimmers lie on loungers, stand under showers and stand by the other extras a while. High diving boards go
         // unused until the swimmers can climb and dive.
-        for (const park::PoolExtra& extra : pools.extras)
-            if (const auto square = squares.find({ extra.col, extra.row }); square != squares.end() && square->second->kind == park::PoolKind::Tile)
-            {
-                const auto [dc, dr] = kSides[static_cast<std::size_t>(extra.turn & 3)];
-                const PoolUse use = extra.fit.lounger ? PoolUse::Lounge : extra.fit.shower ? PoolUse::Shower : PoolUse::Stand;
-                complexes[complex_of.at(square->first)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<float>(square->second->surface)), .heading = { std::atan2(static_cast<float>(dc), static_cast<float>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : std::uint8_t { 1 } });
-            }
+        for (const auto& extras : { std::span(pools.extras), scenery })
+            for (const park::PoolExtra& extra : extras)
+                if (const auto square = squares.find({ extra.col, extra.row }); square != squares.end() && square->second->kind == park::PoolKind::Tile)
+                {
+                    const auto [dc, dr] = kSides[static_cast<std::size_t>(extra.turn & 3)];
+                    const PoolUse use = extra.fit.lounger ? PoolUse::Lounge : extra.fit.shower ? PoolUse::Shower : PoolUse::Stand;
+                    complexes[complex_of.at(square->first)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<float>(square->second->surface)), .heading = { std::atan2(static_cast<float>(dc), static_cast<float>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : std::uint8_t { 1 } });
+                }
         // The rooms there were, by tile, and the complexes they opened on.
         std::map<std::pair<std::int32_t, std::int32_t>, entt::entity> rooms;
         for (const auto [e, door] : r.view<const PoolDoor>().each())

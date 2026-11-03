@@ -3,7 +3,7 @@
 // A park from the game with pools, opened: its pools come in as squares the pool tool works on, their pieces
 // and changing rooms placed again from them, saved and loaded again as they were, and on a warm day its guests
 // swim. Give it a park the game saved
-// with a pool complex and a changing room:
+// with a pool complex and a changing room (best with guests swimming, sun loungers and a spa pool):
 //
 //   ./nob script scripts/tests/pool_saved.ts -- --no-intro --no-audio --seed 1 --park PARK
 
@@ -70,4 +70,18 @@ if (spa) {
     camera.look({ col: spa.col + 0.5, row: spa.row + 0.5 }, { col: spa.col + 0.5, row: spa.row + 3.5, up: 2 });
     await frames(30);
     await screenshot("pool_saved_spa");
+}
+
+// Swimmers lie on the sun loungers the park placed, and stand under its showers.
+const extra = map.objects().find((o) => o.symbol.startsWith("SunLoungers") || o.symbol === "PoolShower");
+if (extra) {
+    log("extra", extra.symbol, "at", extra.col, extra.row);
+    const using_it = () => swimmers().find((p) => p.pool_extra !== undefined && Math.floor(p.col!) === extra.col && Math.floor(p.row!) === extra.row);
+    await ui.click("bar/Top_SuperFastForward");
+    await until(() => using_it() !== undefined, 20000, `a swimmer on the ${extra.symbol}`);
+    await ui.click("bar/Top_Play");
+    log("using it", JSON.stringify(using_it()));
+    camera.look({ col: extra.col + 0.5, row: extra.row + 0.5 }, { col: extra.col + 0.5, row: extra.row + 3, up: 1.5 });
+    await frames(30);
+    await screenshot("pool_saved_extra");
 }

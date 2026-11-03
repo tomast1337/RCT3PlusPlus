@@ -947,6 +947,9 @@ namespace rct3::scene
                     constexpr std::array<std::string_view, 14> kGestures { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdown", "handticket", "applause", "lookwatch", "disapproval", "cry", "horror", "turnlook" };
                     if (const auto* gesture = r.try_get<simulation::Gesture>(p.guest))
                         person["gesture"] = kGestures[std::to_underlying(gesture->kind)];
+                    // In a pool, on a sun lounger or under a shower.
+                    if (const auto* swimmer = r.try_get<simulation::Swimmer>(p.guest); swimmer != nullptr && swimmer->place >= 0)
+                        person["pool_extra"] = swimmer->use == simulation::PoolUse::Lounge ? "lounger" : swimmer->use == simulation::PoolUse::Shower ? "shower" : "other";
                     // Stopped at a path item: on a bench, at a view, firing a water cannon.
                     if (const auto* linger = r.try_get<simulation::Linger>(p.guest))
                         person["lingering"] = kPathItemKinds.at(std::to_underlying(linger->at));

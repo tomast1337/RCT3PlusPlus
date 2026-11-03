@@ -6,6 +6,7 @@
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 
+#include <array>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -249,6 +250,23 @@ TEST_CASE("swimmers lie on loungers and stand under showers, as many as they tak
         CHECK(most <= places);
         CHECK(waiting > 0); // Some came while it was full
     }
+}
+
+TEST_CASE("extras a park placed as scenery are used as those laid with the pool")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    park::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::Tile });
+    pools.squares.push_back({ .col = 5, .row = 3 });
+    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    const std::array scenery { park::PoolExtra { .symbol = "Loungers", .col = 6, .row = 2, .fit = { .lounger = true } }, park::PoolExtra { .symbol = "Far", .col = 9, .row = 9, .fit = { .lounger = true } } };
+    import_pools(park.world(), pools, scenery);
+    auto& r = park.world().registry;
+    const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
+    REQUIRE(pool.extras.size() == 1); // Not the one off the pool
+    CHECK(pool.extras.front().use == PoolUse::Lounge);
 }
 
 TEST_CASE("swimmers dirty the water, and the room's fluid cleans it while the room is open")

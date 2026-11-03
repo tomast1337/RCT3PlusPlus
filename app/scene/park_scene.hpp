@@ -435,13 +435,14 @@ namespace rct3::scene
         std::vector<std::uint64_t> fence_panels; ///< The objects of the fence round the park's land, as last built
         /// By ride id, the objects of the fence the park built round the ride and beside its doors, as last built.
         std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> ride_fence_pieces;
-        save::EnclosureMap enclosures;               ///< The animal enclosures' tiles and fences
-        std::vector<std::uint64_t> enclosure_panels; ///< The objects of their fences, as last built
-        park::PoolMap pools;                         ///< The swimming pools the player laid
-        std::size_t pools_seen = 0;                  ///< A fingerprint of `pools` as the simulation last took them in
-        std::vector<std::uint64_t> pool_pieces;      ///< Their pieces' objects, as last built
-        std::size_t saved_pool_water = 0;            ///< footpaths.pools of the park's own file; the pools' follow
-        std::size_t entrance_centred = 0;            ///< Of the park's entrances, the one the view last went to
+        save::EnclosureMap enclosures;                    ///< The animal enclosures' tiles and fences
+        std::vector<std::uint64_t> enclosure_panels;      ///< The objects of their fences, as last built
+        park::PoolMap pools;                              ///< The swimming pools the player laid
+        std::size_t pools_seen = 0;                       ///< A fingerprint of `pools` as the simulation last took them in
+        std::vector<park::PoolExtra> scenery_pool_extras; ///< Pool extras a park from the game placed as scenery, for its swimmers to use
+        std::vector<std::uint64_t> pool_pieces;           ///< Their pieces' objects, as last built
+        std::size_t saved_pool_water = 0;                 ///< footpaths.pools of the park's own file; the pools' follow
+        std::size_t entrance_centred = 0;                 ///< Of the park's entrances, the one the view last went to
         std::vector<glm::vec3> anchors;
         std::vector<park::Lamp> lamps; ///< The objects' lamps at full strength; packed again when `lamps_due`
         bool lamps_due = true;

@@ -943,7 +943,7 @@ namespace rct3::scene
             for (const save::PathTile& p : laid)
                 (void)simulation::add_path(scene.sim, p, scene.grid);
             (void)simulation::relink_attractions(scene.sim, scene.rides);
-            simulation::import_pools(scene.sim, scene.pools);
+            simulation::import_pools(scene.sim, scene.pools, scene.scenery_pool_extras);
             // Boats keep out from under the paths laid low over their water.
             simulation::boat_water(scene.sim, scene.grid, scene.footpaths.water.bodies, boat_obstacles(scene));
         }

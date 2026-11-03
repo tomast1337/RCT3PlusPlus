@@ -60,8 +60,9 @@ namespace rct3::simulation
     /// Brings the pools of `pools` into the simulation, or brings them up to date after they or the paths
     /// changed: each complex (squares that meet side to side) the spots its swimmers go to, each changing room
     /// an attraction at the path tile before its door, at its complex's ticket price, open as it is. A room
-    /// that still stands keeps its swimmers; those of a room gone come out at its door. Call after import_paths.
-    void import_pools(SimWorld& world, const park::PoolMap& pools);
+    /// that still stands keeps its swimmers; those of a room gone come out at its door. `scenery` are extras the park
+    /// placed as scenery, used as those of `pools` are. Call after import_paths.
+    void import_pools(SimWorld& world, const park::PoolMap& pools, std::span<const park::PoolExtra> scenery = { });
     /// Adds a shop for every stall of `rides` that sells a drink or food and has a path on the tile in front of
     /// it, near its height; a path beside it does not count. Returns how many were added. Its wares take the extras `kinds` says their items can, where the stall puts them on.
     /// Call after import_paths.

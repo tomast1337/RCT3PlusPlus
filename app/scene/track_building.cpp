@@ -1997,6 +1997,9 @@ namespace rct3::scene
             standing = park::solid_tiles(others, scene.models, scene.grid);
         }
         const save::PlacedObject first = b.ghost->object;
+        // A design of two tracks side by side holds both halves of each joined piece, laid as they come rather
+        // than each laying its other half.
+        const park::SplitState split = design.empty() ? b.split : std::exchange(b.split, park::SplitState::None);
         for (std::size_t i = 0; i < std::max<std::size_t>(design.size(), 1); ++i)
         {
             if (i > 0)
@@ -2032,6 +2035,19 @@ namespace rct3::scene
         }
         if (!design.empty() && ride.track->pieces.size() == design.size())
         {
+            // Its stretches as the design has them, as the two tracks of a ride of two, each closed round.
+            if (settings && settings->track)
+            {
+                save::Track& track = *ride.track;
+                track.segments = settings->track->segments;
+                for (save::TrackSegment& stretch : track.segments)
+                    stretch.id = 0;
+                for (std::size_t i = 0; i < design.size(); ++i)
+                    track.pieces[i].segment = design[i].segment;
+                if (!std::exchange(track.circuit, settings->track->circuit) && track.circuit)
+                    scene.doors_requested = *b.ride;
+                track_changed(scene, b, assets);
+            }
             // It runs as the design was set to run, in the design's colours.
             if (settings)
             {
@@ -2053,7 +2069,10 @@ namespace rct3::scene
             }
         }
         if (!design.empty())
+        {
+            use_split(scene, b, split);
             logging::logger("park").info("design laid with {} of {} pieces for {}, mode {}, lift {} m/s", ride.track->pieces.size(), design.size(), cash - scene.park.cash.value_or(0), std::to_underlying(ride.mode), ride.options.lift_speed);
+        }
         // A ride that is one building is done once set down: on to its window, where its doors are placed.
         if (*b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].one_piece && !ride.track->pieces.empty())
         {

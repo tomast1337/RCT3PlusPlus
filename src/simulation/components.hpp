@@ -120,6 +120,25 @@ namespace rct3::simulation
         bool closed = false;
     };
 
+    /// A place outside the park, mostly where its road leaves the map, where arriving guests appear and walk to
+    /// the gate from, and where those going home walk off.
+    struct GuestSpawn
+    {
+        NodeId node = kNoNode;
+    };
+
+    /// A guest on the paths outside the park, between a spawn point and the gate.
+    struct Outside
+    {
+        enum class Way : std::uint8_t
+        {
+            In,         ///< Walking to the gate, not paid yet
+            TurnedAway, ///< Could not pay at the gate, walking back
+            Home,       ///< Walking home from the gate
+        };
+        Way way = Way::In;
+    };
+
     /// The path tiles under the park's entrances, in the registry's context: staff never step onto them, so they
     /// never walk out of the park.
     struct EntrancePaths

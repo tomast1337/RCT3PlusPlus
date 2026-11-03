@@ -846,3 +846,26 @@ TEST_CASE("a no-entry sign bars the side its front faces; staff are kept off lan
     CHECK_FALSE(world.paths.may_step(at(0), at(1), simulation::Walker::Guest));
     CHECK(world.paths.may_step(at(2), at(1), simulation::Walker::Guest));
 }
+
+TEST_CASE("the park's spawn points come over on the path tiles they stand on")
+{
+    simulation::SimWorld world;
+    save::TerrainGrid grid;
+    grid.width = 4;
+    grid.height = 1;
+    grid.tile_size_x = 4;
+    grid.tile_size_z = 4;
+    grid.cells.resize(4);
+    for (int c = 0; c < 4; ++c)
+    {
+        save::PathTile p;
+        p.kind = save::PathKind::Ground;
+        p.col = static_cast<std::uint8_t>(c);
+        (void)simulation::add_path(world, p, grid);
+    }
+    const std::array<save::PlacedObject, 3> objects { save::PlacedObject { .id = 1, .col = 0, .row = 0 }, save::PlacedObject { .id = 2, .symbol = "InjectionPoint", .col = 3, .row = 0, .hidden = true }, save::PlacedObject { .id = 3, .symbol = "InjectionPoint", .col = 3, .row = 5, .hidden = true } };
+    REQUIRE(simulation::import_gate(world, objects, [](const save::PlacedObject& o) { return o.id == 1 ? std::optional(std::array<std::int32_t, 2> { 1, 1 }) : std::nullopt; }) != entt::null);
+    const auto spawns = world.registry.view<const simulation::GuestSpawn>();
+    REQUIRE(spawns.size() == 1); // The one off the paths is left out
+    CHECK(spawns.get<const simulation::GuestSpawn>(spawns.front()).node == *world.paths.find({ 3, 0, 0 }));
+}

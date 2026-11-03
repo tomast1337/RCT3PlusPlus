@@ -181,8 +181,8 @@ namespace rct3::simulation
     std::size_t import_sights(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<std::optional<PathItemKind>(const save::PlacedObject&)>& sight_of);
     /// The park entrances `squares_of` picks out, giving the tiles each covers along its own X and Z: the first, at
     /// the path tile it stands on or one beside it, as the gate guests come in and leave by; and the path tiles
-    /// under every one of them as EntrancePaths. entt::null when none is on the paths. Call after import_paths,
-    /// then keep_staff_in.
+    /// under every one of them as EntrancePaths. entt::null when none is on the paths. Also the park's spawn
+    /// points on the paths, each a GuestSpawn. Call after import_paths, then keep_staff_in.
     entt::entity import_gate(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<std::optional<std::array<std::int32_t, 2>>(const save::PlacedObject&)>& squares_of);
     /// Keeps staff off the path tiles on land the park does not own and off those under its entrances, and lets
     /// them onto the others. Call after import_gate, and again when the park's land changes.

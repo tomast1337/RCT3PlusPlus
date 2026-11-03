@@ -439,9 +439,26 @@ namespace rct3::simulation
             return found != nullptr ? found->time.value : Daylight { }.time.value;
         }
 
+        /// The nearest spawn point a guest on path node `from` can walk to, and the way there; none without one.
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> way_off(const entt::registry& r, const PathNetwork& paths, NodeId from)
+        {
+            std::vector<entt::entity> spawns;
+            std::vector<NodeId> nodes;
+            for (const auto [e, spawn] : r.view<const GuestSpawn>().each())
+            {
+                spawns.push_back(e);
+                nodes.push_back(spawn.node);
+            }
+            auto found = nodes.empty() ? std::nullopt : paths.route_nearest(from, nodes);
+            if (!found)
+                return std::nullopt;
+            return std::pair { spawns[found->first], std::move(found->second) };
+        }
+
         /// A wandering guest (with their party, all walking with them) that may go home now: one done with
-        /// the park, by night a family, in a storm anyone. The gate and the way there. A party goes by how done
-        /// its members are on average. `cash_machine` is whether the park has one open.
+        /// the park, by night a family, in a storm anyone. Where they go, and the way there: out of the gate and
+        /// on to the nearest spawn point, or the gate itself when no spawn point can be reached from it. A party
+        /// goes by how done its members are on average. `cash_machine` is whether the park has one open.
         std::optional<std::pair<entt::entity, std::vector<NodeId>>> going_home(const entt::registry& r, const PathNetwork& paths, entt::entity guest, NodeId at, Dice& dice, bool night, bool storm, bool cash_machine, std::uint64_t tick)
         {
             // A guest of honour stays for their whole visit, then heads straight out.
@@ -476,16 +493,44 @@ namespace rct3::simulation
                 return std::nullopt;
             for (const auto [gate, at_gate] : r.view<const ParkGate>().each())
                 if (auto walk = paths.route(at, at_gate.node, Walker::Guest, r.get<Wallet>(guest).cash.value))
+                {
+                    if (auto off = way_off(r, paths, at_gate.node))
+                    {
+                        walk->append_range(off->second);
+                        return std::pair { off->first, std::move(*walk) };
+                    }
                     return std::pair { gate, std::move(*walk) };
+                }
             return std::nullopt;
         }
 
         /// The guest goes home: they stop needing, feeling and walking, and leave their party.
         void leave(entt::registry& r, entt::entity guest)
         {
-            ++r.ctx().emplace<Turnstile>().out[static_cast<std::size_t>(age_of(r, guest))];
-            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Glance, Watching, Carried, RideWalk, Crossing, Swimmer>(guest);
+            // Those turned away at the gate never came in.
+            if (const auto* outside = r.try_get<Outside>(guest); outside == nullptr || outside->way != Outside::Way::TurnedAway)
+                ++r.ctx().emplace<Turnstile>().out[static_cast<std::size_t>(age_of(r, guest))];
+            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Glance, Watching, Carried, RideWalk, Crossing, Swimmer, Outside>(guest);
             r.emplace<Left>(guest);
+        }
+
+        /// Each of `party` pays the entrance fee, the party making up what one is short of. False, with nothing
+        /// paid, when together they cannot pay for all of them: they are turned away, and no longer counted in.
+        bool pay_entry(entt::registry& r, std::span<const entt::entity> party)
+        {
+            const Money fee = r.ctx().contains<Draw>() ? r.ctx().get<Draw>().entrance_fee : Money { };
+            if (fee.value <= 0)
+                return true;
+            if (std::ranges::fold_left(party, std::int64_t { 0 }, [&](std::int64_t sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) >= fee.value * static_cast<std::int64_t>(party.size()))
+            {
+                for (const entt::entity m : party)
+                    pay(r, m, fee, &Wallet::spent_entry);
+                return true;
+            }
+            for (const entt::entity m : party)
+                --r.ctx().get<Turnstile>().in[std::to_underlying(r.get<Visitor>(m).age)];
+            ++r.ctx().emplace<Turnstile>().turned_away;
+            return false;
         }
 
         Weather weather_in(const entt::registry& r)
@@ -885,7 +930,39 @@ namespace rct3::simulation
             const float now = static_cast<float>(world.tick) * kTickSeconds;
             const Weather weather = weather_in(r);
             auto& vandalism = r.ctx().emplace<Vandalism>();
-            // Guests come in at the gate: families by day, mostly teens after dark.
+            // Guests outside the park with nowhere to go (just loaded, or put down there by the player) go on to the
+            // gate to come in, or off to the nearest spawn point. With no way there they count as in the park.
+            for (const entt::entity g : sorted(r.view<const Outside, Errand, Stride>()))
+            {
+                auto& errand = r.get<Errand>(g);
+                auto& stride = r.get<Stride>(g);
+                const auto* member = r.try_get<Member>(g);
+                if (errand.kind != ErrandKind::Wandering || stride.to >= paths.nodes().size() || (member != nullptr && r.get<Party>(member->party).leader != g))
+                    continue;
+                std::optional<std::pair<entt::entity, std::vector<NodeId>>> goal;
+                if (r.get<Outside>(g).way != Outside::Way::In)
+                    goal = way_off(r, paths, stride.to);
+                else
+                    for (const auto [gate, at_gate] : r.view<const ParkGate>().each())
+                        if (auto walk = paths.route(stride.to, at_gate.node))
+                        {
+                            goal = std::pair { gate, std::move(*walk) };
+                            break;
+                        }
+                if (!goal)
+                {
+                    if (member != nullptr)
+                        for (const entt::entity m : r.get<Party>(member->party).members)
+                            r.remove<Outside>(m);
+                    r.remove<Outside>(g);
+                    continue;
+                }
+                errand = { ErrandKind::Heading, goal->first, 0 };
+                stride.route = std::move(goal->second);
+            }
+
+            // Parties come families by day, mostly teens after dark, appearing at one of the park's spawn points
+            // to walk to the gate; at the gate itself where no spawn point has a way there.
             double arrivals = arrivals_per_second(weather);
             if (const auto* draw = r.ctx().find<Draw>(); draw != nullptr && !r.view<const ParkGate>().empty())
             {
@@ -903,26 +980,31 @@ namespace rct3::simulation
                 auto& dice = r.get<Dice>(gate).state;
                 if (!random::chance(dice, arrivals * dt) || r.get<ParkGate>(gate).closed)
                     continue;
-                // Each pays the entrance fee, the party making up what one is short of; a party that cannot
-                // pay for all of them is turned away.
-                const std::vector<entt::entity> party = admit_party(world, dice, r.get<ParkGate>(gate).node);
-                const Money fee = r.ctx().contains<Draw>() ? r.ctx().get<Draw>().entrance_fee : Money { };
-                if (fee.value <= 0)
-                    continue;
-                if (std::ranges::fold_left(party, std::int64_t { 0 }, [&](std::int64_t sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) >= fee.value * static_cast<std::int64_t>(party.size()))
+                const NodeId entry = r.get<ParkGate>(gate).node;
+                const auto spawns = sorted(r.view<const GuestSpawn>());
+                std::optional<std::vector<NodeId>> walk;
+                NodeId from = entry;
+                for (std::size_t k = 0, first = spawns.empty() ? 0 : random::below(dice, spawns.size()); k < spawns.size() && !walk; ++k)
+                {
+                    from = r.get<GuestSpawn>(spawns[(first + k) % spawns.size()]).node;
+                    walk = paths.route(from, entry);
+                }
+                const std::vector<entt::entity> party = admit_party(world, dice, walk ? from : entry);
+                if (walk)
                 {
                     for (const entt::entity m : party)
-                        pay(r, m, fee, &Wallet::spent_entry);
+                        r.emplace<Outside>(m);
+                    r.get<Errand>(party.front()) = { ErrandKind::Heading, gate, 0 };
+                    r.get<Stride>(party.front()).route = std::move(*walk);
                     continue;
                 }
+                // At the gate they pay at once; a party that cannot is gone again.
+                if (pay_entry(r, party))
+                    continue;
                 if (const auto* member = r.try_get<Member>(party.front()))
                     r.destroy(member->party);
                 for (const entt::entity m : party)
-                {
-                    --r.ctx().get<Turnstile>().in[std::to_underlying(r.get<Visitor>(m).age)];
                     r.destroy(m);
-                }
-                ++r.ctx().emplace<Turnstile>().turned_away;
             }
             vandalism.recent *= std::exp(-dt / kTuning.vandals.fade.value);
             if (vandalism.since_warning.value >= 0)
@@ -3155,6 +3237,33 @@ namespace rct3::simulation
                         followers.push_back(m);
             }
             auto& errand = r.get<Errand>(guest);
+            // Come from a spawn point to the gate: in, paying, or, at a closed gate or short of the fee, back the way
+            // they came. With no way back they go home there, as those leaving do.
+            if (const auto* outside = r.try_get<Outside>(guest); outside != nullptr && outside->way == Outside::Way::In && r.all_of<ParkGate>(arrived[i]))
+            {
+                std::vector<entt::entity> party { guest };
+                party.append_range(followers);
+                const bool shut = r.get<ParkGate>(arrived[i]).closed;
+                if (!shut && pay_entry(r, party))
+                {
+                    for (const entt::entity m : party)
+                        r.remove<Outside>(m);
+                    errand = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
+                    continue;
+                }
+                for (const entt::entity m : party)
+                {
+                    r.get<Outside>(m).way = Outside::Way::TurnedAway;
+                    if (shut) // Not counted in, as those who cannot pay are not
+                        --r.ctx().get<Turnstile>().in[std::to_underlying(r.get<Visitor>(m).age)];
+                }
+                if (auto off = way_off(r, paths, r.get<ParkGate>(arrived[i]).node))
+                {
+                    errand = { ErrandKind::Heading, off->first, 0 };
+                    r.get<Stride>(guest).route = std::move(off->second);
+                    continue;
+                }
+            }
             if (auto* shop = r.try_get<Shop>(arrived[i]))
             {
                 errand = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
@@ -3183,7 +3292,7 @@ namespace rct3::simulation
                     if (const float needed = need(m); buy(m, arrived[i], *shop, false))
                         served(m, needed);
             }
-            else if (r.all_of<ParkGate>(arrived[i]))
+            else if (r.any_of<ParkGate, GuestSpawn>(arrived[i]))
             {
                 if (const auto* member = r.try_get<Member>(guest))
                 {

@@ -1062,6 +1062,10 @@ namespace rct3::simulation
         EntrancePaths under;
         for (const save::PlacedObject& o : objects)
         {
+            // A spawn point is an asset of its own, placed on the road outside the park and kept out of sight.
+            if (o.symbol == "InjectionPoint")
+                if (const auto at = path_by(paths, o))
+                    world.registry.emplace<GuestSpawn>(world.registry.create(), *at);
             const auto squares = o.hidden ? std::nullopt : squares_of(o);
             if (!squares)
                 continue;

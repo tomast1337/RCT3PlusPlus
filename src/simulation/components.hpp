@@ -217,6 +217,7 @@ namespace rct3::simulation
         Money spent_food { };
         Money spent_drink { };
         Money spent_souvenirs { };
+        bool needs_cash = false; ///< Could not afford something since they last drew cash
     };
 
     // ----- guests on the move -----

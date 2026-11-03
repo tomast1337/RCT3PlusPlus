@@ -118,19 +118,22 @@ namespace rct3::parkfile
         template<> struct Stored<simulation::Wallet>
         {
             static constexpr std::string_view kTag = "WALT";
-            static constexpr std::uint32_t kVersion = 2;
+            static constexpr std::uint32_t kVersion = 3; ///< 3 adds `needs_cash`
             static constexpr std::size_t kMinRecord = 4 + 8;
             static constexpr auto kSums = std::array { &simulation::Wallet::cash, &simulation::Wallet::bank, &simulation::Wallet::withdrawn, &simulation::Wallet::spent, &simulation::Wallet::spent_entry, &simulation::Wallet::spent_rides, &simulation::Wallet::spent_food, &simulation::Wallet::spent_drink, &simulation::Wallet::spent_souvenirs };
             static void write(Writer& w, const simulation::Wallet& m)
             {
                 for (const auto sum : kSums)
                     w.number((m.*sum).value);
+                w.number(std::uint8_t { m.needs_cash });
             }
             static std::expected<simulation::Wallet, std::string> read(Reader& r, std::uint32_t version)
             {
                 simulation::Wallet m;
                 for (const auto sum : version >= 2 ? std::span(kSums) : std::span(kSums).first(1))
                     (m.*sum).value = r.number<std::int64_t>();
+                if (version >= 3)
+                    m.needs_cash = r.number<std::uint8_t>() != 0;
                 return m;
             }
         };

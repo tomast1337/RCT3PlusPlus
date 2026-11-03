@@ -88,6 +88,30 @@ TEST_CASE("a guest stays at a toilet or first aid the longer the more they neede
     }
 }
 
+TEST_CASE("a guest who cannot afford what they want draws cash, though they have more than a little")
+{
+    {
+        // Only dearer food than they have money for.
+        Sandbox park;
+        park.path({ 0, 0 }, { 6, 0 });
+        park.shop("Food", Product::Food, { 6, 0 }, 3000);
+        park.shop("Cash", Product::CashMachine, { 0, 0 }, 0);
+        const auto g = park.guest({ 3, 0 }, { .hunger = 0.9f, .cash = 2000 });
+        CHECK(park.run_until([&] { return park.world().registry.get<Wallet>(g).withdrawn.value > 0; }, 60));
+    }
+    {
+        // Turned away for want of money where they could not see the price first.
+        Sandbox park;
+        park.path({ 0, 0 }, { 6, 0 });
+        park.shop("Cash", Product::CashMachine, { 6, 0 }, 0);
+        const auto g = park.guest({ 0, 0 }, { .cash = 2000 });
+        auto& r = park.world().registry;
+        r.get<Wallet>(g).needs_cash = true;
+        CHECK(park.run_until([&] { return r.get<Wallet>(g).withdrawn.value > 0; }, 60));
+        CHECK_FALSE(r.get<Wallet>(g).needs_cash);
+    }
+}
+
 TEST_CASE("tired guests sit on the benches they pass, as many as there are seats, and rest")
 {
     Sandbox park;

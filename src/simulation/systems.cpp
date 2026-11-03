@@ -183,7 +183,7 @@ namespace rct3::simulation
                 { hot, Product::Food, true },
                 { needs.bladder.value, Product::Toilet },
                 { mood.nausea.value, Product::FirstAid },
-                { wallet.cash.value < kTuning.facilities.low_cash.value && wallet.bank.value > 0 ? 1.0f : 0.0f, Product::CashMachine },
+                { (wallet.cash.value < kTuning.facilities.low_cash.value || wallet.needs_cash) && wallet.bank.value > 0 ? 1.0f : 0.0f, Product::CashMachine },
             } };
             std::ranges::stable_sort(wants, std::greater { }, &Want::need);
             const Serve suits = hot >= kTuning.needs.want.value || temperature >= kTuning.weather.hot.value ? Serve::Cold : temperature < kTuning.weather.cold.value ? Serve::Hot : Serve::Any;
@@ -205,6 +205,10 @@ namespace rct3::simulation
                         return found;
                 if (auto found = shop(want.product, false))
                     return found;
+                // Only dearer ones than they can pay for: off for more cash first.
+                if (wallet.bank.value > 0 && std::ranges::any_of(offers, [&](const Offer& o) { return o.kind == AttractionKind::Shop && o.product == want.product && o.price > wallet.cash.value; }))
+                    if (auto found = shop(Product::CashMachine, false))
+                        return found;
             }
             // A swim, when they wish for one and it is warm enough.
             if (needs.swim.value >= kTuning.needs.want.value && temperature >= kTuning.pools.coldest.value)
@@ -2966,7 +2970,7 @@ namespace rct3::simulation
                 return false;
             }
             const bool cools = shop.serve == Serve::Cold && mood.heat.value >= kTuning.needs.want.value;
-            if (!chose && !cools && (umbrella ? !weather.rain || r.all_of<Umbrella>(guest) : need != nullptr ? *need < kTuning.needs.want.value : wallet.cash.value >= kTuning.facilities.low_cash.value))
+            if (!chose && !cools && (umbrella ? !weather.rain || r.all_of<Umbrella>(guest) : need != nullptr ? *need < kTuning.needs.want.value : wallet.cash.value >= kTuning.facilities.low_cash.value && !wallet.needs_cash))
             {
                 // Came along without wanting anything.
                 if (meal)
@@ -3027,7 +3031,10 @@ namespace rct3::simulation
             {
                 mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
                 if (attraction.open)
+                {
                     think(r, guest, ThoughtKind::CantAfford, at, now);
+                    wallet.needs_cash = true;
+                }
                 return false;
             }
             if (meal && price.value <= kTuning.eating.good_value.value * static_cast<float>((ware < shop.menu.size() ? worth(shop.menu[ware]) : flat_worth).value))
@@ -3076,6 +3083,7 @@ namespace rct3::simulation
                 wallet.cash.value += drawn;
                 wallet.bank.value -= drawn;
                 wallet.withdrawn.value += drawn;
+                wallet.needs_cash = false;
             }
             mood.happiness.value = clamp01(mood.happiness.value + kTuning.needs.treat.value);
             // Something cold on a hot day or hot on a cold one pleases the more, and something cold cools.
@@ -3148,7 +3156,10 @@ namespace rct3::simulation
                     if (!attraction.open || (!inspector && !pay(r, g, attraction.price, &Wallet::spent_rides)))
                     {
                         if (attraction.open)
+                        {
                             think(r, g, ThoughtKind::CantAfford, arrived[i], now);
+                            r.get<Wallet>(g).needs_cash = true;
+                        }
                         r.get<Errand>(g) = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
                         return;
                     }
@@ -3957,7 +3968,10 @@ namespace rct3::simulation
                         if (!attraction.open || (!inspector && !pay(r, guest, attraction.price, &Wallet::spent_rides)))
                         {
                             if (attraction.open)
+                            {
                                 think(r, guest, ThoughtKind::CantAfford, e, now);
+                                r.get<Wallet>(guest).needs_cash = true;
+                            }
                             r.get<Errand>(guest) = after_ride(r, guest, e);
                             continue;
                         }

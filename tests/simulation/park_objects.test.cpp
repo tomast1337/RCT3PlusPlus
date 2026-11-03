@@ -5,6 +5,7 @@
 #include "simulation/systems.hpp"
 
 #include <doctest/doctest.h>
+#include <utility>
 #include <vector>
 
 using namespace rct3::simulation;
@@ -107,4 +108,20 @@ TEST_CASE("special attractions are told apart by the kind their item stores")
     CHECK(facility_of(12) == Product::CashMachine);
     CHECK(facility_of(13) == Product::FirstAid);
     CHECK(facility_of(14) == std::nullopt);
+}
+
+TEST_CASE("path items are told apart by the setting their item's data names")
+{
+    using rct3::park::ItemCategory;
+    using rct3::park::PathFeature;
+    const auto feature = std::to_underlying(ItemCategory::PathFeature);
+    CHECK(sight_of(feature, PathFeature::Vista) == PathItemKind::PhotoSpot);
+    CHECK(sight_of(feature, PathFeature::Speaker) == PathItemKind::Speaker);
+    CHECK(sight_of(feature, PathFeature::PassportPost) == PathItemKind::PassportPost);
+    CHECK(sight_of(feature, PathFeature::Fountain) == PathItemKind::Fountain);
+    CHECK(sight_of(feature, PathFeature::WaterCannon) == PathItemKind::WaterCannon);
+    CHECK(sight_of(feature, PathFeature::None) == std::nullopt);
+    CHECK(sight_of(std::to_underlying(ItemCategory::Effect), PathFeature::None) == PathItemKind::Sight);
+    CHECK(sight_of(std::to_underlying(ItemCategory::Animatronic), PathFeature::None) == PathItemKind::Sight);
+    CHECK(sight_of(std::to_underlying(ItemCategory::Bench), PathFeature::None) == std::nullopt);
 }

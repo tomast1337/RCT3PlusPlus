@@ -155,7 +155,7 @@ namespace rct3::park
         bool water_only = false;                         ///< A ride that stands only on water
         bool fenced_round = false;                       ///< A track piece fenced round its footprint, a tower's base
         bool paved_under = false;                        ///< A track piece whose footprint is paved, a tower's base
-        bool photo_spot = false;                         ///< A path item guests stop at to have their photo taken
+        PathFeature feature = PathFeature::None;         ///< What a path feature is for
         std::optional<float> water_capacity { };         ///< A flower bed's water when full; none for what is not watered
         bool no_entry = false;                           ///< A sign that can be set to forbid entry
         bool ground_height = true;                       ///< On the ground, it stands at the ground's height there

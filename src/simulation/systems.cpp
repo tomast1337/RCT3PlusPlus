@@ -1099,7 +1099,7 @@ namespace rct3::simulation
                 }
                 if (mood.happiness.value < kTuning.vandals.mood.value && !guarded[at] && random::chance(dice.state, kTuning.vandals.breaking.value * dt))
                 {
-                    const auto whole = std::ranges::find_if(items(at), [&](entt::entity i) { return !r.get<PathItem>(i).broken && r.get<PathItem>(i).kind != PathItemKind::Sight && r.get<PathItem>(i).kind != PathItemKind::PhotoSpot; });
+                    const auto whole = std::ranges::find_if(items(at), [&](entt::entity i) { return !r.get<PathItem>(i).broken && breakable(r.get<PathItem>(i).kind); });
                     if (whole != items(at).end())
                     {
                         r.get<PathItem>(*whole).broken = true;

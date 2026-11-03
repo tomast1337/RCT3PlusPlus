@@ -965,6 +965,31 @@ namespace rct3::simulation
         return added;
     }
 
+    std::optional<PathItemKind> sight_of(std::uint32_t category, park::PathFeature feature)
+    {
+        using enum park::PathFeature;
+        if (category == std::to_underlying(park::ItemCategory::Animatronic) || category == std::to_underlying(park::ItemCategory::Effect))
+            return PathItemKind::Sight;
+        if (category != std::to_underlying(park::ItemCategory::PathFeature))
+            return std::nullopt;
+        switch (feature)
+        {
+            case Vista:
+                return PathItemKind::PhotoSpot;
+            case Speaker:
+                return PathItemKind::Speaker;
+            case PassportPost:
+                return PathItemKind::PassportPost;
+            case Fountain:
+                return PathItemKind::Fountain;
+            case WaterCannon:
+                return PathItemKind::WaterCannon;
+            case None:
+                break;
+        }
+        return std::nullopt;
+    }
+
     std::size_t import_sights(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<std::optional<PathItemKind>(const save::PlacedObject&)>& sight_of)
     {
         std::size_t added = 0;

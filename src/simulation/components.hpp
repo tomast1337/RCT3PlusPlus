@@ -671,9 +671,19 @@ namespace rct3::simulation
         Bin,
         Bench,
         Sign,
-        Sight,     ///< Something to stop and watch: a fountain, an effect, an animatronic
-        PhotoSpot, ///< A view to stop at, where a player's guest has their photo taken
+        Sight,        ///< Something to look at: an effect or an animatronic
+        PhotoSpot,    ///< A view to stop at, where a player's guest has their photo taken
+        Fountain,     ///< Jumping fountains, which guests passing turn to look at
+        WaterCannon,  ///< A cannon a guest may stop to fire at those passing
+        Speaker,      ///< A loudspeaker whose music guests passing hear
+        PassportPost, ///< A stamp machine
     };
+
+    /// Whether a vandal breaks a path item of `kind`: what guests sit on, bin into or read, not the features.
+    [[nodiscard]] constexpr bool breakable(PathItemKind kind) noexcept
+    {
+        return kind == PathItemKind::Bin || kind == PathItemKind::Bench || kind == PathItemKind::Sign;
+    }
 
     /// Something standing on a path tile that guests use and vandals break.
     struct PathItem

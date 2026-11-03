@@ -1401,9 +1401,7 @@ namespace rct3::scene
                 });
                 simulation::import_sights(scene.sim, scene.objects, [&](const save::PlacedObject& o) -> std::optional<simulation::PathItemKind> {
                     const auto model = scene.models.find(park::model_ref(o));
-                    if (model == scene.models.end() || !park::is_sight(model->second.category))
-                        return std::nullopt;
-                    return model->second.photo_spot ? simulation::PathItemKind::PhotoSpot : simulation::PathItemKind::Sight;
+                    return model == scene.models.end() ? std::nullopt : simulation::sight_of(model->second.category, model->second.feature);
                 });
                 simulation::import_gate(scene.sim, scene.objects, [&](const save::PlacedObject& o) -> std::optional<std::array<std::int32_t, 2>> {
                     const auto model = scene.models.find(park::model_ref(o));

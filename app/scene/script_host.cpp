@@ -378,7 +378,7 @@ namespace rct3::scene
                 throw std::runtime_error("no park is open");
             std::size_t broke = 0;
             for (auto [e, item] : park_->sim.registry.view<simulation::PathItem>().each())
-                if (!item.broken && item.kind != simulation::PathItemKind::Sight && item.kind != simulation::PathItemKind::PhotoSpot)
+                if (!item.broken && simulation::breakable(item.kind))
                 {
                     item.broken = true;
                     ++broke;

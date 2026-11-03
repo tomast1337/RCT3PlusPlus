@@ -330,6 +330,15 @@ namespace rct3::scene
                     tiles.push_back({ { "col", park_->sim.paths.nodes()[n].tile.col }, { "row", park_->sim.paths.nodes()[n].tile.row } });
             return tiles;
         });
+        engine_.define("park.spawns", [this](const Json&) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            // The path tiles guests appear on and walk off from.
+            Json tiles = Json::array();
+            for (const auto [e, spawn] : park_->sim.registry.view<const simulation::GuestSpawn>().each())
+                tiles.push_back({ { "col", park_->sim.paths.nodes()[spawn.node].tile.col }, { "row", park_->sim.paths.nodes()[spawn.node].tile.row } });
+            return tiles;
+        });
         engine_.define("park.dropParties", [this](const Json& a) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
@@ -923,9 +932,13 @@ namespace rct3::scene
                         person["seat"] = sitting->seat;
                         person["rising"] = sitting->rising;
                     }
-                    // On their way out of the park.
-                    if (errand != nullptr && errand->kind == simulation::ErrandKind::Heading && r.valid(errand->target) && r.all_of<simulation::ParkGate>(errand->target))
+                    // On their way out of the park, or in from a spawn point and not through the gate yet.
+                    const auto* outside = r.try_get<simulation::Outside>(p.guest);
+                    const bool arriving = outside != nullptr && outside->way == simulation::Outside::Way::In;
+                    if (errand != nullptr && errand->kind == simulation::ErrandKind::Heading && r.valid(errand->target) && (r.all_of<simulation::GuestSpawn>(errand->target) || (!arriving && r.all_of<simulation::ParkGate>(errand->target))))
                         person["leaving"] = true;
+                    if (arriving)
+                        person["arriving"] = true;
                     // Their party, as a number shared by its members, while they are with it.
                     if (const auto* member = r.try_get<simulation::Member>(p.guest))
                         person["party"] = entt::to_integral(member->party);

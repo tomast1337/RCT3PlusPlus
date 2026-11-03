@@ -3154,7 +3154,8 @@ namespace rct3::simulation
                 // aid the longer the more they needed it. The rest of a party waits nearby (5.).
                 const auto need = [&](entt::entity m) { return r.all_of<Staff>(m) ? 0.0f : shop->product == Product::Toilet ? r.get<Needs>(m).bladder.value : shop->product == Product::FirstAid ? r.get<Mood>(m).nausea.value : 0.0f; };
                 const auto served = [&](entt::entity m, float needed) {
-                    r.get<Errand>(m) = { .kind = ErrandKind::Buying, .target = arrived[i], .rest = ticks(std::max(kTuning.facilities.served.value, needed * kTuning.facilities.relief.value)) };
+                    const Seconds turn { std::max(kTuning.facilities.served.value, needed * kTuning.facilities.relief.value) };
+                    r.get<Errand>(m) = { .kind = ErrandKind::Buying, .target = arrived[i], .rest = ticks(turn.value), .turn = turn };
                     auto& stride = r.get<Stride>(m);
                     const NodeId at = r.get<Attraction>(arrived[i]).entrance;
                     stride.route.clear();

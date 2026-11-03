@@ -58,6 +58,7 @@
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/import_people.hpp"
+#include "simulation/systems.hpp"
 #include "strings/ascii.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/management_pages.hpp"
@@ -283,12 +284,12 @@ namespace rct3::scene
                     return;
                 ShownPerson shown;
                 park::PersonLook& look = shown.pose.look;
-                look.swimwear = a.wearing_swimsuit;
                 look.head = set(a.head);
-                look.body = set(a.wearing_swimsuit && !a.swim_body.is_none() ? a.swim_body : a.body);
-                look.legs = set(a.wearing_swimsuit && !a.swim_legs.is_none() ? a.swim_legs : a.legs);
+                look.body = set(a.body);
+                look.legs = set(a.legs);
                 shown.swim_body = a.swim_body.is_none() ? nullptr : set(a.swim_body);
                 shown.swim_legs = a.swim_legs.is_none() ? nullptr : set(a.swim_legs);
+                shown.swimwear = a.wearing_swimsuit;
                 if (look.head == nullptr && look.body == nullptr && look.legs == nullptr)
                     return;
                 for (std::size_t i = 0; i < look.colours.size(); ++i)
@@ -1489,7 +1490,10 @@ namespace rct3::scene
                 for (ShownPerson& p : scene.shown_people)
                 {
                     if (!p.staff && p.saved < guests.size() && guests[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(guests[p.saved]))
+                    {
                         p.guest = guests[p.saved];
+                        p.swimwear = simulation::in_swimwear(scene.sim.registry, p.guest); // As the simulation has them, not as saved
+                    }
                     // A vendor stands in their booth as saved, serving the riders handing over their tickets, and a
                     // lifeguard sits in their chair.
                     else if (p.staff && p.saved < staff.size() && staff[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Staff>(staff[p.saved]))

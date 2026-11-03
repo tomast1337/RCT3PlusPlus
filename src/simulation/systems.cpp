@@ -2381,18 +2381,19 @@ namespace rct3::simulation
         if (!r.valid(person) || r.any_of<Left, Held, Dropped, RideWalk>(person) || !r.all_of<Errand, Stride, Pose, Dice>(person))
             return false;
         Errand& errand = r.get<Errand>(person);
-        if (errand.kind == ErrandKind::Riding || errand.kind == ErrandKind::Swimming)
+        const auto* swimmer = r.try_get<Swimmer>(person);
+        if (errand.kind == ErrandKind::Riding || (errand.kind == ErrandKind::Swimming && (swimmer == nullptr || swimmer->changing.value > 0)))
             return false;
         step_out(r, person);
         auto& dice = r.get<Dice>(person).state;
         const auto& holding = kTuning.holding;
-        const Held held { .height = { static_cast<float>(random::between(dice, holding.lowest.value, holding.highest.value)) }, .happy = random::chance(dice, holding.happy.value) };
+        const Held held { .height = { static_cast<float>(random::between(dice, holding.lowest.value, holding.highest.value)) }, .happy = random::chance(dice, holding.happy.value), .swimwear = in_swimwear(r, person) };
         if (r.all_of<Visitor>(person))
         {
             constexpr std::array kSay { ThoughtKind::PickedUpHappy, ThoughtKind::PickedUpNeutral, ThoughtKind::PickedUpSad };
             think(r, person, kSay[random::below(dice, kSay.size())], entt::null, static_cast<float>(world.tick) * kTickSeconds);
         }
-        r.remove<Errand, Stride, Linger, Gesture, Watching>(person);
+        r.remove<Errand, Stride, Linger, Gesture, Watching, Swimmer>(person);
         r.emplace<Held>(person, held);
         return true;
     }
@@ -2405,9 +2406,38 @@ namespace rct3::simulation
         const std::optional<NodeId> node = path_to_rejoin(world.paths, ground);
         if (!node)
             return false;
+        // Only guests swim; staff let go over a pool walk off it to the paths.
+        const auto door = r.all_of<Visitor>(person) ? pool_door_at(world, ground) : std::nullopt;
+        const bool swimwear = r.get<Held>(person).swimwear;
         r.remove<Held>(person);
-        r.emplace<Dropped>(person, Dropped { .ground = ground.y, .node = *node });
+        r.emplace<Dropped>(person, Dropped { .ground = ground.y, .node = *node, .swimwear = swimwear, .pool = door.value_or(entt::null) });
         return true;
+    }
+
+    std::optional<entt::entity> pool_door_at(const SimWorld& world, glm::vec3 point)
+    {
+        const auto& r = world.registry;
+        const float half = world.paths.tile_size / 2;
+        const auto within = [&](const glm::vec3& w) { return std::abs(point.x - w.x) <= half && std::abs(point.z - w.z) <= half; };
+        for (const entt::entity door : sorted(r.view<const PoolDoor>()))
+        {
+            const PoolDoor& d = r.get<PoolDoor>(door);
+            const auto* pool = r.valid(d.pool) ? r.try_get<SwimPool>(d.pool) : nullptr;
+            if (pool != nullptr && !pool->water.empty() && (std::ranges::any_of(pool->water, within) || std::ranges::any_of(pool->paved, within) || std::ranges::any_of(pool->spa, within)))
+                return door;
+        }
+        return std::nullopt;
+    }
+
+    bool in_swimwear(const entt::registry& r, entt::entity person)
+    {
+        if (const auto* swimmer = r.try_get<Swimmer>(person))
+            return swimmer->changed;
+        if (const auto* held = r.try_get<Held>(person))
+            return held->swimwear;
+        if (const auto* drop = r.try_get<Dropped>(person))
+            return drop->swimwear && r.get<Pose>(person).position.y > drop->ground;
+        return false;
     }
 
     std::optional<glm::vec3> entrance_drop(const SimWorld& world)
@@ -3702,6 +3732,22 @@ namespace rct3::simulation
             }
             if (r.all_of<Gesture>(e))
                 continue;
+            // Landed in a pool complex: they swim there, in their swimwear, as if they had paid and changed at
+            // its room, and leave by it. Away from their party, they go on alone after.
+            if (const auto* door = r.valid(drop.pool) ? r.try_get<PoolDoor>(drop.pool) : nullptr; door != nullptr && r.all_of<Attraction>(drop.pool))
+            {
+                const entt::entity room = drop.pool;
+                const NodeId door_node = r.get<Attraction>(room).entrance != kNoNode ? r.get<Attraction>(room).entrance : drop.node;
+                const glm::vec3 landed = pose.position;
+                const Dice dice = r.get<Dice>(e);
+                r.remove<Dropped>(e);
+                start_walking(world, e, door_node);
+                r.get<Dice>(e) = dice;
+                pose.position = pose.was = landed;
+                r.get<Errand>(e) = { .kind = ErrandKind::Swimming, .target = room };
+                r.emplace_or_replace<Swimmer>(e, Swimmer { .changed = true, .left = kTuning.pools.stay, .goal = landed });
+                continue;
+            }
             const glm::vec3 to = paths.centre(drop.node) - pose.position;
             const float left = glm::length(glm::vec2(to.x, to.z));
             if (left > kLaneReach)

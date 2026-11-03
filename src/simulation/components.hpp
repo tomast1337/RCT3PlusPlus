@@ -890,8 +890,9 @@ namespace rct3::simulation
     /// queueing till let go, their party waiting for them. Where they hang is the player's to move (Pose).
     struct Held
     {
-        Distance height { }; ///< Over the ground under them
-        bool happy = false;  ///< Enjoying it, or cross
+        Distance height { };   ///< Over the ground under them
+        bool happy = false;    ///< Enjoying it, or cross
+        bool swimwear = false; ///< Taken out of a pool in their swimwear, kept on till they land
     };
 
     /// A person let go of, thrown by a crash or sliding down ground grown too steep: falling to `ground`, then
@@ -906,6 +907,8 @@ namespace rct3::simulation
         bool sliding = false; ///< Down the slope, along the ground
         Seconds slid { };     ///< Since they began sliding
         NodeId node = kNoNode;
+        bool swimwear = false;          ///< Taken out of a pool in their swimwear, kept on till they land
+        entt::entity pool = entt::null; ///< The changing room of the pool complex they fall into, to swim there
     };
 
     /// What a bin holds, in pieces of rubbish.

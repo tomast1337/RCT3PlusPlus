@@ -948,6 +948,21 @@ TEST_CASE("worn out guests take a bench's free seats in turn, no more than it ha
     CHECK(most == 2);
 }
 
+TEST_CASE("a rested guest with something to eat sits down to have it on a bench they pass, and gets up once it is gone")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 1, 0 });
+    park.item(PathItemKind::Bench, { 0, 0 });
+    const auto g = park.guest({ 1, 0 });
+    auto& r = park.world().registry;
+    r.emplace<Carried>(g, Carried { .food = true, .bites = kTuning.eating.bites, .fill = { 0.05f } });
+    REQUIRE(park.run_until([&] { return r.all_of<Linger>(g); }, 120));
+    CHECK(r.get<Carried>(g).bites > 0);
+    // Up only once it is eaten.
+    CHECK(park.run_until([&] { return r.all_of<Linger>(g) && r.get<Linger>(g).rising; }, 600));
+    CHECK(r.get<Carried>(g).bites == 0);
+}
+
 TEST_CASE("a party stops now and then to stand in a ring facing in, then walks on")
 {
     Sandbox park;

@@ -726,6 +726,7 @@ namespace rct3::scene
                         one["joined"] = true;
                         one["price"] = a.price.value;
                         one["selling"] = a.open;
+                        one["customers"] = a.customers;
                         one["broken"] = upkeep != nullptr && upkeep->broken;
                     }
                 stalls.push_back(std::move(one));

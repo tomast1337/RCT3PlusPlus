@@ -18,6 +18,7 @@
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <numbers>
 #include <numeric>
 #include <optional>
 #include <ranges>
@@ -3377,7 +3378,8 @@ namespace rct3::simulation
             }
             if (swimmer.spot >= 0 && static_cast<std::size_t>(swimmer.spot) < pool->extras.size() && swimmer.place < 0 && pool->extras[static_cast<std::size_t>(swimmer.spot)].use != PoolUse::Stand)
             {
-                // At a lounger or shower: on it in a free place, side by side across it; else wait their turn.
+                // At a lounger or shower: on it in a free place, one lounger of a set each, round a shower's pole
+                // facing it; else wait their turn.
                 const PoolSpot& spot = pool->extras[static_cast<std::size_t>(swimmer.spot)];
                 auto& places = places_taken[door->pool];
                 places.resize(std::max(places.size(), pool->extras.size()));
@@ -3392,11 +3394,15 @@ namespace rct3::simulation
                     swimmer.use = spot.use;
                     swimmer.waited = { };
                     swimmer.idle = spot.use == PoolUse::Lounge ? kTuning.pools.lounging : kTuning.pools.showering;
-                    const float across = (static_cast<float>(free) + 0.5f) / static_cast<float>(spot.places) - 0.5f;
-                    const glm::vec3 side { std::cos(spot.heading.value), 0, -std::sin(spot.heading.value) };
-                    swimmer.goal = spot.at + side * (across * paths.tile_size);
+                    const glm::vec3 ahead { std::sin(spot.heading.value), 0, std::cos(spot.heading.value) };
+                    const glm::vec3 side { ahead.z, 0, -ahead.x };
+                    const auto& tuning = kTuning.pools;
+                    // The shower's places a third of a turn apart, the last where a saved park's showering guest stood.
+                    const float turn = glm::radians(30.5f) + 2 * std::numbers::pi_v<float> * static_cast<float>(free + 1 - spot.places) / static_cast<float>(spot.places);
+                    const glm::vec3 off = spot.use == PoolUse::Lounge ? ahead * (tuning.lounger_reach - static_cast<float>(spot.places - 1 - free) * tuning.lounger_gap) + side * tuning.lounger_side : (side * std::cos(turn) + ahead * std::sin(turn)) * tuning.shower_reach;
+                    swimmer.goal = spot.at + off;
                     pose.position = swimmer.goal;
-                    pose.heading = spot.heading;
+                    pose.heading = spot.use == PoolUse::Lounge ? spot.heading : Radians { std::atan2(-off.x, -off.z) };
                     continue;
                 }
                 // shortcut: those waiting stand in the middle of its square together; upgrade to a line beside it.

@@ -536,6 +536,11 @@ namespace rct3::simulation::tuning
         std::uint8_t lounger_places = 2;            ///< Swimmers a set of sun loungers takes at once, as the saved parks' do
         std::uint8_t shower_places = 3;             ///< And a shower
         Seconds lounging { 45 };                    ///< Chosen by eye: on a lounger
+        float deck = 0.2f;                          ///< The paving's top over the pool's surface, in metres, where saved guests walk it
+        float lounger_reach = 1.44f;                ///< From a set of loungers' middle to where one lying on the last is placed, the way they face, in metres, as a saved park's are
+        float lounger_side = 0.55f;                 ///< And sideways from there, as a saved park's are
+        float lounger_gap = 1.75f;                  ///< Between the loungers of a set, the way those on them face, in metres, measured by eye on the model
+        float shower_reach = 0.75f;                 ///< From a shower's pole to those under it, in metres, as a saved park's are
         Seconds showering { 6 };                    ///< Chosen by eye: under a shower
         Seconds patience { 20 };                    ///< Chosen by eye: waiting for a place at an extra before going elsewhere
         float spa_water = 0.0f;                     ///< A spa pool's water over the paving round it, in height units

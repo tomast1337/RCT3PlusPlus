@@ -46,11 +46,15 @@ for (const item of items)
     expect(kinds.includes(item.kind as PathItemKind), `the ${item.symbol} known to guests as a ${item.kind}`);
 
 park.dropParties(40, 3);
-/** Waits for a guest `found` picks out, then looks at them and keeps a screenshot named `name`. */
-async function show(name: string, found: () => { col?: number; row?: number } | undefined): Promise<void> {
+/** Waits for a guest `found` picks out, `after` seconds more, then looks at them from `from` (offsets in tiles) and keeps
+ * a screenshot named `name`. */
+async function show(name: string, found: () => { col?: number; row?: number } | undefined, from: { col: number; row: number; up: number }, after = 0): Promise<void> {
     await park.advanceUntil(() => found() !== undefined, 1800, name);
-    const who = found()!;
-    camera.look({ col: who.col!, row: who.row! }, { col: who.col! + 1.5, row: who.row! + 2, up: 1.5 });
+    if (after > 0)
+        await park.advance(after);
+    const who = found() ?? people.list().find((p) => p.col !== undefined)!;
+    log(name, JSON.stringify(who));
+    camera.look({ col: who.col!, row: who.row!, up: 0.8 }, { col: who.col! + from.col, row: who.row! + from.row, up: from.up });
     await frames(4);
     await screenshot(name);
 }
@@ -62,11 +66,13 @@ const gunner = firer()!;
 camera.look({ col: gunner.col!, row: gunner.row!, up: 0.8 }, { col: gunner.col! - 0.1, row: gunner.row! + 0.5, up: 1.8 });
 await frames(4);
 await screenshot("cannon");
-await show("fountain", () => people.list().find((p) => p.gesture === "turnlook" && p.col !== undefined));
+// Glancing at the fountains as they go on past, the head turned to them; from the side.
+await show("fountain", () => people.list().find((p) => p.glancing === true && p.col !== undefined), { col: 0.8, row: -0.2, up: 1.2 });
+// A party lined up at the view a few seconds after stopping, one of them filming the rest; from above.
 await show("vista", () => {
     const party = people.list().filter((p) => p.lingering === "photo spot" && p.party !== undefined && p.col !== undefined);
     return party.find((p) => party.filter((q) => q.party === p.party).length >= 2);
-});
+}, { col: 0.01, row: 0.3, up: 3 }, 3);
 
 const kNiceMusic = 29;
 const fan = () => people.list().findIndex((p) => !p.staff && (p.thoughts ?? []).includes(kNiceMusic));

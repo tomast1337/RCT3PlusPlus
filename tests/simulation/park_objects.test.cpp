@@ -253,13 +253,23 @@ TEST_CASE("guests passing jumping fountains turn to look, and some like them, wi
         guests.push_back(park.guest({ 1, 0 }));
     auto& r = park.world().registry;
     bool glanced = false;
+    bool walked_on = false; // A glancer still going, from one tick to the next
     for (int t = 0; t < 600; ++t)
     {
+        std::vector<glm::vec3> was;
+        for (const entt::entity g : guests)
+            was.push_back(r.get<Pose>(g).position);
         park.run(1);
-        glanced = glanced || std::ranges::any_of(guests, [&](entt::entity g) { return r.all_of<Gesture>(g) && r.get<Gesture>(g).kind == GestureKind::Glance; });
+        for (std::size_t i = 0; i < guests.size(); ++i)
+            if (const auto* glance = r.try_get<Glance>(guests[i]))
+            {
+                glanced = glanced || r.all_of<PathItem>(glance->at);
+                walked_on = walked_on || r.get<Pose>(guests[i]).position != was[i];
+            }
         CHECK(r.view<Linger>().empty());
     }
     CHECK(glanced);
+    CHECK(walked_on);
     CHECK(std::ranges::any_of(guests, [&](entt::entity g) {
         const auto* thoughts = r.try_get<Thoughts>(g);
         return thoughts != nullptr && std::ranges::contains(thoughts->recent, ThoughtKind::JumpingFountainsGood, &Thought::kind);

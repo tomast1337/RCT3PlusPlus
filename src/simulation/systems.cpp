@@ -484,7 +484,7 @@ namespace rct3::simulation
         void leave(entt::registry& r, entt::entity guest)
         {
             ++r.ctx().emplace<Turnstile>().out[static_cast<std::size_t>(age_of(r, guest))];
-            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Watching, Carried, RideWalk, Crossing, Swimmer>(guest);
+            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Glance, Watching, Carried, RideWalk, Crossing, Swimmer>(guest);
             r.emplace<Left>(guest);
         }
 
@@ -1119,9 +1119,9 @@ namespace rct3::simulation
                     const NodeId here = stride.from;
                     const auto sight = std::ranges::find_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Sight || r.get<PathItem>(i).kind == PathItemKind::PhotoSpot; });
                     // Jumping fountains catch a passer's eye for a moment, and often please them.
-                    if (std::ranges::any_of(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Fountain; }) && random::chance(dice.state, kTuning.surroundings.glance.value))
+                    if (const auto fountain = std::ranges::find_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Fountain; }); fountain != items(here).end() && random::chance(dice.state, kTuning.surroundings.glance.value))
                     {
-                        r.emplace_or_replace<Gesture>(g, GestureKind::Glance, kTuning.surroundings.glancing.value);
+                        r.emplace_or_replace<Glance>(g, Glance { .at = *fountain, .left = kTuning.surroundings.glancing });
                         if (random::chance(dice.state, kTuning.surroundings.fountain_thought.value))
                         {
                             think(r, g, ThoughtKind::JumpingFountainsGood, entt::null, now);
@@ -2562,6 +2562,9 @@ namespace rct3::simulation
         for (auto [g, gesture] : r.view<Gesture>().each())
             if ((gesture.left.value -= dt) <= 0)
                 r.remove<Gesture>(g);
+        for (auto [g, glance] : r.view<Glance>().each())
+            if ((glance.left.value -= dt) <= 0)
+                r.remove<Glance>(g);
         for (auto [_, pose] : r.view<Pose>().each())
         {
             pose.walked.value += glm::distance(glm::vec2(pose.was.x, pose.was.z), glm::vec2(pose.position.x, pose.position.z));

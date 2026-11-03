@@ -92,16 +92,22 @@ namespace rct3::parkfile
         };
         std::unordered_map<entt::entity, std::int32_t> parties;
         std::vector<bool> in_park(model.guests.size());
-        // shortcut: queueing, riding and errands are not kept, guests walk on from where they stand; keep
-        // them once the save can name rides and path nodes that last across loading.
+        // shortcut: queueing, riding and errands other than swimming are not kept, guests walk on from where they
+        // stand; keep them once the save can name rides and path nodes that last across loading.
         for (const auto [e, visitor, pose, needs, mood, wallet] : r.view<const Visitor, const Pose, const Needs, const Mood, const Wallet>(entt::exclude<Left>).each())
         {
             // Those off the paths (on a ride) where they were going on them, so they walk again on loading.
             const auto* stride = r.try_get<Stride>(e);
-            const bool off = !world.paths.nearest(pose.position) && stride != nullptr && stride->to < world.paths.nodes().size();
+            // A swimmer by the room they came in at, which a pool keeps across loading.
+            const auto* swimmer = r.try_get<Swimmer>(e);
+            const auto* errand = r.try_get<Errand>(e);
+            const auto* door = swimmer != nullptr && errand != nullptr && errand->kind == ErrandKind::Swimming && r.valid(errand->target) ? r.try_get<PoolDoor>(errand->target) : nullptr;
+            const bool off = door == nullptr && !world.paths.nearest(pose.position) && stride != nullptr && stride->to < world.paths.nodes().size();
             SavedGuest& g = out.guests.emplace_back(SavedGuest { .look = look(e, model.guests.size()), .visitor = visitor, .position = off ? world.paths.centre(stride->to) : pose.position, .heading = pose.heading.value, .needs = needs, .mood = mood, .cash = wallet.cash.value });
             if (const auto* taste = r.try_get<Taste>(e))
                 g.taste = *taste;
+            if (door != nullptr)
+                g.swim = SavedSwim { .room_col = door->col, .room_row = door->row, .swimmer = *swimmer };
             if (const auto* member = r.try_get<Member>(e); member != nullptr && r.valid(member->party))
             {
                 g.party = parties.try_emplace(member->party, static_cast<std::int32_t>(parties.size())).first->second;
@@ -180,6 +186,30 @@ namespace rct3::parkfile
             }
             r.emplace<Party>(e, std::move(party));
         }
+    }
+
+    std::size_t place_swimmers(simulation::SimWorld& world, const SavedPeople& people, std::span<const entt::entity> guests)
+    {
+        using namespace simulation;
+        entt::registry& r = world.registry;
+        std::size_t placed = 0;
+        for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
+        {
+            const SavedGuest& g = people.guests[i];
+            if (!g.swim || !r.all_of<Errand, Pose>(guests[i]))
+                continue;
+            for (const auto [room, door] : r.view<const PoolDoor>().each())
+                if (door.col == g.swim->room_col && door.row == g.swim->room_row)
+                {
+                    r.get<Errand>(guests[i]) = { .kind = ErrandKind::Swimming, .target = room };
+                    r.emplace_or_replace<Swimmer>(guests[i], g.swim->swimmer);
+                    auto& pose = r.get<Pose>(guests[i]);
+                    pose.position = pose.was = g.position;
+                    ++placed;
+                    break;
+                }
+        }
+        return placed;
     }
 
     std::vector<entt::entity> place_staff(simulation::SimWorld& world, const SavedPeople& people)
@@ -308,7 +338,7 @@ namespace rct3::parkfile
         write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
-            put_chunk(w, "PEOP", 1, *park.people);
+            put_chunk(w, "PEOP", 2, *park.people);
         if (!park.no_queue_signs.empty())
             put_chunk(w, "QSGN", 1, park.no_queue_signs);
         if (shows)
@@ -338,7 +368,7 @@ namespace rct3::parkfile
             std::expected<void, std::string> result;
             if (tag == "PEOP")
             {
-                if (park.people || version != 1)
+                if (park.people || version != 2) // 2 adds the swimmers
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.people.emplace());
             }

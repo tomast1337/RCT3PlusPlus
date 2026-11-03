@@ -45,6 +45,8 @@ namespace rct3::scene
 
     namespace
     {
+        /// Each path item kind's name, in PathItemKind's order.
+        constexpr std::array kPathItemKinds { "bin", "bench", "sign", "sight", "photo spot", "fountain", "water cannon", "speaker", "passport post" };
         using scripting::Json;
 
         // The helpers scripts get that only wait on the natives below, in assets/scripting/helpers.js.
@@ -353,10 +355,9 @@ namespace rct3::scene
         engine_.define("park.pathItems", [this](const Json&) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
-            constexpr std::array kKinds { "bin", "bench", "sign", "sight", "photo spot" };
             Json items = Json::array();
             for (const auto [e, item] : park_->sim.registry.view<const simulation::PathItem>().each())
-                items.push_back({ { "object", item.object }, { "kind", kKinds.at(std::to_underlying(item.kind)) }, { "broken", item.broken } });
+                items.push_back({ { "object", item.object }, { "kind", kPathItemKinds.at(std::to_underlying(item.kind)) }, { "broken", item.broken } });
             return items;
         });
         engine_.define("park.litter", [this](const Json&) -> Json {
@@ -922,9 +923,12 @@ namespace rct3::scene
                     if (const auto* carried = r.try_get<simulation::Carried>(p.guest); carried != nullptr && carried->held)
                         person["carrying"] = carried->bites == 0 ? "empty" : carried->food ? "food" : "drink";
                     // A gesture they make now, by the motion it shows.
-                    constexpr std::array<std::string_view, 13> kGestures { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdown", "handticket", "applause", "lookwatch", "disapproval", "cry", "horror" };
+                    constexpr std::array<std::string_view, 14> kGestures { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdown", "handticket", "applause", "lookwatch", "disapproval", "cry", "horror", "turnlook" };
                     if (const auto* gesture = r.try_get<simulation::Gesture>(p.guest))
                         person["gesture"] = kGestures[std::to_underlying(gesture->kind)];
+                    // Stopped at a path item: on a bench, at a view, firing a water cannon.
+                    if (const auto* linger = r.try_get<simulation::Linger>(p.guest))
+                        person["lingering"] = kPathItemKinds.at(std::to_underlying(linger->at));
                     // Stopped round someone: an entertainer's show, or a VIP for an autograph; or walking after the VIP.
                     if (const auto* watching = r.try_get<simulation::Watching>(p.guest))
                         person["watching"] = !watching->autograph ? "show" : watching->chasing ? "chasing" : "autograph";

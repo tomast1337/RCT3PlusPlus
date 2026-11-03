@@ -685,6 +685,13 @@ namespace rct3::scene
         const bool simulated = simulate && shown.guest != entt::null;
         park::PlacedPerson pose = shown.pose;
         pose.time = shown.walking ? shown.saved_time : shown.saved_time + clock * shown.speed;
+        // In their swimwear inside a pool complex, their clothes elsewhere (simulation::in_swimwear).
+        if (shown.swimwear)
+        {
+            pose.look.swimwear = true;
+            pose.look.body = shown.swim_body != nullptr ? shown.swim_body : pose.look.body;
+            pose.look.legs = shown.swim_legs != nullptr ? shown.swim_legs : pose.look.legs;
+        }
         if (simulated)
         {
             const auto& r = scene.sim.registry;
@@ -784,29 +791,26 @@ namespace rct3::scene
                 const bool falling = held == nullptr && now.position.y > r.get<simulation::Dropped>(shown.guest).ground;
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), held != nullptr ? now.position : at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
                 pose.motion = held != nullptr ? (held->happy ? kDangleHappyMotion : kDangleCrossMotion) : falling ? kDangleCrossMotion : park::motion::kWalk;
+                // Falling into a pool they tip over as they go, to land in the water.
+                if (const auto* drop = held == nullptr ? &r.get<simulation::Dropped>(shown.guest) : nullptr; falling && drop->pool != entt::null)
+                {
+                    pose.motion = park::motion_number("knockdownin").value_or(pose.motion);
+                    pose.time = drop->fall.value / simulation::kTuning.holding.gravity;
+                }
                 if (held == nullptr && !falling && shown.paces[0] > 0)
                     pose.time = at.walked.value / shown.paces[0];
                 if (held == nullptr && !falling)
                     gestured(r.try_get<simulation::Gesture>(shown.guest));
                 return pose;
             }
-            // At a pool, in their swimwear: out of sight while changing, then swimming, or walking round the water.
+            // At a pool: out of sight while changing, then swimming, or walking round the water.
             if (const auto* swimmer = r.try_get<simulation::Swimmer>(shown.guest))
             {
                 if (swimmer->changing.value > 0)
                     return std::nullopt;
                 const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
                 const bool moving = now.was != now.position;
-                // shortcut: walking the paving they keep their clothes, as the swimwear sets drawn out of the water
-                // show only parts of a person; upgrade once the dry swimwear pieces are understood. Lying on a
-                // lounger they wear the swimwear, whose pieces alone carry the lying motion.
                 const bool lounging = swimmer->place >= 0 && swimmer->use == simulation::PoolUse::Lounge;
-                pose.look.swimwear = swimmer->in_water || lounging;
-                if (swimmer->in_water || lounging)
-                {
-                    pose.look.body = shown.swim_body != nullptr ? shown.swim_body : pose.look.body;
-                    pose.look.legs = shown.swim_legs != nullptr ? shown.swim_legs : pose.look.legs;
-                }
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
                 pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : moving ? park::motion::kWalk : park::motion::kIdle;
                 if (!swimmer->in_water && moving && shown.paces[0] > 0)
@@ -1602,6 +1606,27 @@ namespace rct3::scene
                     profiling::unregister_thread();
                     return built;
                 });
+            }
+        }
+        // Into or out of their swimwear: in a changing room, out of sight, it just happens; anywhere else, as when
+        // the player lets a guest go into a pool or lifts one out, a puff of sparkles hides the change.
+        if (scene.simulate)
+        {
+            constexpr std::string_view kChangePuff = "magicsparkles";
+            constexpr float kPuffHeight = 0.9f; ///< Chosen by eye: above their feet, round their middle
+            const auto& r = scene.sim.registry;
+            for (std::size_t i = 0; i < scene.shown_people.size(); ++i)
+            {
+                ShownPerson& shown = scene.shown_people[i];
+                if (shown.guest == entt::null || !r.valid(shown.guest) || !r.all_of<simulation::Pose>(shown.guest))
+                    continue;
+                const auto* swimmer = r.try_get<simulation::Swimmer>(shown.guest);
+                const bool changing = swimmer != nullptr && swimmer->changing.value > 0;
+                const bool swimwear = simulation::in_swimwear(r, shown.guest);
+                if (swimwear != shown.swimwear && !changing && !shown.changing && i < scene.people_levels.size() && scene.people_levels[i] != park::kNotDrawn)
+                    fire_park_particles(scene.particles, kChangePuff, r.get<simulation::Pose>(shown.guest).position + glm::vec3 { 0, kPuffHeight, 0 }, glm::vec3 { 0, 1, 0 });
+                shown.swimwear = swimwear;
+                shown.changing = changing;
             }
         }
         // The people in motion are posed away from the frame, again as soon as the last posing is done.

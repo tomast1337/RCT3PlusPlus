@@ -186,13 +186,23 @@ namespace rct3::simulation
     std::vector<entt::entity> admit_guests(SimWorld& world, random::RandomState& dice, NodeId at, std::span<const std::pair<AgeGroup, bool>> who, const tuning::TasteBand& band);
 
     /// The player picks `person` up, guest or staff, out of what they were doing: a guest leaves their queue
-    /// and their party, a mechanic the ride they were going to. False, and nothing done, for one who cannot be
-    /// picked up now: on a ride, in a booth, gone home or held already.
+    /// and their party, a mechanic the ride they were going to, a swimmer the pool, keeping their swimwear on
+    /// till they land. False, and nothing done, for one who cannot be picked up now: on a ride, in a booth,
+    /// changing, gone home or held already.
     bool pick_up(SimWorld& world, entt::entity person);
 
-    /// The player lets a held person go over `ground`, a point on the ground or a path: they fall to it and walk
-    /// to the nearest path to go on from. False, and still held, where there are no paths to walk to.
+    /// The player lets a held person go over `ground`, a point on the ground, a path or a pool complex: they
+    /// fall to it and walk to the nearest path to go on from, or, a guest let go over a pool complex, swim there
+    /// as if they had come in through its changing room. False, and still held, where there are no paths to
+    /// walk to.
     bool let_go(SimWorld& world, entt::entity person, glm::vec3 ground);
+
+    /// The changing room of the pool complex whose water, paving or spa pool lies under `point`, if any.
+    [[nodiscard]] std::optional<entt::entity> pool_door_at(const SimWorld& world, glm::vec3 point);
+
+    /// Whether `person` wears their swimwear now: inside a pool complex, from changing into it till changing
+    /// back, and held or falling out of one till they land; their clothes everywhere else.
+    [[nodiscard]] bool in_swimwear(const entt::registry& r, entt::entity person);
 
     /// Where a worker just hired goes when the player gives them back without putting them down: the middle of
     /// the walkway staff may use nearest the park's entrance. None without an entrance or such a walkway.

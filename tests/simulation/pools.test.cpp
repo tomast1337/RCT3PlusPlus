@@ -384,3 +384,97 @@ TEST_CASE("guests a park saved swimming go on swimming in their pool for the tim
     REQUIRE(park.run_until([&] { return r.get<Errand>(guests[0]).kind != ErrandKind::Swimming; }, 30 + kTuning.pools.changing.value + 30));
     CHECK(park.world().paths.nearest(r.get<Pose>(guests[0]).position) == r.get<Attraction>(room).entrance);
 }
+
+TEST_CASE("a guest wears their swimwear from changing into it at the room till changing back, their clothes everywhere else")
+{
+    Sandbox park;
+    pool_by_path(park);
+    auto& r = park.world().registry;
+    const entt::entity room = room_of(r);
+    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    bool dressed_outside = false;
+    REQUIRE(park.run_until(
+        [&] {
+            dressed_outside = dressed_outside || (in_swimwear(r, guest) && !r.all_of<Swimmer>(guest));
+            return r.all_of<Swimmer>(guest);
+        },
+        60));
+    // Changing, out of sight: still in their clothes.
+    CHECK(r.get<Swimmer>(guest).changing.value > 0);
+    CHECK_FALSE(in_swimwear(r, guest));
+    REQUIRE(park.run_until([&] { return r.get<Swimmer>(guest).changing.value <= 0; }, 60));
+    CHECK(in_swimwear(r, guest));
+    // In the complex, on the paving and in the water alike, then dressed again at the door.
+    REQUIRE(park.run_until(
+        [&] {
+            const auto* swimmer = r.try_get<Swimmer>(guest);
+            dressed_outside = dressed_outside || (in_swimwear(r, guest) && swimmer == nullptr);
+            CHECK((swimmer == nullptr || swimmer->changed == in_swimwear(r, guest)));
+            return swimmer == nullptr;
+        },
+        kTuning.pools.stay.value + 2 * kTuning.pools.changing.value + 60));
+    CHECK_FALSE(dressed_outside);
+    CHECK_FALSE(in_swimwear(r, guest));
+    CHECK(park.world().paths.nearest(r.get<Pose>(guest).position) == r.get<Attraction>(room).entrance);
+}
+
+TEST_CASE("a guest let go over a pool swims there in their swimwear; picked out, they keep it on till they land")
+{
+    Sandbox park;
+    pool_by_path(park);
+    auto& r = park.world().registry;
+    const entt::entity room = room_of(r);
+    const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room).pool);
+    const auto guest = park.guest({ 0, 0 });
+    park.run(5);
+    CHECK(pool_door_at(park.world(), pool.water[2]) == room);
+    CHECK(pool_door_at(park.world(), pool.paved[0]) == room);
+    CHECK_FALSE(pool_door_at(park.world(), park.world().paths.centre(r.get<Attraction>(room).entrance)));
+
+    REQUIRE(pick_up(park.world(), guest));
+    CHECK_FALSE(in_swimwear(r, guest));
+    REQUIRE(let_go(park.world(), guest, pool.water[2]));
+    r.get<Pose>(guest).position = pool.water[2] + glm::vec3 { 0, 5, 0 };
+    park.run(1);
+    CHECK_FALSE(in_swimwear(r, guest)); // Falling in their clothes
+    REQUIRE(park.run_until([&] { return r.all_of<Swimmer>(guest); }, 10));
+    CHECK(in_swimwear(r, guest));
+    CHECK(r.get<Errand>(guest).kind == ErrandKind::Swimming);
+    CHECK(r.get<Errand>(guest).target == room);
+    park.run_seconds(2);
+    CHECK(r.get<Swimmer>(guest).in_water);
+
+    // Out again, onto the path: in their swimwear while held and falling, their clothes once down.
+    REQUIRE(pick_up(park.world(), guest));
+    CHECK_FALSE(r.all_of<Swimmer>(guest));
+    CHECK(in_swimwear(r, guest));
+    const glm::vec3 path = park.world().paths.centre(r.get<Attraction>(room).entrance);
+    REQUIRE(let_go(park.world(), guest, path));
+    r.get<Pose>(guest).position = path + glm::vec3 { 0, 5, 0 };
+    park.run(1);
+    CHECK(in_swimwear(r, guest));
+    REQUIRE(park.run_until([&] { return !r.all_of<Dropped>(guest); }, 20));
+    CHECK_FALSE(in_swimwear(r, guest));
+    CHECK_FALSE(r.all_of<Swimmer>(guest));
+}
+
+TEST_CASE("swimmers changing cannot be picked up, and staff let go over a pool walk off it")
+{
+    Sandbox park;
+    pool_by_path(park);
+    auto& r = park.world().registry;
+    const entt::entity room = room_of(r);
+    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    REQUIRE(park.run_until([&] { return r.all_of<Swimmer>(guest); }, 60));
+    CHECK_FALSE(pick_up(park.world(), guest));
+
+    const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room).pool);
+    const auto handyman = park.staff(StaffRole::Handyman, { 1, 0 });
+    park.run(5);
+    REQUIRE(pick_up(park.world(), handyman));
+    REQUIRE(let_go(park.world(), handyman, pool.water[0]));
+    CHECK(r.get<Dropped>(handyman).pool == entt::null);
+    REQUIRE(park.run_until([&] { return !r.all_of<Dropped>(handyman); }, 60));
+    CHECK_FALSE(r.all_of<Swimmer>(handyman));
+    CHECK_FALSE(in_swimwear(r, handyman));
+}

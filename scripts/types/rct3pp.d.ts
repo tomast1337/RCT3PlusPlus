@@ -73,6 +73,9 @@ declare namespace render {
     function live(): { buffers: number; pipelines: number; textures: number };
 }
 
+/** What a path item is, as park.pathItems() and people.list() name it. */
+type PathItemKind = "bin" | "bench" | "sign" | "sight" | "photo spot" | "fountain" | "water cannon" | "speaker" | "passport post";
+
 declare namespace park {
     /** Opens the park at `path` in the game's folder, such as "Campaigns/Base/BlankLandscape.dat", and waits until it shows. */
     function open(path: string): Promise<void>;
@@ -97,7 +100,7 @@ declare namespace park {
      *  `seed` (1 by default), as if they had walked there from the gate. Where each landed and how many it holds. */
     function dropParties(parties: number, seed?: number): { col: number; row: number; guests: number }[];
     /** The things guests use on the paths: benches, bins, signs and sights, by the placed object each stands as. */
-    function pathItems(): { object: number; kind: "bin" | "bench" | "sign" | "sight" | "photo spot"; broken: boolean }[];
+    function pathItems(): { object: number; kind: PathItemKind; broken: boolean }[];
     /** The litter and sick lying on the paths, each by the middle of the path tile it lies on, in tiles. */
     function litter(): { col: number; row: number; sick: boolean }[];
     /** Breaks every bench, bin and sign at once, as vandals would; how many it broke. */
@@ -444,7 +447,7 @@ declare namespace people {
      *  or ride entrance they serve at as `post`; a worker the simulation runs, their job as `role`. Members of one party share its number, `party`, while they are with it,
      *  and those on their way out of the park are `leaving`. `thoughts` are the numbers of the thoughts their window
      *  lists, and a guest's `happiness` (0 to 1) is what their window and the guest list show. */
-    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
+    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; lingering?: PathItemKind; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

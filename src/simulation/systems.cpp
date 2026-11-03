@@ -1029,8 +1029,9 @@ namespace rct3::simulation
                             r.remove<Linger>(g);
                         continue;
                     }
-                    // Up once no longer worn out or sick, the more rested the sooner; someone beside them keeps them chatting.
-                    const bool needy = mood.energy.value < kTuning.facilities.tired.value || mood.nausea.value >= kTuning.needs.want.value;
+                    // Up once no longer worn out or sick and done eating, the more rested the sooner; someone beside them
+                    // keeps them chatting.
+                    const bool needy = mood.energy.value < kTuning.facilities.tired.value || mood.nausea.value >= kTuning.needs.want.value || munching(r, g);
                     const auto mate = [&](int seat) { return r.valid(linger->bench) && seat >= 0 && sitter(linger->bench, seat) && !sitter(linger->bench, seat)->rising; };
                     const float chat = mate(linger->seat - 1) || mate(linger->seat + 1) ? kTuning.facilities.chatting : 1;
                     if (linger->left.value <= 0 && !needy && random::chance(dice.state, kTuning.facilities.stand.value * dt * mood.energy.value / chat))
@@ -1067,7 +1068,7 @@ namespace rct3::simulation
                     const auto here = litter_at.find(stride.from);
                     about(ThoughtKind::Vomit, here != litter_at.end() && std::ranges::any_of(here->second, [&](entt::entity l) { return r.get<Litter>(l).vomit; }));
                 }
-                // A wandering guest just come to a tile may sit on a bench there when tired, or stop at a sight.
+                // A wandering guest just come to a tile may sit on a bench there when tired or eating, or stop at a sight.
                 if (errand.kind == ErrandKind::Wandering && stride.fresh)
                 {
                     const NodeId here = stride.from;
@@ -1099,7 +1100,8 @@ namespace rct3::simulation
                                         return std::pair { i, s };
                         return std::nullopt;
                     };
-                    if (mood.energy.value < kTuning.facilities.tired.value || mood.nausea.value >= kTuning.needs.want.value)
+                    // Worn out, sick, or with something to eat or drink in hand.
+                    if (mood.energy.value < kTuning.facilities.tired.value || mood.nausea.value >= kTuning.needs.want.value || munching(r, g))
                         if (const auto free = seat(); free && random::chance(dice.state, kTuning.facilities.sit_chance.value))
                         {
                             r.emplace<Linger>(g, Linger { .at = PathItemKind::Bench, .left = kTuning.facilities.sit, .bench = free->first, .seat = free->second });

@@ -153,7 +153,20 @@ namespace rct3::scene
         const std::int32_t kSitMotion = park::motion_number("sitbenchloop").value_or(park::motion::kIdle);
         const std::array<std::int32_t, 2> kSitChatMotions { park::motion_number("sitbenchconvl").value_or(park::motion::kIdle), park::motion_number("sitbenchconvr").value_or(park::motion::kIdle) };
         const std::int32_t kStandUpMotion = park::motion_number("sitbenchout").value_or(park::motion::kIdle);
+        const std::int32_t kSitEatMotion = park::motion_number("sitbencheatlhand").value_or(park::motion::kIdle);
+        const std::int32_t kSitDrinkMotion = park::motion_number("sitbenchdrinkl").value_or(park::motion::kIdle);
         constexpr float kStepToSeat = 0.8f; ///< Chosen by eye: seconds from the path to the seat and back
+
+        /// What a guest holds of what they carry from a stall: it while there is some left, then its empty; nothing
+        /// once only empties in their pockets are left, or when its look is not known.
+        const park::ObjectModel* held_model(const ParkScene& scene, const simulation::Carried& carried)
+        {
+            const auto& r = scene.sim.registry;
+            const auto* shop = r.valid(carried.stall) ? r.try_get<simulation::Shop>(carried.stall) : nullptr;
+            const auto look = shop != nullptr && carried.ware < shop->menu.size() ? scene.carried_looks.find(shop->menu[carried.ware].symbol) : scene.carried_looks.end();
+            const auto* model = look == scene.carried_looks.end() || !carried.held ? nullptr : carried.bites > 0 ? &look->second.full : &look->second.empty;
+            return model != nullptr && *model ? &**model : nullptr;
+        }
 
         /// How guests go on foot in each gait (simulation::Gait), as the game's motions name them.
         const std::array<std::int32_t, kGaits> kGaitMotions { park::motion::kWalk, park::motion_number("run").value_or(park::motion::kWalk), park::motion_number("walktired").value_or(park::motion::kWalk), park::motion_number("walksick").value_or(park::motion::kWalk), park::motion_number("walktoilet").value_or(park::motion::kWalk) };
@@ -633,6 +646,16 @@ namespace rct3::scene
                 if (down >= sitting && turn % 2 == 0)
                     if (const bool before = beside(-1), after = beside(1); before || after)
                         pose.motion = kSitChatMotions[after && (!before || turn / 2 % 2 == 0) ? 1 : 0];
+                // What they bought in their left hand, a bite or a sip of it now and then.
+                if (const auto* carried = r.try_get<simulation::Carried>(shown.guest))
+                {
+                    pose.held = held_model(scene, *carried);
+                    if (pose.held != nullptr && down >= sitting && carried->bites > 0 && carried->since.value < kBiteSeconds)
+                    {
+                        pose.motion = carried->food ? kSitEatMotion : kSitDrinkMotion;
+                        pose.time = carried->since.value;
+                    }
+                }
                 return pose;
             }
             const auto& stride = r.get<simulation::Stride>(shown.guest);
@@ -717,10 +740,7 @@ namespace rct3::scene
             // Food or drink from a stall in their left hand, or its empty once it is gone.
             if (const auto* carried = r.try_get<simulation::Carried>(shown.guest))
             {
-                const auto* shop = r.valid(carried->stall) ? r.try_get<simulation::Shop>(carried->stall) : nullptr;
-                const auto look = shop != nullptr && carried->ware < shop->menu.size() ? scene.carried_looks.find(shop->menu[carried->ware].symbol) : scene.carried_looks.end();
-                const auto* model = look == scene.carried_looks.end() || !carried->held ? nullptr : carried->bites > 0 ? &look->second.full : &look->second.empty;
-                pose.held = model != nullptr && *model ? &**model : nullptr;
+                pose.held = held_model(scene, *carried);
                 const bool biting = carried->bites > 0 && carried->since.value < kBiteSeconds;
                 if (pose.held != nullptr && walking && way == 0 && !r.all_of<simulation::Gesture>(shown.guest))
                 {

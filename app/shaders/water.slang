@@ -74,6 +74,8 @@ static const uint kFlow = 256u;
 
 static const float kFresnelBase = 0.02;                       // Reflectance seen straight on, for a refractive index near 1.33
 static const float kMirrorLeast = 0.42;                       // The least the mirror shows, looking straight down
+static const float kClearMirror = 0.12;                       // Chosen by eye: the least for clear water (pools), so swimmers show whole
+static const float2 kClearToMurky = float2(0.3, 0.6);        // Chosen by eye: water colour alphas from clear to lake-murky
 static const float2 kMirrorTint = float2(0.45, 1.8);          // How much of the water's colour the mirror takes, and its strength
 static const float kWaterIndex = 1.33;
 static const float3 kAbsorption = float3(0.80, 0.30, 0.12);   // Per world unit of water crossed
@@ -464,7 +466,9 @@ float4 fragment_main(Varyings v) : SV_Target
     const float3 shafts = water_shafts(v.world, -view, path, v.world.y, kAbsorption * (0.5 + v.color.a), to_sun, sun, time, 8, length(fwidth(v.world.xz)) * kCausticScale, 0.0, v.position.xy);
 
     const float facing = clamp(dot(n, view), 0.0, 1.0);
-    const float fresnel = lerp(kMirrorLeast, 1.0, kFresnelBase + (1.0 - kFresnelBase) * pow(1.0 - facing, 5.0));
+    // Clear water mirrors less looking down into it, else the sky laid over what is in it washes it out.
+    const float least = lerp(kClearMirror, kMirrorLeast, smoothstep(kClearToMurky.x, kClearToMurky.y, v.color.a));
+    const float fresnel = lerp(least, 1.0, kFresnelBase + (1.0 - kFresnelBase) * pow(1.0 - facing, 5.0));
     float3 mirrored = sky;
     if (has(kReflection))
         mirrored = u_reflection.Sample(u_sampler, clamp(screen + bend * kReflectionBend * 0.05, float2(0.001), float2(0.999))).rgb;

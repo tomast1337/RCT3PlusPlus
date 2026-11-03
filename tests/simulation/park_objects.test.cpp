@@ -3,7 +3,9 @@
 #include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
+#include "simulation/tuning.hpp"
 
+#include <algorithm>
 #include <array>
 #include <doctest/doctest.h>
 #include <utility>
@@ -37,6 +39,23 @@ TEST_CASE("guests use toilets, cash machines and first aid when they need them")
         park.shop("First aid", Product::FirstAid, { 6, 0 }, 0);
         const auto g = park.guest({ 0, 0 }, { .nausea = 0.9f });
         CHECK(park.run_until([&] { return park.world().registry.get<Mood>(g).nausea.value == 0; }, 60));
+    }
+}
+
+TEST_CASE("a guest will not pay more for a toilet than their need makes it worth")
+{
+    for (const bool dear : { false, true })
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 6, 0 });
+        // Just over what a guest needing it this much pays, or well under.
+        const auto toilet = park.shop("Toilet", Product::Toilet, { 6, 0 }, dear ? kTuning.facilities.toilet_worth.value * 9 / 10 + 10 : kTuning.facilities.toilet_worth.value / 2);
+        const auto g = park.guest({ 0, 0 }, { .bladder = 0.9f });
+        auto& r = park.world().registry;
+        const auto thought = [&](ThoughtKind kind) { return r.all_of<Thoughts>(g) && std::ranges::any_of(r.get<Thoughts>(g).recent, [&](const Thought& t) { return t.kind == kind; }); };
+        park.run_seconds(30);
+        CHECK(r.get<Attraction>(toilet).customers == (dear ? 0 : 1));
+        CHECK(thought(ThoughtKind::NotPayingToilet) == dear);
     }
 }
 

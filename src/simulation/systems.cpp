@@ -3015,6 +3015,13 @@ namespace rct3::simulation
                 think(r, guest, ThoughtKind::NotPaying, at, now);
                 return false;
             }
+            else if (shop.product == Product::Toilet && static_cast<float>(price.value) > static_cast<float>(kTuning.facilities.toilet_worth.value) * needs.bladder.value && attraction.open)
+            {
+                // Worth more the more they need it.
+                mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
+                think(r, guest, ThoughtKind::NotPayingToilet, at, now);
+                return false;
+            }
             Money Wallet::* const on = shop.product == Product::Drink ? &Wallet::spent_drink : shop.product == Product::Food ? &Wallet::spent_food : umbrella ? &Wallet::spent_souvenirs : nullptr;
             if (!attraction.open || wallet.cash.value < price.value || !pay(r, guest, price, on))
             {

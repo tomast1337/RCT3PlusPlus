@@ -499,6 +499,86 @@ namespace rct3::scene
                     if (view_bones[view] >= 0 && static_cast<std::size_t>(view_bones[view]) < moves.size())
                         boned.views[view] = moves[static_cast<std::size_t>(view_bones[view])];
             }
+            // Jumping fountains on neighbouring path tiles throw water from each nozzle into the same nozzle of the
+            // next, which throws on to the one after as it lands, along the row. With no jump in the air for a
+            // while, the fountains at the ends of rows start again.
+            // shortcut: every row in the park keeps one beat, and a ring of fountains with no end never starts;
+            // upgrade with patterns per row.
+            if (scene.simulate)
+            {
+                constexpr float kJumpAngle = 1.0f; ///< Chosen by eye: radians above the level a jump leaves at
+                constexpr float kPour = 0.4f;      ///< Chosen by eye: seconds of water in each jump
+                constexpr float kRest = 1.5f;      ///< Chosen by eye: seconds between the last jump landing and the next
+                const auto& r = scene.sim.registry;
+                const auto& nodes = scene.sim.paths.nodes();
+                // The jumping fountains next to the one at `node`.
+                const auto next_to = [&](simulation::NodeId node) {
+                    std::vector<simulation::NodeId> out;
+                    for (const auto [e, item] : r.view<const simulation::PathItem>().each())
+                        if (item.kind == simulation::PathItemKind::Fountain && node < nodes.size() && std::ranges::contains(nodes[node].next, item.node))
+                            out.push_back(item.node);
+                    return out;
+                };
+                const auto fountain_at = [&](simulation::NodeId node) -> std::optional<std::size_t> {
+                    for (const auto [e, item] : r.view<const simulation::PathItem>().each())
+                        if (item.kind == simulation::PathItemKind::Fountain && item.node == node)
+                            if (const auto k = std::ranges::find(scene.objects, item.object, &save::PlacedObject::id); k != scene.objects.end())
+                                return static_cast<std::size_t>(k - scene.objects.begin());
+                    return std::nullopt;
+                };
+                const auto node_of = [&](std::size_t object) {
+                    for (const auto [e, item] : r.view<const simulation::PathItem>().each())
+                        if (item.object == scene.objects[object].id)
+                            return item.node;
+                    return simulation::kNoNode;
+                };
+                const auto jump = [&](std::size_t from, std::size_t to) {
+                    const auto a = scene.models.find(park::model_ref(scene.objects[from]));
+                    const auto b = scene.models.find(park::model_ref(scene.objects[to]));
+                    if (a == scene.models.end() || b == scene.models.end() || b->second.nozzles.empty())
+                        return;
+                    const glm::mat4 at = park::placed_transform(scene.objects[from], &a->second, scene.grid, scene.fitted);
+                    const glm::mat4 into = park::placed_transform(scene.objects[to], &b->second, scene.grid, scene.fitted);
+                    const glm::vec3 step = glm::vec3(into[3]) - glm::vec3(at[3]);
+                    for (const glm::vec3& nozzle : a->second.nozzles)
+                    {
+                        const glm::vec3 out(at * glm::vec4(nozzle, 1));
+                        const auto landing = std::ranges::min(b->second.nozzles | std::views::transform([&](const glm::vec3& n) { return glm::vec3(into * glm::vec4(n, 1)); }), { }, [&](const glm::vec3& n) { return glm::distance(n, out + step); });
+                        if (const auto thrown = park::throw_to(out, landing, kJumpAngle))
+                        {
+                            // Chosen by eye: a thin, even stream.
+                            ParkScene::Jet& jet = scene.jets.emplace_back(ParkScene::Jet { .object = from, .to = to, .pours = scene.park_clock + kPour, .lands = scene.park_clock + thrown->seconds + kPour, .water = park::WaterJet(thrown->seconds + kPour, 0.04f, 0) });
+                            jet.water.aim(out, thrown->velocity);
+                        }
+                    }
+                };
+                // Landed: the fountain landed in throws on, away from where the water came from.
+                std::vector<std::pair<std::size_t, std::size_t>> landed;
+                for (ParkScene::Jet& jet : scene.jets)
+                    if (jet.to && !jet.landed && scene.park_clock >= jet.lands)
+                    {
+                        jet.landed = true;
+                        if (!std::ranges::contains(landed, std::pair { jet.object, *jet.to }))
+                            landed.emplace_back(jet.object, *jet.to);
+                    }
+                for (const auto& [from, to] : landed)
+                    for (const simulation::NodeId n : next_to(node_of(to)))
+                        if (const auto onto = fountain_at(n); onto && *onto != from)
+                            jump(to, *onto);
+                if (std::ranges::any_of(scene.jets, [](const ParkScene::Jet& jet) { return jet.to && !jet.landed; }))
+                    scene.jumps_ended = scene.park_clock;
+                else if (scene.park_clock - scene.jumps_ended > kRest)
+                {
+                    scene.jumps_ended = scene.park_clock;
+                    for (const auto [e, item] : r.view<const simulation::PathItem>().each())
+                        if (const auto near = next_to(item.node); item.kind == simulation::PathItemKind::Fountain && near.size() == 1)
+                            if (const auto from = fountain_at(item.node), to = fountain_at(near.front()); from && to)
+                                jump(*from, *to);
+                }
+                for (ParkScene::Jet& jet : scene.jets)
+                    if (jet.to && scene.park_clock < jet.pours)
+                        jet.fed = true;
+            }
             // Jets not aimed this frame stop, their water falling on; the spent ones go.
             const float seconds = scene.park_clock - scene.jets_clock;
             scene.jets_clock = scene.park_clock;
@@ -510,7 +590,7 @@ namespace rct3::scene
                 jet.water.advance(seconds);
             }
             // A cannon keeps its own, to stay turned as it was left.
-            std::erase_if(scene.jets, [&](const ParkScene::Jet& jet) { return jet.water.finished() && (!std::ranges::contains(scene.boned_rides, jet.object, &ParkScene::BonedRide::object)); });
+            std::erase_if(scene.jets, [&](const ParkScene::Jet& jet) { return jet.water.finished() && (jet.to || !std::ranges::contains(scene.boned_rides, jet.object, &ParkScene::BonedRide::object)); });
         }
 
         /// The band and side of each of `owners`' vertices: `side` 0 for objects drawn whole.

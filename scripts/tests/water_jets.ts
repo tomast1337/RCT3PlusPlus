@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Places a water cannon along the road in from the blank landscape's entrance, brings guests in, and keeps close
-// screenshots of it: turned to spray a guest, its jet arcing down to a splash.
+// Places a row of jumping fountains and a water cannon along the road in from the blank landscape's entrance,
+// brings guests in, and keeps a close screenshot of each: water jumping from fountain to fountain, and the
+// cannon turned to spray a guest, its jet arcing down to a splash.
 //
 //   ./nob script scripts/tests/water_jets.ts -- --no-audio
 
@@ -18,6 +19,9 @@ const paths = map.paths();
 const gate = paths.reduce((a, b) => (b.row > a.row ? b : a));
 const road = paths.filter((p) => p.col === gate.col && p.row < gate.row - 1).sort((a, b) => b.row - a.row);
 const items = [
+    { overlay: "Style/Vanilla/Style", symbol: "PathFountain", tile: road[1] },
+    { overlay: "Style/Vanilla/Style", symbol: "PathFountain", tile: road[2] },
+    { overlay: "Style/Vanilla/Style", symbol: "PathFountain", tile: road[3] },
     { overlay: "Style/Vanilla/CapeTyphoon/Style", symbol: "WaterCannon", tile: road[7] },
 ];
 for (const item of items) {
@@ -35,6 +39,17 @@ for (const item of items) {
     build.stop();
     await frames(1);
 }
+expect(park.pathItems().filter((i) => i.kind === "fountain").length === 3, "three jumping fountains");
+
+const row = road[2];
+camera.look({ col: row.col + 0.5, row: row.row + 0.5 }, { col: row.col + 3, row: row.row + 1.5, up: 7 });
+await park.advance(2);
+for (let i = 0; i < 6; ++i) {
+    await park.advance(0.25);
+    await frames(2);
+    await screenshot(`jumping_${i}`);
+}
+
 park.dropParties(40, 3);
 await park.advanceUntil(() => people.list().some((p) => p.lingering === "water cannon" && p.col !== undefined), 1800, "a guest firing the cannon");
 const cannon = road[7];

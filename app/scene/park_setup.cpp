@@ -978,10 +978,7 @@ namespace rct3::scene
             if (auto flow = park::load_flow_picture(*flow_file))
             {
                 if (auto uploaded = ui::upload_textures(device, { { std::string(park::kFlowPicture), *flow } }))
-                {
                     scene.object_textures.merge(*uploaded);
-                    scene.flow_picture = std::move(*flow);
-                }
             }
             else
                 logging::logger("park").warning("flowing water: {}", flow.error());

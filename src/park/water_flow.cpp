@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstring>
 #include <format>
 
 namespace rct3::park
@@ -26,7 +25,7 @@ namespace rct3::park
 
     } // namespace
 
-    std::optional<ModelPart> flow_strip(const ovl::Spline& left, const ovl::Spline& right, std::string texture)
+    std::optional<ModelPart> flow_strip(const ovl::Spline& left, const ovl::Spline& right, const ovl::Spline& track, std::string texture)
     {
         if (left.nodes.size() < 2 || left.nodes.size() != right.nodes.size())
             return std::nullopt;
@@ -48,9 +47,12 @@ namespace rct3::park
             return std::nullopt;
         // A whole number of repeats, so the picture meets the next piece's.
         const float repeats = std::max(1.0f, std::round(along.back() / kFlowRepeat));
+        // Files list the water of some pieces from the track's far end (all right-hand curves, among others).
+        const bool backwards = !track.nodes.empty() && glm::distance(lefts.back(), vec(track.nodes.front().position)) < glm::distance(lefts.front(), vec(track.nodes.front().position));
         ModelPart part;
         part.texture = std::move(texture);
         part.blend = PartBlend::Blended;
+        part.chain = true;
         for (std::size_t i = 0; i < lefts.size(); ++i)
         {
             const std::size_t next = std::min(i + 1, lefts.size() - 1);
@@ -60,7 +62,7 @@ namespace rct3::park
                 normal = glm::normalize(normal);
             if (normal.y < 0)
                 normal = -normal;
-            const float v = along[i] / along.back() * repeats;
+            const float v = (backwards ? along.back() - along[i] : along[i]) / along.back() * repeats;
             part.vertices.push_back({ lefts[i], normal, { 0.0f, v } });
             part.vertices.push_back({ rights[i], normal, { 1.0f, v } });
         }
@@ -72,23 +74,11 @@ namespace rct3::park
         return part;
     }
 
-    std::uint32_t flow_shift(std::uint32_t rows, float seconds)
+    float flow_scroll(float seconds, std::int32_t run)
     {
-        if (rows == 0)
-            return 0;
-        const float moved = std::fmod(seconds * kFlowSpeed / kFlowRepeat, 1.0f);
-        return static_cast<std::uint32_t>(moved * static_cast<float>(rows)) % rows;
-    }
-
-    ovl::RgbaImage flow_rows(const ovl::RgbaImage& image, std::uint32_t shift)
-    {
-        ovl::RgbaImage out { image.width, image.height, std::vector<std::uint8_t>(image.pixels.size()) };
-        const std::size_t row = std::size_t { image.width } * 4;
-        if (image.height == 0 || image.pixels.size() != row * image.height)
-            return image;
-        for (std::uint32_t y = 0; y < image.height; ++y)
-            std::memcpy(out.pixels.data() + ((y + shift) % image.height) * row, image.pixels.data() + y * row, row);
-        return out;
+        // The picture's v goes down by the distance flowed, so it is read further back and moves on along v.
+        const float moved = seconds * kFlowSpeed / kFlowRepeat * (run < 0 ? 1.0f : -1.0f);
+        return moved - std::floor(moved);
     }
 
     std::expected<ovl::RgbaImage, std::string> load_flow_picture(const std::filesystem::path& file, std::string_view name)

@@ -834,7 +834,8 @@ namespace rct3::park
         const ovl::Spline* right = spline_in(*file, section->water_splines[1]);
         if (left == nullptr || right == nullptr)
             return;
-        const auto strip = flow_strip(*left, *right, std::string(kFlowPicture));
+        const ovl::Spline* track = section->splines[0].empty() ? nullptr : spline_in(*file, section->splines[0]);
+        const auto strip = flow_strip(*left, *right, track != nullptr ? *track : ovl::Spline { }, std::string(kFlowPicture));
         if (!strip)
             return;
         for (ModelLevel& level : model.levels)

@@ -78,7 +78,9 @@ namespace rct3::park
         /// Of a car on an arm, at every level: the arm's joint that carries it, or -1 for the car itself.
         std::int32_t bone = -1;
         bool board = false; ///< A board for words (ovl::kMeshFlagBoard)
-        bool chain = false; ///< A lift piece's chain, which moves along its picture as the lift runs (chain_lifts.hpp)
+        /// Its picture slides along it: a lift piece's chain as the lift runs (chain_lifts.hpp), or a slide's
+        /// flowing water (water_flow.hpp, whose parts the scene tells by their picture)
+        bool chain = false;
     };
 
     /// A flat picture standing upright on the item's anchor, turned to face the viewer round the vertical.

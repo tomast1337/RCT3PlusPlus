@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Places jumping fountains, a water cannon and a view point along the road in from the blank landscape's
+// Places jumping fountains, a water cannon, a view point and a loudspeaker along the road in from the blank landscape's
 // entrance, brings guests in, and waits to see each used: someone firing the cannon, someone turning to look at
-// the fountains, a party stopped together at the view. Each is kept as a screenshot.
+// the fountains, a party stopped together at the view, someone liking the loudspeaker's music. Each is kept as a
+// screenshot, the last in the guest's window, naming the speaker.
 //
 //   ./nob script scripts/tests/park_attractions.ts -- --no-audio
 
@@ -22,6 +23,7 @@ const items = [
     { overlay: "Style/Vanilla/Style", symbol: "PathFountain", kind: "fountain", tile: road[1] },
     { overlay: "Style/Vanilla/CapeTyphoon/Style", symbol: "WaterCannon", kind: "water cannon", tile: road[4] },
     { overlay: "Style/Vanilla/Style", symbol: "VistaPoint", kind: "photo spot", tile: road[7] },
+    { overlay: "Style/Vanilla/Style", symbol: "LoudSpeaker", kind: "speaker", tile: road[10] },
 ];
 for (const item of items) {
     expect(item.tile !== undefined, `road for the ${item.symbol}`);
@@ -58,3 +60,13 @@ await show("vista", () => {
     const party = people.list().filter((p) => p.lingering === "photo spot" && p.party !== undefined && p.col !== undefined);
     return party.find((p) => party.filter((q) => q.party === p.party).length >= 2);
 });
+
+const kNiceMusic = 29;
+const fan = () => people.list().findIndex((p) => !p.staff && (p.thoughts ?? []).includes(kNiceMusic));
+await park.advanceUntil(() => fan() >= 0, 1800, "a guest liking the speaker's music");
+people.show(fan());
+await until(() => ui.find("info/Guest_Thoughts") !== undefined, 120, "the guest's window");
+await ui.click("info/Guest_Thoughts");
+await frames(5);
+await screenshot("speaker");
+await ui.click("info/close");

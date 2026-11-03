@@ -317,3 +317,19 @@ TEST_CASE("a party stops together at a view and likes it with scenery round it, 
         }
     }
 }
+
+TEST_CASE("guests near a loudspeaker like its music now and then, about that speaker, once in a while")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 3, 0 });
+    const auto speaker = park.item(PathItemKind::Speaker, { 0, 0 });
+    const auto g = park.guest({ 3, 0 });
+    auto& r = park.world().registry;
+    const auto liked = [&] {
+        const auto* thoughts = r.try_get<Thoughts>(g);
+        return thoughts == nullptr ? 0 : std::ranges::count_if(thoughts->recent, [&](const Thought& t) { return t.kind == ThoughtKind::NiceMusic && t.about == speaker; });
+    };
+    REQUIRE(park.run_until([&] { return liked() > 0; }, 600));
+    park.run_seconds(kTuning.thoughts.rethink.value / 2);
+    CHECK(liked() == 1);
+}

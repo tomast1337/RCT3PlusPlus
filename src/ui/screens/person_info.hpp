@@ -12,6 +12,7 @@
 #include "core/maybe.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
+#include "save/model/world.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/info_panel.hpp"
 #include "ui/string_table.hpp"
@@ -60,6 +61,7 @@ namespace rct3::ui
         const save::Staff* staff = nullptr;
         const save::PeopleModel* people = nullptr;
         const save::RideModel* rides = nullptr;
+        std::span<const save::PlacedObject> objects { }; ///< The park's placed objects, for thoughts about path items
         /// Staff the simulation walks: the tiles of their patrol area (0 for none, the whole park), and whether
         /// clicks on the ground paint it. Empty for others.
         std::optional<std::size_t> patrol_tiles { };

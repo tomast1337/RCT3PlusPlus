@@ -5,6 +5,7 @@
 #include "strings/unicode.hpp"
 #include "ui/money_text.hpp"
 #include "ui/save_text.hpp"
+#include "ui/screens/scenery_info.hpp"
 #include "ui/thought_text.hpp"
 
 #include <algorithm>
@@ -190,8 +191,11 @@ namespace rct3::ui
 
         std::u16string attraction_called(const PersonFacts& f, save::PeopleObjectId id, const StringTable& strings)
         {
-            const save::AttractionCommon* a = attraction(f, id);
-            return a != nullptr ? attraction_name(*a, strings) : std::u16string { };
+            if (const save::AttractionCommon* a = attraction(f, id))
+                return attraction_name(*a, strings);
+            // A thought about a path item, such as a loudspeaker, names it as its own window does.
+            const auto object = id == 0 ? f.objects.end() : std::ranges::find(f.objects, id, &save::PlacedObject::id);
+            return object != f.objects.end() ? scenery_name({ .symbol = object->symbol }, strings) : std::u16string { };
         }
 
         std::u16string job(const save::Staff& s, const StringTable& strings)

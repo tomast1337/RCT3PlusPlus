@@ -26,6 +26,7 @@ namespace rct3::simulation
         std::unordered_map<NodeId, std::vector<entt::entity>> items_at { };  ///< Path items on each tile, in entity order
         std::vector<bool> guarded { };                                       ///< By tile: guards keep vandals off it
         std::vector<NodeId> ring { }, next { };
+        std::vector<entt::entity> speakers { }; ///< The park's loudspeakers, in entity order
         /// A person walking the paths, in the grid cell they stand in, for keeping people apart.
         struct Body
         {

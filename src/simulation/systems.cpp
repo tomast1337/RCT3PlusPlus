@@ -942,8 +942,14 @@ namespace rct3::simulation
                 piece.age.value += dt;
                 litter_at[piece.node].push_back(e);
             }
+            auto& speakers = buffers.speakers;
+            speakers.clear();
             for (const entt::entity e : sorted(r.view<const PathItem>()))
+            {
                 items_at[r.get<PathItem>(e).node].push_back(e);
+                if (r.get<PathItem>(e).kind == PathItemKind::Speaker)
+                    speakers.push_back(e);
+            }
             const auto items = [&](NodeId node) -> std::span<const entt::entity> {
                 const auto found = items_at.find(node);
                 return found != items_at.end() ? std::span<const entt::entity>(found->second) : std::span<const entt::entity> { };
@@ -1072,6 +1078,18 @@ namespace rct3::simulation
                     about(ThoughtKind::Vandalism, std::ranges::any_of(items(stride.from), [&](entt::entity i) { return r.get<PathItem>(i).broken; }));
                     const auto here = litter_at.find(stride.from);
                     about(ThoughtKind::Vomit, here != litter_at.end() && std::ranges::any_of(here->second, [&](entt::entity l) { return r.get<Litter>(l).vomit; }));
+                    // Within earshot of a loudspeaker a guest may like its music, once in a while whichever it is.
+                    // shortcut: every speaker plays, and its music always pleases; upgrade when speakers keep their
+                    // music and on/off state.
+                    const PathTileSpot& tile = paths.nodes()[stride.from].tile;
+                    const auto heard = std::ranges::find_if(speakers, [&](entt::entity s) {
+                        const PathTileSpot& at = paths.nodes()[r.get<PathItem>(s).node].tile;
+                        return std::abs(at.col - tile.col) <= kTuning.surroundings.earshot && std::abs(at.row - tile.row) <= kTuning.surroundings.earshot;
+                    });
+                    const auto* thoughts = r.try_get<Thoughts>(g);
+                    const bool lately = thoughts != nullptr && std::ranges::any_of(thoughts->recent, [&](const Thought& t) { return t.kind == ThoughtKind::NiceMusic && now - t.time.value < kTuning.thoughts.rethink.value; });
+                    if (heard != speakers.end() && !lately && random::chance(dice.state, kTuning.surroundings.music_thought.value))
+                        think(r, g, ThoughtKind::NiceMusic, *heard, now);
                 }
                 // A wandering guest just come to a tile may sit on a bench there when tired or eating, or stop at a sight.
                 if (errand.kind == ErrandKind::Wandering && stride.fresh)

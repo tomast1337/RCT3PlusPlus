@@ -134,6 +134,7 @@ namespace rct3::simulation::tuning
         Chance watch_chance { 0.3 }; ///< Of stopping at a sight passed
         Seconds watch { 15 };
         Seconds served { 4 };                             ///< A party member at a stall's counter while the others wait
+        Seconds relief { 12 };                            ///< Chosen by eye: at a toilet or first aid for a guest needing it fully
         PerSecond sight_cheer = PerSecond::over({ 300 }); ///< Happiness while watching
     };
 

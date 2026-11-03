@@ -41,8 +41,8 @@ namespace rct3::audio
         Chain,
         Start,
         Stop,
-        // Water: not played yet. A splash as a car enters water, louder the faster, then the plume loop for a
-        // few seconds; waits on the track model knowing which pieces are water.
+        // Water: a splash as a car splashes through water, louder the faster, then the plume loop for a few
+        // seconds.
         WaterSplash,
         WaterPlume,
     };

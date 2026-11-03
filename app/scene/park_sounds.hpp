@@ -39,11 +39,11 @@ namespace rct3::scene
         audio::TrackSoundSet set = audio::TrackSoundSet::None;
         std::array<audio::VoiceHandle, 3> running; ///< Slow, medium, fast
         audio::VoiceHandle chain;
-        float chain_off = 0;      ///< Seconds since the train left the chain, while its loop fades
-        bool was_running = false; ///< Last update, to hear it set off and come in
-        /// The water plume loop after a splash. shortcut: never played, the track model not knowing which
-        /// pieces are water; play it with the splash once it does.
-        audio::VoiceHandle plume;
+        float chain_off = 0;                       ///< Seconds since the train left the chain, while its loop fades
+        bool was_running = false;                  ///< Last update, to hear it set off and come in
+        audio::VoiceHandle plume;                  ///< The water plume loop after a splash
+        float plume_left = 0;                      ///< Seconds it has left
+        std::optional<std::uint32_t> splashes { }; ///< Times its first car had splashed when last heard
     };
 
     struct ParkSounds

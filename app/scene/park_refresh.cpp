@@ -1177,6 +1177,10 @@ namespace rct3::scene
 
     void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed)
     {
+        // Chosen by eye: the effects a car's splash points spray, by strength, and its wake.
+        constexpr std::array<std::string_view, 3> kSplashEffects { "splash2", "splash4", "watersplashbig" };
+        constexpr std::string_view kWakeEffect = "waterwakemedium";
+        scene.car_waters.resize(scene.cars.size());
         std::vector<float> moved(scene.cars.size()); // Along its course since the park kept it, by car
         for (std::size_t i = 0; i < scene.cars.size(); ++i)
         {
@@ -1219,6 +1223,24 @@ namespace rct3::scene
                         const glm::vec3 left(place[3]);
                         place = glm::translate(glm::mat4(1.0f), left + wreck->at - wreck->from) * glm::mat4_cast(wreck->turned) * glm::translate(glm::mat4(1.0f), -left) * place;
                     }
+                }
+                else if (const auto model = scene.models.find(park::model_ref(scene.cars[i])); model != scene.models.end())
+                {
+                    // Through the water: sprays from its splash points as it splashes, a wake behind it now and then.
+                    const glm::vec3 velocity = elapsed > 0 ? (glm::vec3(place[3]) - glm::vec3(scene.car_places[i][3])) / elapsed : glm::vec3(0.0f);
+                    // Only cars that spray, and the one ridden for the water on the lens, look for the park's water.
+                    const bool looks = !model->second.splash_points.empty() || scene.riding == i;
+                    const park::TrackCourse& course = *scene.courses[spot.ride];
+                    // shortcut: a splash ride whose track says nothing of water (a sea serpent diving into its
+                    // lake) is taken as wet all along, splashing where its fall stops short; upgrade once such a
+                    // track's water is found in its files.
+                    const auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(ride);
+                    const bool dry_splasher = cycle != nullptr && cycle->splash && std::ranges::none_of(course.wet, std::identity { });
+                    const bool in_water = dry_splasher || (looks && park::water_above(scene.water.surface, glm::vec3(place[3])).has_value());
+                    const park::CarSplash splash = park::car_splash(scene.car_waters[i], course, spot.front + moved[i], in_water, velocity, elapsed);
+                    for (const park::SplashPoint& point : model->second.splash_points)
+                        if (point.wake ? splash.wake : splash.splash)
+                            fire_park_particles(scene.particles, point.wake ? kWakeEffect : kSplashEffects[std::min<std::size_t>(point.strength, 2)], glm::vec3(place * glm::vec4(point.position, 1.0f)), glm::vec3(place[1]));
                 }
             }
             // Pulled down, its cars go with it; a kept train the park does not run (a shuttle runs one) is not shown

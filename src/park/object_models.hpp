@@ -155,6 +155,14 @@ namespace rct3::park
         bool queues_only = false; ///< Only on a queue
     };
 
+    /// A place on a car that sprays water as it splashes through, or leaves a wake behind it running on.
+    struct SplashPoint
+    {
+        glm::vec3 position { 0.0f }; ///< Model space
+        std::uint8_t strength = 0;   ///< How big a spray: 0 low, 1 medium, 2 high
+        bool wake = false;           ///< A wake's, not a splash's
+    };
+
     struct ObjectModel
     {
         std::uint16_t positioning = 0;                   ///< How the item sits on its tile (see object_placement.hpp)
@@ -166,6 +174,7 @@ namespace rct3::park
         bool water_only = false;                         ///< A ride that stands only on water
         bool fenced_round = false;                       ///< A track piece fenced round its footprint, a tower's base
         bool paved_under = false;                        ///< A track piece whose footprint is paved, a tower's base
+        bool flows = false;                              ///< A track piece water flows along (water_flow.hpp)
         PathFeature feature = PathFeature::None;         ///< What a path feature is for
         std::optional<float> water_capacity { };         ///< A flower bed's water when full; none for what is not watered
         bool no_entry = false;                           ///< A sign that can be set to forbid entry
@@ -217,6 +226,9 @@ namespace rct3::park
         /// Of a car with bones named "carfront" and "carrear" at its ends: how it sits on its track. Its wheels
         /// are its wheel bones, or both midway between its ends, on its own centre line, where it has none.
         std::optional<CarFit> car_fit;
+        /// Of a car that rides through water: its bones named "watersplash" or "wake", a strength ("low", "med",
+        /// "high") and a number.
+        std::vector<SplashPoint> splash_points;
         /// Of a car a rider can look out of: the eyes of each kind of camera it has, by RideEye, model space,
         /// looking along +Z with +Y up, as its camera bones have them. A car hung under its track has them
         /// turned over. Its nose's are the front seat's where it has no nose camera.

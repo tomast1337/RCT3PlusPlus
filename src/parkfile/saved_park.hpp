@@ -17,7 +17,7 @@
 //   "RIDE" v1  save::RideModel
 //   "PARK" v1  SavedProgress
 //   "VIEW" v1  park::ParkCamera
-//   "PEOP" v1  SavedPeople: the people's looks and pages, and where the guests and staff stand and how
+//   "PEOP" v3  SavedPeople: the people's looks and pages, and where the guests and staff stand and how
 //              they are. Saves made before it lack it; their people start again from the original park.
 //   "QSGN" v1  std::vector<save::ObjectId>: the rides whose queues have no signs, by id. Only when there are any.
 //   "SHOW" v1  std::vector<save::RideShow>: the show rides' shows. Only when there are any; without it, the
@@ -108,7 +108,8 @@ namespace rct3::parkfile
         std::optional<simulation::Taste> taste { };
         std::int32_t party = -1; ///< Guests with the same number go round together; -1 alone
         bool leader = false;
-        std::optional<SavedSwim> swim { }; ///< In a pool
+        std::optional<SavedSwim> swim { };              ///< In a pool
+        std::optional<simulation::Outside> outside { }; ///< On the way between a spawn point and the gate
     };
 
     /// A member of staff at work.

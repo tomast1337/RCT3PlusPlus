@@ -12,6 +12,7 @@
 // That sheet is given the same flowing water (flowing_sheet).
 #pragma once
 
+#include "math/texture_shift.hpp"
 #include "ovl/spline.hpp"
 #include "ovl/texture_image.hpp"
 #include "park/object_models.hpp"
@@ -48,8 +49,8 @@ namespace rct3::park
     void flowing_sheet(ModelPart& sheet, const ovl::Spline& track, std::string texture);
 
     /// How far along its picture the water of a piece of run `run` (see Chains) is moved after flowing for
-    /// `seconds`, from 0 up to 1, added to the picture's v: against the strip's v when the run is negative.
-    [[nodiscard]] float flow_scroll(float seconds, std::int32_t run);
+    /// `seconds`, added to the picture's v: against the strip's v when the run is negative.
+    [[nodiscard]] TextureShift flow_scroll(float seconds, std::int32_t run);
 
     /// The picture of the texture `name` (the flowing water's by default) from the overlay whose common file is
     /// `file`.

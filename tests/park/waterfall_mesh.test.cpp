@@ -118,12 +118,12 @@ TEST_CASE("waterfall_mesh: foam fades out at its edges and is whole in its middl
 TEST_CASE("waterfall_layer_scroll: the first picture runs on past its second, and stays within one repeat")
 {
     const WaterfallPicture& sheet = kWaterfallPictures[0];
-    CHECK(waterfall_layer_scroll(sheet, 0.0f) == doctest::Approx(0.0f));
-    const float soon = waterfall_layer_scroll(sheet, 0.5f);
+    CHECK(waterfall_layer_scroll(sheet, 0.0f).lengths == doctest::Approx(0.0f));
+    const float soon = waterfall_layer_scroll(sheet, 0.5f).lengths;
     CHECK(soon == doctest::Approx(1.0f - 0.5f * sheet.layer_lag));
     for (const float seconds : { 1.0f, 7.3f, 1000.0f })
     {
-        const float s = waterfall_layer_scroll(sheet, seconds);
+        const float s = waterfall_layer_scroll(sheet, seconds).lengths;
         CHECK(s >= 0.0f);
         CHECK(s < 1.0f);
     }

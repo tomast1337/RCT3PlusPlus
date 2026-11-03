@@ -61,11 +61,11 @@ TEST_CASE("water listed from the track's far end still runs its picture the way 
 TEST_CASE("flowing water slides its picture on along v, and back along it on pieces laid the other way round")
 {
     const float quarter = kFlowRepeat / kFlowSpeed / 4;
-    CHECK(flow_scroll(0, 1) == 0);
+    CHECK(flow_scroll(0, 1).lengths == 0);
     // Adding 0.75 to v reads the picture a quarter further back: it has moved on a quarter.
-    CHECK(flow_scroll(quarter, 1) == doctest::Approx(0.75f));
-    CHECK(flow_scroll(quarter, 0) == doctest::Approx(0.75f));
-    CHECK(flow_scroll(quarter, -3) == doctest::Approx(0.25f));
+    CHECK(flow_scroll(quarter, 1).lengths == doctest::Approx(0.75f));
+    CHECK(flow_scroll(quarter, 0).lengths == doctest::Approx(0.75f));
+    CHECK(flow_scroll(quarter, -3).lengths == doctest::Approx(0.25f));
 }
 
 TEST_CASE("a piece's own water sheet flows as a strip does, its picture turned round when it runs from the far end")

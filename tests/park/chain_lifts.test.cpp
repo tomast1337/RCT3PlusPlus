@@ -31,10 +31,10 @@ TEST_CASE("pieces laid backwards take their ride's chain the other way round")
     CHECK(runs.at(9) == -3);
 
     const std::array shifts { 0.25f, 0.0f, 0.25f };
-    CHECK(chain_scroll(shifts, 1) == doctest::Approx(0.25f));
-    CHECK(chain_scroll(shifts, -3) == doctest::Approx(0.75f));
-    CHECK(chain_scroll(shifts, 0) == 0);
-    CHECK(chain_scroll(shifts, 4) == 0);
+    CHECK(chain_scroll(shifts, 1).lengths == doctest::Approx(0.25f));
+    CHECK(chain_scroll(shifts, -3).lengths == doctest::Approx(0.75f));
+    CHECK(chain_scroll(shifts, 0).lengths == 0);
+    CHECK(chain_scroll(shifts, 4).lengths == 0);
 }
 
 TEST_CASE("a section that lays its piece from the far end takes the chain and the water the other way round")

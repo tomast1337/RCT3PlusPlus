@@ -333,6 +333,7 @@ namespace rct3::save
         bool leaving_due_to_closed_park = false;
         std::optional<float> pool_need { };
         std::optional<float> pool_preference { };
+        std::optional<float> time_in_pool { };   ///< Seconds still to swim, while in a pool
         std::optional<float> price_modifier { }; ///< Willingness-to-pay multiplier
     };
 

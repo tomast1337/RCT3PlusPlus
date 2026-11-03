@@ -238,5 +238,9 @@ namespace rct3::simulation
     /// them) back on it: on a flat ride's turn, or on a train, sending off one that stands at the start. Those
     /// the ride has no room for walk off from its exit. Returns how many it seated. Call after start_guests.
     std::size_t board_saved_riders(SimWorld& world, const save::PeopleModel& people, std::span<const entt::entity> guests, const save::RideModel& saved, std::span<const entt::entity> rides);
+    /// Puts the guests the park had swimming (`guests` by place in `people`) back in the pool they stand in,
+    /// changed already, for the time the park says they had left. Returns how many. Call after start_guests
+    /// and import_pools.
+    std::size_t resume_saved_swimmers(SimWorld& world, const save::PeopleModel& people, std::span<const entt::entity> guests);
 
 } // namespace rct3::simulation

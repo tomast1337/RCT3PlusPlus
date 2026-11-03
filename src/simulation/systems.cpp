@@ -3294,14 +3294,16 @@ namespace rct3::simulation
         {
             auto& swimmer = r.get<Swimmer>(g);
             auto& pose = r.get<Pose>(g);
-            auto& errand = r.get<Errand>(g);
-            const auto* door = r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr;
+            // Thrown out by a crashed train's blast, they swim no more.
+            auto* swimming = r.try_get<Errand>(g);
+            const auto* door = swimming != nullptr && r.valid(swimming->target) ? r.try_get<PoolDoor>(swimming->target) : nullptr;
             auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<SwimPool>(door->pool) : nullptr;
-            if (errand.kind != ErrandKind::Swimming || pool == nullptr || pool->water.empty())
+            if (swimming == nullptr || swimming->kind != ErrandKind::Swimming || pool == nullptr || pool->water.empty())
             {
                 r.remove<Swimmer>(g);
                 continue;
             }
+            auto& errand = *swimming;
             auto& dice = r.get<Dice>(g).state;
             if (swimmer.changing.value > 0)
             {

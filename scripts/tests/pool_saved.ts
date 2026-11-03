@@ -22,6 +22,10 @@ const pieces = map.objects().filter((o) => o.overlay === kPool);
 log("pool pieces", pieces.length, [...new Set(pieces.map((o) => o.symbol))].join(" "));
 expect(pieces.some((o) => o.symbol === "Base"), "water squares placed from the pool's squares");
 expect(pieces.some((o) => o.symbol === "SolidTop"), "paved squares placed from them");
+// Those the park had swimming swim on in its pools, not out on the paths.
+const saved_swimmers = people.list().filter((p) => p.state === "swimming").length;
+log("swimming as saved", saved_swimmers);
+expect(saved_swimmers > 0, "the park's swimmers still in the water");
 
 // Saved and loaded again: the squares kept, and the pieces placed from them only once.
 async function click_tool(tool: string): Promise<void> {

@@ -845,7 +845,19 @@ namespace rct3::park
                 model.runs_back.emplace_back(name);
         }
         if (section->water_splines[0].empty() || section->water_splines[1].empty())
+        {
+            // A piece through water with no water edges carries its water as its own see-through parts.
+            if ((section->flags[0] & kPieceWater) == 0)
+                return;
+            for (ModelLevel& level : model.levels)
+                for (ModelPart& part : level.parts)
+                    if (part.blend == PartBlend::Blended)
+                    {
+                        flowing_sheet(part, track != nullptr ? *track : ovl::Spline { }, std::string(kFlowPicture));
+                        model.flows = true;
+                    }
             return;
+        }
         const ovl::Spline* left = spline_in(*file, section->water_splines[0]);
         const ovl::Spline* right = spline_in(*file, section->water_splines[1]);
         if (left == nullptr || right == nullptr)

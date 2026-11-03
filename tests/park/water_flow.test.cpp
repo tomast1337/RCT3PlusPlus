@@ -67,3 +67,28 @@ TEST_CASE("flowing water slides its picture on along v, and back along it on pie
     CHECK(flow_scroll(quarter, 0) == doctest::Approx(0.75f));
     CHECK(flow_scroll(quarter, -3) == doctest::Approx(0.25f));
 }
+
+TEST_CASE("a piece's own water sheet flows as a strip does, its picture turned round when it runs from the far end")
+{
+    // A sheet whose picture runs along v from x = -4 to 0, on rails running from 0 to -4.
+    ModelPart sheet;
+    sheet.texture = "water";
+    sheet.blend = PartBlend::Cutout;
+    for (const float x : { -4.0f, 0.0f })
+        for (const float z : { -1.0f, 1.0f })
+            sheet.vertices.push_back({ .position = { x, 0.5f, z }, .uv = { z > 0 ? 1.0f : 0.0f, x == 0 ? 1.0f : 0.0f } });
+    ModelPart turned = sheet;
+    flowing_sheet(turned, straight({ 0, 0, 0 }, 4, 1), "flow");
+    CHECK(turned.texture == "flow");
+    CHECK(turned.blend == PartBlend::Blended);
+    CHECK(turned.chain);
+    CHECK(turned.vertices[0].uv.y == doctest::Approx(1));
+    CHECK(turned.vertices[2].uv.y == doctest::Approx(0));
+    CHECK(turned.vertices[1].uv.x == 1);
+
+    // Rails running the same way as the picture leave it as it is.
+    ModelPart kept = sheet;
+    flowing_sheet(kept, straight({ -4, 0, 0 }, -4, 1), "flow");
+    CHECK(kept.vertices[0].uv.y == 0);
+    CHECK(kept.vertices[2].uv.y == 1);
+}

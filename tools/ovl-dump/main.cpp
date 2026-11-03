@@ -657,6 +657,8 @@ namespace
                 }
                 const auto& i = item.stall->info;
                 out.info("  {:<32} type {:d} text {} icon {} sid {}", name.c_str(), i.type_id, std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str());
+                for (const auto& g : item.stall->goods)
+                    out.info("    sells {} at {:d}", std::string(g.item).c_str(), g.price);
             }
         }
         if (opt.sat)

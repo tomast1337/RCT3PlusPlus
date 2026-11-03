@@ -11,6 +11,7 @@
 
 #include "math/glm.hpp"
 #include "math/hex_colour.hpp"
+#include "math/texture_shift.hpp"
 
 #include <array>
 #include <compare>
@@ -197,7 +198,7 @@ namespace rct3::render
         /// LitCrossing, with TexturedCutout's holes.
         LitCrossingCutout,
         /// Lit, over two pictures: the first extra texture, in place of the noise, is a second picture read at
-        /// the same coordinate, which `DrawCommand::scroll` moves for the first picture only, so the two run at
+        /// the same coordinate, which `DrawCommand::v_shift` moves for the first picture only, so the two run at
         /// their own speeds. Its colour, lit, is added to the result; its alpha multiplies the first's.
         LitLayerAdded,
         /// LitLayerAdded, with the second picture multiplying the first, colour and alpha, before the light.
@@ -361,9 +362,8 @@ namespace rct3::render
         /// the height of the surface over the eye.
         bool underwater = false;
         /// A slide's flowing water (park/water_flow.hpp): its vertices are an object's, and the texture is its
-        /// picture, moved along its v by `scroll`'s fraction. Neither the mirror nor the scene behind is read.
+        /// picture, moved along its v by `DrawCommand::v_shift`. Neither the mirror nor the scene behind is read.
         bool flow = false;
-        float scroll = 0;
     };
 
     /// What the Occlusion shader needs. Depths are as the depth buffer holds them, 0 near to 1 far.
@@ -412,8 +412,8 @@ namespace rct3::render
         TextureHandle texture;          ///< For shaders that sample one
         Filter filter = Filter::Nearest;
         AddressMode address = AddressMode::Clamp;
-        SceneLight light; ///< For the Lit shaders
-        float scroll = 0; ///< For the Lit shaders: added to the texture's v, from 0 up to 1
+        SceneLight light;     ///< For the Lit shaders
+        TextureShift v_shift; ///< For the Lit shaders and flowing Water: added to the texture's v
         /// For shaders that read more than one picture, bound after `texture` with the same sampler. A missing one
         /// reads as `texture`.
         std::array<TextureHandle, kExtraTextures> extra_textures { };

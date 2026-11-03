@@ -165,7 +165,7 @@ namespace rct3::scene
                     draw.address = render::AddressMode::Repeat;
                     draw.light = light;
                     draw.extra_textures[1] = relief_of(textures, batch.texture);
-                    draw.scroll = batch.texture == park::kFlowPicture ? park::flow_scroll(scene.park_clock, batch.chain) : park::chain_scroll(scene.chain_shifts, batch.chain);
+                    draw.v_shift = batch.texture == park::kFlowPicture ? park::flow_scroll(scene.park_clock, batch.chain) : park::chain_scroll(scene.chain_shifts, batch.chain);
                     device.draw(draw);
                 }
             };
@@ -277,7 +277,8 @@ namespace rct3::scene
                         draw.address = render::AddressMode::Repeat;
                         draw.light = light;
                         draw.extra_textures = { render::TextureHandle { }, render::TextureHandle { }, render::TextureHandle { }, scene.water.ripple_texture };
-                        draw.water = { .eye = parts.eye, .time = scene.park_clock, .near = park::kNear, .far = park::kFar, .waves = scene.water.look.waves, .flow = true, .scroll = park::flow_scroll(scene.park_clock, batch.chain) };
+                        draw.water = { .eye = parts.eye, .time = scene.park_clock, .near = park::kNear, .far = park::kFar, .waves = scene.water.look.waves, .flow = true };
+                        draw.v_shift = park::flow_scroll(scene.park_clock, batch.chain);
                         device.draw(draw);
                     }
                 });
@@ -305,7 +306,7 @@ namespace rct3::scene
                             draw.pipeline = scene.see_through_pipeline;
                         draw.address = render::AddressMode::Repeat;
                         draw.light = light;
-                        draw.scroll = park::waterfall_layer_scroll(*picture, scene.park_clock);
+                        draw.v_shift = park::waterfall_layer_scroll(*picture, scene.park_clock);
                         device.draw(draw);
                     }
                 });

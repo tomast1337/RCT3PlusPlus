@@ -275,7 +275,7 @@ float4 fragment_main(LitVaryings f) : SV_Target
 {
     if (crossed_out(f))
         discard;
-    // Layered, the scroll moves the first picture only: the second is read where the mesh puts it.
+    // Layered, the v shift moves the first picture only: the second is read where the mesh puts it.
     float4 layer = float4(0.0);
     if (kMode == 2 || kMode == 3)
         layer = u_variation.Sample(u_sampler, f.uv - float2(0.0, frac(u_draw.sky.w)));

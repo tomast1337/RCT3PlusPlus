@@ -6,6 +6,7 @@
 // whose section lays its piece from the far end, take it the other way round.
 #pragma once
 
+#include "math/texture_shift.hpp"
 #include "park/object_mesh.hpp"
 #include "save/model/rides.hpp"
 
@@ -26,8 +27,8 @@ namespace rct3::park
     /// its lift pulling at `speed` metres a second.
     [[nodiscard]] float chain_shift(float shift, float speed, float seconds);
 
-    /// How far along its picture a chain part of run `run` is moved, from 0 up to 1, with each ride's shift in
-    /// `shifts` by its place in the ride list; 0 for parts of no chain.
-    [[nodiscard]] float chain_scroll(std::span<const float> shifts, std::int32_t run);
+    /// How far along its picture a chain part of run `run` is moved, with each ride's shift in `shifts` by its
+    /// place in the ride list; none for parts of no chain.
+    [[nodiscard]] TextureShift chain_scroll(std::span<const float> shifts, std::int32_t run);
 
 } // namespace rct3::park

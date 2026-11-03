@@ -90,11 +90,10 @@ namespace rct3::park
             v.uv.y = ends - v.uv.y;
     }
 
-    float flow_scroll(float seconds, std::int32_t run)
+    TextureShift flow_scroll(float seconds, std::int32_t run)
     {
         // The picture's v goes down by the distance flowed, so it is read further back and moves on along v.
-        const float moved = seconds * kFlowSpeed / kFlowRepeat * (run < 0 ? 1.0f : -1.0f);
-        return moved - std::floor(moved);
+        return TextureShift::by(seconds * kFlowSpeed / kFlowRepeat * (run < 0 ? 1.0f : -1.0f));
     }
 
     std::expected<ovl::RgbaImage, std::string> load_flow_picture(const std::filesystem::path& file, std::string_view name)

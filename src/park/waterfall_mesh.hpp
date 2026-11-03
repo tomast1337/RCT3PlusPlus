@@ -8,6 +8,7 @@
 // own, running at another speed (waterfall_layer_scroll), so the water shimmers rather than slides.
 #pragma once
 
+#include "math/texture_shift.hpp"
 #include "park/object_mesh.hpp"
 #include "save/model/world.hpp"
 
@@ -43,9 +44,9 @@ namespace rct3::park
         { "WaterfallFloorFroth", "rct3pp:waterfall-froth", "WaterfallFloorFrothB", "rct3pp:waterfall-froth-b", false, -0.4f },
     } };
 
-    /// How far, from 0 up to 1, the first picture of `picture` is moved along v past its second after `seconds`:
+    /// How far the first picture of `picture` is moved along v past its second after `seconds`:
     /// the mesh's coordinates are where the second is read, and the draw moves the first on by this.
-    [[nodiscard]] float waterfall_layer_scroll(const WaterfallPicture& picture, float seconds);
+    [[nodiscard]] TextureShift waterfall_layer_scroll(const WaterfallPicture& picture, float seconds);
 
     /// Where the water of `fall` is after running `along` (0 at the edge, 1 where it lands), halfway across.
     [[nodiscard]] glm::vec3 waterfall_point(const save::Waterfall& fall, float along);

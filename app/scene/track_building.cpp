@@ -421,6 +421,23 @@ namespace rct3::scene
             return o;
         }
 
+        /// Where piece `i` of `design` goes when the design is moved and turned as its first piece is to stand as
+        /// `to`, as it was saved rather than on after the piece before: some pieces' ends do not quite meet their
+        /// neighbours' as their shapes are read. Nothing when the catalogue has no such piece.
+        std::optional<park::PiecePlacement> design_piece(const park::PieceCatalogue& c, std::span<const save::TrackPiece> design, std::size_t i, const save::PlacedObject& to, const save::TerrainGrid& grid)
+        {
+            const auto first = park::shape_named(c, design.front().symbol);
+            const auto shape = park::shape_named(c, design[i].symbol);
+            if (!first || !shape)
+                return std::nullopt;
+            const auto saved = [](const save::TrackPiece& p) { return save::PlacedObject { .col = p.tile_x, .row = p.tile_z, .base_height = p.height, .rotation = p.direction, .force_absolute_height = true }; };
+            park::PiecePlacement placed { .object = park::moved_with(saved(design[i]), shape->record.squares, saved(design.front()), first->record.squares, to) };
+            placed.object.symbol = shape->record.item;
+            placed.object.overlay = to.overlay;
+            placed.next = park::tip_of(placed.object, *shape, design[i].reversed, grid);
+            return placed;
+        }
+
         /// The file of the train named `train_name` among the install's cars.
         std::optional<std::filesystem::path> train_file(const config::GameInstall& install, std::string_view train_name)
         {
@@ -637,21 +654,16 @@ namespace rct3::scene
             // A design shows whole with its doors, and may be laid only whole: any piece or door that may not stand,
             // or a piece that does not follow, refuses all of it.
             std::vector<save::PlacedObject> shown { o };
-            park::TrackTip tip = b.ghost->next;
             bool whole = true;
             for (std::size_t i = 1; starting && i < b.design.size(); ++i)
             {
-                const auto next = park::shape_named(*c, b.design[i].symbol);
-                auto placed = next ? park::place_after(tip, *next, b.design[i].reversed, scene.grid) : std::nullopt;
-                if (placed)
-                    placed->object.overlay = b.overlay;
+                auto placed = design_piece(*c, b.design, i, o, scene.grid);
                 if (!placed || !load_object_model(scene, b.models, assets, placed->object))
                 {
                     whole = false;
                     break;
                 }
                 b.off_water = b.off_water || off_water(scene, b, assets, placed->object);
-                tip = placed->next;
                 shown.push_back(std::move(placed->object));
             }
             const std::size_t pieces = shown.size();
@@ -1975,18 +1987,17 @@ namespace rct3::scene
             });
             standing = park::solid_tiles(others, scene.models, scene.grid);
         }
+        const save::PlacedObject first = b.ghost->object;
         for (std::size_t i = 0; i < std::max<std::size_t>(design.size(), 1); ++i)
         {
             if (i > 0)
             {
-                const auto shape = park::shape_named(*c, design[i].symbol);
-                auto placed = shape && b.tip ? park::place_after(*b.tip, *shape, design[i].reversed, scene.grid) : std::nullopt;
-                if (!placed)
+                auto placed = design_piece(*c, design, i, first, scene.grid);
+                if (!placed || !load_object_model(scene, b.models, assets, placed->object))
                     break;
-                placed->object.overlay = b.overlay;
-                if (!load_object_model(scene, b.models, assets, placed->object))
-                    break;
-                b.picked = park::LaidPiece { static_cast<std::size_t>(&*shape - c->pieces.data()), design[i].reversed };
+                b.picked = park::LaidPiece { static_cast<std::size_t>(&*park::shape_named(*c, design[i].symbol) - c->pieces.data()), design[i].reversed };
+                // Laid in the design's own order, even on a ride built back from its station.
+                b.backward = false;
                 // Refused where it would clash with what stands, as a piece built by hand is; the flag left by the
                 // last refresh is the offered piece's, not this one's.
                 b.clashes = clashes(scene, standing, placed->object);

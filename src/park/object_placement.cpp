@@ -42,6 +42,23 @@ namespace rct3::park
         return { static_cast<float>(object.col) + span_x / 2, static_cast<float>(object.row) + span_z / 2 };
     }
 
+    save::PlacedObject moved_with(save::PlacedObject object, std::array<std::int32_t, 2> squares, const save::PlacedObject& from, std::array<std::int32_t, 2> from_squares, const save::PlacedObject& to)
+    {
+        const std::int32_t turns = ((to.rotation - from.rotation) % 4 + 4) % 4;
+        // The offset from `from`'s middle, along the park's X and Z, turned as a model's X and Z are.
+        const glm::vec2 d = footprint_middle(object, squares) - footprint_middle(from, from_squares);
+        const glm::vec2 x = turned_x(turns) * turned_x(0).x;
+        const glm::vec2 z { -x.y, x.x };
+        const glm::vec2 middle = footprint_middle(to, from_squares) + d.x * x + d.y * z;
+        object.rotation = (object.rotation + turns) % 4;
+        const bool across = (object.rotation & 1) != 0;
+        object.col = static_cast<std::int32_t>(std::lround(middle.x - static_cast<float>(squares[across ? 1 : 0]) / 2));
+        object.row = static_cast<std::int32_t>(std::lround(middle.y - static_cast<float>(squares[across ? 0 : 1]) / 2));
+        object.base_height = object.base_height.value_or(0) - from.base_height.value_or(0) + to.base_height.value_or(0);
+        object.force_absolute_height = true;
+        return object;
+    }
+
     save::Tile square_tile(const save::PlacedObject& object, std::array<std::int32_t, 2> squares, int x, int z)
     {
         const glm::vec2 middle = footprint_middle(object, squares);

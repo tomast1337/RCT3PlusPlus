@@ -59,6 +59,11 @@ namespace rct3::park
     /// when both sides are odd, a tile's corner when both are even.
     [[nodiscard]] glm::vec2 footprint_middle(const save::PlacedObject& object, std::array<std::int32_t, 2> squares);
 
+    /// `object`, covering `squares`, moved and turned with a layout it was saved in, so that the layout's object
+    /// `from`, covering `from_squares`, stands as `to`: round the middle of `from`'s footprint, its height kept
+    /// as far above `from`'s.
+    [[nodiscard]] save::PlacedObject moved_with(save::PlacedObject object, std::array<std::int32_t, 2> squares, const save::PlacedObject& from, std::array<std::int32_t, 2> from_squares, const save::PlacedObject& to);
+
     /// The tile under square (x, z) of a footprint of `squares`, counted along the object's own X and Z.
     [[nodiscard]] save::Tile square_tile(const save::PlacedObject& object, std::array<std::int32_t, 2> squares, int x, int z);
 

@@ -3,6 +3,7 @@
 
 #include "../ovl/builder.hpp"
 #include "../ovl/record_file.hpp"
+#include "park/object_placement.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -225,6 +226,41 @@ TEST_CASE("the next piece goes on the tile its start meets, turned to the tip")
     CHECK(back->object.col == 6);
     CHECK(back->object.rotation == 2);
     CHECK(back->next.end.heading == 0);
+}
+
+TEST_CASE("a saved layout moved and turned keeps each piece where the one before it ends")
+{
+    const save::TerrainGrid g = flat();
+    const PieceShape s = shape_piece(record("Straight"), straight_line());
+    PieceRecord r = record("Long");
+    r.squares = { 2, 1 };
+    PieceLine l;
+    l.start = { kTile, 0, 0 };
+    l.end = { -kTile, 0, 0 };
+    const PieceShape longer = shape_piece(r, l);
+    const save::PlacedObject first = placed(1, 1, 0, 3);
+    const auto second = place_after(tip_of(first, s, false, g), longer, false, g);
+    REQUIRE(second);
+    const auto third = place_after(second->next, s, false, g);
+    REQUIRE(third);
+    for (int turns = 0; turns < 4; ++turns)
+    {
+        CAPTURE(turns);
+        const save::PlacedObject to = placed(5, 4, turns, 7);
+        const save::PlacedObject moved = moved_with(second->object, r.squares, first, { 1, 1 }, to);
+        const auto laid = place_after(tip_of(to, s, false, g), longer, false, g);
+        REQUIRE(laid);
+        CHECK(moved.col == laid->object.col);
+        CHECK(moved.row == laid->object.row);
+        CHECK(moved.rotation == laid->object.rotation);
+        CHECK(moved.base_height == laid->object.base_height);
+        // The piece after it, measured from the moved one rather than the first.
+        const save::PlacedObject next = moved_with(third->object, { 1, 1 }, second->object, r.squares, moved);
+        const auto after = place_after(laid->next, s, false, g);
+        REQUIRE(after);
+        CHECK(next.col == after->object.col);
+        CHECK(next.row == after->object.row);
+    }
 }
 
 TEST_CASE("a piece whose start cannot meet the tip at a whole tile and height is not placed")

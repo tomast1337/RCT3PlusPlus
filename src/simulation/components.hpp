@@ -402,14 +402,31 @@ namespace rct3::simulation
         std::uint64_t saved = 0; ///< The saved park's own id of it; 0 when not from a save
     };
 
+    /// What swimmers do at a pool extra.
+    enum class PoolUse : std::uint8_t
+    {
+        Stand,  ///< Stand by it a while
+        Lounge, ///< Lie on a sun lounger
+        Shower, ///< Stand under a shower
+    };
+
+    /// A pool extra swimmers go to, in the middle of its paved square.
+    struct PoolSpot
+    {
+        glm::vec3 at { 0.0f };
+        Radians heading { }; ///< The way it faces
+        PoolUse use = PoolUse::Stand;
+        std::uint8_t places = 1; ///< Swimmers it takes at once; more wait their turn beside it
+    };
+
     /// A pool complex: the squares its swimmers go to, each spot the middle of a square at its surface.
     struct SwimPool
     {
         std::vector<glm::vec3> water { };
         std::vector<glm::vec3> paved { };
-        std::vector<glm::vec3> spa { };    ///< Where swimmers sit in the spa pools, at the spa's water
-        std::vector<glm::vec3> extras { }; ///< The paved squares with an extra on them, loungers and showers
-        Share dirt { };                    ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
+        std::vector<glm::vec3> spa { };   ///< Where swimmers sit in the spa pools, at the spa's water
+        std::vector<PoolSpot> extras { }; ///< The paved squares with an extra on them, loungers and showers
+        Share dirt { };                   ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
     };
 
     /// How dirty a pool looks, in the six steps the pool's window names, cleanest first.
@@ -444,13 +461,17 @@ namespace rct3::simulation
     /// A guest at a pool, from paying at its changing room until they come out of it again.
     struct Swimmer
     {
-        Seconds changing { };    ///< Still to spend changing, out of sight in the room
-        bool changed = false;    ///< Into their swimwear
-        Seconds left { };        ///< In the pool still; then they go back to change
-        glm::vec3 goal { 0.0f }; ///< Where they swim or walk to next
-        bool in_water = false;   ///< Swimming, or sitting in a spa pool; else on the paved squares round the water
-        bool to_spa = false;     ///< The goal is a seat in a spa pool
-        Seconds idle { };        ///< Floating, or standing, before going on
+        Seconds changing { };         ///< Still to spend changing, out of sight in the room
+        bool changed = false;         ///< Into their swimwear
+        Seconds left { };             ///< In the pool still; then they go back to change
+        glm::vec3 goal { 0.0f };      ///< Where they swim or walk to next
+        bool in_water = false;        ///< Swimming, or sitting in a spa pool; else on the paved squares round the water
+        bool to_spa = false;          ///< The goal is a seat in a spa pool
+        Seconds idle { };             ///< Floating, or standing, before going on
+        std::int32_t spot = -1;       ///< The extra of the pool's they head for, wait at or use; -1 for none
+        std::int32_t place = -1;      ///< Their place on it while they use it; -1 on the way or waiting
+        PoolUse use = PoolUse::Stand; ///< What they do there
+        Seconds waited { };           ///< For a place on it so far
     };
 
     /// What a shop sells, or what a facility does for its guests.

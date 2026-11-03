@@ -3280,7 +3280,16 @@ namespace rct3::simulation
         phase.emplace("Swimming");
         // Swimmers change out of sight in the room, then swim from spot to spot in the water and now and then walk
         // the paved squares round it, resting between; their time up, they go back and change again, and come out
-        // at the door.
+        // at the door. At an extra with every place taken they wait beside it a while.
+        // The places taken on each pool's extras, a bit for each.
+        std::unordered_map<entt::entity, std::vector<std::uint32_t>> places_taken;
+        for (const auto [g, swimmer, errand] : r.view<const Swimmer, const Errand>().each())
+            if (const auto* door = swimmer.place >= 0 && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
+            {
+                auto& places = places_taken[door->pool];
+                places.resize(std::max(places.size(), static_cast<std::size_t>(swimmer.spot) + 1));
+                places[static_cast<std::size_t>(swimmer.spot)] |= 1u << swimmer.place;
+            }
         for (const entt::entity g : sorted(r.view<Swimmer>()))
         {
             auto& swimmer = r.get<Swimmer>(g);
@@ -3353,6 +3362,7 @@ namespace rct3::simulation
                 continue;
             if (swimmer.left.value <= 0)
             {
+                swimmer.spot = swimmer.place = -1;
                 // Back at the room's side of the pool: in to change.
                 if (glm::distance(pose.position, door->poolside) < 0.01f)
                     swimmer.changing = kTuning.pools.changing;
@@ -3363,8 +3373,40 @@ namespace rct3::simulation
                 }
                 continue;
             }
+            if (swimmer.spot >= 0 && static_cast<std::size_t>(swimmer.spot) < pool->extras.size() && swimmer.place < 0 && pool->extras[static_cast<std::size_t>(swimmer.spot)].use != PoolUse::Stand)
+            {
+                // At a lounger or shower: on it in a free place, side by side across it; else wait their turn.
+                const PoolSpot& spot = pool->extras[static_cast<std::size_t>(swimmer.spot)];
+                auto& places = places_taken[door->pool];
+                places.resize(std::max(places.size(), pool->extras.size()));
+                std::uint32_t& used = places[static_cast<std::size_t>(swimmer.spot)];
+                std::int32_t free = 0;
+                while (free < spot.places && (used & (1u << free)) != 0)
+                    ++free;
+                if (free < spot.places)
+                {
+                    used |= 1u << free;
+                    swimmer.place = free;
+                    swimmer.use = spot.use;
+                    swimmer.waited = { };
+                    swimmer.idle = spot.use == PoolUse::Lounge ? kTuning.pools.lounging : kTuning.pools.showering;
+                    const float across = (static_cast<float>(free) + 0.5f) / static_cast<float>(spot.places) - 0.5f;
+                    const glm::vec3 side { std::cos(spot.heading.value), 0, -std::sin(spot.heading.value) };
+                    swimmer.goal = spot.at + side * (across * paths.tile_size);
+                    pose.position = swimmer.goal;
+                    pose.heading = spot.heading;
+                    continue;
+                }
+                // shortcut: those waiting stand in the middle of its square together; upgrade to a line beside it.
+                if ((swimmer.waited.value += dt) < kTuning.pools.patience.value)
+                    continue;
+                swimmer.idle = { };
+            }
             if ((swimmer.idle.value -= dt) > 0)
                 continue;
+            swimmer.spot = swimmer.place = -1;
+            swimmer.use = PoolUse::Stand;
+            swimmer.waited = { };
             swimmer.idle.value = static_cast<float>(random::between(dice, double { kTuning.pools.shortest_rest.value }, double { kTuning.pools.longest_rest.value }));
             // shortcut: swimmers go straight from spot to spot, over the pool's walls; upgrade with ladders and
             // steps as ways in and out.
@@ -3373,7 +3415,10 @@ namespace rct3::simulation
             const std::size_t pick = random::below(dice, extra ? pool->spa.size() + pool->extras.size() : out ? pool->paved.size() : pool->water.size());
             swimmer.to_spa = extra && pick < pool->spa.size();
             if (extra)
-                swimmer.goal = swimmer.to_spa ? pool->spa[pick] : pool->extras[pick - pool->spa.size()];
+            {
+                swimmer.goal = swimmer.to_spa ? pool->spa[pick] : pool->extras[pick - pool->spa.size()].at;
+                swimmer.spot = swimmer.to_spa ? -1 : static_cast<std::int32_t>(pick - pool->spa.size());
+            }
             else
             {
                 // Within a quarter tile of a square's middle: the water's cut corners leave no less.

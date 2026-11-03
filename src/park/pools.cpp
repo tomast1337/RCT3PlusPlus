@@ -267,6 +267,10 @@ namespace rct3::park
             }
             else if (strings::equals_ignoring_case(word, "LifeGuard"))
                 fit.lifeguard = true;
+            else if (strings::equals_ignoring_case(word, "SunLounger"))
+                fit.lounger = true;
+            else if (strings::equals_ignoring_case(word, "Shower"))
+                fit.shower = true;
             else if (strings::equals_ignoring_case(word, "CentralSolid"))
                 fit.paved_middle = true;
             else if (strings::equals_ignoring_case(word, "CentralWater"))

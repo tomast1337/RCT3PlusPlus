@@ -7,6 +7,7 @@
 // laziness off, but upsets someone who was working well. Every so often they think about it all: idle or
 // worked off their feet, paid too little for it, tired, keen, glad or miserable; one miserable for long
 // thinks of quitting, once, and if it goes on longer still, quits.
+// A park inspector stays as content and as keen as they came, thinks only their reports and never quits.
 #pragma once
 
 #include "save/model/people.hpp"

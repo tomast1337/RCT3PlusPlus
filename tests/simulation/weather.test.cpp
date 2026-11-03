@@ -195,7 +195,7 @@ TEST_CASE("a guest too hot buys an ice cream though not hungry, and it cools the
     CHECK(r.get<Mood>(g).heat.value < 0.1f);
 }
 
-TEST_CASE("a splashing ride leaves its riders damp and cool")
+TEST_CASE("a splashing ride leaves its riders soaked and cool")
 {
     Sandbox park;
     park.path({ 0, 0 }, { 3, 0 });
@@ -206,7 +206,7 @@ TEST_CASE("a splashing ride leaves its riders damp and cool")
     r.get<Mood>(g).heat.value = 0.8f;
     r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
     REQUIRE(park.run_until([&] { return r.get<Attraction>(ride).customers == 1 && r.get<Errand>(g).kind != ErrandKind::Riding; }, 60));
-    CHECK(r.get<Mood>(g).wet.value > 0.2f);
+    CHECK(r.get<Mood>(g).wet.value == doctest::Approx(1));
     CHECK(r.get<Mood>(g).heat.value == 0);
 }
 

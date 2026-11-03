@@ -95,7 +95,7 @@ namespace rct3::park
                 continue;
             if (deck != holds.decks.end() && now[k] > deck->second - kDeckRoom)
                 return true;
-            if (spans != holds.raised.tiles.end() && std::ranges::any_of(spans->second, [&](const SolidSpan& s) { return was[k] <= s.low + kSame && now[k] > s.low + kSame; }))
+            if (spans != holds.raised.tiles.end() && std::ranges::any_of(spans->second, [&](const SolidSpan& s) { return was[k] <= s.low - s.below + kSame && now[k] > s.low - s.below + kSame; }))
                 return true;
         }
         return false;

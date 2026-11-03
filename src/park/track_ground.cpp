@@ -29,8 +29,8 @@ namespace rct3::park
             float floor = std::numeric_limits<float>::max();
             for (const SolidSpan& s : spans)
             {
-                if (cell.max_height() > s.low + kSlack && cell.min_height() < s.high + kGroundCover)
-                    floor = std::min(floor, s.low);
+                if (cell.max_height() > s.low - s.below + kSlack && cell.min_height() < s.high + s.above + kGroundCover)
+                    floor = std::min(floor, s.low - s.below);
             }
             if (floor == std::numeric_limits<float>::max())
                 continue;
@@ -96,8 +96,8 @@ namespace rct3::park
                 continue;
             for (const SolidSpan& s : spans)
             {
-                if (grid.at(col, row).min_height() >= s.high + kGroundCover)
-                    hollows.push_back({ col, row, s.low - kTunnelFloor, s.high });
+                if (grid.at(col, row).min_height() >= s.high + s.above + kGroundCover)
+                    hollows.push_back({ col, row, s.low - s.below - kTunnelFloor, s.high + s.above });
             }
         }
         return hollows;
@@ -109,7 +109,7 @@ namespace rct3::park
         return !solids.tiles.empty() && std::ranges::all_of(solids.tiles, [&](const auto& tile) {
             const auto col = static_cast<std::int32_t>(tile.first & 0xFFFF);
             const auto row = static_cast<std::int32_t>(tile.first >> 16);
-            return grid.contains(col, row) && std::ranges::all_of(tile.second, [&](const SolidSpan& s) { return grid.at(col, row).min_height() >= s.high + kGroundCover; });
+            return grid.contains(col, row) && std::ranges::all_of(tile.second, [&](const SolidSpan& s) { return grid.at(col, row).min_height() >= s.high + s.above + kGroundCover; });
         });
     }
 

@@ -6,6 +6,10 @@
 // thirds of the square they fill, across and along. A path piece may not pass through a solid square's levels, and keeps kPathHeadroom clear
 // over its top for guests to walk.
 //
+// Track keeps kRiderRoom more clear past its levels for the riders: over them, or under them for track whose
+// cars hang below it. Paths, scenery and the ground keep out of that room; other track does not, so pieces
+// stack and cross as closely as their levels allow.
+//
 // Some items never block: fences, which stand along a tile's edges; path pieces, which paths check among themselves; the support columns, which are
 // built again round the paths; the park entrance, which paths run through; and what belongs on or along a path
 // (benches, bins, signs, lamps and the like, litter, where guests walk in), by their category or by being
@@ -45,6 +49,10 @@ namespace rct3::park
         return static_cast<std::uint8_t>(0x10U << (turns & 3));
     }
 
+    /// Room kept clear past a track piece's levels for its riders, in world units: a quarter of a plain piece's
+    /// three levels, so paths and scenery keep off the cars and a tunnel's roof clears them.
+    inline constexpr float kRiderRoom = 0.75f;
+
     /// Every third of a tile, as bits 3 * row + column in the park's own directions.
     inline constexpr std::uint16_t kAllThirds = 0x1FF;
 
@@ -56,6 +64,8 @@ namespace rct3::park
         float high = 0;
         std::uint8_t room = kWholeTile;
         std::uint16_t thirds = kAllThirds;
+        float below = 0; ///< Room kept clear under `low`, for riders (kRiderRoom)
+        float above = 0; ///< Over `high`
     };
 
     /// What fills each tile, by tile (row << 16 | column).

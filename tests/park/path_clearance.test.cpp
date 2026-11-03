@@ -72,6 +72,31 @@ TEST_CASE("a stall blocks paths through it but not over it; a bench never does")
     CHECK(solid_tiles(lamp, lamp_models, g).tiles.empty());
 }
 
+TEST_CASE("track keeps paths and scenery out of its riders' room, over it or under it for hanging cars, but not other track")
+{
+    const save::TerrainGrid g = owned_grid(5, 3);
+    auto [objects, models] = one_item(ItemCategory::TrackPiece);
+    SolidTiles solids = solid_tiles(objects, models, g);
+    CHECK(blocked(solids, { 2, 1 }, 4 + kRiderRoom - 0.25f, 4 + kRiderRoom - 0.25f)); // Over the old limit, under the new
+    CHECK_FALSE(blocked(solids, { 2, 1 }, 4 + kRiderRoom, 4 + kRiderRoom));
+    CHECK_FALSE(blocked(solids, { 2, 1 }, -kPathHeadroom, -kPathHeadroom)); // Under it, as before
+
+    auto [prop, prop_models] = one_item(ItemCategory::SmallScenery);
+    prop[0].base_height = 4; // On its top, in the riders' room
+    CHECK(clash(solid_tiles(prop, prop_models, g), solids, { }, g) == Clash::Solid);
+    auto [above, above_models] = one_item(ItemCategory::TrackPiece);
+    above[0].base_height = 4;
+    CHECK(clash(solid_tiles(above, above_models, g), solids, { }, g) == Clash::None);
+
+    SupportFootprint f;
+    f.points.emplace_back().hanging = true;
+    models.begin()->second.supports = f;
+    solids = solid_tiles(objects, models, g);
+    CHECK_FALSE(blocked(solids, { 2, 1 }, 4, 4)); // Nothing rides over it
+    CHECK(blocked(solids, { 2, 1 }, -kPathHeadroom, -kPathHeadroom));
+    CHECK_FALSE(blocked(solids, { 2, 1 }, -kPathHeadroom - kRiderRoom, -kPathHeadroom - kRiderRoom));
+}
+
 TEST_CASE("a route goes round a stall in its way")
 {
     const save::TerrainGrid g = owned_grid(5, 3);

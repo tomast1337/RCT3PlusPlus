@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// How track meets the ground. Each solid square of a piece either stands wholly over its tile's ground, lies
-// under at least kGroundCover of it all round, as in a tunnel, or passes into it. Where it passes into it,
+// How track meets the ground. Each solid square of a piece, with the riders' room past it (path_clearance.hpp),
+// either stands wholly over its tile's ground, lies under at least kGroundCover of it all round, as in a
+// tunnel, or passes into it. Where it passes into it,
 // the tile's ground is cut down to the square's floor: sharply, the tile's own corners only, so the trench round
 // the piece has walls; smoothly, also the corners of the tiles round it that meet the cut, so they slope down to
 // it. Cutting leaves the ground as it is when the piece is taken away again.

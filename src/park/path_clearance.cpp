@@ -71,6 +71,8 @@ namespace rct3::park
                 default:
                     break;
             }
+            const bool track = m.category == std::to_underlying(ItemCategory::TrackPiece);
+            const bool hanging = m.supports && std::ranges::any_of(m.supports->points, &SupportPoint::hanging);
             for (std::size_t i = 0; i < under.size() && i < m.solid.size(); ++i)
             {
                 const auto& levels = m.solid[i];
@@ -93,7 +95,10 @@ namespace rct3::park
                         thirds |= static_cast<std::uint16_t>(1U << (3 * z + x));
                     }
                 }
-                out.tiles[key_of(under[i].first, under[i].second)].push_back({ base + static_cast<float>((*levels)[0]), base + static_cast<float>((*levels)[1]), room, thirds });
+                SolidSpan span { base + static_cast<float>((*levels)[0]), base + static_cast<float>((*levels)[1]), room, thirds };
+                if (track)
+                    (hanging ? span.below : span.above) = kRiderRoom;
+                out.tiles[key_of(under[i].first, under[i].second)].push_back(span);
             }
         }
         return out;
@@ -105,7 +110,7 @@ namespace rct3::park
         if (found == solids.tiles.end())
             return false;
         // A wall along an edge parts paths there instead (edge_walls.hpp).
-        return std::ranges::any_of(found->second, [&](const SolidSpan& s) { return (s.room & kWholeTile) != 0 && s.low < high + kPathHeadroom && low < s.high; });
+        return std::ranges::any_of(found->second, [&](const SolidSpan& s) { return (s.room & kWholeTile) != 0 && s.low - s.below < high + kPathHeadroom && low < s.high + s.above; });
     }
 
     Clash clash(const SolidTiles& mine, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
@@ -117,7 +122,11 @@ namespace rct3::park
             const auto there = solids.tiles.find(key);
             for (const SolidSpan& s : spans)
             {
-                if (there != solids.tiles.end() && std::ranges::any_of(there->second, [&](const SolidSpan& t) { return (t.room & s.room) != 0 && (t.thirds & s.thirds) != 0 && t.low < s.high - kTopSlack && s.low < t.high - kTopSlack; }))
+                // Track meets track at its levels alone; the riders' room keeps out only what is not track.
+                if (there != solids.tiles.end() && std::ranges::any_of(there->second, [&](const SolidSpan& t) {
+                        const float room = s.below + s.above == 0 || t.below + t.above == 0 ? 1.0f : 0.0f;
+                        return (t.room & s.room) != 0 && (t.thirds & s.thirds) != 0 && t.low - room * t.below < s.high + room * s.above - kTopSlack && s.low - room * s.below < t.high + room * t.above - kTopSlack;
+                    }))
                     return Clash::Solid;
             }
             for (const save::PathTile& path : paths)

@@ -44,9 +44,8 @@ namespace rct3::simulation
             return std::ranges::search(text, word, [](char a, char b) { return std::tolower(static_cast<unsigned char>(a)) == b; }).begin() != text.end();
         }
 
-        /// Drink, food or umbrella, guessed from a name.
-        // shortcut: matches words in item names and kind symbols (Soda:cid), upgrade to the kinds' own food and
-        // drink values once those are read.
+        /// Drink, food or umbrella, guessed from a name, for items whose kind is unknown or neither feeds nor quenches.
+        // shortcut: matches words in item names and kind symbols (Umbrella:cid), upgrade when carried items' kind flags are read.
         std::optional<Product> product_named(std::string_view name)
         {
             for (const std::string_view w : { "drink", "cola", "soda", "juice", "coffee", "lemonade", "shake", "smoothie", "moonshine", "water", "beer", "burdock", "hotchocolate", "hot chocolate" })
@@ -98,12 +97,14 @@ namespace rct3::simulation
             for (const save::StallItem& item : stall.items)
             {
                 const std::string_view name = product_named(item.name) ? std::string_view(item.name) : std::string_view(item.kind_symbol);
-                const auto product = product_named(name);
+                const park::CarriedKind* kind = kind_of(kinds.items, item.kind_symbol);
+                // What it feeds or quenches says what it is; a name only where its kind is unknown or does neither.
+                const auto product = kind && kind->effects[0] > 0 ? std::optional(Product::Food) : kind && kind->effects[1] > 0 ? std::optional(Product::Drink) : product_named(name);
                 if (!product)
                     continue;
                 Ware& ware = menu.emplace_back(Ware { *product, serve_named(name), { item.price }, item.kind_symbol });
                 // An extra goes on when the stall offers it and it is ticked on the item, or the guest picks.
-                if (const park::CarriedKind* kind = kind_of(kinds.items, item.kind_symbol))
+                if (kind)
                 {
                     ware.extras = static_cast<std::uint8_t>(std::min<std::size_t>(kind->extras.size(), 32));
                     for (std::size_t i = 0; i < ware.extras; ++i)

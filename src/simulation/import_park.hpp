@@ -167,6 +167,14 @@ namespace rct3::simulation
     /// The kind of path item guests react to that an item of `category` and `feature` stands as: effects and
     /// animatronics, or a path feature guests know. Nothing for the rest, bins, benches and signs among them.
     [[nodiscard]] std::optional<PathItemKind> sight_of(std::uint32_t category, park::PathFeature feature);
+    /// What an item of `category` and `feature` adds to the scenery round the path tiles near it: plants least,
+    /// fountains, effects and animatronics most; nothing for what is not scenery.
+    [[nodiscard]] float scenery_weight(std::uint32_t category, park::PathFeature feature);
+    /// Sets SceneryNear from `objects`, each adding what `weight_of` gives it to the path tiles within reach of
+    /// its tile. Call after import_paths.
+    void import_scenery(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<float(const save::PlacedObject&)>& weight_of);
+    /// Adds `object`, of `weight`, to SceneryNear.
+    void add_scenery(SimWorld& world, const save::PlacedObject& object, float weight);
     /// The objects `sight_of` gives a kind, each on the path tile it stands on or one beside it, for guests to
     /// react to. Returns how many came over. Call after import_paths.
     std::size_t import_sights(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<std::optional<PathItemKind>(const save::PlacedObject&)>& sight_of);

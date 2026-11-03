@@ -1403,6 +1403,10 @@ namespace rct3::scene
                     const auto model = scene.models.find(park::model_ref(o));
                     return model == scene.models.end() ? std::nullopt : simulation::sight_of(model->second.category, model->second.feature);
                 });
+                simulation::import_scenery(scene.sim, scene.objects, [&](const save::PlacedObject& o) {
+                    const auto model = scene.models.find(park::model_ref(o));
+                    return model == scene.models.end() ? 0.0f : simulation::scenery_weight(model->second.category, model->second.feature);
+                });
                 simulation::import_gate(scene.sim, scene.objects, [&](const save::PlacedObject& o) -> std::optional<std::array<std::int32_t, 2>> {
                     const auto model = scene.models.find(park::model_ref(o));
                     if (model == scene.models.end() || model->second.category != std::to_underlying(park::ItemCategory::ParkEntrance))

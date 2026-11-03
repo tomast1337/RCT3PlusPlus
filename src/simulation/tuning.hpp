@@ -541,6 +541,20 @@ namespace rct3::simulation::tuning
         Share bad { 3.0f / 6 };                                                         ///< And from which dirty
     };
 
+    /// What guests make of the park round them, and the scenery they pass.
+    struct Surroundings
+    {
+        Seconds look { 90 };         ///< Chosen by eye: between a guest's looks at what is round them
+        std::int32_t reach = 2;      ///< Chosen by eye: tiles round a path tile whose scenery counts for it
+        float plant = 1;             ///< Chosen by eye: what a tree, shrub or flower bed adds
+        float ornament = 1.5f;       ///< Chosen by eye: what other scenery adds
+        float feature = 4;           ///< Chosen by eye: what a fountain, effect or animatronic adds
+        float great = 20;            ///< Chosen by eye: scenery round a tile from which guests think it great
+        Share great_cheer { 0.04f }; ///< Chosen by eye: happiness from thinking the scenery great
+        Share tidy_cheer { 0.02f };  ///< Chosen by eye: happiness from thinking the park tidy
+        Chance stop { 0.02 };        ///< Chosen by eye: of stopping to watch an effect or animatronic passed; most walk on
+    };
+
     struct Tuning
     {
         Needs needs;
@@ -575,6 +589,7 @@ namespace rct3::simulation::tuning
         Holding holding;
         Slides slides;
         Pools pools;
+        Surroundings surroundings;
     };
 
 } // namespace rct3::simulation::tuning

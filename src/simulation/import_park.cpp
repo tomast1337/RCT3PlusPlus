@@ -990,6 +990,48 @@ namespace rct3::simulation
         return std::nullopt;
     }
 
+    float scenery_weight(std::uint32_t category, park::PathFeature feature)
+    {
+        using enum park::ItemCategory;
+        const auto is = [&](park::ItemCategory c) { return category == std::to_underlying(c); };
+        if (is(Tree) || is(Shrub) || is(Flowers))
+            return kTuning.surroundings.plant;
+        if (is(SmallScenery) || is(MediumScenery))
+            return kTuning.surroundings.ornament;
+        if (is(Animatronic) || is(Effect) || (is(PathFeature) && feature == park::PathFeature::Fountain))
+            return kTuning.surroundings.feature;
+        return 0;
+    }
+
+    void import_scenery(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<float(const save::PlacedObject&)>& weight_of)
+    {
+        std::map<std::pair<std::int32_t, std::int32_t>, float> by_tile;
+        for (const save::PlacedObject& o : objects)
+            if (const float weight = o.hidden ? 0 : weight_of(o); weight > 0)
+                by_tile[{ o.col, o.row }] += weight;
+        const auto& nodes = world.paths.nodes();
+        SceneryNear near { .by_node = std::vector<float>(nodes.size(), 0.0f) };
+        const std::int32_t reach = kTuning.surroundings.reach;
+        for (std::size_t n = 0; n < nodes.size(); ++n)
+            for (std::int32_t dc = -reach; dc <= reach; ++dc)
+                for (std::int32_t dr = -reach; dr <= reach; ++dr)
+                    if (const auto found = by_tile.find({ nodes[n].tile.col + dc, nodes[n].tile.row + dr }); found != by_tile.end())
+                        near.by_node[n] += found->second;
+        world.registry.ctx().insert_or_assign(std::move(near));
+    }
+
+    void add_scenery(SimWorld& world, const save::PlacedObject& object, float weight)
+    {
+        if (weight <= 0 || object.hidden)
+            return;
+        const auto& nodes = world.paths.nodes();
+        auto& near = world.registry.ctx().emplace<SceneryNear>().by_node;
+        near.resize(std::max(near.size(), nodes.size()), 0.0f);
+        for (std::size_t n = 0; n < nodes.size(); ++n)
+            if (std::abs(nodes[n].tile.col - object.col) <= kTuning.surroundings.reach && std::abs(nodes[n].tile.row - object.row) <= kTuning.surroundings.reach)
+                near[n] += weight;
+    }
+
     std::size_t import_sights(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<std::optional<PathItemKind>(const save::PlacedObject&)>& sight_of)
     {
         std::size_t added = 0;

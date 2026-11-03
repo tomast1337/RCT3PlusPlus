@@ -985,6 +985,28 @@ namespace rct3::simulation
                 auto [errand, stride, mood, dice, needs] = guests_view.get(g);
                 if (!walking(errand.kind) || stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
                     continue;
+                // Every so often, once the park has run a while, a guest takes in what is round them, walking or
+                // stopped, unless taken up with a show: plenty of scenery, or else a tidy, unspoilt path. Each at
+                // their own moment, by who they are.
+                const float look = kTuning.surroundings.look.value;
+                const float phase = static_cast<float>(entt::to_integral(g) % 101) / 101 * look;
+                if (now > look && r.all_of<Visitor>(g) && !r.any_of<Watching, Gesture>(g) && std::floor((now + phase) / look) != std::floor((now - dt + phase) / look))
+                {
+                    const NodeId here = stride.from;
+                    const auto* near = r.ctx().find<SceneryNear>();
+                    const bool clean = litter_on(here) == 0 && std::ranges::none_of(paths.nodes()[here].next, [&](NodeId m) { return m != kNoNode && litter_on(m) > 0; });
+                    const bool whole = std::ranges::none_of(items(here), [&](entt::entity i) { return r.get<PathItem>(i).broken; });
+                    if (near != nullptr && here < near->by_node.size() && near->by_node[here] >= kTuning.surroundings.great)
+                    {
+                        think(r, g, ThoughtKind::GreatScenery, entt::null, now);
+                        mood.happiness.value = clamp01(mood.happiness.value + kTuning.surroundings.great_cheer.value);
+                    }
+                    else if (clean && whole)
+                    {
+                        think(r, g, ThoughtKind::ReallyTidy, entt::null, now);
+                        mood.happiness.value = clamp01(mood.happiness.value + kTuning.surroundings.tidy_cheer.value);
+                    }
+                }
                 // Sitting rests a guest, watching cheers them; then they walk on.
                 if (auto* linger = r.try_get<Linger>(g))
                 {
@@ -1039,7 +1061,8 @@ namespace rct3::simulation
                         ++seated[here];
                         continue;
                     }
-                    if (sight != items(here).end() && random::chance(dice.state, kTuning.facilities.watch_chance.value))
+                    // Most walk past an effect or animatronic, taking it in as scenery; a view is worth a stop.
+                    if (sight != items(here).end() && random::chance(dice.state, r.get<PathItem>(*sight).kind == PathItemKind::Sight ? kTuning.surroundings.stop.value : kTuning.facilities.watch_chance.value))
                     {
                         const PathItemKind kind = r.get<PathItem>(*sight).kind;
                         r.emplace<Linger>(g, kind, kTuning.facilities.watch.value);

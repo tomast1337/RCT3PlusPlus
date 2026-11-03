@@ -492,10 +492,14 @@ namespace rct3::scene
         ovl::RgbaImage flow_picture;     ///< The flowing water's, still; empty without one (park/water_flow.hpp)
         std::uint32_t flow_shift = 0;    ///< Rows it is rolled by on the GPU
         park::ObjectMesh waterfall_mesh; ///< The waterfalls' water, built again each frame as it runs
-        /// Water a park object shoots: a cannon a guest fires.
+        /// Water a park object shoots: a cannon a guest fires, or a jumping fountain at the next.
         struct Jet
         {
             std::size_t object = 0;                      ///< Its place in `objects`
+            std::optional<std::size_t> to;               ///< Of a jump, the fountain it lands in, by place in `objects`
+            float pours = 0;                             ///< Of a jump, park_clock until which water leaves the nozzle
+            float lands = 0;                             ///< And when it lands
+            bool landed = false;                         ///< A jump's landing handed on to the next fountain
             park::WaterJet water { 1.6f, 0.05f, 0.12f }; ///< Chosen by eye: a cannon's, a hose-thick stream that frays
             float heading = 0;                           ///< Where the cannon points now, round the vertical, 0 along +Z, as Pose's
             float yaw = 0;                               ///< Its gun's turn from standing, round the vertical
@@ -505,6 +509,7 @@ namespace rct3::scene
         };
         std::vector<Jet> jets;
         float jets_clock = 0;                                 ///< park_clock when the jets last moved
+        float jumps_ended = 0;                                ///< park_clock when the jumping fountains last had a jump in the air
         render::PipelineHandle waterfall_added_pipeline;      ///< Its pictures with a second added
         render::PipelineHandle waterfall_multiplied_pipeline; ///< And with a second multiplying them
         park::SkyModels sky;

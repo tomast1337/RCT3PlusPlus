@@ -676,6 +676,11 @@ namespace rct3::park
                     for (const auto& seat : seats)
                         model.seat_places.push_back(seat.second);
                 }
+                // A jumping fountain's nozzles, which its jets leave from and land in.
+                if (model.nozzles.empty())
+                    for (const ovl::ShapeEffect& e : shape->effects)
+                        if (e.name.size() > kNozzle.size() && strings::equals_ignoring_case(e.name.substr(0, kNozzle.size()), kNozzle))
+                            model.nozzles.emplace_back(column_matrix(e.transform)[3]);
                 if (model.lights.empty() || model.effects.empty())
                 {
                     std::vector<NamedPlace> places;

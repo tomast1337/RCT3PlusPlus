@@ -59,6 +59,35 @@ TEST_CASE("a guest will not pay more for a toilet than their need makes it worth
     }
 }
 
+TEST_CASE("a guest stays at a toilet or first aid the longer the more they needed it")
+{
+    // How long the guest stands at the facility, from paying to walking on.
+    const auto stay = [](Product product, float need) {
+        Sandbox park;
+        park.path({ 0, 0 }, { 6, 0 });
+        park.shop("Facility", product, { 6, 0 }, 0);
+        const auto g = park.guest({ 0, 0 }, { .bladder = product == Product::Toilet ? need : 0.0f, .nausea = product == Product::FirstAid ? need : 0.0f });
+        auto& r = park.world().registry;
+        const auto buying = [&] { return r.get<Errand>(g).kind == ErrandKind::Buying; };
+        REQUIRE(park.run_until(buying, 60));
+        float seconds = 0;
+        while (buying() && seconds < 60)
+        {
+            park.run_seconds(0.5f);
+            seconds += 0.5f;
+        }
+        return seconds;
+    };
+    // Not quite sick enough to throw up on the way.
+    for (const auto [product, most] : { std::pair { Product::Toilet, 1.0f }, std::pair { Product::FirstAid, 0.75f } })
+    {
+        const float longest = stay(product, most);
+        CHECK(longest >= kTuning.facilities.relief.value * most - 1);
+        CHECK(stay(product, 0.6f) < longest - 1);
+        CHECK(stay(product, 0.6f) >= kTuning.facilities.served.value);
+    }
+}
+
 TEST_CASE("tired guests sit on the benches they pass, as many as there are seats, and rest")
 {
     Sandbox park;

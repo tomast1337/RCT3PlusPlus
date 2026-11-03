@@ -3101,10 +3101,11 @@ namespace rct3::simulation
             if (auto* shop = r.try_get<Shop>(arrived[i]))
             {
                 errand = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
-                // Those who bought stand at the counter a moment, facing the stall, and pay; the rest of a party
-                // waits nearby (5.).
-                const auto served = [&](entt::entity m) {
-                    r.get<Errand>(m) = { .kind = ErrandKind::Buying, .target = arrived[i], .rest = ticks(kTuning.facilities.served.value) };
+                // Those who bought stand at the counter a moment, facing the stall, and pay; at a toilet or first
+                // aid the longer the more they needed it. The rest of a party waits nearby (5.).
+                const auto need = [&](entt::entity m) { return r.all_of<Staff>(m) ? 0.0f : shop->product == Product::Toilet ? r.get<Needs>(m).bladder.value : shop->product == Product::FirstAid ? r.get<Mood>(m).nausea.value : 0.0f; };
+                const auto served = [&](entt::entity m, float needed) {
+                    r.get<Errand>(m) = { .kind = ErrandKind::Buying, .target = arrived[i], .rest = ticks(std::max(kTuning.facilities.served.value, needed * kTuning.facilities.relief.value)) };
                     auto& stride = r.get<Stride>(m);
                     const NodeId at = r.get<Attraction>(arrived[i]).entrance;
                     stride.route.clear();
@@ -3118,11 +3119,11 @@ namespace rct3::simulation
                     place(paths, stride, pose);
                 };
                 // An inspector only stands at the counter a while; they judged its prices on the way.
-                if (r.all_of<Staff>(guest) || buy(guest, arrived[i], *shop, !r.all_of<Member>(guest)))
-                    served(guest);
+                if (const float needed = need(guest); r.all_of<Staff>(guest) || buy(guest, arrived[i], *shop, !r.all_of<Member>(guest)))
+                    served(guest, needed);
                 for (const entt::entity m : followers)
-                    if (buy(m, arrived[i], *shop, false))
-                        served(m);
+                    if (const float needed = need(m); buy(m, arrived[i], *shop, false))
+                        served(m, needed);
             }
             else if (r.all_of<ParkGate>(arrived[i]))
             {

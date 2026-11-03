@@ -626,7 +626,7 @@ namespace rct3::park
                 }
         }
         model.ground_height = (item->flags & ovl::kItemOnGroundHeight) != 0;
-        model.level_paths_only = (item->flags & ovl::kItemLevelPathsOnly) != 0;
+        model.path_rules = { .level_only = (item->flags & ovl::kItemLevelPathsOnly) != 0, .off_queues = (item->flags & ovl::kItemOffQueues) != 0, .queues_only = (item->flags & ovl::kItemQueuesOnly) != 0 };
         model.holds_ground = (item->flags & ovl::kItemHoldsGround) != 0;
         // Buildings, rides and path pieces carry the bit too but stay rigid; only plants bend.
         model.fits_ground = (item->flags & ovl::kItemFitsGround) != 0 && item->type <= std::to_underlying(ItemCategory::Flowers);

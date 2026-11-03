@@ -71,6 +71,10 @@ namespace rct3::ovl
 
     /// SceneryItem::flags bit of path items that stand only on level paths: benches and most signs.
     inline constexpr std::uint32_t kItemLevelPathsOnly = 1u << 0;
+    /// SceneryItem::flags bits of path items that stand only off queues, or only on queues. No item the game ships
+    /// sets either; custom items may.
+    inline constexpr std::uint32_t kItemQueuesOnly = 1u << 17;
+    inline constexpr std::uint32_t kItemOffQueues = 1u << 18;
     /// SceneryItem::flags bit set on flat rides, stalls, shops and a few animated statues: the ground under them
     /// is not reshaped.
     inline constexpr std::uint32_t kItemHoldsGround = 1u << 3;

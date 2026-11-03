@@ -21,7 +21,7 @@ namespace rct3::park
         constexpr std::int32_t kSameLevel = 2; ///< Units between two items' bases that still clash
     } // namespace
 
-    std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, Positioning positioning, std::int32_t turns, bool level_only)
+    std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, Positioning positioning, std::int32_t turns, PathRules rules)
     {
         if (grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
             return std::nullopt;
@@ -64,28 +64,43 @@ namespace rct3::park
         // A queue on the ground stores a slope of its own, but lies on the land as a ground path does.
         const std::uint8_t slope = path->elevation ? path->elevation->slope : 0;
         const bool sloped = slope != 0 && slope != save::kSlopeOnGround;
+        const bool queue = path->kind == save::PathKind::Queue;
+        const bool forbidden = queue ? rules.off_queues : rules.queues_only;
         if (positioning == Positioning::PathCentre)
         {
-            spot.refused = sloped;
+            spot.refused = sloped || forbidden;
             return spot;
         }
-        // On a sloped deck an item kept to level paths may stand only at an end of the slope, without falling back.
-        const bool ends_only = level_only && sloped;
+        // On a sloped deck an item kept to level paths may stand only at an end of the slope.
+        const bool ends_only = rules.level_only && sloped;
         // The stored direction runs along columns (0, 1) or rows (2, 3); sides 1 and 3 face along columns.
         const auto at_end = [&](std::uint8_t side) { return (side % 2 == 1) == (path->direction < 2); };
 
-        // Whether a path across `side` meets this one's edge there.
+        // A path's height at `side`: its edge there, or its middle where it has none, as along a queue's fences.
+        const auto level = [&](const save::PathTile& p, std::uint8_t side) -> std::optional<float> {
+            if (const auto edge = edge_height(p, grid, side))
+                return edge;
+            float sum = 0;
+            int count = 0;
+            for (std::uint8_t s = 0; s < 4; ++s)
+                if (const auto edge = edge_height(p, grid, s))
+                {
+                    sum += *edge;
+                    ++count;
+                }
+            return count > 0 ? std::optional(sum / static_cast<float>(count)) : std::nullopt;
+        };
+        // Whether a path across `side` meets this one there, at about its height: joined, or the next lane of a queue.
         const auto joined = [&](std::uint8_t side) {
-            if (!edges[side])
-                return false;
+            const auto here = level(*path, side);
             const int col = tile.col + kSteps[side][0];
             const int row = tile.row + kSteps[side][1];
-            return std::ranges::any_of(paths, [&](const save::PathTile& p) {
-                if (p.col != col || p.row != row)
-                    return false;
-                const auto there = edge_height(p, grid, static_cast<std::uint8_t>((side + 2) % 4));
-                return there && std::abs(*there - *edges[side]) < kSameHeight;
-            });
+            return here && std::ranges::any_of(paths, [&](const save::PathTile& p) {
+                       if (p.col != col || p.row != row)
+                           return false;
+                       const auto there = level(p, static_cast<std::uint8_t>((side + 2) % 4));
+                       return there && std::abs(*there - *here) < kSameHeight;
+                   });
         };
         const float in_x = fx - static_cast<float>(tile.col);
         const float in_z = fz - static_cast<float>(tile.row);
@@ -100,7 +115,7 @@ namespace rct3::park
             if (joined(side) == wants_joined && (!ends_only || at_end(side)) && (!best || away[side] < away[*best]))
                 best = side;
         }
-        spot.refused = ends_only && !best;
+        spot.refused = !best || forbidden;
         const std::uint8_t side = best.value_or(*any);
         spot.turns = kTurnsFacing[side];
         if (edges[side])

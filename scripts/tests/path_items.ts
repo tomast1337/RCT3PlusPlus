@@ -2,7 +2,8 @@
 //
 // Places the things guests use on paths, as a player would, on the game's blank landscape: a bench, a bin, a
 // lamp and two signs. Each must be refused on the grass, go on its own tile of the road in from the park's
-// entrance, and then be refused where it already stands.
+// entrance, and then be refused where it already stands. On a slope a bench keeps to its ends, and on a queue lane
+// boxed in by paths it finds no side.
 //
 //   ./nob script scripts/tests/path_items.ts -- --no-audio
 
@@ -79,6 +80,56 @@ for (const [symbol, problem] of [["Bin", "none"], ["Bench", "blocked"]]) {
     expect(on.problem === problem, `${symbol} on the slope ${problem}, not ${on.problem}`);
 }
 await screenshot("path_items_slope");
+build.stop();
+await frames(1);
+
+// Two queue lanes beside the road, side by side, further up it. A bench needs a side of its tile no path meets: on
+// the inner lane, with the road on one side, the outer lane on the other and the lane on at its ends, there is none;
+// on the outer lane its outer side is free.
+const lane = paths.filter((p) => p.col === gate.col && p.row < gate.row - 1).sort((a, b) => b.row - a.row)[symbols.length + 6];
+expect(lane !== undefined, "road left for the queues");
+camera.look({ col: lane.col + 2, row: lane.row + 1.5 }, { col: lane.col + 2, row: lane.row + 9.5, up: 25 });
+await frames(3);
+if (ui.find("footpaths/route") === undefined)
+    await ui.click("tools/Paths/Obj_Paths");
+await until(() => ui.find("footpaths/route") !== undefined, 120, "the path panel");
+await ui.toggle("footpaths/follow", false);
+await ui.click("footpaths/paths");
+await frames(2);
+const pathStyles = ui.children("footpaths/body") ?? [];
+await ui.click("footpaths/queues");
+await frames(2);
+const queueStyle = (ui.children("footpaths/body") ?? []).find((n) => !pathStyles.includes(n));
+expect(queueStyle !== undefined, `a queue style, not only ${pathStyles}`);
+await ui.click(`footpaths/body/${queueStyle}`);
+await frames(2);
+const queued = (c: number, r: number) => map.paths().some((p) => p.col === c && p.row === r && p.queue);
+for (const col of [lane.col + 1, lane.col + 2]) {
+    await ui.toggle("footpaths/route", false);
+    const from = map.screen(col, lane.row)!;
+    await pointer.click(from.x, from.y);
+    await ui.toggle("footpaths/route", true);
+    const to = map.screen(col, lane.row + 2)!;
+    for (let wait = 1; wait <= 96 && !queued(col, lane.row + 2); wait *= 2) {
+        pointer.move(to.x, to.y);
+        await frames(wait);
+        await pointer.click(to.x, to.y);
+    }
+    await ui.toggle("footpaths/route", false);
+    for (let row = lane.row; row <= lane.row + 2; ++row)
+        expect(queued(col, row), `a queue on ${col},${row}, laid ${JSON.stringify(map.paths().filter((p) => p.queue))}`);
+}
+await ui.click("footpaths/close");
+build.stop();
+await frames(5);
+expect(build.pick("Style/Vanilla/Style", "Bench"), "the bench in the scenery lists");
+await frames(2);
+const inner = await hover(lane.col + 1, lane.row + 1);
+await screenshot("path_items_queue_refused");
+const outer = await hover(lane.col + 2, lane.row + 1);
+log("bench on the inner lane", inner.problem, "on the outer lane", outer.problem);
+expect(inner.problem === "blocked", `a bench refused between the road and the other lane, not ${inner.problem}`);
+expect(outer.problem === "none", `a bench placeable on the outer lane, not ${outer.problem}`);
 build.stop();
 await frames(1);
 

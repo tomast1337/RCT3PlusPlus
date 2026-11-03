@@ -29,6 +29,17 @@ namespace
         return p;
     }
 
+    /// A queue on the ground at `col`, `row`, its line running along the columns.
+    save::PathTile queue(int col, int row)
+    {
+        save::PathTile p = ground(col, row);
+        p.kind = save::PathKind::Queue;
+        p.queue = save::PathQueueInfo { .start_direction = 0, .end_direction = 1 };
+        p.elevation = save::PathElevation { };
+        p.elevation->slope = save::kSlopeOnGround;
+        return p;
+    }
+
     /// The world point at column and row with fractions, `y` high.
     glm::vec3 at(float col, float row, float y = 0)
     {
@@ -63,7 +74,7 @@ TEST_CASE("a sign where paths join takes a joined side, and the middle keeps the
     CHECK(furniture_spot(kLine, grid, at(2.9f, 1.6f), Positioning::PathCentre, 3)->turns == 3);
 }
 
-TEST_CASE("off the paths nothing goes, in a plaza the nearest side, on a deck its height")
+TEST_CASE("off the paths nothing goes, in a plaza only an edge tile's free side, on a deck its height")
 {
     const save::TerrainGrid grid = flat_grid(8, 8);
     CHECK_FALSE(furniture_spot(kLine, grid, at(5.5f, 5.5f), Positioning::PathSide, 0));
@@ -73,7 +84,11 @@ TEST_CASE("off the paths nothing goes, in a plaza the nearest side, on a deck it
     for (int col = 1; col <= 3; ++col)
         for (int row = 1; row <= 3; ++row)
             plaza.push_back(ground(col, row));
-    CHECK(faced_side(furniture_spot(plaza, grid, at(2.9f, 2.5f), Positioning::PathSide, 0)->turns) == 1);
+    // Every side of the middle tile is joined: refused. An edge tile keeps its outer side.
+    CHECK(furniture_spot(plaza, grid, at(2.9f, 2.5f), Positioning::PathSide, 0)->refused);
+    const auto edge = furniture_spot(plaza, grid, at(3.9f, 2.5f), Positioning::PathSide, 0);
+    CHECK_FALSE(edge->refused);
+    CHECK(faced_side(edge->turns) == 1);
 
     // A deck over the ground path on the same tile, taken when the pointer is up at it.
     std::vector<save::PathTile> stacked = kLine;
@@ -130,23 +145,50 @@ TEST_CASE("on a sloped deck a level-only item keeps to the slope's ends, and not
     const std::vector<save::PathTile> paths { slope };
     const glm::vec3 long_side = at(2.5f, 1.9f, 2.5f);
 
-    const auto bin = furniture_spot(paths, grid, long_side, Positioning::PathSide, 0, false);
+    const auto bin = furniture_spot(paths, grid, long_side, Positioning::PathSide, 0);
     REQUIRE(bin);
     CHECK_FALSE(bin->refused);
     CHECK(faced_side(bin->turns) == 0); // The long side pointed at
 
-    const auto bench = furniture_spot(paths, grid, long_side, Positioning::PathSide, 0, true);
+    const auto bench = furniture_spot(paths, grid, long_side, Positioning::PathSide, 0, { .level_only = true });
     REQUIRE(bench);
     CHECK_FALSE(bench->refused);
     CHECK(faced_side(bench->turns) % 2 == 1); // An end, along the columns
 
     // A sign wants a joined side, and no path joins this slope's ends.
-    CHECK(furniture_spot(paths, grid, long_side, Positioning::PathSideJoin, 0, true)->refused);
-    CHECK(furniture_spot(paths, grid, long_side, Positioning::PathCentre, 0, false)->refused);
+    CHECK(furniture_spot(paths, grid, long_side, Positioning::PathSideJoin, 0, { .level_only = true })->refused);
+    CHECK(furniture_spot(paths, grid, long_side, Positioning::PathCentre, 0)->refused);
 
     // Level, the same deck takes them all as before.
     std::vector<save::PathTile> level = paths;
     level[0].elevation->slope = 0;
-    CHECK(faced_side(furniture_spot(level, grid, long_side, Positioning::PathSide, 0, true)->turns) == 0);
-    CHECK_FALSE(furniture_spot(level, grid, long_side, Positioning::PathCentre, 0, false)->refused);
+    CHECK(faced_side(furniture_spot(level, grid, long_side, Positioning::PathSide, 0, { .level_only = true })->turns) == 0);
+    CHECK_FALSE(furniture_spot(level, grid, long_side, Positioning::PathCentre, 0)->refused);
+}
+
+TEST_CASE("an item's data may keep it off queues, or on queues only")
+{
+    const save::TerrainGrid grid = flat_grid(8, 8);
+    const std::vector<save::PathTile> paths { queue(2, 1), ground(5, 1) };
+    for (const Positioning positioning : { Positioning::PathSide, Positioning::PathCentre })
+    {
+        CHECK_FALSE(furniture_spot(paths, grid, at(2.5f, 1.9f), positioning, 0)->refused);
+        CHECK(furniture_spot(paths, grid, at(2.5f, 1.9f), positioning, 0, { .off_queues = true })->refused);
+        CHECK_FALSE(furniture_spot(paths, grid, at(2.5f, 1.9f), positioning, 0, { .queues_only = true })->refused);
+        CHECK(furniture_spot(paths, grid, at(5.5f, 1.9f), positioning, 0, { .queues_only = true })->refused);
+        CHECK_FALSE(furniture_spot(paths, grid, at(5.5f, 1.9f), positioning, 0, { .off_queues = true })->refused);
+    }
+}
+
+TEST_CASE("between a road and the next lane of a queue a bench finds no side")
+{
+    const save::TerrainGrid grid = flat_grid(8, 8);
+    // A road along row 0, and two queue lanes along rows 1 and 2.
+    std::vector<save::PathTile> paths;
+    for (int col = 1; col <= 3; ++col)
+        paths.insert(paths.end(), { ground(col, 0), queue(col, 1), queue(col, 2) });
+    CHECK(furniture_spot(paths, grid, at(2.5f, 1.9f), Positioning::PathSide, 0)->refused);
+    const auto outer = furniture_spot(paths, grid, at(2.5f, 2.1f), Positioning::PathSide, 0);
+    CHECK_FALSE(outer->refused);
+    CHECK(faced_side(outer->turns) == 0); // Its outer side
 }

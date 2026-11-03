@@ -563,6 +563,7 @@ namespace rct3::scene
             ui::PersonFacts f;
             f.people = &scene.people;
             f.rides = &scene.rides;
+            f.objects = scene.objects;
             if (shown >= scene.shown_people.size())
                 return f;
             const ShownPerson& p = scene.shown_people[shown];
@@ -3230,7 +3231,9 @@ namespace rct3::scene
                         const float newest = std::ranges::max(slots, { }, &save::Thought::time).time;
                         const auto* about = scene.sim.registry.valid(t.about) ? scene.sim.registry.try_get<simulation::Attraction>(t.about) : nullptr;
                         std::shift_right(slots.begin(), slots.end(), 1);
-                        slots[0] = { .about = { about != nullptr ? about->saved : 0 }, .id = std::to_underlying(t.kind), .time = newest + 1, .variant = static_cast<std::int32_t>(t.variant) };
+                        // A thought about a path item is about the placed object it stands as.
+                        const auto* item = about == nullptr && scene.sim.registry.valid(t.about) ? scene.sim.registry.try_get<simulation::PathItem>(t.about) : nullptr;
+                        slots[0] = { .about = { about != nullptr ? about->saved : item != nullptr ? item->object : 0 }, .id = std::to_underlying(t.kind), .time = newest + 1, .variant = static_cast<std::int32_t>(t.variant) };
                         // shortcut: the message names what they thought about but cannot take the view to the
                         // person; add it once messages open people.
                         if (std::string key = ui::thought_text_key(*assets.strings, slots[0].id, slots[0].variant); person.thoughts_to_console && !key.empty())

@@ -575,6 +575,8 @@ namespace rct3::simulation::tuning
         Chance fire_cannon { 0.2 };      ///< Chosen by eye: of taking a free water cannon passed
         Seconds firing { 30 };           ///< Chosen by eye: a guest fires one for
         Share view_cheer { 0.05f };      ///< Chosen by eye: happiness from a fine view
+        std::int32_t earshot = 2;        ///< Chosen by eye: tiles from a loudspeaker within which guests hear it
+        Chance music_thought { 0.15 };   ///< Chosen by eye: of liking its music, on each tile walked in earshot
     };
 
     struct Tuning

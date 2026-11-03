@@ -168,3 +168,26 @@ TEST_CASE("path items are told apart by the setting their item's data names")
     CHECK(sight_of(std::to_underlying(ItemCategory::Animatronic), PathFeature::None) == PathItemKind::Sight);
     CHECK(sight_of(std::to_underlying(ItemCategory::Bench), PathFeature::None) == std::nullopt);
 }
+
+TEST_CASE("guests passing jumping fountains turn to look, and some like them, without stopping to watch")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 1, 0 });
+    park.item(PathItemKind::Fountain, { 0, 0 });
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 6; ++i)
+        guests.push_back(park.guest({ 1, 0 }));
+    auto& r = park.world().registry;
+    bool glanced = false;
+    for (int t = 0; t < 600; ++t)
+    {
+        park.run(1);
+        glanced = glanced || std::ranges::any_of(guests, [&](entt::entity g) { return r.all_of<Gesture>(g) && r.get<Gesture>(g).kind == GestureKind::Glance; });
+        CHECK(r.view<Linger>().empty());
+    }
+    CHECK(glanced);
+    CHECK(std::ranges::any_of(guests, [&](entt::entity g) {
+        const auto* thoughts = r.try_get<Thoughts>(g);
+        return thoughts != nullptr && std::ranges::contains(thoughts->recent, ThoughtKind::JumpingFountainsGood, &Thought::kind);
+    }));
+}

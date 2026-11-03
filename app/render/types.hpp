@@ -360,6 +360,10 @@ namespace rct3::render
         /// with the water the line of sight crosses. Its vertices carry the water's colour and, as their depth,
         /// the height of the surface over the eye.
         bool underwater = false;
+        /// A slide's flowing water (park/water_flow.hpp): its vertices are an object's, and the texture is its
+        /// picture, moved along its v by `scroll`'s fraction. Neither the mirror nor the scene behind is read.
+        bool flow = false;
+        float scroll = 0;
     };
 
     /// What the Occlusion shader needs. Depths are as the depth buffer holds them, 0 near to 1 far.

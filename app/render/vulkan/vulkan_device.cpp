@@ -62,9 +62,10 @@ namespace rct3::render::vulkan
                 const float shadow = l.shadow_map && l.shadow_view ? 1 + (before ? std::clamp(l.shadow_before, 0.0f, 1.0f) : 0.0f) : 0.0f;
                 return { command.transform, glm::vec4(l.sun_direction, shadow), glm::vec4(l.sun, l.haze_rate), glm::vec4(l.sky, (command.extra_textures[0] ? 1.0f : 0.0f) + (command.extra_textures[1] ? 2.0f : 0.0f) + 4.0f * static_cast<float>(std::clamp(l.surface_detail, 0, 2)) + (l.lamps ? 16.0f : 0.0f) + (l.ghost ? 32.0f : 0.0f) + (l.cut_clear ? 64.0f : 0.0f) + (command.scroll - std::floor(command.scroll))), glm::vec4(l.ground, haze) };
             }
+            // sky.w: the flags, plus the scroll as its fraction (water.slang).
             const WaterView& w = command.water;
             const bool shadow = l.shadow_map && l.shadow_view;
-            const auto flags = static_cast<float>((w.reflection ? 1 : 0) | (w.refraction ? 2 : 0) | (w.waves ? 4 : 0) | (w.foam ? 8 : 0) | (w.ripples ? 16 : 0) | (w.underwater ? 32 : 0) | (shadow ? 64 : 0) | (w.shafts ? 128 : 0));
+            const auto flags = static_cast<float>((w.reflection ? 1 : 0) | (w.refraction ? 2 : 0) | (w.waves ? 4 : 0) | (w.foam ? 8 : 0) | (w.ripples ? 16 : 0) | (w.underwater ? 32 : 0) | (shadow ? 64 : 0) | (w.shafts ? 128 : 0) | (w.flow ? 256 : 0)) + (w.scroll - std::floor(w.scroll));
             return { command.transform, glm::vec4(w.eye, w.time), glm::vec4(l.sun_direction, w.near), glm::vec4(l.sun, w.far), glm::vec4(l.sky, flags) };
         }
 

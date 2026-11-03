@@ -136,6 +136,9 @@ namespace rct3::scene
             // Depth-only parts are left to their own pass, after the solid ones.
             const auto object_pipeline = [&](const park::ObjectBatch& b) { return b.blend == park::PartBlend::DepthOnly ? render::PipelineHandle { } : sided(pipeline_for(scene.steady_objects, b.blend, b.texture), b); };
             const auto depth_pipeline = [&](const park::ObjectBatch& b) { return b.blend == park::PartBlend::DepthOnly ? sided(scene.depth_only_pipeline, b) : render::PipelineHandle { }; };
+            // Slides' flowing water takes the water shader with the water, unless crossing a band of detail: those
+            // objects' vertices carry the band too, which the water shader does not read.
+            const bool shaded_flow = parts.shaded_water && scene.water.shaded && parts.water && scene.show_scenery && parts.scenery && parts.see_through;
             // Opaque and cut-out parts in the solid pass, the others in their own.
             const auto draw_shown = [&](const ShownObjects& shown, std::optional<park::PartBlend> pass) {
                 if (!shown.indices)
@@ -143,6 +146,8 @@ namespace rct3::scene
                 for (const park::ObjectBatch& batch : shown.batches)
                 {
                     if (pass ? batch.blend != *pass : batch.blend == park::PartBlend::Blended || batch.blend == park::PartBlend::DepthOnly)
+                        continue;
+                    if (shaded_flow && &shown == &scene.steady_objects && batch.texture == park::kFlowPicture)
                         continue;
                     // Parts painted like the ground take the ground's pictures (see object_mesh.hpp).
                     const ui::UiTextures& textures = scene.object_textures.contains(batch.texture) ? scene.object_textures : scene.ground_textures;
@@ -257,7 +262,25 @@ namespace rct3::scene
                     draw_rides(depth_pipeline);
                 });
             if (parts.water)
-                profiling::section("Water", [&] { draw_park_water(device, scene.water, transform, light, parts.eye, scene.park_clock, parts.shaded_water); });
+                profiling::section("Water", [&] {
+                    draw_park_water(device, scene.water, transform, light, parts.eye, scene.park_clock, parts.shaded_water);
+                    const auto flow = scene.object_textures.find(park::kFlowPicture);
+                    if (!shaded_flow || !scene.steady_objects.indices || flow == scene.object_textures.end())
+                        return;
+                    for (const park::ObjectBatch& batch : scene.steady_objects.batches)
+                    {
+                        if (batch.texture != park::kFlowPicture)
+                            continue;
+                        render::DrawCommand draw { .pipeline = scene.water.shaded, .vertices = { scene.steady_objects.vertices }, .indices = { scene.steady_objects.indices }, .index_type = render::IndexType::U32, .count = batch.count, .first = batch.first, .transform = transform };
+                        draw.texture = flow->second.handle;
+                        draw.filter = render::Filter::Linear;
+                        draw.address = render::AddressMode::Repeat;
+                        draw.light = light;
+                        draw.extra_textures = { render::TextureHandle { }, render::TextureHandle { }, render::TextureHandle { }, scene.water.ripple_texture };
+                        draw.water = { .eye = parts.eye, .time = scene.park_clock, .near = park::kNear, .far = park::kFar, .waves = scene.water.look.waves, .flow = true, .scroll = park::flow_scroll(scene.park_clock, batch.chain) };
+                        device.draw(draw);
+                    }
+                });
             if (parts.water && parts.see_through)
                 profiling::section("Waterfalls", [&] {
                     // As draw_transient, each picture with its second (park/waterfall_mesh.hpp).

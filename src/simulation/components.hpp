@@ -245,6 +245,7 @@ namespace rct3::simulation
         /// and the one to get off at
         std::uint8_t station = 0;
         std::uint8_t off = 0;
+        Seconds turn { }; ///< At a counter, how long their turn there lasts all told
     };
 
     /// What a guest thinks, numbered as saved parks number their guests' thoughts, so the game's language

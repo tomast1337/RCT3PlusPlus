@@ -111,6 +111,15 @@ expect(why == null, `the toilet opened, not kept closed by ${why}`);
 park.dropParties(40, 3);
 await park.advanceUntil(() => (toilet().customers ?? 0) > 0, 600, "a guest using the toilet");
 log("customers", toilet().customers);
+// One going in, close up at the door: they step in and are out of sight inside.
+const user = () => people.list().find((p) => p.state === "buying" && p.at !== null && p.at.col >= col - 1 && p.at.col <= col + kind.width && p.at.row >= row - 1 && p.at.row <= row + kind.length);
+await park.advanceUntil(() => user() !== undefined, 600, "a guest going into the toilet");
+park.setTime(0.5); // Shown by day
+await frames(20);
+camera.look({ col: col + 0.3, row: row + 0.5, up: 0.8 }, { col: col - 1.6, row: row + 1.4, up: 2.2 });
+await frames(4);
+log("in the toilet, drawn at", JSON.stringify({ col: user()?.col, row: user()?.row }));
+await screenshot("facility_path_using");
 
 // Saved and loaded again.
 async function click_tool(tool: string): Promise<void> {

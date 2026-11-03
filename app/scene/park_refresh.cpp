@@ -185,6 +185,8 @@ namespace rct3::scene
         constexpr float kBiteSeconds = 1.5f; ///< Chosen by eye: how long a bite or a sip shows
         /// How a guest hands over their ticket at a ride's entrance, as the game's motions name it.
         const std::int32_t kTicketMotion = park::motion_number("handticket").value_or(park::motion::kIdle);
+        /// How a guest counts the cash a cash machine gave them, as the game's motions name it.
+        const std::int32_t kCountCashMotion = park::motion_number("checkchange").value_or(park::motion::kIdle);
         /// How a person picked up hangs, enjoying it or cross, as the game's motions name it.
         const std::int32_t kDangleHappyMotion = park::motion_number("danglehappy").value_or(park::motion::kIdle);
         const std::int32_t kDangleCrossMotion = park::motion_number("dangleangry").value_or(park::motion::kIdle);
@@ -900,13 +902,39 @@ namespace rct3::scene
                 pose.motion = kTicketMotion;
                 pose.time = simulation::kTuning.queues.ticket.value - ride_walk->pause.value;
             }
-            // At a stall's counter: waiting while served, then paying.
+            // At a stall's counter: waiting while served, then paying. At a cash machine counting the money out. A
+            // toilet or first aid they step into, out of sight while there, and step out of for the last of it.
             if (kind == simulation::ErrandKind::Buying && !walking)
-                if (const float paying = served_for(r.get<simulation::Errand>(shown.guest)) - simulation::kTuning.facilities.served.value / 2; paying >= 0)
+            {
+                const auto& errand = r.get<simulation::Errand>(shown.guest);
+                const auto* shop = r.valid(errand.target) ? r.try_get<simulation::Shop>(errand.target) : nullptr;
+                const auto product = shop != nullptr ? shop->product : simulation::Product::Drink;
+                const float left = static_cast<float>(errand.rest) * simulation::kTickSeconds;
+                const float into = errand.turn.value - left;
+                if (product == simulation::Product::Toilet || product == simulation::Product::FirstAid)
+                {
+                    constexpr float kIndoors = 0.8f; ///< Chosen by eye: from the counter in through the door
+                    const float off = std::min(into, left);
+                    if (off >= kStepToSeat)
+                        return std::nullopt;
+                    const float part = std::max(off, 0.0f) / kStepToSeat;
+                    const glm::vec3 ahead { std::sin(at.heading.value), 0.0f, std::cos(at.heading.value) };
+                    const float facing = at.heading.value + (left < into ? glm::pi<float>() : 0.0f);
+                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position + ahead * kIndoors * part), facing, glm::vec3(0.0f, 1.0f, 0.0f));
+                    pose.motion = park::motion::kWalk;
+                    pose.time = shown.paces[0] > 0 ? kIndoors * part / shown.paces[0] : 0.0f;
+                }
+                else if (product == simulation::Product::CashMachine)
+                {
+                    pose.motion = kCountCashMotion;
+                    pose.time = into;
+                }
+                else if (const float paying = served_for(errand) - simulation::kTuning.facilities.served.value / 2; paying >= 0)
                 {
                     pose.motion = kTicketMotion;
                     pose.time = paying;
                 }
+            }
             // At work where they stand: the job's motions in turn, any tool in hand.
             const auto* staff = r.try_get<simulation::Staff>(shown.guest);
             if (staff != nullptr && staff->job != simulation::StaffJob::None && staff->busy.value > 0 && !walking)

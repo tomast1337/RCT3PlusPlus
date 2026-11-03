@@ -1356,7 +1356,10 @@ namespace rct3::scene
                 }
                 simulation::start_guests(scene.sim);
                 if (kept != nullptr)
+                {
                     parkfile::place_parties(scene.sim, *kept, placed);
+                    parkfile::place_swimmers(scene.sim, *kept, placed);
+                }
                 else
                 {
                     simulation::board_saved_riders(scene.sim, scene.people, guests, scene.rides, scene.ride_entities);

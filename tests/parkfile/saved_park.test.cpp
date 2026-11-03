@@ -280,6 +280,54 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     CHECK(parkfile::place_staff(loaded, people) == std::vector<entt::entity> { entt::null });
 }
 
+TEST_CASE("a save keeps its swimmers in the pool of their changing room")
+{
+    using namespace simulation;
+    SimWorld world;
+    auto& r = world.registry;
+    const auto room_at = [](entt::registry& in, std::int32_t col) {
+        const entt::entity room = in.create();
+        in.emplace<PoolDoor>(room, PoolDoor { .col = col, .row = 3 });
+        return room;
+    };
+    room_at(r, 1);
+    const entt::entity room = room_at(r, 2);
+    const entt::entity dee = r.create();
+    r.emplace<Visitor>(dee);
+    r.emplace<Pose>(dee, Pose { .position = { 5, -1, 6 } });
+    r.emplace<Needs>(dee);
+    r.emplace<Mood>(dee);
+    r.emplace<Wallet>(dee);
+    r.emplace<Errand>(dee, Errand { .kind = ErrandKind::Swimming, .target = room });
+    r.emplace<Swimmer>(dee, Swimmer { .changed = true, .left = { 42 }, .goal = { 5, -1, 7 }, .in_water = true, .spot = 2, .place = 1, .use = PoolUse::Lounge, .waited = { 3 } });
+
+    parkfile::SavedPark park = small_park();
+    park.people = parkfile::keep_people(world, { }, { });
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+    SimWorld loaded;
+    auto& l = loaded.registry;
+    room_at(l, 1);
+    const entt::entity room2 = room_at(l, 2);
+    const auto guests = parkfile::place_guests(loaded, *read->people);
+    REQUIRE(guests.size() == 1);
+    l.emplace<Errand>(guests[0]); // As start_guests leaves them, walking
+    CHECK(parkfile::place_swimmers(loaded, *read->people, guests) == 1);
+    CHECK(l.get<Errand>(guests[0]).kind == ErrandKind::Swimming);
+    CHECK(l.get<Errand>(guests[0]).target == room2);
+    CHECK(l.get<Pose>(guests[0]).position == glm::vec3 { 5, -1, 6 });
+    REQUIRE(l.all_of<Swimmer>(guests[0]));
+    const Swimmer& swimmer = l.get<Swimmer>(guests[0]);
+    CHECK(swimmer.changed);
+    CHECK(swimmer.left.value == 42);
+    CHECK(swimmer.goal == glm::vec3 { 5, -1, 7 });
+    CHECK(swimmer.in_water);
+    CHECK(swimmer.spot == 2);
+    CHECK(swimmer.place == 1);
+    CHECK(swimmer.use == PoolUse::Lounge);
+    CHECK(swimmer.waited.value == 3);
+}
+
 TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animals and dung")
 {
     using namespace simulation;

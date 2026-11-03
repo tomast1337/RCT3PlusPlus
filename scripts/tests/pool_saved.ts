@@ -52,6 +52,10 @@ await frames(10);
 const again = map.objects().filter((o) => o.overlay === kPool).length;
 expect(again === pieces.length, `${pieces.length} pool pieces after loading, not ${again}`);
 expect(map.objects().length === objects, `${objects} objects after loading, not ${map.objects().length}`);
+// Its swimmers saved with it, still in the water.
+const reloaded_swimmers = people.list().filter((p) => p.state === "swimming").length;
+log("swimming after loading", reloaded_swimmers);
+expect(reloaded_swimmers >= saved_swimmers * 0.9, `most of the ${saved_swimmers} swimmers still swimming, not ${reloaded_swimmers}`);
 
 park.setWeather("sunny");
 park.setTemperature(28);

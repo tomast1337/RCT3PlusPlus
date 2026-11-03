@@ -88,6 +88,14 @@ namespace rct3::parkfile
     };
 
     /// A guest in the park.
+    /// A guest in a pool: the tile of the changing room they came in by, and how far they are with their swim.
+    struct SavedSwim
+    {
+        std::int32_t room_col = 0;
+        std::int32_t room_row = 0;
+        simulation::Swimmer swimmer { };
+    };
+
     struct SavedGuest
     {
         std::int32_t look = -1; ///< Place in SavedPeople::model.guests of the guest drawn for them; -1 none
@@ -100,6 +108,7 @@ namespace rct3::parkfile
         std::optional<simulation::Taste> taste { };
         std::int32_t party = -1; ///< Guests with the same number go round together; -1 alone
         bool leader = false;
+        std::optional<SavedSwim> swim { }; ///< In a pool
     };
 
     /// A member of staff at work.
@@ -208,6 +217,10 @@ namespace rct3::parkfile
     /// Makes the saved parties again of the guests start_guests set walking, `guests` being place_guests's
     /// answer; in place of import_parties.
     void place_parties(simulation::SimWorld& world, const SavedPeople& people, std::span<const entt::entity> guests);
+
+    /// Puts the saved swimmers back in the pools of their changing rooms, as they were; `guests` being
+    /// place_guests's answer. Call after import_pools and start_guests. Returns how many.
+    std::size_t place_swimmers(simulation::SimWorld& world, const SavedPeople& people, std::span<const entt::entity> guests);
 
     /// Adds the saved staff to `world`, walking; returns them in the order of people.staff, null for those not
     /// on a path. In place of import_staff.

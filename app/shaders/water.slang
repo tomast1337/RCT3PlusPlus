@@ -16,6 +16,11 @@
 // outside it, where the light cannot leave (total internal reflection). With the eye under water the draw is
 // instead one quad over the view: the scene behind it is fogged and coloured by the water each line of sight
 // crosses, and what lies under the surface catches the caustics.
+//
+// The flowing water of slides and water rides (kFlow) is a cheaper look: a thin sheet on the track with no mirror
+// and no copy of the scene behind it. Its own picture (park/water_flow.hpp) slides along it, and a second read of
+// the picture, set deeper and seen through the first, gives it depth; it slopes the surface for the glint and the
+// sky it shows, and the bottom catches the caustics.
 import common;
 
 [[vk::binding(0, 0)]] Texture2D u_waves;
@@ -46,13 +51,15 @@ struct Varyings
     [[vk::location(1)]] float4 color;
     [[vk::location(2)]] float depth; ///< Under water: the height of the surface over the eye
     [[vk::location(3)]] float4 clip;
+    [[vk::location(4)]] float2 uv;     ///< Flowing water: across its strip and along it
+    [[vk::location(5)]] float3 normal; ///< Flowing water: its strip's
 }
 
 [shader("vertex")]
-Varyings vertex_main([[vk::location(0)]] float3 position, [[vk::location(1)]] float4 color, [[vk::location(2)]] float2 uv)
+Varyings vertex_main([[vk::location(0)]] float3 position, [[vk::location(1)]] float4 color, [[vk::location(2)]] float2 uv, [[vk::location(3)]] float3 normal)
 {
     const float4 clip = mul(u_draw.transform, float4(position, 1.0));
-    return { clip, position, color, uv.x, clip };
+    return { clip, position, color, uv.x, clip, uv, normal };
 }
 
 static const uint kReflection = 1u;
@@ -63,6 +70,7 @@ static const uint kRipples = 16u;
 static const uint kUnderwater = 32u;
 static const uint kShadow = 64u;
 static const uint kShafts = 128u;
+static const uint kFlow = 256u;
 
 static const float kFresnelBase = 0.02;                       // Reflectance seen straight on, for a refractive index near 1.33
 static const float kMirrorLeast = 0.42;                       // The least the mirror shows, looking straight down
@@ -91,6 +99,10 @@ static const float kCausticGain = 2.2;                        // Light a full li
 static const float kCausticDim = 0.25;                        // Light the bottom loses between the lines, where the net drew it
 static const float kShaftReach = 12.0;                        // The most water a line of sight is read through
 static const float kShaftGain = 0.5;                          // Light a full line scatters to the eye, per world unit of water
+static const float3 kFlowColour = float3(0.16, 0.42, 0.46);   // Chosen by eye: the green blue of a flume's water, lit
+static const float kFlowDepth = 0.25;                         // Chosen by eye: world units of water over the track
+static const float kFlowLayer = 0.12;                         // Chosen by eye: how far under the surface the second read lies, in picture widths
+static const float kFlowBump = 0.004;                         // Chosen by eye: the surface's slope per unit of the picture's own
 
 bool has(uint flag)
 {
@@ -337,6 +349,58 @@ float3 from_below(Varyings v, float3 n, float3 view, float dist, float2 bend, fl
     return through_water(v, colour, dist, v.world.y - u_draw.eye_time.y, body_light);
 }
 
+// Flowing water over a slide's track (kFlow), seen from `view` (towards the eye) `dist` away. The picture's
+// brightness is the foam on it; read again deeper and off to the side, it shows through the water under the foam.
+float4 flowing(Varyings v, float3 view, float dist, float3 sky, float3 sun, float3 to_sun, float3 body_light, float time)
+{
+    float3 n0 = normalize(v.normal + float3(0.0, 1e-6, 0.0));
+    if (dot(n0, view) < 0.0)
+        n0 = -n0;
+    // The strip's own frame, across its picture (u) and along it (v), from how both change over the pixel.
+    const float3 dp1 = ddx(v.world);
+    const float3 dp2 = ddy(v.world);
+    const float2 duv1 = ddx(v.uv);
+    const float2 duv2 = ddy(v.uv);
+    const float3 p2 = cross(dp2, n0);
+    const float3 p1 = cross(n0, dp1);
+    float3 across = p2 * duv1.x + p1 * duv2.x;
+    float3 along = p2 * duv1.y + p1 * duv2.y;
+    const float scale = rsqrt(max(max(dot(across, across), dot(along, along)), 1e-12));
+    across *= scale;
+    along *= scale;
+
+    const float2 uv = v.uv + float2(0.0, frac(u_draw.sky_flags.w));
+    const float2 sideways = float2(dot(view, across), dot(view, along)) / max(dot(view, n0), 0.2);
+    const float2 deep = uv + float2(0.5, 0.37) - sideways * kFlowLayer;
+    const float4 top = u_waves.Sample(u_sampler, uv);
+    const float4 below = u_waves.Sample(u_sampler, deep);
+    const float2 slope = picture_slope(uv);
+    const float3 n = normalize(n0 - (slope.x * across + slope.y * along) * kFlowBump);
+
+    const float facing = clamp(dot(n, view), 0.0, 1.0);
+    const float fresnel = kFresnelBase + (1.0 - kFresnelBase) * pow(1.0 - facing, 5.0);
+    const float path = kFlowDepth / max(facing, 0.15);
+    const float3 kept = exp(-kAbsorption * path);
+    const float3 bottom = v.world - view * path;
+    const float caustic = caustic_factor(bottom, kFlowDepth, 1.0, to_sun, sun, time, length(fwidth(bottom.xz)));
+    // shortcut: as the lake without its copy of the scene, the caustics' light is added as on a mid grey bottom.
+    const float3 sunlit = sun * max(to_sun.y, 0.0) * 0.4 * (caustic - 1.0) * kept;
+    const float3 scattered = kFlowColour * body_light;
+    const float foam = dot(top.rgb, float3(1.0 / 3.0)) * top.a;
+    const float sunk = dot(below.rgb, float3(1.0 / 3.0)) * below.a * dot(kept, float3(1.0 / 3.0));
+
+    const float3 half_way = normalize(to_sun + view);
+    const float shine = max(dot(n, half_way), 0.0);
+    const float3 glint = sun * (pow(shine, 600.0) * 1.0 + pow(shine, 48.0) * 0.05) * step(0.0, to_sun.y);
+
+    const float through = (1.0 - fresnel) * dot(kept, float3(1.0 / 3.0)) * (1.0 - foam) * (1.0 - 0.5 * sunk);
+    float alpha = 1.0 - through;
+    const float3 water = (1.0 - fresnel) * (scattered * (1.0 - dot(kept, float3(1.0 / 3.0))) + sunlit) + fresnel * sky * kFlowColour * 2.5;
+    float3 colour = (water * (1.0 - foam) + body_light * (foam + 0.5 * sunk * (1.0 - foam)) + glint) / max(alpha, 1e-3);
+    alpha *= 1.0 - smoothstep(0.6, 0.95, dist / u_draw.sun_far.w);
+    return float4(colour, alpha);
+}
+
 [shader("fragment")]
 float4 fragment_main(Varyings v) : SV_Target
 {
@@ -352,6 +416,8 @@ float4 fragment_main(Varyings v) : SV_Target
     const float3 to_eye = u_draw.eye_time.xyz - v.world;
     const float dist = length(to_eye);
     const float3 view = to_eye / max(dist, 1e-4);
+    if (has(kFlow))
+        return flowing(v, view, dist, sky, sun, to_sun, body_light, time);
 
     float2 slope = float2(0.0);
     if (has(kWaves))

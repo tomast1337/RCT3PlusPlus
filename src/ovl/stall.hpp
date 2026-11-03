@@ -23,9 +23,9 @@ namespace rct3::ovl
 
     struct Stall
     {
-        /// Version 1 files hold all of it but the scenery item and the goods.
+        /// Version 1 files hold all of it but the scenery item.
         AttractionInfo info;
-        /// Version 4 and 5 files only.
+        /// Version 1 files hold them only where the scenery item sits at 0x38.
         std::vector<StallGoods> goods;
     };
 
@@ -41,7 +41,8 @@ namespace rct3::ovl
     /// pointer at 0x24 to the attraction fields and the scenery item at 0x28. The goods follow as pairs of
     /// a carried-item reference and a price, and the attraction fields follow them, laid out as in a version
     /// 1 item. When the pointer to the fields is null, only the type is read, from where the fields would
-    /// follow the goods. Version 1 items are read from their start only. Views in the result point into the
+    /// follow the goods. Version 1 items start with the attraction fields; in themed files the scenery item
+    /// follows at 0x38, then the number of goods and a pointer to them, laid out as in later items. Views in the result point into the
     /// overlay's bytes.
     [[nodiscard]] std::vector<StallItem> read_stalls(const Overlay& overlay, const Part& part);
 

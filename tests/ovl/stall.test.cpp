@@ -29,6 +29,31 @@ TEST_CASE("version 1 stalls start with the attraction fields")
     CHECK(i.value_a == 10000);
 }
 
+TEST_CASE("themed version 1 stalls follow their scenery item with their goods")
+{
+    Pool pool;
+    pool.add("Pies:sta");
+    pool.add("Pies:sid");
+    pool.add("Pie:cid");
+    pool.add("BigPie:cid");
+    const std::uint32_t at = pool.base();
+    // The attraction fields, then the scenery item at 0x38, two goods and a pointer to them, the goods from 0x44.
+    std::vector<std::byte> bytes;
+    put(bytes, { 7, 0, 0, 0, 10000 });
+    bytes.resize(0x3C, std::byte { 0 });
+    put(bytes, { 2, at + 0x44, 0, 120, 0, 180 });
+    const auto overlay = make_record_overlay(1, pool, "Pies:sta", bytes, { { 0x38, "Pies:sid" }, { 0x44, "Pie:cid" }, { 0x4C, "BigPie:cid" } });
+    const auto items = read_stalls(overlay, overlay.common());
+    REQUIRE(items[0].stall.has_value());
+    const auto& s = *items[0].stall;
+    CHECK(s.info.type_id == 7);
+    REQUIRE(s.goods.size() == 2);
+    CHECK(s.goods[0].item == "Pie");
+    CHECK(s.goods[0].price == 120);
+    CHECK(s.goods[1].item == "BigPie");
+    CHECK(s.goods[1].price == 180);
+}
+
 TEST_CASE("later stalls point to their goods and attraction fields")
 {
     Pool pool;

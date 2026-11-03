@@ -2934,8 +2934,9 @@ namespace rct3::scene
                 for (const park::PoolRoom& room : scene.pools.rooms)
                     for (const std::int64_t v : { std::int64_t { room.col }, std::int64_t { room.row }, std::int64_t { room.turn }, room.ticket, std::int64_t { room.open }, std::int64_t { room.fluid } })
                         mix(v);
+                mix(static_cast<std::int64_t>(scene.pools.extras.size() + scene.scenery_pool_extras.size()));
                 if (std::exchange(scene.pools_seen, pools) != pools)
-                    simulation::import_pools(scene.sim, scene.pools);
+                    simulation::import_pools(scene.sim, scene.pools, scene.scenery_pool_extras);
                 scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(scene.footpaths.pools.size()), .rating = scene.park.rating, .guest_cash = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_cash : 0 }, .guest_bank = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_bank_funds : 0 } });
                 // What a crashed train's wrecks fly over and into: the ground, and the scenery, stalls and flat rides
                 // standing in the park, each as the box it is clicked in.
@@ -3118,9 +3119,20 @@ namespace rct3::scene
                 {
                     scene.chairs_changed = false;
                     std::unordered_set<std::string_view> chair_symbols;
+                    std::unordered_map<std::string_view, park::PoolExtraFit> extra_fits;
                     for (const park::BuildItem& item : scene.build.items.get())
-                        if (park::pool_extra_fit(item.pool_extra).lifeguard)
-                            chair_symbols.insert(item.symbol);
+                        if (!item.pool_extra.empty())
+                        {
+                            const park::PoolExtraFit fit = park::pool_extra_fit(item.pool_extra);
+                            extra_fits.emplace(item.symbol, fit);
+                            if (fit.lifeguard)
+                                chair_symbols.insert(item.symbol);
+                        }
+                    // The extras a park from the game placed stand as scenery, not in `pools`; its swimmers use them too.
+                    scene.scenery_pool_extras.clear();
+                    for (const save::PlacedObject& o : scene.objects)
+                        if (const auto fit = extra_fits.find(o.symbol); fit != extra_fits.end() && !o.hidden && !std::ranges::contains(scene.pool_pieces, o.id))
+                            scene.scenery_pool_extras.push_back({ .symbol = o.symbol, .overlay = o.overlay, .col = o.col, .row = o.row, .turn = o.rotation, .fit = fit->second });
                     const save::TerrainGrid& g = scene.grid;
                     const auto tile_of = [&g](glm::vec3 p) { return glm::ivec2 { static_cast<int>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((p.z - g.origin_z) / g.tile_size_z)) }; };
                     std::vector<std::size_t> chairs;

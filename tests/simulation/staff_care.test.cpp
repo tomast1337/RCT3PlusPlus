@@ -181,6 +181,19 @@ TEST_CASE("a miserable worker thinks of quitting once a stretch, then quits once
     }
 }
 
+TEST_CASE("a park inspector keeps their mood, thinks nothing of it and never quits")
+{
+    Staff inspector { .role = StaffRole::Inspector, .happiness = 0.5f, .load = 0 };
+    for (int i = 0; i < 200; ++i)
+    {
+        care_for(inspector, false, 10);
+        CHECK(staff_thoughts(inspector).empty());
+        CHECK(!quits(inspector));
+    }
+    CHECK(inspector.happiness.value == 0.5f);
+    CHECK(inspector.laziness.value == 0);
+}
+
 TEST_CASE("staff take up the work their save counts")
 {
     Staff handyman;

@@ -64,6 +64,8 @@ namespace rct3::simulation
 
     void care_for(Staff& staff, bool working, float seconds)
     {
+        if (staff.role == StaffRole::Inspector) // An inspector's mood and laziness never change
+            return;
         staff.load.value += ((working ? 1.0f : 0.0f) - staff.load.value) * std::min(seconds / kTuning.staff.load_window.value, 1.0f);
         // An entertainer's work comes in short shows, so their share of time at work is no measure of them.
         const bool entertainer = staff.role == StaffRole::Entertainer;
@@ -106,6 +108,8 @@ namespace rct3::simulation
     {
         const auto& t = kTuning.staff;
         std::vector<ThoughtKind> out;
+        if (staff.role == StaffRole::Inspector) // Their thoughts are their reports, made on their rounds
+            return out;
         if (staff.load.value < t.bored.value)
             out.push_back(ThoughtKind::StaffBored);
         else if (staff.load.value > t.overworked.value)

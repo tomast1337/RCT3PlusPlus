@@ -1496,7 +1496,8 @@ namespace rct3::simulation
     entt::entity add_staff(SimWorld& world, StaffRole role, NodeId at)
     {
         const entt::entity e = world.registry.create();
-        Staff staff { .role = role };
+        // An inspector's mood never changes; saved ones are all half content.
+        Staff staff { .role = role, .happiness = role == StaffRole::Inspector ? 0.5f : 1.0f };
         set_wage_level(staff, staff.wage_level);
         world.registry.emplace<Staff>(e, staff);
         start_walking(world, e, at);

@@ -504,7 +504,13 @@ namespace rct3::scene
                         // shortcut: it lands on a level at the sprayed guest's feet, or the cannon's; upgrade with a ground test.
                         if (const auto land = jet->water.landing([&](glm::vec2) { return ground; }); land && scene.park_clock - jet->splashed > 0.15f)
                         {
-                            fire_park_particles(scene.particles, kCannonSplash, *land, glm::vec3(0, 1, 0));
+                            // One splash where it lands and two round it, as wide as the jet is there, turning each time.
+                            constexpr float kSplashWide = 0.5f; ///< Chosen by eye
+                            for (int s = 0; s < 3; ++s)
+                            {
+                                const float round = scene.park_clock * 5 + static_cast<float>(s) * 2.1f;
+                                fire_park_particles(scene.particles, kCannonSplash, *land + (s == 0 ? glm::vec3(0) : glm::vec3(std::cos(round), 0, std::sin(round)) * kSplashWide), glm::vec3(0, 1, 0));
+                            }
                             jet->splashed = scene.park_clock;
                         }
                     }

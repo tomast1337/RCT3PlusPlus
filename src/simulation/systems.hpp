@@ -44,6 +44,11 @@ namespace rct3::simulation
     /// Where `pose` is drawn `along` (0..1) of the way through the step after the last.
     [[nodiscard]] Pose between_steps(const Pose& pose, float along);
 
+    /// How far a water cannon pointing along `heading` at rest turns, round the vertical, to point along `way`
+    /// (x, z): radians, the way Pose's heading grows; none when that is more than `most` to either side, as
+    /// behind it.
+    [[nodiscard]] std::optional<float> cannon_turn(float heading, glm::vec2 way, float most);
+
     /// The gait a guest of `age`, feeling as `mood` and `needs` have them, goes on in from a tile: worn out,
     /// sick or bursting they show it, and otherwise now and then they run, children most and the fresher the
     /// likelier. Drawn with `dice`.

@@ -1048,7 +1048,8 @@ namespace rct3::simulation
                 continue;
             if (const auto at = path_by(world.paths, o))
             {
-                world.registry.emplace<PathItem>(world.registry.create(), PathItem { .node = *at, .kind = *kind, .object = o.id });
+                const glm::vec2 x = park::turned_x(o.rotation);
+                world.registry.emplace<PathItem>(world.registry.create(), PathItem { .node = *at, .kind = *kind, .object = o.id, .heading = std::atan2(x.x, x.y) });
                 ++added;
             }
         }
@@ -1414,7 +1415,8 @@ namespace rct3::simulation
             return entt::null;
         auto& r = world.registry;
         const entt::entity e = r.create();
-        r.emplace<PathItem>(e, PathItem { .node = *at, .kind = kind, .object = o.id });
+        const glm::vec2 x = park::turned_x(o.rotation);
+        r.emplace<PathItem>(e, PathItem { .node = *at, .kind = kind, .object = o.id, .heading = std::atan2(x.x, x.y) });
         if (kind == PathItemKind::Bin)
             r.emplace<Bin>(e, Bin { kNewBinPieces, 0 });
         return e;

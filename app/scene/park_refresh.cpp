@@ -460,7 +460,8 @@ namespace rct3::scene
                         constexpr float kTurn = 2.5f;    ///< Chosen by eye: radians a second the gun turns
                         constexpr float kHighest = 0.8f; ///< Chosen by eye: most the gun tips up, and down
                         constexpr float kLowest = -0.35f;
-                        float yaw = 0.7f * std::sin(scene.park_clock * 0.5f + static_cast<float>(boned.object)); // Sweeping about
+                        const float swing = simulation::kTuning.surroundings.cannon_swing;
+                        float yaw = 0.6f * swing * std::sin(scene.park_clock * 0.5f + static_cast<float>(boned.object)); // Sweeping about
                         float pitch = 0.35f;
                         float ground = boned.placed[3].y;
                         if (firing && r.valid(firing->target) && r.all_of<simulation::Pose>(firing->target))
@@ -469,9 +470,10 @@ namespace rct3::scene
                             ground = at.y;
                             const glm::vec3 local = glm::vec3(glm::inverse(boned.placed) * glm::vec4(at + glm::vec3(0, 1, 0), 1)) - muzzle;
                             const float across = std::hypot(local.x, local.z);
-                            if (across > 0.5f)
+                            // One out of its swing, as they walk round it, is let be until the firer picks another.
+                            if (const auto turn = simulation::cannon_turn(std::atan2(ahead.x, ahead.z), { local.x, local.z }, swing); turn && across > 0.5f)
                             {
-                                yaw = std::atan2(ahead.z * local.x - ahead.x * local.z, ahead.x * local.x + ahead.z * local.z);
+                                yaw = *turn;
                                 // The lower of the two arcs that land on them, else the farthest throw.
                                 const float g = park::kJetGravity;
                                 const float v2 = kSpeed * kSpeed;

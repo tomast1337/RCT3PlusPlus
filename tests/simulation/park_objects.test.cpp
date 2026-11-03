@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <doctest/doctest.h>
 #include <utility>
 #include <vector>
@@ -311,16 +312,46 @@ TEST_CASE("a water cannon's firer sprays another guest in reach, who gets wet")
 {
     Sandbox park;
     park.path({ 0, 0 }, { 1, 0 });
-    park.item(PathItemKind::WaterCannon, { 0, 0 });
+    const auto cannon = park.item(PathItemKind::WaterCannon, { 0, 0 });
     const auto firer = park.guest({ 0, 0 });
     const auto passer = park.guest({ 1, 0 });
     auto& r = park.world().registry;
-    r.emplace_or_replace<Linger>(firer, PathItemKind::WaterCannon, Seconds { 20 });
+    const glm::vec3 way = r.get<Pose>(passer).position - r.get<Pose>(firer).position;
+    r.get<PathItem>(cannon).heading = std::atan2(way.x, way.z);
+    r.emplace_or_replace<Linger>(firer, Linger { .at = PathItemKind::WaterCannon, .left = Seconds { 20 }, .bench = cannon });
     park.run_seconds(3);
     REQUIRE(r.all_of<Linger>(firer));
     CHECK(r.get<Linger>(firer).target == passer);
     CHECK(r.get<Mood>(passer).wet.value > 0.2f);
     CHECK(r.get<Mood>(firer).wet.value == 0);
+}
+
+TEST_CASE("a water cannon's firer sprays no one behind it, but aims about in front")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 1, 0 });
+    const auto cannon = park.item(PathItemKind::WaterCannon, { 0, 0 });
+    const auto firer = park.guest({ 0, 0 });
+    const auto passer = park.guest({ 1, 0 });
+    auto& r = park.world().registry;
+    const glm::vec3 way = r.get<Pose>(passer).position - r.get<Pose>(firer).position;
+    r.get<PathItem>(cannon).heading = std::atan2(-way.x, -way.z);
+    r.emplace_or_replace<Linger>(firer, Linger { .at = PathItemKind::WaterCannon, .left = Seconds { 20 }, .bench = cannon });
+    park.run_seconds(3);
+    REQUIRE(r.all_of<Linger>(firer));
+    CHECK(r.get<Linger>(firer).target == entt::entity { entt::null });
+    CHECK(r.get<Mood>(passer).wet.value == 0);
+}
+
+TEST_CASE("a water cannon turns only so far to either side of where it points at rest")
+{
+    CHECK(cannon_turn(0, { 0, 1 }, 1).value() == doctest::Approx(0));
+    CHECK(cannon_turn(0, { 1, 1 }, 1).value() == doctest::Approx(glm::pi<float>() / 4));
+    CHECK(cannon_turn(0, { -1, 1 }, 1).value() == doctest::Approx(-glm::pi<float>() / 4));
+    CHECK_FALSE(cannon_turn(0, { 1, 0 }, 1).has_value());
+    CHECK_FALSE(cannon_turn(0, { 0, -1 }, 1).has_value());
+    // Across the half turn: pointing nearly backwards round the circle, a little turn reaches it.
+    CHECK(cannon_turn(3, { std::sin(-3.0f), std::cos(-3.0f) }, 1).value() == doctest::Approx(2 * glm::pi<float>() - 6));
 }
 
 TEST_CASE("a party stops together at a view and likes it with scenery round it, or folds its arms at a bare one")

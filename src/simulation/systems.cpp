@@ -691,6 +691,14 @@ namespace rct3::simulation
         return { glm::mix(pose.was, pose.position, along), pose.was_heading.value + turn * along, pose.was, pose.was_heading.value, walked };
     }
 
+    std::optional<float> cannon_turn(float heading, glm::vec2 way, float most)
+    {
+        const float turn = std::remainder(std::atan2(way.x, way.y) - heading, 2 * glm::pi<float>());
+        if (std::abs(turn) > most)
+            return std::nullopt;
+        return turn;
+    }
+
     double arrivals_per_second(const Weather& weather)
     {
         double rate = kTuning.arrivals.rate.value * (weather.storm ? kTuning.arrivals.storm.value : weather.rain ? kTuning.arrivals.rain.value : 1);
@@ -1115,7 +1123,14 @@ namespace rct3::simulation
                         {
                             const glm::vec3 from = r.get<Pose>(g).position;
                             const float reach = kTuning.surroundings.cannon_reach.value;
-                            const auto in_reach = [&](entt::entity t) { return t != g && r.valid(t) && r.all_of<Pose, Mood, Visitor>(t) && !r.any_of<Staff>(t) && glm::distance(r.get<Pose>(t).position, from) <= reach; };
+                            // Only those in front of it: it turns so far, and never back on its firer.
+                            const auto* cannon = r.valid(linger->bench) ? r.try_get<PathItem>(linger->bench) : nullptr;
+                            const auto in_reach = [&](entt::entity t) {
+                                if (t == g || cannon == nullptr || !r.valid(t) || !r.all_of<Pose, Mood, Visitor>(t) || r.any_of<Staff>(t))
+                                    return false;
+                                const glm::vec3 to = r.get<Pose>(t).position - from;
+                                return glm::length(to) <= reach && cannon_turn(cannon->heading, { to.x, to.z }, kTuning.surroundings.cannon_swing).has_value();
+                            };
                             if (!in_reach(linger->target) || random::chance(dice.state, kTuning.surroundings.retarget.value * dt))
                             {
                                 std::vector<entt::entity> near;

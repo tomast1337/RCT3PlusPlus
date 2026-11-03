@@ -71,12 +71,30 @@ namespace rct3::scene
                     allowed = true;
                 }
             }
+            // A guest over a pool complex's water, paving or spa pool, nearer than any path: let go, they swim there.
+            if (r.all_of<simulation::Visitor>(held.who) && std::abs(ray.direction.y) > 1e-6f)
+            {
+                const float half = scene.sim.paths.tile_size / 2;
+                float nearest = spot ? glm::distance(ray.origin, *spot) / glm::length(ray.direction) : std::numeric_limits<float>::max();
+                for (const auto [e, pool] : r.view<const simulation::SwimPool>().each())
+                    for (const auto* squares : { &pool.water, &pool.paved, &pool.spa })
+                        for (const glm::vec3& square : *squares)
+                        {
+                            const float t = (square.y - ray.origin.y) / ray.direction.y;
+                            const glm::vec3 hit = ray.origin + ray.direction * t;
+                            if (t <= 0 || t >= nearest || std::abs(hit.x - square.x) > half || std::abs(hit.z - square.z) > half || !simulation::pool_door_at(scene.sim, hit))
+                                continue;
+                            nearest = t;
+                            spot = hit;
+                            allowed = true;
+                        }
+            }
             if (!spot && ground)
             {
                 spot = ray.origin + ray.direction * *ground;
                 const int col = static_cast<int>(std::floor((spot->x - scene.grid.origin_x) / scene.grid.tile_size_x));
                 const int row = static_cast<int>(std::floor((spot->z - scene.grid.origin_z) / scene.grid.tile_size_z));
-                // shortcut: water never takes them, as nobody swims or treads water yet; let them in once they do.
+                // shortcut: the park's lakes never take them, as nobody treads water there yet; let them in once they do.
                 const auto water = park::water_hit(ray, scene.water.surface);
                 allowed = scene.grid.contains(col, row) && park::owned_outright(scene.grid.at(col, row)) && !(water && *water < *ground + 1e-3f);
             }

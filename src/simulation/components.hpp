@@ -253,6 +253,8 @@ namespace rct3::simulation
         Lost = 1, ///< Cut off from their party
         Tired = 2,
         Litter = 3,
+        ReallyTidy = 6,   ///< No litter or damage round them
+        GreatScenery = 8, ///< Plenty of scenery round them
         Hungry = 4,
         Thirsty = 5,
         Toilet = 12,
@@ -692,6 +694,15 @@ namespace rct3::simulation
         PathItemKind kind = PathItemKind::Bin;
         bool broken = false;      ///< Of no use until a handyman mends it, or the player replaces it
         std::uint64_t object = 0; ///< The placed object it stands as, 0 for none
+    };
+
+    /// In the registry's context: how much scenery stands round each path tile, by NodeId, as weighed by
+    /// scenery_weight. Tiles laid since count as bare.
+    /// shortcut: scenery taken away still counts till the park loads again; upgrade when removal reaches the
+    /// simulation.
+    struct SceneryNear
+    {
+        std::vector<float> by_node;
     };
 
     /// A flower bed beside a path. It dries out, and a handyman waters it once dry.

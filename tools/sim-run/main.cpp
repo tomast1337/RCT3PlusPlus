@@ -159,6 +159,7 @@ int main(int argc, char** argv)
     std::vector<std::optional<std::uint32_t>> guests_room;
     std::map<std::uint64_t, simulation::PathItemKind> sights;   // Placed objects guests stop at
     std::map<std::uint64_t, std::array<std::int32_t, 2>> gates; // Park entrances, with the tiles each covers
+    std::map<std::uint64_t, float> scenery;                     // What each placed object adds to the scenery round the paths
     std::map<std::uint64_t, std::uint32_t> facility_kinds;      // Special attractions' kinds, by attraction
     if (game)
     {
@@ -200,10 +201,15 @@ int main(int argc, char** argv)
         }
         park::ModelLoader loader(assets);
         for (const save::PlacedObject& o : world_model->objects)
-            if (const auto model = loader.load(o.symbol, o.overlay); model && simulation::sight_of(model->category, model->feature))
+        {
+            const auto model = loader.load(o.symbol, o.overlay);
+            if (model)
+                scenery.emplace(o.id, simulation::scenery_weight(model->category, model->feature));
+            if (model && simulation::sight_of(model->category, model->feature))
                 sights.emplace(o.id, *simulation::sight_of(model->category, model->feature));
             else if (model && model->category == std::to_underlying(park::ItemCategory::ParkEntrance))
                 gates.emplace(o.id, model->squares);
+        }
         for (const save::Ride& ride : rides->rides)
             if (ride.kind == save::RideKind::Special)
                 if (const auto file = install->find(std::format("{}.common.ovl", ride.base.overlay_path)))
@@ -291,6 +297,10 @@ int main(int argc, char** argv)
     const std::size_t facilities = simulation::import_facilities(world, *rides, [&](const save::Ride& ride) -> std::optional<std::uint32_t> {
         const auto found = facility_kinds.find(ride.base.id);
         return found != facility_kinds.end() ? std::optional(found->second) : std::nullopt;
+    });
+    simulation::import_scenery(world, world_model->objects, [&](const save::PlacedObject& o) {
+        const auto found = scenery.find(o.id);
+        return found != scenery.end() ? found->second : 0.0f;
     });
     const std::size_t sight_count = simulation::import_sights(world, world_model->objects, [&](const save::PlacedObject& o) {
         const auto found = sights.find(o.id);

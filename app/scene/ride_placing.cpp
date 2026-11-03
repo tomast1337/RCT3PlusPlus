@@ -794,6 +794,7 @@ namespace rct3::scene
                 else if (*kind == simulation::PathItemKind::Sign)
                     scene.signs.push_back({ .object_ref = id });
             }
+            simulation::add_scenery(scene.sim, scene.objects.back(), simulation::scenery_weight(category, model.feature));
             if (model.water_capacity)
                 simulation::add_flower_bed(scene.sim, scene.objects.back(), *model.water_capacity, std::nullopt);
             animate_scenery(device, scene, scene.objects.size() - 1);

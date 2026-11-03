@@ -473,6 +473,7 @@ namespace rct3::simulation
         std::int32_t place = -1;      ///< Their place on it while they use it; -1 on the way or waiting
         PoolUse use = PoolUse::Stand; ///< What they do there
         Seconds waited { };           ///< For a place on it so far
+        Seconds stayed { };           ///< At their goal so far
     };
 
     /// What a shop sells, or what a facility does for its guests.

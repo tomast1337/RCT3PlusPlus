@@ -3383,6 +3383,7 @@ namespace rct3::simulation
             const float way = glm::length(to);
             const float pace = (swimmer.in_water ? kTuning.pools.swim.value : r.get<Stride>(g).speed.value) * dt;
             const bool there = way <= pace;
+            swimmer.stayed.value = there ? swimmer.stayed.value + dt : 0;
             if (!there)
                 pose.heading.value = std::atan2(to.x, to.y);
             const glm::vec2 at = there ? glm::vec2 { swimmer.goal.x, swimmer.goal.z } : glm::vec2 { pose.position.x, pose.position.z } + to * (pace / way);

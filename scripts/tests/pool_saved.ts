@@ -75,8 +75,9 @@ if (spa) {
     await ui.click("bar/Top_SuperFastForward");
     await until(() => sitting() !== undefined, 20000, "a swimmer in the spa pool");
     await ui.click("bar/Top_Play");
-    camera.look({ col: spa.col + 0.5, row: spa.row + 0.5 }, { col: spa.col + 0.5, row: spa.row + 3.5, up: 2 });
-    await frames(30);
+    await frames(120);
+    camera.look({ col: spa.col + 0.5, row: spa.row + 0.5, up: 0.3 }, { col: spa.col + 1.3, row: spa.row + 0.9, up: 0.9 });
+    await frames(4);
     await screenshot("pool_saved_spa");
 }
 

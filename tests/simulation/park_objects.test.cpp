@@ -283,6 +283,7 @@ TEST_CASE("a guest passing a free water cannon may fire it a while, one at a tim
         for (const auto [g, linger] : r.view<const Linger>().each())
             if (linger.at == PathItemKind::WaterCannon)
             {
+                CHECK(r.valid(linger.bench)); // They fire that cannon, from where it has them stand
                 ++now;
                 firing = g;
             }

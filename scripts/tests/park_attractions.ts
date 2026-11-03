@@ -54,7 +54,13 @@ async function show(name: string, found: () => { col?: number; row?: number } | 
     await frames(4);
     await screenshot(name);
 }
-await show("cannon", () => people.list().find((p) => p.lingering === "water cannon" && p.col !== undefined));
+// The cannon a few seconds on, once they have stepped behind it and taken hold, close up from its side.
+await park.advanceUntil(() => people.list().some((p) => p.lingering === "water cannon"), 1800, "someone firing the cannon");
+await park.advance(5);
+const cannon = road[4];
+camera.look({ col: cannon.col + 0.5, row: cannon.row + 0.5 }, { col: cannon.col + 3, row: cannon.row + 1.5, up: 1.2 });
+await frames(4);
+await screenshot("cannon");
 await show("fountain", () => people.list().find((p) => p.gesture === "turnlook" && p.col !== undefined));
 await show("vista", () => {
     const party = people.list().filter((p) => p.lingering === "photo spot" && p.party !== undefined && p.col !== undefined);

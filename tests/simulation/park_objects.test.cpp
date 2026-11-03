@@ -139,6 +139,8 @@ TEST_CASE("a party with the player's guest in it has its photo taken at a photo 
             REQUIRE(photos != nullptr);
             REQUIRE(photos->taken.size() == 1);
             CHECK(photos->taken[0].guest == friend_);
+            CHECK(std::ranges::contains(r.get<Thoughts>(friend_).recent, ThoughtKind::Photographee, &Thought::kind));
+            CHECK(std::ranges::contains(r.get<Thoughts>(leader).recent, ThoughtKind::Photographer, &Thought::kind));
         }
         else
             CHECK((photos == nullptr || photos->taken.empty()));
@@ -216,4 +218,30 @@ TEST_CASE("a guest passing a free water cannon may fire it a while, one at a tim
     }
     CHECK(most == 1);
     CHECK(firing != entt::null);
+}
+
+TEST_CASE("a party stops together at a view and likes it with scenery round it, or folds its arms at a bare one")
+{
+    for (const bool planted : { true, false })
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 1, 0 });
+        park.item(PathItemKind::PhotoSpot, { 0, 0 });
+        std::vector<rct3::save::PlacedObject> trees;
+        for (int i = 0; i < 30; ++i)
+            trees.push_back({ .id = static_cast<std::uint64_t>(i + 1), .col = i % 2, .row = 1 });
+        import_scenery(park.world(), trees, [&](const rct3::save::PlacedObject&) { return planted ? 1.0f : 0.0f; });
+        const auto leader = park.guest({ 1, 0 });
+        const auto friend_ = park.guest({ 1, 0 });
+        park.party({ leader, friend_ });
+        auto& r = park.world().registry;
+        REQUIRE(park.run_until([&] { return r.all_of<Linger>(leader); }, 120));
+        for (const auto g : { leader, friend_ })
+        {
+            CHECK(r.all_of<Linger>(g));
+            const auto* thoughts = r.try_get<Thoughts>(g);
+            CHECK((thoughts != nullptr && std::ranges::contains(thoughts->recent, ThoughtKind::PhotoSpotGood, &Thought::kind)) == planted);
+            CHECK((r.all_of<Gesture>(g) && r.get<Gesture>(g).kind == GestureKind::Disapproval) == !planted);
+        }
+    }
 }

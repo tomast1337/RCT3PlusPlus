@@ -1084,16 +1084,42 @@ namespace rct3::simulation
                     {
                         const PathItemKind kind = r.get<PathItem>(*sight).kind;
                         r.emplace<Linger>(g, kind, kTuning.facilities.watch.value);
-                        // The player keeps a photo of each stop their own guest's party makes at a photo spot.
+                        // At a view the whole party stops to take it in, and judges it by the scenery round it: a fine
+                        // one pleases them, a bare one gets folded arms. The player keeps a photo of each stop their
+                        // own guest's party makes, one of the others taking it.
+                        // shortcut: the party stands where it stopped rather than lined up along the view; upgrade
+                        // with a facing for the spot.
                         if (kind == PathItemKind::PhotoSpot)
                         {
-                            entt::entity avatar = r.get<Visitor>(g).avatar ? g : entt::null;
-                            if (const auto* member = r.try_get<Member>(g))
-                                for (const entt::entity m : r.get<Party>(member->party).members)
-                                    if (avatar == entt::null && r.get<Visitor>(m).avatar)
-                                        avatar = m;
+                            const auto* member = r.try_get<Member>(g);
+                            const std::vector<entt::entity> party = member != nullptr ? r.get<Party>(member->party).members : std::vector { g };
+                            const auto* near = r.ctx().find<SceneryNear>();
+                            const bool fine = near != nullptr && here < near->by_node.size() && near->by_node[here] >= kTuning.surroundings.great;
+                            entt::entity avatar = entt::null;
+                            for (const entt::entity m : party)
+                            {
+                                if (avatar == entt::null && r.get<Visitor>(m).avatar)
+                                    avatar = m;
+                                if (!r.all_of<Mood, Stride>(m))
+                                    continue;
+                                if (m != g && !r.all_of<Linger>(m))
+                                    r.emplace<Linger>(m, kind, kTuning.facilities.watch.value);
+                                if (!fine)
+                                {
+                                    r.emplace_or_replace<Gesture>(m, GestureKind::Disapproval, kTuning.gestures.shown.value);
+                                    continue;
+                                }
+                                think(r, m, ThoughtKind::PhotoSpotGood, entt::null, now);
+                                auto& happiness = r.get<Mood>(m).happiness.value;
+                                happiness = clamp01(happiness + kTuning.surroundings.view_cheer.value);
+                            }
                             if (avatar != entt::null)
+                            {
                                 r.ctx().emplace<Photos>().taken.push_back({ avatar, here });
+                                think(r, avatar, ThoughtKind::Photographee, entt::null, now);
+                                if (const auto other = std::ranges::find_if(party, [&](entt::entity m) { return m != avatar; }); other != party.end())
+                                    think(r, *other, ThoughtKind::Photographer, entt::null, now);
+                            }
                         }
                         continue;
                     }

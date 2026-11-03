@@ -256,6 +256,9 @@ namespace rct3::simulation
         ReallyTidy = 6,   ///< No litter or damage round them
         GreatScenery = 8, ///< Plenty of scenery round them
         JumpingFountainsGood = 189,
+        PhotoSpotGood = 85, ///< At a view with plenty of scenery round it
+        Photographer = 88,  ///< Took a photo of the player's guest at a view
+        Photographee = 89,  ///< The player's guest, photographed at one
         Hungry = 4,
         Thirsty = 5,
         Toilet = 12,

@@ -1230,7 +1230,7 @@ namespace rct3::simulation
                             else
                                 --rubbish->pocketed;
                         }
-                        r.emplace_or_replace<Gesture>(g, GestureKind::HandOver, kTuning.gestures.shown.value);
+                        r.emplace_or_replace<Gesture>(g, Gesture { .kind = GestureKind::HandOver, .left = kTuning.gestures.shown, .at = *bin });
                         if (!rubbish->held && rubbish->pocketed == 0)
                             r.remove<Carried>(g);
                     }

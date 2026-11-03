@@ -781,6 +781,7 @@ namespace rct3::simulation
     {
         GestureKind kind = GestureKind::Nod;
         Seconds left { };
+        entt::entity at = entt::null; ///< What it is made at, if anything: the bin their rubbish goes in
     };
 
     /// A guest stopped to watch someone, the star: an entertainer's show, or a VIP they want an autograph from.

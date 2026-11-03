@@ -147,6 +147,18 @@ namespace rct3::scene
             return park::placed_transform(*o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[linger->seat];
         }
 
+        /// Where path item `item` stands in the park, as its placed object; nothing once it is gone.
+        std::optional<glm::vec3> item_at(const ParkScene& scene, entt::entity item)
+        {
+            const auto& r = scene.sim.registry;
+            const auto* path_item = r.valid(item) ? r.try_get<simulation::PathItem>(item) : nullptr;
+            const auto o = path_item != nullptr ? std::ranges::find(scene.objects, path_item->object, &save::PlacedObject::id) : scene.objects.end();
+            if (o == scene.objects.end() || o->hidden)
+                return std::nullopt;
+            const auto model = scene.models.find(park::model_ref(*o));
+            return glm::vec3(park::placed_transform(*o, model != scene.models.end() ? &model->second : nullptr, scene.grid, scene.fitted)[3]);
+        }
+
         /// How guests sit on a bench, as the game's motions name them: down onto it, sitting, turned to talk to
         /// someone on the seat to one side or the other, and up again.
         const std::int32_t kSitDownMotion = park::motion_number("sitbenchin").value_or(park::motion::kIdle);
@@ -712,6 +724,18 @@ namespace rct3::scene
                 constexpr std::array<std::string_view, 14> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop", "handticket", "applause", "lookwatch", "disapproval", "cry", "horror", "turnlook" };
                 pose.motion = park::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(park::motion::kIdle);
                 pose.time = simulation::kTuning.gestures.shown.value - gesture->left.value + scene.sim_time;
+                // Rubbish into a bin: a quick step over to it, facing it, and back.
+                if (const auto bin = gesture->kind == simulation::GestureKind::HandOver ? item_at(scene, gesture->at) : std::nullopt)
+                {
+                    constexpr float kBinReach = 0.45f; ///< Chosen by eye: from a bin to where one using it stands
+                    constexpr float kBinStep = 0.3f;   ///< Chosen by eye: seconds of the step over to a bin and back
+                    const glm::vec2 to { bin->x - at.position.x, bin->z - at.position.z };
+                    const float part = std::clamp(std::min(pose.time, gesture->left.value - scene.sim_time) / kBinStep, 0.0f, 1.0f);
+                    const float reach = std::max(glm::length(to) - kBinReach, 0.0f) * part;
+                    const glm::vec2 way = glm::length(to) > 0 ? glm::normalize(to) : glm::vec2 { 0.0f };
+                    const float turn = glm::length(to) > 0 ? std::remainder(std::atan2(to.x, to.y) - at.heading.value, glm::two_pi<float>()) : 0.0f;
+                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position + glm::vec3(way.x, 0.0f, way.y) * reach), at.heading.value + turn * part, glm::vec3(0.0f, 1.0f, 0.0f));
+                }
                 // Clapping: hands up, clapping a while, hands down for the last of it.
                 constexpr float kClapEnds = 0.33f; ///< Seconds the applause motions take to raise and lower the hands
                 if (gesture->kind == simulation::GestureKind::Clap)

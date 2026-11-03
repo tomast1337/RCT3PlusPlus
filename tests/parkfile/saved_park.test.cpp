@@ -198,7 +198,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     model.guests.resize(2);
     model.guests[0].in_park = true;
     model.staff.resize(1);
-    // Ann is drawn as the second saved guest; Bob came in at the gate since; Cy has left.
+    // Ann is drawn as the second saved guest; Bob arrived since and is walking in; Cy has left.
     const entt::entity ann = r.create();
     r.emplace<Visitor>(ann, Visitor { .name = "Ann" });
     r.emplace<Pose>(ann, Pose { .position = { 1, 0, 2 }, .heading = 0.5f });
@@ -212,6 +212,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     r.emplace<Needs>(bob);
     r.emplace<Mood>(bob);
     r.emplace<Wallet>(bob);
+    r.emplace<Outside>(bob); // Still on the road in from a spawn point
     const entt::entity cy = r.create();
     r.emplace<Visitor>(cy);
     r.emplace<Pose>(cy);
@@ -267,6 +268,9 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     CHECK(l.get<Wallet>(ann2).spent_rides.value == 300);
     CHECK(l.get<Taste>(ann2).most.value == 0.7f);
     CHECK(l.get<Visitor>(bob2).name == "Bob");
+    REQUIRE(l.all_of<Outside>(bob2));
+    CHECK(l.get<Outside>(bob2).way == Outside::Way::In);
+    CHECK_FALSE(l.all_of<Outside>(ann2));
     CHECK(people.guests[1 - first].look == -1);
     // As start_guests leaves them, walking.
     for (const entt::entity e : guests)

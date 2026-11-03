@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <map>
 
@@ -113,6 +114,20 @@ namespace rct3::park
                 const glm::mat4 local { glm::vec4(rows[0], 0.0f), glm::vec4(rows[1], 0.0f), glm::vec4(rows[2], 0.0f), glm::vec4(at, 1.0f) };
                 const std::int32_t parent = head.parents[bone];
                 bones[bone] = (parent >= 0 ? bones[static_cast<std::size_t>(parent)] : person.world) * local;
+            }
+            // Turned to look at something: the head bone and all that hangs from it, about the upright through it.
+            if (person.head_turn != 0 && head.turns < bones.size())
+            {
+                const glm::vec3 pivot { bones[head.turns][3] };
+                const glm::mat4 turn = glm::translate(glm::mat4(1.0f), pivot) * glm::rotate(glm::mat4(1.0f), person.head_turn, glm::normalize(glm::vec3(person.world[1]))) * glm::translate(glm::mat4(1.0f), -pivot);
+                std::vector<bool> under(bones.size());
+                for (std::size_t bone = 0; bone < bones.size(); ++bone)
+                {
+                    const std::int32_t parent = head.parents[bone];
+                    under[bone] = bone == head.turns || (parent >= 0 && under[static_cast<std::size_t>(parent)]);
+                    if (under[bone])
+                        bones[bone] = turn * bones[bone];
+                }
             }
             return bones;
         }

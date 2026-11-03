@@ -79,6 +79,7 @@ namespace rct3::park
     {
         std::string texture;
         std::vector<std::int32_t> parents; ///< Of each bone
+        std::size_t turns = 0;             ///< The bone that turns the head to look about: the one its name calls the head
         std::vector<std::optional<ovl::SimpleAnim>> motions;
         MotionIndex motion_index;
         std::array<std::optional<ovl::SimpleSkin>, 2> skins; ///< The plain face at each level

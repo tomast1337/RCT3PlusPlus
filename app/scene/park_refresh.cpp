@@ -721,7 +721,7 @@ namespace rct3::scene
                 if (gesture == nullptr)
                     return;
                 // By the names the people's meshes give these motions, in GestureKind's order.
-                constexpr std::array<std::string_view, 14> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop", "handticket", "applause", "lookwatch", "disapproval", "cry", "horror", "turnlook" };
+                constexpr std::array<std::string_view, 13> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop", "handticket", "applause", "lookwatch", "disapproval", "cry", "horror" };
                 pose.motion = park::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(park::motion::kIdle);
                 pose.time = simulation::kTuning.gestures.shown.value - gesture->left.value + scene.sim_time;
                 // Rubbish into a bin: a quick step over to it, facing it, and back.
@@ -1025,6 +1025,16 @@ namespace rct3::scene
                 else if (shown.paces[0] > 0)
                     pose.time = at.walked.value / shown.paces[0]; // Their walk's step, whatever their gait
             }
+            // Glancing at something as they go: the head turns to it and back, as far as a neck goes.
+            if (const auto* glance = r.try_get<simulation::Glance>(shown.guest))
+                if (const auto seen = item_at(scene, glance->at))
+                {
+                    constexpr float kNeckTurn = glm::radians(70.0f); ///< Chosen by eye: the furthest a head turns
+                    const float length = simulation::kTuning.surroundings.glancing.value;
+                    const float into = std::clamp(length - glance->left.value + scene.sim_time, 0.0f, length);
+                    const float turn = std::remainder(std::atan2(seen->x - at.position.x, seen->z - at.position.z) - at.heading.value, glm::two_pi<float>());
+                    pose.head_turn = std::clamp(turn, -kNeckTurn, kNeckTurn) * std::sin(glm::pi<float>() * into / length);
+                }
         }
         return pose;
     }

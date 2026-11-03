@@ -288,6 +288,8 @@ namespace rct3::park
             const auto skeleton_file = f.parts.find(tagged(rig->bones, "sal"), rig_file).value_or(rig_file);
             HeadModel head;
             head.parents = skeleton->parents;
+            if (const auto named = std::ranges::find_if(skeleton->bones, [](std::string_view bone) { return lower(bone).ends_with(" head"); }); named != skeleton->bones.end())
+                head.turns = static_cast<std::size_t>(named - skeleton->bones.begin());
             head.motion_index = MotionIndex(skeleton->animation_names);
             for (const std::string_view motion : skeleton->animations)
             {

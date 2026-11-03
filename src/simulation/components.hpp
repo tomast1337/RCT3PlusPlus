@@ -774,7 +774,6 @@ namespace rct3::simulation
         Disapproval, ///< Arms folded at a poor show
         Cry,         ///< A child crying after a poor show
         Horror,      ///< A child taking fright at a poor show
-        Glance,      ///< Turning to look at jumping fountains passed
     };
 
     struct Gesture
@@ -782,6 +781,13 @@ namespace rct3::simulation
         GestureKind kind = GestureKind::Nod;
         Seconds left { };
         entt::entity at = entt::null; ///< What it is made at, if anything: the bin their rubbish goes in
+    };
+
+    /// A look a guest gives something they walk on past, their head turned towards it a moment.
+    struct Glance
+    {
+        entt::entity at = entt::null; ///< The path item looked at: jumping fountains
+        Seconds left { };
     };
 
     /// A guest stopped to watch someone, the star: an entertainer's show, or a VIP they want an autograph from.

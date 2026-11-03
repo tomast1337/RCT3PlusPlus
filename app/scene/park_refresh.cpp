@@ -420,8 +420,8 @@ namespace rct3::scene
                     std::optional<const simulation::Linger&> firing;
                     for (const auto [e, item] : r.view<const simulation::PathItem>().each())
                         if (item.object == id)
-                            for (const auto [g, linger, stride] : r.view<const simulation::Linger, const simulation::Stride>().each())
-                                if (linger.at == simulation::PathItemKind::WaterCannon && stride.from == item.node)
+                            for (const auto [g, linger] : r.view<const simulation::Linger>().each())
+                                if (linger.at == simulation::PathItemKind::WaterCannon && linger.bench == e)
                                     firing = linger;
                     auto jet = std::ranges::find(scene.jets, boned.object, &ParkScene::Jet::object);
                     if (firing && jet == scene.jets.end())

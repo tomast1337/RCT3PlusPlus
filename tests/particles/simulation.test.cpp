@@ -157,6 +157,15 @@ TEST_CASE("a particle's look follows its curves, size and the effect's tint")
     CHECK(l.colour.r == doctest::Approx(0.5));
 }
 
+TEST_CASE("a stretched particle is drawn longer along its motion, by its speed")
+{
+    Effect e = steady(1, 2);
+    const ParticleArrays p { .velocity = { { 0, -4, 2 } }, .age = { 0.5f }, .life = { 2 }, .scale = { 1 }, .kind = { 0 } };
+    CHECK(look(e, p, 0).stretch == glm::vec3(0.0f));
+    e.particles[0].stretch = 0.25f;
+    CHECK(look(e, p, 0).stretch == glm::vec3(0, -1, 0.5f));
+}
+
 TEST_CASE("a sprite runs through its frames, or keeps the one a particle picks")
 {
     rct3::particles::Sprite sprite { .frames = { { }, { }, { }, { } }, .animated = true, .loop_time = 2 };

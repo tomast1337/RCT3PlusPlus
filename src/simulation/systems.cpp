@@ -1156,12 +1156,10 @@ namespace rct3::simulation
                     if (sight != items(here).end() && random::chance(dice.state, r.get<PathItem>(*sight).kind == PathItemKind::Sight ? kTuning.surroundings.stop.value : kTuning.facilities.watch_chance.value))
                     {
                         const PathItemKind kind = r.get<PathItem>(*sight).kind;
-                        r.emplace<Linger>(g, kind, kTuning.facilities.watch.value);
-                        // At a view the whole party stops to take it in, and judges it by the scenery round it: a fine
-                        // one pleases them, a bare one gets folded arms. The player keeps a photo of each stop their
-                        // own guest's party makes, one of the others taking it.
-                        // shortcut: the party stands where it stopped rather than lined up along the view; upgrade
-                        // with a facing for the spot.
+                        r.emplace<Linger>(g, Linger { .at = kind, .left = kTuning.facilities.watch, .bench = *sight });
+                        // At a view the whole party stops to take it in, in a row along it, and judges it by the scenery
+                        // round it: a fine one pleases them, a bare one gets folded arms. The player keeps a photo of each
+                        // stop their own guest's party makes, one of the others taking it.
                         if (kind == PathItemKind::PhotoSpot)
                         {
                             const auto* member = r.try_get<Member>(g);
@@ -1176,7 +1174,7 @@ namespace rct3::simulation
                                 if (!r.all_of<Mood, Stride>(m))
                                     continue;
                                 if (m != g && !r.all_of<Linger>(m))
-                                    r.emplace<Linger>(m, kind, kTuning.facilities.watch.value);
+                                    r.emplace<Linger>(m, Linger { .at = kind, .left = kTuning.facilities.watch, .bench = *sight });
                                 if (!fine)
                                 {
                                     r.emplace_or_replace<Gesture>(m, GestureKind::Disapproval, kTuning.gestures.shown.value);
@@ -1190,8 +1188,15 @@ namespace rct3::simulation
                             {
                                 r.ctx().emplace<Photos>().taken.push_back({ avatar, here });
                                 think(r, avatar, ThoughtKind::Photographee, entt::null, now);
-                                if (const auto other = std::ranges::find_if(party, [&](entt::entity m) { return m != avatar; }); other != party.end())
+                            }
+                            // One of a party films the rest: the player's guest's party has their photo taken.
+                            const entt::entity posing = avatar != entt::null ? avatar : g;
+                            if (const auto other = std::ranges::find_if(party, [&](entt::entity m) { return m != posing; }); other != party.end())
+                            {
+                                if (avatar != entt::null)
                                     think(r, *other, ThoughtKind::Photographer, entt::null, now);
+                                if (auto* taking = r.try_get<Linger>(*other); taking != nullptr && taking->bench == *sight)
+                                    taking->camera = true;
                             }
                         }
                         continue;

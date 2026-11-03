@@ -213,6 +213,10 @@ TEST_CASE("a party with the player's guest in it has its photo taken at a photo 
             CHECK(photos->taken[0].guest == friend_);
             CHECK(std::ranges::contains(r.get<Thoughts>(friend_).recent, ThoughtKind::Photographee, &Thought::kind));
             CHECK(std::ranges::contains(r.get<Thoughts>(leader).recent, ThoughtKind::Photographer, &Thought::kind));
+            // The party stops at that view, the photographer filming.
+            CHECK(r.get<Linger>(leader).camera);
+            CHECK(!r.get<Linger>(friend_).camera);
+            CHECK(r.get<Linger>(friend_).bench == r.get<Linger>(leader).bench);
         }
         else
             CHECK((photos == nullptr || photos->taken.empty()));

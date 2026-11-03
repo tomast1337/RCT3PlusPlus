@@ -748,11 +748,12 @@ namespace rct3::simulation
     struct Linger
     {
         PathItemKind at = PathItemKind::Bench;
-        Seconds left { };                ///< Watching: till they walk on. Sitting: till they may get up, then getting up
-        entt::entity bench = entt::null; ///< The bench they sit on, or the water cannon they fire
-        std::uint8_t seat = 0;           ///< Which of its seats, counting as its model numbers them
-        Seconds sat { };                 ///< Since they sat down
-        bool rising = false;             ///< Getting up, for what `left` holds
+        Seconds left { };                 ///< Watching: till they walk on. Sitting: till they may get up, then getting up
+        entt::entity bench = entt::null;  ///< The bench they sit on, or the water cannon they fire
+        std::uint8_t seat = 0;            ///< Which of its seats, counting as its model numbers them
+        Seconds sat { };                  ///< Since they sat down
+        bool rising = false;              ///< Getting up, for what `left` holds
+        entt::entity target = entt::null; ///< Firing a water cannon: who they spray, none while they aim about
     };
 
     /// How a guest shows what they feel, standing a moment where they are.

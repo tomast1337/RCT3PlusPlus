@@ -725,7 +725,15 @@ namespace rct3::park
                         for (const std::int32_t b : joint_bones)
                             model.arm_joints.push_back(column_matrix(shape->bones[static_cast<std::size_t>(b)].world));
                 }
-                const bool rigged = joint_of.empty() && !model.rig && !lod.animations.empty();
+                // A water cannon has no motions of its own, but turns its gun to aim: rigged all the same.
+                const auto bone_named = [&](std::string_view name) {
+                    const auto b = std::ranges::find_if(shape->bones, [&](const ovl::Bone& bone) { return strings::equals_ignoring_case(bone.name, name); });
+                    return b != shape->bones.end() ? static_cast<std::int32_t>(b - shape->bones.begin()) : -1;
+                };
+                const std::int32_t turret = bone_named(kCannonTurret);
+                const std::int32_t nozzle = bone_named(kCannonNozzle);
+                const bool aims = turret >= 0 && nozzle >= 0;
+                const bool rigged = joint_of.empty() && !model.rig && (!lod.animations.empty() || aims);
                 if (model.lights.empty() || model.effects.empty())
                 {
                     std::vector<NamedPlace> places;
@@ -746,6 +754,8 @@ namespace rct3::park
                     // In number order, as the seats' and cameras' places are.
                     model.seat_bones = numbered_bones(*shape, kSeat);
                     model.view_bones = numbered_bones(*shape, kView);
+                    if (aims)
+                        model.aim_bones = { turret, nozzle };
                 }
                 for (const std::string_view name : lod.animations)
                 {

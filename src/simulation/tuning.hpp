@@ -533,6 +533,7 @@ namespace rct3::simulation::tuning
         Seconds longest_rest { 15 };
         Chance poolside { 0.2 };                    ///< Of going to the paved squares next rather than the water
         Chance extra { 0.3 };                       ///< Of going to a spa pool or an extra next, of those that go on from the water
+        Chance slide { 0.25 };                      ///< Chosen by eye: of going up one of the pool's slides next, when it has any
         std::uint8_t lounger_places = 2;            ///< Swimmers a set of sun loungers takes at once, as the saved parks' do
         std::uint8_t shower_places = 3;             ///< And a shower
         Seconds lounging { 45 };                    ///< Chosen by eye: on a lounger

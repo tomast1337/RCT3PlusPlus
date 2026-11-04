@@ -82,6 +82,9 @@ namespace rct3::simulation
         /// The track's end joins its start. When it does not, as on one left unfinished, a train going round
         /// runs off its end.
         bool closed = true;
+        /// Of a track with two ends, the far end is a pool slide's: a train running off it drops its riders
+        /// into the pool and is gone, not crashed, till it is back at the station.
+        bool splash_out = false;
         /// A test train shown while the track is built: it crashes as any train does, but its wrecks hurt no one
         /// and the crash is not the park's
         bool ghost = false;
@@ -101,6 +104,8 @@ namespace rct3::simulation
         float held = 0;   ///< Seconds it has been held at the top of its climb
         /// Run off an end of its track: stopped running, where it left the track and at the speed it left at
         bool crashed = false;
+        /// Run off the end of a pool slide: out of sight, where it left the track and at the speed it left at
+        bool splashed = false;
 
         [[nodiscard]] float length() const
         {
@@ -131,7 +136,8 @@ namespace rct3::simulation
     /// Moves `coaster`'s running train on by `seconds`, but no further than `room` (the clear track ahead of it,
     /// up to the train in front), where it stops and waits; whether it has come round to its start (on a shuttle,
     /// back to it for the last time), where it stops. At one of its other stops it stops too, no longer running,
-    /// but this gives false. A train that runs off an end of a track with two ends is left crashed instead.
+    /// but this gives false. A train that runs off an end of a track with two ends is left crashed instead, or
+    /// off the end of a pool slide left splashed, which counts as coming round.
     bool drive(Coaster& coaster, float seconds, float room = std::numeric_limits<float>::infinity());
 
     /// What riders of a train feel at its front, from the bend of the track at its speed and gravity: in g, up

@@ -482,18 +482,21 @@ namespace rct3::simulation
     /// A guest at a pool, from paying at its changing room until they come out of it again.
     struct Swimmer
     {
-        Seconds changing { };         ///< Still to spend changing, out of sight in the room
-        bool changed = false;         ///< Into their swimwear
-        Seconds left { };             ///< In the pool still; then they go back to change
-        glm::vec3 goal { 0.0f };      ///< Where they swim or walk to next
-        bool in_water = false;        ///< Swimming, or sitting in a spa pool; else on the paved squares round the water
-        bool to_spa = false;          ///< The goal is a seat in a spa pool
-        Seconds idle { };             ///< Floating, or standing, before going on
-        std::int32_t spot = -1;       ///< The extra of the pool's they head for, wait at or use; -1 for none
-        std::int32_t place = -1;      ///< Their place on it while they use it; -1 on the way or waiting
-        PoolUse use = PoolUse::Stand; ///< What they do there
-        Seconds waited { };           ///< For a place on it so far
-        Seconds stayed { };           ///< At their goal so far
+        Seconds changing { };            ///< Still to spend changing, out of sight in the room
+        bool changed = false;            ///< Into their swimwear
+        Seconds left { };                ///< In the pool still; then they go back to change
+        glm::vec3 goal { 0.0f };         ///< Where they swim or walk to next
+        bool in_water = false;           ///< Swimming, or sitting in a spa pool; else on the paved squares round the water
+        bool to_spa = false;             ///< The goal is a seat in a spa pool
+        Seconds idle { };                ///< Floating, or standing, before going on
+        std::int32_t spot = -1;          ///< The extra of the pool's they head for, wait at or use; -1 for none
+        std::int32_t place = -1;         ///< Their place on it while they use it; -1 on the way or waiting
+        PoolUse use = PoolUse::Stand;    ///< What they do there
+        Seconds waited { };              ///< For a place on it so far
+        Seconds stayed { };              ///< At their goal so far
+        entt::entity slide = entt::null; ///< The pool slide they head for, to queue at its station
+        /// The changing room of the complex whose slide they queue for or ride, to swim on in after
+        entt::entity room = entt::null;
     };
 
     /// What a shop sells, or what a facility does for its guests.
@@ -907,8 +910,9 @@ namespace rct3::simulation
         bool sliding = false; ///< Down the slope, along the ground
         Seconds slid { };     ///< Since they began sliding
         NodeId node = kNoNode;
-        bool swimwear = false;          ///< Taken out of a pool in their swimwear, kept on till they land
-        entt::entity pool = entt::null; ///< The changing room of the pool complex they fall into, to swim there
+        bool swimwear = false;           ///< Taken out of a pool in their swimwear, kept on till they land
+        entt::entity pool = entt::null;  ///< The changing room of the pool complex they fall into, to swim there
+        entt::entity slide = entt::null; ///< The pool slide they came off the end of, splashing down
     };
 
     /// What a bin holds, in pieces of rubbish.

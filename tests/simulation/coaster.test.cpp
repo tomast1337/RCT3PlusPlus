@@ -448,6 +448,26 @@ TEST_CASE("a train going round an unfinished track runs off its end and crashes 
     CHECK(c.speed > 5);
 }
 
+TEST_CASE("a train off the end of a pool slide splashes out, not crashed, still going, and that ends its lap")
+{
+    Coaster c = unfinished();
+    c.splash_out = true;
+    bool back = false;
+    for (int i = 0; i < 4000 && c.running; ++i)
+        back = drive(c, 0.05f);
+    CHECK(back);
+    CHECK(c.splashed);
+    CHECK_FALSE(c.crashed);
+    CHECK(c.at == 80);
+    CHECK(c.speed > 5);
+    CHECK_FALSE(standing_at(c)); // Not in the station to load
+    Coaster tested = unfinished();
+    tested.splash_out = true;
+    const auto test = test_lap(tested); // Rated as a ride that comes round
+    REQUIRE(test);
+    CHECK(test->ride_length == doctest::Approx(80));
+}
+
 TEST_CASE("a shuttle's train pushed too hard runs off an end and crashes")
 {
     Coaster c = spikes(Shuttle::Back, 2);

@@ -365,6 +365,9 @@ namespace rct3::simulation
         /// What a guest does once let go by a ride: a party member waits for the rest, others wander on.
         Errand after_ride(const entt::registry& r, entt::entity guest, entt::entity ride)
         {
+            // Out of a pool slide's queue, a swimmer swims on.
+            if (const auto* swimmer = r.try_get<Swimmer>(guest); swimmer != nullptr && r.valid(swimmer->room))
+                return { .kind = ErrandKind::Swimming, .target = swimmer->room };
             if (r.all_of<Member>(guest))
             {
                 const Errand& was = r.get<Errand>(guest);
@@ -2436,7 +2439,7 @@ namespace rct3::simulation
         if (const auto* held = r.try_get<Held>(person))
             return held->swimwear;
         if (const auto* drop = r.try_get<Dropped>(person))
-            return drop->swimwear && r.get<Pose>(person).position.y > drop->ground;
+            return drop->swimwear && (r.get<Pose>(person).position.y > drop->ground || r.valid(drop->pool));
         return false;
     }
 
@@ -2571,7 +2574,8 @@ namespace rct3::simulation
         float room = std::numeric_limits<float>::infinity();
         for (std::size_t k = 0; k < trains.size(); ++k)
         {
-            if (k == t || length <= 0)
+            // Gone off a pool slide's end, a train is in no one's way; on a track with two ends, nor is one behind.
+            if (k == t || length <= 0 || trains[k].splashed || (!train.closed && trains[k].at < train.at))
                 continue;
             // How far ahead the back of train k is, round the track.
             const float ahead = std::fmod(std::fmod(trains[k].at - train.at, length) + length, length);
@@ -3498,8 +3502,11 @@ namespace rct3::simulation
         {
             auto& swimmer = r.get<Swimmer>(g);
             auto& pose = r.get<Pose>(g);
-            // Thrown out by a crashed train's blast, they swim no more.
+            // Splashing down off a slide, or queueing for or riding one, they swim on after.
             auto* swimming = r.try_get<Errand>(g);
+            if (r.all_of<Dropped>(g) || (swimming != nullptr && (swimming->kind == ErrandKind::Queueing || swimming->kind == ErrandKind::Riding) && r.valid(swimmer.room)))
+                continue;
+            // Thrown out by a crashed train's blast, they swim no more.
             const auto* door = swimming != nullptr && r.valid(swimming->target) ? r.try_get<PoolDoor>(swimming->target) : nullptr;
             auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<SwimPool>(door->pool) : nullptr;
             if (swimming == nullptr || swimming->kind != ErrandKind::Swimming || pool == nullptr || pool->water.empty())
@@ -3567,6 +3574,22 @@ namespace rct3::simulation
             swimmer.left.value -= dt;
             if (!there)
                 continue;
+            // At a slide's station: into its queue, up on the platform, if it still runs.
+            // shortcut: those queueing stand at the station together, upgrade to a line up its steps.
+            if (r.valid(swimmer.slide))
+            {
+                const entt::entity slide = std::exchange(swimmer.slide, entt::null);
+                const auto* upkeep = r.try_get<Upkeep>(slide);
+                if (r.get<Attraction>(slide).open && (upkeep == nullptr || !upkeep->broken))
+                {
+                    pose.position = swimmer.goal;
+                    swimmer.room = errand.target;
+                    swimmer.in_water = false;
+                    errand = { .kind = ErrandKind::Queueing, .target = slide };
+                    r.get<CycleRide>(slide).queue.push_back(g);
+                    continue;
+                }
+            }
             if (swimmer.left.value <= 0)
             {
                 swimmer.spot = swimmer.place = -1;
@@ -3620,6 +3643,22 @@ namespace rct3::simulation
             swimmer.use = PoolUse::Stand;
             swimmer.waited = { };
             swimmer.idle.value = static_cast<float>(random::between(dice, double { kTuning.pools.shortest_rest.value }, double { kTuning.pools.longest_rest.value }));
+            // Now and then over to one of the complex's open slides, those ending in its water, where the rider
+            // gets on (the middle of the car waiting at the station).
+            std::vector<std::pair<entt::entity, glm::vec3>> slides;
+            for (const entt::entity s : sorted(r.view<const Trains, const Attraction, const CycleRide>()))
+            {
+                const Coaster& train = r.get<Trains>(s).trains.front();
+                const auto* upkeep = r.try_get<Upkeep>(s);
+                if (train.splash_out && r.get<Attraction>(s).open && (upkeep == nullptr || !upkeep->broken) && pool_door_at(world, track_point(train, train.length())) == errand.target)
+                    slides.emplace_back(s, track_point(train, train.start - train.train_length / 2));
+            }
+            if (!slides.empty() && random::chance(dice, kTuning.pools.slide.value))
+            {
+                std::tie(swimmer.slide, swimmer.goal) = slides[random::below(dice, slides.size())];
+                swimmer.to_spa = false;
+                continue;
+            }
             // shortcut: swimmers go straight from spot to spot, over the pool's walls; upgrade with ladders and
             // steps as ways in and out.
             const bool out = !pool->paved.empty() && random::chance(dice, kTuning.pools.poolside.value);
@@ -3740,12 +3779,14 @@ namespace rct3::simulation
                 const NodeId door_node = r.get<Attraction>(room).entrance != kNoNode ? r.get<Attraction>(room).entrance : drop.node;
                 const glm::vec3 landed = pose.position;
                 const Dice dice = r.get<Dice>(e);
+                const auto* swam = r.try_get<Swimmer>(e); // Off one of its slides, with the time they had left
+                const Seconds left = swam != nullptr ? swam->left : kTuning.pools.stay;
                 r.remove<Dropped>(e);
                 start_walking(world, e, door_node);
                 r.get<Dice>(e) = dice;
                 pose.position = pose.was = landed;
                 r.get<Errand>(e) = { .kind = ErrandKind::Swimming, .target = room };
-                r.emplace_or_replace<Swimmer>(e, Swimmer { .changed = true, .left = kTuning.pools.stay, .goal = landed });
+                r.emplace_or_replace<Swimmer>(e, Swimmer { .changed = true, .left = left, .goal = landed });
                 continue;
             }
             const glm::vec3 to = paths.centre(drop.node) - pose.position;
@@ -3800,6 +3841,13 @@ namespace rct3::simulation
                     upkeep.samples = 0;
                 }
             }
+            // Out of the queue at the station's entrance; a swimmer out of a pool slide's swims on from where they stand.
+            const auto leave_queue = [&](entt::entity guest, NodeId entrance) {
+                Errand& errand = r.get<Errand>(guest);
+                errand = after_ride(r, guest, e);
+                if (errand.kind != ErrandKind::Swimming)
+                    stop_at(paths, entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+            };
             // Each station's queue in turn.
             for (std::size_t station = 0; station <= ride.stops.size(); ++station)
             {
@@ -3814,8 +3862,7 @@ namespace rct3::simulation
                     if (!r.valid(guest) || r.get<Errand>(guest).queued.value < kTuning.queues.give_up_after.value || r.get<Mood>(guest).happiness.value >= kTuning.queues.give_up_mood.value || !random::chance(r.get<Dice>(guest).state, kTuning.queues.give_up.value * dt))
                         return false;
                     think(r, guest, ThoughtKind::GaveUpQueue, e, now);
-                    r.get<Errand>(guest) = after_ride(r, guest, e);
-                    stop_at(paths, entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+                    leave_queue(guest, entrance);
                     return true;
                 });
                 if (!line.empty())
@@ -3874,7 +3921,7 @@ namespace rct3::simulation
             const auto* walks = r.try_get<RideWalks>(e);
             // Those getting off at `station`: where they meant to, or back where they got on.
             // `shift`: from where the train stands at the station's end to where it stands now.
-            const auto unload = [&](std::vector<entt::entity>& riders, std::size_t station, glm::vec3 shift = glm::vec3(0.0f)) {
+            const auto unload = [&](std::vector<entt::entity>& riders, std::size_t station, glm::vec3 shift = glm::vec3(0.0f), const Coaster* splashed = nullptr) {
                 std::vector<bool> off(riders.size());
                 float side_ahead = 0;
                 for (std::size_t seat = 0; seat < riders.size(); ++seat)
@@ -3942,6 +3989,28 @@ namespace rct3::simulation
                         }
                         r.get<Pose>(guest).position = walk.points.front();
                         r.emplace_or_replace<RideWalk>(guest, std::move(walk));
+                    }
+                    else if (splashed != nullptr)
+                    {
+                        // Off the end of a pool slide they fly on as fast as their car went, splash down into the
+                        // water and swim on there; with no pool under the end, they land on the ground.
+                        const glm::vec3 at = track_point(*splashed, splashed->at);
+                        const glm::vec3 velocity = track_way(*splashed, splashed->at) * splashed->speed;
+                        const std::optional<NodeId> node = path_to_rejoin(paths, at);
+                        const auto door = pool_door_at(world, at);
+                        const auto* pool = door ? r.try_get<SwimPool>(r.get<PoolDoor>(*door).pool) : nullptr;
+                        if (pool == nullptr || pool->water.empty() || !node)
+                        {
+                            throw_person(r, guest, at, velocity, node.value_or(kNoNode));
+                            continue;
+                        }
+                        const auto nearest = std::ranges::min_element(pool->water, { }, [&](const glm::vec3& w) { return glm::distance(glm::vec2(w.x, w.z), glm::vec2(at.x, at.z)); });
+                        step_out(r, guest);
+                        r.remove<Errand, Stride, Linger, Gesture, Watching, RideWalk>(guest);
+                        auto& pose = r.get<Pose>(guest);
+                        pose.position = pose.was = at;
+                        pose.heading.value = std::atan2(velocity.x, velocity.z);
+                        r.emplace<Dropped>(guest, Dropped { .ground = nearest->y, .fall = { -velocity.y }, .drift = { velocity.x, velocity.z }, .node = *node, .swimwear = true, .pool = *door, .slide = e });
                     }
                     else
                         let_out(r, paths, guest, e, gesture);
@@ -4027,11 +4096,18 @@ namespace rct3::simulation
                         continue; // Halted on the track till fixed
                     // A crashed train is off the track till its wrecks are gone, and back in the station once the
                     // ride is opened or tested again.
-                    if (train.crashed)
+                    // Off a pool slide's end, it is back at the station once nothing stands at its start there.
+                    // shortcut: it is back the moment its start is clear, as if carried there; upgrade if a park
+                    // shows the way back.
+                    const auto in_station = [&](const Coaster& other) { return &other != &train && !other.splashed && !other.crashed && std::abs(other.at - train.start) < train.train_length + kBlockGap; };
+                    if (train.splashed && (!(attraction.open || attraction.testing) || std::ranges::any_of(fleet->trains, in_station)))
+                        continue;
+                    if (train.crashed || train.splashed)
                     {
                         if ((wrecks != nullptr && t < wrecks->trains.size() && !wrecks->trains[t].empty()) || !(attraction.open || attraction.testing))
                             continue;
                         train.crashed = false;
+                        train.splashed = false;
                         train.at = train.start;
                         train.was_at = train.at;
                         train.travelled = 0;
@@ -4077,7 +4153,9 @@ namespace rct3::simulation
                             thrill.reaction = react(thrill.reaction, feel, moving, lifted, mood->happiness, over, leanings, seat < per_car, r.get<Dice>(guest).state, dt);
                         }
                     }
-                    const auto stop = round ? std::optional<std::size_t> { 0 } : was_running ? standing_at(train) : std::nullopt;
+                    if (round && train.splashed)
+                        unload(fleet->riders[t], 0, glm::vec3(0.0f), &train);
+                    const auto stop = round && !train.splashed ? std::optional<std::size_t> { 0 } : was_running ? standing_at(train) : std::nullopt;
                     // Held up in a station behind the train ahead, its riders get off where it stands, every car at
                     // once; it then moves up to load at the station's end.
                     const auto held = stop ? std::nullopt : held_in_station(train);
@@ -4238,9 +4316,11 @@ namespace rct3::simulation
                         const entt::entity guest = queue[i];
                         if (!r.valid(guest))
                             continue;
-                        // An inspector rides free, telling the player when they queued for ages.
+                        // An inspector rides free, telling the player when they queued for ages; a swimmer rides a pool
+                        // slide free, on the complex's ticket.
                         const bool inspector = r.all_of<Staff>(guest);
-                        if (!attraction.open || (!inspector && !pay(r, guest, attraction.price, &Wallet::spent_rides)))
+                        const Money price = r.all_of<Swimmer>(guest) ? Money { } : attraction.price;
+                        if (!attraction.open || (!inspector && !pay(r, guest, price, &Wallet::spent_rides)))
                         {
                             if (attraction.open)
                             {
@@ -4252,7 +4332,7 @@ namespace rct3::simulation
                         }
                         if (!inspector)
                         {
-                            attraction.income.value += attraction.price.value;
+                            attraction.income.value += price.value;
                             ++attraction.customers;
                         }
                         else if (r.get<Errand>(guest).queued.value >= kLongQueue)
@@ -4320,8 +4400,7 @@ namespace rct3::simulation
                         if (!r.valid(guest) || r.all_of<Umbrella>(guest) || paths.nodes()[r.get<Stride>(guest).from].covered || !random::chance(r.get<Dice>(guest).state, kTuning.weather.rain_leave.value * (weather.storm ? 3 : 1) * dt))
                             return false;
                         think(r, guest, ThoughtKind::RainKeepsMeOff, e, now);
-                        r.get<Errand>(guest) = after_ride(r, guest, e);
-                        stop_at(paths, entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+                        leave_queue(guest, entrance);
                         return true;
                     });
                 }
@@ -4334,8 +4413,7 @@ namespace rct3::simulation
                             continue;
                         auto& mood = r.get<Mood>(guest);
                         mood.happiness.value = clamp01(mood.happiness.value - kTuning.wear.breakdown_gloom.value);
-                        r.get<Errand>(guest) = after_ride(r, guest, e);
-                        stop_at(paths, entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+                        leave_queue(guest, entrance);
                     }
                     queue.clear();
                 }

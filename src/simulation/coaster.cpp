@@ -327,10 +327,12 @@ namespace rct3::simulation
                 const float kept = std::clamp(to, std::min(c.train_length, c.length()), c.length());
                 if (kept != to)
                 {
+                    const bool splash = c.splash_out && to > kept;
                     c.at = kept;
-                    c.crashed = true;
+                    c.crashed = !splash;
+                    c.splashed = splash;
                     c.running = false;
-                    return false;
+                    return splash;
                 }
             }
             if (open)
@@ -400,7 +402,7 @@ namespace rct3::simulation
 
     std::optional<std::size_t> standing_at(const Coaster& c)
     {
-        if (c.running || c.crashed)
+        if (c.running || c.crashed || c.splashed)
             return std::nullopt;
         return c.travelled == 0 ? 0 : c.next_stop;
     }

@@ -2550,6 +2550,7 @@ namespace rct3::scene
             if (gone || (!t.train.crashed && !t.train.running && (t.waited += elapsed) >= kTestWait))
             {
                 t.train.crashed = false;
+                t.train.splashed = false;
                 t.wrecks.clear();
                 t.train.at = t.train.start;
                 t.train.travelled = 0;
@@ -2562,6 +2563,8 @@ namespace rct3::scene
             for (std::size_t i = 0; i < t.stood.size(); ++i)
             {
                 glm::mat4 place = park::moved_along(*course, t.stood[i], { t.spots[i].front, t.spots[i].rear }, t.train.at - t.stood_at);
+                if (t.train.splashed)
+                    place = glm::mat4(0.0f); // Off a pool slide's end, out of sight
                 // Crashed, each car flies and tumbles as its wreck does, and is gone with it.
                 if (const simulation::Wreck* wreck = t.train.crashed && i < t.wrecks.size() ? &t.wrecks[i] : nullptr)
                 {

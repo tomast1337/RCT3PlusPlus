@@ -793,12 +793,14 @@ namespace rct3::simulation
         if (!course.closed)
         {
             // A track with two ends runs back and forth: how depends on the ride's mode, how long on its circuits.
-            // In a mode that goes round, the track is unfinished, and its train runs on off the end.
+            // In a mode that goes round, the track is unfinished, and its train runs on off the end; a pool slide's
+            // runs off into the pool.
             // shortcut: a drop tower's car is pushed up like a launched tower's, not hauled up; plain shuttle mode
             // and the other modes run no train; upgrade when a park has them.
             using enum save::OperatingMode;
             const int circuits = std::max(ride.options.circuits, 1);
             c.closed = false;
+            c.splash_out = course.splash_end && ride.mode == ContinuousCircuit;
             switch (ride.mode)
             {
                 case ContinuousCircuit:
@@ -1521,9 +1523,17 @@ namespace rct3::simulation
     {
         auto& r = world.registry;
         std::unordered_map<save::ObjectId, entt::entity> ride_of;
-        // Not a ride run with no doors on the paths, as its riders would have nowhere to get off.
+        // Not a ride run with no doors on the paths, as its riders would have nowhere to get off, but for a pool
+        // slide, whose riders swim on in the pool it ends in.
+        const auto slide_room = [&](entt::entity ride) -> std::optional<entt::entity> {
+            const auto* fleet = r.try_get<Trains>(ride);
+            if (fleet == nullptr || !fleet->trains.front().splash_out)
+                return std::nullopt;
+            const Coaster& train = fleet->trains.front();
+            return pool_door_at(world, track_point(train, train.length()));
+        };
         for (std::size_t i = 0; i < saved.rides.size() && i < rides.size(); ++i)
-            if (rides[i] != entt::null && r.get<Attraction>(rides[i]).entrance != kNoNode)
+            if (rides[i] != entt::null && (r.get<Attraction>(rides[i]).entrance != kNoNode || slide_room(rides[i])))
                 ride_of.emplace(saved.rides[i].base.id, rides[i]);
         std::size_t seated = 0;
         for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
@@ -1534,9 +1544,13 @@ namespace rct3::simulation
             if (e == entt::null || p.state != save::PersonState::OnRide || ride == ride_of.end())
                 continue;
             auto& cycle = r.get<CycleRide>(ride->second);
-            // Off the ride they get off where its riders do.
+            // Off the ride they get off where its riders do; off a slide, in their swimwear, into its pool.
+            const auto room = slide_room(ride->second);
+            const NodeId off = cycle.exit != kNoNode ? cycle.exit : r.get<Attraction>(ride->second).entrance;
+            if (!r.all_of<Stride>(e) && off == kNoNode)
+                continue;
             if (!r.all_of<Stride>(e))
-                start_walking(world, e, cycle.exit != kNoNode ? cycle.exit : r.get<Attraction>(ride->second).entrance);
+                start_walking(world, e, off);
             std::vector<entt::entity>* riders = nullptr;
             if (auto* fleet = r.try_get<Trains>(ride->second))
             {
@@ -1560,6 +1574,8 @@ namespace rct3::simulation
                 continue;
             riders->push_back(e);
             r.get<Errand>(e) = { ErrandKind::Riding, ride->second, 0 };
+            if (room)
+                r.emplace_or_replace<Swimmer>(e, Swimmer { .changed = true, .left = kTuning.pools.stay, .room = *room });
             ++seated;
         }
         return seated;

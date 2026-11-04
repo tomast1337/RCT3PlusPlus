@@ -43,6 +43,7 @@ namespace rct3::park
         std::vector<bool> wet;                     ///< By piece, as piece_starts: runs through open water, not in a tube
         bool closed = false;                       ///< The end joins the start, so cars go round
         bool reverse_lift = false;                 ///< Has the hill a reverse cable lift pulls the train up
+        bool splash_end = false;                   ///< Its last piece is a pool slide's open end
         std::size_t first_piece = 0;               ///< Of the track's pieces, the one the course starts on
         std::vector<glm::vec3> other_stations { }; ///< Where the track's other stretches with a station start, in their order
         [[nodiscard]] float length() const

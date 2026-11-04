@@ -54,6 +54,7 @@ namespace rct3::park
     inline constexpr std::uint32_t kRoleBrakes = 1;     ///< PieceRecord::role of brakes
     inline constexpr std::uint32_t kRoleBlockBrake = 2; ///< PieceRecord::role of a block brake
     inline constexpr std::uint32_t kRoleStation = 3;    ///< PieceRecord::role of a station piece, flagged one or not
+    inline constexpr std::uint32_t kRoleSlideEnd = 85;  ///< PieceRecord::role of a pool slide's open end, where riders splash into the pool
     /// Roles of a rotating tower's pieces (base, shaft, caps): marked as chain, though nothing pulls a train up them
     inline constexpr std::uint32_t kRoleTowerFirst = 91;
     inline constexpr std::uint32_t kRoleTowerLast = 95;

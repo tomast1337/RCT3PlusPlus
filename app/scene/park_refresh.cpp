@@ -339,6 +339,10 @@ namespace rct3::scene
                 {
                     if (const auto model = scene.models.find(park::model_ref(scene.cars[seat->first])); model != scene.models.end())
                         seating = model->second.seating;
+                    // On a pool slide, all but the body slide's riders sit as in a ring.
+                    const auto* fleet = scene.sim.registry.try_get<simulation::Trains>(scene.sim.registry.get<simulation::Errand>(shown.guest).target);
+                    if (fleet != nullptr && fleet->trains.front().splash_out && seating != park::kSlideBodySeating)
+                        seating = park::kSlideRingSeating;
                 }
                 else if (const auto flat = scene.ride_seatings.find(scene.sim.registry.get<simulation::Errand>(shown.guest).target); flat != scene.ride_seatings.end())
                     seating = flat->second;
@@ -792,9 +796,13 @@ namespace rct3::scene
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), held != nullptr ? now.position : at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
                 pose.motion = held != nullptr ? (held->happy ? kDangleHappyMotion : kDangleCrossMotion) : falling ? kDangleCrossMotion : park::motion::kWalk;
                 // Falling into a pool they tip over as they go, to land in the water.
+                // Off the end of a pool slide, they splash down as they rode it, on their back or in their ring.
                 if (const auto* drop = held == nullptr ? &r.get<simulation::Dropped>(shown.guest) : nullptr; falling && drop->pool != entt::null)
                 {
-                    pose.motion = park::motion_number("knockdownin").value_or(pose.motion);
+                    const auto cars = drop->slide != entt::null ? scene.ride_cars.find(drop->slide) : scene.ride_cars.end();
+                    const auto model = cars != scene.ride_cars.end() && !cars->second.empty() ? scene.models.find(park::model_ref(scene.cars[cars->second.front()])) : scene.models.end();
+                    const bool body = model != scene.models.end() && model->second.seating == park::kSlideBodySeating;
+                    pose.motion = park::motion_number(drop->slide == entt::null ? "knockdownin" : body ? "slidebodybacksplashdownin" : "slideringsplashdownin").value_or(pose.motion);
                     pose.time = drop->fall.value / simulation::kTuning.holding.gravity;
                 }
                 if (held == nullptr && !falling && shown.paces[0] > 0)
@@ -806,7 +814,8 @@ namespace rct3::scene
             // At a pool: out of sight while changing, then swimming, or walking round the water.
             if (const auto* swimmer = r.try_get<simulation::Swimmer>(shown.guest))
             {
-                if (swimmer->changing.value > 0)
+                // Out of sight changing; seated on a pool slide, they go with their car (pose_riders).
+                if (const auto* errand = r.try_get<simulation::Errand>(shown.guest); swimmer->changing.value > 0 || (errand != nullptr && errand->kind == simulation::ErrandKind::Riding))
                     return std::nullopt;
                 const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
                 const bool moving = now.was != now.position;
@@ -1215,7 +1224,10 @@ namespace rct3::scene
                 // Crashed, each car flies on and tumbles as its wreck does from where it left the track, and is
                 // gone with it; a train whose wrecks are gone is off the track till it is back in the station.
                 // shortcut: drawn as it was, not burnt; upgrade if a burnt look turns up among the cars' textures.
-                if (train.crashed)
+                // Off a pool slide's end, it is out of sight till it is back at the station.
+                if (train.splashed)
+                    place = glm::mat4(0.0f);
+                else if (train.crashed)
                 {
                     const auto* wrecks = scene.sim.registry.try_get<simulation::Wrecks>(ride);
                     const std::size_t car = static_cast<std::size_t>(std::ranges::count_if(std::span(scene.car_spots).first(i), [&](const park::CarSpot& s) { return s.ride == spot.ride && s.train == spot.train; }));

@@ -60,6 +60,9 @@ namespace rct3::park
     /// not known.
     [[nodiscard]] std::optional<RiderMotions> rider_motions(std::uint8_t seating);
 
+    inline constexpr std::uint8_t kSlideBodySeating = 30; ///< A body slide's rider, lying on their back
+    inline constexpr std::uint8_t kSlideRingSeating = 31; ///< A ring slide's rider, sitting in the ring
+
     /// Whether motion `number` starts again from the beginning once it ends.
     [[nodiscard]] bool motion_repeats(std::int32_t number);
 

@@ -307,6 +307,8 @@ TEST_CASE("pools: an extra's words name what it takes of its square")
     CHECK(fit.shower);
     CHECK_FALSE(fit.lounger);
     CHECK(pool_extra_fit("CentralSolid WholeTile SunLounger").lounger);
+    CHECK(pool_extra_fit("WaveMachine UnderWaterWall").wave_machine);
+    CHECK(pool_extra_fit("WaveMachine UnderWaterWall").wall);
 }
 
 TEST_CASE("pools: an extra fits where its square offers all it takes and no other extra has it")
@@ -395,7 +397,7 @@ TEST_CASE("pools: a park from the game gives its squares, boards and changing ro
     world.pool_segments = {
         { .id = 1, .col = 5, .row = 5, .type = 0, .surface = 4, .depth = 2 }, { .id = 2, .col = 5, .row = 6, .type = 3, .surface = 4, .special = 8 }, { .id = 3, .col = 6, .row = 5, .type = 1, .surface = 4, .complex = 2 }, { .id = 4, .col = 4, .row = 5, .type = 4, .surface = 4 }, { .id = 5, .col = 5, .row = 4, .type = 6, .surface = 4 }, { .id = 6, .col = 5, .row = 3, .type = 5, .surface = 4 },
     };
-    world.pool_complexes = { { .index = 2, .ticket = 250, .name = "Lido" } };
+    world.pool_complexes = { { .index = 2, .ticket = 250, .name = "Lido", .wave_height = 5, .wave_frequency = 4, .wave_on = 45, .wave_every = 120 } };
     world.changing_rooms = { { .object_ref = 90, .segment = 3, .open = true, .fluid = 2 } };
     const std::vector<save::PlacedObject> objects { { .id = 90, .symbol = "Room", .col = 7, .row = 5 } };
     const park::PoolMap map = park::saved_pools(world, objects);
@@ -414,4 +416,8 @@ TEST_CASE("pools: a park from the game gives its squares, boards and changing ro
     CHECK(map.rooms[0].complex_name == "Lido");
     CHECK(map.rooms[0].open);
     CHECK(map.rooms[0].fluid == 2);
+    CHECK(map.rooms[0].waves.height == 5);
+    CHECK(map.rooms[0].waves.frequency == 4);
+    CHECK(map.rooms[0].waves.on == 45);
+    CHECK(map.rooms[0].waves.every == 120);
 }

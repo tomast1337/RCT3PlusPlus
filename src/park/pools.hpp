@@ -106,6 +106,7 @@ namespace rct3::park
         bool shower = false;       ///< "Shower": swimmers stand under it
         bool ladder = false;       ///< "Ladder": out of the water up its wall
         bool light = false;        ///< "Light": a lamp, on the paving or in a wall under the water
+        bool wave_machine = false; ///< "WaveMachine": it makes waves in the pool, out from its wall
         std::int32_t step = 0;     ///< "HeightStep" and its number: a change of level at its side
     };
 
@@ -127,6 +128,20 @@ namespace rct3::park
     /// A new pool complex's ticket price, hundredths: what parks saved with a pool just built show.
     inline constexpr std::int64_t kPoolTicket = 100;
 
+    /// How a pool complex's wave machines run, the same in every changing room of it. The machines push the water
+    /// up and down `frequency` times in 2 pi seconds, as high as `height` says, for `on` seconds of every `every`.
+    struct PoolWaves
+    {
+        float height = 8;    ///< Of the crests, in steps from kLeastWaveHeight to kMostWaveHeight
+        float frequency = 6; ///< Radians a second; the fewer, the longer the waves
+        float on = 30;       ///< Seconds the machines run for
+        float every = 60;    ///< Seconds from one start of the machines to the next
+    };
+    inline constexpr float kLeastWaveHeight = 2;    ///< Chosen by eye: the lowest the wave height setting goes
+    inline constexpr float kMostWaveHeight = 14;    ///< Chosen by eye: the highest
+    inline constexpr float kLeastWaveFrequency = 2; ///< Chosen by eye: the longest waves
+    inline constexpr float kMostWaveFrequency = 10; ///< Chosen by eye: the shortest
+
     /// A changing room the player has built beside a pool.
     struct PoolRoom
     {
@@ -139,6 +154,7 @@ namespace rct3::park
         bool open = false;
         std::string complex_name { }; ///< Its pool complex's name, the same in every room of it; empty for the default
         std::uint8_t fluid = 0;       ///< The cleaning fluid it keeps its pool clean with, mildest 0 to harshest 2
+        PoolWaves waves { };
     };
 
     /// The pools the player has laid, a square to a tile, the extras in them and their changing rooms.

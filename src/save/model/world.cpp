@@ -114,6 +114,10 @@ namespace rct3::save
             constexpr std::string_view kComplexIndex = "Index";
             constexpr std::string_view kComplexTicket = "TicketPrice";
             constexpr std::string_view kComplexName = "RawName";
+            constexpr std::string_view kComplexWaveHeight = "WaveAmplitude";
+            constexpr std::string_view kComplexWaveFrequency = "WaveFrequency";
+            constexpr std::string_view kComplexWaveOn = "WaveOnPeriod";
+            constexpr std::string_view kComplexWaveEvery = "WaveTotalPeriod";
             constexpr std::string_view kRoomClass = "ChangingRoomInstance";
             constexpr std::string_view kRoomScenery = "Scenery";
             constexpr std::string_view kRoomSegment = "PoolSegment";
@@ -1087,7 +1091,7 @@ namespace rct3::save
                         m.pool_water.push_back({ m.pool_segments.back().col, m.pool_segments.back().row, m.pool_segments.back().surface, m.pool_segments.back().depth });
                     break;
                 case Kind::PoolComplex:
-                    m.pool_complexes.push_back({ .index = int_or(o.find(names::kComplexIndex)), .ticket = get_int(o.find(names::kComplexTicket)).value_or(0), .name = string_or(o.find(names::kComplexName)) });
+                    m.pool_complexes.push_back({ .index = int_or(o.find(names::kComplexIndex)), .ticket = get_int(o.find(names::kComplexTicket)).value_or(0), .name = string_or(o.find(names::kComplexName)), .wave_height = float_or(o.find(names::kComplexWaveHeight), 8), .wave_frequency = float_or(o.find(names::kComplexWaveFrequency), 6), .wave_on = float_or(o.find(names::kComplexWaveOn), 30), .wave_every = float_or(o.find(names::kComplexWaveEvery), 60) });
                     break;
                 case Kind::ChangingRoom:
                     if (!get_bool(o.find(names::kPoolPrototype)).value_or(false))

@@ -275,6 +275,8 @@ namespace rct3::park
                 fit.ladder = true;
             else if (strings::equals_ignoring_case(word, "Light"))
                 fit.light = true;
+            else if (strings::equals_ignoring_case(word, "WaveMachine"))
+                fit.wave_machine = true;
             else if (strings::equals_ignoring_case(word, "CentralSolid"))
                 fit.paved_middle = true;
             else if (strings::equals_ignoring_case(word, "CentralWater"))
@@ -626,6 +628,8 @@ namespace rct3::park
             const auto complex = std::ranges::find(world.pool_complexes, segment->complex, &save::PoolComplexState::index);
             const bool named = complex != world.pool_complexes.end() && !complex->name.starts_with("%ME%");
             map.rooms.push_back({ .symbol = object->symbol, .overlay = object->overlay, .col = object->col, .row = object->row, .turn = static_cast<std::int32_t>(turn - kSideStep.begin()), .ticket = complex != world.pool_complexes.end() ? complex->ticket : kPoolTicket, .open = room.open, .complex_name = named ? complex->name : std::string(), .fluid = static_cast<std::uint8_t>(std::clamp(room.fluid, 0, 2)) });
+            if (complex != world.pool_complexes.end())
+                map.rooms.back().waves = { .height = complex->wave_height, .frequency = complex->wave_frequency, .on = complex->wave_on, .every = complex->wave_every };
         }
         return map;
     }

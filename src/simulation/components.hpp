@@ -13,6 +13,7 @@
 #pragma once
 
 #include "math/glm.hpp"
+#include "park/pool_score.hpp"
 #include "random/generator.hpp"
 #include "simulation/boat.hpp"
 #include "simulation/coaster.hpp"
@@ -448,6 +449,7 @@ namespace rct3::simulation
         std::vector<glm::vec3> spa { };   ///< Where swimmers sit in the spa pools, at the spa's water
         std::vector<PoolSpot> extras { }; ///< The paved squares with an extra on them, loungers and showers
         Share dirt { };                   ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
+        park::PoolTally tally { };        ///< What it has, for its excitement and what its ticket is worth
     };
 
     /// How dirty a pool looks, in the six steps the pool's window names, cleanest first.

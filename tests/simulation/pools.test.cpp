@@ -105,6 +105,22 @@ TEST_CASE("a guest wishing to swim where no pool is open thinks so")
     CHECK(std::ranges::contains(r.get<Thoughts>(guest).recent, ThoughtKind::NoPools, &Thought::kind));
 }
 
+TEST_CASE("a guest will not pay more for a pool than it is worth to them")
+{
+    Sandbox park;
+    park::PoolMap pools = pool_by_path(park);
+    pools.rooms[0].ticket = 5000;
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    const entt::entity room = room_of(r);
+    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 10000 });
+    park.run_seconds(30);
+    CHECK(r.get<Attraction>(room).customers == 0);
+    CHECK(r.get<Wallet>(guest).cash.value == 10000);
+    REQUIRE(r.all_of<Thoughts>(guest));
+    CHECK(std::ranges::contains(r.get<Thoughts>(guest).recent, ThoughtKind::NotPaying, &Thought::kind));
+}
+
 TEST_CASE("the wish to swim grows the faster the more a guest likes pools")
 {
     Sandbox park;

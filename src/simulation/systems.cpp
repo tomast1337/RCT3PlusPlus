@@ -3357,10 +3357,27 @@ namespace rct3::simulation
             }
             else if (r.all_of<PoolDoor>(arrived[i]))
             {
-                // Each pays at the door and goes in to change; those of the party who would rather not wait (5.).
+                // Each pays at the door and goes in to change, at no more than the complex is worth to them, slides
+                // ending in it too; those of the party who would rather not wait (5.).
+                const entt::entity pool = r.get<PoolDoor>(arrived[i]).pool;
+                std::size_t slides = 0;
+                for (const auto [e, fleet] : r.view<const Trains>().each())
+                    if (!fleet.trains.empty() && fleet.trains.front().splash_out)
+                        if (const auto end = pool_door_at(world, track_point(fleet.trains.front(), fleet.trains.front().length())); end && r.get<PoolDoor>(*end).pool == pool)
+                            ++slides;
+                const auto* swim_pool = r.valid(pool) ? r.try_get<SwimPool>(pool) : nullptr;
+                const std::int64_t worth = swim_pool != nullptr ? park::pool_worth(swim_pool->tally, slides, swim_pool->dirt.value) : 0;
                 const auto swim = [&](entt::entity g) {
                     auto& attraction = r.get<Attraction>(arrived[i]);
                     const bool inspector = r.all_of<Staff>(g);
+                    if (attraction.open && !inspector && attraction.price.value > worth && attraction.price.value <= r.get<Wallet>(g).cash.value)
+                    {
+                        auto& happiness = r.get<Mood>(g).happiness.value;
+                        happiness = clamp01(happiness - kTuning.needs.treat.value);
+                        think(r, g, ThoughtKind::NotPaying, arrived[i], now);
+                        r.get<Errand>(g) = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
+                        return;
+                    }
                     if (!attraction.open || (!inspector && !pay(r, g, attraction.price, &Wallet::spent_rides)))
                     {
                         if (attraction.open)

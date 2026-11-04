@@ -657,15 +657,18 @@ namespace rct3::simulation
         constexpr std::array<std::array<std::int32_t, 2>, 4> kSides { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } }; // By turn
         std::map<std::pair<std::int32_t, std::int32_t>, std::size_t> complex_of;
         std::vector<SwimPool> complexes;
+        std::vector<std::vector<park::PoolSquare>> members; // By complex
         for (const park::PoolSquare& first : pools.squares)
         {
             if (!complex_of.try_emplace({ first.col, first.row }, complexes.size()).second)
                 continue;
             SwimPool& complex = complexes.emplace_back();
+            auto& member = members.emplace_back();
             for (std::vector<const park::PoolSquare*> todo { &first }; !todo.empty();)
             {
                 const park::PoolSquare& s = *todo.back();
                 todo.pop_back();
+                member.push_back(s);
                 if (s.kind == park::PoolKind::Water)
                     complex.water.push_back(middle(s.col, s.row, static_cast<float>(s.surface) + park::kPoolBrim));
                 else if (s.kind == park::PoolKind::Jacuzzi)
@@ -688,6 +691,10 @@ namespace rct3::simulation
                     const PoolUse use = extra.fit.lounger ? PoolUse::Lounge : extra.fit.shower ? PoolUse::Shower : PoolUse::Stand;
                     complexes[complex_of.at(square->first)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<float>(square->second->surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 }, .heading = { std::atan2(static_cast<float>(dc), static_cast<float>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : std::uint8_t { 1 } });
                 }
+        std::vector<park::PoolExtra> all_extras(pools.extras.begin(), pools.extras.end());
+        all_extras.append_range(scenery);
+        for (std::size_t c = 0; c < complexes.size(); ++c)
+            complexes[c].tally = park::pool_tally(members[c], all_extras);
         // The rooms there were, by tile, and the complexes they opened on.
         std::map<std::pair<std::int32_t, std::int32_t>, entt::entity> rooms;
         for (const auto [e, door] : r.view<const PoolDoor>().each())

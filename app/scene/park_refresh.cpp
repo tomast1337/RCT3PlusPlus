@@ -897,7 +897,10 @@ namespace rct3::scene
                     switch (swimmer->dive)
                     {
                         case Climb:
+                            // The ladder climb is made facing a quarter turn to the right of the way they walk: turned
+                            // back, they face the rungs.
                             pose.motion = kClimbLadderMotion;
+                            pose.world = glm::rotate(pose.world, glm::half_pi<float>(), glm::vec3(0.0f, 1.0f, 0.0f));
                             break;
                         case Jump:
                             pose.motion = high ? kHighDiveInMotion : kDiveMotion;

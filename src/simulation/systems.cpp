@@ -3832,6 +3832,13 @@ namespace rct3::simulation
                 const PoolBoard& board = pool->boards[static_cast<std::size_t>(swimmer.board)];
                 if (!boards_taken.insert({ door->pool, swimmer.board }).second)
                 {
+                    // A high board's next swimmer waits behind its ladder, not in the tower.
+                    if (board.high && swimmer.waited.value == 0)
+                    {
+                        swimmer.goal = board.foot - glm::vec3 { std::sin(board.heading.value), 0, std::cos(board.heading.value) } * kTuning.dives.ladder_queue;
+                        swimmer.waited.value = dt;
+                        continue;
+                    }
                     if ((swimmer.waited.value += dt) < kTuning.pools.patience.value)
                         continue;
                     swimmer.board = -1;

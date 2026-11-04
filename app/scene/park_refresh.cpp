@@ -214,6 +214,9 @@ namespace rct3::scene
         /// Swimming along, and treading water while still.
         const std::int32_t kSwimMotion = park::motion_number("swimloop").value_or(park::motion::kIdle);
         const std::int32_t kTreadMotion = park::motion_number("swimtreadwaterloop").value_or(park::motion::kIdle);
+        /// Sitting on their own float, still or paddling it along.
+        const std::int32_t kFloatSitMotion = park::motion_number("inflatablesitloop").value_or(park::motion::kIdle);
+        const std::int32_t kFloatPaddleMotion = park::motion_number("inflatablepaddleloop").value_or(park::motion::kIdle);
         const std::int32_t kTreadInMotion = park::motion_number("swimtreadwaterin").value_or(park::motion::kIdle);
         /// Diving in off the pool's edge or a small board, and climbing out over its wall or by a ladder.
         const std::int32_t kDiveMotion = park::motion_number("swimdive").value_or(park::motion::kIdle);
@@ -285,6 +288,20 @@ namespace rct3::scene
             return { whole % kShelvesEvery == 0 ? kShelvesMotion : kBoredMotion, (turn - static_cast<float>(whole)) * kVendorTurnSeconds };
         }
 
+        /// Whether their swimwear shows a float of their own, an optional body piece whose picture names it.
+        bool own_float(const park::PersonLibrary& library, const park::PlacedPerson& person)
+        {
+            if (!person.look.swimwear || person.look.body == nullptr)
+                return false;
+            const park::PartLevel& pieces = person.look.body->swim_levels[0];
+            for (std::size_t k = 0; k < pieces.optional.size() && k < 32; ++k)
+            {
+                if ((person.look.optionals[1] >> k & 1u) != 0 && pieces.optional[k] != park::kNoPiece && library.piece(pieces.optional[k]).texture.contains("inflatable"))
+                    return true;
+            }
+            return false;
+        }
+
         /// Places the people near enough to see that stand still, or those that move and may be in `view`, as
         /// they are at `clock`, at `levels`. With `simulate`, the simulated guests count as moving and stand
         /// where the simulation has them. The still ones read only what is set when the park loads besides the
@@ -303,8 +320,9 @@ namespace rct3::scene
                 pose->level = static_cast<std::size_t>(levels[i]);
                 placed.push_back(*pose);
                 // A lazy river rider's ring round them at the water line, turning with them. The ring slide's riders
-                // sit lying back, which a rider treading water does not fit, so they tread water in it.
-                if (scene.swim_ring && shown.guest != entt::null && scene.sim.registry.all_of<simulation::Floating>(shown.guest))
+                // sit lying back, which a rider treading water does not fit, so they tread water in it. One with a
+                // float of their own rides that instead.
+                if (scene.swim_ring && shown.guest != entt::null && scene.sim.registry.all_of<simulation::Floating>(shown.guest) && !own_float(*scene.person_models, *pose))
                     placed.push_back({ .world = pose->world, .held = &*scene.swim_ring });
             }
             // Litter and sick lying on the paths, with what moves: each piece somewhere about its tile, turned its
@@ -851,7 +869,8 @@ namespace rct3::scene
                 if (floating != nullptr)
                 {
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), bobbed()), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                    pose.motion = floating->paddling ? kSwimMotion : kTreadMotion;
+                    const bool on_float = scene.person_models && own_float(*scene.person_models, pose);
+                    pose.motion = floating->paddling ? (on_float ? kFloatPaddleMotion : kSwimMotion) : on_float ? kFloatSitMotion : kTreadMotion;
                     return pose;
                 }
                 const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);

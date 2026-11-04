@@ -8,7 +8,7 @@ body:
         Describe the layout in your own words: field positions, sizes, meanings, which files show it.
         **Do not paste bytes, hex dumps or files from the game, and nothing obtained by decompiling,
         disassembling or debugging the game's program.** Use invented example values when one helps.
-        See the Code of Conduct and CLEAN_ROOM.md.
+        See the Code of Conduct and ORIGINAL_WORK.md.
   - type: input
     id: format
     attributes:

@@ -2,7 +2,7 @@ build/
 .cache/
 compile_commands.json
 
-# Private, game-derived material. See CLEAN_ROOM.md.
+# Private, game-derived material. See ORIGINAL_WORK.md.
 local/
 
 # Safety net: game files must never be tracked.

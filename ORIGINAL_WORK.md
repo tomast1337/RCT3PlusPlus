@@ -1,4 +1,4 @@
-# Clean room: keeping game material out of the repository
+# Original work: keeping game material out of the repository
 
 rct3++ is original code and original documentation. It contains no files from the game, nothing extracted
 or converted from them, no code or text copied from the game or its developer, and no decompiled or

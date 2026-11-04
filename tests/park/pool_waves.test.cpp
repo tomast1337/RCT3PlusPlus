@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/pool_waves.hpp"
 
+#include "park/terrain_mesh.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <doctest/doctest.h>
@@ -137,4 +139,18 @@ TEST_CASE("pool waves: the renderer gets each wave's place, shape and timing")
     CHECK(texels[2 * kMaxPoolWaves] == glm::vec4 { 0, 0, 8, 8 });
     CHECK(texels[3 * kMaxPoolWaves] == glm::vec4 { 4, 20, 60, 0 });
     CHECK(texels[1].x == 0); // No wave in the second place
+}
+
+TEST_CASE("pool waves: the surface they lift dies down at a wall and stays under the rim")
+{
+    const save::TerrainGrid g = grid();
+    // Water on the right and below only: walls on the left and above, and the corner square up and to the left.
+    const auto water = [](int dc, int dr) { return dc >= 0 && dr >= 0; };
+    CHECK(pool_wall_room(g, { 0, 2 }, water) == 0);
+    CHECK(pool_wall_room(g, { 1, 3 }, water) == doctest::Approx(1));
+    CHECK(pool_wall_room(g, { 2, 2 }, [](int, int) { return true; }) == 4); // Water all round: a square at most
+    CHECK(pool_wave_lift(1, 0) == 0);
+    CHECK(pool_wave_lift(1, 0.1f) <= kPoolWaveLook.rim_room + kPoolWaveLook.rim_rise * 0.1f);
+    CHECK(pool_wave_lift(0.1f, 4) == doctest::Approx(0.1f));
+    CHECK(pool_wave_lift(-0.5f, 4) == doctest::Approx(-0.5f)); // Troughs are not held up
 }

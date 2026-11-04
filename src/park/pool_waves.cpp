@@ -154,8 +154,6 @@ namespace rct3::park
         {
             if (!inside(w.bounds, at))
                 continue;
-            const float side = std::min({ at.x - w.bounds.x, at.y - w.bounds.y, w.bounds.z - at.x, w.bounds.w - at.y });
-            const float taper = std::clamp(side / look.edge, 0.0f, 1.0f);
             const float d = glm::dot(at - w.from, w.heading);
             const float age = clock - w.start;
             if (w.kind == PoolWaveKind::Machine)
@@ -167,12 +165,12 @@ namespace rct3::park
                     continue;
                 const float phase = std::fmod(left, std::max({ s.every, s.on, 1.0f }));
                 const float running = std::clamp(phase / look.ramp, 0.0f, 1.0f) * std::clamp((s.on - phase) / look.ramp, 0.0f, 1.0f);
-                sum += taper * look.crest * s.height * running * std::sin(s.frequency * left) * std::exp(-d / look.reach);
+                sum += look.crest * s.height * running * std::sin(s.frequency * left) * std::exp(-d / look.reach);
             }
             else if (w.kind == PoolWaveKind::Line && age >= 0 && age <= look.line_life)
             {
                 const float x = d - look.line_speed * age;
-                sum += taper * look.line_height * std::exp(-age / look.line_fade) * std::exp(-(x / look.line_width) * (x / look.line_width)) * std::cos(2 * std::numbers::pi_v<float> / look.line_length * x);
+                sum += look.line_height * std::exp(-age / look.line_fade) * std::exp(-(x / look.line_width) * (x / look.line_width)) * std::cos(2 * std::numbers::pi_v<float> / look.line_length * x);
             }
             else if (w.kind == PoolWaveKind::Whirlpool && age >= 0 && age <= look.whirl_life)
             {
@@ -180,10 +178,15 @@ namespace rct3::park
                 const glm::vec2 off = at - w.from;
                 const float r = glm::length(off) / w.radius;
                 const float arms = look.whirl_arms * r * std::sin(3 * std::atan2(off.y, off.x) - w.spin * (look.whirl_turn * age - look.whirl_wind * r));
-                sum -= taper * look.whirl_depth * strength * std::exp(-r * r) * (1 - arms);
+                sum -= look.whirl_depth * strength * std::exp(-r * r) * (1 - arms);
             }
         }
         return sum;
+    }
+
+    float pool_wave_lift(float height, float room, const PoolWaveLook& look)
+    {
+        return std::min(height * std::clamp(room / look.edge, 0.0f, 1.0f), look.rim_room + look.rim_rise * room);
     }
 
     PoolWaveTexels pool_wave_texels(std::span<const PoolWave> waves, const PoolWaveLook& look)

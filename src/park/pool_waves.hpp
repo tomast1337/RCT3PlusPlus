@@ -16,7 +16,7 @@
 // the whole body of water, dying down as it goes. A line drawn aslant does nothing. A circle drawn round and round
 // turns into a whirlpool there a while: a dip in the water with arms that turn the way the circle was drawn.
 //
-// All of them die down near the sides of their water. The renderer is handed each wave (pool_wave_texels) and works
+// All of them die down near the walls of their water and stay under the rim there. The renderer is handed each wave (pool_wave_texels) and works
 // out the same heights itself: it moves the surface up and down by them, so the swimmers floating there ride them
 // as they show.
 #pragma once
@@ -57,7 +57,9 @@ namespace rct3::park
         float whirl_turn = 3.0f;    ///< Radians a second its arms turn
         float whirl_arms = 0.6f;    ///< How deep its arms cut into the dip, at its radius
         float whirl_wind = 3.0f;    ///< Radians its arms wind round for each radius out
-        float edge = 1.0f;          ///< Waves die down over this far from their water's sides, so they stay under its rim
+        float edge = 1.0f;          ///< Waves die down over this far from their water's walls
+        float rim_room = 0.08f;     ///< At a wall the water rises at most this far, under the rim (kPoolBrim below its top)
+        float rim_rise = 0.3f;      ///< And for each world unit out from the wall, this much more
         float least_radius = 1.0f;  ///< Of a whirlpool, however small the circle drawn
         float most_radius = 4.0f;   ///< Of a whirlpool, however big the circle drawn
         float least_stroke = 1.5f;  ///< The shortest drawn line or circle that makes a wave, along the pointer's way
@@ -105,6 +107,10 @@ namespace rct3::park
 
     /// How far the water at world x and z `at` stands above its level at `clock`, from all `waves` together.
     [[nodiscard]] float pool_wave_height(std::span<const PoolWave> waves, glm::vec2 at, float clock, const PoolWaveLook& look = kPoolWaveLook);
+
+    /// How far the surface rises for waves of `height`, `room` world units from its nearest wall (pool_wall_room):
+    /// dying down near the wall and kept under its rim.
+    [[nodiscard]] float pool_wave_lift(float height, float room, const PoolWaveLook& look = kPoolWaveLook);
 
     /// What the renderer reads, four rows of kMaxPoolWaves, after the ripples' two: each wave's `from` and
     /// heading; its kind, crest height (world units), start and spin; its bounds; its frequency, on and every

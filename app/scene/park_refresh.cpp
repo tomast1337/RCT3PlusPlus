@@ -817,20 +817,33 @@ namespace rct3::scene
                 // Out of sight changing; seated on a pool slide, they go with their car (pose_riders). Floating round a
                 // lazy river, they tread water in their ring, or swim paddling it along.
                 const auto* floating = r.try_get<simulation::Floating>(shown.guest);
+                // In the water they ride the pool's waves up and down, as its surface shows them.
+                const auto bobbed = [&] {
+                    const glm::vec2 at_xz { at.position.x, at.position.z };
+                    const int col = static_cast<int>(std::floor((at_xz.x - scene.grid.origin_x) / scene.grid.tile_size_x));
+                    const int row = static_cast<int>(std::floor((at_xz.y - scene.grid.origin_z) / scene.grid.tile_size_z));
+                    const auto square = scene.pools.at(col, row);
+                    if (!square || square->kind != park::PoolKind::Water || scene.grid.tile_size_x <= 0 || scene.grid.tile_size_z <= 0)
+                        return at.position;
+                    const auto water = [&](int dc, int dr) {
+                        const auto next = scene.pools.at(col + dc, row + dr);
+                        return next && next->kind == park::PoolKind::Water && next->surface == square->surface;
+                    };
+                    const float room = park::pool_wall_room(scene.grid, at_xz - glm::vec2 { scene.grid.world_x(col), scene.grid.world_z(row) }, water);
+                    return at.position + glm::vec3(0.0f, park::pool_wave_lift(park::pool_wave_height(scene.water.pool_waves, at_xz, clock), room), 0.0f);
+                };
                 if (const auto* errand = r.try_get<simulation::Errand>(shown.guest); swimmer->changing.value > 0 || (errand != nullptr && errand->kind == simulation::ErrandKind::Riding && floating == nullptr))
                     return std::nullopt;
                 if (floating != nullptr)
                 {
-                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), bobbed()), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
                     pose.motion = floating->paddling ? kSwimMotion : kTreadMotion;
                     return pose;
                 }
                 const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
                 const bool moving = now.was != now.position;
                 const bool lounging = swimmer->place >= 0 && swimmer->use == simulation::PoolUse::Lounge;
-                // Floating, they ride the pool's waves up and down.
-                const float bob = swimmer->in_water && !swimmer->to_spa ? park::pool_wave_height(scene.water.pool_waves, { at.position.x, at.position.z }, clock) : 0.0f;
-                pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position + glm::vec3(0.0f, bob, 0.0f)), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+                pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), swimmer->in_water && !swimmer->to_spa ? bobbed() : at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
                 pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : moving ? park::motion::kWalk : park::motion::kIdle;
                 if (!swimmer->in_water && moving && shown.paces[0] > 0)
                     pose.time = at.walked.value / shown.paces[0];

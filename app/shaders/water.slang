@@ -18,6 +18,8 @@
 // instead one quad over the view: the scene behind it is fogged and coloured by the water each line of sight
 // crosses, and what lies under the surface catches the caustics.
 //
+// Pool water's second texture coordinate is the distance to its nearest wall, which the waves die down towards.
+//
 // The flowing water of slides and water rides (kFlow) is a cheaper look: a thin sheet on the track with no mirror
 // and no copy of the scene behind it. Its own picture (park/water_flow.hpp) slides along it, and a second read of
 // the picture, set deeper and seen through the first, gives it depth; it slopes the surface for the glint and the
@@ -160,6 +162,8 @@ static const float kWhirlTurn = 3.0;
 static const float kWhirlArms = 0.6;
 static const float kWhirlWind = 3.0;
 static const float kPoolEdge = 1.0;
+static const float kRimRoom = 0.08;
+static const float kRimRise = 0.3;
 static const float kPoolFoam = 0.55; // Chosen by eye: foam on a crest above this share of its wave's height
 static const float kPoolLight = 1.2; // Chosen by eye: crests lighter and troughs darker by this much per unit of height
 
@@ -181,7 +185,6 @@ float2 pool_wave_height(float2 at, float time)
             continue;
         const float4 place = u_ripples.Load(int3(i, 2, 0));
         const float4 timing = u_ripples.Load(int3(i, 5, 0));
-        const float taper = saturate(min(min(at.x - bounds.x, at.y - bounds.y), min(bounds.z - at.x, bounds.w - at.y)) / kPoolEdge);
         const float d = dot(at - place.xy, place.zw);
         const float age = time - shape.z;
         float h = 0.0;
@@ -214,10 +217,17 @@ float2 pool_wave_height(float2 at, float time)
             // Foam along the arms' ridges, thinning out past the radius.
             f = strength * smoothstep(0.4, 0.9, arm) * smoothstep(0.2, 0.6, r) * exp(-0.5 * r * r);
         }
-        sum += taper * h;
-        foam = max(foam, taper * f);
+        sum += h;
+        foam = max(foam, f);
     }
     return float2(sum, foam);
+}
+
+// How far the surface rises for waves of `height`, `room` world units from its wall: dying down near it and
+// kept under its rim (pool_wave_lift).
+float pool_lift(float height, float room)
+{
+    return min(height * saturate(room / kPoolEdge), kRimRoom + kRimRise * room);
 }
 
 // The pools' waves' slope in x and z, how high they stand here and their foam.
@@ -233,8 +243,8 @@ float4 pool_waves(float2 at, float time)
 [shader("vertex")]
 Varyings vertex_main([[vk::location(0)]] float3 position, [[vk::location(1)]] float4 color, [[vk::location(2)]] float2 uv, [[vk::location(3)]] float3 normal)
 {
-    // A pool's waves move its surface.
-    const float lift = has(kRipples) && !has(kFlow) && !has(kUnderwater) ? pool_wave_height(position.xz, u_draw.eye_time.w).x : 0.0;
+    // A pool's waves move its surface; the second texture coordinate is how far its wall is.
+    const float lift = has(kRipples) && !has(kFlow) && !has(kUnderwater) ? pool_lift(pool_wave_height(position.xz, u_draw.eye_time.w).x, uv.y) : 0.0;
     const float3 moved = position + float3(0.0, lift, 0.0);
     const float4 clip = mul(u_draw.transform, float4(moved, 1.0));
     return { clip, moved, color, uv.x + lift, clip, uv, normal };
@@ -519,7 +529,7 @@ float4 fragment_main(Varyings v) : SV_Target
         slope += (broad + 0.5 * fine) * kWaveHeight * calm;
     }
     const float3 rip = has(kRipples) ? ripples(v.world.xz) : float3(0.0);
-    const float4 pool = has(kRipples) ? pool_waves(v.world.xz, time) : float4(0.0);
+    const float4 pool = has(kRipples) ? pool_waves(v.world.xz, time) * saturate(v.uv.y / kPoolEdge) : float4(0.0);
     slope += rip.xy + pool.xy;
     const float3 n = normalize(float3(-slope.x, 1.0, -slope.y));
 

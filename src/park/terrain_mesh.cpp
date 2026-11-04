@@ -314,7 +314,8 @@ namespace rct3::park
         {
             if (!grid.contains(pool.col, pool.row))
                 continue;
-            // In small squares, so the waves in it can move the surface.
+            // In small squares, so the waves in it can move the surface, each knowing how far its wall is.
+            const auto water = [&](int dc, int dr) { return std::ranges::any_of(pools, [&](const save::PoolWater& o) { return o.col == pool.col + dc && o.row == pool.row + dr && o.surface == pool.surface; }); };
             const float level = static_cast<float>(pool.surface) + kPoolBrim;
             const glm::vec3 low = corner(grid, pool.col, pool.row, 0);
             const glm::vec3 high = corner(grid, pool.col, pool.row, 3);
@@ -323,10 +324,26 @@ namespace rct3::park
                     for (const auto& [di, dj] : { std::pair { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 }, { 0, 1 }, { 1, 0 } })
                     {
                         const glm::vec2 t = glm::vec2 { i + di, j + dj } / static_cast<float>(kPoolWaterSteps);
-                        out.push_back({ { glm::mix(low.x, high.x, t.x), level, glm::mix(low.z, high.z, t.y) }, kPoolColour, static_cast<float>(pool.depth) + kPoolBrim });
+                        const glm::vec3 p { glm::mix(low.x, high.x, t.x), level, glm::mix(low.z, high.z, t.y) };
+                        out.push_back({ p, kPoolColour, static_cast<float>(pool.depth) + kPoolBrim, pool_wall_room(grid, { p.x - low.x, p.z - low.z }, water) });
                     }
         }
         return out;
+    }
+
+    float pool_wall_room(const save::TerrainGrid& grid, glm::vec2 within, std::function_ref<bool(int dc, int dr)> water)
+    {
+        const glm::vec2 size { grid.tile_size_x, grid.tile_size_z };
+        float room = std::max(size.x, size.y);
+        for (int dr = -1; dr <= 1; ++dr)
+            for (int dc = -1; dc <= 1; ++dc)
+            {
+                if ((dc == 0 && dr == 0) || water(dc, dr))
+                    continue;
+                const auto across = [](int d, float at, float side) { return d < 0 ? at : d > 0 ? side - at : 0.0f; };
+                room = std::min(room, glm::length(glm::vec2 { across(dc, within.x, size.x), across(dr, within.y, size.y) }));
+            }
+        return room;
     }
 
 } // namespace rct3::park

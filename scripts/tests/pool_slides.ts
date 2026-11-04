@@ -58,6 +58,8 @@ expect((info().wrecks ?? []).length === 0, "no wrecks");
 expect(info().open === true, "the slide still open");
 const told = park.messages().slice(messages).map((m) => m.key);
 expect(!told.some((k) => /crash/i.test(k)), `no crash message, not ${told.join(" ")}`);
+// Swimmers get on from the pool, so there is no entrance on the paths to complain of.
+expect(!park.messages().slice(messages).some((m) => /NoPathToEntrance/.test(m.key) && m.name === info().name), "no complaint about the slide's entrance");
 const people_now = people.list();
 expect(people_now.every((p) => p.state !== "thrown"), "nobody thrown");
 log("customers", info().customers, "riders now", info().riders);

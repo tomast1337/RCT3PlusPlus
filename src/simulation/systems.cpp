@@ -1739,10 +1739,11 @@ namespace rct3::simulation
                             tell(r, e, Finding::OffTheme, a, now);
                             break;
                         }
-                        // A lazy river has no entrance: swimmers get on from its pools.
+                        // A lazy river or pool slide has no entrance on the paths: swimmers get on from its pools.
                         if (attraction.entrance == kNoNode)
                         {
-                            if (r.all_of<River>(a))
+                            const auto* fleet = r.try_get<Trains>(a);
+                            if (r.all_of<River>(a) || (fleet != nullptr && !fleet->trains.empty() && fleet->trains.front().splash_out))
                                 continue;
                             rounds->seen.emplace_back(a, now);
                             tell(r, e, Finding::NoPath, a, now);

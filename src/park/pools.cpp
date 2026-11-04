@@ -459,6 +459,10 @@ namespace rct3::park
                 o.overlay = overlay;
                 o.col = square.col;
                 o.row = square.row;
+                // A high diving board's boards cover three squares in a row along their own Z, the tower's in the
+                // middle, and are named by the first of them, as saved parks hold them.
+                if (piece.symbol == "DBMidBoard" || piece.symbol == "DBTopBoard")
+                    ((piece.turn & 1) != 0 ? o.col : o.row) -= 1;
                 o.base_height = piece.height;
                 o.force_absolute_height = true;
                 o.rotation = piece.turn;

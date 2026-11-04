@@ -713,7 +713,7 @@ namespace rct3::simulation
             {
                 const auto [dc, dr] = kSides[static_cast<std::size_t>(s.turn & 3)];
                 const glm::vec3 ahead { static_cast<float>(dc), 0, static_cast<float>(dr) };
-                PoolBoard board { .foot = middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.deck / paths.level_height) + ahead * kTuning.dives.ladder_foot, .heading = { std::atan2(ahead.x, ahead.z) }, .reach = kTuning.dives.high_reach, .high = true };
+                PoolBoard board { .foot = middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.deck / paths.level_height) + ahead * kTuning.dives.ladder_foot + glm::vec3 { -ahead.z, 0, ahead.x } * kTuning.dives.ladder_side, .heading = { std::atan2(ahead.x, ahead.z) }, .reach = kTuning.dives.high_reach, .high = true };
                 for (std::int32_t level = 0; level < std::max(s.board / park::kBoardLevel, 1); ++level)
                     board.levels.push_back(static_cast<float>(s.surface + 2 + park::kBoardLevel * level) * paths.level_height + kTuning.dives.board_top);
                 complexes[complex_of.at({ s.col, s.row })].boards.push_back(std::move(board));

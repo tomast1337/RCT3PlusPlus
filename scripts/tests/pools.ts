@@ -158,6 +158,24 @@ expect(park.cash()! < cash, "the board paid for");
 camera.look({ col: c0 + 7.5, row: r0 + 4.5, up: 2 }, { col: c0 + 3.5, row: r0 + 2.5, up: 4 });
 await frames(10);
 await screenshot("pool_high_dive");
+camera.look({ col: c0 + 7.5, row: r0 + 4.5, up: 3 }, { col: c0 + 10, row: r0 + 8, up: 3 });
+await frames(10);
+await screenshot("pool_high_dive_back");
+// Another on the near side, a quarter turn round. Each one's boards cover three squares in a row, the tower's in
+// the middle, and are named by the first.
+camera.look({ col: c0 + 4.5, row: r0 + 6 }, { col: c0 + 4.5, row: r0 + 10, up: 4 });
+await frames(10);
+const near = on_view(c0 + 4.5, r0 + 7.5);
+await pointer.drag(near, [near[0], near[1] - 0.08], 8);
+await frames(3);
+const boards = (col: number, row: number) => pieces().some((o) => o.symbol === "DBTopBoard" && o.col === col && o.row === row);
+expect(boards(c0 + 6, r0 + 4) && boards(c0 + 4, r0 + 6), `both towers' boards over their pool, not ${JSON.stringify(pieces().filter((o) => o.symbol === "DBTopBoard"))}`);
+camera.look({ col: c0 + 4.5, row: r0 + 7.5, up: 3 }, { col: c0 + 9.5, row: r0 + 9.5, up: 5 });
+await frames(10);
+await screenshot("pool_high_dive_turned");
+camera.look({ col: c0 + 4.5, row: r0 + 7.5, up: 3 }, { col: c0 + 1, row: r0 + 10, up: 3 });
+await frames(10);
+await screenshot("pool_high_dive_turned_back");
 build.stop();
 camera.look({ col: c0 + 1.5, row: r0 + 2.5 }, { col: c0 + 4, row: r0 + 6, up: 3 });
 await frames(10);

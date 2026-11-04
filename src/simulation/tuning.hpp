@@ -589,8 +589,9 @@ namespace rct3::simulation::tuning
         float behind = 0.3f;          ///< Chosen by eye: from the pool's wall back to where swimmers step on a small board, in world units
         float small_reach = 3.5f;     ///< From the wall to where a diver stands at a small board's end, as far as its model reaches
         float small_board = 0.3f;     ///< A small board's top over the paving, as its model stands
-        float ladder_foot = 1.8f;     ///< From a high board's square middle out to its ladder's foot, at the back of its tower as it is drawn
-        float high_reach = 7.0f;      ///< From the ladder's foot out to where a diver stands at its boards' end, as far as they are drawn
+        float ladder_foot = -0.25f;   ///< From a high board's square middle towards the water to a climber on its ladder: the tower stands in the square's front half, the ladder on its back face, as its model has them
+        float ladder_side = 0.55f;    ///< And to the side, where the ladder runs up the tower's back as its model has it
+        float high_reach = 5.1f;      ///< From the ladder's climber out to where a diver stands at its boards' end, a little short of their tip as the model reaches
         float board_top = 1.2f;       ///< A high board's top over the height it is placed at, in world units, as its model stands
     };
 

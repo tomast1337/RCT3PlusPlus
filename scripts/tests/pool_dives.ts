@@ -31,17 +31,25 @@ park.setTime(0.5);
 options.set("camera_mode", 1);
 const tower = map.objects().find((o) => o.overlay === kPool && o.symbol === "DBTopBoard");
 expect(tower !== undefined, "a high diving board in the park");
+// The tower as the park has it, from both sides along its boards.
+const base = map.objects().find((o) => o.overlay === kPool && o.symbol === "DBBase")!;
+for (const [name, dc, dr] of [["pool_dives_tower", 6, 4], ["pool_dives_tower_back", -5, -4]] as const)
+{
+    camera.look({ col: base.col + 0.5, row: base.row + 0.5, up: 8 }, { col: base.col + 0.5 + dc, row: base.row + 0.5 + dr, up: 8 });
+    await frames(5);
+    await screenshot(name);
+}
 
 const diver = (high: boolean, step?: string) => people.list().findIndex((p) => p.diving !== undefined && p.high_board === high && (step === undefined || p.diving === step));
-const look_at = async (i: number, name: string) => {
+const look_at = async (i: number, name: string, behind = false) => {
     // Paused, so they stay where they are for the picture.
     await ui.click("bar/Top_Pause");
     const p = people.list()[i];
     log(name, p.diving, "at", p.col?.toFixed(2), p.row?.toFixed(2), "up", p.up?.toFixed(2));
-    // Close and level with them, from the side of the board (both boards here reach out along the columns). A
-    // person's `up` is their height in the world, a map point's over the ground there.
+    // Close and level with them, from the side of the board (both boards here reach out along the columns) or
+    // from behind the tower. A person's `up` is their height in the world, a map point's over the ground there.
     const ground = (col: number, row: number) => (camera.look({ col, row }), camera.view().target[1]);
-    const from = { col: p.col!, row: p.row! + 2 };
+    const from = behind ? { col: p.col! - 2, row: p.row! } : { col: p.col!, row: p.row! + 2 };
     camera.look({ col: p.col!, row: p.row!, up: p.up! + 0.9 - ground(p.col!, p.row!) }, { ...from, up: p.up! + 1.2 - ground(from.col, from.row) });
     await frames(3);
     await screenshot(name);
@@ -52,6 +60,7 @@ const look_at = async (i: number, name: string) => {
 await until(() => diver(true, "climb") >= 0, 6000, "a swimmer climbing the high board");
 const high = diver(true);
 await look_at(high, "pool_dives_climb");
+await look_at(high, "pool_dives_climb_back", true);
 let most = 0;
 const count = () => (most = Math.max(most, people.list().filter((p) => p.diving !== undefined && p.high_board).length));
 await until(() => (count(), people.list()[high].diving === "walk"), 3600, "the diver up on a board");

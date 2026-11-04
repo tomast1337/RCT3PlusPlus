@@ -214,6 +214,18 @@ TEST_CASE("pools: a high diving board climbs from its paved stack in levels, a b
     CHECK(pool_refund(kPrices, { .kind = PoolKind::HighDive, .depth = 2, .board = 10 }) == -60 - 2 * 5 - 9 * 30);
 }
 
+TEST_CASE("pools: a high diving board's boards are named by the first of the three squares they cover")
+{
+    // Water at the next column: the boards lie along the columns, the tower's square in their middle.
+    const PoolMap map { { { .col = 5, .row = 7, .kind = PoolKind::HighDive, .surface = 0, .depth = 2, .board = 6, .turn = 1 } } };
+    for (const save::PlacedObject& o : pool_objects(map, "Pools/Own", 0))
+    {
+        const bool board = o.symbol == "DBMidBoard" || o.symbol == "DBTopBoard";
+        CHECK(o.col == (board ? 4 : 5));
+        CHECK(o.row == 7);
+    }
+}
+
 TEST_CASE("pools: a spiral staircase winds up from its paved stack, railed at its top where no square meets it")
 {
     // Its foot at the next column, a paved square at the top level at the row before.

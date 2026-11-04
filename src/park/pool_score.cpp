@@ -71,11 +71,11 @@ namespace rct3::park
         return share(e * (1 - share(dirt) / 2));
     }
 
-    std::int64_t pool_worth(const PoolTally& t, std::size_t slides, float dirt)
+    std::int64_t pool_worth(const PoolTally& t, std::size_t slides, std::size_t rivers, float dirt)
     {
         // Chosen by eye, hundredths: over the ticket new complexes start at, so a plain pool still sells at it.
         const auto up_to = [](std::int64_t count, std::int64_t most, std::int64_t each) { return std::min(count, most) * each; };
-        return 300 + std::llround(500 * pool_excitement(t, dirt)) + up_to(t.jacuzzis, 4, 60) + up_to(t.high_dives, 3, 100) + up_to(static_cast<std::int64_t>(slides), 4, 150) + up_to(t.loungers, 8, 15) + up_to(t.showers, 4, 20);
+        return 300 + std::llround(500 * pool_excitement(t, dirt)) + up_to(t.jacuzzis, 4, 60) + up_to(t.high_dives, 3, 100) + up_to(static_cast<std::int64_t>(slides), 4, 150) + up_to(static_cast<std::int64_t>(rivers), 2, 200) + up_to(t.loungers, 8, 15) + up_to(t.showers, 4, 20);
     }
 
 } // namespace rct3::park

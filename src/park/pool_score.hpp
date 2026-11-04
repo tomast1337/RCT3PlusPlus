@@ -6,7 +6,7 @@
 // many of its water squares have shaped walls (curved or cut corners, or a corner jutting out), lamps for
 // its size, and ladders and lifeguards for its water. Dirt takes it down. Its worth adds to a plain ticket's
 // a share for the excitement and some for each feature (spa pools, high diving boards, slides, sun loungers,
-// showers), each kind counting only up to a few. Every weight is chosen by eye.
+// showers, lazy rivers), each kind counting only up to a few. Every weight is chosen by eye.
 #pragma once
 
 #include "park/pools.hpp"
@@ -41,7 +41,8 @@ namespace rct3::park
     /// The complex's excitement, 0 to 1, with its water `dirt` from clean (0) to a health hazard (1).
     [[nodiscard]] float pool_excitement(const PoolTally& tally, float dirt);
 
-    /// The most a guest pays to go in, hundredths, with `slides` ending in its water.
-    [[nodiscard]] std::int64_t pool_worth(const PoolTally& tally, std::size_t slides, float dirt);
+    /// The most a guest pays to go in, hundredths, with `slides` ending in its water and `rivers` lazy rivers joined
+    /// to it.
+    [[nodiscard]] std::int64_t pool_worth(const PoolTally& tally, std::size_t slides, std::size_t rivers, float dirt);
 
 } // namespace rct3::park

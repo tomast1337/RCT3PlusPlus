@@ -70,16 +70,18 @@ TEST_CASE("dirt takes a pool's excitement down, to half when it is a health haza
 TEST_CASE("a pool's worth grows with its features, each kind counting only up to a few")
 {
     const PoolTally plain = pool_tally(water(4, 4), { });
-    const auto worth = pool_worth(plain, 0, 0);
+    const auto worth = pool_worth(plain, 0, 0, 0);
     CHECK(worth >= 100); // A new complex's ticket still sells
-    CHECK(pool_worth(plain, 1, 0) > worth);
-    CHECK(pool_worth(plain, 9, 0) == pool_worth(plain, 4, 0));
+    CHECK(pool_worth(plain, 1, 0, 0) > worth);
+    CHECK(pool_worth(plain, 9, 0, 0) == pool_worth(plain, 4, 0, 0));
+    CHECK(pool_worth(plain, 0, 1, 0) > worth);
+    CHECK(pool_worth(plain, 0, 5, 0) == pool_worth(plain, 0, 2, 0));
     PoolTally spa = plain;
     spa.jacuzzis = 1;
-    CHECK(pool_worth(spa, 0, 0) > worth);
+    CHECK(pool_worth(spa, 0, 0, 0) > worth);
     spa.jacuzzis = 50;
     PoolTally four = plain;
     four.jacuzzis = 4;
-    CHECK(pool_worth(spa, 0, 0) == pool_worth(four, 0, 0));
-    CHECK(pool_worth(plain, 0, 1) < worth);
+    CHECK(pool_worth(spa, 0, 0, 0) == pool_worth(four, 0, 0, 0));
+    CHECK(pool_worth(plain, 0, 0, 1) < worth);
 }

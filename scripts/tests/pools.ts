@@ -188,8 +188,9 @@ await pointer.drag(at_wall, [at_wall[0], at_wall[1] - 0.08], 8);
 await frames(3);
 expect(on_square("SolidTop", c0 + 6, r0 + 2) && !on_square("Base", c0 + 6, r0 + 2) && on_square("DBBase", c0 + 6, r0 + 2), "the water square paved under the tower");
 expect(pieces().find((o) => o.symbol === "SolidTop" && o.col === c0 + 6 && o.row === r0 + 2)!.height === pieces().find((o) => o.symbol === "SolidTop" && o.col === c0 + 7 && o.row === r0 + 2)!.height, "the paving at the pool's surface");
-// Facing the next row, its boards cover the tower's square and the squares either side along the rows.
-expect(boards(c0 + 6, r0 + 1) && on_square("Base", c0 + 6, r0 + 3), "its boards' tip over the water in front");
+// Facing away from the wall, straight out over the pool: its boards cover the tower's square and the squares
+// either side along the columns.
+expect(boards(c0 + 5, r0 + 2) && on_square("Base", c0 + 5, r0 + 2), `its boards straight out from the wall over the water, not ${JSON.stringify(pieces().filter((o) => o.symbol === "DBTopBoard"))}`);
 expect(park.cash()! < cash, "the tower paid for");
 await screenshot("pool_high_dive_on_water");
 build.stop();

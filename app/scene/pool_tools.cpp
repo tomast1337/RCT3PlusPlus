@@ -471,7 +471,8 @@ namespace rct3::scene
         }
         const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
         // A high diving board faces the water beside it nearest the pointer, as an extra takes its side; the turn
-        // keys turn it only where water lies on every side or none.
+        // keys turn it only where water lies on every side or none. Sides with no water behind come first, so one
+        // laid on water at a pool's wall reaches straight out from the wall, not along it.
         if (t.item && t.item->symbol == park::kPoolHighDive && !t.corner && tile)
         {
             const auto water = [&](std::int32_t turn) {
@@ -479,7 +480,10 @@ namespace rct3::scene
                 const auto square = scene.pools.at(tile->col + dc, tile->row + dr);
                 return square && square->kind == park::PoolKind::Water;
             };
-            if (const auto side = park::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, water); side && !std::ranges::all_of(std::array { 0, 1, 2, 3 }, water))
+            const auto turns = std::array { 0, 1, 2, 3 };
+            const bool backed = std::ranges::any_of(turns, [&](std::int32_t turn) { return water(turn) && !water(turn + 2); });
+            const auto faces = [&](std::int32_t turn) { return water(turn) && (!backed || !water(turn + 2)); };
+            if (const auto side = park::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, faces); side && !std::ranges::all_of(turns, faces))
                 t.turns = *side;
         }
         if (std::exchange(t.redraw, false))

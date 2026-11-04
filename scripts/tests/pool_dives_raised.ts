@@ -37,34 +37,47 @@ await frames(5);
 await screenshot("pool_dives_raised_tower");
 
 const near = (p: { col?: number; row?: number }) => Math.abs(p.col! - (base.col + 0.5)) < 2.5 && Math.abs(p.row! - (base.row + 0.5)) < 2.5;
-const diver = (step: string) => people.list().findIndex((p) => p.high_board === true && p.diving === step && near(p));
-const look_at = async (i: number, name: string) => {
+const diver = (step: string) => people.list().find((p) => p.high_board === true && p.diving === step && near(p))?.name;
+// By name: the list's order changes as guests come and go.
+const who = (name: string) => people.list().find((p) => p.name === name)!;
+const ground = (col: number, row: number) => (camera.look({ col, row }), camera.view().target[1]);
+// From the side of the boards: level with the diver, or, given `mid`, far enough back to see from the boards down
+// to the water, looking at that height.
+const frame = (p: { col?: number; row?: number; up?: number }, mid?: number) => {
+    const away = mid === undefined ? 3 : 9;
+    const at = mid === undefined ? { col: p.col!, row: p.row!, up: p.up! + 0.9 } : { col: low.col + 0.5, row: low.row + 0.5, up: mid };
+    const from = { col: at.col - away * fr, row: at.row + away * fc, up: mid === undefined ? p.up! + 1.2 : mid };
+    camera.look({ ...at, up: at.up - ground(at.col, at.row) }, { ...from, up: from.up - ground(from.col, from.row) });
+};
+const look_at = async (named: string, name: string, mid?: number) => {
     await ui.click("bar/Top_Pause");
-    const p = people.list()[i];
+    const p = who(named);
     log(name, p.diving, "at", p.col?.toFixed(2), p.row?.toFixed(2), "up", p.up?.toFixed(2));
-    const ground = (col: number, row: number) => (camera.look({ col, row }), camera.view().target[1]);
-    // From the side of the boards, level with them.
-    const from = { col: p.col! - 3 * fr, row: p.row! + 3 * fc };
-    camera.look({ col: p.col!, row: p.row!, up: p.up! + 0.9 - ground(p.col!, p.row!) }, { ...from, up: p.up! + 1.2 - ground(from.col, from.row) });
+    frame(p, mid);
     await frames(3);
     await screenshot(name);
     await ui.click("bar/Top_Pause");
 };
 
-await until(() => diver("climb") >= 0, 12000, "a swimmer climbing the raised tower");
-const high = diver("climb");
-await until(() => people.list()[high].diving === "jump", 3600, "the diver at the board's end");
-const top = people.list()[high].up!;
+await until(() => diver("climb") !== undefined, 12000, "a swimmer climbing the raised tower");
+const high = diver("climb")!;
+await until(() => who(high).diving === "jump", 3600, "the diver at the board's end");
+const top = who(high).up!;
 await look_at(high, "pool_dives_raised_board");
-await until(() => people.list()[high].diving === "fall" && people.list()[high].up! < top - 4, 600, "the diver falling");
-await look_at(high, "pool_dives_raised_fall");
-await until(() => people.list()[high].diving === "surface", 600, "the diver in the low pool");
-const landed = people.list()[high];
+// Back far enough to see the boards, the diver and the low pool, framed before the fall: people seen from a new
+// distance are built again a few frames later, so a view moved there while paused shows the diver missing.
+const mid = (top + ground(low.col + 0.5, low.row + 0.5)) / 2;
+frame(who(high), mid);
+await until(() => who(high).diving === "fall" && who(high).up! < top - 4, 600, "the diver falling");
+await look_at(high, "pool_dives_raised_fall", mid);
+await until(() => who(high).diving === "surface", 600, "the diver in the low pool");
+const landed = who(high);
 await look_at(high, "pool_dives_raised_splash");
-log("fell from", top.toFixed(2), "to", landed.up?.toFixed(2));
+log("fell from", top.toFixed(2), "to", landed.up?.toFixed(2), "at", landed.col?.toFixed(2), landed.row?.toFixed(2));
+expect(water(Math.floor(landed.col!), Math.floor(landed.row!)).length > 0, `a water square where the diver lands, not ${landed.col?.toFixed(2)}, ${landed.row?.toFixed(2)}`);
 expect(top - landed.up! > 10, `a long fall into the low pool, not ${(top - landed.up!).toFixed(2)}`);
 // Out past the tower's wall, the way it faces: the low pool, not the deck.
 const out = (landed.col! - (base.col + 0.5)) * (low.col - base.col) + (landed.row! - (base.row + 0.5)) * (low.row - base.row);
 expect(out > 0.5 && out < 6, `in the low pool in front of the tower, not ${out.toFixed(2)} out`);
-await until(() => people.list()[high].diving === undefined, 600, "the diver swimming on");
-expect(people.list()[high].state === "swimming", "the diver swimming on");
+await until(() => who(high).diving === undefined, 600, "the diver swimming on");
+expect(who(high).state === "swimming", "the diver swimming on");

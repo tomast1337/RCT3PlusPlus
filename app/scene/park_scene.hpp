@@ -527,6 +527,7 @@ namespace rct3::scene
         std::vector<Jet> jets;
         float jets_clock = 0;                                 ///< park_clock when the jets last moved
         float jumps_ended = 0;                                ///< park_clock when the jumping fountains last had a jump in the air
+        std::vector<std::pair<float, glm::vec3>> splashdowns; ///< Pool slide riders in the air: park_clock when they reach the water, and where
         render::PipelineHandle waterfall_added_pipeline;      ///< Its pictures with a second added
         render::PipelineHandle waterfall_multiplied_pipeline; ///< And with a second multiplying them
         park::SkyModels sky;

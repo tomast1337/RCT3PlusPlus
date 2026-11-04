@@ -1271,6 +1271,23 @@ namespace rct3::scene
         // Chosen by eye: the effects a car's splash points spray, by strength, and its wake.
         constexpr std::array<std::string_view, 3> kSplashEffects { "splash2", "splash4", "watersplashbig" };
         constexpr std::string_view kWakeEffect = "waterwakemedium";
+        // Where a pool slide's rider comes down in the water, a low burst of spray rises round them and falls back
+        // amid foam.
+        constexpr std::string_view kFoam = kWakeEffect; ///< Chosen by eye: foam spreading on the water
+        constexpr int kSprays = 6;                      ///< Chosen by eye: sprays round where they come down
+        constexpr float kSprayLean = 0.5f;              ///< Chosen by eye: how far out from straight up each is thrown
+        constexpr float kSprayScale = 0.55f;            ///< Chosen by eye: the splash this small rises about rider high
+        std::erase_if(scene.splashdowns, [&](const std::pair<float, glm::vec3>& down) {
+            if (down.first > scene.park_clock)
+                return false;
+            fire_park_particles(scene.particles, kFoam, down.second, glm::vec3(0, 1, 0));
+            for (int k = 0; k < kSprays; ++k)
+            {
+                const float round = glm::two_pi<float>() * static_cast<float>(k) / kSprays;
+                fire_park_particles(scene.particles, kSplashEffects[1], down.second, glm::vec3(0, 1, 0) + glm::vec3(std::cos(round), 0, std::sin(round)) * kSprayLean, kSprayScale);
+            }
+            return true;
+        });
         scene.car_waters.resize(scene.cars.size());
         std::vector<float> moved(scene.cars.size()); // Along its course since the park kept it, by car
         for (std::size_t i = 0; i < scene.cars.size(); ++i)
@@ -1302,9 +1319,22 @@ namespace rct3::scene
                 // Crashed, each car flies on and tumbles as its wreck does from where it left the track, and is
                 // gone with it; a train whose wrecks are gone is off the track till it is back in the station.
                 // shortcut: drawn as it was, not burnt; upgrade if a burnt look turns up among the cars' textures.
-                // Off a pool slide's end, it is out of sight till it is back at the station.
+                // Off a pool slide's end, it is out of sight till it is back at the station; its riders fly on, to
+                // splash down in the pool.
                 if (train.splashed)
+                {
+                    if (scene.car_places[i][3][3] != 0)
+                        for (const auto [guest, drop, pose] : scene.sim.registry.view<const simulation::Dropped, const simulation::Pose>().each())
+                            if (drop.slide == ride && pose.position.y > drop.ground)
+                            {
+                                // Falling from where they are as the simulation drops them, till they reach the water.
+                                const float g = simulation::kTuning.holding.gravity;
+                                const float f = drop.fall.value;
+                                const float t = (std::sqrt(f * f + 2 * g * (pose.position.y - drop.ground)) - f) / g;
+                                scene.splashdowns.emplace_back(scene.park_clock + t, glm::vec3 { pose.position.x + drop.drift.x * t, drop.ground, pose.position.z + drop.drift.y * t });
+                            }
                     place = glm::mat4(0.0f);
+                }
                 else if (train.crashed)
                 {
                     const auto* wrecks = scene.sim.registry.try_get<simulation::Wrecks>(ride);

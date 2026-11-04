@@ -38,18 +38,33 @@ camera.look({ col: at.col!, row: at.row!, up: at.up! }, { col: at.col! + 3, row:
 await frames(6);
 await screenshot("pool_slides_riding");
 
-// Off the end they splash down into the pool and swim on, still in their swimwear.
+// Off the end they splash down into the pool, a low burst of spray and a ring of foam where the slide meets the
+// water, and swim on, still in their swimwear.
 await until(() => people.list()[rider].state !== "riding", 1200, "the rider off the end");
 const flying = people.list()[rider];
 log("off the end as", flying.state, "swimwear", flying.swimwear);
 expect(flying.swimwear === true, "the rider still in their swimwear off the end");
-camera.look({ col: flying.col!, row: flying.row!, up: flying.up! }, { col: flying.col! + 4, row: flying.row! + 4, up: flying.up! + 3 });
-await frames(2);
-await screenshot("pool_slides_splashdown");
+const splashing = () => map.effects().filter((e) => /^(splash4|waterwakemedium)$/.test(e.effect) && Math.abs(e.col - flying.col!) + Math.abs(e.row - flying.row!) < 3);
+await until(() => new Set(splashing().map((e) => e.effect)).size === 2, 300, "spray and foam where the rider came down");
+const splashes = splashing();
 await until(() => people.list()[rider].state === "swimming", 600, "the rider swimming again");
 expect(people.list()[rider].swimwear === true, "the rider swimming in their swimwear");
 await frames(30);
 await screenshot("pool_slides_swimming");
+
+// A close look from the side at where the riders come down, the slide's end beyond, as the next car goes off it:
+// mid-splash with its rider, then the foam spreading.
+const mouth = splashes[0];
+const flew = { col: mouth.col - flying.col!, row: mouth.row - flying.row! };
+const far = Math.hypot(flew.col, flew.row) || 1;
+camera.look(mouth, { col: mouth.col - (flew.row / far) * 1.2 + (flew.col / far) * 0.6, row: mouth.row + (flew.col / far) * 1.2 + (flew.row / far) * 0.6, up: mouth.up + 0.7 });
+const near_end = () => map.effects().filter((e) => e.effect === "waterwakemedium" && Math.abs(e.col - mouth.col) + Math.abs(e.row - mouth.row) < 1);
+await until(() => near_end().length === 0, 1200, "the spray settled");
+await until(() => near_end().length > 0, 6000, "the next car off the end");
+await frames(15);
+await screenshot("pool_slides_splash_mid");
+await frames(45);
+await screenshot("pool_slides_splashdown");
 
 // Cars go off the end again and again, and none of it is a crash.
 await until(() => (info().customers ?? 0) >= 3, 6000, "three swimmers down the slide");

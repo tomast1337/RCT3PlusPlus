@@ -51,8 +51,9 @@ namespace rct3::scene
     void load_park_particles(render::Device& device, ParkParticles& particles, const std::filesystem::path& root, random::RandomState random);
     /// Starts the effects `effects` name, in place of any running in `list`.
     void show_park_particles(ParkParticles& particles, std::span<const park::PlacedEffect> effects, std::vector<ParkParticles::Shown> ParkParticles::* list = &ParkParticles::shown);
-    /// Sets off the effect `effect` once at `position`, pointing along `up`. False when there is no such effect.
-    bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up);
+    /// Sets off the effect `effect` once at `position`, pointing along `up`, `scale` times its size: how far its
+    /// particles go and how big they are drawn. False when there is no such effect.
+    bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up, float scale = 1);
     /// Moves time on for the effects near enough `eye` to be seen, nearest first, until `budget` particles are
     /// alive; the rest wait and are not drawn.
     void advance_park_particles(ParkParticles& particles, float seconds, glm::vec3 eye, std::size_t budget);

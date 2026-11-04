@@ -4,13 +4,14 @@
 // the pointer. Each is a wave over one body of water (its squares joined side to side at one surface), kept to the
 // box round it; the water's surface and the swimmers floating on it follow them all. The shapes are ours:
 //
-// A wave machine sends straight crests out from its wall across the water, at a steady speed c:
+// A wave machine sends a front of crests out from its own stretch of wall, one square wide, at a steady speed c:
 //
-//   height(d, t) = A * sin(w * (t - d / c)) * exp(-d / reach),  d = distance out from the wall
+//   height(d, t) = A * sin(w * (t - d / c)) * exp(-d / reach) * across,  d = distance out from the wall
 //
-// counted only where the water at d left the wall while the machine ran. The machines of a complex run for `on`
-// seconds out of every `every`, all in step, from the park clock's start, so each run's crests cross the pool
-// after it and die away at the far side.
+// counted only where the water at d left the wall while the machine ran. The front widens a little as it goes,
+// lower for it, and fades out at its sides (`across`); it dies away well before the far side of a big pool,
+// and is gone by `cut`. Each machine makes its own. The machines of a complex run for `on` seconds out of every
+// `every`, all in step, from the park clock's start.
 //
 // A line drawn on the water along a side of the grid sends a short train of crests the way it was drawn, across
 // the whole body of water, dying down as it goes. A line drawn aslant does nothing. A circle drawn round and round
@@ -44,7 +45,10 @@ namespace rct3::park
     {
         float crest = 0.025f;       ///< A wave machine's crest height for each step of its height setting
         float speed = 3.0f;         ///< Of a wave machine's crests, out from its wall
-        float reach = 40.0f;        ///< A wave machine's crests fall to a third (1/e) over this distance
+        float reach = 5.0f;         ///< A wave machine's crests fall to a third (1/e) over this distance
+        float cut = 16.0f;          ///< And are gone this far from its wall
+        float spread = 0.35f;       ///< Its front widens by this much each side for each unit out
+        float front_soft = 0.75f;   ///< Over this far its front fades out at each side
         float ramp = 2.0f;          ///< Seconds a wave machine takes to start and to stop
         float line_height = 0.3f;   ///< Of a drawn line's crests at first
         float line_speed = 3.5f;    ///< Of a drawn line's crests
@@ -85,7 +89,7 @@ namespace rct3::park
         glm::vec2 heading { 0.0f }; ///< The way its crests go, a side of the grid; none for a whirlpool
         glm::vec4 bounds { 0.0f };  ///< The box round its body of water: least x and z, most x and z
         float start = 0;            ///< The park clock when a line or a whirlpool was drawn
-        float radius = 0;           ///< A whirlpool's
+        float radius = 0;           ///< A whirlpool's; half a wave machine's front where it leaves the wall
         float spin = 0;             ///< A whirlpool's way round: 1 or -1
         PoolWaves settings { };     ///< A machine's complex's
     };

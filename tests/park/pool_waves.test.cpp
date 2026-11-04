@@ -57,11 +57,12 @@ TEST_CASE("pool waves: a wave machine sends crests out from its wall, with its c
     CHECK(waves[0].from == glm::vec2 { 4, 10 });
     CHECK(waves[0].heading == glm::vec2 { 1, 0 });
     CHECK(waves[0].bounds == glm::vec4 { 4, 4, 28, 20 });
+    CHECK(waves[0].radius == 2); // Half its square, along the wall
     CHECK(waves[0].settings.height == 10);
     CHECK(waves[0].settings.every == 60);
 }
 
-TEST_CASE("pool waves: the machines run for their time out of every period, and the crests cross the pool after")
+TEST_CASE("pool waves: the machines run for their time out of every period, and the crests go on out after")
 {
     PoolMap map = ringed();
     map.extras.push_back({ .col = 1, .row = 2, .turn = 3, .fit = pool_extra_fit("WaveMachine UnderWaterWall") });
@@ -76,9 +77,32 @@ TEST_CASE("pool waves: the machines run for their time out of every period, and 
     CHECK(largest(near, 8) > 0.05f);       // Running: 0 to 20 s of every 60
     CHECK(largest(near, 30) == 0.0f);      // Stopped, the last crests gone by
     CHECK(largest(near, 68) > 0.05f);      // Running again
-    CHECK(largest({ 25, 10 }, 1) == 0.0f); // The first crests have not reached the far side yet
-    CHECK(largest({ 25, 10 }, 24) > 0.0f); // Just after the machine stops, they are there
-    CHECK(largest({ 40, 10 }, 8) == 0.0f); // Off the pool's water
+    CHECK(largest({ 19, 10 }, 0) == 0.0f); // The first crests have not got this far yet
+    CHECK(largest({ 17, 10 }, 24) > 0.0f); // Just after the machine stops, the last are still on their way
+}
+
+TEST_CASE("pool waves: a wave machine's front is its own square wide, widens a little and dies out on its way")
+{
+    PoolMap map = ringed();
+    map.extras.push_back({ .col = 1, .row = 2, .turn = 3, .fit = pool_extra_fit("WaveMachine UnderWaterWall") });
+    std::vector<PoolWave> waves = machine_waves(map, { }, grid());
+    const auto largest = [&](glm::vec2 at) {
+        float most = 0;
+        for (int i = 0; i < 200; ++i)
+            most = std::max(most, std::abs(pool_wave_height(waves, at, 6 + static_cast<float>(i) * 0.05f)));
+        return most;
+    };
+    CHECK(largest({ 6, 10 }) > largest({ 14, 10 })); // Lower further out
+    CHECK(largest({ 27, 10 }) == 0.0f);              // Gone before the far side
+    CHECK(largest({ 4.5f, 13.5f }) == 0.0f);         // Beside the machine, off its square
+    CHECK(largest({ 12, 13.5f }) > 0.0f);            // Further out, the front has widened to there
+    CHECK(largest({ 6, 18 }) == 0.0f);               // Nothing along the rest of the wall
+    // A second machine along the wall makes its own front there.
+    map.extras.push_back({ .col = 1, .row = 4, .turn = 3, .fit = pool_extra_fit("WaveMachine UnderWaterWall") });
+    waves = machine_waves(map, { }, grid());
+    REQUIRE(waves.size() == 2);
+    CHECK(waves[1].from == glm::vec2 { 4, 18 });
+    CHECK(largest({ 6, 18 }) > 0.05f);
 }
 
 TEST_CASE("pool waves: a line drawn along a side of the grid sends a train of crests that way")

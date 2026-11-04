@@ -73,6 +73,7 @@ namespace rct3::park
             const glm::vec2 half { grid.tile_size_x / 2, grid.tile_size_z / 2 };
             w.from = glm::vec2 { grid.world_x(e.col), grid.world_z(e.row) } + half + side * half;
             w.heading = -side;
+            w.radius = glm::length(glm::vec2 { side.y, side.x } * half); // Half the square, along the wall
             w.bounds = body_bounds(map, grid, *square);
             for (std::size_t i = 0; i < complexes.size(); ++i)
                 if (std::ranges::contains(complexes[i], save::Tile { e.col, e.row }))
@@ -161,11 +162,15 @@ namespace rct3::park
                 // When the water at d left the wall, and whether the machine ran then, easing in and out.
                 const PoolWaves& s = w.settings;
                 const float left = clock - d / look.speed;
-                if (d < 0 || left < 0 || s.on <= 0)
+                if (d < 0 || d > look.cut || left < 0 || s.on <= 0)
                     continue;
+                // Its front, wider out from the wall and lower for it, fading out at its sides.
+                const float half_front = w.radius + look.spread * d;
+                const float out = std::abs(glm::dot(at - w.from, glm::vec2 { -w.heading.y, w.heading.x }));
+                const float across = std::clamp((half_front + look.front_soft - out) / (2 * look.front_soft), 0.0f, 1.0f) * std::sqrt(w.radius / half_front);
                 const float phase = std::fmod(left, std::max({ s.every, s.on, 1.0f }));
                 const float running = std::clamp(phase / look.ramp, 0.0f, 1.0f) * std::clamp((s.on - phase) / look.ramp, 0.0f, 1.0f);
-                sum += look.crest * s.height * running * std::sin(s.frequency * left) * std::exp(-d / look.reach);
+                sum += look.crest * s.height * running * std::sin(s.frequency * left) * std::exp(-d / look.reach) * across * std::clamp(look.cut - d, 0.0f, 1.0f);
             }
             else if (w.kind == PoolWaveKind::Line && age >= 0 && age <= look.line_life)
             {

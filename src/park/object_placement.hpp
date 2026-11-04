@@ -18,6 +18,7 @@
 #include "save/model/world.hpp"
 
 #include <array>
+#include <concepts>
 #include <cstdint>
 #include <optional>
 
@@ -52,6 +53,19 @@ namespace rct3::park
     /// cut by the diagonals; a corner item turns to the corner of the quarter the pointer is in. None for items
     /// the player turns.
     [[nodiscard]] std::optional<std::int32_t> snapped_turns(Positioning positioning, glm::vec2 at);
+
+    /// Of the sides of a tile for which `suits` holds (0 towards higher rows, 1 higher columns, 2 lower rows, 3
+    /// lower columns), the one nearest the point `at` inside it (0 to 1 along X and Z); the lowest of equals. None
+    /// when no side suits.
+    template<std::predicate<std::uint8_t> Suits> [[nodiscard]] std::optional<std::uint8_t> nearest_side(glm::vec2 at, Suits&& suits)
+    {
+        const std::array<float, 4> away { 1 - at.y, 1 - at.x, at.y, at.x };
+        std::optional<std::uint8_t> best;
+        for (std::uint8_t side = 0; side < 4; ++side)
+            if (suits(side) && (!best || away[side] < away[*best]))
+                best = side;
+        return best;
+    }
 
     /// Where the middle of `object`'s footprint is, in tiles from the grid's corner, for an item covering
     /// `squares` tiles along its own X and Z. The object names the footprint's tile of lowest column and row

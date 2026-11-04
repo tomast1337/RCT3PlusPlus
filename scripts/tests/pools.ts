@@ -124,23 +124,28 @@ const put = async (symbol: string, col: number, row: number) => {
 cash = park.cash()!;
 await put("PoolLamp", c0, r0 + 3);
 expect(extras() === 1 && park.cash()! < cash, "a lamp, paid for");
-// Turned a quarter to the left, against the pool's wall.
-keys.press(",");
-await frames(2);
+// Against the pool's wall, turned to it unasked.
 await put("Ladder", c0 + 1.5, r0 + 3.5);
 expect(extras() === 2, "a ladder on the wall");
-// A wave machine on the same wall, two squares along.
-await put("WaveMachine", c0 + 1.5, r0 + 1.5);
+// A wave machine on the same wall, two squares along, in the corner: the pointer near the wall picks it.
+await put("WaveMachine", c0 + 1.2, r0 + 1.5);
 expect(count("WaveMachine") === 1, "a wave machine on the wall");
-keys.press(".");
-await frames(2);
 await put("PoolLamp", c0, r0 + 3);
 expect(extras() === 3, "no second lamp where one stands");
 await put("SunLoungers", c0 + 3, r0);
 await put("PoolShower", c0 + 3, r0);
 expect(extras() === 4, `loungers alone on their square, not ${extras()} extras`);
-// A high diving board on the far paved side, turned to face the water, raised by dragging up from its square;
-// facing away from the water it is refused.
+// In the far corner of the water, a wall on two sides: a ladder goes against the wall the pointer is nearer,
+// a second against the other; a third finds neither free.
+camera.look({ col: c0 + 6.5, row: r0 + 6.5 }, { col: c0 + 3.5, row: r0 + 3.5, up: 4 });
+await frames(10);
+await put("Ladder", c0 + 6.8, r0 + 6.4);
+await put("Ladder", c0 + 6.4, r0 + 6.8);
+await put("Ladder", c0 + 6.8, r0 + 6.4);
+expect(extras() === 6, `two ladders in the corner, one on each wall, not ${extras() - 4}`);
+await screenshot("pool_corner_ladders");
+// A high diving board on the far paved side, turned to face the water unasked, raised by dragging up from its
+// square.
 expect(build.pick(kPool, "SegmentTypeHighDive"), "the high diving board in the pool list");
 camera.look({ col: c0 + 6, row: r0 + 4 }, { col: c0 + 3, row: r0 + 4, up: 4 });
 await frames(10);
@@ -148,25 +153,18 @@ cash = park.cash()!;
 const dive = on_view(c0 + 7.5, r0 + 4.5);
 await pointer.drag(dive, [dive[0], dive[1] - 0.08], 8);
 await frames(3);
-expect(count("DBTopBoard") === 0, "no board facing away from the water");
-keys.press(",");
-await frames(2);
-await pointer.drag(dive, [dive[0], dive[1] - 0.08], 8);
-await frames(3);
 expect(count("DBTopBoard") === 1 && count("DBMidBoard") >= 1, `a board raised by the drag, not ${count("DBMidBoard")} levels below its top`);
 expect(park.cash()! < cash, "the board paid for");
 camera.look({ col: c0 + 7.5, row: r0 + 4.5, up: 2 }, { col: c0 + 3.5, row: r0 + 2.5, up: 4 });
 await frames(10);
 await screenshot("pool_high_dive");
-keys.press(".");
-await frames(2);
 build.stop();
 camera.look({ col: c0 + 1.5, row: r0 + 2.5 }, { col: c0 + 4, row: r0 + 6, up: 3 });
 await frames(10);
 await screenshot("pool_extras");
 
 // A changing room on the ground beside the paved ring, opening on it: the railing there opens. Picked in the
-// panel, it follows the pointer as a ghost, shown in the panel's disc too, and turns with the turn keys; placed,
+// panel, it follows the pointer as a ghost, shown in the panel's disc too, and turns to the pool unasked; placed,
 // the tool goes and the room's window opens, where the pool complex opens and its ticket price is set.
 const room = () => map.objects().find((o) => o.overlay !== kPool && o.col === c0 - 1 && o.row === r0 + 4);
 const railings = count("Railing");
@@ -180,15 +178,6 @@ await frames(2);
 await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
 camera.look({ col: c0 - 0.5, row: r0 + 4.5 }, { col: c0 + 3, row: r0 + 5.5, up: 2.5 });
 await frames(10);
-// It opens towards the pool once turned a quarter.
-pointer.move(...on_view(c0 - 0.5, r0 + 4.5));
-await frames(3);
-await screenshot("pool_room_ghost_turned_away");
-await pointer.click(...on_view(c0 - 0.5, r0 + 4.5));
-await frames(3);
-expect(room() === undefined, "no changing room opening away from the pool");
-keys.press(".");
-await frames(3);
 await pointer.click(...on_view(c0 - 1.5, r0 + 4.5));
 await frames(3);
 expect(room() === undefined, "no changing room away from the pool");
@@ -404,8 +393,30 @@ camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 16, up: 14 })
 await frames(10);
 await screenshot("pool_loaded");
 
+// A changing room on each other side of the pool, each turned unasked to the paving there, or where two sides are
+// paved, the one the pointer is nearer.
+const sides = [[c0 - 1, r0 + 4, 0.5, 0.5], [c0 + 8, r0 + 3, 0.2, 0.5], [c0 + 3, r0 - 1, 0.5, 0.8], [c0, r0 + 7, 0.5, 0.5]];
+const rooms = () => sides.filter(([col, row]) => map.objects().some((o) => o.overlay !== kPool && o.col === col && o.row === row)).length;
+camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 16, up: 14 });
+await frames(10);
+for (const [col, row, x, y] of sides.slice(1))
+{
+    await open_editor();
+    await ui.click("pool_panel/Pool_ChangingRoomPanel");
+    await until(() => (ui.children("pool_panel/body")?.length ?? 0) > 1, 120, "the changing rooms");
+    await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
+    await frames(2);
+    await pointer.click(...on_view(col + x, row + y));
+    await until(() => ui.find("info") !== undefined, 120, `the window of the room at ${col - c0}, ${row - r0}`);
+    await ui.click("info/close");
+    await frames(3);
+    expect(map.pavings().some((p) => p.col === col && p.row === row), `the floor of the room at ${col - c0}, ${row - r0} paved`);
+}
+expect(rooms() === 4, `a changing room on each side, not ${rooms()}`);
+await screenshot("pool_rooms_each_side");
+
 // The changing room's window again, its complex's name kept; selling the complex takes up its squares, extras
-// and room, once asked, and leaves the pool below.
+// and rooms, once asked, and leaves the pool below.
 const first = () => pieces().filter((o) => o.row < r0 + 8).length;
 const below = pieces().length - first();
 camera.look({ col: c0 - 0.5, row: r0 + 4.5 }, { col: c0 + 3, row: r0 + 5.5, up: 2.5 });
@@ -421,7 +432,7 @@ await until(() => ui.find("sell_pool_question") !== undefined, 120, "the questio
 await screenshot("pool_sell_question");
 await ui.click("sell_pool_question/content/GUI2MiniDialog_Confirm");
 await frames(3);
-expect(first() === 0 && room() === undefined, `the complex gone, not ${first()} pieces`);
+expect(first() === 0 && rooms() === 0, `the complex gone, not ${first()} pieces and rooms at ${JSON.stringify(sides.filter(([col, row]) => map.objects().some((o) => o.overlay !== kPool && o.col === col && o.row === row)).map(([col, row]) => [col - c0, row - r0]))}`);
 expect(pieces().length === below, "the pool below kept");
 expect(park.cash()! > cash, "money back for the complex");
 

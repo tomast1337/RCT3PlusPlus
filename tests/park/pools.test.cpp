@@ -373,6 +373,15 @@ TEST_CASE("pools: a changing room stands off the pool, opening on a paved square
     CHECK(objects.back().base_height == 4);
 }
 
+TEST_CASE("pools: a changing room fits on every side of a pool, turned towards it")
+{
+    const PoolMap map = ringed(2, 2);
+    // West, south, east and north of the paved ring, each opening on the square beside it alone.
+    for (const auto [col, row, turn] : { std::array { -1, 1, 1 }, std::array { 1, -1, 0 }, std::array { 4, 2, 3 }, std::array { 2, 4, 2 } })
+        for (std::int32_t other = 0; other < 4; ++other)
+            CHECK(pool_room_fits(map, col, row, other) == (other == turn));
+}
+
 TEST_CASE("pools: a complex is the squares that meet side to side, and the changing rooms opening on them")
 {
     PoolMap map = ringed(2, 2);

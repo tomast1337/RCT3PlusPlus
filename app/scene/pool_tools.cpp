@@ -4,6 +4,7 @@
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
 #include "park/object_pick.hpp"
+#include "park/object_placement.hpp"
 #include "park/pools.hpp"
 #include "park/tile_shaping.hpp"
 #include "profiling/profiler.hpp"
@@ -240,10 +241,14 @@ namespace rct3::scene
             PoolTool& t = scene.pooling;
             const park::BuildItem& item = *t.item;
             const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
-            const std::int32_t turn = t.turns;
             const park::PoolExtraFit fit = park::pool_extra_fit(item.pool_extra);
             const bool room = item.kind == park::BuildKind::PoolRoom;
-            const bool fits = tile && (room ? park::pool_room_fits(scene.pools, tile->col, tile->row, turn) && park::owned_outright(scene.grid.at(tile->col, tile->row)) : park::pool_extra_fits(scene.pools, tile->col, tile->row, fit, turn));
+            const auto fits_at = [&](std::int32_t turn) { return tile && (room ? park::pool_room_fits(scene.pools, tile->col, tile->row, turn) : park::pool_extra_fits(scene.pools, tile->col, tile->row, fit, turn)); };
+            // It takes the side nearest the pointer that it fits against, as a bench on a path does; the turn keys
+            // turn it only where it fits every way or none.
+            const auto side = tile ? park::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, fits_at) : std::nullopt;
+            const std::int32_t turn = side && !std::ranges::all_of(std::array { 0, 1, 2, 3 }, fits_at) ? *side : t.turns;
+            const bool fits = fits_at(turn) && (!room || park::owned_outright(scene.grid.at(tile->col, tile->row)));
             const bool ok = fits && (!scene.park.cash || *scene.park.cash >= item.price);
             if (down && tile)
                 t.corner = tile;
@@ -438,6 +443,18 @@ namespace rct3::scene
             turn_preview(device, scene, assets, piece, park::kPoolOverlay);
         }
         const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
+        // A high diving board faces the water beside it nearest the pointer, as an extra takes its side; the turn
+        // keys turn it only where water lies on every side or none.
+        if (t.item && t.item->symbol == park::kPoolHighDive && !t.corner && tile)
+        {
+            const auto water = [&](std::int32_t turn) {
+                const auto [dc, dr] = kFacing[static_cast<std::size_t>(turn & 3)];
+                const auto square = scene.pools.at(tile->col + dc, tile->row + dr);
+                return square && square->kind == park::PoolKind::Water;
+            };
+            if (const auto side = park::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, water); side && !std::ranges::all_of(std::array { 0, 1, 2, 3 }, water))
+                t.turns = *side;
+        }
         if (std::exchange(t.redraw, false))
             pools_changed(device, scene, assets);
         const bool dragging = t.item && down && (t.corner || tile);

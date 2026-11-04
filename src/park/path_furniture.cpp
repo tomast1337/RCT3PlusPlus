@@ -104,17 +104,9 @@ namespace rct3::park
         };
         const float in_x = fx - static_cast<float>(tile.col);
         const float in_z = fz - static_cast<float>(tile.row);
-        const std::array<float, 4> away { 1 - in_z, 1 - in_x, in_z, in_x };
         const bool wants_joined = positioning == Positioning::PathSideJoin;
-        std::optional<std::uint8_t> best;
-        std::optional<std::uint8_t> any;
-        for (std::uint8_t side = 0; side < 4; ++side)
-        {
-            if (!any || away[side] < away[*any])
-                any = side;
-            if (joined(side) == wants_joined && (!ends_only || at_end(side)) && (!best || away[side] < away[*best]))
-                best = side;
-        }
+        const std::optional<std::uint8_t> best = nearest_side({ in_x, in_z }, [&](std::uint8_t side) { return joined(side) == wants_joined && (!ends_only || at_end(side)); });
+        const std::optional<std::uint8_t> any = nearest_side({ in_x, in_z }, [](std::uint8_t) { return true; });
         spot.refused = !best || forbidden;
         const std::uint8_t side = best.value_or(*any);
         spot.turns = kTurnsFacing[side];

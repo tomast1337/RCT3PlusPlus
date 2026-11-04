@@ -59,13 +59,12 @@ for (const [symbol, col] of [["SunLoungers", c + 4], ["PoolShower", c + 6]] as c
     expect(map.objects().some((o) => o.symbol === symbol && o.col === col && o.row === r + 3), `${symbol} on the paving`);
 }
 
-// The changing room between the road and the pool, turned to open on it; placed, its window opens, where the
+// The changing room between the road and the pool, turned to open on it unasked; placed, its window opens, where the
 // complex opens.
 await until(() => ui.find("pool_panel/Pool_ChangingRoomPanel") !== undefined, 120, "the pool panel");
 await ui.click("pool_panel/Pool_ChangingRoomPanel");
 await frames(2);
 await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
-keys.press(".");
 await frames(3);
 await pointer.click(...on_view(c + 1.5, r + 0.5));
 await frames(3);

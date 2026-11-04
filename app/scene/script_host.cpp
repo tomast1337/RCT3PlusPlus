@@ -978,6 +978,15 @@ namespace rct3::scene
                     // In a pool, on a sun lounger or under a shower.
                     if (const auto* swimmer = r.try_get<simulation::Swimmer>(p.guest); swimmer != nullptr && swimmer->place >= 0)
                         person["pool_extra"] = swimmer->use == simulation::PoolUse::Lounge ? "lounger" : swimmer->use == simulation::PoolUse::Shower ? "shower" : "other";
+                    // Off a diving board, how far with it, and whether it is a high one.
+                    if (const auto* swimmer = r.try_get<simulation::Swimmer>(p.guest); swimmer != nullptr && swimmer->dive != simulation::DiveStep::None)
+                    {
+                        constexpr std::array<std::string_view, 6> kDiveSteps { "none", "climb", "walk", "jump", "fall", "surface" };
+                        person["diving"] = kDiveSteps[std::to_underlying(swimmer->dive)];
+                        const auto* door = errand != nullptr && r.valid(errand->target) ? r.try_get<simulation::PoolDoor>(errand->target) : nullptr;
+                        const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
+                        person["high_board"] = pool != nullptr && swimmer->board >= 0 && static_cast<std::size_t>(swimmer->board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(swimmer->board)].high;
+                    }
                     // Stopped at a path item: on a bench, at a view, firing a water cannon.
                     if (const auto* linger = r.try_get<simulation::Linger>(p.guest))
                         person["lingering"] = kPathItemKinds.at(std::to_underlying(linger->at));

@@ -104,7 +104,8 @@ namespace rct3::park
         bool lifeguard = false;    ///< "LifeGuard": a lifeguard's chair, which a lifeguard comes with
         bool lounger = false;      ///< "SunLounger": swimmers lie on it
         bool shower = false;       ///< "Shower": swimmers stand under it
-        bool ladder = false;       ///< "Ladder": out of the water up its wall
+        bool board = false;        ///< "DivingBoard": swimmers walk out on it and dive off
+        bool ladder = false;       ///< "Ladder": out of the water up its wall; swimmers climb out by it
         bool light = false;        ///< "Light": a lamp, on the paving or in a wall under the water
         bool wave_machine = false; ///< "WaveMachine": it makes waves in the pool, out from its wall
         std::int32_t step = 0;     ///< "HeightStep" and its number: a change of level at its side

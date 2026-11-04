@@ -441,6 +441,17 @@ namespace rct3::simulation
         std::uint8_t places = 1; ///< Swimmers it takes at once; more wait their turn beside it
     };
 
+    /// A diving board of a pool complex, small on the pool's edge or high on a paved square: where swimmers
+    /// step on, the boards they may dive from, and the way it faces.
+    struct PoolBoard
+    {
+        glm::vec3 foot { 0.0f };       ///< On the paving: a high board's ladder foot, a small board's back
+        Radians heading { };           ///< Out over the water, the way they dive
+        std::vector<float> levels { }; ///< The boards' tops they may walk out on, lowest first, in world units; one for a small board
+        float reach = 0;               ///< From the foot to the boards' end, the way it faces, in world units
+        bool high = false;
+    };
+
     /// A pool complex: the squares its swimmers go to, each spot the middle of a square at its surface.
     struct SwimPool
     {
@@ -448,9 +459,11 @@ namespace rct3::simulation
         std::vector<glm::vec3> paved { };
         std::vector<glm::vec3> spa { };   ///< Where swimmers sit in the spa pools, at the spa's water
         std::vector<PoolSpot> extras { }; ///< The paved squares with an extra on them, loungers and showers
-        std::vector<glm::vec3> steps { }; ///< Its pool path stairs, where a lazy river's station may join it
-        Share dirt { };                   ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
-        park::PoolTally tally { };        ///< What it has, for its excitement and what its ticket is worth
+        std::vector<glm::vec3> steps { };   ///< Its pool path stairs, where a lazy river's station may join it
+        std::vector<PoolBoard> boards { };
+        std::vector<glm::vec3> ladders { }; ///< On the paving behind each ladder, where those climbing out by it step off
+        Share dirt { };                     ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
+        park::PoolTally tally { };          ///< What it has, for its excitement and what its ticket is worth
     };
 
     /// How dirty a pool looks, in the six steps the pool's window names, cleanest first.
@@ -482,6 +495,17 @@ namespace rct3::simulation
         glm::vec3 poolside { 0.0f }; ///< The middle of the paved square it opens on
     };
 
+    /// How far a swimmer is with a dive off one of the pool's boards.
+    enum class DiveStep : std::uint8_t
+    {
+        None,    ///< Not diving; on the way to a board's foot when they have one
+        Climb,   ///< Up a high board's ladder
+        Walk,    ///< Out along the board to its end
+        Jump,    ///< Springing off its end
+        Fall,    ///< Down through the air
+        Surface, ///< Back up after going under
+    };
+
     /// A guest at a pool, from paying at its changing room until they come out of it again.
     struct Swimmer
     {
@@ -500,6 +524,11 @@ namespace rct3::simulation
         entt::entity slide = entt::null; ///< The pool slide they head for, to queue at its station
         /// The changing room of the complex whose slide they queue for or ride, to swim on in after
         entt::entity room = entt::null;
+        std::int32_t board = -1;        ///< The pool's diving board they head for or dive off; -1 for none
+        DiveStep dive = DiveStep::None; ///< How far they are with it
+        float height = 0;               ///< The board's top they climb to and walk out on, in world units
+        float fall = 0;                 ///< Their speed down, falling, in world units a second
+        Seconds diving { };             ///< In this step so far
     };
 
     /// A lazy river: a channel with no trains round which swimmers float in rings, free on their complex's ticket.

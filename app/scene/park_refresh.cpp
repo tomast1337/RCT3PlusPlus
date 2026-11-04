@@ -214,6 +214,16 @@ namespace rct3::scene
         /// Swimming along, and treading water while still.
         const std::int32_t kSwimMotion = park::motion_number("swimloop").value_or(park::motion::kIdle);
         const std::int32_t kTreadMotion = park::motion_number("swimtreadwaterloop").value_or(park::motion::kIdle);
+        const std::int32_t kTreadInMotion = park::motion_number("swimtreadwaterin").value_or(park::motion::kIdle);
+        /// Diving in off the pool's edge or a small board, and climbing out over its wall or by a ladder.
+        const std::int32_t kDiveMotion = park::motion_number("swimdive").value_or(park::motion::kIdle);
+        const std::int32_t kClimbOutMotion = park::motion_number("swimout").value_or(park::motion::kIdle);
+        const std::int32_t kOutByLadderMotion = park::motion_number("swimoutladder").value_or(park::motion::kIdle);
+        /// Up a high diving board's ladder, and off its end: springing, falling and coming back up.
+        const std::int32_t kClimbLadderMotion = park::motion_number("swimclimbladderloop").value_or(park::motion::kIdle);
+        const std::int32_t kHighDiveInMotion = park::motion_number("swimdivehiin").value_or(park::motion::kIdle);
+        const std::int32_t kHighDiveMotion = park::motion_number("swimdivehiloop").value_or(park::motion::kIdle);
+        const std::int32_t kHighDiveOutMotion = park::motion_number("swimdivehiout").value_or(park::motion::kIdle);
         /// Lying down on a sun lounger, lying there and getting up.
         const std::int32_t kLieDownMotion = park::motion_number("sunloungerin").value_or(park::motion::kIdle);
         const std::int32_t kLoungeMotion = park::motion_number("sunloungerloop").value_or(park::motion::kIdle);
@@ -851,16 +861,57 @@ namespace rct3::scene
                 pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : moving ? park::motion::kWalk : park::motion::kIdle;
                 if (!swimmer->in_water && moving && shown.paces[0] > 0)
                     pose.time = at.walked.value / shown.paces[0];
+                const auto length = [&](std::int32_t motion) {
+                    park::PlacedPerson probe = pose;
+                    probe.motion = motion;
+                    return park::motion_seconds(*scene.person_models, probe);
+                };
+                // Off a diving board: up its ladder, out along it, off its end and through the air, up again after.
+                if (swimmer->dive != simulation::DiveStep::None && swimmer->dive != simulation::DiveStep::Walk)
+                {
+                    const auto* errand = r.try_get<simulation::Errand>(shown.guest);
+                    const auto* door = errand != nullptr && r.valid(errand->target) ? r.try_get<simulation::PoolDoor>(errand->target) : nullptr;
+                    const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
+                    const bool high = pool != nullptr && swimmer->board >= 0 && static_cast<std::size_t>(swimmer->board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(swimmer->board)].high;
+                    const float into = swimmer->diving.value + scene.sim_time;
+                    using enum simulation::DiveStep;
+                    switch (swimmer->dive)
+                    {
+                        case Climb:
+                            pose.motion = kClimbLadderMotion;
+                            break;
+                        case Jump:
+                            pose.motion = high ? kHighDiveInMotion : kDiveMotion;
+                            break;
+                        case Fall:
+                            pose.motion = high ? kHighDiveMotion : kDiveMotion;
+                            break;
+                        default:
+                            pose.motion = high ? kHighDiveOutMotion : kTreadInMotion;
+                            break;
+                    }
+                    // A small board's one dive motion runs on from springing off into the fall.
+                    pose.time = swimmer->dive == Fall && !high ? simulation::kTuning.dives.jump.value + into : into;
+                    if (swimmer->dive != Climb && swimmer->dive != Fall)
+                        pose.time = std::min(pose.time, length(pose.motion));
+                    return pose;
+                }
+                // Into the water off its edge in a dive; out, climbing over its wall or up a ladder.
+                if (const float since = scene.park_clock - shown.crossed; swimmer->dive == simulation::DiveStep::None)
+                {
+                    const std::int32_t crossing = shown.in_water ? kDiveMotion : shown.by_ladder ? kOutByLadderMotion : kClimbOutMotion;
+                    if (since < length(crossing))
+                    {
+                        pose.motion = crossing;
+                        pose.time = since;
+                        return pose;
+                    }
+                }
                 // Lying down on a lounger, or sitting down in a spa pool as on a bench: down, staying a while, and up
                 // for the last of it.
                 const bool spa = swimmer->to_spa && swimmer->in_water && !moving;
                 if (lounging || spa)
                 {
-                    const auto length = [&](std::int32_t motion) {
-                        park::PlacedPerson probe = pose;
-                        probe.motion = motion;
-                        return park::motion_seconds(*scene.person_models, probe);
-                    };
                     const float stay = lounging ? simulation::kTuning.pools.lounging.value : swimmer->stayed.value + swimmer->idle.value;
                     const float into = (lounging ? stay - swimmer->idle.value : swimmer->stayed.value) + scene.sim_time;
                     const std::int32_t down = lounging ? kLieDownMotion : kSitDownMotion;
@@ -1666,6 +1717,31 @@ namespace rct3::scene
                     fire_park_particles(scene.particles, kChangePuff, r.get<simulation::Pose>(shown.guest).position + glm::vec3 { 0, kPuffHeight, 0 }, glm::vec3 { 0, 1, 0 });
                 shown.swimwear = swimwear;
                 shown.changing = changing;
+                // Into or out of the water, but for a dive; a diver going under throws up a splash.
+                if (swimmer == nullptr || changing)
+                    continue;
+                const glm::vec3 at = r.get<simulation::Pose>(shown.guest).position;
+                if (swimmer->dive == simulation::DiveStep::Surface && shown.dive == simulation::DiveStep::Fall)
+                {
+                    const auto* errand = r.try_get<simulation::Errand>(shown.guest);
+                    const auto* door = errand != nullptr && r.valid(errand->target) ? r.try_get<simulation::PoolDoor>(errand->target) : nullptr;
+                    const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
+                    const bool high = pool != nullptr && swimmer->board >= 0 && static_cast<std::size_t>(swimmer->board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(swimmer->board)].high;
+                    constexpr std::string_view kSmallSplash = "splash2";      ///< Chosen by eye: off a small board
+                    constexpr std::string_view kBigSplash = "watersplashbig"; ///< Chosen by eye: off a high one
+                    fire_park_particles(scene.particles, high ? kBigSplash : kSmallSplash, at, glm::vec3 { 0, 1, 0 });
+                }
+                if (swimmer->in_water != shown.in_water && swimmer->dive == simulation::DiveStep::None && shown.dive == simulation::DiveStep::None)
+                {
+                    shown.crossed = scene.park_clock;
+                    const auto* errand = r.try_get<simulation::Errand>(shown.guest);
+                    const auto* door = errand != nullptr && r.valid(errand->target) ? r.try_get<simulation::PoolDoor>(errand->target) : nullptr;
+                    const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
+                    constexpr float kLadderReach = 1.0f; ///< Chosen by eye: from a ladder's foot within which those climbing out use it
+                    shown.by_ladder = pool != nullptr && std::ranges::any_of(pool->ladders, [&](const glm::vec3& l) { return glm::distance(glm::vec2(l.x, l.z), glm::vec2(at.x, at.z)) < kLadderReach; });
+                }
+                shown.in_water = swimmer->in_water;
+                shown.dive = swimmer->dive;
             }
         }
         // The people in motion are posed away from the frame, again as soon as the last posing is done.

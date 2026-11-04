@@ -271,6 +271,8 @@ namespace rct3::park
                 fit.lounger = true;
             else if (strings::equals_ignoring_case(word, "Shower"))
                 fit.shower = true;
+            else if (strings::equals_ignoring_case(word, "DivingBoard"))
+                fit.board = true;
             else if (strings::equals_ignoring_case(word, "Ladder"))
                 fit.ladder = true;
             else if (strings::equals_ignoring_case(word, "Light"))

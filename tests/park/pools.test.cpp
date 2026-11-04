@@ -309,6 +309,9 @@ TEST_CASE("pools: an extra's words name what it takes of its square")
     CHECK(pool_extra_fit("CentralSolid WholeTile SunLounger").lounger);
     CHECK(pool_extra_fit("WaveMachine UnderWaterWall").wave_machine);
     CHECK(pool_extra_fit("WaveMachine UnderWaterWall").wall);
+    CHECK(pool_extra_fit("Side CentralWater OppositeWater DivingBoard").board);
+    CHECK(pool_extra_fit("Side UnderWaterWall Ladder").ladder);
+    CHECK_FALSE(fit.board);
 }
 
 TEST_CASE("pools: an extra fits where its square offers all it takes and no other extra has it")

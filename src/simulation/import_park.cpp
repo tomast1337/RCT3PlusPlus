@@ -682,8 +682,7 @@ namespace rct3::simulation
                         todo.push_back(next->second);
             }
         }
-        // Swimmers lie on loungers, stand under showers and stand by the other extras a while. High diving boards go
-        // unused until the swimmers can climb and dive.
+        // Swimmers lie on loungers, stand under showers and stand by the other extras a while.
         for (const auto& extras : { std::span(pools.extras), scenery })
             for (const park::PoolExtra& extra : extras)
                 if (const auto square = squares.find({ extra.col, extra.row }); square != squares.end() && square->second->kind == park::PoolKind::Tile)
@@ -693,6 +692,32 @@ namespace rct3::simulation
                     const PoolUse use = extra.fit.lounger ? PoolUse::Lounge : extra.fit.shower ? PoolUse::Shower : PoolUse::Stand;
                     complexes[complex_of.at(square->first)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<float>(square->second->surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 }, .heading = { std::atan2(static_cast<float>(dc), static_cast<float>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : std::uint8_t { 1 } });
                 }
+                // Small diving boards and ladders stand in the water against its wall: swimmers step on, or climb
+                // out, from the paving just behind it.
+                else if (square != squares.end() && square->second->kind == park::PoolKind::Water && (extra.fit.board || extra.fit.ladder))
+                {
+                    const auto [dc, dr] = kSides[static_cast<std::size_t>(extra.turn & 3)];
+                    const glm::vec3 back { static_cast<float>(dc), 0, static_cast<float>(dr) };
+                    const float deck = static_cast<float>(square->second->surface) + kTuning.pools.deck / paths.level_height;
+                    const glm::vec3 foot = middle(extra.col, extra.row, deck) + back * (paths.tile_size / 2 + kTuning.dives.behind);
+                    SwimPool& complex = complexes[complex_of.at(square->first)];
+                    if (extra.fit.ladder)
+                        complex.ladders.push_back(foot);
+                    else
+                        complex.boards.push_back({ .foot = foot, .heading = { std::atan2(-back.x, -back.z) }, .levels = { foot.y + kTuning.dives.small_board }, .reach = kTuning.dives.behind + kTuning.dives.small_reach });
+                }
+        // A high diving board's ladder rises at the back of its square; its boards, one a level, reach out over the
+        // water it faces.
+        for (const park::PoolSquare& s : pools.squares)
+            if (s.kind == park::PoolKind::HighDive)
+            {
+                const auto [dc, dr] = kSides[static_cast<std::size_t>(s.turn & 3)];
+                const glm::vec3 ahead { static_cast<float>(dc), 0, static_cast<float>(dr) };
+                PoolBoard board { .foot = middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.deck / paths.level_height) - ahead * kTuning.dives.ladder_back, .heading = { std::atan2(ahead.x, ahead.z) }, .reach = kTuning.dives.ladder_back + kTuning.dives.high_reach, .high = true };
+                for (std::int32_t level = 0; level < std::max(s.board / park::kBoardLevel, 1); ++level)
+                    board.levels.push_back((static_cast<float>(s.surface + 2 + park::kBoardLevel * level) + kTuning.dives.board_top) * paths.level_height);
+                complexes[complex_of.at({ s.col, s.row })].boards.push_back(std::move(board));
+            }
         std::vector<park::PoolExtra> all_extras(pools.extras.begin(), pools.extras.end());
         all_extras.append_range(scenery);
         for (std::size_t c = 0; c < complexes.size(); ++c)

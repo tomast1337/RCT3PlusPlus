@@ -494,3 +494,93 @@ TEST_CASE("swimmers changing cannot be picked up, and staff let go over a pool w
     CHECK_FALSE(r.all_of<Swimmer>(handyman));
     CHECK_FALSE(in_swimwear(r, handyman));
 }
+
+TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into the water one at a time, and swim on")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    park::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::HighDive, .board = 6, .turn = 0 });
+    for (std::int32_t col = 5; col < 7; ++col)
+        pools.squares.push_back({ .col = col, .row = 3 });
+    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
+    REQUIRE(pool.boards.size() == 1);
+    const PoolBoard& board = pool.boards.front();
+    CHECK(board.high);
+    CHECK(board.levels.size() == 2);
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 12; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+    std::vector<std::vector<DiveStep>> steps(guests.size());
+    std::size_t most = 0;
+    bool done = false;
+    for (int t = 0; t < 4 * static_cast<int>(kTuning.pools.stay.value) && !done; ++t)
+    {
+        park.run_seconds(0.1f);
+        std::size_t on = 0;
+        for (std::size_t i = 0; i < guests.size(); ++i)
+            if (const auto* swimmer = r.try_get<Swimmer>(guests[i]))
+            {
+                on += swimmer->dive != DiveStep::None ? 1 : 0;
+                if (steps[i].empty() ? swimmer->dive != DiveStep::None : steps[i].back() != swimmer->dive)
+                    steps[i].push_back(swimmer->dive);
+                if (swimmer->dive == DiveStep::Walk)
+                    CHECK(r.get<Pose>(guests[i]).position.y > board.foot.y);
+                // Back up in the water past the board's end.
+                if (swimmer->dive == DiveStep::Surface)
+                {
+                    CHECK(swimmer->in_water);
+                    CHECK(glm::dot(r.get<Pose>(guests[i]).position - board.foot, glm::vec3 { 0, 0, 1 }) > board.reach);
+                }
+                done = done || steps[i] == std::vector { DiveStep::Climb, DiveStep::Walk, DiveStep::Jump, DiveStep::Fall, DiveStep::Surface, DiveStep::None };
+            }
+        most = std::max(most, on);
+    }
+    CHECK(done);
+    CHECK(most == 1);
+}
+
+TEST_CASE("a small diving board on the pool's wall is walked out on and dived off; a ladder is a way out")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    park::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+    for (std::int32_t col = 5; col < 7; ++col)
+        pools.squares.push_back({ .col = col, .row = 3 });
+    pools.extras.push_back({ .symbol = "Board", .col = 5, .row = 3, .turn = 2, .fit = { .board = true } });
+    pools.extras.push_back({ .symbol = "Ladder", .col = 6, .row = 3, .turn = 2, .fit = { .ladder = true } });
+    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
+    REQUIRE(pool.boards.size() == 1);
+    REQUIRE(pool.ladders.size() == 1);
+    CHECK_FALSE(pool.boards.front().high);
+    CHECK(pool.extras.empty());
+    // Behind the wall, on the paving the board and the ladder stand against.
+    CHECK(pool.boards.front().foot.z < park.world().paths.origin.y + 3 * park.world().paths.tile_size);
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 8; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+    bool walked = false, dived = false, by_ladder = false;
+    park.run_until(
+        [&] {
+            for (const entt::entity g : guests)
+                if (const auto* swimmer = r.try_get<Swimmer>(g))
+                {
+                    CHECK(swimmer->dive != DiveStep::Climb);
+                    walked = walked || swimmer->dive == DiveStep::Walk;
+                    dived = dived || (walked && swimmer->dive == DiveStep::Surface);
+                    by_ladder = by_ladder || glm::distance(r.get<Pose>(g).position, pool.ladders.front()) < 0.01f;
+                }
+            return dived && by_ladder;
+        },
+        2 * kTuning.pools.stay.value);
+    CHECK(dived);
+    CHECK(by_ladder);
+}

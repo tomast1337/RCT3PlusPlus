@@ -362,8 +362,12 @@ namespace rct3::scene
         std::uint32_t thoughts_seen = 0;          ///< Of the simulated guest's thoughts, those already in the saved person
         const park::PartSet* swim_body = nullptr; ///< Worn in place of the body and legs at a pool, if any
         const park::PartSet* swim_legs = nullptr;
-        bool swimwear = false; ///< Shown in their swimwear: as saved, or as the simulation has them
-        bool changing = false; ///< Out of sight in a changing room when last looked at
+        bool swimwear = false;                                  ///< Shown in their swimwear: as saved, or as the simulation has them
+        bool changing = false;                                  ///< Out of sight in a changing room when last looked at
+        bool in_water = false;                                  ///< A swimmer in the water when last looked at
+        bool by_ladder = false;                                 ///< Out of the water last by a ladder
+        float crossed = -1e9f;                                  ///< When they last went into or out of the water, on the park's clock
+        simulation::DiveStep dive = simulation::DiveStep::None; ///< How far with a dive when last looked at
     };
 
     /// A head, body or legs that a guest coming in at the gate may wear.

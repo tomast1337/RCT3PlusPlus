@@ -574,6 +574,26 @@ namespace rct3::simulation::tuning
         std::array<float, 3> rated { 3.6f, 0.9f, 0.0f };
     };
 
+    /// Dives off a pool's boards.
+    struct Dives
+    {
+        Chance chance { 0.15 };       ///< Chosen by eye: of heading for one of the pool's boards next, when it has any
+        Chance ladder { 0.5 };        ///< Chosen by eye: of climbing out of the water by a ladder, when the pool has any
+        Chance step_off { 0.3 };      ///< Chosen by eye: of walking out on a lower board of a high one, at each passed
+        Pace climb { 1.2f };          ///< Chosen by eye: up a high board's ladder
+        Seconds jump { 1.0f };        ///< Chosen by eye: springing off a board's end
+        Pace leap { 1.5f };           ///< Chosen by eye: on along the way they face, as they fall
+        Seconds surfacing { 2.0f };   ///< Chosen by eye: coming back up
+        Share high_cheer { 0.04f };   ///< Chosen by eye: happiness from a dive off a high board
+        Share small_cheer { 0.015f }; ///< Chosen by eye: and off a small one
+        float behind = 0.3f;          ///< Chosen by eye: from the pool's wall back to where swimmers step on a small board, in world units
+        float small_reach = 1.4f;     ///< Chosen by eye: from the wall to a small board's end
+        float small_board = 0.4f;     ///< Chosen by eye: a small board's top over the paving
+        float ladder_back = 1.2f;     ///< Chosen by eye: from a high board's square middle back to its ladder
+        float high_reach = 2.4f;      ///< Chosen by eye: from the square's middle out to its boards' end
+        float board_top = 0.3f;       ///< Chosen by eye: a high board's top over the height it is placed at, in height units
+    };
+
     /// What guests make of the park round them, and the scenery they pass.
     struct Surroundings
     {
@@ -636,6 +656,7 @@ namespace rct3::simulation::tuning
         Slides slides;
         Pools pools;
         Rivers rivers;
+        Dives dives;
         Surroundings surroundings;
     };
 

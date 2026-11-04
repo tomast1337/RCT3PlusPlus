@@ -6,6 +6,7 @@
 // an attraction's instead, about the pool complex it lets guests into.
 #pragma once
 
+#include "park/pools.hpp"
 #include "save/model/world.hpp"
 #include "ui/screens/info_panel.hpp"
 #include "ui/string_table.hpp"
@@ -30,7 +31,7 @@ namespace rct3::ui
         // A changing room's, laid out as an attraction's window about its pool complex:
         RoomDetails,     ///< The complex's name, pulling down the room or the complex, and finding it
         RoomMaintenance, ///< Its upkeep
-        RoomMode,        ///< The complex opened or closed
+        RoomMode,        ///< The complex opened or closed, and how its wave machines run
         RoomFinances,    ///< The ticket price
         RoomCustomers,   ///< The people in the complex
     };
@@ -43,7 +44,14 @@ namespace rct3::ui
     inline constexpr int kPoolDeleteComplexControl = 5;
     inline constexpr int kPoolLocateControl = 6;
     inline constexpr int kPoolMechanicControl = 7;
-    inline constexpr int kPoolFluidControl = 8; ///< A choice: the cleaning fluid, mildest 0 to harshest 2
+    inline constexpr int kPoolFluidControl = 8;       ///< A choice: the cleaning fluid, mildest 0 to harshest 2
+    inline constexpr int kPoolWaveHeightControl = 9;  ///< The wave machines' wave height setting
+    inline constexpr int kPoolWaveLengthControl = 10; ///< Their wave length: kLeastWaveFrequency + kMostWaveFrequency less the frequency
+    inline constexpr int kPoolWaveOnControl = 11;     ///< Seconds they run for
+    inline constexpr int kPoolWaveEveryControl = 12;  ///< Minutes from one start of theirs to the next
+    inline constexpr int kMostWaveOn = 600;           ///< Chosen by eye
+    inline constexpr int kWaveOnStep = 10;            ///< Chosen by eye
+    inline constexpr int kMostWaveEvery = 30;         ///< Chosen by eye: minutes
     inline constexpr int kMostPoolTicket = 2000;
 
     /// The pool complex a changing room lets guests into.
@@ -55,6 +63,8 @@ namespace rct3::ui
         std::int64_t people = 0; ///< In the complex
         std::size_t dirt = 0;    ///< How dirty its water is, in six steps, cleanest 0
         std::uint8_t fluid = 0;  ///< As kPoolFluidControl's value
+        park::PoolWaves waves { };
+        bool machines = false; ///< It has wave machines; without, their times cannot be set
     };
 
     struct SceneryTabInfo

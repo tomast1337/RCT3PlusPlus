@@ -444,6 +444,8 @@ namespace rct3::scene
         park::PoolMap pools;                              ///< The swimming pools the player laid
         std::size_t pools_seen = 0;                       ///< A fingerprint of `pools` as the simulation last took them in
         std::vector<park::PoolExtra> scenery_pool_extras; ///< Pool extras a park from the game placed as scenery, for its swimmers to use
+        std::vector<park::PoolWave> machine_waves;        ///< The pools' wave machines', as `pools` was last taken in
+        std::vector<park::PoolWave> drawn_waves;          ///< Drawn on the pools' water with the pointer, oldest first
         std::vector<std::uint64_t> pool_pieces;           ///< Their pieces' objects, as last built
         std::size_t saved_pool_water = 0;                 ///< footpaths.pools of the park's own file; the pools' follow
         std::size_t entrance_centred = 0;                 ///< Of the park's entrances, the one the view last went to
@@ -772,6 +774,7 @@ namespace rct3::scene
         render::TextureHandle photo_target;                         ///< A photo is drawn into
         std::optional<std::string> photo_reading;                   ///< The file name start of the photo read from the target this frame, for the app to save
         std::optional<ui::Point> press;                             ///< Where the left button went down over the park, until it is let go
+        std::vector<glm::vec3> stroke;                              ///< The pool water under the pointer while pressed: world x, z and scene.clock
         std::optional<ui::Point> right_press;                       ///< Likewise the right button
         render::SceneLight light;                                   ///< What the day clock shows, for this frame
         int shadows = 0;                                            ///< The Shadows option: none, static (drawn now and then), dynamic

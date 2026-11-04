@@ -94,9 +94,15 @@ namespace rct3::scene
             device.draw(draw);
         }
 
-        std::span<const std::byte> ripple_bytes(const park::RippleTexels& texels)
+        /// The ripples' rows, then the pools' waves'.
+        using WaterTexels = std::array<glm::vec4, std::tuple_size_v<park::RippleTexels> + std::tuple_size_v<park::PoolWaveTexels>>;
+
+        WaterTexels water_texels(const ParkWater& water)
         {
-            return std::as_bytes(std::span(texels));
+            WaterTexels texels { };
+            std::ranges::copy(park::ripple_texels(water.ripples), texels.begin());
+            std::ranges::copy(park::pool_wave_texels(water.pool_waves), texels.begin() + std::tuple_size_v<park::RippleTexels>);
+            return texels;
         }
 
         /// Makes `texture` a target of `size`, again if its size changed. False if it could not.
@@ -157,8 +163,9 @@ namespace rct3::scene
         if (!white)
             return std::unexpected(white.error());
         water.white = *white;
-        const park::RippleTexels none = park::ripple_texels(water.ripples);
-        auto ripples = device.create_texture({ .width = park::kMaxRipples, .height = 2, .format = render::TextureFormat::Rgba32Float, .pixels = ripple_bytes(none), .label = "water ripples" });
+        static_assert(park::kMaxPoolWaves == park::kMaxRipples, "the pools' waves share the ripples' rows' width");
+        const WaterTexels none = water_texels(water);
+        auto ripples = device.create_texture({ .width = park::kMaxRipples, .height = 6, .format = render::TextureFormat::Rgba32Float, .pixels = std::as_bytes(std::span(none)), .label = "water ripples" });
         if (!ripples)
             return std::unexpected(ripples.error());
         water.ripple_texture = *ripples;
@@ -227,8 +234,8 @@ namespace rct3::scene
             return;
         water.eye_in = park::water_above(water.surface, eye);
         device.end_pass();
-        const park::RippleTexels texels = park::ripple_texels(water.ripples);
-        device.update_texture(water.ripple_texture, ripple_bytes(texels));
+        const WaterTexels texels = water_texels(water);
+        device.update_texture(water.ripple_texture, std::as_bytes(std::span(texels)));
         const render::Extent screen = device.extent();
         // Under water, the scene is fogged from its copy even where the options leave refraction out.
         if (water.look.refraction || water.eye_in)
@@ -278,7 +285,7 @@ namespace rct3::scene
                 .refraction = water.have_behind,
                 .waves = water.look.waves,
                 .foam = true,
-                .ripples = park::live_ripples(water.ripples) > 0,
+                .ripples = park::live_ripples(water.ripples) > 0 || !water.pool_waves.empty(),
                 .shafts = water.look.shafts,
             };
         };

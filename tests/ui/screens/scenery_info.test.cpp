@@ -144,7 +144,7 @@ TEST_CASE("a changing room opens and closes its pool complex and sets its ticket
     s.add("AttractionStatusClosed", u"Closed");
     const SceneryFacts facts { .pool = PoolComplexFacts { .ticket = 150, .open = true } };
     const InfoPage mode = scenery_page(SceneryTab::RoomMode, facts, s);
-    REQUIRE(mode.controls.size() == 1);
+    REQUIRE(mode.controls.size() == 5);
     CHECK(mode.controls[0].id == kPoolStateControl);
     CHECK(mode.controls[0].value == 0);
     CHECK(mode.controls[0].label == u"Open");
@@ -153,6 +153,30 @@ TEST_CASE("a changing room opens and closes its pool complex and sets its ticket
     CHECK(finances.controls[0].id == kPoolTicketControl);
     CHECK(finances.controls[0].value == 150);
     CHECK(finances.controls[0].decimals == 2);
+}
+
+TEST_CASE("a changing room sets how its complex's wave machines run, their times only with a machine there")
+{
+    StringTable s = table();
+    s.add("WaveHeightText", u"Height");
+    s.add("WaveLengthText", u"Length");
+    s.add("ManySeconds", u"# secs");
+    s.add("ManyMinutes", u"# mins");
+    const auto mode = [&](bool machines) { return scenery_page(SceneryTab::RoomMode, { .pool = PoolComplexFacts { .waves = { .height = 5, .frequency = 4, .on = 40, .every = 180 }, .machines = machines } }, s); };
+    const InfoPage page = mode(true);
+    REQUIRE(page.controls.size() == 5);
+    CHECK(page.controls[1].id == kPoolWaveHeightControl);
+    CHECK(page.controls[1].label == u"Height");
+    CHECK(page.controls[1].value == 5);
+    CHECK(page.controls[2].id == kPoolWaveLengthControl);
+    CHECK(page.controls[2].value == static_cast<int>(park::kLeastWaveFrequency + park::kMostWaveFrequency) - 4); // Longer for a lower frequency
+    CHECK(page.controls[3].value == 40);
+    CHECK(page.controls[3].text == u" secs");
+    CHECK(page.controls[4].value == 3);
+    CHECK(page.controls[4].text == u" mins");
+    CHECK(page.controls[4].enabled);
+    CHECK_FALSE(mode(false).controls[3].enabled);
+    CHECK_FALSE(mode(false).controls[4].enabled);
 }
 
 TEST_CASE("a changing room counts the people in its complex in the game's words")

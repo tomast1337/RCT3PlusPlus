@@ -3,7 +3,8 @@
 // render::Shader::Water. Positions are in world space; the first texture coordinate is the depth of water over
 // the ground at the vertex.
 //
-// The surface's slope comes from two drifting layers of a tiling height picture and from the ripples. Seen from
+// The surface's slope comes from two drifting layers of a tiling height picture, from the ripples and from the
+// pools' waves. Seen from
 // above, it shows a blend of the mirrored scene and what lies under it, leaning on the mirror more than real
 // water does so the park shows in it even from high up; light under the water is absorbed over the length of
 // water it crosses (Beer-Lambert), red first, and replaced by light scattered in the water's own blue, so
@@ -149,6 +150,75 @@ float3 ripples(float2 at)
         crest = max(crest, h);
     }
     return float3(slope, crest);
+}
+
+// The pools' waves (park/pool_waves.hpp, whose look these follow): rows 2 to 5 of the ripples' texture, one
+// wave a column.
+static const float kPoolSpeed = 3.0;
+static const float kPoolReach = 40.0;
+static const float kPoolRamp = 2.0;
+static const float kLineSpeed = 3.5;
+static const float kLineLength = 2.5;
+static const float kLineWidth = 2.5;
+static const float kLineFade = 4.0;
+static const float kLineLife = 16.0;
+static const float kWhirlLife = 10.0;
+static const float kWhirlTurn = 3.0;
+
+float pool_wave_height(float2 at, float time)
+{
+    float sum = 0.0;
+    const int2 size = texels_of(u_ripples);
+    if (size.y < 6)
+        return 0.0;
+    for (int i = 0; i < size.x; ++i)
+    {
+        const float4 shape = u_ripples.Load(int3(i, 3, 0));
+        if (shape.x < 0.5)
+            continue;
+        const float4 bounds = u_ripples.Load(int3(i, 4, 0));
+        if (any(at < bounds.xy) || any(at > bounds.zw))
+            continue;
+        const float4 place = u_ripples.Load(int3(i, 2, 0));
+        const float4 timing = u_ripples.Load(int3(i, 5, 0));
+        const float d = dot(at - place.xy, place.zw);
+        const float age = time - shape.z;
+        if (shape.x < 1.5)
+        {
+            const float left = time - d / kPoolSpeed;
+            if (d < 0.0 || left < 0.0 || timing.y <= 0.0)
+                continue;
+            const float phase = fmod(left, max(max(timing.z, timing.y), 1.0));
+            const float running = saturate(phase / kPoolRamp) * saturate((timing.y - phase) / kPoolRamp);
+            sum += shape.y * running * sin(timing.x * left) * exp(-d / kPoolReach);
+        }
+        else if (shape.x < 2.5)
+        {
+            if (age < 0.0 || age > kLineLife)
+                continue;
+            const float x = d - kLineSpeed * age;
+            sum += shape.y * exp(-age / kLineFade) * exp(-(x / kLineWidth) * (x / kLineWidth)) * cos(6.2831853 / kLineLength * x);
+        }
+        else if (age >= 0.0 && age <= kWhirlLife)
+        {
+            const float strength = saturate(age) * saturate((kWhirlLife - age) / 3.0);
+            const float2 off = at - place.xy;
+            const float r = length(off) / timing.w;
+            const float arms = 0.35 * r * sin(3.0 * atan2(off.y, off.x) - shape.w * (kWhirlTurn * age - 2.0 * r));
+            sum -= shape.y * strength * exp(-r * r) * (1.0 - arms);
+        }
+    }
+    return sum;
+}
+
+// The pools' waves' slope in x and z, from the heights a little either side, and how high they stand here.
+float3 pool_waves(float2 at, float time)
+{
+    const float e = 0.05;
+    const float h = pool_wave_height(at, time);
+    const float dx = pool_wave_height(at + float2(e, 0.0), time) - pool_wave_height(at - float2(e, 0.0), time);
+    const float dz = pool_wave_height(at + float2(0.0, e), time) - pool_wave_height(at - float2(0.0, e), time);
+    return float3(dx, dz, h) / float3(2.0 * e, 2.0 * e, 1.0);
 }
 
 // Distance along the view axis of a depth read back from the depth buffer.
@@ -429,7 +499,12 @@ float4 fragment_main(Varyings v) : SV_Target
         const float2 fine = picture_slope(v.world.xz * kWaveScale.y + time * kWaveDriftB) * kWaveScale.y;
         slope += (broad + 0.5 * fine) * kWaveHeight * calm;
     }
-    const float3 rip = has(kRipples) ? ripples(v.world.xz) : float3(0.0);
+    float3 rip = has(kRipples) ? ripples(v.world.xz) : float3(0.0);
+    if (has(kRipples))
+    {
+        const float3 pool = pool_waves(v.world.xz, time);
+        rip = float3(rip.xy + pool.xy, max(rip.z, pool.z));
+    }
     slope += rip.xy;
     const float3 n = normalize(float3(-slope.x, 1.0, -slope.y));
 

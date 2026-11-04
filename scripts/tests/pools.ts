@@ -129,13 +129,16 @@ keys.press(",");
 await frames(2);
 await put("Ladder", c0 + 1.5, r0 + 3.5);
 expect(extras() === 2, "a ladder on the wall");
+// A wave machine on the same wall, two squares along.
+await put("WaveMachine", c0 + 1.5, r0 + 1.5);
+expect(count("WaveMachine") === 1, "a wave machine on the wall");
 keys.press(".");
 await frames(2);
 await put("PoolLamp", c0, r0 + 3);
-expect(extras() === 2, "no second lamp where one stands");
+expect(extras() === 3, "no second lamp where one stands");
 await put("SunLoungers", c0 + 3, r0);
 await put("PoolShower", c0 + 3, r0);
-expect(extras() === 3, `loungers alone on their square, not ${extras()} extras`);
+expect(extras() === 4, `loungers alone on their square, not ${extras()} extras`);
 // A high diving board on the far paved side, turned to face the water, raised by dragging up from its square;
 // facing away from the water it is refused.
 expect(build.pick(kPool, "SegmentTypeHighDive"), "the high diving board in the pool list");
@@ -216,6 +219,9 @@ const choice = ui.find("info/body/AttractionStatusOpen")!;
 await pointer.drag([choice.x, choice.y], [choice.x, choice.bottom + (choice.bottom - choice.top) / 2], 6);
 await frames(3);
 await screenshot("pool_complex_open");
+// The complex has a wave machine, so its settings are shown.
+for (const name of ["WaveHeightText", "WaveLengthText", "WaveOnPeriodText", "WaveTotalPeriodText"])
+    expect(ui.find(`info/body/${name}`) !== undefined, `the ${name} setting there, not ${JSON.stringify(ui.children("info/body"))}`);
 for (const tab of ["Attraction_Finances", "Attraction_Customers", "Attraction_Maintenance"])
 {
     await ui.click(`info/${tab}`);
@@ -223,6 +229,34 @@ for (const tab of ["Attraction_Finances", "Attraction_Customers", "Attraction_Ma
     await screenshot(`pool_room_${tab}`);
 }
 await ui.click("info/close");
+
+// With no tool out, a line drawn on the water along the grid sends waves across it, and a circle makes a
+// whirlpool; the wave machine runs from the clock's start.
+await frames(2);
+camera.look({ col: c0 + 3.5, row: r0 + 3.5 }, { col: c0 + 3.5, row: r0 + 9, up: 6 });
+await frames(10);
+await screenshot("pool_wave_machine");
+pointer.move(...on_view(c0 + 1.5, r0 + 4.5));
+pointer.press();
+for (let i = 1; i <= 8; ++i)
+{
+    pointer.move(...on_view(c0 + 1.5 + i * 0.5, r0 + 4.5));
+    await frames(1);
+}
+pointer.release();
+await frames(40);
+await screenshot("pool_wave_line");
+const circle = (a: number): [number, number] => on_view(c0 + 3.5 + 1.2 * Math.cos(a), r0 + 3 + 1.2 * Math.sin(a));
+pointer.move(...circle(0));
+pointer.press();
+for (let i = 1; i <= 24; ++i)
+{
+    pointer.move(...circle((i * Math.PI) / 8));
+    await frames(1);
+}
+pointer.release();
+await frames(90);
+await screenshot("pool_whirlpool");
 
 // Below it, in tiles: a lone square, a strip three long, and a strip four long with a block under its first
 // two squares, an inner corner where they meet.

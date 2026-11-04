@@ -34,7 +34,10 @@ namespace rct3::ui
         constexpr std::array<std::string_view, 6> kDirtSteps { "PoolDirt_Clean", "PoolDirt_SlightlyDirty", "PoolDirt_Dirty", "PoolDirt_VeryDirty", "PoolDirt_Disgusting", "PoolDirt_HealthHazard" };
         constexpr std::string_view kFluid = "Fluid_TypeLabel";
         constexpr std::array<std::string_view, 3> kFluids { "Fluid_ZaniClenz", "Fluid_MegaKleen", "Fluid_ToxiScrub" }; // By kPoolFluidControl's value
+        // The wave machines' settings: label and help, by control from kPoolWaveHeightControl on.
+        constexpr std::array<std::array<std::string_view, 2>, 4> kWaveSettings { { { "WaveHeightText", "WaveHeightToolTip" }, { "WaveLengthText", "WaveLengthToolTip" }, { "WaveOnPeriodText", "WaveOnPeriodToolTip" }, { "WaveTotalPeriodText", "WaveTotalPeriodToolTip" } } };
         constexpr int kTicketStep = 10;
+        constexpr float kTimedWidth = 100; ///< A wave setting's box with its unit, as wide as an attraction's waits
         constexpr float kPercent = 100;
         /// Slot 1 is the colours tab's, kept even when a prop takes no colours; what a prop does goes on from the next.
         constexpr int kColourSlot = 1;
@@ -145,6 +148,19 @@ namespace rct3::ui
                 for (const std::string_view s : kPoolStates)
                     state.items.emplace_back(strings.get(s));
                 state.value = pool.open ? 0 : 1;
+                // How the complex's wave machines run: the wave's height and length, and their times, which only
+                // count with a machine in the pool.
+                const auto number = [&](int id, int value, int least, int most, int step, std::string_view unit, bool enabled) {
+                    const auto [label, help] = kWaveSettings[static_cast<std::size_t>(id - kPoolWaveHeightControl)];
+                    const std::u16string words(unit.empty() ? std::u16string_view { } : strings.get(unit));
+                    page.controls.push_back({ .id = id, .name = std::string(label), .kind = InfoControlKind::Number, .label = std::u16string(strings.get(label)), .value = std::clamp(value, least, most), .minimum = least, .maximum = most, .step = step, .text = words.substr(std::min(words.find(u'#') + 1, words.size())), .enabled = enabled, .width = unit.empty() ? 0.0f : kTimedWidth, .help = std::u16string(strings.get(help)) });
+                };
+                const auto least_frequency = static_cast<int>(park::kLeastWaveFrequency);
+                const auto most_frequency = static_cast<int>(park::kMostWaveFrequency);
+                number(kPoolWaveHeightControl, static_cast<int>(std::lround(pool.waves.height)), static_cast<int>(park::kLeastWaveHeight), static_cast<int>(park::kMostWaveHeight), 1, { }, true);
+                number(kPoolWaveLengthControl, least_frequency + most_frequency - static_cast<int>(std::lround(pool.waves.frequency)), least_frequency, most_frequency, 1, { }, true);
+                number(kPoolWaveOnControl, static_cast<int>(std::lround(pool.waves.on)), 0, kMostWaveOn, kWaveOnStep, "ManySeconds", pool.machines);
+                number(kPoolWaveEveryControl, static_cast<int>(std::lround(pool.waves.every / 60)), 1, kMostWaveEvery, 1, "ManyMinutes", pool.machines);
             }
             else if (tab == SceneryTab::RoomFinances)
             {

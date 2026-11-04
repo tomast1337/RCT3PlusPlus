@@ -658,6 +658,8 @@ namespace rct3::scene
         std::map<std::string, park::ObjectModel, std::less<>> staff_tools;
         /// How litter and sick look lying on the paths; either missing when its shape is.
         std::array<std::optional<park::ObjectModel>, 2> litter_looks;
+        /// The ring lazy river riders float in, about its middle; missing when its car is.
+        std::optional<park::ObjectModel> swim_ring;
         /// What guests carry from stalls, by its carried item's symbol (as `Burger:cid`).
         std::map<std::string, CarriedLook, std::less<>> carried_looks;
         std::vector<ShownPerson> shown_people;

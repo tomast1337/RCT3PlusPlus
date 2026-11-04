@@ -292,6 +292,10 @@ namespace rct3::scene
                     continue;
                 pose->level = static_cast<std::size_t>(levels[i]);
                 placed.push_back(*pose);
+                // A lazy river rider's ring round them at the water line, turning with them. The ring slide's riders
+                // sit lying back, which a rider treading water does not fit, so they tread water in it.
+                if (scene.swim_ring && shown.guest != entt::null && scene.sim.registry.all_of<simulation::Floating>(shown.guest))
+                    placed.push_back({ .world = pose->world, .held = &*scene.swim_ring });
             }
             // Litter and sick lying on the paths, with what moves: each piece somewhere about its tile, turned its
             // own way.

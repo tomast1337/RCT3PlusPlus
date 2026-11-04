@@ -41,6 +41,10 @@ const one = floating()[0];
 camera.look({ col: one.col!, row: one.row!, up: one.up! }, { col: one.col! + 3, row: one.row! + 3, up: one.up! + 10 });
 await frames(30);
 await screenshot("pool_river_floating");
+// Close by, sitting in their rings.
+camera.look({ col: one.col!, row: one.row!, up: one.up! }, { col: one.col! + 0.15, row: one.row! + 0.15, up: one.up! + 3 });
+await frames(30);
+await screenshot("pool_river_rings");
 
 // Swimmers get on from the pools, free, and those far enough round get off up the stairs to swim on.
 const customers = info().customers ?? 0;

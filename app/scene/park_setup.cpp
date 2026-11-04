@@ -14,6 +14,7 @@
 #include "park/carried_goods.hpp"
 #include "park/chain_lifts.hpp"
 #include "park/enclosures.hpp"
+#include "park/flexi_colours.hpp"
 #include "park/ground_paths.hpp"
 #include "park/ground_queues.hpp"
 #include "park/ground_textures.hpp"
@@ -182,18 +183,21 @@ namespace rct3::scene
         constexpr std::string_view kCarriedOverlay = "CarriedItems/MainCarriedItems";
         constexpr std::string_view kLitterFolder = "Objects/Litter";
         constexpr std::string_view kToolFolder = "People/Handyman";
+        constexpr std::string_view kRingFolder = "Cars/TrackedRideCars/RingSlide";
         /// The umbrella shapes, in the order of ParkScene::umbrellas.
         constexpr std::array<std::string_view, 2> kUmbrellaShapes { "UmbrellaOpen", "KidsUmbrellaOpen" };
 
         /// Reads the umbrellas guests carry, the food and drink as stalls hand it over and as its empty is left,
-        /// the litter and sick on the paths and the handymen's tools, and uploads their pictures with the people's.
+        /// the litter and sick on the paths, the handymen's tools and the lazy river's swim ring, and uploads their
+        /// pictures with the people's.
         void load_carried_models(render::Device& device, ParkScene& scene, const config::GameInstall& install)
         {
             const auto found = install.find(kCarriedFolder);
             const std::string folder = found.value_or(std::filesystem::path(kCarriedFolder)).filename().string();
             const std::string litter = install.find(kLitterFolder).value_or(install.root() / kLitterFolder).lexically_relative(install.root()).generic_string();
             const std::string tools = install.find(kToolFolder).value_or(install.root() / kToolFolder).lexically_relative(install.root()).generic_string();
-            const std::array<std::string_view, 3> folders { folder, litter, tools };
+            const std::string ring = install.find(kRingFolder).value_or(install.root() / kRingFolder).lexically_relative(install.root()).generic_string();
+            const std::array<std::string_view, 4> folders { folder, litter, tools, ring };
             const park::AssetIndex index = park::AssetIndex::scan(install.root(), folders);
             park::ModelLoader loader(index);
             std::vector<park::ObjectBatch> batches;
@@ -219,6 +223,59 @@ namespace rct3::scene
                 scene.litter_looks[i] = loader.load_shape(kLitterShapes[i], std::format("{}/Litter", litter));
                 add_pictures(scene.litter_looks[i]);
             }
+            // Chosen by eye, not shown to be what the game draws: lazy river riders float in the ring slide's ring.
+            scene.swim_ring = loader.load_car("ringslide", std::format("{}/RingSlide", ring), 0);
+            if (!scene.swim_ring)
+                scene.swim_ring = loader.load("ringslide", std::format("{}/RingSlide", ring));
+            // The car is a raft of four rings round its middle, one each way, raised to its track, with a frame
+            // between them and a seat in each: keep the ring one way, moved to the middle, without frame or seat.
+            if (scene.swim_ring && !scene.swim_ring->levels.empty())
+            {
+                std::vector<park::ModelPart>& parts = scene.swim_ring->levels.front().parts;
+                const auto corners = [](const park::ModelPart& part, std::size_t t) { return std::array { part.vertices[part.indices[t]].position, part.vertices[part.indices[t + 1]].position, part.vertices[part.indices[t + 2]].position }; };
+                const auto ring_way = [&](const park::ModelPart& part, std::size_t t) {
+                    if (std::max({ part.indices[t], part.indices[t + 1], part.indices[t + 2] }) >= part.vertices.size())
+                        return false;
+                    const auto c = corners(part, t);
+                    const glm::vec3 centre = (c[0] + c[1] + c[2]) / 3.0f;
+                    return centre.x > std::abs(centre.z);
+                };
+                glm::vec3 middle { 0.0f };
+                float count = 0;
+                for (const park::ModelPart& part : parts)
+                    for (std::size_t t = 0; t + 2 < part.indices.size(); t += 3)
+                        if (ring_way(part, t))
+                        {
+                            const auto c = corners(part, t);
+                            middle += (c[0] + c[1] + c[2]) / 3.0f;
+                            ++count;
+                        }
+                middle = count > 0 ? middle / count : glm::vec3(0.0f);
+                const auto across = [&](const glm::vec3& p) { return glm::length(glm::vec2(p.x - middle.x, p.z - middle.z)); };
+                float reach = 0;
+                for (const park::ModelPart& part : parts)
+                    for (std::size_t t = 0; t + 2 < part.indices.size(); t += 3)
+                        if (ring_way(part, t))
+                            for (const glm::vec3& p : corners(part, t))
+                                reach += across(p) / (3.0f * count);
+                // Chosen by eye: the farthest a kept corner and the nearest a kept middle is, over the average, leaving out the frame
+                // and the seat across the hole, which the rider in it would be under.
+                constexpr float kRingReach = 1.5f, kHoleReach = 0.6f;
+                for (park::ModelPart& part : parts)
+                {
+                    std::vector<std::uint32_t> kept;
+                    for (std::size_t t = 0; t + 2 < part.indices.size(); t += 3)
+                        if (ring_way(part, t) && std::ranges::all_of(corners(part, t), [&](const glm::vec3& p) { return across(p) <= kRingReach * reach; }) && across((corners(part, t)[0] + corners(part, t)[1] + corners(part, t)[2]) / 3.0f) >= kHoleReach * reach)
+                            kept.insert(kept.end(), { part.indices[t], part.indices[t + 1], part.indices[t + 2] });
+                    for (park::ModelVertex& v : part.vertices)
+                        v.position -= middle;
+                    part.indices = std::move(kept);
+                }
+            }
+            // Painted in the car's own colours, under the plain name the people's mesh asks for.
+            if (scene.swim_ring)
+                for (const park::ModelPart& part : scene.swim_ring->levels.front().parts)
+                    batches.push_back({ park::painted_name(part.texture, part.slots, { }), part.texture, park::flexi_colours(scene.swim_ring->default_colours), part.blend, 0, 0 });
             // Each item's shape, and what it leaves, by name, with the overlay they are in.
             struct Item
             {

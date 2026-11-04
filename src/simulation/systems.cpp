@@ -561,6 +561,14 @@ namespace rct3::simulation
                 swimmer.dive = step;
                 swimmer.diving = { };
             };
+            // The pool's boards were laid out again (one built or taken away) under them: down off it, by its foot.
+            if ((swimmer.dive == DiveStep::Climb || swimmer.dive == DiveStep::Walk || swimmer.dive == DiveStep::Jump) && std::ranges::find(board.levels, swimmer.height) == board.levels.end())
+            {
+                next(DiveStep::None);
+                swimmer.board = -1;
+                pose.position = swimmer.goal = board.foot;
+                return;
+            }
             switch (swimmer.dive)
             {
                 case DiveStep::None:

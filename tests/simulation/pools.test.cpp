@@ -502,8 +502,10 @@ TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into t
     park::PoolMap pools;
     pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
     pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::HighDive, .board = 6, .turn = 0 });
-    for (std::int32_t col = 5; col < 7; ++col)
-        pools.squares.push_back({ .col = col, .row = 3 });
+    // Water far enough out for the boards' end, more than a square out from the tower.
+    for (std::int32_t row = 3; row < 6; ++row)
+        for (std::int32_t col = 5; col < 7; ++col)
+            pools.squares.push_back({ .col = col, .row = row });
     pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
     import_pools(park.world(), pools);
     auto& r = park.world().registry;
@@ -542,6 +544,22 @@ TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into t
     }
     CHECK(done);
     CHECK(most == 1);
+
+    // A small board built while someone climbs: the boards are laid out again, and the climber comes down.
+    entt::entity climber = entt::null;
+    for (int t = 0; t < 4 * static_cast<int>(kTuning.pools.stay.value) && climber == entt::null; ++t)
+    {
+        park.run_seconds(0.1f);
+        for (const entt::entity g : guests)
+            if (const auto* swimmer = r.try_get<Swimmer>(g); swimmer != nullptr && swimmer->dive == DiveStep::Climb)
+                climber = g;
+    }
+    REQUIRE(climber != entt::null);
+    pools.extras.push_back({ .symbol = "Board", .col = 5, .row = 3, .turn = 2, .fit = { .board = true } });
+    import_pools(park.world(), pools);
+    park.run_seconds(0.1f);
+    const Swimmer& down = r.get<Swimmer>(climber);
+    CHECK((down.dive != DiveStep::Climb || r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool).boards[static_cast<std::size_t>(down.board)].high));
 }
 
 TEST_CASE("a small diving board on the pool's wall is walked out on and dived off; a ladder is a way out")

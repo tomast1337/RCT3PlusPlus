@@ -706,16 +706,16 @@ namespace rct3::simulation
                     else
                         complex.boards.push_back({ .foot = foot, .heading = { std::atan2(-back.x, -back.z) }, .levels = { foot.y + kTuning.dives.small_board }, .reach = kTuning.dives.behind + kTuning.dives.small_reach });
                 }
-        // A high diving board's ladder rises at the back of its square; its boards, one a level, reach out over the
-        // water it faces.
+        // A high diving board's ladder rises at the back of its tower, which stands at the front of its square; its
+        // boards, one a level, reach out over the water it faces.
         for (const park::PoolSquare& s : pools.squares)
             if (s.kind == park::PoolKind::HighDive)
             {
                 const auto [dc, dr] = kSides[static_cast<std::size_t>(s.turn & 3)];
                 const glm::vec3 ahead { static_cast<float>(dc), 0, static_cast<float>(dr) };
-                PoolBoard board { .foot = middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.deck / paths.level_height) - ahead * kTuning.dives.ladder_back, .heading = { std::atan2(ahead.x, ahead.z) }, .reach = kTuning.dives.ladder_back + kTuning.dives.high_reach, .high = true };
+                PoolBoard board { .foot = middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.deck / paths.level_height) + ahead * kTuning.dives.ladder_foot, .heading = { std::atan2(ahead.x, ahead.z) }, .reach = kTuning.dives.high_reach, .high = true };
                 for (std::int32_t level = 0; level < std::max(s.board / park::kBoardLevel, 1); ++level)
-                    board.levels.push_back((static_cast<float>(s.surface + 2 + park::kBoardLevel * level) + kTuning.dives.board_top) * paths.level_height);
+                    board.levels.push_back(static_cast<float>(s.surface + 2 + park::kBoardLevel * level) * paths.level_height + kTuning.dives.board_top);
                 complexes[complex_of.at({ s.col, s.row })].boards.push_back(std::move(board));
             }
         std::vector<park::PoolExtra> all_extras(pools.extras.begin(), pools.extras.end());

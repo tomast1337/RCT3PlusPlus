@@ -27,16 +27,25 @@ await frames(10);
 park.setWeather("sunny");
 park.setTemperature(28);
 park.setTime(0.5);
+// Free look, so the camera can stand level with someone up a board rather than over the ground.
+options.set("camera_mode", 1);
 const tower = map.objects().find((o) => o.overlay === kPool && o.symbol === "DBTopBoard");
 expect(tower !== undefined, "a high diving board in the park");
 
 const diver = (high: boolean, step?: string) => people.list().findIndex((p) => p.diving !== undefined && p.high_board === high && (step === undefined || p.diving === step));
 const look_at = async (i: number, name: string) => {
+    // Paused, so they stay where they are for the picture.
+    await ui.click("bar/Top_Pause");
     const p = people.list()[i];
     log(name, p.diving, "at", p.col?.toFixed(2), p.row?.toFixed(2), "up", p.up?.toFixed(2));
-    camera.look({ col: p.col!, row: p.row!, up: p.up! }, { col: p.col! + 2, row: p.row! + 4, up: p.up! + 1.5 });
+    // Close and level with them, from the side of the board (both boards here reach out along the columns). A
+    // person's `up` is their height in the world, a map point's over the ground there.
+    const ground = (col: number, row: number) => (camera.look({ col, row }), camera.view().target[1]);
+    const from = { col: p.col!, row: p.row! + 2 };
+    camera.look({ col: p.col!, row: p.row!, up: p.up! + 0.9 - ground(p.col!, p.row!) }, { ...from, up: p.up! + 1.2 - ground(from.col, from.row) });
     await frames(3);
     await screenshot(name);
+    await ui.click("bar/Top_Pause");
 };
 
 // Up the ladder, out on a board, off its end and into the water; nobody else on it meanwhile.
@@ -45,9 +54,11 @@ const high = diver(true);
 await look_at(high, "pool_dives_climb");
 let most = 0;
 const count = () => (most = Math.max(most, people.list().filter((p) => p.diving !== undefined && p.high_board).length));
-await until(() => (count(), people.list()[high].diving === "walk"), 3600, "the diver out on a board");
+await until(() => (count(), people.list()[high].diving === "walk"), 3600, "the diver up on a board");
+const top = people.list()[high].up!;
+await until(() => (count(), people.list()[high].diving === "jump"), 600, "the diver at the board's end");
 await look_at(high, "pool_dives_board");
-await until(() => (count(), people.list()[high].diving === "fall"), 600, "the diver falling");
+await until(() => (count(), people.list()[high].diving === "fall" && people.list()[high].up! < top / 2), 600, "the diver halfway down");
 await look_at(high, "pool_dives_fall");
 await until(() => (count(), people.list()[high].diving === "surface"), 600, "the diver in the water");
 await frames(2);
@@ -95,7 +106,7 @@ await screenshot("pool_dives_small_placed");
 log("placed", JSON.stringify(extras().slice(before)), "of", water.length);
 expect(boards() === 1, "a small diving board on the pool's wall");
 build.stop();
-await until(() => diver(false, "walk") >= 0, 12000, "a swimmer walking out on the small board");
+await until(() => diver(false, "jump") >= 0, 12000, "a swimmer at the small board's end");
 const small = diver(false);
 await look_at(small, "pool_dives_small_board");
 await until(() => people.list()[small].diving === "surface", 600, "the small board's diver in the water");

@@ -459,7 +459,7 @@ namespace rct3::simulation
         std::vector<glm::vec3> paved { };
         std::vector<glm::vec3> spa { };   ///< Where swimmers sit in the spa pools, at the spa's water
         std::vector<PoolSpot> extras { }; ///< The paved squares with an extra on them, loungers and showers
-        std::vector<glm::vec3> steps { };   ///< Its pool path stairs, where a lazy river's station may join it
+        std::vector<glm::vec3> steps { }; ///< Its pool path stairs, where a lazy river's station may join it
         std::vector<PoolBoard> boards { };
         std::vector<glm::vec3> ladders { }; ///< On the paving behind each ladder, where those climbing out by it step off
         Share dirt { };                     ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it

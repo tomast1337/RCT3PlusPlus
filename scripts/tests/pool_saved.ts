@@ -27,6 +27,28 @@ const saved_swimmers = people.list().filter((p) => p.state === "swimming").lengt
 log("swimming as saved", saved_swimmers);
 expect(saved_swimmers > 0, "the park's swimmers still in the water");
 
+// Its changing room, there once, opens its complex's window, where the complex opens.
+const room = map.objects().find((o) => o.overlay !== kPool && o.symbol.startsWith("CRoom"));
+expect(room !== undefined, "a changing room");
+expect(map.objects().filter((o) => o.col === room!.col && o.row === room!.row && o.symbol === room!.symbol).length === 1, "the changing room there once");
+camera.look({ col: room!.col + 0.5, row: room!.row + 0.5 }, { col: room!.col + 0.5, row: room!.row + 6, up: 5 });
+await frames(10);
+// Its roof, above the guests' heads.
+const middle = map.screen(room!.col + 0.5, room!.row + 0.5)!;
+await pointer.click(middle.x, middle.y - 0.12);
+await until(() => ui.find("info/Attraction_OpMode") !== undefined, 120, "the changing room's window");
+await ui.click("info/Attraction_OpMode");
+await frames(3);
+const state = () => ui.find("info/body/AttractionStatusOpen_label")?.text;
+const saved_state = state();
+const choice = ui.find("info/body/AttractionStatusOpen")!;
+await pointer.drag([choice.x, choice.y], [choice.x, choice.bottom + (choice.bottom - choice.top) / 2], 6);
+await frames(3);
+log("changing room", saved_state, "then", state());
+expect(state() === "Open", `the complex open, not ${state()}`);
+await screenshot("pool_saved_room_open");
+await ui.click("info/close");
+
 // Saved and loaded again: the squares kept, and the pieces placed from them only once.
 async function click_tool(tool: string): Promise<void> {
     await ui.click(`tools/${tool}/${ui.children(`tools/${tool}`)![0]}`);

@@ -76,6 +76,9 @@ await frames(3);
 const choice = ui.find("info/body/AttractionStatusOpen")!;
 await pointer.drag([choice.x, choice.y], [choice.x, choice.bottom + (choice.bottom - choice.top) / 2], 6);
 await frames(3);
+const status = ui.find("info/body/AttractionStatusOpen_label")?.text;
+expect(status === "Open", `the complex open, not ${status}`);
+await screenshot("pool_guests_open");
 await ui.click("info/close");
 
 // A warm, sunny day, and guests.

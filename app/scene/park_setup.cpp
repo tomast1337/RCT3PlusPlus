@@ -921,7 +921,10 @@ namespace rct3::scene
             if (!saved)
             {
                 scene.pools = park::saved_pools(*world, world->objects);
-                std::erase_if(world->objects, [&](const save::PlacedObject& o) { return o.overlay == park::kPoolOverlay || std::ranges::contains(world->changing_rooms, o.id, &save::ChangingRoomState::object_ref); });
+                // A room's scenery may be kept twice on its tile, once not named by the room: both go, or the one left
+                // over hides the room, a plain prop that cannot be opened.
+                const auto room = [&](const save::PlacedObject& o) { return std::ranges::any_of(scene.pools.rooms, [&](const park::PoolRoom& r) { return r.col == o.col && r.row == o.row && r.symbol == o.symbol; }); };
+                std::erase_if(world->objects, [&](const save::PlacedObject& o) { return o.overlay == park::kPoolOverlay || std::ranges::contains(world->changing_rooms, o.id, &save::ChangingRoomState::object_ref) || room(o); });
             }
             world->pool_water.clear();
         }

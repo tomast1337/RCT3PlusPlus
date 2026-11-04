@@ -226,6 +226,38 @@ TEST_CASE("pools: a high diving board's boards are named by the first of the thr
     }
 }
 
+TEST_CASE("pools: a high diving board laid on a water square paves it, walls the water beside it and refunds the water")
+{
+    PoolMap map = ringed(3, 3);
+    const PoolSquare water = *map.at(3, 2);
+    // At the wall on the next column, facing the next row's water.
+    const PoolSquare dive { .col = 3, .row = 2, .kind = PoolKind::HighDive, .surface = 4, .depth = 2, .board = 3, .turn = 0 };
+    CHECK(lay_pool(map, kPrices, std::array { dive }) == pool_build_cost(kPrices, dive) + pool_refund(kPrices, water));
+    const auto pieces = pool_pieces(map, *map.at(3, 2));
+    CHECK(std::ranges::contains(pieces, std::string_view("SolidTop"), &PoolPiece::symbol));
+    CHECK(std::ranges::contains(pieces, std::string_view("DBBase"), &PoolPiece::symbol));
+    CHECK(!std::ranges::contains(pieces, std::string_view("Base"), &PoolPiece::symbol));
+    // The water in front, in the pool's corner, is walled at the tower too.
+    CHECK(std::ranges::any_of(walls_at(map, 3, 3), [](const PoolWallPiece& w) { return w.shape == PoolWall::End; }));
+    CHECK(pool_water(map).size() == 8);
+}
+
+TEST_CASE("pools: a saved high diving board faces the side it keeps, down past water at its own level")
+{
+    save::WorldModel world;
+    // A raised pool a row back at the tower's level, a low pool in front of it.
+    world.pool_segments = {
+        { .id = 1, .col = 5, .row = 4, .type = 0, .surface = 16, .depth = 2 },
+        { .id = 2, .col = 5, .row = 5, .type = 3, .surface = 16, .special = 19, .side = 2 },
+        { .id = 3, .col = 5, .row = 6, .type = 0, .surface = 3, .depth = 2 },
+    };
+    CHECK(saved_pools(world, { }).at(5, 5)->turn == 0);
+    // Kept without a side, it faces the first water beside it.
+    world.pool_segments[1].side = 0;
+    world.pool_segments[0].type = 1;
+    CHECK(saved_pools(world, { }).at(5, 5)->turn == 0);
+}
+
 TEST_CASE("pools: a spiral staircase winds up from its paved stack, railed at its top where no square meets it")
 {
     // Its foot at the next column, a paved square at the top level at the row before.

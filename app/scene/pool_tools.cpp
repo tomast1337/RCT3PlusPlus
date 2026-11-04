@@ -534,10 +534,11 @@ namespace rct3::scene
             {
                 auto [map, cost] = marked_pools(scene, working->first, working->second);
                 t.cost = cost;
-                // A high diving board faces water.
+                // A high diving board faces water under its boards' tip: beside it at its own level, or below it.
                 const auto [dc, dr] = kFacing[static_cast<std::size_t>(t.turns & 3)];
                 const auto faced = map.at(working->first.col + dc, working->first.row + dr);
-                t.faces = t.item->symbol != park::kPoolHighDive || (faced && faced->kind == park::PoolKind::Water);
+                const auto tower = map.at(working->first.col, working->first.row);
+                t.faces = t.item->symbol != park::kPoolHighDive || (faced && tower && faced->kind == park::PoolKind::Water && faced->surface <= tower->surface);
                 t.ok = t.faces && allowed(scene, marked(working->first, working->second), cost);
                 if (t.ok)
                 {

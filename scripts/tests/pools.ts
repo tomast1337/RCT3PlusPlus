@@ -172,6 +172,38 @@ for (const [col, row, up] of [[c0 + 4, r0 + 7, 0.08], [c0 + 5, r0, 0.2], [c0, r0
 const boards = (col: number, row: number) => map.objects().some((o) => o.overlay === kPool && o.symbol === "DBTopBoard" && o.col === col && o.row === row);
 expect(map.objects().some((o) => o.overlay === kPool && o.symbol === "DBTopBoard" && o.col === c0 + 5 && o.height === 14), "the far tower five levels high");
 expect(boards(c0 + 6, r0 + 4) && boards(c0 + 4, r0 + 6) && boards(c0 + 5, r0 - 1) && boards(c0 - 1, r0 + 5), `four towers' boards over their pool, not ${JSON.stringify(pieces().filter((o) => o.symbol === "DBTopBoard"))}`);
+// One laid on a water square at the pool's wall: the square turns to paving at the pool's surface, paid for less
+// the water's refund, the tower stands on it, and its boards reach out over the water square in front.
+camera.look({ col: c0 + 6.5, row: r0 + 2.5 }, { col: c0 + 3, row: r0 + 4.5, up: 6 });
+await frames(10);
+const on_square = (symbol: string, col: number, row: number) => pieces().some((o) => o.symbol === symbol && o.col === col && o.row === row);
+expect(on_square("Base", c0 + 6, r0 + 2), "water at the wall before");
+cash = park.cash()!;
+pointer.move(...on_view(c0 + 6.5, r0 + 2.8));
+await frames(3);
+expect(on_square("SolidTop", c0 + 6, r0 + 2) && !on_square("Base", c0 + 6, r0 + 2) && on_square("DBBase", c0 + 6, r0 + 2), "the tower shown on paving where the water was");
+await screenshot("pool_high_dive_on_water_shown");
+const at_wall = on_view(c0 + 6.5, r0 + 2.8);
+await pointer.drag(at_wall, [at_wall[0], at_wall[1] - 0.08], 8);
+await frames(3);
+expect(on_square("SolidTop", c0 + 6, r0 + 2) && !on_square("Base", c0 + 6, r0 + 2) && on_square("DBBase", c0 + 6, r0 + 2), "the water square paved under the tower");
+expect(pieces().find((o) => o.symbol === "SolidTop" && o.col === c0 + 6 && o.row === r0 + 2)!.height === pieces().find((o) => o.symbol === "SolidTop" && o.col === c0 + 7 && o.row === r0 + 2)!.height, "the paving at the pool's surface");
+// Facing the next row, its boards cover the tower's square and the squares either side along the rows.
+expect(boards(c0 + 6, r0 + 1) && on_square("Base", c0 + 6, r0 + 3), "its boards' tip over the water in front");
+expect(park.cash()! < cash, "the tower paid for");
+await screenshot("pool_high_dive_on_water");
+build.stop();
+camera.look({ col: c0 + 6.5, row: r0 + 2.5 }, { col: c0 + 6.6, row: r0 + 2.5, up: 30 });
+await frames(10);
+await screenshot("pool_high_dive_on_water_above");
+// Water again, as the pool was, for the shapes after.
+expect(build.pick(kPool, "Pool_DepthNormal"), "the water in the pool list");
+camera.look({ col: c0 + 6.5, row: r0 + 2.5 }, { col: c0 + 3, row: r0 + 4.5, up: 6 });
+await frames(10);
+await pointer.click(...on_view(c0 + 6.5, r0 + 2.8));
+await frames(3);
+expect(on_square("Base", c0 + 6, r0 + 2) && !on_square("DBBase", c0 + 6, r0 + 2), "water again where the tower stood");
+expect(build.pick(kPool, "SegmentTypeHighDive"), "the high diving board in the pool list");
 // The tool put away first, so no square is shown laid under the pointer.
 build.stop();
 camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 4.5, up: 30 });

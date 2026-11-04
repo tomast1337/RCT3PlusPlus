@@ -354,6 +354,7 @@ namespace rct3::save
         std::int32_t surface = 0; ///< Whole units, as placed objects' heights
         std::int32_t depth = 0;
         std::int32_t special = 0; ///< A high diving board's height over the surface
+        std::int32_t side = 0;    ///< Bits of the sides: 1 the column before, 2 the next row, 4 the next column, 8 the row before; a high diving board's one, the side it faces
         std::int32_t complex = 0; ///< Its pool complex, by index
     };
 

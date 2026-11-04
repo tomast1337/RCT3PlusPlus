@@ -108,6 +108,7 @@ namespace rct3::save
             constexpr std::string_view kPoolDepth = "Depth";
             constexpr std::string_view kPoolPrototype = "Prototype";
             constexpr std::string_view kPoolSpecial = "SpecialHeight";
+            constexpr std::string_view kPoolSide = "Side";
             constexpr std::string_view kPoolComplexIndex = "PoolComplexIndex";
             // Pool complexes, and their changing rooms.
             constexpr std::string_view kComplexClass = "PoolComplex";
@@ -1086,7 +1087,7 @@ namespace rct3::save
                 case Kind::Pool:
                     if (get_bool(o.find(names::kPoolPrototype)).value_or(false))
                         break;
-                    m.pool_segments.push_back({ .id = o.id, .col = int_or(o.find(names::kPoolCol)), .row = int_or(o.find(names::kPoolRow)), .type = int_or(o.find(names::kPoolType), -1), .surface = int_or(o.find(names::kPoolSurface)), .depth = int_or(o.find(names::kPoolDepth)), .special = int_or(o.find(names::kPoolSpecial)), .complex = int_or(o.find(names::kPoolComplexIndex)) });
+                    m.pool_segments.push_back({ .id = o.id, .col = int_or(o.find(names::kPoolCol)), .row = int_or(o.find(names::kPoolRow)), .type = int_or(o.find(names::kPoolType), -1), .surface = int_or(o.find(names::kPoolSurface)), .depth = int_or(o.find(names::kPoolDepth)), .special = int_or(o.find(names::kPoolSpecial)), .side = int_or(o.find(names::kPoolSide)), .complex = int_or(o.find(names::kPoolComplexIndex)) });
                     if (m.pool_segments.back().type == 0)
                         m.pool_water.push_back({ m.pool_segments.back().col, m.pool_segments.back().row, m.pool_segments.back().surface, m.pool_segments.back().depth });
                     break;

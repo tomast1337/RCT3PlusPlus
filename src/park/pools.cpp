@@ -610,10 +610,19 @@ namespace rct3::park
             square.kind = s.type == kWater ? PoolKind::Water : s.type == kSpa ? PoolKind::Jacuzzi : s.type == kHighDive ? PoolKind::HighDive : s.type == kPath ? PoolKind::Path : s.type == kPathSlope ? PoolKind::PathSlope : s.type == kPathStairs ? PoolKind::PathStairs : PoolKind::Tile;
             square.board = s.type == kHighDive ? s.special : 0;
         }
-        // A board faces the water beside it; a path's slope or stairs has its foot at the path beside it level
+        // A board faces the side it keeps, which may look down past water at its own level to a pool below; one kept
+        // without it faces the water beside it. A path's slope or stairs has its foot at the path beside it level
         // with it.
-        for (PoolSquare& square : map.squares)
+        constexpr std::array<std::int32_t, 4> kSideTurn { 3, 0, 1, 2 }; // By bit of the stored side
+        for (std::size_t i = 0; i < map.squares.size(); ++i)
         {
+            PoolSquare& square = map.squares[i];
+            const auto side = static_cast<std::uint32_t>(world.pool_segments[i].side);
+            if (square.kind == PoolKind::HighDive && std::has_single_bit(side) && side < 16)
+            {
+                square.turn = kSideTurn[static_cast<std::size_t>(std::countr_zero(side))];
+                continue;
+            }
             const bool climbs = square.kind == PoolKind::PathSlope || square.kind == PoolKind::PathStairs;
             for (std::int32_t turn = 0; (square.kind == PoolKind::HighDive || climbs) && turn < 4; ++turn)
                 if (const auto next = map.at(square.col + kSideStep[static_cast<std::size_t>(turn)][0], square.row + kSideStep[static_cast<std::size_t>(turn)][1]); next && (climbs ? next->kind == PoolKind::Path && next->surface == square.surface : next->kind == PoolKind::Water))

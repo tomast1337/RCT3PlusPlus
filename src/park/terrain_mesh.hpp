@@ -118,6 +118,7 @@ namespace rct3::park
     /// How far above the pool's surface height its water stands: just under the top of the rim piece there,
     /// which rises a fifth of a unit.
     inline constexpr float kPoolBrim = 0.1f;
+    inline constexpr int kPoolWaterSteps = 6; ///< Chosen by eye: a pool square's water is cut this many times each way, for the waves
     /// Pool water is clearer and lighter than the lakes': its low alpha also has it mirror the sky less looking
     /// down, so swimmers show whole under the surface.
     inline constexpr glm::vec4 kPoolColour = unit(hex("#3c9ccc4c"));

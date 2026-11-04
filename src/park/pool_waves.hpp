@@ -16,7 +16,9 @@
 // the whole body of water, dying down as it goes. A line drawn aslant does nothing. A circle drawn round and round
 // turns into a whirlpool there a while: a dip in the water with arms that turn the way the circle was drawn.
 //
-// The renderer is handed each wave (pool_wave_texels) and works out the same heights itself.
+// All of them die down near the sides of their water. The renderer is handed each wave (pool_wave_texels) and works
+// out the same heights itself: it moves the surface up and down by them, so the swimmers floating there ride them
+// as they show.
 #pragma once
 
 #include "math/glm.hpp"
@@ -53,6 +55,9 @@ namespace rct3::park
         float whirl_depth = 0.6f;   ///< Of a whirlpool's dip in the middle
         float whirl_life = 10.0f;   ///< Seconds a whirlpool lasts, its last few dying down
         float whirl_turn = 3.0f;    ///< Radians a second its arms turn
+        float whirl_arms = 0.6f;    ///< How deep its arms cut into the dip, at its radius
+        float whirl_wind = 3.0f;    ///< Radians its arms wind round for each radius out
+        float edge = 1.0f;          ///< Waves die down over this far from their water's sides, so they stay under its rim
         float least_radius = 1.0f;  ///< Of a whirlpool, however small the circle drawn
         float most_radius = 4.0f;   ///< Of a whirlpool, however big the circle drawn
         float least_stroke = 1.5f;  ///< The shortest drawn line or circle that makes a wave, along the pointer's way

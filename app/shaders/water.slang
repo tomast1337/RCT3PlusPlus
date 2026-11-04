@@ -56,13 +56,6 @@ struct Varyings
     [[vk::location(5)]] float3 normal; ///< Flowing water: its strip's
 }
 
-[shader("vertex")]
-Varyings vertex_main([[vk::location(0)]] float3 position, [[vk::location(1)]] float4 color, [[vk::location(2)]] float2 uv, [[vk::location(3)]] float3 normal)
-{
-    const float4 clip = mul(u_draw.transform, float4(position, 1.0));
-    return { clip, position, color, uv.x, clip, uv, normal };
-}
-
 static const uint kReflection = 1u;
 static const uint kRefraction = 2u;
 static const uint kWaves = 4u;
@@ -164,13 +157,20 @@ static const float kLineFade = 4.0;
 static const float kLineLife = 16.0;
 static const float kWhirlLife = 10.0;
 static const float kWhirlTurn = 3.0;
+static const float kWhirlArms = 0.6;
+static const float kWhirlWind = 3.0;
+static const float kPoolEdge = 1.0;
+static const float kPoolFoam = 0.55; // Chosen by eye: foam on a crest above this share of its wave's height
+static const float kPoolLight = 1.2; // Chosen by eye: crests lighter and troughs darker by this much per unit of height
 
-float pool_wave_height(float2 at, float time)
+// How high the pools' waves stand at `at`, and how much foam they carry there.
+float2 pool_wave_height(float2 at, float time)
 {
     float sum = 0.0;
+    float foam = 0.0;
     const int2 size = texels_of(u_ripples);
     if (size.y < 6)
-        return 0.0;
+        return float2(0.0);
     for (int i = 0; i < size.x; ++i)
     {
         const float4 shape = u_ripples.Load(int3(i, 3, 0));
@@ -181,8 +181,11 @@ float pool_wave_height(float2 at, float time)
             continue;
         const float4 place = u_ripples.Load(int3(i, 2, 0));
         const float4 timing = u_ripples.Load(int3(i, 5, 0));
+        const float taper = saturate(min(min(at.x - bounds.x, at.y - bounds.y), min(bounds.z - at.x, bounds.w - at.y)) / kPoolEdge);
         const float d = dot(at - place.xy, place.zw);
         const float age = time - shape.z;
+        float h = 0.0;
+        float f = 0.0;
         if (shape.x < 1.5)
         {
             const float left = time - d / kPoolSpeed;
@@ -190,35 +193,51 @@ float pool_wave_height(float2 at, float time)
                 continue;
             const float phase = fmod(left, max(max(timing.z, timing.y), 1.0));
             const float running = saturate(phase / kPoolRamp) * saturate((timing.y - phase) / kPoolRamp);
-            sum += shape.y * running * sin(timing.x * left) * exp(-d / kPoolReach);
+            h = shape.y * running * sin(timing.x * left) * exp(-d / kPoolReach);
+            f = smoothstep(kPoolFoam, 1.0, h / shape.y);
         }
         else if (shape.x < 2.5)
         {
             if (age < 0.0 || age > kLineLife)
                 continue;
             const float x = d - kLineSpeed * age;
-            sum += shape.y * exp(-age / kLineFade) * exp(-(x / kLineWidth) * (x / kLineWidth)) * cos(6.2831853 / kLineLength * x);
+            h = shape.y * exp(-age / kLineFade) * exp(-(x / kLineWidth) * (x / kLineWidth)) * cos(6.2831853 / kLineLength * x);
+            f = smoothstep(kPoolFoam, 1.0, h / shape.y * exp(age / kLineFade)) * exp(-age / kLineFade);
         }
         else if (age >= 0.0 && age <= kWhirlLife)
         {
             const float strength = saturate(age) * saturate((kWhirlLife - age) / 3.0);
             const float2 off = at - place.xy;
             const float r = length(off) / timing.w;
-            const float arms = 0.35 * r * sin(3.0 * atan2(off.y, off.x) - shape.w * (kWhirlTurn * age - 2.0 * r));
-            sum -= shape.y * strength * exp(-r * r) * (1.0 - arms);
+            const float arm = sin(3.0 * atan2(off.y, off.x) - shape.w * (kWhirlTurn * age - kWhirlWind * r));
+            h = -shape.y * strength * exp(-r * r) * (1.0 - kWhirlArms * r * arm);
+            // Foam along the arms' ridges, thinning out past the radius.
+            f = strength * smoothstep(0.4, 0.9, arm) * smoothstep(0.2, 0.6, r) * exp(-0.5 * r * r);
         }
+        sum += taper * h;
+        foam = max(foam, taper * f);
     }
-    return sum;
+    return float2(sum, foam);
 }
 
-// The pools' waves' slope in x and z, from the heights a little either side, and how high they stand here.
-float3 pool_waves(float2 at, float time)
+// The pools' waves' slope in x and z, how high they stand here and their foam.
+float4 pool_waves(float2 at, float time)
 {
     const float e = 0.05;
-    const float h = pool_wave_height(at, time);
-    const float dx = pool_wave_height(at + float2(e, 0.0), time) - pool_wave_height(at - float2(e, 0.0), time);
-    const float dz = pool_wave_height(at + float2(0.0, e), time) - pool_wave_height(at - float2(0.0, e), time);
-    return float3(dx, dz, h) / float3(2.0 * e, 2.0 * e, 1.0);
+    const float2 h = pool_wave_height(at, time);
+    const float dx = pool_wave_height(at + float2(e, 0.0), time).x - pool_wave_height(at - float2(e, 0.0), time).x;
+    const float dz = pool_wave_height(at + float2(0.0, e), time).x - pool_wave_height(at - float2(0.0, e), time).x;
+    return float4(dx / (2.0 * e), dz / (2.0 * e), h.x, h.y);
+}
+
+[shader("vertex")]
+Varyings vertex_main([[vk::location(0)]] float3 position, [[vk::location(1)]] float4 color, [[vk::location(2)]] float2 uv, [[vk::location(3)]] float3 normal)
+{
+    // A pool's waves move its surface.
+    const float lift = has(kRipples) && !has(kFlow) && !has(kUnderwater) ? pool_wave_height(position.xz, u_draw.eye_time.w).x : 0.0;
+    const float3 moved = position + float3(0.0, lift, 0.0);
+    const float4 clip = mul(u_draw.transform, float4(moved, 1.0));
+    return { clip, moved, color, uv.x + lift, clip, uv, normal };
 }
 
 // Distance along the view axis of a depth read back from the depth buffer.
@@ -499,13 +518,9 @@ float4 fragment_main(Varyings v) : SV_Target
         const float2 fine = picture_slope(v.world.xz * kWaveScale.y + time * kWaveDriftB) * kWaveScale.y;
         slope += (broad + 0.5 * fine) * kWaveHeight * calm;
     }
-    float3 rip = has(kRipples) ? ripples(v.world.xz) : float3(0.0);
-    if (has(kRipples))
-    {
-        const float3 pool = pool_waves(v.world.xz, time);
-        rip = float3(rip.xy + pool.xy, max(rip.z, pool.z));
-    }
-    slope += rip.xy;
+    const float3 rip = has(kRipples) ? ripples(v.world.xz) : float3(0.0);
+    const float4 pool = has(kRipples) ? pool_waves(v.world.xz, time) : float4(0.0);
+    slope += rip.xy + pool.xy;
     const float3 n = normalize(float3(-slope.x, 1.0, -slope.y));
 
     const float2 screen = screen_uv(v);
@@ -574,13 +589,15 @@ float4 fragment_main(Varyings v) : SV_Target
         colour = ((1.0 - fresnel) * (scattered * (1.0 - dot(kept, float3(1.0 / 3.0))) + sunlit + shafts) + fresnel * mirrored + glint) / max(alpha, 1e-3);
     }
 
+    // The pools' crests catch more light and their troughs, a whirlpool's middle most, less.
+    colour *= 1.0 + kPoolLight * clamp(pool.z, -0.5, 0.5);
     if (has(kFoam))
     {
         const float shallows = (1.0 - smoothstep(0.0, kFoamDepth, depth)) * smoothstep(0.0, 0.04, depth);
         const float grain = u_waves.Sample(u_sampler, v.world.xz * 0.31 + float2(0.020, -0.013) * time).r;
         const float grain2 = u_waves.Sample(u_sampler, v.world.xz * 0.77 - float2(0.011, 0.017) * time).r;
         const float broken = smoothstep(0.55, 0.9, 0.6 * grain + 0.4 * grain2 + 0.3 * shallows);
-        float foam = max(shallows * broken, 0.6 * smoothstep(kCrestLow, kCrestHigh, rip.z));
+        float foam = max(max(shallows * broken, 0.6 * smoothstep(kCrestLow, kCrestHigh, rip.z)), pool.w * (0.5 + 0.5 * smoothstep(0.4, 0.8, grain)));
         foam *= kFoamMost / (1.0 + dist / 150.0);
         colour = lerp(colour, body_light * 0.95, foam);
         alpha = lerp(alpha, 1.0, foam);

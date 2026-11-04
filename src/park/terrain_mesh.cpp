@@ -314,13 +314,17 @@ namespace rct3::park
         {
             if (!grid.contains(pool.col, pool.row))
                 continue;
+            // In small squares, so the waves in it can move the surface.
             const float level = static_cast<float>(pool.surface) + kPoolBrim;
-            for (const int c : { 0, 1, 2, 3, 2, 1 })
-            {
-                glm::vec3 p = corner(grid, pool.col, pool.row, c);
-                p.y = level;
-                out.push_back({ p, kPoolColour, static_cast<float>(pool.depth) + kPoolBrim });
-            }
+            const glm::vec3 low = corner(grid, pool.col, pool.row, 0);
+            const glm::vec3 high = corner(grid, pool.col, pool.row, 3);
+            for (int i = 0; i < kPoolWaterSteps; ++i)
+                for (int j = 0; j < kPoolWaterSteps; ++j)
+                    for (const auto& [di, dj] : { std::pair { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 }, { 0, 1 }, { 1, 0 } })
+                    {
+                        const glm::vec2 t = glm::vec2 { i + di, j + dj } / static_cast<float>(kPoolWaterSteps);
+                        out.push_back({ { glm::mix(low.x, high.x, t.x), level, glm::mix(low.z, high.z, t.y) }, kPoolColour, static_cast<float>(pool.depth) + kPoolBrim });
+                    }
         }
         return out;
     }

@@ -181,7 +181,7 @@ TEST_CASE("pool water fills each of its squares just under the rim, down to the 
     const save::TerrainGrid g = flat(2, 2, -4);
     const std::vector<save::PoolWater> pools { { 1, 0, -5, 2 }, { 7, 7, -5, 2 } };
     const auto water = pool_water(g, pools);
-    REQUIRE(water.size() == 6); // The square off the map is left out
+    REQUIRE(water.size() == 6 * kPoolWaterSteps * kPoolWaterSteps); // The square off the map is left out
     for (const WaterVertex& v : water)
     {
         CHECK(v.position.y == doctest::Approx(-5 + kPoolBrim));

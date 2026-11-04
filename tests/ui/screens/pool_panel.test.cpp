@@ -55,6 +55,15 @@ TEST_CASE("the pool panel opens on the editor with water out")
     CHECK_FALSE(f.button("pools/File_LoadGame").enabled);
 }
 
+TEST_CASE("a tab clicked again keeps its page open")
+{
+    Fixture f;
+    f.click("pools/Pool_ChangingRoomPanel");
+    f.click("pools/Pool_ChangingRoomPanel");
+    CHECK(f.panel->page() == PoolPage::Rooms);
+    CHECK(f.desktop.root().find("pools/body/room").has_value());
+}
+
 TEST_CASE("the paths tab puts paths out, its buttons slopes and stairs, and the editor's tab water again")
 {
     Fixture f;

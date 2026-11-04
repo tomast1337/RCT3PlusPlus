@@ -229,7 +229,7 @@ namespace rct3::ui
             if (tabs_[i]->take_click())
             {
                 const auto page = static_cast<PoolPage>(i);
-                open(page_ == page ? std::nullopt : std::optional(page));
+                open(page);
                 // Opening the editor's tab puts its tool out again, as in the game; the paths' tab puts paths out.
                 const bool path_mode = editor_.mode >= PoolMode::Path;
                 if (page == PoolPage::Editor && (placing_ || path_mode))

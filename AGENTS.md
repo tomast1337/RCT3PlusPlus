@@ -35,7 +35,7 @@ Suggested messages:
 
 ## Clean room
 
-Read [CLEAN_ROOM.md](CLEAN_ROOM.md) before touching anything to do with the game's files. Summary:
+Read [ORIGINAL_WORK.md](ORIGINAL_WORK.md) before touching anything to do with the game's files. Summary:
 
 - No game files or anything extracted from them, no byte dumps from real files, no code, names or
   addresses taken from the game's program, no copied code from other projects (vendored libraries in
@@ -44,7 +44,7 @@ Read [CLEAN_ROOM.md](CLEAN_ROOM.md) before touching anything to do with the game
   install.
 - `local/` is git-ignored and holds fuzz corpora and other generated output. Never reference it from
   tracked files.
-- Before suggesting a commit, review the diff as described in CLEAN_ROOM.md.
+- Before suggesting a commit, review the diff as described in ORIGINAL_WORK.md.
 
 ## Design
 

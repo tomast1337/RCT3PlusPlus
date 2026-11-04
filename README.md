@@ -36,12 +36,12 @@ Where our knowledge comes from:
 
 We do not accept contributions based on decompiling, disassembling or debugging the game's executables, or
 on leaked source or documents. See the clean-room standards in the [Code of Conduct](CODE_OF_CONDUCT.md)
-and the detailed rules in [CLEAN_ROOM.md](CLEAN_ROOM.md).
+and the detailed rules in [ORIGINAL_WORK.md](ORIGINAL_WORK.md).
 
 ## Contributing
 
 Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md). Read it, and
-[CLEAN_ROOM.md](CLEAN_ROOM.md), before opening a pull request. [CONTRIBUTING.md](CONTRIBUTING.md) says how
+[ORIGINAL_WORK.md](ORIGINAL_WORK.md), before opening a pull request. [CONTRIBUTING.md](CONTRIBUTING.md) says how
 to build and run rct3++, report a bug or send a change, and [SECURITY.md](SECURITY.md) how to report a security problem.
 
 ## License

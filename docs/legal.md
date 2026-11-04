@@ -24,7 +24,7 @@ What is in this repository:
 - Tests whose inputs are built in code: invented values shaped like the formats, never bytes from a real
   file.
 - Values borrowed from other open-source projects under a compatible licence, each credited where it is
-  used (see [CLEAN_ROOM.md](../CLEAN_ROOM.md)).
+  used (see [ORIGINAL_WORK.md](../ORIGINAL_WORK.md)).
 
 What is not, and never will be:
 
@@ -84,7 +84,7 @@ that is needed only to make an independent program work with another.
 
 ### What keeps the risk low
 
-- No game files, extracted assets or leaked material, ever (see [CLEAN_ROOM.md](../CLEAN_ROOM.md)).
+- No game files, extracted assets or leaked material, ever (see [ORIGINAL_WORK.md](../ORIGINAL_WORK.md)).
 - The player needs their own copy of the game; rct3++ replaces none of it.
 - The project is free and sells nothing.
 - No official logos or branding, and a clear statement that the project is not affiliated.

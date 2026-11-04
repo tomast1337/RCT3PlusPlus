@@ -61,7 +61,7 @@ Knowledge may come from:
 - **Our own model.** Where measuring is not practical, we design our own behaviour.
   rct3++ does not need to match the original number for number.
 - **Public, openly licensed work**, such as OpenRCT2, under a compatible licence and credited at the
-  place of use (see [CLEAN_ROOM.md](CLEAN_ROOM.md)).
+  place of use (see [ORIGINAL_WORK.md](ORIGINAL_WORK.md)).
 - **Public documentation**: the game's manual, published interviews and community knowledge written by
   players, summarised in our own words.
 

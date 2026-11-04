@@ -557,6 +557,23 @@ namespace rct3::simulation::tuning
         Share bad { 3.0f / 6 };                                                         ///< And from which dirty
     };
 
+    /// Lazy rivers: swimmers float round them in rings, carried by the current.
+    struct Rivers
+    {
+        Pace flow { 1.7f };         ///< The current, as far as the saved parks' riders went over their time on the river
+        Pace least_paddle { 0.5f }; ///< Riders paddle from this fast to `most_paddle`, ahead or back, as saved riders do
+        Pace most_paddle { 2.0f };
+        float least_stay = 0.5f; ///< Laps a rider floats before getting off, from this many to `most_stay`, as saved riders mean to
+        float most_stay = 2.0f;
+        float spin = 1.5f;                        ///< Most radians a second a resting rider's ring turns, about as fast as saved riders' rings turn
+        Chance paddle { 0.15 };                   ///< Chosen by eye: of paddling off, each time a resting rider's ring comes round to face along the river or back
+        Frequency rest = Frequency::every({ 8 }); ///< Chosen by eye: how often a paddling rider stops to rest
+        float lane = 1.0f;                        ///< Chosen by eye: most metres to either side of the channel's middle a rider floats
+        float join = 2.0f;                        ///< Chosen by eye: tiles from a station's track to pool path stairs that join it to their complex
+        /// Excitement, intensity and nausea of a river not rated yet, as a saved park rates its river (with no test run)
+        std::array<float, 3> rated { 3.6f, 0.9f, 0.0f };
+    };
+
     /// What guests make of the park round them, and the scenery they pass.
     struct Surroundings
     {
@@ -618,6 +635,7 @@ namespace rct3::simulation::tuning
         Holding holding;
         Slides slides;
         Pools pools;
+        Rivers rivers;
         Surroundings surroundings;
     };
 

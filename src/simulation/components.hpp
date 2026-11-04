@@ -448,6 +448,7 @@ namespace rct3::simulation
         std::vector<glm::vec3> paved { };
         std::vector<glm::vec3> spa { };   ///< Where swimmers sit in the spa pools, at the spa's water
         std::vector<PoolSpot> extras { }; ///< The paved squares with an extra on them, loungers and showers
+        std::vector<glm::vec3> steps { }; ///< Its pool path stairs, where a lazy river's station may join it
         Share dirt { };                   ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
         park::PoolTally tally { };        ///< What it has, for its excitement and what its ticket is worth
     };
@@ -499,6 +500,35 @@ namespace rct3::simulation
         entt::entity slide = entt::null; ///< The pool slide they head for, to queue at its station
         /// The changing room of the complex whose slide they queue for or ride, to swim on in after
         entt::entity room = entt::null;
+    };
+
+    /// A lazy river: a channel with no trains round which swimmers float in rings, free on their complex's ticket.
+    /// They get on and off at its stations, each joined to the complex whose pool path stairs come down beside it.
+    struct River
+    {
+        struct Station
+        {
+            float at = 0;                      ///< Along the course, the middle of the station, where riders get on and off
+            std::vector<glm::vec3> points { }; ///< Of the course along it
+            entt::entity pool = entt::null;    ///< The complex it joins (its SwimPool); none till one does
+            glm::vec3 steps { 0.0f };          ///< The stairs that join it, where swimmers come and go
+        };
+        Coaster course { };
+        std::vector<Station> stations { };
+    };
+
+    /// A swimmer floating round a lazy river in a ring, on top of their Swimmer and riding Errand.
+    struct Floating
+    {
+        entt::entity river = entt::null;
+        float along = 0;     ///< Where they are along the course
+        float travelled = 0; ///< Since they got on
+        float stay = 0;      ///< How far they float before getting off at the next station on
+        float lane = -1;     ///< Across the channel, -1 to 1
+        Radians facing { };  ///< In their ring, from along the current
+        float spin = 0;      ///< Radians a second their ring turns while they rest
+        Pace paddle { };     ///< How fast they paddle, the way they face
+        bool paddling = false;
     };
 
     /// What a shop sells, or what a facility does for its guests.

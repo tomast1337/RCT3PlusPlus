@@ -909,7 +909,8 @@ namespace rct3::scene
                     const auto* errand = r.try_get<simulation::Errand>(p.guest);
                     const auto* linger = r.try_get<simulation::Linger>(p.guest);
                     const auto* sitting = linger != nullptr && linger->at == simulation::PathItemKind::Bench ? linger : nullptr;
-                    const glm::vec3 at = (errand != nullptr && errand->kind == simulation::ErrandKind::Riding) || sitting != nullptr ? standing : r.get<simulation::Pose>(p.guest).position; // Seated, in their seat
+                    const auto* floating = r.try_get<simulation::Floating>(p.guest);
+                    const glm::vec3 at = (errand != nullptr && errand->kind == simulation::ErrandKind::Riding && floating == nullptr) || sitting != nullptr ? standing : r.get<simulation::Pose>(p.guest).position; // Seated, in their seat
                     person["col"] = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
                     person["row"] = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
                     person["up"] = at.y;
@@ -952,6 +953,13 @@ namespace rct3::scene
                     {
                         person["reaction"] = kReactions[std::to_underlying(thrill->reaction)];
                         if (const auto on = std::ranges::find(park.ride_entities, errand->target); on != park.ride_entities.end())
+                            person["ride"] = on - park.ride_entities.begin();
+                    }
+                    // Floating round a lazy river (by its place in rides.list), resting or paddling.
+                    if (floating != nullptr)
+                    {
+                        person["floating"] = floating->paddling ? "paddling" : "resting";
+                        if (const auto on = std::ranges::find(park.ride_entities, floating->river); on != park.ride_entities.end())
                             person["ride"] = on - park.ride_entities.begin();
                     }
                     // Food or drink from a stall in hand, or its empty.
@@ -1173,6 +1181,13 @@ namespace rct3::scene
                                 riders += aboard.size();
                         one["riders"] = riders;
                         one["ratings"] = { c->excitement.value, c->intensity.value, c->nausea.value };
+                        // A lazy river: its length, and how many of its stations a pool complex joins.
+                        if (const auto* river = registry.try_get<simulation::River>(e))
+                        {
+                            one["trackLength"] = river->course.length();
+                            one["riverStations"] = river->stations.size();
+                            one["riverJoined"] = std::ranges::count_if(river->stations, [&](const simulation::River::Station& s) { return registry.valid(s.pool); });
+                        }
                     }
                     if (const auto* wrecks = registry.try_get<simulation::Wrecks>(e))
                     {

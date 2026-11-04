@@ -814,9 +814,17 @@ namespace rct3::scene
             // At a pool: out of sight while changing, then swimming, or walking round the water.
             if (const auto* swimmer = r.try_get<simulation::Swimmer>(shown.guest))
             {
-                // Out of sight changing; seated on a pool slide, they go with their car (pose_riders).
-                if (const auto* errand = r.try_get<simulation::Errand>(shown.guest); swimmer->changing.value > 0 || (errand != nullptr && errand->kind == simulation::ErrandKind::Riding))
+                // Out of sight changing; seated on a pool slide, they go with their car (pose_riders). Floating round a
+                // lazy river, they tread water in their ring, or swim paddling it along.
+                const auto* floating = r.try_get<simulation::Floating>(shown.guest);
+                if (const auto* errand = r.try_get<simulation::Errand>(shown.guest); swimmer->changing.value > 0 || (errand != nullptr && errand->kind == simulation::ErrandKind::Riding && floating == nullptr))
                     return std::nullopt;
+                if (floating != nullptr)
+                {
+                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+                    pose.motion = floating->paddling ? kSwimMotion : kTreadMotion;
+                    return pose;
+                }
                 const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
                 const bool moving = now.was != now.position;
                 const bool lounging = swimmer->place >= 0 && swimmer->use == simulation::PoolUse::Lounge;

@@ -338,6 +338,9 @@ interface RideInfo {
     trainsAt?: { front: number; length: number; station: number | null; held: number | null; riders: number }[];
     /** Ridden by the park on a track: the length of its track, metres. */
     trackLength?: number;
+    /** A lazy river the park runs: its stations, and how many of them a pool complex joins by its stairs. */
+    riverStations?: number;
+    riverJoined?: number;
     /** Rides with a track: each piece's name, in track order. */
     track?: string[];
     /** Rides with a track: each piece's three colours (palette places), in track order. */
@@ -457,8 +460,9 @@ declare namespace people {
      *  those on their way out of the park are `leaving`, and those walking in from a spawn point who have not come
      *  through the gate yet are `arriving`. `thoughts` are the numbers of the thoughts their window
      *  lists, and a guest's `happiness` (0 to 1) is what their window and the guest list show. Those in their swimwear
-     *  (in a pool complex, or held or falling out of one) are `swimwear`. */
-    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; arriving?: boolean; bench?: number; seat?: number; rising?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "sitting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; glancing?: boolean; lingering?: PathItemKind; pool_extra?: "lounger" | "shower" | "other"; swimwear?: boolean; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
+     *  (in a pool complex, or held or falling out of one) are `swimwear`; those floating round a lazy river (its place
+     *  in rides.list as `ride`) are `floating`, resting in their ring or paddling. */
+    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; arriving?: boolean; bench?: number; seat?: number; rising?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "sitting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; glancing?: boolean; lingering?: PathItemKind; pool_extra?: "lounger" | "shower" | "other"; swimwear?: boolean; floating?: "resting" | "paddling"; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

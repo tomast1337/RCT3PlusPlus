@@ -675,6 +675,8 @@ namespace rct3::simulation
                     complex.spa.push_back(middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.spa_water));
                 else if (s.kind == park::PoolKind::Tile || s.kind == park::PoolKind::Path) // Not a diving board's, a slope or stairs
                     complex.paved.push_back(middle(s.col, s.row, static_cast<float>(s.surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 });
+                else if (s.kind == park::PoolKind::PathStairs)
+                    complex.steps.push_back(middle(s.col, s.row, static_cast<float>(s.surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 });
                 for (const auto [dc, dr] : kSides)
                     if (const auto next = squares.find({ s.col + dc, s.row + dr }); next != squares.end() && complex_of.try_emplace(next->first, complexes.size() - 1).second)
                         todo.push_back(next->second);
@@ -1161,6 +1163,45 @@ namespace rct3::simulation
                 // shortcut: boats that sail off their dock go out all at once and come back after a set trip, with
                 // no boat moving on the water; upgrade with boats steering over the lake.
                 timing = RideTiming { .seats = static_cast<std::uint32_t>(ride.seats.size()), .run = kTuning.boats.trip.value };
+            // A lazy river runs no trains: swimmers float round it, free on their complex's ticket, getting on and off
+            // at its stations. Rated as the park has it, else as a saved park rates its river.
+            if (ride.kind == save::RideKind::Tracked && ride.mode == save::OperatingMode::LazyRiver && coaster != nullptr && coaster->closed && coaster->points.size() == coaster->kinds.size())
+            {
+                auto& r = world.registry;
+                const entt::entity e = r.create();
+                r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::AttractionState::Open, .testing = ride.base.state == save::AttractionState::Testing, .saved = ride.base.id });
+                const auto& rated = kTuning.rivers.rated;
+                const auto valid = ride.assessment.valid;
+                CycleRide cycle { .capacity = 0, .splash = true };
+                cycle.excitement.value = rating(valid ? ride.assessment.excitement : rated[0]);
+                cycle.intensity.value = rating(valid ? ride.assessment.intensity : rated[1]);
+                cycle.nausea.value = rating(valid ? ride.assessment.nausea : rated[2]);
+                if (i < guests.size() && guests[i])
+                    cycle.room = *guests[i];
+                r.emplace<CycleRide>(e, std::move(cycle));
+                River river { .course = *coaster };
+                const auto& kinds = coaster->kinds;
+                float from = 0;
+                // shortcut: a station broken by the lap's start counts as two, upgrade if a river is built that way.
+                for (std::size_t k = 0; k + 1 < kinds.size(); ++k)
+                {
+                    if (kinds[k] != Stretch::Station)
+                        continue;
+                    if (k == 0 || kinds[k - 1] != Stretch::Station)
+                    {
+                        river.stations.emplace_back();
+                        from = coaster->distance[k];
+                    }
+                    river.stations.back().points.push_back(coaster->points[k]);
+                    river.stations.back().at = (from + coaster->distance[k + 1]) / 2;
+                }
+                r.emplace<River>(e, std::move(river));
+                r.emplace<Upkeep>(e, upkeep_of(ride));
+                if (r.get<Upkeep>(e).broken)
+                    r.get<Attraction>(e).open = false;
+                added[i] = e;
+                continue;
+            }
             // Rides left out still make room in the park while open and working.
             const auto elsewhere = [&] {
                 if (i < guests.size() && guests[i] && ride.base.state == save::AttractionState::Open && (ride.base.flags & save::AttractionCommon::kBrokenDown) == 0)
@@ -1540,7 +1581,7 @@ namespace rct3::simulation
             return pool_door_at(world, track_point(train, train.length()));
         };
         for (std::size_t i = 0; i < saved.rides.size() && i < rides.size(); ++i)
-            if (rides[i] != entt::null && (r.get<Attraction>(rides[i]).entrance != kNoNode || slide_room(rides[i])))
+            if (rides[i] != entt::null && (r.get<Attraction>(rides[i]).entrance != kNoNode || slide_room(rides[i]) || r.all_of<River>(rides[i])))
                 ride_of.emplace(saved.rides[i].base.id, rides[i]);
         std::size_t seated = 0;
         for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
@@ -1551,6 +1592,35 @@ namespace rct3::simulation
             if (e == entt::null || p.state != save::PersonState::OnRide || ride == ride_of.end())
                 continue;
             auto& cycle = r.get<CycleRide>(ride->second);
+            // On a lazy river, at the nearest of its course to where the park kept them, in their ring; they swim on
+            // in the complex they get off in.
+            // shortcut: the room they swim on from till then is the nearest, upgrade when the save's own is read.
+            if (const auto* river = r.try_get<River>(ride->second); river != nullptr && r.all_of<Pose, Dice>(e))
+            {
+                const glm::vec3 at { p.position.x, p.position.y, p.position.z };
+                const auto& points = river->course.points;
+                std::optional<entt::entity> room;
+                float closest = std::numeric_limits<float>::max();
+                for (const entt::entity door : r.view<const PoolDoor>())
+                    if (const float d = glm::distance(r.get<PoolDoor>(door).poolside, at); d < closest)
+                    {
+                        closest = d;
+                        room = door;
+                    }
+                if (points.empty() || !room)
+                    continue;
+                const auto near = std::ranges::min_element(points, { }, [&](const glm::vec3& q) { return glm::distance(q, at); });
+                auto& dice = r.get<Dice>(e).state;
+                const auto& tuning = kTuning.rivers;
+                const float length = river->course.length();
+                r.emplace_or_replace<Floating>(
+                    e, Floating { .river = ride->second, .along = river->course.distance[static_cast<std::size_t>(near - points.begin())], .stay = static_cast<float>(random::between(dice, tuning.least_stay, tuning.most_stay)) * length, .lane = static_cast<float>(random::between(dice, -1.0, 1.0)), .spin = static_cast<float>(random::between(dice, -tuning.spin, tuning.spin)), .paddle = { static_cast<float>(random::between(dice, tuning.least_paddle.value, tuning.most_paddle.value)) } });
+                r.emplace_or_replace<Swimmer>(e, Swimmer { .changed = true, .left = kTuning.pools.stay, .in_water = true, .room = *room });
+                r.get<Errand>(e) = { ErrandKind::Riding, ride->second, 0 };
+                cycle.riders.push_back(e);
+                ++seated;
+                continue;
+            }
             // Off the ride they get off where its riders do; off a slide, in their swimwear, into its pool.
             const auto room = slide_room(ride->second);
             const NodeId off = cycle.exit != kNoNode ? cycle.exit : r.get<Attraction>(ride->second).entrance;

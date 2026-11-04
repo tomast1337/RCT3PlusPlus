@@ -158,24 +158,28 @@ expect(park.cash()! < cash, "the board paid for");
 camera.look({ col: c0 + 7.5, row: r0 + 4.5, up: 2 }, { col: c0 + 3.5, row: r0 + 2.5, up: 4 });
 await frames(10);
 await screenshot("pool_high_dive");
-camera.look({ col: c0 + 7.5, row: r0 + 4.5, up: 3 }, { col: c0 + 10, row: r0 + 8, up: 3 });
+// One on each of the other sides. Each one's boards cover three squares in a row, the tower's in the middle,
+// named by the first; their tip reaches out over the water square in front of the tower.
+for (const [col, row] of [[c0 + 4, r0 + 7], [c0 + 5, r0], [c0, r0 + 5]])
+{
+    camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col + 0.5, row: row + 3, up: 12 });
+    await frames(10);
+    const at = on_view(col + 0.5, row + 0.5);
+    await pointer.drag(at, [at[0], at[1] - 0.08], 8);
+    await frames(3);
+}
+const boards = (col: number, row: number) => map.objects().some((o) => o.overlay === kPool && o.symbol === "DBTopBoard" && o.col === col && o.row === row);
+expect(boards(c0 + 6, r0 + 4) && boards(c0 + 4, r0 + 6) && boards(c0 + 5, r0 - 1) && boards(c0 - 1, r0 + 5), `four towers' boards over their pool, not ${JSON.stringify(pieces().filter((o) => o.symbol === "DBTopBoard"))}`);
+camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 4.5, up: 30 });
 await frames(10);
-await screenshot("pool_high_dive_back");
-// Another on the near side, a quarter turn round. Each one's boards cover three squares in a row, the tower's in
-// the middle, and are named by the first.
-camera.look({ col: c0 + 4.5, row: r0 + 6 }, { col: c0 + 4.5, row: r0 + 10, up: 4 });
-await frames(10);
-const near = on_view(c0 + 4.5, r0 + 7.5);
-await pointer.drag(near, [near[0], near[1] - 0.08], 8);
-await frames(3);
-const boards = (col: number, row: number) => pieces().some((o) => o.symbol === "DBTopBoard" && o.col === col && o.row === row);
-expect(boards(c0 + 6, r0 + 4) && boards(c0 + 4, r0 + 6), `both towers' boards over their pool, not ${JSON.stringify(pieces().filter((o) => o.symbol === "DBTopBoard"))}`);
-camera.look({ col: c0 + 4.5, row: r0 + 7.5, up: 3 }, { col: c0 + 9.5, row: r0 + 9.5, up: 5 });
-await frames(10);
-await screenshot("pool_high_dive_turned");
-camera.look({ col: c0 + 4.5, row: r0 + 7.5, up: 3 }, { col: c0 + 1, row: r0 + 10, up: 3 });
-await frames(10);
-await screenshot("pool_high_dive_turned_back");
+await screenshot("pool_high_dives_above");
+// Each from straight over the water in front of it, its boards reaching out over that square, across the wall.
+for (const [col, row, dc, dr, name] of [[c0 + 7, r0 + 4, -1, 0, "east"], [c0 + 4, r0 + 7, 0, -1, "south"], [c0 + 5, r0, 0, 1, "north"], [c0, r0 + 5, 1, 0, "west"]] as const)
+{
+    camera.look({ col: col + 0.5 + dc, row: row + 0.5 + dr }, { col: col + 0.5 + dc, row: row + 0.6 + dr, up: 30 });
+    await frames(10);
+    await screenshot(`pool_high_dive_${name}`);
+}
 build.stop();
 camera.look({ col: c0 + 1.5, row: r0 + 2.5 }, { col: c0 + 4, row: r0 + 6, up: 3 });
 await frames(10);

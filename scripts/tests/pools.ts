@@ -233,10 +233,13 @@ await ui.click("info/close");
 // With no tool out, a line drawn on the water along the grid sends waves across it, and a circle makes a
 // whirlpool; the wave machine runs from the clock's start.
 await frames(2);
-// The machine's front, seen low and close: one square wide off its wall, dying out on its way.
-camera.look({ col: c0 + 1.5, row: r0 + 1.5 }, { col: c0 + 3.8, row: r0 + 3.8, up: 1.4 });
-await frames(150);
+// The machine's front, seen from the pool's side: a train of crests rolling out from its square of wall, and a
+// moment later further out, dying away before the far side.
+camera.look({ col: c0 + 3, row: r0 + 1.5 }, { col: c0 + 3, row: r0 + 6, up: 2.5 });
+await frames(60);
 await screenshot("pool_wave_machine");
+await frames(25);
+await screenshot("pool_wave_machine_later");
 // Seen low over the water from its far corner, so the surface's rise and fall shows.
 camera.look({ col: c0 + 3, row: r0 + 3 }, { col: c0 + 7.5, row: r0 + 7.5, up: 2.5 });
 await frames(10);

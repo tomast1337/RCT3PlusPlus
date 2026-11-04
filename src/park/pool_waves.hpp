@@ -43,11 +43,11 @@ namespace rct3::park
     /// How the waves look and behave. Lengths in world units (about a metre), times in seconds; all chosen by eye.
     struct PoolWaveLook
     {
-        float crest = 0.025f;       ///< A wave machine's crest height for each step of its height setting
+        float crest = 0.05f;        ///< A wave machine's crest height for each step of its height setting
         float speed = 3.0f;         ///< Of a wave machine's crests, out from its wall
-        float reach = 5.0f;         ///< A wave machine's crests fall to a third (1/e) over this distance
-        float cut = 16.0f;          ///< And are gone this far from its wall
-        float spread = 0.35f;       ///< Its front widens by this much each side for each unit out
+        float reach = 8.0f;         ///< A wave machine's crests fall to a third (1/e) over this distance
+        float cut = 14.0f;          ///< And are gone this far from its wall
+        float spread = 0.25f;       ///< Its front widens by this much each side for each unit out
         float front_soft = 0.75f;   ///< Over this far its front fades out at each side
         float ramp = 2.0f;          ///< Seconds a wave machine takes to start and to stop
         float line_height = 0.3f;   ///< Of a drawn line's crests at first

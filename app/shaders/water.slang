@@ -150,9 +150,9 @@ float3 ripples(float2 at)
 // The pools' waves (park/pool_waves.hpp, whose look these follow): rows 2 to 5 of the ripples' texture, one
 // wave a column.
 static const float kPoolSpeed = 3.0;
-static const float kPoolReach = 5.0;
-static const float kPoolCut = 16.0;
-static const float kPoolSpread = 0.35;
+static const float kPoolReach = 8.0;
+static const float kPoolCut = 14.0;
+static const float kPoolSpread = 0.25;
 static const float kFrontSoft = 0.75;
 static const float kPoolRamp = 2.0;
 static const float kLineSpeed = 3.5;
@@ -202,8 +202,11 @@ float2 pool_wave_height(float2 at, float time)
             const float across = saturate((half_front + kFrontSoft - out) / (2.0 * kFrontSoft)) * sqrt(timing.w / half_front);
             const float phase = fmod(left, max(max(timing.z, timing.y), 1.0));
             const float running = saturate(phase / kPoolRamp) * saturate((timing.y - phase) / kPoolRamp);
-            h = shape.y * running * sin(timing.x * left) * exp(-d / kPoolReach) * across * saturate(kPoolCut - d);
-            f = smoothstep(kPoolFoam, 1.0, h / shape.y);
+            const float lifted = running * exp(-d / kPoolReach) * across * saturate(kPoolCut - d);
+            const float wave = sin(timing.x * left);
+            h = shape.y * lifted * wave;
+            // Foam on every crest while the front still stands up, thinning as it dies.
+            f = smoothstep(kPoolFoam, 1.0, wave) * saturate(2.5 * lifted);
         }
         else if (shape.x < 2.5)
         {

@@ -327,6 +327,17 @@ namespace rct3::scene
             return tiles;
         };
         scene.footpaths.pavings = park::ride_pavings(scene.rides, [&](const save::PlacementSpot& spot) { return footprint_of(spot, false); }, [&](const save::PlacementSpot& spot) { return footprint_of(spot, true); });
+        // A changing room's floor is paved as a stall's is, opening onto the tile on its side away from the pool.
+        constexpr std::array<std::array<std::int32_t, 2>, 4> kSideStep { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } }; // By turn, as park/pools.hpp turns
+        for (const park::PoolRoom& room : scene.pools.rooms)
+        {
+            const auto o = std::ranges::find_if(scene.objects, [&](const save::PlacedObject& p) { return p.col == room.col && p.row == room.row && p.symbol == room.symbol; });
+            if (o == scene.objects.end())
+                continue;
+            const auto [dc, dr] = kSideStep[static_cast<std::size_t>(room.turn & 3)];
+            const save::Tile door { room.col - dc, room.row - dr };
+            scene.footpaths.pavings.push_back({ .tiles = { { room.col, room.row } }, .height = o->base_height.value_or(0), .source = door, .links = { door }, .owner = o->id });
+        }
         scene.footpaths.pavings_stale = true;
     }
 

@@ -565,6 +565,7 @@ namespace rct3::scene
         std::vector<save::PoolWater>& water = scene.footpaths.pools;
         water.resize(scene.saved_pool_water);
         std::ranges::copy(park::pool_water(scene.pools), std::back_inserter(water));
+        refresh_pavings(scene); // The changing rooms pave their floors
         rebuild_ground(device, scene, assets, touched);
     }
 

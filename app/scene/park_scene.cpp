@@ -3201,12 +3201,20 @@ namespace rct3::scene
                         else
                             r.destroy(e);
                     }
+                    // Saved lifeguards too: their saved heading is wherever they were looking about at the time.
                     for (const std::size_t c : chairs)
-                        if (std::ranges::none_of(lifeguards, [&](entt::entity e) { return r.valid(e) && seated(e, c); }))
+                    {
+                        // Facing out over the front of the chair, which its model has along -Z.
+                        const glm::mat4& m = scene.places.transforms[c];
+                        const simulation::Radians facing { std::atan2(-m[2][0], -m[2][2]) };
+                        if (const auto sitter = std::ranges::find_if(lifeguards, [&](entt::entity e) { return r.valid(e) && seated(e, c); }); sitter != lifeguards.end())
                         {
-                            const glm::mat4& m = scene.places.transforms[c];
-                            (void)simulation::add_lifeguard(scene.sim, scene.anchors[c], { std::atan2(m[2][0], m[2][2]) });
+                            auto& pose = r.get<simulation::Pose>(*sitter);
+                            pose.heading = pose.was_heading = facing;
                         }
+                        else
+                            (void)simulation::add_lifeguard(scene.sim, scene.anchors[c], facing);
+                    }
                 }
                 // What is broken looks it, and looks whole again once mended.
                 park::Broken broken;

@@ -159,28 +159,33 @@ camera.look({ col: c0 + 7.5, row: r0 + 4.5, up: 2 }, { col: c0 + 3.5, row: r0 + 
 await frames(10);
 await screenshot("pool_high_dive");
 // One on each of the other sides. Each one's boards cover three squares in a row, the tower's in the middle,
-// named by the first; their tip reaches out over the water square in front of the tower.
-for (const [col, row] of [[c0 + 4, r0 + 7], [c0 + 5, r0], [c0, r0 + 5]])
+// named by the first; their tip reaches out over the water square in front of the tower. The one on the far side
+// is dragged up to five levels, as high as the tower a saved park has (pool_dives.ts), to be seen alike from above.
+for (const [col, row, up] of [[c0 + 4, r0 + 7, 0.08], [c0 + 5, r0, 0.2], [c0, r0 + 5, 0.08]])
 {
     camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col + 0.5, row: row + 3, up: 12 });
     await frames(10);
     const at = on_view(col + 0.5, row + 0.5);
-    await pointer.drag(at, [at[0], at[1] - 0.08], 8);
+    await pointer.drag(at, [at[0], at[1] - up], 8);
     await frames(3);
 }
 const boards = (col: number, row: number) => map.objects().some((o) => o.overlay === kPool && o.symbol === "DBTopBoard" && o.col === col && o.row === row);
+expect(map.objects().some((o) => o.overlay === kPool && o.symbol === "DBTopBoard" && o.col === c0 + 5 && o.height === 14), "the far tower five levels high");
 expect(boards(c0 + 6, r0 + 4) && boards(c0 + 4, r0 + 6) && boards(c0 + 5, r0 - 1) && boards(c0 - 1, r0 + 5), `four towers' boards over their pool, not ${JSON.stringify(pieces().filter((o) => o.symbol === "DBTopBoard"))}`);
+// The tool put away first, so no square is shown laid under the pointer.
+build.stop();
 camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 4.5, up: 30 });
 await frames(10);
 await screenshot("pool_high_dives_above");
-// Each from straight over the water in front of it, its boards reaching out over that square, across the wall.
+// Each from straight over the water in front of it, its boards reaching out over that square, across the wall,
+// to be seen alike with the saved park's tower in pool_dives.ts.
 for (const [col, row, dc, dr, name] of [[c0 + 7, r0 + 4, -1, 0, "east"], [c0 + 4, r0 + 7, 0, -1, "south"], [c0 + 5, r0, 0, 1, "north"], [c0, r0 + 5, 1, 0, "west"]] as const)
 {
-    camera.look({ col: col + 0.5 + dc, row: row + 0.5 + dr }, { col: col + 0.5 + dc, row: row + 0.6 + dr, up: 30 });
+    // Leaning a touch across the boards, not along them, so their height does not slide them on the view.
+    camera.look({ col: col + 0.5 + dc, row: row + 0.5 + dr }, { col: col + 0.5 + dc + 0.1 * Math.abs(dr), row: row + 0.5 + dr + 0.1 * Math.abs(dc), up: 30 });
     await frames(10);
     await screenshot(`pool_high_dive_${name}`);
 }
-build.stop();
 camera.look({ col: c0 + 1.5, row: r0 + 2.5 }, { col: c0 + 4, row: r0 + 6, up: 3 });
 await frames(10);
 await screenshot("pool_extras");

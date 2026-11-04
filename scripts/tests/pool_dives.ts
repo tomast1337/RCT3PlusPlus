@@ -39,6 +39,10 @@ for (const [name, dc, dr] of [["pool_dives_tower", 6, 4], ["pool_dives_tower_bac
     await frames(5);
     await screenshot(name);
 }
+// And from straight over the water square in front of it, as pools.ts shows the towers it lays.
+camera.look({ col: base.col + 1.5, row: base.row + 0.5 }, { col: base.col + 1.5, row: base.row + 0.6, up: 30 });
+await frames(5);
+await screenshot("pool_dives_tower_above");
 
 const diver = (high: boolean, step?: string) => people.list().findIndex((p) => p.diving !== undefined && p.high_board === high && (step === undefined || p.diving === step));
 const look_at = async (i: number, name: string, behind = false) => {

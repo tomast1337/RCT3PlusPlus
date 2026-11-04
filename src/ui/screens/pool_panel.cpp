@@ -118,7 +118,7 @@ namespace rct3::ui
             {
                 Button& b = body_->add<Button>(c.icon, std::string { }, c.icon);
                 b.tooltip = c.help;
-                b.icon_scale = (pool_panel::kCell - 4) / info_panel::kIconSize;
+                b.icon_fit = pool_panel::kCell - 4; // A changing room's picture is bigger than an extra's
                 b.swell = 2;
                 choices_.push_back(&b);
             }

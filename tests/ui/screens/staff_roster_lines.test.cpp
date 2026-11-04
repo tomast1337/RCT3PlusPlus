@@ -43,6 +43,14 @@ TEST_CASE("the staff list starts without the vendors and shows or hides each job
     CHECK(roster_lines(facts, s, 0, RosterSort::Job).empty());
 }
 
+TEST_CASE("the staff list never shows lifeguards, whatever the switches")
+{
+    const StringTable s;
+    save::PeopleModel people;
+    people.staff = { worker(save::StaffKind::LifeGuard, "Lu"), worker(save::StaffKind::Handyman, "Hal") };
+    CHECK(names(roster_lines({ .people = &people }, s, kAllRosterJobs, RosterSort::Job)) == List { u"Hal" });
+}
+
 TEST_CASE("sorted by job the staff follow the switches' order, then the park's")
 {
     const StringTable s;

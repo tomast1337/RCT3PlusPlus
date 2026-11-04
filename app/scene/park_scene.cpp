@@ -3113,6 +3113,8 @@ namespace rct3::scene
                         }
                 }
                 // One lifeguard sits in each lifeguard chair, come with it and gone with it, as the game has them.
+                // shortcut: a sacked lifeguard's chair gets a new one when the chairs next change; match the game once
+                // what it does with the empty chair is known.
                 if (scene.chairs_changed && scene.anchors.size() == scene.objects.size() && scene.places.transforms.size() == scene.objects.size() && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
                 {
                     scene.chairs_changed = false;

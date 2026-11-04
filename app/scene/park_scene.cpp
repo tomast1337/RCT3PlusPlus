@@ -2271,7 +2271,7 @@ namespace rct3::scene
             update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, over, input.shift, input.commands);
             update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, elapsed);
             update_enclosing(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over);
-            update_pooling(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, typing(scene) ? std::span<const ui::PlayCommand> { } : std::span(input.commands));
+            update_pooling(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, input.shift, typing(scene) ? std::span<const ui::PlayCommand> { } : std::span(input.commands));
             // A changing room just placed opens its window, on the tab last open in a room's.
             if (const auto room = scene.pooling.room_placed)
                 for (std::size_t i = 0; i < scene.objects.size(); ++i)

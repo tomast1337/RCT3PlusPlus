@@ -489,3 +489,32 @@ expect(count("PathSlope") === 1, `a slope, not ${count("PathSlope")}`);
 build.stop();
 await frames(5);
 await screenshot("pool_paths");
+
+// Below the raised squares, two paved squares raised with Shift: held over the first, the pointer moved up the
+// screen lifts its surface; the drag then lays both at that height. Let go of, the surface follows the ground again.
+await open_editor();
+await ui.click("pool_panel/body/editor/Pool_PlaceTiles");
+await frames(2);
+const lift = on_view(c0 + 2.5, r0 + 6.5);
+pointer.move(...lift);
+await frames(3);
+pointer.shift(true);
+for (let i = 1; i <= 6; ++i)
+{
+    pointer.move(lift[0], lift[1] - i * 0.015);
+    await frames(1);
+}
+await frames(3);
+pointer.press();
+await frames(2);
+pointer.move(...on_view(c0 + 3.5, r0 + 6.5));
+await frames(3);
+pointer.release();
+pointer.shift(false);
+await frames(3);
+const lifted = pieces().filter((o) => o.symbol === "SolidTop" && o.row === r0 + 6);
+expect(lifted.length === 2 && lifted.every((o) => o.height !== null && o.height >= level + 2), `two squares raised with Shift, not ${JSON.stringify(lifted)} over ${level}`);
+build.stop();
+camera.look({ col: c0 + 3, row: r0 + 6.5 }, { col: c0 + 3, row: r0 + 11, up: 4 });
+await frames(10);
+await screenshot("pool_shift_raised");

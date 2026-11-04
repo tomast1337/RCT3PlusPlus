@@ -278,7 +278,16 @@ namespace rct3::scene
         std::int32_t board = park::kBoardLevel; ///< A high diving board's or a staircase's height, from the drag
         std::int32_t worked_board = 0;          ///< And the turn and height of the work shown
         std::int32_t worked_turns = 0;
-        bool faces = true; ///< The work shown is no high diving board facing away from the water
+        /// While Shift is held: where the pointer was when it went down, in tiles, and the surface there then
+        struct Lift
+        {
+            glm::vec2 spot { 0.0f };
+            std::int32_t surface = 0;
+        };
+        std::optional<Lift> lift;
+        std::optional<std::int32_t> lifted;        ///< The surface Shift raised or lowered the squares to, until let go
+        std::optional<std::int32_t> worked_lifted; ///< And the one of the work shown
+        bool faces = true;                         ///< The work shown is no high diving board facing away from the water
         /// The extra or changing room where it would go, drawn see-through, and whether it may go there.
         std::optional<save::PlacedObject> ghost_of;
         bool ghost_ok = false;

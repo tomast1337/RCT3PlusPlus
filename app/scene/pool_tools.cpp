@@ -127,11 +127,11 @@ namespace rct3::scene
                 const std::int64_t cost = park::take_up_pool(map, prices, a, b);
                 return { std::move(map), cost };
             }
-            // Snapped to the ground, the surface is the ground's where the drag began, or the surface of the pool
-            // begun there; else the height the pool panel sets. Raised, a pool stands on the land raised to its
-            // floor (pools_changed).
+            // Raised or lowered with Shift, the surface is where Shift took it. Snapped to the ground, it is the
+            // ground's where the drag began, or the surface of the pool begun there; else the height the pool panel
+            // sets. Raised, a pool stands on the land raised to its floor (pools_changed).
             const auto begun = scene.pools.at(a.col, a.row);
-            const std::int32_t surface = scene.pooling.height.value_or(begun ? begun->surface : static_cast<std::int32_t>(std::lround(scene.grid.at(a.col, a.row).max_height())));
+            const std::int32_t surface = scene.pooling.lifted.value_or(scene.pooling.height.value_or(begun ? begun->surface : static_cast<std::int32_t>(std::lround(scene.grid.at(a.col, a.row).max_height()))));
             const auto water = std::ranges::find(park::kPoolWater, item.symbol);
             const park::PoolKind kind = water != park::kPoolWater.end() ? park::PoolKind::Water : item.symbol == park::kPoolJacuzzi ? park::PoolKind::Jacuzzi : item.symbol == park::kPoolHighDive ? park::PoolKind::HighDive : item.symbol == park::kPoolStairs ? park::PoolKind::Stairs : item.symbol == park::kPoolPath ? park::PoolKind::Path : item.symbol == park::kPoolPathSlope ? park::PoolKind::PathSlope : item.symbol == park::kPoolPathStairs ? park::PoolKind::PathStairs : park::PoolKind::Tile;
             const bool climbs = kind == park::PoolKind::HighDive || kind == park::PoolKind::Stairs;
@@ -416,15 +416,42 @@ namespace rct3::scene
         panel->show(choices(extras), choices(rooms));
     }
 
-    void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, std::span<const ui::PlayCommand> commands)
+    void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, bool shift, std::span<const ui::PlayCommand> commands)
     {
         follow_panel(scene);
         PoolTool& t = scene.pooling;
         t.room_placed.reset(); // Its window opened, and the click that placed it was not taken as a pick
         // The pointer finds the park as it was before the work shown, which moves with it.
         swap_pool_work(scene);
-        const auto spot = t.item && !over ? pointed_spot(scene, at, size) : std::nullopt;
+        auto spot = t.item && !over ? pointed_spot(scene, at, size) : std::nullopt;
         swap_pool_work(scene);
+        // Held before a drag, Shift keeps the square under the pointer and raises or lowers its surface with the
+        // pointer, as it lifts scenery; the drag then lays the squares at that height. Let go of before a drag, the
+        // surface goes back.
+        const bool squares = t.item && t.item->kind == park::BuildKind::PoolSquare;
+        if (!shift && !t.corner)
+        {
+            t.lift.reset();
+            t.lifted.reset();
+        }
+        else if (shift && squares && !t.corner && size.x > 0 && size.y > 0)
+        {
+            if (!t.lift && spot)
+            {
+                const save::Tile tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+                const auto square = scene.pools.at(tile.col, tile.row);
+                t.lift = PoolTool::Lift { .spot = *spot, .surface = t.height.value_or(square ? square->surface : static_cast<std::int32_t>(std::lround(scene.grid.at(tile.col, tile.row).max_height()))) };
+            }
+            if (t.lift)
+            {
+                const save::TerrainGrid& g = scene.grid;
+                const glm::vec3 lift_at { g.origin_x + t.lift->spot.x * g.tile_size_x, static_cast<float>(t.lift->surface), g.origin_z + t.lift->spot.y * g.tile_size_z };
+                const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
+                if (const auto h = lifted_height(ray, lift_at, t.lift->surface))
+                    t.lifted = std::clamp(*h, ui::pool_panel::kHeightLowest, ui::pool_panel::kHeightHighest);
+                spot = t.lift->spot;
+            }
+        }
         for (const ui::PlayCommand c : commands)
         {
             if (c == ui::PlayCommand::TurnItemRight)
@@ -486,7 +513,7 @@ namespace rct3::scene
         // biggest parks); rebuild only the squares touched once the ground mesh is in chunks and objects can be
         // added to the built ones.
         const bool letting_go = !dragging && t.corner && t.other;
-        if ((working != t.working || t.board != t.worked_board || t.turns != t.worked_turns) && (letting_go || !scene.object_build.valid()))
+        if ((working != t.working || t.board != t.worked_board || t.turns != t.worked_turns || t.lifted != t.worked_lifted) && (letting_go || !scene.object_build.valid()))
         {
             bool changed = put_back(scene);
             // The work shown before and now, with the walls and railings round each.
@@ -502,6 +529,7 @@ namespace rct3::scene
             t.working = working;
             t.worked_board = t.board;
             t.worked_turns = t.turns;
+            t.worked_lifted = t.lifted;
             if (working)
             {
                 auto [map, cost] = marked_pools(scene, working->first, working->second);
@@ -545,6 +573,8 @@ namespace rct3::scene
             t.corner.reset();
             t.other.reset();
             t.press_y.reset();
+            t.lift.reset();
+            t.lifted.reset();
         }
         const auto marks = working ? std::optional(marked(working->first, working->second)) : std::nullopt;
         draw_marks(device, scene, marks, park::TilePart::Whole, !working || t.ok);

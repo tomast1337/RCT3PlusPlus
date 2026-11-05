@@ -81,6 +81,21 @@ TEST_CASE("a guest wishing to swim pays at the changing room, swims for their st
     CHECK(park.world().paths.nearest(r.get<Pose>(guest).position) == r.get<Attraction>(room).entrance);
 }
 
+TEST_CASE("a pool takes so many swimmers for its water and no more")
+{
+    Sandbox park;
+    pool_by_path(park);
+    auto& r = park.world().registry;
+    const entt::entity room = room_of(r);
+    const auto room_for = static_cast<std::size_t>(kTuning.pools.crowd * static_cast<float>(r.get<SwimPool>(r.get<PoolDoor>(room).pool).water.size()));
+    std::vector<entt::entity> keen;
+    for (std::size_t i = 0; i < room_for + 4; ++i)
+        keen.push_back(park.guest({ static_cast<std::int32_t>(i % 4), 0 }, { .swim = 0.9f, .cash = 1000 }));
+    park.run_seconds(60);
+    CHECK(r.get<Attraction>(room).customers == room_for);
+    CHECK(std::ranges::count_if(keen, [&](entt::entity g) { return r.get<Errand>(g).kind == ErrandKind::Swimming; }) == static_cast<std::ptrdiff_t>(room_for));
+}
+
 TEST_CASE("nobody swims on a cold day, and those wishing to think it too cold")
 {
     Sandbox park;
@@ -268,7 +283,10 @@ TEST_CASE("swimmers lie on loungers and stand under showers, as many as they tak
         park::PoolMap pools;
         pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
         pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::Tile });
-        pools.squares.push_back({ .col = 5, .row = 3 });
+        // Water enough for them all.
+        for (std::int32_t row = 3; row < 11; ++row)
+            for (std::int32_t col = 4; col < 7; ++col)
+                pools.squares.push_back({ .col = col, .row = row });
         pools.extras.push_back({ .symbol = "Extra", .col = 6, .row = 2, .turn = 1, .fit = { .lounger = lounger, .shower = !lounger } });
         pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
         import_pools(park.world(), pools);
@@ -280,7 +298,7 @@ TEST_CASE("swimmers lie on loungers and stand under showers, as many as they tak
         const std::size_t places = lounger ? kTuning.pools.lounger_places : kTuning.pools.shower_places;
         CHECK(spot.places == places);
         std::vector<entt::entity> guests;
-        for (int i = 0; i < 20; ++i)
+        for (int i = 0; i < 48; ++i)
             guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
         std::size_t most = 0, waiting = 0;
         for (int t = 0; t < 4 * static_cast<int>(kTuning.pools.stay.value); ++t)

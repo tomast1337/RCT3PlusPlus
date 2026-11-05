@@ -74,6 +74,23 @@ namespace rct3::simulation
             bool splash;
         };
 
+        /// Whether `pool` has as many guests as it takes: those changing, swimming or on its rides, by the room they
+        /// came in at or swim on from, and with `on_way` those walking to one of its rooms.
+        bool pool_full(const entt::registry& r, entt::entity pool, bool on_way)
+        {
+            const auto* water = r.valid(pool) ? r.try_get<SwimPool>(pool) : nullptr;
+            if (water == nullptr)
+                return false;
+            std::size_t n = 0;
+            for (const auto [e, errand] : r.view<const Errand>().each())
+            {
+                const auto* swimmer = r.try_get<Swimmer>(e);
+                const entt::entity room = errand.kind == ErrandKind::Swimming || (on_way && errand.kind == ErrandKind::Heading) ? errand.target : swimmer != nullptr ? swimmer->room : entt::null;
+                n += r.valid(room) && r.all_of<PoolDoor>(room) && r.get<PoolDoor>(room).pool == pool;
+            }
+            return static_cast<float>(n) >= kTuning.pools.crowd * static_cast<float>(water->water.size());
+        }
+
         std::vector<Offer> offers(const entt::registry& r)
         {
             std::vector<Offer> out;
@@ -92,8 +109,13 @@ namespace rct3::simulation
                         if (stop.entrance != kNoNode)
                             out.push_back({ e, AttractionKind::Ride, Product::Drink, stop.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash });
                 }
-                else if (r.all_of<PoolDoor>(e))
+                else if (const auto* door = r.try_get<PoolDoor>(e))
+                {
+                    // A full pool is not on offer till some leave.
+                    if (pool_full(r, door->pool, true))
+                        continue;
                     out.push_back({ e, AttractionKind::Pool, Product::Drink, a.entrance, a.price.value, 0, 0, Serve::Any, false });
+                }
             }
             return out;
         }
@@ -3570,6 +3592,12 @@ namespace rct3::simulation
                 const auto swim = [&](entt::entity g) {
                     auto& attraction = r.get<Attraction>(arrived[i]);
                     const bool inspector = r.all_of<Staff>(g);
+                    // Those who set out for it together may find it full.
+                    if (pool_full(r, pool, false))
+                    {
+                        r.get<Errand>(g) = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
+                        return;
+                    }
                     if (attraction.open && !inspector && attraction.price.value > worth && attraction.price.value <= r.get<Wallet>(g).cash.value)
                     {
                         auto& happiness = r.get<Mood>(g).happiness.value;

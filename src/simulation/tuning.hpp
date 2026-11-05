@@ -522,8 +522,13 @@ namespace rct3::simulation::tuning
     /// Swimming pools.
     struct Pools
     {
-        PerSecond longing = PerSecond::over({ 1500 }); ///< Wish to swim grown in a guest who likes pools fully; slower as they like them less
-        Share least_liking { 0.1f };                   ///< Guests like pools from this much to `most_liking`, as saved guests do
+        // Fitted to saves: parks saved on a 26 to 27 degree day with a pool as their main attraction have about half
+        // their guests at it (from 30 to 60 in a hundred), so a guest who likes pools swims soon after coming in.
+        PerSecond longing = PerSecond::over({ 300 }); ///< Wish to swim grown in a guest who likes pools fully; slower as they like them less
+        // Fitted to saves: big parks with many guests wishing for a swim hold 1.4 to 1.6 swimmers a square of water
+        // in their pools, the fullest saved pool 2.4.
+        float crowd = 2.0f;          ///< Swimmers a pool takes for each square of its water, counting those on their way, changing and on its rides; no more set out for it
+        Share least_liking { 0.1f }; ///< Guests like pools from this much to `most_liking`, as saved guests do
         Share most_liking { 0.9f };
         Degrees cool { 20 };         ///< Chosen by eye: under which a guest must wish for a swim the more before going
         Share chill { 0.03f };       ///< Chosen by eye: more wish for each degree under `cool`; on a cold enough day none is enough

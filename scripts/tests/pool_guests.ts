@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Guests swim. On the game's blank landscape a pool goes in beside the road, paved round with water in the
-// middle, and a changing room between the road and the pool, opened. On a warm day guests come in: those
-// wishing for a swim pay at the room, change out of sight and swim, in their swimwear, and lie on the sun loungers
-// and stand under the shower along the far side.
+// middle, and a changing room between the road and the pool, opened. On a warm day guests come in, a good share of
+// them to swim: those wishing for a swim pay at the room, change out of sight and swim, in their swimwear, and lie
+// on the sun loungers and stand under the shower along the far side.
 //
 //   ./nob script scripts/tests/pool_guests.ts -- --no-intro --no-audio --seed 1
 
@@ -91,6 +91,10 @@ const swimmers = () => people.list().filter((p) => p.state === "swimming");
 const in_pool = () => swimmers().filter((p) => p.col !== undefined && p.col > c + 3.2 && p.col < c + 6.8 && p.row! > r + 0.2 && p.row! < r + 2.8);
 await until(() => in_pool().length >= 4, 6000, `guests in the pool (${JSON.stringify(swimmers())})`);
 log("swimming", swimmers().length, "in sight", in_pool().length, JSON.stringify(swimmers().slice(0, 6)), "pool at", c + 3, r);
+// On a warm day a good share of the guests swim, as many as half the room twelve squares of water make, at the least.
+const guests = () => people.list().filter((p) => !p.staff && !p.leaving).length;
+await until(() => swimmers().length >= Math.min(0.15 * guests(), 12), 3000, `a share of the guests swimming (${swimmers().length} of ${guests()})`);
+log("share swimming", swimmers().length, "of", guests());
 log("cash", cash, "then", park.cash());
 if (cash !== undefined)
     await until(() => park.cash()! > cash, 600, "the tickets paid");

@@ -294,7 +294,7 @@ declare namespace build {
     /** What building gave to be heard: how many thumps of something put down were asked for since the park opened
      * (several close together are heard as one), and while a shaping stroke goes the loudness of its rumble, 0..1. */
     function sounds(): { thumps: number; rumble: number | null };
-    /** Puts the placing tool or the enclosure tool away, as a right click does. */
+    /** Puts the placing tool or the enclosure tool away, as a right click does a ride's. */
     function stop(): void;
     /** While an enclosure drag is held: what letting go would cost in hundredths (below 0 when it pays back),
      * and how many tiles it would take in or out; undefined otherwise. */

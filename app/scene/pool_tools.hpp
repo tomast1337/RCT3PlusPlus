@@ -12,7 +12,9 @@
 // changing room picked, it follows the pointer as a see-through ghost on the square under it, red where it does
 // not fit (park/pools.hpp) or cannot be paid for, and shows alone, turning, in the panel's disc; the turn keys
 // turn it a quarter. A click puts an extra in there. A changing room must open on a paved square of a pool; a
-// click builds it there once: the tool and the panel go, and the room's window opens. A right click, or picking another tool, puts the tool away.
+// click builds it there once: the tool and the panel go, and the room's window opens. With any of the tools out,
+// a right click takes up the square pointed at as the delete tool does, or deletes what else is there as the
+// delete menu's tool does; the tool stays out. Picking another tool puts it away.
 #pragma once
 
 #include "park/build_catalogue.hpp"
@@ -49,6 +51,10 @@ namespace rct3::scene
     /// Takes up the pool complex the changing room `room` (of the pools' rooms) opens on, its squares, extras
     /// and rooms, refunded as the delete tool refunds them.
     void delete_pool_complex(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t room);
+
+    /// A right click at `at`, in a view of `size`, with a pool tool out: takes up the top pool square pointed at,
+    /// with what stands on it, refunded as the delete tool refunds it. False when no square is there.
+    bool delete_pool_square(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size);
 
     /// Draws the extra or changing room picked, see-through where it would go.
     void draw_pool_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);

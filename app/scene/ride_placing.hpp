@@ -12,7 +12,8 @@
 // beside its station, walled and paved as a flat ride's; with both, it runs on the track built for it as the
 // flat rides do. A new ride of either kind takes its theme's fence.
 //
-// Scenery picked in the lists is placed the same way, one item a click until the tool is put away: centred
+// Scenery picked in the lists is placed the same way, one item a click until the tool is put away (a right click
+// there deletes what is under the pointer, as the delete menu's tool does, and leaves the tool out): centred
 // on the tile pointed at, in the quarter of it pointed at for quarter-tile items, on the ground or on top of
 // the thing pointed at, which is how roofs go onto walls. While Shift is held the item stays on its tile and
 // rises and sinks with the pointer. An item may not take room another solid item or a path fills. A round

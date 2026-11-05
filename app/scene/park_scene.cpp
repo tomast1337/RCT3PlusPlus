@@ -2320,6 +2320,25 @@ namespace rct3::scene
                 deleting.drawn = marks;
             }
             update_structure_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, input.shift, input.commands);
+            // What the delete menu's tool takes at `at`: an attraction is asked about first; a changing room, a prop
+            // or a path goes at once, and the tool stays out.
+            const auto delete_under = [&](ui::Point at, ui::Point size) {
+                const Picked picked = picked_at(scene, at, size);
+                if (picked.attraction)
+                    ask_demolish(scene, *assets.strings, assets.palette, { *picked.attraction });
+                else if (const auto room = picked.prop ? pool_room(scene, scene.objects[*picked.prop]) : std::nullopt)
+                {
+                    scene.pools.rooms.erase(scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room));
+                    pools_changed(device, scene, assets);
+                }
+                else if (picked.prop)
+                    delete_props(device, scene, assets, std::span(&*picked.prop, 1));
+                else if (const auto path = footpath_at(scene, at, size))
+                    delete_paths(device, scene, assets, std::span(&*path, 1));
+                // What was taken stays among the objects, hidden: the tools out see its room free again.
+                scene.placing.solids_of = static_cast<std::size_t>(-1);
+                scene.footpaths.solids_of = static_cast<std::size_t>(-1);
+            };
             // A click is the left button pressed and let go over the park without the pointer going far.
             if (pointer.down && !scene.press && !over && !input.right && !input.middle)
             {
@@ -2358,16 +2377,7 @@ namespace rct3::scene
                     }
                 }
                 else if (still && !over && scene.deleting.tool == DeleteTools::Tool::One)
-                {
-                    // An attraction is asked about first; a prop or a path goes at once, and the tool stays out.
-                    const Picked picked = picked_at(scene, pointer.position, { screen.width(), screen.height() });
-                    if (picked.attraction)
-                        ask_demolish(scene, *assets.strings, assets.palette, { *picked.attraction });
-                    else if (picked.prop)
-                        delete_props(device, scene, assets, std::span(&*picked.prop, 1));
-                    else if (const auto path = footpath_at(scene, pointer.position, { screen.width(), screen.height() }))
-                        delete_paths(device, scene, assets, std::span(&*path, 1));
-                }
+                    delete_under(pointer.position, { screen.width(), screen.height() });
                 else if (still && !over && (structure_tools_click(device, scene, assets) || ride_placing_click(device, scene, assets) || track_building_click(scene, assets, pointer.position, { screen.width(), screen.height() })))
                     ;
                 else if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }, input.control))
@@ -2395,7 +2405,8 @@ namespace rct3::scene
             }
             if (input.right || input.middle)
                 scene.press.reset();
-            // A right click on a path while the path panel shows its controls sells it.
+            // A right click deletes what is under the pointer with the tools that build things one by one, as the
+            // delete menu's tool does, and the tool stays out; the other tools are put away.
             if (input.right && !scene.right_press && !over)
                 scene.right_press = pointer.position;
             else if (!input.right && scene.right_press)
@@ -2406,16 +2417,23 @@ namespace rct3::scene
                 const bool still = std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack;
                 if (!still)
                     ;
-                else if (ride_placing(scene))
-                    stop_ride_placing(scene); // A right click puts the placing away, as in the game
+                else if (ride_placing(scene) && scene.placing.step != RidePlacing::Step::Scenery)
+                    stop_ride_placing(scene);
                 else if (scene.structures.tool != StructureTools::Tool::None)
                     stop_structure_tools(scene);
-                else if (scene.deleting.tool != DeleteTools::Tool::None)
+                else if (scene.deleting.tool == DeleteTools::Tool::Area)
                     stop_deleting(scene);
-                else if (scene.enclosing.item)
-                    stop_enclosing(scene);
                 else if (scene.pooling.item)
-                    stop_pooling(scene);
+                {
+                    // A pool tool takes up the pool square pointed at first.
+                    if (!over && !delete_pool_square(device, scene, assets, pointer.position, { screen.width(), screen.height() }))
+                        delete_under(pointer.position, { screen.width(), screen.height() });
+                }
+                else if (ride_placing(scene) || scene.deleting.tool == DeleteTools::Tool::One || scene.enclosing.item)
+                {
+                    if (!over)
+                        delete_under(pointer.position, { screen.width(), screen.height() });
+                }
                 else if (land_tool(scene))
                 {
                     if (!delete_waterfall(device, scene, assets, pointer.position, { screen.width(), screen.height() }))

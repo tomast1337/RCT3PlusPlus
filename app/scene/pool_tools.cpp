@@ -774,6 +774,44 @@ namespace rct3::scene
         pools_changed(device, scene, assets);
     }
 
+    bool delete_pool_square(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size)
+    {
+        PoolTool& t = scene.pooling;
+        if (!t.item)
+            return false;
+        // The work shown goes first, so the square pointed at is one built; it is shown again on the next frame.
+        const bool shown = put_back(scene);
+        t.working.reset();
+        const auto spot = pointed_spot(scene, at, size);
+        const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
+        const auto top = tile ? scene.pools.at(tile->col, tile->row) : std::nullopt;
+        const auto& items = scene.build.items;
+        const bool ready = items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+        const auto type = ready ? std::ranges::find_if(items.get(), [](const park::BuildItem& i) { return i.overlay == park::kPoolOverlay && i.pool_prices.size() == 18; }) : decltype(items.get().end()) { };
+        if (!top || !ready || type == items.get().end())
+        {
+            if (shown)
+                pools_changed(device, scene, assets);
+            return false;
+        }
+        // The top square there goes as the delete tool takes it up, with what stands on it, the ground it dug put back.
+        const std::int32_t level = top->surface;
+        park::PoolMap map = scene.pools;
+        const std::int64_t cost = park::take_up_pool(map, std::span<const std::int32_t, 18>(type->pool_prices.data(), 18), *tile, *tile, level);
+        for (const park::PoolSquare& s : scene.pools.squares)
+            if (const auto now = map.at(s.col, s.row, s.surface); s.ground && (!now || now->surface != s.surface))
+                scene.grid.at(s.col, s.row).corners = *s.ground;
+        scene.pools = std::move(map);
+        ++scene.built;
+        if (scene.park.cash)
+            *scene.park.cash -= cost;
+        if (cost != 0)
+            float_money(scene, tile_point(scene.grid, *tile), -cost);
+        scene.supports.stale = true;
+        pools_changed(device, scene, assets);
+        return true;
+    }
+
     void draw_pool_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {
         if (scene.pooling.item && !scene.pooling.ghost.vertices.empty())

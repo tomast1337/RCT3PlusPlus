@@ -43,8 +43,9 @@ namespace rct3::park
         /// forward) holds `symbol`, the full stored name with its tag ("Bench:sid").
         void add(std::string_view symbol, std::string_view path);
 
-        /// The overlay holding `symbol`, nearest to `near` (an overlay path in the same form) when several do.
-        [[nodiscard]] std::optional<std::string> find(std::string_view symbol, std::string_view near) const;
+        /// The overlay holding `symbol`, nearest to `near` (an overlay path in the same form) when several do;
+        /// of them, one inside the folder `inside` (in the same form, ending in a slash) first, when given.
+        [[nodiscard]] std::optional<std::string> find(std::string_view symbol, std::string_view near, std::string_view inside = { }) const;
 
         /// `hint` as an indexed overlay path: slashes made forward, case matched to the files. Nothing when
         /// no such overlay is indexed.

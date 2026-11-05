@@ -29,6 +29,18 @@ TEST_CASE("of several files with a symbol, the nearest wins")
     CHECK(index.find("Rail:shs", "rides\\track2\\Track2") == "Rides/Track2/Track2");
 }
 
+TEST_CASE("of several files with a symbol, one inside the folder asked for wins")
+{
+    AssetIndex index;
+    index.add("Post1m:svd", "Props/Golf/Post1m");
+    index.add("Post1m:svd", "Props/Pier/Post1m");
+    index.add("Post1m:svd", "Props/PierSmall/Post1m");
+    CHECK(index.find("Post1m:svd", "Props/Main") == "Props/Golf/Post1m");
+    CHECK(index.find("Post1m:svd", "Props/Main", "Props/pier/") == "Props/Pier/Post1m");
+    // None inside it: the nearest as ever, not the one sharing most of the folder's name.
+    CHECK(index.find("Post1m:svd", "Props/Main", "Props/Pi/") == "Props/Golf/Post1m");
+}
+
 TEST_CASE("an overlay hint is matched to the files")
 {
     AssetIndex index;

@@ -19,7 +19,7 @@ namespace rct3::park
     namespace
     {
 
-        constexpr std::uint8_t kSides = 4;
+        constexpr std::uint8_t kSideCount = 4;
 
         /// A piece unturned: its open sides and filled corners, a bit each.
         struct Pattern
@@ -48,22 +48,11 @@ namespace rct3::park
         } };
 
         /// The corners of a tile (in the terrain's order) on each side's edge.
-        constexpr std::array<std::array<std::size_t, 2>, kSides> kEdgeCorners { { { 2, 3 }, { 1, 3 }, { 0, 1 }, { 0, 2 } } };
+        constexpr std::array<std::array<std::size_t, 2>, kSideCount> kEdgeCorners { { { 2, 3 }, { 1, 3 }, { 0, 1 }, { 0, 2 } } };
 
-        constexpr std::uint8_t rotated_bits(std::uint8_t bits, std::uint8_t turns) noexcept
+        constexpr std::uint8_t rotated_bits(std::uint8_t bits, ModelTurn turn) noexcept
         {
-            return static_cast<std::uint8_t>(((bits << turns) | (bits >> (kSides - turns))) & 0b1111);
-        }
-
-        constexpr std::uint8_t next_side(std::uint8_t side, std::uint8_t by) noexcept
-        {
-            return static_cast<std::uint8_t>((side + by) % kSides);
-        }
-
-        std::array<int, 2> across(int col, int row, std::uint8_t side) noexcept
-        {
-            constexpr std::array<std::array<int, 2>, kSides> kSteps { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } };
-            return { col + kSteps[side][0], row + kSteps[side][1] };
+            return static_cast<std::uint8_t>(((bits << turn.value) | (bits >> (kSideCount - turn.value))) & 0b1111);
         }
 
         bool meets(float a, float b) noexcept
@@ -111,9 +100,9 @@ namespace rct3::park
             return cell.max_height() - cell.min_height() <= kFlat && meets(cell.min_height(), height);
         }
 
-        bool any_flat_at(const TilePaths& tiles, const save::TerrainGrid& grid, std::array<int, 2> tile, float height)
+        bool any_flat_at(const TilePaths& tiles, const save::TerrainGrid& grid, save::Tile tile, float height)
         {
-            return std::ranges::any_of(tiles.at(tile[0], tile[1]), [&](const save::PathTile* p) { return flat_at(*p, grid, height); });
+            return std::ranges::any_of(tiles.at(tile.col, tile.row), [&](const save::PathTile* p) { return flat_at(*p, grid, height); });
         }
 
         Deck choose(const save::PathTile& path, const TilePaths& tiles, const save::TerrainGrid& grid, std::optional<const EdgeWalls&> walls)
@@ -122,36 +111,38 @@ namespace rct3::park
             const auto height = static_cast<float>(e.quantised_height);
             if (e.slope != 0)
             {
-                const std::uint8_t heading = stored_direction(path.direction);
+                const Side heading = stored_heading_or_bare(path.direction);
                 // A gentle slope beside: the same slope, the same way, from the same height.
-                const auto beside = [&](std::uint8_t side) {
-                    const auto [col, row] = across(path.col, path.row, side);
+                const auto beside = [&](Side side) {
+                    const auto [col, row] = side.beyond({ path.col, path.row });
                     return std::ranges::any_of(tiles.at(col, row), [&](const save::PathTile* p) { return p->kind != save::PathKind::Queue && p->elevation && p->elevation->slope == e.slope && p->direction == path.direction && p->elevation->quantised_height == e.quantised_height; });
                 };
-                return slope_deck(e.slope, heading, beside(next_side(heading, 3)), beside(next_side(heading, 1)));
+                return slope_deck(e.slope, heading, beside(heading.left()), beside(heading.right()));
             }
+            const save::Tile tile { path.col, path.row };
             std::uint8_t sides = 0;
-            for (std::uint8_t side = 0; side < kSides; ++side)
+            for (const Side side : kSides)
             {
-                const auto [col, row] = across(path.col, path.row, side);
-                const std::uint8_t facing = next_side(side, 2);
+                const auto [col, row] = side.beyond(tile);
+                const Side facing = side.opposite();
                 const bool joined = std::ranges::any_of(tiles.at(col, row), [&](const save::PathTile* p) {
                     const auto edge = edge_height(*p, grid, facing);
-                    return edge && meets(*edge, height) && (p->kind == save::PathKind::Queue || !walls || !walled(*walls, { path.col, path.row }, side, height));
+                    return edge && meets(*edge, height) && (p->kind == save::PathKind::Queue || !walls || !walled(*walls, tile, static_cast<std::uint8_t>(side.value), height));
                 });
                 if (joined)
-                    sides = static_cast<std::uint8_t>(sides | 1u << side);
+                    sides = static_cast<std::uint8_t>(sides | side.bit());
             }
+            // Corner k lies between side k and the side after it, so it shares side k's bit.
             std::uint8_t corners = 0;
-            for (std::uint8_t corner = 0; corner < kSides; ++corner)
+            for (const Side corner : kSides)
             {
-                const std::uint8_t other = next_side(corner, 1);
-                if ((sides >> corner & 1u) == 0 || (sides >> other & 1u) == 0)
+                const Side other = corner.right();
+                if ((sides & corner.bit()) == 0 || (sides & other.bit()) == 0)
                     continue;
-                const auto a = across(path.col, path.row, corner);
-                const auto b = across(path.col, path.row, other);
-                if (any_flat_at(tiles, grid, a, height) && any_flat_at(tiles, grid, b, height) && any_flat_at(tiles, grid, across(a[0], a[1], other), height))
-                    corners = static_cast<std::uint8_t>(corners | 1u << corner);
+                const save::Tile a = corner.beyond(tile);
+                const save::Tile b = other.beyond(tile);
+                if (any_flat_at(tiles, grid, a, height) && any_flat_at(tiles, grid, b, height) && any_flat_at(tiles, grid, other.beyond(a), height))
+                    corners = static_cast<std::uint8_t>(corners | corner.bit());
             }
             return flat_deck(sides, corners);
         }
@@ -162,50 +153,67 @@ namespace rct3::park
     {
         sides &= 0b1111;
         // Only corners between two joined sides count.
-        corners &= static_cast<std::uint8_t>(sides & rotated_bits(sides, 3));
-        for (std::uint8_t turns = 0; turns < kSides; ++turns)
+        corners &= static_cast<std::uint8_t>(sides & rotated_bits(sides, ModelTurn { 3 }));
+        for (const Side side : kSides)
         {
+            const ModelTurn turn = ModelTurn::toward(side);
             for (const Pattern& p : kPatterns)
             {
-                if (rotated_bits(p.sides, turns) == sides && rotated_bits(p.corners, turns) == corners)
-                    return { p.piece, turns };
+                if (rotated_bits(p.sides, turn) == sides && rotated_bits(p.corners, turn) == corners)
+                    return { p.piece, turn };
             }
         }
         return { };
     }
 
-    Deck slope_deck(std::uint8_t slope, std::uint8_t heading, bool before, bool after) noexcept
+    Deck slope_deck(std::uint8_t slope, Side heading, bool before, bool after) noexcept
     {
         const bool up = !slope_falls(slope);
-        const auto turns = next_side(heading, up ? 3 : 1);
+        const ModelTurn turn = ModelTurn::toward(up ? heading.left() : heading.right());
         if (path_rise(slope) > 1)
-            return { DeckPiece::Slope, turns };
+            return { DeckPiece::Slope, turn };
         // The slope beside this one on the left going up is on the right going down.
         const bool left = up ? after : before;
         const bool right = up ? before : after;
         const DeckPiece piece = left && right ? DeckPiece::SlopeMid : left ? DeckPiece::SlopeStraightLeft : right ? DeckPiece::SlopeStraightRight : DeckPiece::SlopeStraight;
-        return { piece, turns };
+        return { piece, turn };
     }
 
-    std::uint8_t stored_direction(std::uint8_t heading) noexcept
+    namespace
     {
-        constexpr std::array<std::uint8_t, kSides> kSwap { 3, 1, 2, 0 };
-        return heading < kSides ? kSwap[heading] : heading;
+        /// Stored directions by heading, and headings by stored direction: the same swap both ways.
+        constexpr std::array<std::uint8_t, kSideCount> kSwap { 3, 1, 2, 0 };
+    } // namespace
+
+    std::uint8_t stored_direction(Side heading) noexcept
+    {
+        return kSwap[static_cast<std::size_t>(heading.value & 3)];
     }
 
-    std::array<std::size_t, 2> edge_corners(std::uint8_t side) noexcept
+    std::optional<Side> stored_heading(std::uint8_t direction) noexcept
     {
-        return kEdgeCorners[side % kSides];
+        return direction < kSideCount ? std::optional(Side { kSwap[direction] }) : std::nullopt;
     }
 
-    std::optional<float> edge_height(const save::PathTile& path, const save::TerrainGrid& grid, std::uint8_t side)
+    Side stored_heading_or_bare(std::uint8_t direction) noexcept
     {
-        if (side >= kSides || !grid.contains(path.col, path.row))
+        return stored_heading(direction).value_or(Side::from(direction));
+    }
+
+    std::array<std::size_t, 2> edge_corners(Side side) noexcept
+    {
+        return kEdgeCorners[static_cast<std::size_t>(side.value & 3)];
+    }
+
+    std::optional<float> edge_height(const save::PathTile& path, const save::TerrainGrid& grid, Side side)
+    {
+        if (!grid.contains(path.col, path.row))
             return std::nullopt;
         const auto& corners = grid.at(path.col, path.row).corners;
-        const float ground = (corners[kEdgeCorners[side][0]] + corners[kEdgeCorners[side][1]]) / 2;
+        const auto [first, second] = edge_corners(side);
+        const float ground = (corners[first] + corners[second]) / 2;
         // A queue reaches only the sides its line comes in and goes out by.
-        const bool queue_side = path.queue && (stored_direction(path.queue->start_direction) == side || stored_direction(path.queue->end_direction) == side);
+        const bool queue_side = path.queue && (stored_heading(path.queue->start_direction) == side || stored_heading(path.queue->end_direction) == side);
         if (is_ground_queue(path))
             return queue_side ? std::optional(ground) : std::nullopt;
         if (!path.elevation)
@@ -214,10 +222,10 @@ namespace rct3::park
         const auto height = static_cast<float>(e.quantised_height);
         if (e.slope == 0)
             return path.kind != save::PathKind::Queue || queue_side ? std::optional(height) : std::nullopt;
-        const std::uint8_t heading = stored_direction(path.direction);
-        if (side == heading)
+        // Without a stored heading only the end behind its bare count is met, as it always has been.
+        if (stored_heading(path.direction) == side)
             return height + (slope_falls(e.slope) ? -path_rise(e.slope) : path_rise(e.slope));
-        if (side == next_side(heading, 2))
+        if (side == stored_heading_or_bare(path.direction).opposite())
             return height;
         return std::nullopt;
     }
@@ -228,33 +236,33 @@ namespace rct3::park
         return at < style.pieces.size() ? style.pieces[at] : std::string();
     }
 
-    std::pair<QueuePiece, std::uint8_t> queue_deck(const save::PathTile& queue)
+    std::pair<QueuePiece, ModelTurn> queue_deck(const save::PathTile& queue)
     {
         if (!queue.elevation || !queue.queue)
             return { };
         const std::uint8_t slope = queue.elevation->slope;
         if (slope != 0)
         {
-            const std::uint8_t turns = slope_deck(slope, stored_direction(queue.direction), false, false).turns;
+            const ModelTurn turn = slope_deck(slope, stored_heading_or_bare(queue.direction), false, false).turn;
             const QueuePiece piece = path_rise(slope) <= 1 ? QueuePiece::SlopeStraight : slope_falls(slope) ? QueuePiece::SlopeDown : QueuePiece::SlopeUp;
-            return { piece, turns };
+            return { piece, turn };
         }
-        const std::uint8_t start = stored_direction(queue.queue->start_direction) % kSides;
-        const std::uint8_t end = stored_direction(queue.queue->end_direction) % kSides;
-        const QueuePiece piece = end == next_side(start, 1) ? QueuePiece::TurnLeft : end == next_side(start, 3) ? QueuePiece::TurnRight : QueuePiece::Straight;
-        return { piece, next_side(start, 1) };
+        const Side start = stored_heading_or_bare(queue.queue->start_direction);
+        const Side end = stored_heading_or_bare(queue.queue->end_direction);
+        const QueuePiece piece = end == start.right() ? QueuePiece::TurnLeft : end == start.left() ? QueuePiece::TurnRight : QueuePiece::Straight;
+        return { piece, ModelTurn::toward(start.right()) };
     }
 
-    std::pair<std::string, std::uint8_t> deck_for(const PathStyle& style, const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    std::pair<std::string, ModelTurn> deck_for(const PathStyle& style, const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
     {
         if (path.kind == save::PathKind::Queue)
         {
-            const auto [piece, turns] = queue_deck(path);
+            const auto [piece, turn] = queue_deck(path);
             const auto at = static_cast<std::size_t>(piece);
-            return { at < style.pieces.size() ? style.pieces[at] : std::string(), turns };
+            return { at < style.pieces.size() ? style.pieces[at] : std::string(), turn };
         }
         const Deck deck = choose_deck(path, paths, grid);
-        return { deck_symbol(style, deck.piece), deck.turns };
+        return { deck_symbol(style, deck.piece), deck.turn };
     }
 
     Deck choose_deck(const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::optional<const EdgeWalls&> walls)
@@ -284,20 +292,20 @@ namespace rct3::park
                     const auto style = std::ranges::find_if(styles, [&](const PathStyle& s) { return s.queue == queue && strings::equals_ignoring_case(s.name, p->surface_name); });
                     if (object == by_id.end() || style == styles.end())
                         continue;
-                    std::uint8_t turns = 0;
+                    ModelTurn turn;
                     std::string symbol;
                     if (queue)
-                        std::tie(symbol, turns) = deck_for(*style, *p, paths, grid);
+                        std::tie(symbol, turn) = deck_for(*style, *p, paths, grid);
                     else
                     {
                         const Deck deck = choose(*p, tiles, grid, walls);
                         symbol = deck_symbol(*style, deck.piece);
-                        turns = deck.turns;
+                        turn = deck.turn;
                     }
-                    if (symbol.empty() || (symbol == object->second->symbol && object->second->rotation == turns))
+                    if (symbol.empty() || (symbol == object->second->symbol && object->second->rotation == turn.value))
                         continue;
                     object->second->symbol = std::move(symbol);
-                    object->second->rotation = turns;
+                    object->second->rotation = turn.value;
                     ++changed;
                 }
             }

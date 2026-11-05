@@ -474,12 +474,15 @@ namespace rct3::simulation
             corners = grid.at(path.col, path.row).corners;
         else if (path.elevation && park::path_rise(path.elevation->slope) > 0)
         {
-            const std::uint8_t ahead = park::stored_direction(path.direction);
-            const auto behind = static_cast<std::uint8_t>((ahead + 2) % 4);
-            if (const auto up = park::edge_height(path, grid, ahead), down = park::edge_height(path, grid, behind); up && down)
-                for (const std::uint8_t side : { ahead, behind })
-                    for (const std::size_t k : park::edge_corners(side))
-                        corners[k] = side == ahead ? *up : *down;
+            // A ramp without a stored heading meets no edge ahead, so it keeps its flat corners.
+            if (const auto ahead = park::stored_heading(path.direction))
+            {
+                const park::Side behind = ahead->opposite();
+                if (const auto up = park::edge_height(path, grid, *ahead), down = park::edge_height(path, grid, behind); up && down)
+                    for (const park::Side side : { *ahead, behind })
+                        for (const std::size_t k : park::edge_corners(side))
+                            corners[k] = side == *ahead ? *up : *down;
+            }
         }
         // A queue joins only across the two ends its line passes through.
         std::uint8_t open = 0b1111;
@@ -488,7 +491,7 @@ namespace rct3::simulation
             open = 0;
             // path_decks counts the sides from +row, the network from +col: the same sides, each pair swapped.
             for (std::uint8_t side = 0; side < 4; ++side)
-                if (park::edge_height(path, grid, side ^ 1U))
+                if (park::edge_height(path, grid, park::Side::from(side ^ 1U)))
                     open |= static_cast<std::uint8_t>(1U << side);
         }
         world.paths.set_corners(id, corners, open);

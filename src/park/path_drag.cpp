@@ -115,14 +115,14 @@ namespace rct3::park
             return std::nullopt;
         const save::PathTile& p = paths[best->path];
         const Side side = nearest_side((best_hit.x - grid.world_x(p.col)) / grid.tile_size_x, (best_hit.z - grid.world_z(p.row)) / grid.tile_size_z);
-        if (edge_height(p, grid, side.value))
+        if (edge_height(p, grid, side))
             best->side = side;
         return best;
     }
 
     bool start_from_edge(FootpathBuilder& builder, const save::PathTile& path, const save::TerrainGrid& grid, Side side)
     {
-        const auto height = edge_height(path, grid, side.value);
+        const auto height = edge_height(path, grid, side);
         if (!height)
             return false;
         const save::Tile spot { path.col, path.row };

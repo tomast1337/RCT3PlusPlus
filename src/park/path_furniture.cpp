@@ -40,12 +40,13 @@ namespace rct3::park
             std::array<std::optional<float>, 4> e;
             float sum = 0;
             int count = 0;
-            for (std::uint8_t side = 0; side < 4; ++side)
+            for (const Side side : kSides)
             {
-                e[side] = edge_height(p, grid, side);
-                if (e[side])
+                auto& edge = e[static_cast<std::size_t>(side.value)];
+                edge = edge_height(p, grid, side);
+                if (edge)
                 {
-                    sum += *e[side];
+                    sum += *edge;
                     ++count;
                 }
             }
@@ -75,12 +76,12 @@ namespace rct3::park
         const auto at_end = [&](Side side) { return side.on_columns() == (path->direction < 2); };
 
         // A path's height at `side`: its edge there, or its middle where it has none, as along a queue's fences.
-        const auto level = [&](const save::PathTile& p, std::uint8_t side) -> std::optional<float> {
+        const auto level = [&](const save::PathTile& p, Side side) -> std::optional<float> {
             if (const auto edge = edge_height(p, grid, side))
                 return edge;
             float sum = 0;
             int count = 0;
-            for (std::uint8_t s = 0; s < 4; ++s)
+            for (const Side s : kSides)
                 if (const auto edge = edge_height(p, grid, s))
                 {
                     sum += *edge;
@@ -90,12 +91,12 @@ namespace rct3::park
         };
         // Whether a path across `side` meets this one there, at about its height: joined, or the next lane of a queue.
         const auto joined = [&](Side side) {
-            const auto here = level(*path, static_cast<std::uint8_t>(side.value));
+            const auto here = level(*path, side);
             const save::Tile across = side.beyond(tile);
             return here && std::ranges::any_of(paths, [&](const save::PathTile& p) {
                        if (p.col != across.col || p.row != across.row)
                            return false;
-                       const auto there = level(p, static_cast<std::uint8_t>(side.opposite().value));
+                       const auto there = level(p, side.opposite());
                        return there && std::abs(*there - *here) < kSameHeight;
                    });
         };

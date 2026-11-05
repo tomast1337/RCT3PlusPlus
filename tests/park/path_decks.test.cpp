@@ -21,7 +21,7 @@ namespace
     }
 
     /// A raised path at `height` drawn by object `id + 100`.
-    save::PathTile raised(int col, int row, std::int32_t height, std::uint64_t id, std::uint8_t slope = 0, std::uint8_t heading = 0)
+    save::PathTile raised(int col, int row, std::int32_t height, std::uint64_t id, std::uint8_t slope = 0, Side heading = Side::kNextRow)
     {
         save::PathTile p;
         p.id = id;
@@ -70,23 +70,26 @@ TEST_CASE("a flat tile's piece follows its joined sides and filled corners")
 
 TEST_CASE("a sloping tile's piece follows its steepness, its way and the slopes beside it")
 {
-    CHECK(slope_deck(1, 0, false, false) == Deck { DeckPiece::Slope, 3 });
-    CHECK(slope_deck(2, 0, false, false) == Deck { DeckPiece::Slope, 1 });
-    CHECK(slope_deck(4, 1, false, false) == Deck { DeckPiece::SlopeStraight, 0 });
-    CHECK(slope_deck(4, 0, true, false) == Deck { DeckPiece::SlopeStraightRight, 3 });
-    CHECK(slope_deck(4, 0, false, true) == Deck { DeckPiece::SlopeStraightLeft, 3 });
-    CHECK(slope_deck(5, 0, true, false) == Deck { DeckPiece::SlopeStraightLeft, 1 });
-    CHECK(slope_deck(5, 0, true, true) == Deck { DeckPiece::SlopeMid, 1 });
+    CHECK(slope_deck(1, Side { 0 }, false, false) == Deck { DeckPiece::Slope, 3 });
+    CHECK(slope_deck(2, Side { 0 }, false, false) == Deck { DeckPiece::Slope, 1 });
+    CHECK(slope_deck(4, Side { 1 }, false, false) == Deck { DeckPiece::SlopeStraight, 0 });
+    CHECK(slope_deck(4, Side { 0 }, true, false) == Deck { DeckPiece::SlopeStraightRight, 3 });
+    CHECK(slope_deck(4, Side { 0 }, false, true) == Deck { DeckPiece::SlopeStraightLeft, 3 });
+    CHECK(slope_deck(5, Side { 0 }, true, false) == Deck { DeckPiece::SlopeStraightLeft, 1 });
+    CHECK(slope_deck(5, Side { 0 }, true, true) == Deck { DeckPiece::SlopeMid, 1 });
     // Steep slopes have no wide pieces.
-    CHECK(slope_deck(2, 3, true, true) == Deck { DeckPiece::Slope, 0 });
+    CHECK(slope_deck(2, Side { 3 }, true, true) == Deck { DeckPiece::Slope, 0 });
 }
 
 TEST_CASE("headings and stored directions swap both ways")
 {
-    for (std::uint8_t h = 0; h < 4; ++h)
-        CHECK(stored_direction(stored_direction(h)) == h);
-    CHECK(stored_direction(0) == 3);
-    CHECK(stored_direction(255) == 255);
+    for (const Side h : kSides)
+        CHECK(stored_heading(stored_direction(h)) == h);
+    CHECK(stored_direction(Side::kNextRow) == 3);
+    CHECK_FALSE(stored_heading(save::kNoDirection));
+    // A bare count past 3 is taken as itself, as before headings were checked.
+    CHECK(stored_heading_or_bare(save::kNoDirection) == Side::kColBefore);
+    CHECK(stored_heading_or_bare(2) == Side::kRowBefore);
 }
 
 TEST_CASE("a path meets the edges of its tile at its own height")
@@ -97,24 +100,24 @@ TEST_CASE("a path meets the edges of its tile at its own height")
     ground.kind = save::PathKind::Ground;
     ground.col = 1;
     ground.row = 1;
-    CHECK(edge_height(ground, g, 0) == doctest::Approx(3));
-    CHECK(edge_height(ground, g, 1) == doctest::Approx(2));
+    CHECK(edge_height(ground, g, Side { 0 }) == doctest::Approx(3));
+    CHECK(edge_height(ground, g, Side { 1 }) == doctest::Approx(2));
 
     // A gentle slope climbing towards higher columns reaches only its two ends.
-    const save::PathTile slope = raised(1, 1, 4, 1, 4, 1);
-    CHECK(edge_height(slope, g, 3) == doctest::Approx(4));
-    CHECK(edge_height(slope, g, 1) == doctest::Approx(5));
-    CHECK_FALSE(edge_height(slope, g, 0));
-    const save::PathTile down = raised(1, 1, 4, 1, 2, 1);
-    CHECK(edge_height(down, g, 1) == doctest::Approx(2));
+    const save::PathTile slope = raised(1, 1, 4, 1, 4, Side::kNextCol);
+    CHECK(edge_height(slope, g, Side { 3 }) == doctest::Approx(4));
+    CHECK(edge_height(slope, g, Side { 1 }) == doctest::Approx(5));
+    CHECK_FALSE(edge_height(slope, g, Side { 0 }));
+    const save::PathTile down = raised(1, 1, 4, 1, 2, Side::kNextCol);
+    CHECK(edge_height(down, g, Side { 1 }) == doctest::Approx(2));
 
     save::PathTile queue = raised(1, 1, 4, 1);
     queue.kind = save::PathKind::Queue;
     queue.queue = save::PathQueueInfo { };
     queue.queue->start_direction = 0; // Towards lower columns
     queue.queue->end_direction = 1;
-    CHECK(edge_height(queue, g, 3) == doctest::Approx(4));
-    CHECK_FALSE(edge_height(queue, g, 0));
+    CHECK(edge_height(queue, g, Side { 3 }) == doctest::Approx(4));
+    CHECK_FALSE(edge_height(queue, g, Side { 0 }));
 }
 
 TEST_CASE("raised paths take the pieces their neighbours call for")
@@ -159,7 +162,7 @@ TEST_CASE("raised paths take the pieces their neighbours call for")
 TEST_CASE("a gentle slope beside another takes the wide pieces")
 {
     const save::TerrainGrid g = flat_grid(5, 5);
-    const std::vector<save::PathTile> paths { raised(1, 2, 0, 1, 4, 0), raised(2, 2, 0, 2, 4, 0), raised(3, 2, 0, 3, 4, 0) };
+    const std::vector<save::PathTile> paths { raised(1, 2, 0, 1, 4), raised(2, 2, 0, 2, 4), raised(3, 2, 0, 3, 4) };
     CHECK(choose_deck(paths[0], paths, g).piece == DeckPiece::SlopeStraightLeft);
     CHECK(choose_deck(paths[1], paths, g).piece == DeckPiece::SlopeMid);
     CHECK(choose_deck(paths[2], paths, g).piece == DeckPiece::SlopeStraightRight);
@@ -170,22 +173,22 @@ TEST_CASE("a raised queue's piece follows its line")
     save::PathTile q = raised(1, 1, 2, 1);
     q.kind = save::PathKind::Queue;
     q.queue = save::PathQueueInfo { };
-    const auto line = [&](std::uint8_t start, std::uint8_t end) {
+    const auto line = [&](Side start, Side end) {
         q.queue->start_direction = stored_direction(start);
         q.queue->end_direction = stored_direction(end);
         return queue_deck(q);
     };
-    CHECK(line(0, 2) == std::pair { QueuePiece::Straight, std::uint8_t { 1 } });
-    CHECK(line(3, 1) == std::pair { QueuePiece::Straight, std::uint8_t { 0 } });
-    CHECK(line(2, 3) == std::pair { QueuePiece::TurnLeft, std::uint8_t { 3 } });
-    CHECK(line(3, 2) == std::pair { QueuePiece::TurnRight, std::uint8_t { 0 } });
+    CHECK(line(Side { 0 }, Side { 2 }) == std::pair { QueuePiece::Straight, ModelTurn { 1 } });
+    CHECK(line(Side { 3 }, Side { 1 }) == std::pair { QueuePiece::Straight, ModelTurn { 0 } });
+    CHECK(line(Side { 2 }, Side { 3 }) == std::pair { QueuePiece::TurnLeft, ModelTurn { 3 } });
+    CHECK(line(Side { 3 }, Side { 2 }) == std::pair { QueuePiece::TurnRight, ModelTurn { 0 } });
 
     q.elevation->slope = 1; // Steep up, heading +row
-    CHECK(queue_deck(q) == std::pair { QueuePiece::SlopeUp, std::uint8_t { 3 } });
+    CHECK(queue_deck(q) == std::pair { QueuePiece::SlopeUp, ModelTurn { 3 } });
     q.elevation->slope = 2;
     CHECK(queue_deck(q).first == QueuePiece::SlopeDown);
     q.elevation->slope = 5;
-    CHECK(queue_deck(q) == std::pair { QueuePiece::SlopeStraight, std::uint8_t { 1 } });
+    CHECK(queue_deck(q) == std::pair { QueuePiece::SlopeStraight, ModelTurn { 1 } });
 
     PathStyle style;
     style.queue = true;

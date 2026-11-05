@@ -61,10 +61,10 @@ namespace rct3::park
             const auto out_side = side_of(p.queue->end_direction);
             // A slope is fenced along the way its deck faces, leaning as the deck rises, whichever way the
             // line runs over it.
-            const std::uint8_t heading = stored_direction(p.direction);
+            const auto heading = stored_heading(p.direction);
             const auto facing = side_of(p.direction);
-            const auto ahead = edge_height(p, grid, heading);
-            const auto behind = edge_height(p, grid, static_cast<std::uint8_t>((heading + 2) % 4));
+            const auto ahead = heading ? edge_height(p, grid, *heading) : std::nullopt;
+            const auto behind = heading ? edge_height(p, grid, heading->opposite()) : std::nullopt;
             if (rise > 0 && (!facing || !ahead || !behind))
                 continue;
 

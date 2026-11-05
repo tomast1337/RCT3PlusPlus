@@ -32,7 +32,7 @@ namespace rct3::park
         for (const save::PathTile& path : paths)
         {
             std::optional<float> deck;
-            for (std::uint8_t side = 0; side < 4; ++side)
+            for (const Side side : kSides)
                 if (const auto at = edge_height(path, grid, side); at && (!deck || *at < *deck))
                     deck = at;
             if (deck)
@@ -133,7 +133,7 @@ namespace rct3::park
             {
                 // shortcut: a path's height is taken at one edge, so a slope's lower end may pass under an item;
                 // take its lowest edge if that shows.
-                const auto deck = edge_height(path, grid, 0);
+                const auto deck = edge_height(path, grid, Side::kNextRow);
                 if (path.col == tile.col && path.row == tile.row && deck && blocked(mine, tile, *deck, *deck))
                     return Clash::Path;
             }

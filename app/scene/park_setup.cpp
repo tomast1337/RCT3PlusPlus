@@ -1203,9 +1203,9 @@ namespace rct3::scene
         // or track, a ride or a stall lies under the ground.
         scene.footpaths.walls = park::edge_walls(scene.objects, scene.models, scene.grid);
         scene.footpaths.pavings_stale = scene.footpaths.pavings_stale || !park::buried_hollows(scene.objects, scene.models, scene.grid).empty() || std::ranges::any_of(scene.footpaths.paths, [&](const save::PathTile& p) {
-                                            return !p.elevation && std::ranges::any_of(std::array<std::uint8_t, 4> { 0, 1, 2, 3 }, [&](std::uint8_t side) {
+                                            return !p.elevation && std::ranges::any_of(park::kSides, [&](park::Side side) {
                                                 const auto edge = park::edge_height(p, scene.grid, side);
-                                                return edge && park::walled(scene.footpaths.walls, { p.col, p.row }, side, *edge);
+                                                return edge && park::walled(scene.footpaths.walls, { p.col, p.row }, static_cast<std::uint8_t>(side.value), *edge);
                                             });
                                         });
         scene.blend_band = options.get(config::GameOption::DetailBlendBand);

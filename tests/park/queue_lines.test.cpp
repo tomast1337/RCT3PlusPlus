@@ -80,7 +80,7 @@ TEST_CASE("a queue laid away from an entrance joins the station's line")
     CHECK(paths[0].queue->fence_overlay == "Fences");
     CHECK(paths[0].queue->fence_colours[0] == 5);
     CHECK(paths[2].queue->fence_symbol.empty());
-    CHECK(paths[0].queue->end_direction == stored_direction(3));
+    CHECK(paths[0].queue->end_direction == stored_direction(Side { 3 }));
     // Tiles laid after join the line as they are laid; here they were laid first, so only the joined one has it.
     CHECK(paths[2].queue->queue_line_ref == 0);
 }
@@ -97,10 +97,10 @@ TEST_CASE("a queue laid towards an entrance is turned round to lead to it")
     for (const save::PathTile& p : paths)
     {
         CHECK(p.queue->queue_line_ref == 7);
-        CHECK(p.queue->end_direction == stored_direction(1)); // All lead towards higher columns
+        CHECK(p.queue->end_direction == stored_direction(Side { 1 })); // All lead towards higher columns
     }
-    CHECK(paths[0].queue->start_direction == stored_direction(3));
-    CHECK(paths[1].queue->start_direction == stored_direction(3));
+    CHECK(paths[0].queue->start_direction == stored_direction(Side { 3 }));
+    CHECK(paths[1].queue->start_direction == stored_direction(Side { 3 }));
     CHECK(rides.rides[0].stations[0].queue_tiles == 3);
     // The head is the tile nothing leads into.
     CHECK(tiles_behind(paths, g, 2).size() == 0);
@@ -114,7 +114,7 @@ TEST_CASE("a queue's open end turns to a path beside it")
     paths.push_back(ground_path({ 2, 0 }, "Tarmac", 51));
     CHECK_FALSE(turn_to_path(paths, g, 1)); // Its start meets the next queue tile
     REQUIRE(turn_to_path(paths, g, 2));
-    CHECK(stored_direction(paths[2].queue->start_direction) == 0);
+    CHECK(stored_heading(paths[2].queue->start_direction) == Side::kNextRow);
     CHECK_FALSE(turn_to_path(paths, g, 2)); // Now it meets the path
 
     // Nor does it turn while something meets its open end already.
@@ -141,7 +141,7 @@ TEST_CASE("a queue laid on towards a line's open end joins it, turned round to l
     for (const save::PathTile& p : paths)
     {
         CHECK(p.queue->queue_line_ref == line);
-        CHECK(p.queue->end_direction == stored_direction(1));
+        CHECK(p.queue->end_direction == stored_direction(Side { 1 }));
     }
     CHECK(rides.rides[0].stations[0].queue_tiles == 5);
     CHECK_FALSE(join_line(rides, paths, g, 4)); // Already on it
@@ -173,14 +173,14 @@ TEST_CASE("a queue over steps laid towards the entrance turns round whole, its s
     const QueueFences fenced = queue_fences(paths, g, 0);
     std::vector<std::array<std::optional<float>, 4>> before;
     for (const save::PathTile& p : paths)
-        before.push_back({ edge_height(p, g, 0), edge_height(p, g, 1), edge_height(p, g, 2), edge_height(p, g, 3) });
+        before.push_back({ edge_height(p, g, Side { 0 }), edge_height(p, g, Side { 1 }), edge_height(p, g, Side { 2 }), edge_height(p, g, Side { 3 }) });
 
     join_entrance(rides, paths, g, 3, *entrance_beside(rides, { 4, 1 }, std::nullopt), 99);
     // The sloping pieces' ends stay where they were.
     for (const std::size_t i : { 1u, 3u })
     {
-        CHECK(edge_height(paths[i], g, 1) == before[i][1]);
-        CHECK(edge_height(paths[i], g, 3) == before[i][3]);
+        CHECK(edge_height(paths[i], g, Side { 1 }) == before[i][1]);
+        CHECK(edge_height(paths[i], g, Side { 3 }) == before[i][3]);
     }
     // Their railings lean the same way as before.
     const QueueFences refenced = queue_fences(paths, g, 0);

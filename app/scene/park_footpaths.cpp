@@ -175,7 +175,7 @@ namespace rct3::scene
         /// The object drawing raised path `path` of `style`, with the piece the paths around it call for.
         save::PlacedObject deck_object(const park::PathStyle& style, const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::uint64_t id)
         {
-            const auto [symbol, turns] = park::deck_for(style, path, paths, grid);
+            const auto [symbol, turn] = park::deck_for(style, path, paths, grid);
             const save::PathElevation& e = *path.elevation;
             save::PlacedObject o;
             o.id = id;
@@ -186,7 +186,7 @@ namespace rct3::scene
             o.row = path.row;
             // Stands on its low end: a piece going down is entered at its top.
             o.base_height = e.quantised_height - (park::slope_falls(e.slope) ? static_cast<std::int32_t>(park::path_rise(e.slope)) : 0);
-            o.rotation = turns;
+            o.rotation = turn.value;
             // Held at its own height: an object with no offset from the ground would be put on the ground.
             o.force_absolute_height = true;
             return o;
@@ -428,13 +428,13 @@ namespace rct3::scene
                             continue;
                         std::vector<save::PathTile> next = f.paths;
                         next.push_back(t.path);
-                        const auto [symbol, turns] = park::deck_for(*own, *joined, next, scene.grid);
+                        const auto [symbol, turn] = park::deck_for(*own, *joined, next, scene.grid);
                         const auto shown = std::ranges::find(scene.objects, joined->elevation->scenery_ref, &save::PlacedObject::id);
-                        if (!symbol.empty() && shown != scene.objects.end() && (shown->symbol != symbol || shown->rotation != turns))
+                        if (!symbol.empty() && shown != scene.objects.end() && (shown->symbol != symbol || shown->rotation != turn.value))
                         {
                             save::PlacedObject turned = *shown;
                             turned.symbol = symbol;
-                            turned.rotation = turns;
+                            turned.rotation = turn.value;
                             if (load_object_model(scene, f.models, assets, turned))
                             {
                                 *shown = std::move(turned);

@@ -48,8 +48,8 @@ declare namespace clipboard {
 
 declare namespace ui {
     /** The middle of the widget at `path` (such as "tools/Land/Land") and its edges, or undefined when it is not shown;
-     * `on` for a toggle button or a tick box, `text` for an edit box or a label. */
-    function find(path: string): { x: number; y: number; left: number; top: number; right: number; bottom: number; on?: boolean; text?: string } | undefined;
+     * `on` for a toggle button or a tick box, `text` for an edit box or a label, `tooltip` for one with help. */
+    function find(path: string): { x: number; y: number; left: number; top: number; right: number; bottom: number; on?: boolean; text?: string; tooltip?: string } | undefined;
     /** Moves the pointer to the widget at `path`, presses and lets go. Throws when it is not shown. */
     function click(path: string): Promise<void>;
     /** Clicks the switch at `path` unless it is already `on`. */

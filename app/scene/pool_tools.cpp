@@ -494,7 +494,7 @@ namespace rct3::scene
         scene.pooling = PoolTool { .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .grid = scene.pooling.grid, .edge = scene.pooling.edge, .redraw = redraw, .turns = scene.pooling.turns, .preview_target = scene.pooling.preview_target, .preview_pixels = scene.pooling.preview_pixels }; // The marks go on the next frame
     }
 
-    void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets)
+    void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ui::Currency& currency)
     {
         auto panel = panel_of(scene);
         if (panel && panel->showing())
@@ -507,10 +507,11 @@ namespace rct3::scene
             panel = scene.desktop->root().add<ui::PoolPanel>(std::string(kPanelName), ui::game_skins::pool_panel_style(assets.palette), *assets.strings);
         }
         const Offered offer = offered(scene);
+        // Each choice's help is its name, and its price where it has one.
         const auto choices = [&](const std::vector<const park::BuildItem*>& items) {
             std::vector<ui::PoolChoice> out;
             for (const park::BuildItem* i : items)
-                out.push_back({ i->icon, std::u16string(assets.strings->get(i->name_text)) });
+                out.push_back({ i->icon, std::u16string(assets.strings->get(i->name_text)) + (i->price > 0 ? u" : " + ui::money_text(currency, i->price) : std::u16string { }) });
             return out;
         };
         panel->show(choices(offer.extras), choices(offer.rooms), choices(offer.stairs));

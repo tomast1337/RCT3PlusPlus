@@ -73,6 +73,7 @@ expect(ui.find("pool_panel/body/Icon_Default_HighDive") !== undefined, "the high
 // The game's eleven: nine extras of the pool type, the high diving board and the spa pool; the ramps and the spiral
 // staircase are on the paths page.
 const offered_extras = ui.children("pool_panel/body")!;
+expect(offered_extras.every((n) => ui.find(`pool_panel/body/${n}`)?.tooltip), "every extra named");
 expect(offered_extras.length === 11 && !offered_extras.includes("Icon_Default_SpiralStairs"), `the eleven extras, not ${JSON.stringify(offered_extras)}`);
 await screenshot("pool_panel_extras");
 await ui.click("pool_panel/Pool_ChangingRoomPanel");
@@ -525,6 +526,14 @@ await ui.click("pool_panel/body/editor/Pool_Height");
 await ui.click("pool_panel/Pool_PathPanel");
 await until(() => ui.find("pool_panel/body/Icon_Default_SpiralStairs") !== undefined, 120, "the spiral staircase on the paths page");
 expect(ui.children("pool_panel/body")!.filter((n) => n !== "paths").length === 3, `two ramps and the staircase on the paths page, not ${JSON.stringify(ui.children("pool_panel/body"))}`);
+// Each way between levels is named, with its price, as the pointer rests on it.
+const stairs_help = ui.find("pool_panel/body/Icon_Default_SpiralStairs")!;
+expect(/^Spiral Stairs : \$\d+\.00$/.test(stairs_help.tooltip ?? ""), `the staircase's help, not ${stairs_help.tooltip}`);
+const ramp_help = ui.children("pool_panel/body")!.filter((n) => n !== "paths" && n !== "Icon_Default_SpiralStairs").map((n) => ui.find(`pool_panel/body/${n}`)!.tooltip);
+expect(ramp_help.length === 2 && ramp_help.every((h) => h?.match(/^\dm Ramp : \$12\.00$/)), `the ramps' help, not ${JSON.stringify(ramp_help)}`);
+pointer.move(stairs_help.x, stairs_help.y);
+await frames(60);
+await screenshot("pool_panel_tooltip");
 await ui.click("pool_panel/body/Icon_Default_SpiralStairs");
 await frames(2);
 cash = park.cash()!;

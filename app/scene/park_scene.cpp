@@ -3609,7 +3609,7 @@ namespace rct3::scene
                     stop_structure_tools(scene);
                     stop_enclosing(scene);
                     close_build_list(desktop.root());
-                    toggle_pool_panel(device, scene, assets);
+                    toggle_pool_panel(device, scene, assets, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
                 }
                 else if (*item == ui::ToolItem::People)
                     scene.show_people = tools->switched_on(*item);

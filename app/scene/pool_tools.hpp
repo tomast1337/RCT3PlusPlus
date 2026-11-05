@@ -20,6 +20,7 @@
 #include "render/device.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/key_map.hpp"
+#include "ui/money_text.hpp"
 #include "ui/widget.hpp"
 
 #include <span>
@@ -36,7 +37,7 @@ namespace rct3::scene
     void stop_pooling(ParkScene& scene);
 
     /// Opens the pool panel (ui/screens/pool_panel.hpp) with the editor's tool out, or closes it.
-    void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets);
+    void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ui::Currency& currency);
 
     /// Swaps the pool tool's work shown, not yet kept, with the pools and the ground as they were before it;
     /// twice swaps it back.

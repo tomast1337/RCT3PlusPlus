@@ -222,6 +222,8 @@ namespace rct3::scene
                 found["text"] = strings::to_utf8(e->text);
             if (const auto* l = dynamic_cast<const ui::Label*>(as_pointer(w)); l != nullptr)
                 found["text"] = strings::to_utf8(l->text);
+            if (!w->tooltip.empty())
+                found["tooltip"] = strings::to_utf8(w->tooltip);
             return found;
         });
         engine_.define("ui.children", [this](const Json& a) -> Json {

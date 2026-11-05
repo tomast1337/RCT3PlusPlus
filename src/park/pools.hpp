@@ -199,6 +199,11 @@ namespace rct3::park
         [[nodiscard]] std::optional<const PoolSquare&> at(std::int32_t col, std::int32_t row, std::int32_t level = std::numeric_limits<std::int32_t>::max()) const noexcept;
     };
 
+    /// The height a pool path trail starts at from side `turn` of `square`, a square of `map`: its surface, or a
+    /// slope's or steps' foot or top, which are the only sides they start from. None where a square beside already
+    /// meets that side at that height, so trails start only at the complex's edges, water and paving alike.
+    [[nodiscard]] std::optional<std::int32_t> pool_path_start(const PoolMap& map, const PoolSquare& square, std::int32_t turn);
+
     /// The shapes of wall a water square takes, each a set of pieces of the pool type.
     enum class PoolWall : std::uint8_t
     {

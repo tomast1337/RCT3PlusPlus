@@ -439,6 +439,12 @@ namespace rct3::scene
                 }
                 if (done || redraw)
                     pools_changed(device, scene, assets, done ? std::optional(park::TileRect { done->col, done->row, done->col + 1, done->row + 1 }.grown(1)) : std::nullopt);
+                // Following, the camera glides to the trail's next square as the path panel's does.
+                if (const auto next = park::next_spot(t.trail); done && next && panel->following())
+                {
+                    const std::int32_t height = t.trail.trail.empty() ? t.trail.start_height.value_or(0) : t.trail.trail.back().height;
+                    scene.footpaths.camera_goal = glm::vec3 { scene.grid.world_x(next->col) + scene.grid.tile_size_x / 2, static_cast<float>(height), scene.grid.world_z(next->row) + scene.grid.tile_size_z / 2 };
+                }
             }
             std::array<bool, ui::kPoolPathControls> usable;
             usable.fill(true);
@@ -575,6 +581,33 @@ namespace rct3::scene
             turn_preview(device, scene, assets, piece, park::kPoolOverlay);
         }
         const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
+        // Pinned, the paths page starts a trail where pressed: at the side of the pool square nearest the pointer
+        // that a trail may start from. The square it would lay first is marked, else the trail's next.
+        if (const auto panel = panel_of(scene); t.item && laying_paths(*t.item) && panel && panel->pinned())
+        {
+            if (const bool shown = put_back(scene); std::exchange(t.redraw, false) || shown)
+                pools_changed(device, scene, assets);
+            t.working.reset();
+            const auto square = tile ? scene.pools.at(tile->col, tile->row) : std::nullopt;
+            const auto side = square ? park::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, [&](std::uint8_t turn) { return park::pool_path_start(scene.pools, *square, turn).has_value(); }) : std::nullopt;
+            if (down && !t.corner && side)
+            {
+                park::start_at(t.trail, *tile);
+                t.trail.heading = *side;
+                t.trail.start_height = park::pool_path_start(scene.pools, *square, *side);
+                t.trail.trail.push_back({ .spot = *tile, .laid = 0, .height = *t.trail.start_height });
+                t.trail.on_slope = square->kind == park::PoolKind::PathSlope || square->kind == park::PoolKind::PathStairs;
+                t.trail_ground.assign(1, std::nullopt);
+            }
+            if (down)
+                t.corner = tile;
+            else
+                t.corner.reset();
+            const auto [dc, dr] = side ? kFacing[*side] : std::array<std::int32_t, 2> { };
+            const auto first = side ? std::optional(save::Tile { tile->col + dc, tile->row + dr }) : park::next_spot(t.trail);
+            draw_marks(device, scene, first ? std::optional(marked(*first, *first)) : std::nullopt, park::TilePart::Whole, true);
+            return;
+        }
         // A high diving board faces the water beside it nearest the pointer, as an extra takes its side; the turn
         // keys turn it only where water lies on every side or none. Sides with no water behind come first, so one
         // laid on water at a pool's wall reaches straight out from the wall, not along it.

@@ -428,6 +428,32 @@ TEST_CASE("pools: a trail lays the next pool path piece from where its last one 
     CHECK(next->end == 3);
 }
 
+TEST_CASE("pools: a pool path trail starts at any side of the complex that no square meets, a slope only at its ends")
+{
+    PoolMap map = ringed(2, 1);
+    // A paved corner starts from its two outer sides; the sides it shares with the ring and the water do not.
+    const PoolSquare& corner = *map.at(0, 0);
+    CHECK(pool_path_start(map, corner, 2) == 4);
+    CHECK(pool_path_start(map, corner, 3) == 4);
+    CHECK_FALSE(pool_path_start(map, corner, 0));
+    CHECK_FALSE(pool_path_start(map, corner, 1));
+    // Water inside the ring meets squares all round.
+    for (std::int32_t turn = 0; turn < 4; ++turn)
+        CHECK_FALSE(pool_path_start(map, *map.at(1, 1), turn));
+    // A slope off the ring's top side, its foot on the paving: its top starts a trail a unit up, its sides none,
+    // and the paving under its foot no longer starts one there.
+    map.squares.push_back({ .col = 1, .row = -1, .kind = PoolKind::PathSlope, .surface = 4, .depth = 0, .turn = 0 });
+    const PoolSquare& slope = map.squares.back();
+    CHECK(pool_path_start(map, slope, 2) == 5);
+    CHECK_FALSE(pool_path_start(map, slope, 1));
+    CHECK_FALSE(pool_path_start(map, slope, 0));
+    CHECK_FALSE(pool_path_start(map, *map.at(1, 0), 2));
+    CHECK(pool_path_start(map, *map.at(2, 0), 2) == 4);
+    // A square beside at another height does not meet the side.
+    map.squares.push_back({ .col = -1, .row = 0, .kind = PoolKind::Tile, .surface = 9, .depth = 2 });
+    CHECK(pool_path_start(map, *map.at(0, 0), 3) == 4);
+}
+
 TEST_CASE("pools: each square costs its kind's price and its depth's")
 {
     CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Water, .depth = 2 }) == 100 + 2 * 300);

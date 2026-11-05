@@ -4,7 +4,10 @@
 // menu's pools button. It has the land panel's shape: a disc in the corner with tabs on a ring round it, and a
 // strip running out to the right of the disc that shows the page of the tab out.
 //
-// Tabs, going round the ring: the pool editor, pool paths, extras, changing rooms and saved pools. The editor's
+// Tabs, going round the ring: pool paths, extras, the pool editor, changing rooms and saved pools, as in the game;
+// while the paths page is out two more stand before them, as on the path panel: a pin and a camera follow switch.
+// The pin shows the page's controls and has the pointer start a trail at a side of the pool picked; unpinned,
+// the controls hide and the pointer lays paths by dragging. The editor's
 // page has three rows: the three depths of water, then the snap to ground switch and the surface height beside
 // it, which only counts while the switch is off; under them the four kinds of edge; at the foot, laying water,
 // laying tiles and the grid switch, with the delete tool at the right end. Water, tiles and delete are one
@@ -117,7 +120,11 @@ namespace rct3::ui
         inline constexpr float kDiscIcon = 56; ///< The picture of what the tool lays, on the disc
         inline constexpr float kCloseLeft = 9;
         inline constexpr float kCloseBottom = 9;
-        inline constexpr int kFirstSlot = 1; ///< Of the ring's slots, the editor's tab's; the others follow
+        /// Of the ring's slots (footpath_tab_offset), each tab's in the order of PoolPage, and the paths page's pin
+        /// and camera follow switch.
+        inline constexpr std::array<int, 5> kTabSlots { 4, 2, 3, 5, 6 };
+        inline constexpr int kPinSlot = 0;
+        inline constexpr int kFollowSlot = 1;
     } // namespace pool_panel
 
     class PoolPanel : public Widget
@@ -148,6 +155,16 @@ namespace rct3::ui
             return page_;
         }
 
+        /// The paths page's pin is in: its controls show and the pointer starts a trail at a side picked.
+        [[nodiscard]] bool pinned() const
+        {
+            return pin_->on;
+        }
+        /// The camera follows the trail's end as pieces are laid.
+        [[nodiscard]] bool following() const
+        {
+            return follow_->on;
+        }
         /// Which of the paths page's controls can be used, and which of them picks the slope chosen.
         void set_path_controls(const std::array<bool, kPoolPathControls>& usable, std::size_t slope_control)
         {
@@ -202,6 +219,8 @@ namespace rct3::ui
         Widget* body_ = nullptr;
         Label* status_ = nullptr;
         std::array<Button*, 5> tabs_ { };
+        Button* pin_ = nullptr;
+        Button* follow_ = nullptr;
         // The editor's page.
         Widget* editor_page_ = nullptr;
         std::array<Button*, 3> modes_ { };  ///< Water, tiles, delete

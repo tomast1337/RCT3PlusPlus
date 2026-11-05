@@ -301,6 +301,28 @@ namespace rct3::park
         return PoolPathPiece { .square = { .col = spot->col, .row = spot->row, .kind = kind, .surface = std::min(from, end), .depth = 0, .turn = up ? (builder.heading + 2) & 3 : builder.heading }, .end = end };
     }
 
+    std::optional<std::int32_t> pool_path_start(const PoolMap& map, const PoolSquare& square, std::int32_t turn)
+    {
+        // The height of a square's side; a slope or steps have only their foot and top.
+        const auto side_height = [](const PoolSquare& s, std::int32_t side) -> std::optional<std::int32_t> {
+            if (s.kind != PoolKind::PathSlope && s.kind != PoolKind::PathStairs)
+                return s.surface;
+            if ((side & 3) == (s.turn & 3))
+                return s.surface;
+            if ((side & 3) == ((s.turn + 2) & 3))
+                return s.surface + (s.kind == PoolKind::PathSlope ? kPathSlopeRise : kPathStairsRise);
+            return std::nullopt;
+        };
+        const auto height = side_height(square, turn);
+        if (!height)
+            return std::nullopt;
+        const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn & 3)];
+        const auto next = map.at(square.col + dc, square.row + dr, *height);
+        if (next && side_height(*next, turn + 2) == height)
+            return std::nullopt;
+        return height;
+    }
+
     PoolExtraFit pool_extra_fit(std::string_view words)
     {
         PoolExtraFit fit;

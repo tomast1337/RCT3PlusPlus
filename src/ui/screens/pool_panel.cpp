@@ -6,6 +6,7 @@
 #include "ui/skin_library.hpp"
 
 #include <algorithm>
+#include <tuple>
 
 namespace rct3::ui
 {
@@ -51,6 +52,17 @@ namespace rct3::ui
             b.icon_scale = info_panel::kTabSize / info_panel::kIconSize;
             tabs_[i] = &b;
         }
+        // The paths page's switches, with the path panel's pictures and help.
+        for (auto [button, icon, help] : { std::tuple { &pin_, "RideCamGUI_Pin", "PathEditor_EditMode" }, { &follow_, "Guest_Camera", "PathEditor_CameraFollow" } })
+        {
+            Button& b = add<Button>(button == &pin_ ? "pin" : "follow", style_.tab_face, icon);
+            b.tooltip = std::u16string(strings_.get(help));
+            b.toggle = true;
+            b.swell = (info_panel::kTabGrown - info_panel::kTabSize) / 2;
+            b.icon_scale = info_panel::kTabSize / info_panel::kIconSize;
+            *button = &b;
+        }
+        pin_->on = true;
 
         editor_page_ = &body_->add<Widget>("editor");
         const auto button = [&](std::string_view icon, std::string_view help) -> Button& {
@@ -111,7 +123,8 @@ namespace rct3::ui
             (void)body_->remove(*b);
         choices_.clear();
         editor_page_->visible = page_ == PoolPage::Editor;
-        paths_page_->visible = page_ == PoolPage::Paths;
+        paths_page_->visible = page_ == PoolPage::Paths && pin_->on;
+        pin_->visible = follow_->visible = page_ == PoolPage::Paths;
         for (const PoolChoice& c : choices_of(page_))
         {
             // On the tabs' round face, as in the game.
@@ -131,7 +144,7 @@ namespace rct3::ui
         if (page_ == PoolPage::Editor)
             return { pool_panel::kEditorWidth, 2 * pool_panel::kButton + pool_panel::kEdgeHeight + 2 * pool_panel::kRowGap };
         if (page_ == PoolPage::Paths)
-            return { footpath_panel::kControlsWidth + pool_panel::kGroupGap + pool_panel::kStairCell, footpath_panel::kControlsHeight };
+            return { (pin_->on ? footpath_panel::kControlsWidth + pool_panel::kGroupGap : 0) + pool_panel::kStairCell, footpath_panel::kControlsHeight };
         if (choices_.empty())
             return { 0, 0 };
         const auto columns = (choices_.size() + pool_panel::kRows - 1) / pool_panel::kRows;
@@ -162,8 +175,13 @@ namespace rct3::ui
         const Point centre { (d.x0 + d.x1) / 2 - r.x0, (d.y0 + d.y1) / 2 - r.y0 };
         for (std::size_t i = 0; i < tabs_.size(); ++i)
         {
-            const Point at = footpath_tab_offset(pool_panel::kFirstSlot + static_cast<int>(i));
+            const Point at = footpath_tab_offset(pool_panel::kTabSlots[i]);
             tabs_[i]->placement = top_left(centre.x + at.x - info_panel::kTabSize / 2, centre.y + at.y - info_panel::kTabSize / 2, info_panel::kTabSize, info_panel::kTabSize);
+        }
+        for (auto [b, slot] : { std::pair { pin_, pool_panel::kPinSlot }, { follow_, pool_panel::kFollowSlot } })
+        {
+            const Point at = footpath_tab_offset(slot);
+            b->placement = top_left(centre.x + at.x - info_panel::kTabSize / 2, centre.y + at.y - info_panel::kTabSize / 2, info_panel::kTabSize, info_panel::kTabSize);
         }
         const Rect s = strip();
         const Point body = body_size();
@@ -255,6 +273,13 @@ namespace rct3::ui
                 }
                 return;
             }
+        (void)follow_->take_click();
+        if (pin_->take_click())
+        {
+            // The controls come and go with the pin.
+            open(page_);
+            return;
+        }
         const PoolEditor before = editor_;
         for (std::size_t i = 0; i < modes_.size(); ++i)
             if (modes_[i]->take_click())
@@ -375,7 +400,7 @@ namespace rct3::ui
                 if (editor_.snap)
                     lit(snap_);
             }
-            else if (page_ == PoolPage::Paths && !placing_ && path_slope_ < path_controls_.size())
+            else if (page_ == PoolPage::Paths && pin_->on && !placing_ && path_slope_ < path_controls_.size())
                 lit(path_controls_[path_slope_]);
             if (placing_ && placing_->first == page_ && placing_->second < choices_.size())
                 lit(choices_[placing_->second]);

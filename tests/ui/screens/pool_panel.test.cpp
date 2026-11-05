@@ -130,3 +130,24 @@ TEST_CASE("the paths page offers the ways between levels, picked like the extras
     CHECK(f.panel->take_change());
     CHECK(f.panel->placing() == std::pair { PoolPage::Paths, std::size_t { 0 } });
 }
+
+TEST_CASE("the paths page alone has the pin and the camera follow switch, and the pin shows its controls")
+{
+    Fixture f;
+    CHECK_FALSE(f.button("pools/pin").visible);
+    CHECK_FALSE(f.button("pools/follow").visible);
+    f.click("pools/Pool_PathPanel");
+    CHECK(f.button("pools/pin").visible);
+    CHECK(f.panel->pinned());
+    CHECK_FALSE(f.panel->following());
+    CHECK(f.desktop.root().find_as<Widget>("pools/body/paths")->visible);
+    f.click("pools/follow");
+    CHECK(f.panel->following());
+    f.click("pools/pin");
+    CHECK_FALSE(f.panel->pinned());
+    CHECK_FALSE(f.desktop.root().find_as<Widget>("pools/body/paths")->visible);
+    f.click("pools/pin");
+    CHECK(f.panel->pinned());
+    f.click("pools/Pool_ExtraPanel");
+    CHECK_FALSE(f.button("pools/pin").visible);
+}

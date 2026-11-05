@@ -1190,9 +1190,7 @@ namespace rct3::simulation
 
     Upkeep upkeep_of(const save::Ride& ride)
     {
-        // The intervals the maintenance page lists, in its order: every 10, 20, 30 and 45 minutes, every hour,
-        // every two hours, never.
-        constexpr std::array<float, 7> kIntervals { 600, 1200, 1800, 2700, 3600, 7200, -1 };
+        constexpr auto& kIntervals = kInspectionSeconds;
         const std::int32_t interval = ride.breakdown.inspection_interval;
         // Broken by its flag alone: saves keep a breakdown kind on most open, running rides too, and a repair
         // status on some fixed ones.

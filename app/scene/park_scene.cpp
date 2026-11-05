@@ -54,6 +54,7 @@
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/delete_area_panel.hpp"
 #include "ui/screens/message_drawer.hpp"
+#include "ui/screens/pool_panel.hpp"
 #include "ui/screens/ride_camera_panel.hpp"
 #include "ui/screens/tool_menus.hpp"
 #include "ui/screens/tool_row.hpp"
@@ -654,7 +655,27 @@ namespace rct3::scene
                 std::int64_t people = 0;
                 for (const auto [g, swimmer, errand] : r.view<const simulation::Swimmer, const simulation::Errand>().each())
                     people += door != nullptr && r.valid(errand.target) && r.all_of<simulation::PoolDoor>(errand.target) && r.get<simulation::PoolDoor>(errand.target).pool == door->pool;
-                f.pool = ui::PoolComplexFacts { .name = strings::to_utf16(scene.pools.rooms[*room].complex_name), .ticket = scene.pools.rooms[*room].ticket, .open = scene.pools.rooms[*room].open, .people = people, .dirt = pool != nullptr ? simulation::dirt_step(*pool) : 0, .fluid = scene.pools.rooms[*room].fluid, .waves = scene.pools.rooms[*room].waves };
+                const park::PoolRoom& at = scene.pools.rooms[*room];
+                f.pool = ui::PoolComplexFacts {
+                    .name = strings::to_utf16(at.complex_name), .number = static_cast<std::size_t>(std::ranges::count(scene.pools.rooms.begin(), scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room) + 1, at.symbol, &park::PoolRoom::symbol)), .ticket = at.ticket, .open = at.open, .people = people, .dirt = pool != nullptr ? simulation::dirt_step(*pool) : 0, .fluid = at.fluid, .waves = at.waves, .refill = simulation::kTuning.pools.refill.at(std::min<std::size_t>(at.fluid, 2)).value
+                };
+                // The room's takings and upkeep, and what guests thought of it, as the simulation has them.
+                if (const auto* attraction = e != entt::null ? r.try_get<simulation::Attraction>(e) : nullptr)
+                {
+                    f.pool->customers = attraction->customers;
+                    f.pool->income = attraction->income.value;
+                }
+                if (const auto* upkeep = e != entt::null ? r.try_get<simulation::Upkeep>(e) : nullptr)
+                {
+                    f.pool->reliability = upkeep->reliability.value;
+                    f.pool->since_inspection = upkeep->since_inspection.value;
+                    if (const auto interval = std::ranges::find(simulation::kInspectionSeconds, upkeep->inspect_every.value); interval != simulation::kInspectionSeconds.end())
+                        f.pool->inspection = static_cast<int>(interval - simulation::kInspectionSeconds.begin());
+                }
+                for (const auto [g, thoughts] : r.view<const simulation::Thoughts>().each())
+                    for (const simulation::Thought& t : thoughts.recent)
+                        if (e != entt::null && t.about == e)
+                            f.pool->thoughts.push_back({ .thought = static_cast<std::int32_t>(std::to_underlying(t.kind)), .time = t.time.value, .variant = t.variant });
                 const std::vector<save::Tile> complex = park::pool_complex(scene.pools, *room);
                 const auto machine = [&](const park::PoolExtra& x) { return x.fit.wave_machine && std::ranges::contains(complex, save::Tile { x.col, x.row }); };
                 f.pool->machines = std::ranges::any_of(scene.pools.extras, machine) || std::ranges::any_of(scene.scenery_pool_extras, machine);
@@ -736,7 +757,12 @@ namespace rct3::scene
             if (!scene.shown_party.empty())
                 panel.show_page(ui::party_page(scene.party_tab, party_facts(scene), *assets.strings, info_units(assets, options)));
             else if (scene.shown_prop)
-                panel.show_page(ui::scenery_page(scene.prop_tab, prop_facts(scene, *scene.shown_prop), *assets.strings));
+            {
+                ui::SceneryFacts f = prop_facts(scene, *scene.shown_prop);
+                if (f.pool)
+                    f.pool->currency = info_units(assets, options).currency;
+                panel.show_page(ui::scenery_page(scene.prop_tab, f, *assets.strings));
+            }
             else if (scene.shown_person)
                 panel.show_page(ui::person_page(scene.person_tab, person_facts(scene, *scene.shown_person), *assets.strings, info_units(assets, options)));
             else if (scene.shown)
@@ -891,6 +917,10 @@ namespace rct3::scene
                 tab.slot = t.slot;
                 tab.action = t.action;
                 tab.paints = t.paints;
+                // A changing room's flag opens or closes its complex, as a stall's does.
+                if (t.tab == ui::SceneryTab::RoomState)
+                    for (const ui::StateChoice& c : ui::state_choices(ui::AttractionKind::Stall))
+                        tab.choices.push_back({ std::string(c.icon), std::u16string(assets.strings->get(c.help)) });
                 scene.prop_tabs.push_back(t.tab);
             }
             if (scene.shown_prop != index)
@@ -2467,6 +2497,10 @@ namespace rct3::scene
                     info->hide();
                 }
             }
+            // A changing room's construction tab opens the pool panel, to build on at its complex.
+            if (action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::SceneryTab::RoomConstruction)
+                if (const auto pools = scene.desktop->root().find_as<ui::PoolPanel>("pool_panel"); !pools || !pools->showing())
+                    toggle_pool_panel(device, scene, assets, info_units(assets, options).currency);
             if (action && scene.shown_person && *action < scene.person_tabs.size() && scene.person_tabs[*action] == ui::PersonTab::Party)
                 open_party(scene, *info, *scene.shown_person, assets, options);
             if (action && scene.shown && *action < scene.shown_tabs.size() && scene.shown_tabs[*action] == ui::AttractionTab::Construction)
@@ -2532,6 +2566,12 @@ namespace rct3::scene
                     if (const entt::entity e = room_entity(scene, *room); e != entt::null)
                         scene.sim.registry.get_or_emplace<simulation::Upkeep>(e).called = true;
                 }
+                else if (change->id == ui::kPoolInspectionControl)
+                {
+                    // Each room is inspected on its own, as each ride is.
+                    if (const entt::entity e = room_entity(scene, *room); e != entt::null && change->value >= 0 && std::cmp_less(change->value, simulation::kInspectionSeconds.size()))
+                        scene.sim.registry.get_or_emplace<simulation::Upkeep>(e).inspect_every = { simulation::kInspectionSeconds[static_cast<std::size_t>(change->value)] };
+                }
                 else if (change->id == ui::kPoolLocateControl)
                 {
                     const auto model = scene.models.find(park::model_ref(o));
@@ -2543,9 +2583,7 @@ namespace rct3::scene
                     // settings, all its rooms alike. A blank name keeps the old one, as an attraction's does.
                     for (const std::size_t r : park::pool_complex_rooms(scene.pools, *room))
                     {
-                        if (change->id == ui::kPoolStateControl)
-                            scene.pools.rooms[r].open = change->value == 0;
-                        else if (change->id == ui::kPoolTicketControl)
+                        if (change->id == ui::kPoolTicketControl)
                             scene.pools.rooms[r].ticket = change->value;
                         else if (change->id == ui::kPoolFluidControl)
                             scene.pools.rooms[r].fluid = static_cast<std::uint8_t>(std::clamp(change->value, 0, 2));
@@ -2636,7 +2674,17 @@ namespace rct3::scene
                 scene.info_section = *section;
                 show_info_page(scene, *info, assets, options);
             }
-            if (const auto choice = info->take_choice(); choice && scene.shown)
+            const auto choice = info->take_choice();
+            if (const auto room = choice && scene.shown_prop ? pool_room(scene, scene.objects[*scene.shown_prop]) : std::nullopt)
+            {
+                // The whole complex opened or closed, all its rooms alike; then shown again for the flag's new look.
+                const std::vector<ui::StateChoice> states = ui::state_choices(ui::AttractionKind::Stall);
+                if (choice->second < states.size())
+                    for (const std::size_t r : park::pool_complex_rooms(scene.pools, *room))
+                        scene.pools.rooms[r].open = states[choice->second].state == save::AttractionState::Open;
+                open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
+            }
+            if (choice && scene.shown)
             {
                 // Put in the state picked, then shown again for the state tab's new look.
                 const ui::AttractionFacts f = facts(scene, *scene.shown);

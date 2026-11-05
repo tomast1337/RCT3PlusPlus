@@ -3719,7 +3719,7 @@ namespace rct3::simulation
         {
             const auto& door = r.get<PoolDoor>(e);
             auto& tank = r.get<PoolTank>(e);
-            auto& upkeep = r.get_or_emplace<Upkeep>(e);
+            auto& upkeep = r.get_or_emplace<Upkeep>(e, Upkeep { .inspect_every = { kInspectionSeconds[kRoomInspection] } });
             upkeep.since_inspection.value += dt;
             if (tank.left.value < kTuning.pools.refill_at.value)
                 upkeep.called = true;

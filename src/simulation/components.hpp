@@ -1112,6 +1112,12 @@ namespace rct3::simulation
         }
     };
 
+    /// The intervals the maintenance page lists, in its order, in seconds: every 10, 20, 30 and 45 minutes, every
+    /// hour, every two hours, never.
+    inline constexpr std::array<float, 7> kInspectionSeconds { 600, 1200, 1800, 2700, 3600, 7200, -1 };
+    /// The interval a new changing room is inspected at, of those: every 30 minutes, as the game's window shows.
+    inline constexpr std::size_t kRoomInspection = 2;
+
     /// A ride's wear. Each run wears it a little, and the less reliable it is the likelier a run ends in a
     /// breakdown, which closes it until a mechanic repairs it. Inspections win some reliability back. Stalls and
     /// cash machines wear with time instead (`break_in`), and are never inspected.

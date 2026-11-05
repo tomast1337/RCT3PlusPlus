@@ -289,6 +289,9 @@ namespace rct3::ui
     /// The page of `tab`, at `section` when the page has several.
     [[nodiscard]] InfoPage attraction_page(AttractionTab tab, const AttractionFacts& facts, const StringTable& strings, const InfoUnits& units, std::size_t section = 0);
 
+    /// The latest of the thoughts `all` on `page`, newest first, as many as it has room for, each with its mood's face.
+    void add_thoughts(InfoPage& page, std::span<const save::ThoughtEntry> all, const StringTable& strings);
+
     /// What a saved design's browser says of it, worded as a ride's results are: the ground it covers, its
     /// price, its ratings when it was rated and its test results when it was tested.
     [[nodiscard]] std::vector<InfoLine> design_lines(const save::DesignSummary& design, const StringTable& strings, const InfoUnits& units);

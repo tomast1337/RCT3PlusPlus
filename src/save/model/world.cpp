@@ -110,6 +110,8 @@ namespace rct3::save
             constexpr std::string_view kPoolSpecial = "SpecialHeight";
             constexpr std::string_view kPoolSide = "Side";
             constexpr std::string_view kPoolComplexIndex = "PoolComplexIndex";
+            constexpr std::array<std::string_view, 4> kPoolGround { "TerrainHeight0", "TerrainHeight1", "TerrainHeight2", "TerrainHeight3" };
+            constexpr std::string_view kPoolGroundKept = "TerrainHeightsStored";
             // Pool complexes, and their changing rooms.
             constexpr std::string_view kComplexClass = "PoolComplex";
             constexpr std::string_view kComplexIndex = "Index";
@@ -1088,6 +1090,12 @@ namespace rct3::save
                     if (get_bool(o.find(names::kPoolPrototype)).value_or(false))
                         break;
                     m.pool_segments.push_back({ .id = o.id, .col = int_or(o.find(names::kPoolCol)), .row = int_or(o.find(names::kPoolRow)), .type = int_or(o.find(names::kPoolType), -1), .surface = int_or(o.find(names::kPoolSurface)), .depth = int_or(o.find(names::kPoolDepth)), .special = int_or(o.find(names::kPoolSpecial)), .side = int_or(o.find(names::kPoolSide)), .complex = int_or(o.find(names::kPoolComplexIndex)) });
+                    if (get_bool(o.find(names::kPoolGroundKept)).value_or(false))
+                    {
+                        auto& ground = m.pool_segments.back().ground.emplace();
+                        for (std::size_t i = 0; i < ground.size(); ++i)
+                            ground[i] = static_cast<float>(int_or(o.find(names::kPoolGround[i])));
+                    }
                     if (m.pool_segments.back().type == 0)
                         m.pool_water.push_back({ m.pool_segments.back().col, m.pool_segments.back().row, m.pool_segments.back().surface, m.pool_segments.back().depth });
                     break;

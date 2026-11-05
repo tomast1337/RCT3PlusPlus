@@ -369,6 +369,82 @@ TEST_CASE("pools: laying over a square costs the new one and refunds the old")
     CHECK(map.squares.empty());
 }
 
+TEST_CASE("pools: a square laid well above another on its tile stacks over it; one laid close takes its place")
+{
+    PoolMap map;
+    const PoolSquare low { .col = 2, .row = 2, .kind = PoolKind::Water, .surface = 3, .depth = 2 };
+    (void)lay_pool(map, kPrices, std::array { low });
+    // Its floor kPoolHeadroom over the low square's surface: stacked, paid for alone.
+    const PoolSquare high { .col = 2, .row = 2, .kind = PoolKind::Tile, .surface = 3 + kPoolHeadroom + 2, .depth = 2 };
+    CHECK(lay_pool(map, kPrices, std::array { high }) == pool_build_cost(kPrices, high));
+    REQUIRE(map.squares.size() == 2);
+    CHECK(map.at(2, 2)->surface == high.surface); // Seen from above
+    CHECK(map.at(2, 2, 0)->surface == low.surface);
+    // A unit lower, it would be in the low square's way: it takes its place, the low one refunded.
+    PoolSquare close = high;
+    close.surface -= 1;
+    close.col = 3;
+    (void)lay_pool(map, kPrices, std::array { PoolSquare { .col = 3, .row = 2, .kind = PoolKind::Water, .surface = 3, .depth = 2 } });
+    CHECK(lay_pool(map, kPrices, std::array { close }) == pool_build_cost(kPrices, close) + pool_refund(kPrices, low));
+    CHECK(std::ranges::count_if(map.squares, [](const PoolSquare& s) { return s.col == 3; }) == 1);
+    // Taken up from the level of one of them, the other stays.
+    CHECK(take_up_pool(map, kPrices, { 2, 2 }, { 2, 2 }, high.surface) == pool_refund(kPrices, high));
+    REQUIRE(map.at(2, 2));
+    CHECK(map.at(2, 2)->surface == low.surface);
+}
+
+TEST_CASE("pools: stacked squares are walled and railed by their own level")
+{
+    PoolMap map = ringed(2, 2);
+    // A paved square over the corner of the pool, high above it.
+    map.squares.push_back({ .col = 1, .row = 1, .kind = PoolKind::Tile, .surface = 20, .depth = 2 });
+    const auto low = std::ranges::find_if(map.squares, [](const PoolSquare& s) { return s.col == 1 && s.row == 1 && s.surface == 4; });
+    REQUIRE(low != map.squares.end());
+    CHECK(water_around(map, *low) == water_around(ringed(2, 2), *ringed(2, 2).at(1, 1)));
+    const auto railings = [&](const PoolSquare& s) { return std::ranges::count(pool_pieces(map, s), std::string_view("Railing"), &PoolPiece::symbol); };
+    CHECK(railings(*low) == 0);
+    CHECK(railings(*map.at(1, 1)) == 4);
+}
+
+TEST_CASE("pools: the ground is dug down to a square's floor and kept, and left under a raised square")
+{
+    save::TerrainGrid grid { .width = 2, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
+    grid.cells.resize(2);
+    for (save::TerrainCell& c : grid.cells)
+        c.corners = { 5, 5, 6, 5 };
+    PoolMap map;
+    map.squares = { { .col = 0, .row = 0, .kind = PoolKind::Water, .surface = 5, .depth = 2 }, { .col = 1, .row = 0, .kind = PoolKind::Water, .surface = 16, .depth = 2 } };
+    dig_under_pools(map, grid);
+    CHECK(grid.at(0, 0).corners == std::array { 3.0f, 3.0f, 3.0f, 3.0f });
+    REQUIRE(map.squares[0].ground);
+    CHECK(*map.squares[0].ground == std::array { 5.0f, 5.0f, 6.0f, 5.0f });
+    // Raised: the ground stays where it was, and there is none to put back.
+    CHECK(grid.at(1, 0).corners == std::array { 5.0f, 5.0f, 6.0f, 5.0f });
+    CHECK_FALSE(map.squares[1].ground);
+    // Again, nothing changes: the ground kept is the one from before.
+    dig_under_pools(map, grid);
+    CHECK(*map.squares[0].ground == std::array { 5.0f, 5.0f, 6.0f, 5.0f });
+    // Laid over, a square keeps the ground the one before it dug.
+    (void)lay_pool(map, kPrices, std::array { PoolSquare { .col = 0, .row = 0, .kind = PoolKind::Tile, .surface = 5, .depth = 2 } });
+    CHECK(map.at(0, 0)->ground == std::array { 5.0f, 5.0f, 6.0f, 5.0f });
+}
+
+TEST_CASE("pools: a park from the game keeps squares stacked on a tile, and the ground those sunk into it dug")
+{
+    save::WorldModel world;
+    world.pool_segments = {
+        { .id = 1, .col = 5, .row = 5, .type = 1, .surface = 3, .depth = 2, .ground = std::array { 0.0f, 0.0f, 0.0f, 0.0f } },
+        { .id = 2, .col = 5, .row = 5, .type = 1, .surface = 16, .depth = 2, .ground = std::array { 0.0f, 0.0f, 0.0f, 0.0f } },
+        { .id = 3, .col = 6, .row = 5, .type = 0, .surface = 0, .depth = 2, .ground = std::array { 0.0f, 0.0f, 0.0f, 0.0f } },
+    };
+    const park::PoolMap map = park::saved_pools(world, { });
+    REQUIRE(map.squares.size() == 3);
+    CHECK(map.at(5, 5, 0)->surface == 3);
+    CHECK(map.at(5, 5)->surface == 16);
+    CHECK_FALSE(map.at(5, 5, 0)->ground); // Its floor over the ground
+    CHECK(map.at(6, 5)->ground == std::array { 0.0f, 0.0f, 0.0f, 0.0f });
+}
+
 TEST_CASE("pools: an extra's words name what it takes of its square")
 {
     const PoolExtraFit fit = pool_extra_fit(" side centralsolid WholeTile HeightStep 2 Shower");

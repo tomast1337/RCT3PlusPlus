@@ -29,7 +29,7 @@ namespace rct3::park
                 for (const glm::vec2 side : kSide)
                 {
                     const save::Tile next { body[i].col + static_cast<int>(side.x), body[i].row + static_cast<int>(side.y) };
-                    if (const auto square = map.at(next.col, next.row); square && square->kind == PoolKind::Water && square->surface == start.surface && !std::ranges::contains(body, next))
+                    if (const auto square = map.at(next.col, next.row, start.surface); square && square->kind == PoolKind::Water && square->surface == start.surface && !std::ranges::contains(body, next))
                         body.push_back(next);
                 }
             glm::ivec2 low { start.col, start.row };

@@ -363,7 +363,7 @@ namespace rct3::parkfile
         if (park.animals)
             put_chunk(w, "ANML", 1, *park.animals);
         if (park.pools)
-            put_chunk(w, "POOL", 8, *park.pools);
+            put_chunk(w, "POOL", 9, *park.pools);
         return w.take();
     }
 
@@ -436,7 +436,7 @@ namespace rct3::parkfile
             }
             if (tag == "POOL")
             {
-                if (park.pools || version != 8) // 8 adds the wave machines to the extras' fit, and the rooms' wave settings
+                if (park.pools || version != 9) // 9 adds the ground each square dug
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.pools.emplace());
             }

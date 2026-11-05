@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <bit>
 #include <charconv>
+#include <cstdlib>
 
 namespace rct3::park
 {
@@ -71,6 +72,15 @@ namespace rct3::park
             return a.kind == b.kind && a.depth == b.depth && a.surface == b.surface && a.board == b.board && a.turn == b.turn;
         }
 
+        /// Whether `a` and `b`, on one tile, leave kPoolHeadroom between the top of the lower and the floor of the
+        /// upper: a staircase's or a high diving board's top is its climb over the surface, a slope's or steps' their
+        /// rise.
+        bool stacked(const PoolSquare& a, const PoolSquare& b) noexcept
+        {
+            const auto top = [](const PoolSquare& s) { return s.surface + s.board + (s.kind == PoolKind::PathSlope ? kPathSlopeRise : s.kind == PoolKind::PathStairs ? kPathStairsRise : 0); };
+            return a.surface - a.depth >= top(b) + kPoolHeadroom || b.surface - b.depth >= top(a) + kPoolHeadroom;
+        }
+
         /// The parts of a square, as bits: its middle, paved or water, then four bits each, by turn, for its
         /// sides, the walls under them, water at them and changes of level at them.
         constexpr std::uint32_t kPavedMiddle = 1u << 0;
@@ -133,7 +143,7 @@ namespace rct3::park
         std::optional<const PoolSquare&> water_beside(const PoolMap& map, const PoolSquare& square, std::int32_t turn)
         {
             const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn & 3)];
-            const auto s = map.at(square.col + dc, square.row + dr);
+            const auto s = map.at(square.col + dc, square.row + dr, square.surface);
             if (!s || s->kind != PoolKind::Water || s->surface != square.surface)
                 return std::nullopt;
             return s;
@@ -212,7 +222,7 @@ namespace rct3::park
         bool path_joins(const PoolMap& map, const PoolSquare& square, std::int32_t turn)
         {
             const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn & 3)];
-            const auto next = map.at(square.col + dc, square.row + dr);
+            const auto next = map.at(square.col + dc, square.row + dr, square.surface);
             if (!next || !is_pool_path(next->kind))
                 return false;
             if (next->kind == PoolKind::Path)
@@ -240,12 +250,13 @@ namespace rct3::park
 
     } // namespace
 
-    std::optional<const PoolSquare&> PoolMap::at(std::int32_t col, std::int32_t row) const noexcept
+    std::optional<const PoolSquare&> PoolMap::at(std::int32_t col, std::int32_t row, std::int32_t level) const noexcept
     {
-        const auto found = std::ranges::find_if(squares, [&](const PoolSquare& s) { return s.col == col && s.row == row; });
-        if (found == squares.end())
-            return std::nullopt;
-        return *found;
+        std::optional<const PoolSquare&> found;
+        for (const PoolSquare& s : squares)
+            if (s.col == col && s.row == row && (!found || std::abs(std::int64_t { s.surface } - level) < std::abs(std::int64_t { found->surface } - level)))
+                found = s;
+        return found;
     }
 
     std::optional<PoolPathPiece> next_pool_path(const FootpathBuilder& builder)
@@ -358,7 +369,7 @@ namespace rct3::park
     std::uint8_t water_around(const PoolMap& map, const PoolSquare& square) noexcept
     {
         const auto water = [&](std::int32_t dc, std::int32_t dr) {
-            const auto s = map.at(square.col + dc, square.row + dr);
+            const auto s = map.at(square.col + dc, square.row + dr, square.surface);
             return s && s->kind == PoolKind::Water && s->surface == square.surface;
         };
         std::uint8_t bits = 0;
@@ -450,11 +461,12 @@ namespace rct3::park
         {
             const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn)];
             const bool room = std::ranges::any_of(map.rooms, [&](const PoolRoom& r) { return r.col == square.col + dc && r.row == square.row + dr && ((r.turn + 2) & 3) == turn; });
-            const auto next = map.at(square.col + dc, square.row + dr);
+            const auto next = map.at(square.col + dc, square.row + dr, square.surface);
             if (!room && (!next || next->surface != square.surface))
                 out.push_back({ "Railing", square.surface, turn });
             // A staircase's top is railed where no square meets it.
-            if (const std::int32_t top = square.surface + std::max(square.board, kLowestStairs); square.kind == PoolKind::Stairs && (!next || next->surface != top))
+            const std::int32_t top = square.surface + std::max(square.board, kLowestStairs);
+            if (const auto above = map.at(square.col + dc, square.row + dr, top); square.kind == PoolKind::Stairs && (!above || above->surface != top))
                 out.push_back({ "Railing", top, turn });
         }
         return out;
@@ -525,6 +537,20 @@ namespace rct3::park
         return out;
     }
 
+    void dig_under_pools(PoolMap& map, save::TerrainGrid& grid)
+    {
+        for (PoolSquare& s : map.squares)
+            if (grid.contains(s.col, s.row))
+            {
+                auto& corners = grid.at(s.col, s.row).corners;
+                const auto floor = static_cast<float>(s.surface - s.depth);
+                if (std::ranges::any_of(corners, [&](float h) { return h > floor; }))
+                    s.ground = s.ground.value_or(corners);
+                for (float& h : corners)
+                    h = std::min(h, floor);
+            }
+    }
+
     std::int64_t pool_build_cost(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept
     {
         return price(prices, square, kBuild);
@@ -575,7 +601,8 @@ namespace rct3::park
         std::int64_t cost = 0;
         for (const PoolSquare& square : squares)
         {
-            const auto was = std::ranges::find_if(map.squares, [&](const PoolSquare& s) { return s.col == square.col && s.row == square.row; });
+            const auto in_the_way = [&](const PoolSquare& s) { return s.col == square.col && s.row == square.row && !stacked(s, square); };
+            const auto was = std::ranges::find_if(map.squares, in_the_way);
             if (was == map.squares.end())
             {
                 cost += pool_build_cost(prices, square);
@@ -583,8 +610,18 @@ namespace rct3::park
             }
             else if (!same(*was, square))
             {
+                // It takes the place of every square in its way, and keeps the ground the first had dug.
                 cost += pool_build_cost(prices, square) + pool_refund(prices, *was);
+                const auto ground = was->ground;
                 *was = square;
+                was->ground = ground;
+                const std::size_t kept = static_cast<std::size_t>(was - map.squares.begin());
+                for (std::size_t i = map.squares.size(); i-- > 0;)
+                    if (i != kept && in_the_way(map.squares[i]))
+                    {
+                        cost += pool_refund(prices, map.squares[i]);
+                        map.squares.erase(map.squares.begin() + static_cast<std::ptrdiff_t>(i));
+                    }
                 cost += clear_extras(map, square.col, square.row);
             }
             else
@@ -594,17 +631,24 @@ namespace rct3::park
         return cost;
     }
 
-    std::int64_t take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::Tile a, save::Tile b)
+    std::int64_t take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::Tile a, save::Tile b, std::optional<std::int32_t> level)
     {
         const auto [c0, c1] = std::minmax(a.col, b.col);
         const auto [r0, r1] = std::minmax(a.row, b.row);
         std::int64_t cost = 0;
-        std::erase_if(map.squares, [&](const PoolSquare& s) {
-            if (s.col < c0 || s.col > c1 || s.row < r0 || s.row > r1)
-                return false;
-            cost += pool_refund(prices, s);
-            return true;
-        });
+        // Each square going, marked first: which of a stack is nearest the level is seen before any goes.
+        std::vector<bool> going(map.squares.size());
+        for (std::size_t i = 0; i < map.squares.size(); ++i)
+        {
+            const PoolSquare& s = map.squares[i];
+            going[i] = s.col >= c0 && s.col <= c1 && s.row >= r0 && s.row <= r1 && (!level || &*map.at(s.col, s.row, *level) == &s);
+        }
+        for (std::size_t i = map.squares.size(); i-- > 0;)
+            if (going[i])
+            {
+                cost += pool_refund(prices, map.squares[i]);
+                map.squares.erase(map.squares.begin() + static_cast<std::ptrdiff_t>(i));
+            }
         std::erase_if(map.extras, [&](const PoolExtra& e) {
             if (e.col < c0 || e.col > c1 || e.row < r0 || e.row > r1)
                 return false;
@@ -622,6 +666,8 @@ namespace rct3::park
         for (const save::PoolSegmentState& s : world.pool_segments)
         {
             PoolSquare& square = map.squares.emplace_back(PoolSquare { .col = s.col, .row = s.row, .surface = s.surface, .depth = s.depth });
+            if (s.ground && std::ranges::any_of(*s.ground, [&](float h) { return h > static_cast<float>(s.surface - s.depth); }))
+                square.ground = s.ground;
             square.kind = s.type == kWater ? PoolKind::Water : s.type == kSpa ? PoolKind::Jacuzzi : s.type == kHighDive ? PoolKind::HighDive : s.type == kPath ? PoolKind::Path : s.type == kPathSlope ? PoolKind::PathSlope : s.type == kPathStairs ? PoolKind::PathStairs : PoolKind::Tile;
             square.board = s.type == kHighDive ? s.special : 0;
         }
@@ -640,7 +686,7 @@ namespace rct3::park
             }
             const bool climbs = square.kind == PoolKind::PathSlope || square.kind == PoolKind::PathStairs;
             for (std::int32_t turn = 0; (square.kind == PoolKind::HighDive || climbs) && turn < 4; ++turn)
-                if (const auto next = map.at(square.col + kSideStep[static_cast<std::size_t>(turn)][0], square.row + kSideStep[static_cast<std::size_t>(turn)][1]); next && (climbs ? next->kind == PoolKind::Path && next->surface == square.surface : next->kind == PoolKind::Water))
+                if (const auto next = map.at(square.col + kSideStep[static_cast<std::size_t>(turn)][0], square.row + kSideStep[static_cast<std::size_t>(turn)][1], square.surface); next && (climbs ? next->kind == PoolKind::Path && next->surface == square.surface : next->kind == PoolKind::Water))
                 {
                     square.turn = turn;
                     break;

@@ -22,6 +22,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <ranges>
 #include <utility>
 
 namespace rct3::scene
@@ -135,15 +136,16 @@ namespace rct3::scene
             const park::BuildItem& item = *scene.pooling.item;
             park::PoolMap map = scene.pools;
             const auto prices = std::span<const std::int32_t, 18>(item.pool_prices.data(), 18);
+            // Where squares are stacked, the one on top where the drag began is taken up, and those level with it.
+            const auto begun = scene.pools.at(a.col, a.row);
             if (item.symbol == park::kPoolDelete)
             {
-                const std::int64_t cost = park::take_up_pool(map, prices, a, b);
+                const std::int64_t cost = park::take_up_pool(map, prices, a, b, begun ? std::optional(begun->surface) : std::nullopt);
                 return { std::move(map), cost };
             }
             // Raised or lowered with Shift, the surface is where Shift took it. Snapped to the ground, it is the
             // ground's where the drag began, or the surface of the pool begun there; else the height the pool panel
-            // sets. Raised, a pool stands on the land raised to its floor (pools_changed).
-            const auto begun = scene.pools.at(a.col, a.row);
+            // sets. Raised, a pool stands over the ground, which stays where it is (pools_changed).
             const std::int32_t surface = scene.pooling.lifted.value_or(scene.pooling.height.value_or(begun ? begun->surface : static_cast<std::int32_t>(std::lround(scene.grid.at(a.col, a.row).max_height()))));
             const auto water = std::ranges::find(park::kPoolWater, item.symbol);
             const park::PoolKind kind = water != park::kPoolWater.end() ? park::PoolKind::Water : item.symbol == park::kPoolJacuzzi ? park::PoolKind::Jacuzzi : item.symbol == park::kPoolHighDive ? park::PoolKind::HighDive : item.symbol == park::kPoolStairs ? park::PoolKind::Stairs : item.symbol == park::kPoolPath ? park::PoolKind::Path : item.symbol == park::kPoolPathSlope ? park::PoolKind::PathSlope : item.symbol == park::kPoolPathStairs ? park::PoolKind::PathStairs : park::PoolKind::Tile;
@@ -218,7 +220,8 @@ namespace rct3::scene
                         corners.fill(static_cast<float>(s.surface));
                     }
                 park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], part, ok ? kMarkColour : kRefusedColour);
-                for (const auto& [tile, corners] : dug)
+                // Backwards: a tile with squares stacked is in it more than once.
+                for (const auto& [tile, corners] : std::views::reverse(dug))
                     scene.grid.at(tile.col, tile.row).corners = corners;
             }
             set_view_lines(device, scene.pool_marks, mesh);
@@ -417,9 +420,9 @@ namespace rct3::scene
                         auto& corners = scene.grid.at(spot.col, spot.row).corners;
                         if (ground)
                             corners = *ground;
-                        else
-                            corners.fill(static_cast<float>(square->surface));
-                        cost = park::take_up_pool(scene.pools, prices, spot, spot);
+                        else if (square->ground)
+                            corners = *square->ground;
+                        cost = park::take_up_pool(scene.pools, prices, spot, spot, square->surface);
                         done = spot;
                     }
                     const auto back = t.trail.trail.empty() ? std::nullopt : scene.pools.at(t.trail.trail.back().spot.col, t.trail.trail.back().spot.row);
@@ -469,10 +472,10 @@ namespace rct3::scene
             for (std::int32_t row = area[1]; row <= area[3]; ++row)
                 for (std::int32_t col = area[0]; col <= area[2]; ++col)
                     t.dug.emplace_back(save::Tile { col, row }, scene.grid.at(col, row).corners);
-            // The ground under squares taken up is left flat at their surface.
+            // The ground a square taken up had dug is put back.
             for (const park::PoolSquare& s : scene.pools.squares)
-                if (!map.at(s.col, s.row))
-                    scene.grid.at(s.col, s.row).corners.fill(static_cast<float>(s.surface));
+                if (const auto now = map.at(s.col, s.row, s.surface); s.ground && (!now || now->surface != s.surface))
+                    scene.grid.at(s.col, s.row).corners = *s.ground;
             t.before = std::exchange(scene.pools, std::move(map));
         }
     } // namespace
@@ -718,10 +721,7 @@ namespace rct3::scene
         // same room.
         const auto shown = scene.shown_prop && *scene.shown_prop < scene.objects.size() ? std::optional(scene.objects[*scene.shown_prop]) : std::nullopt;
         const bool shown_piece = shown && std::ranges::contains(scene.pool_pieces, shown->id);
-        // The ground under every square is dug down to its floor.
-        for (const park::PoolSquare& s : scene.pools.squares)
-            if (scene.grid.contains(s.col, s.row))
-                scene.grid.at(s.col, s.row).corners.fill(static_cast<float>(s.surface - s.depth));
+        park::dig_under_pools(scene.pools, scene.grid);
         std::vector<save::PlacedObject> pieces;
         for (save::PlacedObject& piece : park::pool_objects(scene.pools, park::kPoolOverlay, last_id(scene)))
         {
@@ -757,15 +757,16 @@ namespace rct3::scene
         const std::vector<save::Tile> complex = park::pool_complex(scene.pools, room);
         if (complex.empty())
             return;
-        // Each square goes as the delete tool takes it up, the ground left flat at its surface; the rooms
-        // opening on them go with them.
+        // Each square goes as the delete tool takes it up, the ground it dug put back; the rooms opening on them go
+        // with them.
         std::int64_t cost = 0;
         for (const save::Tile tile : complex)
-            if (const auto square = scene.pools.at(tile.col, tile.row))
-            {
-                scene.grid.at(tile.col, tile.row).corners.fill(static_cast<float>(square->surface));
-                cost += park::take_up_pool(scene.pools, prices, tile, tile);
-            }
+        {
+            for (const park::PoolSquare& s : scene.pools.squares)
+                if (s.col == tile.col && s.row == tile.row && s.ground)
+                    scene.grid.at(tile.col, tile.row).corners = *s.ground;
+            cost += park::take_up_pool(scene.pools, prices, tile, tile);
+        }
         if (scene.park.cash)
             *scene.park.cash -= cost;
         if (cost != 0)

@@ -9,6 +9,9 @@
 // piece at the bottom and, where a side or a corner meets no water, a wall turned to face it. A square of
 // the pool has a railing on each side that meets no square of the pool.
 //
+// The ground is dug down to a square's floor where it is higher, and left where it is lower: a raised pool stands
+// over it on the support columns its pieces ask for. A raised square may stand over another on the same tile.
+//
 // Where two walls meet round the outside of a corner, the square's edge setting, chosen when it was laid,
 // shapes the corner: square, cut across, or a tight curve inside the square. A loose curve sweeps on into the
 // squares on either side, which take curved walls to meet it; it falls back to a tight curve where a square
@@ -37,6 +40,7 @@
 
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <span>
 #include <string>
@@ -86,7 +90,14 @@ namespace rct3::park
         std::int32_t board = 0;   ///< A high diving board's or a staircase's height over the surface, whole units
         std::int32_t turn = 0;    ///< The side a high diving board faces, or a staircase's foot
         PoolEdge edge = PoolEdge::Straight;
+        /// The ground's corners, as the grid keeps them, before the square dug it down to its floor: put back when
+        /// it goes. None where the ground was under its floor, as under a raised pool, which stands over it.
+        std::optional<std::array<float, 4>> ground { };
     };
+
+    /// A pool square stacked over another on one tile leaves at least this much between the lower one's top and
+    /// the upper one's floor; one laid closer takes the other's place.
+    inline constexpr std::int32_t kPoolHeadroom = 3; ///< Chosen by eye: room for a person on the lower deck
 
     /// A pool path piece as a trail lays it, and the height it is left at.
     struct PoolPathPiece
@@ -129,6 +140,8 @@ namespace rct3::park
     [[nodiscard]] PoolExtraFit pool_extra_fit(std::string_view words);
 
     /// An extra the player has put in a pool.
+    /// shortcut: on a tile with squares stacked it stands on the highest; keep its own level once extras go under a
+    /// raised pool.
     struct PoolExtra
     {
         std::string symbol { };  ///< Its scenery item
@@ -172,14 +185,17 @@ namespace rct3::park
         PoolWaves waves { };
     };
 
-    /// The pools the player has laid, a square to a tile, the extras in them and their changing rooms.
+    /// The pools the player has laid, the extras in them and their changing rooms. A tile holds a square, or several
+    /// stacked with headroom between them.
     struct PoolMap
     {
         std::vector<PoolSquare> squares { };
         std::vector<PoolExtra> extras { };
         std::vector<PoolRoom> rooms { };
 
-        [[nodiscard]] std::optional<const PoolSquare&> at(std::int32_t col, std::int32_t row) const noexcept;
+        /// The square at (`col`, `row`) whose surface is nearest `level`; without one, the highest, as seen from
+        /// above.
+        [[nodiscard]] std::optional<const PoolSquare&> at(std::int32_t col, std::int32_t row, std::int32_t level = std::numeric_limits<std::int32_t>::max()) const noexcept;
     };
 
     /// The shapes of wall a water square takes, each a set of pieces of the pool type.
@@ -243,6 +259,10 @@ namespace rct3::park
     /// are placed as; take them in once the pool tool lays them.
     [[nodiscard]] PoolMap saved_pools(const save::WorldModel& world, std::span<const save::PlacedObject> objects);
 
+    /// Digs the ground of `grid` down to the floor of each square of `map` where it is higher, keeping in the square
+    /// the ground it dug; the ground under a raised square is left as it is.
+    void dig_under_pools(PoolMap& map, save::TerrainGrid& grid);
+
     /// What laying `square` costs, from the pool type's price list (ovl::PoolType::prices); in hundredths.
     [[nodiscard]] std::int64_t pool_build_cost(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept;
     /// What taking `square` up again costs: below zero, money back.
@@ -265,12 +285,13 @@ namespace rct3::park
 
     /// Lays `squares` in `map`, each over whatever square was where it goes, and returns what that costs:
     /// each new square's price and the refund of each it takes the place of, and of the extras on it. A square
-    /// laid over one the same, but for its edge setting, costs nothing. Changing rooms whose square is no longer paved, or that now stand
+    /// laid over one the same, but for its edge setting, costs nothing. A square laid above or below one on its tile,
+    /// with kPoolHeadroom between, is stacked with it. Changing rooms whose square is no longer paved, or that now stand
     /// in the pool, go.
     std::int64_t lay_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, std::span<const PoolSquare> squares);
 
     /// Takes up the squares of `map` from `a` to `b`, the extras on them and the changing rooms opening on
-    /// them; returns the refund, below zero.
-    std::int64_t take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::Tile a, save::Tile b);
+    /// them; returns the refund, below zero. Given a `level`, of squares stacked on a tile only the one nearest it.
+    std::int64_t take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::Tile a, save::Tile b, std::optional<std::int32_t> level = std::nullopt);
 
 } // namespace rct3::park

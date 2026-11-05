@@ -568,10 +568,16 @@ await open_editor();
 await ui.click("pool_panel/Pool_PathPanel");
 await until(() => ui.children("pool_panel/body")?.includes("paths") === true, 120, "the paths page");
 expect(ui.children("pool_panel/body/paths")!.length === 9, `the path controls, not ${JSON.stringify(ui.children("pool_panel/body/paths"))}`);
+// Above the paths tab, the pin (in) and the camera follow switch (off), as on the path panel.
+expect(ui.find("pool_panel/pin")?.on === true && ui.find("pool_panel/follow")?.on === false, "the pin in and the camera follow off");
 await screenshot("pool_panel_paths");
+// Unpinned, the controls hide and the pointer lays paths by dragging.
+await ui.toggle("pool_panel/pin", false);
+expect(ui.find("pool_panel/body/paths") === undefined, "the controls hidden while unpinned");
 await pointer.drag(on_view(c0 + 6.5, r0 + 2.5), on_view(c0 + 8.5, r0 + 5.5), 6);
 await frames(3);
 expect(count("PathCorner") === 1 && count("PathStraight") === 5 && park.cash()! < cash, `an L of path, paid for, not ${count("PathCorner")} corners and ${count("PathStraight")} straights`);
+await ui.toggle("pool_panel/pin", true);
 await ui.click("pool_panel/body/paths/Path_UpwardSlope");
 await ui.click("pool_panel/body/paths/Path_Straight");
 await frames(3);
@@ -589,6 +595,42 @@ expect(!pieces().some((o) => o.col === c0 + 8 && o.row === r0 + 7), "the last pi
 build.stop();
 await frames(5);
 await screenshot("pool_paths");
+
+// Pinned, a press near a side of a paved square at the raised squares' edge starts a trail there, as at a path's
+// edge: the controls lay a flat piece out from it, then, the camera following, a slope down and a flat piece.
+camera.look({ col: c0 + 1.5, row: r0 + 4 }, { col: c0 + 1.5, row: r0 + 12, up: 9 });
+await frames(10);
+await open_editor();
+await ui.click("pool_panel/Pool_PathPanel");
+await until(() => ui.find("pool_panel/body/paths") !== undefined, 120, "the paths page, pinned");
+await pointer.click(...on_view(c0 + 1.5, r0 + 3.9));
+await frames(2);
+const view_before = camera.view().target;
+await ui.click("pool_panel/body/paths/Path_Straight");
+await frames(10);
+// The view's height keeps to what is under it; along the ground it holds still.
+const still = camera.view().target;
+expect(still[0] === view_before[0] && still[2] === view_before[2], `the camera kept still while not following, not from ${view_before} to ${still}`);
+await ui.toggle("pool_panel/follow", true);
+await ui.click("pool_panel/body/paths/Path_DownwardSlope");
+await ui.click("pool_panel/body/paths/Path_Straight");
+await ui.click("pool_panel/body/paths/Path_NoSlope");
+await ui.click("pool_panel/body/paths/Path_Straight");
+await frames(60);
+const trail = [4, 5, 6].map((row) => pieces().find((o) => o.symbol.startsWith("Path") && o.col === c0 + 1 && o.row === r0 + row));
+log("trail from the edge", JSON.stringify(trail.map((o) => o && [o.symbol, o.height])));
+expect(trail.every((o) => o !== undefined), `three pieces out from the edge, not ${JSON.stringify(trail)}`);
+expect(trail[0]!.height === level + 3 && trail[1]!.symbol === "PathSlope" && trail[1]!.height === level + 2 && trail[2]!.height === level + 2, `level with the paving, then down a slope to a flat piece, not ${JSON.stringify(trail)}`);
+const view_after = camera.view().target;
+expect(Math.hypot(view_after[0] - view_before[0], view_after[2] - view_before[2]) > 1, `the camera following the trail, from ${view_before} to ${view_after}`);
+await screenshot("pool_paths_from_edge");
+// Unpinned again, the pointer lays by dragging and the controls go.
+await ui.toggle("pool_panel/pin", false);
+expect(ui.find("pool_panel/body/paths") === undefined && ui.find("pool_panel/follow") !== undefined, "back to the pointer, the switches kept");
+await ui.toggle("pool_panel/pin", true);
+await ui.toggle("pool_panel/follow", false);
+build.stop();
+await frames(5);
 
 // Below the raised squares, two paved squares raised with Shift: held over the first, the pointer moved up the
 // screen lifts its surface; the drag then lays both at that height. Let go of, the surface follows the ground again.

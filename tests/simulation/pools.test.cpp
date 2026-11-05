@@ -107,6 +107,27 @@ TEST_CASE("on a cool day only those wishing hard for a swim go, the others think
     CHECK(std::ranges::contains(r.get<Thoughts>(mild).recent, ThoughtKind::TooColdForPools, &Thought::kind));
 }
 
+TEST_CASE("on a hot day guests go for a swim wishing less for one")
+{
+    Sandbox park;
+    pool_by_path(park);
+    auto& r = park.world().registry;
+    const float mild_wish = kTuning.needs.want.value - 0.1f;
+    SUBCASE("hot: they go")
+    {
+        r.ctx().emplace<Weather>(Weather { .temperature = kTuning.pools.warm.value + 8 });
+        const auto mild = park.guest({ 0, 0 }, { .swim = mild_wish });
+        CHECK(park.run_until([&] { return r.get<Errand>(mild).kind == ErrandKind::Swimming; }, 60));
+    }
+    SUBCASE("mild: they do not")
+    {
+        r.ctx().emplace<Weather>(Weather { .temperature = kTuning.pools.cool.value + 2 });
+        const auto mild = park.guest({ 0, 0 }, { .swim = mild_wish });
+        park.run_seconds(60);
+        CHECK(r.get<Errand>(mild).kind != ErrandKind::Swimming);
+    }
+}
+
 TEST_CASE("a guest wishing to swim where no pool is open thinks so")
 {
     Sandbox park;

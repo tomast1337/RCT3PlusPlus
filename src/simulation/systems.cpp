@@ -120,10 +120,13 @@ namespace rct3::simulation
             return std::pair { wanted[found->first], std::move(found->second) };
         }
 
-        /// How much a guest must wish for a swim to go for one: more the cooler the day.
+        /// How much a guest must wish for a swim to go for one: more the cooler the day, less the hotter.
         float swim_wish_needed(float temperature)
         {
-            return kTuning.needs.want.value + kTuning.pools.chill.value * std::max(0.0f, kTuning.pools.cool.value - temperature);
+            const auto& pools = kTuning.pools;
+            const float cold = pools.chill.value * std::max(0.0f, pools.cool.value - temperature);
+            const float hot = pools.heat.value * std::max(0.0f, temperature - pools.warm.value);
+            return std::max(pools.least_wish.value, kTuning.needs.want.value + cold - hot);
         }
 
         /// Most a guest pays for `ware`: its item's worth for the weather, more in the cold for a hot drink and in

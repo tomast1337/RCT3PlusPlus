@@ -527,6 +527,9 @@ namespace rct3::simulation::tuning
         Share most_liking { 0.9f };
         Degrees cool { 20 };         ///< Chosen by eye: under which a guest must wish for a swim the more before going
         Share chill { 0.03f };       ///< Chosen by eye: more wish for each degree under `cool`; on a cold enough day none is enough
+        Degrees warm { 25 };         ///< Chosen by eye: over which a guest goes for a swim with less wish for one
+        Share heat { 0.02f };        ///< Chosen by eye: less wish for each degree over `warm`
+        Share least_wish { 0.3f };   ///< Chosen by eye: the least wish that sends a guest for a swim, however hot
         Seconds stay { 300 };        ///< In the pool, out of their clothes: the longest saved swimmers have left
         Seconds changing { 20 };     ///< In the changing room, each way
         Pace swim { 0.7f };          ///< Across the water

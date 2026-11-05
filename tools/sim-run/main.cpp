@@ -479,8 +479,14 @@ int main(int argc, char** argv)
             std::array<std::size_t, 3> in { };
             for (const auto [_, visitor] : world.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>).each())
                 ++in[static_cast<std::size_t>(visitor.age)];
+            // At a pool (changing, swimming, or on its slides and river) and walking to one.
+            std::size_t to_pool = 0;
+            for (const auto [_, errand] : world.registry.view<const simulation::Errand>(entt::exclude<simulation::Left>).each())
+                if (errand.kind == simulation::ErrandKind::Heading && world.registry.valid(errand.target))
+                    to_pool += world.registry.all_of<simulation::PoolDoor>(errand.target);
+            const auto swimming = static_cast<std::size_t>(std::ranges::distance(world.registry.view<const simulation::Swimmer>(entt::exclude<simulation::Left>)));
             const auto& turnstile = world.registry.ctx().emplace<simulation::Turnstile>();
-            out.info("{:02d}:00{} in the park: {:d} children, {:d} teens, {:d} adults; came {:d}/{:d}/{:d}, went {:d}/{:d}/{:d}", now, simulation::is_night(day.time) ? " (dark)" : "", in[0], in[1], in[2], turnstile.in[0], turnstile.in[1], turnstile.in[2], turnstile.out[0], turnstile.out[1], turnstile.out[2]);
+            out.info("{:02d}:00{} in the park: {:d} children, {:d} teens, {:d} adults; came {:d}/{:d}/{:d}, went {:d}/{:d}/{:d}; at a pool {:d}, going to one {:d}", now, simulation::is_night(day.time) ? " (dark)" : "", in[0], in[1], in[2], turnstile.in[0], turnstile.in[1], turnstile.in[2], turnstile.out[0], turnstile.out[1], turnstile.out[2], swimming, to_pool);
         }
         profiling::section("Step", [&] { simulation::step(world, maybe(workers.get())); });
         profiling::capture_frame();

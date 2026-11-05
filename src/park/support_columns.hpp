@@ -11,7 +11,7 @@
 // next below it on the tile. That is the ground, rounded up to the next whole level from its lowest corner,
 // when nothing is below; then a path at the ground of the tile, or no room between the item and the ground (an item at
 // or under the ground, as in a tunnel), leaves the column out. Otherwise it is the next item down: a column
-// stands on it only when the set's columns stand on anything (wooden and mine track do) or that item (a pool piece among them) carries
+// stands on it only when the set's columns stand on anything (wooden and mine track do) or that item carries
 // columns, keeping one level clear over track unless the set stands close; on anything else, such as a path
 // deck, a ride, scenery or other track, the tile gets no column. An item buried more than a level under the
 // ground counts as the ground. Support pieces, and items the caller names (station platforms), are passed by.

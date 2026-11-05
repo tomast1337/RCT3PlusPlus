@@ -19,7 +19,6 @@ namespace rct3::park
         constexpr std::uint32_t kCapped = 0x800;
         constexpr std::uint32_t kNoColumnsMeet = 1u << 26; ///< Joined coaster pieces: columns neither hold them up nor stop at them
         constexpr std::uint32_t kTrackType = 18;
-        constexpr std::uint32_t kPoolPieceType = 38;
 
         // Square flags.
         constexpr std::uint32_t kSquareWantsColumn = 0x2;
@@ -67,9 +66,7 @@ namespace rct3::park
     {
         SupportFootprint f;
         f.wants_supports = (item.flags & kWantsSupports) != 0;
-        // A pool piece holds up the columns of a pool stacked over it, so the upper deck stands on the lower
-        // rather than floating; the data does not mark pool pieces as carriers.
-        f.carries_columns = (item.flags & kCarriesColumns) != 0 || item.type == kPoolPieceType;
+        f.carries_columns = (item.flags & kCarriesColumns) != 0;
         f.track = item.type == kTrackType;
         if ((item.flags & kNoColumnsMeet) != 0 || item.squares.empty())
             return std::nullopt;

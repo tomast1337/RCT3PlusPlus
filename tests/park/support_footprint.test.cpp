@@ -85,12 +85,6 @@ TEST_CASE("every item with squares has a footprint, as columns stop at it, but j
     CHECK_FALSE(support_footprint(item((1u << 26) | 0x1, 3)));
 }
 
-TEST_CASE("a pool piece carries the columns of what stands over it, as other pieces do only when marked")
-{
-    CHECK(support_footprint(item(0x80, 38))->carries_columns);
-    CHECK_FALSE(support_footprint(item(0x80, 3))->carries_columns);
-}
-
 TEST_CASE("column facings turn with the item")
 {
     CHECK(turned(kRoundSupport, 1) == kRoundSupport);

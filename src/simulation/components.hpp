@@ -462,8 +462,10 @@ namespace rct3::simulation
         std::vector<glm::vec3> steps { }; ///< Its pool path stairs, where a lazy river's station may join it
         std::vector<PoolBoard> boards { };
         std::vector<glm::vec3> ladders { }; ///< On the paving behind each ladder, where those climbing out by it step off
-        Share dirt { };                     ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
-        park::PoolTally tally { };          ///< What it has, for its excitement and what its ticket is worth
+        /// Its ramps and spiral staircases, each the points walked through from the lower level to the upper.
+        std::vector<std::vector<glm::vec3>> ways { };
+        Share dirt { };            ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
+        park::PoolTally tally { }; ///< What it has, for its excitement and what its ticket is worth
     };
 
     /// How dirty a pool looks, in the six steps the pool's window names, cleanest first.
@@ -529,6 +531,14 @@ namespace rct3::simulation
         float height = 0;               ///< The board's top they climb to and walk out on, in world units
         float fall = 0;                 ///< Their speed down, falling, in world units a second
         Seconds diving { };             ///< In this step so far
+    };
+
+    /// A swimmer on their way up or down a ramp or staircase of their pool, for as long as it takes; not kept in
+    /// saves, they set out on it again.
+    struct PoolClimb
+    {
+        std::array<glm::vec3, 3> via { }; ///< The points still to walk through, the next last
+        std::uint8_t left = 0;            ///< How many of them
     };
 
     /// A lazy river: a channel with no trains round which swimmers float in rings, free on their complex's ticket.

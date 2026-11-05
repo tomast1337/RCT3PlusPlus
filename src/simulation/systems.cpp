@@ -523,7 +523,7 @@ namespace rct3::simulation
             // Those turned away at the gate never came in.
             if (const auto* outside = r.try_get<Outside>(guest); outside == nullptr || outside->way != Outside::Way::TurnedAway)
                 ++r.ctx().emplace<Turnstile>().out[static_cast<std::size_t>(age_of(r, guest))];
-            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Glance, Watching, Carried, RideWalk, Crossing, Swimmer, Outside>(guest);
+            r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Glance, Watching, Carried, RideWalk, Crossing, Swimmer, PoolClimb, Outside>(guest);
             r.emplace<Left>(guest);
         }
 
@@ -2378,7 +2378,7 @@ namespace rct3::simulation
             const auto* member = r.try_get<Member>(guest);
             const bool follows = member != nullptr && r.valid(member->party) && r.get<Party>(member->party).leader != guest;
             errand = follows ? Errand { ErrandKind::Following, entt::null, 0 } : Errand { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
-            r.remove<RideWalk, Swimmer>(guest);
+            r.remove<RideWalk, Swimmer, PoolClimb>(guest);
             // Out of the queue at its entrance, riders off at its exit, swimmers out at the door; those on their
             // way walk on from where they are.
             if ((was == ErrandKind::Queueing || was == ErrandKind::Swimming) && entrance != kNoNode)
@@ -2584,7 +2584,7 @@ namespace rct3::simulation
             constexpr std::array kSay { ThoughtKind::PickedUpHappy, ThoughtKind::PickedUpNeutral, ThoughtKind::PickedUpSad };
             think(r, person, kSay[random::below(dice, kSay.size())], entt::null, static_cast<float>(world.tick) * kTickSeconds);
         }
-        r.remove<Errand, Stride, Linger, Gesture, Watching, Swimmer>(person);
+        r.remove<Errand, Stride, Linger, Gesture, Watching, Swimmer, PoolClimb>(person);
         r.emplace<Held>(person, held);
         return true;
     }
@@ -3723,7 +3723,7 @@ namespace rct3::simulation
             auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<SwimPool>(door->pool) : nullptr;
             if (swimming == nullptr || swimming->kind != ErrandKind::Swimming || pool == nullptr || pool->water.empty())
             {
-                r.remove<Swimmer>(g);
+                r.remove<Swimmer, PoolClimb>(g);
                 continue;
             }
             auto& errand = *swimming;
@@ -3750,7 +3750,7 @@ namespace rct3::simulation
                     const auto* member = r.try_get<Member>(g);
                     const bool follows = member != nullptr && r.valid(member->party) && r.get<Party>(member->party).leader != g;
                     errand = follows ? Errand { ErrandKind::Following, entt::null, 0 } : Errand { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
-                    r.remove<Swimmer>(g);
+                    r.remove<Swimmer, PoolClimb>(g);
                     if (out != kNoNode)
                         stop_at(paths, out, r.get<Stride>(g), pose);
                     continue;
@@ -3769,7 +3769,46 @@ namespace rct3::simulation
                     swimmer.dive = DiveStep::None;
                 continue;
             }
-            // Across the ground, at the water's surface over a square of water and on the paving elsewhere.
+            // On the paving, to a goal at another level: by the nearest ramp or staircase joining the two, to its end
+            // on their level, then along it.
+            // shortcut: only a way joining the two levels straight is taken, else they go straight across as before;
+            // upgrade to a route through several ways once a complex has three levels joined so.
+            const auto level = [&](const glm::vec3& p) { return std::lround(p.y / paths.level_height); };
+            if (!swimmer.in_water && !r.all_of<PoolClimb>(g) && level(swimmer.goal) != level(pose.position))
+            {
+                const std::vector<glm::vec3>* best = nullptr;
+                bool up = false;
+                float nearest = std::numeric_limits<float>::max();
+                for (const auto& w : pool->ways)
+                    for (const bool climbs : { true, false })
+                        if (const glm::vec3& from = climbs ? w.front() : w.back(); level(from) == level(pose.position) && level(climbs ? w.back() : w.front()) == level(swimmer.goal) && glm::distance(from, pose.position) < nearest)
+                        {
+                            best = &w;
+                            up = climbs;
+                            nearest = glm::distance(from, pose.position);
+                        }
+                if (best != nullptr)
+                {
+                    PoolClimb& climb = r.emplace<PoolClimb>(g);
+                    for (std::size_t i = 0; i < best->size() && i < climb.via.size(); ++i)
+                        climb.via[climb.left++] = (*best)[up ? best->size() - 1 - i : i];
+                }
+            }
+            if (auto* climb = r.try_get<PoolClimb>(g))
+            {
+                const glm::vec3 to = climb->via[climb->left - 1] - pose.position;
+                const float left = glm::length(to);
+                const float pace = r.get<Stride>(g).speed.value * dt;
+                if (glm::length(glm::vec2 { to.x, to.z }) > 0)
+                    pose.heading.value = std::atan2(to.x, to.z);
+                pose.position += left <= pace ? to : to * (pace / left);
+                if (left <= pace && --climb->left == 0)
+                    r.remove<PoolClimb>(g);
+                swimmer.left.value -= dt;
+                continue;
+            }
+            // Across the ground, at the water's surface over a square of water and on the paving elsewhere: of the
+            // squares under them, the one nearest their height; off them, at the height they are going to.
             const glm::vec2 to { swimmer.goal.x - pose.position.x, swimmer.goal.z - pose.position.z };
             const float way = glm::length(to);
             const float pace = (swimmer.in_water ? kTuning.pools.swim.value : r.get<Stride>(g).speed.value) * dt;
@@ -3780,10 +3819,16 @@ namespace rct3::simulation
             const glm::vec2 at = there ? glm::vec2 { swimmer.goal.x, swimmer.goal.z } : glm::vec2 { pose.position.x, pose.position.z } + to * (pace / way);
             const float half = paths.tile_size / 2;
             const auto within = [&](const glm::vec3& w) { return std::abs(at.x - w.x) <= half && std::abs(at.y - w.z) <= half; };
-            const auto water = std::ranges::find_if(pool->water, within);
+            const auto under = [&](const std::vector<glm::vec3>& spots) {
+                const auto best = std::ranges::min_element(spots, { }, [&](const glm::vec3& w) { return within(w) ? std::abs(w.y - pose.position.y) : std::numeric_limits<float>::max(); });
+                return best != spots.end() && within(*best) ? std::optional<float>(best->y) : std::nullopt;
+            };
+            const auto water = under(pool->water);
+            const auto paved = under(pool->paved);
             const bool in_spa = swimmer.to_spa && within(swimmer.goal);
-            swimmer.in_water = water != pool->water.end() || in_spa;
-            pose.position = { at.x, in_spa ? swimmer.goal.y : water != pool->water.end() ? water->y : door->poolside.y, at.y };
+            const bool wet = water && (!paved || std::abs(*water - pose.position.y) <= std::abs(*paved - pose.position.y));
+            swimmer.in_water = wet || in_spa;
+            pose.position = { at.x, in_spa ? swimmer.goal.y : wet ? *water : paved.value_or(swimmer.goal.y), at.y };
             // In the water they dirty it, the less the more water there is, and enjoy it the cleaner it is.
             if (swimmer.in_water)
             {

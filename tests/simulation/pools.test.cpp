@@ -8,6 +8,7 @@
 
 #include <array>
 #include <doctest/doctest.h>
+#include <set>
 
 using namespace rct3;
 using namespace rct3::simulation;
@@ -636,4 +637,50 @@ TEST_CASE("a small diving board on the pool's wall is walked out on and dived of
         2 * kTuning.pools.stay.value);
     CHECK(dived);
     CHECK(by_ladder);
+}
+
+TEST_CASE("swimmers walk up a ramp to a raised square and down it again, the ramp's slope between")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    // The paved square by the room, a square two up beside it with a ramp climbing to it, and water below.
+    park::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::Tile, .surface = 2 });
+    for (std::int32_t col = 4; col < 7; ++col)
+        pools.squares.push_back({ .col = col, .row = 3 });
+    pools.extras.push_back({ .symbol = "Ramp", .col = 5, .row = 2, .turn = 1, .fit = park::pool_extra_fit("Side CentralSolid WholeTile HeightStep 2") });
+    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
+    REQUIRE(pool.ways.size() == 1);
+    CHECK(pool.extras.empty()); // A ramp is no spot to stand at
+    const float tile = park.world().paths.tile_size;
+    const float raised_col = park.world().paths.origin.x + 6 * tile;
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 8; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+    std::set<entt::entity> up;
+    bool slope = false, down = false;
+    park.run_until(
+        [&] {
+            for (const entt::entity g : guests)
+                if (r.all_of<Swimmer>(g))
+                {
+                    const glm::vec3 at = r.get<Pose>(g).position;
+                    // On the raised square only at its height, never sunk into it.
+                    if (at.x > raised_col + 0.1f && at.x < raised_col + tile && at.z > park.world().paths.origin.y + 2 * tile && at.z < park.world().paths.origin.y + 3 * tile)
+                    {
+                        CHECK(at.y > 1.9f);
+                        up.insert(g);
+                    }
+                    slope = slope || (r.all_of<PoolClimb>(g) && at.y > 0.5f && at.y < 1.5f);
+                    down = down || (up.contains(g) && at.y < 0.5f);
+                }
+            return slope && down;
+        },
+        4 * kTuning.pools.stay.value);
+    CHECK(slope);
+    CHECK(down);
 }

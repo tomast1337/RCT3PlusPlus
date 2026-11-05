@@ -539,9 +539,9 @@ namespace rct3::scene
                 return nullptr;
             const float x = g.world_x(0) + static_cast<float>(col) * g.tile_size_x;
             const float z = g.world_z(0) + static_cast<float>(row) * g.tile_size_z;
-            // On a pool square, its surface: the ground under it is dug out of sight.
+            // At the height asked, else on a pool square, its surface: the ground under it is dug out of sight.
             const auto pool = park_->pools.at(static_cast<int>(std::floor(col)), static_cast<int>(std::floor(row)));
-            const float height = pool ? static_cast<float>(pool->surface) : g.height_at(x, z).value_or(0);
+            const float height = a.size() > 2 && a[2].is_number() ? a[2].get<float>() : pool ? static_cast<float>(pool->surface) : g.height_at(x, z).value_or(0);
             const glm::vec4 clip = park::view_projection(park_->camera, static_cast<float>(view.width) / static_cast<float>(view.height)) * glm::vec4(x, height, z, 1);
             if (clip.w <= 0)
                 return nullptr;
@@ -1047,6 +1047,15 @@ namespace rct3::scene
                 placing["site"] = { { "col", p.site->col }, { "row", p.site->row }, { "turns", p.site->turns }, { "height", p.site->height } };
             return placing;
         });
+        engine_.define("build.pooling", [this](const Json&) -> Json {
+            const PoolTool& t = park_of(park_).pooling;
+            if (!t.item)
+                return nullptr;
+            Json pooling { { "ghost", t.ghost.vertices.empty() || !t.ghost_of ? Json(nullptr) : Json(t.ghost_of->symbol) }, { "arrow", !t.arrow.vertices.empty() } };
+            if (t.ghost_of && !t.ghost.vertices.empty())
+                pooling["ghostAt"] = { { "col", t.ghost_of->col }, { "row", t.ghost_of->row }, { "height", t.ghost_of->base_height.value_or(0) } };
+            return pooling;
+        });
         engine_.define("build.sounds", [this](const Json&) -> Json { return Json { { "thumps", park_of(park_).built }, { "rumble", park_of(park_).land.rumble ? Json(*park_of(park_).land.rumble) : Json(nullptr) } }; });
         engine_.define("build.enclosing", [this](const Json&) -> Json {
             const ParkScene& scene = park_of(park_);
@@ -1108,6 +1117,11 @@ namespace rct3::scene
                                 platform_colours.push_back(std::vector<int>(o.colours.begin(), o.colours.end()));
                             }
                     one["platforms"] = std::move(platforms);
+                    Json decks = Json::array();
+                    for (const save::TrackPiece& p : ride.track->pieces)
+                        if (p.platform)
+                            decks.push_back({ { "col", p.platform->tile_x }, { "row", p.platform->tile_z }, { "height", p.platform->height }, { "turn", p.platform->direction } });
+                    one["platformSquares"] = std::move(decks);
                     one["platformColours"] = std::move(platform_colours);
                     Json arms = Json::array();
                     for (const save::TrackPiece& p : ride.track->pieces)

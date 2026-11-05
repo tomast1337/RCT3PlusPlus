@@ -78,3 +78,64 @@ expect(!park.messages().slice(messages).some((m) => /NoPathToEntrance/.test(m.ke
 const people_now = people.list();
 expect(people_now.every((p) => p.state !== "thrown"), "nobody thrown");
 log("customers", info().customers, "riders now", info().riders);
+
+// A pool path trail starts from the slide's platform: pinned, from a side of a platform square off the slide's
+// track, at the platform's height, the first piece's ghost and arrow out from it; laid, the piece is level with
+// the platform.
+const ride = info();
+expect((ride.platformSquares ?? []).length > 0, "the slide's platform squares");
+log("platform squares", JSON.stringify(ride.platformSquares));
+const rides_menu = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+await until(() => build.flatRides() !== undefined, 1200, "the build items");
+if (!ui.find("tools/Rides/Obj_Pools"))
+    await ui.click(rides_menu);
+await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
+await ui.click("tools/Rides/Obj_Pools");
+await until(() => ui.find("pool_panel/Pool_PathPanel") !== undefined, 120, "the pool panel");
+await ui.click("pool_panel/Pool_PathPanel");
+await until(() => ui.find("pool_panel/body/paths") !== undefined, 120, "the paths page, pinned");
+await ui.click("pool_panel/body/paths/Path_NoSlope");
+const kOut = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+let anchored: { col: number; row: number; height: number; out: number[] } | undefined;
+for (const square of ride.platformSquares!)
+{
+    if (anchored)
+        break;
+    for (const turn of [square.turn & 3, (square.turn + 2) & 3])
+    {
+        const out = kOut[turn];
+        const beside = [square.col + out[0], square.row + out[1]];
+        if (map.objects().some((o) => o.overlay === "Pool/Default/Default_Stub" && o.col === beside[0] && o.row === beside[1] && o.height === square.height))
+            continue;
+        const up = square.height - Math.max(...map.tile(square.col, square.row)!.corners);
+        camera.look({ col: square.col + 0.5, row: square.row + 0.5, up }, { col: square.col + 0.5 + out[0] * 3, row: square.row + 0.5 + out[1] * 3, up: up + 40 });
+        await frames(10);
+        const at = map.screen(square.col + 0.5 + out[0] * 0.4, square.row + 0.5 + out[1] * 0.4, square.height);
+        if (!at)
+        {
+            log("out of sight", JSON.stringify(square), "side", turn);
+            continue;
+        }
+        pointer.move(at.x, at.y);
+        await frames(3);
+        const shown = build.pooling();
+        log("at the platform", JSON.stringify(square), "side", turn, JSON.stringify(shown));
+        if (shown?.ghost?.startsWith("Path") && shown.ghostAt?.col === beside[0] && shown.ghostAt?.row === beside[1] && shown.ghostAt?.height === square.height && shown.arrow)
+        {
+            anchored = { col: beside[0], row: beside[1], height: square.height, out };
+            await screenshot("pool_slides_path_ghost");
+            await pointer.click(at.x, at.y);
+            await frames(2);
+            break;
+        }
+    }
+}
+expect(anchored !== undefined, "a trail started at the slide's platform, its ghost and arrow shown");
+await ui.click("pool_panel/body/paths/Path_Straight");
+await ui.click("pool_panel/body/paths/Path_Straight");
+await frames(5);
+const joined = map.objects().find((o) => o.overlay === "Pool/Default/Default_Stub" && o.col === anchored!.col && o.row === anchored!.row && o.symbol.startsWith("Path"));
+expect(joined !== undefined && joined.height === anchored!.height, `a pool path laid level with the platform, not ${JSON.stringify(joined)}`);
+build.stop();
+await frames(10);
+await screenshot("pool_slides_path_joined");

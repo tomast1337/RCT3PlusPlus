@@ -454,6 +454,21 @@ TEST_CASE("pools: a pool path trail starts at any side of the complex that no sq
     CHECK(pool_path_start(map, *map.at(0, 0), 3) == 4);
 }
 
+TEST_CASE("pools: a trail starts at a slide's platform from the sides off its track, at its deck")
+{
+    PoolMap map;
+    const SlidePlatform platform { .col = 5, .row = 5, .height = 16, .turn = 3 };
+    CHECK(slide_path_start(map, platform, 1) == 16);
+    CHECK(slide_path_start(map, platform, 3) == 16);
+    CHECK_FALSE(slide_path_start(map, platform, 0));
+    CHECK_FALSE(slide_path_start(map, platform, 2));
+    // A path beside at the deck's height already meets that side; water far below does not.
+    map.squares.push_back({ .col = 6, .row = 5, .kind = PoolKind::Path, .surface = 16, .depth = 0 });
+    map.squares.push_back({ .col = 4, .row = 5, .kind = PoolKind::Water, .surface = 0, .depth = 2 });
+    CHECK_FALSE(slide_path_start(map, platform, 1));
+    CHECK(slide_path_start(map, platform, 3) == 16);
+}
+
 TEST_CASE("pools: each square costs its kind's price and its depth's")
 {
     CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Water, .depth = 2 }) == 100 + 2 * 300);

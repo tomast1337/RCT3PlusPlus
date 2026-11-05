@@ -149,6 +149,26 @@ namespace rct3::park
             return cost;
         }
 
+        /// The height of side `side` of `s`; a slope or steps have only their foot and top.
+        std::optional<std::int32_t> side_height(const PoolSquare& s, std::int32_t side)
+        {
+            if (s.kind != PoolKind::PathSlope && s.kind != PoolKind::PathStairs)
+                return s.surface;
+            if ((side & 3) == (s.turn & 3))
+                return s.surface;
+            if ((side & 3) == ((s.turn + 2) & 3))
+                return s.surface + (s.kind == PoolKind::PathSlope ? kPathSlopeRise : kPathStairsRise);
+            return std::nullopt;
+        }
+
+        /// Whether a square beside (`col`, `row`) at side `turn` meets that side at `height`.
+        bool met(const PoolMap& map, std::int32_t col, std::int32_t row, std::int32_t turn, std::int32_t height)
+        {
+            const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn & 3)];
+            const auto next = map.at(col + dc, row + dr, height);
+            return next && side_height(*next, turn + 2) == height;
+        }
+
         /// The water square at side `turn` of `square`, at its surface.
         std::optional<const PoolSquare&> water_beside(const PoolMap& map, const PoolSquare& square, std::int32_t turn)
         {
@@ -304,24 +324,17 @@ namespace rct3::park
 
     std::optional<std::int32_t> pool_path_start(const PoolMap& map, const PoolSquare& square, std::int32_t turn)
     {
-        // The height of a square's side; a slope or steps have only their foot and top.
-        const auto side_height = [](const PoolSquare& s, std::int32_t side) -> std::optional<std::int32_t> {
-            if (s.kind != PoolKind::PathSlope && s.kind != PoolKind::PathStairs)
-                return s.surface;
-            if ((side & 3) == (s.turn & 3))
-                return s.surface;
-            if ((side & 3) == ((s.turn + 2) & 3))
-                return s.surface + (s.kind == PoolKind::PathSlope ? kPathSlopeRise : kPathStairsRise);
-            return std::nullopt;
-        };
         const auto height = side_height(square, turn);
-        if (!height)
-            return std::nullopt;
-        const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn & 3)];
-        const auto next = map.at(square.col + dc, square.row + dr, *height);
-        if (next && side_height(*next, turn + 2) == height)
+        if (!height || met(map, square.col, square.row, turn, *height))
             return std::nullopt;
         return height;
+    }
+
+    std::optional<std::int32_t> slide_path_start(const PoolMap& map, const SlidePlatform& platform, std::int32_t turn)
+    {
+        if (((turn - platform.turn) & 1) != 0 || met(map, platform.col, platform.row, turn, platform.height))
+            return std::nullopt;
+        return platform.height;
     }
 
     PoolExtraFit pool_extra_fit(std::string_view words)

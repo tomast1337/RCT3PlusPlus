@@ -204,6 +204,20 @@ namespace rct3::park
     /// meets that side at that height, so trails start only at the complex's edges, water and paving alike.
     [[nodiscard]] std::optional<std::int32_t> pool_path_start(const PoolMap& map, const PoolSquare& square, std::int32_t turn);
 
+    /// A square of a pool slide's station platform, where swimmers get on.
+    struct SlidePlatform
+    {
+        std::int32_t col = 0;
+        std::int32_t row = 0;
+        std::int32_t height = 0; ///< Of its deck, whole units
+        std::int32_t turn = 0;   ///< Its piece's turn: the sides at this turn and the opposite one are off its track
+    };
+
+    /// The height a pool path trail starts at from side `turn` of `platform`: its deck's, from the two sides off its
+    /// track, as saved parks join pool paths to their slides' stations. None where a square of `map` already meets
+    /// that side there.
+    [[nodiscard]] std::optional<std::int32_t> slide_path_start(const PoolMap& map, const SlidePlatform& platform, std::int32_t turn);
+
     /// The shapes of wall a water square takes, each a set of pieces of the pool type.
     enum class PoolWall : std::uint8_t
     {

@@ -288,10 +288,11 @@ namespace rct3::scene
         std::optional<std::int32_t> lifted;        ///< The surface Shift raised or lowered the squares to, until let go
         std::optional<std::int32_t> worked_lifted; ///< And the one of the work shown
         bool faces = true;                         ///< The work shown is no high diving board facing away from the water
-        /// The extra or changing room where it would go, drawn see-through, and whether it may go there.
+        /// The extra, changing room or next pool path piece where it would go, drawn see-through, and whether it may go there.
         std::optional<save::PlacedObject> ghost_of;
         bool ghost_ok = false;
         park::ObjectMesh ghost;
+        park::TerrainMesh arrow; ///< Over the paths page's next piece, the way its trail goes on
         /// The extra or changing room alone, for the pool panel's disc, and the view of it there.
         std::string preview_of;
         park::ObjectMesh preview;

@@ -205,9 +205,9 @@ declare namespace map {
     function size(): { width: number; height: number };
     /** Undefined off the map. */
     function tile(col: number, row: number): Tile | undefined;
-    /** The middle of a tile on the view (on a pool square, at its surface), or with fractions that point of it;
-     *  undefined when it is not in sight. */
-    function screen(col: number, row: number): { x: number; y: number } | undefined;
+    /** The middle of a tile on the view (at `height` when given, else on a pool square at its surface), or with
+     *  fractions that point of it; undefined when it is not in sight. */
+    function screen(col: number, row: number, height?: number): { x: number; y: number } | undefined;
     function paths(): PathPiece[];
     /** The tiles the rides and stalls pave: their doors, floors and the ground under stalls, and the path style
      *  each is paved in (empty where a path covers it). */
@@ -294,6 +294,9 @@ declare namespace build {
     /** What building gave to be heard: how many thumps of something put down were asked for since the park opened
      * (several close together are heard as one), and while a shaping stroke goes the loudness of its rumble, 0..1. */
     function sounds(): { thumps: number; rumble: number | null };
+    /** With the pool tool out: the piece its ghost shows (an extra, a changing room or the paths page's next piece)
+     * and where, and whether the arrow over the next pool path piece shows; undefined while the tool is away. */
+    function pooling(): { ghost: string | null; ghostAt?: { col: number; row: number; height: number }; arrow: boolean } | undefined;
     /** Puts the placing tool, the enclosure tool or the pool tool away, as Escape does. */
     function stop(): void;
     /** While an enclosure drag is held: what letting go would cost in hundredths (below 0 when it pays back),
@@ -349,6 +352,9 @@ interface RideInfo {
     platforms?: string[];
     /** Rides with a track: the three colours of each of `platforms`. */
     platformColours?: number[][];
+    /** Rides with a track: the squares its stations' platforms stand on, the height of their decks and the
+     *  quarter turn of their pieces, in track order. */
+    platformSquares?: { col: number; row: number; height: number; turn: number }[];
     /** Rides with a track: each piece's arm angles in degrees, base first, or null where it holds none. */
     arms?: (number[] | null)[];
     /** Rides with a track: where each of its cars stands now, and the way it faces (radians round the vertical, 0 along +row).

@@ -692,3 +692,69 @@ expect(ground_at(c0 + 2, r0 + 2) === ground_before, `the land under both left as
 camera.look({ col: c0 + 2.5, row: r0 + 2.5, up: 5 }, { col: c0 + 9, row: r0 + 9, up: 9 });
 await frames(10);
 await screenshot("pool_stacked");
+
+// A tall pool path on bare land: paving raised well off the ground, then, pinned, a trail out from its edge. Before
+// each piece its ghost shows, with the arrow over it the way the trail goes; then slopes down. Each piece stands
+// on the pool paths' own posts, every column reaching the ground.
+let tall: { col: number; row: number } | undefined;
+for (let r = 1; r < height - 16 && !tall; r += 2)
+    for (let c = 1; c < width - 12 && !tall; c += 2)
+        if ((c > c0 + 12 || c + 12 < c0 || r > r0 + 16 || r + 16 < r0) && clear(c, r))
+            tall = { col: c, row: r };
+expect(tall !== undefined, "room for a tall pool path");
+const tc = tall!.col;
+const tr = tall!.row;
+const deck = Math.round(map.tile(tc + 1, tr + 1)!.corners[0]) + 9;
+camera.look({ col: tc + 1.5, row: tr + 3 }, { col: tc + 1.5, row: tr + 14, up: 12 });
+await frames(10);
+await open_editor();
+await ui.click("pool_panel/body/editor/Pool_PlaceTiles");
+await ui.click("pool_panel/body/editor/Pool_Height");
+await ui.click("pool_panel/body/editor/height/field");
+keys.press("Ctrl+A");
+keys.type(`${deck}`);
+keys.press("Enter");
+await frames(2);
+await pointer.drag(on_view(tc + 1.5, tr + 1.5), on_view(tc + 2.5, tr + 1.5), 6);
+await frames(3);
+await ui.click("pool_panel/body/editor/Pool_Height");
+await ui.click("pool_panel/Pool_PathPanel");
+await until(() => ui.find("pool_panel/body/paths") !== undefined, 120, "the paths page, pinned");
+await ui.click("pool_panel/body/paths/Path_NoSlope");
+pointer.move(...on_view(tc + 1.5, tr + 1.9));
+await frames(3);
+const hover = build.pooling()!;
+log("hovered at the edge", JSON.stringify(hover));
+expect(hover.ghost === "PathStraight" && hover.ghostAt?.col === tc + 1 && hover.ghostAt?.row === tr + 2 && hover.ghostAt?.height === deck && hover.arrow, `the first piece's ghost and arrow out from the edge, not ${JSON.stringify(hover)}`);
+await pointer.click(...on_view(tc + 1.5, tr + 1.9));
+await frames(2);
+await ui.click("pool_panel/body/paths/Path_DownwardSlope");
+await frames(2);
+const next = build.pooling()!;
+expect(next.ghost === "PathSlope" && next.ghostAt?.row === tr + 2 && next.ghostAt?.height === deck - 1 && next.arrow, `a slope's ghost and arrow while pinned, not ${JSON.stringify(next)}`);
+await screenshot("pool_paths_ghost");
+const slopes = 6;
+for (let i = 0; i < slopes; ++i)
+    await ui.click("pool_panel/body/paths/Path_Straight");
+await frames(5);
+build.stop();
+await until(() => map.supports().some((s) => s.col === tc + 1 && s.row === tr + 2 + slopes - 1), 120, "supports under the tall path");
+const laid = pieces_at(tc + 1, tr + 2, slopes);
+log("tall path", JSON.stringify(laid.map((o) => o && [o.symbol, o.height])));
+expect(laid.every((o, i) => o?.symbol === "PathSlope" && o.height === deck - 1 - i), `${slopes} slopes down from the paving, not ${JSON.stringify(laid)}`);
+for (let i = 0; i < slopes; ++i)
+{
+    const row = tr + 2 + i;
+    const posts = map.objects().filter((o) => o.overlay !== kPool && o.col === tc + 1 && o.row === row);
+    const ground = Math.min(...map.tile(tc + 1, row)!.corners);
+    const lowest = Math.min(...posts.map((o) => o.height ?? Infinity));
+    expect(posts.length > 0 && posts.every((o) => /^DPPSupport/.test(o.symbol)), `the pool paths' posts under the slope at row ${i}, not ${JSON.stringify(posts.map((o) => o.symbol))}`);
+    expect(lowest <= Math.ceil(ground), `the column at row ${i} reaching the ground at ${ground}, not from ${lowest}`);
+}
+camera.look({ col: tc + 1.5, row: tr + 5, up: 4 }, { col: tc + 12, row: tr + 5, up: 6 });
+await frames(10);
+await screenshot("pool_path_tall");
+
+function pieces_at(col: number, row: number, n: number) {
+    return Array.from({ length: n }, (_, i) => map.objects().find((o) => o.overlay === kPool && o.col === col && o.row === row + i && o.symbol.startsWith("Path")));
+}

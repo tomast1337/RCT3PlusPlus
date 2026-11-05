@@ -70,6 +70,10 @@ await screenshot("pool_panel_editor");
 await ui.click("pool_panel/Pool_ExtraPanel");
 await until(() => ui.find("pool_panel/body/Icon_Default_Jacuzzi") !== undefined, 120, "the extras page");
 expect(ui.find("pool_panel/body/Icon_Default_HighDive") !== undefined, "the high diving board on the extras page");
+// The game's eleven: nine extras of the pool type, the high diving board and the spa pool; the ramps and the spiral
+// staircase are on the paths page.
+const offered_extras = ui.children("pool_panel/body")!;
+expect(offered_extras.length === 11 && !offered_extras.includes("Icon_Default_SpiralStairs"), `the eleven extras, not ${JSON.stringify(offered_extras)}`);
 await screenshot("pool_panel_extras");
 await ui.click("pool_panel/Pool_ChangingRoomPanel");
 await frames(3);
@@ -518,8 +522,9 @@ const raised = pieces().filter((o) => o.symbol === "SolidTop" && o.row < r0 + 8 
 expect(raised === 9 && park.cash()! < cash, `nine raised squares, paid for, not ${raised}`);
 expect(map.tile(c0 + 2, r0 + 2)!.corners.every((h) => Math.abs(h - (level + 1)) < 0.01), `the land raised to their floor, not ${map.tile(c0 + 2, r0 + 2)!.corners}`);
 await ui.click("pool_panel/body/editor/Pool_Height");
-await ui.click("pool_panel/Pool_ExtraPanel");
-await until(() => ui.find("pool_panel/body/Icon_Default_SpiralStairs") !== undefined, 120, "the spiral staircase on the extras page");
+await ui.click("pool_panel/Pool_PathPanel");
+await until(() => ui.find("pool_panel/body/Icon_Default_SpiralStairs") !== undefined, 120, "the spiral staircase on the paths page");
+expect(ui.children("pool_panel/body")!.filter((n) => n !== "paths").length === 3, `two ramps and the staircase on the paths page, not ${JSON.stringify(ui.children("pool_panel/body"))}`);
 await ui.click("pool_panel/body/Icon_Default_SpiralStairs");
 await frames(2);
 cash = park.cash()!;

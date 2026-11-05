@@ -8,11 +8,13 @@
 // page has three rows: the three depths of water, then the snap to ground switch and the surface height beside
 // it, which only counts while the switch is off; under them the four kinds of edge; at the foot, laying water,
 // laying tiles and the grid switch, with the delete tool at the right end. Water, tiles and delete are one
-// choice, the depths another, the edges a third; picking an edge puts the water out, as in the game. The extras and changing room pages show their pictures in two
-// rows; picking one puts it out instead of the editor's tool, and opening the editor's tab brings that back.
-// The paths page lays pool paths along an L from where the drag began, or a slope or stairs on one square,
-// turned with the turn keys, and has the delete tool too. The disc shows the picture of what the tool lays now. The band along the strip's top tells what the button
-// under the pointer does, else the tab's help.
+// choice, the depths another, the edges a third; picking an edge puts the water out, as in the game. The extras and
+// changing room pages show their pictures on round buttons in two rows; picking one puts it out instead of the
+// editor's tool, and opening the editor's tab brings that back. The paths page lays pool paths along an L from
+// where the drag began, or a slope or stairs on one square, turned with the turn keys, and has the delete tool
+// too; a column at its right end holds the ways between levels (ramps and the spiral staircase), picked like the
+// extras. The disc shows the picture of what the tool lays now. The band along the strip's top tells what the
+// button under the pointer does, else the tab's help.
 //
 // Tabs and buttons whose feature is not built are greyed. The panel keeps its choices while hidden, so it opens
 // again as it was left. It keeps no park state; the owner hears through take_change() what the player chose.
@@ -81,7 +83,7 @@ namespace rct3::ui
         friend bool operator==(const PoolEditor&, const PoolEditor&) = default;
     };
 
-    /// An extra or changing room the player can pick.
+    /// An extra, changing room, ramp or staircase the player can pick.
     struct PoolChoice
     {
         std::string icon;
@@ -100,7 +102,8 @@ namespace rct3::ui
         inline constexpr std::int32_t kHeightLowest = -100;
         inline constexpr std::int32_t kHeightHighest = 100;
         inline constexpr float kEditorWidth = 3 * kButton + kGroupGap + kButton + 4 + kHeightWidth;
-        inline constexpr float kCell = 40; ///< A picture on the extras and changing room pages, with the room round it
+        inline constexpr float kCell = 40;      ///< A picture on the extras and changing room pages, with the room round it
+        inline constexpr float kStairCell = 32; ///< Chosen by eye: a way between levels in the paths page's column, three to the strip's height
         inline constexpr std::size_t kRows = 2;
         inline constexpr float kBodyLeft = 40; ///< From the strip's left edge to the page, past the ring's tabs
         inline constexpr float kBodyRight = 16;
@@ -117,9 +120,9 @@ namespace rct3::ui
     public:
         PoolPanel(std::string name, PoolPanelStyle style, const StringTable& strings);
 
-        /// Opens the panel with the `extras` and `rooms` to pick from, on the page last out (the editor's at
-        /// first), the editor's tool out.
-        void show(std::vector<PoolChoice> extras, std::vector<PoolChoice> rooms);
+        /// Opens the panel with the `extras`, `rooms` and `stairs` (the ways between levels) to pick from, on the
+        /// page last out (the editor's at first), the editor's tool out.
+        void show(std::vector<PoolChoice> extras, std::vector<PoolChoice> rooms, std::vector<PoolChoice> stairs);
         void hide();
         [[nodiscard]] bool showing() const
         {
@@ -130,7 +133,7 @@ namespace rct3::ui
         {
             return editor_;
         }
-        /// The extra or changing room picked, out instead of the editor's tool.
+        /// The extra, changing room or way between levels picked, by its page, out instead of the editor's tool.
         [[nodiscard]] std::optional<std::pair<PoolPage, std::size_t>> placing() const
         {
             return placing_;
@@ -174,6 +177,7 @@ namespace rct3::ui
         void place();
         [[nodiscard]] Point body_size() const;
         [[nodiscard]] std::string_view preview() const;
+        [[nodiscard]] const std::vector<PoolChoice>& choices_of(std::optional<PoolPage> page) const;
 
         PoolPanelStyle style_;
         const StringTable& strings_;
@@ -192,10 +196,11 @@ namespace rct3::ui
         Button* grid_ = nullptr;
         Button* snap_ = nullptr;
         Spinner* height_ = nullptr;
-        // The extras' and changing rooms' pages.
+        // The extras', changing rooms' and paths' pictures to pick.
         std::vector<Button*> choices_;
         std::vector<PoolChoice> extras_;
         std::vector<PoolChoice> rooms_;
+        std::vector<PoolChoice> stairs_;
         std::optional<PoolPage> page_ = PoolPage::Editor;
         PoolEditor editor_;
         std::optional<std::pair<PoolPage, std::size_t>> placing_;

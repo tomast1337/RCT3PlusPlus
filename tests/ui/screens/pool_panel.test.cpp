@@ -21,7 +21,7 @@ namespace
             panel = &desktop.root().add<PoolPanel>("pools", game_skins::pool_panel_style(kGamePalette), strings);
             desktop.layout({ 0, 0, 1000, 700 });
             desktop.update({ });
-            panel->show({ { "lamp", u"Lamp" }, { "ladder", u"Ladder" } }, { { "room", u"Room" } });
+            panel->show({ { "lamp", u"Lamp" }, { "ladder", u"Ladder" } }, { { "room", u"Room" } }, { { "ramp", u"Ramp" } });
             desktop.update({ });
         }
 
@@ -96,7 +96,7 @@ TEST_CASE("the editor's buttons change the tool and keep their choices")
     f.click("pools/body/editor/Pool_DepthDeep");
     CHECK(f.panel->editor().depth == 3);
     f.panel->hide();
-    f.panel->show({ }, { });
+    f.panel->show({ }, { }, { });
     CHECK(f.panel->editor().mode == PoolMode::Delete);
     CHECK(f.panel->editor().depth == 3);
 }
@@ -113,4 +113,14 @@ TEST_CASE("an extra picked replaces the editor's tool until the editor's tab ope
     f.click("pools/Pool_PoolPanel");
     CHECK(f.panel->take_change());
     CHECK_FALSE(f.panel->placing());
+}
+
+TEST_CASE("the paths page offers the ways between levels, picked like the extras")
+{
+    Fixture f;
+    f.click("pools/Pool_PathPanel");
+    (void)f.panel->take_change();
+    f.click("pools/body/ramp");
+    CHECK(f.panel->take_change());
+    CHECK(f.panel->placing() == std::pair { PoolPage::Paths, std::size_t { 0 } });
 }

@@ -42,11 +42,19 @@ namespace rct3::scene
             return scene.desktop->root().find_as<ui::PoolPanel>(kPanelName);
         }
 
-        /// The extras and the changing rooms the pool panel offers, in its order: the pool type's extras, its
-        /// spa pool last, and every changing room. None while the build items are still being read.
-        std::pair<std::vector<const park::BuildItem*>, std::vector<const park::BuildItem*>> offered(const ParkScene& scene)
+        /// What the pool panel offers to pick, each in its order.
+        struct Offered
         {
-            std::pair<std::vector<const park::BuildItem*>, std::vector<const park::BuildItem*>> out;
+            std::vector<const park::BuildItem*> extras; ///< The pool type's extras, its high diving board and spa pool last
+            std::vector<const park::BuildItem*> rooms;  ///< Every changing room
+            std::vector<const park::BuildItem*> stairs; ///< On the paths page: the ramps, its spiral staircase last
+        };
+
+        /// What the pool panel offers; nothing while the build items are still being read. An extra that changes
+        /// the level at its side is a ramp, offered with the ways up rather than the extras, as in the game.
+        Offered offered(const ParkScene& scene)
+        {
+            Offered out;
             const auto& items = scene.build.items;
             if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
                 return out;
@@ -59,9 +67,9 @@ namespace rct3::scene
                     continue;
                 // shortcut: the default pool type only; offer the others once the panel can choose a type.
                 if (i.kind == park::BuildKind::PoolRoom)
-                    out.second.push_back(&i);
+                    out.rooms.push_back(&i);
                 else if (i.overlay == park::kPoolOverlay && i.kind == park::BuildKind::PoolExtra)
-                    out.first.push_back(&i);
+                    (park::pool_extra_fit(i.pool_extra).step > 0 ? out.stairs : out.extras).push_back(&i);
                 else if (i.overlay == park::kPoolOverlay && i.symbol == park::kPoolJacuzzi)
                     spa = &i;
                 else if (i.overlay == park::kPoolOverlay && i.symbol == park::kPoolHighDive)
@@ -69,9 +77,11 @@ namespace rct3::scene
                 else if (i.overlay == park::kPoolOverlay && i.symbol == park::kPoolStairs)
                     stairs = &i;
             }
-            for (const park::BuildItem* last : { dive, spa, stairs })
+            for (const park::BuildItem* last : { dive, spa })
                 if (last != nullptr)
-                    out.first.push_back(last);
+                    out.extras.push_back(last);
+            if (stairs != nullptr)
+                out.stairs.push_back(stairs);
             return out;
         }
 
@@ -92,11 +102,11 @@ namespace rct3::scene
                 scene.show_grid = scene.pooling.grid = e.grid;
             if (!panel->take_change())
                 return;
-            const auto [extras, rooms] = offered(scene);
+            const Offered offer = offered(scene);
             const park::BuildItem* item = nullptr;
             if (const auto p = panel->placing())
             {
-                const auto& from = p->first == ui::PoolPage::Extras ? extras : rooms;
+                const auto& from = p->first == ui::PoolPage::Extras ? offer.extras : p->first == ui::PoolPage::Paths ? offer.stairs : offer.rooms;
                 item = p->second < from.size() ? from[p->second] : nullptr;
             }
             else if (const auto& items = scene.build.items; items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
@@ -406,14 +416,14 @@ namespace rct3::scene
             (void)ui::add_extra_skins(device, assets, kIconFiles);
             panel = scene.desktop->root().add<ui::PoolPanel>(std::string(kPanelName), ui::game_skins::pool_panel_style(assets.palette), *assets.strings);
         }
-        const auto [extras, rooms] = offered(scene);
+        const Offered offer = offered(scene);
         const auto choices = [&](const std::vector<const park::BuildItem*>& items) {
             std::vector<ui::PoolChoice> out;
             for (const park::BuildItem* i : items)
                 out.push_back({ i->icon, std::u16string(assets.strings->get(i->name_text)) });
             return out;
         };
-        panel->show(choices(extras), choices(rooms));
+        panel->show(choices(offer.extras), choices(offer.rooms), choices(offer.stairs));
     }
 
     void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, bool shift, std::span<const ui::PlayCommand> commands)

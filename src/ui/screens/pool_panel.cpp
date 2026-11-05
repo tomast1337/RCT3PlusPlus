@@ -89,10 +89,11 @@ namespace rct3::ui
         visible = false;
     }
 
-    void PoolPanel::show(std::vector<PoolChoice> extras, std::vector<PoolChoice> rooms)
+    void PoolPanel::show(std::vector<PoolChoice> extras, std::vector<PoolChoice> rooms, std::vector<PoolChoice> stairs)
     {
         extras_ = std::move(extras);
         rooms_ = std::move(rooms);
+        stairs_ = std::move(stairs);
         visible = true;
         closed_ = false;
         placing_.reset();
@@ -113,15 +114,15 @@ namespace rct3::ui
         choices_.clear();
         editor_page_->visible = page_ == PoolPage::Editor;
         paths_page_->visible = page_ == PoolPage::Paths;
-        if (page_ == PoolPage::Extras || page_ == PoolPage::Rooms)
-            for (const PoolChoice& c : page_ == PoolPage::Extras ? extras_ : rooms_)
-            {
-                Button& b = body_->add<Button>(c.icon, std::string { }, c.icon);
-                b.tooltip = c.help;
-                b.icon_fit = pool_panel::kCell - 4; // A changing room's picture is bigger than an extra's
-                b.swell = 2;
-                choices_.push_back(&b);
-            }
+        for (const PoolChoice& c : choices_of(page_))
+        {
+            // On the tabs' round face, as in the game.
+            Button& b = body_->add<Button>(c.icon, style_.tab_face, c.icon);
+            b.tooltip = c.help;
+            b.icon_fit = (page_ == PoolPage::Paths ? pool_panel::kStairCell : pool_panel::kCell) - 8; // A changing room's picture is bigger than an extra's
+            b.swell = 2;
+            choices_.push_back(&b);
+        }
         for (std::size_t i = 0; i < tabs_.size(); ++i)
             tabs_[i]->on = page_ == static_cast<PoolPage>(i);
         place();
@@ -132,7 +133,7 @@ namespace rct3::ui
         if (page_ == PoolPage::Editor)
             return { pool_panel::kEditorWidth, 2 * pool_panel::kButton + pool_panel::kEdgeHeight + 2 * pool_panel::kRowGap };
         if (page_ == PoolPage::Paths)
-            return { pool_panel::kButton * static_cast<float>(path_modes_.size()) + pool_panel::kGroupGap, pool_panel::kButton };
+            return { pool_panel::kButton * static_cast<float>(path_modes_.size()) + 2 * pool_panel::kGroupGap + pool_panel::kStairCell, 3 * pool_panel::kStairCell };
         if (choices_.empty())
             return { 0, 0 };
         const auto columns = (choices_.size() + pool_panel::kRows - 1) / pool_panel::kRows;
@@ -197,9 +198,15 @@ namespace rct3::ui
         for (std::size_t i = 0; i < path_modes_.size(); ++i)
             path_modes_[i]->placement = top_left(static_cast<float>(i) * kButton + (i + 1 == path_modes_.size() ? kGroupGap : 0), 0, kButton, kButton);
 
-        // Down the columns, so the first two pictures stand one over the other.
+        // Down the columns, so the first two pictures stand one over the other; the paths page's in one column at
+        // its right end.
         for (std::size_t i = 0; i < choices_.size(); ++i)
         {
+            if (page_ == PoolPage::Paths)
+            {
+                choices_[i]->placement = top_left(body.x - kStairCell + 2, static_cast<float>(i) * kStairCell + 2, kStairCell - 4, kStairCell - 4);
+                continue;
+            }
             const auto column = static_cast<float>(i / kRows);
             const auto row = static_cast<float>(i % kRows);
             choices_[i]->placement = top_left(column * kCell + 2, row * kCell + 2, kCell - 4, kCell - 4);
@@ -289,7 +296,7 @@ namespace rct3::ui
             for (const auto& w : (page_ == PoolPage::Editor ? editor_page_ : paths_page_)->children())
                 if (w->hovered())
                     status_->text = w->tooltip;
-        const std::vector<PoolChoice>& shown = page_ == PoolPage::Extras ? extras_ : rooms_;
+        const std::vector<PoolChoice>& shown = choices_of(page_);
         for (std::size_t i = 0; i < choices_.size(); ++i)
         {
             if (choices_[i]->hovered())
@@ -307,12 +314,18 @@ namespace rct3::ui
     {
         if (placing_)
         {
-            const std::vector<PoolChoice>& from = placing_->first == PoolPage::Extras ? extras_ : rooms_;
+            const std::vector<PoolChoice>& from = choices_of(placing_->first);
             return placing_->second < from.size() ? std::string_view(from[placing_->second].icon) : std::string_view { };
         }
         if (editor_.mode == PoolMode::Water)
             return kDepths[static_cast<std::size_t>(std::clamp(editor_.depth, 1, 3) - 1)];
         return kModes[std::to_underlying(editor_.mode)];
+    }
+
+    const std::vector<PoolChoice>& PoolPanel::choices_of(std::optional<PoolPage> page) const
+    {
+        static const std::vector<PoolChoice> none;
+        return page == PoolPage::Extras ? extras_ : page == PoolPage::Rooms ? rooms_ : page == PoolPage::Paths ? stairs_ : none;
     }
 
     void PoolPanel::draw(DrawContext& context) const
@@ -358,7 +371,7 @@ namespace rct3::ui
                     if (kPathModes[i] == editor_.mode)
                         lit(path_modes_[i]);
             }
-            else if (placing_ && placing_->first == page_ && placing_->second < choices_.size())
+            if (placing_ && placing_->first == page_ && placing_->second < choices_.size())
                 lit(choices_[placing_->second]);
         }
 

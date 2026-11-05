@@ -251,7 +251,7 @@ TEST_CASE("one standing in a queue walks out along its line, never through anoth
     CHECK_FALSE(p.route(other, far)); // Its own line leads nowhere
     CHECK_FALSE(p.way_out(other));
     // Kept from the far tile by a no-entry sign, it still finds the way off the queue.
-    p.set_no_entry(far, 2, true);
+    p.set_no_entry(far, rct3::park::Side::kColBefore, true);
     CHECK_FALSE(p.route(line[2], far));
     CHECK(p.way_out(line[2]) == std::vector<NodeId> { line[1], line[0], path });
 }
@@ -266,8 +266,8 @@ TEST_CASE("a wall between two tiles parts them, a queue keeps its own sides, and
     const NodeId d = p.add({ 1, 1, 0 });
     const NodeId q = p.add({ 2, 0, 0 }, true);
     REQUIRE(p.nodes()[a].corner[0] == d);
-    p.add_wall(0, 0, 0, -0.5f, 2); // Between a and b
-    p.add_wall(1, 0, 0, -0.5f, 2); // Between b and the queue
+    p.add_wall(0, 0, rct3::park::Side::kNextCol, -0.5f, 2); // Between a and b
+    p.add_wall(1, 0, rct3::park::Side::kNextCol, -0.5f, 2); // Between b and the queue
     CHECK(p.nodes()[a].next[0] == kNoNode);
     CHECK(p.nodes()[b].next[2] == kNoNode);
     CHECK(p.nodes()[a].corner[0] == kNoNode); // The square is broken, so no crossing
@@ -276,16 +276,16 @@ TEST_CASE("a wall between two tiles parts them, a queue keeps its own sides, and
     REQUIRE(around);
     CHECK(*around == std::vector<NodeId> { c, d, b });
     // A wall low on the ground does not part a deck far above it.
-    p.add_wall(0, 0, 1, -0.5f, 2);
+    p.add_wall(0, 0, rct3::park::Side::kNextRow, -0.5f, 2);
     CHECK(p.nodes()[a].next[1] == kNoNode);
-    p.remove_wall(0, 0, 1, -0.5f, 2);
-    p.remove_wall(0, 0, 0, -0.5f, 2);
+    p.remove_wall(0, 0, rct3::park::Side::kNextRow, -0.5f, 2);
+    p.remove_wall(0, 0, rct3::park::Side::kNextCol, -0.5f, 2);
     CHECK(p.nodes()[a].next[0] == b);
     CHECK(p.nodes()[a].next[1] == c);
     CHECK(p.nodes()[a].corner[0] == d);
     PathNetwork high;
     const NodeId low = high.add({ 0, 0, 6 });
-    high.add_wall(0, 0, 0, -0.5f, 2);
+    high.add_wall(0, 0, rct3::park::Side::kNextCol, -0.5f, 2);
     CHECK(high.nodes()[low].next[0] == high.add({ 1, 0, 6 }));
 }
 
@@ -295,14 +295,14 @@ TEST_CASE("a no-entry side keeps guests from coming in across it, but not from l
     const NodeId a = p.add({ 0, 0, 0 });
     const NodeId b = p.add({ 1, 0, 0 });
     const NodeId c = p.add({ 2, 0, 0 });
-    p.set_no_entry(b, 2, true); // The side facing a
+    p.set_no_entry(b, rct3::park::Side::kColBefore, true); // The side facing a
     CHECK_FALSE(p.may_step(a, b, Walker::Guest));
     CHECK(p.may_step(b, a, Walker::Guest));
     CHECK(p.may_step(c, b, Walker::Guest));
     CHECK_FALSE(p.route(a, c));
     CHECK(p.route(c, a));
     CHECK(p.route(a, c, Walker::Staff));
-    p.set_no_entry(b, 2, false);
+    p.set_no_entry(b, rct3::park::Side::kColBefore, false);
     CHECK(p.route(a, c));
 }
 
@@ -316,7 +316,7 @@ TEST_CASE("a no-entry side also bars the cut across a square into its tile")
     const NodeId to = *p.find({ 1, 1, 0 });
     REQUIRE(std::ranges::contains(p.nodes()[from].corner, to));
     CHECK(p.may_step(from, to, Walker::Guest));
-    p.set_no_entry(to, 3, true); // Its -row side
+    p.set_no_entry(to, rct3::park::Side::kRowBefore, true); // Its -row side
     CHECK_FALSE(p.may_step(from, to, Walker::Guest));
     const auto walk = p.route(from, to);
     REQUIRE(walk);
@@ -360,4 +360,16 @@ TEST_CASE("given a purse, a route takes a link through a queue when it is shorte
     p.link({ .from = queue, .to = *p.find({ 19, 0, 0 }), .length = 30, .toll = 0 });
     CHECK(p.route(start, far, Walker::Guest, 0)->size() == 20);
     CHECK_FALSE(p.route(start, p.add({ 0, 2, 0 }), Walker::Guest, 0));
+}
+
+TEST_CASE("park sides map onto the network's own count of sides")
+{
+    for (const rct3::park::Side side : rct3::park::kSides)
+    {
+        const auto [dc, dr] = side.step();
+        PathNetwork p;
+        const NodeId a = p.add({ 1, 1, 0 });
+        const NodeId b = p.add({ 1 + dc, 1 + dr, 0 });
+        CHECK(p.nodes()[a].next[network_side(side)] == b);
+    }
 }

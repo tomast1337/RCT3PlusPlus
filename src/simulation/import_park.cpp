@@ -7,6 +7,7 @@
 #include "park/ground_queues.hpp"
 #include "park/object_placement.hpp"
 #include "park/path_decks.hpp"
+#include "park/path_furniture.hpp"
 #include "park/queue_fences.hpp"
 #include "park/terrain_mesh.hpp"
 #include "simulation/animals.hpp"
@@ -489,10 +490,9 @@ namespace rct3::simulation
         if (path.queue)
         {
             open = 0;
-            // path_decks counts the sides from +row, the network from +col: the same sides, each pair swapped.
-            for (std::uint8_t side = 0; side < 4; ++side)
-                if (park::edge_height(path, grid, park::Side::from(side ^ 1U)))
-                    open |= static_cast<std::uint8_t>(1U << side);
+            for (const park::Side side : park::kSides)
+                if (park::edge_height(path, grid, side))
+                    open |= static_cast<std::uint8_t>(1U << simulation::network_side(side));
         }
         world.paths.set_corners(id, corners, open);
         world.paths.keep_staff_off(id, kept_from_staff(world, grid, id));
@@ -1179,12 +1179,9 @@ namespace rct3::simulation
             world.paths.keep_staff_off(n, kept_from_staff(world, grid, n));
     }
 
-    std::size_t no_entry_side(const save::PlacedObject& sign)
+    park::Side no_entry_side(const save::PlacedObject& sign)
     {
-        // The front faces lower columns unturned, then a quarter clockwise each: higher rows, higher columns,
-        // lower rows (park::turned_x); the network numbers the sides +col, +row, -col, -row.
-        constexpr std::array<std::size_t, 4> kSide { 2, 1, 0, 3 };
-        return kSide[static_cast<std::size_t>(((sign.rotation % 4) + 4) % 4)];
+        return park::faced_side(park::ModelTurn::from(sign.rotation));
     }
 
     void import_party_mix(SimWorld& world, const save::GroupMix& mix)
@@ -1513,8 +1510,7 @@ namespace rct3::simulation
 
     void set_wall(SimWorld& world, const park::EdgeWall& wall, bool standing)
     {
-        // path_decks counts the sides from +row, the network from +col: the same sides, each pair swapped.
-        const std::size_t side = wall.side ^ 1U;
+        const park::Side side = park::Side::from(wall.side);
         if (standing)
             world.paths.add_wall(wall.tile.col, wall.tile.row, side, wall.low, wall.high);
         else

@@ -22,9 +22,13 @@
 // entrance's own path), unless they already stand on one, so a member of staff found outside can come back in.
 //
 // Nothing is sized to the original game's maps: columns, rows and levels are full integers.
+//
+// The network counts a tile's sides its own way, +col, +row, -col, -row (`next`, `open`, `no_entry`), the order
+// its searches try them in. Walls and no-entry signs are given as park sides and converted by network_side.
 #pragma once
 
 #include "math/glm.hpp"
+#include "park/turns.hpp"
 
 #include <array>
 #include <cstdint>
@@ -38,6 +42,12 @@ namespace rct3::simulation
 {
 
     using NodeId = std::uint32_t;
+
+    /// The network's number for park side `side`: the park's count with each pair swapped.
+    [[nodiscard]] constexpr std::size_t network_side(park::Side side) noexcept
+    {
+        return static_cast<std::size_t>(side.value ^ 1);
+    }
     inline constexpr NodeId kNoNode = ~NodeId { 0 };
     /// Most a path's surface may stand above or below its neighbour's at the ends of their shared edge and
     /// still join it. Chosen by eye: a quarter of a level absorbs rounding in saved heights, while a ramp's side
@@ -109,11 +119,11 @@ namespace rct3::simulation
         /// crossings.
         void remove(NodeId node);
 
-        /// Stands a wall along `side` (as `next` numbers them) of tile (`col`, `row`), from world height `low` to
-        /// `high`, and parts the tiles it stands between.
-        void add_wall(int col, int row, std::size_t side, float low, float high);
+        /// Stands a wall along `side` of tile (`col`, `row`), from world height `low` to `high`, and parts the
+        /// tiles it stands between.
+        void add_wall(int col, int row, park::Side side, float low, float high);
         /// Takes such a wall away again, and joins what it kept apart.
-        void remove_wall(int col, int row, std::size_t side, float low, float high);
+        void remove_wall(int col, int row, park::Side side, float low, float high);
 
         [[nodiscard]] const std::vector<PathNode>& nodes() const
         {
@@ -135,10 +145,10 @@ namespace rct3::simulation
         /// Gives a node's tile a surface that is not flat at its height (a ramp, or ground that is not level) and
         /// the sides it may join across (`open`, as PathNode::open); joins its tile again to suit.
         void set_corners(NodeId node, std::array<float, 4> corners, std::uint8_t open = 0b1111);
-        /// Bars side `side` (as `next` numbers them) of a node's tile to guests coming in, or lifts the bar.
-        void set_no_entry(NodeId node, std::size_t side, bool barred)
+        /// Bars side `side` of a node's tile to guests coming in, or lifts the bar.
+        void set_no_entry(NodeId node, park::Side side, bool barred)
         {
-            const auto bit = static_cast<std::uint8_t>(1U << (side % 4));
+            const auto bit = static_cast<std::uint8_t>(1U << network_side(side));
             nodes_[node].no_entry = barred ? nodes_[node].no_entry | bit : nodes_[node].no_entry & ~bit;
         }
         /// Keeps staff off a node's tile, or lets them on again.
@@ -194,7 +204,7 @@ namespace rct3::simulation
         void rejoin(int col, int row);
         struct Wall
         {
-            std::size_t side = 0;
+            std::size_t side = 0; ///< As `next` numbers them
             float low = 0;
             float high = 0;
             bool operator==(const Wall&) const = default;

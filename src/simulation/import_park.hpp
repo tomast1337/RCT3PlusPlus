@@ -187,9 +187,8 @@ namespace rct3::simulation
     /// Keeps staff off the path tiles on land the park does not own and off those under its entrances, and lets
     /// them onto the others. Call after import_gate, and again when the park's land changes.
     void keep_staff_in(SimWorld& world, const save::TerrainGrid& grid);
-    /// The side of its path tile, as the network numbers them, that a no-entry sign standing as `sign` bars: the
-    /// side its front faces.
-    [[nodiscard]] std::size_t no_entry_side(const save::PlacedObject& sign);
+    /// The side of its path tile that a no-entry sign standing as `sign` bars: the side its front faces.
+    [[nodiscard]] park::Side no_entry_side(const save::PlacedObject& sign);
 
     /// Sets the park's own mix of parties (PartyMix) from the scenario's, when the save carries one.
     void import_party_mix(SimWorld& world, const save::GroupMix& mix);

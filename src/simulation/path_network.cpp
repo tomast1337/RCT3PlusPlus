@@ -138,21 +138,19 @@ namespace rct3::simulation
             }
     }
 
-    void PathNetwork::add_wall(int col, int row, std::size_t side, float low, float high)
+    void PathNetwork::add_wall(int col, int row, park::Side side, float low, float high)
     {
-        const int across_col = col + kSides[side % 4][0];
-        const int across_row = row + kSides[side % 4][1];
-        walls_.emplace(key(col, row), Wall { side % 4, low, high });
-        walls_.emplace(key(across_col, across_row), Wall { (side + 2) % 4, low, high });
+        const auto [across_col, across_row] = side.beyond({ col, row });
+        walls_.emplace(key(col, row), Wall { network_side(side), low, high });
+        walls_.emplace(key(across_col, across_row), Wall { network_side(side.opposite()), low, high });
         rejoin(col, row);
         rejoin(across_col, across_row);
     }
 
-    void PathNetwork::remove_wall(int col, int row, std::size_t side, float low, float high)
+    void PathNetwork::remove_wall(int col, int row, park::Side side, float low, float high)
     {
-        const int across_col = col + kSides[side % 4][0];
-        const int across_row = row + kSides[side % 4][1];
-        for (const auto& [at, wall] : { std::pair { key(col, row), Wall { side % 4, low, high } }, std::pair { key(across_col, across_row), Wall { (side + 2) % 4, low, high } } })
+        const auto [across_col, across_row] = side.beyond({ col, row });
+        for (const auto& [at, wall] : { std::pair { key(col, row), Wall { network_side(side), low, high } }, std::pair { key(across_col, across_row), Wall { network_side(side.opposite()), low, high } } })
         {
             const auto [first, last] = walls_.equal_range(at);
             if (const auto found = std::find_if(first, last, [&](const auto& w) { return w.second == wall; }); found != last)

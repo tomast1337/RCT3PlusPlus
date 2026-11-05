@@ -19,6 +19,7 @@
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/line_plot.hpp"
 #include "ui/widgets/paint_button.hpp"
+#include "ui/widgets/slider.hpp"
 #include "ui/widgets/spinner.hpp"
 
 #include <cstddef>
@@ -76,10 +77,11 @@ namespace rct3::ui
         ColourPaletteStyle palette; ///< Of the colours a paint tab opens
         std::size_t palette_count = 32;
         std::size_t palette_columns = 8;
-        SpinnerStyle spinner;   ///< Of a page's number controls
-        StallMenuStyle menu;    ///< Of a stall's menu
-        DropdownStyle dropdown; ///< Of its lists
-        std::string tick_box;   ///< Of its ticks
+        SpinnerStyle spinner;                                                                                            ///< Of a page's number controls
+        SliderStyle bar { .rail = { }, .thumb = { }, .thumb_width = 0, .bar = true, .bar_back_colour = hex("#ece8f0") }; ///< Of its bars set by pressing along them; colours chosen by eye
+        StallMenuStyle menu;                                                                                             ///< Of a stall's menu
+        DropdownStyle dropdown;                                                                                          ///< Of its lists
+        std::string tick_box;                                                                                            ///< Of its ticks
         std::string tick;
         std::string button;                           ///< Behind its buttons' text
         Color section_colour = hex("#b8d8f0");        ///< Of a section button's text
@@ -230,6 +232,7 @@ namespace rct3::ui
         Paint,  ///< Pots of colours, each opening the colours to pick from
         Text,   ///< A line to type in, told when Enter is pressed
         Words,  ///< Its label alone, across its column
+        Bar,    ///< A bar filled from the left as far as the value, set by pressing along it
     };
 
     /// Something on a page the player can change, on a row of its own under the lines: its label on the left,
@@ -239,25 +242,25 @@ namespace rct3::ui
         int id = 0;
         std::string name; ///< Its widget's name: a string key from where it is made, to find it by
         InfoControlKind kind = InfoControlKind::Number;
-        std::u16string label;
+        std::u16string label { };
         int value = 0; ///< The number, the item picked, whether ticked, or whether a button is held down
         int minimum = 0;
         int maximum = 0;
         int step = 1;
-        int decimals = 0;                  ///< Of a number shown with a point, such as money in hundredths
-        std::vector<std::u16string> items; ///< Of a list
-        std::u16string text;               ///< On a button, typed, or a number's unit after it
+        int decimals = 0;                      ///< Of a number shown with a point, such as money in hundredths
+        std::vector<std::u16string> items { }; ///< Of a list
+        std::u16string text { };               ///< On a button, typed, or a number's unit after it
         /// A number's value in words, such as money, in the value column with only the arrows after it, its row
         /// a line high like the lines'; empty to type the number in a field.
-        std::u16string shown;
-        std::string icon;                ///< A button's picture, instead of text
-        std::vector<std::size_t> paints; ///< The colour of each pot
+        std::u16string shown { };
+        std::string icon { };                ///< A button's picture, instead of text
+        std::vector<std::size_t> paints { }; ///< The colour of each pot
         bool enabled = true;
         /// On the row of the control before it, after it, instead of on a row of its own.
         bool beside = false;
         int column = 0;                        ///< 0 the page's left, or all of it; 1 its right half
         float width = 0;                       ///< Of the control itself; 0 for its kind's own
-        std::u16string help;                   ///< Shown under the pointer
+        std::u16string help { };               ///< Shown under the pointer
         std::optional<Color> colour { };       ///< Of its label, instead of the panel's text colour
         std::optional<std::size_t> series { }; ///< The graph's series whose colour its label takes
     };

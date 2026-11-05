@@ -2768,8 +2768,10 @@ namespace rct3::scene
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         advance_park_water(scene.water, park_seconds);
         park::drop_spent_waves(scene.drawn_waves, scene.park_clock);
+        park::drop_spent_waves(scene.rings, scene.park_clock);
         scene.water.pool_waves = scene.machine_waves;
         scene.water.pool_waves.insert(scene.water.pool_waves.end(), scene.drawn_waves.begin(), scene.drawn_waves.end());
+        scene.water.pool_waves.insert(scene.water.pool_waves.end(), scene.rings.begin(), scene.rings.end());
         profiling::section("LensWater", [&] {
             using save::WeatherType;
             const WeatherType w = scene.park.weather;

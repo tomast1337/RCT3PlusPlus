@@ -220,6 +220,9 @@ declare namespace map {
     /** The particle effects shown now, those items keep running and those fired once: the effect's name, lower
      * case, where it is as a map point, and its particles alive. */
     function effects(): { effect: string; col: number; row: number; up: number; live: number }[];
+    /** The rings spreading on the pools' water where people fell in: their middle as a map point, their water's
+     * world height, seconds since they started (below 0 before) and their leading crest's height now. */
+    function rings(): { col: number; row: number; up: number; age: number; crest: number }[];
     function water(): Lake[];
     /** The waterfalls: the middle of the edge each pours over and where its water lands, in tiles, the levels of
      *  the lakes it joins and how wide it is in world units. */

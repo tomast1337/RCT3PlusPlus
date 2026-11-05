@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/pool_waves.hpp"
 
+#include "park/terrain_mesh.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <numbers>
@@ -143,12 +145,33 @@ namespace rct3::park
         return w;
     }
 
-    void drop_spent_waves(std::vector<PoolWave>& waves, float clock, const PoolWaveLook& look)
+    std::optional<PoolWave> entry_rings(const PoolMap& map, const save::TerrainGrid& grid, glm::vec3 at, float strength, float clock)
     {
-        std::erase_if(waves, [&](const PoolWave& w) { return (w.kind == PoolWaveKind::Line && clock - w.start > look.line_life) || (w.kind == PoolWaveKind::Whirlpool && clock - w.start > look.whirl_life); });
+        const auto tile = tile_at(grid, { at.x, at.z });
+        const auto square = tile ? map.at(tile->col, tile->row, static_cast<std::int32_t>(std::lround(at.y))) : std::nullopt;
+        if (!square || square->kind != PoolKind::Water || std::abs(at.y - static_cast<float>(square->surface)) > kPoolHeadroom / 2.0f)
+            return std::nullopt;
+        const float x = (at.x - grid.world_x(square->col)) / grid.tile_size_x - 0.5f;
+        const float z = (at.z - grid.world_z(square->row)) / grid.tile_size_z - 0.5f;
+        if (!pool_water_at(map, *square, x, z))
+            return std::nullopt;
+        return PoolWave { .kind = PoolWaveKind::Ring, .from = { at.x, at.z }, .bounds = body_bounds(map, grid, *square), .start = clock, .level = static_cast<float>(square->surface) + kPoolBrim, .strength = std::clamp(strength, 0.0f, 1.0f) };
     }
 
-    float pool_wave_height(std::span<const PoolWave> waves, glm::vec2 at, float clock, const PoolWaveLook& look)
+    float ring_crest(const PoolWave& rings, float clock, const PoolWaveLook& look)
+    {
+        const float age = clock - rings.start;
+        if (rings.kind != PoolWaveKind::Ring || age < 0 || age > look.ring_life)
+            return 0;
+        return look.ring_height * rings.strength * std::exp(-age / look.ring_fade) / (1 + look.ring_speed * age / look.ring_spread);
+    }
+
+    void drop_spent_waves(std::vector<PoolWave>& waves, float clock, const PoolWaveLook& look)
+    {
+        std::erase_if(waves, [&](const PoolWave& w) { return (w.kind == PoolWaveKind::Line && clock - w.start > look.line_life) || (w.kind == PoolWaveKind::Whirlpool && clock - w.start > look.whirl_life) || (w.kind == PoolWaveKind::Ring && clock - w.start > look.ring_life); });
+    }
+
+    float pool_wave_height(std::span<const PoolWave> waves, glm::vec2 at, float clock, std::optional<float> level, const PoolWaveLook& look)
     {
         float sum = 0;
         for (const PoolWave& w : waves.first(std::min(waves.size(), kMaxPoolWaves)))
@@ -185,6 +208,11 @@ namespace rct3::park
                 const float arms = look.whirl_arms * r * std::sin(3 * std::atan2(off.y, off.x) - w.spin * (look.whirl_turn * age - look.whirl_wind * r));
                 sum -= look.whirl_depth * strength * std::exp(-r * r) * (1 - arms);
             }
+            else if (w.kind == PoolWaveKind::Ring && (!level || std::abs(*level - w.level) < kPoolHeadroom / 2.0f))
+            {
+                const float x = glm::distance(at, w.from) - look.ring_speed * age;
+                sum += ring_crest(w, clock, look) * std::exp(-(x / look.ring_width) * (x / look.ring_width)) * std::cos(2 * std::numbers::pi_v<float> / look.ring_length * x);
+            }
         }
         return sum;
     }
@@ -200,9 +228,10 @@ namespace rct3::park
         for (std::size_t i = 0; i < std::min(waves.size(), kMaxPoolWaves); ++i)
         {
             const PoolWave& w = waves[i];
-            const float crest = w.kind == PoolWaveKind::Machine ? look.crest * w.settings.height : w.kind == PoolWaveKind::Line ? look.line_height : look.whirl_depth;
+            using enum PoolWaveKind;
+            const float crest = w.kind == Machine ? look.crest * w.settings.height : w.kind == Line ? look.line_height : w.kind == Ring ? look.ring_height * w.strength : look.whirl_depth;
             texels[i] = { w.from.x, w.from.y, w.heading.x, w.heading.y };
-            texels[kMaxPoolWaves + i] = { static_cast<float>(std::to_underlying(w.kind)), crest, w.start, w.spin };
+            texels[kMaxPoolWaves + i] = { static_cast<float>(std::to_underlying(w.kind)), crest, w.start, w.kind == Ring ? w.level : w.spin };
             texels[2 * kMaxPoolWaves + i] = w.bounds;
             texels[3 * kMaxPoolWaves + i] = { w.settings.frequency, w.settings.on, w.settings.every, w.radius };
         }

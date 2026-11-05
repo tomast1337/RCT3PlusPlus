@@ -178,3 +178,42 @@ TEST_CASE("pool waves: the surface they lift dies down at a wall and stays under
     CHECK(pool_wave_lift(0.1f, 4) == doctest::Approx(0.1f));
     CHECK(pool_wave_lift(-0.5f, 4) == doctest::Approx(-0.5f)); // Troughs are not held up
 }
+
+TEST_CASE("pool waves: rings spread out from where someone falls into open water, falling as they go, and end")
+{
+    const PoolMap map = ringed();
+    const auto rings = entry_rings(map, grid(), { 14, 4, 12 }, 1, 20);
+    REQUIRE(rings);
+    CHECK(rings->kind == PoolWaveKind::Ring);
+    CHECK(rings->level == doctest::Approx(4 + kPoolBrim));
+    CHECK(rings->bounds == glm::vec4 { 4, 4, 28, 20 });
+    const std::vector<PoolWave> lone { *rings };
+    const auto& look = kPoolWaveLook;
+    // A second on, the leading crest stands out at the ring's radius; the middle has settled.
+    CHECK(pool_wave_height(lone, { 14 + look.ring_speed, 12 }, 21) == doctest::Approx(ring_crest(*rings, 21)));
+    CHECK(std::abs(pool_wave_height(lone, { 14, 12 }, 21)) < 0.1f * ring_crest(*rings, 21));
+    CHECK(ring_crest(*rings, 20) == doctest::Approx(look.ring_height));
+    CHECK(ring_crest(*rings, 22) < ring_crest(*rings, 21));
+    CHECK(ring_crest(*rings, 19) == 0.0f); // Not started yet
+    CHECK(ring_crest(*rings, 20 + look.ring_life + 0.1f) == 0.0f);
+    std::vector<PoolWave> kept = lone;
+    drop_spent_waves(kept, 20 + look.ring_life - 0.1f);
+    CHECK(kept.size() == 1);
+    drop_spent_waves(kept, 20 + look.ring_life + 0.1f);
+    CHECK(kept.empty());
+}
+
+TEST_CASE("pool waves: rings start only on open water, and move only the water they fell into")
+{
+    const PoolMap map = ringed();
+    CHECK_FALSE(entry_rings(map, grid(), { 2, 4, 12 }, 1, 0));    // On the paving
+    CHECK_FALSE(entry_rings(map, grid(), { 4.5f, 4, 12 }, 1, 0)); // On the coping along the wall
+    CHECK_FALSE(entry_rings(map, grid(), { 14, 9, 12 }, 1, 0));   // High over the water
+    const auto rings = entry_rings(map, grid(), { 14, 4, 12 }, 0.5f, 0);
+    REQUIRE(rings);
+    CHECK(ring_crest(*rings, 0) == doctest::Approx(0.5f * kPoolWaveLook.ring_height));
+    const std::vector<PoolWave> lone { *rings };
+    const glm::vec2 crest { 14 + kPoolWaveLook.ring_speed, 12 };
+    CHECK(pool_wave_height(lone, crest, 1, 4 + kPoolBrim) > 0.0f);
+    CHECK(pool_wave_height(lone, crest, 1, 4 + kPoolBrim + kPoolHeadroom) == 0.0f); // A pool stacked over it
+}

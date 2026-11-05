@@ -17,6 +17,13 @@
 // the whole body of water, dying down as it goes. A line drawn aslant does nothing. A circle drawn round and round
 // turns into a whirlpool there a while: a dip in the water with arms that turn the way the circle was drawn.
 //
+// Where someone dives or drops into the water, rings spread out from there over its surface, a few crests
+// round a ring that widens at a steady speed, falling as it ages and as it widens:
+//
+//   height(r, t) = A * exp(-t / fade) / (1 + c * t / spread) * exp(-(x / width)^2) * cos(2 pi x / length),  x = r - c * t
+//
+// on that water alone, not on water stacked over or under it.
+//
 // All of them die down near the walls of their water and stay under the rim there. The renderer is handed each wave (pool_wave_texels) and works
 // out the same heights itself: it moves the surface up and down by them, so the swimmers floating there ride them
 // as they show.
@@ -71,6 +78,13 @@ namespace rct3::park
         float aslant = 0.3f;        ///< Radians a line may lean off a side of the grid and still make a wave
         float round = 0.4f;         ///< A circle's box is at least this share as wide as it is long
         float least_turning = 5.0f; ///< Radians the pointer turns round a circle, all one way, to make a whirlpool
+        float ring_height = 0.14f;  ///< Of the rings where someone falls in at full strength, at first
+        float ring_speed = 1.6f;    ///< Of the rings, outwards
+        float ring_length = 0.7f;   ///< From one of a ring's crests to the next
+        float ring_width = 0.6f;    ///< Of the train of crests round a ring
+        float ring_fade = 2.0f;     ///< Seconds the rings take to fall to a third
+        float ring_spread = 2.0f;   ///< The rings fall to half as they widen to this radius
+        float ring_life = 5.0f;     ///< Seconds before the rings are gone
     };
     inline constexpr PoolWaveLook kPoolWaveLook { };
 
@@ -80,6 +94,7 @@ namespace rct3::park
         Machine,   ///< A wave machine's, while the park runs
         Line,      ///< A line drawn on the water
         Whirlpool, ///< A circle drawn on the water
+        Ring,      ///< Rings where someone fell into the water
     };
 
     struct PoolWave
@@ -91,6 +106,8 @@ namespace rct3::park
         float start = 0;            ///< The park clock when a line or a whirlpool was drawn
         float radius = 0;           ///< A whirlpool's; half a wave machine's front where it leaves the wall
         float spin = 0;             ///< A whirlpool's way round: 1 or -1
+        float level = 0;            ///< Rings': their water's surface, world height
+        float strength = 0;         ///< Rings': 0 to 1, how hard the fall into the water was
         PoolWaves settings { };     ///< A machine's complex's
     };
 
@@ -106,18 +123,26 @@ namespace rct3::park
     /// Whether the water at world x and z `at` is a pool's.
     [[nodiscard]] bool on_pool_water(const PoolMap& map, const save::TerrainGrid& grid, glm::vec2 at);
 
-    /// Drops the drawn waves that have died away by `clock`.
+    /// Rings spreading from world point `at`, where someone fell into the water at `clock` (or will then) with
+    /// `strength` from 0 to 1. None unless `at` is over a pool's open water, past its coping, at about its surface.
+    [[nodiscard]] std::optional<PoolWave> entry_rings(const PoolMap& map, const save::TerrainGrid& grid, glm::vec3 at, float strength, float clock);
+
+    /// How high the leading crest of `rings` stands at `clock`: 0 before they start and once they are gone.
+    [[nodiscard]] float ring_crest(const PoolWave& rings, float clock, const PoolWaveLook& look = kPoolWaveLook);
+
+    /// Drops the drawn waves and rings that have died away by `clock`.
     void drop_spent_waves(std::vector<PoolWave>& waves, float clock, const PoolWaveLook& look = kPoolWaveLook);
 
-    /// How far the water at world x and z `at` stands above its level at `clock`, from all `waves` together.
-    [[nodiscard]] float pool_wave_height(std::span<const PoolWave> waves, glm::vec2 at, float clock, const PoolWaveLook& look = kPoolWaveLook);
+    /// How far the water at world x and z `at` stands above its level at `clock`, from all `waves` together; given
+    /// the water's world height `level`, rings on water stacked over or under it leave it be.
+    [[nodiscard]] float pool_wave_height(std::span<const PoolWave> waves, glm::vec2 at, float clock, std::optional<float> level = std::nullopt, const PoolWaveLook& look = kPoolWaveLook);
 
     /// How far the surface rises for waves of `height`, `room` world units from its nearest wall (pool_wall_room):
     /// dying down near the wall and kept under its rim.
     [[nodiscard]] float pool_wave_lift(float height, float room, const PoolWaveLook& look = kPoolWaveLook);
 
     /// What the renderer reads, four rows of kMaxPoolWaves, after the ripples' two: each wave's `from` and
-    /// heading; its kind, crest height (world units), start and spin; its bounds; its frequency, on and every
+    /// heading; its kind, crest height (world units), start and spin (rings: their level); its bounds; its frequency, on and every
     /// seconds and radius. The first kMaxPoolWaves waves are kept.
     using PoolWaveTexels = std::array<glm::vec4, 4 * kMaxPoolWaves>;
     [[nodiscard]] PoolWaveTexels pool_wave_texels(std::span<const PoolWave> waves, const PoolWaveLook& look = kPoolWaveLook);

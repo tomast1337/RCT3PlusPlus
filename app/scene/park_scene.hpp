@@ -462,6 +462,7 @@ namespace rct3::scene
         std::vector<park::PoolExtra> scenery_pool_extras; ///< Pool extras a park from the game placed as scenery, for its swimmers to use
         std::vector<park::PoolWave> machine_waves;        ///< The pools' wave machines', as `pools` was last taken in
         std::vector<park::PoolWave> drawn_waves;          ///< Drawn on the pools' water with the pointer, oldest first
+        std::vector<park::PoolWave> rings;                ///< Spreading where people fell into the pools' water, oldest first
         std::vector<std::uint64_t> pool_pieces;           ///< Their pieces' objects, as last built
         std::size_t saved_pool_water = 0;                 ///< footpaths.pools of the park's own file; the pools' follow
         std::size_t entrance_centred = 0;                 ///< Of the park's entrances, the one the view last went to

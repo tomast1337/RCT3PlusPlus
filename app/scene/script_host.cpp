@@ -617,6 +617,13 @@ namespace rct3::scene
                 }
             return effects;
         });
+        engine_.define("map.rings", [this](const Json&) {
+            const save::TerrainGrid& g = grid_of(park_);
+            Json rings = Json::array();
+            for (const park::PoolWave& w : park_->rings)
+                rings.push_back({ { "col", (w.from.x - g.origin_x) / g.tile_size_x }, { "row", (w.from.y - g.origin_z) / g.tile_size_z }, { "up", w.level }, { "age", park_->park_clock - w.start }, { "crest", park::ring_crest(w, park_->park_clock) } });
+            return rings;
+        });
         engine_.define("map.fire", [this](const Json& a) {
             const save::TerrainGrid& g = grid_of(park_);
             if (a.empty() || !a[0].is_object() || !a[0].contains("effect"))

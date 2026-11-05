@@ -164,14 +164,22 @@ static const float kWhirlLife = 10.0;
 static const float kWhirlTurn = 3.0;
 static const float kWhirlArms = 0.6;
 static const float kWhirlWind = 3.0;
+static const float kRingHeight = 0.14;
+static const float kRingSpeed = 1.6;
+static const float kRingLength = 0.7;
+static const float kRingWidth = 0.6;
+static const float kRingFade = 2.0;
+static const float kRingSpread = 2.0;
+static const float kRingLife = 5.0;
+static const float kHeadroom = 1.5; // Half kPoolHeadroom: rings move only the water they fell into, not one stacked over or under it
 static const float kPoolEdge = 1.0;
 static const float kRimRoom = 0.08;
 static const float kRimRise = 0.3;
 static const float kPoolFoam = 0.55; // Chosen by eye: foam on a crest above this share of its wave's height
 static const float kPoolLight = 1.2; // Chosen by eye: crests lighter and troughs darker by this much per unit of height
 
-// How high the pools' waves stand at `at`, and how much foam they carry there.
-float2 pool_wave_height(float2 at, float time)
+// How high the pools' waves stand at `at`, on water at world height `level`, and how much foam they carry there.
+float2 pool_wave_height(float2 at, float level, float time)
 {
     float sum = 0.0;
     float foam = 0.0;
@@ -216,6 +224,17 @@ float2 pool_wave_height(float2 at, float time)
             h = shape.y * exp(-age / kLineFade) * exp(-(x / kLineWidth) * (x / kLineWidth)) * cos(6.2831853 / kLineLength * x);
             f = smoothstep(kPoolFoam, 1.0, h / shape.y * exp(age / kLineFade)) * exp(-age / kLineFade);
         }
+        else if (shape.x > 3.5)
+        {
+            if (age < 0.0 || age > kRingLife || abs(level - shape.w) > kHeadroom)
+                continue;
+            const float x = length(at - place.xy) - kRingSpeed * age;
+            const float fall = exp(-age / kRingFade) / (1.0 + kRingSpeed * age / kRingSpread);
+            const float wave = exp(-(x / kRingWidth) * (x / kRingWidth)) * cos(6.2831853 / kRingLength * x);
+            h = shape.y * fall * wave;
+            // A little foam on the first crests, gone within a second or so.
+            f = smoothstep(kPoolFoam, 1.0, wave) * exp(-2.0 * age) * shape.y / kRingHeight;
+        }
         else if (age >= 0.0 && age <= kWhirlLife)
         {
             const float strength = saturate(age) * saturate((kWhirlLife - age) / 3.0);
@@ -240,12 +259,12 @@ float pool_lift(float height, float room)
 }
 
 // The pools' waves' slope in x and z, how high they stand here and their foam.
-float4 pool_waves(float2 at, float time)
+float4 pool_waves(float3 at, float time)
 {
     const float e = 0.05;
-    const float2 h = pool_wave_height(at, time);
-    const float dx = pool_wave_height(at + float2(e, 0.0), time).x - pool_wave_height(at - float2(e, 0.0), time).x;
-    const float dz = pool_wave_height(at + float2(0.0, e), time).x - pool_wave_height(at - float2(0.0, e), time).x;
+    const float2 h = pool_wave_height(at.xz, at.y, time);
+    const float dx = pool_wave_height(at.xz + float2(e, 0.0), at.y, time).x - pool_wave_height(at.xz - float2(e, 0.0), at.y, time).x;
+    const float dz = pool_wave_height(at.xz + float2(0.0, e), at.y, time).x - pool_wave_height(at.xz - float2(0.0, e), at.y, time).x;
     return float4(dx / (2.0 * e), dz / (2.0 * e), h.x, h.y);
 }
 
@@ -253,7 +272,7 @@ float4 pool_waves(float2 at, float time)
 Varyings vertex_main([[vk::location(0)]] float3 position, [[vk::location(1)]] float4 color, [[vk::location(2)]] float2 uv, [[vk::location(3)]] float3 normal)
 {
     // A pool's waves move its surface; the second texture coordinate is how far its wall is.
-    const float lift = has(kRipples) && !has(kFlow) && !has(kUnderwater) ? pool_lift(pool_wave_height(position.xz, u_draw.eye_time.w).x, uv.y) : 0.0;
+    const float lift = has(kRipples) && !has(kFlow) && !has(kUnderwater) ? pool_lift(pool_wave_height(position.xz, position.y, u_draw.eye_time.w).x, uv.y) : 0.0;
     const float3 moved = position + float3(0.0, lift, 0.0);
     const float4 clip = mul(u_draw.transform, float4(moved, 1.0));
     return { clip, moved, color, uv.x + lift, clip, uv, normal };
@@ -538,7 +557,7 @@ float4 fragment_main(Varyings v) : SV_Target
         slope += (broad + 0.5 * fine) * kWaveHeight * calm;
     }
     const float3 rip = has(kRipples) ? ripples(v.world.xz) : float3(0.0);
-    const float4 pool = has(kRipples) ? pool_waves(v.world.xz, time) * saturate(v.uv.y / kPoolEdge) : float4(0.0);
+    const float4 pool = has(kRipples) ? pool_waves(v.world, time) * saturate(v.uv.y / kPoolEdge) : float4(0.0);
     slope += rip.xy + pool.xy;
     const float3 n = normalize(float3(-slope.x, 1.0, -slope.y));
 

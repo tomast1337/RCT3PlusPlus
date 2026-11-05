@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // A pool complex with a water slide: swimmers go up to its station, ride it down in their swimwear and splash
-// into the pool, where they swim on. A car running off the slide's open end into the water is no crash: no
+// into the pool, where rings spread on the water, and they swim on. A car running off the slide's open end into the water is no crash: no
 // wreck, no message, the slide stays open, rated, and its cars go round again. Give it a park the game saved
 // with a body, ring or pro slide ending in a pool and guests swimming:
 //
@@ -44,9 +44,11 @@ await until(() => people.list()[rider].state !== "riding", 1200, "the rider off 
 const flying = people.list()[rider];
 log("off the end as", flying.state, "swimwear", flying.swimwear);
 expect(flying.swimwear === true, "the rider still in their swimwear off the end");
-const splashing = () => map.effects().filter((e) => /^(splash4|waterwakemedium)$/.test(e.effect) && Math.abs(e.col - flying.col!) + Math.abs(e.row - flying.row!) < 3);
+const splashing = () => map.effects().filter((e) => /^(splash2|waterwakemedium)$/.test(e.effect) && Math.abs(e.col - flying.col!) + Math.abs(e.row - flying.row!) < 3);
 await until(() => new Set(splashing().map((e) => e.effect)).size === 2, 300, "spray and foam where the rider came down");
 const splashes = splashing();
+const rings = map.rings().filter((r) => Math.abs(r.col - splashes[0].col) + Math.abs(r.row - splashes[0].row) < 0.5);
+expect(rings.length === 1 && rings[0].crest > 0, `rings spreading where the rider came down, not ${JSON.stringify(map.rings())}`);
 await until(() => people.list()[rider].state === "swimming", 600, "the rider swimming again");
 expect(people.list()[rider].swimwear === true, "the rider swimming in their swimwear");
 await frames(30);

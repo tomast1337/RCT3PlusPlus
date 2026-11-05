@@ -48,6 +48,25 @@ namespace rct3::scene
     namespace
     {
 
+        /// Starts rings spreading on the pool water at `at` in `delay` seconds, where someone falls in with
+        /// `strength` (park::entry_rings). When there are already the most, they take the place of the lowest, if
+        /// those are lower than the new ones start.
+        void start_rings(ParkScene& scene, glm::vec3 at, float strength, float delay = 0)
+        {
+            constexpr std::size_t kMostRings = park::kMaxPoolWaves / 2; ///< Chosen by eye: room left for the machines' and drawn waves
+            const auto rings = park::entry_rings(scene.pools, scene.grid, at, strength, scene.park_clock + delay);
+            if (!rings)
+                return;
+            if (scene.rings.size() < kMostRings)
+            {
+                scene.rings.push_back(*rings);
+                return;
+            }
+            const auto crest = [&](const park::PoolWave& w) { return w.start > scene.park_clock ? w.strength * park::kPoolWaveLook.ring_height : park::ring_crest(w, scene.park_clock); };
+            if (const auto lowest = std::ranges::min_element(scene.rings, { }, crest); crest(*lowest) < rings->strength * park::kPoolWaveLook.ring_height)
+                *lowest = *rings;
+        }
+
         /// How far away people are drawn at each level of detail, finest first; beyond the last they are not.
         constexpr std::array kPersonDistances { 75.0f, 200.0f, 600.0f };
 
@@ -862,7 +881,7 @@ namespace rct3::scene
                         return next && next->kind == park::PoolKind::Water && next->surface == square->surface;
                     };
                     const float room = park::pool_wall_room(scene.grid, at_xz - glm::vec2 { scene.grid.world_x(col), scene.grid.world_z(row) }, water);
-                    return at.position + glm::vec3(0.0f, park::pool_wave_lift(park::pool_wave_height(scene.water.pool_waves, at_xz, clock), room), 0.0f);
+                    return at.position + glm::vec3(0.0f, park::pool_wave_lift(park::pool_wave_height(scene.water.pool_waves, at_xz, clock, at.position.y), room), 0.0f);
                 };
                 if (const auto* errand = r.try_get<simulation::Errand>(shown.guest); swimmer->changing.value > 0 || (errand != nullptr && errand->kind == simulation::ErrandKind::Riding && floating == nullptr))
                     return std::nullopt;
@@ -1293,21 +1312,17 @@ namespace rct3::scene
         // Chosen by eye: the effects a car's splash points spray, by strength, and its wake.
         constexpr std::array<std::string_view, 3> kSplashEffects { "splash2", "splash4", "watersplashbig" };
         constexpr std::string_view kWakeEffect = "waterwakemedium";
-        // Where a pool slide's rider comes down in the water, a low burst of spray rises round them and falls back
-        // amid foam.
+        // Where a pool slide's rider comes down in the water, a low spray rises and falls back amid a little foam,
+        // and rings spread on the water from there.
         constexpr std::string_view kFoam = kWakeEffect; ///< Chosen by eye: foam spreading on the water
-        constexpr int kSprays = 6;                      ///< Chosen by eye: sprays round where they come down
-        constexpr float kSprayLean = 0.5f;              ///< Chosen by eye: how far out from straight up each is thrown
-        constexpr float kSprayScale = 0.55f;            ///< Chosen by eye: the splash this small rises about rider high
+        constexpr float kSprayScale = 0.45f;            ///< Chosen by eye: the spray this small rises below rider high
+        constexpr float kDownRings = 0.8f;              ///< Chosen by eye: the rings' strength
         std::erase_if(scene.splashdowns, [&](const std::pair<float, glm::vec3>& down) {
             if (down.first > scene.park_clock)
                 return false;
             fire_park_particles(scene.particles, kFoam, down.second, glm::vec3(0, 1, 0));
-            for (int k = 0; k < kSprays; ++k)
-            {
-                const float round = glm::two_pi<float>() * static_cast<float>(k) / kSprays;
-                fire_park_particles(scene.particles, kSplashEffects[1], down.second, glm::vec3(0, 1, 0) + glm::vec3(std::cos(round), 0, std::sin(round)) * kSprayLean, kSprayScale);
-            }
+            fire_park_particles(scene.particles, kSplashEffects[0], down.second, glm::vec3(0, 1, 0), kSprayScale);
+            start_rings(scene, down.second, kDownRings);
             return true;
         });
         scene.car_waters.resize(scene.cars.size());
@@ -1769,7 +1784,8 @@ namespace rct3::scene
                     fire_park_particles(scene.particles, kChangePuff, r.get<simulation::Pose>(shown.guest).position + glm::vec3 { 0, kPuffHeight, 0 }, glm::vec3 { 0, 1, 0 });
                 shown.swimwear = swimwear;
                 shown.changing = changing;
-                // Into or out of the water, but for a dive; a diver going under throws up a splash.
+                // Into or out of the water, but for a dive; a diver going under throws up a little spray, and rings
+                // spread on the water from there.
                 if (swimmer == nullptr || changing)
                     continue;
                 const glm::vec3 at = r.get<simulation::Pose>(shown.guest).position;
@@ -1779,12 +1795,19 @@ namespace rct3::scene
                     const auto* door = errand != nullptr && r.valid(errand->target) ? r.try_get<simulation::PoolDoor>(errand->target) : nullptr;
                     const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
                     const bool high = pool != nullptr && swimmer->board >= 0 && static_cast<std::size_t>(swimmer->board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(swimmer->board)].high;
-                    constexpr std::string_view kSmallSplash = "splash2";      ///< Chosen by eye: off a small board
-                    constexpr std::string_view kBigSplash = "watersplashbig"; ///< Chosen by eye: off a high one
-                    fire_park_particles(scene.particles, high ? kBigSplash : kSmallSplash, at, glm::vec3 { 0, 1, 0 });
+                    constexpr std::string_view kSpray = "splash2"; ///< Chosen by eye: a low spray of drops
+                    constexpr float kSmallSpray = 0.35f;           ///< Chosen by eye: its size off a small board
+                    constexpr float kHighSpray = 0.6f;             ///< Chosen by eye: and off a high one
+                    constexpr float kSmallRings = 0.6f;            ///< Chosen by eye: rings' strength off a small board; full off a high one
+                    fire_park_particles(scene.particles, kSpray, at, glm::vec3 { 0, 1, 0 }, high ? kHighSpray : kSmallSpray);
+                    start_rings(scene, at, high ? 1.0f : kSmallRings);
                 }
                 if (swimmer->in_water != shown.in_water && swimmer->dive == simulation::DiveStep::None && shown.dive == simulation::DiveStep::None)
                 {
+                    constexpr float kEdgeRings = 0.7f; ///< Chosen by eye: rings' strength diving in off the edge
+                    constexpr float kEdgeDelay = 0.5f; ///< Chosen by eye: seconds into the dive the body meets the water
+                    if (swimmer->in_water)
+                        start_rings(scene, at, kEdgeRings, kEdgeDelay);
                     shown.crossed = scene.park_clock;
                     const auto* errand = r.try_get<simulation::Errand>(shown.guest);
                     const auto* door = errand != nullptr && r.valid(errand->target) ? r.try_get<simulation::PoolDoor>(errand->target) : nullptr;

@@ -266,13 +266,15 @@ keys.press("Enter");
 await frames(3);
 expect(ui.find("info/body/PoolComplexName")?.text === "Lagoon", `the complex named, not ${ui.find("info/body/PoolComplexName")?.text}`);
 await screenshot("pool_room_details");
+// Opened from the flag's green light.
+await ui.click("info/Attraction_General_Closed");
+await until(() => ui.find("info/Attraction_Button_Open") !== undefined, 60, "the flag's lights");
+await ui.click("info/Attraction_Button_Open");
+await frames(3);
+expect(ui.find("info/Attraction_General_Open") !== undefined, "the complex open");
+await screenshot("pool_complex_open");
 await ui.click("info/Attraction_OpMode");
 await frames(3);
-// Dragged from the choice down onto its first row, Open.
-const choice = ui.find("info/body/AttractionStatusOpen")!;
-await pointer.drag([choice.x, choice.y], [choice.x, choice.bottom + (choice.bottom - choice.top) / 2], 6);
-await frames(3);
-await screenshot("pool_complex_open");
 // The complex has a wave machine, so its settings are shown.
 for (const name of ["WaveHeightText", "WaveLengthText", "WaveOnPeriodText", "WaveTotalPeriodText"])
     expect(ui.find(`info/body/${name}`) !== undefined, `the ${name} setting there, not ${JSON.stringify(ui.children("info/body"))}`);

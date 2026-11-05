@@ -37,12 +37,14 @@ await frames(10);
 const middle = map.screen(room!.col + 0.5, room!.row + 0.5)!;
 await pointer.click(middle.x, middle.y - 0.12);
 await until(() => ui.find("info/Attraction_OpMode") !== undefined, 120, "the changing room's window");
-await ui.click("info/Attraction_OpMode");
-await frames(3);
-const state = () => ui.find("info/body/AttractionStatusOpen_label")?.text;
+const state = () => (ui.find("info/Attraction_General_Open") !== undefined ? "Open" : "Closed");
 const saved_state = state();
-const choice = ui.find("info/body/AttractionStatusOpen")!;
-await pointer.drag([choice.x, choice.y], [choice.x, choice.bottom + (choice.bottom - choice.top) / 2], 6);
+if (saved_state !== "Open")
+{
+    await ui.click("info/Attraction_General_Closed");
+    await until(() => ui.find("info/Attraction_Button_Open") !== undefined, 60, "the flag's lights");
+    await ui.click("info/Attraction_Button_Open");
+}
 await frames(3);
 log("changing room", saved_state, "then", state());
 expect(state() === "Open", `the complex open, not ${state()}`);

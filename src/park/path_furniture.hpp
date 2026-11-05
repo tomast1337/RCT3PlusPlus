@@ -17,6 +17,7 @@
 
 #include "park/object_mesh.hpp"
 #include "park/object_placement.hpp"
+#include "park/turns.hpp"
 #include "save/model/world.hpp"
 
 #include <cstdint>
@@ -34,25 +35,34 @@ namespace rct3::park
         return positioning == PathSide || positioning == PathSideOuter || positioning == PathCentre || positioning == PathSideJoin;
     }
 
-    /// The side of a tile, as path_decks numbers them, that an item's +X faces after `turns` quarter turns.
-    [[nodiscard]] constexpr std::uint8_t faced_side(std::int32_t turns) noexcept
+    // An item's model does not count its turns as a path deck piece does: unturned, its +X faces the column
+    // before, and each quarter turn moves it one side on clockwise. These two convert between the two counts.
+
+    /// The side of a tile that an item's +X faces after `turn`.
+    [[nodiscard]] constexpr Side faced_side(ModelTurn turn) noexcept
     {
-        return static_cast<std::uint8_t>((turns + 3) & 3);
+        return Side::kColBefore.turned(turn.value);
+    }
+
+    /// The turn that faces an item's +X at `side`: faced_side turned back.
+    [[nodiscard]] constexpr ModelTurn turn_facing(Side side) noexcept
+    {
+        return ModelTurn::from(side.value - Side::kColBefore.value);
     }
 
     struct FurnitureSpot
     {
         save::Tile tile;
-        std::int32_t turns = 0;
+        ModelTurn turn;
         std::int32_t height = 0; ///< Whole units; the deck's on a raised path, the land's middle on the ground
         bool raised = false;
         bool refused = false; ///< On a path, but not where the item may stand: no side suits, or its rules forbid the path
     };
 
     /// Where an item positioned `positioning` goes for the pointer at world point `hit`: on the path tile under it
-    /// whose height is nearest, against the side chosen as above, or in the middle turned `turns`. Nothing off the
+    /// whose height is nearest, against the side chosen as above, or in the middle turned `turn`. Nothing off the
     /// paths. `rules` are the item's ObjectModel::path_rules.
-    [[nodiscard]] std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, Positioning positioning, std::int32_t turns, PathRules rules = { });
+    [[nodiscard]] std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, Positioning positioning, ModelTurn turn, PathRules rules = { });
 
     /// Whether another shown item of `objects` already stands where `item`, positioned `positioning`, would: in
     /// the middle of its tile, or against the same side, at about its height.

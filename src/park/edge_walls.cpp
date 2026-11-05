@@ -40,7 +40,7 @@ namespace rct3::park
         std::int32_t top = 0;
         for (const auto& levels : m.solid)
             top = std::max(top, levels ? (*levels)[1] + 1 : 0);
-        return EdgeWall { .tile = { o.col, o.row }, .side = faced_side(o.rotation), .low = base - kBelow, .high = base + (top > 0 ? static_cast<float>(top) : kFenceHeight) };
+        return EdgeWall { .tile = { o.col, o.row }, .side = static_cast<std::uint8_t>(faced_side(ModelTurn::from(o.rotation)).value), .low = base - kBelow, .high = base + (top > 0 ? static_cast<float>(top) : kFenceHeight) };
     }
 
     EdgeWalls edge_walls(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)

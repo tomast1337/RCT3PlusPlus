@@ -557,7 +557,7 @@ namespace rct3::scene
             if (park::on_paths(positioning))
             {
                 p.lift.reset();
-                const auto spot = hit ? park::furniture_spot(scene.footpaths.paths, scene.grid, *hit, positioning, p.turns, model != scene.models.end() ? model->second.path_rules : park::PathRules { }) : std::nullopt;
+                const auto spot = hit ? park::furniture_spot(scene.footpaths.paths, scene.grid, *hit, positioning, park::ModelTurn::from(p.turns), model != scene.models.end() ? model->second.path_rules : park::PathRules { }) : std::nullopt;
                 if (!spot)
                 {
                     p.site.reset();
@@ -565,7 +565,7 @@ namespace rct3::scene
                     p.ghost_mesh = { };
                     return;
                 }
-                p.site = park::RideSite { spot->tile.col, spot->tile.row, spot->turns, spot->height, { 1, 1 } };
+                p.site = park::RideSite { spot->tile.col, spot->tile.row, spot->turn.value, spot->height, { 1, 1 } };
                 // On the ground it follows the land; on a deck it keeps the deck's height.
                 p.ground = spot->raised ? park::ride_site({ spot->tile.col, spot->tile.row }, squares, 0, scene.grid).height : spot->height;
                 p.absolute = spot->raised;

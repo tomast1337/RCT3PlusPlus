@@ -13,13 +13,11 @@ namespace rct3::park
 
     namespace
     {
-        /// The quarter turns that face an item's +X at each side: faced_side turned back.
-        constexpr std::array<std::int32_t, 4> kTurnsFacing { 1, 2, 3, 0 };
         constexpr float kSameHeight = 0.5f;    ///< World units between two edges that still meet
         constexpr std::int32_t kSameLevel = 2; ///< Units between two items' bases that still clash
     } // namespace
 
-    std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, Positioning positioning, std::int32_t turns, PathRules rules)
+    std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, Positioning positioning, ModelTurn turn, PathRules rules)
     {
         if (grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
             return std::nullopt;
@@ -59,7 +57,7 @@ namespace rct3::park
         }
         if (path == nullptr)
             return std::nullopt;
-        FurnitureSpot spot { .tile = tile, .turns = turns & 3, .height = static_cast<std::int32_t>(std::lround(middle)), .raised = path->elevation.has_value() };
+        FurnitureSpot spot { .tile = tile, .turn = ModelTurn::from(turn.value), .height = static_cast<std::int32_t>(std::lround(middle)), .raised = path->elevation.has_value() };
         // A queue on the ground stores a slope of its own, but lies on the land as a ground path does.
         const std::uint8_t slope = path->elevation ? path->elevation->slope : 0;
         const bool sloped = slope != 0 && slope != save::kSlopeOnGround;
@@ -106,10 +104,10 @@ namespace rct3::park
         const std::optional<Side> best = nearest_side({ in_x, in_z }, [&](Side side) { return joined(side) == wants_joined && (!ends_only || at_end(side)); });
         const std::optional<Side> any = nearest_side({ in_x, in_z }, [](Side) { return true; });
         spot.refused = !best || forbidden;
-        const auto side = static_cast<std::size_t>(best.value_or(*any).value);
-        spot.turns = kTurnsFacing[side];
-        if (edges[side])
-            spot.height = static_cast<std::int32_t>(std::lround(*edges[side]));
+        const Side side = best.value_or(*any);
+        spot.turn = turn_facing(side);
+        if (const auto& edge = edges[static_cast<std::size_t>(side.value)])
+            spot.height = static_cast<std::int32_t>(std::lround(*edge));
         return spot;
     }
 

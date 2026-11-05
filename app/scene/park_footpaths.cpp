@@ -1508,7 +1508,7 @@ namespace rct3::scene
             if (chosen_queue(f))
             {
                 if (const auto entrance = park::entrance_beside(rides, { tile.col, tile.row }, std::nullopt))
-                    f.builder.heading = park::Side::from(entrance->side).opposite();
+                    f.builder.heading = entrance->side.opposite();
             }
             f.notice.clear();
             f.dirty = true;

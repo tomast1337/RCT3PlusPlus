@@ -749,3 +749,76 @@ TEST_CASE("pools: a park from the game gives its squares, boards and changing ro
     CHECK(map.rooms[0].waves.on == 45);
     CHECK(map.rooms[0].waves.every == 120);
 }
+
+namespace
+{
+
+    /// Whether the point (`x`, `z`) of the square at (`col`, `row`) of `map`, in tiles from its middle, is open water.
+    bool open_at(const PoolMap& map, std::int32_t col, std::int32_t row, float x, float z)
+    {
+        return pool_water_at(map, *map.at(col, row), x, z);
+    }
+
+} // namespace
+
+TEST_CASE("pools: a wall's coping takes the quarter tile along its side, square round an outer corner")
+{
+    const PoolMap map = ringed(6, 6);
+    CHECK(open_at(map, 3, 3, 0.45f, -0.45f));
+    // (3, 1) is walled at the row before.
+    CHECK_FALSE(open_at(map, 3, 1, 0, -0.3f));
+    CHECK(open_at(map, 3, 1, 0, -0.2f));
+    // (1, 1) at the row before and the column before, its water square up to the corner of the copings.
+    CHECK(open_at(map, 1, 1, -0.2f, -0.2f));
+    CHECK_FALSE(open_at(map, 1, 1, -0.3f, 0.4f));
+}
+
+TEST_CASE("pools: a corner cut across runs from where one coping meets the open side to where the other does")
+{
+    const PoolMap map = edged(ringed(6, 6), PoolEdge::Diagonal);
+    CHECK_FALSE(open_at(map, 1, 1, -0.2f, -0.2f));
+    CHECK(open_at(map, 1, 1, 0.3f, 0.3f));
+    CHECK_FALSE(open_at(map, 1, 1, 0.45f, -0.22f));
+    CHECK(open_at(map, 1, 1, 0.45f, -0.15f));
+    // The edges beside it are only walled.
+    CHECK(open_at(map, 2, 1, -0.45f, -0.2f));
+}
+
+TEST_CASE("pools: a tight curve rounds as wide as the water reaches past it; a lone square in a circle")
+{
+    const PoolMap map = edged(ringed(6, 6), PoolEdge::Tight);
+    CHECK_FALSE(open_at(map, 1, 1, -0.2f, -0.2f));
+    CHECK(open_at(map, 1, 1, 0, 0));
+    CHECK(open_at(map, 1, 1, -0.2f, 0.4f));
+    const PoolMap lone = edged(ringed(1, 1), PoolEdge::Tight);
+    CHECK(open_at(lone, 1, 1, 0, 0));
+    CHECK(open_at(lone, 1, 1, 0.2f, 0));
+    CHECK_FALSE(open_at(lone, 1, 1, 0.2f, 0.2f));
+    // Straight, its corners stay square.
+    CHECK(open_at(ringed(1, 1), 1, 1, 0.2f, 0.2f));
+}
+
+TEST_CASE("pools: a corner where water goes round the inside takes a quarter tile round it")
+{
+    // An L: the square at the next column and next row of (1, 1) is paved.
+    PoolMap map = ringed(3, 3);
+    std::ranges::find_if(map.squares, [](const PoolSquare& s) { return s.col == 2 && s.row == 2; })->kind = PoolKind::Tile;
+    CHECK_FALSE(open_at(map, 1, 1, 0.45f, 0.45f));
+    CHECK(open_at(map, 1, 1, 0.3f, 0.3f));
+}
+
+TEST_CASE("pools: a loose curve's water lies inside a circle through its corner square and the squares either side")
+{
+    const PoolMap map = edged(ringed(6, 6), PoolEdge::Loose);
+    // The corner square is paved but for its open corner.
+    CHECK_FALSE(open_at(map, 1, 1, 0, 0));
+    CHECK(open_at(map, 1, 1, 0.45f, 0.45f));
+    // The square beside it at the next column curves on towards the straight edge.
+    CHECK_FALSE(open_at(map, 2, 1, -0.3f, 0));
+    CHECK(open_at(map, 2, 1, 0.3f, 0));
+    CHECK(open_at(map, 3, 1, 0, -0.2f));
+    CHECK(open_at(map, 3, 3, 0, 0));
+    // Without the squares either side to sweep into, a loose corner rounds as a tight one.
+    const PoolMap lone = edged(ringed(1, 1), PoolEdge::Loose);
+    CHECK(open_at(lone, 1, 1, 0, 0));
+}

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <bit>
 #include <charconv>
+#include <cmath>
 #include <cstdlib>
 
 namespace rct3::park
@@ -432,6 +433,62 @@ namespace rct3::park
                 bits |= static_cast<std::uint8_t>(kNextBoth << turn);
         }
         return bits;
+    }
+
+    bool pool_water_at(const PoolMap& map, const PoolSquare& square, float x, float z)
+    {
+        constexpr float kCoping = 0.25f;   ///< Of a tile: how far a wall's coping reaches in from its side, as its pieces' models are made
+        constexpr float kSweep = 5.0f / 3; ///< In tiles, a loose curve's water's radius, round a point 1.5 tiles out past its open corner, as its pieces' models curve
+        const std::uint8_t water = water_around(map, square);
+        const auto walled = [&](std::int32_t turn) { return (water & (1u << (turn & 3))) == 0; };
+        // How far in from side `turn`, in tiles.
+        const auto in = [&](std::int32_t turn) {
+            const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn & 3)];
+            return 0.5f - (static_cast<float>(dc) * x + static_cast<float>(dr) * z);
+        };
+        for (std::int32_t turn = 0; turn < 4; ++turn)
+            if (walled(turn) && in(turn) < kCoping)
+                return false;
+        const bool sweeping = sweeps(map, square);
+        for (std::int32_t turn = 0; turn < 4; ++turn)
+        {
+            const float a = in(turn);
+            const float b = in(turn + 1);
+            if (!walled(turn) && !walled(turn + 1) && (water & (kNextBoth << turn)) == 0 && std::hypot(a, b) < kCoping)
+                return false;
+            if (!walled(turn) || !walled(turn + 1) || sweeping || square.edge == PoolEdge::Straight)
+                continue;
+            const bool two_walls = !walled(turn + 2) && !walled(turn + 3);
+            if (square.edge == PoolEdge::Diagonal)
+            {
+                // Cut across from where one coping meets the open side to where the other does.
+                if (two_walls && a + b < 1 + kCoping)
+                    return false;
+                continue;
+            }
+            // Rounded as wide as the water reaches past the corner; halfway across where a strip's walls face each
+            // other, so a strip's end rounds in a half circle and a lone square in a whole one.
+            const auto reach = [&](std::int32_t opposite) { return walled(opposite) ? (1 - 2 * kCoping) / 2 : 1 - kCoping; };
+            const float r = std::min(reach(turn + 2), reach(turn + 3));
+            const float centre = kCoping + r;
+            if (a < centre && b < centre && std::hypot(centre - a, centre - b) > r)
+                return false;
+        }
+        // A loose curve's water, in its corner square and the squares either side.
+        for (std::int32_t turn = -1; turn < 4; ++turn)
+        {
+            const auto corner = turn < 0 ? std::optional<const PoolSquare&>(square) : water_beside(map, square, turn);
+            if (!sweeps(map, corner))
+                continue;
+            const auto walls = pool_walls(water_around(map, *corner));
+            const auto [ac, ar] = kSideStep[static_cast<std::size_t>(walls[0].turn & 3)];
+            const auto [bc, br] = kSideStep[static_cast<std::size_t>((walls[0].turn + 1) & 3)];
+            const float cx = static_cast<float>(corner->col - square.col) - 1.5f * static_cast<float>(ac + bc);
+            const float cz = static_cast<float>(corner->row - square.row) - 1.5f * static_cast<float>(ar + br);
+            if (std::hypot(x - cx, z - cz) > kSweep)
+                return false;
+        }
+        return true;
     }
 
     std::vector<PoolPiece> pool_pieces(const PoolMap& map, const PoolSquare& square)

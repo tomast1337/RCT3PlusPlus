@@ -240,6 +240,15 @@ namespace rct3::park
     /// The neighbours of `square` that hold water, at its own surface, as pool_walls takes them.
     [[nodiscard]] std::uint8_t water_around(const PoolMap& map, const PoolSquare& square) noexcept;
 
+    /// Whether the point (`x`, `z`) of the water square `square` of `map`, in tiles from its middle along the
+    /// columns and the rows, lies over open water rather than the paving round it. Each wall's coping takes the
+    /// quarter tile along its side, and a corner where water goes round the inside a quarter tile round the corner.
+    /// An outside corner is square, cut across from where one coping meets the open side to where the other does,
+    /// or rounded: a tight curve as wide as the water reaches past it, a strip's end in a half circle and a lone
+    /// square in a whole one. A loose curve that sweeps keeps its water inside a circle that runs through its
+    /// corner square and the squares either side.
+    [[nodiscard]] bool pool_water_at(const PoolMap& map, const PoolSquare& square, float x, float z);
+
     struct PoolPiece
     {
         std::string_view symbol; ///< The scenery item in the pool type's overlay

@@ -624,6 +624,8 @@ await screenshot("pool_shift_raised");
 // A second pool over the raised squares, high enough to leave room under it: a strip of water ringed by paving,
 // stacked on their tiles, the squares under it kept and the land left as it was.
 const top = level + 3 + 8;
+const held = (col: number, row: number) => map.supports().find((s) => s.col === col && s.row === row)?.pieces ?? 0;
+const held_before = held(c0 + 1, r0 + 1);
 await open_editor();
 await ui.click("pool_panel/body/editor/Pool_PlaceTiles");
 await ui.click("pool_panel/body/editor/Pool_Height");
@@ -647,6 +649,12 @@ log("stacked at the middle", JSON.stringify(stacked(c0 + 2, r0 + 2)), "corner", 
 expect(JSON.stringify(stacked(c0 + 1, r0 + 1)) === JSON.stringify([level + 3, top]), `a paved square over a paved square, not ${JSON.stringify(stacked(c0 + 1, r0 + 1))}`);
 expect(JSON.stringify(stacked(c0 + 2, r0 + 2)) === JSON.stringify([level + 3, top - 2]), `water over a raised paved square, not ${JSON.stringify(stacked(c0 + 2, r0 + 2))}`);
 expect(ground_at(c0 + 2, r0 + 2) === ground_before, `the land under both left as it was, not ${ground_at(c0 + 2, r0 + 2)}`);
+// The upper deck stands on columns down to the one under it.
+await until(() => held(c0 + 1, r0 + 1) > held_before, 120, `columns from the upper deck down to the lower, ${held_before} pieces before`);
 camera.look({ col: c0 + 2.5, row: r0 + 2.5, up: 5 }, { col: c0 + 9, row: r0 + 9, up: 9 });
 await frames(10);
 await screenshot("pool_stacked");
+// From the side, low down: the gap between the two decks and the columns across it.
+camera.look({ col: c0 + 2.5, row: r0 + 2.5, up: level + 6 }, { col: c0 + 2.5, row: r0 + 13, up: level + 4.5 });
+await frames(10);
+await screenshot("pool_stacked_side");

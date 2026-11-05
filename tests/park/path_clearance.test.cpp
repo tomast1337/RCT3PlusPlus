@@ -125,11 +125,11 @@ TEST_CASE("items in different quarters or along different edges of a tile take d
     CHECK((spans[0].room & spans[1].room) == 0);
     CHECK(blocked(solids, { 2, 1 }, 0, 0)); // A path still needs the whole tile
 
-    CHECK((edge_room(0) & edge_room(1)) == 0);
-    CHECK((half_room(0) & half_room(2)) == 0); // Turned apart, two halves share a tile
-    CHECK((half_room(1) & half_room(3)) == 0);
-    CHECK(half_room(0) == (quarter_room(0) | quarter_room(2))); // Quarters on the -X side
-    CHECK((edge_room(2) & kWholeTile) == 0);
+    CHECK((edge_room(ModelTurn { 0 }) & edge_room(ModelTurn { 1 })) == 0);
+    CHECK((half_room(ModelTurn { 0 }) & half_room(ModelTurn { 2 })) == 0); // Turned apart, two halves share a tile
+    CHECK((half_room(ModelTurn { 1 }) & half_room(ModelTurn { 3 })) == 0);
+    CHECK(half_room(ModelTurn { 0 }) == (quarter_room(0) | quarter_room(2))); // Quarters on the -X side
+    CHECK((edge_room(ModelTurn { 2 }) & kWholeTile) == 0);
 }
 
 TEST_CASE("an item clashes with one in the same room of a tile, not with one beside or on top of it")

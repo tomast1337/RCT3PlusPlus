@@ -61,12 +61,12 @@ TEST_CASE("a fence stands along the side its +X faces, listed on both tiles it p
     const auto [o, models] = fence(2); // +X
     const auto wall = edge_wall(o, models, grid);
     REQUIRE(wall);
-    CHECK(wall->side == 1);
+    CHECK(wall->side == Side::kNextCol);
     const EdgeWalls walls = edge_walls(std::vector { o }, models, grid);
-    CHECK(walled(walls, { 2, 1 }, 1, 0));
-    CHECK(walled(walls, { 3, 1 }, 3, 0));
-    CHECK_FALSE(walled(walls, { 2, 1 }, 0, 0));
-    CHECK_FALSE(walled(walls, { 2, 1 }, 1, 6)); // A deck high over it
+    CHECK(walled(walls, { 2, 1 }, Side { 1 }, 0));
+    CHECK(walled(walls, { 3, 1 }, Side { 3 }, 0));
+    CHECK_FALSE(walled(walls, { 2, 1 }, Side { 0 }, 0));
+    CHECK_FALSE(walled(walls, { 2, 1 }, Side { 1 }, 6)); // A deck high over it
     // Neither a fence item set elsewhere than an edge, nor a stall, nor a hidden fence is a wall.
     const auto [lamp, lamp_models] = fence(2, ItemCategory::Fence, Positioning::PathSide);
     CHECK_FALSE(edge_wall(lamp, lamp_models, grid));

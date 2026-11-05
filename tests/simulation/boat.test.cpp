@@ -41,10 +41,10 @@ TEST_CASE("a rock in the water or a low bridge over it closes its tile to boats,
     for (std::uint8_t col = 0; col < 5; ++col)
         body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
     park::SolidTiles solids;
-    solids.tiles[0] = { { .low = 2, .high = 6 } };                             // A rock standing up out of it
-    solids.tiles[1] = { { .low = 5.5f, .high = 6 } };                          // A low bridge
-    solids.tiles[2] = { { .low = 9, .high = 10 } };                            // A high one
-    solids.tiles[3] = { { .low = 2, .high = 6, .room = park::edge_room(0) } }; // A fence along its edge
+    solids.tiles[0] = { { .low = 2, .high = 6 } };                                                 // A rock standing up out of it
+    solids.tiles[1] = { { .low = 5.5f, .high = 6 } };                                              // A low bridge
+    solids.tiles[2] = { { .low = 9, .high = 10 } };                                                // A high one
+    solids.tiles[3] = { { .low = 2, .high = 6, .room = park::edge_room(park::ModelTurn { 0 }) } }; // A fence along its edge
     const auto water = simulation::water_tiles(grid, std::span { &body, 1 }, solids);
     CHECK_FALSE(water.at(0, 0));
     CHECK_FALSE(water.at(1, 0));

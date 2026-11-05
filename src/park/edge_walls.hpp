@@ -13,6 +13,7 @@
 #pragma once
 
 #include "park/object_mesh.hpp"
+#include "park/turns.hpp"
 #include "save/model/world.hpp"
 
 #include <cstdint>
@@ -23,12 +24,11 @@
 namespace rct3::park
 {
 
-    /// A fence or wall along side `side` of `tile`, sides as path_decks numbers them, from height `low` to
-    /// `high` in world units.
+    /// A fence or wall along side `side` of `tile`, from height `low` to `high` in world units.
     struct EdgeWall
     {
         save::Tile tile;
-        std::uint8_t side = 0;
+        Side side;
         float low = 0;
         float high = 0;
     };
@@ -43,6 +43,6 @@ namespace rct3::park
     [[nodiscard]] EdgeWalls edge_walls(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
 
     /// Whether a wall stands along `side` of `tile` where a path's edge meets it at `height`.
-    [[nodiscard]] bool walled(const EdgeWalls& walls, save::Tile tile, std::uint8_t side, float height);
+    [[nodiscard]] bool walled(const EdgeWalls& walls, save::Tile tile, Side side, float height);
 
 } // namespace rct3::park

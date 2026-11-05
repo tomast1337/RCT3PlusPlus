@@ -18,6 +18,7 @@
 
 #include "park/footpath_builder.hpp"
 #include "park/object_mesh.hpp"
+#include "park/turns.hpp"
 #include "save/model/world.hpp"
 
 #include <array>
@@ -38,15 +39,15 @@ namespace rct3::park
     {
         return static_cast<std::uint8_t>(1U << (quadrant & 3));
     }
-    /// The two quarters on the side an item's +X faces after `turns` quarter turns (see turned_x).
-    [[nodiscard]] constexpr std::uint8_t half_room(std::int32_t turns) noexcept
+    /// The two quarters on the side an item's +X faces after `turn` (see turned_x).
+    [[nodiscard]] constexpr std::uint8_t half_room(ModelTurn turn) noexcept
     {
         constexpr std::array<std::uint8_t, 4> kHalves { 0b0101, 0b1100, 0b1010, 0b0011 }; // -X, +Z, +X, -Z
-        return kHalves[static_cast<std::size_t>(turns & 3)];
+        return kHalves[static_cast<std::size_t>(turn.value & 3)];
     }
-    [[nodiscard]] constexpr std::uint8_t edge_room(std::int32_t turns) noexcept
+    [[nodiscard]] constexpr std::uint8_t edge_room(ModelTurn turn) noexcept
     {
-        return static_cast<std::uint8_t>(0x10U << (turns & 3));
+        return static_cast<std::uint8_t>(0x10U << (turn.value & 3));
     }
 
     /// Room kept clear past a track piece's levels for its riders, in world units: a quarter of a plain piece's

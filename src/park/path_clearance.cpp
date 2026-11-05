@@ -63,10 +63,10 @@ namespace rct3::park
                     room = quarter_room(o.quadrant);
                     break;
                 case Positioning::Half:
-                    room = half_room(o.rotation);
+                    room = half_room(ModelTurn::from(o.rotation));
                     break;
                 case Positioning::Edge:
-                    room = edge_room(o.rotation);
+                    room = edge_room(ModelTurn::from(o.rotation));
                     break;
                 default:
                     break;

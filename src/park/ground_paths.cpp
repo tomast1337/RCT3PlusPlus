@@ -332,7 +332,7 @@ namespace rct3::park
         // Paving runs on within itself and into its links whatever stands between: the ride's fence is its edge.
         const std::size_t here = static_cast<std::size_t>(row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(col);
         const bool paved = !map.pavings.empty() && (map.pavings[here] != 0 || map.pavings[here + static_cast<std::size_t>(dr * map.width + dc)] != 0);
-        const bool wall = !paved && walled(map.walls, tile, static_cast<std::uint8_t>(side.value), edge);
+        const bool wall = !paved && walled(map.walls, tile, side, edge);
         if (has_ground_path(map, { col + dc, row + dr }))
             return !wall;
         const std::size_t there = static_cast<std::size_t>(row + dr) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(col + dc);

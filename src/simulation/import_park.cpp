@@ -1510,11 +1510,10 @@ namespace rct3::simulation
 
     void set_wall(SimWorld& world, const park::EdgeWall& wall, bool standing)
     {
-        const park::Side side = park::Side::from(wall.side);
         if (standing)
-            world.paths.add_wall(wall.tile.col, wall.tile.row, side, wall.low, wall.high);
+            world.paths.add_wall(wall.tile.col, wall.tile.row, wall.side, wall.low, wall.high);
         else
-            world.paths.remove_wall(wall.tile.col, wall.tile.row, side, wall.low, wall.high);
+            world.paths.remove_wall(wall.tile.col, wall.tile.row, wall.side, wall.low, wall.high);
     }
 
     entt::entity add_path_item(SimWorld& world, const save::PlacedObject& o, PathItemKind kind)

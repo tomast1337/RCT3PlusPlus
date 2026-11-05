@@ -127,7 +127,7 @@ namespace rct3::park
                 const Side facing = side.opposite();
                 const bool joined = std::ranges::any_of(tiles.at(col, row), [&](const save::PathTile* p) {
                     const auto edge = edge_height(*p, grid, facing);
-                    return edge && meets(*edge, height) && (p->kind == save::PathKind::Queue || !walls || !walled(*walls, tile, static_cast<std::uint8_t>(side.value), height));
+                    return edge && meets(*edge, height) && (p->kind == save::PathKind::Queue || !walls || !walled(*walls, tile, side, height));
                 });
                 if (joined)
                     sides = static_cast<std::uint8_t>(sides | side.bit());

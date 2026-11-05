@@ -2,6 +2,7 @@
 #include "park/path_tunnels.hpp"
 
 #include "park/ground_paths.hpp"
+#include "park/path_decks.hpp"
 #include "park/queue_fences.hpp"
 
 #include <algorithm>
@@ -60,19 +61,15 @@ namespace rct3::park
             const auto [here, here_end] = by_tile.equal_range({ h.col, h.row });
             if (std::none_of(here, here_end, [&](const auto& other) { return other.second != &h && other.second->low < h.low && h.low <= other.second->high; }))
                 quad(cliff, { glm::vec3 { x0, h.low, z0 }, { x0, h.low, z1 }, { x1, h.low, z1 }, { x1, h.low, z0 } }, { 0, 1, 0 }, true);
-            // Sides as the builder's headings: towards higher rows, higher columns, lower rows, lower columns.
-            constexpr std::array<std::array<int, 2>, 4> kStep { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } };
-            // The neighbour's corners on the shared edge, in the terrain's corner order.
-            constexpr std::array<std::array<std::size_t, 2>, 4> kFacing { { { 0, 1 }, { 0, 2 }, { 2, 3 }, { 1, 3 } } };
-            for (std::size_t side = 0; side < 4; ++side)
+            for (const Side side : kSides)
             {
-                const int col = h.col + kStep[side][0];
-                const int row = h.row + kStep[side][1];
+                const auto [col, row] = side.beyond({ h.col, h.row });
                 // Open where the ground beyond is lower than the hollow's top: that is the tunnel's mouth.
                 if (grid.contains(col, row))
                 {
                     const auto& corners = grid.at(col, row).corners;
-                    if (std::min(corners[kFacing[side][0]], corners[kFacing[side][1]]) < h.high)
+                    const auto [first, second] = edge_corners(side.opposite()); // The neighbour's, on the shared edge
+                    if (std::min(corners[first], corners[second]) < h.high)
                         continue;
                 }
                 // Walled where no hollow beyond meets it: a neighbouring hollow higher or lower, as on a slope,
@@ -92,10 +89,11 @@ namespace rct3::park
                 }
                 if (from < h.high)
                     bare.emplace_back(from, h.high);
-                const bool along_x = side % 2 == 0;
-                const float x = side == 1 ? x1 : x0;
-                const float z = side == 0 ? z1 : z0;
-                const glm::vec3 inward { -static_cast<float>(kStep[side][0]), 0, -static_cast<float>(kStep[side][1]) };
+                const bool along_x = !side.on_columns();
+                const float x = side == Side::kNextCol ? x1 : x0;
+                const float z = side == Side::kNextRow ? z1 : z0;
+                const auto [dc, dr] = side.step();
+                const glm::vec3 inward { -static_cast<float>(dc), 0, -static_cast<float>(dr) };
                 const glm::vec3 a = along_x ? glm::vec3 { x0, 0, z } : glm::vec3 { x, 0, z0 };
                 const glm::vec3 b = along_x ? glm::vec3 { x1, 0, z } : glm::vec3 { x, 0, z1 };
                 for (const auto& [low, high] : bare)

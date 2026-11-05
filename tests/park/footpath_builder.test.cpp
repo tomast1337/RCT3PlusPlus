@@ -30,18 +30,18 @@ namespace
 TEST_CASE("each heading steps one tile, and turning right goes clockwise")
 {
     const save::Tile from { 5, 5 };
-    CHECK(step(from, 0) == save::Tile { 5, 6 });
-    CHECK(step(from, 1) == save::Tile { 6, 5 });
-    CHECK(step(from, 2) == save::Tile { 5, 4 });
-    CHECK(step(from, 3) == save::Tile { 4, 5 });
-    CHECK(step(from, 4) == step(from, 0));
+    CHECK(step(from, Side::kNextRow) == save::Tile { 5, 6 });
+    CHECK(step(from, Side::kNextCol) == save::Tile { 6, 5 });
+    CHECK(step(from, Side::kRowBefore) == save::Tile { 5, 4 });
+    CHECK(step(from, Side::kColBefore) == save::Tile { 4, 5 });
+    CHECK(step(from, Side::from(4)) == step(from, Side::kNextRow));
 
     FootpathBuilder b;
     CHECK(press(b, PathControl::TurnRight) == PathStep::None);
-    CHECK(b.heading == 1);
+    CHECK(b.heading == Side::kNextCol);
     CHECK(press(b, PathControl::TurnLeft) == PathStep::None);
     CHECK(press(b, PathControl::TurnLeft) == PathStep::None);
-    CHECK(b.heading == 3);
+    CHECK(b.heading == Side::kColBefore);
 }
 
 TEST_CASE("going straight lays, and so does picking the slope already chosen")
@@ -64,7 +64,7 @@ TEST_CASE("no turning while the last piece slopes")
     b.on_slope = true;
     CHECK_FALSE(can_turn(b));
     (void)press(b, PathControl::TurnRight);
-    CHECK(b.heading == 0);
+    CHECK(b.heading == Side::kNextRow);
 }
 
 TEST_CASE("slope controls map to slopes and back")
@@ -173,7 +173,7 @@ TEST_CASE("slopes climb off the ground and later pieces start where the last end
     FootpathBuilder b;
     std::vector<save::PathTile> paths;
     start_at(b, { 1, 1 });
-    b.heading = 1;
+    b.heading = Side::kNextCol;
     b.slope = PathSlope::Up;
     const NextPiece up = *next_piece(b, g);
     CHECK(up == NextPiece { { 1, 1 }, 0, 1, false, false });
@@ -210,7 +210,7 @@ TEST_CASE("a hill stops a piece, or is cut down to it")
         c = 2; // Too low over the piece for a tunnel
     FootpathBuilder b;
     start_at(b, { 1, 1 });
-    b.heading = 1;
+    b.heading = Side::kNextCol;
     std::vector<save::PathTile> paths;
     CHECK(lay_path(b, paths, *next_piece(b, g), "Gravel", 10, 0));
     CHECK(next_piece(b, g)->cut);
@@ -238,7 +238,7 @@ TEST_CASE("deep under a hill a piece is a tunnel, laid without cutting")
         c = 3;
     FootpathBuilder b;
     start_at(b, { 1, 1 });
-    b.heading = 1;
+    b.heading = Side::kNextCol;
     std::vector<save::PathTile> paths;
     CHECK(lay_path(b, paths, *next_piece(b, g), "Gravel", 10, 0));
     const NextPiece under = *next_piece(b, g);
@@ -318,7 +318,7 @@ TEST_CASE("queue tiles lead guests back along the trail")
     const save::TerrainGrid g = owned_grid(6, 6);
     FootpathBuilder b;
     b.queue = true;
-    b.heading = 1;
+    b.heading = Side::kNextCol;
     start_at(b, { 1, 1 });
     std::vector<save::PathTile> paths;
     CHECK(lay_path(b, paths, *next_piece(b, g), "QueueSet", 10, 0));
@@ -362,7 +362,7 @@ TEST_CASE("the arrow lies over the next piece and points the way it goes")
 {
     const save::TerrainGrid g = owned_grid(4, 4);
     NextPiece piece { { 1, 2 }, 0, 1, false, false };
-    const park::TerrainMesh arrow = heading_arrow(piece, 1, g); // Up towards higher columns
+    const park::TerrainMesh arrow = heading_arrow(piece, Side::kNextCol, g); // Up towards higher columns
     REQUIRE(arrow.vertices.size() == 4);
     for (const park::GroundVertex& v : arrow.vertices)
     {
@@ -415,7 +415,7 @@ TEST_CASE("only the controls that lead to a piece that fits can be used")
     CHECK(usable(u, PathControl::CutIntoGround));
     CHECK_FALSE(usable(u, PathControl::Remove));
     // Facing into the park, up fits and down goes into the ground unless cutting.
-    b.heading = 1;
+    b.heading = Side::kNextCol;
     u = fitting_controls(b, g, paths);
     CHECK(usable(u, PathControl::Straight));
     CHECK(usable(u, PathControl::Up));

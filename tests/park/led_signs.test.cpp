@@ -33,7 +33,7 @@ namespace
     {
         FootpathBuilder b;
         b.queue = true;
-        b.heading = heading;
+        b.heading = Side::from(heading);
         start_at(b, from);
         std::vector<save::PathTile> paths;
         for (int i = 0; i < count; ++i)

@@ -69,7 +69,7 @@ namespace rct3::park
                     complexes.push_back(pool_complex(map, i));
             PoolWave& w = out.emplace_back();
             w.kind = PoolWaveKind::Machine;
-            const glm::vec2 side = kSide[static_cast<std::size_t>(e.turn & 3)];
+            const glm::vec2 side { e.side.step()[0], e.side.step()[1] };
             const glm::vec2 half { grid.tile_size_x / 2, grid.tile_size_z / 2 };
             w.from = glm::vec2 { grid.world_x(e.col), grid.world_z(e.row) } + half + side * half;
             w.heading = -side;

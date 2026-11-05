@@ -16,11 +16,11 @@ namespace rct3::park
     namespace
     {
 
-        constexpr std::uint8_t kSides = 4;
+        constexpr std::uint8_t kSideCount = 4;
 
         std::uint8_t opposite(std::uint8_t side) noexcept
         {
-            return static_cast<std::uint8_t>((side + 2) % kSides);
+            return static_cast<std::uint8_t>((side + 2) % kSideCount);
         }
 
     } // namespace
@@ -38,9 +38,9 @@ namespace rct3::park
                     continue;
                 // shortcut: any side of the entrance's tile joins, the way it faces is not looked at; check it
                 // once that is known.
-                for (std::uint8_t side = 0; side < kSides; ++side)
+                for (std::uint8_t side = 0; side < kSideCount; ++side)
                 {
-                    const save::Tile beside = step({ col, row }, side);
+                    const save::Tile beside = step({ col, row }, Side::from(side));
                     if (beside.col == at->col && beside.row == at->row)
                         return EntranceBeside { r, s, side };
                 }
@@ -58,7 +58,7 @@ namespace rct3::park
             const save::PathTile& here = paths[at];
             const std::uint8_t side = stored_direction(here.queue->end_direction);
             const auto edge = edge_height(here, grid, side);
-            const save::Tile next = step({ here.col, here.row }, side);
+            const save::Tile next = step({ here.col, here.row }, Side::from(side));
             const auto found = std::ranges::find_if(paths, [&](const save::PathTile& p) {
                 if (!p.queue || p.col != next.col || p.row != next.row || stored_direction(p.queue->start_direction) != opposite(side))
                     return false;
@@ -86,7 +86,7 @@ namespace rct3::park
             save::PathTile turned = here;
             turned.queue->start_direction = stored_direction(side);
             const auto edge = edge_height(turned, grid, side);
-            const save::Tile next = step({ here.col, here.row }, side);
+            const save::Tile next = step({ here.col, here.row }, Side::from(side));
             return edge && std::ranges::any_of(paths, [&](const save::PathTile& p) {
                        if (p.col != next.col || p.row != next.row || (!any_kind && p.queue))
                            return false;
@@ -98,7 +98,7 @@ namespace rct3::park
         const std::uint8_t end = stored_direction(here.queue->end_direction);
         if (meets(start, true))
             return false;
-        for (std::uint8_t side = 0; side < kSides; ++side)
+        for (std::uint8_t side = 0; side < kSideCount; ++side)
         {
             if (side != start && side != end && meets(side, false))
             {
@@ -179,12 +179,12 @@ namespace rct3::park
         const save::PathTile& here = paths[tile];
         if (!here.queue)
             return std::nullopt;
-        for (std::uint8_t side = 0; side < kSides; ++side)
+        for (std::uint8_t side = 0; side < kSideCount; ++side)
         {
             save::PathTile turned = here;
             turned.queue->end_direction = stored_direction(side);
             const auto edge = edge_height(turned, grid, side);
-            const save::Tile next = step({ here.col, here.row }, side);
+            const save::Tile next = step({ here.col, here.row }, Side::from(side));
             const auto head = std::ranges::find_if(paths, [&](const save::PathTile& p) {
                 if (!p.queue || p.queue->queue_line_ref == 0 || p.queue->queue_line_ref == here.queue->queue_line_ref || p.col != next.col || p.row != next.row || stored_direction(p.queue->start_direction) != opposite(side))
                     return false;

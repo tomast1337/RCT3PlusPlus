@@ -16,7 +16,7 @@ namespace rct3::park
         {
             save::Tile spot;         ///< Where the last piece is
             std::int32_t height = 0; ///< Where it ends
-            std::uint8_t heading = 0;
+            Side heading { };
             bool on_slope = false;
             bool started = true; ///< False for the first node of a trail that has laid nothing yet
             std::int64_t cost = 0;
@@ -29,7 +29,7 @@ namespace rct3::park
             const auto col = static_cast<std::uint64_t>(static_cast<std::uint16_t>(n.spot.col));
             const auto row = static_cast<std::uint64_t>(static_cast<std::uint16_t>(n.spot.row));
             const auto height = static_cast<std::uint64_t>(static_cast<std::uint32_t>(n.height));
-            return col | row << 16 | height << 32 | std::uint64_t { n.heading } << 60 | std::uint64_t { n.on_slope } << 62;
+            return col | row << 16 | height << 32 | static_cast<std::uint64_t>(n.heading.value) << 60 | std::uint64_t { n.on_slope } << 62;
         }
 
         /// The builder as it stands after `node`.
@@ -146,10 +146,10 @@ namespace rct3::park
             if (const auto known = best.find(key_of(node)); at != 0 && known != best.end() && known->second < node.cost)
                 continue;
             ++looked;
-            for (std::uint8_t heading = 0; heading < 4; ++heading)
+            for (const Side heading : kSides)
             {
                 const bool turn = heading != node.heading;
-                if (node.started && (turn && node.on_slope || heading == (node.heading + 2) % 4))
+                if (node.started && (turn && node.on_slope || heading == node.heading.opposite()))
                     continue;
                 for (std::size_t s = 0; s < kPathSlopeCount; ++s)
                 {

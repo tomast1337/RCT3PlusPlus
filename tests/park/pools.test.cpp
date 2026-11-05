@@ -33,7 +33,7 @@ namespace
 
     bool has(const std::vector<PoolWallPiece>& walls, PoolWall shape, std::int32_t turn)
     {
-        return std::ranges::any_of(walls, [&](const PoolWallPiece& w) { return w.shape == shape && w.turn == turn; });
+        return std::ranges::any_of(walls, [&](const PoolWallPiece& w) { return w.shape == shape && w.side.value == turn; });
     }
 
 } // namespace
@@ -93,18 +93,18 @@ TEST_CASE("pools: every way water lies round a square walls each dry side once a
             switch (w.shape)
             {
                 case PoolWall::Edge:
-                    ++sides[static_cast<std::size_t>(w.turn)];
+                    ++sides[static_cast<std::size_t>(w.side.value)];
                     break;
                 case PoolWall::OuterCorner:
-                    ++sides[static_cast<std::size_t>(w.turn)];
-                    ++sides[static_cast<std::size_t>((w.turn + 1) & 3)];
+                    ++sides[static_cast<std::size_t>(w.side.value)];
+                    ++sides[static_cast<std::size_t>((w.side.value + 1) & 3)];
                     break;
                 case PoolWall::InnerCorner:
-                    ++corners[static_cast<std::size_t>(w.turn)];
+                    ++corners[static_cast<std::size_t>(w.side.value)];
                     break;
                 case PoolWall::End: // Open a turn before its own
                     for (std::int32_t turn = 0; turn < 4; ++turn)
-                        sides[static_cast<std::size_t>(turn)] += turn != ((w.turn + 3) & 3) ? 1 : 0;
+                        sides[static_cast<std::size_t>(turn)] += turn != ((w.side.value + 3) & 3) ? 1 : 0;
                     break;
                 case PoolWall::Full:
                     for (int& side : sides)
@@ -126,11 +126,11 @@ TEST_CASE("pools: every way water lies round a square walls each dry side once a
         std::vector<std::pair<std::string_view, std::int32_t>> want;
         constexpr std::array<std::string_view, 5> kTop { "EdgeTop", "Corner1Top", "CurveCorner1Top", "EndTop", "FullTop" }; // By PoolWall
         for (const PoolWallPiece& w : pool_walls(water))
-            want.emplace_back(kTop[static_cast<std::size_t>(w.shape)], w.turn);
+            want.emplace_back(kTop[static_cast<std::size_t>(w.shape)], w.side.value);
         std::vector<std::pair<std::string_view, std::int32_t>> got;
         for (const PoolPiece& p : pool_pieces(map, *map.at(1, 1)))
             if (p.symbol.ends_with("Top"))
-                got.emplace_back(p.symbol, p.turn);
+                got.emplace_back(p.symbol, p.turn.value);
         CHECK(got == want);
     }
 }
@@ -152,7 +152,7 @@ namespace
         std::vector<std::pair<std::string_view, std::int32_t>> out;
         for (const PoolPiece& p : pool_pieces(map, *map.at(col, row)))
             if (p.symbol.ends_with("Top") && !p.symbol.starts_with("Solid"))
-                out.emplace_back(p.symbol, p.turn);
+                out.emplace_back(p.symbol, p.turn.value);
         return out;
     }
 
@@ -258,8 +258,8 @@ TEST_CASE("pools: a square is a stack from its floor to its surface, railed wher
     CHECK(tile[2].symbol == "SolidTop");
     CHECK(tile[2].height == 4);
     CHECK(tile[3].symbol == "Railing");
-    CHECK(tile[3].turn == 2);
-    CHECK(tile[4].turn == 3);
+    CHECK(tile[3].turn.value == 2);
+    CHECK(tile[4].turn.value == 3);
     PoolMap shallow { { { .col = 0, .row = 0, .kind = PoolKind::Water, .surface = 4, .depth = 1 }, { .col = 0, .row = 1, .kind = PoolKind::Water, .surface = 4, .depth = 1 } } };
     const auto water = pool_pieces(shallow, shallow.squares[0]);
     // A floor, an end of two pieces, three railings.
@@ -284,11 +284,11 @@ TEST_CASE("pools: a high diving board climbs from its paved stack in levels, a b
 {
     const PoolMap map;
     std::vector<std::pair<std::string_view, std::int32_t>> above;
-    for (const PoolPiece& p : pool_pieces(map, { .kind = PoolKind::HighDive, .surface = 4, .depth = 2, .board = 10, .turn = 1 }))
+    for (const PoolPiece& p : pool_pieces(map, { .kind = PoolKind::HighDive, .surface = 4, .depth = 2, .board = 10, .side = Side { 1 } }))
         if (p.height > 4 || p.symbol.starts_with("DB"))
         {
             above.emplace_back(p.symbol, p.height);
-            CHECK(p.turn == 3);
+            CHECK(p.turn.value == 3);
         }
     using Piece = std::pair<std::string_view, std::int32_t>;
     CHECK(above == std::vector<Piece> { { "DBBase", 4 }, { "DBMidBoard", 6 }, { "DBMid", 7 }, { "DBMidBoard", 9 }, { "DBMid", 10 }, { "DBTopBoard", 12 } });
@@ -300,7 +300,7 @@ TEST_CASE("pools: a high diving board climbs from its paved stack in levels, a b
 TEST_CASE("pools: a high diving board's boards are named by the first of the three squares they cover")
 {
     // Water at the next column: the boards lie along the columns, the tower's square in their middle.
-    const PoolMap map { { { .col = 5, .row = 7, .kind = PoolKind::HighDive, .surface = 0, .depth = 2, .board = 6, .turn = 1 } } };
+    const PoolMap map { { { .col = 5, .row = 7, .kind = PoolKind::HighDive, .surface = 0, .depth = 2, .board = 6, .side = Side { 1 } } } };
     for (const save::PlacedObject& o : pool_objects(map, "Pools/Own", 0))
     {
         const bool board = o.symbol == "DBMidBoard" || o.symbol == "DBTopBoard";
@@ -314,7 +314,7 @@ TEST_CASE("pools: a high diving board laid on a water square paves it, walls the
     PoolMap map = ringed(3, 3);
     const PoolSquare water = *map.at(3, 2);
     // At the wall on the next column, facing the next row's water.
-    const PoolSquare dive { .col = 3, .row = 2, .kind = PoolKind::HighDive, .surface = 4, .depth = 2, .board = 3, .turn = 0 };
+    const PoolSquare dive { .col = 3, .row = 2, .kind = PoolKind::HighDive, .surface = 4, .depth = 2, .board = 3, .side = Side { 0 } };
     CHECK(lay_pool(map, kPrices, std::array { dive }) == pool_build_cost(kPrices, dive) + pool_refund(kPrices, water));
     const auto pieces = pool_pieces(map, *map.at(3, 2));
     CHECK(std::ranges::contains(pieces, std::string_view("SolidTop"), &PoolPiece::symbol));
@@ -334,17 +334,17 @@ TEST_CASE("pools: a saved high diving board faces the side it keeps, down past w
         { .id = 2, .col = 5, .row = 5, .type = 3, .surface = 16, .special = 19, .side = 2 },
         { .id = 3, .col = 5, .row = 6, .type = 0, .surface = 3, .depth = 2 },
     };
-    CHECK(saved_pools(world, { }).at(5, 5)->turn == 0);
+    CHECK(saved_pools(world, { }).at(5, 5)->side == Side { 0 });
     // Kept without a side, it faces the first water beside it.
     world.pool_segments[1].side = 0;
     world.pool_segments[0].type = 1;
-    CHECK(saved_pools(world, { }).at(5, 5)->turn == 0);
+    CHECK(saved_pools(world, { }).at(5, 5)->side == Side { 0 });
 }
 
 TEST_CASE("pools: a spiral staircase winds up from its paved stack, railed at its top where no square meets it")
 {
     // Its foot at the next column, a paved square at the top level at the row before.
-    PoolMap map { { { .col = 0, .row = 0, .kind = PoolKind::Stairs, .surface = 4, .depth = 2, .board = 5, .turn = 0 }, { .col = 0, .row = -1, .kind = PoolKind::Tile, .surface = 9, .depth = 2 } } };
+    PoolMap map { { { .col = 0, .row = 0, .kind = PoolKind::Stairs, .surface = 4, .depth = 2, .board = 5, .side = Side { 0 } }, { .col = 0, .row = -1, .kind = PoolKind::Tile, .surface = 9, .depth = 2 } } };
     std::vector<std::pair<std::string_view, std::int32_t>> steps;
     std::vector<std::int32_t> turns;
     std::vector<std::int32_t> top_rails;
@@ -353,10 +353,10 @@ TEST_CASE("pools: a spiral staircase winds up from its paved stack, railed at it
         if (p.symbol.starts_with("Stairs") || p.symbol == "SolidTop")
         {
             steps.emplace_back(p.symbol, p.height);
-            turns.push_back(p.turn);
+            turns.push_back(p.turn.value);
         }
         if (p.symbol == "Railing" && p.height == 9)
-            top_rails.push_back(p.turn);
+            top_rails.push_back(p.turn.value);
     }
     using Piece = std::pair<std::string_view, std::int32_t>;
     CHECK(steps == std::vector<Piece> { { "StairsBase", 4 }, { "StairsMid", 5 }, { "StairsMid", 6 }, { "StairsMid", 7 }, { "StairsTop", 8 } });
@@ -372,14 +372,14 @@ TEST_CASE("pools: a pool path's piece follows the paths joining it, slopes by th
     const auto piece = [](const PoolMap& map, std::int32_t col, std::int32_t row) {
         const auto pieces = pool_pieces(map, *map.at(col, row));
         REQUIRE(pieces.size() == 1);
-        return std::pair { pieces[0].symbol, pieces[0].turn };
+        return std::pair { pieces[0].symbol, pieces[0].turn.value };
     };
     using Piece = std::pair<std::string_view, std::int32_t>;
     // A path along the columns, turning down the rows to a slope rising a unit away from it, then the path on.
     const PoolMap map { {
         { .col = 0, .row = 0, .kind = PoolKind::Path, .surface = 4, .depth = 0 },
         { .col = 1, .row = 0, .kind = PoolKind::Path, .surface = 4, .depth = 0 },
-        { .col = 1, .row = 1, .kind = PoolKind::PathSlope, .surface = 4, .depth = 0, .turn = 2 },
+        { .col = 1, .row = 1, .kind = PoolKind::PathSlope, .surface = 4, .depth = 0, .side = Side { 2 } },
         { .col = 1, .row = 2, .kind = PoolKind::Path, .surface = 5, .depth = 0 },
     } };
     CHECK(piece(map, 0, 0) == Piece { "PathStraight", 3 });
@@ -389,7 +389,7 @@ TEST_CASE("pools: a pool path's piece follows the paths joining it, slopes by th
     // A piece alone, as a trail's first, runs the way it was laid.
     for (const std::int32_t turn : { 0, 1, 2, 3 })
     {
-        const PoolMap lone { { { .col = 0, .row = 0, .kind = PoolKind::Path, .surface = 4, .depth = 0, .turn = turn } } };
+        const PoolMap lone { { { .col = 0, .row = 0, .kind = PoolKind::Path, .surface = 4, .depth = 0, .side = Side { turn } } } };
         CHECK(piece(lone, 0, 0) == Piece { "PathStraight", turn % 2 != 0 ? 3 : 2 });
     }
     // Four ways, and three.
@@ -422,7 +422,7 @@ TEST_CASE("pools: a trail lays the next pool path piece from where its last one 
     next = next_pool_path(trail);
     CHECK(next->square.kind == PoolKind::PathSlope);
     CHECK(next->square.surface == 4);
-    CHECK(next->square.turn == 2);
+    CHECK(next->square.side == Side::kRowBefore);
     CHECK(next->end == 5);
     // Down steps from a height of 5: their foot ahead, two units lower.
     trail.trail.back().height = 5;
@@ -430,7 +430,7 @@ TEST_CASE("pools: a trail lays the next pool path piece from where its last one 
     next = next_pool_path(trail);
     CHECK(next->square.kind == PoolKind::PathStairs);
     CHECK(next->square.surface == 3);
-    CHECK(next->square.turn == 0);
+    CHECK(next->square.side == Side::kNextRow);
     CHECK(next->end == 3);
 }
 
@@ -439,40 +439,40 @@ TEST_CASE("pools: a pool path trail starts at any side of the complex that no sq
     PoolMap map = ringed(2, 1);
     // A paved corner starts from its two outer sides; the sides it shares with the ring and the water do not.
     const PoolSquare& corner = *map.at(0, 0);
-    CHECK(pool_path_start(map, corner, 2) == 4);
-    CHECK(pool_path_start(map, corner, 3) == 4);
-    CHECK_FALSE(pool_path_start(map, corner, 0));
-    CHECK_FALSE(pool_path_start(map, corner, 1));
+    CHECK(pool_path_start(map, corner, Side { 2 }) == 4);
+    CHECK(pool_path_start(map, corner, Side { 3 }) == 4);
+    CHECK_FALSE(pool_path_start(map, corner, Side { 0 }));
+    CHECK_FALSE(pool_path_start(map, corner, Side { 1 }));
     // Water inside the ring meets squares all round.
     for (std::int32_t turn = 0; turn < 4; ++turn)
-        CHECK_FALSE(pool_path_start(map, *map.at(1, 1), turn));
+        CHECK_FALSE(pool_path_start(map, *map.at(1, 1), Side { turn }));
     // A slope off the ring's top side, its foot on the paving: its top starts a trail a unit up, its sides none,
     // and the paving under its foot no longer starts one there.
-    map.squares.push_back({ .col = 1, .row = -1, .kind = PoolKind::PathSlope, .surface = 4, .depth = 0, .turn = 0 });
+    map.squares.push_back({ .col = 1, .row = -1, .kind = PoolKind::PathSlope, .surface = 4, .depth = 0, .side = Side { 0 } });
     const PoolSquare& slope = map.squares.back();
-    CHECK(pool_path_start(map, slope, 2) == 5);
-    CHECK_FALSE(pool_path_start(map, slope, 1));
-    CHECK_FALSE(pool_path_start(map, slope, 0));
-    CHECK_FALSE(pool_path_start(map, *map.at(1, 0), 2));
-    CHECK(pool_path_start(map, *map.at(2, 0), 2) == 4);
+    CHECK(pool_path_start(map, slope, Side { 2 }) == 5);
+    CHECK_FALSE(pool_path_start(map, slope, Side { 1 }));
+    CHECK_FALSE(pool_path_start(map, slope, Side { 0 }));
+    CHECK_FALSE(pool_path_start(map, *map.at(1, 0), Side { 2 }));
+    CHECK(pool_path_start(map, *map.at(2, 0), Side { 2 }) == 4);
     // A square beside at another height does not meet the side.
     map.squares.push_back({ .col = -1, .row = 0, .kind = PoolKind::Tile, .surface = 9, .depth = 2 });
-    CHECK(pool_path_start(map, *map.at(0, 0), 3) == 4);
+    CHECK(pool_path_start(map, *map.at(0, 0), Side { 3 }) == 4);
 }
 
 TEST_CASE("pools: a trail starts at a slide's platform from the sides off its track, at its deck")
 {
     PoolMap map;
-    const SlidePlatform platform { .col = 5, .row = 5, .height = 16, .turn = 3 };
-    CHECK(slide_path_start(map, platform, 1) == 16);
-    CHECK(slide_path_start(map, platform, 3) == 16);
-    CHECK_FALSE(slide_path_start(map, platform, 0));
-    CHECK_FALSE(slide_path_start(map, platform, 2));
+    const SlidePlatform platform { .col = 5, .row = 5, .height = 16, .turn = ModelTurn { 3 } };
+    CHECK(slide_path_start(map, platform, Side { 1 }) == 16);
+    CHECK(slide_path_start(map, platform, Side { 3 }) == 16);
+    CHECK_FALSE(slide_path_start(map, platform, Side { 0 }));
+    CHECK_FALSE(slide_path_start(map, platform, Side { 2 }));
     // A path beside at the deck's height already meets that side; water far below does not.
     map.squares.push_back({ .col = 6, .row = 5, .kind = PoolKind::Path, .surface = 16, .depth = 0 });
     map.squares.push_back({ .col = 4, .row = 5, .kind = PoolKind::Water, .surface = 0, .depth = 2 });
-    CHECK_FALSE(slide_path_start(map, platform, 1));
-    CHECK(slide_path_start(map, platform, 3) == 16);
+    CHECK_FALSE(slide_path_start(map, platform, Side { 1 }));
+    CHECK(slide_path_start(map, platform, Side { 3 }) == 16);
 }
 
 TEST_CASE("pools: each square costs its kind's price and its depth's")
@@ -602,23 +602,23 @@ TEST_CASE("pools: an extra fits where its square offers all it takes and no othe
     const PoolExtraFit on_wall { .side = true, .wall = true };
     const PoolExtraFit board { .water_middle = true, .side = true, .water_across = true };
     // Paved squares take middle extras; water squares do not.
-    CHECK(pool_extra_fits(map, 0, 0, middle, 0));
-    CHECK_FALSE(pool_extra_fits(map, 2, 2, middle, 0));
+    CHECK(pool_extra_fits(map, 0, 0, middle, Side { 0 }));
+    CHECK_FALSE(pool_extra_fits(map, 2, 2, middle, Side { 0 }));
     // Wall extras go on a walled side of a water square only: (1, 2) is walled towards the column before.
-    CHECK(pool_extra_fits(map, 1, 2, on_wall, 3));
-    CHECK_FALSE(pool_extra_fits(map, 1, 2, on_wall, 1));
-    CHECK_FALSE(pool_extra_fits(map, 2, 2, on_wall, 3));
-    CHECK_FALSE(pool_extra_fits(map, 0, 2, on_wall, 3));
+    CHECK(pool_extra_fits(map, 1, 2, on_wall, Side { 3 }));
+    CHECK_FALSE(pool_extra_fits(map, 1, 2, on_wall, Side { 1 }));
+    CHECK_FALSE(pool_extra_fits(map, 2, 2, on_wall, Side { 3 }));
+    CHECK_FALSE(pool_extra_fits(map, 0, 2, on_wall, Side { 3 }));
     // A board needs water across from its wall.
-    CHECK(pool_extra_fits(map, 1, 2, board, 3));
+    CHECK(pool_extra_fits(map, 1, 2, board, Side { 3 }));
     // What one extra takes, another may not.
-    map.extras.push_back({ .col = 0, .row = 0, .turn = 0, .fit = middle });
-    CHECK_FALSE(pool_extra_fits(map, 0, 0, middle, 1));
-    CHECK_FALSE(pool_extra_fits(map, 0, 0, whole, 2));
-    map.extras.push_back({ .col = 1, .row = 2, .turn = 3, .fit = on_wall });
-    CHECK_FALSE(pool_extra_fits(map, 1, 2, on_wall, 3));
-    CHECK_FALSE(pool_extra_fits(map, 1, 2, board, 3));
-    CHECK_FALSE(pool_extra_fits(map, 9, 9, middle, 0));
+    map.extras.push_back({ .col = 0, .row = 0, .side = Side { 0 }, .fit = middle });
+    CHECK_FALSE(pool_extra_fits(map, 0, 0, middle, Side { 1 }));
+    CHECK_FALSE(pool_extra_fits(map, 0, 0, whole, Side { 2 }));
+    map.extras.push_back({ .col = 1, .row = 2, .side = Side { 3 }, .fit = on_wall });
+    CHECK_FALSE(pool_extra_fits(map, 1, 2, on_wall, Side { 3 }));
+    CHECK_FALSE(pool_extra_fits(map, 1, 2, board, Side { 3 }));
+    CHECK_FALSE(pool_extra_fits(map, 9, 9, middle, Side { 0 }));
 }
 
 TEST_CASE("pools: extras go with their square, refunded")
@@ -631,7 +631,7 @@ TEST_CASE("pools: extras go with their square, refunded")
     PoolSquare water { .col = 2, .row = 2, .kind = PoolKind::Water, .surface = 4, .depth = 2 };
     CHECK(lay_pool(map, kPrices, std::array { water }) == 700 + (-60 - 2 * 5) - 40);
     CHECK(map.extras.empty());
-    map.extras.push_back({ .symbol = "Lamp", .overlay = "Pools/Own", .col = 1, .row = 1, .turn = 3 });
+    map.extras.push_back({ .symbol = "Lamp", .overlay = "Pools/Own", .col = 1, .row = 1, .side = Side { 3 } });
     const auto objects = pool_objects(map, "Pools/Own", 0);
     CHECK(objects.back().symbol == "Lamp");
     CHECK(objects.back().rotation == 3);
@@ -641,15 +641,15 @@ TEST_CASE("pools: extras go with their square, refunded")
 TEST_CASE("pools: a changing room stands off the pool, opening on a paved square, and leaves its railing open")
 {
     PoolMap map = ringed(2, 2);
-    CHECK(pool_room_fits(map, -1, 1, 1));
-    CHECK_FALSE(pool_room_fits(map, -1, 1, 3));
-    CHECK_FALSE(pool_room_fits(map, 0, 1, 1));
-    CHECK(pool_room_fits(map, 1, -1, 0));
+    CHECK(pool_room_fits(map, -1, 1, Side { 1 }));
+    CHECK_FALSE(pool_room_fits(map, -1, 1, Side { 3 }));
+    CHECK_FALSE(pool_room_fits(map, 0, 1, Side { 1 }));
+    CHECK(pool_room_fits(map, 1, -1, Side { 0 }));
     const auto railings = [&] { return std::ranges::count(pool_pieces(map, *map.at(0, 1)), std::string_view("Railing"), &PoolPiece::symbol); };
     CHECK(railings() == 1);
-    map.rooms.push_back({ .col = -1, .row = 1, .turn = 1 });
+    map.rooms.push_back({ .col = -1, .row = 1, .side = Side { 1 } });
     CHECK(railings() == 0);
-    CHECK_FALSE(pool_room_fits(map, -1, 1, 1));
+    CHECK_FALSE(pool_room_fits(map, -1, 1, Side { 1 }));
     const auto objects = pool_objects(map, "Pools/Own", 0);
     CHECK(objects.back().col == -1);
     CHECK(objects.back().rotation == 2);
@@ -663,7 +663,7 @@ TEST_CASE("pools: a ramp opens the railings across it, on its own square and on 
         std::vector<std::int32_t> turns;
         for (const PoolPiece& p : pool_pieces(map, s))
             if (p.symbol == "Railing")
-                turns.push_back(p.turn);
+                turns.push_back(p.turn.value);
         return turns;
     };
     for (std::int32_t turn = 0; turn < 4; ++turn)
@@ -684,13 +684,13 @@ TEST_CASE("pools: a ramp opens the railings across it, on its own square and on 
         // It goes up to the higher square, or off the pool; not down, nor against a square as high.
         const PoolExtraFit up = pool_extra_fit("Side HeightStep 1");
         map.squares.push_back({ .col = -dc, .row = -dr, .kind = PoolKind::Tile, .surface = 4 });
-        CHECK(pool_extra_fits(map, 0, 0, up, turn));
-        CHECK(pool_extra_fits(map, 0, 0, up, turn + 1));
-        CHECK_FALSE(pool_extra_fits(map, 0, 0, up, turn + 2));
-        CHECK_FALSE(pool_extra_fits(map, dc, dr, up, turn + 2));
+        CHECK(pool_extra_fits(map, 0, 0, up, Side { turn }));
+        CHECK(pool_extra_fits(map, 0, 0, up, Side::from(turn + 1)));
+        CHECK_FALSE(pool_extra_fits(map, 0, 0, up, Side::from(turn + 2)));
+        CHECK_FALSE(pool_extra_fits(map, dc, dr, up, Side::from(turn + 2)));
         map.squares.pop_back();
         // A ramp climbing one, short of the square beside, leaves both railed.
-        map.extras.push_back({ .col = 0, .row = 0, .turn = turn, .fit = pool_extra_fit("Side HeightStep 1") });
+        map.extras.push_back({ .col = 0, .row = 0, .side = Side { turn }, .fit = pool_extra_fit("Side HeightStep 1") });
         CHECK(railed(map, map.squares[0]).size() == 4);
         CHECK(railed(map, map.squares[1]).size() == 4);
         // One climbing two meets it: open at its foot's side and at the top's side towards it.
@@ -698,7 +698,7 @@ TEST_CASE("pools: a ramp opens the railings across it, on its own square and on 
         CHECK(railed(map, map.squares[0]) == all_but(turn));
         CHECK(railed(map, map.squares[1]) == all_but((turn + 2) & 3));
         // Turned away from it, the ramp faces nothing and both are railed all round.
-        map.extras.back().turn = turn + 1;
+        map.extras.back().side = Side::from(turn + 1);
         CHECK(railed(map, map.squares[0]).size() == 4);
         CHECK(railed(map, map.squares[1]).size() == 4);
     }
@@ -706,8 +706,8 @@ TEST_CASE("pools: a ramp opens the railings across it, on its own square and on 
 
 TEST_CASE("pools: a square at a spiral staircase's top is open towards it, one at its foot level too")
 {
-    PoolMap map { { { .col = 0, .row = 0, .kind = PoolKind::Stairs, .surface = 4, .depth = 2, .board = 5, .turn = 1 }, { .col = 0, .row = -1, .kind = PoolKind::Tile, .surface = 9, .depth = 2 }, { .col = 1, .row = 0, .kind = PoolKind::Tile, .surface = 4, .depth = 2 }, { .col = -1, .row = 0, .kind = PoolKind::Tile, .surface = 7, .depth = 2 } } };
-    const auto railed = [&](std::size_t square, std::int32_t turn) { return std::ranges::any_of(pool_pieces(map, map.squares[square]), [&](const PoolPiece& p) { return p.symbol == "Railing" && p.turn == turn; }); };
+    PoolMap map { { { .col = 0, .row = 0, .kind = PoolKind::Stairs, .surface = 4, .depth = 2, .board = 5, .side = Side { 1 } }, { .col = 0, .row = -1, .kind = PoolKind::Tile, .surface = 9, .depth = 2 }, { .col = 1, .row = 0, .kind = PoolKind::Tile, .surface = 4, .depth = 2 }, { .col = -1, .row = 0, .kind = PoolKind::Tile, .surface = 7, .depth = 2 } } };
+    const auto railed = [&](std::size_t square, std::int32_t turn) { return std::ranges::any_of(pool_pieces(map, map.squares[square]), [&](const PoolPiece& p) { return p.symbol == "Railing" && p.turn.value == turn; }); };
     CHECK_FALSE(railed(1, 0)); // At its top
     CHECK_FALSE(railed(2, 3)); // At its foot
     CHECK(railed(3, 1));       // Neither: between its foot and its top
@@ -719,7 +719,7 @@ TEST_CASE("pools: a changing room fits on every side of a pool, turned towards i
     // West, south, east and north of the paved ring, each opening on the square beside it alone.
     for (const auto [col, row, turn] : { std::array { -1, 1, 1 }, std::array { 1, -1, 0 }, std::array { 4, 2, 3 }, std::array { 2, 4, 2 } })
         for (std::int32_t other = 0; other < 4; ++other)
-            CHECK(pool_room_fits(map, col, row, other) == (other == turn));
+            CHECK(pool_room_fits(map, col, row, Side { other }) == (other == turn));
 }
 
 TEST_CASE("pools: a complex is the squares that meet side to side, and the changing rooms opening on them")
@@ -727,9 +727,9 @@ TEST_CASE("pools: a complex is the squares that meet side to side, and the chang
     PoolMap map = ringed(2, 2);
     // Another pool, apart from the first.
     map.squares.push_back({ .col = 10, .row = 0, .kind = PoolKind::Tile, .surface = 4, .depth = 2 });
-    map.rooms.push_back({ .col = -1, .row = 1, .turn = 1 });
-    map.rooms.push_back({ .col = 9, .row = 0, .turn = 1 });
-    map.rooms.push_back({ .col = 1, .row = 4, .turn = 2 });
+    map.rooms.push_back({ .col = -1, .row = 1, .side = Side { 1 } });
+    map.rooms.push_back({ .col = 9, .row = 0, .side = Side { 1 } });
+    map.rooms.push_back({ .col = 1, .row = 4, .side = Side { 2 } });
     CHECK(pool_complex_rooms(map, 0) == std::vector<std::size_t> { 0, 2 });
     CHECK(pool_complex_rooms(map, 1) == std::vector<std::size_t> { 1 });
     CHECK(pool_complex(map, 1).size() == 1);
@@ -754,13 +754,13 @@ TEST_CASE("pools: a park from the game gives its squares, boards and changing ro
     CHECK(map.at(5, 5)->kind == park::PoolKind::Water);
     CHECK(map.at(5, 6)->kind == park::PoolKind::HighDive);
     CHECK(map.at(5, 6)->board == 8);
-    CHECK(map.at(5, 6)->turn == 2); // The water is a row back
+    CHECK(map.at(5, 6)->side == Side { 2 }); // The water is a row back
     CHECK(map.at(4, 5)->kind == park::PoolKind::Jacuzzi);
     CHECK(map.at(5, 3)->kind == park::PoolKind::Path);
     CHECK(map.at(5, 4)->kind == park::PoolKind::PathSlope);
-    CHECK(map.at(5, 4)->turn == 2); // Its foot at the path a row back
+    CHECK(map.at(5, 4)->side == Side { 2 }); // Its foot at the path a row back
     REQUIRE(map.rooms.size() == 1);
-    CHECK(map.rooms[0].turn == 3); // Its paved square a column back
+    CHECK(map.rooms[0].side == Side::kColBefore); // Its paved square a column back
     CHECK(map.rooms[0].ticket == 250);
     CHECK(map.rooms[0].complex_name == "Lido");
     CHECK(map.rooms[0].open);

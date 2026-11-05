@@ -25,7 +25,7 @@ namespace
                 const bool edge = col == 0 || row == 0 || col == 7 || row == 5;
                 map.squares.push_back({ .col = col, .row = row, .kind = edge ? PoolKind::Tile : PoolKind::Water, .surface = 4, .depth = 2 });
             }
-        map.rooms.push_back({ .col = -1, .row = 2, .turn = 1, .waves = { .height = 10, .frequency = 4, .on = 20, .every = 60 } });
+        map.rooms.push_back({ .col = -1, .row = 2, .side = rct3::park::Side { 1 }, .waves = { .height = 10, .frequency = 4, .on = 20, .every = 60 } });
         return map;
     }
 
@@ -49,8 +49,8 @@ TEST_CASE("pool waves: a wave machine sends crests out from its wall, with its c
 {
     PoolMap map = ringed();
     // Against the left wall of the water square at (1, 2): turn 3 is the column before.
-    map.extras.push_back({ .col = 1, .row = 2, .turn = 3, .fit = pool_extra_fit("WaveMachine UnderWaterWall") });
-    map.extras.push_back({ .col = 3, .row = 0, .turn = 0, .fit = pool_extra_fit("CentralSolid Light") }); // Not a machine
+    map.extras.push_back({ .col = 1, .row = 2, .side = rct3::park::Side { 3 }, .fit = pool_extra_fit("WaveMachine UnderWaterWall") });
+    map.extras.push_back({ .col = 3, .row = 0, .side = rct3::park::Side { 0 }, .fit = pool_extra_fit("CentralSolid Light") }); // Not a machine
     const std::vector<PoolWave> waves = machine_waves(map, { }, grid());
     REQUIRE(waves.size() == 1);
     CHECK(waves[0].kind == PoolWaveKind::Machine);
@@ -65,7 +65,7 @@ TEST_CASE("pool waves: a wave machine sends crests out from its wall, with its c
 TEST_CASE("pool waves: the machines run for their time out of every period, and the crests go on out after")
 {
     PoolMap map = ringed();
-    map.extras.push_back({ .col = 1, .row = 2, .turn = 3, .fit = pool_extra_fit("WaveMachine UnderWaterWall") });
+    map.extras.push_back({ .col = 1, .row = 2, .side = rct3::park::Side { 3 }, .fit = pool_extra_fit("WaveMachine UnderWaterWall") });
     const std::vector<PoolWave> waves = machine_waves(map, { }, grid());
     const auto largest = [&](glm::vec2 at, float from) {
         float most = 0;
@@ -84,7 +84,7 @@ TEST_CASE("pool waves: the machines run for their time out of every period, and 
 TEST_CASE("pool waves: a wave machine's front is its own square wide, widens a little and dies out on its way")
 {
     PoolMap map = ringed();
-    map.extras.push_back({ .col = 1, .row = 2, .turn = 3, .fit = pool_extra_fit("WaveMachine UnderWaterWall") });
+    map.extras.push_back({ .col = 1, .row = 2, .side = rct3::park::Side { 3 }, .fit = pool_extra_fit("WaveMachine UnderWaterWall") });
     std::vector<PoolWave> waves = machine_waves(map, { }, grid());
     const auto largest = [&](glm::vec2 at) {
         float most = 0;
@@ -98,7 +98,7 @@ TEST_CASE("pool waves: a wave machine's front is its own square wide, widens a l
     CHECK(largest({ 12, 13.5f }) > 0.0f);            // Further out, the front has widened to there
     CHECK(largest({ 6, 18 }) == 0.0f);               // Nothing along the rest of the wall
     // A second machine along the wall makes its own front there.
-    map.extras.push_back({ .col = 1, .row = 4, .turn = 3, .fit = pool_extra_fit("WaveMachine UnderWaterWall") });
+    map.extras.push_back({ .col = 1, .row = 4, .side = rct3::park::Side { 3 }, .fit = pool_extra_fit("WaveMachine UnderWaterWall") });
     waves = machine_waves(map, { }, grid());
     REQUIRE(waves.size() == 2);
     CHECK(waves[1].from == glm::vec2 { 4, 18 });

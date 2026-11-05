@@ -38,7 +38,7 @@ namespace
     }
 
     /// Lays `count` ground queue tiles from `from` heading `heading`.
-    std::vector<save::PathTile> lay_queue(const save::TerrainGrid& g, save::Tile from, std::uint8_t heading, int count)
+    std::vector<save::PathTile> lay_queue(const save::TerrainGrid& g, save::Tile from, Side heading, int count)
     {
         FootpathBuilder b;
         b.queue = true;
@@ -65,7 +65,7 @@ TEST_CASE("a queue laid away from an entrance joins the station's line")
     const save::TerrainGrid g = owned_grid(8, 4);
     save::RideModel rides = ride_at(0, 1);
     // Heading +col from the tile beside the entrance.
-    std::vector<save::PathTile> paths = lay_queue(g, { 1, 1 }, 1, 3);
+    std::vector<save::PathTile> paths = lay_queue(g, { 1, 1 }, Side::kNextCol, 3);
     CHECK(tiles_behind(paths, g, 2) == std::vector<std::size_t> { 1, 0 });
     const auto entrance = entrance_beside(rides, { 1, 1 }, 0);
     REQUIRE(entrance);
@@ -90,7 +90,7 @@ TEST_CASE("a queue laid towards an entrance is turned round to lead to it")
     const save::TerrainGrid g = owned_grid(8, 4);
     save::RideModel rides = ride_at(5, 1);
     rides.rides[0].stations[0].queue_line = 7;
-    std::vector<save::PathTile> paths = lay_queue(g, { 2, 1 }, 1, 3); // Ends on (4, 1), beside the entrance
+    std::vector<save::PathTile> paths = lay_queue(g, { 2, 1 }, Side::kNextCol, 3); // Ends on (4, 1), beside the entrance
     const auto entrance = entrance_beside(rides, { 4, 1 }, 0);
     REQUIRE(entrance);
     CHECK(join_entrance(rides, paths, g, 2, *entrance, 99) == 7);
@@ -109,7 +109,7 @@ TEST_CASE("a queue laid towards an entrance is turned round to lead to it")
 TEST_CASE("a queue's open end turns to a path beside it")
 {
     const save::TerrainGrid g = owned_grid(8, 8);
-    std::vector<save::PathTile> paths = lay_queue(g, { 1, 1 }, 1, 3); // (1..3, 1), open towards (4, 1)
+    std::vector<save::PathTile> paths = lay_queue(g, { 1, 1 }, Side::kNextCol, 3); // (1..3, 1), open towards (4, 1)
     paths.push_back(ground_path({ 3, 2 }, "Tarmac", 50));
     paths.push_back(ground_path({ 2, 0 }, "Tarmac", 51));
     CHECK_FALSE(turn_to_path(paths, g, 1)); // Its start meets the next queue tile
@@ -118,7 +118,7 @@ TEST_CASE("a queue's open end turns to a path beside it")
     CHECK_FALSE(turn_to_path(paths, g, 2)); // Now it meets the path
 
     // Nor does it turn while something meets its open end already.
-    std::vector<save::PathTile> met = lay_queue(g, { 1, 1 }, 1, 3);
+    std::vector<save::PathTile> met = lay_queue(g, { 1, 1 }, Side::kNextCol, 3);
     met.push_back(ground_path({ 4, 1 }, "Tarmac", 50));
     met.push_back(ground_path({ 3, 2 }, "Tarmac", 51));
     CHECK_FALSE(turn_to_path(met, g, 2));
@@ -128,10 +128,10 @@ TEST_CASE("a queue laid on towards a line's open end joins it, turned round to l
 {
     const save::TerrainGrid g = owned_grid(8, 4);
     save::RideModel rides = ride_at(5, 1);
-    std::vector<save::PathTile> paths = lay_queue(g, { 2, 1 }, 1, 3); // (2..4, 1), the entrance beyond
+    std::vector<save::PathTile> paths = lay_queue(g, { 2, 1 }, Side::kNextCol, 3); // (2..4, 1), the entrance beyond
     const std::uint64_t line = join_entrance(rides, paths, g, 2, *entrance_beside(rides, { 4, 1 }, 0), 99);
     // A second stroke from (0, 1) up to the line's open end at (2, 1).
-    for (save::PathTile p : lay_queue(g, { 0, 1 }, 1, 2))
+    for (save::PathTile p : lay_queue(g, { 0, 1 }, Side::kNextCol, 2))
     {
         p.id += 100;
         paths.push_back(p);
@@ -153,7 +153,7 @@ TEST_CASE("a queue over steps laid towards the entrance turns round whole, its s
     save::RideModel rides = ride_at(5, 1);
     FootpathBuilder b;
     b.queue = true;
-    b.heading = 1;
+    b.heading = Side::kNextCol;
     start_at(b, { 1, 1 });
     std::vector<save::PathTile> paths;
     for (const PathSlope slope : { PathSlope::Flat, PathSlope::SteepUp, PathSlope::Flat, PathSlope::SteepDown })

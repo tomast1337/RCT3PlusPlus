@@ -25,7 +25,7 @@ namespace
         for (std::int32_t row = 3; row < 5; ++row)
             for (std::int32_t col = 4; col < 7; ++col)
                 pools.squares.push_back({ .col = col, .row = row });
-        pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = open });
+        pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = open });
         import_pools(park.world(), pools);
         return pools;
     }
@@ -228,9 +228,9 @@ TEST_CASE("swimmers walk the plain paved squares, not those a spa pool or diving
     park::PoolMap pools;
     pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
     pools.squares.push_back({ .col = 4, .row = 2, .kind = park::PoolKind::Jacuzzi });
-    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::HighDive, .turn = 0 });
+    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::HighDive, .side = rct3::park::Side { 0 } });
     pools.squares.push_back({ .col = 5, .row = 3 });
-    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
     import_pools(park.world(), pools);
     const auto& r = park.world().registry;
     const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(park.world().registry)).pool);
@@ -249,7 +249,7 @@ TEST_CASE("swimmers sit in the spa pools and stand at the extras now and then")
     pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::Tile });
     pools.squares.push_back({ .col = 5, .row = 3 });
     pools.extras.push_back({ .symbol = "Lounger", .col = 6, .row = 2 });
-    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
     import_pools(park.world(), pools);
     auto& r = park.world().registry;
     const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
@@ -287,8 +287,8 @@ TEST_CASE("swimmers lie on loungers and stand under showers, as many as they tak
         for (std::int32_t row = 3; row < 11; ++row)
             for (std::int32_t col = 4; col < 7; ++col)
                 pools.squares.push_back({ .col = col, .row = row });
-        pools.extras.push_back({ .symbol = "Extra", .col = 6, .row = 2, .turn = 1, .fit = { .lounger = lounger, .shower = !lounger } });
-        pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+        pools.extras.push_back({ .symbol = "Extra", .col = 6, .row = 2, .side = rct3::park::Side { 1 }, .fit = { .lounger = lounger, .shower = !lounger } });
+        pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
         import_pools(park.world(), pools);
         auto& r = park.world().registry;
         const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
@@ -330,7 +330,7 @@ TEST_CASE("extras a park placed as scenery are used as those laid with the pool"
     pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
     pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::Tile });
     pools.squares.push_back({ .col = 5, .row = 3 });
-    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
     const std::array scenery { park::PoolExtra { .symbol = "Loungers", .col = 6, .row = 2, .fit = { .lounger = true } }, park::PoolExtra { .symbol = "Far", .col = 9, .row = 9, .fit = { .lounger = true } } };
     import_pools(park.world(), pools, scenery);
     auto& r = park.world().registry;
@@ -555,12 +555,12 @@ TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into t
     park.path({ 0, 0 }, { 5, 0 });
     park::PoolMap pools;
     pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
-    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::HighDive, .board = 6, .turn = 0 });
+    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::HighDive, .board = 6, .side = rct3::park::Side { 0 } });
     // Water far enough out for the boards' end, more than a square out from the tower.
     for (std::int32_t row = 3; row < 6; ++row)
         for (std::int32_t col = 5; col < 7; ++col)
             pools.squares.push_back({ .col = col, .row = row });
-    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
     import_pools(park.world(), pools);
     auto& r = park.world().registry;
     const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
@@ -609,7 +609,7 @@ TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into t
                 climber = g;
     }
     REQUIRE(climber != entt::null);
-    pools.extras.push_back({ .symbol = "Board", .col = 5, .row = 3, .turn = 2, .fit = { .board = true } });
+    pools.extras.push_back({ .symbol = "Board", .col = 5, .row = 3, .side = rct3::park::Side { 2 }, .fit = { .board = true } });
     import_pools(park.world(), pools);
     park.run_seconds(0.1f);
     const Swimmer& down = r.get<Swimmer>(climber);
@@ -624,9 +624,9 @@ TEST_CASE("a small diving board on the pool's wall is walked out on and dived of
     pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
     for (std::int32_t col = 5; col < 7; ++col)
         pools.squares.push_back({ .col = col, .row = 3 });
-    pools.extras.push_back({ .symbol = "Board", .col = 5, .row = 3, .turn = 2, .fit = { .board = true } });
-    pools.extras.push_back({ .symbol = "Ladder", .col = 6, .row = 3, .turn = 2, .fit = { .ladder = true } });
-    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    pools.extras.push_back({ .symbol = "Board", .col = 5, .row = 3, .side = rct3::park::Side { 2 }, .fit = { .board = true } });
+    pools.extras.push_back({ .symbol = "Ladder", .col = 6, .row = 3, .side = rct3::park::Side { 2 }, .fit = { .ladder = true } });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
     import_pools(park.world(), pools);
     auto& r = park.world().registry;
     const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
@@ -667,8 +667,8 @@ TEST_CASE("swimmers walk up a ramp to a raised square and down it again, the ram
     pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::Tile, .surface = 2 });
     for (std::int32_t col = 4; col < 7; ++col)
         pools.squares.push_back({ .col = col, .row = 3 });
-    pools.extras.push_back({ .symbol = "Ramp", .col = 5, .row = 2, .turn = 1, .fit = park::pool_extra_fit("Side CentralSolid WholeTile HeightStep 2") });
-    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    pools.extras.push_back({ .symbol = "Ramp", .col = 5, .row = 2, .side = rct3::park::Side { 1 }, .fit = park::pool_extra_fit("Side CentralSolid WholeTile HeightStep 2") });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
     import_pools(park.world(), pools);
     auto& r = park.world().registry;
     const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);

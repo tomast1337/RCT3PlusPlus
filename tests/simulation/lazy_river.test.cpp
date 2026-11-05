@@ -30,7 +30,7 @@ namespace
             for (std::int32_t col = 4; col < 7; ++col)
                 pools.squares.push_back({ .col = col, .row = row });
         pools.squares.push_back({ .col = 7, .row = 3, .kind = park::PoolKind::PathStairs });
-        pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+        pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
         import_pools(park.world(), pools);
         const auto& paths = park.world().paths;
         const auto middle = [&](float col, float row) { return glm::vec3 { paths.origin.x + (col + 0.5f) * paths.tile_size, 0, paths.origin.y + (row + 0.5f) * paths.tile_size }; };

@@ -104,7 +104,7 @@ TEST_CASE("a route goes round a stall in its way")
     const SolidTiles solids = solid_tiles(objects, models, g);
     FootpathBuilder b;
     start_at(b, { 0, 1 });
-    b.heading = 1;
+    b.heading = Side::kNextCol;
     const auto route = find_route(b, { 4, 1 }, g, { }, 1000, std::nullopt, solids);
     REQUIRE(route);
     CHECK(route->back().piece.spot == save::Tile { 4, 1 });

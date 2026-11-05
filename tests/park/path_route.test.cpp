@@ -160,7 +160,7 @@ TEST_CASE("a route goes on from the trail's end and walks over paths already the
 {
     const save::TerrainGrid g = owned_grid(8, 3);
     FootpathBuilder b = started_at({ 0, 1 });
-    b.heading = 1;
+    b.heading = Side::kNextCol;
     b.trail.push_back({ { 0, 1 }, 7, 0 });
     const std::vector<save::PathTile> paths { ground_path({ 0, 1 }, "Old", 7), ground_path({ 3, 1 }, "Old", 8) };
     const auto route = find_route(b, { 5, 1 }, g, paths, 1000);

@@ -143,15 +143,15 @@ TEST_CASE("an edge item snaps to the tile edge nearest the pointer")
 
 TEST_CASE("an item against a side takes the side nearest the pointer of those it suits")
 {
-    const auto every = [](std::uint8_t) { return true; };
-    CHECK(nearest_side({ 0.5f, 0.9f }, every) == 0);
-    CHECK(nearest_side({ 0.9f, 0.5f }, every) == 1);
-    CHECK(nearest_side({ 0.5f, 0.1f }, every) == 2);
-    CHECK(nearest_side({ 0.1f, 0.5f }, every) == 3);
+    const auto every = [](Side) { return true; };
+    CHECK(nearest_side({ 0.5f, 0.9f }, every) == Side::kNextRow);
+    CHECK(nearest_side({ 0.9f, 0.5f }, every) == Side::kNextCol);
+    CHECK(nearest_side({ 0.5f, 0.1f }, every) == Side::kRowBefore);
+    CHECK(nearest_side({ 0.1f, 0.5f }, every) == Side::kColBefore);
     // Only the sides that suit: the nearer of them.
-    CHECK(nearest_side({ 0.9f, 0.6f }, [](std::uint8_t side) { return side % 2 == 0; }) == 0);
-    CHECK(nearest_side({ 0.9f, 0.4f }, [](std::uint8_t side) { return side % 2 == 0; }) == 2);
-    CHECK(!nearest_side({ 0.5f, 0.5f }, [](std::uint8_t) { return false; }));
+    CHECK(nearest_side({ 0.9f, 0.6f }, [](Side side) { return !side.on_columns(); }) == Side::kNextRow);
+    CHECK(nearest_side({ 0.9f, 0.4f }, [](Side side) { return !side.on_columns(); }) == Side::kRowBefore);
+    CHECK(!nearest_side({ 0.5f, 0.5f }, [](Side) { return false; }));
 }
 
 TEST_CASE("a corner item turns to the pointer's quarter and other items keep the player's turns")

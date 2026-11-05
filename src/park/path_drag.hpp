@@ -48,15 +48,14 @@ namespace rct3::park
     /// What a stroke over `area` would do among `paths` and, when given, what else fills the tiles.
     [[nodiscard]] DragPlan plan_drag(std::span<const save::Tile> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids = std::nullopt);
 
-    /// The side (as a heading) of a tile nearest a point on it `across` its width along columns and rows, each
-    /// from 0 to 1.
-    [[nodiscard]] std::uint8_t nearest_side(float across_col, float across_row) noexcept;
+    /// The side of a tile nearest a point on it `across` its width along columns and rows, each from 0 to 1.
+    [[nodiscard]] Side nearest_side(float across_col, float across_row) noexcept;
 
     /// A path under the pointer, and the edge of it the pointer is nearest.
     struct PathEdge
     {
-        std::size_t path = 0;             ///< Of the paths
-        std::optional<std::uint8_t> side; ///< None when the path does not reach that edge
+        std::size_t path = 0;     ///< Of the paths
+        std::optional<Side> side; ///< None when the path does not reach that edge
     };
 
     /// The path `ray` meets first, if it meets one before the ground; a path is met at its middle height. With
@@ -67,13 +66,13 @@ namespace rct3::park
     /// Has `builder` go on from `path`'s edge on `side`: the next piece on the tile beyond, heading away, at
     /// the height the path meets the edge. False, leaving the builder as it was, when the path does not reach
     /// that edge.
-    bool start_from_edge(FootpathBuilder& builder, const save::PathTile& path, const save::TerrainGrid& grid, std::uint8_t side);
+    bool start_from_edge(FootpathBuilder& builder, const save::PathTile& path, const save::TerrainGrid& grid, Side side);
 
     /// A door under the pointer, and the edge of its tile the pointer is nearest.
     struct DoorEdge
     {
         std::size_t door = 0; ///< Of the doors
-        std::uint8_t side = 0;
+        Side side { };
     };
 
     /// The door of `doors` that `ray` meets first, met flat across its tile at its height, if it meets one before
@@ -82,6 +81,6 @@ namespace rct3::park
 
     /// Has `builder` go on from `door`'s edge on `side`: the next piece on the tile beyond, heading away, at the
     /// door's height.
-    void start_from_door(FootpathBuilder& builder, const save::PlacementSpot& door, std::uint8_t side);
+    void start_from_door(FootpathBuilder& builder, const save::PlacementSpot& door, Side side);
 
 } // namespace rct3::park

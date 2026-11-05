@@ -13,8 +13,6 @@ namespace rct3::park
 
     namespace
     {
-        /// Columns and rows to the tile across each side, as path_decks numbers the sides.
-        constexpr std::array<std::array<int, 2>, 4> kSteps { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } };
         /// The quarter turns that face an item's +X at each side: faced_side turned back.
         constexpr std::array<std::int32_t, 4> kTurnsFacing { 1, 2, 3, 0 };
         constexpr float kSameHeight = 0.5f;    ///< World units between two edges that still meet
@@ -74,7 +72,7 @@ namespace rct3::park
         // On a sloped deck an item kept to level paths may stand only at an end of the slope.
         const bool ends_only = rules.level_only && sloped;
         // The stored direction runs along columns (0, 1) or rows (2, 3); sides 1 and 3 face along columns.
-        const auto at_end = [&](std::uint8_t side) { return (side % 2 == 1) == (path->direction < 2); };
+        const auto at_end = [&](Side side) { return side.on_columns() == (path->direction < 2); };
 
         // A path's height at `side`: its edge there, or its middle where it has none, as along a queue's fences.
         const auto level = [&](const save::PathTile& p, std::uint8_t side) -> std::optional<float> {
@@ -91,24 +89,23 @@ namespace rct3::park
             return count > 0 ? std::optional(sum / static_cast<float>(count)) : std::nullopt;
         };
         // Whether a path across `side` meets this one there, at about its height: joined, or the next lane of a queue.
-        const auto joined = [&](std::uint8_t side) {
-            const auto here = level(*path, side);
-            const int col = tile.col + kSteps[side][0];
-            const int row = tile.row + kSteps[side][1];
+        const auto joined = [&](Side side) {
+            const auto here = level(*path, static_cast<std::uint8_t>(side.value));
+            const save::Tile across = side.beyond(tile);
             return here && std::ranges::any_of(paths, [&](const save::PathTile& p) {
-                       if (p.col != col || p.row != row)
+                       if (p.col != across.col || p.row != across.row)
                            return false;
-                       const auto there = level(p, static_cast<std::uint8_t>((side + 2) % 4));
+                       const auto there = level(p, static_cast<std::uint8_t>(side.opposite().value));
                        return there && std::abs(*there - *here) < kSameHeight;
                    });
         };
         const float in_x = fx - static_cast<float>(tile.col);
         const float in_z = fz - static_cast<float>(tile.row);
         const bool wants_joined = positioning == Positioning::PathSideJoin;
-        const std::optional<std::uint8_t> best = nearest_side({ in_x, in_z }, [&](std::uint8_t side) { return joined(side) == wants_joined && (!ends_only || at_end(side)); });
-        const std::optional<std::uint8_t> any = nearest_side({ in_x, in_z }, [](std::uint8_t) { return true; });
+        const std::optional<Side> best = nearest_side({ in_x, in_z }, [&](Side side) { return joined(side) == wants_joined && (!ends_only || at_end(side)); });
+        const std::optional<Side> any = nearest_side({ in_x, in_z }, [](Side) { return true; });
         spot.refused = !best || forbidden;
-        const std::uint8_t side = best.value_or(*any);
+        const auto side = static_cast<std::size_t>(best.value_or(*any).value);
         spot.turns = kTurnsFacing[side];
         if (edges[side])
             spot.height = static_cast<std::int32_t>(std::lround(*edges[side]));

@@ -48,10 +48,10 @@ TEST_CASE("a brush square is centred on its tile, an even one reaching further t
 
 TEST_CASE("the nearest side of a tile is found by its diagonals")
 {
-    CHECK(nearest_side(0.5f, 0.9f) == 0);
-    CHECK(nearest_side(0.9f, 0.5f) == 1);
-    CHECK(nearest_side(0.5f, 0.1f) == 2);
-    CHECK(nearest_side(0.1f, 0.5f) == 3);
+    CHECK(nearest_side(0.5f, 0.9f) == Side::kNextRow);
+    CHECK(nearest_side(0.9f, 0.5f) == Side::kNextCol);
+    CHECK(nearest_side(0.5f, 0.1f) == Side::kRowBefore);
+    CHECK(nearest_side(0.1f, 0.5f) == Side::kColBefore);
 }
 
 TEST_CASE("the pointer over a raised path picks it and its edge; the next piece goes on from there")
@@ -67,10 +67,10 @@ TEST_CASE("the pointer over a raised path picks it and its edge; the next piece 
     const auto under = path_under(ray, paths, g);
     REQUIRE(under);
     CHECK(under->path == 0);
-    CHECK(under->side == std::uint8_t { 1 });
+    CHECK(under->side == Side::kNextCol);
 
     FootpathBuilder b;
-    REQUIRE(start_from_edge(b, raised, g, 1));
+    REQUIRE(start_from_edge(b, raised, g, Side::kNextCol));
     const auto next = next_piece(b, g);
     REQUIRE(next);
     CHECK(next->spot == save::Tile { 2, 1 });
@@ -114,7 +114,7 @@ TEST_CASE("a door is picked at its own height, and the trail goes on from its ed
     const auto under = door_under(down, doors, g);
     REQUIRE(under);
     CHECK(under->door == 0);
-    CHECK(under->side == std::uint8_t { 1 });
+    CHECK(under->side == Side::kNextCol);
     // Beside the tile, the ray meets the ground and no door.
     CHECK_FALSE(door_under({ { g.world_x(2) + 2.0f, 20.0f, g.world_z(1) + 2.0f }, { 0.0f, -1.0f, 0.0f } }, doors, g));
 

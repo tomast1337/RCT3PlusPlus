@@ -654,7 +654,6 @@ namespace rct3::simulation
         std::multimap<std::pair<std::int32_t, std::int32_t>, const park::PoolSquare*> squares;
         for (const park::PoolSquare& s : pools.squares)
             squares.emplace(std::pair { s.col, s.row }, &s);
-        constexpr std::array<std::array<std::int32_t, 2>, 4> kSides { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } }; // By turn
         std::map<const park::PoolSquare*, std::size_t> complex_of;
         std::vector<SwimPool> complexes;
         std::vector<std::vector<park::PoolSquare>> members; // By complex
@@ -685,8 +684,8 @@ namespace rct3::simulation
                     complex.paved.push_back(middle(s.col, s.row, static_cast<float>(s.surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 });
                 else if (s.kind == park::PoolKind::PathStairs)
                     complex.steps.push_back(middle(s.col, s.row, static_cast<float>(s.surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 });
-                for (const auto [dc, dr] : kSides)
-                    for (auto [it, end] = squares.equal_range({ s.col + dc, s.row + dr }); it != end; ++it)
+                for (const park::Side side : park::kSides)
+                    for (auto [it, end] = squares.equal_range({ s.col + side.step()[0], s.row + side.step()[1] }); it != end; ++it)
                         if (complex_of.try_emplace(it->second, complexes.size() - 1).second)
                             todo.push_back(it->second);
             }
@@ -698,7 +697,7 @@ namespace rct3::simulation
                 {
                     // A ramp climbs from its foot on its square to its side, where the square it meets is as much
                     // higher; it is no spot of its own.
-                    const auto [dc, dr] = kSides[static_cast<std::size_t>(extra.turn & 3)];
+                    const auto [dc, dr] = extra.side.step();
                     const std::int32_t top = square->surface + extra.fit.step;
                     if (const auto high = pools.at(extra.col + dc, extra.row + dr, top); !high || high->surface != top)
                         continue;
@@ -710,7 +709,7 @@ namespace rct3::simulation
                 else if (square && square->kind == park::PoolKind::Tile)
                 {
                     // Facing along the extra's length, as those on a saved park's loungers lie.
-                    const auto [dc, dr] = kSides[static_cast<std::size_t>((extra.turn + 1) & 3)];
+                    const auto [dc, dr] = extra.side.right().step();
                     const PoolUse use = extra.fit.lounger ? PoolUse::Lounge : extra.fit.shower ? PoolUse::Shower : PoolUse::Stand;
                     complexes[complex_of.at(&*square)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<float>(square->surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 }, .heading = { std::atan2(static_cast<float>(dc), static_cast<float>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : std::uint8_t { 1 } });
                 }
@@ -718,7 +717,7 @@ namespace rct3::simulation
                 // out, from the paving just behind it.
                 else if (square && square->kind == park::PoolKind::Water && (extra.fit.board || extra.fit.ladder))
                 {
-                    const auto [dc, dr] = kSides[static_cast<std::size_t>(extra.turn & 3)];
+                    const auto [dc, dr] = extra.side.step();
                     const glm::vec3 back { static_cast<float>(dc), 0, static_cast<float>(dr) };
                     const float deck = static_cast<float>(square->surface) + kTuning.pools.deck / paths.level_height;
                     const glm::vec3 foot = middle(extra.col, extra.row, deck) + back * (paths.tile_size / 2 + kTuning.dives.behind);
@@ -733,7 +732,7 @@ namespace rct3::simulation
         for (const park::PoolSquare& s : pools.squares)
             if (s.kind == park::PoolKind::HighDive)
             {
-                const auto [dc, dr] = kSides[static_cast<std::size_t>(s.turn & 3)];
+                const auto [dc, dr] = s.side.step();
                 const glm::vec3 ahead { static_cast<float>(dc), 0, static_cast<float>(dr) };
                 PoolBoard board { .foot = middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.deck / paths.level_height) + ahead * kTuning.dives.ladder_foot + glm::vec3 { -ahead.z, 0, ahead.x } * kTuning.dives.ladder_side, .heading = { std::atan2(ahead.x, ahead.z) }, .reach = kTuning.dives.high_reach, .high = true };
                 for (std::int32_t level = 0; level < std::max(s.board / park::kBoardLevel, 1); ++level)
@@ -747,7 +746,9 @@ namespace rct3::simulation
             if (s.kind == park::PoolKind::Stairs)
             {
                 const std::int32_t top = s.surface + std::max(s.board, park::kLowestStairs);
-                for (const auto [dc, dr] : kSides)
+                for (const park::Side to : park::kSides)
+                {
+                    const auto [dc, dr] = to.step();
                     if (const auto high = pools.at(s.col + dc, s.row + dr, top); high && high->surface == top)
                     {
                         const glm::vec3 deck { 0, kTuning.pools.deck, 0 };
@@ -755,6 +756,7 @@ namespace rct3::simulation
                         complexes[complex_of.at(&s)].ways.push_back({ middle(s.col, s.row, static_cast<float>(s.surface)) + deck, middle(s.col, s.row, static_cast<float>(top)) + deck, middle(s.col, s.row, static_cast<float>(top)) + side + deck });
                         break;
                     }
+                }
             }
         std::vector<park::PoolExtra> all_extras(pools.extras.begin(), pools.extras.end());
         all_extras.append_range(scenery);
@@ -768,7 +770,7 @@ namespace rct3::simulation
         std::vector<entt::entity> kept;
         for (const park::PoolRoom& room : pools.rooms)
         {
-            const auto [dc, dr] = kSides[static_cast<std::size_t>(room.turn & 3)];
+            const auto [dc, dr] = room.side.step();
             const auto square = pools.at(room.col + dc, room.row + dr);
             if (!square)
                 continue;

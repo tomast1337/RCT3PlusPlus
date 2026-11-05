@@ -31,12 +31,13 @@
 // of the pool, which leaves that square's railing open towards it. Squares that meet side to side make one
 // pool complex; its changing rooms share its ticket price and are opened and closed together.
 //
-// Turns are quarter turns as placed objects count them; a piece turned by 0 has its wall on the square's
-// side towards the next row, 1 towards the next column, 2 towards the row before, 3 towards the column
-// before.
+// Sides of a square are counted as park::Side counts them. A pool piece's sides turn with it: turned by 0
+// (ModelTurn) it has its wall on the square's side towards the next row (side 0), turned by 1 towards the next
+// column, and so on.
 #pragma once
 
 #include "park/footpath_builder.hpp"
+#include "park/turns.hpp"
 #include "save/model/world.hpp"
 
 #include <array>
@@ -56,11 +57,11 @@ namespace rct3::park
         Water,
         Tile,     ///< Paved
         Jacuzzi,  ///< A spa pool, on a paved square
-        HighDive, ///< A high diving board, on a paved square, facing the water at its side `turn`
-        Stairs,   ///< A spiral staircase, on a paved square, climbing `board` units from its foot at side `turn`
+        HighDive, ///< A high diving board, on a paved square, facing the water at its side `side`
+        Stairs,   ///< A spiral staircase, on a paved square, climbing `board` units from its foot at side `side`
         // Pool paths: walkways of one piece, no deeper than their surface, joining the paths beside them.
         Path,
-        PathSlope,  ///< Rising kPathSlopeRise units from its foot at side `turn`, at the surface
+        PathSlope,  ///< Rising kPathSlopeRise units from its foot at side `side`, at the surface
         PathStairs, ///< Rising kPathStairsRise units, the same way
     };
 
@@ -89,7 +90,7 @@ namespace rct3::park
         std::int32_t surface = 0; ///< Whole units, as placed objects' heights
         std::int32_t depth = 2;   ///< Whole units: 1 shallow, 2 normal, 3 deep
         std::int32_t board = 0;   ///< A high diving board's or a staircase's height over the surface, whole units
-        std::int32_t turn = 0;    ///< The side a high diving board faces, or a staircase's foot
+        Side side { };            ///< The side a high diving board faces, or a staircase's or a slope's foot
         PoolEdge edge = PoolEdge::Straight;
         /// The ground's corners, as the grid keeps them, before the square dug it down to its floor: put back when
         /// it goes. None where the ground was under its floor, as under a raised pool, which stands over it.
@@ -149,7 +150,7 @@ namespace rct3::park
         std::string overlay { }; ///< The scenery item's overlay
         std::int32_t col = 0;
         std::int32_t row = 0;
-        std::int32_t turn = 0;   ///< The side it is against
+        Side side { };           ///< The side it is against
         std::int64_t refund = 0; ///< What taking it away costs, hundredths; below zero, money back
         PoolExtraFit fit { };
     };
@@ -178,7 +179,7 @@ namespace rct3::park
         std::string overlay { }; ///< The scenery item's overlay
         std::int32_t col = 0;
         std::int32_t row = 0;
-        std::int32_t turn = 0; ///< The side towards the paved square it opens on
+        Side side { }; ///< The side towards the paved square it opens on
         std::int64_t ticket = kPoolTicket;
         bool open = false;
         std::string complex_name { }; ///< Its pool complex's name, the same in every room of it; empty for the default
@@ -199,10 +200,10 @@ namespace rct3::park
         [[nodiscard]] std::optional<const PoolSquare&> at(std::int32_t col, std::int32_t row, std::int32_t level = std::numeric_limits<std::int32_t>::max()) const noexcept;
     };
 
-    /// The height a pool path trail starts at from side `turn` of `square`, a square of `map`: its surface, or a
+    /// The height a pool path trail starts at from side `side` of `square`, a square of `map`: its surface, or a
     /// slope's or steps' foot or top, which are the only sides they start from. None where a square beside already
     /// meets that side at that height, so trails start only at the complex's edges, water and paving alike.
-    [[nodiscard]] std::optional<std::int32_t> pool_path_start(const PoolMap& map, const PoolSquare& square, std::int32_t turn);
+    [[nodiscard]] std::optional<std::int32_t> pool_path_start(const PoolMap& map, const PoolSquare& square, Side side);
 
     /// A square of a pool slide's station platform, where swimmers get on.
     struct SlidePlatform
@@ -210,13 +211,13 @@ namespace rct3::park
         std::int32_t col = 0;
         std::int32_t row = 0;
         std::int32_t height = 0; ///< Of its deck, whole units
-        std::int32_t turn = 0;   ///< Its piece's turn: the sides at this turn and the opposite one are off its track
+        ModelTurn turn { };      ///< Its piece's turn: the side it brings the piece's side 0 to, and the opposite one, are off its track
     };
 
-    /// The height a pool path trail starts at from side `turn` of `platform`: its deck's, from the two sides off its
+    /// The height a pool path trail starts at from side `side` of `platform`: its deck's, from the two sides off its
     /// track, as saved parks join pool paths to their slides' stations. None where a square of `map` already meets
     /// that side there.
-    [[nodiscard]] std::optional<std::int32_t> slide_path_start(const PoolMap& map, const SlidePlatform& platform, std::int32_t turn);
+    [[nodiscard]] std::optional<std::int32_t> slide_path_start(const PoolMap& map, const SlidePlatform& platform, Side side);
 
     /// The shapes of wall a water square takes, each a set of pieces of the pool type.
     enum class PoolWall : std::uint8_t
@@ -231,18 +232,18 @@ namespace rct3::park
     struct PoolWallPiece
     {
         PoolWall shape = PoolWall::Edge;
-        std::int32_t turn = 0; ///< A corner's turn is that of the first of its two sides, counting up
+        Side side { }; ///< The side it is along; a corner's is the first of its two sides, clockwise
     };
 
     /// The sides and corners round a square, as bits of the mask pool_walls takes.
     enum PoolSide : std::uint8_t
     {
-        kNextRow = 1u << 0,    ///< Turn 0
-        kNextCol = 1u << 1,    ///< Turn 1
-        kRowBefore = 1u << 2,  ///< Turn 2
-        kColBefore = 1u << 3,  ///< Turn 3
-        kNextBoth = 1u << 4,   ///< The corner between turns 0 and 1
-        kRowColNext = 1u << 5, ///< Between turns 1 and 2: the next column, the row before
+        kNextRow = 1u << 0,    ///< Side 0
+        kNextCol = 1u << 1,    ///< Side 1
+        kRowBefore = 1u << 2,  ///< Side 2
+        kColBefore = 1u << 3,  ///< Side 3
+        kNextBoth = 1u << 4,   ///< The corner between sides 0 and 1
+        kRowColNext = 1u << 5, ///< Between sides 1 and 2: the next column, the row before
         kBothBefore = 1u << 6, ///< Between 2 and 3
         kColRowNext = 1u << 7, ///< Between 3 and 0: the column before, the next row
     };
@@ -267,7 +268,7 @@ namespace rct3::park
     {
         std::string_view symbol; ///< The scenery item in the pool type's overlay
         std::int32_t height = 0; ///< Whole units
-        std::int32_t turn = 0;
+        ModelTurn turn { };
     };
 
     /// The pieces `square` of `map` is built of, from the bottom up, railings last.
@@ -298,12 +299,12 @@ namespace rct3::park
     [[nodiscard]] std::int64_t pool_refund(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept;
 
     /// Whether an extra that fits as `fit` may go in `map` on the square at (`col`, `row`), against its side
-    /// `turn`.
-    [[nodiscard]] bool pool_extra_fits(const PoolMap& map, std::int32_t col, std::int32_t row, const PoolExtraFit& fit, std::int32_t turn);
+    /// `side`.
+    [[nodiscard]] bool pool_extra_fits(const PoolMap& map, std::int32_t col, std::int32_t row, const PoolExtraFit& fit, Side side);
 
     /// Whether a changing room may stand at (`col`, `row`), off the pool, opening on the paved square at its
-    /// side `turn`, where no other room opens.
-    [[nodiscard]] bool pool_room_fits(const PoolMap& map, std::int32_t col, std::int32_t row, std::int32_t turn);
+    /// side `side`, where no other room opens.
+    [[nodiscard]] bool pool_room_fits(const PoolMap& map, std::int32_t col, std::int32_t row, Side side);
 
     /// The squares of the complex the room `room` (of map.rooms) opens on: every square joined to the one it
     /// opens on.

@@ -23,6 +23,7 @@
 #include "simulation/units.hpp"
 
 #include <array>
+#include <bitset>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -452,10 +453,16 @@ namespace rct3::simulation
         bool high = false;
     };
 
+    /// A pool's open water is marked in this many steps across a square, each way.
+    inline constexpr std::size_t kOpenSteps = 16;
+
     /// A pool complex: the squares its swimmers go to, each spot the middle of a square at its surface.
     struct SwimPool
     {
         std::vector<glm::vec3> water { };
+        /// Of each square of `water`, where its water is open, clear of the paving and coping round it: kOpenSteps by
+        /// kOpenSteps marks, row by row from its corner of least column and row.
+        std::vector<std::bitset<kOpenSteps * kOpenSteps>> open { };
         std::vector<glm::vec3> paved { };
         std::vector<glm::vec3> spa { };   ///< Where swimmers sit in the spa pools, at the spa's water
         std::vector<PoolSpot> extras { }; ///< The paved squares with an extra on them, loungers and showers
@@ -470,6 +477,9 @@ namespace rct3::simulation
 
     /// How dirty a pool looks, in the six steps the pool's window names, cleanest first.
     [[nodiscard]] std::size_t dirt_step(const SwimPool& pool);
+
+    /// Whether `at` is over the open water of the square `square` of `pool`'s water, `tile` across.
+    [[nodiscard]] bool open_water(const SwimPool& pool, std::size_t square, glm::vec3 at, float tile);
 
     /// The cleaning fluids a changing room may keep its pool clean with, mildest first.
     enum class PoolFluid : std::uint8_t

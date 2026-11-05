@@ -670,7 +670,15 @@ namespace rct3::simulation
                 todo.pop_back();
                 member.push_back(s);
                 if (s.kind == park::PoolKind::Water)
+                {
                     complex.water.push_back(middle(s.col, s.row, static_cast<float>(s.surface) + park::kPoolBrim));
+                    auto& open = complex.open.emplace_back();
+                    for (std::size_t i = 0; i < open.size(); ++i)
+                    {
+                        const auto mark = [](std::size_t step) { return (static_cast<float>(step) + 0.5f) / static_cast<float>(kOpenSteps) - 0.5f; };
+                        open[i] = park::pool_water_at(pools, s, mark(i % kOpenSteps), mark(i / kOpenSteps));
+                    }
+                }
                 else if (s.kind == park::PoolKind::Jacuzzi)
                     complex.spa.push_back(middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.spa_water));
                 else if (s.kind == park::PoolKind::Tile || s.kind == park::PoolKind::Path) // Not a diving board's, a slope or stairs

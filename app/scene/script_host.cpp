@@ -977,6 +977,9 @@ namespace rct3::scene
                     // In their swimwear, inside a pool complex or held or falling out of one.
                     if (simulation::in_swimwear(r, p.guest))
                         person["swimwear"] = true;
+                    // In a pool, in its water rather than on the paving round it.
+                    if (const auto* swimmer = r.try_get<simulation::Swimmer>(p.guest))
+                        person["in_water"] = swimmer->in_water;
                     // In a pool, on a sun lounger or under a shower.
                     if (const auto* swimmer = r.try_get<simulation::Swimmer>(p.guest); swimmer != nullptr && swimmer->place >= 0)
                         person["pool_extra"] = swimmer->use == simulation::PoolUse::Lounge ? "lounger" : swimmer->use == simulation::PoolUse::Shower ? "shower" : "other";

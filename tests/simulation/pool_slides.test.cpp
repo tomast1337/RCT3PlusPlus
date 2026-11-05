@@ -16,7 +16,7 @@ namespace
 {
     /// A path along row 0 from column 0 to 5, a changing room at (5, 1) opening on the paved square below it and
     /// three by two squares of water below that; and a slide for one rider at a time, from 2 m over the paved
-    /// square down into the far row of water, its station first.
+    /// square down into the near row of water, its riders flying on clear of the far wall, its station first.
     entt::entity slide_by_pool(Sandbox& park)
     {
         park.path({ 0, 0 }, { 5, 0 });
@@ -30,7 +30,7 @@ namespace
         auto& r = park.world().registry;
         const SwimPool& pool = r.get<SwimPool>(r.get<PoolDoor>(r.view<const PoolDoor>().front()).pool);
         const glm::vec3 top = pool.paved.front() + glm::vec3(0, 2, 0);
-        const glm::vec3 bottom = *std::ranges::max_element(pool.water, { }, &glm::vec3::z) + glm::vec3(0, 0.5f, 0);
+        const glm::vec3 bottom = *std::ranges::min_element(pool.water, { }, &glm::vec3::z) + glm::vec3(0, 0.5f, 0);
         const auto ride = park.flat_ride("Slide", { 4, 0 }, 100, { .capacity = 1 });
         Coaster train;
         train.points = { top, top + glm::normalize(bottom - top) * 2.0f, bottom };

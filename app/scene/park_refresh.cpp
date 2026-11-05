@@ -1789,7 +1789,7 @@ namespace rct3::scene
                     const auto* errand = r.try_get<simulation::Errand>(shown.guest);
                     const auto* door = errand != nullptr && r.valid(errand->target) ? r.try_get<simulation::PoolDoor>(errand->target) : nullptr;
                     const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
-                    constexpr float kLadderReach = 1.0f; ///< Chosen by eye: from a ladder's foot within which those climbing out use it
+                    constexpr float kLadderReach = 2.0f; ///< Chosen by eye: from a ladder's foot within which those climbing out use it, at the water's edge past the coping
                     shown.by_ladder = pool != nullptr && std::ranges::any_of(pool->ladders, [&](const glm::vec3& l) { return glm::distance(glm::vec2(l.x, l.z), glm::vec2(at.x, at.z)) < kLadderReach; });
                 }
                 shown.in_water = swimmer->in_water;

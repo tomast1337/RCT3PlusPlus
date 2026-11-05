@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/systems.hpp"
 
+#include "park/terrain_mesh.hpp"
 #include "profiling/profiler.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/coaster.hpp"
@@ -2244,6 +2245,15 @@ namespace rct3::simulation
         return std::min(static_cast<std::size_t>(pool.dirt.value * 6), std::size_t { 5 });
     }
 
+    bool open_water(const SwimPool& pool, std::size_t square, glm::vec3 at, float tile)
+    {
+        if (square >= pool.open.size())
+            return true;
+        const float steps = static_cast<float>(kOpenSteps);
+        const auto step = [&](float along) { return static_cast<std::size_t>(std::clamp((along / tile + 0.5f) * steps, 0.0f, steps - 1)); };
+        return pool.open[square][step(at.z - pool.water[square].z) * kOpenSteps + step(at.x - pool.water[square].x)];
+    }
+
     float Upkeep::downtime_share() const
     {
         int sum = 0;
@@ -3807,8 +3817,9 @@ namespace rct3::simulation
                 swimmer.left.value -= dt;
                 continue;
             }
-            // Across the ground, at the water's surface over a square of water and on the paving elsewhere: of the
-            // squares under them, the one nearest their height; off them, at the height they are going to.
+            // Across the ground, at the water's surface over open water and on the paving elsewhere, the coping round
+            // the water too: of the squares under them, the one nearest their height; off them, at the height they are
+            // going to.
             const glm::vec2 to { swimmer.goal.x - pose.position.x, swimmer.goal.z - pose.position.z };
             const float way = glm::length(to);
             const float pace = (swimmer.in_water ? kTuning.pools.swim.value : r.get<Stride>(g).speed.value) * dt;
@@ -3821,10 +3832,18 @@ namespace rct3::simulation
             const auto within = [&](const glm::vec3& w) { return std::abs(at.x - w.x) <= half && std::abs(at.y - w.z) <= half; };
             const auto under = [&](const std::vector<glm::vec3>& spots) {
                 const auto best = std::ranges::min_element(spots, { }, [&](const glm::vec3& w) { return within(w) ? std::abs(w.y - pose.position.y) : std::numeric_limits<float>::max(); });
-                return best != spots.end() && within(*best) ? std::optional<float>(best->y) : std::nullopt;
+                return best != spots.end() && within(*best) ? best : spots.end();
             };
-            const auto water = under(pool->water);
-            const auto paved = under(pool->paved);
+            const auto square = under(pool->water);
+            const auto pave = under(pool->paved);
+            std::optional<float> water;
+            std::optional<float> paved;
+            if (pave != pool->paved.end())
+                paved = pave->y;
+            if (square != pool->water.end() && open_water(*pool, static_cast<std::size_t>(square - pool->water.begin()), { at.x, 0, at.y }, paths.tile_size))
+                water = square->y;
+            else if (square != pool->water.end() && !paved)
+                paved = square->y - park::kPoolBrim * paths.level_height + kTuning.pools.deck;
             const bool in_spa = swimmer.to_spa && within(swimmer.goal);
             const bool wet = water && (!paved || std::abs(*water - pose.position.y) <= std::abs(*paved - pose.position.y));
             swimmer.in_water = wet || in_spa;
@@ -4014,7 +4033,7 @@ namespace rct3::simulation
                 continue;
             }
             const bool extra = out && pool->spa.size() + pool->extras.size() > 0 && random::chance(dice, kTuning.pools.extra.value);
-            const std::size_t pick = random::below(dice, extra ? pool->spa.size() + pool->extras.size() : out ? pool->paved.size() : pool->water.size());
+            std::size_t pick = random::below(dice, extra ? pool->spa.size() + pool->extras.size() : out ? pool->paved.size() : pool->water.size());
             swimmer.to_spa = extra && pick < pool->spa.size();
             if (extra)
             {
@@ -4023,9 +4042,16 @@ namespace rct3::simulation
             }
             else
             {
-                // Within a quarter tile of a square's middle: the water's cut corners leave no less.
+                // Within a quarter tile of a square's middle; in the water, a few tries for one clear of the paving
+                // round it, as a curved corner's square has only its open corner.
                 const float spread = 0.25f * paths.tile_size;
-                swimmer.goal = (out ? pool->paved : pool->water)[pick] + glm::vec3 { static_cast<float>(random::between(dice, -1.0, 1.0)) * spread, 0, static_cast<float>(random::between(dice, -1.0, 1.0)) * spread };
+                const auto near = [&](const glm::vec3& middle) { return middle + glm::vec3 { static_cast<float>(random::between(dice, -1.0, 1.0)) * spread, 0, static_cast<float>(random::between(dice, -1.0, 1.0)) * spread }; };
+                swimmer.goal = near((out ? pool->paved : pool->water)[pick]);
+                for (std::size_t tries = 0; !out && tries < 8 && !open_water(*pool, pick, swimmer.goal, paths.tile_size); ++tries)
+                {
+                    pick = random::below(dice, pool->water.size());
+                    swimmer.goal = near(pool->water[pick]);
+                }
             }
         }
 

@@ -280,7 +280,7 @@ TEST_CASE("swimmers lie on loungers and stand under showers, as many as they tak
         const std::size_t places = lounger ? kTuning.pools.lounger_places : kTuning.pools.shower_places;
         CHECK(spot.places == places);
         std::vector<entt::entity> guests;
-        for (int i = 0; i < 12; ++i)
+        for (int i = 0; i < 20; ++i)
             guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
         std::size_t most = 0, waiting = 0;
         for (int t = 0; t < 4 * static_cast<int>(kTuning.pools.stay.value); ++t)

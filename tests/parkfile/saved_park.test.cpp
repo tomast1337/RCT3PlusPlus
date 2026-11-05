@@ -332,6 +332,44 @@ TEST_CASE("a save keeps its swimmers in the pool of their changing room")
     CHECK(swimmer.waited.value == 3);
 }
 
+TEST_CASE("a loaded swimmer heads for no slide, the one they were saved heading for being another entity once loaded")
+{
+    using namespace simulation;
+    SimWorld world;
+    auto& r = world.registry;
+    const entt::entity room = r.create();
+    r.emplace<PoolDoor>(room, PoolDoor { .col = 2, .row = 3 });
+    const entt::entity slide = r.create();
+    const entt::entity dee = r.create();
+    r.emplace<Visitor>(dee);
+    r.emplace<Pose>(dee);
+    r.emplace<Needs>(dee);
+    r.emplace<Mood>(dee);
+    r.emplace<Wallet>(dee);
+    r.emplace<Errand>(dee, Errand { .kind = ErrandKind::Swimming, .target = room });
+    r.emplace<Swimmer>(dee, Swimmer { .changed = true, .left = { 42 }, .slide = slide, .room = room });
+
+    parkfile::SavedPark park = small_park();
+    park.people = parkfile::keep_people(world, { }, { });
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+    SimWorld loaded;
+    auto& l = loaded.registry;
+    // The saved slide's number now names something else.
+    for (int i = 0; i < 3; ++i)
+        static_cast<void>(l.create());
+    const entt::entity room2 = l.create();
+    l.emplace<PoolDoor>(room2, PoolDoor { .col = 2, .row = 3 });
+    const auto guests = parkfile::place_guests(loaded, *read->people);
+    REQUIRE(guests.size() == 1);
+    l.emplace<Errand>(guests[0]);
+    CHECK(parkfile::place_swimmers(loaded, *read->people, guests) == 1);
+    const Swimmer& swimmer = l.get<Swimmer>(guests[0]);
+    CHECK(swimmer.slide == entt::null);
+    CHECK(swimmer.room == entt::null);
+    CHECK(swimmer.left.value == 42);
+}
+
 TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animals and dung")
 {
     using namespace simulation;

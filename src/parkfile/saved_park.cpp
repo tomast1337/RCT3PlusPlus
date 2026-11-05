@@ -209,7 +209,10 @@ namespace rct3::parkfile
                 if (door.col == g.swim->room_col && door.row == g.swim->room_row)
                 {
                     r.get<Errand>(guests[i]) = { .kind = ErrandKind::Swimming, .target = room };
-                    r.emplace_or_replace<Swimmer>(guests[i], g.swim->swimmer);
+                    auto& swimmer = r.emplace_or_replace<Swimmer>(guests[i], g.swim->swimmer);
+                    // The slide they were headed for and the room they rode from are this run's entities, others
+                    // once loaded; they swim on and pick again.
+                    swimmer.slide = swimmer.room = entt::null;
                     auto& pose = r.get<Pose>(guests[i]);
                     pose.position = pose.was = g.position;
                     ++placed;

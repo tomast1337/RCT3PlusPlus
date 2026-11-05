@@ -11,16 +11,16 @@
 namespace rct3::park
 {
 
-    std::int32_t edge_turns(TileSide side) noexcept
+    ModelTurn edge_turns(Side side) noexcept
     {
-        const auto [dc, dr] = side_step(side);
+        const auto [dc, dr] = side.step();
         for (std::int32_t turns = 0; turns < 4; ++turns)
         {
             const glm::vec2 x = turned_x(turns);
             if (std::lround(x.x) == dc && std::lround(x.y) == dr)
-                return turns;
+                return { turns };
         }
-        return 0;
+        return { };
     }
 
     bool slope_falls(std::uint8_t slope) noexcept
@@ -28,24 +28,19 @@ namespace rct3::park
         return slope == 2 || slope == 5;
     }
 
-    glm::vec2 edge_lean(const save::TerrainGrid& grid, save::Tile tile, TileSide side)
+    glm::vec2 edge_lean(const save::TerrainGrid& grid, save::Tile tile, Side side)
     {
         const auto [col, row] = tile;
         if (!grid.contains(col, row))
             return { };
         const auto& h = grid.at(col, row).corners; // (x, z) corners: 0 at both low ends, 3 at both high
-        switch (side)
-        {
-            case TileSide::Back:
-                return { (h[1] - h[0]) / grid.tile_size_x, 0 };
-            case TileSide::Front:
-                return { (h[3] - h[2]) / grid.tile_size_x, 0 };
-            case TileSide::Left:
-                return { 0, (h[2] - h[0]) / grid.tile_size_z };
-            case TileSide::Right:
-                return { 0, (h[3] - h[1]) / grid.tile_size_z };
-        }
-        return { };
+        if (side == Side::kRowBefore)
+            return { (h[1] - h[0]) / grid.tile_size_x, 0 };
+        if (side == Side::kNextRow)
+            return { (h[3] - h[2]) / grid.tile_size_x, 0 };
+        if (side == Side::kColBefore)
+            return { 0, (h[2] - h[0]) / grid.tile_size_z };
+        return { 0, (h[3] - h[1]) / grid.tile_size_z };
     }
 
     QueueFences queue_fences(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::uint64_t last_id)
@@ -57,14 +52,13 @@ namespace rct3::park
                 continue;
             const bool on_ground = is_ground_queue(p);
             const float rise = on_ground ? 0.0f : path_rise(p.elevation->slope);
-            const auto in = side_of(p.queue->start_direction);
-            const auto out_side = side_of(p.queue->end_direction);
+            const auto in = stored_heading(p.queue->start_direction);
+            const auto out_side = stored_heading(p.queue->end_direction);
             // A slope is fenced along the way its deck faces, leaning as the deck rises, whichever way the
             // line runs over it.
-            const auto heading = stored_heading(p.direction);
-            const auto facing = side_of(p.direction);
-            const auto ahead = heading ? edge_height(p, grid, *heading) : std::nullopt;
-            const auto behind = heading ? edge_height(p, grid, heading->opposite()) : std::nullopt;
+            const auto facing = stored_heading(p.direction);
+            const auto ahead = facing ? edge_height(p, grid, *facing) : std::nullopt;
+            const auto behind = facing ? edge_height(p, grid, facing->opposite()) : std::nullopt;
             if (rise > 0 && (!facing || !ahead || !behind))
                 continue;
 
@@ -72,15 +66,15 @@ namespace rct3::park
             float low = static_cast<float>(p.elevation->quantised_height);
             if (rise > 0)
             {
-                const auto [dc, dr] = side_step(*facing);
+                const auto [dc, dr] = facing->step();
                 const float up = *ahead - *behind;
                 slope_lean = { up * static_cast<float>(dc) / grid.tile_size_x, up * static_cast<float>(dr) / grid.tile_size_z };
                 low = std::min(*ahead, *behind);
             }
 
-            for (const TileSide side : { TileSide::Back, TileSide::Right, TileSide::Front, TileSide::Left })
+            for (const Side side : kSidesFromRowBefore)
             {
-                if (rise > 0 ? (static_cast<int>(side) - static_cast<int>(*facing)) % 2 == 0 : side == in || side == out_side)
+                if (rise > 0 ? side.on_columns() == facing->on_columns() : side == in || side == out_side)
                     continue;
                 save::PlacedObject o;
                 o.id = ++last_id;
@@ -90,7 +84,7 @@ namespace rct3::park
                 o.overlay = p.queue->fence_overlay;
                 o.col = p.col;
                 o.row = p.row;
-                o.rotation = edge_turns(side);
+                o.rotation = edge_turns(side).value;
                 o.colours = p.queue->fence_colours;
                 glm::vec2 lean = slope_lean;
                 if (on_ground)

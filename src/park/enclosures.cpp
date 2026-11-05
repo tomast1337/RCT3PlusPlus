@@ -15,26 +15,23 @@ namespace rct3::park
 
     namespace
     {
-        constexpr std::array kSides { TileSide::Back, TileSide::Right, TileSide::Front, TileSide::Left };
-
         /// The side of a tile a piece turned `turns` quarter turns fences.
-        TileSide side_of(std::int32_t turns) noexcept
+        Side side_of(std::int32_t turns) noexcept
         {
-            for (const TileSide side : kSides)
-                if (edge_turns(side) == ((turns % 4) + 4) % 4)
+            for (const Side side : kSidesFromRowBefore)
+                if (edge_turns(side) == ModelTurn::from(turns))
                     return side;
-            return TileSide::Back;
+            return Side::kRowBefore;
         }
 
         /// The tile across `side` of (`col`, `row`).
-        save::Tile across(std::int32_t col, std::int32_t row, TileSide side) noexcept
+        save::Tile across(std::int32_t col, std::int32_t row, Side side) noexcept
         {
-            const auto [dc, dr] = side_step(side);
-            return { col + dc, row + dr };
+            return side.beyond({ col, row });
         }
 
         /// The fence along `side` of (`col`, `row`) in `map`, if one stands there.
-        std::optional<std::string_view> fenced(const save::EnclosureMap& map, std::int32_t col, std::int32_t row, TileSide side)
+        std::optional<std::string_view> fenced(const save::EnclosureMap& map, std::int32_t col, std::int32_t row, Side side)
         {
             const std::int32_t own = map.at(col, row);
             const save::Tile other = across(col, row, side);
@@ -70,7 +67,7 @@ namespace rct3::park
                     open.pop_back();
                     ++area.size;
                     ++area.was[static_cast<std::size_t>(map.tiles[static_cast<std::size_t>(k)])];
-                    for (const TileSide side : kSides)
+                    for (const Side side : kSidesFromRowBefore)
                     {
                         const save::Tile t = across(k % map.cols, k / map.cols, side);
                         const std::int32_t other = map.at(t.col, t.row);
@@ -251,7 +248,7 @@ namespace rct3::park
         {
             for (std::int32_t col = 0; col < std::max(before.cols, after.cols); ++col)
             {
-                for (const TileSide side : kSides)
+                for (const Side side : kSidesFromRowBefore)
                 {
                     const auto was = fenced(before, col, row, side);
                     const auto is = fenced(after, col, row, side);

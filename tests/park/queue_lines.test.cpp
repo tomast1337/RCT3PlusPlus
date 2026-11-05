@@ -196,5 +196,5 @@ TEST_CASE("a queue over steps laid towards the entrance turns round whole, its s
     const auto spots = queue_sign_spots(paths, g);
     REQUIRE(spots.size() == 1);
     CHECK(spots[0].col == 1);
-    CHECK(spots[0].turn.value == edge_turns(TileSide::Left));
+    CHECK(spots[0].turn == edge_turns(Side::kColBefore));
 }

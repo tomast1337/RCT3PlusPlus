@@ -45,10 +45,10 @@ namespace rct3::park
             if (head == tiles.end())
                 continue;
             const save::PathTile& p = paths[*head];
-            const auto side = side_of(p.queue->start_direction);
+            const auto side = stored_heading(p.queue->start_direction);
             if (!side)
                 continue;
-            spots.push_back({ line, p.col, p.row, edge_height(p, grid, *stored_heading(p.queue->start_direction)).value_or(0), ModelTurn { edge_turns(*side) } });
+            spots.push_back({ line, p.col, p.row, edge_height(p, grid, *side).value_or(0), edge_turns(*side) });
         }
         return spots;
     }

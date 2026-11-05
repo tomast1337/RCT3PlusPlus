@@ -85,7 +85,7 @@ namespace rct3::park
         std::vector<std::string> styles;                     ///< System names, in the order first met
         std::vector<std::int16_t> tiles;                     ///< Row by row: index into styles, or kNoPath
         std::map<std::size_t, std::vector<float>> raised;    ///< By tile index: heights the raised paths there end at
-        std::map<std::size_t, std::uint8_t> queues;          ///< By tile index: ground queue's open sides, bit per TileSide
+        std::map<std::size_t, std::uint8_t> queues;          ///< By tile index: ground queue's open sides, as Side::bit
         EdgeWalls walls;                                     ///< That paths do not join across; set by the caller
         std::vector<std::uint16_t> pavings;                  ///< Row by row: 1 + the paving a tile is laid by, 0 for a path of the park; empty when none
         std::set<std::pair<std::size_t, std::size_t>> links; ///< Tile index pairs, both ways, that paving joins across

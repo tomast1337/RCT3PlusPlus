@@ -2,6 +2,7 @@
 #include "park/ground_queues.hpp"
 
 #include "park/ground_paths.hpp"
+#include "park/path_decks.hpp"
 
 #include <doctest/doctest.h>
 
@@ -52,13 +53,11 @@ namespace
 
 TEST_CASE("stored directions name the sides they point out of")
 {
-    CHECK(side_of(kMinusX) == TileSide::Left);
-    CHECK(side_of(kPlusX) == TileSide::Right);
-    CHECK(side_of(kMinusZ) == TileSide::Back);
-    CHECK(side_of(kPlusZ) == TileSide::Front);
-    CHECK_FALSE(side_of(save::kNoDirection).has_value());
-    CHECK(side_step(TileSide::Right) == std::array<int, 2> { 1, 0 });
-    CHECK(side_step(TileSide::Back) == std::array<int, 2> { 0, -1 });
+    CHECK(stored_heading(kMinusX) == Side::kColBefore);
+    CHECK(stored_heading(kPlusX) == Side::kNextCol);
+    CHECK(stored_heading(kMinusZ) == Side::kRowBefore);
+    CHECK(stored_heading(kPlusZ) == Side::kNextRow);
+    CHECK_FALSE(stored_heading(save::kNoDirection).has_value());
 }
 
 TEST_CASE("a queue tile open on opposite sides is straight, turned to their axis")
@@ -82,8 +81,9 @@ TEST_CASE("a turn is turned so its open sides face the start and end")
     {
         for (const std::uint8_t end : { kMinusX, kPlusX, kMinusZ, kPlusZ })
         {
-            const int a = static_cast<int>(*side_of(start));
-            const int b = static_cast<int>(*side_of(end));
+            // Counted from the picture's top, towards the row before.
+            const int a = stored_heading(start)->turned(-Side::kRowBefore.value).value;
+            const int b = stored_heading(end)->turned(-Side::kRowBefore.value).value;
             if (a == b || (a + 2) % 4 == b)
                 continue;
             const QueueShape s = queue_shape(start, end);

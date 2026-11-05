@@ -54,7 +54,7 @@ TEST_CASE("a line's sign stands on the tile no other leads into, facing the way 
     CHECK(spots[0].line == 7);
     CHECK(spots[0].col == last.col);
     CHECK(spots[0].row == last.row);
-    CHECK(spots[0].turn.value == edge_turns(TileSide::Front)); // Its start side, +row
+    CHECK(spots[0].turn == edge_turns(Side::kNextRow)); // Its start side, +row
 
     // Tiles of no line, and a line of tiles all leading into each other, get none.
     paths.back().queue->queue_line_ref = 0;

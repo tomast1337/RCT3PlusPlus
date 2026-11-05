@@ -3,6 +3,7 @@
 
 #include "park/ground_queues.hpp"
 #include "park/object_placement.hpp"
+#include "park/path_decks.hpp"
 
 #include <algorithm>
 #include <array>
@@ -80,8 +81,8 @@ namespace rct3::park
                 auto& sides = map.queues[at];
                 for (const std::uint8_t d : { p.queue->start_direction, p.queue->end_direction })
                 {
-                    if (const auto side = side_of(d))
-                        sides = static_cast<std::uint8_t>(sides | 1u << static_cast<unsigned>(*side));
+                    if (const auto side = stored_heading(d))
+                        sides = static_cast<std::uint8_t>(sides | side->bit());
                 }
                 continue;
             }
@@ -320,26 +321,25 @@ namespace rct3::park
         const auto [col, row] = tile;
         if (!grid.contains(col, row) || !grid.contains(col + dc, row + dr))
             return has_ground_path(map, { col + dc, row + dr });
-        // This tile's two corners on the shared edge, and the side it is as path_decks numbers them.
+        // This tile's two corners on the shared edge, and the side it is.
         const auto& corners = grid.at(col, row).corners;
         const std::size_t a = dc > 0 ? 1 : dr > 0 ? 2 : 0;
         const std::size_t b = dc != 0 ? a + 2 : a + 1;
         const float edge = (corners[a] + corners[b]) / 2;
-        const std::uint8_t side = dc > 0 ? 1 : dc < 0 ? 3 : dr > 0 ? 0 : 2;
+        const Side side = dc > 0 ? Side::kNextCol : dc < 0 ? Side::kColBefore : dr > 0 ? Side::kNextRow : Side::kRowBefore;
         if (!may_join(map, tile, { col + dc, row + dr }))
             return false;
         // Paving runs on within itself and into its links whatever stands between: the ride's fence is its edge.
         const std::size_t here = static_cast<std::size_t>(row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(col);
         const bool paved = !map.pavings.empty() && (map.pavings[here] != 0 || map.pavings[here + static_cast<std::size_t>(dr * map.width + dc)] != 0);
-        const bool wall = !paved && walled(map.walls, tile, side, edge);
+        const bool wall = !paved && walled(map.walls, tile, static_cast<std::uint8_t>(side.value), edge);
         if (has_ground_path(map, { col + dc, row + dr }))
             return !wall;
         const std::size_t there = static_cast<std::size_t>(row + dr) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(col + dc);
         if (const auto queue = map.queues.find(there); queue != map.queues.end())
         {
             // The neighbour's side facing back towards this tile.
-            const TileSide facing = dc > 0 ? TileSide::Left : dc < 0 ? TileSide::Right : dr > 0 ? TileSide::Back : TileSide::Front;
-            if ((queue->second & 1u << static_cast<unsigned>(facing)) != 0)
+            if ((queue->second & side.opposite().bit()) != 0)
                 return true;
         }
         const auto found = map.raised.find(there);

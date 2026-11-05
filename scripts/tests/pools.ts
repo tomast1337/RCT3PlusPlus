@@ -531,26 +531,46 @@ cash = park.cash()!;
 await pointer.click(...on_view(c0 + 4.5, r0 + 2.5));
 await frames(3);
 expect(count("StairsBase") === 1 && count("StairsTop") === 1 && park.cash()! < cash, `a staircase, paid for, not ${count("StairsBase")}`);
+// A ramp from the same column, against a side of the paved square past the staircase.
+const ramp = ui.children("pool_panel/body")!.find((n) => n !== "paths" && n !== "Icon_Default_SpiralStairs")!;
+await ui.click(`pool_panel/body/${ramp}`);
+await frames(2);
+const before_ramp = pieces().length;
+cash = park.cash()!;
+await pointer.click(...on_view(c0 + 5.5, r0 + 2.5));
+await frames(3);
+expect(pieces().length > before_ramp && park.cash()! < cash, `a ramp, paid for, not ${pieces().length - before_ramp} pieces more`);
 build.stop();
 await frames(5);
 await screenshot("pool_raised_stairs");
 
-// Pool paths from the paths tab: an L of path beside the raised squares, a slope at its end.
+// Pool paths from the paths tab: an L of path beside the raised squares, then the path panel's controls going on
+// from its end: a slope up, a flat piece after it, and that piece taken away again.
 camera.look({ col: c0 + 6, row: r0 + 4 }, { col: c0 + 6, row: r0 + 13, up: 9 });
 await frames(10);
 cash = park.cash()!;
 await open_editor();
 await ui.click("pool_panel/Pool_PathPanel");
 await until(() => ui.children("pool_panel/body")?.includes("paths") === true, 120, "the paths page");
+expect(ui.children("pool_panel/body/paths")!.length === 9, `the path controls, not ${JSON.stringify(ui.children("pool_panel/body/paths"))}`);
 await screenshot("pool_panel_paths");
 await pointer.drag(on_view(c0 + 6.5, r0 + 2.5), on_view(c0 + 8.5, r0 + 5.5), 6);
 await frames(3);
 expect(count("PathCorner") === 1 && count("PathStraight") === 5 && park.cash()! < cash, `an L of path, paid for, not ${count("PathCorner")} corners and ${count("PathStraight")} straights`);
-await ui.click("pool_panel/body/paths/slope");
-await frames(2);
-await pointer.click(...on_view(c0 + 8.5, r0 + 6.5));
+await ui.click("pool_panel/body/paths/Path_UpwardSlope");
+await ui.click("pool_panel/body/paths/Path_Straight");
 await frames(3);
-expect(count("PathSlope") === 1, `a slope, not ${count("PathSlope")}`);
+const slope = pieces().find((o) => o.symbol === "PathSlope");
+expect(slope !== undefined && slope.col === c0 + 8 && slope.row === r0 + 6, `a slope on from the L's end, not ${JSON.stringify(slope)}`);
+await ui.click("pool_panel/body/paths/Path_NoSlope");
+await ui.click("pool_panel/body/paths/Path_Straight");
+await frames(3);
+const above = pieces().find((o) => o.symbol.startsWith("Path") && o.col === c0 + 8 && o.row === r0 + 7);
+expect(above !== undefined && above.height! > slope!.height!, `a path past the slope's top, not ${JSON.stringify(above)}`);
+await screenshot("pool_paths_trail");
+await ui.click("pool_panel/body/paths/PathEditor_Delete");
+await frames(3);
+expect(!pieces().some((o) => o.col === c0 + 8 && o.row === r0 + 7), "the last piece taken away");
 build.stop();
 await frames(5);
 await screenshot("pool_paths");

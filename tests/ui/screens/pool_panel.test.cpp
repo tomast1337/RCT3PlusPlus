@@ -64,13 +64,19 @@ TEST_CASE("a tab clicked again keeps its page open")
     CHECK(f.desktop.root().find("pools/body/room").has_value());
 }
 
-TEST_CASE("the paths tab puts paths out, its buttons slopes and stairs, and the editor's tab water again")
+TEST_CASE("the paths tab puts paths out, its controls pressed one at a time, and the editor's tab water again")
 {
     Fixture f;
     f.click("pools/Pool_PathPanel");
     CHECK(f.panel->editor().mode == PoolMode::Path);
-    f.click("pools/body/paths/stairs");
-    CHECK(f.panel->editor().mode == PoolMode::PathStairs);
+    (void)f.panel->take_change();
+    f.click("pools/body/paths/Path_UpwardSteps");
+    CHECK(f.panel->take_path_control() == std::size_t { 7 });
+    CHECK_FALSE(f.panel->take_path_control());
+    CHECK(f.panel->take_change());
+    f.click("pools/body/paths/Path_Straight");
+    CHECK(f.panel->take_path_control() == std::size_t { 1 });
+    CHECK_FALSE(f.panel->take_change());
     f.click("pools/Pool_PoolPanel");
     CHECK(f.panel->editor().mode == PoolMode::Water);
 }

@@ -10,16 +10,17 @@
 // laying tiles and the grid switch, with the delete tool at the right end. Water, tiles and delete are one
 // choice, the depths another, the edges a third; picking an edge puts the water out, as in the game. The extras and
 // changing room pages show their pictures on round buttons in two rows; picking one puts it out instead of the
-// editor's tool, and opening the editor's tab brings that back. The paths page lays pool paths along an L from
-// where the drag began, or a slope or stairs on one square, turned with the turn keys, and has the delete tool
-// too; a column at its right end holds the ways between levels (ramps and the spiral staircase), picked like the
-// extras. The disc shows the picture of what the tool lays now. The band along the strip's top tells what the
+// editor's tool, and opening the editor's tab brings that back. The paths page has the path panel's controls
+// (footpath_panel.hpp) but its cut switch: three arrows that turn left, go straight on or turn right, five slopes
+// from steps down to steps up, and a button that takes the last piece away; a column at its right end holds the
+// ways between levels (ramps and the spiral staircase), picked like the extras. The disc shows the picture of what the tool lays now. The band along the strip's top tells what the
 // button under the pointer does, else the tab's help.
 //
 // Tabs and buttons whose feature is not built are greyed. The panel keeps its choices while hidden, so it opens
 // again as it was left. It keeps no park state; the owner hears through take_change() what the player chose.
 #pragma once
 
+#include "ui/screens/footpath_panel.hpp"
 #include "ui/screens/info_panel.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
@@ -37,8 +38,15 @@
 namespace rct3::ui
 {
 
+    /// The paths page's controls: the path panel's, in their order, but its cut switch.
+    inline constexpr std::size_t kPoolPathControls = kFootpathControls - 1;
+
     struct PoolPanelStyle
     {
+        /// Each path control's picture when it can be used and when it cannot, and its help (strings keys).
+        std::array<std::string, kPoolPathControls> path_icons;
+        std::array<std::string, kPoolPathControls> path_unusable_icons;
+        std::array<std::string, kPoolPathControls> path_help;
         CodedInfoPanel coded;
         std::string tab_face;   ///< Behind each tab's icon
         std::string close_icon; ///< On the close button
@@ -65,10 +73,7 @@ namespace rct3::ui
         Water,
         Tiles,
         Delete,
-        // The paths page's.
-        Path,
-        PathSlope,
-        PathStairs,
+        Path, ///< The paths page's
     };
 
     /// The editor's choices.
@@ -143,6 +148,18 @@ namespace rct3::ui
             return page_;
         }
 
+        /// Which of the paths page's controls can be used, and which of them picks the slope chosen.
+        void set_path_controls(const std::array<bool, kPoolPathControls>& usable, std::size_t slope_control)
+        {
+            path_usable_ = usable;
+            path_slope_ = slope_control;
+        }
+        /// The paths page's control pressed since the last call, by its index.
+        [[nodiscard]] std::optional<std::size_t> take_path_control()
+        {
+            return std::exchange(path_control_now_, std::nullopt);
+        }
+
         /// True once after the player changed what the tool does.
         [[nodiscard]] bool take_change()
         {
@@ -190,9 +207,12 @@ namespace rct3::ui
         std::array<Button*, 3> modes_ { };  ///< Water, tiles, delete
         std::array<Button*, 3> depths_ { }; ///< Shallow, normal, deep
         std::array<Button*, 4> edges_ { };  ///< Straight, diagonal, tight, loose
-        // The paths' page: paths, slopes, stairs and the delete tool.
+        // The paths' page.
         Widget* paths_page_ = nullptr;
-        std::array<Button*, 4> path_modes_ { };
+        std::array<Button*, kPoolPathControls> path_controls_ { };
+        std::array<bool, kPoolPathControls> path_usable_ { };
+        std::size_t path_slope_ = 5; ///< The control of the slope chosen
+        std::optional<std::size_t> path_control_now_;
         Button* grid_ = nullptr;
         Button* snap_ = nullptr;
         Spinner* height_ = nullptr;

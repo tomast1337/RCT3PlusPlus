@@ -315,6 +315,36 @@ TEST_CASE("pools: a pool path's piece follows the paths joining it, slopes by th
     CHECK(pool_refund(kPrices, { .kind = PoolKind::PathStairs, .depth = 0 }) == -9);
 }
 
+TEST_CASE("pools: a trail lays the next pool path piece from where its last one ended, its slope's foot at the low end")
+{
+    FootpathBuilder trail;
+    CHECK_FALSE(next_pool_path(trail));
+    start_at(trail, { 1, 0 });
+    trail.start_height = 4;
+    trail.trail.push_back({ .spot = { 1, 0 }, .laid = 1, .height = 4 });
+    // Flat on along the rows, then up a slope: its foot towards the trail, its top a unit higher.
+    auto next = next_pool_path(trail);
+    REQUIRE(next);
+    CHECK(next->square.col == 1);
+    CHECK(next->square.row == 1);
+    CHECK(next->square.kind == PoolKind::Path);
+    CHECK(next->end == 4);
+    trail.slope = PathSlope::Up;
+    next = next_pool_path(trail);
+    CHECK(next->square.kind == PoolKind::PathSlope);
+    CHECK(next->square.surface == 4);
+    CHECK(next->square.turn == 2);
+    CHECK(next->end == 5);
+    // Down steps from a height of 5: their foot ahead, two units lower.
+    trail.trail.back().height = 5;
+    trail.slope = PathSlope::SteepDown;
+    next = next_pool_path(trail);
+    CHECK(next->square.kind == PoolKind::PathStairs);
+    CHECK(next->square.surface == 3);
+    CHECK(next->square.turn == 0);
+    CHECK(next->end == 3);
+}
+
 TEST_CASE("pools: each square costs its kind's price and its depth's")
 {
     CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Water, .depth = 2 }) == 100 + 2 * 300);

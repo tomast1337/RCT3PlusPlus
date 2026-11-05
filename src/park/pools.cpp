@@ -103,10 +103,10 @@ namespace rct3::park
         /// The parts `square` offers extras.
         std::uint32_t offered(const PoolMap& map, const PoolSquare& square) noexcept
         {
+            // A paved square offers a change of level at every side, so a ramp may go against any of them.
+            // shortcut: also where nothing on the other side is higher or lower; refuse those once it shows.
             if (square.kind == PoolKind::Tile)
-                // shortcut: a paved square offers no change of level; give it the sides that meet a square
-                // a level up or down once pools have levels.
-                return kPavedMiddle | (0xfu << kSides);
+                return kPavedMiddle | (0xfu << kSides) | (0xfu << kStepAt);
             if (square.kind != PoolKind::Water)
                 return 0;
             const std::uint8_t water = water_around(map, square);
@@ -246,6 +246,21 @@ namespace rct3::park
         if (found == squares.end())
             return std::nullopt;
         return *found;
+    }
+
+    std::optional<PoolPathPiece> next_pool_path(const FootpathBuilder& builder)
+    {
+        const auto spot = next_spot(builder);
+        if (!spot)
+            return std::nullopt;
+        const std::int32_t from = builder.trail.empty() ? builder.start_height.value_or(0) : builder.trail.back().height;
+        const PathSlope slope = builder.slope;
+        const bool steep = slope == PathSlope::SteepUp || slope == PathSlope::SteepDown;
+        const bool up = slope == PathSlope::Up || slope == PathSlope::SteepUp;
+        const std::int32_t rise = slope == PathSlope::Flat ? 0 : steep ? kPathStairsRise : kPathSlopeRise;
+        const std::int32_t end = up ? from + rise : from - rise;
+        const PoolKind kind = rise == 0 ? PoolKind::Path : steep ? PoolKind::PathStairs : PoolKind::PathSlope;
+        return PoolPathPiece { .square = { .col = spot->col, .row = spot->row, .kind = kind, .surface = std::min(from, end), .depth = 0, .turn = up ? (builder.heading + 2) & 3 : builder.heading }, .end = end };
     }
 
     PoolExtraFit pool_extra_fit(std::string_view words)

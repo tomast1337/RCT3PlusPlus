@@ -298,7 +298,9 @@ namespace rct3::scene
         park::ParkCamera preview_camera;
         render::TextureHandle preview_target;
         std::uint32_t preview_pixels = 0;
-        std::optional<std::size_t> room_placed; ///< Of the pools' rooms, one just placed, its window to open
+        std::optional<std::size_t> room_placed;                        ///< Of the pools' rooms, one just placed, its window to open
+        park::FootpathBuilder trail;                                   ///< The paths page's: the heading, the slope and the pool paths laid along it
+        std::vector<std::optional<std::array<float, 4>>> trail_ground; ///< By trail step, the ground's corners before its piece, when known
     };
 
     /// An amount of money floating up from a point of the park (scene/park_view.hpp).

@@ -32,6 +32,7 @@
 // before.
 #pragma once
 
+#include "park/footpath_builder.hpp"
 #include "save/model/world.hpp"
 
 #include <array>
@@ -86,6 +87,19 @@ namespace rct3::park
         std::int32_t turn = 0;    ///< The side a high diving board faces, or a staircase's foot
         PoolEdge edge = PoolEdge::Straight;
     };
+
+    /// A pool path piece as a trail lays it, and the height it is left at.
+    struct PoolPathPiece
+    {
+        PoolSquare square;
+        std::int32_t end = 0;
+    };
+
+    /// The pool path piece `builder` (park/footpath_builder.hpp) lays next: on the square after its last step,
+    /// in its heading, entered at the height that step ended at (its start height when it has none). Flat it is
+    /// a path; a slope or steps have their foot on the side it is entered by going up, and on the side it is left
+    /// by going down. None before the trail has a start.
+    [[nodiscard]] std::optional<PoolPathPiece> next_pool_path(const FootpathBuilder& builder);
 
     /// A high diving board climbs in levels of this many units: a stretch of ladder and a board at each.
     inline constexpr std::int32_t kBoardLevel = 3;

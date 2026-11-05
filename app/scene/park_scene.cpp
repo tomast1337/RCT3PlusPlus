@@ -2156,8 +2156,8 @@ namespace rct3::scene
         desktop.layout({ 0, 0, static_cast<float>(extent.width) / scale, static_cast<float>(extent.height) / scale });
 
         // Escape asks to leave, as the guide's quit does, unless the question is already open: then it
-        // answers it. An open build list takes it first, to empty its search and then to close; a path trail
-        // going on is let go before anything closes.
+        // answers it. An open build list takes it first, to empty its search and then to close; a tool out is
+        // put away, and a path trail going on let go, before anything closes.
         const bool asking = desktop.root().find(kQuestionName).has_value();
         ui::KeyboardState keys = keyboard;
         if (!asking && !build_list_open(desktop.root()))
@@ -2170,6 +2170,15 @@ namespace rct3::scene
                 stop_riding(scene);
             else if (!escape.empty() && tools && tools->open_menu())
                 tools->close_menu();
+            else if (!escape.empty() && (ride_placing(scene) || scene.structures.tool != StructureTools::Tool::None || scene.deleting.tool != DeleteTools::Tool::None || scene.pooling.item || scene.enclosing.item || land_tool(scene)))
+            {
+                stop_ride_placing(scene);
+                stop_structure_tools(scene);
+                stop_deleting(scene);
+                stop_pooling(scene);
+                stop_enclosing(scene);
+                stop_land_tools(scene);
+            }
             else if (!escape.empty() && !drop_footpath_trail(scene) && !close_top_management_window(desktop))
                 ask_leave(scene, *assets.strings, assets.palette);
             keys.presses.erase(escape.begin(), escape.end());
@@ -2405,8 +2414,8 @@ namespace rct3::scene
             }
             if (input.right || input.middle)
                 scene.press.reset();
-            // A right click deletes what is under the pointer with the tools that build things one by one, as the
-            // delete menu's tool does, and the tool stays out; the other tools are put away.
+            // A right click deletes what is under the pointer with the tools that build or place things one by one, as
+            // the delete menu's tool does, and the tool stays out; the other tools are put away. Escape puts any away.
             if (input.right && !scene.right_press && !over)
                 scene.right_press = pointer.position;
             else if (!input.right && scene.right_press)
@@ -2417,8 +2426,6 @@ namespace rct3::scene
                 const bool still = std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack;
                 if (!still)
                     ;
-                else if (ride_placing(scene) && scene.placing.step != RidePlacing::Step::Scenery)
-                    stop_ride_placing(scene);
                 else if (scene.structures.tool != StructureTools::Tool::None)
                     stop_structure_tools(scene);
                 else if (scene.deleting.tool == DeleteTools::Tool::Area)

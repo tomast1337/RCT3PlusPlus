@@ -9,7 +9,7 @@
 // Placing: a load window lists the structures, ours and the original game's. The one picked follows the
 // pointer as a see-through ghost, centred on the tile pointed at, on the ground there; the turn keys and the
 // panel's button turn it a quarter, and Shift raises and sinks it. A click builds every item if it fits and the
-// park can pay what they cost together, and the tool stays out for another. A right click puts it away.
+// park can pay what they cost together, and the tool stays out for another. A right click or Escape puts it away.
 #pragma once
 
 #include "park/object_mesh.hpp"

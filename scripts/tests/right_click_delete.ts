@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// A still right click deletes what is under the pointer while a tool that builds things one by one is out, and the
-// tool stays out: a pool square and a pool path with the pool tools, refunded as the pool delete tool refunds them;
-// a tree with the tree tool, and a path with the path panel's controls. A right drag turns the camera and deletes
-// nothing.
+// A still right click deletes what is under the pointer while a tool that builds or places things one by one is out,
+// and the tool stays out: a pool square and a pool path with the pool tools, refunded as the pool delete tool refunds
+// them; a tree with the tree tool or a ride being placed, and a path with the path panel's controls. A right drag
+// turns the camera and deletes nothing. Escape puts each tool away.
 //
 //   ./nob script scripts/tests/right_click_delete.ts -- --no-intro --no-audio --no-simulate --seed 1
 
@@ -116,8 +116,103 @@ log("tree removal", park.cash()! - cash);
 expect(trees() === 0, "the tree deleted by a right click");
 expect(build.placing() !== undefined, "the tree tool still out");
 await screenshot("right_click_tree_after");
-build.stop();
+keys.press("Escape");
 await frames(2);
+expect(build.placing() === undefined, "the tree tool put away by Escape");
+
+// With a ride being placed, a right click deletes the tree pointed at and the ride's ghost stays; Escape puts it away.
+const plant = async () => {
+    expect(build.pick("Style/Vanilla/Style", "Common_Linden_2"), "a tree in the scenery lists");
+    await frames(2);
+    pointer.move(tx, ty);
+    await frames(3);
+    await pointer.click(tx, ty);
+    await frames(3);
+    keys.press("Escape");
+    await frames(2);
+    expect(trees() === 1, `a tree planted again, not ${trees()}`);
+};
+await plant();
+const ride = build.flatRides()![0];
+expect(build.pick(ride.overlay, ride.symbol), `${ride.symbol} picked`);
+await frames(2);
+await pointer.click(tx, ty - 0.03, "right");
+await frames(3);
+expect(trees() === 0, "the tree deleted by a right click while placing a ride");
+expect(build.placing()?.step === "ride", "the ride still being placed");
+keys.press("Escape");
+await frames(2);
+expect(build.placing() === undefined, "the ride's placing put away by Escape");
+
+// Escape puts every other tool away too: the pool tool, the land tools, both delete tools, the fence tool and the
+// structure picking out tool. A tool menu left open after picking from it closes on the first Escape.
+const escape = async (item?: string) => {
+    if (item && ui.find(item)) {
+        keys.press("Escape");
+        await frames(2);
+        expect(ui.find(item) === undefined, `the menu of ${item} closed by Escape first`);
+    }
+    keys.press("Escape");
+    await frames(2);
+};
+if (!ui.find("tools/Rides/Obj_Pools"))
+    await ui.click(`tools/Rides/${ui.children("tools/Rides")![0]}`);
+await ui.click("tools/Rides/Obj_Pools");
+await until(() => ui.find("pool_panel") !== undefined, 120, "the pool panel");
+expect(build.pick(kPool, "Pool_PlaceTiles"), "the pool tiles");
+await frames(2);
+await escape("tools/Rides/Obj_Pools");
+expect(ui.find("pool_panel") === undefined, "the pool tool put away by Escape");
+
+if (!ui.find("tools/Land/Land_Brush_Height"))
+    await ui.click("tools/Land/Land");
+await ui.click("tools/Land/Land_Brush_Height");
+await frames(2);
+expect(ui.find("land_panel") !== undefined, "the shaping tool's panel");
+await escape("tools/Land/Land_Brush_Height");
+expect(ui.find("land_panel") === undefined, "the shaping tool put away by Escape");
+
+if (!ui.find("tools/Delete/GUI2_DeleteSelection"))
+    await ui.click("tools/Delete/Obj_Delete");
+await ui.click("tools/Delete/GUI2_DeleteSelection");
+await frames(2);
+expect(ui.find("delete_area") !== undefined, "the area delete panel");
+await escape("tools/Delete/GUI2_DeleteSelection");
+expect(ui.find("delete_area") === undefined, "the area delete tool put away by Escape");
+
+await plant();
+if (!ui.find("tools/Delete/GUI2_DeleteSingleItem"))
+    await ui.click("tools/Delete/Obj_Delete");
+await ui.click("tools/Delete/GUI2_DeleteSingleItem");
+await frames(2);
+await escape("tools/Delete/GUI2_DeleteSingleItem");
+await pointer.click(tx, ty - 0.03);
+await frames(3);
+expect(trees() === 1, "the tree left by a click once Escape put the delete tool away");
+await ui.click("info/close").catch(() => undefined);
+
+expect(build.pick("Enclosures/Fences/Wood/Wood_Stub", "Wood"), "the wooden fence in the enclosure list");
+await frames(2);
+keys.press("Escape");
+await frames(2);
+const [fx, fy] = on_view(c0 + 0.5, r0 + 5.5);
+pointer.move(fx, fy);
+await frames(2);
+pointer.press();
+pointer.move(...on_view(c0 + 2.5, r0 + 5.5));
+await frames(3);
+const fencing = build.enclosing();
+pointer.release();
+await frames(2);
+expect(fencing === undefined, "no fence drawn once Escape put the fence tool away");
+
+await ui.click("tools/Scenery/Obj_Scenery");
+await ui.click("tools/Scenery/SavedSelection_SubMenu");
+await ui.click("tools/Scenery/SavedSelection_Grab");
+await frames(2);
+expect(ui.find("structure_grab") !== undefined, "the picking out panel");
+await escape("tools/Scenery/SavedSelection_Grab");
+expect(ui.find("structure_grab") === undefined, "the picking out tool put away by Escape");
 
 // A level path of the park, in sight.
 const paths = map.paths().filter((p) => !p.raised && !p.queue && !taken_by_objects.has(`${p.col},${p.row}`));

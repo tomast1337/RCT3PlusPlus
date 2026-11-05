@@ -55,6 +55,18 @@ async function click_tool(tool: string): Promise<void> {
 }
 const objects = map.objects().length;
 park.setTemperature(28);
+// Squares stacked on a tile, the decks' heights and the ground under them, to find again after loading.
+const stacks = () => {
+    const decks = new Map<string, Set<number>>();
+    for (const o of map.objects().filter((o) => o.overlay === kPool && (o.symbol === "SolidTop" || o.symbol === "Base" || o.symbol === "StairsBase")))
+        decks.set(`${o.col},${o.row}`, (decks.get(`${o.col},${o.row}`) ?? new Set()).add(o.height!));
+    return JSON.stringify([...decks].filter(([, h]) => h.size > 1).sort().map(([k, h]) => {
+        const [col, row] = k.split(",").map(Number);
+        return [k, [...h].sort((a, b) => a - b), map.tile(col, row)!.corners];
+    }));
+};
+const saved_stacks = stacks();
+log("stacked tiles", saved_stacks);
 await click_tool("Files");
 await ui.click("tools/Files/File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
@@ -72,6 +84,7 @@ await ui.click("park_files/content/open");
 await until(() => park.loaded() && park.weatherLook().temperature > 20, 1200, "the saved park");
 await frames(10);
 const again = map.objects().filter((o) => o.overlay === kPool).length;
+expect(stacks() === saved_stacks, `the stacked squares and the ground under them as saved, ${saved_stacks}, not ${stacks()}`);
 expect(again === pieces.length, `${pieces.length} pool pieces after loading, not ${again}`);
 expect(map.objects().length === objects, `${objects} objects after loading, not ${map.objects().length}`);
 // Its swimmers saved with it, still in the water.

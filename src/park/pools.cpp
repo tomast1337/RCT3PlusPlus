@@ -21,7 +21,7 @@ namespace rct3::park
         constexpr WallStack kEdge { "EdgeBot", "EdgeMid", "EdgeTop" };
         constexpr WallStack kSquareCorner { "Corner1Bot", "Corner1Mid", "Corner1Top" };
         constexpr WallStack kCutCorner { "Corner2Bot", "Corner2Mid", "Corner2Top" };
-        constexpr WallStack kSquareInside { "Corner3Bot", "Corner3Mid", "Corner3Top" };
+        constexpr WallStack kPlainInside { "Corner3Bot", "Corner3Mid", "Corner3Top" };
         constexpr WallStack kEnd { "EndBot", "EndMid", "EndTop" };
         constexpr WallStack kFull { "FullBot", "FullMid", "FullTop" };
         constexpr WallStack kCurvedEnd { "CurveEndBot", "CurveEndMid", "CurveEndTop" };
@@ -154,11 +154,14 @@ namespace rct3::park
             return std::ranges::contains(walls, shape, &PoolWallPiece::shape);
         }
 
-        /// Whether `square` is the corner of a loose curve that sweeps on into the squares beside it: none of
-        /// them walled straight or cut across, a lone square or the end of a strip.
+        /// Whether `square` is the corner of a loose curve that sweeps on into the squares beside it: its only wall
+        /// that corner, and none of the squares beside it walled straight or cut across, a lone square or the end of
+        /// a strip.
         bool sweeps(const PoolMap& map, std::optional<const PoolSquare&> square)
         {
-            if (!square || square->edge != PoolEdge::Loose || !has_wall(pool_walls(water_around(map, *square)), PoolWall::OuterCorner))
+            if (!square || square->edge != PoolEdge::Loose)
+                return false;
+            if (const auto walls = pool_walls(water_around(map, *square)); walls.size() != 1 || walls[0].shape != PoolWall::OuterCorner)
                 return false;
             for (std::int32_t turn = 0; turn < 4; ++turn)
                 if (const auto next = water_beside(map, *square, turn))
@@ -171,10 +174,10 @@ namespace rct3::park
             return true;
         }
 
-        /// Whether `square` has a square outside corner.
-        bool square_cornered(const PoolMap& map, std::optional<const PoolSquare&> square)
+        /// Whether `square` has an outside corner cut across.
+        bool cut_cornered(const PoolMap& map, std::optional<const PoolSquare&> square)
         {
-            return square && square->edge == PoolEdge::Straight && has_wall(pool_walls(water_around(map, *square)), PoolWall::OuterCorner);
+            return square && square->edge == PoolEdge::Diagonal && has_wall(pool_walls(water_around(map, *square)), PoolWall::OuterCorner);
         }
 
         /// The wall stack and its turn for `wall` of the water square `square`.
@@ -202,12 +205,12 @@ namespace rct3::park
                     return { kTightCorner[meeting(t - 1, t + 2)], t };
                 case PoolWall::InnerCorner:
                 {
-                    // Turned to the second of the two sides whose water meets round it.
-                    const std::int32_t turn = (t + 1) & 3;
+                    // Turned to the first of the two sides whose water meets round it; the pieces meeting a sweep at
+                    // its second side alone or at both are made a turn on, as saved parks show.
                     if (const std::size_t at = meeting(t + 1, t); at != 0)
-                        return { kInside[at], turn };
-                    const bool square_meets = square_cornered(map, square) || square_cornered(map, water_beside(map, square, t)) || square_cornered(map, water_beside(map, square, t + 1));
-                    return { square_meets ? kSquareInside : kInside[0], turn };
+                        return { kInside[at], at == 2 ? t : (t + 1) & 3 };
+                    const bool cut_meets = cut_cornered(map, square) || cut_cornered(map, water_beside(map, square, t)) || cut_cornered(map, water_beside(map, square, t + 1));
+                    return { cut_meets ? kPlainInside : kInside[0], t };
                 }
                 case PoolWall::End:
                     return { curved ? kCurvedEnd : kEnd, t };
@@ -670,6 +673,8 @@ namespace rct3::park
                 square.ground = s.ground;
             square.kind = s.type == kWater ? PoolKind::Water : s.type == kSpa ? PoolKind::Jacuzzi : s.type == kHighDive ? PoolKind::HighDive : s.type == kPath ? PoolKind::Path : s.type == kPathSlope ? PoolKind::PathSlope : s.type == kPathStairs ? PoolKind::PathStairs : PoolKind::Tile;
             square.board = s.type == kHighDive ? s.special : 0;
+            constexpr std::array kEdges { PoolEdge::Straight, PoolEdge::Tight, PoolEdge::Diagonal, PoolEdge::Loose }; // By the stored setting
+            square.edge = kEdges[static_cast<std::size_t>(s.flags & 3)];
         }
         // A board faces the side it keeps, which may look down past water at its own level to a pool below; one kept
         // without it faces the water beside it. A path's slope or stairs has its foot at the path beside it level

@@ -15,9 +15,10 @@
 // Where two walls meet round the outside of a corner, the square's edge setting, chosen when it was laid,
 // shapes the corner: square, cut across, or a tight curve inside the square. A loose curve sweeps on into the
 // squares on either side, which take curved walls to meet it; it falls back to a tight curve where a square
-// beside it has walls laid straight or cut across, or is a lone square or the end of a strip. Squares laid
-// curved round the ends of strips and lone squares too. A corner where water goes round the inside has a
-// rounded wall, square where a square corner meets it, and curved to meet a sweep beside it.
+// beside it has walls laid straight or cut across, or is a lone square or the end of a strip, and where the corner
+// square has a corner where water goes round the inside as well. Squares laid curved round the ends of strips and
+// lone squares too. A corner where water goes round the inside has a small rounded wall, a plain one where a corner
+// cut across meets it, and a curved one to meet a sweep beside it.
 //
 // Extras (sun loungers, lamps, ladders and the rest) are scenery items standing on a square, each against one
 // of its sides. Each takes parts of its square, named by the words of its pool extra setting: the middle of a

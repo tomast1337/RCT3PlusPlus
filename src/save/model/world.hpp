@@ -355,6 +355,7 @@ namespace rct3::save
         std::int32_t depth = 0;
         std::int32_t special = 0; ///< A high diving board's height over the surface
         std::int32_t side = 0;    ///< Bits of the sides: 1 the column before, 2 the next row, 4 the next column, 8 the row before; a high diving board's one, the side it faces
+        std::int32_t flags = 0;   ///< Its low two bits the edge setting it was laid with: 0 straight, 1 tight curves, 2 cut across, 3 loose curves
         std::int32_t complex = 0; ///< Its pool complex, by index
         /// The ground's corner heights, whole units, from before the square was laid, when the park keeps them.
         /// shortcut: taken in the order the park lists them; only level ground under pools was seen, check the order

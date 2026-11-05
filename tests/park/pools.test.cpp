@@ -80,6 +80,61 @@ TEST_CASE("pools: a lone square, an end and a channel")
     CHECK(has(channel, PoolWall::Edge, 3));
 }
 
+TEST_CASE("pools: every way water lies round a square walls each dry side once and each dry corner between water")
+{
+    for (std::uint32_t mask = 0; mask < 256; ++mask)
+    {
+        CAPTURE(mask);
+        const auto water = static_cast<std::uint8_t>(mask);
+        const auto wet = [&](std::int32_t turn) { return (water & (1u << (turn & 3))) != 0; };
+        std::array<int, 4> sides { };
+        std::array<int, 4> corners { };
+        for (const PoolWallPiece& w : pool_walls(water))
+            switch (w.shape)
+            {
+                case PoolWall::Edge:
+                    ++sides[static_cast<std::size_t>(w.turn)];
+                    break;
+                case PoolWall::OuterCorner:
+                    ++sides[static_cast<std::size_t>(w.turn)];
+                    ++sides[static_cast<std::size_t>((w.turn + 1) & 3)];
+                    break;
+                case PoolWall::InnerCorner:
+                    ++corners[static_cast<std::size_t>(w.turn)];
+                    break;
+                case PoolWall::End: // Open a turn before its own
+                    for (std::int32_t turn = 0; turn < 4; ++turn)
+                        sides[static_cast<std::size_t>(turn)] += turn != ((w.turn + 3) & 3) ? 1 : 0;
+                    break;
+                case PoolWall::Full:
+                    for (int& side : sides)
+                        ++side;
+                    break;
+            }
+        for (std::int32_t turn = 0; turn < 4; ++turn)
+        {
+            CHECK(sides[static_cast<std::size_t>(turn)] == (wet(turn) ? 0 : 1));
+            CHECK(corners[static_cast<std::size_t>(turn)] == (wet(turn) && wet(turn + 1) && (water & (kNextBoth << turn)) == 0 ? 1 : 0));
+        }
+        // Laid straight, each wall is a stack of its own pieces turned as the wall.
+        PoolMap map { { { .col = 1, .row = 1, .surface = 4, .depth = 2 } } };
+        constexpr std::array<std::array<std::int32_t, 2>, 8> kAround { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 }, { 1, 1 }, { 1, -1 }, { -1, -1 }, { -1, 1 } } };
+        for (std::size_t bit = 0; bit < kAround.size(); ++bit)
+            if (water & (1u << bit))
+                map.squares.push_back({ .col = 1 + kAround[bit][0], .row = 1 + kAround[bit][1], .surface = 4, .depth = 2 });
+        CHECK(water_around(map, *map.at(1, 1)) == water);
+        std::vector<std::pair<std::string_view, std::int32_t>> want;
+        constexpr std::array<std::string_view, 5> kTop { "EdgeTop", "Corner1Top", "CurveCorner1Top", "EndTop", "FullTop" }; // By PoolWall
+        for (const PoolWallPiece& w : pool_walls(water))
+            want.emplace_back(kTop[static_cast<std::size_t>(w.shape)], w.turn);
+        std::vector<std::pair<std::string_view, std::int32_t>> got;
+        for (const PoolPiece& p : pool_pieces(map, *map.at(1, 1)))
+            if (p.symbol.ends_with("Top"))
+                got.emplace_back(p.symbol, p.turn);
+        CHECK(got == want);
+    }
+}
+
 namespace
 {
 
@@ -141,20 +196,48 @@ TEST_CASE("pools: a loose curve beside a straight wall is tight, and the curves 
     CHECK(tops(narrow, 1, 1) == Tops { { "CurveCorner7Top", 2 } });
 }
 
-TEST_CASE("pools: an inside corner is rounded, square where a square corner meets it")
+TEST_CASE("pools: an inside corner has its own wall, a plain one where a corner cut across meets it")
 {
     // An L of water: rows 1 and 2 four long, then two more rows two wide; the inside corner at (2, 2).
     PoolMap map;
     for (std::int32_t row = 1; row <= 4; ++row)
         for (std::int32_t col = 1; col <= (row <= 2 ? 4 : 2); ++col)
             map.squares.push_back({ .col = col, .row = row, .kind = PoolKind::Water, .surface = 4, .depth = 2 });
-    // Turned to the second of the two sides round it: the next row, then the next column.
-    CHECK(tops(map, 2, 2) == Tops { { "CurveCorner1Top", 1 } });
-    // A ring round a paved middle: each corner square has a square corner outside, so its inside corner is square.
-    PoolMap cut = ringed(3, 3);
-    std::ranges::find_if(cut.squares, [](const PoolSquare& s) { return s.col == 2 && s.row == 2; })->kind = PoolKind::Tile;
-    const auto walls = tops(cut, 1, 1);
-    CHECK(std::ranges::contains(walls, std::pair { std::string_view("Corner3Top"), 1 }));
+    // Turned to the first of the two sides round it: the next row.
+    CHECK(tops(map, 2, 2) == Tops { { "CurveCorner1Top", 0 } });
+    // A ring round a paved middle: each corner square's square outside corner leaves its inside corner as it is.
+    PoolMap ring = ringed(3, 3);
+    std::ranges::find_if(ring.squares, [](const PoolSquare& s) { return s.col == 2 && s.row == 2; })->kind = PoolKind::Tile;
+    CHECK(std::ranges::contains(tops(ring, 1, 1), std::pair { std::string_view("CurveCorner1Top"), 0 }));
+    // Laid cut across, the corner squares' inside corners are plain.
+    CHECK(tops(edged(ring, PoolEdge::Diagonal), 1, 1) == Tops { { "Corner2Top", 2 }, { "Corner3Top", 0 } });
+}
+
+TEST_CASE("pools: a loose corner with water round its inside too does not sweep, nor do the squares beside it meet it")
+{
+    // Water at the row before and the column before of (1, 1), not at the corner between: an outside corner and an
+    // inside one in the same square.
+    PoolMap map;
+    for (const auto [col, row] : { std::pair { 0, 1 }, { 1, 0 }, { 1, 1 } })
+        map.squares.push_back({ .col = col, .row = row, .kind = PoolKind::Water, .surface = 4, .depth = 2, .edge = PoolEdge::Loose });
+    CHECK(tops(map, 1, 1) == Tops { { "CurveCorner5Top", 0 }, { "CurveCorner1Top", 2 } });
+}
+
+TEST_CASE("pools: an inside corner meeting a sweep at its second side, or at both, is turned a turn on")
+{
+    // Loose water three by two, then two more squares under its first two: the inside corner at (2, 2), between the
+    // next row and the next column, both of whose squares sweep round their own corners.
+    const auto loose = [](std::int32_t rows) {
+        PoolMap map;
+        for (std::int32_t row = 1; row <= rows; ++row)
+            for (std::int32_t col = 1; col <= (row <= 2 ? 3 : 2); ++col)
+                map.squares.push_back({ .col = col, .row = row, .kind = PoolKind::Water, .surface = 4, .depth = 2, .edge = PoolEdge::Loose });
+        return map;
+    };
+    CHECK(tops(loose(3), 2, 3) == Tops { { "CurveCorner9Top", 0 } });
+    CHECK(tops(loose(3), 2, 2) == Tops { { "CurveCorner4Top", 1 } });
+    // A row longer under it, the next row's square is an edge: only the next column's square sweeps.
+    CHECK(tops(loose(4), 2, 2) == Tops { { "CurveCorner2Top", 1 } });
 }
 
 TEST_CASE("pools: laid curved, the ends of strips and lone squares are rounded")

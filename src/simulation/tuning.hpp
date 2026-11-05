@@ -525,7 +525,8 @@ namespace rct3::simulation::tuning
         PerSecond longing = PerSecond::over({ 1500 }); ///< Wish to swim grown in a guest who likes pools fully; slower as they like them less
         Share least_liking { 0.1f };                   ///< Guests like pools from this much to `most_liking`, as saved guests do
         Share most_liking { 0.9f };
-        Degrees coldest { 18 };      ///< Under which guests will not swim
+        Degrees cool { 20 };         ///< Chosen by eye: under which a guest must wish for a swim the more before going
+        Share chill { 0.03f };       ///< Chosen by eye: more wish for each degree under `cool`; on a cold enough day none is enough
         Seconds stay { 300 };        ///< In the pool, out of their clothes: the longest saved swimmers have left
         Seconds changing { 20 };     ///< In the changing room, each way
         Pace swim { 0.7f };          ///< Across the water

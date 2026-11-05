@@ -120,6 +120,12 @@ namespace rct3::simulation
             return std::pair { wanted[found->first], std::move(found->second) };
         }
 
+        /// How much a guest must wish for a swim to go for one: more the cooler the day.
+        float swim_wish_needed(float temperature)
+        {
+            return kTuning.needs.want.value + kTuning.pools.chill.value * std::max(0.0f, kTuning.pools.cool.value - temperature);
+        }
+
         /// Most a guest pays for `ware`: its item's worth for the weather, more in the cold for a hot drink and in
         /// the heat for an ice cream; `flat` where that is not known.
         Money worth_of(const Ware& ware, Money flat, float temperature)
@@ -212,8 +218,8 @@ namespace rct3::simulation
                     if (auto found = shop(Product::CashMachine, false))
                         return found;
             }
-            // A swim, when they wish for one and it is warm enough.
-            if (needs.swim.value >= kTuning.needs.want.value && temperature >= kTuning.pools.coldest.value)
+            // A swim, when they wish for one enough for the weather.
+            if (needs.swim.value >= swim_wish_needed(temperature))
                 if (auto found = nearest_offer(paths, at, offers, wallet, [](const Offer& o) { return o.kind == AttractionKind::Pool; }))
                     return found;
             if (mood.nausea.value >= kTuning.needs.max_nausea.value || !random::chance(dice.state, kTuning.needs.ride_chance.value))
@@ -1269,7 +1275,7 @@ namespace rct3::simulation
                     about(ThoughtKind::Cold, weather.temperature.value < kTuning.weather.cold.value);
                     const bool swim = needs.swim.value >= kTuning.needs.want.value;
                     about(ThoughtKind::NoPools, swim && !pool_open);
-                    about(ThoughtKind::TooColdForPools, swim && pool_open && weather.temperature.value < kTuning.pools.coldest.value);
+                    about(ThoughtKind::TooColdForPools, swim && pool_open && needs.swim.value < swim_wish_needed(weather.temperature.value));
                     about(ThoughtKind::Vandalism, std::ranges::any_of(items(stride.from), [&](entt::entity i) { return r.get<PathItem>(i).broken; }));
                     const auto here = litter_at.find(stride.from);
                     about(ThoughtKind::Vomit, here != litter_at.end() && std::ranges::any_of(here->second, [&](entt::entity l) { return r.get<Litter>(l).vomit; }));

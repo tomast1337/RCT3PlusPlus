@@ -80,17 +80,31 @@ TEST_CASE("a guest wishing to swim pays at the changing room, swims for their st
     CHECK(park.world().paths.nearest(r.get<Pose>(guest).position) == r.get<Attraction>(room).entrance);
 }
 
-TEST_CASE("nobody swims in the cold, and those wishing to think it too cold")
+TEST_CASE("nobody swims on a cold day, and those wishing to think it too cold")
 {
     Sandbox park;
     pool_by_path(park);
     auto& r = park.world().registry;
-    r.ctx().emplace<Weather>(Weather { .temperature = kTuning.pools.coldest.value - 5 });
-    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f });
+    r.ctx().emplace<Weather>(Weather { .temperature = 0 });
+    const auto guest = park.guest({ 0, 0 }, { .swim = 1.0f });
     park.run_seconds(60);
     CHECK(r.get<Attraction>(room_of(r)).customers == 0);
     REQUIRE(r.all_of<Thoughts>(guest));
     CHECK(std::ranges::contains(r.get<Thoughts>(guest).recent, ThoughtKind::TooColdForPools, &Thought::kind));
+}
+
+TEST_CASE("on a cool day only those wishing hard for a swim go, the others thinking it too cold")
+{
+    Sandbox park;
+    pool_by_path(park);
+    auto& r = park.world().registry;
+    r.ctx().emplace<Weather>(Weather { .temperature = kTuning.pools.cool.value - 3 });
+    const auto keen = park.guest({ 0, 0 }, { .swim = 0.9f });
+    const auto mild = park.guest({ 1, 0 }, { .swim = kTuning.needs.want.value + 0.02f });
+    REQUIRE(park.run_until([&] { return r.get<Errand>(keen).kind == ErrandKind::Swimming; }, 60));
+    CHECK(r.get<Errand>(mild).kind != ErrandKind::Swimming);
+    REQUIRE(r.all_of<Thoughts>(mild));
+    CHECK(std::ranges::contains(r.get<Thoughts>(mild).recent, ThoughtKind::TooColdForPools, &Thought::kind));
 }
 
 TEST_CASE("a guest wishing to swim where no pool is open thinks so")

@@ -609,6 +609,63 @@ TEST_CASE("pools: a changing room stands off the pool, opening on a paved square
     CHECK(objects.back().base_height == 4);
 }
 
+TEST_CASE("pools: a ramp opens the railings across it, on its own square and on the square it climbs to")
+{
+    // A paved square with a higher one at each side, two up at the next row, one up at the next column.
+    const auto railed = [](const PoolMap& map, const PoolSquare& s) {
+        std::vector<std::int32_t> turns;
+        for (const PoolPiece& p : pool_pieces(map, s))
+            if (p.symbol == "Railing")
+                turns.push_back(p.turn);
+        return turns;
+    };
+    for (std::int32_t turn = 0; turn < 4; ++turn)
+    {
+        CAPTURE(turn);
+        constexpr std::array<std::array<std::int32_t, 2>, 4> kStep { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } };
+        const auto [dc, dr] = kStep[static_cast<std::size_t>(turn)];
+        PoolMap map { { { .col = 0, .row = 0, .kind = PoolKind::Tile, .surface = 4 }, { .col = dc, .row = dr, .kind = PoolKind::Tile, .surface = 6 } } };
+        const auto all_but = [](std::int32_t open) {
+            std::vector<std::int32_t> turns;
+            for (std::int32_t t = 0; t < 4; ++t)
+                if (t != open)
+                    turns.push_back(t);
+            return turns;
+        };
+        CHECK(railed(map, map.squares[0]).size() == 4);
+        CHECK(railed(map, map.squares[1]).size() == 4);
+        // It goes up to the higher square, or off the pool; not down, nor against a square as high.
+        const PoolExtraFit up = pool_extra_fit("Side HeightStep 1");
+        map.squares.push_back({ .col = -dc, .row = -dr, .kind = PoolKind::Tile, .surface = 4 });
+        CHECK(pool_extra_fits(map, 0, 0, up, turn));
+        CHECK(pool_extra_fits(map, 0, 0, up, turn + 1));
+        CHECK_FALSE(pool_extra_fits(map, 0, 0, up, turn + 2));
+        CHECK_FALSE(pool_extra_fits(map, dc, dr, up, turn + 2));
+        map.squares.pop_back();
+        // A ramp climbing one, short of the square beside, leaves both railed.
+        map.extras.push_back({ .col = 0, .row = 0, .turn = turn, .fit = pool_extra_fit("Side HeightStep 1") });
+        CHECK(railed(map, map.squares[0]).size() == 4);
+        CHECK(railed(map, map.squares[1]).size() == 4);
+        // One climbing two meets it: open at its foot's side and at the top's side towards it.
+        map.extras.back().fit = pool_extra_fit("Side CentralSolid WholeTile HeightStep 2");
+        CHECK(railed(map, map.squares[0]) == all_but(turn));
+        CHECK(railed(map, map.squares[1]) == all_but((turn + 2) & 3));
+        // Turned away from it, the ramp faces nothing and both are railed all round.
+        map.extras.back().turn = turn + 1;
+        CHECK(railed(map, map.squares[0]).size() == 4);
+        CHECK(railed(map, map.squares[1]).size() == 4);
+    }
+}
+
+TEST_CASE("pools: a square at a spiral staircase's top is open towards it, one at its foot level too")
+{
+    PoolMap map { { { .col = 0, .row = 0, .kind = PoolKind::Stairs, .surface = 4, .depth = 2, .board = 5, .turn = 1 }, { .col = 0, .row = -1, .kind = PoolKind::Tile, .surface = 9, .depth = 2 }, { .col = 1, .row = 0, .kind = PoolKind::Tile, .surface = 4, .depth = 2 }, { .col = -1, .row = 0, .kind = PoolKind::Tile, .surface = 7, .depth = 2 } } };
+    const auto railed = [&](std::size_t square, std::int32_t turn) { return std::ranges::any_of(pool_pieces(map, map.squares[square]), [&](const PoolPiece& p) { return p.symbol == "Railing" && p.turn == turn; }); };
+    CHECK_FALSE(railed(1, 0)); // At its top
+    CHECK_FALSE(railed(2, 3)); // At its foot
+    CHECK(railed(3, 1));       // Neither: between its foot and its top
+}
+
 TEST_CASE("pools: a changing room fits on every side of a pool, turned towards it")
 {
     const PoolMap map = ringed(2, 2);

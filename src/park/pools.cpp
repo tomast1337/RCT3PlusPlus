@@ -113,10 +113,19 @@ namespace rct3::park
         /// The parts `square` offers extras.
         std::uint32_t offered(const PoolMap& map, const PoolSquare& square) noexcept
         {
-            // A paved square offers a change of level at every side, so a ramp may go against any of them.
-            // shortcut: also where nothing on the other side is higher or lower; refuse those once it shows.
+            // A paved square offers a change of level at each side where nothing beside it stands as high or lower,
+            // so a ramp goes up to a higher square, or off the pool, as the game's parks have them.
             if (square.kind == PoolKind::Tile)
-                return kPavedMiddle | (0xfu << kSides) | (0xfu << kStepAt);
+            {
+                std::uint32_t parts = kPavedMiddle | (0xfu << kSides);
+                for (std::int32_t turn = 0; turn < 4; ++turn)
+                {
+                    const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn)];
+                    if (const auto next = map.at(square.col + dc, square.row + dr, square.surface); !next || next->surface > square.surface)
+                        parts |= at_side(kStepAt, turn);
+                }
+                return parts;
+            }
             if (square.kind != PoolKind::Water)
                 return 0;
             const std::uint8_t water = water_around(map, square);
@@ -240,6 +249,21 @@ namespace rct3::park
         {
             const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn & 3)];
             return map.at(col + dc, row + dr);
+        }
+
+        /// The surfaces a ramp on the square at (`col`, `row`), against its side `turn`, joins: its square's and that
+        /// of the square beside it there, as high as the ramp climbs. None where no ramp there meets such a square.
+        std::optional<std::pair<std::int32_t, std::int32_t>> ramp_between(const PoolMap& map, std::int32_t col, std::int32_t row, std::int32_t turn)
+        {
+            const auto low = map.at(col, row);
+            if (!low)
+                return std::nullopt;
+            const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn & 3)];
+            for (const PoolExtra& e : map.extras)
+                if (e.col == col && e.row == row && e.fit.step > 0 && (e.turn & 3) == (turn & 3))
+                    if (const auto high = map.at(col + dc, row + dr, low->surface + e.fit.step); high && high->surface == low->surface + e.fit.step)
+                        return std::pair { low->surface, high->surface };
+            return std::nullopt;
         }
 
         /// Takes out the changing rooms that no longer open on a paved square or that stand in the pool.
@@ -465,7 +489,13 @@ namespace rct3::park
             const auto [dc, dr] = kSideStep[static_cast<std::size_t>(turn)];
             const bool room = std::ranges::any_of(map.rooms, [&](const PoolRoom& r) { return r.col == square.col + dc && r.row == square.row + dr && ((r.turn + 2) & 3) == turn; });
             const auto next = map.at(square.col + dc, square.row + dr, square.surface);
-            if (!room && (!next || next->surface != square.surface))
+            // Open where a way up or down meets it: a ramp on it climbing at that side, a ramp beside it climbing up
+            // to it, or the top of a staircase beside it.
+            const auto own_ramp = ramp_between(map, square.col, square.row, turn);
+            const auto ramp_up = ramp_between(map, square.col + dc, square.row + dr, turn + 2);
+            const bool stairs_up = std::ranges::any_of(map.squares, [&](const PoolSquare& s) { return s.kind == PoolKind::Stairs && s.col == square.col + dc && s.row == square.row + dr && s.surface + std::max(s.board, kLowestStairs) == square.surface; });
+            const bool way = (own_ramp && own_ramp->first == square.surface) || (ramp_up && ramp_up->second == square.surface) || stairs_up;
+            if (!room && !way && (!next || next->surface != square.surface))
                 out.push_back({ "Railing", square.surface, turn });
             // A staircase's top is railed where no square meets it.
             const std::int32_t top = square.surface + std::max(square.board, kLowestStairs);

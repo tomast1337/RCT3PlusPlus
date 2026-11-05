@@ -386,6 +386,12 @@ TEST_CASE("pools: a pool path's piece follows the paths joining it, slopes by th
     CHECK(piece(map, 1, 0) == Piece { "PathCorner", 3 });
     CHECK(piece(map, 1, 1) == Piece { "PathSlope", 2 });
     CHECK(piece(map, 1, 2) == Piece { "PathStraight", 2 });
+    // A piece alone, as a trail's first, runs the way it was laid.
+    for (const std::int32_t turn : { 0, 1, 2, 3 })
+    {
+        const PoolMap lone { { { .col = 0, .row = 0, .kind = PoolKind::Path, .surface = 4, .depth = 0, .turn = turn } } };
+        CHECK(piece(lone, 0, 0) == Piece { "PathStraight", turn % 2 != 0 ? 3 : 2 });
+    }
     // Four ways, and three.
     PoolMap cross;
     for (const auto [col, row] : { std::pair { 1, 1 }, { 0, 1 }, { 2, 1 }, { 1, 0 }, { 1, 2 } })

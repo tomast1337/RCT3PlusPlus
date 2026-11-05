@@ -528,8 +528,9 @@ namespace rct3::park
                 if (count == 2 && has(turn) && has(turn + 1))
                     return { { "PathCorner", square.surface, turn } };
             }
-            // Straight, along the sides joined, or along the rows with none.
-            const bool across = count > 0 && (has(1) || has(3));
+            // Straight, along the sides joined, or with none the way it was laid: a trail's first piece joins only
+            // the pool's paving or a slide's platform, and runs on from it.
+            const bool across = count > 0 ? has(1) || has(3) : (square.turn & 1) != 0;
             return { { "PathStraight", square.surface, across ? 3 : 2 } };
         }
         const std::int32_t floor = square.surface - square.depth;

@@ -54,8 +54,8 @@ namespace
 TEST_CASE("an entrance beside a tile is found on its side, near its height")
 {
     const save::RideModel rides = ride_at(3, 2);
-    CHECK(entrance_beside(rides, { 2, 2 }, 0) == EntranceBeside { 0, 0, 1 });
-    CHECK(entrance_beside(rides, { 3, 3 }, std::nullopt) == EntranceBeside { 0, 0, 2 });
+    CHECK(entrance_beside(rides, { 2, 2 }, 0) == EntranceBeside { 0, 0, Side::kNextCol });
+    CHECK(entrance_beside(rides, { 3, 3 }, std::nullopt) == EntranceBeside { 0, 0, Side::kRowBefore });
     CHECK_FALSE(entrance_beside(rides, { 2, 3 }, 0));
     CHECK_FALSE(entrance_beside(rides, { 2, 2 }, kEntranceReach + 1));
 }
@@ -196,5 +196,5 @@ TEST_CASE("a queue over steps laid towards the entrance turns round whole, its s
     const auto spots = queue_sign_spots(paths, g);
     REQUIRE(spots.size() == 1);
     CHECK(spots[0].col == 1);
-    CHECK(spots[0].turns == edge_turns(TileSide::Left));
+    CHECK(spots[0].turn.value == edge_turns(TileSide::Left));
 }

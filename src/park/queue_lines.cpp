@@ -30,7 +30,7 @@ namespace rct3::park
                 {
                     const save::Tile beside = side.beyond({ col, row });
                     if (beside.col == at->col && beside.row == at->row)
-                        return EntranceBeside { r, s, static_cast<std::uint8_t>(side.value) };
+                        return EntranceBeside { r, s, side };
                 }
             }
         }
@@ -159,7 +159,7 @@ namespace rct3::park
         if (station.queue_line == 0)
             station.queue_line = new_line;
         const std::uint64_t line = station.queue_line;
-        lead_out(paths, grid, tile, Side::from(entrance.side), line);
+        lead_out(paths, grid, tile, entrance.side, line);
         take_ride(rides, paths, line);
         return line;
     }

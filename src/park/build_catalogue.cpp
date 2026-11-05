@@ -469,10 +469,13 @@ namespace rct3::park
                 stairs.icon = kStairsIcon;
                 stairs.group_icon = kJacuzziIcon;
                 stairs.group_text = kPoolExtraText;
-                // Each is named as the piece it is built from.
+                // Each is named as the piece it is built from. The staircase shows that piece's price: what the
+                // lowest costs laid on the paving, its climb less the paving's refund (pool_build_cost).
                 for (const auto& [item, piece] : { std::pair { &jacuzzi, "Jacuzzi" }, { &dive, "DBTopBoard" }, { &stairs, "StairsBase" } })
                     if (const ovl::SceneryItem* p = placed_as(piece, piece); p && !p->name_text.empty())
                         item->name_text = p->name_text;
+                if (const ovl::SceneryItem* p = placed_as("StairsBase", "StairsBase"))
+                    stairs.price = p->cost;
                 // The extras are the scenery items of the pool type's overlay that say where in a pool they go.
                 for (const auto& [name, item] : placed)
                 {

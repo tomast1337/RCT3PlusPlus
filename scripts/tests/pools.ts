@@ -526,9 +526,9 @@ await ui.click("pool_panel/body/editor/Pool_Height");
 await ui.click("pool_panel/Pool_PathPanel");
 await until(() => ui.find("pool_panel/body/Icon_Default_SpiralStairs") !== undefined, 120, "the spiral staircase on the paths page");
 expect(ui.children("pool_panel/body")!.filter((n) => n !== "paths").length === 3, `two ramps and the staircase on the paths page, not ${JSON.stringify(ui.children("pool_panel/body"))}`);
-// Each way between levels is named, with its price, as the pointer rests on it.
+// Each way between levels is named, with its price, as the pointer rests on it: the staircase its foot's.
 const stairs_help = ui.find("pool_panel/body/Icon_Default_SpiralStairs")!;
-expect(/^Spiral Stairs : \$\d+\.00$/.test(stairs_help.tooltip ?? ""), `the staircase's help, not ${stairs_help.tooltip}`);
+expect(stairs_help.tooltip === "Spiral Stairs : $24.00", `the staircase's help, not ${stairs_help.tooltip}`);
 const ramp_help = ui.children("pool_panel/body")!.filter((n) => n !== "paths" && n !== "Icon_Default_SpiralStairs").map((n) => ui.find(`pool_panel/body/${n}`)!.tooltip);
 expect(ramp_help.length === 2 && ramp_help.every((h) => h?.match(/^\dm Ramp : \$12\.00$/)), `the ramps' help, not ${JSON.stringify(ramp_help)}`);
 pointer.move(stairs_help.x, stairs_help.y);
@@ -539,7 +539,9 @@ await frames(2);
 cash = park.cash()!;
 await pointer.click(...on_view(c0 + 4.5, r0 + 2.5));
 await frames(3);
-expect(count("StairsBase") === 1 && count("StairsTop") === 1 && park.cash()! < cash, `a staircase, paid for, not ${count("StairsBase")}`);
+// Laid on the paving at its lowest, it costs its price: its climb, less the paving it takes the place of.
+const stairs_paid = cash - park.cash()!;
+expect(count("StairsBase") === 1 && count("StairsTop") === 1 && stairs_paid === 2400, `a staircase, paid $24.00, not ${count("StairsBase")} for ${stairs_paid}`);
 // A ramp from the same column, against a side of the paved square past the staircase.
 const ramp = ui.children("pool_panel/body")!.find((n) => n !== "paths" && n !== "Icon_Default_SpiralStairs")!;
 await ui.click(`pool_panel/body/${ramp}`);

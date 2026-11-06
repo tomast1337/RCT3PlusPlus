@@ -604,6 +604,27 @@ namespace rct3::simulation
         bool paddling = false;
     };
 
+    /// A pool slide with no cars, as on an inflatable ship: swimmers climb it on foot from the water and slide down
+    /// on their backs into it, free on their complex's ticket.
+    struct ClimbSlide
+    {
+        struct Way
+        {
+            Coaster course { }; ///< From its foot in the water, up on foot, then down the slide
+            float top = 0;      ///< Along the course, where the climb ends and the slide begins
+        };
+        std::vector<Way> ways { };
+    };
+
+    /// A swimmer on a ClimbSlide, on top of their Swimmer and riding Errand.
+    struct Climbing
+    {
+        entt::entity slide = entt::null;
+        std::uint8_t way = 0;
+        float along = 0;
+        Pace speed { }; ///< Along the way
+    };
+
     /// What a shop sells, or what a facility does for its guests.
     enum class Product : std::uint8_t
     {

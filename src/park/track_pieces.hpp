@@ -161,6 +161,9 @@ namespace rct3::park
         std::string partner;                     ///< Of side by side tracks: the other half of a joined piece, by name
         std::string group;                       ///< For the ride's piece patterns
         std::string platform_run;                ///< As ovl::TrackSection::platform_run
+        /// Of a slide with no cars, as on an inflatable ship: each way up on foot from its foot in the water and down
+        /// one of its slides, laid as drawn. None on other pieces.
+        std::vector<std::vector<glm::vec3>> climbs { };
     };
 
     struct PieceShape
@@ -173,6 +176,11 @@ namespace rct3::park
         PieceUse use = PieceUse::Plain;
         std::uint8_t toggles = 0; ///< Bits of the PieceToggle values it has, laid as drawn
     };
+
+    /// The ways up and down a slide climbed on foot: for each slide, from the start of `loop` to the point of it
+    /// nearest where the path ending nearest the slide's top begins, along that path, then down the slide. With no
+    /// path, straight from that nearest loop point to the slide's top.
+    [[nodiscard]] std::vector<std::vector<glm::vec3>> slide_climbs(std::span<const glm::vec3> loop, std::span<const std::vector<glm::vec3>> paths, std::span<const std::vector<glm::vec3>> slides);
 
     /// `line` measured in steps. Banks are counted from `base_bank`, in degrees.
     [[nodiscard]] PieceEnd measure_end(const glm::vec3& direction, const glm::vec3& side, float base_bank = 0);

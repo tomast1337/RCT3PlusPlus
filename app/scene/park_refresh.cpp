@@ -852,7 +852,7 @@ namespace rct3::scene
                 {
                     const auto cars = drop->slide != entt::null ? scene.ride_cars.find(drop->slide) : scene.ride_cars.end();
                     const auto model = cars != scene.ride_cars.end() && !cars->second.empty() ? scene.models.find(park::model_ref(scene.cars[cars->second.front()])) : scene.models.end();
-                    const bool body = model != scene.models.end() && model->second.seating == park::kSlideBodySeating;
+                    const bool body = (model != scene.models.end() && model->second.seating == park::kSlideBodySeating) || (r.valid(drop->slide) && r.all_of<simulation::ClimbSlide>(drop->slide));
                     pose.motion = park::motion_number(drop->slide == entt::null ? "knockdownin" : body ? "slidebodybacksplashdownin" : "slideringsplashdownin").value_or(pose.motion);
                     pose.time = drop->fall.value / simulation::kTuning.holding.gravity;
                 }
@@ -883,6 +883,16 @@ namespace rct3::scene
                     const float room = park::pool_wall_room(scene.grid, at_xz - glm::vec2 { scene.grid.world_x(col), scene.grid.world_z(row) }, water);
                     return at.position + glm::vec3(0.0f, park::pool_wave_lift(park::pool_wave_height(scene.water.pool_waves, at_xz, clock, at.position.y), room), 0.0f);
                 };
+                // Up a slide climbed on foot they walk, and slide down it on their backs.
+                if (const auto* climbing = r.try_get<simulation::Climbing>(shown.guest))
+                {
+                    const auto* slide = r.valid(climbing->slide) ? r.try_get<simulation::ClimbSlide>(climbing->slide) : nullptr;
+                    const bool down = slide != nullptr && climbing->way < slide->ways.size() && climbing->along >= slide->ways[climbing->way].top;
+                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+                    pose.motion = down ? park::motion_number("slidebodybackloop").value_or(park::motion::kWalk) : park::motion::kWalk;
+                    pose.time = scene.sim_time;
+                    return pose;
+                }
                 if (const auto* errand = r.try_get<simulation::Errand>(shown.guest); swimmer->changing.value > 0 || (errand != nullptr && errand->kind == simulation::ErrandKind::Riding && floating == nullptr))
                     return std::nullopt;
                 if (floating != nullptr)

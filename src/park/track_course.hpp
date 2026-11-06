@@ -35,17 +35,18 @@ namespace rct3::park
     struct TrackCourse
     {
         std::vector<glm::vec3> points;
-        std::vector<glm::vec3> ups;                ///< Up for the track at each point, leaning with its bank; none is straight up
-        std::vector<float> distance;               ///< From the start to each point
-        std::vector<CourseKind> kinds;             ///< Of the stretch from each point to the next; the last is unused
-        std::vector<float> brake_speeds;           ///< Of the brake or block brake from each point, in m/s: 0 where it has none of its own, below 0 off them
-        std::vector<float> piece_starts;           ///< Distance at the start of each of the track's pieces
-        std::vector<bool> wet;                     ///< By piece, as piece_starts: runs through open water, not in a tube
-        bool closed = false;                       ///< The end joins the start, so cars go round
-        bool reverse_lift = false;                 ///< Has the hill a reverse cable lift pulls the train up
-        bool splash_end = false;                   ///< Its last piece is a pool slide's open end
-        std::size_t first_piece = 0;               ///< Of the track's pieces, the one the course starts on
-        std::vector<glm::vec3> other_stations { }; ///< Where the track's other stretches with a station start, in their order
+        std::vector<glm::vec3> ups;                     ///< Up for the track at each point, leaning with its bank; none is straight up
+        std::vector<float> distance;                    ///< From the start to each point
+        std::vector<CourseKind> kinds;                  ///< Of the stretch from each point to the next; the last is unused
+        std::vector<float> brake_speeds;                ///< Of the brake or block brake from each point, in m/s: 0 where it has none of its own, below 0 off them
+        std::vector<float> piece_starts;                ///< Distance at the start of each of the track's pieces
+        std::vector<bool> wet;                          ///< By piece, as piece_starts: runs through open water, not in a tube
+        bool closed = false;                            ///< The end joins the start, so cars go round
+        bool reverse_lift = false;                      ///< Has the hill a reverse cable lift pulls the train up
+        bool splash_end = false;                        ///< Its last piece is a pool slide's open end
+        std::size_t first_piece = 0;                    ///< Of the track's pieces, the one the course starts on
+        std::vector<glm::vec3> other_stations { };      ///< Where the track's other stretches with a station start, in their order
+        std::vector<std::vector<glm::vec3>> climbs { }; ///< Of a slide climbed on foot, its pieces' ways up and down (PieceRecord::climbs)
         [[nodiscard]] float length() const
         {
             return distance.empty() ? 0 : distance.back();

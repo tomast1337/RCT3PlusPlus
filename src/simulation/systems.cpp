@@ -1848,7 +1848,7 @@ namespace rct3::simulation
                         if (attraction.entrance == kNoNode)
                         {
                             const auto* fleet = r.try_get<Trains>(a);
-                            if (r.all_of<River>(a) || (fleet != nullptr && !fleet->trains.empty() && fleet->trains.front().splash_out))
+                            if (r.any_of<River, ClimbSlide>(a) || (fleet != nullptr && !fleet->trains.empty() && fleet->trains.front().splash_out))
                                 continue;
                             rounds->seen.emplace_back(a, now);
                             tell(r, e, Finding::NoPath, a, now);
@@ -2594,6 +2594,78 @@ namespace rct3::simulation
                 const glm::vec3 across = glm::length(glm::vec2 { way.x, way.z }) > 0 ? glm::normalize(glm::vec3 { way.z, 0, -way.x }) : glm::vec3 { 1, 0, 0 };
                 pose.position = track_point(river->course, f.along) + across * (f.lane * tuning.lane);
                 pose.heading.value = std::atan2(way.x, way.z) + f.facing.value;
+            }
+        }
+
+        /// Swimmers on slides climbed on foot: up the steps, then down the slide, faster down its steeper stretches,
+        /// and off its end into the pool, splashing down as off a pool slide.
+        void climb_slides(SimWorld& world, float dt)
+        {
+            auto& r = world.registry;
+            const auto& tuning = kTuning.climbs;
+            for (const entt::entity g : sorted(r.view<Climbing>()))
+            {
+                auto& c = r.get<Climbing>(g);
+                const auto* errand = r.try_get<Errand>(g);
+                const auto* slide = r.valid(c.slide) ? r.try_get<ClimbSlide>(c.slide) : nullptr;
+                // Off it some other way (picked up, or it was pulled down from under them, when they fall from where
+                // they are).
+                if (!r.all_of<Swimmer>(g) || errand == nullptr || errand->kind != ErrandKind::Riding || errand->target != c.slide || slide == nullptr || c.way >= slide->ways.size())
+                {
+                    if (slide == nullptr && errand != nullptr && errand->kind == ErrandKind::Riding && errand->target == c.slide && r.all_of<Swimmer>(g))
+                        c.along = std::numeric_limits<float>::max();
+                    else
+                    {
+                        r.remove<Climbing>(g);
+                        continue;
+                    }
+                }
+                auto& pose = r.get<Pose>(g);
+                glm::vec3 at = pose.position;
+                glm::vec3 way { 0, 0, 1 };
+                bool off = slide == nullptr;
+                if (slide != nullptr)
+                {
+                    const ClimbSlide::Way& w = slide->ways[c.way];
+                    way = track_way(w.course, c.along);
+                    if (c.along < w.top)
+                        c.speed = tuning.climb;
+                    else
+                    {
+                        // Pulled down the slope, slowed by the slide.
+                        c.speed.value += (-kTuning.holding.gravity * way.y - tuning.drag * c.speed.value) * dt;
+                        c.speed.value = std::clamp(c.speed.value, tuning.slowest.value, tuning.fastest.value);
+                    }
+                    c.along += c.speed.value * dt;
+                    off = c.along >= w.course.length();
+                    at = track_point(w.course, std::min(c.along, w.course.length()));
+                    way = track_way(w.course, std::min(c.along, w.course.length()));
+                    r.get<Swimmer>(g).left.value -= dt;
+                }
+                if (!off)
+                {
+                    pose.position = at;
+                    if (glm::length(glm::vec2 { way.x, way.z }) > 0)
+                        pose.heading.value = std::atan2(way.x, way.z);
+                    continue;
+                }
+                // Off the end: on as fast as they went, down into the water of the complex under it, or the one
+                // they came from.
+                const glm::vec3 velocity = way * c.speed.value;
+                const auto door = pool_door_at(world, at);
+                const entt::entity room = door ? *door : r.get<Swimmer>(g).room;
+                const auto* door_of = r.valid(room) ? r.try_get<PoolDoor>(room) : nullptr;
+                const auto* pool = door_of != nullptr && r.valid(door_of->pool) ? r.try_get<SwimPool>(door_of->pool) : nullptr;
+                const entt::entity from = c.slide;
+                if (r.valid(from) && r.all_of<CycleRide>(from))
+                    std::erase(r.get<CycleRide>(from).riders, g);
+                r.remove<Climbing>(g);
+                const float ground = pool != nullptr && !pool->water.empty() ? std::ranges::min_element(pool->water, { }, [&](const glm::vec3& w) { return glm::distance(glm::vec2(w.x, w.z), glm::vec2(at.x, at.z)); })->y : at.y;
+                step_out(r, g);
+                r.remove<Errand, Stride, Linger, Gesture, Watching, RideWalk>(g);
+                pose.position = pose.was = at;
+                pose.heading.value = std::atan2(velocity.x, velocity.z);
+                r.emplace<Dropped>(g, Dropped { .ground = ground, .fall = { -velocity.y }, .drift = { velocity.x, velocity.z }, .node = path_to_rejoin(world.paths, at).value_or(kNoNode), .swimwear = true, .pool = room, .slide = from });
             }
         }
     } // namespace
@@ -3989,6 +4061,27 @@ namespace rct3::simulation
                     ++r.get<Attraction>(slide).customers;
                     continue;
                 }
+                // Up the steps of a slide climbed on foot, once the one ahead is far enough up; treading water
+                // at its foot till then.
+                // shortcut: those waiting tread water together at the foot, upgrade to a line in the water.
+                if (const auto* climb = r.try_get<ClimbSlide>(slide); climb != nullptr && r.get<Attraction>(slide).open && (upkeep == nullptr || !upkeep->broken))
+                {
+                    if (std::ranges::any_of(r.get<CycleRide>(slide).riders, [&](entt::entity on) {
+                            const auto* c = r.try_get<Climbing>(on);
+                            return c != nullptr && c->along < kTuning.climbs.gap;
+                        }))
+                    {
+                        swimmer.slide = slide;
+                        continue;
+                    }
+                    r.emplace_or_replace<Climbing>(g, Climbing { .slide = slide, .way = static_cast<std::uint8_t>(random::below(dice, climb->ways.size())), .speed = kTuning.climbs.climb });
+                    swimmer.room = errand.target;
+                    swimmer.in_water = false;
+                    errand = { .kind = ErrandKind::Riding, .target = slide };
+                    r.get<CycleRide>(slide).riders.push_back(g);
+                    ++r.get<Attraction>(slide).customers;
+                    continue;
+                }
                 if (r.get<Attraction>(slide).open && (upkeep == nullptr || !upkeep->broken))
                 {
                     pose.position = swimmer.goal;
@@ -4098,6 +4191,14 @@ namespace rct3::simulation
                 if (train.splash_out && r.get<Attraction>(s).open && (upkeep == nullptr || !upkeep->broken) && pool_door_at(world, track_point(train, train.length())) == errand.target)
                     slides.emplace_back(s, track_point(train, train.start - train.train_length / 2));
             }
+            // And over to the foot of a slide climbed on foot that starts and ends in its water.
+            for (const entt::entity s : sorted(r.view<const ClimbSlide, const Attraction>()))
+            {
+                const auto* upkeep = r.try_get<Upkeep>(s);
+                const auto& ways = r.get<ClimbSlide>(s).ways;
+                if (r.get<Attraction>(s).open && (upkeep == nullptr || !upkeep->broken) && pool_door_at(world, ways.front().course.points.front()) == errand.target)
+                    slides.emplace_back(s, ways.front().course.points.front());
+            }
             // And over to the stairs down into a lazy river joined to the complex, to float round it.
             for (const entt::entity s : sorted(r.view<const River, const Attraction>()))
             {
@@ -4161,6 +4262,9 @@ namespace rct3::simulation
 
         phase.emplace("Rivers");
         float_on_rivers(world, dt);
+
+        phase.emplace("Climbs");
+        climb_slides(world, dt);
 
         phase.emplace("Ride walks");
         // Riders on their feet walk on to their seats, stopping at the ticket spot first, or off to the paths.
@@ -4328,8 +4432,9 @@ namespace rct3::simulation
                     upkeep.samples = 0;
                 }
             }
-            // A lazy river's riders float round it on their own (float_on_rivers).
-            if (r.all_of<River>(e))
+            // A lazy river's riders float round it on their own (float_on_rivers), and a slide's climbed on foot
+            // go up and down it on their own (climb_slides).
+            if (r.any_of<River, ClimbSlide>(e))
                 continue;
             // Out of the queue at the station's entrance; a swimmer out of a pool slide's swims on from where they stand.
             const auto leave_queue = [&](entt::entity guest, NodeId entrance) {

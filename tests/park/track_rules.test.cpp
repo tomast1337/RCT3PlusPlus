@@ -95,6 +95,21 @@ TEST_CASE("an unfinished track with a station tests and opens, as one stretch; w
     CHECK(open_refusal(r, TrackRules { }, kTest, false, course) == "RideHasNoStation");
 }
 
+TEST_CASE("a slide climbed on foot opens with no station or doors, and tests only if its kind may be")
+{
+    TrackCourse course;
+    course.points.resize(2);
+    course.distance = { 0, 20 };
+    course.kinds = { CourseKind::Plain, CourseKind::Plain };
+    course.closed = false;
+    course.climbs = { { { 0, 0, 0 }, { 0, 8, -6 }, { 3, 1, 10 } } };
+    save::Ride r = ride(1, 0, false);
+    CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
+    CHECK(open_refusal(r, rules_with([](TrackRules& t) { t.never_tested = true; }), kTest, false, course) == "CannotTestTrackedRide");
+    course.climbs.clear();
+    CHECK(open_refusal(r, TrackRules { }, kOpen, false, course) == "RideHasNoStation");
+}
+
 TEST_CASE("entrances and exits are counted as the ride's door rules say")
 {
     save::Ride two = ride(6, 2);

@@ -925,7 +925,8 @@ namespace rct3::scene
                     const auto* linger = r.try_get<simulation::Linger>(p.guest);
                     const auto* sitting = linger != nullptr && linger->at == simulation::PathItemKind::Bench ? linger : nullptr;
                     const auto* floating = r.try_get<simulation::Floating>(p.guest);
-                    const glm::vec3 at = (errand != nullptr && errand->kind == simulation::ErrandKind::Riding && floating == nullptr) || sitting != nullptr ? standing : r.get<simulation::Pose>(p.guest).position; // Seated, in their seat
+                    const auto* climbing = r.try_get<simulation::Climbing>(p.guest);
+                    const glm::vec3 at = (errand != nullptr && errand->kind == simulation::ErrandKind::Riding && floating == nullptr && climbing == nullptr) || sitting != nullptr ? standing : r.get<simulation::Pose>(p.guest).position; // Seated, in their seat
                     person["col"] = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
                     person["row"] = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
                     person["up"] = at.y;
@@ -975,6 +976,14 @@ namespace rct3::scene
                     {
                         person["floating"] = floating->paddling ? "paddling" : "resting";
                         if (const auto on = std::ranges::find(park.ride_entities, floating->river); on != park.ride_entities.end())
+                            person["ride"] = on - park.ride_entities.begin();
+                    }
+                    // On a slide climbed on foot (by its place in rides.list), going up its steps or sliding down.
+                    if (climbing != nullptr)
+                    {
+                        const auto* slide = r.valid(climbing->slide) ? r.try_get<simulation::ClimbSlide>(climbing->slide) : nullptr;
+                        person["climbing"] = slide != nullptr && climbing->way < slide->ways.size() && climbing->along >= slide->ways[climbing->way].top ? "sliding" : "climbing";
+                        if (const auto on = std::ranges::find(park.ride_entities, climbing->slide); on != park.ride_entities.end())
                             person["ride"] = on - park.ride_entities.begin();
                     }
                     // Food or drink from a stall in hand, or its empty.
@@ -1235,6 +1244,12 @@ namespace rct3::scene
                             one["riverStations"] = river->stations.size();
                             one["riverJoined"] = std::ranges::count_if(river->stations, [&](const simulation::River::Station& s) { return registry.valid(s.pool); });
                         }
+                    }
+                    if (const auto* climb = registry.try_get<simulation::ClimbSlide>(e))
+                    {
+                        one["climbWays"] = climb->ways.size();
+                        const glm::vec3 foot = climb->ways.front().course.points.front();
+                        one["climbFoot"] = { { "col", (foot.x - park.grid.origin_x) / park.grid.tile_size_x }, { "row", (foot.z - park.grid.origin_z) / park.grid.tile_size_z }, { "up", foot.y } };
                     }
                     if (const auto* wrecks = registry.try_get<simulation::Wrecks>(e))
                     {

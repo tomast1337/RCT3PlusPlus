@@ -13,8 +13,10 @@
 #include <algorithm>
 #include <bit>
 #include <cmath>
+#include <format>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <numbers>
 #include <ranges>
@@ -186,6 +188,27 @@ namespace rct3::park
         return beside;
     }
 
+    std::vector<std::vector<glm::vec3>> slide_climbs(std::span<const glm::vec3> loop, std::span<const std::vector<glm::vec3>> paths, std::span<const std::vector<glm::vec3>> slides)
+    {
+        std::vector<std::vector<glm::vec3>> ways;
+        if (loop.empty())
+            return ways;
+        for (const auto& slide : slides)
+        {
+            if (slide.empty())
+                continue;
+            const auto stub = std::ranges::min_element(paths, { }, [&](const std::vector<glm::vec3>& p) { return p.empty() ? std::numeric_limits<float>::max() : glm::distance(p.back(), slide.front()); });
+            const bool by_path = stub != paths.end() && !stub->empty();
+            const glm::vec3 off = by_path ? stub->front() : slide.front();
+            const auto cut = std::ranges::min_element(loop, { }, [&](const glm::vec3& p) { return glm::distance(p, off); });
+            auto& way = ways.emplace_back(loop.begin(), std::next(cut));
+            if (by_path)
+                way.insert(way.end(), stub->begin(), stub->end());
+            way.insert(way.end(), slide.begin(), slide.end());
+        }
+        return ways;
+    }
+
     std::expected<PieceCatalogue, std::string> load_piece_catalogue(const std::filesystem::path& file, std::string overlay)
     {
         auto first = ovl::Overlay::load(file);
@@ -256,6 +279,30 @@ namespace rct3::park
             r.partner = section.partner.substr(0, section.partner.find(':'));
             r.group = section.group;
             r.platform_run = section.platform_run;
+            // A slide climbed on foot: its walk up, named after the section, and its two rails as its two slides.
+            if (const auto loop = splines.find(std::format("{}Loop", t.name)); loop != splines.end())
+            {
+                const auto points = [](const ovl::Spline& spline) {
+                    constexpr int kPerPart = 4;
+                    std::vector<glm::vec3> out;
+                    for (std::size_t i = 0; i + 1 < spline.nodes.size(); ++i)
+                        for (int k = 0; k < kPerPart; ++k)
+                            out.push_back(vec(ovl::spline_point(spline, i, static_cast<float>(k) / kPerPart)));
+                    if (!spline.nodes.empty())
+                        out.push_back(vec(spline.nodes.back().position));
+                    return out;
+                };
+                std::vector<std::vector<glm::vec3>> paths;
+                for (int n = 1;; ++n)
+                {
+                    const auto path = splines.find(std::format("{}Path{:02}", t.name, n));
+                    if (path == splines.end())
+                        break;
+                    paths.push_back(points(path->second));
+                }
+                const std::array slides { points(left->second), points(right->second) };
+                r.climbs = slide_climbs(points(loop->second), paths, slides);
+            }
             lines.push_back(*line);
         }
         return PieceCatalogue { std::move(overlay), shape_pieces(records, lines) };

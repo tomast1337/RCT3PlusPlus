@@ -227,6 +227,10 @@ namespace rct3::simulation
     /// (simulation/ratings.hpp). Tracked rides leave the station as their operating settings say. Each makes
     /// room in the park for `guests` at its place, when there; those left out add theirs to RoomElsewhere while
     /// open and working. Call after import_paths.
+    /// The park's run of `ride`, a pool slide with no cars that swimmers climb on foot (TrackCourse::climbs of
+    /// `course`); none for another ride.
+    entt::entity import_climb_slide(SimWorld& world, const save::Ride& ride, const park::TrackCourse& course);
+
     std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters = { }, std::span<const std::optional<std::uint32_t>> guests = { });
 
     /// Sets every guest walking from the path they stand on, or from the nearest path for one saved off the paths;

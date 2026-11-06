@@ -228,7 +228,9 @@ namespace rct3::scene
                     const auto found = scene.models.find(park::model_ref(o));
                     return found != scene.models.end() ? &found->second : nullptr;
                 });
-                const auto added = simulation::import_rides(scene.sim, one, timings, coaster);
+                auto added = simulation::import_rides(scene.sim, one, timings, coaster);
+                if (!added.empty() && added.front() == entt::null && course)
+                    added.front() = simulation::import_climb_slide(scene.sim, ride, *course);
                 if (added.empty() || added.front() == entt::null)
                     return false;
                 scene.ride_entities.resize(scene.rides.rides.size(), entt::null);

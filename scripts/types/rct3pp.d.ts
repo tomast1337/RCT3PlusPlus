@@ -350,6 +350,10 @@ interface RideInfo {
     /** A lazy river the park runs: its stations, and how many of them a pool complex joins by its stairs. */
     riverStations?: number;
     riverJoined?: number;
+    /** A slide the park runs that swimmers climb on foot, as an inflatable ship: its ways up and down, and the
+     *  foot of its steps, where swimmers get on. */
+    climbWays?: number;
+    climbFoot?: { col: number; row: number; up: number };
     /** Rides with a track: each piece's name, in track order. */
     track?: string[];
     /** Rides with a track: each piece's three colours (palette places), in track order. */
@@ -475,8 +479,9 @@ declare namespace people {
      *  (in a pool complex, or held or falling out of one) are `swimwear`; those floating round a lazy river (its place
      *  in rides.list as `ride`) are `floating`, resting in their ring or paddling. A swimmer off a diving board is
      *  `diving`, how far, and `high_board` when it is a high one. A swimmer is `in_water` in the pool's water, not
-     *  on the paving and coping round it, and `pool_edge` while crossing its edge, how. */
-    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; arriving?: boolean; bench?: number; seat?: number; rising?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "sitting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; glancing?: boolean; lingering?: PathItemKind; pool_extra?: "lounger" | "shower" | "other"; diving?: "climb" | "walk" | "jump" | "fall" | "surface"; high_board?: boolean; in_water?: boolean; pool_edge?: "dive in" | "climb out" | "ladder out" | "ladder in"; swimwear?: boolean; floating?: "resting" | "paddling"; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
+     *  on the paving and coping round it, and `pool_edge` while crossing its edge, how. On a slide climbed on foot,
+     *  `climbing` says whether up its steps or down the slide, and `ride` which. */
+    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; arriving?: boolean; bench?: number; seat?: number; rising?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "sitting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; glancing?: boolean; lingering?: PathItemKind; pool_extra?: "lounger" | "shower" | "other"; diving?: "climb" | "walk" | "jump" | "fall" | "surface"; high_board?: boolean; in_water?: boolean; pool_edge?: "dive in" | "climb out" | "ladder out" | "ladder in"; swimwear?: boolean; floating?: "resting" | "paddling"; climbing?: "climbing" | "sliding"; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

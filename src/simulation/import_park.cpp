@@ -1222,6 +1222,47 @@ namespace rct3::simulation
         };
     }
 
+    entt::entity import_climb_slide(SimWorld& world, const save::Ride& ride, const park::TrackCourse& course)
+    {
+        if (ride.kind != save::RideKind::Tracked || course.climbs.empty())
+            return entt::null;
+        ClimbSlide slide;
+        for (const auto& points : course.climbs)
+        {
+            if (points.size() < 2)
+                continue;
+            ClimbSlide::Way& way = slide.ways.emplace_back();
+            Coaster& c = way.course;
+            c.closed = false;
+            c.points = points;
+            for (const glm::vec3& p : points)
+            {
+                c.distance.push_back(c.distance.empty() ? 0 : c.distance.back() + glm::distance(c.points[c.distance.size() - 1], p));
+                c.height.push_back(p.y);
+                c.kinds.push_back(Stretch::Plain);
+            }
+            // The slide begins at the top of the climb.
+            way.top = c.distance[static_cast<std::size_t>(std::ranges::max_element(points, { }, &glm::vec3::y) - points.begin())];
+        }
+        if (slide.ways.empty())
+            return entt::null;
+        auto& r = world.registry;
+        const entt::entity e = r.create();
+        r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::AttractionState::Open, .testing = ride.base.state == save::AttractionState::Testing, .saved = ride.base.id });
+        const auto& rated = kTuning.climbs.rated;
+        const bool valid = ride.assessment.valid;
+        CycleRide cycle { .capacity = 0, .splash = true };
+        cycle.excitement.value = rating(valid ? ride.assessment.excitement : rated[0]);
+        cycle.intensity.value = rating(valid ? ride.assessment.intensity : rated[1]);
+        cycle.nausea.value = rating(valid ? ride.assessment.nausea : rated[2]);
+        r.emplace<CycleRide>(e, std::move(cycle));
+        r.emplace<ClimbSlide>(e, std::move(slide));
+        r.emplace<Upkeep>(e, upkeep_of(ride));
+        if (r.get<Upkeep>(e).broken)
+            r.get<Attraction>(e).open = false;
+        return e;
+    }
+
     std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters, std::span<const std::optional<std::uint32_t>> guests)
     {
         std::vector<entt::entity> added(rides.rides.size(), entt::null);

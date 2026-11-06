@@ -363,3 +363,17 @@ TEST_CASE("a track set's pieces are also looked for in the files beside it whose
     CHECK(piece_files_beside(dir / "Set.common.ovl") == std::vector { dir / "Set_More.common.ovl" });
     fs::remove_all(dir);
 }
+
+TEST_CASE("slide_climbs: each slide is reached up the loop and along the path ending nearest its top")
+{
+    // A walk up from the water, a stub off each side at the top, and two slides down from the stubs' ends.
+    const std::vector<glm::vec3> loop { { 0, 0, 10 }, { 0, 2, 6 }, { 0, 4, 2 }, { 0, 5, 0 } };
+    const std::vector<std::vector<glm::vec3>> paths { { { 0, 4, 2 }, { -2, 4, 2 } }, { { 0, 5, 0 }, { 2, 5, 0 } } };
+    const std::vector<std::vector<glm::vec3>> slides { { { 2.1f, 5, 0 }, { 3, 0, 10 } }, { { -2.1f, 4, 2 }, { -3, 0, 10 } } };
+    const auto ways = slide_climbs(loop, paths, slides);
+    REQUIRE(ways.size() == 2);
+    CHECK(ways[0] == std::vector<glm::vec3> { { 0, 0, 10 }, { 0, 2, 6 }, { 0, 4, 2 }, { 0, 5, 0 }, { 0, 5, 0 }, { 2, 5, 0 }, { 2.1f, 5, 0 }, { 3, 0, 10 } });
+    CHECK(ways[1] == std::vector<glm::vec3> { { 0, 0, 10 }, { 0, 2, 6 }, { 0, 4, 2 }, { 0, 4, 2 }, { -2, 4, 2 }, { -2.1f, 4, 2 }, { -3, 0, 10 } });
+    // With no walk up, no ways.
+    CHECK(slide_climbs({ }, paths, slides).empty());
+}

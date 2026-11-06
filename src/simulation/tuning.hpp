@@ -591,6 +591,18 @@ namespace rct3::simulation::tuning
         std::array<float, 3> rated { 3.6f, 0.9f, 0.0f };
     };
 
+    /// Slides with no cars that swimmers climb on foot, as on an inflatable ship.
+    struct Climbs
+    {
+        Pace climb { 0.9f };   ///< Chosen by eye: up the steps, about a slow walk
+        float gap = 1.5f;      ///< Chosen by eye: metres up the steps the one ahead must be before the next sets off
+        float drag = 0.25f;    ///< Chosen by eye: share of their speed a slider loses each second, against gravity's pull
+        Pace slowest { 1.0f }; ///< Chosen by eye: down the slide, never slower, so nobody stops on a flat stretch
+        Pace fastest { 8.0f }; ///< Chosen by eye
+        /// Chosen by eye: excitement, intensity and nausea of one not rated yet, a little under a body slide
+        std::array<float, 3> rated { 3.0f, 1.5f, 0.5f };
+    };
+
     /// Dives off a pool's boards.
     struct Dives
     {
@@ -675,6 +687,7 @@ namespace rct3::simulation::tuning
         Slides slides;
         Pools pools;
         Rivers rivers;
+        Climbs climbs;
         Dives dives;
         Surroundings surroundings;
     };

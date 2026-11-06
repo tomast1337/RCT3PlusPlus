@@ -310,7 +310,7 @@ namespace rct3::save
         /// Per-piece operating parameters. Stored as plain integers; their meaning is only partly established.
         std::int32_t brake_speed = -1;
         std::int32_t holding_time = 0;
-        std::int32_t speed_class = -1;
+        std::int32_t speed_class = -1;             ///< The speed the player set the piece to, in whole m/s: a booster pushes up to it
         std::optional<TrackPlatform> platform { }; ///< Station pieces
         /// Of a ride whose cars ride on arms, the arm's four joint angles in degrees where the player set them:
         /// the arm holds them at the piece's middle.

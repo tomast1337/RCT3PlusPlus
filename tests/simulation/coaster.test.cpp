@@ -253,6 +253,58 @@ TEST_CASE("a block brake pushes a slow train on up to its speed, and no faster")
     CHECK(c.speed == doctest::Approx(4).epsilon(0.05));
 }
 
+TEST_CASE("booster jets shove a car up a climb, hard, to their speed and no faster")
+{
+    // A 20 m climb up 8 m from 10 m on, boosters along it set to 9 m/s.
+    Coaster c = hill();
+    c.distance = { 0, 10, 30, 40 };
+    c.height = { 0, 0, 8, 8 };
+    c.kinds = { Stretch::Station, Stretch::Booster, Stretch::Plain, Stretch::Plain };
+    c.brake_speeds = { -1, 9, -1, -1 };
+    c.train_length = 2;
+    c.cars = 1;
+    c.running = true;
+    c.launched = true;
+    c.travelled = 5;
+    c.at = 12;
+    c.speed = 1;
+    drive(c, 0.5f);
+    CHECK(c.speed > 5); // Much harder than any station or block brake pushes
+    for (int i = 0; i < 10; ++i)
+        drive(c, 0.1f);
+    CHECK(c.speed <= 9);
+    CHECK(c.speed > 8);
+}
+
+TEST_CASE("a pool slide's car is eased off its platform, then taken by the slope")
+{
+    // A 4 m platform, then a 20 m slope down 10 m.
+    Coaster c;
+    c.distance = { 0, 4, 24 };
+    c.height = { 10, 10, 0 };
+    c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain };
+    c.station_speed = 4;
+    c.train_length = 2.5f;
+    c.start = 4;
+    c.at = 4;
+    c.closed = false;
+    c.splash_out = true;
+    c.running = true;
+    drive(c, 0.1f);
+    CHECK(c.speed > 0);
+    CHECK(c.speed < 1); // Eased up, not put straight to the station's speed
+    float most = 0;
+    while (c.travelled < 0.5f && c.running)
+    {
+        drive(c, 0.05f);
+        most = std::max(most, c.speed);
+    }
+    CHECK(most < 1.5f); // Nothing like the station speed it would be carried at, though the slope has begun to tell
+    for (int i = 0; i < 20 && c.running; ++i)
+        drive(c, 0.05f);
+    CHECK(c.speed > 2); // Gravity's, down the slope
+}
+
 TEST_CASE("a train held at a block brake is braked to a stop where its room ends, not stopped dead")
 {
     Coaster c = hill();

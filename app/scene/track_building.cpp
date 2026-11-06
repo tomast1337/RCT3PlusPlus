@@ -2034,6 +2034,7 @@ namespace rct3::scene
                 piece.arm_angles = design[i].arm_angles;
                 piece.brake_speed = design[i].brake_speed;
                 piece.holding_time = design[i].holding_time;
+                piece.speed_class = design[i].speed_class; // A booster's speed among them
             }
         }
         // The height Shift gave the first piece goes with it; a track begun again starts on the ground.
@@ -2522,7 +2523,7 @@ namespace rct3::scene
                 train->closed = false;
                 train->ghost = true;
                 train->running = true;
-                train->speed = train->station_speed; // Sent off by the station, as the park sends a train
+                train->speed = train->splash_out ? 0 : train->station_speed; // Sent off by the station, as the park sends a train; a slide's car is eased off
                 park::stand_train(*course, ghost.trains.front(), scene.car_fits.at(*b.ride), train->start);
                 const park::RideCars cars = park::ride_cars(std::span(&ghost, 1), 0);
                 load_car_models(scene, *assets.install, cars);
@@ -2565,7 +2566,7 @@ namespace rct3::scene
                 t.train.travelled = 0;
                 t.train.launched = false;
                 t.train.running = true;
-                t.train.speed = t.train.station_speed;
+                t.train.speed = t.train.splash_out ? 0 : t.train.station_speed;
                 t.waited = 0;
             }
             std::vector<glm::mat4> places;

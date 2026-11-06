@@ -39,7 +39,7 @@ namespace rct3::park
             std::vector<BlockEnd> ends;
             if (course.kinds.size() < 2)
                 return ends;
-            const auto ends_block = [](CourseKind k) { return k != CourseKind::Plain && k != CourseKind::Launch && k != CourseKind::Brake; };
+            const auto ends_block = [](CourseKind k) { return k != CourseKind::Plain && k != CourseKind::Launch && k != CourseKind::Brake && k != CourseKind::Booster; };
             const std::size_t last = course.kinds.size() - 1; // The last kind is past the track's end
             for (std::size_t i = 0; i < last; ++i)
             {
@@ -105,9 +105,12 @@ namespace rct3::park
                     kind = CourseKind::Launch;
                 else if (kind == CourseKind::Plain && role == kRoleBrakes)
                     kind = CourseKind::Brake;
-                // A brake's or block brake's own speed, 0 when it has none; below 0 on other pieces.
+                else if (kind == CourseKind::Plain && (shape->record.flags & kPieceBooster) != 0)
+                    kind = CourseKind::Booster;
+                // A brake's or block brake's own speed, 0 when it has none; below 0 on other pieces. A booster's is the
+                // speed the player set it to push the cars up to.
                 const bool brakes = kind == CourseKind::Brake || (kind == CourseKind::BlockBrake && role == kRoleBlockBrake);
-                const auto brake_speed = brakes ? static_cast<float>(std::max(piece.brake_speed, 0)) : -1.0f;
+                const auto brake_speed = brakes ? static_cast<float>(std::max(piece.brake_speed, 0)) : kind == CourseKind::Booster ? static_cast<float>(std::max(piece.speed_class, 0)) : -1.0f;
                 course.reverse_lift = course.reverse_lift || (shape->record.flags & kPieceReverseLift) != 0;
                 course.splash_end = role >= kRoleSlideBowl && role <= kRoleSlideEnd;
                 for (const auto& climb : shape->record.climbs)

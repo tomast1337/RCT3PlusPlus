@@ -23,6 +23,9 @@ namespace rct3::simulation
         constexpr float kTopHold = 3;         ///< Seconds a drop tower's train is held at the top
         constexpr float kStationBrake = 3;    ///< m/s² a station's brakes slow an arriving train by. Chosen by eye
         constexpr float kStationCreep = 0.5f; ///< m/s an arriving train is brought the last of the way in at. Chosen by eye
+        constexpr float kSlideLeave = 1;      ///< m/s a pool slide's car is eased off its platform at. Measured: a car setting off in a saved park
+        constexpr float kSlideEase = 4;       ///< m/s² it is eased up to that by. Chosen by eye
+        constexpr float kJetPull = 15;        ///< m/s² booster jets push a car over them by. Chosen by eye
 
         std::size_t point_at(const Coaster& c, float d)
         {
@@ -217,6 +220,12 @@ namespace rct3::simulation
                     c.speed = open && c.speed < 0 ? std::min(c.speed, -c.lift_speed) : std::max(c.speed, c.lift_speed);
                 else if (home)
                     c.speed = std::copysign(c.station_speed, c.start - c.at);
+                else if (c.splash_out && c.travelled < c.train_length)
+                {
+                    // A pool slide's car is eased off its platform, no faster than a walk; the slope takes it from there.
+                    if (c.speed < kSlideLeave)
+                        c.speed = std::min(c.speed + kSlideEase * dt, kSlideLeave);
+                }
                 else if (under == Stretch::Station)
                 {
                     // A shuttle's train rolls through the station on its passes before the last. Others are carried
@@ -242,20 +251,33 @@ namespace rct3::simulation
                 }
                 // Each car over a brake or block brake slows the train while it is faster than that brake's speed,
                 // down to it and no further, whichever way it goes; each over a block brake pushes it on while it is
-                // slower. A brake set to nothing lets it through.
+                // slower. A brake set to nothing lets it through. Each car over a booster is shoved on by its jets,
+                // much harder, while slower than the booster's speed.
                 const int cars = std::max(c.cars, 1);
                 const float car = c.train_length / static_cast<float>(cars);
                 float pull = 0;
                 float push = 0;
                 float least = 0;
                 float most = 0;
+                float jets = 0;
+                float jet_most = 0;
                 bool blocked = false;
                 for (int k = 0; k < cars; ++k)
                 {
                     const std::size_t i = point_at(c, wrap(c, c.at - (static_cast<float>(k) + 0.5f) * car));
                     const bool block = c.kinds[i] == Stretch::BlockBrake;
-                    if ((!block && c.kinds[i] != Stretch::Brake) || i >= c.brake_speeds.size() || c.brake_speeds[i] <= 0)
+                    const bool jet = c.kinds[i] == Stretch::Booster;
+                    if ((!block && !jet && c.kinds[i] != Stretch::Brake) || i >= c.brake_speeds.size() || c.brake_speeds[i] <= 0)
                         continue;
+                    if (jet)
+                    {
+                        if (c.speed < c.brake_speeds[i])
+                        {
+                            jets += kJetPull / static_cast<float>(cars);
+                            jet_most = std::max(jet_most, c.brake_speeds[i]);
+                        }
+                        continue;
+                    }
                     blocked = blocked || block;
                     if (std::abs(c.speed) > c.brake_speeds[i])
                     {
@@ -272,6 +294,8 @@ namespace rct3::simulation
                     c.speed = std::copysign(std::max(std::abs(c.speed) - pull * dt, least), c.speed);
                 else if (push > 0)
                     c.speed = std::min(c.speed + push * dt, most);
+                if (jets > 0)
+                    c.speed = std::max(c.speed, std::min(c.speed + jets * dt, jet_most));
                 // Held on a block brake for the block ahead to clear, the brakes bring it to a stop where its room
                 // runs out.
                 if (blocked && std::isfinite(room))

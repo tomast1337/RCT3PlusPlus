@@ -1217,7 +1217,7 @@ namespace rct3::scene
                             const simulation::Coaster& c = fleet->trains[t];
                             const auto standing = simulation::standing_at(c);
                             const auto held = simulation::held_in_station(c);
-                            at.push_back({ { "front", c.at }, { "length", c.train_length }, { "station", standing ? Json(*standing) : Json(nullptr) }, { "held", held ? Json(*held) : Json(nullptr) }, { "riders", t < fleet->riders.size() ? fleet->riders[t].size() : 0 } });
+                            at.push_back({ { "front", c.at }, { "speed", c.speed }, { "length", c.train_length }, { "station", standing ? Json(*standing) : Json(nullptr) }, { "held", held ? Json(*held) : Json(nullptr) }, { "riders", t < fleet->riders.size() ? fleet->riders[t].size() : 0 } });
                         }
                         one["trainsAt"] = std::move(at);
                         one["trackLength"] = fleet->trains.empty() ? 0.0f : fleet->trains.front().length();

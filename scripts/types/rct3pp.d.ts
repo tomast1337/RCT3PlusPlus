@@ -346,10 +346,10 @@ interface RideInfo {
     /** Ridden by the park on a track: the trains it runs, and how many are under way now. */
     running?: number;
     moving?: number;
-    /** Ridden by the park on a track: each train's front along the track (metres), its length, and the station it
+    /** Ridden by the park on a track: each train's front along the track (metres), its speed along it (m/s), its length, and the station it
      * stands at (0 the first, k the k-th stop after it), null while under way; the station it is held up in behind
      * the train ahead, short of its end, numbered alike, or null; and the riders still in its seats. */
-    trainsAt?: { front: number; length: number; station: number | null; held: number | null; riders: number }[];
+    trainsAt?: { front: number; speed: number; length: number; station: number | null; held: number | null; riders: number }[];
     /** Ridden by the park on a track: the length of its track, metres. */
     trackLength?: number;
     /** A lazy river the park runs: its stations, how many of them a pool complex joins, and the middle of the

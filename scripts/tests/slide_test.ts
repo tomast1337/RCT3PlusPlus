@@ -88,6 +88,36 @@ for (const slide of found) {
     log(kind, "length", length.toFixed(1), "open end", open_end, "trains", JSON.stringify(at.map((t) => t.front.toFixed(1))));
     expect(!open_end || at.filter((t) => t.front < length - 0.01).length === 1, `one car on ${kind}'s track, the rest past its end, not ${JSON.stringify(at)}`);
 
+    // Setting off: eased off the platform, not shot out of it. Its speed each tenth of a second for its first two
+    // seconds under way (logged), and the speed it has left the platform at.
+    const top = at.findIndex((t) => t.front < length - 0.01);
+    await park.advanceUntil(() => info().trainsAt![top].speed > 0, 60, `${kind}'s car setting off`);
+    const start = info().trainsAt![top].front;
+    const speeds: string[] = [];
+    for (let k = 0; k < 20; ++k) {
+        const t = info().trainsAt![top];
+        speeds.push(`${t.speed.toFixed(2)}@${(t.front - start).toFixed(2)}`);
+        await park.advance(0.1);
+    }
+    log(kind, "setting off, speed@metres", speeds.join(" "));
+    // A slide's car is eased off at a walk, not carried at the station's speed; one that goes round leaves at that.
+    if (open_end)
+        expect(Number(speeds[0].split("@")[0]) <= 1.01, `${kind}'s car eased off its platform, not ${speeds[0]}`);
+    // The Aqua Blaster's jets shove its car up each climb they line.
+    if (kind === "MasterBlaster") {
+        let fastest = 0;
+        const climb: string[] = [];
+        for (let k = 0; k < 120; ++k) {
+            const t = info().trainsAt![top];
+            fastest = Math.max(fastest, t.speed);
+            if (k % 4 === 0)
+                climb.push(`${t.speed.toFixed(1)}@${t.front.toFixed(0)}`);
+            await park.advance(0.25);
+        }
+        log(kind, "under way, speed@front", climb.join(" "), "fastest", fastest.toFixed(1));
+        expect(fastest > 8, `${kind}'s car shoved up its climbs by the jets, not ${fastest.toFixed(1)} m/s at most`);
+    }
+
     // Under way down the slide: a look at the empty car.
     const sliding = () => (info().trainsAt ?? []).findIndex((t) => t.station === null && t.front > 5 && t.front < length - 5);
     await park.advanceUntil(() => sliding() >= 0 && info().trainsAt![sliding()].front > length / 3, 120, `${kind}'s car on its way down`);

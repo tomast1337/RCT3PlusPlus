@@ -971,13 +971,16 @@ namespace rct3::simulation
         for (const park::CourseKind k : course.kinds)
         {
             using enum park::CourseKind;
-            c.kinds.push_back(k == Chain || k == Cable ? Stretch::Chain : k == Station ? Stretch::Station : k == BlockBrake ? Stretch::BlockBrake : k == Launch ? Stretch::Launch : k == Brake ? Stretch::Brake : Stretch::Plain);
+            c.kinds.push_back(k == Chain || k == Cable ? Stretch::Chain : k == Station ? Stretch::Station : k == BlockBrake ? Stretch::BlockBrake : k == Launch ? Stretch::Launch : k == Brake ? Stretch::Brake : k == Booster ? Stretch::Booster : Stretch::Plain);
         }
         // A brake or block brake with no speed of its own, under 1 m/s, slows to the ride's for its kind.
+        // shortcut: a booster with no speed of its own pushes up to the lift speed, upgrade when the speed a newly
+        // built booster gets is known.
         for (std::size_t i = 0; i < course.brake_speeds.size(); ++i)
         {
             const float speed = course.brake_speeds[i];
-            const float ride_speed = i < c.kinds.size() && c.kinds[i] == Stretch::BlockBrake ? ride.options.block_brake_off_speed : ride.options.brake_speed;
+            const Stretch kind = i < c.kinds.size() ? c.kinds[i] : Stretch::Plain;
+            const float ride_speed = kind == Stretch::BlockBrake ? ride.options.block_brake_off_speed : kind == Stretch::Booster ? ride.options.lift_speed : ride.options.brake_speed;
             c.brake_speeds.push_back(speed < 0 ? -1.0f : speed >= 1 ? speed : ride_speed);
         }
         // Trains set off from where a station stretch ends.

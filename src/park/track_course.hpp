@@ -30,6 +30,7 @@ namespace rct3::park
         BlockBrake, ///< Ends a block: a train may wait on it for the block ahead to clear (also holding pieces, lift tops)
         Launch,     ///< Pushes a launched train on, past its station
         Brake,      ///< Slows a train down to the piece's brake speed
+        Booster,    ///< Jets push the cars up to the piece's speed, as a water coaster's climbs have them
     };
 
     struct TrackCourse
@@ -38,7 +39,7 @@ namespace rct3::park
         std::vector<glm::vec3> ups;                     ///< Up for the track at each point, leaning with its bank; none is straight up
         std::vector<float> distance;                    ///< From the start to each point
         std::vector<CourseKind> kinds;                  ///< Of the stretch from each point to the next; the last is unused
-        std::vector<float> brake_speeds;                ///< Of the brake or block brake from each point, in m/s: 0 where it has none of its own, below 0 off them
+        std::vector<float> brake_speeds;                ///< Of the brake or block brake from each point, in m/s: 0 where it has none of its own, below 0 off them; of a booster, the speed it pushes up to
         std::vector<float> piece_starts;                ///< Distance at the start of each of the track's pieces
         std::vector<bool> wet;                          ///< By piece, as piece_starts: runs through open water, not in a tube
         bool closed = false;                            ///< The end joins the start, so cars go round

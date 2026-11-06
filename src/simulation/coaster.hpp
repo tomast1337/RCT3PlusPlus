@@ -8,7 +8,9 @@
 // station speed, slowing it there too when it comes back. Brakes slow it down to their speed and no further,
 // each car over one braking it, so a short run of brakes may not bring a fast train all the way down. Block brakes
 // do the same and push a slower train up to their speed; one held for the block ahead brakes it to a stop. A ride
-// with a fixed speed moves at that speed everywhere. On a shuttle the train runs back and forth between the
+// with a fixed speed moves at that speed everywhere. Boosters' jets shove a car on hard while it is slower than their
+// speed, as a water coaster's climbs have them. A pool slide's car is not carried off its platform but eased off at a
+// walk, the slope taking it from there. On a shuttle the train runs back and forth between the
 // track's ends, counting its passes through the station. A train that runs off either end of a track with two
 // ends, a shuttle's or an unfinished circuit's, crashes. The speeds are the ride's own, as its park keeps them.
 //
@@ -36,6 +38,7 @@ namespace rct3::simulation
         BlockBrake, ///< Slows or pushes the train to the stretch's brake speed; ends a block, where a train may be held
         Launch,     ///< Goes on pushing a launched train as hard as its platform began to
         Brake,      ///< Slows the train to the stretch's brake speed
+        Booster,    ///< Jets push the cars over it up to the stretch's brake speed, hard, the way they are going
     };
 
     /// How a train on a track with two ends runs back and forth through its station.

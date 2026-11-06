@@ -87,10 +87,10 @@ TEST_CASE("every item with squares has a footprint, as columns stop at it, but j
 
 TEST_CASE("column facings turn with the item")
 {
-    CHECK(turned(kRoundSupport, 1) == kRoundSupport);
-    CHECK(turned(kAlongX, 1) == kAlongZ);
-    CHECK(turned(kAlongZ, 2) == kAlongZ);
-    CHECK(turned(5, 1) == 2);
-    CHECK(turned(3, -1) == 2);
-    CHECK(turned(kNoSupport, 3) == kNoSupport);
+    CHECK(turned(kRoundSupport, ModelTurn { 1 }) == kRoundSupport);
+    CHECK(turned(kAlongX, ModelTurn { 1 }) == kAlongZ);
+    CHECK(turned(kAlongZ, ModelTurn { 2 }) == kAlongZ);
+    CHECK(turned(5, ModelTurn { 1 }) == 2);
+    CHECK(turned(3, ModelTurn::from(-1)) == 2);
+    CHECK(turned(kNoSupport, ModelTurn { 3 }) == kNoSupport);
 }

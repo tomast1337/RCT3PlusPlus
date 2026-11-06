@@ -70,7 +70,7 @@ namespace rct3::park
     struct FoundSet
     {
         const SupportSet* set = nullptr;
-        std::int32_t quarter_turns = 0; ///< To turn the set's pieces by so they face the way asked
+        ModelTurn turn; ///< To turn the set's pieces by so they face the way asked
     };
 
     /// The set of `group` for a column facing `kind`: one facing that way, turned when it faces another

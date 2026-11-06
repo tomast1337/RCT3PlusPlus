@@ -157,7 +157,7 @@ namespace rct3::park
             std::uint64_t last_id = 0;
             BuiltSupports out;
 
-            save::PlacedObject& add(const save::PlacedObject& held, const SupportPiece& piece, const Tile& tile, std::int32_t level, std::int32_t turns)
+            save::PlacedObject& add(const save::PlacedObject& held, const SupportPiece& piece, const Tile& tile, std::int32_t level, ModelTurn turn)
             {
                 save::PlacedObject& o = out.pieces.emplace_back();
                 o.id = ++last_id;
@@ -169,16 +169,16 @@ namespace rct3::park
                 o.base_height = level;
                 o.height_adjust = 0.0f;
                 o.force_absolute_height = true;
-                o.rotation = turns;
+                o.rotation = turn.value;
                 o.colours = held.colours;
                 return o;
             }
 
-            /// A piece stood at `at`, turned like `turns` and stretched up by `stretch`.
-            void stand(const save::PlacedObject& held, const SupportPiece& piece, glm::vec2 tiles, float level, std::int32_t turns, float stretch)
+            /// A piece stood at `at`, turned `turn` and stretched up by `stretch`.
+            void stand(const save::PlacedObject& held, const SupportPiece& piece, glm::vec2 tiles, float level, ModelTurn turn, float stretch)
             {
-                save::PlacedObject& o = add(held, piece, tile_of(tiles), static_cast<std::int32_t>(std::floor(level)), turns);
-                const glm::vec2 x = turned_x(ModelTurn::from(turns));
+                save::PlacedObject& o = add(held, piece, tile_of(tiles), static_cast<std::int32_t>(std::floor(level)), turn);
+                const glm::vec2 x = turned_x(turn);
                 glm::mat4 m { 1.0f };
                 m[0] = glm::vec4(x.x, 0, x.y, 0);
                 m[1] = glm::vec4(0, stretch, 0, 0);
@@ -199,7 +199,7 @@ namespace rct3::park
                 const glm::vec3 side = glm::normalize(glm::cross(along, glm::vec3 { 0, 1, 0 }));
                 const glm::vec3 up = glm::cross(side, along);
                 const glm::vec3 middle = (from + to) / 2.0f;
-                save::PlacedObject& o = add(held, piece, { static_cast<int>(std::floor((middle.x - grid.world_x(0)) / grid.tile_size_x)), static_cast<int>(std::floor((middle.z - grid.world_z(0)) / grid.tile_size_z)) }, static_cast<std::int32_t>(std::floor(middle.y)), held.rotation);
+                save::PlacedObject& o = add(held, piece, { static_cast<int>(std::floor((middle.x - grid.world_x(0)) / grid.tile_size_x)), static_cast<int>(std::floor((middle.z - grid.world_z(0)) / grid.tile_size_z)) }, static_cast<std::int32_t>(std::floor(middle.y)), ModelTurn::from(held.rotation));
                 glm::mat4 m { 1.0f };
                 m[0] = glm::vec4(along * ((distance + 2 * overhang) / length), 0);
                 m[1] = glm::vec4(up, 0);
@@ -340,7 +340,7 @@ namespace rct3::park
                 if (!f.wants_supports || f.by_points || !c.square->wants_column || c.square->kind == kNoSupport || (f.alternate_tiles && !odd_tile) || !c.object->base_height)
                     continue;
                 const std::string& group = c.object->support_set.empty() ? models.at(model_key(*c.object)).support_group : c.object->support_set;
-                const FoundSet found = find_support_set(sets, group, turned(c.square->kind, c.object->rotation));
+                const FoundSet found = find_support_set(sets, group, turned(c.square->kind, ModelTurn::from(c.object->rotation)));
                 if (found.set == nullptr)
                     continue;
                 const auto base = column_base(std::span(covered).subspan(i + 1), ground_paths, grid, tile, c.object, static_cast<float>(c.low), *found.set, std::nullopt, true);
@@ -348,7 +348,7 @@ namespace rct3::park
                     continue;
                 for (const Piece& p : column(*found.set, base->first, c.low, base->second))
                 {
-                    build.add(*c.object, *p.piece, tile, static_cast<std::int32_t>(p.level), found.quarter_turns);
+                    build.add(*c.object, *p.piece, tile, static_cast<std::int32_t>(p.level), found.turn);
                     build.out.of.push_back({ c.object->id, tile });
                 }
             }
@@ -410,9 +410,9 @@ namespace rct3::park
                 if (!thirds_built.emplace(tile, third).second || !wanted(tile))
                     continue;
                 for (const Piece& piece : column(set, base->first, top, base->second, exact_top))
-                    build.stand(*object, *piece.piece, column_spot, piece.level, object->rotation, piece.stretch);
+                    build.stand(*object, *piece.piece, column_spot, piece.level, ModelTurn::from(object->rotation), piece.stretch);
                 if (cap)
-                    build.stand(*object, *set.cap, column_spot, exact_top, object->rotation, 1);
+                    build.stand(*object, *set.cap, column_spot, exact_top, ModelTurn::from(object->rotation), 1);
                 if (!straight && !beams.empty())
                 {
                     const glm::vec3 from = in_park(grid, top_spot, base_level + p.top_height);

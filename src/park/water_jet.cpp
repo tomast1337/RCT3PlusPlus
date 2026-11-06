@@ -11,7 +11,7 @@ namespace rct3::park
     namespace
     {
         constexpr float kDropsPerSecond = 20;              ///< Chosen by eye: enough rings that a swinging jet still bends smoothly
-        constexpr int kSides = 8;                          ///< Chosen by eye: round enough close up
+        constexpr int kRimSides = 8;                       ///< Chosen by eye: round enough close up
         constexpr float kPictureLength = 3;                ///< Chosen by eye: metres of jet the picture covers
         constexpr float kPictureSpeed = 0.8f;              ///< Chosen by eye: pictures a second the water runs along it
         constexpr float kFlare = 1.0f;                     ///< Chosen by eye: how much wider than its spread broken water gets
@@ -158,25 +158,25 @@ namespace rct3::park
                     const glm::vec3 tint = spray ? kSpray : glm::mix(kWhole, kSpray, broken);
                     const float share = spray ? broken : 1 - kThinning * broken;
                     const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
-                    for (int k = 0; k <= kSides; ++k)
+                    for (int k = 0; k <= kRimSides; ++k)
                     {
-                        const float turn = 2 * std::numbers::pi_v<float> * static_cast<float>(k) / kSides;
+                        const float turn = 2 * std::numbers::pi_v<float> * static_cast<float>(k) / kRimSides;
                         const glm::vec3 out = side * std::cos(turn) + lift * std::sin(turn);
-                        const float wander = noise(drops[i].serial, static_cast<std::uint32_t>(k % kSides));
-                        const float gap = noise(drops[i].serial, static_cast<std::uint32_t>(k % kSides) + kSides);
+                        const float wander = noise(drops[i].serial, static_cast<std::uint32_t>(k % kRimSides));
+                        const float gap = noise(drops[i].serial, static_cast<std::uint32_t>(k % kRimSides) + kRimSides);
                         // Seen edge on, water looks thicker; broken water lets more through face on, and has gaps.
                         const float rim = 1 - std::abs(glm::dot(out, view));
                         const float alpha = glm::mix(0.85f + 0.15f * rim * rim, 0.25f + 0.5f * rim * rim, broken) * (1 - kGaps * broken * gap) * fade * thin * share;
-                        mesh.vertices.push_back({ .position = p + out * std::max(radius, least) * (spray ? kSprayWider : 1.0f) * (1 + kRagged * broken * (wander - 0.5f)), .colour = { tint, alpha }, .uv = { static_cast<float>(k) / kSides, (run - seconds * kPictureSpeed * kPictureLength) / kPictureLength }, .normal = out });
+                        mesh.vertices.push_back({ .position = p + out * std::max(radius, least) * (spray ? kSprayWider : 1.0f) * (1 + kRagged * broken * (wander - 0.5f)), .colour = { tint, alpha }, .uv = { static_cast<float>(k) / kRimSides, (run - seconds * kPictureSpeed * kPictureLength) / kPictureLength }, .normal = out });
                         mesh.owners.push_back(0);
                     }
                     if (i + 1 < drops.size())
                     {
                         run += glm::distance(p, drops[i + 1].position);
-                        for (std::uint32_t k = 0; k < kSides; ++k)
+                        for (std::uint32_t k = 0; k < kRimSides; ++k)
                         {
                             const std::uint32_t a = base + k;
-                            const std::uint32_t b = a + kSides + 1;
+                            const std::uint32_t b = a + kRimSides + 1;
                             mesh.indices.insert(mesh.indices.end(), { a, b, a + 1, a + 1, b, b + 1 });
                         }
                     }

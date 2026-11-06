@@ -23,6 +23,8 @@ namespace rct3::simulation
         constexpr float kStationCreep = 0.5f; ///< m/s an arriving train is brought the last of the way in at. Chosen by eye
         constexpr float kSlideLeave = 1;      ///< m/s a pool slide's car is eased off its platform at. Measured: a car setting off in a saved park
         constexpr float kSlideEase = 4;       ///< m/s² it is eased up to that by. Chosen by eye
+        constexpr float kWadeSpeed = 2.9f;    ///< m/s a slide's car is carried through the pool at on its way back to its lift. Measured: a car of a tested slide in the original game
+        constexpr float kWadeDrag = 40;       ///< m/s² the water slows a faster car by, down to that. Measured likewise: 13 m/s down to 3 in 2 m
         constexpr float kJetPull = 15;        ///< m/s² booster jets push a car over them by. Chosen by eye
         /// Radians a slide's car swings up its trough's wall to go over a rim. The rims are the piece's rails,
         /// level with the track's line the car swings from, so it goes over once swung out level with them.
@@ -257,8 +259,13 @@ namespace rct3::simulation
                 const float back = c.at - c.train_length;
                 const float slope = std::clamp((height_at(c, c.at) - height_at(c, back)) / c.train_length, -1.0f, 1.0f);
                 c.speed += (-kGravity * slope - kGravity * c.rolling * std::sqrt(1 - slope * slope) - c.air * c.speed * std::abs(c.speed)) * dt;
+                // A slide's way back to its lift has a chain under the water too, which the water's pace overrides.
+                // shortcut: slowed so whether or not a pool is there; upgrade once a run in the original game with no
+                // pool joined is known.
+                if (std::ranges::any_of(c.wades, [&](const std::array<float, 2>& w) { return c.at >= w[0] && c.at < w[1]; }))
+                    c.speed = std::max(c.speed - kWadeDrag * dt, kWadeSpeed);
                 // A shuttle's chain carries the train either way, the way it is going.
-                if (chained)
+                else if (chained)
                     c.speed = open && c.speed < 0 ? std::min(c.speed, -c.lift_speed) : std::max(c.speed, c.lift_speed);
                 else if (home)
                     c.speed = std::copysign(c.station_speed, c.start - c.at);

@@ -964,6 +964,8 @@ namespace rct3::simulation
                 return std::nullopt;
         }
         c.distance = course.distance;
+        c.drop_offs = course.drop_offs;
+        c.wades = course.wades;
         c.points = course.points;
         c.ups = course.ups;
         for (const glm::vec3& p : course.points)

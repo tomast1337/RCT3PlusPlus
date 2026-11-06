@@ -131,6 +131,29 @@ TEST_CASE("a train is pulled up the chain, runs down the drop faster and comes r
     CHECK(running.at == 10);
 }
 
+TEST_CASE("a slide's car down in the pool on its way back is slowed in the water and carried on to the lift")
+{
+    // The drop's foot to the lift's foot is the pool, the level 30 m back from 70 m.
+    Coaster c = hill();
+    c.wades = { { { 70, 100 } } };
+    c.running = true;
+    float in_pool = 0;
+    float slowest = 100;
+    for (int t = 0; t < 4000 && c.running; ++t)
+    {
+        drive(c, 0.01f);
+        if (c.at > 75 && c.at < 100)
+        {
+            in_pool = std::max(in_pool, c.speed);
+            slowest = std::min(slowest, c.speed);
+        }
+    }
+    // Some 17 m/s off the drop, under 3 m/s once 5 m into the water, never stopping.
+    CHECK(in_pool < 3);
+    CHECK(slowest > 2.5f);
+    CHECK(c.at == 10);
+}
+
 TEST_CASE("a point on the track is on a chain only along the chain's stretch, round again past either end")
 {
     const Coaster c = hill();

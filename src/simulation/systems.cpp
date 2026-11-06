@@ -4835,6 +4835,9 @@ namespace rct3::simulation
                         fleet->lap_done = end_lap(fleet->lap);
                     if (t == 0 && train.crashed)
                         fleet->lap = { };
+                    // On a slide's way back to its lift, its riders are let off into the pool and the car goes on empty.
+                    if (!fleet->riders[t].empty() && std::ranges::any_of(train.drop_offs, [&](float d) { return train.was_at < d && train.at >= d; }))
+                        unload(fleet->riders[t], 0, glm::vec3(0.0f), &train);
                     // Its riders react to the ride, seated in its cars front to back.
                     if (const auto& riders = fleet->riders[t]; !riders.empty() && !train.crashed)
                     {

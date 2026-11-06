@@ -8,6 +8,7 @@
 #include <charconv>
 #include <cmath>
 #include <cstdlib>
+#include <set>
 
 namespace rct3::park
 {
@@ -662,6 +663,15 @@ namespace rct3::park
             if (s.kind == PoolKind::Water)
                 out.push_back({ s.col, s.row, s.surface, s.depth });
         return out;
+    }
+
+    void drop_saved_pool_pieces(const PoolMap& map, std::string_view overlay, std::vector<save::PlacedObject>& objects)
+    {
+        std::set<std::string, std::less<>> laid;
+        for (const save::PlacedObject& o : pool_objects(map, overlay, 0))
+            laid.insert(o.symbol);
+        const auto same_overlay = [&](std::string_view o) { return std::ranges::equal(o, overlay, [](char a, char b) { return strings::ascii_lower(a == '\\' ? '/' : a) == strings::ascii_lower(b == '\\' ? '/' : b); }); };
+        std::erase_if(objects, [&](const save::PlacedObject& o) { return same_overlay(o.overlay) && laid.contains(o.symbol); });
     }
 
     void dig_under_pools(PoolMap& map, save::TerrainGrid& grid)

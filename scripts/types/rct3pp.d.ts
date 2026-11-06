@@ -217,6 +217,9 @@ declare namespace map {
     /** The placed objects that are shown: scenery, rides' parts, supports, fences and the rest, with the whole-unit
      * height stored for each (null when unset). */
     function objects(): { symbol: string; overlay: string; col: number; row: number; height: number | null }[];
+    /** The pieces the pools' squares place now, their extras and changing rooms, shaped as `objects` gives them: what
+     * the pool tool's work should leave shown. */
+    function poolPieces(): { symbol: string; overlay: string; col: number; row: number; height: number | null }[];
     /** The particle effects shown now, those items keep running and those fired once: the effect's name, lower
      * case, where it is as a map point, and its particles alive. */
     function effects(): { effect: string; col: number; row: number; up: number; live: number }[];

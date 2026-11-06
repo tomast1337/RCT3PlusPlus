@@ -675,6 +675,12 @@ namespace rct3::scene
             }
             return objects;
         });
+        engine_.define("map.poolPieces", [this](const Json&) {
+            Json pieces = Json::array();
+            for (const save::PlacedObject& o : park::pool_objects(park_of(park_).pools, park::kPoolOverlay, 0))
+                pieces.push_back({ { "symbol", o.symbol }, { "overlay", o.overlay }, { "col", o.col }, { "row", o.row }, { "height", o.base_height ? Json(*o.base_height) : Json(nullptr) } });
+            return pieces;
+        });
         engine_.define("build.flatRides", [this](const Json&) -> Json {
             const auto items = build_items(park_of(park_));
             if (!items)

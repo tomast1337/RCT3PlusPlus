@@ -289,6 +289,11 @@ namespace rct3::park
     /// are placed as; take them in once the pool tool lays them.
     [[nodiscard]] PoolMap saved_pools(const save::WorldModel& world, std::span<const save::PlacedObject> objects);
 
+    /// Takes out of `objects` the pieces a park from the game placed for `map`'s squares, so the squares alone place
+    /// them and the pool tool's work redraws them: those in the pool type in `overlay` (named with either slash, in
+    /// any case) that pool_objects lays for `map`. The rest stays as placed: the extras, and any piece it never lays.
+    void drop_saved_pool_pieces(const PoolMap& map, std::string_view overlay, std::vector<save::PlacedObject>& objects);
+
     /// Digs the ground of `grid` down to the floor of each square of `map` where it is higher, keeping in the square
     /// the ground it dug; the ground under a raised square is left as it is.
     void dig_under_pools(PoolMap& map, save::TerrainGrid& grid);

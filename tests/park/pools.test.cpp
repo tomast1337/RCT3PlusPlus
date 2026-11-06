@@ -771,6 +771,22 @@ TEST_CASE("pools: a park from the game gives its squares, boards and changing ro
     CHECK(map.rooms[0].waves.every == 120);
 }
 
+TEST_CASE("pools: a park from the game's own pieces for its squares go, so the squares alone place them; its extras stay")
+{
+    const PoolMap map = ringed(1, 1);
+    // As a park from the game names its pool type: back slashes, any case.
+    constexpr std::string_view kSaved = "pool\\type\\Stub";
+    // Pieces of the squares, an extra (4) and a piece of another type (5).
+    std::vector<save::PlacedObject> objects {
+        { .id = 1, .symbol = "Base", .overlay = std::string(kSaved), .col = 1, .row = 1 }, { .id = 2, .symbol = "SolidTop", .overlay = std::string(kSaved), .col = 0, .row = 0 }, { .id = 3, .symbol = "Railing", .overlay = std::string(kSaved), .col = 2, .row = 2 }, { .id = 4, .symbol = "Lamp", .overlay = std::string(kSaved), .col = 0, .row = 1 }, { .id = 5, .symbol = "Base", .overlay = "Other/Stub", .col = 1, .row = 1 },
+    };
+    drop_saved_pool_pieces(map, "Pool/Type/Stub", objects);
+    std::vector<std::uint64_t> kept;
+    for (const save::PlacedObject& o : objects)
+        kept.push_back(o.id);
+    CHECK(kept == std::vector<std::uint64_t> { 4, 5 });
+}
+
 namespace
 {
 

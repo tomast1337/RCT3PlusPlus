@@ -586,7 +586,7 @@ namespace rct3::simulation::tuning
         Chance paddle { 0.15 };                   ///< Chosen by eye: of paddling off, each time a resting rider's ring comes round to face along the river or back
         Frequency rest = Frequency::every({ 8 }); ///< Chosen by eye: how often a paddling rider stops to rest
         float lane = 1.0f;                        ///< Chosen by eye: most metres to either side of the channel's middle a rider floats
-        float join = 2.0f;                        ///< Chosen by eye: tiles from a station's track to pool path stairs that join it to their complex
+        float join = 1.75f;                       ///< Chosen by eye: most tiles across from a pool ride's station track to the middle of a square beside it that joins it to its complex, a wide station's track lying a tile and a half from its sides' squares
         /// Excitement, intensity and nausea of a river not rated yet, as a saved park rates its river (with no test run)
         std::array<float, 3> rated { 3.6f, 0.9f, 0.0f };
     };

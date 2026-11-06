@@ -685,8 +685,8 @@ namespace rct3::simulation
                     complex.spa.push_back(middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.spa_water));
                 else if (s.kind == park::PoolKind::Tile || s.kind == park::PoolKind::Path) // Not a diving board's, a slope or stairs
                     complex.paved.push_back(middle(s.col, s.row, static_cast<float>(s.surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 });
-                else if (s.kind == park::PoolKind::PathStairs)
-                    complex.steps.push_back(middle(s.col, s.row, static_cast<float>(s.surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 });
+                else if (s.kind == park::PoolKind::PathStairs) // At their top, where a station beside them joins them
+                    complex.steps.push_back(middle(s.col, s.row, static_cast<float>(s.surface + park::kPathStairsRise)) + glm::vec3 { 0, kTuning.pools.deck, 0 });
                 for (const park::Side side : park::kSides)
                     for (auto [it, end] = squares.equal_range({ s.col + side.step()[0], s.row + side.step()[1] }); it != end; ++it)
                         if (complex_of.try_emplace(it->second, complexes.size() - 1).second)
@@ -1309,7 +1309,9 @@ namespace rct3::simulation
                         river.stations.emplace_back();
                         from = coaster->distance[k];
                     }
-                    river.stations.back().points.push_back(coaster->points[k]);
+                    if (river.stations.back().points.empty())
+                        river.stations.back().points.push_back(coaster->points[k]);
+                    river.stations.back().points.push_back(coaster->points[k + 1]);
                     river.stations.back().at = (from + coaster->distance[k + 1]) / 2;
                 }
                 r.emplace<River>(e, std::move(river));

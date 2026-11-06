@@ -474,7 +474,7 @@ namespace rct3::simulation
         std::vector<glm::vec3> paved { };
         std::vector<glm::vec3> spa { };   ///< Where swimmers sit in the spa pools, at the spa's water
         std::vector<PoolSpot> extras { }; ///< The paved squares with an extra on them, loungers and showers
-        std::vector<glm::vec3> steps { }; ///< Its pool path stairs, where a lazy river's station may join it
+        std::vector<glm::vec3> steps { }; ///< Its pool path stairs, at their top, which a pool ride's station may join as it may its paving
         std::vector<PoolBoard> boards { };
         std::vector<PoolLadder> ladders { };
         /// Its ramps and spiral staircases, each the points walked through from the lower level to the upper.
@@ -576,7 +576,7 @@ namespace rct3::simulation
     };
 
     /// A lazy river: a channel with no trains round which swimmers float in rings, free on their complex's ticket.
-    /// They get on and off at its stations, each joined to the complex whose pool path stairs come down beside it.
+    /// They get on and off at its stations, each joined to the complex whose paving or pool paths lie beside it.
     struct River
     {
         struct Station
@@ -584,7 +584,7 @@ namespace rct3::simulation
             float at = 0;                      ///< Along the course, the middle of the station, where riders get on and off
             std::vector<glm::vec3> points { }; ///< Of the course along it
             entt::entity pool = entt::null;    ///< The complex it joins (its SwimPool); none till one does
-            glm::vec3 steps { 0.0f };          ///< The stairs that join it, where swimmers come and go
+            glm::vec3 square { 0.0f };         ///< The square beside it that joins it, where swimmers come and go
         };
         Coaster course { };
         std::vector<Station> stations { };

@@ -2495,7 +2495,7 @@ namespace rct3::simulation
             r.emplace<Dropped>(person, Dropped { .ground = ground, .fall = { -velocity.y }, .drift = { velocity.x, velocity.z }, .thrown = true, .node = node });
         }
 
-        /// Joins each lazy river's stations to the complexes whose pool path stairs come down beside them, and floats
+        /// Joins each lazy river's stations to the complexes whose paving or pool paths lie beside them, and floats
         /// their riders round in their rings till they get off at a joined station and swim on in its complex.
         void float_on_rivers(SimWorld& world, float dt)
         {
@@ -2508,21 +2508,9 @@ namespace rct3::simulation
                 {
                     if (r.valid(station.pool) && r.all_of<SwimPool>(station.pool))
                         continue;
-                    station.pool = entt::null;
-                    float closest = tuning.join * world.paths.tile_size;
-                    for (const entt::entity door : sorted(r.view<const PoolDoor>()))
-                    {
-                        const entt::entity pool = r.get<PoolDoor>(door).pool;
-                        if (const auto* complex = r.valid(pool) ? r.try_get<SwimPool>(pool) : nullptr)
-                            for (const glm::vec3& steps : complex->steps)
-                                for (const glm::vec3& point : station.points)
-                                    if (const float d = glm::distance(glm::vec2 { steps.x, steps.z }, glm::vec2 { point.x, point.z }); d < closest && std::abs(steps.y - point.y) < world.paths.tile_size)
-                                    {
-                                        closest = d;
-                                        station.pool = pool;
-                                        station.steps = steps;
-                                    }
-                    }
+                    const auto join = pool_beside(world, station.points);
+                    station.pool = join ? join->pool : entt::null;
+                    station.square = join ? join->square : station.square;
                 }
             for (const entt::entity g : sorted(r.view<Floating>()))
             {
@@ -2564,7 +2552,7 @@ namespace rct3::simulation
                 f.along = std::fmod(std::fmod(f.along + moved, length) + length, length);
                 f.travelled += moved;
                 swimmer->left.value -= dt;
-                // Far enough, they get off at the next joined station they come to, up its stairs, and swim on in its
+                // Far enough, they get off at the next joined station they come to, onto the square joining it, and swim on in its
                 // complex from a changing room of it, theirs if it is; with no station joined, back in their own.
                 const auto joined = [&](const River::Station& s) { return r.valid(s.pool); };
                 const auto reached = f.travelled >= f.stay && moved > 0 ? std::ranges::find_if(river->stations, [&](const River::Station& s) { return joined(s) && std::fmod(s.at - from + length, length) <= moved; }) : river->stations.end();
@@ -2580,7 +2568,7 @@ namespace rct3::simulation
                         std::erase(r.get<CycleRide>(f.river).riders, g);
                         r.remove<Floating>(g);
                         *errand = { .kind = ErrandKind::Swimming, .target = room };
-                        pose.position = reached != river->stations.end() ? reached->steps : r.get<PoolDoor>(room).poolside;
+                        pose.position = reached != river->stations.end() ? reached->square : r.get<PoolDoor>(room).poolside;
                         swimmer->goal = pose.position;
                         swimmer->room = entt::null;
                         swimmer->in_water = false;
@@ -2722,6 +2710,36 @@ namespace rct3::simulation
                 return door;
         }
         return std::nullopt;
+    }
+
+    std::optional<PoolJoin> pool_beside(const SimWorld& world, std::span<const glm::vec3> station)
+    {
+        const auto& r = world.registry;
+        const float tile = world.paths.tile_size;
+        std::optional<PoolJoin> found;
+        float closest = kTuning.rivers.join * tile;
+        for (const entt::entity pool : sorted(r.view<const SwimPool>()))
+        {
+            const SwimPool& complex = r.get<SwimPool>(pool);
+            for (const auto* squares : { &complex.paved, &complex.steps })
+                for (const glm::vec3& square : *squares)
+                    for (std::size_t k = 0; k < station.size(); ++k)
+                    {
+                        // Across the track from a stretch of the station, not past its ends, and at its level.
+                        const glm::vec3 a = station[k];
+                        const glm::vec3 b = station[std::min(k + 1, station.size() - 1)];
+                        const glm::vec2 run { b.x - a.x, b.z - a.z };
+                        const glm::vec2 to { square.x - a.x, square.z - a.z };
+                        const float length = glm::length(run);
+                        const float along = length > 0 ? glm::dot(to, run) / length : 0.0f;
+                        const float across = length > 0 ? std::abs(run.x * to.y - run.y * to.x) / length : glm::length(to);
+                        if (std::abs(square.y - a.y) >= world.paths.level_height || along < -tile / 2 || along > length + tile / 2 || across >= closest)
+                            continue;
+                        closest = across;
+                        found = PoolJoin { .pool = pool, .square = square };
+                    }
+        }
+        return found;
     }
 
     bool in_swimwear(const entt::registry& r, entt::entity person)
@@ -4041,7 +4059,7 @@ namespace rct3::simulation
                 // Into a lazy river at its station there, in a ring, free on the complex's ticket.
                 if (const auto* river = r.try_get<River>(slide); river != nullptr && r.get<Attraction>(slide).open && (upkeep == nullptr || !upkeep->broken))
                 {
-                    const auto station = std::ranges::min_element(river->stations, { }, [&](const River::Station& st) { return st.pool == door->pool ? glm::distance(st.steps, pose.position) : std::numeric_limits<float>::max(); });
+                    const auto station = std::ranges::min_element(river->stations, { }, [&](const River::Station& st) { return st.pool == door->pool ? glm::distance(st.square, pose.position) : std::numeric_limits<float>::max(); });
                     if (station->pool != door->pool)
                         continue;
                     const auto& tuning = kTuning.rivers;
@@ -4199,7 +4217,7 @@ namespace rct3::simulation
                 if (r.get<Attraction>(s).open && (upkeep == nullptr || !upkeep->broken) && pool_door_at(world, ways.front().course.points.front()) == errand.target)
                     slides.emplace_back(s, ways.front().course.points.front());
             }
-            // And over to the stairs down into a lazy river joined to the complex, to float round it.
+            // And over to the square joining a lazy river's station to the complex, to float round it.
             for (const entt::entity s : sorted(r.view<const River, const Attraction>()))
             {
                 const auto* upkeep = r.try_get<Upkeep>(s);
@@ -4207,7 +4225,7 @@ namespace rct3::simulation
                     for (const River::Station& station : r.get<River>(s).stations)
                         if (station.pool == door->pool)
                         {
-                            slides.emplace_back(s, station.steps);
+                            slides.emplace_back(s, station.square);
                             break;
                         }
             }

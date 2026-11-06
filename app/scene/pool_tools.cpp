@@ -809,6 +809,15 @@ namespace rct3::scene
         draw_marks(device, scene, marks, park::TilePart::Whole, !working || t.ok);
     }
 
+    std::vector<park::PoolOpening> pool_openings(const ParkScene& scene)
+    {
+        std::vector<park::PoolOpening> out;
+        for (std::size_t i = 0; i < scene.rides.rides.size() && i < scene.courses.size(); ++i)
+            if (!scene.rides.rides[i].base.demolished && scene.courses[i])
+                std::ranges::copy(scene.courses[i]->pool_openings, std::back_inserter(out));
+        return out;
+    }
+
     void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<park::TileRect> touched)
     {
         const profiling::Scope zone("PoolsChanged");
@@ -819,8 +828,9 @@ namespace rct3::scene
         const auto shown = scene.shown_prop && *scene.shown_prop < scene.objects.size() ? std::optional(scene.objects[*scene.shown_prop]) : std::nullopt;
         const bool shown_piece = shown && std::ranges::contains(scene.pool_pieces, shown->id);
         park::dig_under_pools(scene.pools, scene.grid);
+        scene.pool_openings = pool_openings(scene);
         std::vector<save::PlacedObject> pieces;
-        for (save::PlacedObject& piece : park::pool_objects(scene.pools, park::kPoolOverlay, last_id(scene)))
+        for (save::PlacedObject& piece : park::pool_objects(scene.pools, park::kPoolOverlay, last_id(scene), scene.pool_openings))
         {
             if (!load_object_model(scene, scene.placing.models, assets, piece))
                 continue;

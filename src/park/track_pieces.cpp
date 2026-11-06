@@ -279,6 +279,14 @@ namespace rct3::park
             r.partner = section.partner.substr(0, section.partner.find(':'));
             r.group = section.group;
             r.platform_run = section.platform_run;
+            r.drop_off = section.drop_off;
+            // Unturned, a model's +X faces the column before (faced_side), its +Z the row before.
+            constexpr std::array<std::pair<std::uint32_t, Side>, 4> kDrawnSides { { { 0x1, Side::kColBefore }, { 0x2, Side::kNextRow }, { 0x4, Side::kNextCol }, { 0x8, Side::kRowBefore } } };
+            for (const ovl::TrackSquare& q : section.squares)
+                if ((q.flags & (ovl::TrackSquare::kJoinsPool | ovl::TrackSquare::kOverPool)) != 0)
+                    for (const auto& [bit, side] : kDrawnSides)
+                        if ((q.flags & bit) != 0)
+                            r.pool_sides.push_back({ .x = q.x, .z = q.z, .height = q.height, .side = side });
             // A slide climbed on foot: its walk up, named after the section, and its two rails as its two slides.
             if (const auto loop = splines.find(std::format("{}Loop", t.name)); loop != splines.end())
             {

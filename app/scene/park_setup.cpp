@@ -56,6 +56,7 @@
 #include "scene/park_scene.hpp"
 #include "scene/park_view.hpp"
 #include "scene/park_water.hpp"
+#include "scene/pool_tools.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/import_people.hpp"
@@ -1452,7 +1453,8 @@ namespace rct3::scene
                 scene.enclosure_panels.push_back(panel.id);
             built.insert(built.end(), std::make_move_iterator(enclosed.pieces.begin()), std::make_move_iterator(enclosed.pieces.end()));
             scene.leans.merge(enclosed.leans);
-            for (save::PlacedObject& piece : park::pool_objects(scene.pools, park::kPoolOverlay, largest_id()))
+            scene.pool_openings = pool_openings(scene);
+            for (save::PlacedObject& piece : park::pool_objects(scene.pools, park::kPoolOverlay, largest_id(), scene.pool_openings))
             {
                 scene.pool_pieces.push_back(piece.id);
                 built.push_back(std::move(piece));

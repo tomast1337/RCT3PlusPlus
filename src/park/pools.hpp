@@ -264,6 +264,17 @@ namespace rct3::park
     /// corner square and the squares either side.
     [[nodiscard]] bool pool_water_at(const PoolMap& map, const PoolSquare& square, float x, float z);
 
+    /// A side of a tile where something built beside the pools joins them at `height`, as a slide's end does: a pool
+    /// square across that side, its surface at that height, leaves its railing open there.
+    struct PoolOpening
+    {
+        std::int32_t col = 0;
+        std::int32_t row = 0;
+        std::int32_t height = 0; ///< Whole units
+        Side side { };           ///< Towards the pool square
+        friend bool operator==(const PoolOpening&, const PoolOpening&) = default;
+    };
+
     struct PoolPiece
     {
         std::string_view symbol; ///< The scenery item in the pool type's overlay
@@ -271,14 +282,15 @@ namespace rct3::park
         ModelTurn turn { };
     };
 
-    /// The pieces `square` of `map` is built of, from the bottom up, railings last.
-    [[nodiscard]] std::vector<PoolPiece> pool_pieces(const PoolMap& map, const PoolSquare& square);
+    /// The pieces `square` of `map` is built of, from the bottom up, railings last; none on a side one of `openings`
+    /// joins it at.
+    [[nodiscard]] std::vector<PoolPiece> pool_pieces(const PoolMap& map, const PoolSquare& square, std::span<const PoolOpening> openings = { });
 
     /// The pieces of every square of `map`, as placed objects of the pool type in `overlay`, each standing
     /// on its square at its own height, then the extras, at their squares' surface, then the changing rooms,
     /// at the surface of the square they open on. New objects take ids
-    /// after `last_id`.
-    [[nodiscard]] std::vector<save::PlacedObject> pool_objects(const PoolMap& map, std::string_view overlay, std::uint64_t last_id);
+    /// after `last_id`. Railings are left open where `openings` join the squares.
+    [[nodiscard]] std::vector<save::PlacedObject> pool_objects(const PoolMap& map, std::string_view overlay, std::uint64_t last_id, std::span<const PoolOpening> openings = { });
 
     /// The water of every water square, as the park's water mesh takes it.
     [[nodiscard]] std::vector<save::PoolWater> pool_water(const PoolMap& map);

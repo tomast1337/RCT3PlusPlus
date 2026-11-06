@@ -138,6 +138,15 @@ namespace rct3::park
                 course.wet.push_back(water && (shape->record.flags & kPieceEnclosed) == 0);
                 course.covered.push_back((shape->record.flags & kPieceEnclosed) != 0);
                 course.steady.push_back(shape->record.role >= kRoleSlideToLiftFirst && shape->record.role <= kRoleSlideToLiftLast);
+                for (const PieceOpening& o : shape->record.pool_sides)
+                {
+                    const save::Tile tile = square_tile(object, shape->record.squares, o.x, o.z);
+                    course.pool_openings.push_back({ .col = tile.col, .row = tile.row, .height = object.base_height.value_or(0) + o.height, .side = o.side.turned(object.rotation) });
+                }
+                if (shape->record.drop_off >= 0)
+                    course.drop_offs.push_back(course.length() + shape->record.drop_off);
+                const float top = glm::vec3(to_world * glm::vec4(path.front(), 1.0f)).y;
+                std::optional<float> wade_from;
                 for (std::size_t k = course.points.empty() ? 0 : 1; k < path.size(); ++k)
                 {
                     const glm::vec3 at = glm::vec3(to_world * glm::vec4(path[k], 1.0f));
@@ -146,7 +155,12 @@ namespace rct3::park
                     course.ups.push_back(glm::normalize(glm::mat3(to_world) * ups[k]));
                     course.kinds.push_back(kind);
                     course.brake_speeds.push_back(brake_speed);
+                    // A quarter metre below its start (chosen by eye) a slide's way back to its lift is in the water.
+                    if (course.steady.back() && !wade_from && at.y < top - 0.25f)
+                        wade_from = course.distance.back();
                 }
+                if (wade_from)
+                    course.wades.push_back({ *wade_from, course.length() });
             }
             // Missing a piece, the track has no course; past the stretch trains run on, that stretch is left out.
             if (!whole_stretch && !stopping)

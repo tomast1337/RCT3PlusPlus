@@ -462,6 +462,7 @@ namespace rct3::scene
         std::vector<park::PoolWave> drawn_waves;          ///< Drawn on the pools' water with the pointer, oldest first
         std::vector<park::PoolWave> rings;                ///< Spreading where people fell into the pools' water, oldest first
         std::vector<std::uint64_t> pool_pieces;           ///< Their pieces' objects, as last built
+        std::vector<park::PoolOpening> pool_openings;     ///< Where the rides joined them when their pieces were last built
         std::size_t saved_pool_water = 0;                 ///< footpaths.pools of the park's own file; the pools' follow
         std::size_t entrance_centred = 0;                 ///< Of the park's entrances, the one the view last went to
         std::vector<glm::vec3> anchors;

@@ -2753,6 +2753,9 @@ namespace rct3::scene
             const ui::Rect screen = desktop.root().rect();
             update_track_building(device, scene, assets, options.choice(config::GameOption::Currency), info_units(assets, options).distance, pointer.position, { screen.width(), screen.height() }, over, input.shift, input.commands, elapsed);
         });
+        // A slide built up to a pool, or taken away, opens or closes its railing there.
+        if (!scene.pools.squares.empty() && pool_openings(scene) != scene.pool_openings)
+            pools_changed(device, scene, assets);
         scene.view_camera.yaw += kViewTurn * elapsed;
         if (scene.shown_person && *scene.shown_person < scene.shown_people.size())
             scene.view_camera = person_view(scene, *scene.shown_person, scene.view_camera.yaw);

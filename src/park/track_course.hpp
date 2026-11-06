@@ -7,6 +7,7 @@
 #pragma once
 
 #include "park/object_mesh.hpp"
+#include "park/pools.hpp"
 #include "park/track_pieces.hpp"
 #include "save/model/rides.hpp"
 
@@ -50,6 +51,11 @@ namespace rct3::park
         std::size_t first_piece = 0;                    ///< Of the track's pieces, the one the course starts on
         std::vector<glm::vec3> other_stations { };      ///< Where the track's other stretches with a station start, in their order
         std::vector<std::vector<glm::vec3>> climbs { }; ///< Of a slide climbed on foot, its pieces' ways up and down (PieceRecord::climbs)
+        std::vector<PoolOpening> pool_openings { };     ///< Where its pieces join a pool beside them (PieceRecord::pool_sides)
+        std::vector<float> drop_offs { };               ///< Distances where a slide's riders are let off into the pool, on the way back to its lift
+        /// Stretches, from and to a distance, where a slide's car on its way back to its lift is down in the pool's
+        /// water: from where its path first falls below the height its piece starts at, to that piece's end.
+        std::vector<std::array<float, 2>> wades { };
         [[nodiscard]] float length() const
         {
             return distance.empty() ? 0 : distance.back();

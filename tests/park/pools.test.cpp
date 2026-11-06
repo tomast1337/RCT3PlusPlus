@@ -859,3 +859,23 @@ TEST_CASE("pools: a loose curve's water lies inside a circle through its corner 
     const PoolMap lone = edged(ringed(1, 1), PoolEdge::Loose);
     CHECK(open_at(lone, 1, 1, 0, 0));
 }
+
+TEST_CASE("pools: a square joined by a slide's end leaves its railing open on that side, at its own level only")
+{
+    // A strip of two squares along a column; the slide's end stands at (2, 0), joining (1, 0) across its column before.
+    const PoolMap map { { { .col = 0, .row = 0, .surface = 4, .depth = 2 }, { .col = 1, .row = 0, .surface = 4, .depth = 2 } } };
+    const auto railings = [&](std::span<const PoolOpening> openings) {
+        std::vector<std::int32_t> out;
+        for (const PoolPiece& p : pool_pieces(map, *map.at(1, 0), openings))
+            if (p.symbol == "Railing")
+                out.push_back(p.turn.value);
+        return out;
+    };
+    CHECK(railings({ }) == std::vector<std::int32_t> { 0, 1, 2 });
+    const std::array joined { PoolOpening { .col = 2, .row = 0, .height = 4, .side = Side::kColBefore } };
+    CHECK(railings(joined) == std::vector<std::int32_t> { 0, 2 });
+    const std::array higher { PoolOpening { .col = 2, .row = 0, .height = 6, .side = Side::kColBefore } };
+    CHECK(railings(higher) == std::vector<std::int32_t> { 0, 1, 2 });
+    const std::array away { PoolOpening { .col = 2, .row = 0, .height = 4, .side = Side::kNextRow } };
+    CHECK(railings(away) == std::vector<std::int32_t> { 0, 1, 2 });
+}

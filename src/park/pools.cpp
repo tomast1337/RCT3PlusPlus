@@ -503,7 +503,7 @@ namespace rct3::park
         return true;
     }
 
-    std::vector<PoolPiece> pool_pieces(const PoolMap& map, const PoolSquare& square)
+    std::vector<PoolPiece> pool_pieces(const PoolMap& map, const PoolSquare& square, std::span<const PoolOpening> openings)
     {
         std::vector<PoolPiece> out;
         if (square.kind == PoolKind::PathSlope || square.kind == PoolKind::PathStairs)
@@ -590,7 +590,8 @@ namespace rct3::park
             const auto ramp_up = ramp_between(map, square.col + dc, square.row + dr, side.opposite());
             const bool stairs_up = std::ranges::any_of(map.squares, [&](const PoolSquare& s) { return s.kind == PoolKind::Stairs && s.col == square.col + dc && s.row == square.row + dr && s.surface + std::max(s.board, kLowestStairs) == square.surface; });
             const bool way = (own_ramp && own_ramp->first == square.surface) || (ramp_up && ramp_up->second == square.surface) || stairs_up;
-            if (!room && !way && (!next || next->surface != square.surface))
+            const bool joined = std::ranges::any_of(openings, [&](const PoolOpening& o) { return o.col == square.col + dc && o.row == square.row + dr && o.side == side.opposite() && o.height == square.surface; });
+            if (!room && !way && !joined && (!next || next->surface != square.surface))
                 out.push_back({ "Railing", square.surface, ModelTurn::toward(side) });
             // A staircase's top is railed where no square meets it.
             const std::int32_t top = square.surface + std::max(square.board, kLowestStairs);
@@ -600,11 +601,11 @@ namespace rct3::park
         return out;
     }
 
-    std::vector<save::PlacedObject> pool_objects(const PoolMap& map, std::string_view overlay, std::uint64_t last_id)
+    std::vector<save::PlacedObject> pool_objects(const PoolMap& map, std::string_view overlay, std::uint64_t last_id, std::span<const PoolOpening> openings)
     {
         std::vector<save::PlacedObject> out;
         for (const PoolSquare& square : map.squares)
-            for (const PoolPiece& piece : pool_pieces(map, square))
+            for (const PoolPiece& piece : pool_pieces(map, square, openings))
             {
                 save::PlacedObject& o = out.emplace_back();
                 o.id = ++last_id;

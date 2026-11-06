@@ -147,6 +147,15 @@ namespace rct3::park
     };
 
     /// What a section stores about a piece besides its splines.
+    /// A side of a square of a piece's footprint where the piece joins a pool square across it.
+    struct PieceOpening
+    {
+        std::int32_t x = 0; ///< Square of the footprint, counted as square_tile counts them
+        std::int32_t z = 0;
+        std::int32_t height = 0; ///< Whole units above the piece's own height
+        Side side { };           ///< As the piece stands unturned
+    };
+
     struct PieceRecord
     {
         std::string name; ///< Of the section
@@ -167,6 +176,8 @@ namespace rct3::park
         /// Of a slide with no cars, as on an inflatable ship: each way up on foot from its foot in the water and down
         /// one of its slides, laid as drawn. None on other pieces.
         std::vector<std::vector<glm::vec3>> climbs { };
+        std::vector<PieceOpening> pool_sides { }; ///< Where it joins a pool beside: a slide's end, or its track out over the water
+        float drop_off = -1;                      ///< As ovl::TrackSection::drop_off
     };
 
     struct PieceShape

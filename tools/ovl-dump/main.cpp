@@ -544,10 +544,14 @@ namespace
                 }
                 const auto& s = *item.section;
                 out.info(
-                    "  {:<32} sid {:<24} role {:d} flags {:#x} widths {:d} {:d} side {:d} splines {} {} {} {} extra {} {} refs {:d}", name.c_str(), std::string(s.scenery_item).c_str(), s.role, s.flags[1], s.widths[0], s.widths[1], s.side, std::string(s.splines[0]).c_str(), std::string(s.splines[1]).c_str(), std::string(s.splines[2]).c_str(), std::string(s.splines[3]).c_str(), s.extra_splines[0].empty() ? "-" : std::string(s.extra_splines[0]).c_str(),
+                    "  {:<32} sid {:<24} role {:d} flags {:#x} {:#x} widths {:d} {:d} side {:d} splines {} {} {} {} extra {} {} refs {:d}", name.c_str(), std::string(s.scenery_item).c_str(), s.role, s.flags[0], s.flags[1], s.widths[0], s.widths[1], s.side, std::string(s.splines[0]).c_str(), std::string(s.splines[1]).c_str(), std::string(s.splines[2]).c_str(), std::string(s.splines[3]).c_str(), s.extra_splines[0].empty() ? "-" : std::string(s.extra_splines[0]).c_str(),
                     s.extra_splines[1].empty() ? "-" : std::string(s.extra_splines[1]).c_str(), s.references.size());
                 for (const auto& r : s.references)
                     out.info("    +0x{:02x} {}:{}", r.offset, std::string(r.name).c_str(), std::string(r.tag).c_str());
+                if (s.drop_off >= 0)
+                    out.info("    drop off {:.2f}", s.drop_off);
+                for (const auto& q : s.squares)
+                    out.info("    square {:d} {:d} height {:d} flags {:#x}", q.x, q.z, q.height, q.flags);
             }
         }
         if (opt.ric)

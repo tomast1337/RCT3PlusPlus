@@ -92,6 +92,11 @@ namespace rct3::ovl
                 {
                     s.group = record->text(0x104);
                     s.ground = record->u32(0x128);
+                    s.drop_off = record->real(0x124);
+                    const std::uint32_t count = record->u32(0xF4);
+                    if (const auto list = count == 0 ? std::nullopt : ItemRecord::open(space, refs, record->u32(0xF8), std::size_t { count } * 16))
+                        for (std::uint32_t i = 0; i < count; ++i)
+                            s.squares.push_back({ list->i32(i * 16), list->i32(i * 16 + 4), list->i32(i * 16 + 8), list->u32(i * 16 + 12) });
                     for (std::size_t end = 0; end < 2; ++end)
                     {
                         const auto list = [&](std::size_t at) { return strings(space, refs, record->u32(at + end * 8), record->u32(at + end * 8 + 4)); };

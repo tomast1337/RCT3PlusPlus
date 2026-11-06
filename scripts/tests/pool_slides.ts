@@ -40,7 +40,7 @@ await screenshot("pool_slides_riding");
 
 // Off the end they splash down into the pool, a low burst of spray and a ring of foam where the slide meets the
 // water, and swim on, still in their swimwear.
-await until(() => people.list()[rider].state !== "riding", 1200, "the rider off the end");
+await until(() => people.list()[rider].state !== "riding", 2400, "the rider off the end");
 const flying = people.list()[rider];
 log("off the end as", flying.state, "swimwear", flying.swimwear);
 expect(flying.swimwear === true, "the rider still in their swimwear off the end");

@@ -19,9 +19,9 @@ using namespace rct3::simulation;
 namespace
 {
     /// A path along row 0 from column 0 to 5, a changing room at (5, 1) opening on the paved square below it, three
-    /// by two squares of water below that and a square `beside` at (7, 3) next to the water, pool path stairs climbing
-    /// from the water unless told, their top at `surface`; and an open lazy river round a loop from column 8 to 12 and row 2 to 5, its station along
-    /// column 8.
+    /// by two squares of water below that and a square `beside` at (7, 3) next to the water, pool path stairs unless
+    /// told, their foot towards the river and their top at `surface` towards the water; and an open lazy river round a
+    /// loop from column 8 to 12 and row 2 to 5, its station along column 8.
     entt::entity river_by_pool(Sandbox& park, park::PoolKind beside = park::PoolKind::PathStairs, std::int32_t surface = 0)
     {
         park.path({ 0, 0 }, { 5, 0 });
@@ -30,7 +30,7 @@ namespace
         for (std::int32_t row = 3; row < 5; ++row)
             for (std::int32_t col = 4; col < 7; ++col)
                 pools.squares.push_back({ .col = col, .row = row });
-        pools.squares.push_back({ .col = 7, .row = 3, .kind = beside, .surface = surface - (beside == park::PoolKind::PathStairs ? park::kPathStairsRise : 0), .side = rct3::park::Side { 3 } });
+        pools.squares.push_back({ .col = 7, .row = 3, .kind = beside, .surface = surface - (beside == park::PoolKind::PathStairs ? park::kPathStairsRise : 0), .side = rct3::park::Side { 1 } });
         pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
         import_pools(park.world(), pools);
         const auto& paths = park.world().paths;

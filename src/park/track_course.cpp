@@ -136,6 +136,7 @@ namespace rct3::park
                 course.piece_starts.push_back(course.length());
                 const bool water = (shape->record.flags & kPieceWater) != 0 || (model != models.end() && model->second.flows);
                 course.wet.push_back(water && (shape->record.flags & kPieceEnclosed) == 0);
+                course.covered.push_back((shape->record.flags & kPieceEnclosed) != 0);
                 for (std::size_t k = course.points.empty() ? 0 : 1; k < path.size(); ++k)
                 {
                     const glm::vec3 at = glm::vec3(to_world * glm::vec4(path[k], 1.0f));

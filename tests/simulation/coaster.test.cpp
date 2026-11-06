@@ -698,3 +698,80 @@ TEST_CASE("a train is drawn between where its last step began and ended, the sho
     c.at = 1;
     CHECK(between_drives(c, 0.5f) == doctest::Approx(c.length()));
 }
+
+namespace
+{
+    /// A pool slide's car going round a flat circle of radius `r` to its left at `speed`, swinging in its trough as a
+    /// body slide's car does.
+    Coaster circling(float r, float speed)
+    {
+        Coaster c;
+        constexpr int kPoints = 64;
+        for (int k = 0; k <= kPoints; ++k)
+        {
+            const float a = 2 * std::numbers::pi_v<float> * static_cast<float>(k) / kPoints;
+            c.points.emplace_back(r * std::cos(a), 0, r * std::sin(a));
+            c.distance.push_back(r * a);
+            c.height.push_back(0);
+            c.ups.emplace_back(0, 1, 0);
+            c.kinds.push_back(Stretch::Plain);
+        }
+        c.train_length = 2;
+        c.at = 2;
+        c.fixed_speed = speed;
+        c.speed = speed;
+        c.running = true;
+        c.launched = true;
+        c.trough = Trough { .damping = 2, .centring = 1, .friction = 0.5f };
+        return c;
+    }
+} // namespace
+
+TEST_CASE("a slide's car swings up its trough's wall in a turn, the further the faster, and stays in")
+{
+    Coaster slow = circling(10, 9);
+    Coaster fast = circling(10, 13);
+    for (int i = 0; i < 80; ++i)
+    {
+        drive(slow, 0.05f);
+        drive(fast, 0.05f);
+    }
+    // A gentle turn's pull is not enough to slide it up the wall against the wall's friction.
+    Coaster gentle = circling(10, 5);
+    for (int i = 0; i < 80; ++i)
+        drive(gentle, 0.05f);
+    CHECK(gentle.lean == 0);
+    REQUIRE(slow.running);
+    REQUIRE(fast.running);
+    CHECK(std::abs(slow.lean) > 0.05f);
+    CHECK(std::abs(fast.lean) > std::abs(slow.lean));
+    CHECK(slow.lean * fast.lean > 0); // Both out of the turn, the same way
+}
+
+TEST_CASE("a slide's car taken round a tight turn too fast flies out of its trough and crashes, but not in a tube")
+{
+    Coaster c = circling(3, 22);
+    for (int i = 0; i < 12 && c.running; ++i)
+        drive(c, 0.05f);
+    CHECK(c.crashed);
+    CHECK_FALSE(c.running);
+    Coaster tube = circling(3, 22);
+    tube.covered.assign(tube.distance.size(), true);
+    for (int i = 0; i < 12; ++i) // Short of coming round to its start
+        drive(tube, 0.05f);
+    CHECK_FALSE(tube.crashed);
+    CHECK(tube.running);
+}
+
+TEST_CASE("a slide's car on the straight stays in the middle of its trough")
+{
+    Coaster c = hill();
+    c.trough = Trough { .damping = 2, .centring = 1, .friction = 0.5f };
+    c.points = { { 0, 0, 0 }, { 0, 0, 10 }, { 0, 15, 40 }, { 0, 0, 70 }, { 0, 0, 100 } };
+    c.running = true;
+    for (int i = 0; i < 200 && c.running; ++i)
+    {
+        drive(c, 0.05f);
+        CHECK(c.lean == doctest::Approx(0).epsilon(1e-4));
+    }
+}

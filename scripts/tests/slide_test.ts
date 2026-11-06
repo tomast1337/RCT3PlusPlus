@@ -127,18 +127,36 @@ for (const slide of found) {
     await frames(10);
     await screenshot(`${kind}_testing`);
 
-    // Off the end it is gone from sight, the next car coming down after it; none of it is a crash.
-    if (open_end)
-        await park.advanceUntil(() => info().trainsAt![down].front >= length - 0.01 || (info().crashes ?? 0) > 0, 180, `${kind}'s car off the end`);
-    else {
-        let last = info().trainsAt![down].front;
-        await park.advanceUntil(() => {
-            const now = info().trainsAt![down].front;
-            const round = now < last;
-            last = now;
-            return round || (info().crashes ?? 0) > 0;
-        }, 240, `${kind}'s car round past its station`);
+    // Off the end it is gone from sight, the next car coming down after it; none of it is a crash. On its way it
+    // swings up the trough's walls in the turns (logged: the most, in radians, and where), short of going over.
+    let most = 0;
+    let most_at = 0;
+    const swing = () => {
+        const t = info().trainsAt![down];
+        if (t.lean !== null && Math.abs(t.lean) > Math.abs(most)) {
+            most = t.lean;
+            most_at = t.front;
+        }
+        return Math.abs(t.lean ?? 0) > 0.3;
+    };
+    let last = info().trainsAt![down].front;
+    let over = false;
+    const done = () => {
+        const now = info().trainsAt![down].front;
+        over ||= (info().crashes ?? 0) > 0 || (open_end ? now >= length - 0.01 : now < last);
+        last = now;
+        return over;
+    };
+    // Stopped for a look the first time it is well up a wall.
+    await park.advanceUntil(() => swing() || done(), 240, `${kind}'s car up a wall or round`);
+    if (swing()) {
+        const c = info().cars![down];
+        camera.look(c, { col: c.col + 2, row: c.row + 2, up: c.up! + 2 });
+        await frames(5);
+        await screenshot(`${kind}_up_the_wall`);
     }
+    await park.advanceUntil(() => { swing(); return done(); }, 240, open_end ? `${kind}'s car off the end` : `${kind}'s car round past its station`);
+    log(kind, "swung up the wall at most", most.toFixed(2), "at", most_at.toFixed(1));
     await park.advance(20);
     expect((info().crashes ?? 0) === 0, `no crash on ${kind}, not ${info().crashes}`);
     expect((info().wrecks ?? []).length === 0, `no wrecks on ${kind}`);
@@ -155,3 +173,34 @@ for (const slide of found) {
 }
 const told = park.messages().slice(messages).map((m) => m.key);
 expect(!told.some((k) => /crash/i.test(k)), `no crash message, not ${told.join(" ")}`);
+
+// Too fast for its turns: a ring slide's car driven round at a speed far past what its drops give flies out of its
+// trough in the first tight turn and crashes, as a coaster's train off its track does.
+const ring = found.find((i) => /^RingSlide:/.test(rides.list()[i].symbol));
+if (ring !== undefined) {
+    const info = () => rides.list()[ring];
+    expect(rides.setState(ring, "closed") == null, "the ring slide closed");
+    await frames(10);
+    expect(rides.setState(ring, "testing") == null, "the ring slide tested");
+    await frames(10);
+    rides.setFixedSpeed(ring, 25);
+    let most = 0;
+    let car = 0;
+    await park.advanceUntil(() => {
+        info().trainsAt!.forEach((t, k) => {
+            if (Math.abs(t.lean ?? 0) > most) {
+                most = Math.abs(t.lean ?? 0);
+                car = k;
+            }
+        });
+        return (info().crashes ?? 0) > 0;
+    }, 60, "the ring slide's car flying out of its trough");
+    log("RingSlide at 25 m/s flew out at", info().trainsAt![car].front.toFixed(1), "swung", most.toFixed(2));
+    const c = info().cars?.[car];
+    if (c !== undefined) {
+        camera.look(c, { col: c.col + 3, row: c.row + 3, up: (c.up ?? 0) + 4 });
+        await frames(10);
+        await screenshot("RingSlide_flown_out");
+    }
+    rides.setFixedSpeed(ring, 0);
+}

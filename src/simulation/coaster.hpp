@@ -10,7 +10,8 @@
 // do the same and push a slower train up to their speed; one held for the block ahead brakes it to a stop. A ride
 // with a fixed speed moves at that speed everywhere. Boosters' jets shove a car on hard while it is slower than their
 // speed, as a water coaster's climbs have them. A pool slide's car is not carried off its platform but eased off at a
-// walk, the slope taking it from there. On a shuttle the train runs back and forth between the
+// walk, the slope taking it from there. In its turns an open slide's car swings up the trough's wall, as far as the
+// turn's pull outweighs gravity and the wall's friction; swung up past the rims it flies out and crashes. On a shuttle the train runs back and forth between the
 // track's ends, counting its passes through the station. A train that runs off either end of a track with two
 // ends, a shuttle's or an unfinished circuit's, crashes. The speeds are the ride's own, as its park keeps them.
 //
@@ -49,6 +50,20 @@ namespace rct3::simulation
         Swing, ///< Pushed on each time through the station, the way it is going, harder and then softer
         Tower, ///< Pushed up, braked as it falls back into the station and pushed up again, softer
         Drop,  ///< As a tower, but held at the top of its first climb before it falls
+    };
+
+    /// How a pool slide's car rides its open trough, as its car file has it: a turn swings it up the trough's wall,
+    /// gravity swings it back down, and taken too fast it goes over the rim.
+    struct Trough
+    {
+        float damping = 0;  ///< Per second, how fast its swing dies down
+        float centring = 0; ///< Per second, how fast it is drawn back to the trough's middle
+        float friction = 0; ///< Of the car on the wall, held back as it swings by this much of the weight pressing it there
+        /// Metres from the middle of its swing, on the track's line, down to the car. Measured: a body slide's car
+        /// under way in a saved park.
+        // shortcut: every slide's car swings on a body slide's, upgrade when another kind's is measured.
+        float length = 0.77f;
+        float pivot = 0; ///< Metres up from where the car is drawn to the middle of its swing on the car's shape
     };
 
     struct Coaster
@@ -91,6 +106,9 @@ namespace rct3::simulation
         /// A test train shown while the track is built: it crashes as any train does, but its wrecks hurt no one
         /// and the crash is not the park's
         bool ghost = false;
+        /// Of a pool slide's car, how it swings in its trough; nothing for every other train.
+        std::optional<Trough> trough;
+        std::vector<bool> covered { }; ///< By point: the stretch from it is a tube, which no car goes out of
         // The train
         bool running = false;
         float at = 0;              ///< Distance of the front of the train
@@ -100,12 +118,15 @@ namespace rct3::simulation
         float speed = 0;           ///< Along the track
         float slow = 0;            ///< Seconds it has been all but stopped away from a chain or station
         bool launched = false;     ///< Its tail has left the platform since it set off, so it is pushed no more there
+        float lean = 0;            ///< Of a slide's car, radians it has swung up the trough's wall from the bottom, to its right
+        float lean_rate = 0;       ///< How fast that swing is changing, in radians a second
         // A shuttle's train
         int passed = 0;   ///< Times it has come into the station since it set off
         float push = 0;   ///< The speed it is being pushed to, negative backwards; 0 when it is not
         float pushed = 0; ///< Metres it has moved under that push
         float held = 0;   ///< Seconds it has been held at the top of its climb
-        /// Run off an end of its track: stopped running, where it left the track and at the speed it left at
+        /// Run off an end of its track, or a slide's car over its trough's rim: stopped running, where it left the
+        /// track and at the speed it left at
         bool crashed = false;
         /// Run off the end of a pool slide: out of sight, where it left the track and at the speed it left at
         bool splashed = false;

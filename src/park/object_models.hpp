@@ -12,6 +12,7 @@
 #pragma once
 
 #include "math/glm.hpp"
+#include "ovl/ride_car.hpp"
 #include "ovl/ride_train.hpp"
 #include "park/asset_index.hpp"
 #include "park/bone_poses.hpp"
@@ -238,6 +239,10 @@ namespace rct3::park
         std::array<std::optional<glm::mat4>, 3> ride_eyes;
         ovl::RideCameraTuning ride_look; ///< How they move, as the car's train sets it
         ovl::BoatHandling boat_handling; ///< How it handles out on open water, as the car's train sets it
+        /// Of a pool slide's car, how it swings in the trough, and how far up from the car's origin its shape's
+        /// pivot stands, the point it is drawn swung about.
+        std::optional<ovl::TroughRide> trough;
+        float swing_pivot = 0;
         /// Of a rowing boat whose rig moves its oars: its motions rowing straight on, turning to its left and to
         /// its right (ovl::RideCar::rowing).
         std::optional<std::array<std::size_t, 3>> rowing;

@@ -1363,6 +1363,13 @@ namespace rct3::scene
                 const float at = simulation::between_drives(train, scene.sim_time / simulation::kTickSeconds);
                 moved[i] = at - scene.rides.rides[spot.ride].trains[spot.train].distance;
                 place = park::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, moved[i]);
+                // A slide's car swung up its trough's wall, turned about its shape's pivot.
+                if (train.trough && train.lean != 0)
+                {
+                    const glm::vec3 way = glm::normalize(glm::vec3(place[2]));
+                    const glm::vec3 pivot = glm::vec3(place[3]) + glm::normalize(glm::vec3(place[1])) * train.trough->pivot;
+                    place = glm::translate(glm::mat4(1.0f), pivot) * glm::rotate(glm::mat4(1.0f), -train.lean, way) * glm::translate(glm::mat4(1.0f), -pivot) * place;
+                }
                 // Crashed, each car flies on and tumbles as its wreck does from where it left the track, and is
                 // gone with it; a train whose wrecks are gone is off the track till it is back in the station.
                 // shortcut: drawn as it was, not burnt; upgrade if a burnt look turns up among the cars' textures.

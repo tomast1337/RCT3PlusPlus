@@ -784,6 +784,13 @@ namespace rct3::scene
         board_tracked_ride(device, scene, install, ride_index);
     }
 
+    std::optional<simulation::Trough> trough_of(const park::ObjectModel& model)
+    {
+        if (!model.trough)
+            return std::nullopt;
+        return simulation::Trough { .damping = model.trough->damping, .centring = model.trough->centring, .friction = model.trough->friction, .pivot = model.swing_pivot };
+    }
+
     void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::RideCars& cars)
     {
         load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
@@ -799,10 +806,15 @@ namespace rct3::scene
         for (std::size_t i = 0; i < scene.car_spots.size(); ++i)
             if (scene.car_spots[i].ride == ride_index)
                 cars.push_back(i);
-        const auto* fleet = scene.sim.registry.try_get<simulation::Trains>(entity);
+        auto* fleet = scene.sim.registry.try_get<simulation::Trains>(entity);
         const save::Ride& ride = scene.rides.rides[ride_index];
         if (cars.empty())
             scene.ride_cars.erase(entity);
+        // A pool slide's cars swing in their trough as their car's file has them.
+        if (fleet != nullptr && !cars.empty())
+            if (const auto model = scene.models.find(park::model_ref(scene.cars[cars.front()])); model != scene.models.end())
+                for (simulation::Coaster& train : fleet->trains)
+                    train.trough = trough_of(model->second);
         if (cars.empty() || fleet == nullptr || fleet->trains.empty() || !scene.courses[ride_index] || ride.trains.empty())
             return;
         // Riders of tracked rides board the first train as it waits at the station, seats front to back.

@@ -1092,6 +1092,8 @@ namespace rct3::park
         model.ride_eyes = { bone_of(car->visual, "nosecamera").or_else([&] { return front; }), front, bone_of(car->visual, "camerarear") };
         model.ride_look = found->camera;
         model.boat_handling = found->boat;
+        model.trough = car->trough;
+        model.swing_pivot = pivot.y;
         constexpr std::array<std::string_view, 3> kStrengths { "low", "med", "high" };
         for (std::uint8_t strength = 0; strength < kStrengths.size(); ++strength)
         {

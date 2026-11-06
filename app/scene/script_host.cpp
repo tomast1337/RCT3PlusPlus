@@ -840,6 +840,16 @@ namespace rct3::scene
             const auto refused = change_ride_state(park, a[0].get<std::size_t>(), state->second);
             return refused ? Json(*refused) : Json(nullptr);
         });
+        engine_.define("rides.setFixedSpeed", [this](const Json& a) {
+            ParkScene& park = park_of(park_);
+            const std::size_t i = a.size() == 2 && a[0].is_number_unsigned() && a[1].is_number() ? a[0].get<std::size_t>() : park.ride_entities.size();
+            auto* fleet = i < park.ride_entities.size() && park.ride_entities[i] != entt::null ? park.sim.registry.try_get<simulation::Trains>(park.ride_entities[i]) : nullptr;
+            if (fleet == nullptr)
+                throw std::invalid_argument("rides.setFixedSpeed takes the place in rides.list() of a ride the park runs trains on, and a speed in m/s");
+            for (simulation::Coaster& train : fleet->trains)
+                train.fixed_speed = a[1].get<float>() > 0 ? std::optional(a[1].get<float>()) : std::nullopt;
+            return Json(nullptr);
+        });
         engine_.define("stalls.setState", [this](const Json& a) {
             ParkScene& park = park_of(park_);
             const bool open = a.size() == 2 && a[1] == "open";
@@ -1217,7 +1227,7 @@ namespace rct3::scene
                             const simulation::Coaster& c = fleet->trains[t];
                             const auto standing = simulation::standing_at(c);
                             const auto held = simulation::held_in_station(c);
-                            at.push_back({ { "front", c.at }, { "speed", c.speed }, { "length", c.train_length }, { "station", standing ? Json(*standing) : Json(nullptr) }, { "held", held ? Json(*held) : Json(nullptr) }, { "riders", t < fleet->riders.size() ? fleet->riders[t].size() : 0 } });
+                            at.push_back({ { "front", c.at }, { "speed", c.speed }, { "lean", c.trough ? Json(c.lean) : Json(nullptr) }, { "length", c.train_length }, { "station", standing ? Json(*standing) : Json(nullptr) }, { "held", held ? Json(*held) : Json(nullptr) }, { "riders", t < fleet->riders.size() ? fleet->riders[t].size() : 0 } });
                         }
                         one["trainsAt"] = std::move(at);
                         one["trackLength"] = fleet->trains.empty() ? 0.0f : fleet->trains.front().length();

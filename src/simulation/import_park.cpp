@@ -968,6 +968,11 @@ namespace rct3::simulation
         c.ups = course.ups;
         for (const glm::vec3& p : course.points)
             c.height.push_back(p.y);
+        for (const float d : course.distance)
+        {
+            const auto piece = std::ranges::upper_bound(course.piece_starts, d) - course.piece_starts.begin() - 1;
+            c.covered.push_back(piece >= 0 && static_cast<std::size_t>(piece) < course.covered.size() && course.covered[static_cast<std::size_t>(piece)]);
+        }
         for (const park::CourseKind k : course.kinds)
         {
             using enum park::CourseKind;

@@ -58,6 +58,8 @@ namespace rct3::ovl
                     car.rowing[i] = record->i32(0x7C + 4 * i);
                 car.references = record->references(static_cast<std::uint32_t>(size));
                 car.record = record->bytes();
+                if ((record->u32(0x110) & 0x200) != 0)
+                    car.trough = TroughRide { .damping = record->real(0x20), .centring = record->real(0x24), .friction = record->real(0x34) };
                 item.car = std::move(car);
             }
             items.push_back(std::move(item));

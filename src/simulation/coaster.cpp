@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 namespace rct3::simulation
 {
@@ -26,6 +27,10 @@ namespace rct3::simulation
         constexpr float kSlideLeave = 1;      ///< m/s a pool slide's car is eased off its platform at. Measured: a car setting off in a saved park
         constexpr float kSlideEase = 4;       ///< m/s² it is eased up to that by. Chosen by eye
         constexpr float kJetPull = 15;        ///< m/s² booster jets push a car over them by. Chosen by eye
+        /// Radians a slide's car swings up its trough's wall to go over a rim. The rims are the piece's rails,
+        /// level with the track's line the car swings from, so it goes over once swung out level with them.
+        // shortcut: every piece's rims are taken as level with its line, upgrade when each piece's own rails are read.
+        constexpr float kRim = std::numbers::pi_v<float> / 2;
 
         std::size_t point_at(const Coaster& c, float d)
         {
@@ -344,6 +349,38 @@ namespace rct3::simulation
                 c.speed = 0;
             }
             room -= moved;
+            // A slide's car swings in its trough as a weight hung from the middle of the swing: gravity, less the
+            // turn's pull, swings it on along its arc; the wall's friction holds it, enough to stop a slow swing dead;
+            // the swing dies down and drifts back to the middle. Swung out past the rails of an open trough, it flies
+            // out and crashes, going as fast as it left; a tube holds it in.
+            if (c.trough && !c.points.empty())
+            {
+                const Trough& t = *c.trough;
+                constexpr float kReach = 2; ///< Metres either side the bend is taken over, so corners between points do not jolt
+                const float d = c.at - c.train_length / 2;
+                const glm::vec3 here = track_point(c, d);
+                const glm::vec3 bend = (track_point(c, d + kReach) - 2.0f * here + track_point(c, d - kReach)) / (kReach * kReach);
+                const glm::vec3 up = track_up(c, d);
+                const glm::vec3 across = glm::cross(track_way(c, d), up);
+                const glm::vec3 right = glm::length(across) > 1e-6f ? glm::normalize(across) : glm::vec3(1, 0, 0);
+                const glm::vec3 weight = glm::vec3(0, -kGravity, 0) - bend * c.speed * c.speed;
+                const glm::vec3 hang = right * std::sin(c.lean) - up * std::cos(c.lean);
+                const glm::vec3 arc = right * std::cos(c.lean) + up * std::sin(c.lean);
+                // Turned by the pull along its arc times its arm, as a weight its own size.
+                float rate = c.lean_rate + glm::dot(weight, arc) * t.length * dt;
+                const float held = t.friction * std::max(glm::dot(weight, hang), 0.0f) * t.length * dt;
+                rate = std::abs(rate) <= held ? 0.0f : (rate - std::copysign(held, rate)) * std::exp(-t.damping * dt);
+                c.lean = (c.lean + rate * dt) * std::exp(-t.centring * dt);
+                c.lean_rate = rate;
+                const std::size_t i = point_at(c, wrap(c, d));
+                if (std::abs(c.lean) > kRim && !(i < c.covered.size() && c.covered[i]))
+                {
+                    c.crashed = true;
+                    c.running = false;
+                    c.lean = c.lean_rate = 0;
+                    return false;
+                }
+            }
             // Run off either end of its track, the train crashes there, going as fast as it left.
             if (two_ends(c))
             {
@@ -356,6 +393,7 @@ namespace rct3::simulation
                     c.crashed = !splash;
                     c.splashed = splash;
                     c.running = false;
+                    c.lean = c.lean_rate = 0;
                     return splash;
                 }
             }

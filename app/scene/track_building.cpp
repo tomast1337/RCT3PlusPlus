@@ -2527,6 +2527,8 @@ namespace rct3::scene
                 park::stand_train(*course, ghost.trains.front(), scene.car_fits.at(*b.ride), train->start);
                 const park::RideCars cars = park::ride_cars(std::span(&ghost, 1), 0);
                 load_car_models(scene, *assets.install, cars);
+                if (const auto model = cars.pieces.empty() ? scene.models.end() : scene.models.find(park::model_ref(cars.pieces.front())); model != scene.models.end())
+                    train->trough = trough_of(model->second);
                 TrackBuilding::GhostTrain& t = b.test.emplace(TrackBuilding::GhostTrain { .train = *train, .spots = cars.spots, .stood_at = ghost.trains.front().distance });
                 for (const save::PlacedObject& car : cars.pieces)
                     t.stood.push_back(cars.fitted.at(car.id));
@@ -2564,6 +2566,7 @@ namespace rct3::scene
                 t.wrecks.clear();
                 t.train.at = t.train.start;
                 t.train.travelled = 0;
+                t.train.lean = t.train.lean_rate = 0;
                 t.train.launched = false;
                 t.train.running = true;
                 t.train.speed = t.train.splash_out ? 0 : t.train.station_speed;

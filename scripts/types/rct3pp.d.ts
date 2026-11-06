@@ -346,10 +346,10 @@ interface RideInfo {
     /** Ridden by the park on a track: the trains it runs, and how many are under way now. */
     running?: number;
     moving?: number;
-    /** Ridden by the park on a track: each train's front along the track (metres), its speed along it (m/s), its length, and the station it
+    /** Ridden by the park on a track: each train's front along the track (metres), its speed along it (m/s), a slide car's swing up its trough's wall (radians, to its right; null for other trains), its length, and the station it
      * stands at (0 the first, k the k-th stop after it), null while under way; the station it is held up in behind
      * the train ahead, short of its end, numbered alike, or null; and the riders still in its seats. */
-    trainsAt?: { front: number; speed: number; length: number; station: number | null; held: number | null; riders: number }[];
+    trainsAt?: { front: number; speed: number; lean: number | null; length: number; station: number | null; held: number | null; riders: number }[];
     /** Ridden by the park on a track: the length of its track, metres. */
     trackLength?: number;
     /** A lazy river the park runs: its stations, how many of them a pool complex joins, and the middle of the
@@ -419,6 +419,9 @@ declare namespace rides {
     /** Puts ride `i` of list() in `state`, as its window's open-or-close tab does. Null once changed, else the
      *  string key of why the ride stays as it was (a track without a station, a missing exit...). */
     function setState(i: number, state: "closed" | "testing" | "open"): string | null;
+    /** Has every train of ride `i` (its place in list()) run at `speed` m/s all the way round, as a ride set to a
+     *  fixed speed does; 0 or less lets them run free again. Throws for a ride the park runs no trains on. */
+    function setFixedSpeed(i: number, speed: number): void;
     /** Opens ride `i`'s window, as clicking the ride does, on the next frame. */
     function show(i: number): void;
     /** The ride the info panel shows and its tab, by the tab's help key; undefined when it shows no ride. */

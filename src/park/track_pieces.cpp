@@ -85,7 +85,7 @@ namespace rct3::park
 
         glm::vec3 turned(const glm::vec3& v, std::int32_t turns)
         {
-            const glm::vec2 x = turned_x(turns);
+            const glm::vec2 x = turned_x(ModelTurn::from(turns));
             const glm::vec2 z { -x.y, x.x };
             return { x.x * v.x + z.x * v.z, v.y, x.y * v.x + z.y * v.z };
         }

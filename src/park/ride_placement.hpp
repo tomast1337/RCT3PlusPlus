@@ -123,6 +123,13 @@ namespace rct3::park
         return ModelTurn::from(spot.direction);
     }
 
+    /// The side of its tile a stall turned `turn` serves from: a quarter turn back from the side its model's +X
+    /// faces.
+    [[nodiscard]] constexpr Side served_side(ModelTurn turn) noexcept
+    {
+        return faced_side(turn).left();
+    }
+
     /// A ride's entrance or exit: its tile and the turn that faces it to the ride, its +X towards the side of its
     /// tile the ride is on (faced_side).
     struct DoorSpot

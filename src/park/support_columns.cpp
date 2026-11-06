@@ -178,7 +178,7 @@ namespace rct3::park
             void stand(const save::PlacedObject& held, const SupportPiece& piece, glm::vec2 tiles, float level, std::int32_t turns, float stretch)
             {
                 save::PlacedObject& o = add(held, piece, tile_of(tiles), static_cast<std::int32_t>(std::floor(level)), turns);
-                const glm::vec2 x = turned_x(turns);
+                const glm::vec2 x = turned_x(ModelTurn::from(turns));
                 glm::mat4 m { 1.0f };
                 m[0] = glm::vec4(x.x, 0, x.y, 0);
                 m[1] = glm::vec4(0, stretch, 0, 0);
@@ -213,7 +213,7 @@ namespace rct3::park
 
     glm::vec2 spot_in_tiles(const save::PlacedObject& object, const SupportFootprint& footprint, const SupportSpot& spot, bool middle_of_third)
     {
-        const glm::vec2 x = turned_x(object.rotation);
+        const glm::vec2 x = turned_x(ModelTurn::from(object.rotation));
         const glm::vec2 z { -x.y, x.x };
         const auto along = [&](int i) {
             const float within = middle_of_third ? 0.5f : spot.within[static_cast<std::size_t>(i)];

@@ -61,7 +61,7 @@ namespace
 
     std::array<int, 2> beyond(const Edge& e)
     {
-        const glm::vec2 x = turned_x(std::get<2>(e));
+        const glm::vec2 x = turned_x(ModelTurn::from(std::get<2>(e)));
         return { std::get<0>(e) + static_cast<int>(std::lround(x.x)), std::get<1>(e) + static_cast<int>(std::lround(x.y)) };
     }
 

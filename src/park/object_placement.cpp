@@ -7,14 +7,14 @@
 namespace rct3::park
 {
 
-    glm::vec2 turned_x(std::int32_t turns)
+    glm::vec2 turned_x(ModelTurn turn)
     {
         // Unturned facing -X, then a quarter clockwise each: -X, +Z, +X, -Z.
-        static constexpr std::array<glm::vec2, 4> kDirections { glm::vec2 { -1, 0 }, glm::vec2 { 0, 1 }, glm::vec2 { 1, 0 }, glm::vec2 { 0, -1 } };
-        return kDirections[static_cast<std::size_t>(((turns % 4) + 4) % 4)];
+        const auto [dc, dr] = faced_side(turn).step();
+        return { static_cast<float>(dc), static_cast<float>(dr) };
     }
 
-    std::optional<std::int32_t> snapped_turns(Positioning positioning, glm::vec2 at)
+    std::optional<ModelTurn> snapped_turn(Positioning positioning, glm::vec2 at)
     {
         switch (positioning)
         {
@@ -22,12 +22,12 @@ namespace rct3::park
             case Positioning::Half:
                 // Turns face -X, +Z, +X, -Z in turn (turned_x).
                 if (at.y > at.x)
-                    return at.x + at.y >= 1 ? 1 : 0;
-                return at.x + at.y >= 1 ? 2 : 3;
+                    return ModelTurn { at.x + at.y >= 1 ? 1 : 0 };
+                return ModelTurn { at.x + at.y >= 1 ? 2 : 3 };
             case Positioning::Corner:
                 if (at.x >= 0.5f)
-                    return at.y >= 0.5f ? 1 : 2;
-                return at.y >= 0.5f ? 0 : 3;
+                    return ModelTurn { at.y >= 0.5f ? 1 : 2 };
+                return ModelTurn { at.y >= 0.5f ? 0 : 3 };
             default:
                 return std::nullopt;
         }
@@ -44,13 +44,13 @@ namespace rct3::park
 
     save::PlacedObject moved_with(save::PlacedObject object, std::array<std::int32_t, 2> squares, const save::PlacedObject& from, std::array<std::int32_t, 2> from_squares, const save::PlacedObject& to)
     {
-        const std::int32_t turns = ((to.rotation - from.rotation) % 4 + 4) % 4;
+        const ModelTurn turn = ModelTurn::from(to.rotation - from.rotation);
         // The offset from `from`'s middle, along the park's X and Z, turned as a model's X and Z are.
         const glm::vec2 d = footprint_middle(object, squares) - footprint_middle(from, from_squares);
-        const glm::vec2 x = turned_x(turns) * turned_x(0).x;
+        const glm::vec2 x = turned_x(turn) * turned_x({ }).x;
         const glm::vec2 z { -x.y, x.x };
         const glm::vec2 middle = footprint_middle(to, from_squares) + d.x * x + d.y * z;
-        object.rotation = (object.rotation + turns) % 4;
+        object.rotation = (object.rotation + turn.value) % 4;
         const bool across = (object.rotation & 1) != 0;
         object.col = static_cast<std::int32_t>(std::lround(middle.x - static_cast<float>(squares[across ? 1 : 0]) / 2));
         object.row = static_cast<std::int32_t>(std::lround(middle.y - static_cast<float>(squares[across ? 0 : 1]) / 2));
@@ -62,8 +62,9 @@ namespace rct3::park
     save::Tile square_tile(const save::PlacedObject& object, std::array<std::int32_t, 2> squares, int x, int z)
     {
         const glm::vec2 middle = footprint_middle(object, squares);
-        const glm::vec2 along_x = turned_x(object.rotation);
-        const glm::vec2 along_z = turned_x(object.rotation + 3);
+        const ModelTurn turn = ModelTurn::from(object.rotation);
+        const glm::vec2 along_x = turned_x(turn);
+        const glm::vec2 along_z = turned_x(turn.turned(3));
         // Square indices grow along the model's -X and -Z, from the footprint's far corner.
         const glm::vec2 centre = middle - (static_cast<float>(x) + 0.5f - static_cast<float>(squares[0]) / 2) * along_x - (static_cast<float>(z) + 0.5f - static_cast<float>(squares[1]) / 2) * along_z;
         return { static_cast<int>(std::floor(centre.x)), static_cast<int>(std::floor(centre.y)) };
@@ -95,7 +96,7 @@ namespace rct3::park
 
     glm::mat4 object_transform(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid, std::array<std::int32_t, 2> squares, bool ground_height)
     {
-        const glm::vec2 x = turned_x(object.rotation);
+        const glm::vec2 x = turned_x(ModelTurn::from(object.rotation));
         const glm::vec2 z { -x.y, x.x }; // The model's +Z, a quarter turn on from its +X
 
         const glm::vec2 middle = footprint_middle(object, squares);

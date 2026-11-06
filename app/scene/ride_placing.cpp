@@ -408,7 +408,7 @@ namespace rct3::scene
                 std::vector<ui::InfoTab> tabs;
                 // Walls and other items that turn to the pointer have nothing to turn.
                 const auto positioning = static_cast<park::Positioning>(scene.models.at(park::model_key(alone)).positioning);
-                if (!scenery || !park::snapped_turns(positioning, { }))
+                if (!scenery || !park::snapped_turn(positioning, { }))
                 {
                     ui::InfoTab& turn = tabs.emplace_back();
                     turn.icon = "IconAttractionEditorRotate";
@@ -593,7 +593,7 @@ namespace rct3::scene
                     return;
                 }
                 const glm::vec2 inside { spot.x - static_cast<float>(col), spot.y - static_cast<float>(row) };
-                p.site = park::ride_site({ col, row }, squares, park::ModelTurn::from(park::snapped_turns(positioning, inside).value_or(p.turn.value)), scene.grid);
+                p.site = park::ride_site({ col, row }, squares, park::snapped_turn(positioning, inside).value_or(p.turn), scene.grid);
                 p.ground = p.site->height;
                 // Rounded up, less a hair, so an item lands on a top that is a whole unit high.
                 if (top)
@@ -998,7 +998,7 @@ namespace rct3::scene
         constexpr float kArrowLift = 0.04f; ///< Over the ground or path under it, so it shows
         if (!p.item || p.item->kind != park::BuildKind::Shop || !p.item->stall || p.step != RidePlacing::Step::Ride || !p.site || p.ghost_mesh.vertices.empty())
             return { };
-        return park::facing_arrow(p.site->col, p.site->row, static_cast<float>(p.site->height) + kArrowLift, static_cast<std::uint8_t>(p.site->turn.value), scene.grid);
+        return park::facing_arrow(p.site->col, p.site->row, static_cast<float>(p.site->height) + kArrowLift, park::served_side(p.site->turn), scene.grid);
     }
 
     void draw_ride_placing_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)

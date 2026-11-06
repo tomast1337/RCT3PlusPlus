@@ -441,3 +441,14 @@ TEST_CASE("a stall offers each extra its items take once, at the usual amount, k
     CHECK(stall.extras[2].kind_symbol == "Salt:ced");
     CHECK(std::ranges::all_of(stall.items, [](const save::StallItem& i) { return i.extras == 0; }));
 }
+
+TEST_CASE("a stall serves from the side a quarter turn back from its model's +X")
+{
+    CHECK(served_side(ModelTurn { 0 }) == Side::kRowBefore);
+    CHECK(served_side(ModelTurn { 1 }) == Side::kColBefore);
+    for (const ModelTurn turn : { ModelTurn { 0 }, ModelTurn { 1 }, ModelTurn { 2 }, ModelTurn { 3 } })
+    {
+        const auto [dc, dr] = served_side(turn).step();
+        CHECK(turned_x(turn.turned(3)) == glm::vec2(dc, dr)); // As paths and guests find a stall's front
+    }
+}

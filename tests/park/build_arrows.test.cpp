@@ -25,7 +25,7 @@ TEST_CASE("a stall's arrow lies across the edge it faces, its head on the outer 
 {
     const save::TerrainGrid g = grid_of_fours();
     // Facing higher columns from tile (2, 3): the quad spans x 10..14, over the edge at x 12.
-    const TerrainMesh m = facing_arrow(2, 3, 5.0f, 3, g);
+    const TerrainMesh m = facing_arrow(2, 3, 5.0f, Side::kNextCol, g);
     REQUIRE(m.vertices.size() == 4);
     for (const GroundVertex& v : m.vertices)
     {
@@ -40,7 +40,7 @@ TEST_CASE("a stall's arrow lies across the edge it faces, its head on the outer 
     CHECK(high == doctest::Approx(14.0f));
 
     // Facing lower rows: the outer edge is at the low z.
-    for (const GroundVertex& v : facing_arrow(2, 3, 0.0f, 0, g).vertices)
+    for (const GroundVertex& v : facing_arrow(2, 3, 0.0f, Side::kRowBefore, g).vertices)
         CHECK(v.uv.y == doctest::Approx(v.position.z < 12.0f ? 1.0f : 0.0f));
 }
 

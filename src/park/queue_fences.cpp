@@ -6,21 +6,13 @@
 #include "park/path_decks.hpp"
 
 #include <algorithm>
-#include <cmath>
 
 namespace rct3::park
 {
 
     ModelTurn edge_turns(Side side) noexcept
     {
-        const auto [dc, dr] = side.step();
-        for (std::int32_t turns = 0; turns < 4; ++turns)
-        {
-            const glm::vec2 x = turned_x(turns);
-            if (std::lround(x.x) == dc && std::lround(x.y) == dr)
-                return { turns };
-        }
-        return { };
+        return turn_facing(side);
     }
 
     bool slope_falls(std::uint8_t slope) noexcept

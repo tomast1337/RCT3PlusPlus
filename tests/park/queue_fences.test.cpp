@@ -48,7 +48,7 @@ TEST_CASE("an edge piece is turned to face out of its side")
 {
     for (const Side side : kSidesFromRowBefore)
     {
-        const glm::vec2 x = turned_x(edge_turns(side).value);
+        const glm::vec2 x = turned_x(edge_turns(side));
         const auto [dc, dr] = side.step();
         CHECK(x.x == doctest::Approx(static_cast<float>(dc)));
         CHECK(x.y == doctest::Approx(static_cast<float>(dr)));

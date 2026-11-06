@@ -27,11 +27,10 @@ namespace rct3::park
 
     } // namespace
 
-    TerrainMesh facing_arrow(std::int32_t col, std::int32_t row, float height, std::uint8_t facing, const save::TerrainGrid& grid)
+    TerrainMesh facing_arrow(std::int32_t col, std::int32_t row, float height, Side side, const save::TerrainGrid& grid)
     {
-        // Out of the tile, by facing, in columns and rows.
-        constexpr std::array<std::array<int, 2>, 4> kOut { { { 0, -1 }, { -1, 0 }, { 0, 1 }, { 1, 0 } } };
-        const auto [out_col, out_row] = kOut[facing % 4];
+        // Out of the tile, in columns and rows.
+        const auto [out_col, out_row] = side.step();
         TerrainMesh mesh;
         for (int corner = 0; corner < 4; ++corner)
         {

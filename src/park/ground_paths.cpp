@@ -127,8 +127,8 @@ namespace rct3::park
                     if (!door)
                         continue;
                     const save::Tile at { door->col, door->row };
-                    const save::Tile behind = step(at, turned_x(door->direction + 2));
-                    out.push_back({ .tiles = { at }, .height = door->height, .source = behind, .entrance = entrance, .links = { step(at, turned_x(door->direction)), behind }, .owner = door->object });
+                    const save::Tile behind = step(at, turned_x(ModelTurn::from(door->direction).turned(2)));
+                    out.push_back({ .tiles = { at }, .height = door->height, .source = behind, .entrance = entrance, .links = { step(at, turned_x(ModelTurn::from(door->direction))), behind }, .owner = door->object });
                 }
             }
             if (ride.kind == save::RideKind::Special && ride.stations.empty() && ride.base.spot)
@@ -139,7 +139,7 @@ namespace rct3::park
                 {
                     for (std::int32_t side = 0; side < 4; ++side)
                     {
-                        const save::Tile there = step(tile, turned_x(side));
+                        const save::Tile there = step(tile, turned_x(ModelTurn { side }));
                         if (!std::ranges::contains(under.tiles, there) && !std::ranges::contains(under.links, there))
                             under.links.push_back(there);
                     }
@@ -162,7 +162,7 @@ namespace rct3::park
                         if (!door)
                             continue;
                         if (!floor.source)
-                            floor.source = step({ door->col, door->row }, turned_x(door->direction + 2));
+                            floor.source = step({ door->col, door->row }, turned_x(ModelTurn::from(door->direction).turned(2)));
                         floor.links.push_back({ door->col, door->row });
                     }
                 }
@@ -185,7 +185,7 @@ namespace rct3::park
                 continue;
             Paving under { .tiles = footprint_of(*stall.base.spot), .height = stall.base.spot->height, .owner = stall.base.spot->object };
             // A stall serves the side it faces, opening onto the tiles there. Facings point at -row, -col, +row, +col.
-            const glm::vec2 front = turned_x(stall.base.facing + 3);
+            const glm::vec2 front = turned_x(ModelTurn::from(stall.base.facing).turned(3));
             for (const save::Tile tile : under.tiles)
             {
                 const save::Tile there = step(tile, front);

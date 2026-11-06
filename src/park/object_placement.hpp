@@ -46,8 +46,8 @@ namespace rct3::park
     inline constexpr float kPathSideOffset = 1.6f;
     inline constexpr float kQuarterOffset = 1.0f;
 
-    /// The direction a model's +X points after `turns` quarter turns, in the park's X and Z.
-    [[nodiscard]] glm::vec2 turned_x(std::int32_t turns);
+    /// The direction a model's +X points after `turn`, in the park's X and Z.
+    [[nodiscard]] glm::vec2 turned_x(ModelTurn turn);
 
     // A placed model does not count its turns as a path deck piece does: unturned, its +X faces the column
     // before, and each quarter turn moves it one side on clockwise. These two convert between the two counts.
@@ -64,11 +64,11 @@ namespace rct3::park
         return ModelTurn::from(side.value - Side::kColBefore.value);
     }
 
-    /// The turns an item that snaps to the pointer takes, from where the pointer is inside its tile (`at`, 0 to 1
+    /// The turn an item that snaps to the pointer takes, from where the pointer is inside its tile (`at`, 0 to 1
     /// along X and Z): an edge or half item faces the tile's edge nearest the pointer, its quarter of the tile
     /// cut by the diagonals; a corner item turns to the corner of the quarter the pointer is in. None for items
     /// the player turns.
-    [[nodiscard]] std::optional<std::int32_t> snapped_turns(Positioning positioning, glm::vec2 at);
+    [[nodiscard]] std::optional<ModelTurn> snapped_turn(Positioning positioning, glm::vec2 at);
 
     /// Of the sides of a tile for which `suits` holds, the one nearest the point `at` inside it (0 to 1 along X
     /// and Z); the lowest of equals. None when no side suits.

@@ -257,11 +257,12 @@ namespace rct3::scene
         std::optional<save::Tile> spot;
         for (std::int32_t side = 0; side < 4 && !spot; ++side)
         {
-            const std::int32_t way = (side + site.turns) % 4; // 0 past the last row, then round
-            const std::int32_t across = way % 2 == 0 ? site.span[0] : site.span[1];
+            // The house's turn counted as sides from the next row, as a pool piece's is.
+            const park::Side way = site.turn.facing().turned(side);
+            const std::int32_t across = way.on_columns() ? site.span[1] : site.span[0];
             for (std::int32_t i = across / 2, n = 0; n < across && !spot; ++n, i = (i + 1) % across)
             {
-                const save::Tile t = way == 0 ? save::Tile { site.col + i, site.row + site.span[1] } : way == 1 ? save::Tile { site.col + site.span[0], site.row + i } : way == 2 ? save::Tile { site.col + i, site.row - 1 } : save::Tile { site.col - 1, site.row + i };
+                const save::Tile t = way == park::Side::kNextRow ? save::Tile { site.col + i, site.row + site.span[1] } : way == park::Side::kNextCol ? save::Tile { site.col + site.span[0], site.row + i } : way == park::Side::kRowBefore ? save::Tile { site.col + i, site.row - 1 } : save::Tile { site.col - 1, site.row + i };
                 if (free(t))
                     spot = t;
             }
@@ -278,8 +279,8 @@ namespace rct3::scene
             hut.overlay = item.overlay;
             hut.col = spot->col;
             hut.row = spot->row;
-            hut.base_height = park::ride_site({ spot->col, spot->row }, { 1, 1 }, site.turns, scene.grid).height;
-            hut.rotation = site.turns;
+            hut.base_height = park::ride_site({ spot->col, spot->row }, { 1, 1 }, site.turn, scene.grid).height;
+            hut.rotation = site.turn.value;
             hut.id = last_id(scene) + 1;
             hut.owner_ref = hut.id;
             if (load_object_model(scene, scene.placing.models, assets, hut))

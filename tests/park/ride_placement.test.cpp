@@ -35,45 +35,45 @@ namespace
 TEST_CASE("a ride's footprint is centred on the tile under the pointer, turned, at the ground's height")
 {
     const save::TerrainGrid grid = owned_land();
-    const RideSite flat = ride_site({ 4, 4 }, { 3, 2 }, 0, grid);
+    const RideSite flat = ride_site({ 4, 4 }, { 3, 2 }, { }, grid);
     CHECK(flat.col == 3);
     CHECK(flat.row == 4);
     CHECK(flat.span == std::array<std::int32_t, 2> { 3, 2 });
     CHECK(flat.height == 2);
-    const RideSite turned = ride_site({ 4, 4 }, { 3, 2 }, 5, grid);
-    CHECK(turned.turns == 1);
+    const RideSite turned = ride_site({ 4, 4 }, { 3, 2 }, ModelTurn { 5 }, grid);
+    CHECK(turned.turn == ModelTurn { 1 });
     CHECK(turned.span == std::array<std::int32_t, 2> { 2, 3 });
     CHECK(turned.col == 4);
     CHECK(turned.row == 3);
-    CHECK(ride_site({ 6, 6 }, { 1, 1 }, 0, grid).height == 6);
+    CHECK(ride_site({ 6, 6 }, { 1, 1 }, { }, grid).height == 6);
 }
 
 TEST_CASE("a ride stands at the mean height of the ground under its whole footprint, halves rounded up")
 {
     save::TerrainGrid grid = owned_land();
-    CHECK(ride_site({ 6, 6 }, { 3, 3 }, 0, grid).height == 2); // Pointed at the hill, among flat tiles
+    CHECK(ride_site({ 6, 6 }, { 3, 3 }, { }, grid).height == 2); // Pointed at the hill, among flat tiles
     grid.at(1, 2).corners = { 3, 3, 3, 3 };
-    CHECK(ride_site({ 1, 1 }, { 1, 2 }, 0, grid).height == 3);
+    CHECK(ride_site({ 1, 1 }, { 1, 2 }, { }, grid).height == 3);
 }
 
 TEST_CASE("a ride raised over the ground may not have the ground of any tile rise over its base")
 {
     const save::TerrainGrid grid = owned_land();
-    RideSite site = ride_site({ 6, 6 }, { 3, 3 }, 0, grid);
+    RideSite site = ride_site({ 6, 6 }, { 3, 3 }, { }, grid);
     site.height = 3;
     CHECK(ground_problem(site, grid) == SiteProblem::IntoGround);
     site.height = 7;
     CHECK(ground_problem(site, grid) == SiteProblem::None);
-    site = ride_site({ 2, 2 }, { 3, 3 }, 0, grid);
+    site = ride_site({ 2, 2 }, { 3, 3 }, { }, grid);
     CHECK(ground_problem(site, grid) == SiteProblem::None); // On the ground is not in it
 }
 
 TEST_CASE("a ride needs owned land clear of paths and of solid things above its base")
 {
     save::TerrainGrid grid = owned_land();
-    const RideSite site = ride_site({ 2, 2 }, { 3, 3 }, 0, grid);
+    const RideSite site = ride_site({ 2, 2 }, { 3, 3 }, { }, grid);
     CHECK(site_problem(site, grid, { }, { }) == SiteProblem::None);
-    CHECK(site_problem(ride_site({ 0, 0 }, { 3, 3 }, 0, grid), grid, { }, { }) == SiteProblem::NotOwned);
+    CHECK(site_problem(ride_site({ 0, 0 }, { 3, 3 }, { }, grid), grid, { }, { }) == SiteProblem::NotOwned);
     grid.at(3, 1).flags |= std::to_underlying(save::TileFlag::RightsOnly);
     CHECK(site_problem(site, grid, { }, { }) == SiteProblem::NotOwned);
     grid = owned_land();
@@ -91,7 +91,7 @@ TEST_CASE("a ride needs owned land clear of paths and of solid things above its 
 TEST_CASE("placing a ride levels its footprint, and the tiles round it slope to it")
 {
     save::TerrainGrid grid = owned_land();
-    RideSite site = ride_site({ 6, 6 }, { 1, 1 }, 0, grid);
+    RideSite site = ride_site({ 6, 6 }, { 1, 1 }, { }, grid);
     site.height = 4;
     level_ground(grid, site);
     CHECK(grid.at(6, 6).corners == std::array<float, 4> { 4, 4, 4, 4 });
@@ -114,13 +114,13 @@ TEST_CASE("shaping flattens a sloped tile to its top or bottom, then moves a fla
 TEST_CASE("an entrance goes across the footprint's rim nearest the pointer, facing the ride")
 {
     const save::TerrainGrid grid = owned_land();
-    const RideSite site = ride_site({ 3, 3 }, { 3, 3 }, 0, grid); // Tiles 2..4 both ways
-    CHECK(door_spot(site, { 0, 3 }) == DoorSpot { 1, 3, 2 });
-    CHECK(door_spot(site, { 3, 7 }) == DoorSpot { 3, 5, 3 });
-    CHECK(door_spot(site, { 6, 2 }) == DoorSpot { 5, 2, 0 });
-    CHECK(door_spot(site, { 4, 0 }) == DoorSpot { 4, 1, 1 });
+    const RideSite site = ride_site({ 3, 3 }, { 3, 3 }, { }, grid); // Tiles 2..4 both ways
+    CHECK(door_spot(site, { 0, 3 }) == DoorSpot { 1, 3, ModelTurn { 2 } });
+    CHECK(door_spot(site, { 3, 7 }) == DoorSpot { 3, 5, ModelTurn { 3 } });
+    CHECK(door_spot(site, { 6, 2 }) == DoorSpot { 5, 2, ModelTurn { 0 } });
+    CHECK(door_spot(site, { 4, 0 }) == DoorSpot { 4, 1, ModelTurn { 1 } });
     // Inside, the nearest side; off a corner, never the corner tile.
-    CHECK(door_spot(site, { 4, 3 }) == DoorSpot { 5, 3, 0 });
+    CHECK(door_spot(site, { 4, 3 }) == DoorSpot { 5, 3, ModelTurn { 0 } });
     const DoorSpot corner = door_spot(site, { 0, 0 });
     CHECK(((corner.col == 1 && corner.row == 2) || (corner.col == 2 && corner.row == 1)));
     // Not on the other door's tile.
@@ -140,12 +140,12 @@ TEST_CASE("a tracked ride's entrance stands beside its station, across the track
     along_z.direction = 1;
     const std::vector stations { along_x, along_z };
     CHECK_FALSE(station_door_spot({ }, { 0, 0 }));
-    CHECK(station_door_spot(stations, { 4, 7 }) == DoorSpot { 4, 5, 3, 3 });
-    CHECK(station_door_spot(stations, { 3, 1 }) == DoorSpot { 4, 3, 1, 3 });
+    CHECK(station_door_spot(stations, { 4, 7 }) == DoorSpot { 4, 5, ModelTurn { 3 }, 3 });
+    CHECK(station_door_spot(stations, { 3, 1 }) == DoorSpot { 4, 3, ModelTurn { 1 }, 3 });
     // Never at the station's ends, where the track runs on.
-    CHECK(station_door_spot(stations, { 1, 4 }) == DoorSpot { 4, 3, 1, 3 });
-    CHECK(station_door_spot(stations, { 12, 4 }) == DoorSpot { 11, 4, 0, 3 });
-    CHECK(station_door_spot(stations, { 9, 4 }) == DoorSpot { 9, 4, 2, 3 });
+    CHECK(station_door_spot(stations, { 1, 4 }) == DoorSpot { 4, 3, ModelTurn { 1 }, 3 });
+    CHECK(station_door_spot(stations, { 12, 4 }) == DoorSpot { 11, 4, ModelTurn { 0 }, 3 });
+    CHECK(station_door_spot(stations, { 9, 4 }) == DoorSpot { 9, 4, ModelTurn { 2 }, 3 });
 }
 
 TEST_CASE("a door goes to the station it stands beside, each station taking its own entrance and exit")
@@ -159,8 +159,8 @@ TEST_CASE("a door goes to the station it stands beside, each station taking its 
         return p;
     };
     const std::vector stations { piece(1), piece(2), piece(6), piece(7), piece(0) };
-    const auto beside = [](std::int32_t x) { return DoorSpot { x, 5, 3, 2 }; };
-    const auto spot = [](const DoorSpot& d) { return save::PlacementSpot { 1, d.col, d.row, d.height, d.direction }; };
+    const auto beside = [](std::int32_t x) { return DoorSpot { x, 5, ModelTurn { 3 }, 2 }; };
+    const auto spot = [](const DoorSpot& d) { return save::PlacementSpot { 1, d.col, d.row, d.height, static_cast<std::uint8_t>(d.turn.value) }; };
     // Nothing kept yet: the first station, whichever run it stands beside.
     CHECK(door_station(stations, { }, beside(7)) == 0);
     // A station whose door stands beside the same run takes the other door, wherever along the run it was kept,
@@ -168,7 +168,7 @@ TEST_CASE("a door goes to the station it stands beside, each station taking its 
     std::vector<save::Station> saved(1);
     saved[0].entrance_spot = spot(beside(6));
     CHECK(door_station(stations, saved, beside(7)) == 0);
-    CHECK(door_station(stations, saved, DoorSpot { 7, 3, 1, 2 }) == 0);
+    CHECK(door_station(stations, saved, DoorSpot { 7, 3, ModelTurn { 1 }, 2 }) == 0);
     CHECK(door_station(stations, saved, beside(1)) == 1);
     saved.resize(2);
     saved[1].exit_spot = spot(beside(0));
@@ -210,7 +210,7 @@ TEST_CASE("a station piece's platform is capped where the station ends and has s
     CHECK(platform_symbol("deck", along_x, end, { }, names) == "deckend");
     CHECK(platform_symbol("deck", along_x, alone, { }, names) == "deckstartEnd");
     // Left of the way it runs is +z, right is -z; a door at another height is not beside it.
-    const std::vector<DoorSpot> left { { 4, 5, 3, 3 } }, right { { 4, 3, 1, 3 } }, both { { 4, 5, 3, 3 }, { 4, 3, 1, 3 } }, above { { 4, 5, 3, 4 } };
+    const std::vector<DoorSpot> left { { 4, 5, ModelTurn { 3 }, 3 } }, right { { 4, 3, ModelTurn { 1 }, 3 } }, both { { 4, 5, ModelTurn { 3 }, 3 }, { 4, 3, ModelTurn { 1 }, 3 } }, above { { 4, 5, ModelTurn { 3 }, 4 } };
     CHECK(platform_symbol("deck", along_x, middle, left, names) == "deckmiddle1stairLeft");
     CHECK(platform_symbol("deck", along_x, end, right, names) == "deckend1stairRight");
     CHECK(platform_symbol("deck", along_x, alone, both, names) == "deckstartEnd2stair");
@@ -218,7 +218,7 @@ TEST_CASE("a station piece's platform is capped where the station ends and has s
     // Turned a quarter, its left is +x.
     save::TrackPiece along_z = along_x;
     along_z.direction = 1;
-    CHECK(platform_symbol("deck", along_z, middle, std::vector<DoorSpot> { { 5, 4, 0, 3 } }, names) == "deckmiddle1stairLeft");
+    CHECK(platform_symbol("deck", along_z, middle, std::vector<DoorSpot> { { 5, 4, ModelTurn { 0 }, 3 } }, names) == "deckmiddle1stairLeft");
 }
 
 TEST_CASE("a station piece takes the nearest platform its type has, or none")
@@ -230,7 +230,7 @@ TEST_CASE("a station piece takes the nearest platform its type has, or none")
         p.station_before = false;
         return p;
     }();
-    const std::vector<DoorSpot> right { { 0, -1, 1, 0 } };
+    const std::vector<DoorSpot> right { { 0, -1, ModelTurn { 1 }, 0 } };
     SUBCASE("a type with middles only gives one to the station's ends")
     {
         const std::vector<std::string> names { "hallmiddle", "hallmiddle1stairRight" };
@@ -394,9 +394,9 @@ TEST_CASE("an item moved on a stall's menu takes its new place, the others closi
 TEST_CASE("a ride on ground left as it is stands clear of its footprint's highest corner")
 {
     const save::TerrainGrid grid = owned_land();
-    const RideSite site = ride_site({ 6, 6 }, { 3, 3 }, 0, grid);
+    const RideSite site = ride_site({ 6, 6 }, { 3, 3 }, { }, grid);
     CHECK(clear_height(site, grid) == 7);
-    CHECK(clear_height(ride_site({ 2, 2 }, { 3, 3 }, 0, grid), grid) == 2);
+    CHECK(clear_height(ride_site({ 2, 2 }, { 3, 3 }, { }, grid), grid) == 2);
 }
 
 TEST_CASE("levelling sharply sets the footprint's own corners; smoothly, also the corners round it on its edge")
@@ -404,7 +404,7 @@ TEST_CASE("levelling sharply sets the footprint's own corners; smoothly, also th
     save::TerrainGrid grid = owned_land();
     for (save::TerrainCell& c : grid.cells)
         c.corners = { 4, 4, 4, 4 };
-    RideSite site = ride_site({ 3, 3 }, { 1, 1 }, 0, grid);
+    RideSite site = ride_site({ 3, 3 }, { 1, 1 }, { }, grid);
     CHECK(levelled_ground(site, Flatten::Sharp, grid).footprint.empty()); // Already level
     site.height = 2;
     CHECK(levelled_ground(site, Flatten::Off, grid).footprint.empty());

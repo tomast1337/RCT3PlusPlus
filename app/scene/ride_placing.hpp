@@ -68,7 +68,7 @@ namespace rct3::scene
         };
         std::optional<park::BuildItem> item; ///< Being placed; none while idle
         Step step = Step::Ride;
-        std::int32_t turns = 0;
+        park::ModelTurn turn;
         std::optional<park::RideSite> site;     ///< Pointed at, then where the ride was placed
         std::optional<park::DoorSpot> door;     ///< The entrance or exit pointed at
         std::optional<park::DoorSpot> entrance; ///< Placed; of a tracked ride getting a door, its other door

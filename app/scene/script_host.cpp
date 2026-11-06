@@ -1057,7 +1057,7 @@ namespace rct3::scene
             constexpr std::array<std::string_view, 3> kFlattens { "off", "sharp", "smooth" };
             Json placing { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable }, { "flatten", kFlattens.at(static_cast<std::size_t>(p.flatten)) }, { "levelling", p.levelling_cost }, { "ghost", !p.ghost_mesh.vertices.empty() }, { "arrow", !stall_arrow(park_of(park_)).vertices.empty() } };
             if (p.site)
-                placing["site"] = { { "col", p.site->col }, { "row", p.site->row }, { "turns", p.site->turns }, { "height", p.site->height } };
+                placing["site"] = { { "col", p.site->col }, { "row", p.site->row }, { "turns", p.site->turn.value }, { "height", p.site->height } };
             return placing;
         });
         engine_.define("build.pooling", [this](const Json&) -> Json {

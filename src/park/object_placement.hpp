@@ -49,6 +49,21 @@ namespace rct3::park
     /// The direction a model's +X points after `turns` quarter turns, in the park's X and Z.
     [[nodiscard]] glm::vec2 turned_x(std::int32_t turns);
 
+    // A placed model does not count its turns as a path deck piece does: unturned, its +X faces the column
+    // before, and each quarter turn moves it one side on clockwise. These two convert between the two counts.
+
+    /// The side of a tile that a model's +X faces after `turn`.
+    [[nodiscard]] constexpr Side faced_side(ModelTurn turn) noexcept
+    {
+        return Side::kColBefore.turned(turn.value);
+    }
+
+    /// The turn that faces a model's +X at `side`: faced_side turned back.
+    [[nodiscard]] constexpr ModelTurn turn_facing(Side side) noexcept
+    {
+        return ModelTurn::from(side.value - Side::kColBefore.value);
+    }
+
     /// The turns an item that snaps to the pointer takes, from where the pointer is inside its tile (`at`, 0 to 1
     /// along X and Z): an edge or half item faces the tile's edge nearest the pointer, its quarter of the tile
     /// cut by the diagonals; a corner item turns to the corner of the quarter the pointer is in. None for items

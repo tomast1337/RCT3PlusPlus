@@ -239,7 +239,7 @@ namespace rct3::scene
             t.lift_at.reset();
             if (tile && distance)
             {
-                t.ground = park::ride_site(*tile, { 1, 1 }, 0, scene.grid).height;
+                t.ground = park::ride_site(*tile, { 1, 1 }, { }, scene.grid).height;
                 t.height = t.ground;
                 if (shift)
                 {

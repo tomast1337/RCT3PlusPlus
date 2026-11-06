@@ -158,12 +158,12 @@ namespace rct3::park
         return tricks;
     }
 
-    RideSite ride_site(save::Tile tile, std::array<std::int32_t, 2> squares, std::int32_t turns, const save::TerrainGrid& grid)
+    RideSite ride_site(save::Tile tile, std::array<std::int32_t, 2> squares, ModelTurn turn, const save::TerrainGrid& grid)
     {
         const auto [col, row] = tile;
         RideSite site;
-        site.turns = turns & 3;
-        site.span = site.turns % 2 == 0 ? squares : std::array { squares[1], squares[0] };
+        site.turn = ModelTurn::from(turn.value);
+        site.span = site.turn.value % 2 == 0 ? squares : std::array { squares[1], squares[0] };
         site.col = col - (site.span[0] - 1) / 2;
         site.row = row - (site.span[1] - 1) / 2;
         float sum = 0;
@@ -312,26 +312,38 @@ namespace rct3::park
         const std::int32_t last_row = site.row + site.span[1] - 1;
         const std::int32_t c = std::clamp(col, site.col, last_col);
         const std::int32_t r = std::clamp(row, site.row, last_row);
-        // How far the tile is past (or, inside, short of) each side; the nearest side takes the door.
-        const std::array<std::int32_t, 4> past {
-            site.col - col, // -x side
-            row - last_row, // +z side
-            col - last_col, // +x side
-            site.row - row, // -z side
-        };
-        const auto side = static_cast<std::size_t>(std::ranges::max_element(past) - past.begin());
-        switch (side)
-        {
-            case 0:
-                return { site.col - 1, r, 2 };
-            case 1:
-                return { c, last_row + 1, 3 };
-            case 2:
-                return { last_col + 1, r, 0 };
-            default:
-                return { c, site.row - 1, 1 };
-        }
+        // How far the tile is past (or, inside, short of) each side; the nearest side takes the door, on the tile
+        // across it from the rim, facing back.
+        const std::array<std::pair<std::int32_t, Side>, 4> past { {
+            { site.col - col, Side::kColBefore },
+            { row - last_row, Side::kNextRow },
+            { col - last_col, Side::kNextCol },
+            { site.row - row, Side::kRowBefore },
+        } };
+        const Side side = std::ranges::max_element(past, { }, &std::pair<std::int32_t, Side>::first)->second;
+        const save::Tile rim = side == Side::kColBefore ? save::Tile { site.col, r } : side == Side::kNextRow ? save::Tile { c, last_row } : side == Side::kNextCol ? save::Tile { last_col, r } : save::Tile { c, site.row };
+        const save::Tile at = side.beyond(rim);
+        return { at.col, at.row, turn_facing(side.opposite()) };
     }
+
+    namespace
+    {
+        /// The two door spots beside station piece `p`, across the sides its track does not run through, each
+        /// facing the piece: the one towards lower rows or columns first.
+        std::array<DoorSpot, 2> beside_station(const save::TrackPiece& p)
+        {
+            // A track turned 0 or 2 runs along x, so its sides are across z; turned 1 or 3 the other way.
+            const bool along_x = p.direction % 2 == 0;
+            std::array<DoorSpot, 2> spots;
+            for (std::size_t i = 0; i < 2; ++i)
+            {
+                const Side side = along_x ? std::array { Side::kRowBefore, Side::kNextRow }[i] : std::array { Side::kColBefore, Side::kNextCol }[i];
+                const save::Tile at = side.beyond({ p.tile_x, p.tile_z });
+                spots[i] = { at.col, at.row, turn_facing(side.opposite()), p.height };
+            }
+            return spots;
+        }
+    } // namespace
 
     std::optional<DoorSpot> station_door_spot(std::span<const save::TrackPiece> stations, save::Tile tile)
     {
@@ -339,16 +351,8 @@ namespace rct3::park
         std::int64_t nearest = 0;
         for (const save::TrackPiece& p : stations)
         {
-            // A track facing 0 or 2 runs along x, so its sides are across z; facing 1 or 3 the other way.
-            const bool along_x = p.direction % 2 == 0;
-            for (const std::int32_t side : { -1, 1 })
+            for (const DoorSpot& spot : beside_station(p))
             {
-                const DoorSpot spot {
-                    along_x ? p.tile_x : p.tile_x + side,
-                    along_x ? p.tile_z + side : p.tile_z,
-                    static_cast<std::uint8_t>(along_x ? (side > 0 ? 3 : 1) : (side > 0 ? 0 : 2)),
-                    p.height,
-                };
                 const std::int64_t dc = spot.col - tile.col, dr = spot.row - tile.row;
                 if (!best || dc * dc + dr * dr < nearest)
                 {
@@ -367,25 +371,23 @@ namespace rct3::park
             const bool along_x = a.direction % 2 == 0;
             return a.height == b.height && std::abs(b.tile_x - a.tile_x) == (along_x ? 1 : 0) && std::abs(b.tile_z - a.tile_z) == (along_x ? 0 : 1);
         };
-        const auto run_of = [&](std::int32_t col, std::int32_t row, std::uint8_t direction) -> std::optional<std::size_t> {
+        const auto run_of = [&](std::int32_t col, std::int32_t row, ModelTurn turn) -> std::optional<std::size_t> {
             std::size_t run = 0;
             std::optional<std::size_t> found;
             for (std::size_t k = 0; k < stations.size(); ++k)
             {
                 if (k > 0 && !follows(stations[k - 1], stations[k]))
                     ++run;
-                const save::TrackPiece& p = stations[k];
-                const bool along_x = p.direction % 2 == 0;
-                for (const std::int32_t side : { -1, 1 })
-                    if (!found && col == (along_x ? p.tile_x : p.tile_x + side) && row == (along_x ? p.tile_z + side : p.tile_z) && direction == (along_x ? (side > 0 ? 3 : 1) : (side > 0 ? 0 : 2)))
+                for (const DoorSpot& spot : beside_station(stations[k]))
+                    if (!found && col == spot.col && row == spot.row && turn == spot.turn)
                         found = run;
             }
             if (found && run > 0 && *found == run && follows(stations.back(), stations.front()))
                 return 0;
             return found;
         };
-        const auto run = run_of(door.col, door.row, door.direction);
-        const auto at_run = [&](const std::optional<save::PlacementSpot>& spot) { return spot && run_of(spot->col, spot->row, spot->direction) == run; };
+        const auto run = run_of(door.col, door.row, door.turn);
+        const auto at_run = [&](const std::optional<save::PlacementSpot>& spot) { return spot && run_of(spot->col, spot->row, spot_turn(*spot)) == run; };
         for (std::size_t k = 0; k < saved.size(); ++k)
             if (at_run(saved[k].entrance_spot) || at_run(saved[k].exit_spot))
                 return k;
@@ -400,9 +402,9 @@ namespace rct3::park
             if (d.height != piece.height || std::abs(d.col - piece.tile_x) + std::abs(d.row - piece.tile_z) != 1)
                 continue;
             // A door faces the piece, so the side it stands on is where it faces from.
-            const int turn = (d.direction - piece.direction + 4) % 4;
-            left = left || turn == 3;
-            right = right || turn == 1;
+            const ModelTurn turn = d.turn.turned(-piece.direction);
+            left = left || turn == ModelTurn { 3 };
+            right = right || turn == ModelTurn { 1 };
         }
         const std::string_view stairs = left && right ? "2stair" : left ? "1stairLeft" : right ? "1stairRight" : "";
         const bool before = place.station_before, after = place.station_after;

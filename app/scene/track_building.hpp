@@ -96,9 +96,9 @@ namespace rct3::scene
         int brake_speed = 0;  ///< Whole m/s for brakes and block brakes; 0 until set, so they take the ride's
         std::uint8_t facing = 0;
         std::optional<save::RideColours> colours; ///< Painted in the ring's colour tab; else as the piece before
-        /// A track with no pieces yet starts on the tile the pointer was last over, turned `turns` quarters.
+        /// A track with no pieces yet starts on the tile the pointer was last over, turned `turn`.
         std::optional<save::Tile> aim;
-        std::int32_t turns = 0;
+        park::ModelTurn turn;
         /// The height Shift raised the first piece to, which it keeps once Shift is let go; never under the ground.
         std::optional<std::int32_t> raised;
         /// While Shift is held over the first piece: where the pointer met the ground when it went down, and the

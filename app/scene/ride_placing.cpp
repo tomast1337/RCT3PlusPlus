@@ -111,7 +111,7 @@ namespace rct3::scene
                 o.symbol = p.item->symbol;
                 o.col = p.site->col;
                 o.row = p.site->row;
-                o.rotation = p.site->turns;
+                o.rotation = p.site->turn.value;
                 o.quadrant = p.quadrant;
                 o.height_offset = p.site->height - p.ground;
                 o.force_absolute_height = p.absolute;
@@ -124,7 +124,7 @@ namespace rct3::scene
                 o.symbol = p.item->scenery;
                 o.col = p.site->col;
                 o.row = p.site->row;
-                o.rotation = static_cast<std::uint8_t>(p.site->turns);
+                o.rotation = p.site->turn.value;
                 return o;
             }
             if (!p.door)
@@ -133,7 +133,7 @@ namespace rct3::scene
             o.overlay = p.item->door_overlay;
             o.col = p.door->col;
             o.row = p.door->row;
-            o.rotation = p.door->direction;
+            o.rotation = p.door->turn.value;
             return o;
         }
 
@@ -307,8 +307,8 @@ namespace rct3::scene
             // A flat ride's doors go round the ground it stands on, its fence built again as each goes in.
             const save::PlacementSpot& spot = *r.base.spot;
             const std::array squares { static_cast<std::int32_t>(item.width), static_cast<std::int32_t>(item.length) };
-            p.site = park::RideSite { .col = spot.col, .row = spot.row, .turns = spot.direction & 3, .height = spot.height, .span = spot.direction % 2 == 0 ? squares : std::array { squares[1], squares[0] } };
-            p.ground = park::ride_site({ spot.col + (p.site->span[0] - 1) / 2, spot.row + (p.site->span[1] - 1) / 2 }, squares, p.site->turns, scene.grid).height;
+            p.site = park::RideSite { .col = spot.col, .row = spot.row, .turn = park::spot_turn(spot), .height = spot.height, .span = spot.direction % 2 == 0 ? squares : std::array { squares[1], squares[0] } };
+            p.ground = park::ride_site({ spot.col + (p.site->span[0] - 1) / 2, spot.row + (p.site->span[1] - 1) / 2 }, squares, p.site->turn, scene.grid).height;
         }
         // A station standing on a base of its own (a tower's) takes its doors round the ground the base covers.
         p.base.reset();
@@ -336,7 +336,7 @@ namespace rct3::scene
         if (const auto& doors = scene.rides.rides[ride].stations; !doors.empty())
         {
             if (const auto& other = exit ? doors.front().entrance_spot : doors.front().exit_spot)
-                p.entrance = park::DoorSpot { other->col, other->row, other->direction, other->height };
+                p.entrance = park::DoorSpot::of(*other);
         }
         return true;
     }
@@ -375,9 +375,9 @@ namespace rct3::scene
             for (const ui::PlayCommand c : commands)
             {
                 if (c == ui::PlayCommand::TurnItemRight)
-                    p.turns = (p.turns + 1) % 4;
+                    p.turn = p.turn.turned(1);
                 else if (c == ui::PlayCommand::TurnItemLeft)
-                    p.turns = (p.turns + 3) % 4;
+                    p.turn = p.turn.turned(-1);
             }
         }
         if (whole)
@@ -452,7 +452,7 @@ namespace rct3::scene
                 {
                     const std::size_t smooth = placing_tabs().size() - (levelled ? 2 : 0);
                     if (*pressed < smooth)
-                        p.turns = (p.turns + 1) % 4;
+                        p.turn = p.turn.turned(1);
                     else
                     {
                         const park::Flatten picked = *pressed == smooth ? park::Flatten::Smooth : park::Flatten::Sharp;
@@ -557,7 +557,7 @@ namespace rct3::scene
             if (park::on_paths(positioning))
             {
                 p.lift.reset();
-                const auto spot = hit ? park::furniture_spot(scene.footpaths.paths, scene.grid, *hit, positioning, park::ModelTurn::from(p.turns), model != scene.models.end() ? model->second.path_rules : park::PathRules { }) : std::nullopt;
+                const auto spot = hit ? park::furniture_spot(scene.footpaths.paths, scene.grid, *hit, positioning, p.turn, model != scene.models.end() ? model->second.path_rules : park::PathRules { }) : std::nullopt;
                 if (!spot)
                 {
                     p.site.reset();
@@ -567,7 +567,7 @@ namespace rct3::scene
                 }
                 p.site = park::RideSite { spot->tile.col, spot->tile.row, spot->turn.value, spot->height, { 1, 1 } };
                 // On the ground it follows the land; on a deck it keeps the deck's height.
-                p.ground = spot->raised ? park::ride_site({ spot->tile.col, spot->tile.row }, squares, 0, scene.grid).height : spot->height;
+                p.ground = spot->raised ? park::ride_site({ spot->tile.col, spot->tile.row }, squares, { }, scene.grid).height : spot->height;
                 p.absolute = spot->raised;
                 const save::PlacedObject o = *ghost_object(p);
                 p.problem = !park::on_owned_land(o, squares, scene.grid) ? park::SiteProblem::NotOwned : spot->refused || park::furniture_taken(scene.objects, scene.models, o, positioning) ? park::SiteProblem::Blocked : park::SiteProblem::None;
@@ -593,7 +593,7 @@ namespace rct3::scene
                     return;
                 }
                 const glm::vec2 inside { spot.x - static_cast<float>(col), spot.y - static_cast<float>(row) };
-                p.site = park::ride_site({ col, row }, squares, park::snapped_turns(positioning, inside).value_or(p.turns), scene.grid);
+                p.site = park::ride_site({ col, row }, squares, park::ModelTurn::from(park::snapped_turns(positioning, inside).value_or(p.turn.value)), scene.grid);
                 p.ground = p.site->height;
                 // Rounded up, less a hair, so an item lands on a top that is a whole unit high.
                 if (top)
@@ -664,7 +664,7 @@ namespace rct3::scene
         if (p.step == RidePlacing::Step::Ride)
         {
             const std::array squares { static_cast<std::int32_t>(p.item->width), static_cast<std::int32_t>(p.item->length) };
-            p.site = park::ride_site({ tile->col, tile->row }, squares, p.turns, scene.grid);
+            p.site = park::ride_site({ tile->col, tile->row }, squares, p.turn, scene.grid);
             // Unless the ground is levelled for it, it stands clear of the ground.
             if (p.flatten == park::Flatten::Off)
                 p.site->height = park::clear_height(*p.site, scene.grid);
@@ -697,13 +697,13 @@ namespace rct3::scene
             {
                 p.door = p.base ? park::door_spot(*p.base, { tile->col, tile->row }) : park::station_door_spot(p.stations, { tile->col, tile->row });
                 p.door->height = p.base ? p.base->height : p.door->height;
-                p.ground = park::ride_site({ p.door->col, p.door->row }, { 1, 1 }, 0, scene.grid).height;
-                p.site = park::RideSite { p.door->col, p.door->row, 0, p.door->height, { 1, 1 } };
+                p.ground = park::ride_site({ p.door->col, p.door->row }, { 1, 1 }, { }, scene.grid).height;
+                p.site = park::RideSite { .col = p.door->col, .row = p.door->row, .height = p.door->height };
                 // The other door kept at the station this one goes to keeps its tile.
                 const auto& kept = scene.rides.rides.at(p.ride).stations;
                 const std::size_t k = p.base ? 0 : park::door_station(p.stations, kept, *p.door);
                 const auto& other = k >= kept.size() ? std::nullopt : p.step == RidePlacing::Step::Exit ? kept[k].entrance_spot : kept[k].exit_spot;
-                p.entrance = other ? std::optional(park::DoorSpot { other->col, other->row, other->direction, other->height }) : std::nullopt;
+                p.entrance = other ? std::optional(park::DoorSpot::of(*other)) : std::nullopt;
             }
             else
                 p.door = park::door_spot(*p.site, { tile->col, tile->row });
@@ -845,9 +845,9 @@ namespace rct3::scene
                 stall.base.state = save::AttractionState::Closed;
                 stall.base.flags = save::AttractionCommon::kNeverOpened;
                 stall.base.placement = object;
-                stall.base.spot = save::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turns) };
+                stall.base.spot = save::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turn.value) };
                 // It serves the tile it faces.
-                stall.base.facing = static_cast<std::uint8_t>(p.site->turns);
+                stall.base.facing = static_cast<std::uint8_t>(p.site->turn.value);
                 // Everything its kind sells, each named after its item.
                 // shortcut: at the stall's own price for it; the game lowers a price over what guests would pay,
                 // cap it so once carried items' price limits are read.
@@ -882,8 +882,8 @@ namespace rct3::scene
                 facility.base.state = save::AttractionState::Closed;
                 facility.base.flags = save::AttractionCommon::kNeverOpened;
                 facility.base.placement = object;
-                facility.base.spot = save::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turns) };
-                facility.base.facing = static_cast<std::uint8_t>(p.site->turns);
+                facility.base.spot = save::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turn.value) };
+                facility.base.facing = static_cast<std::uint8_t>(p.site->turn.value);
                 if (scene.park.cash)
                     *scene.park.cash -= price;
                 float_money(scene, site_point(scene, *p.site), -price);
@@ -926,8 +926,8 @@ namespace rct3::scene
                         show.order.push_back(t);
                 }
             ride.base.placement = object;
-            ride.base.spot = save::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turns) };
-            ride.base.facing = static_cast<std::uint8_t>(p.site->turns);
+            ride.base.spot = save::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turn.value) };
+            ride.base.facing = static_cast<std::uint8_t>(p.site->turn.value);
             if (scene.park.cash)
                 *scene.park.cash -= price;
             float_money(scene, site_point(scene, *p.site), -price);
@@ -969,7 +969,7 @@ namespace rct3::scene
             if (const auto at = std::ranges::find(scene.objects, old, &save::PlacedObject::id); old != 0 && at != scene.objects.end())
                 at->hidden = true;
             old = object;
-            (exit ? doors.exit_spot : doors.entrance_spot) = save::PlacementSpot { object, p.door->col, p.door->row, p.site->height, p.door->direction };
+            (exit ? doors.exit_spot : doors.entrance_spot) = save::PlacementSpot { object, p.door->col, p.door->row, p.site->height, static_cast<std::uint8_t>(p.door->turn.value) };
             fence_ride(scene, assets, ride);
             // The entrance down, the exit follows when the ride has none, as in the game.
             if (!exit && !doors.exit_spot)
@@ -998,7 +998,7 @@ namespace rct3::scene
         constexpr float kArrowLift = 0.04f; ///< Over the ground or path under it, so it shows
         if (!p.item || p.item->kind != park::BuildKind::Shop || !p.item->stall || p.step != RidePlacing::Step::Ride || !p.site || p.ghost_mesh.vertices.empty())
             return { };
-        return park::facing_arrow(p.site->col, p.site->row, static_cast<float>(p.site->height) + kArrowLift, static_cast<std::uint8_t>(p.site->turns), scene.grid);
+        return park::facing_arrow(p.site->col, p.site->row, static_cast<float>(p.site->height) + kArrowLift, static_cast<std::uint8_t>(p.site->turn.value), scene.grid);
     }
 
     void draw_ride_placing_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)

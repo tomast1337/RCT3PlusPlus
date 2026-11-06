@@ -35,21 +35,6 @@ namespace rct3::park
         return positioning == PathSide || positioning == PathSideOuter || positioning == PathCentre || positioning == PathSideJoin;
     }
 
-    // An item's model does not count its turns as a path deck piece does: unturned, its +X faces the column
-    // before, and each quarter turn moves it one side on clockwise. These two convert between the two counts.
-
-    /// The side of a tile that an item's +X faces after `turn`.
-    [[nodiscard]] constexpr Side faced_side(ModelTurn turn) noexcept
-    {
-        return Side::kColBefore.turned(turn.value);
-    }
-
-    /// The turn that faces an item's +X at `side`: faced_side turned back.
-    [[nodiscard]] constexpr ModelTurn turn_facing(Side side) noexcept
-    {
-        return ModelTurn::from(side.value - Side::kColBefore.value);
-    }
-
     struct FurnitureSpot
     {
         save::Tile tile;

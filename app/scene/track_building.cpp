@@ -290,7 +290,7 @@ namespace rct3::scene
             for (const save::Station& s : ride.stations)
                 for (const auto& spot : { s.entrance_spot, s.exit_spot })
                     if (spot)
-                        p.doors.push_back({ spot->col, spot->row, spot->direction, spot->height });
+                        p.doors.push_back(park::DoorSpot::of(*spot));
             return p;
         }
 
@@ -623,7 +623,7 @@ namespace rct3::scene
                 save::PlacedObject on;
                 on.col = b.aim->col;
                 on.row = b.aim->row;
-                on.rotation = b.turns;
+                on.rotation = b.turn.value;
                 on.symbol = shape.record.item;
                 on.overlay = b.overlay;
                 // A piece that goes only on water floats on it, not on the lake's floor.
@@ -636,7 +636,7 @@ namespace rct3::scene
                 // Raised with Shift, never under the ground.
                 if (b.raised)
                 {
-                    on.base_height = std::max({ *b.raised, on.base_height.value_or(0), park::ride_site(*b.aim, shape.record.squares, b.turns, scene.grid).height });
+                    on.base_height = std::max({ *b.raised, on.base_height.value_or(0), park::ride_site(*b.aim, shape.record.squares, b.turn, scene.grid).height });
                     on.force_absolute_height = true;
                 }
                 // A design stands with its lowest piece where its first would, as it was built on the ground.
@@ -644,7 +644,7 @@ namespace rct3::scene
                 {
                     if (const std::int32_t lift = b.design.front().height - std::ranges::min(b.design, { }, &save::TrackPiece::height).height; lift > 0)
                     {
-                        on.base_height = on.base_height.value_or(park::ride_site(*b.aim, shape.record.squares, b.turns, scene.grid).height) + lift;
+                        on.base_height = on.base_height.value_or(park::ride_site(*b.aim, shape.record.squares, b.turn, scene.grid).height) + lift;
                         on.force_absolute_height = true;
                     }
                 }
@@ -2100,7 +2100,7 @@ namespace rct3::scene
         b.station_first = true;
         b.selected.reset();
         b.aim.reset();
-        b.turns = 0;
+        b.turn = { };
         b.raised.reset();
         b.lift.reset();
         b.tip = track_tip(scene, b);
@@ -2294,7 +2294,7 @@ namespace rct3::scene
             // Each press turns the first piece a quarter, as a flat ride's turn does.
             if (*tab == Rotate && starting)
             {
-                b.turns = (b.turns + 1) % 4;
+                b.turn = b.turn.turned(1);
                 changed = true;
             }
             // Each press shows or hides the strip of construction controls.
@@ -2383,7 +2383,7 @@ namespace rct3::scene
             {
                 if (command == ui::PlayCommand::TurnItemRight || command == ui::PlayCommand::TurnItemLeft)
                 {
-                    b.turns = (b.turns + (command == ui::PlayCommand::TurnItemRight ? 1 : 3)) % 4;
+                    b.turn = b.turn.turned(command == ui::PlayCommand::TurnItemRight ? 1 : -1);
                     changed = true;
                 }
             }

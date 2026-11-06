@@ -681,6 +681,21 @@ namespace rct3::scene
                 pieces.push_back({ { "symbol", o.symbol }, { "overlay", o.overlay }, { "col", o.col }, { "row", o.row }, { "height", o.base_height ? Json(*o.base_height) : Json(nullptr) } });
             return pieces;
         });
+        engine_.define("map.pools", [this](const Json&) {
+            const park::PoolMap& pools = park_of(park_).pools;
+            constexpr std::array kKinds { "water", "tile", "spa", "high dive", "stairs", "path", "slope", "steps" }; // By park::PoolKind
+            Json squares = Json::array();
+            for (const park::PoolSquare& s : pools.squares)
+                squares.push_back({ { "col", s.col }, { "row", s.row }, { "kind", kKinds[std::to_underlying(s.kind)] }, { "surface", s.surface }, { "side", s.side.value }, { "board", s.board } });
+            Json ramps = Json::array();
+            for (const park::PoolExtra& e : pools.extras)
+                if (e.fit.step > 0)
+                    ramps.push_back({ { "col", e.col }, { "row", e.row }, { "side", e.side.value }, { "step", e.fit.step } });
+            Json rooms = Json::array();
+            for (const park::PoolRoom& room : pools.rooms)
+                rooms.push_back({ { "col", room.col }, { "row", room.row } });
+            return Json { { "squares", squares }, { "ramps", ramps }, { "rooms", rooms } };
+        });
         engine_.define("build.flatRides", [this](const Json&) -> Json {
             const auto items = build_items(park_of(park_));
             if (!items)

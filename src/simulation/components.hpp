@@ -464,6 +464,23 @@ namespace rct3::simulation
     /// A pool's open water is marked in this many steps across a square, each way.
     inline constexpr std::size_t kOpenSteps = 16;
 
+    /// A square of a pool complex swimmers may be on, and the squares they may go on to from it: where paving meets
+    /// paving or the coping round water at the same height, water meets water, a slope or steps meet at their foot
+    /// or top, or a ramp or a spiral staircase climbs from one to the other. A spiral staircase has one at its foot
+    /// and one at its top.
+    struct PoolWalk
+    {
+        struct Join
+        {
+            std::size_t to = 0;
+            std::vector<glm::vec3> via { }; ///< Walked through on the way, from this square: where the two meet, or a ramp's or staircase's ends
+        };
+        glm::vec3 at { 0.0f }; ///< Its middle, at its paving's height or, for water, its water's surface
+        bool water = false;    ///< Swum across; walked only along its coping
+        bool end = false;      ///< Gone to but never through: a spa pool's, or a high diving board's
+        std::vector<Join> joins { };
+    };
+
     /// A pool complex: the squares its swimmers go to, each spot the middle of a square at its surface.
     struct SwimPool
     {
@@ -477,10 +494,9 @@ namespace rct3::simulation
         std::vector<glm::vec3> steps { }; ///< Its pool path stairs, at their top, which a pool ride's station may join as it may its paving
         std::vector<PoolBoard> boards { };
         std::vector<PoolLadder> ladders { };
-        /// Its ramps and spiral staircases, each the points walked through from the lower level to the upper.
-        std::vector<std::vector<glm::vec3>> ways { };
-        Share dirt { };            ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
-        park::PoolTally tally { }; ///< What it has, for its excitement and what its ticket is worth
+        std::vector<PoolWalk> walks { }; ///< Its squares as swimmers go from one to the next
+        Share dirt { };                  ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
+        park::PoolTally tally { };       ///< What it has, for its excitement and what its ticket is worth
     };
 
     /// How dirty a pool looks, in the six steps the pool's window names, cleanest first.
@@ -488,6 +504,15 @@ namespace rct3::simulation
 
     /// Whether `at` is over the open water of the square `square` of `pool`'s water, `tile` across.
     [[nodiscard]] bool open_water(const SwimPool& pool, std::size_t square, glm::vec3 at, float tile);
+
+    /// The walk of `pool` (its squares `tile` across) that `at` is on, the one nearest its height where squares are
+    /// stacked; off them, the nearest whose middle is within kTuning.pools.platform squares across and two height
+    /// units `level` high, as a slide's station is from the path beside its platform. None further off.
+    [[nodiscard]] std::optional<std::size_t> pool_walk_at(const SwimPool& pool, glm::vec3 at, float tile, float level);
+
+    /// Of each walk of `pool`, the one before it on the shortest way there from `from` over the joins, crossing no
+    /// square that is only gone to; `from` for itself, none where it cannot be reached.
+    [[nodiscard]] std::vector<std::optional<std::size_t>> pool_ways(const SwimPool& pool, std::size_t from);
 
     /// The cleaning fluids a changing room may keep its pool clean with, mildest first.
     enum class PoolFluid : std::uint8_t
@@ -567,12 +592,17 @@ namespace rct3::simulation
         Seconds edging { };             ///< Into it so far
     };
 
-    /// A swimmer on their way up or down a ramp or staircase of their pool, for as long as it takes; not kept in
-    /// saves, they set out on it again.
-    struct PoolClimb
+    /// A swimmer's way to their goal over the squares of their pool joined to the one they are on; not kept in saves,
+    /// they find it again.
+    struct PoolRoute
     {
-        std::array<glm::vec3, 3> via { }; ///< The points still to walk through, the next last
-        std::uint8_t left = 0;            ///< How many of them
+        struct Point
+        {
+            glm::vec3 at { 0.0f };
+            bool water = false; ///< On the way there they cross a square of water, swimming or along its coping
+        };
+        glm::vec3 goal { 0.0f };    ///< The goal it was found for
+        std::vector<Point> via { }; ///< The points still to go through before the goal, the next last
     };
 
     /// A lazy river: a channel with no trains round which swimmers float in rings, free on their complex's ticket.

@@ -798,27 +798,27 @@ namespace rct3::park
 
     PoolMap saved_pools(const save::WorldModel& world, std::span<const save::PlacedObject> objects)
     {
-        constexpr std::int32_t kWater = 0, kHighDive = 3, kSpa = 4, kPath = 5, kPathSlope = 6, kPathStairs = 7; // Of the stored types
+        constexpr std::int32_t kWater = 0, kStairs = 2, kHighDive = 3, kSpa = 4, kPath = 5, kPathSlope = 6, kPathStairs = 7; // Of the stored types
         PoolMap map;
         for (const save::PoolSegmentState& s : world.pool_segments)
         {
             PoolSquare& square = map.squares.emplace_back(PoolSquare { .col = s.col, .row = s.row, .surface = s.surface, .depth = s.depth });
             if (s.ground && std::ranges::any_of(*s.ground, [&](float h) { return h > static_cast<float>(s.surface - s.depth); }))
                 square.ground = s.ground;
-            square.kind = s.type == kWater ? PoolKind::Water : s.type == kSpa ? PoolKind::Jacuzzi : s.type == kHighDive ? PoolKind::HighDive : s.type == kPath ? PoolKind::Path : s.type == kPathSlope ? PoolKind::PathSlope : s.type == kPathStairs ? PoolKind::PathStairs : PoolKind::Tile;
-            square.board = s.type == kHighDive ? s.special : 0;
+            square.kind = s.type == kWater ? PoolKind::Water : s.type == kSpa ? PoolKind::Jacuzzi : s.type == kHighDive ? PoolKind::HighDive : s.type == kStairs ? PoolKind::Stairs : s.type == kPath ? PoolKind::Path : s.type == kPathSlope ? PoolKind::PathSlope : s.type == kPathStairs ? PoolKind::PathStairs : PoolKind::Tile;
+            square.board = s.type == kHighDive || s.type == kStairs ? s.special : 0;
             constexpr std::array kEdges { PoolEdge::Straight, PoolEdge::Tight, PoolEdge::Diagonal, PoolEdge::Loose }; // By the stored setting
             square.edge = kEdges[static_cast<std::size_t>(s.flags & 3)];
         }
         // A board faces the side it keeps, which may look down past water at its own level to a pool below; one kept
-        // without it faces the water beside it. A path's slope or stairs has its foot at the path beside it level
+        // without it faces the water beside it. A spiral staircase has its foot at the side it keeps. A path's slope or stairs has its foot at the path beside it level
         // with it.
         constexpr std::array kStoredSides { Side::kColBefore, Side::kNextRow, Side::kNextCol, Side::kRowBefore }; // By bit of the stored side
         for (std::size_t i = 0; i < map.squares.size(); ++i)
         {
             PoolSquare& square = map.squares[i];
             const auto side = static_cast<std::uint32_t>(world.pool_segments[i].side);
-            if (square.kind == PoolKind::HighDive && std::has_single_bit(side) && side < 16)
+            if ((square.kind == PoolKind::HighDive || square.kind == PoolKind::Stairs) && std::has_single_bit(side) && side < 16)
             {
                 square.side = kStoredSides[static_cast<std::size_t>(std::countr_zero(side))];
                 continue;

@@ -284,9 +284,9 @@ namespace rct3::park
     [[nodiscard]] std::vector<save::PoolWater> pool_water(const PoolMap& map);
 
     /// The pools a park from the game keeps, as squares and changing rooms the pool tool can work on: water,
-    /// paving, spa pools and high diving boards, and the rooms among `objects` that open on them.
-    /// shortcut: stairs and the paths through a pool become plain paving, and the extras stay the scenery they
-    /// are placed as; take them in once the pool tool lays them.
+    /// paving, spa pools, high diving boards, spiral staircases and pool paths, and the rooms among `objects` that
+    /// open on them.
+    /// shortcut: the extras stay the scenery they are placed as; take them in once the pool tool lays them.
     [[nodiscard]] PoolMap saved_pools(const save::WorldModel& world, std::span<const save::PlacedObject> objects);
 
     /// Takes out of `objects` the pieces a park from the game placed for `map`'s squares, so the squares alone place

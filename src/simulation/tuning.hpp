@@ -562,6 +562,8 @@ namespace rct3::simulation::tuning
         float spa_water = 0.0f;                     ///< A spa pool's water over the paving round it, in height units
         float long_ramp = 0.75f;                    ///< A ramp climbing two or more: from its side to its foot, in tiles, as its model runs
         float short_ramp = 0.25f;                   ///< One climbing one
+        float dip = 16.0f;                          ///< Chosen by eye: a way into or out of the water counts as this much longer, in world units (four squares), so walkers keep to the paving
+        float platform = 3.5f;                      ///< Chosen by eye: how many squares off the paving a slide's station may stand and be walked to, a platform three long beside it
         PerSecond cheer = PerSecond::over({ 600 }); ///< Happiness gained while swimming in clean water; lost in dirty
         /// Dirt a swimmer brings to a pool of one square of water in a second; less in bigger pools.
         PerSecond dirtying = PerSecond::over({ 1200 });

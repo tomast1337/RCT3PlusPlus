@@ -697,18 +697,7 @@ namespace rct3::simulation
         for (const auto& extras : { std::span(pools.extras), scenery })
             for (const park::PoolExtra& extra : extras)
                 if (const auto square = pools.at(extra.col, extra.row); square && square->kind == park::PoolKind::Tile && extra.fit.step > 0)
-                {
-                    // A ramp climbs from its foot on its square to its side, where the square it meets is as much
-                    // higher; it is no spot of its own.
-                    const auto [dc, dr] = extra.side.step();
-                    const std::int32_t top = square->surface + extra.fit.step;
-                    if (const auto high = pools.at(extra.col + dc, extra.row + dr, top); !high || high->surface != top)
-                        continue;
-                    const glm::vec3 ahead { static_cast<float>(dc), 0, static_cast<float>(dr) };
-                    const float back = extra.fit.step > 1 ? kTuning.pools.long_ramp : kTuning.pools.short_ramp;
-                    const glm::vec3 side = ahead * (paths.tile_size / 2);
-                    complexes[complex_of.at(&*square)].ways.push_back({ middle(extra.col, extra.row, static_cast<float>(square->surface)) + side - ahead * (back * paths.tile_size) + glm::vec3 { 0, kTuning.pools.deck, 0 }, middle(extra.col, extra.row, static_cast<float>(top)) + side + glm::vec3 { 0, kTuning.pools.deck, 0 } });
-                }
+                    continue; // A ramp, a way between two squares, not a spot of its own
                 else if (square && square->kind == park::PoolKind::Tile)
                 {
                     // Facing along the extra's length, as those on a saved park's loungers lie.
@@ -746,25 +735,89 @@ namespace rct3::simulation
                     board.levels.push_back(static_cast<float>(s.surface + 2 + park::kBoardLevel * level) * paths.level_height + kTuning.dives.board_top);
                 complexes[complex_of.at(&s)].boards.push_back(std::move(board));
             }
-        // A spiral staircase is climbed from its middle at its foot to its middle at its top, then off at a side
-        // where a square meets its top.
-        // shortcut: straight up its middle, not round its turns; upgrade with the steps' own path.
-        for (const park::PoolSquare& s : pools.squares)
-            if (s.kind == park::PoolKind::Stairs)
+        // The squares as swimmers go from one to the next. Two meet across a side where both are at the same height
+        // there: paving, the coping round water and the water itself at the square's surface, a slope or steps at
+        // its foot on the side it is entered by going up and at its top on the other. Railings stand where none
+        // meets, so nobody goes off the paving, nor up or down but by a ramp or staircase.
+        // shortcut: a square at a time, through the middles of the sides between; upgrade to spots within a square
+        // should walkers need to go round things standing on it.
+        const glm::vec3 deck { 0, kTuning.pools.deck, 0 };
+        struct Meet
+        {
+            std::size_t complex = 0;
+            std::size_t walk = 0;
+            std::array<std::optional<std::int32_t>, 4> sides { }; ///< The height it meets each side of its square at
+        };
+        std::multimap<std::pair<std::int32_t, std::int32_t>, Meet> meets; // By tile
+        for (std::size_t c = 0; c < complexes.size(); ++c)
+            for (const park::PoolSquare& s : members[c])
             {
-                const std::int32_t top = s.surface + std::max(s.board, park::kLowestStairs);
-                for (const park::Side to : park::kSides)
+                auto& walks = complexes[c].walks;
+                const auto add = [&](glm::vec3 at, bool water, bool end, std::array<std::optional<std::int32_t>, 4> sides) {
+                    meets.emplace(std::pair { s.col, s.row }, Meet { .complex = c, .walk = walks.size(), .sides = sides });
+                    walks.push_back({ .at = at, .water = water, .end = end });
+                };
+                const auto level = [](std::int32_t h) { return std::array<std::optional<std::int32_t>, 4> { h, h, h, h }; };
+                if (s.kind == park::PoolKind::Water)
+                    add(middle(s.col, s.row, static_cast<float>(s.surface) + park::kPoolBrim), true, false, level(s.surface));
+                else if (park::is_pool_path(s.kind) && s.kind != park::PoolKind::Path)
                 {
-                    const auto [dc, dr] = to.step();
-                    if (const auto high = pools.at(s.col + dc, s.row + dr, top); high && high->surface == top)
-                    {
-                        const glm::vec3 deck { 0, kTuning.pools.deck, 0 };
-                        const glm::vec3 side = glm::vec3 { static_cast<float>(dc), 0, static_cast<float>(dr) } * (paths.tile_size / 2);
-                        complexes[complex_of.at(&s)].ways.push_back({ middle(s.col, s.row, static_cast<float>(s.surface)) + deck, middle(s.col, s.row, static_cast<float>(top)) + deck, middle(s.col, s.row, static_cast<float>(top)) + side + deck });
-                        break;
-                    }
+                    const std::int32_t rise = s.kind == park::PoolKind::PathSlope ? park::kPathSlopeRise : park::kPathStairsRise;
+                    std::array<std::optional<std::int32_t>, 4> sides { };
+                    sides[static_cast<std::size_t>(s.side.value)] = s.surface;
+                    sides[static_cast<std::size_t>(s.side.opposite().value)] = s.surface + rise;
+                    add(middle(s.col, s.row, static_cast<float>(s.surface) + static_cast<float>(rise) / 2) + deck, false, false, sides);
+                }
+                else
+                    add(middle(s.col, s.row, static_cast<float>(s.surface)) + deck, false, s.kind == park::PoolKind::Jacuzzi || s.kind == park::PoolKind::HighDive, level(s.surface));
+                // A spiral staircase is climbed from its middle at its foot to its middle at its top.
+                // shortcut: straight up its middle, not round its turns; upgrade with the steps' own path.
+                if (s.kind == park::PoolKind::Stairs)
+                {
+                    const std::int32_t top = s.surface + std::max(s.board, park::kLowestStairs);
+                    const glm::vec3 foot = walks.back().at;
+                    add(middle(s.col, s.row, static_cast<float>(top)) + deck, false, false, level(top));
+                    walks[walks.size() - 2].joins.push_back({ .to = walks.size() - 1, .via = { foot, walks.back().at } });
+                    walks.back().joins.push_back({ .to = walks.size() - 2, .via = { walks.back().at, foot } });
                 }
             }
+        for (const auto& [tile, a] : meets)
+            for (const park::Side side : park::kSides)
+                for (auto [it, end] = meets.equal_range({ tile.first + side.step()[0], tile.second + side.step()[1] }); it != end; ++it)
+                    if (const auto& b = it->second; a.sides[static_cast<std::size_t>(side.value)] && a.sides[static_cast<std::size_t>(side.value)] == b.sides[static_cast<std::size_t>(side.opposite().value)])
+                    {
+                        auto& walks = complexes[a.complex].walks;
+                        const bool swim = walks[a.walk].water && walks[b.walk].water;
+                        const float height = static_cast<float>(*a.sides[static_cast<std::size_t>(side.value)]);
+                        const glm::vec3 meet = middle(tile.first, tile.second, swim ? height + park::kPoolBrim : height) + glm::vec3 { static_cast<float>(side.step()[0]), 0, static_cast<float>(side.step()[1]) } * (paths.tile_size / 2) + (swim ? glm::vec3 { 0.0f } : deck);
+                        walks[a.walk].joins.push_back({ .to = b.walk, .via = { meet } });
+                    }
+        // A ramp climbs from its foot on its square to its side, where the square it meets is as much higher.
+        for (const auto& extras : { std::span(pools.extras), scenery })
+            for (const park::PoolExtra& extra : extras)
+                if (const auto square = pools.at(extra.col, extra.row); square && square->kind == park::PoolKind::Tile && extra.fit.step > 0)
+                {
+                    const auto [dc, dr] = extra.side.step();
+                    const std::int32_t top = square->surface + extra.fit.step;
+                    const auto walk_at = [&](std::int32_t col, std::int32_t row, std::int32_t height) -> std::optional<std::size_t> {
+                        for (auto [it, end] = meets.equal_range({ col, row }); it != end; ++it)
+                            if (it->second.sides[0] == height)
+                                return it->second.walk;
+                        return std::nullopt;
+                    };
+                    const auto low = walk_at(extra.col, extra.row, square->surface);
+                    const auto high = walk_at(extra.col + dc, extra.row + dr, top);
+                    if (!low || !high)
+                        continue;
+                    const glm::vec3 ahead { static_cast<float>(dc), 0, static_cast<float>(dr) };
+                    const float back = extra.fit.step > 1 ? kTuning.pools.long_ramp : kTuning.pools.short_ramp;
+                    const glm::vec3 side = ahead * (paths.tile_size / 2);
+                    const glm::vec3 foot = middle(extra.col, extra.row, static_cast<float>(square->surface)) + side - ahead * (back * paths.tile_size) + deck;
+                    const glm::vec3 brow = middle(extra.col, extra.row, static_cast<float>(top)) + side + deck;
+                    auto& walks = complexes[complex_of.at(&*square)].walks;
+                    walks[*low].joins.push_back({ .to = *high, .via = { foot, brow } });
+                    walks[*high].joins.push_back({ .to = *low, .via = { brow, foot } });
+                }
         std::vector<park::PoolExtra> all_extras(pools.extras.begin(), pools.extras.end());
         all_extras.append_range(scenery);
         for (std::size_t c = 0; c < complexes.size(); ++c)

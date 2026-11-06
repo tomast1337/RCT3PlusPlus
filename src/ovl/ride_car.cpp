@@ -9,13 +9,13 @@ namespace rct3::ovl
 
         constexpr std::string_view kTag = "ric";
 
-        std::size_t record_size(std::uint32_t version)
+        std::size_t record_size(OvlLayout layout)
         {
-            switch (version)
+            switch (layout)
             {
-                case 1:
+                case OvlLayout::NoStream:
                     return 240;
-                case 4:
+                case OvlLayout::OneStream:
                     return 292;
                 default:
                     return 336;
@@ -28,7 +28,7 @@ namespace rct3::ovl
     {
         const AddressSpace space = overlay.space();
         const ReferenceIndex refs(part, space);
-        const std::size_t size = record_size(part.file.header.version);
+        const std::size_t size = record_size(part.file.header.layout);
 
         std::vector<RideCarItem> items;
         for (const auto& symbol : part.symbols)

@@ -11,25 +11,25 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kTag = "trr";
-        constexpr std::size_t kHeaderSize = 0x28; // the version 1 fields shared by all attractions
+        constexpr std::size_t kHeaderSize = 0x28; // the no-stream fields shared by all attractions
         constexpr std::size_t kLaterSize = 0x130; // up to and including the pointer to the attraction fields
         constexpr detail::AttractionLayout kFields { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20, .addon = 0x38 };
         constexpr std::size_t kLaterFieldsSize = 0x3C; // later items' fields run on to the add-on pack
 
-        /// Later items point at 0x12C to a block whose attraction fields start 0x3C bytes in (version 4) or
-        /// 0x44 bytes in (version 5).
-        std::uint32_t attraction_offset(std::uint32_t version)
+        /// Later items point at 0x12C to a block whose attraction fields start 0x3C bytes in (one-stream) or
+        /// 0x44 bytes in (many-stream).
+        std::uint32_t attraction_offset(OvlLayout layout)
         {
-            return version == 4 ? 0x3C : 0x44;
+            return layout == OvlLayout::OneStream ? 0x3C : 0x44;
         }
 
-        /// The ride parameters sit at the start of later items and 0x50 bytes in in version 1 items, after
+        /// The ride parameters sit at the start of later items and 0x50 bytes in in no-stream items, after
         /// the attraction fields; from there the layout is the same.
         constexpr std::size_t kOperatingSize = 0x110;
 
-        std::optional<RideOperatingDefaults> read_operating(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, std::uint32_t version)
+        std::optional<RideOperatingDefaults> read_operating(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, OvlLayout layout)
         {
-            const auto r = ItemRecord::open(space, refs, address + (version == 1 ? 0x50 : 0), kOperatingSize);
+            const auto r = ItemRecord::open(space, refs, address + (layout == OvlLayout::NoStream ? 0x50 : 0), kOperatingSize);
             if (!r)
                 return std::nullopt;
             RideOperatingDefaults d;
@@ -66,10 +66,10 @@ namespace rct3::ovl
 
         /// The pieces the ride lists: a pointer at 0x04 of the ride parameters to a list of "tks" references.
         /// The count is at 0x00, or at 0x130 when 0x00 holds -1, as in later items.
-        std::vector<std::string_view> read_pieces(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, std::uint32_t version)
+        std::vector<std::string_view> read_pieces(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, OvlLayout layout)
         {
             std::vector<std::string_view> out;
-            const auto r = ItemRecord::open(space, refs, address + (version == 1 ? 0x50 : 0), 0x134);
+            const auto r = ItemRecord::open(space, refs, address + (layout == OvlLayout::NoStream ? 0x50 : 0), 0x134);
             if (!r)
                 return out;
             constexpr std::uint32_t kMostPieces = 4096; // A bound against a stray count
@@ -101,7 +101,7 @@ namespace rct3::ovl
         }
 
         /// The rules of a later item at `address`, its attraction fields block at `fields` (0 when it has none).
-        TrackRules read_rules(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, std::uint32_t fields, std::uint32_t version)
+        TrackRules read_rules(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, std::uint32_t fields, OvlLayout layout)
         {
             TrackRules rules;
             if (const auto doors = fields == 0 ? std::nullopt : ItemRecord::open(space, refs, fields, 0x30))
@@ -109,7 +109,7 @@ namespace rct3::ovl
                 rules.entrances = doors->u32(0x28);
                 rules.exits = doors->u32(0x2C);
             }
-            if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open(space, refs, fields + attraction_offset(version), 0x34))
+            if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open(space, refs, fields + attraction_offset(layout), 0x34))
                 rules.flags = block->u32(0x30);
             const auto r = ItemRecord::open(space, refs, address, 0x184);
             if (!r)
@@ -145,7 +145,7 @@ namespace rct3::ovl
     {
         const AddressSpace space = overlay.space();
         const ReferenceIndex refs(part, space);
-        const std::uint32_t version = part.file.header.version;
+        const OvlLayout layout = part.file.header.layout;
 
         std::vector<TrackedRideItem> items;
         for (const auto& symbol : part.symbols)
@@ -157,15 +157,15 @@ namespace rct3::ovl
                 continue;
 
             TrackedRideItem item { parts.name, std::nullopt };
-            if (version == 1)
+            if (layout == OvlLayout::NoStream)
             {
                 if (const auto record = ItemRecord::open(space, refs, symbol.data, kHeaderSize))
                 {
                     TrackedRide ride;
-                    ride.info = detail::read_attraction(*record, kFields, version);
-                    ride.operating = read_operating(space, refs, symbol.data, version);
+                    ride.info = detail::read_attraction(*record, kFields, layout);
+                    ride.operating = read_operating(space, refs, symbol.data, layout);
                     ride.guests = detail::read_ride_guests(space, refs, symbol.data + 0x38);
-                    ride.pieces = read_pieces(space, refs, symbol.data, version);
+                    ride.pieces = read_pieces(space, refs, symbol.data, layout);
                     item.ride = ride;
                 }
             }
@@ -178,14 +178,14 @@ namespace rct3::ovl
                     ride.splines[i] = record->ref(0x114 + i * 4, "spl");
                 }
                 const std::uint32_t fields = record->u32(0x12C);
-                if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open_up_to(space, refs, fields + attraction_offset(version), kLaterFieldsSize, kHeaderSize))
-                    ride.info = detail::read_attraction(*block, kFields, version);
+                if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open_up_to(space, refs, fields + attraction_offset(layout), kLaterFieldsSize, kHeaderSize))
+                    ride.info = detail::read_attraction(*block, kFields, layout);
                 // The guests lead the block the attraction fields are in.
                 if (fields != 0)
                     ride.guests = detail::read_ride_guests(space, refs, fields);
-                ride.operating = read_operating(space, refs, symbol.data, version);
-                ride.rules = read_rules(space, refs, symbol.data, fields, version);
-                ride.pieces = read_pieces(space, refs, symbol.data, version);
+                ride.operating = read_operating(space, refs, symbol.data, layout);
+                ride.rules = read_rules(space, refs, symbol.data, fields, layout);
+                ride.pieces = read_pieces(space, refs, symbol.data, layout);
                 item.ride = std::move(ride);
             }
             items.push_back(std::move(item));

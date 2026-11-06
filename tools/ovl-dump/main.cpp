@@ -16,6 +16,7 @@
 #include <format>
 #include <fstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 // --- scenery and placement item types (feat/ovl-scenery-types) ---
@@ -115,7 +116,7 @@ namespace
         const auto& header = file.header;
         out.info("== {}", title);
 
-        out.info("version        {:d}", header.version);
+        out.info("layout         {:d}", std::to_underlying(header.layout));
         out.info("flags          0x{:02x}", header.flags);
         out.info("header end     0x{:x}", header.end_offset);
 
@@ -194,7 +195,7 @@ namespace
         }
         std::size_t bad_type = 0;
         std::size_t unlinked = 0; // rows whose symbol address does not land on a symbol table row
-        const std::size_t stride = header.version == 1 ? 12 : 16;
+        const std::size_t stride = header.layout == rct3::ovl::OvlLayout::NoStream ? 12 : 16;
         for (const auto& e : part.loaders.entries)
         {
             if (e.loader_type >= header.loaders.size())

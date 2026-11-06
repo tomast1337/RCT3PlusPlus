@@ -17,13 +17,13 @@ namespace rct3::ovl
             int splines;         // offset of the four spline slots, -1 for none
         };
 
-        Variant variant(std::uint32_t version)
+        Variant variant(OvlLayout layout)
         {
-            switch (version)
+            switch (layout)
             {
-                case 1:
+                case OvlLayout::NoStream:
                     return { { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 }, 0x28, 0x28, -1 };
-                case 4:
+                case OvlLayout::OneStream:
                     return { { .type_id = 0x68, .name_text = 0x6C, .description_text = 0x70, .icon = 0x74, .style = 0x18, .spline = 0x8C, .value_a = 0x78, .value_b = 0x7C, .value_c = 0x88 }, 0xB8, 0x90, 0xA8 };
                 default:
                     return { { .type_id = 0x70, .name_text = 0x74, .description_text = 0x78, .icon = 0x7C, .style = 0x18, .spline = 0x94, .value_a = 0x80, .value_b = 0x84, .value_c = 0x90 }, 0xC4, 0x98, 0xB4 };
@@ -36,8 +36,8 @@ namespace rct3::ovl
     {
         const AddressSpace space = overlay.space();
         const ReferenceIndex refs(part, space);
-        const std::uint32_t version = part.file.header.version;
-        const Variant v = variant(version);
+        const OvlLayout layout = part.file.header.layout;
+        const Variant v = variant(layout);
 
         std::vector<AnimatedRideItem> items;
         for (const auto& symbol : part.symbols)
@@ -52,7 +52,7 @@ namespace rct3::ovl
             if (const auto record = ItemRecord::open_up_to(space, refs, symbol.data, v.size, v.minimum))
             {
                 AnimatedRide ride;
-                ride.info = detail::read_attraction(*record, v.layout, version);
+                ride.info = detail::read_attraction(*record, v.layout, layout);
                 if (v.splines >= 0)
                 {
                     for (std::size_t i = 0; i < ride.splines.size(); ++i)
@@ -60,7 +60,7 @@ namespace rct3::ovl
                         ride.splines[i] = record->ref(static_cast<std::size_t>(v.splines) + i * 4, "spl");
                     }
                 }
-                if (version != 1)
+                if (layout != OvlLayout::NoStream)
                 {
                     ride.guests = detail::read_ride_guests(space, refs, symbol.data + 0x2C);
                     ride.seating = detail::read_ride_seating(space, refs, symbol.data + 0x2C);

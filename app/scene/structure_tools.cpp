@@ -142,7 +142,7 @@ namespace rct3::scene
         StructureTools& t = scene.structures;
         t.tool = StructureTools::Tool::Place;
         t.structure = std::move(read);
-        t.turns = 0;
+        t.turn = { };
         auto& panel = scene.desktop->root().add<ui::DeleteAreaPanel>(std::string(kPlaceName), skins::structure_place_panel_style(), *assets.strings);
         panel.set_marked(true);
         logging::logger("park").info("structures: placing {} ({} items)", t.structure->name, t.structure->pieces.size());
@@ -216,12 +216,12 @@ namespace rct3::scene
             for (const ui::PlayCommand c : commands)
             {
                 if (c == ui::PlayCommand::TurnItemRight)
-                    t.turns = (t.turns + 1) % 4;
+                    t.turn = t.turn.turned(1);
                 else if (c == ui::PlayCommand::TurnItemLeft)
-                    t.turns = (t.turns + 3) % 4;
+                    t.turn = t.turn.turned(-1);
             }
         if (turned)
-            t.turns = (t.turns + 1) % 4;
+            t.turn = t.turn.turned(1);
 
         // Raised with Shift it stays on its tiles; otherwise it follows the ground under the pointer.
         const std::optional<park::Ray> ray = !over && size.x > 0 && size.y > 0 ? std::optional(park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y })) : std::nullopt;
@@ -259,11 +259,11 @@ namespace rct3::scene
             t.solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
             t.solids_of = scene.objects.size();
         }
-        std::vector<save::PlacedObject> placed = park::structure_objects(*t.structure, *t.at, t.turns, t.height, scene.models);
+        std::vector<save::PlacedObject> placed = park::structure_objects(*t.structure, *t.at, t.turn, t.height, scene.models);
         std::erase_if(placed, [&](const save::PlacedObject& o) { return !load_object_model(scene, t.models, assets, o); });
         const bool moved = placed.size() != t.placed.size() || !std::ranges::equal(placed, t.placed, [](const save::PlacedObject& a, const save::PlacedObject& b) { return a.col == b.col && a.row == b.row && a.base_height == b.base_height && a.rotation == b.rotation; });
         t.placed = std::move(placed);
-        const park::StructureProblem problem = park::structure_problem(*t.structure, *t.at, t.turns, t.placed, scene.models, t.solids, scene.footpaths.paths, scene.grid);
+        const park::StructureProblem problem = park::structure_problem(*t.structure, *t.at, t.turn, t.placed, scene.models, t.solids, scene.footpaths.paths, scene.grid);
         t.cost = 0;
         for (const save::PlacedObject& o : t.placed)
             t.cost += price_of(scene, o.symbol);
@@ -311,7 +311,7 @@ namespace rct3::scene
             *scene.park.cash -= t.cost;
         const save::TerrainGrid& g = scene.grid;
         float_money(scene, { g.world_x(t.at->col) + g.tile_size_x / 2, static_cast<float>(t.height), g.world_z(t.at->row) + g.tile_size_z / 2 }, -t.cost);
-        logging::logger("park").info("structures: built {} ({} items) at {},{} height {} turned {}", t.structure->name, t.placed.size(), t.at->col, t.at->row, t.height, t.turns);
+        logging::logger("park").info("structures: built {} ({} items) at {},{} height {} turned {}", t.structure->name, t.placed.size(), t.at->col, t.at->row, t.height, t.turn.value);
         t.ghost_mesh = { };
         return true;
     }

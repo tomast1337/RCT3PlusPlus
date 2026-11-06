@@ -51,7 +51,7 @@ namespace rct3::scene
         bool marks_changed = false;       ///< The marks shown are not the marks
         // Placing
         std::optional<save::Structure> structure; ///< Picked out to save, or being placed
-        std::int32_t turns = 0;
+        park::ModelTurn turn;
         std::optional<save::Tile> at; ///< The tile pointed at
         std::int32_t ground = 0;      ///< The ground's height there
         std::int32_t height = 0;      ///< The lowest item's, the ground's unless raised with Shift

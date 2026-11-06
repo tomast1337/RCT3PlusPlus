@@ -61,13 +61,13 @@ namespace
 TEST_CASE("a structure turns about its middle tile, and four turns bring every tile back")
 {
     const save::Structure s { .cols = 3, .rows = 2, .tiles = std::vector<std::uint8_t>(6, 1) };
-    for (std::int32_t turns = 0; turns < 4; ++turns)
-        CHECK(structure_tile(s, { 10, 10 }, turns, 1, 1) == save::Tile { 10, 10 });
-    CHECK(structure_tile(s, { 10, 10 }, 0, 0, 0) == save::Tile { 9, 9 });
+    for (const ModelTurn turn : { ModelTurn { 0 }, ModelTurn { 1 }, ModelTurn { 2 }, ModelTurn { 3 } })
+        CHECK(structure_tile(s, { 10, 10 }, turn, 1, 1) == save::Tile { 10, 10 });
+    CHECK(structure_tile(s, { 10, 10 }, ModelTurn { 0 }, 0, 0) == save::Tile { 9, 9 });
     // A quarter turn lays its columns along the park's rows, the first column last.
-    CHECK(structure_tile(s, { 10, 10 }, 1, 0, 0) == save::Tile { 9, 11 });
-    CHECK(structure_tile(s, { 10, 10 }, 1, 2, 0) == save::Tile { 9, 9 });
-    CHECK(structure_tile(s, { 10, 10 }, 2, 0, 0) == save::Tile { 11, 11 });
+    CHECK(structure_tile(s, { 10, 10 }, ModelTurn { 1 }, 0, 0) == save::Tile { 9, 11 });
+    CHECK(structure_tile(s, { 10, 10 }, ModelTurn { 1 }, 2, 0) == save::Tile { 9, 9 });
+    CHECK(structure_tile(s, { 10, 10 }, ModelTurn { 2 }, 0, 0) == save::Tile { 11, 11 });
 }
 
 TEST_CASE("picking takes the scenery on the marked tiles, its box round them, its heights from the lowest")
@@ -103,11 +103,11 @@ TEST_CASE("built turned, each item keeps its tiles, quarter and facing in the bo
         .tiles = { 1, 1 },
         .pieces = { { .symbol = "wall", .overlay = "Scenery/Invented", .col = 0, .row = 0, .height = 0, .rotation = 0 }, { .symbol = "tree", .overlay = "Scenery/Invented", .col = 1, .row = 0, .height = 3, .rotation = 1, .quadrant = 1 } },
     };
-    const std::vector<save::PlacedObject> placed = structure_objects(s, { 5, 5 }, 1, 10, m);
+    const std::vector<save::PlacedObject> placed = structure_objects(s, { 5, 5 }, ModelTurn { 1 }, 10, m);
     REQUIRE(placed.size() == 2);
     // The wall, two tiles along the box, now runs along the park's rows over the box's turned tiles.
-    const save::Tile first = structure_tile(s, { 5, 5 }, 1, 0, 0);
-    const save::Tile second = structure_tile(s, { 5, 5 }, 1, 1, 0);
+    const save::Tile first = structure_tile(s, { 5, 5 }, ModelTurn { 1 }, 0, 0);
+    const save::Tile second = structure_tile(s, { 5, 5 }, ModelTurn { 1 }, 1, 0);
     CHECK(placed[0].col == std::min(first.col, second.col));
     CHECK(placed[0].row == std::min(first.row, second.row));
     CHECK(first.col == second.col);
@@ -119,8 +119,8 @@ TEST_CASE("built turned, each item keeps its tiles, quarter and facing in the bo
     CHECK(placed[1].base_height == 13);
     CHECK(placed[1].quadrant == 0); // The +X quarter of the tile turns to its -Z quarter
     // Turned all the way round, the same items come back.
-    const auto again = structure_objects(s, { 5, 5 }, 4, 10, m);
-    const auto plain = structure_objects(s, { 5, 5 }, 0, 10, m);
+    const auto again = structure_objects(s, { 5, 5 }, ModelTurn::from(4), 10, m);
+    const auto plain = structure_objects(s, { 5, 5 }, ModelTurn { 0 }, 10, m);
     for (std::size_t i = 0; i < plain.size(); ++i)
     {
         CHECK(again[i].col == plain[i].col);
@@ -134,12 +134,12 @@ TEST_CASE("a structure fits on the park's own land, clear of solid items and pat
     save::TerrainGrid g = owned_grid(8, 8);
     const ObjectModels m = models();
     const save::Structure s { .cols = 1, .rows = 1, .tiles = { 1 }, .pieces = { { .symbol = "tree", .overlay = "Scenery/Invented" } } };
-    const auto at = [&](save::Tile t) { return structure_objects(s, t, 0, 0, m); };
-    CHECK(structure_problem(s, { 3, 3 }, 0, at({ 3, 3 }), m, { }, { }, g) == StructureProblem::None);
-    CHECK(structure_problem(s, { 9, 3 }, 0, at({ 9, 3 }), m, { }, { }, g) == StructureProblem::NotOwned);
+    const auto at = [&](save::Tile t) { return structure_objects(s, t, ModelTurn { 0 }, 0, m); };
+    CHECK(structure_problem(s, { 3, 3 }, { }, at({ 3, 3 }), m, { }, { }, g) == StructureProblem::None);
+    CHECK(structure_problem(s, { 9, 3 }, { }, at({ 9, 3 }), m, { }, { }, g) == StructureProblem::NotOwned);
     g.cells[3 * 8 + 4].flags = 0;
-    CHECK(structure_problem(s, { 4, 3 }, 0, at({ 4, 3 }), m, { }, { }, g) == StructureProblem::NotOwned);
+    CHECK(structure_problem(s, { 4, 3 }, { }, at({ 4, 3 }), m, { }, { }, g) == StructureProblem::NotOwned);
     const std::vector<save::PlacedObject> standing { item("tree", 3, 3, 0) };
-    CHECK(structure_problem(s, { 3, 3 }, 0, at({ 3, 3 }), m, solid_tiles(standing, m, g), { }, g) == StructureProblem::Blocked);
-    CHECK(structure_problem(s, { 3, 3 }, 0, structure_objects(s, { 3, 3 }, 0, 8, m), m, solid_tiles(standing, m, g), { }, g) == StructureProblem::None);
+    CHECK(structure_problem(s, { 3, 3 }, { }, at({ 3, 3 }), m, solid_tiles(standing, m, g), { }, g) == StructureProblem::Blocked);
+    CHECK(structure_problem(s, { 3, 3 }, { }, structure_objects(s, { 3, 3 }, ModelTurn { 0 }, 8, m), m, solid_tiles(standing, m, g), { }, g) == StructureProblem::None);
 }

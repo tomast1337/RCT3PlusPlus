@@ -1085,7 +1085,7 @@ namespace rct3::scene
             if (t.tool != StructureTools::Tool::Place || !t.structure)
                 return nullptr;
             constexpr std::array<std::string_view, 4> kProblems { "none", "not owned", "blocked", "path" };
-            Json placing { { "name", t.structure->name }, { "items", t.placed.size() }, { "problem", kProblems.at(static_cast<std::size_t>(t.problem)) }, { "affordable", t.affordable }, { "cost", t.cost }, { "turns", t.turns }, { "height", t.height }, { "ghost", !t.ghost_mesh.vertices.empty() } };
+            Json placing { { "name", t.structure->name }, { "items", t.placed.size() }, { "problem", kProblems.at(static_cast<std::size_t>(t.problem)) }, { "affordable", t.affordable }, { "cost", t.cost }, { "turns", t.turn.value }, { "height", t.height }, { "ghost", !t.ghost_mesh.vertices.empty() } };
             if (t.at)
                 placing["at"] = { { "col", t.at->col }, { "row", t.at->row } };
             return placing;

@@ -92,8 +92,9 @@ let slid = 0;
 let shot = false;
 const counts: number[] = [];
 for (let minute = 0; minute < 12 && (counts.at(-1) ?? 0) < 3; ++minute) {
-    for (let s = 0; s < 6; ++s) {
-        await park.advance(10);
+    // A look each second: a slide down lasts only a few.
+    for (let s = 0; s < 60; ++s) {
+        await park.advance(1);
         const on = people.list().filter((p) => p.ride === ship && p.climbing !== undefined);
         climbed += on.filter((p) => p.climbing === "climbing").length;
         slid += on.filter((p) => p.climbing === "sliding").length;

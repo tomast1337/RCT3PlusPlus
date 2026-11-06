@@ -72,6 +72,16 @@ TEST_CASE("a swimmer goes up a slide ending in their pool, rides it free in thei
     REQUIRE(park.run_until([&] { return r.all_of<Dropped>(guest); }, 60));
     CHECK(r.get<Dropped>(guest).slide == slide);
     CHECK(r.get<Dropped>(guest).drift.y > 0); // On down the slide's way
+    // Its car flies on with them, onto the water.
+    REQUIRE(r.get<Trains>(slide).trains.front().flight.has_value());
+    const float water = r.get<Trains>(slide).trains.front().flight->water;
+    CHECK(park.run_until(
+        [&] {
+            const auto& f = r.get<Trains>(slide).trains.front().flight;
+            return f && f->afloat >= 0;
+        },
+        5));
+    CHECK(r.get<Trains>(slide).trains.front().flight->at.y == doctest::Approx(water));
     CHECK(in_swimwear(r, guest));
     REQUIRE(park.run_until([&] { return r.any_of<Errand>(guest) && r.get<Errand>(guest).kind == ErrandKind::Swimming; }, 10));
     park.run(1);
@@ -83,7 +93,7 @@ TEST_CASE("a swimmer goes up a slide ending in their pool, rides it free in thei
     CHECK(r.get<Attraction>(slide).open);
     const Coaster& train = r.get<Trains>(slide).trains.front();
     CHECK_FALSE(train.crashed);
-    CHECK(park.run_until([&] { return !train.splashed && standing_at(train).has_value(); }, 10));
+    CHECK(park.run_until([&] { return !train.splashed && standing_at(train).has_value(); }, 10 + kGone));
 }
 
 TEST_CASE("a swimmer in a slide's queue swims on when the slide breaks down")

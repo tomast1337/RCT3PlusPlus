@@ -867,6 +867,9 @@ namespace rct3::park
         const ovl::Spline* right = spline_in(*file, section->water_splines[1]);
         if (left == nullptr || right == nullptr)
             return;
+        // Off a slide's open end its water pours from where the water's edges end.
+        if (section->role == kRoleSlideEnd && left->nodes.size() >= 2 && !right->nodes.empty())
+            model.pour = SlidePour { .left = position(left->nodes.back()), .right = position(right->nodes.back()), .way = glm::normalize(position(left->nodes.back()) - position(left->nodes[left->nodes.size() - 2])) };
         const auto strip = flow_strip(*left, *right, track != nullptr ? *track : ovl::Spline { }, std::string(kFlowPicture));
         if (!strip)
             return;
@@ -1092,8 +1095,12 @@ namespace rct3::park
         model.ride_eyes = { bone_of(car->visual, "nosecamera").or_else([&] { return front; }), front, bone_of(car->visual, "camerarear") };
         model.ride_look = found->camera;
         model.boat_handling = found->boat;
+        model.mass = car->mass;
+        model.rolling = found->rolling;
+        model.air = found->air;
         model.trough = car->trough;
         model.swing_pivot = pivot.y;
+        model.swing_arm = car->part.empty() ? pivot.y : part_pivot.y;
         constexpr std::array<std::string_view, 3> kStrengths { "low", "med", "high" };
         for (std::uint8_t strength = 0; strength < kStrengths.size(); ++strength)
         {

@@ -59,12 +59,36 @@ namespace rct3::simulation
         float damping = 0;  ///< Per second, how fast its swing dies down
         float centring = 0; ///< Per second, how fast it is drawn back to the trough's middle
         float friction = 0; ///< Of the car on the wall, held back as it swings by this much of the weight pressing it there
-        /// Metres from the middle of its swing, on the track's line, down to the car. Measured: a body slide's car
-        /// under way in a saved park.
-        // shortcut: every slide's car swings on a body slide's, upgrade when another kind's is measured.
+        /// Metres from the middle of its swing, on the track's line, down to the car: its shape's pivot height. A
+        /// body slide's car's, matching one under way in a saved park, unless the car's shape gives its own.
         float length = 0.77f;
         float pivot = 0; ///< Metres up from where the car is drawn to the middle of its swing on the car's shape
     };
+
+    /// Of a car run off a pool slide's open end: flying on as fast as it left, falling, then afloat where it came
+    /// down, drifting to a stop, till it sinks out of sight.
+    struct Flight
+    {
+        glm::vec3 from { };     ///< Where it left the track
+        glm::vec3 way { };      ///< The track's way there
+        glm::vec3 at { };       ///< Where it is now
+        glm::vec3 velocity { }; ///< Metres a second
+        float water = 0;        ///< Height it comes down at: the pool's water, or the ground with no pool under it
+        float afloat = -1;      ///< Seconds since it came down; below 0 while it flies
+        float off = 0;          ///< Seconds since it left the track
+    };
+
+    /// Seconds after it left the track a car off a slide's end is gone. Measured: a capture of the original game,
+    /// where such a car is back on its track ten seconds after it left it.
+    inline constexpr float kGone = 10;
+
+    /// Moves `flight` on by `seconds`: flying it falls, and comes down on its water; afloat it drifts on slowing
+    /// and sinks in its last second. False once kGone seconds have passed since it left the track and it is gone.
+    bool fly(Flight& flight, float seconds);
+
+    /// Moves a car drawn at `flight`'s start, as it left the track, to where the flight has it: nose along its
+    /// way while it flies, level once afloat.
+    [[nodiscard]] glm::mat4 flown(const Flight& flight, const glm::mat4& place);
 
     struct Coaster
     {
@@ -109,6 +133,12 @@ namespace rct3::simulation
         /// Of a pool slide's car, how it swings in its trough; nothing for every other train.
         std::optional<Trough> trough;
         std::vector<bool> covered { }; ///< By point: the stretch from it is a tube, which no car goes out of
+        std::vector<bool> steady { };  ///< By point: on the stretch from it a slide's car swings by its weight alone
+        /// What holds it back as it goes: rolling, as this much of its weight on the track, and the air, as this
+        /// much of its speed squared, in m/s² for each (m/s)². Those of a train in saved parks' tested coasters
+        /// unless its train's file gives its own.
+        float rolling = 0.003f;
+        float air = 0.0004f;
         // The train
         bool running = false;
         float at = 0;              ///< Distance of the front of the train
@@ -128,8 +158,9 @@ namespace rct3::simulation
         /// Run off an end of its track, or a slide's car over its trough's rim: stopped running, where it left the
         /// track and at the speed it left at
         bool crashed = false;
-        /// Run off the end of a pool slide: out of sight, where it left the track and at the speed it left at
+        /// Run off the end of a pool slide: off the track, where it left it and at the speed it left at
         bool splashed = false;
+        std::optional<Flight> flight; ///< Of a car run off the end of a pool slide, till it is gone
 
         [[nodiscard]] float length() const
         {

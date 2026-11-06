@@ -36,6 +36,7 @@ namespace rct3::ovl
         /// bits are set in some later cars; their meaning is unconfirmed.
         std::uint32_t kind = 0;
         std::string_view visual; ///< "svd" item that draws the car
+        float mass = 0;          ///< Kilograms, empty: 40 a body slide's mat, 300 a raft blasted up by jets
         /// "svd" item of the part of the car that spins or swings on it, such as a spinning tub or a hanging
         /// seat; empty when the car is one piece. The two line up where each has a bone named "pivot".
         std::string_view part;

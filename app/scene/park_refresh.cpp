@@ -390,10 +390,6 @@ namespace rct3::scene
                 {
                     if (const auto model = scene.models.find(park::model_ref(scene.cars[seat->first])); model != scene.models.end())
                         seating = model->second.seating;
-                    // On a pool slide, all but the body slide's riders sit as in a ring.
-                    const auto* fleet = scene.sim.registry.try_get<simulation::Trains>(scene.sim.registry.get<simulation::Errand>(shown.guest).target);
-                    if (fleet != nullptr && fleet->trains.front().splash_out && seating != park::kSlideBodySeating)
-                        seating = park::kSlideRingSeating;
                 }
                 else if (const auto flat = scene.ride_seatings.find(scene.sim.registry.get<simulation::Errand>(shown.guest).target); flat != scene.ride_seatings.end())
                     seating = flat->second;
@@ -1373,11 +1369,16 @@ namespace rct3::scene
                 // Crashed, each car flies on and tumbles as its wreck does from where it left the track, and is
                 // gone with it; a train whose wrecks are gone is off the track till it is back in the station.
                 // shortcut: drawn as it was, not burnt; upgrade if a burnt look turns up among the cars' textures.
-                // Off a pool slide's end, it is out of sight till it is back at the station; its riders fly on, to
-                // splash down in the pool.
+                // Off a pool slide's end, it flies on and floats on the pool till it is gone, out of sight till it
+                // is back at the station; its riders fly on, to splash down in the pool.
+                if (!train.splashed)
+                    scene.car_waters[i].off_end = scene.car_waters[i].landed = false;
                 if (train.splashed)
                 {
-                    if (scene.car_places[i][3][3] != 0)
+                    // The car comes down with a splash too, ridden or not.
+                    if (const auto& f = train.flight; f && f->afloat >= 0 && !std::exchange(scene.car_waters[i].landed, true))
+                        scene.splashdowns.emplace_back(scene.park_clock, f->at);
+                    if (!std::exchange(scene.car_waters[i].off_end, true))
                         for (const auto [guest, drop, pose] : scene.sim.registry.view<const simulation::Dropped, const simulation::Pose>().each())
                             if (drop.slide == ride && pose.position.y > drop.ground)
                             {
@@ -1387,7 +1388,7 @@ namespace rct3::scene
                                 const float t = (std::sqrt(f * f + 2 * g * (pose.position.y - drop.ground)) - f) / g;
                                 scene.splashdowns.emplace_back(scene.park_clock + t, glm::vec3 { pose.position.x + drop.drift.x * t, drop.ground, pose.position.z + drop.drift.y * t });
                             }
-                    place = glm::mat4(0.0f);
+                    place = train.flight ? simulation::flown(*train.flight, place) : glm::mat4(0.0f);
                 }
                 else if (train.crashed)
                 {

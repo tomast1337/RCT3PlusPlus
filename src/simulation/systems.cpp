@@ -4804,8 +4804,11 @@ namespace rct3::simulation
                     // Off a pool slide's end, it is back at the station once nothing stands at its start there.
                     // shortcut: it is back the moment its start is clear, as if carried there; upgrade if a park
                     // shows the way back.
+                    // Its car flies on off the end and floats, till it is gone.
+                    if (train.flight && !fly(*train.flight, dt))
+                        train.flight.reset();
                     const auto in_station = [&](const Coaster& other) { return &other != &train && !other.splashed && !other.crashed && std::abs(other.at - train.start) < train.train_length + kBlockGap; };
-                    if (train.splashed && (!(attraction.open || attraction.testing) || std::ranges::any_of(fleet->trains, in_station)))
+                    if (train.splashed && (train.flight || !(attraction.open || attraction.testing) || std::ranges::any_of(fleet->trains, in_station)))
                         continue;
                     if (train.crashed || train.splashed)
                     {
@@ -4859,7 +4862,20 @@ namespace rct3::simulation
                         }
                     }
                     if (round && train.splashed)
+                    {
+                        // Its car flies on as fast as it went, down onto the pool's water under the end, or the
+                        // ground with no pool there.
+                        const glm::vec3 at = track_point(train, train.at);
+                        const auto door = pool_door_at(world, at);
+                        const auto* pool = door ? r.try_get<SwimPool>(r.get<PoolDoor>(*door).pool) : nullptr;
+                        const auto* surroundings = r.ctx().find<WreckSurroundings>();
+                        float water = surroundings != nullptr && surroundings->ground ? surroundings->ground({ at.x, at.z }) : 0.0f;
+                        if (pool != nullptr && !pool->water.empty())
+                            water = std::ranges::min(pool->water, { }, [&](const glm::vec3& w) { return glm::distance(glm::vec2(w.x, w.z), glm::vec2(at.x, at.z)); }).y;
+                        const glm::vec3 way = track_way(train, train.at);
+                        train.flight = Flight { .from = at, .way = way, .at = at, .velocity = way * train.speed, .water = std::min(water, at.y) };
                         unload(fleet->riders[t], 0, glm::vec3(0.0f), &train);
+                    }
                     const auto stop = round && !train.splashed ? std::optional<std::size_t> { 0 } : was_running ? standing_at(train) : std::nullopt;
                     // Held up in a station behind the train ahead, its riders get off where it stands, every car at
                     // once; it then moves up to load at the station's end.

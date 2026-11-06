@@ -511,6 +511,10 @@ namespace rct3::scene
         ui::UiTextures object_textures;
         std::uint32_t ripple_frame = 0;  ///< Of the still water of objects, the picture shown (park::water_picture)
         park::ObjectMesh waterfall_mesh; ///< The waterfalls' water, built again each frame as it runs
+        /// The water pouring off pool slides' open ends, drawn as waterfalls, and how many objects the park had
+        /// when they were found.
+        std::vector<save::Waterfall> slide_pours;
+        std::size_t pours_found = 0;
         /// Water a park object shoots: a cannon a guest fires, or a jumping fountain at the next.
         struct Jet
         {
@@ -948,8 +952,9 @@ namespace rct3::scene
     /// go and its trains' cars are added where they stand, boarded as board_tracked_ride boards them.
     void replace_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index);
 
-    /// How a car of `model` swings in a pool slide's trough; nothing for a car that does not.
-    [[nodiscard]] std::optional<simulation::Trough> trough_of(const park::ObjectModel& model);
+    /// Has `train`, of cars of `model`, swing in a pool slide's trough as the car does (not at all for a car that
+    /// does not) and, on a pool slide, be held back as its train's file has it.
+    void fit_car(simulation::Coaster& train, const park::ObjectModel& model, bool pool_slide);
 
     /// Loads the models of `cars` the scene does not have yet, and their pictures.
     void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::RideCars& cars);

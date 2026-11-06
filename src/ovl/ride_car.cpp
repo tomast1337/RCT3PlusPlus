@@ -46,6 +46,7 @@ namespace rct3::ovl
                 car.name = record->text(0x00);
                 car.display_name = record->text(0x04);
                 car.kind = record->u32(0x08);
+                car.mass = record->real(0x1C);
                 car.visual = record->ref(0x0C, "svd");
                 car.part = record->ref(0x14, "svd");
                 for (std::size_t i = 0; i < car.wheels.size(); ++i)

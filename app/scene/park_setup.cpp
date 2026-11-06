@@ -784,11 +784,17 @@ namespace rct3::scene
         board_tracked_ride(device, scene, install, ride_index);
     }
 
-    std::optional<simulation::Trough> trough_of(const park::ObjectModel& model)
+    void fit_car(simulation::Coaster& train, const park::ObjectModel& model, bool pool_slide)
     {
-        if (!model.trough)
-            return std::nullopt;
-        return simulation::Trough { .damping = model.trough->damping, .centring = model.trough->centring, .friction = model.trough->friction, .pivot = model.swing_pivot };
+        train.trough = model.trough ? std::optional(simulation::Trough { .damping = model.trough->damping, .centring = model.trough->centring, .friction = model.trough->friction, .length = model.swing_arm > 0 ? model.swing_arm : simulation::Trough { }.length, .pivot = model.swing_pivot }) : std::nullopt;
+        // shortcut: other trains keep the losses fitted to saved parks' test times, upgrade when their laps are
+        // checked against their files' losses.
+        // shortcut: the air is taken on one empty car, as every pool slide's train is; upgrade with riders' weight.
+        if (pool_slide && model.mass > 0)
+        {
+            train.rolling = model.rolling;
+            train.air = model.air / model.mass;
+        }
     }
 
     void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::RideCars& cars)
@@ -814,7 +820,7 @@ namespace rct3::scene
         if (fleet != nullptr && !cars.empty())
             if (const auto model = scene.models.find(park::model_ref(scene.cars[cars.front()])); model != scene.models.end())
                 for (simulation::Coaster& train : fleet->trains)
-                    train.trough = trough_of(model->second);
+                    fit_car(train, model->second, ride_index < scene.track_rules.size() && scene.track_rules[ride_index].pool_ride);
         if (cars.empty() || fleet == nullptr || fleet->trains.empty() || !scene.courses[ride_index] || ride.trains.empty())
             return;
         // Riders of tracked rides board the first train as it waits at the station, seats front to back.
@@ -945,6 +951,18 @@ namespace rct3::scene
                     simulation::link_stations(scene.sim, scene.ride_entities, scene.courses, scene.grid);
                     for (const save::RideShow& show : scene.shows)
                         stage_show(scene, show);
+                    // Each kind's rules read once, before their trains are boarded, however many of its rides the park has.
+                    std::map<std::pair<std::string, std::string>, park::TrackRules> kinds;
+                    for (const save::Ride& ride : scene.rides.rides)
+                    {
+                        const auto key = std::pair { ride.base.overlay_path, ride.base.symbol };
+                        if (ride.kind == save::RideKind::Tracked && !kinds.contains(key))
+                        {
+                            const auto file = install.find(std::format("{}.common.ovl", ride.base.overlay_path));
+                            kinds[key] = file ? park::load_track_rules(*file, ride.base.symbol) : park::TrackRules { };
+                        }
+                        scene.track_rules.push_back(kinds.contains(key) ? kinds[key] : park::TrackRules { });
+                    }
                     for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
                     {
                         seat_flat_ride(device, scene, i);
@@ -992,18 +1010,6 @@ namespace rct3::scene
                         if (const auto wall = park::edge_wall(o, scene.models, scene.grid))
                             simulation::set_wall(scene.sim, *wall, true);
                     simulation::import_cover(scene.sim, [&](std::span<const glm::vec3> points) { return park::overheads(points, scene.objects, scene.models, scene.grid, scene.fitted); });
-                    // Each kind's rules read once, however many of its rides the park has.
-                    std::map<std::pair<std::string, std::string>, park::TrackRules> kinds;
-                    for (const save::Ride& ride : scene.rides.rides)
-                    {
-                        const auto key = std::pair { ride.base.overlay_path, ride.base.symbol };
-                        if (ride.kind == save::RideKind::Tracked && !kinds.contains(key))
-                        {
-                            const auto file = install.find(std::format("{}.common.ovl", ride.base.overlay_path));
-                            kinds[key] = file ? park::load_track_rules(*file, ride.base.symbol) : park::TrackRules { };
-                        }
-                        scene.track_rules.push_back(kinds.contains(key) ? kinds[key] : park::TrackRules { });
-                    }
                     simulation::import_facilities(scene.sim, scene.rides, [&](const save::Ride& ride) -> std::optional<std::uint32_t> {
                         const auto file = install.find(std::format("{}.common.ovl", ride.base.overlay_path));
                         return file ? park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))) : std::nullopt;

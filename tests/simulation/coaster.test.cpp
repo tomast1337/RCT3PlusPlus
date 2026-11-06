@@ -763,6 +763,16 @@ TEST_CASE("a slide's car taken round a tight turn too fast flies out of its trou
     CHECK(tube.running);
 }
 
+TEST_CASE("a slide's car taken round onto its lift is not swung up the wall by the turn")
+{
+    Coaster c = circling(3, 22);
+    c.steady.assign(c.distance.size(), true);
+    for (int i = 0; i < 12; ++i)
+        drive(c, 0.05f);
+    CHECK_FALSE(c.crashed);
+    CHECK(c.lean == 0);
+}
+
 TEST_CASE("a slide's car on the straight stays in the middle of its trough")
 {
     Coaster c = hill();
@@ -774,4 +784,52 @@ TEST_CASE("a slide's car on the straight stays in the middle of its trough")
         drive(c, 0.05f);
         CHECK(c.lean == doctest::Approx(0).epsilon(1e-4));
     }
+}
+
+TEST_CASE("a car on the level is slowed by rolling as much of its weight as it is given, and by the air with speed")
+{
+    Coaster c = hill();
+    c.kinds[1] = Stretch::Plain;
+    c.height = { 0, 0, 0, 0, 0 };
+    c.running = true;
+    c.launched = true;
+    c.at = 40;
+    c.speed = 10;
+    c.rolling = 0.06f;
+    c.air = 0;
+    drive(c, 1);
+    CHECK(c.speed == doctest::Approx(10 - 0.06f * 9.81f).epsilon(0.01));
+    Coaster windy = c;
+    windy.speed = 10;
+    windy.air = 0.01f;
+    drive(windy, 0.1f);
+    CHECK(windy.speed == doctest::Approx(10 - (0.06f * 9.81f + 0.01f * 100) * 0.1f).epsilon(0.01));
+}
+
+TEST_CASE("a car off a slide's end flies on, comes down on its water ahead and floats till it is gone ten seconds on")
+{
+    Flight f { .from = { 0, 3, 0 }, .way = { 0, 0, 1 }, .at = { 0, 3, 0 }, .velocity = { 0, 0, 8 }, .water = 1 };
+    // From 2 m over the water it falls for sqrt(2 * 2 / g) seconds, going on at its speed.
+    const float fall = std::sqrt(4 / 9.81f);
+    CHECK(fly(f, fall / 2));
+    CHECK(f.afloat < 0);
+    CHECK(f.at.y == doctest::Approx(3 - 9.81f / 2 * fall * fall / 4));
+    CHECK(f.at.z == doctest::Approx(4 * fall));
+    // Nose down as it falls, level once afloat.
+    CHECK(flown(f, glm::mat4(1.0f))[2].y < 0);
+    CHECK(fly(f, fall));
+    CHECK(f.afloat >= 0);
+    CHECK(f.at.y == doctest::Approx(1));
+    CHECK(f.at.z > 8 * fall);
+    CHECK(flown(f, glm::mat4(1.0f))[2].y == doctest::Approx(0).epsilon(1e-5));
+    // It drifts on slowing, then sinks and is gone.
+    const float drifted = f.at.z;
+    CHECK(fly(f, 1));
+    CHECK(f.at.z > drifted);
+    CHECK(glm::length(f.velocity) < 8);
+    float t = 0;
+    while (fly(f, 0.1f) && t < 20)
+        t += 0.1f;
+    CHECK(t == doctest::Approx(kGone - 1 - fall * 1.5f - 0.1f).epsilon(0.05));
+    CHECK(f.at.y < 1);
 }

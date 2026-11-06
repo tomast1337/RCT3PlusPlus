@@ -58,6 +58,9 @@ namespace rct3::park
     inline constexpr std::uint32_t kRoleSlideBowl = 83;
     inline constexpr std::uint32_t kRoleSlideFunnel = 84;
     inline constexpr std::uint32_t kRoleSlideEnd = 85;
+    /// The pieces taking a slide's end round onto its lift, where the car's swing is not pushed by the turn.
+    inline constexpr std::uint32_t kRoleSlideToLiftFirst = 86;
+    inline constexpr std::uint32_t kRoleSlideToLiftLast = 87;
     /// Roles of a rotating tower's pieces (base, shaft, caps): marked as chain, though nothing pulls a train up them
     inline constexpr std::uint32_t kRoleTowerFirst = 91;
     inline constexpr std::uint32_t kRoleTowerLast = 95;

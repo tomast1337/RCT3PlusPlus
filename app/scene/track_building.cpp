@@ -2528,7 +2528,7 @@ namespace rct3::scene
                 const park::RideCars cars = park::ride_cars(std::span(&ghost, 1), 0);
                 load_car_models(scene, *assets.install, cars);
                 if (const auto model = cars.pieces.empty() ? scene.models.end() : scene.models.find(park::model_ref(cars.pieces.front())); model != scene.models.end())
-                    train->trough = trough_of(model->second);
+                    fit_car(*train, model->second, *b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].pool_ride);
                 TrackBuilding::GhostTrain& t = b.test.emplace(TrackBuilding::GhostTrain { .train = *train, .spots = cars.spots, .stood_at = ghost.trains.front().distance });
                 for (const save::PlacedObject& car : cars.pieces)
                     t.stood.push_back(cars.fitted.at(car.id));
@@ -2545,8 +2545,15 @@ namespace rct3::scene
         if (b.test)
         {
             TrackBuilding::GhostTrain& t = *b.test;
-            if (!t.train.crashed)
-                simulation::drive(t.train, elapsed);
+            if (!t.train.crashed && simulation::drive(t.train, elapsed) && t.train.splashed)
+            {
+                // Off a pool slide's end, its car flies on down to the ground there.
+                const glm::vec3 at = simulation::track_point(t.train, t.train.at);
+                const glm::vec3 way = simulation::track_way(t.train, t.train.at);
+                t.train.flight = simulation::Flight { .from = at, .way = way, .at = at, .velocity = way * t.train.speed, .water = std::min(scene.grid.height_at(at.x, at.z).value_or(0.0f), at.y) };
+            }
+            if (t.train.flight && !simulation::fly(*t.train.flight, elapsed))
+                t.train.flight.reset();
             if (t.train.crashed && t.wrecks.empty())
                 t.wrecks = simulation::thrown_cars(t.train, t.dice);
             // shortcut: wrecks fly through what stands in the park until the park has run, upgrade if a test with
@@ -2559,7 +2566,7 @@ namespace rct3::scene
                         fire_park_particles(scene.particles, effect, wreck.at, glm::vec3(0, 1, 0));
             // Its wrecks gone, or stuck a while short of the end, it is back at the station and sets off again.
             const bool gone = t.train.crashed && std::ranges::all_of(t.wrecks, [](const simulation::Wreck& w) { return w.state == simulation::WreckState::Gone; });
-            if (gone || (!t.train.crashed && !t.train.running && (t.waited += elapsed) >= kTestWait))
+            if (gone || (!t.train.crashed && !t.train.running && !t.train.flight && (t.waited += elapsed) >= kTestWait))
             {
                 t.train.crashed = false;
                 t.train.splashed = false;
@@ -2577,7 +2584,7 @@ namespace rct3::scene
             {
                 glm::mat4 place = park::moved_along(*course, t.stood[i], { t.spots[i].front, t.spots[i].rear }, t.train.at - t.stood_at);
                 if (t.train.splashed)
-                    place = glm::mat4(0.0f); // Off a pool slide's end, out of sight
+                    place = t.train.flight ? simulation::flown(*t.train.flight, place) : glm::mat4(0.0f); // Off a pool slide's end, flying on and afloat till gone
                 // Crashed, each car flies and tumbles as its wreck does, and is gone with it.
                 if (const simulation::Wreck* wreck = t.train.crashed && i < t.wrecks.size() ? &t.wrecks[i] : nullptr)
                 {

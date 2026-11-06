@@ -13,9 +13,6 @@ namespace rct3::simulation
     namespace
     {
         constexpr float kGravity = 9.81f;
-        // Our model's losses, picked so the laps of saved parks' tested coasters come out near their test times.
-        constexpr float kRolling = 0.003f;    ///< Of the train's weight
-        constexpr float kAir = 0.0004f;       ///< Times speed squared, per metre of the train's mass
         constexpr float kStep = 0.05f;        ///< Seconds per part step, short enough for the steepest drops
         constexpr float kStuck = 4;           ///< Seconds all but stopped before the track's tyres take over
         constexpr float kLaunchLeast = 0.5f;  ///< Metres of platform left that a launch is still sized over
@@ -31,6 +28,9 @@ namespace rct3::simulation
         /// level with the track's line the car swings from, so it goes over once swung out level with them.
         // shortcut: every piece's rims are taken as level with its line, upgrade when each piece's own rails are read.
         constexpr float kRim = std::numbers::pi_v<float> / 2;
+
+        constexpr float kWaterDrag = 1.5f; ///< Per second, how fast a car afloat slows. Chosen by eye
+        constexpr float kSink = 1;         ///< Metres a car afloat sinks in its last second, out of sight. Chosen by eye
 
         std::size_t point_at(const Coaster& c, float d)
         {
@@ -171,6 +171,42 @@ namespace rct3::simulation
         return chain_at(c, c.at) || chain_at(c, c.at - c.train_length);
     }
 
+    bool fly(Flight& f, float seconds)
+    {
+        f.off += seconds;
+        if (f.afloat < 0)
+        {
+            const float down = f.at.y - f.water;
+            // Down on its water within the step: at the moment the fall from its height takes.
+            const float t = (f.velocity.y + std::sqrt(f.velocity.y * f.velocity.y + 2 * kGravity * std::max(down, 0.0f))) / kGravity;
+            const float flown = std::min(t, seconds);
+            f.at += f.velocity * flown + glm::vec3(0, -kGravity / 2 * flown * flown, 0);
+            f.velocity.y -= kGravity * flown;
+            if (flown < t)
+                return f.off < kGone;
+            f.at.y = f.water;
+            f.velocity.y = 0;
+            f.afloat = 0;
+            seconds -= flown;
+        }
+        f.afloat += seconds;
+        const float drift = (1 - std::exp(-kWaterDrag * seconds)) / kWaterDrag;
+        f.at += f.velocity * drift;
+        f.velocity *= std::exp(-kWaterDrag * seconds);
+        f.at.y = f.water - kSink * std::max(f.off - (kGone - 1), 0.0f);
+        return f.off < kGone;
+    }
+
+    glm::mat4 flown(const Flight& f, const glm::mat4& place)
+    {
+        const glm::vec3 level = glm::vec3(f.way.x, 0, f.way.z);
+        const glm::vec3 to = f.afloat < 0 && glm::length(f.velocity) > 1e-3f ? glm::normalize(f.velocity) : glm::length(level) > 1e-3f ? glm::normalize(level) : f.way;
+        const glm::vec3 axis = glm::cross(f.way, to);
+        const float turn = std::atan2(glm::length(axis), glm::dot(f.way, to));
+        const glm::mat4 turned = glm::length(axis) > 1e-6f ? glm::rotate(glm::mat4(1.0f), turn, glm::normalize(axis)) : glm::mat4(1.0f);
+        return glm::translate(glm::mat4(1.0f), f.at) * turned * glm::translate(glm::mat4(1.0f), -f.from) * place;
+    }
+
     bool drive(Coaster& c, float seconds, float room)
     {
         if (!c.running || c.distance.size() < 2 || c.length() <= 0)
@@ -216,10 +252,11 @@ namespace rct3::simulation
                 c.speed = *c.fixed_speed;
             else
             {
-                // Pulled down the slope between the train's ends, held back by rolling and the air.
+                // Pulled down the slope between the train's ends, held back by rolling, as much as it presses on the
+                // track, and by the air.
                 const float back = c.at - c.train_length;
-                const float slope = (height_at(c, c.at) - height_at(c, back)) / c.train_length;
-                c.speed += (-kGravity * slope - kGravity * kRolling - kAir * c.speed * std::abs(c.speed)) * dt;
+                const float slope = std::clamp((height_at(c, c.at) - height_at(c, back)) / c.train_length, -1.0f, 1.0f);
+                c.speed += (-kGravity * slope - kGravity * c.rolling * std::sqrt(1 - slope * slope) - c.air * c.speed * std::abs(c.speed)) * dt;
                 // A shuttle's chain carries the train either way, the way it is going.
                 if (chained)
                     c.speed = open && c.speed < 0 ? std::min(c.speed, -c.lift_speed) : std::max(c.speed, c.lift_speed);
@@ -363,7 +400,9 @@ namespace rct3::simulation
                 const glm::vec3 up = track_up(c, d);
                 const glm::vec3 across = glm::cross(track_way(c, d), up);
                 const glm::vec3 right = glm::length(across) > 1e-6f ? glm::normalize(across) : glm::vec3(1, 0, 0);
-                const glm::vec3 weight = glm::vec3(0, -kGravity, 0) - bend * c.speed * c.speed;
+                const std::size_t i = point_at(c, wrap(c, d));
+                const bool steady = i < c.steady.size() && c.steady[i];
+                const glm::vec3 weight = glm::vec3(0, -kGravity, 0) - (steady ? glm::vec3(0) : bend * c.speed * c.speed);
                 const glm::vec3 hang = right * std::sin(c.lean) - up * std::cos(c.lean);
                 const glm::vec3 arc = right * std::cos(c.lean) + up * std::sin(c.lean);
                 // Turned by the pull along its arc times its arm, as a weight its own size.
@@ -372,7 +411,6 @@ namespace rct3::simulation
                 rate = std::abs(rate) <= held ? 0.0f : (rate - std::copysign(held, rate)) * std::exp(-t.damping * dt);
                 c.lean = (c.lean + rate * dt) * std::exp(-t.centring * dt);
                 c.lean_rate = rate;
-                const std::size_t i = point_at(c, wrap(c, d));
                 if (std::abs(c.lean) > kRim && !(i < c.covered.size() && c.covered[i]))
                 {
                     c.crashed = true;

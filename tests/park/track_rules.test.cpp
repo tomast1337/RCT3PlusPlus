@@ -148,6 +148,26 @@ TEST_CASE("a flat ride always tests, and opens once it has its doors")
     CHECK_FALSE(open_refusal(flat, TrackRules { }, kOpen, false));
 }
 
+TEST_CASE("a pool ride opens once its stations join a pool complex, with no entrance or exit")
+{
+    save::Ride river = ride(6, 2);
+    const TrackRules pool = rules_with([](TrackRules& r) {
+        r.entrances = 0;
+        r.exits = 1;
+        r.pool_ride = true;
+    });
+    const TrackRules any = rules_with([](TrackRules& r) { r.pool_ride = true; });
+    CHECK(open_refusal(river, pool, kOpen, false) == "CantOpenPoolRideMissingEntrance");
+    CHECK(open_refusal(river, pool, kOpen, false, std::nullopt, 1) == "CantOpenPoolRideMissingEntrance");
+    CHECK_FALSE(open_refusal(river, pool, kOpen, false, std::nullopt, 2));
+    // At least one joined station, the default rule.
+    CHECK(open_refusal(river, any, kOpen, false) == "CantOpenPoolRideNoEntrance");
+    CHECK_FALSE(open_refusal(river, any, kOpen, false, std::nullopt, 1));
+    // Doors placed on a pool ride's stations do not join it to a pool.
+    river.stations[0] = { .entrance = 1, .exit = 2 };
+    CHECK(open_refusal(river, any, kOpen, false) == "CantOpenPoolRideNoEntrance");
+}
+
 TEST_CASE("patterns swap a station run's ends for its own end pieces")
 {
     // Middles are what the player lays; a middle with no station piece after it becomes the end, and the

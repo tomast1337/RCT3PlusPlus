@@ -1117,7 +1117,8 @@ namespace rct3::scene
                 scene.attractions[half.id] = { park::AttractionRef::Kind::Ride, *b.ride };
                 scene.objects.push_back(std::move(half));
             }
-            if (ride.track->circuit && !closed_before)
+            // A pool ride has no doors: its stations join a pool complex's paving.
+            if (ride.track->circuit && !closed_before && !(*b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].pool_ride))
                 scene.doors_requested = *b.ride;
             // Its end meeting where another open stretch starts, as across a gap left mid-track, joins that one on.
             auto& segments = ride.track->segments;
@@ -2052,7 +2053,7 @@ namespace rct3::scene
                     stretch.id = 0;
                 for (std::size_t i = 0; i < design.size(); ++i)
                     track.pieces[i].segment = design[i].segment;
-                if (!std::exchange(track.circuit, settings->track->circuit) && track.circuit)
+                if (!std::exchange(track.circuit, settings->track->circuit) && track.circuit && !(*b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].pool_ride))
                     scene.doors_requested = *b.ride;
                 track_changed(scene, b, assets);
             }

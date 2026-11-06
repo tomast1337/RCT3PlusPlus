@@ -19,6 +19,7 @@ namespace rct3::park
         constexpr std::uint32_t kNeverTested = 0x10 | 0x4000;
         constexpr std::uint32_t kMayBeSplit = 0x200;
         constexpr std::uint32_t kOnePiece = 0x400;
+        constexpr std::uint32_t kPoolRide = 0x1000;
 
         PieceTest piece_test(const ovl::PieceTest& t)
         {
@@ -56,6 +57,7 @@ namespace rct3::park
         rules.most_trains = stored.most_trains;
         rules.entrances = stored.entrances;
         rules.exits = stored.exits;
+        rules.pool_ride = (stored.flags & kPoolRide) != 0;
         rules.car_rotation = stored.car_rotation;
         rules.car_facing = stored.car_facing;
         for (const auto& pattern : stored.patterns)
@@ -101,7 +103,7 @@ namespace rct3::park
         return { };
     }
 
-    std::optional<std::string> open_refusal(const save::Ride& ride, const TrackRules& rules, save::AttractionState state, bool editing, std::optional<const TrackCourse&> course)
+    std::optional<std::string> open_refusal(const save::Ride& ride, const TrackRules& rules, save::AttractionState state, bool editing, std::optional<const TrackCourse&> course, std::size_t pool_joined)
     {
         if (state == save::AttractionState::Closed || ride.kind == save::RideKind::Special)
             return std::nullopt;
@@ -136,13 +138,13 @@ namespace rct3::park
         if (test || climbed)
             return std::nullopt;
         const auto door = [&](std::uint32_t rule, auto built, std::string_view which) -> std::optional<std::string> {
-            const auto placed = static_cast<std::size_t>(std::ranges::count_if(ride.stations, built));
+            const auto placed = rules.pool_ride ? pool_joined : static_cast<std::size_t>(std::ranges::count_if(ride.stations, built));
             // A station built with no door yet is kept with the track's course, not among the ride's stations.
             const std::size_t stations = std::max(ride.stations.size(), course ? station_runs(*course).size() + course->other_stations.size() : 0);
             const bool enough = rule == 0 ? placed >= stations : rule == 2 || rule == 3 ? placed > 0 : true;
             if (enough)
                 return std::nullopt;
-            return std::format("CantOpenRide{}{}", rule == 0 ? "Missing" : "No", which);
+            return std::format("CantOpen{}{}{}", rules.pool_ride ? "PoolRide" : "Ride", rule == 0 ? "Missing" : "No", which);
         };
         const auto has_entrance = [](const save::Station& s) { return s.entrance != 0; };
         const auto has_exit = [](const save::Station& s) { return s.exit != 0; };

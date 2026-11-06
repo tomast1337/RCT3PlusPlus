@@ -347,9 +347,11 @@ interface RideInfo {
     trainsAt?: { front: number; length: number; station: number | null; held: number | null; riders: number }[];
     /** Ridden by the park on a track: the length of its track, metres. */
     trackLength?: number;
-    /** A lazy river the park runs: its stations, and how many of them a pool complex joins by its stairs. */
+    /** A lazy river the park runs: its stations, how many of them a pool complex joins, and the middle of the
+     *  paving, pool path or stairs square beside each joined one, where swimmers get on and off. */
     riverStations?: number;
     riverJoined?: number;
+    riverSquares?: { col: number; row: number; up: number }[];
     /** A slide the park runs that swimmers climb on foot, as an inflatable ship: its ways up and down, and the
      *  foot of its steps, where swimmers get on. */
     climbWays?: number;

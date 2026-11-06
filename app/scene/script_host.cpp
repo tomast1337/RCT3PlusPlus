@@ -1237,12 +1237,18 @@ namespace rct3::scene
                                 riders += aboard.size();
                         one["riders"] = riders;
                         one["ratings"] = { c->excitement.value, c->intensity.value, c->nausea.value };
-                        // A lazy river: its length, and how many of its stations a pool complex joins.
+                        // A lazy river: its length, how many of its stations a pool complex joins, and the squares
+                        // beside them that join them.
                         if (const auto* river = registry.try_get<simulation::River>(e))
                         {
                             one["trackLength"] = river->course.length();
                             one["riverStations"] = river->stations.size();
                             one["riverJoined"] = std::ranges::count_if(river->stations, [&](const simulation::River::Station& s) { return registry.valid(s.pool); });
+                            Json squares = Json::array();
+                            for (const simulation::River::Station& s : river->stations)
+                                if (registry.valid(s.pool))
+                                    squares.push_back({ { "col", (s.square.x - park.grid.origin_x) / park.grid.tile_size_x }, { "row", (s.square.z - park.grid.origin_z) / park.grid.tile_size_z }, { "up", s.square.y } });
+                            one["riverSquares"] = std::move(squares);
                         }
                     }
                     if (const auto* climb = registry.try_get<simulation::ClimbSlide>(e))

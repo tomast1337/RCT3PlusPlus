@@ -1015,8 +1015,11 @@ namespace rct3::ui
                 if (f.station)
                 {
                     button(AttractionControl::Fence, "Attraction_General_PickFence", *f.station ? "TT_AttractionDialogIconSetFenceButton" : "CantChooseFenceAsRideIsNotPlaced", false);
+                    // A pool ride has none: its stations join a pool complex's paving.
                     for (const bool exit : { false, true })
                     {
+                        if (f.pool_ride)
+                            continue;
                         const std::string_view help = exit ? "TT_AttractionDialogIconSetExitButton" : "TT_AttractionDialogIconSetEntranceButton";
                         button(exit ? AttractionControl::Exit : AttractionControl::Entrance, exit ? "Attraction_General_Exit" : "Attraction_General_Entrance", *f.station ? help : exit ? "CantPlaceExitAsRideHasNoStation" : "CantPlaceEntranceAsRideHasNoStation", *f.station);
                     }

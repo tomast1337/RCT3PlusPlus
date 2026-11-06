@@ -160,6 +160,8 @@ namespace rct3::ui
         /// Of a tracked ride, whether its track has a station, which its entrance and exit stand beside; of a flat
         /// ride, whether it is placed.
         std::optional<bool> station { };
+        /// Of a pool ride, which has no entrance or exit: its stations join a pool complex's paving.
+        bool pool_ride = false;
         /// Of a tracked ride whose trains can still be changed, how far.
         std::optional<TrainLimits> trains { };
         /// String key: why it was last not opened, tested or edited. Shown on its view and state pages.

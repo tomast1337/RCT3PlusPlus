@@ -483,6 +483,7 @@ namespace rct3::scene
                 {
                     const auto& course = ref.index < scene.courses.size() ? scene.courses[ref.index] : std::nullopt;
                     f.station = !f.ride->stations.empty() || (course && std::ranges::contains(course->kinds, park::CourseKind::Station));
+                    f.pool_ride = ref.index < scene.track_rules.size() && scene.track_rules[ref.index].pool_ride;
                     // Its trains can change while it is not open, as in the game, and while none of them has riders
                     // aboard (set_trains).
                     const entt::entity e = scene.simulate && ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null;
@@ -2111,7 +2112,21 @@ namespace rct3::scene
         const std::size_t ride = ref.index;
         const park::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : park::TrackRules { };
         const auto course = ride < scene.courses.size() && scene.courses[ride] ? maybe(&*scene.courses[ride]) : std::nullopt;
-        return park::open_refusal(scene.rides.rides.at(ride), rules, state, scene.building.ride == ride, course);
+        // A pool ride's doors are its stations joined to a pool complex, each run of station stretches one station.
+        // shortcut: only the course's own stretch, not a split track's other stretches with stations; upgrade
+        // when a pool ride may be split.
+        std::size_t joined = 0;
+        if (rules.pool_ride && course && course->points.size() == course->kinds.size())
+            for (std::size_t k = 0; k + 1 < course->kinds.size(); ++k)
+            {
+                if (course->kinds[k] != park::CourseKind::Station)
+                    continue;
+                std::vector<glm::vec3> run { course->points[k] };
+                for (; k + 1 < course->kinds.size() && course->kinds[k] == park::CourseKind::Station; ++k)
+                    run.push_back(course->points[k + 1]);
+                joined += simulation::pool_beside(scene.sim, run).has_value() ? 1 : 0;
+            }
+        return park::open_refusal(scene.rides.rides.at(ride), rules, state, scene.building.ride == ride, course, joined);
     }
 
     std::vector<ui::StateChoice> state_choices(const ParkScene& scene, park::AttractionRef ref)

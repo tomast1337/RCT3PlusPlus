@@ -1693,6 +1693,14 @@ namespace rct3::scene
             }
             return;
         }
+        // A pool slide's track has an open end: its first car waits at the station, and the rest are out of sight
+        // past that end, as if gone off it, and come back to the station one at a time.
+        if (coaster->splash_out)
+        {
+            for (std::size_t t = 0; t < ride.trains.size(); ++t)
+                park::stand_train(*course, ride.trains[t], fits->second, t == 0 ? coaster->start : course->length());
+            return;
+        }
         // Spread over its stations; those with no room are left out, as the game does.
         const std::vector<float> fronts = park::train_fronts(*course, coaster->start, ride.trains.front().length, static_cast<int>(ride.trains.size()), ride.options.block_sectioned);
         const auto kept = static_cast<std::int32_t>(fronts.size());

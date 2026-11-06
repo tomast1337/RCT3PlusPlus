@@ -981,6 +981,15 @@ namespace rct3::simulation
                 out.trains.push_back(train);
                 break;
             }
+            // One kept at or past a pool slide's open end is out of sight, as if gone off it, till the station is clear.
+            if (coaster.splash_out && length > 0 && saved.distance >= length)
+            {
+                train.at = length;
+                train.running = false;
+                train.splashed = true;
+                out.trains.push_back(train);
+                continue;
+            }
             train.at = length > 0 ? std::fmod(std::fmod(saved.distance, length) + length, length) : 0;
             train.travelled = length > 0 ? std::fmod(train.at - train.start + length, length) : 0;
             constexpr float kAtStart = 0.5f; // Metres off the start that still count as standing at it

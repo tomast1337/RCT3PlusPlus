@@ -352,3 +352,42 @@ TEST_CASE("brakes and block brakes keep their own speed, 0 when they have none, 
     CHECK(speed_of(2) < 0);
     CHECK(speed_of(3) < 0);
 }
+
+TEST_CASE("a pool slide's track ends open at a bowl, a funnel or an end piece, and any other last piece is no slide end")
+{
+    save::TerrainGrid grid;
+    grid.width = 8;
+    grid.height = 8;
+    grid.tile_size_x = 4;
+    grid.tile_size_z = 4;
+    grid.cells.resize(64);
+    park::PieceShape plain;
+    plain.line.path = { { 2, 0, 0 }, { -2, 0, 0 } };
+    const auto ends_open = [&](std::uint32_t role) {
+        park::PieceShape last = plain;
+        last.record.role = role;
+        save::Ride ride;
+        auto& track = ride.track.emplace();
+        std::vector<save::PlacedObject> objects;
+        for (std::uint64_t i = 0; i < 2; ++i)
+        {
+            save::PlacedObject& o = objects.emplace_back();
+            o.id = 100 + i;
+            o.col = static_cast<int>(i);
+            o.force_absolute_height = true;
+            save::TrackPiece& piece = track.pieces.emplace_back();
+            piece.symbol = i == 0 ? "Plain" : "Last";
+            piece.scenery = o.id;
+        }
+        track.segments = { { .first_piece = 0, .piece_count = 2 } };
+        const auto shape_of = [&](const save::TrackPiece& p, const save::PlacedObject&) -> std::optional<const park::PieceShape&> { return p.symbol == "Last" ? last : plain; };
+        const auto course = park::track_course(ride, objects, { }, grid, { }, shape_of);
+        REQUIRE(course);
+        return course->splash_end;
+    };
+    CHECK(ends_open(park::kRoleSlideBowl));
+    CHECK(ends_open(park::kRoleSlideFunnel));
+    CHECK(ends_open(park::kRoleSlideEnd));
+    CHECK_FALSE(ends_open(0));
+    CHECK_FALSE(ends_open(park::kRoleBrakes));
+}

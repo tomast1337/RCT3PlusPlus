@@ -103,3 +103,36 @@ TEST_CASE("a swimmer in a slide's queue swims on when the slide breaks down")
     CHECK(r.get<Errand>(guest).kind == ErrandKind::Swimming);
     CHECK(in_swimwear(r, guest));
 }
+
+TEST_CASE("a pool slide's train kept past its open end is out of sight there, and the one at the top waits to go")
+{
+    Coaster slide;
+    slide.points = { { 0, 2, 0 }, { 0, 0, 10 } };
+    slide.distance = { 0, 10 };
+    slide.kinds = { Stretch::Station, Stretch::Plain };
+    slide.train_length = 1.5f;
+    slide.closed = false;
+    slide.splash_out = true;
+    slide.start = slide.at = 2;
+    save::Ride ride;
+    ride.trains.resize(3);
+    ride.trains[0].distance = 2;
+    ride.trains[1].distance = 10;
+    ride.trains[2].distance = 10;
+    const Trains trains = trains_of(slide, ride);
+    REQUIRE(trains.trains.size() == 3);
+    CHECK(trains.trains[0].at == doctest::Approx(2));
+    CHECK_FALSE(trains.trains[0].running);
+    CHECK_FALSE(trains.trains[0].splashed);
+    for (std::size_t t = 1; t < 3; ++t)
+    {
+        CHECK(trains.trains[t].splashed);
+        CHECK_FALSE(trains.trains[t].running);
+        CHECK_FALSE(trains.trains[t].crashed);
+        CHECK(trains.trains[t].at == doctest::Approx(10));
+    }
+    // A coaster's train at the same place is only round its circuit again, at its start.
+    slide.splash_out = false;
+    slide.closed = true;
+    CHECK_FALSE(trains_of(slide, ride).trains[1].splashed);
+}

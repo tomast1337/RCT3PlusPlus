@@ -109,7 +109,7 @@ namespace rct3::park
                 const bool brakes = kind == CourseKind::Brake || (kind == CourseKind::BlockBrake && role == kRoleBlockBrake);
                 const auto brake_speed = brakes ? static_cast<float>(std::max(piece.brake_speed, 0)) : -1.0f;
                 course.reverse_lift = course.reverse_lift || (shape->record.flags & kPieceReverseLift) != 0;
-                course.splash_end = role == kRoleSlideEnd;
+                course.splash_end = role >= kRoleSlideBowl && role <= kRoleSlideEnd;
                 std::vector<glm::vec3> path = shape->line.path;
                 std::vector<glm::vec3> ups = shape->line.ups;
                 ups.resize(path.size(), glm::vec3 { 0, 1, 0 });

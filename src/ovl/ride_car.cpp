@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/ride_car.hpp"
 
+#include <utility>
+
 namespace rct3::ovl
 {
 
@@ -9,17 +11,23 @@ namespace rct3::ovl
 
         constexpr std::string_view kTag = "ric";
 
+        // Bytes in one ride car record, per file layout: later layouts add fields at the end.
+        constexpr std::size_t kNoStreamSize = 240;
+        constexpr std::size_t kOneStreamSize = 292;
+        constexpr std::size_t kManyStreamsSize = 336;
+
         std::size_t record_size(OvlLayout layout)
         {
             switch (layout)
             {
                 case OvlLayout::NoStream:
-                    return 240;
+                    return kNoStreamSize;
                 case OvlLayout::OneStream:
-                    return 292;
-                default:
-                    return 336;
+                    return kOneStreamSize;
+                case OvlLayout::ManyStreams:
+                    return kManyStreamsSize;
             }
+            std::unreachable();
         }
 
     } // namespace

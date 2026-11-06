@@ -8,7 +8,7 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kTag = "sta";
-        constexpr std::size_t kVersion1Size = 0x28;
+        constexpr std::size_t kNoStreamSize = 0x28;
         constexpr std::size_t kVersion1Goods = 0x44;  ///< Up to and including the pointer to the goods, in themed files
         constexpr std::size_t kLaterSize = 0x2C;      // up to and including the scenery item
         constexpr std::size_t kGoodsSize = 8;         // a carried-item reference and a price
@@ -62,7 +62,7 @@ namespace rct3::ovl
         const AddressSpace space = overlay.space();
         const ReferenceIndex refs(part, space);
         const OvlLayout layout = part.file.header.layout;
-        const std::size_t size = layout == OvlLayout::NoStream ? kVersion1Size : kLaterSize;
+        const std::size_t size = layout == OvlLayout::NoStream ? kNoStreamSize : kLaterSize;
 
         std::vector<StallItem> items;
         for (const auto& symbol : part.symbols)

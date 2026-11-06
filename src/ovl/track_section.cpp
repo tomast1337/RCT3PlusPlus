@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/track_section.hpp"
 
+#include <utility>
+
 namespace rct3::ovl
 {
 
@@ -9,17 +11,23 @@ namespace rct3::ovl
 
         constexpr std::string_view kTag = "tks";
 
+        // Bytes in one track piece record, per file layout: later layouts add fields at the end.
+        constexpr std::size_t kNoStreamSize = 228;
+        constexpr std::size_t kOneStreamSize = 364;
+        constexpr std::size_t kManyStreamsSize = 392;
+
         std::size_t record_size(OvlLayout layout)
         {
             switch (layout)
             {
                 case OvlLayout::NoStream:
-                    return 228;
+                    return kNoStreamSize;
                 case OvlLayout::OneStream:
-                    return 364;
-                default:
-                    return 392;
+                    return kOneStreamSize;
+                case OvlLayout::ManyStreams:
+                    return kManyStreamsSize;
             }
+            std::unreachable();
         }
 
         /// The strings of the list of `count` string pointers at `address`; empty when it does not fit.

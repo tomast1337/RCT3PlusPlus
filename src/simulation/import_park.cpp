@@ -716,8 +716,9 @@ namespace rct3::simulation
                     const PoolUse use = extra.fit.lounger ? PoolUse::Lounge : extra.fit.shower ? PoolUse::Shower : PoolUse::Stand;
                     complexes[complex_of.at(&*square)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<float>(square->surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 }, .heading = { std::atan2(static_cast<float>(dc), static_cast<float>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : std::uint8_t { 1 } });
                 }
-                // Small diving boards and ladders stand in the water against its wall: swimmers step on, or climb
-                // out, from the paving just behind it.
+                // Small diving boards stand in the water against its wall: swimmers step on from the paving just
+                // behind it. Ladders stand at the open water's edge, a quarter tile in from the square's side, the
+                // climb's motion taking those climbing out on to the coping.
                 else if (square && square->kind == park::PoolKind::Water && (extra.fit.board || extra.fit.ladder))
                 {
                     const auto [dc, dr] = extra.side.step();
@@ -726,7 +727,10 @@ namespace rct3::simulation
                     const glm::vec3 foot = middle(extra.col, extra.row, deck) + back * (paths.tile_size / 2 + kTuning.dives.behind);
                     SwimPool& complex = complexes[complex_of.at(&*square)];
                     if (extra.fit.ladder)
-                        complex.ladders.push_back(foot);
+                    {
+                        const glm::vec3 water = middle(extra.col, extra.row, static_cast<float>(square->surface) + park::kPoolBrim) + back * (paths.tile_size / 4);
+                        complex.ladders.push_back({ .water = water, .deck = glm::vec3 { water.x, deck * paths.level_height, water.z } + back * kTuning.pools.ladder_reach, .heading = { std::atan2(back.x, back.z) } });
+                    }
                     else
                         complex.boards.push_back({ .foot = foot, .heading = { std::atan2(-back.x, -back.z) }, .levels = { foot.y + kTuning.dives.small_board }, .reach = kTuning.dives.behind + kTuning.dives.small_reach });
                 }

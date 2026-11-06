@@ -937,16 +937,16 @@ namespace rct3::scene
                         pose.time = std::min(pose.time, length(pose.motion));
                     return pose;
                 }
-                // Into the water off its edge in a dive; out, climbing over its wall or up a ladder.
-                if (const float since = scene.park_clock - shown.crossed; swimmer->dive == simulation::DiveStep::None)
+                // Into the water off its edge in a dive, or down a ladder (its climb out played backwards); out, climbing
+                // over its wall or up a ladder. The motion carries them over from where they stand.
+                if (swimmer->edge != simulation::PoolEdge::None)
                 {
-                    const std::int32_t crossing = shown.in_water ? kDiveMotion : shown.by_ladder ? kOutByLadderMotion : kClimbOutMotion;
-                    if (since < length(crossing))
-                    {
-                        pose.motion = crossing;
-                        pose.time = since;
-                        return pose;
-                    }
+                    using enum simulation::PoolEdge;
+                    pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), swimmer->edge_from), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+                    pose.motion = swimmer->edge == DiveIn ? kDiveMotion : swimmer->edge == ClimbOut ? kClimbOutMotion : kOutByLadderMotion;
+                    const float into = swimmer->edging.value + scene.sim_time;
+                    pose.time = std::clamp(swimmer->edge == LadderIn ? length(pose.motion) - into : into, 0.0f, length(pose.motion));
+                    return pose;
                 }
                 // Lying down on a lounger, or sitting down in a spa pool as on a bench: down, staying a while, and up
                 // for the last of it.
@@ -1802,20 +1802,13 @@ namespace rct3::scene
                     fire_park_particles(scene.particles, kSpray, at, glm::vec3 { 0, 1, 0 }, high ? kHighSpray : kSmallSpray);
                     start_rings(scene, at, high ? 1.0f : kSmallRings);
                 }
-                if (swimmer->in_water != shown.in_water && swimmer->dive == simulation::DiveStep::None && shown.dive == simulation::DiveStep::None)
+                if (swimmer->edge == simulation::PoolEdge::DiveIn && shown.edge != simulation::PoolEdge::DiveIn)
                 {
                     constexpr float kEdgeRings = 0.7f; ///< Chosen by eye: rings' strength diving in off the edge
-                    constexpr float kEdgeDelay = 0.5f; ///< Chosen by eye: seconds into the dive the body meets the water
-                    if (swimmer->in_water)
-                        start_rings(scene, at, kEdgeRings, kEdgeDelay);
-                    shown.crossed = scene.park_clock;
-                    const auto* errand = r.try_get<simulation::Errand>(shown.guest);
-                    const auto* door = errand != nullptr && r.valid(errand->target) ? r.try_get<simulation::PoolDoor>(errand->target) : nullptr;
-                    const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
-                    constexpr float kLadderReach = 2.0f; ///< Chosen by eye: from a ladder's foot within which those climbing out use it, at the water's edge past the coping
-                    shown.by_ladder = pool != nullptr && std::ranges::any_of(pool->ladders, [&](const glm::vec3& l) { return glm::distance(glm::vec2(l.x, l.z), glm::vec2(at.x, at.z)) < kLadderReach; });
+                    constexpr float kEdgeDelay = 1.0f; ///< Chosen by eye: seconds into the dive the body meets the water
+                    start_rings(scene, swimmer->edge_to, kEdgeRings, kEdgeDelay);
                 }
-                shown.in_water = swimmer->in_water;
+                shown.edge = swimmer->edge;
                 shown.dive = swimmer->dive;
             }
         }

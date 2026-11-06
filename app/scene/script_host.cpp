@@ -992,7 +992,13 @@ namespace rct3::scene
                         person["swimwear"] = true;
                     // In a pool, in its water rather than on the paving round it.
                     if (const auto* swimmer = r.try_get<simulation::Swimmer>(p.guest))
+                    {
                         person["in_water"] = swimmer->in_water;
+                        // Over the water's edge: diving in, climbing out, or up or down a ladder.
+                        constexpr std::array<std::string_view, 5> kEdges { "none", "dive in", "climb out", "ladder out", "ladder in" };
+                        if (swimmer->edge != simulation::PoolEdge::None)
+                            person["pool_edge"] = kEdges[std::to_underlying(swimmer->edge)];
+                    }
                     // In a pool, on a sun lounger or under a shower.
                     if (const auto* swimmer = r.try_get<simulation::Swimmer>(p.guest); swimmer != nullptr && swimmer->place >= 0)
                         person["pool_extra"] = swimmer->use == simulation::PoolUse::Lounge ? "lounger" : swimmer->use == simulation::PoolUse::Shower ? "shower" : "other";

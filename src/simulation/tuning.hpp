@@ -551,6 +551,12 @@ namespace rct3::simulation::tuning
         float lounger_side = 0.55f;                 ///< And sideways from there, as a saved park's are
         float lounger_gap = 1.75f;                  ///< Between the loungers of a set, the way those on them face, in metres, measured by eye on the model
         float shower_reach = 0.75f;                 ///< From a shower's pole to those under it, in metres, as a saved park's are
+        Seconds dive_in { 2.0f };                   ///< Diving in off the water's edge, as long as the swimwear's dive motion lasts
+        Seconds climb_out { 3.4f };                 ///< Climbing out over the wall, as its motion lasts
+        Seconds ladder { 3.0f };                    ///< Up or down a ladder, as its motion lasts
+        float dive_reach = 0.94f;                   ///< Out over the water a dive off the edge takes them, in metres, as its motion carries the body
+        float out_reach = 0.43f;                    ///< On over the wall climbing out takes them, as its motion carries the body
+        float ladder_reach = 0.39f;                 ///< And up a ladder
         Seconds showering { 6 };                    ///< Chosen by eye: under a shower
         Seconds patience { 20 };                    ///< Chosen by eye: waiting for a place at an extra before going elsewhere
         float spa_water = 0.0f;                     ///< A spa pool's water over the paving round it, in height units

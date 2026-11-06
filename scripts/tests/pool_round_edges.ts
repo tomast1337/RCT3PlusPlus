@@ -3,8 +3,8 @@
 // Swimmers keep to the water's open shape. On the game's blank landscape a pool of six by five squares of water
 // goes in beside the road, paved round, laid with loose curves; one corner is laid again with a tight curve and one
 // cut across, and a changing room opens between the road and the pool. Many guests come to swim. While they do,
-// no swimmer in the water is over the paving or coping round it, and each one getting in does so at the water's
-// edge. Close up, a few of those getting in at the curved corners are shot as they dive.
+// no swimmer in the water is over the paving or coping round it, and each one getting in starts their dive at the
+// water's edge. Close up, a few of those getting in at the curved corners are shot as they dive.
 //
 //   ./nob script scripts/tests/pool_round_edges.ts -- --no-intro --no-audio --seed 1
 
@@ -124,6 +124,8 @@ const swimmers = () => people.list().filter((p) => p.state === "swimming" && p.c
 await until(() => swimmers().filter((p) => p.in_water).length >= 8, 8000, "guests in the pool");
 
 // Watched for a while: each frame no one in the water over dry ground, and each getting in at the water's edge.
+// Crossing it, a swimmer's motion carries them over the wall: they count once it starts, and are not checked on
+// the way over.
 const wet = new Map<string, boolean>();
 const over: string[] = [];
 const far: string[] = [];
@@ -132,12 +134,13 @@ for (let frame = 0; frame < 6000; ++frame) {
     await frames(1);
     for (const p of swimmers()) {
         const col = p.col!, row = p.row!;
-        if (p.in_water) {
+        const crossing = p.pool_edge !== undefined;
+        if (p.in_water && !crossing) {
             ++checked;
             if (dry(col, row, kSlack))
                 over.push(`${p.name} at ${(col - c).toFixed(2)}, ${(row - r).toFixed(2)}`);
         }
-        if (p.in_water && wet.get(p.name) === false) {
+        if (p.pool_edge === "dive in" && wet.get(p.name) === false) {
             ++entries;
             const edge = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].some(([dc, dr]) => dry(col + 0.2 * dc, row + 0.2 * dr, 0));
             if (!edge)
@@ -151,7 +154,7 @@ for (let frame = 0; frame < 6000; ++frame) {
                 }
             }
         }
-        wet.set(p.name, p.in_water === true);
+        wet.set(p.name, p.in_water === true || crossing);
     }
 }
 log("checked", checked, "entries", entries, "at corners", at_corners, "over dry ground", over.length, JSON.stringify(over.slice(0, 8)), "away from the edge", far.length, JSON.stringify(far.slice(0, 8)));

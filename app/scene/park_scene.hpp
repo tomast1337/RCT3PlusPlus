@@ -367,9 +367,7 @@ namespace rct3::scene
         const park::PartSet* swim_legs = nullptr;
         bool swimwear = false;                                  ///< Shown in their swimwear: as saved, or as the simulation has them
         bool changing = false;                                  ///< Out of sight in a changing room when last looked at
-        bool in_water = false;                                  ///< A swimmer in the water when last looked at
-        bool by_ladder = false;                                 ///< Out of the water last by a ladder
-        float crossed = -1e9f;                                  ///< When they last went into or out of the water, on the park's clock
+        simulation::PoolEdge edge = simulation::PoolEdge::None; ///< A swimmer over the water's edge when last looked at
         simulation::DiveStep dive = simulation::DiveStep::None; ///< How far with a dive when last looked at
     };
 

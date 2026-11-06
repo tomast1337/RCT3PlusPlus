@@ -8,6 +8,7 @@
 
 #include <array>
 #include <doctest/doctest.h>
+#include <map>
 #include <set>
 
 using namespace rct3;
@@ -639,7 +640,7 @@ TEST_CASE("a small diving board on the pool's wall is walked out on and dived of
     std::vector<entt::entity> guests;
     for (int i = 0; i < 8; ++i)
         guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
-    bool walked = false, dived = false, by_ladder = false;
+    bool walked = false, dived = false, ladder_out = false, ladder_in = false;
     park.run_until(
         [&] {
             for (const entt::entity g : guests)
@@ -648,13 +649,17 @@ TEST_CASE("a small diving board on the pool's wall is walked out on and dived of
                     CHECK(swimmer->dive != DiveStep::Climb);
                     walked = walked || swimmer->dive == DiveStep::Walk;
                     dived = dived || (walked && swimmer->dive == DiveStep::Surface);
-                    by_ladder = by_ladder || glm::distance(r.get<Pose>(g).position, pool.ladders.front()) < 0.01f;
+                    // Up the ladder from its foot in the water, and down it from the paving behind.
+                    const PoolLadder& ladder = pool.ladders.front();
+                    ladder_out = ladder_out || (swimmer->edge == PoolEdge::LadderOut && swimmer->edge_from == ladder.water && swimmer->edge_to == ladder.deck);
+                    ladder_in = ladder_in || (swimmer->edge == PoolEdge::LadderIn && swimmer->edge_from == ladder.deck && swimmer->edge_to == ladder.water);
                 }
-            return dived && by_ladder;
+            return dived && ladder_out && ladder_in;
         },
-        2 * kTuning.pools.stay.value);
+        6 * kTuning.pools.stay.value);
     CHECK(dived);
-    CHECK(by_ladder);
+    CHECK(ladder_out);
+    CHECK(ladder_in);
 }
 
 TEST_CASE("swimmers walk up a ramp to a raised square and down it again, the ramp's slope between")
@@ -701,4 +706,52 @@ TEST_CASE("swimmers walk up a ramp to a raised square and down it again, the ram
         4 * kTuning.pools.stay.value);
     CHECK(slope);
     CHECK(down);
+}
+
+TEST_CASE("swimmers cross the water's edge only diving in or climbing out, in the motion's time, never in a jump")
+{
+    Sandbox park;
+    pool_by_path(park);
+    auto& r = park.world().registry;
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 8; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+    struct Seen
+    {
+        bool in_water = false;
+        PoolEdge edge = PoolEdge::None;
+        glm::vec3 at { 0.0f };
+    };
+    std::map<entt::entity, Seen> seen;
+    std::set<PoolEdge> crossed;
+    constexpr float kTick = 0.1f;
+    // Fastest along the way: a walker, or the dive's reach over its time.
+    const float most = std::max({ 2.0f, kTuning.pools.dive_reach / kTuning.pools.dive_in.value }) * kTick + 0.01f;
+    for (int t = 0; t < static_cast<int>(kTuning.pools.stay.value / kTick); ++t)
+    {
+        park.run_seconds(kTick);
+        for (const entt::entity g : guests)
+        {
+            const auto* swimmer = r.try_get<Swimmer>(g);
+            if (swimmer == nullptr || swimmer->changing.value > 0)
+            {
+                seen.erase(g);
+                continue;
+            }
+            const glm::vec3 at = r.get<Pose>(g).position;
+            if (const auto was = seen.find(g); was != seen.end())
+            {
+                // Into or out of the water only as an edge's motion ends, and no further a tick than one walks.
+                if (swimmer->in_water != was->second.in_water)
+                    CHECK(was->second.edge != PoolEdge::None);
+                if (swimmer->edge != PoolEdge::None || was->second.edge != PoolEdge::None)
+                    CHECK(glm::distance(at, was->second.at) <= most);
+            }
+            if (swimmer->edge != PoolEdge::None)
+                crossed.insert(swimmer->edge);
+            seen[g] = { swimmer->in_water, swimmer->edge, at };
+        }
+    }
+    CHECK(crossed.contains(PoolEdge::DiveIn));
+    CHECK(crossed.contains(PoolEdge::ClimbOut));
 }

@@ -453,6 +453,14 @@ namespace rct3::simulation
         bool high = false;
     };
 
+    /// A ladder on a pool's wall: swimmers climb out by it, or down it into the water.
+    struct PoolLadder
+    {
+        glm::vec3 water { 0.0f }; ///< In the water at its foot, where those climbing out start and those climbing in end
+        glm::vec3 deck { 0.0f };  ///< On the paving behind it, where those climbing out step off and those climbing in start
+        Radians heading { };      ///< Facing it, out of the water
+    };
+
     /// A pool's open water is marked in this many steps across a square, each way.
     inline constexpr std::size_t kOpenSteps = 16;
 
@@ -468,7 +476,7 @@ namespace rct3::simulation
         std::vector<PoolSpot> extras { }; ///< The paved squares with an extra on them, loungers and showers
         std::vector<glm::vec3> steps { }; ///< Its pool path stairs, where a lazy river's station may join it
         std::vector<PoolBoard> boards { };
-        std::vector<glm::vec3> ladders { }; ///< On the paving behind each ladder, where those climbing out by it step off
+        std::vector<PoolLadder> ladders { };
         /// Its ramps and spiral staircases, each the points walked through from the lower level to the upper.
         std::vector<std::vector<glm::vec3>> ways { };
         Share dirt { };            ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
@@ -518,6 +526,17 @@ namespace rct3::simulation
         Surface, ///< Back up after going under
     };
 
+    /// How a swimmer crosses the water's edge: each way a motion of its own, played where they stand while it
+    /// carries them over.
+    enum class PoolEdge : std::uint8_t
+    {
+        None,
+        DiveIn,    ///< Off the edge, head first
+        ClimbOut,  ///< Up over the wall
+        LadderOut, ///< Up a ladder
+        LadderIn,  ///< Down a ladder
+    };
+
     /// A guest at a pool, from paying at its changing room until they come out of it again.
     struct Swimmer
     {
@@ -541,6 +560,11 @@ namespace rct3::simulation
         float height = 0;               ///< The board's top they climb to and walk out on, in world units
         float fall = 0;                 ///< Their speed down, falling, in world units a second
         Seconds diving { };             ///< In this step so far
+        std::int32_t ladder = -1;       ///< The pool's ladder they head for, to climb out or in by; -1 for none
+        PoolEdge edge = PoolEdge::None; ///< Over the water's edge now
+        glm::vec3 edge_from { 0.0f };   ///< Where they stand for it, the motion carrying them on from there
+        glm::vec3 edge_to { 0.0f };     ///< Where the motion leaves them
+        Seconds edging { };             ///< Into it so far
     };
 
     /// A swimmer on their way up or down a ramp or staircase of their pool, for as long as it takes; not kept in

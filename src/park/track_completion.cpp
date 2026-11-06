@@ -23,7 +23,7 @@ namespace rct3::park
 
         auto key_of(const TrackTip& at, LaidPiece piece)
         {
-            return std::tuple { std::lround(at.position.x * 4), std::lround(at.position.y * 4), std::lround(at.position.z * 4), static_cast<int>(at.end.slope), static_cast<int>(at.end.bank), static_cast<int>(at.end.heading), piece.index, piece.reversed };
+            return std::tuple { std::lround(at.position.x * 4), std::lround(at.position.y * 4), std::lround(at.position.z * 4), static_cast<int>(at.end.slope), static_cast<int>(at.end.bank), at.end.heading.value, piece.index, piece.reversed };
         }
 
         std::vector<LaidPlacement> way_to(const CompletionSearch& search, std::size_t step)

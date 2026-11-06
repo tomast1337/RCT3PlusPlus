@@ -46,3 +46,23 @@ TEST_CASE("a model turn wraps round, and turns a piece's side 0 to the side name
     static_assert(ModelTurn::toward(Side::kRowBefore) == ModelTurn { 2 });
     static_assert(ModelTurn { 7 }.facing() == Side::kColBefore);
 }
+
+TEST_CASE("a heading wraps round in eighths, and is a quarter turn or a side only along the grid")
+{
+    static_assert(Heading8::from(-1) == Heading8 { 7 });
+    static_assert(Heading8 { 6 }.turned(3) == Heading8 { 1 });
+    static_assert(Heading8 { 1 }.turned(ModelTurn { 3 }) == Heading8 { 7 });
+    static_assert(Heading8 { 5 }.reversed() == Heading8 { 1 });
+    static_assert(Heading8 { 1 }.eighths_from(Heading8 { 7 }) == 2);
+    static_assert(Heading8 { 7 }.eighths_from(Heading8 { 1 }) == -2);
+    static_assert(Heading8 { 4 }.eighths_from(Heading8 { 0 }) == -4);
+    CHECK(Heading8 { 6 }.quarter_turns() == ModelTurn { 3 });
+    CHECK_FALSE(Heading8 { 3 }.quarter_turns().has_value());
+    CHECK(Heading8 { 0 }.side() == Side::kNextCol);
+    CHECK(Heading8 { 2 }.side() == Side::kRowBefore);
+    CHECK(Heading8 { 6 }.side() == Side::kNextRow);
+    CHECK_FALSE(Heading8 { 5 }.side().has_value());
+    // A quarter turn is two eighths, so turning heading 0 by a turn gives that turn back.
+    for (std::int32_t t = 0; t < 4; ++t)
+        CHECK(Heading8 { }.turned(ModelTurn { t }).quarter_turns() == ModelTurn { t });
+}

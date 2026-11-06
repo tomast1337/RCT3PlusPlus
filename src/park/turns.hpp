@@ -12,6 +12,10 @@
 // rotation. What a turn of 0 faces depends on the model; for a pool piece and a path deck piece, turning by
 // r moves each of its sides r places on, so a turn and the side it brings the model's side 0 to are the same
 // count (ModelTurn::toward).
+//
+// Heading8: which way a track runs, in eighths of a turn, clockwise as the park is drawn. Heading 0 runs along
+// the park's +X (towards the next column) and heading 2 along -Z; odd headings run along the diagonals. Only
+// even headings are whole quarter turns or sides of a square, so those conversions give nothing for the others.
 #pragma once
 
 #include "save/model/world.hpp"
@@ -124,6 +128,54 @@ namespace rct3::park
             return from(value + quarter_turns);
         }
         friend constexpr bool operator==(ModelTurn, ModelTurn) = default;
+    };
+
+    struct Heading8
+    {
+        static constexpr bool kUnit = true;
+        std::int32_t value = 0; ///< Eighths of a turn, 0 to 7
+
+        /// The heading of `eighths`, any whole number of them.
+        [[nodiscard]] static constexpr Heading8 from(std::int32_t eighths) noexcept
+        {
+            return { eighths & 7 };
+        }
+        /// The heading `eighths` clockwise from this one (anticlockwise when negative).
+        [[nodiscard]] constexpr Heading8 turned(std::int32_t eighths) const noexcept
+        {
+            return from(value + eighths);
+        }
+        /// This heading after the thing it belongs to turns by `turn`: two eighths a quarter.
+        [[nodiscard]] constexpr Heading8 turned(ModelTurn turn) const noexcept
+        {
+            return turned(2 * turn.value);
+        }
+        [[nodiscard]] constexpr Heading8 reversed() const noexcept
+        {
+            return turned(4);
+        }
+        /// Whether it points along a diagonal of the grid.
+        [[nodiscard]] constexpr bool diagonal() const noexcept
+        {
+            return (value & 1) != 0;
+        }
+        /// The eighths from `from` to this heading, -4 to 3, turning right positive.
+        [[nodiscard]] constexpr std::int32_t eighths_from(Heading8 from) const noexcept
+        {
+            return ((value - from.value + 4) & 7) - 4;
+        }
+        /// As whole quarter turns, which only a heading along the grid is: the turn that brings heading 0 here.
+        [[nodiscard]] constexpr std::optional<ModelTurn> quarter_turns() const noexcept
+        {
+            return diagonal() ? std::nullopt : std::optional(ModelTurn { value / 2 });
+        }
+        /// For a heading along the grid, in the park: the side of a square it points out of. Heading 0 points
+        /// along the park's +X, to the next column, and each quarter turn moves it one side on clockwise.
+        [[nodiscard]] constexpr std::optional<Side> side() const noexcept
+        {
+            return diagonal() ? std::nullopt : std::optional(Side::kNextCol.turned(value / 2));
+        }
+        friend constexpr bool operator==(Heading8, Heading8) = default;
     };
 
 } // namespace rct3::park

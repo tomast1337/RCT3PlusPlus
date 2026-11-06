@@ -55,7 +55,7 @@ namespace rct3::park
         // shortcut: the track's bank is not followed, upgrade if the arrows are seen to cut through banked rails.
         constexpr std::array<float, 4> kPitch { 0, 27, 63, 90 };
         const auto frame = [&](const TrackTip& tip) {
-            const float heading = static_cast<float>(tip.end.heading) * std::numbers::pi_v<float> / 4;
+            const float heading = static_cast<float>(tip.end.heading.value) * std::numbers::pi_v<float> / 4;
             const float pitch = std::copysign(kPitch[static_cast<std::size_t>(std::min(std::abs(tip.end.slope), 3))], static_cast<float>(tip.end.slope)) * std::numbers::pi_v<float> / 180;
             const glm::vec3 level { std::cos(heading), 0, -std::sin(heading) }; // Heading 0 along +x, 2 along -z
             const glm::vec3 forward_way = level * std::cos(pitch) + glm::vec3 { 0, std::sin(pitch), 0 };

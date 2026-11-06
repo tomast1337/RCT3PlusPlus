@@ -14,8 +14,8 @@
 //  - Slope: 0 level, 1 gentle (about 1 in 2), 2 steep (about 2 in 1), 3 vertical; negative going down.
 //  - Bank: an eighth of a turn per step, positive leaning left (the right rail higher), 4 upside down.
 //    Upside-down tracks (coasters hanging below their rail) count from their own station.
-//  - Heading: an eighth of a turn per step from the model's -X, positive turning right. In the park, from
-//    the way an unturned model's -X points.
+//  - Heading: an eighth of a turn per step from the model's -X, positive turning right, as a Heading8. In the
+//    park, from the way an unturned model's -X points, which is the park's +X.
 //  - Curve: 0 straight, 1 loose, 2 medium, 3 tight; negative to the left.
 #pragma once
 
@@ -45,7 +45,6 @@ namespace rct3::park
 
     inline constexpr int kSlopeSteps = 3; ///< Up or down from level
     inline constexpr int kBankSteps = 4;  ///< Eighths of a turn to upside down
-    inline constexpr int kHeadings = 8;   ///< Eighths of a turn round
     inline constexpr int kCurveSizes = 3; ///< Loose, medium and tight
     inline constexpr int kUpsideDown = kBankSteps;
 
@@ -81,7 +80,7 @@ namespace rct3::park
     {
         int slope = 0;
         int bank = 0;
-        int heading = 0; ///< 0 to 7
+        Heading8 heading;
 
         friend bool operator==(const PieceEnd&, const PieceEnd&) = default;
     };
@@ -228,7 +227,7 @@ namespace rct3::park
     /// Whether `end` points along a diagonal.
     [[nodiscard]] constexpr bool diagonal(const PieceEnd& end)
     {
-        return (end.heading & 1) != 0;
+        return end.heading.diagonal();
     }
 
     /// Whether a piece entering at `entry` may follow a track whose last piece leaves at `tip`: the same

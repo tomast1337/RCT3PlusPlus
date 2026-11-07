@@ -3959,6 +3959,11 @@ namespace rct3::simulation
         for (const auto [g, swimmer, errand] : r.view<const Swimmer, const Errand>().each())
             if (const auto* door = swimmer.ladder >= 0 && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
                 ladders_taken.insert({ door->pool, swimmer.ladder });
+        // And those waiting their turn at each high board, in a line behind its ladder.
+        std::map<std::pair<entt::entity, std::int32_t>, std::vector<entt::entity>> board_lines;
+        for (const auto [g, swimmer, errand] : r.view<const Swimmer, const Errand>().each())
+            if (const auto* door = swimmer.board >= 0 && swimmer.dive == DiveStep::None && swimmer.waited.value > 0 && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
+                board_lines[{ door->pool, swimmer.board }].push_back(g);
         for (const entt::entity g : sorted(r.view<Swimmer>()))
         {
             auto& swimmer = r.get<Swimmer>(g);
@@ -3976,17 +3981,36 @@ namespace rct3::simulation
             if (r.all_of<Dropped>(g) || (swimming != nullptr && (swimming->kind == ErrandKind::Queueing || swimming->kind == ErrandKind::Riding) && r.valid(swimmer.room)))
             {
                 // In a slide's line they stand a gap behind the one ahead along the way they came to it, stepping up
-                // as it moves on.
+                // as it moves on, never within a gap of anyone ahead; there already, as two coming the same way at once
+                // or lines from two ways meeting are, they step away.
                 auto* route = swimming != nullptr && swimming->kind == ErrandKind::Queueing && r.all_of<Trains>(swimming->target) ? r.try_get<PoolRoute>(g) : nullptr;
                 if (route == nullptr || route->goal != swimmer.goal)
                     continue;
                 const auto& line = r.get<CycleRide>(swimming->target).queue;
-                const auto ahead = static_cast<float>(std::ranges::find(line, g) - line.begin());
-                const float step = std::min(r.get<Stride>(g).speed.value * dt, way_left(*route) - ahead * kTuning.pools.queue_gap);
+                const auto at = std::ranges::find(line, g);
+                const float pace = r.get<Stride>(g).speed.value * dt;
+                const auto crowding = [&](const glm::vec3& p) { return std::find_if(line.begin(), at, [&](entt::entity o) { return glm::distance(p, r.get<Pose>(o).position) < kTuning.pools.queue_gap; }); };
+                if (crowding(pose.position) != at)
+                {
+                    // Away from them all; from the very spot one stands on, back from the way they face; caught between
+                    // two, to the side.
+                    const glm::vec2 back = -glm::vec2 { std::sin(pose.heading.value), std::cos(pose.heading.value) };
+                    glm::vec2 away { 0.0f };
+                    for (auto o = line.begin(); o != at; ++o)
+                        if (const glm::vec3 off = pose.position - r.get<Pose>(*o).position; glm::length(off) < kTuning.pools.queue_gap)
+                            away += glm::length(glm::vec2 { off.x, off.z }) > 1e-3f ? glm::normalize(glm::vec2 { off.x, off.z }) : back;
+                    away = glm::length(away) > 0.5f ? glm::normalize(away) : glm::vec2 { -back.y, back.x };
+                    pose.position += glm::vec3 { away.x, 0, away.y } * pace;
+                    continue;
+                }
+                const float step = std::min(pace, way_left(*route) - static_cast<float>(at - line.begin()) * kTuning.pools.queue_gap);
                 if (step <= 0)
                     continue;
                 const glm::vec3 to = (route->via.empty() ? swimmer.goal : route->via.back().at) - pose.position;
                 const float left = glm::length(to);
+                // Nor up close on anyone behind them in it who stands in the way, who steps away.
+                if (const glm::vec3 next = pose.position + (left <= step ? to : to * (step / left)); crowding(next) != at || std::any_of(std::next(at), line.end(), [&](entt::entity o) { return glm::distance(next, r.get<Pose>(o).position) < kTuning.pools.queue_gap / 2; }))
+                    continue;
                 if (glm::length(glm::vec2 { to.x, to.z }) > 0)
                     pose.heading.value = std::atan2(to.x, to.z);
                 pose.position += left <= step ? to : to * (step / left);
@@ -4308,13 +4332,24 @@ namespace rct3::simulation
             if (swimmer.board >= 0 && static_cast<std::size_t>(swimmer.board) < pool->boards.size())
             {
                 const PoolBoard& board = pool->boards[static_cast<std::size_t>(swimmer.board)];
-                if (!boards_taken.insert({ door->pool, swimmer.board }).second)
+                // Those waiting their turn stand in a line behind it, a high board's behind its ladder, not in the
+                // tower, a gap apart, the one nearest it first; each steps up as the line moves.
+                auto& line = board_lines[{ door->pool, swimmer.board }];
+                const float near = glm::distance(pose.position, board.foot);
+                const auto ahead = swimmer.waited.value == 0 ? line.size() : static_cast<std::size_t>(std::ranges::count_if(line, [&](entt::entity o) {
+                    const float d = glm::distance(r.get<Pose>(o).position, board.foot);
+                    return o != g && (d < near || (d == near && o < g));
+                }));
+                if (ahead > 0 || !boards_taken.insert({ door->pool, swimmer.board }).second)
                 {
-                    // A high board's next swimmer waits behind its ladder, not in the tower.
-                    if (board.high && swimmer.waited.value == 0)
+                    const float back = (board.high ? kTuning.dives.ladder_queue : kTuning.pools.queue_gap) + static_cast<float>(ahead) * kTuning.pools.queue_gap;
+                    const glm::vec3 place = board.foot - glm::vec3 { std::sin(board.heading.value), 0, std::cos(board.heading.value) } * back;
+                    if (swimmer.waited.value == 0) // At its end, behind any joining before them this moment too
+                        line.push_back(g);
+                    swimmer.waited.value = std::max(swimmer.waited.value, dt);
+                    if (glm::distance(place, swimmer.goal) > 0.01f)
                     {
-                        swimmer.goal = board.foot - glm::vec3 { std::sin(board.heading.value), 0, std::cos(board.heading.value) } * kTuning.dives.ladder_queue;
-                        swimmer.waited.value = dt;
+                        swimmer.goal = place;
                         continue;
                     }
                     if ((swimmer.waited.value += dt) < kTuning.pools.patience.value)

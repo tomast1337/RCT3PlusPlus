@@ -611,7 +611,7 @@ namespace rct3::simulation::tuning
     /// Dives off a pool's boards.
     struct Dives
     {
-        Chance chance { 0.15 };       ///< Chosen by eye: of heading for one of the pool's boards next, when it has any
+        Chance chance { 0.03 };       ///< Of heading for one of the pool's boards next, when it has any: seldom, as no saved park has anyone on one
         Chance ladder { 0.5 };        ///< Chosen by eye: of climbing out of the water by a ladder, when the pool has any
         Chance step_off { 0.3 };      ///< Chosen by eye: of walking out on a lower board of a high one, at each passed
         Pace climb { 1.2f };          ///< Chosen by eye: up a high board's ladder

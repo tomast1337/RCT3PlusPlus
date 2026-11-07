@@ -8,6 +8,8 @@
 
 #include <algorithm>
 #include <doctest/doctest.h>
+#include <limits>
+#include <map>
 
 using namespace rct3;
 using namespace rct3::simulation;
@@ -192,4 +194,35 @@ TEST_CASE("a mechanic mends a broken pool slide from its complex's changing room
     CHECK(kept_out);
     CHECK(r.get<Staff>(mechanic).fixed == 1);
     CHECK(r.get<Pose>(mechanic).position.x >= 4 * park.world().paths.tile_size); // Mended at the room's door at column 5
+}
+
+TEST_CASE("swimmers queueing for a pool slide stand apart in a line, never two on one spot")
+{
+    Sandbox park;
+    const auto slide = slide_by_pool(park);
+    auto& r = park.world().registry;
+    r.get<Attraction>(slide).entrance = r.get<CycleRide>(slide).exit = kNoNode; // Only swimmers queue, from the pool
+    for (int i = 0; i < 20; ++i)
+        park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    // The longest line, and the closest two in it came once both had been in it a few seconds: two joining on one
+    // spot, or lines from two ways meeting, step apart.
+    std::size_t most = 0;
+    float closest = std::numeric_limits<float>::max();
+    std::map<entt::entity, int> joined;
+    for (int t = 0; t < 6000; ++t)
+    {
+        park.run_seconds(0.1f);
+        std::vector<glm::vec3> line;
+        for (const entt::entity g : r.get<CycleRide>(slide).queue)
+            if (t - joined.try_emplace(g, t).first->second >= 30)
+                line.push_back(r.get<Pose>(g).position);
+        std::erase_if(joined, [&](const auto& j) { return !std::ranges::contains(r.get<CycleRide>(slide).queue, j.first); });
+        most = std::max(most, line.size());
+        for (std::size_t i = 0; i < line.size(); ++i)
+            for (std::size_t j = i + 1; j < line.size(); ++j)
+                closest = std::min(closest, glm::distance(line[i], line[j]));
+    }
+    CAPTURE(most);
+    CHECK(most >= 3);
+    CHECK(closest > kTuning.pools.queue_gap / 2);
 }

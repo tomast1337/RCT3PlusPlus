@@ -8,6 +8,7 @@
 
 #include <array>
 #include <doctest/doctest.h>
+#include <limits>
 #include <map>
 #include <set>
 
@@ -615,6 +616,42 @@ TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into t
     park.run_seconds(0.1f);
     const Swimmer& down = r.get<Swimmer>(climber);
     CHECK((down.dive != DiveStep::Climb || r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool).boards[static_cast<std::size_t>(down.board)].high));
+}
+
+TEST_CASE("swimmers waiting for a high diving board stand in a line behind its ladder, not on one spot")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    park::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::HighDive, .board = 6, .side = rct3::park::Side { 0 } });
+    for (std::int32_t row = 3; row < 9; ++row)
+        for (std::int32_t col = 2; col < 9; ++col)
+            pools.squares.push_back({ .col = col, .row = row });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 60; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+    // The most waiting at once, standing at their places a while, and the closest two of them ever came.
+    std::size_t most = 0;
+    float closest = std::numeric_limits<float>::max();
+    for (int t = 0; t < 2 * static_cast<int>(kTuning.pools.stay.value) * 10; ++t)
+    {
+        park.run_seconds(0.1f);
+        std::vector<glm::vec3> waiting;
+        for (const entt::entity g : guests)
+            if (const auto* swimmer = r.try_get<Swimmer>(g); swimmer != nullptr && swimmer->board >= 0 && swimmer->dive == DiveStep::None && swimmer->waited.value >= 1 && glm::distance(r.get<Pose>(g).position, swimmer->goal) < 0.01f)
+                waiting.push_back(r.get<Pose>(g).position);
+        most = std::max(most, waiting.size());
+        for (std::size_t i = 0; i < waiting.size(); ++i)
+            for (std::size_t j = i + 1; j < waiting.size(); ++j)
+                closest = std::min(closest, glm::distance(waiting[i], waiting[j]));
+    }
+    CAPTURE(most);
+    CHECK(most >= 2);
+    CHECK(closest > kTuning.pools.queue_gap * 0.9f);
 }
 
 TEST_CASE("a small diving board on the pool's wall is walked out on and dived off; a ladder is a way out")

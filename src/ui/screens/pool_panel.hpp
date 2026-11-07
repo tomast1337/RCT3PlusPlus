@@ -133,8 +133,8 @@ namespace rct3::ui
         PoolPanel(std::string name, PoolPanelStyle style, const StringTable& strings);
 
         /// Opens the panel with the `extras`, `rooms` and `stairs` (the ways between levels) to pick from, on the
-        /// page last out (the editor's at first), the editor's tool out.
-        void show(std::vector<PoolChoice> extras, std::vector<PoolChoice> rooms, std::vector<PoolChoice> stairs);
+        /// page last out (the editor's at first) or on `page`, the editor's tool out.
+        void show(std::vector<PoolChoice> extras, std::vector<PoolChoice> rooms, std::vector<PoolChoice> stairs, std::optional<PoolPage> page = std::nullopt);
         void hide();
         [[nodiscard]] bool showing() const
         {

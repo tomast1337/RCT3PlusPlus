@@ -525,10 +525,10 @@ namespace rct3::scene
         scene.pooling = PoolTool { .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .grid = scene.pooling.grid, .edge = scene.pooling.edge, .redraw = redraw, .side = scene.pooling.side, .preview_target = scene.pooling.preview_target, .preview_pixels = scene.pooling.preview_pixels }; // The marks go on the next frame
     }
 
-    void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ui::Currency& currency)
+    void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ui::Currency& currency, std::optional<ui::PoolPage> page)
     {
         auto panel = panel_of(scene);
-        if (panel && panel->showing())
+        if (panel && panel->showing() && !page)
             return stop_pooling(scene);
         if (!panel)
         {
@@ -545,7 +545,7 @@ namespace rct3::scene
                 out.push_back({ i->icon, std::u16string(assets.strings->get(i->name_text)) + (i->price > 0 ? u" : " + ui::money_text(currency, i->price) : std::u16string { }) });
             return out;
         };
-        panel->show(choices(offer.extras), choices(offer.rooms), choices(offer.stairs));
+        panel->show(choices(offer.extras), choices(offer.rooms), choices(offer.stairs), page);
     }
 
     void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, bool shift, std::span<const ui::PlayCommand> commands)

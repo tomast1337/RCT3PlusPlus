@@ -1012,19 +1012,20 @@ namespace rct3::ui
                     button(AttractionControl::SceneryClear, "SavedSelectionGrabber_ClearIcon", "SavedSelection_Coaster_Clear_TT", false);
                     button(AttractionControl::SaveDesign, "File_SaveGame", "TT_AttractionDialogIconSaveButton", false);
                 }
-                if (f.station)
+                // A pool ride has no fence, entrance or exit: its stations are joined to a pool complex's paving
+                // with the pool's path tool instead.
+                if (f.pool_ride)
+                    button(AttractionControl::JoinPool, "Pool_PathPanel", "TT_AttractionDialogIconPoolPathButton");
+                else if (f.station)
                 {
                     button(AttractionControl::Fence, "Attraction_General_PickFence", *f.station ? "TT_AttractionDialogIconSetFenceButton" : "CantChooseFenceAsRideIsNotPlaced", false);
-                    // A pool ride has none: its stations join a pool complex's paving.
                     for (const bool exit : { false, true })
                     {
-                        if (f.pool_ride)
-                            continue;
                         const std::string_view help = exit ? "TT_AttractionDialogIconSetExitButton" : "TT_AttractionDialogIconSetEntranceButton";
                         button(exit ? AttractionControl::Exit : AttractionControl::Entrance, exit ? "Attraction_General_Exit" : "Attraction_General_Entrance", *f.station ? help : exit ? "CantPlaceExitAsRideHasNoStation" : "CantPlaceEntranceAsRideHasNoStation", *f.station);
                     }
                 }
-                if (f.queue_signs)
+                if (f.queue_signs && !f.pool_ride) // A pool ride has no queue
                     button(AttractionControl::QueueSigns, "Attraction_General_ToggleQueueSigns", "TT_AttractionDialogIconToggleQueueSigns");
                 button(AttractionControl::Locate, "CenterInViewIcon", "TT_AttractionDialogIconFocusCameraButton");
                 if (f.ride)

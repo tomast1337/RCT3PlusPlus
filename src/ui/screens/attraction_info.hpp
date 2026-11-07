@@ -233,6 +233,7 @@ namespace rct3::ui
         SceneryPick,    ///< Picks scenery to keep with a tracked ride's design
         SceneryClear,   ///< Forgets the scenery picked
         SyncStalls,     ///< Whether a stall's menu changes go to every stall of its kind
+        JoinPool,       ///< Opens the pool complex's path tool, to join a pool ride's station to its paving
         /// Families of a stall's controls, one for each of its items, offers or extras: the first's id, the next's
         /// one more, and so on, up to kMostListed.
         ItemPrice = 64,   ///< An item's price

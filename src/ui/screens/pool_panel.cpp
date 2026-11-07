@@ -99,7 +99,7 @@ namespace rct3::ui
         visible = false;
     }
 
-    void PoolPanel::show(std::vector<PoolChoice> extras, std::vector<PoolChoice> rooms, std::vector<PoolChoice> stairs)
+    void PoolPanel::show(std::vector<PoolChoice> extras, std::vector<PoolChoice> rooms, std::vector<PoolChoice> stairs, std::optional<PoolPage> page)
     {
         extras_ = std::move(extras);
         rooms_ = std::move(rooms);
@@ -108,7 +108,7 @@ namespace rct3::ui
         closed_ = false;
         placing_.reset();
         changed_ = true;
-        open(page_.value_or(PoolPage::Editor));
+        open(page ? page : page_.value_or(PoolPage::Editor));
     }
 
     void PoolPanel::hide()

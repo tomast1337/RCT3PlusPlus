@@ -48,8 +48,8 @@ declare namespace clipboard {
 
 declare namespace ui {
     /** The middle of the widget at `path` (such as "tools/Land/Land") and its edges, or undefined when it is not shown;
-     * `on` for a toggle button or a tick box, `text` for an edit box or a label. */
-    function find(path: string): { x: number; y: number; left: number; top: number; right: number; bottom: number; on?: boolean; text?: string } | undefined;
+     * `on` for a toggle button or a tick box, `text` for an edit box or a label, `tooltip` for one with help. */
+    function find(path: string): { x: number; y: number; left: number; top: number; right: number; bottom: number; on?: boolean; text?: string; tooltip?: string } | undefined;
     /** Moves the pointer to the widget at `path`, presses and lets go. Throws when it is not shown. */
     function click(path: string): Promise<void>;
     /** Clicks the switch at `path` unless it is already `on`. */
@@ -205,9 +205,9 @@ declare namespace map {
     function size(): { width: number; height: number };
     /** Undefined off the map. */
     function tile(col: number, row: number): Tile | undefined;
-    /** The middle of a tile on the view (on a pool square, at its surface), or with fractions that point of it;
-     *  undefined when it is not in sight. */
-    function screen(col: number, row: number): { x: number; y: number } | undefined;
+    /** The middle of a tile on the view (at `height` when given, else on a pool square at its surface), or with
+     *  fractions that point of it; undefined when it is not in sight. */
+    function screen(col: number, row: number, height?: number): { x: number; y: number } | undefined;
     function paths(): PathPiece[];
     /** The tiles the rides and stalls pave: their doors, floors and the ground under stalls, and the path style
      *  each is paved in (empty where a path covers it). */
@@ -217,9 +217,20 @@ declare namespace map {
     /** The placed objects that are shown: scenery, rides' parts, supports, fences and the rest, with the whole-unit
      * height stored for each (null when unset). */
     function objects(): { symbol: string; overlay: string; col: number; row: number; height: number | null }[];
+    /** The pieces the pools' squares place now, their extras and changing rooms, shaped as `objects` gives them: what
+     * the pool tool's work should leave shown. */
+    function poolPieces(): { symbol: string; overlay: string; col: number; row: number; height: number | null }[];
+    /** The pools' squares as laid: kind, surface height, the side a slope's, steps' or staircase's foot or a high
+     * board faces, and a staircase's or board's height over the surface; and the ramps among their extras, each by
+     * its square, the side it climbs to and how many units; and the tiles of their changing rooms. Sides count as the pool tool's: 0 next row, 1 next
+     * column, 2 row before, 3 column before. */
+    function pools(): { squares: { col: number; row: number; kind: "water" | "tile" | "spa" | "high dive" | "stairs" | "path" | "slope" | "steps"; surface: number; side: number; board: number }[]; ramps: { col: number; row: number; side: number; step: number }[]; rooms: { col: number; row: number }[] };
     /** The particle effects shown now, those items keep running and those fired once: the effect's name, lower
      * case, where it is as a map point, and its particles alive. */
     function effects(): { effect: string; col: number; row: number; up: number; live: number }[];
+    /** The rings spreading on the pools' water where people fell in: their middle as a map point, their water's
+     * world height, seconds since they started (below 0 before) and their leading crest's height now. */
+    function rings(): { col: number; row: number; up: number; age: number; crest: number }[];
     function water(): Lake[];
     /** The waterfalls: the middle of the edge each pours over and where its water lands, in tiles, the levels of
      *  the lakes it joins and how wide it is in world units. */
@@ -285,16 +296,21 @@ declare namespace build {
     function pick(overlay: string, symbol: string, offer?: "designs"): boolean;
     /** The construction panel's ride (its place in rides.list()), how many pieces fit where the track goes on,
      * the one picked, whether it can be built there (and its arrows show), whether it may not stand there (for a design,
-     * any of its pieces or doors) and whether for land the park does not own, the doors a design's ghost shows, and the files of the saved designs of its kind (the
+     * any of its pieces or doors) and whether for land the park does not own, for a design in hand the string key of why
+     * it may not stand ("" when it may) and the tiles where its ghost meets a pool beside them (each with the height and the side, as
+     * the pools' sides count, the pool square must be across), the quarter turns of the first piece, the doors a design's ghost shows, and the files of the saved designs of its kind (the
      * player's own, then the install's), the piece clicked mid-track to build over (its place in the ride's
      * track), null while building at the open end, and on a ride of two tracks side by side the split button's
      * state: 1 joined from the left track, 2 the left alone, 3 joined from the right, 4 the right alone; 0 on
      * other rides. Undefined while the panel is shut. */
-    function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; arrows: boolean; ghostAt: { col: number; row: number; height: number } | null; clashes: boolean; unowned: boolean; ghostDoors: number; ghostPlatform: string; completing: boolean; proposed: number; complaint: string; testing: boolean; testAt: number | null; testWrecks: number; designs: string[]; selected: number | null; split: number } | undefined;
+    function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; arrows: boolean; ghostAt: { col: number; row: number; height: number } | null; clashes: boolean; unowned: boolean; refusal: string; turn: number; poolSides: { col: number; row: number; height: number; side: number }[]; ghostDoors: number; ghostPlatform: string; completing: boolean; proposed: number; complaint: string; testing: boolean; testAt: number | null; testWrecks: number; designs: string[]; selected: number | null; split: number } | undefined;
     /** What building gave to be heard: how many thumps of something put down were asked for since the park opened
      * (several close together are heard as one), and while a shaping stroke goes the loudness of its rumble, 0..1. */
     function sounds(): { thumps: number; rumble: number | null };
-    /** Puts the placing tool or the enclosure tool away, as a right click does. */
+    /** With the pool tool out: the piece its ghost shows (an extra, a changing room or the paths page's next piece)
+     * and where, and whether the arrow over the next pool path piece shows; undefined while the tool is away. */
+    function pooling(): { ghost: string | null; ghostAt?: { col: number; row: number; height: number }; arrow: boolean } | undefined;
+    /** Puts the placing tool, the enclosure tool or the pool tool away, as Escape does. */
     function stop(): void;
     /** While an enclosure drag is held: what letting go would cost in hundredths (below 0 when it pays back),
      * and how many tiles it would take in or out; undefined otherwise. */
@@ -332,12 +348,21 @@ interface RideInfo {
     /** Ridden by the park on a track: the trains it runs, and how many are under way now. */
     running?: number;
     moving?: number;
-    /** Ridden by the park on a track: each train's front along the track (metres), its length, and the station it
+    /** Ridden by the park on a track: each train's front along the track (metres), its speed along it (m/s), a slide car's swing up its trough's wall (radians, to its right; null for other trains), its length, and the station it
      * stands at (0 the first, k the k-th stop after it), null while under way; the station it is held up in behind
      * the train ahead, short of its end, numbered alike, or null; and the riders still in its seats. */
-    trainsAt?: { front: number; length: number; station: number | null; held: number | null; riders: number }[];
+    trainsAt?: { front: number; speed: number; lean: number | null; length: number; station: number | null; held: number | null; riders: number }[];
     /** Ridden by the park on a track: the length of its track, metres. */
     trackLength?: number;
+    /** A lazy river the park runs: its stations, how many of them a pool complex joins, and the middle of the
+     *  paving, pool path or stairs square beside each joined one, where swimmers get on and off. */
+    riverStations?: number;
+    riverJoined?: number;
+    riverSquares?: { col: number; row: number; up: number }[];
+    /** A slide the park runs that swimmers climb on foot, as an inflatable ship: its ways up and down, and the
+     *  foot of its steps, where swimmers get on. */
+    climbWays?: number;
+    climbFoot?: { col: number; row: number; up: number };
     /** Rides with a track: each piece's name, in track order. */
     track?: string[];
     /** Rides with a track: each piece's three colours (palette places), in track order. */
@@ -346,6 +371,9 @@ interface RideInfo {
     platforms?: string[];
     /** Rides with a track: the three colours of each of `platforms`. */
     platformColours?: number[][];
+    /** Rides with a track: the squares its stations' platforms stand on, the height of their decks and the
+     *  quarter turn of their pieces, in track order. */
+    platformSquares?: { col: number; row: number; height: number; turn: number }[];
     /** Rides with a track: each piece's arm angles in degrees, base first, or null where it holds none. */
     arms?: (number[] | null)[];
     /** Rides with a track: where each of its cars stands now, and the way it faces (radians round the vertical, 0 along +row).
@@ -393,6 +421,9 @@ declare namespace rides {
     /** Puts ride `i` of list() in `state`, as its window's open-or-close tab does. Null once changed, else the
      *  string key of why the ride stays as it was (a track without a station, a missing exit...). */
     function setState(i: number, state: "closed" | "testing" | "open"): string | null;
+    /** Has every train of ride `i` (its place in list()) run at `speed` m/s all the way round, as a ride set to a
+     *  fixed speed does; 0 or less lets them run free again. Throws for a ride the park runs no trains on. */
+    function setFixedSpeed(i: number, speed: number): void;
     /** Opens ride `i`'s window, as clicking the ride does, on the next frame. */
     function show(i: number): void;
     /** The ride the info panel shows and its tab, by the tab's help key; undefined when it shows no ride. */
@@ -457,8 +488,12 @@ declare namespace people {
      *  those on their way out of the park are `leaving`, and those walking in from a spawn point who have not come
      *  through the gate yet are `arriving`. `thoughts` are the numbers of the thoughts their window
      *  lists, and a guest's `happiness` (0 to 1) is what their window and the guest list show. Those in their swimwear
-     *  (in a pool complex, or held or falling out of one) are `swimwear`. */
-    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; arriving?: boolean; bench?: number; seat?: number; rising?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "sitting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; glancing?: boolean; lingering?: PathItemKind; pool_extra?: "lounger" | "shower" | "other"; swimwear?: boolean; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
+     *  (in a pool complex, or held or falling out of one) are `swimwear`; those floating round a lazy river (its place
+     *  in rides.list as `ride`) are `floating`, resting in their ring or paddling. A swimmer off a diving board is
+     *  `diving`, how far, and `high_board` when it is a high one. A swimmer is `in_water` in the pool's water, not
+     *  on the paving and coping round it, and `pool_edge` while crossing its edge, how. On a slide climbed on foot,
+     *  `climbing` says whether up its steps or down the slide, and `ride` which. */
+    function list(): { name: string; staff: boolean; post?: number; thoughts?: number[]; happiness?: number; role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer"; job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest"; at: { col: number; row: number } | null; col?: number; row?: number; up?: number; party?: number; leaving?: boolean; arriving?: boolean; bench?: number; seat?: number; rising?: boolean; state?: "walking" | "queueing" | "riding" | "waiting" | "sitting" | "lost" | "buying" | "swimming" | "held" | "dropped" | "thrown" | "sliding" | "still"; gait?: "walk" | "run" | "weary" | "queasy" | "bursting"; reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained"; carrying?: "food" | "drink" | "empty"; ride?: number; gesture?: string; glancing?: boolean; lingering?: PathItemKind; pool_extra?: "lounger" | "shower" | "other"; diving?: "climb" | "walk" | "jump" | "fall" | "surface"; high_board?: boolean; in_water?: boolean; pool_edge?: "dive in" | "climb out" | "ladder out" | "ladder in"; swimwear?: boolean; floating?: "resting" | "paddling"; climbing?: "climbing" | "sliding"; watching?: "show" | "autograph" | "chasing"; show?: string; slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry" }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

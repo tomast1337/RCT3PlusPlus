@@ -65,6 +65,9 @@ namespace rct3::park
         /// moves it), 3 at least one, 4 none.
         std::uint32_t entrances = 3;
         std::uint32_t exits = 3;
+        /// A pool ride (slides, lazy river): its stations join a pool complex's paving and pool paths instead of
+        /// having entrances and exits, a joined station counting as both.
+        bool pool_ride = false;
         std::vector<PiecePattern> patterns;
         /// Built from its station back towards where its riders start, as a giant slide is from its bottom up.
         bool builds_back = false;
@@ -101,8 +104,9 @@ namespace rct3::park
     /// unjoined track, no station, too few pieces, not a circuit, a ride never tested, the panel open, a
     /// station shorter than a train, a cable lift ride without its lift, then, to open only, its entrances and
     /// exits and for a ride of one entrance and one exit on an open track, an exit before the entrance. A flat
-    /// ride has only the door checks, so it may always be tested.
-    [[nodiscard]] std::optional<std::string> open_refusal(const save::Ride& ride, const TrackRules& rules, save::AttractionState state, bool editing, std::optional<const TrackCourse&> course = std::nullopt);
+    /// ride has only the door checks, so it may always be tested. A pool ride's doors are its `pool_joined`
+    /// stations, those joined to a pool complex.
+    [[nodiscard]] std::optional<std::string> open_refusal(const save::Ride& ride, const TrackRules& rules, save::AttractionState state, bool editing, std::optional<const TrackCourse&> course = std::nullopt, std::size_t pool_joined = 0);
 
     /// `track` (pieces of `pieces` laid in order) after every pattern of `patterns` has swapped what it
     /// matches: each pattern is tried at each piece in turn, its steps taking that piece and those after.

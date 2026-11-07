@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track_course.hpp"
 
+#include "park/design_placement.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <iterator>
 #include <limits>
 #include <unordered_map>
 #include <utility>
@@ -39,7 +42,7 @@ namespace rct3::park
             std::vector<BlockEnd> ends;
             if (course.kinds.size() < 2)
                 return ends;
-            const auto ends_block = [](CourseKind k) { return k != CourseKind::Plain && k != CourseKind::Launch && k != CourseKind::Brake; };
+            const auto ends_block = [](CourseKind k) { return k != CourseKind::Plain && k != CourseKind::Launch && k != CourseKind::Brake && k != CourseKind::Booster; };
             const std::size_t last = course.kinds.size() - 1; // The last kind is past the track's end
             for (std::size_t i = 0; i < last; ++i)
             {
@@ -105,10 +108,20 @@ namespace rct3::park
                     kind = CourseKind::Launch;
                 else if (kind == CourseKind::Plain && role == kRoleBrakes)
                     kind = CourseKind::Brake;
-                // A brake's or block brake's own speed, 0 when it has none; below 0 on other pieces.
+                else if (kind == CourseKind::Plain && (shape->record.flags & kPieceBooster) != 0)
+                    kind = CourseKind::Booster;
+                // A brake's or block brake's own speed, 0 when it has none; below 0 on other pieces. A booster's is the
+                // speed the player set it to push the cars up to.
                 const bool brakes = kind == CourseKind::Brake || (kind == CourseKind::BlockBrake && role == kRoleBlockBrake);
-                const auto brake_speed = brakes ? static_cast<float>(std::max(piece.brake_speed, 0)) : -1.0f;
+                const auto brake_speed = brakes ? static_cast<float>(std::max(piece.brake_speed, 0)) : kind == CourseKind::Booster ? static_cast<float>(std::max(piece.speed_class, 0)) : -1.0f;
                 course.reverse_lift = course.reverse_lift || (shape->record.flags & kPieceReverseLift) != 0;
+                course.splash_end = role >= kRoleSlideBowl && role <= kRoleSlideEnd;
+                for (const auto& climb : shape->record.climbs)
+                {
+                    auto& placed = course.climbs.emplace_back();
+                    for (const glm::vec3& p : climb)
+                        placed.push_back(glm::vec3(to_world * glm::vec4(p, 1.0f)));
+                }
                 std::vector<glm::vec3> path = shape->line.path;
                 std::vector<glm::vec3> ups = shape->line.ups;
                 ups.resize(path.size(), glm::vec3 { 0, 1, 0 });
@@ -126,6 +139,13 @@ namespace rct3::park
                 course.piece_starts.push_back(course.length());
                 const bool water = (shape->record.flags & kPieceWater) != 0 || (model != models.end() && model->second.flows);
                 course.wet.push_back(water && (shape->record.flags & kPieceEnclosed) == 0);
+                course.covered.push_back((shape->record.flags & kPieceEnclosed) != 0);
+                course.steady.push_back(shape->record.role >= kRoleSlideToLiftFirst && shape->record.role <= kRoleSlideToLiftLast);
+                std::ranges::copy(piece_pool_openings(object, shape->record), std::back_inserter(course.pool_openings));
+                if (shape->record.drop_off >= 0)
+                    course.drop_offs.push_back(course.length() + shape->record.drop_off);
+                const float top = glm::vec3(to_world * glm::vec4(path.front(), 1.0f)).y;
+                std::optional<float> wade_from;
                 for (std::size_t k = course.points.empty() ? 0 : 1; k < path.size(); ++k)
                 {
                     const glm::vec3 at = glm::vec3(to_world * glm::vec4(path[k], 1.0f));
@@ -134,7 +154,12 @@ namespace rct3::park
                     course.ups.push_back(glm::normalize(glm::mat3(to_world) * ups[k]));
                     course.kinds.push_back(kind);
                     course.brake_speeds.push_back(brake_speed);
+                    // A quarter metre below its start (chosen by eye) a slide's way back to its lift is in the water.
+                    if (course.steady.back() && !wade_from && at.y < top - 0.25f)
+                        wade_from = course.distance.back();
                 }
+                if (wade_from)
+                    course.wades.push_back({ *wade_from, course.length() });
             }
             // Missing a piece, the track has no course; past the stretch trains run on, that stretch is left out.
             if (!whole_stretch && !stopping)

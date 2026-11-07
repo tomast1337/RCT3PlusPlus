@@ -454,6 +454,16 @@ namespace rct3::ui
                 }
                 case InfoControlKind::Words:
                     break;
+                case InfoControlKind::Bar:
+                {
+                    Slider& b = body_->add<Slider>(name, style_.bar);
+                    b.minimum = static_cast<float>(c.minimum);
+                    b.maximum = static_cast<float>(c.maximum);
+                    b.step = static_cast<float>(c.step);
+                    b.set_value(static_cast<float>(c.value));
+                    w = &b;
+                    break;
+                }
             }
             if (w != nullptr)
             {
@@ -574,6 +584,9 @@ namespace rct3::ui
                     case InfoControlKind::Choice:
                         width = info_panel::kChoiceWidth;
                         break;
+                    case InfoControlKind::Bar:
+                        width = info_panel::kBarWidth;
+                        break;
                     case InfoControlKind::Button:
                     case InfoControlKind::Text:
                     case InfoControlKind::Words:
@@ -662,6 +675,10 @@ namespace rct3::ui
                         change_now_ = InfoChange { c.id, 0, 0, e->text };
                     break;
                 case InfoControlKind::Words:
+                    break;
+                case InfoControlKind::Bar:
+                    if (auto* b = static_cast<Slider*>(w); b->take_change())
+                        change_now_ = InfoChange { c.id, static_cast<int>(std::lround(b->value())), 0, { } };
                     break;
                 case InfoControlKind::Paint:
                     if (const auto pot = static_cast<PaintButton*>(w)->take_pot())

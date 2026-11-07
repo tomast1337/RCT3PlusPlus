@@ -52,12 +52,11 @@ namespace rct3::park
 
     } // namespace
 
-    SupportKind turned(SupportKind kind, std::int32_t quarter_turns)
+    SupportKind turned(SupportKind kind, ModelTurn turn)
     {
-        const std::int32_t turns = ((quarter_turns % 4) + 4) % 4;
         if (kind >= kFirstDiagonal && kind <= kLastDiagonal)
-            return kFirstDiagonal + (kind - kFirstDiagonal + static_cast<SupportKind>(turns)) % 4;
-        if ((kind == kAlongX || kind == kAlongZ) && turns % 2 == 1)
+            return kFirstDiagonal + (kind - kFirstDiagonal + static_cast<SupportKind>(turn.value)) % 4;
+        if ((kind == kAlongX || kind == kAlongZ) && turn.value % 2 == 1)
             return kind == kAlongX ? kAlongZ : kAlongX;
         return kind;
     }

@@ -111,17 +111,17 @@ namespace rct3::park
         for (const SupportSet& s : found->second)
         {
             if (s.kind == kind)
-                return { &s, 0 };
+                return { &s, { } };
             if (diagonal(s.kind) && diagonal(kind))
-                return { &s, static_cast<std::int32_t>((kind - s.kind + 4) % 4) };
+                return { &s, ModelTurn::from(static_cast<std::int32_t>(kind - s.kind)) };
             if (along_axis(s.kind) && along_axis(kind))
-                return { &s, 1 };
+                return { &s, ModelTurn { 1 } };
             if (s.kind == kRoundSupport)
                 round = &s;
             if (any == nullptr)
                 any = &s;
         }
-        return { round != nullptr ? round : any, 0 };
+        return { round != nullptr ? round : any, { } };
     }
 
 } // namespace rct3::park

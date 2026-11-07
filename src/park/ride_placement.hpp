@@ -13,6 +13,7 @@
 
 #include "park/carried_goods.hpp"
 #include "park/ground_holds.hpp"
+#include "park/object_placement.hpp"
 #include "park/path_clearance.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -33,7 +34,7 @@ namespace rct3::park
     {
         std::int32_t col = 0; ///< Lowest column and row of the footprint, as the park stores placed objects
         std::int32_t row = 0;
-        std::int32_t turns = 0;                    ///< Quarter turns, 0..3
+        ModelTurn turn;
         std::int32_t height = 0;                   ///< Whole units
         std::array<std::int32_t, 2> span { 1, 1 }; ///< Columns and rows covered, after the turn
     };
@@ -62,9 +63,9 @@ namespace rct3::park
     /// loop, and a trick with none lasts nothing. All are offered and researched.
     [[nodiscard]] std::vector<save::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds);
 
-    /// The site of a ride of `squares` (along its own X and Z) turned `turns` quarter turns, centred on `tile`,
-    /// at the mean height of the corners of the tiles it covers, to the nearest whole unit.
-    [[nodiscard]] RideSite ride_site(save::Tile tile, std::array<std::int32_t, 2> squares, std::int32_t turns, const save::TerrainGrid& grid);
+    /// The site of a ride of `squares` (along its own X and Z) turned `turn`, centred on `tile`, at the mean
+    /// height of the corners of the tiles it covers, to the nearest whole unit.
+    [[nodiscard]] RideSite ride_site(save::Tile tile, std::array<std::int32_t, 2> squares, ModelTurn turn, const save::TerrainGrid& grid);
 
     enum class SiteProblem : std::uint8_t
     {
@@ -116,14 +117,34 @@ namespace rct3::park
     /// its highest corner going `up` (its lowest going down), a flat one moves one unit.
     [[nodiscard]] std::int32_t shaped_height(const save::TerrainCell& cell, bool up);
 
-    /// A ride's entrance or exit: its tile and the quarter turn it faces the ride by.
+    /// The turn of the object a placement record holds, which the record keeps as a bare number.
+    [[nodiscard]] constexpr ModelTurn spot_turn(const save::PlacementSpot& spot) noexcept
+    {
+        return ModelTurn::from(spot.direction);
+    }
+
+    /// The side of its tile a stall turned `turn` serves from: a quarter turn back from the side its model's +X
+    /// faces.
+    [[nodiscard]] constexpr Side served_side(ModelTurn turn) noexcept
+    {
+        return faced_side(turn).left();
+    }
+
+    /// A ride's entrance or exit: its tile and the turn that faces it to the ride, its +X towards the side of its
+    /// tile the ride is on (faced_side).
     struct DoorSpot
     {
         std::int32_t col = 0;
         std::int32_t row = 0;
-        std::uint8_t direction = 0; ///< 0 faces -x, 1 +z, 2 +x, 3 -z
-        std::int32_t height = 0;    ///< Whole units; set for a tracked ride's, a flat ride's stand at the ride's
-        auto operator<=>(const DoorSpot&) const = default;
+        ModelTurn turn;
+        std::int32_t height = 0; ///< Whole units; set for a tracked ride's, a flat ride's stand at the ride's
+
+        /// The door a placement record holds.
+        [[nodiscard]] static constexpr DoorSpot of(const save::PlacementSpot& spot) noexcept
+        {
+            return { spot.col, spot.row, spot_turn(spot), spot.height };
+        }
+        friend bool operator==(const DoorSpot&, const DoorSpot&) = default;
     };
 
     /// The tile across the rim of `site` nearest to the tile `col`, `row`, facing the ride. Never a corner

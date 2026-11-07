@@ -13,8 +13,10 @@
 #include <algorithm>
 #include <bit>
 #include <cmath>
+#include <format>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <numbers>
 #include <ranges>
@@ -39,22 +41,11 @@ namespace rct3::park
         // pieces that do not turn, 7 for the rest.
         constexpr std::uint32_t kLastCurveJoin = 6;
 
-        int wrap_heading(int heading)
-        {
-            return ((heading % kHeadings) + kHeadings) % kHeadings;
-        }
-
         /// `steps` wrapped to -3..4, upside down being 4.
         int wrap_bank(int steps)
         {
-            const int wrapped = wrap_heading(steps + kBankSteps) - kBankSteps;
+            const int wrapped = ((steps + kBankSteps) & 7) - kBankSteps; // Eight steps round a whole turn
             return wrapped == -kBankSteps ? kUpsideDown : wrapped;
-        }
-
-        /// A turn of `steps` eighths wrapped to -4..3.
-        int wrap_turn(int steps)
-        {
-            return wrap_heading(steps + kHeadings / 2) - kHeadings / 2;
         }
 
         int slope_steps(float pitch)
@@ -72,9 +63,9 @@ namespace rct3::park
             return pitch < 0 ? -steps : steps;
         }
 
-        int heading_steps(const glm::vec3& flat)
+        Heading8 heading_steps(const glm::vec3& flat)
         {
-            return wrap_heading(static_cast<int>(std::lround(std::atan2(flat.z, -flat.x) * kDegrees / kStepDegrees)));
+            return Heading8::from(static_cast<int>(std::lround(std::atan2(flat.z, -flat.x) * kDegrees / kStepDegrees)));
         }
 
         /// How plain a piece is: fewer flags first, then the shorter name.
@@ -83,9 +74,9 @@ namespace rct3::park
             return std::make_tuple(std::popcount(p.record.flags & ~kPieceCommon), p.record.name.size());
         }
 
-        glm::vec3 turned(const glm::vec3& v, std::int32_t turns)
+        glm::vec3 turned(const glm::vec3& v, ModelTurn turn)
         {
-            const glm::vec2 x = turned_x(turns);
+            const glm::vec2 x = turned_x(turn);
             const glm::vec2 z { -x.y, x.x };
             return { x.x * v.x + z.x * v.z, v.y, x.y * v.x + z.y * v.z };
         }
@@ -197,6 +188,27 @@ namespace rct3::park
         return beside;
     }
 
+    std::vector<std::vector<glm::vec3>> slide_climbs(std::span<const glm::vec3> loop, std::span<const std::vector<glm::vec3>> paths, std::span<const std::vector<glm::vec3>> slides)
+    {
+        std::vector<std::vector<glm::vec3>> ways;
+        if (loop.empty())
+            return ways;
+        for (const auto& slide : slides)
+        {
+            if (slide.empty())
+                continue;
+            const auto stub = std::ranges::min_element(paths, { }, [&](const std::vector<glm::vec3>& p) { return p.empty() ? std::numeric_limits<float>::max() : glm::distance(p.back(), slide.front()); });
+            const bool by_path = stub != paths.end() && !stub->empty();
+            const glm::vec3 off = by_path ? stub->front() : slide.front();
+            const auto cut = std::ranges::min_element(loop, { }, [&](const glm::vec3& p) { return glm::distance(p, off); });
+            auto& way = ways.emplace_back(loop.begin(), std::next(cut));
+            if (by_path)
+                way.insert(way.end(), stub->begin(), stub->end());
+            way.insert(way.end(), slide.begin(), slide.end());
+        }
+        return ways;
+    }
+
     std::expected<PieceCatalogue, std::string> load_piece_catalogue(const std::filesystem::path& file, std::string overlay)
     {
         auto first = ovl::Overlay::load(file);
@@ -267,6 +279,38 @@ namespace rct3::park
             r.partner = section.partner.substr(0, section.partner.find(':'));
             r.group = section.group;
             r.platform_run = section.platform_run;
+            r.drop_off = section.drop_off;
+            // Unturned, a model's +X faces the column before (faced_side), its +Z the row before.
+            constexpr std::array<std::pair<std::uint32_t, Side>, 4> kDrawnSides { { { 0x1, Side::kColBefore }, { 0x2, Side::kNextRow }, { 0x4, Side::kNextCol }, { 0x8, Side::kRowBefore } } };
+            for (const ovl::TrackSquare& q : section.squares)
+                if ((q.flags & (ovl::TrackSquare::kJoinsPool | ovl::TrackSquare::kOverPool)) != 0)
+                    for (const auto& [bit, side] : kDrawnSides)
+                        if ((q.flags & bit) != 0)
+                            r.pool_sides.push_back({ .x = q.x, .z = q.z, .height = q.height, .side = side });
+            // A slide climbed on foot: its walk up, named after the section, and its two rails as its two slides.
+            if (const auto loop = splines.find(std::format("{}Loop", t.name)); loop != splines.end())
+            {
+                const auto points = [](const ovl::Spline& spline) {
+                    constexpr int kPerPart = 4;
+                    std::vector<glm::vec3> out;
+                    for (std::size_t i = 0; i + 1 < spline.nodes.size(); ++i)
+                        for (int k = 0; k < kPerPart; ++k)
+                            out.push_back(vec(ovl::spline_point(spline, i, static_cast<float>(k) / kPerPart)));
+                    if (!spline.nodes.empty())
+                        out.push_back(vec(spline.nodes.back().position));
+                    return out;
+                };
+                std::vector<std::vector<glm::vec3>> paths;
+                for (int n = 1;; ++n)
+                {
+                    const auto path = splines.find(std::format("{}Path{:02}", t.name, n));
+                    if (path == splines.end())
+                        break;
+                    paths.push_back(points(path->second));
+                }
+                const std::array slides { points(left->second), points(right->second) };
+                r.climbs = slide_climbs(points(loop->second), paths, slides);
+            }
             lines.push_back(*line);
         }
         return PieceCatalogue { std::move(overlay), shape_pieces(records, lines) };
@@ -307,7 +351,7 @@ namespace rct3::park
         }
         if (record.joins[1].width != 0)
             shape.toggles |= toggle_bit(PieceToggle::Wide);
-        const int turn = wrap_turn(shape.exit.heading - shape.entry.heading);
+        const int turn = shape.exit.heading.eighths_from(shape.entry.heading);
         const std::uint32_t join = record.join_a;
         if ((record.flags & kPieceStation) != 0)
             shape.use = PieceUse::Station;
@@ -348,7 +392,7 @@ namespace rct3::park
             const PieceShape& p = pieces[i];
             if (p.use != PieceUse::Plain)
                 continue;
-            const Key key { p.entry.slope, p.entry.bank, p.entry.heading, p.exit.slope, p.exit.bank, p.exit.heading, p.curve, p.toggles };
+            const Key key { p.entry.slope, p.entry.bank, p.entry.heading.value, p.exit.slope, p.exit.bank, p.exit.heading.value, p.curve, p.toggles };
             const auto [found, added] = plainest.try_emplace(key, i);
             if (added)
                 continue;
@@ -367,14 +411,14 @@ namespace rct3::park
     {
         if (!reversed)
             return shape.entry;
-        return { -shape.exit.slope, wrap_bank(-shape.exit.bank), wrap_heading(shape.exit.heading + kHeadings / 2) };
+        return { -shape.exit.slope, wrap_bank(-shape.exit.bank), shape.exit.heading.reversed() };
     }
 
     PieceEnd laid_exit(const PieceShape& shape, bool reversed)
     {
         if (!reversed)
             return shape.exit;
-        return { -shape.entry.slope, wrap_bank(-shape.entry.bank), wrap_heading(shape.entry.heading + kHeadings / 2) };
+        return { -shape.entry.slope, wrap_bank(-shape.entry.bank), shape.entry.heading.reversed() };
     }
 
     int laid_curve(const PieceShape& shape, bool reversed)
@@ -410,14 +454,14 @@ namespace rct3::park
         TrackTip tip;
         tip.position = glm::vec3(m * glm::vec4(reversed ? shape.line.start : shape.line.end, 1));
         tip.end = laid_exit(shape, reversed);
-        tip.end.heading = wrap_heading(tip.end.heading + 2 * object.rotation);
+        tip.end.heading = tip.end.heading.turned(ModelTurn::from(object.rotation));
         return tip;
     }
 
     TrackTip start_of(const save::PlacedObject& object, const PieceShape& shape, bool reversed, const save::TerrainGrid& grid)
     {
         TrackTip tip = tip_of(object, shape, !reversed, grid);
-        tip.end = { -tip.end.slope, wrap_bank(-tip.end.bank), wrap_heading(tip.end.heading + kHeadings / 2) };
+        tip.end = { -tip.end.slope, wrap_bank(-tip.end.bank), tip.end.heading.reversed() };
         return tip;
     }
 
@@ -426,10 +470,13 @@ namespace rct3::park
         const PieceEnd entry = laid_entry(shape, reversed);
         if (!fits_after(tip.end, entry) || shape.record.positioning != Positioning::Tile || grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
             return std::nullopt;
-        // A quarter turn moves the heading two eighths.
-        const std::int32_t turns = wrap_heading(tip.end.heading - entry.heading) / 2;
-        const glm::vec3 start = turned(reversed ? shape.line.end : shape.line.start, turns);
-        const bool across = (turns & 1) != 0;
+        // The turn that brings the piece's entry round to the tip: whole quarters, as both run along the grid or
+        // both across it.
+        const std::optional<ModelTurn> turn = Heading8::from(tip.end.heading.value - entry.heading.value).quarter_turns();
+        if (!turn)
+            return std::nullopt;
+        const glm::vec3 start = turned(reversed ? shape.line.end : shape.line.start, *turn);
+        const bool across = (turn->value & 1) != 0;
         const auto span_x = static_cast<float>(shape.record.squares[across ? 1 : 0]);
         const auto span_z = static_cast<float>(shape.record.squares[across ? 0 : 1]);
         const float col = (tip.position.x - start.x - grid.world_x(0)) / grid.tile_size_x - span_x / 2;
@@ -443,7 +490,7 @@ namespace rct3::park
         o.symbol = shape.record.item;
         o.col = static_cast<std::int32_t>(std::lround(col));
         o.row = static_cast<std::int32_t>(std::lround(row));
-        o.rotation = turns;
+        o.rotation = turn->value;
         o.base_height = static_cast<std::int32_t>(std::lround(height));
         o.force_absolute_height = true;
         // Checked against the transform the park draws it with, so what is placed is what shows.

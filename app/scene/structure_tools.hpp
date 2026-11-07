@@ -9,7 +9,7 @@
 // Placing: a load window lists the structures, ours and the original game's. The one picked follows the
 // pointer as a see-through ghost, centred on the tile pointed at, on the ground there; the turn keys and the
 // panel's button turn it a quarter, and Shift raises and sinks it. A click builds every item if it fits and the
-// park can pay what they cost together, and the tool stays out for another. A right click puts it away.
+// park can pay what they cost together, and the tool stays out for another. A right click or Escape puts it away.
 #pragma once
 
 #include "park/object_mesh.hpp"
@@ -51,7 +51,7 @@ namespace rct3::scene
         bool marks_changed = false;       ///< The marks shown are not the marks
         // Placing
         std::optional<save::Structure> structure; ///< Picked out to save, or being placed
-        std::int32_t turns = 0;
+        park::ModelTurn turn;
         std::optional<save::Tile> at; ///< The tile pointed at
         std::int32_t ground = 0;      ///< The ground's height there
         std::int32_t height = 0;      ///< The lowest item's, the ground's unless raised with Shift

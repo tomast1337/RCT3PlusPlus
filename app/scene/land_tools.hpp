@@ -51,7 +51,7 @@
 // the ground and moving over it buys the tiles on sale under the brush's square (park/land_buying.hpp), each
 // paid for, and a message says when money ran short. The park's fence and where its staff may walk follow.
 //
-// Every other change is paid for. A right click puts either tool away.
+// Every other change is paid for. A right click or Escape puts either tool away.
 //
 // A shaping stroke rumbles from press to release, softly while the ground stays still and loudest as it moves.
 #pragma once

@@ -8,7 +8,8 @@
 // those under animal houses, animals, rides, shops, park entrances and buildings. While dragging, the tiles
 // that would go in or out are marked and what it costs is shown at the pointer: each length of fence put up
 // at the fence's price, less the refund of each length taken down. Marks the park cannot pay for show red,
-// and letting go of them does nothing. A right click, or picking another tool, puts the tool away.
+// and letting go of them does nothing. A right click deletes what is under the pointer as the delete menu's tool
+// does, and the tool stays out; picking another tool puts it away.
 #pragma once
 
 #include "park/build_catalogue.hpp"

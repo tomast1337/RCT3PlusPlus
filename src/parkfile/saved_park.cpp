@@ -209,7 +209,10 @@ namespace rct3::parkfile
                 if (door.col == g.swim->room_col && door.row == g.swim->room_row)
                 {
                     r.get<Errand>(guests[i]) = { .kind = ErrandKind::Swimming, .target = room };
-                    r.emplace_or_replace<Swimmer>(guests[i], g.swim->swimmer);
+                    auto& swimmer = r.emplace_or_replace<Swimmer>(guests[i], g.swim->swimmer);
+                    // The slide they were headed for and the room they rode from are this run's entities, others
+                    // once loaded; they swim on and pick again.
+                    swimmer.slide = swimmer.room = entt::null;
                     auto& pose = r.get<Pose>(guests[i]);
                     pose.position = pose.was = g.position;
                     ++placed;
@@ -363,7 +366,7 @@ namespace rct3::parkfile
         if (park.animals)
             put_chunk(w, "ANML", 1, *park.animals);
         if (park.pools)
-            put_chunk(w, "POOL", 7, *park.pools);
+            put_chunk(w, "POOL", 9, *park.pools);
         return w.take();
     }
 
@@ -436,7 +439,7 @@ namespace rct3::parkfile
             }
             if (tag == "POOL")
             {
-                if (park.pools || version != 7) // 7 adds the loungers and showers to the extras' fit
+                if (park.pools || version != 9) // 9 adds the ground each square dug
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.pools.emplace());
             }

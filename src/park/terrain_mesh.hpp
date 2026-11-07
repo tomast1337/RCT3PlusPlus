@@ -22,6 +22,7 @@
 #include "save/model/world.hpp"
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <span>
 #include <vector>
@@ -46,6 +47,7 @@ namespace rct3::park
         glm::vec3 position { 0.0f };
         glm::vec4 colour { 1.0f };
         float depth = 0; ///< World units, 0 where the ground reaches the surface or rises above it
+        float room = 0;  ///< Pool water: world units to its nearest wall, at most a square; 0 elsewhere
     };
 
     enum class GroundPaint : std::uint8_t
@@ -118,6 +120,7 @@ namespace rct3::park
     /// How far above the pool's surface height its water stands: just under the top of the rim piece there,
     /// which rises a fifth of a unit.
     inline constexpr float kPoolBrim = 0.1f;
+    inline constexpr int kPoolWaterSteps = 6; ///< Chosen by eye: a pool square's water is cut this many times each way, for the waves
     /// Pool water is clearer and lighter than the lakes': its low alpha also has it mirror the sky less looking
     /// down, so swimmers show whole under the surface.
     inline constexpr glm::vec4 kPoolColour = unit(hex("#3c9ccc4c"));
@@ -127,6 +130,10 @@ namespace rct3::park
     /// shortcut: every square is whole, so water shows past the rim of rounded corner pieces; upgrade by
     /// cutting it to the piece's shape when that shows.
     [[nodiscard]] std::vector<WaterVertex> pool_water(const save::TerrainGrid& grid, std::span<const save::PoolWater> pools);
+
+    /// World units from `within` (from a pool water square's least corner, in world units) to the nearest square
+    /// round it that `water` (by column and row step to it) says holds no water, at most a square across.
+    [[nodiscard]] float pool_wall_room(const save::TerrainGrid& grid, glm::vec2 within, std::function_ref<bool(int dc, int dr)> water);
 
     /// How much of the ground round grid point (x, z) has `surface`: the share of the tiles touching it,
     /// which is how much of that surface shows there.

@@ -2,6 +2,7 @@
 #include "park/ground_queues.hpp"
 
 #include "park/ground_paths.hpp"
+#include "park/path_decks.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -10,47 +11,15 @@
 namespace rct3::park
 {
 
-    std::optional<TileSide> side_of(std::uint8_t direction) noexcept
-    {
-        switch (direction)
-        {
-            case 0:
-                return TileSide::Left;
-            case 1:
-                return TileSide::Right;
-            case 2:
-                return TileSide::Back;
-            case 3:
-                return TileSide::Front;
-            default:
-                return std::nullopt;
-        }
-    }
-
-    std::array<int, 2> side_step(TileSide side) noexcept
-    {
-        switch (side)
-        {
-            case TileSide::Back:
-                return { 0, -1 };
-            case TileSide::Right:
-                return { 1, 0 };
-            case TileSide::Front:
-                return { 0, 1 };
-            case TileSide::Left:
-                return { -1, 0 };
-        }
-        return { 0, 0 };
-    }
-
     QueueShape queue_shape(std::uint8_t start, std::uint8_t end) noexcept
     {
-        const auto in = side_of(start);
-        const auto out = side_of(end);
+        const auto in = stored_heading(start);
+        const auto out = stored_heading(end);
         if (!in || !out)
             return { };
-        const int a = static_cast<int>(*in);
-        const int b = static_cast<int>(*out);
+        // Counted as the picture turns, from its top.
+        const int a = in->turned(-Side::kRowBefore.value).value;
+        const int b = out->turned(-Side::kRowBefore.value).value;
         const auto turns = static_cast<std::uint8_t>(a);
         if (a == b || (a + 2) % 4 == b)
             return { QueueCell::Straight, static_cast<std::uint8_t>(a % 2) };

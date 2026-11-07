@@ -95,6 +95,21 @@ TEST_CASE("an unfinished track with a station tests and opens, as one stretch; w
     CHECK(open_refusal(r, TrackRules { }, kTest, false, course) == "RideHasNoStation");
 }
 
+TEST_CASE("a slide climbed on foot opens with no station or doors, and tests only if its kind may be")
+{
+    TrackCourse course;
+    course.points.resize(2);
+    course.distance = { 0, 20 };
+    course.kinds = { CourseKind::Plain, CourseKind::Plain };
+    course.closed = false;
+    course.climbs = { { { 0, 0, 0 }, { 0, 8, -6 }, { 3, 1, 10 } } };
+    save::Ride r = ride(1, 0, false);
+    CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
+    CHECK(open_refusal(r, rules_with([](TrackRules& t) { t.never_tested = true; }), kTest, false, course) == "CannotTestTrackedRide");
+    course.climbs.clear();
+    CHECK(open_refusal(r, TrackRules { }, kOpen, false, course) == "RideHasNoStation");
+}
+
 TEST_CASE("entrances and exits are counted as the ride's door rules say")
 {
     save::Ride two = ride(6, 2);
@@ -131,6 +146,26 @@ TEST_CASE("a flat ride always tests, and opens once it has its doors")
     CHECK(open_refusal(flat, TrackRules { }, kOpen, false) == "CantOpenRideNoEntrance");
     flat.stations[0] = { .entrance = 1, .exit = 2 };
     CHECK_FALSE(open_refusal(flat, TrackRules { }, kOpen, false));
+}
+
+TEST_CASE("a pool ride opens once its stations join a pool complex, with no entrance or exit")
+{
+    save::Ride river = ride(6, 2);
+    const TrackRules pool = rules_with([](TrackRules& r) {
+        r.entrances = 0;
+        r.exits = 1;
+        r.pool_ride = true;
+    });
+    const TrackRules any = rules_with([](TrackRules& r) { r.pool_ride = true; });
+    CHECK(open_refusal(river, pool, kOpen, false) == "CantOpenPoolRideMissingEntrance");
+    CHECK(open_refusal(river, pool, kOpen, false, std::nullopt, 1) == "CantOpenPoolRideMissingEntrance");
+    CHECK_FALSE(open_refusal(river, pool, kOpen, false, std::nullopt, 2));
+    // At least one joined station, the default rule.
+    CHECK(open_refusal(river, any, kOpen, false) == "CantOpenPoolRideNoEntrance");
+    CHECK_FALSE(open_refusal(river, any, kOpen, false, std::nullopt, 1));
+    // Doors placed on a pool ride's stations do not join it to a pool.
+    river.stations[0] = { .entrance = 1, .exit = 2 };
+    CHECK(open_refusal(river, any, kOpen, false) == "CantOpenPoolRideNoEntrance");
 }
 
 TEST_CASE("patterns swap a station run's ends for its own end pieces")

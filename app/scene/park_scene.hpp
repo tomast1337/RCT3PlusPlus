@@ -273,23 +273,35 @@ namespace rct3::scene
         std::optional<park::PoolMap> before;
         std::vector<std::pair<save::Tile, std::array<float, 4>>> dug;
         bool redraw = false;                    ///< The pools were put back away from the frame and are drawn on the next
-        std::int32_t turns = 0;                 ///< Of an extra, changing room or high diving board, quarter turns from the turn keys
+        park::Side side { };                    ///< Of an extra, changing room or high diving board, as the turn keys turn it
         std::optional<float> press_y;           ///< Where on the screen the drag began
         std::int32_t board = park::kBoardLevel; ///< A high diving board's or a staircase's height, from the drag
         std::int32_t worked_board = 0;          ///< And the turn and height of the work shown
-        std::int32_t worked_turns = 0;
-        bool faces = true; ///< The work shown is no high diving board facing away from the water
-        /// The extra or changing room where it would go, drawn see-through, and whether it may go there.
+        park::Side worked_side { };
+        /// While Shift is held: where the pointer was when it went down, in tiles, and the surface there then
+        struct Lift
+        {
+            glm::vec2 spot { 0.0f };
+            std::int32_t surface = 0;
+        };
+        std::optional<Lift> lift;
+        std::optional<std::int32_t> lifted;        ///< The surface Shift raised or lowered the squares to, until let go
+        std::optional<std::int32_t> worked_lifted; ///< And the one of the work shown
+        bool faces = true;                         ///< The work shown is no high diving board facing away from the water
+        /// The extra, changing room or next pool path piece where it would go, drawn see-through, and whether it may go there.
         std::optional<save::PlacedObject> ghost_of;
         bool ghost_ok = false;
         park::ObjectMesh ghost;
+        park::TerrainMesh arrow; ///< Over the paths page's next piece, the way its trail goes on
         /// The extra or changing room alone, for the pool panel's disc, and the view of it there.
         std::string preview_of;
         park::ObjectMesh preview;
         park::ParkCamera preview_camera;
         render::TextureHandle preview_target;
         std::uint32_t preview_pixels = 0;
-        std::optional<std::size_t> room_placed; ///< Of the pools' rooms, one just placed, its window to open
+        std::optional<std::size_t> room_placed;                        ///< Of the pools' rooms, one just placed, its window to open
+        park::FootpathBuilder trail;                                   ///< The paths page's: the heading, the slope and the pool paths laid along it
+        std::vector<std::optional<std::array<float, 4>>> trail_ground; ///< By trail step, the ground's corners before its piece, when known
     };
 
     /// An amount of money floating up from a point of the park (scene/park_view.hpp).
@@ -353,8 +365,10 @@ namespace rct3::scene
         std::uint32_t thoughts_seen = 0;          ///< Of the simulated guest's thoughts, those already in the saved person
         const park::PartSet* swim_body = nullptr; ///< Worn in place of the body and legs at a pool, if any
         const park::PartSet* swim_legs = nullptr;
-        bool swimwear = false; ///< Shown in their swimwear: as saved, or as the simulation has them
-        bool changing = false; ///< Out of sight in a changing room when last looked at
+        bool swimwear = false;                                  ///< Shown in their swimwear: as saved, or as the simulation has them
+        bool changing = false;                                  ///< Out of sight in a changing room when last looked at
+        simulation::PoolEdge edge = simulation::PoolEdge::None; ///< A swimmer over the water's edge when last looked at
+        simulation::DiveStep dive = simulation::DiveStep::None; ///< How far with a dive when last looked at
     };
 
     /// A head, body or legs that a guest coming in at the gate may wear.
@@ -444,7 +458,11 @@ namespace rct3::scene
         park::PoolMap pools;                              ///< The swimming pools the player laid
         std::size_t pools_seen = 0;                       ///< A fingerprint of `pools` as the simulation last took them in
         std::vector<park::PoolExtra> scenery_pool_extras; ///< Pool extras a park from the game placed as scenery, for its swimmers to use
+        std::vector<park::PoolWave> machine_waves;        ///< The pools' wave machines', as `pools` was last taken in
+        std::vector<park::PoolWave> drawn_waves;          ///< Drawn on the pools' water with the pointer, oldest first
+        std::vector<park::PoolWave> rings;                ///< Spreading where people fell into the pools' water, oldest first
         std::vector<std::uint64_t> pool_pieces;           ///< Their pieces' objects, as last built
+        std::vector<park::PoolOpening> pool_openings;     ///< Where the rides joined them when their pieces were last built
         std::size_t saved_pool_water = 0;                 ///< footpaths.pools of the park's own file; the pools' follow
         std::size_t entrance_centred = 0;                 ///< Of the park's entrances, the one the view last went to
         std::vector<glm::vec3> anchors;
@@ -494,6 +512,10 @@ namespace rct3::scene
         ui::UiTextures object_textures;
         std::uint32_t ripple_frame = 0;  ///< Of the still water of objects, the picture shown (park::water_picture)
         park::ObjectMesh waterfall_mesh; ///< The waterfalls' water, built again each frame as it runs
+        /// The water pouring off pool slides' open ends, drawn as waterfalls, and how many objects the park had
+        /// when they were found.
+        std::vector<save::Waterfall> slide_pours;
+        std::size_t pours_found = 0;
         /// Water a park object shoots: a cannon a guest fires, or a jumping fountain at the next.
         struct Jet
         {
@@ -512,6 +534,7 @@ namespace rct3::scene
         std::vector<Jet> jets;
         float jets_clock = 0;                                 ///< park_clock when the jets last moved
         float jumps_ended = 0;                                ///< park_clock when the jumping fountains last had a jump in the air
+        std::vector<std::pair<float, glm::vec3>> splashdowns; ///< Pool slide riders in the air: park_clock when they reach the water, and where
         render::PipelineHandle waterfall_added_pipeline;      ///< Its pictures with a second added
         render::PipelineHandle waterfall_multiplied_pipeline; ///< And with a second multiplying them
         park::SkyModels sky;
@@ -656,6 +679,8 @@ namespace rct3::scene
         std::map<std::string, park::ObjectModel, std::less<>> staff_tools;
         /// How litter and sick look lying on the paths; either missing when its shape is.
         std::array<std::optional<park::ObjectModel>, 2> litter_looks;
+        /// The ring lazy river riders float in, about its middle; missing when its car is.
+        std::optional<park::ObjectModel> swim_ring;
         /// What guests carry from stalls, by its carried item's symbol (as `Burger:cid`).
         std::map<std::string, CarriedLook, std::less<>> carried_looks;
         std::vector<ShownPerson> shown_people;
@@ -772,6 +797,7 @@ namespace rct3::scene
         render::TextureHandle photo_target;                         ///< A photo is drawn into
         std::optional<std::string> photo_reading;                   ///< The file name start of the photo read from the target this frame, for the app to save
         std::optional<ui::Point> press;                             ///< Where the left button went down over the park, until it is let go
+        std::vector<glm::vec3> stroke;                              ///< The pool water under the pointer while pressed: world x, z and scene.clock
         std::optional<ui::Point> right_press;                       ///< Likewise the right button
         render::SceneLight light;                                   ///< What the day clock shows, for this frame
         int shadows = 0;                                            ///< The Shadows option: none, static (drawn now and then), dynamic
@@ -926,6 +952,10 @@ namespace rct3::scene
     /// Has the scene's cars of ride `ride_index` (of scene.rides) be its trains' cars as they are now: those it had
     /// go and its trains' cars are added where they stand, boarded as board_tracked_ride boards them.
     void replace_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index);
+
+    /// Has `train`, of cars of `model`, swing in a pool slide's trough as the car does (not at all for a car that
+    /// does not) and, on a pool slide, be held back as its train's file has it.
+    void fit_car(simulation::Coaster& train, const park::ObjectModel& model, bool pool_slide);
 
     /// Loads the models of `cars` the scene does not have yet, and their pictures.
     void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::RideCars& cars);

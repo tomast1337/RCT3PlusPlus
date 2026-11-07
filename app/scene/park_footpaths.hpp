@@ -108,7 +108,7 @@ namespace rct3::scene
         std::vector<save::Tile> brush;                        ///< While a stroke goes on: the tiles it passed over, in order
         /// The path edge the pointer is at, as the builder going on from it, and which path and side that is.
         std::optional<park::FootpathBuilder> hover;
-        std::optional<std::pair<std::size_t, std::uint8_t>> hover_edge;
+        std::optional<std::pair<std::size_t, park::Side>> hover_edge;
         std::optional<save::Tile> hover_tile;                  ///< Bare ground pointed at, shown as the path a click would lay
         std::optional<std::array<std::int32_t, 4>> hover_door; ///< The door edge pointed at: column, row, height, side
         /// While Shift is held: where the pointer met the ground when it went down, and the first piece's height then.

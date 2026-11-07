@@ -3,8 +3,8 @@
 // Placing a ride whole (a flat ride) picked in the build lists: its see-through ghost follows the pointer
 // over the ground, the turn keys turn it a quarter, and a click places it there if it fits (park/ride_placement.hpp),
 // levelling the ground under it and paying its price. Then its entrance and its exit are placed in turn
-// round its rim. A right click puts the tool away; a ride left without an entrance or exit stays built but
-// takes no riders. The ride is fenced round its rim as it is placed, and the fence opens for each door as it
+// round its rim. A right click deletes what is under the pointer and Escape puts the tool away; a ride left
+// without an entrance or exit stays built but takes no riders. The ride is fenced round its rim as it is placed, and the fence opens for each door as it
 // goes in, beside it; the doors take the fence's colours. The ground under the ride is paved (park/ground_paths.hpp).
 //
 // A ride placed with both is run by the simulation from the first frame its entrance has a path behind it.
@@ -12,7 +12,8 @@
 // beside its station, walled and paved as a flat ride's; with both, it runs on the track built for it as the
 // flat rides do. A new ride of either kind takes its theme's fence.
 //
-// Scenery picked in the lists is placed the same way, one item a click until the tool is put away: centred
+// Scenery picked in the lists is placed the same way, one item a click until the tool is put away (a right click
+// there deletes what is under the pointer, as the delete menu's tool does, and leaves the tool out): centred
 // on the tile pointed at, in the quarter of it pointed at for quarter-tile items, on the ground or on top of
 // the thing pointed at, which is how roofs go onto walls. While Shift is held the item stays on its tile and
 // rises and sinks with the pointer. An item may not take room another solid item or a path fills. A round
@@ -67,7 +68,7 @@ namespace rct3::scene
         };
         std::optional<park::BuildItem> item; ///< Being placed; none while idle
         Step step = Step::Ride;
-        std::int32_t turns = 0;
+        park::ModelTurn turn;
         std::optional<park::RideSite> site;     ///< Pointed at, then where the ride was placed
         std::optional<park::DoorSpot> door;     ///< The entrance or exit pointed at
         std::optional<park::DoorSpot> entrance; ///< Placed; of a tracked ride getting a door, its other door

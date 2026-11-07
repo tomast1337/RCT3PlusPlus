@@ -22,6 +22,8 @@ namespace rct3::park
         float wake = 0;                ///< Seconds before its next wake
         std::uint32_t splashes = 0;    ///< Times it has splashed
         std::uint8_t strength = 0;     ///< Of the last splash: 0 low, 1 medium, 2 high, by its speed
+        bool off_end = false;          ///< Run off a pool slide's end; its riders' splashes are on their way
+        bool landed = false;           ///< Flown off a pool slide's end, it has come down with its splash
     };
 
     /// What a car does in the water this step.

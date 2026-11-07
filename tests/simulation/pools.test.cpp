@@ -8,6 +8,8 @@
 
 #include <array>
 #include <doctest/doctest.h>
+#include <map>
+#include <set>
 
 using namespace rct3;
 using namespace rct3::simulation;
@@ -24,7 +26,7 @@ namespace
         for (std::int32_t row = 3; row < 5; ++row)
             for (std::int32_t col = 4; col < 7; ++col)
                 pools.squares.push_back({ .col = col, .row = row });
-        pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = open });
+        pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = open });
         import_pools(park.world(), pools);
         return pools;
     }
@@ -80,17 +82,67 @@ TEST_CASE("a guest wishing to swim pays at the changing room, swims for their st
     CHECK(park.world().paths.nearest(r.get<Pose>(guest).position) == r.get<Attraction>(room).entrance);
 }
 
-TEST_CASE("nobody swims in the cold, and those wishing to think it too cold")
+TEST_CASE("a pool takes so many swimmers for its water and no more")
 {
     Sandbox park;
     pool_by_path(park);
     auto& r = park.world().registry;
-    r.ctx().emplace<Weather>(Weather { .temperature = kTuning.pools.coldest.value - 5 });
-    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f });
+    const entt::entity room = room_of(r);
+    const auto room_for = static_cast<std::size_t>(kTuning.pools.crowd * static_cast<float>(r.get<SwimPool>(r.get<PoolDoor>(room).pool).water.size()));
+    std::vector<entt::entity> keen;
+    for (std::size_t i = 0; i < room_for + 4; ++i)
+        keen.push_back(park.guest({ static_cast<std::int32_t>(i % 4), 0 }, { .swim = 0.9f, .cash = 1000 }));
+    park.run_seconds(60);
+    CHECK(r.get<Attraction>(room).customers == room_for);
+    CHECK(std::ranges::count_if(keen, [&](entt::entity g) { return r.get<Errand>(g).kind == ErrandKind::Swimming; }) == static_cast<std::ptrdiff_t>(room_for));
+}
+
+TEST_CASE("nobody swims on a cold day, and those wishing to think it too cold")
+{
+    Sandbox park;
+    pool_by_path(park);
+    auto& r = park.world().registry;
+    r.ctx().emplace<Weather>(Weather { .temperature = 0 });
+    const auto guest = park.guest({ 0, 0 }, { .swim = 1.0f });
     park.run_seconds(60);
     CHECK(r.get<Attraction>(room_of(r)).customers == 0);
     REQUIRE(r.all_of<Thoughts>(guest));
     CHECK(std::ranges::contains(r.get<Thoughts>(guest).recent, ThoughtKind::TooColdForPools, &Thought::kind));
+}
+
+TEST_CASE("on a cool day only those wishing hard for a swim go, the others thinking it too cold")
+{
+    Sandbox park;
+    pool_by_path(park);
+    auto& r = park.world().registry;
+    r.ctx().emplace<Weather>(Weather { .temperature = kTuning.pools.cool.value - 3 });
+    const auto keen = park.guest({ 0, 0 }, { .swim = 0.9f });
+    const auto mild = park.guest({ 1, 0 }, { .swim = kTuning.needs.want.value + 0.02f });
+    REQUIRE(park.run_until([&] { return r.get<Errand>(keen).kind == ErrandKind::Swimming; }, 60));
+    CHECK(r.get<Errand>(mild).kind != ErrandKind::Swimming);
+    REQUIRE(r.all_of<Thoughts>(mild));
+    CHECK(std::ranges::contains(r.get<Thoughts>(mild).recent, ThoughtKind::TooColdForPools, &Thought::kind));
+}
+
+TEST_CASE("on a hot day guests go for a swim wishing less for one")
+{
+    Sandbox park;
+    pool_by_path(park);
+    auto& r = park.world().registry;
+    const float mild_wish = kTuning.needs.want.value - 0.1f;
+    SUBCASE("hot: they go")
+    {
+        r.ctx().emplace<Weather>(Weather { .temperature = kTuning.pools.warm.value + 8 });
+        const auto mild = park.guest({ 0, 0 }, { .swim = mild_wish });
+        CHECK(park.run_until([&] { return r.get<Errand>(mild).kind == ErrandKind::Swimming; }, 60));
+    }
+    SUBCASE("mild: they do not")
+    {
+        r.ctx().emplace<Weather>(Weather { .temperature = kTuning.pools.cool.value + 2 });
+        const auto mild = park.guest({ 0, 0 }, { .swim = mild_wish });
+        park.run_seconds(60);
+        CHECK(r.get<Errand>(mild).kind != ErrandKind::Swimming);
+    }
 }
 
 TEST_CASE("a guest wishing to swim where no pool is open thinks so")
@@ -103,6 +155,22 @@ TEST_CASE("a guest wishing to swim where no pool is open thinks so")
     CHECK(r.get<Attraction>(room_of(r)).customers == 0);
     REQUIRE(r.all_of<Thoughts>(guest));
     CHECK(std::ranges::contains(r.get<Thoughts>(guest).recent, ThoughtKind::NoPools, &Thought::kind));
+}
+
+TEST_CASE("a guest will not pay more for a pool than it is worth to them")
+{
+    Sandbox park;
+    park::PoolMap pools = pool_by_path(park);
+    pools.rooms[0].ticket = 5000;
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    const entt::entity room = room_of(r);
+    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 10000 });
+    park.run_seconds(30);
+    CHECK(r.get<Attraction>(room).customers == 0);
+    CHECK(r.get<Wallet>(guest).cash.value == 10000);
+    REQUIRE(r.all_of<Thoughts>(guest));
+    CHECK(std::ranges::contains(r.get<Thoughts>(guest).recent, ThoughtKind::NotPaying, &Thought::kind));
 }
 
 TEST_CASE("the wish to swim grows the faster the more a guest likes pools")
@@ -161,9 +229,9 @@ TEST_CASE("swimmers walk the plain paved squares, not those a spa pool or diving
     park::PoolMap pools;
     pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
     pools.squares.push_back({ .col = 4, .row = 2, .kind = park::PoolKind::Jacuzzi });
-    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::HighDive, .turn = 0 });
+    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::HighDive, .side = rct3::park::Side { 0 } });
     pools.squares.push_back({ .col = 5, .row = 3 });
-    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
     import_pools(park.world(), pools);
     const auto& r = park.world().registry;
     const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(park.world().registry)).pool);
@@ -182,7 +250,7 @@ TEST_CASE("swimmers sit in the spa pools and stand at the extras now and then")
     pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::Tile });
     pools.squares.push_back({ .col = 5, .row = 3 });
     pools.extras.push_back({ .symbol = "Lounger", .col = 6, .row = 2 });
-    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
     import_pools(park.world(), pools);
     auto& r = park.world().registry;
     const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
@@ -216,9 +284,12 @@ TEST_CASE("swimmers lie on loungers and stand under showers, as many as they tak
         park::PoolMap pools;
         pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
         pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::Tile });
-        pools.squares.push_back({ .col = 5, .row = 3 });
-        pools.extras.push_back({ .symbol = "Extra", .col = 6, .row = 2, .turn = 1, .fit = { .lounger = lounger, .shower = !lounger } });
-        pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+        // Water enough for them all.
+        for (std::int32_t row = 3; row < 11; ++row)
+            for (std::int32_t col = 4; col < 7; ++col)
+                pools.squares.push_back({ .col = col, .row = row });
+        pools.extras.push_back({ .symbol = "Extra", .col = 6, .row = 2, .side = rct3::park::Side { 1 }, .fit = { .lounger = lounger, .shower = !lounger } });
+        pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
         import_pools(park.world(), pools);
         auto& r = park.world().registry;
         const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
@@ -228,7 +299,7 @@ TEST_CASE("swimmers lie on loungers and stand under showers, as many as they tak
         const std::size_t places = lounger ? kTuning.pools.lounger_places : kTuning.pools.shower_places;
         CHECK(spot.places == places);
         std::vector<entt::entity> guests;
-        for (int i = 0; i < 12; ++i)
+        for (int i = 0; i < 48; ++i)
             guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
         std::size_t most = 0, waiting = 0;
         for (int t = 0; t < 4 * static_cast<int>(kTuning.pools.stay.value); ++t)
@@ -260,7 +331,7 @@ TEST_CASE("extras a park placed as scenery are used as those laid with the pool"
     pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
     pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::Tile });
     pools.squares.push_back({ .col = 5, .row = 3 });
-    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
     const std::array scenery { park::PoolExtra { .symbol = "Loungers", .col = 6, .row = 2, .fit = { .lounger = true } }, park::PoolExtra { .symbol = "Far", .col = 9, .row = 9, .fit = { .lounger = true } } };
     import_pools(park.world(), pools, scenery);
     auto& r = park.world().registry;
@@ -477,4 +548,316 @@ TEST_CASE("swimmers changing cannot be picked up, and staff let go over a pool w
     REQUIRE(park.run_until([&] { return !r.all_of<Dropped>(handyman); }, 60));
     CHECK_FALSE(r.all_of<Swimmer>(handyman));
     CHECK_FALSE(in_swimwear(r, handyman));
+}
+
+TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into the water one at a time, and swim on")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    park::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::HighDive, .board = 6, .side = rct3::park::Side { 0 } });
+    // Water far enough out for the boards' end, more than a square out from the tower.
+    for (std::int32_t row = 3; row < 6; ++row)
+        for (std::int32_t col = 5; col < 7; ++col)
+            pools.squares.push_back({ .col = col, .row = row });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
+    REQUIRE(pool.boards.size() == 1);
+    const PoolBoard& board = pool.boards.front();
+    CHECK(board.high);
+    CHECK(board.levels.size() == 2);
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 12; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+    std::vector<std::vector<DiveStep>> steps(guests.size());
+    std::size_t most = 0;
+    bool done = false;
+    for (int t = 0; t < 4 * static_cast<int>(kTuning.pools.stay.value) && !done; ++t)
+    {
+        park.run_seconds(0.1f);
+        std::size_t on = 0;
+        for (std::size_t i = 0; i < guests.size(); ++i)
+            if (const auto* swimmer = r.try_get<Swimmer>(guests[i]))
+            {
+                on += swimmer->dive != DiveStep::None ? 1 : 0;
+                if (steps[i].empty() ? swimmer->dive != DiveStep::None : steps[i].back() != swimmer->dive)
+                    steps[i].push_back(swimmer->dive);
+                if (swimmer->dive == DiveStep::Walk)
+                    CHECK(r.get<Pose>(guests[i]).position.y > board.foot.y);
+                // Back up in the water past the board's end.
+                if (swimmer->dive == DiveStep::Surface)
+                {
+                    CHECK(swimmer->in_water);
+                    CHECK(glm::dot(r.get<Pose>(guests[i]).position - board.foot, glm::vec3 { 0, 0, 1 }) > board.reach);
+                }
+                done = done || steps[i] == std::vector { DiveStep::Climb, DiveStep::Walk, DiveStep::Jump, DiveStep::Fall, DiveStep::Surface, DiveStep::None };
+            }
+        most = std::max(most, on);
+    }
+    CHECK(done);
+    CHECK(most == 1);
+
+    // A small board built while someone climbs: the boards are laid out again, and the climber comes down.
+    entt::entity climber = entt::null;
+    for (int t = 0; t < 4 * static_cast<int>(kTuning.pools.stay.value) && climber == entt::null; ++t)
+    {
+        park.run_seconds(0.1f);
+        for (const entt::entity g : guests)
+            if (const auto* swimmer = r.try_get<Swimmer>(g); swimmer != nullptr && swimmer->dive == DiveStep::Climb)
+                climber = g;
+    }
+    REQUIRE(climber != entt::null);
+    pools.extras.push_back({ .symbol = "Board", .col = 5, .row = 3, .side = rct3::park::Side { 2 }, .fit = { .board = true } });
+    import_pools(park.world(), pools);
+    park.run_seconds(0.1f);
+    const Swimmer& down = r.get<Swimmer>(climber);
+    CHECK((down.dive != DiveStep::Climb || r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool).boards[static_cast<std::size_t>(down.board)].high));
+}
+
+TEST_CASE("a small diving board on the pool's wall is walked out on and dived off; a ladder is a way out")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    park::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+    for (std::int32_t col = 5; col < 7; ++col)
+        pools.squares.push_back({ .col = col, .row = 3 });
+    pools.extras.push_back({ .symbol = "Board", .col = 5, .row = 3, .side = rct3::park::Side { 2 }, .fit = { .board = true } });
+    pools.extras.push_back({ .symbol = "Ladder", .col = 6, .row = 3, .side = rct3::park::Side { 2 }, .fit = { .ladder = true } });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
+    REQUIRE(pool.boards.size() == 1);
+    REQUIRE(pool.ladders.size() == 1);
+    CHECK_FALSE(pool.boards.front().high);
+    CHECK(pool.extras.empty());
+    // Behind the wall, on the paving the board and the ladder stand against.
+    CHECK(pool.boards.front().foot.z < park.world().paths.origin.y + 3 * park.world().paths.tile_size);
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 8; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+    bool walked = false, dived = false, ladder_out = false, ladder_in = false;
+    park.run_until(
+        [&] {
+            for (const entt::entity g : guests)
+                if (const auto* swimmer = r.try_get<Swimmer>(g))
+                {
+                    CHECK(swimmer->dive != DiveStep::Climb);
+                    walked = walked || swimmer->dive == DiveStep::Walk;
+                    dived = dived || (walked && swimmer->dive == DiveStep::Surface);
+                    // Up the ladder from its foot in the water, and down it from the paving behind.
+                    const PoolLadder& ladder = pool.ladders.front();
+                    ladder_out = ladder_out || (swimmer->edge == PoolEdge::LadderOut && swimmer->edge_from == ladder.water && swimmer->edge_to == ladder.deck);
+                    ladder_in = ladder_in || (swimmer->edge == PoolEdge::LadderIn && swimmer->edge_from == ladder.deck && swimmer->edge_to == ladder.water);
+                }
+            return dived && ladder_out && ladder_in;
+        },
+        6 * kTuning.pools.stay.value);
+    CHECK(dived);
+    CHECK(ladder_out);
+    CHECK(ladder_in);
+}
+
+TEST_CASE("swimmers walk up a ramp to a raised square and down it again, the ramp's slope between")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    // The paved square by the room, a square two up beside it with a ramp climbing to it, and water below.
+    park::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+    pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::Tile, .surface = 2 });
+    for (std::int32_t col = 4; col < 7; ++col)
+        pools.squares.push_back({ .col = col, .row = 3 });
+    pools.extras.push_back({ .symbol = "Ramp", .col = 5, .row = 2, .side = rct3::park::Side { 1 }, .fit = park::pool_extra_fit("Side CentralSolid WholeTile HeightStep 2") });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
+    CHECK(pool.extras.empty()); // A ramp is no spot to stand at
+    const float tile = park.world().paths.tile_size;
+    const float raised_col = park.world().paths.origin.x + 6 * tile;
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 8; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+    std::set<entt::entity> up;
+    bool slope = false, down = false;
+    park.run_until(
+        [&] {
+            for (const entt::entity g : guests)
+                if (r.all_of<Swimmer>(g))
+                {
+                    const glm::vec3 at = r.get<Pose>(g).position;
+                    // On the raised square only at its height, never sunk into it.
+                    if (at.x > raised_col + 0.1f && at.x < raised_col + tile && at.z > park.world().paths.origin.y + 2 * tile && at.z < park.world().paths.origin.y + 3 * tile)
+                    {
+                        CHECK(at.y > 1.9f);
+                        up.insert(g);
+                    }
+                    slope = slope || (at.x > raised_col - tile && at.x < raised_col && at.y > 0.5f && at.y < 1.5f);
+                    down = down || (up.contains(g) && at.y < 0.5f);
+                }
+            return slope && down;
+        },
+        4 * kTuning.pools.stay.value);
+    CHECK(slope);
+    CHECK(down);
+}
+
+TEST_CASE("swimmers cross the water's edge only diving in or climbing out, in the motion's time, never in a jump")
+{
+    Sandbox park;
+    pool_by_path(park);
+    auto& r = park.world().registry;
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 8; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+    struct Seen
+    {
+        bool in_water = false;
+        PoolEdge edge = PoolEdge::None;
+        glm::vec3 at { 0.0f };
+    };
+    std::map<entt::entity, Seen> seen;
+    std::set<PoolEdge> crossed;
+    constexpr float kTick = 0.1f;
+    // Fastest along the way: a walker, or the dive's reach over its time.
+    const float most = std::max({ 2.0f, kTuning.pools.dive_reach / kTuning.pools.dive_in.value }) * kTick + 0.01f;
+    for (int t = 0; t < static_cast<int>(kTuning.pools.stay.value / kTick); ++t)
+    {
+        park.run_seconds(kTick);
+        for (const entt::entity g : guests)
+        {
+            const auto* swimmer = r.try_get<Swimmer>(g);
+            if (swimmer == nullptr || swimmer->changing.value > 0)
+            {
+                seen.erase(g);
+                continue;
+            }
+            const glm::vec3 at = r.get<Pose>(g).position;
+            if (const auto was = seen.find(g); was != seen.end())
+            {
+                // Into or out of the water only as an edge's motion ends, and no further a tick than one walks.
+                if (swimmer->in_water != was->second.in_water)
+                    CHECK(was->second.edge != PoolEdge::None);
+                if (swimmer->edge != PoolEdge::None || was->second.edge != PoolEdge::None)
+                    CHECK(glm::distance(at, was->second.at) <= most);
+            }
+            if (swimmer->edge != PoolEdge::None)
+                crossed.insert(swimmer->edge);
+            seen[g] = { swimmer->in_water, swimmer->edge, at };
+        }
+    }
+    CHECK(crossed.contains(PoolEdge::DiveIn));
+    CHECK(crossed.contains(PoolEdge::ClimbOut));
+}
+
+namespace
+{
+    /// The paved square by the room at (5, 2) with water below it, beside it to the east a square three up with no way
+    /// to it, and to the west a pool path climbing to a path a unit up.
+    park::PoolMap levels_by_path(Sandbox& park)
+    {
+        park.path({ 0, 0 }, { 5, 0 });
+        park::PoolMap pools;
+        pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+        pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::Tile, .surface = 3 });
+        pools.squares.push_back({ .col = 4, .row = 2, .kind = park::PoolKind::PathSlope, .side = rct3::park::Side { 1 } });
+        pools.squares.push_back({ .col = 3, .row = 2, .kind = park::PoolKind::Path, .surface = 1 });
+        for (std::int32_t col = 4; col < 7; ++col)
+            pools.squares.push_back({ .col = col, .row = 3 });
+        pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
+        return pools;
+    }
+
+    /// The middle of the square at (`col`, `row`), `height` units up.
+    glm::vec3 square_middle(Sandbox& park, std::int32_t col, std::int32_t row, float height)
+    {
+        const auto& paths = park.world().paths;
+        return { paths.origin.x + (static_cast<float>(col) + 0.5f) * paths.tile_size, height * paths.level_height, paths.origin.y + (static_cast<float>(row) + 0.5f) * paths.tile_size };
+    }
+} // namespace
+
+TEST_CASE("pool squares join where they meet at the same height, a slope at its foot and its top, and not across a step")
+{
+    Sandbox park;
+    import_pools(park.world(), levels_by_path(park));
+    auto& r = park.world().registry;
+    const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
+    const auto& paths = park.world().paths;
+    const auto walk = [&](std::int32_t col, std::int32_t row, float height) { return pool_walk_at(pool, square_middle(park, col, row, height), paths.tile_size, paths.level_height); };
+    const auto deck = walk(5, 2, 0);
+    REQUIRE(deck);
+    const auto ways = pool_ways(pool, *deck);
+    const auto reached = [&](std::int32_t col, std::int32_t row, float height) { return ways[*walk(col, row, height)].has_value(); };
+    CHECK(reached(5, 3, 0)); // The water below
+    CHECK(reached(4, 3, 0));
+    CHECK(reached(3, 2, 1));       // Up the slope
+    CHECK_FALSE(reached(6, 2, 3)); // Three up, with no way
+    // The slope is walked in from its foot at the deck's height and left at its top a unit up.
+    const PoolWalk& slope = pool.walks[*walk(4, 2, 0.5f)];
+    REQUIRE(slope.joins.size() == 2);
+    for (const PoolWalk::Join& join : slope.joins)
+        CHECK(join.via.front().y == doctest::Approx((join.via.front().x < slope.at.x ? 1.0f : 0.0f) * paths.level_height + kTuning.pools.deck));
+}
+
+TEST_CASE("a ramp or a spiral staircase joins a raised square to the paving below")
+{
+    for (const bool ramp : { true, false })
+    {
+        CAPTURE(ramp);
+        Sandbox park;
+        park::PoolMap pools = levels_by_path(park);
+        if (ramp)
+            pools.extras.push_back({ .symbol = "Ramp", .col = 5, .row = 2, .side = rct3::park::Side { 1 }, .fit = park::pool_extra_fit("Side CentralSolid WholeTile HeightStep 3") });
+        else
+            pools.squares.back() = { .col = 6, .row = 3, .kind = park::PoolKind::Stairs, .board = 3 }; // For the water's last square, below the one three up
+        import_pools(park.world(), pools);
+        auto& r = park.world().registry;
+        const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
+        const auto& paths = park.world().paths;
+        const auto walk = [&](std::int32_t col, std::int32_t row, float height) { return *pool_walk_at(pool, square_middle(park, col, row, height), paths.tile_size, paths.level_height); };
+        const auto ways = pool_ways(pool, walk(5, 2, 0));
+        REQUIRE(ways[walk(6, 2, 3)]);
+        // The way there climbs only on the ramp's or staircase's square.
+        CHECK(*ways[walk(6, 2, 3)] == (ramp ? walk(5, 2, 0) : walk(6, 3, 3)));
+    }
+}
+
+TEST_CASE("swimmers never go where no way over the pool leads, and keep to the paving's height")
+{
+    Sandbox park;
+    import_pools(park.world(), levels_by_path(park));
+    auto& r = park.world().registry;
+    const auto& paths = park.world().paths;
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 8; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+    const auto tile = [&](float along, float origin) { return static_cast<std::int32_t>(std::floor((along - origin) / paths.tile_size)); };
+    bool up = false;
+    for (int t = 0; t < static_cast<int>(2 * kTuning.pools.stay.value); ++t)
+    {
+        park.run_seconds(1);
+        for (const entt::entity g : guests)
+            if (const auto* swimmer = r.try_get<Swimmer>(g); swimmer != nullptr && swimmer->changing.value <= 0 && !swimmer->in_water && swimmer->edge == PoolEdge::None)
+            {
+                const glm::vec3 at = r.get<Pose>(g).position;
+                const std::int32_t col = tile(at.x, paths.origin.x);
+                const std::int32_t row = tile(at.z, paths.origin.y);
+                CAPTURE(col);
+                CAPTURE(row);
+                CHECK_FALSE((col == 6 && row == 2 && at.y > 1.5f)); // Never on the square three up
+                CHECK(col >= 3);
+                CHECK(col <= 6);
+                // On the path a unit up at its height, on the slope between, elsewhere at the deck's.
+                const float height = (col == 3 ? 1.0f : col == 4 && row == 2 ? std::clamp((static_cast<float>(5) - (at.x - paths.origin.x) / paths.tile_size), 0.0f, 1.0f) : 0.0f) * paths.level_height + kTuning.pools.deck;
+                if (row == 2 && col != 6)
+                    CHECK(at.y == doctest::Approx(height).epsilon(0.02));
+                up = up || col == 3;
+            }
+    }
+    CHECK(up);
 }

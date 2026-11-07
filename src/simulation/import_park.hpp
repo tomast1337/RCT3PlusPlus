@@ -187,9 +187,8 @@ namespace rct3::simulation
     /// Keeps staff off the path tiles on land the park does not own and off those under its entrances, and lets
     /// them onto the others. Call after import_gate, and again when the park's land changes.
     void keep_staff_in(SimWorld& world, const save::TerrainGrid& grid);
-    /// The side of its path tile, as the network numbers them, that a no-entry sign standing as `sign` bars: the
-    /// side its front faces.
-    [[nodiscard]] std::size_t no_entry_side(const save::PlacedObject& sign);
+    /// The side of its path tile that a no-entry sign standing as `sign` bars: the side its front faces.
+    [[nodiscard]] park::Side no_entry_side(const save::PlacedObject& sign);
 
     /// Sets the park's own mix of parties (PartyMix) from the scenario's, when the save carries one.
     void import_party_mix(SimWorld& world, const save::GroupMix& mix);
@@ -228,6 +227,10 @@ namespace rct3::simulation
     /// (simulation/ratings.hpp). Tracked rides leave the station as their operating settings say. Each makes
     /// room in the park for `guests` at its place, when there; those left out add theirs to RoomElsewhere while
     /// open and working. Call after import_paths.
+    /// The park's run of `ride`, a pool slide with no cars that swimmers climb on foot (TrackCourse::climbs of
+    /// `course`); none for another ride.
+    entt::entity import_climb_slide(SimWorld& world, const save::Ride& ride, const park::TrackCourse& course);
+
     std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters = { }, std::span<const std::optional<std::uint32_t>> guests = { });
 
     /// Sets every guest walking from the path they stand on, or from the nearest path for one saved off the paths;

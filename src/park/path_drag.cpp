@@ -68,11 +68,11 @@ namespace rct3::park
         return plan;
     }
 
-    std::uint8_t nearest_side(float across_col, float across_row) noexcept
+    Side nearest_side(float across_col, float across_row) noexcept
     {
-        // Distances to the edges towards higher rows, higher columns, lower rows and lower columns.
+        // Distances to the edges, by side.
         const std::array<float, 4> to_edge { 1 - across_row, 1 - across_col, across_row, across_col };
-        return static_cast<std::uint8_t>(std::ranges::min_element(to_edge) - to_edge.begin());
+        return Side::from(static_cast<std::int32_t>(std::ranges::min_element(to_edge) - to_edge.begin()));
     }
 
     std::optional<PathEdge> path_under(const Ray& ray, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, bool through_ground)
@@ -114,13 +114,13 @@ namespace rct3::park
         if (!best)
             return std::nullopt;
         const save::PathTile& p = paths[best->path];
-        const std::uint8_t side = nearest_side((best_hit.x - grid.world_x(p.col)) / grid.tile_size_x, (best_hit.z - grid.world_z(p.row)) / grid.tile_size_z);
+        const Side side = nearest_side((best_hit.x - grid.world_x(p.col)) / grid.tile_size_x, (best_hit.z - grid.world_z(p.row)) / grid.tile_size_z);
         if (edge_height(p, grid, side))
             best->side = side;
         return best;
     }
 
-    bool start_from_edge(FootpathBuilder& builder, const save::PathTile& path, const save::TerrainGrid& grid, std::uint8_t side)
+    bool start_from_edge(FootpathBuilder& builder, const save::PathTile& path, const save::TerrainGrid& grid, Side side)
     {
         const auto height = edge_height(path, grid, side);
         if (!height)
@@ -156,7 +156,7 @@ namespace rct3::park
         return best;
     }
 
-    void start_from_door(FootpathBuilder& builder, const save::PlacementSpot& door, std::uint8_t side)
+    void start_from_door(FootpathBuilder& builder, const save::PlacementSpot& door, Side side)
     {
         const save::Tile spot { door.col, door.row };
         start_at(builder, spot);

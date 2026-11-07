@@ -14,8 +14,8 @@
 //  - Slope: 0 level, 1 gentle (about 1 in 2), 2 steep (about 2 in 1), 3 vertical; negative going down.
 //  - Bank: an eighth of a turn per step, positive leaning left (the right rail higher), 4 upside down.
 //    Upside-down tracks (coasters hanging below their rail) count from their own station.
-//  - Heading: an eighth of a turn per step from the model's -X, positive turning right. In the park, from
-//    the way an unturned model's -X points.
+//  - Heading: an eighth of a turn per step from the model's -X, positive turning right, as a Heading8. In the
+//    park, from the way an unturned model's -X points, which is the park's +X.
 //  - Curve: 0 straight, 1 loose, 2 medium, 3 tight; negative to the left.
 #pragma once
 
@@ -45,7 +45,6 @@ namespace rct3::park
 
     inline constexpr int kSlopeSteps = 3; ///< Up or down from level
     inline constexpr int kBankSteps = 4;  ///< Eighths of a turn to upside down
-    inline constexpr int kHeadings = 8;   ///< Eighths of a turn round
     inline constexpr int kCurveSizes = 3; ///< Loose, medium and tight
     inline constexpr int kUpsideDown = kBankSteps;
 
@@ -54,6 +53,14 @@ namespace rct3::park
     inline constexpr std::uint32_t kRoleBrakes = 1;     ///< PieceRecord::role of brakes
     inline constexpr std::uint32_t kRoleBlockBrake = 2; ///< PieceRecord::role of a block brake
     inline constexpr std::uint32_t kRoleStation = 3;    ///< PieceRecord::role of a station piece, flagged one or not
+    /// PieceRecord::role of a pool slide's open ends, where riders splash into the pool: a bowl and a funnel, which
+    /// they drop out of the bottom of, and a plain end
+    inline constexpr std::uint32_t kRoleSlideBowl = 83;
+    inline constexpr std::uint32_t kRoleSlideFunnel = 84;
+    inline constexpr std::uint32_t kRoleSlideEnd = 85;
+    /// The pieces taking a slide's end round onto its lift, where the car's swing is not pushed by the turn.
+    inline constexpr std::uint32_t kRoleSlideToLiftFirst = 86;
+    inline constexpr std::uint32_t kRoleSlideToLiftLast = 87;
     /// Roles of a rotating tower's pieces (base, shaft, caps): marked as chain, though nothing pulls a train up them
     inline constexpr std::uint32_t kRoleTowerFirst = 91;
     inline constexpr std::uint32_t kRoleTowerLast = 95;
@@ -80,7 +87,7 @@ namespace rct3::park
     {
         int slope = 0;
         int bank = 0;
-        int heading = 0; ///< 0 to 7
+        Heading8 heading;
 
         friend bool operator==(const PieceEnd&, const PieceEnd&) = default;
     };
@@ -140,6 +147,15 @@ namespace rct3::park
     };
 
     /// What a section stores about a piece besides its splines.
+    /// A side of a square of a piece's footprint where the piece joins a pool square across it.
+    struct PieceOpening
+    {
+        std::int32_t x = 0; ///< Square of the footprint, counted as square_tile counts them
+        std::int32_t z = 0;
+        std::int32_t height = 0; ///< Whole units above the piece's own height
+        Side side { };           ///< As the piece stands unturned
+    };
+
     struct PieceRecord
     {
         std::string name; ///< Of the section
@@ -157,6 +173,11 @@ namespace rct3::park
         std::string partner;                     ///< Of side by side tracks: the other half of a joined piece, by name
         std::string group;                       ///< For the ride's piece patterns
         std::string platform_run;                ///< As ovl::TrackSection::platform_run
+        /// Of a slide with no cars, as on an inflatable ship: each way up on foot from its foot in the water and down
+        /// one of its slides, laid as drawn. None on other pieces.
+        std::vector<std::vector<glm::vec3>> climbs { };
+        std::vector<PieceOpening> pool_sides { }; ///< Where it joins a pool beside: a slide's end, or its track out over the water
+        float drop_off = -1;                      ///< As ovl::TrackSection::drop_off
     };
 
     struct PieceShape
@@ -169,6 +190,11 @@ namespace rct3::park
         PieceUse use = PieceUse::Plain;
         std::uint8_t toggles = 0; ///< Bits of the PieceToggle values it has, laid as drawn
     };
+
+    /// The ways up and down a slide climbed on foot: for each slide, from the start of `loop` to the point of it
+    /// nearest where the path ending nearest the slide's top begins, along that path, then down the slide. With no
+    /// path, straight from that nearest loop point to the slide's top.
+    [[nodiscard]] std::vector<std::vector<glm::vec3>> slide_climbs(std::span<const glm::vec3> loop, std::span<const std::vector<glm::vec3>> paths, std::span<const std::vector<glm::vec3>> slides);
 
     /// `line` measured in steps. Banks are counted from `base_bank`, in degrees.
     [[nodiscard]] PieceEnd measure_end(const glm::vec3& direction, const glm::vec3& side, float base_bank = 0);
@@ -227,7 +253,7 @@ namespace rct3::park
     /// Whether `end` points along a diagonal.
     [[nodiscard]] constexpr bool diagonal(const PieceEnd& end)
     {
-        return (end.heading & 1) != 0;
+        return end.heading.diagonal();
     }
 
     /// Whether a piece entering at `entry` may follow a track whose last piece leaves at `tip`: the same

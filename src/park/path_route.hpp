@@ -50,7 +50,7 @@ namespace rct3::park
     /// A piece of a route: how the builder is set to lay it, and the piece it lays.
     struct RouteStep
     {
-        std::uint8_t heading = 0;
+        Side heading { };
         PathSlope slope = PathSlope::Flat;
         NextPiece piece;
     };

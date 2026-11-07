@@ -16,6 +16,7 @@
 
 #include "ovl/scenery_item.hpp"
 #include "ovl/texture_image.hpp"
+#include "park/turns.hpp"
 #include "save/model/world.hpp"
 #include "ui/font.hpp"
 
@@ -36,8 +37,8 @@ namespace rct3::park
         std::uint64_t line = 0;
         int col = 0;
         int row = 0;
-        float height = 0;       ///< Of the head's start edge, in world units
-        std::int32_t turns = 0; ///< Quarter turns of the sign: as a railing on the head's start edge
+        float height = 0; ///< Of the head's start edge, in world units
+        ModelTurn turn;   ///< Of the sign: as a railing on the head's start edge
         friend bool operator==(const QueueSignSpot&, const QueueSignSpot&) = default;
     };
 

@@ -32,13 +32,13 @@ namespace rct3::scene
             render::VertexAttribute { 2, render::VertexFormat::Float2, offsetof(Corner, uv) },
         };
         /// A run of `effect` at `position`, each on numbers of its own; nothing when the install lacks it.
-        std::optional<ParkParticles::Shown> start(ParkParticles& particles, std::string_view name, glm::vec3 position, const glm::mat3& axes, bool loops)
+        std::optional<ParkParticles::Shown> start(ParkParticles& particles, std::string_view name, glm::vec3 position, const glm::mat3& axes, bool loops, float scale = 1)
         {
             const particles::Effect* effect = particles.library->effect(name);
             if (effect == nullptr)
                 return std::nullopt;
             const random::RandomState own = random::seeded(random::Seed { random::next(particles.random) });
-            ParkParticles::Shown shown { .run = particles::EffectRun(*effect, own, loops, kRunCapacity), .sprites = { }, .position = position, .effect = std::string(name) };
+            ParkParticles::Shown shown { .run = particles::EffectRun(*effect, own, loops, kRunCapacity, 1, scale), .sprites = { }, .position = position, .effect = std::string(name), .size = scale };
             shown.run.place(position, axes);
             for (const particles::Particle& kind : effect->particles)
                 shown.sprites.push_back(particles.library->sprite(kind.skin));
@@ -89,13 +89,13 @@ namespace rct3::scene
             logging::logger("particles").warning("{} named particle effects not found", missing);
     }
 
-    bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up)
+    bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up, float scale)
     {
         if (!particles.library)
             return false;
         const glm::vec3 along = glm::normalize(up);
         const glm::vec3 side = glm::normalize(glm::cross(std::abs(along.y) < 0.9f ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0), along));
-        auto shown = start(particles, effect, position, glm::mat3(side, along, glm::cross(side, along)), false);
+        auto shown = start(particles, effect, position, glm::mat3(side, along, glm::cross(side, along)), false, scale);
         if (shown)
             particles.fired.push_back(std::move(*shown));
         return shown.has_value();

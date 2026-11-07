@@ -3,6 +3,7 @@
 
 #include "park/ground_queues.hpp"
 #include "park/object_placement.hpp"
+#include "park/path_decks.hpp"
 
 #include <algorithm>
 #include <array>
@@ -80,8 +81,8 @@ namespace rct3::park
                 auto& sides = map.queues[at];
                 for (const std::uint8_t d : { p.queue->start_direction, p.queue->end_direction })
                 {
-                    if (const auto side = side_of(d))
-                        sides = static_cast<std::uint8_t>(sides | 1u << static_cast<unsigned>(*side));
+                    if (const auto side = stored_heading(d))
+                        sides = static_cast<std::uint8_t>(sides | side->bit());
                 }
                 continue;
             }
@@ -126,8 +127,8 @@ namespace rct3::park
                     if (!door)
                         continue;
                     const save::Tile at { door->col, door->row };
-                    const save::Tile behind = step(at, turned_x(door->direction + 2));
-                    out.push_back({ .tiles = { at }, .height = door->height, .source = behind, .entrance = entrance, .links = { step(at, turned_x(door->direction)), behind }, .owner = door->object });
+                    const save::Tile behind = step(at, turned_x(ModelTurn::from(door->direction).turned(2)));
+                    out.push_back({ .tiles = { at }, .height = door->height, .source = behind, .entrance = entrance, .links = { step(at, turned_x(ModelTurn::from(door->direction))), behind }, .owner = door->object });
                 }
             }
             if (ride.kind == save::RideKind::Special && ride.stations.empty() && ride.base.spot)
@@ -138,7 +139,7 @@ namespace rct3::park
                 {
                     for (std::int32_t side = 0; side < 4; ++side)
                     {
-                        const save::Tile there = step(tile, turned_x(side));
+                        const save::Tile there = step(tile, turned_x(ModelTurn { side }));
                         if (!std::ranges::contains(under.tiles, there) && !std::ranges::contains(under.links, there))
                             under.links.push_back(there);
                     }
@@ -161,7 +162,7 @@ namespace rct3::park
                         if (!door)
                             continue;
                         if (!floor.source)
-                            floor.source = step({ door->col, door->row }, turned_x(door->direction + 2));
+                            floor.source = step({ door->col, door->row }, turned_x(ModelTurn::from(door->direction).turned(2)));
                         floor.links.push_back({ door->col, door->row });
                     }
                 }
@@ -184,7 +185,7 @@ namespace rct3::park
                 continue;
             Paving under { .tiles = footprint_of(*stall.base.spot), .height = stall.base.spot->height, .owner = stall.base.spot->object };
             // A stall serves the side it faces, opening onto the tiles there. Facings point at -row, -col, +row, +col.
-            const glm::vec2 front = turned_x(stall.base.facing + 3);
+            const glm::vec2 front = turned_x(ModelTurn::from(stall.base.facing).turned(3));
             for (const save::Tile tile : under.tiles)
             {
                 const save::Tile there = step(tile, front);
@@ -320,12 +321,12 @@ namespace rct3::park
         const auto [col, row] = tile;
         if (!grid.contains(col, row) || !grid.contains(col + dc, row + dr))
             return has_ground_path(map, { col + dc, row + dr });
-        // This tile's two corners on the shared edge, and the side it is as path_decks numbers them.
+        // This tile's two corners on the shared edge, and the side it is.
         const auto& corners = grid.at(col, row).corners;
         const std::size_t a = dc > 0 ? 1 : dr > 0 ? 2 : 0;
         const std::size_t b = dc != 0 ? a + 2 : a + 1;
         const float edge = (corners[a] + corners[b]) / 2;
-        const std::uint8_t side = dc > 0 ? 1 : dc < 0 ? 3 : dr > 0 ? 0 : 2;
+        const Side side = dc > 0 ? Side::kNextCol : dc < 0 ? Side::kColBefore : dr > 0 ? Side::kNextRow : Side::kRowBefore;
         if (!may_join(map, tile, { col + dc, row + dr }))
             return false;
         // Paving runs on within itself and into its links whatever stands between: the ride's fence is its edge.
@@ -338,8 +339,7 @@ namespace rct3::park
         if (const auto queue = map.queues.find(there); queue != map.queues.end())
         {
             // The neighbour's side facing back towards this tile.
-            const TileSide facing = dc > 0 ? TileSide::Left : dc < 0 ? TileSide::Right : dr > 0 ? TileSide::Back : TileSide::Front;
-            if ((queue->second & 1u << static_cast<unsigned>(facing)) != 0)
+            if ((queue->second & side.opposite().bit()) != 0)
                 return true;
         }
         const auto found = map.raised.find(there);

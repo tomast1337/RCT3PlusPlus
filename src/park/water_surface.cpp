@@ -16,7 +16,7 @@ namespace rct3::park
         {
             std::vector<GroundVertex>& run = by_level[water[i].position.y];
             for (std::size_t k = i; k < i + 3; ++k)
-                run.push_back({ .position = water[k].position, .colour = water[k].colour, .uv = { water[k].depth, 0.0f } });
+                run.push_back({ .position = water[k].position, .colour = water[k].colour, .uv = { water[k].depth, water[k].room } });
         }
         WaterSurface surface;
         for (const auto& [level, run] : by_level)

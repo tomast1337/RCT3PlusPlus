@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The park's people heard from the camera, by the rules of audio/park_voices.hpp: the chatter of the crowd
-// about the point looked at, a guest's cheer, laugh or retching as they show how they feel, and screams from
+// about the point looked at, a guest's cheer, laugh or retching as they show how they feel, a diver's splash, and screams from
 // the riders of a train going fast or dropping, the trains themselves by the rules of audio/ride_sounds.hpp, and
 // the roar of each waterfall.
 // Building is heard too, not placed in the world: a thump each time something is put down (a ride, stall, piece of
@@ -56,6 +56,8 @@ namespace rct3::scene
         std::array<std::vector<audio::SoundBuffer>, 4> screams;                          ///< A man alone, a woman alone, men, women
         std::array<audio::VoiceHandle, 2> chatter_voices;                                ///< Overlapping, so the chatter never stops
         std::set<entt::entity> heard;                                                    ///< Guests whose gesture was heard
+        std::array<std::vector<audio::SoundBuffer>, 2> dives;                            ///< Going under off a small board, and off a high one
+        std::set<entt::entity> under;                                                    ///< Divers coming back up, their splash heard
         std::map<std::pair<entt::entity, std::size_t>, audio::VoiceHandle> train_voices; ///< By ride and train
         /// Each set's sounds, by audio::TrackSound; nothing where the set lacks one.
         std::array<std::array<std::optional<audio::SoundBuffer>, audio::kTrackSounds>, audio::kTrackSoundSets> track_sounds;

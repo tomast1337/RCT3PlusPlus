@@ -66,7 +66,7 @@ namespace rct3::ui
     inline constexpr RosterJobs kAllRosterJobs = (1u << kRosterJobs.size()) - 1;
     inline constexpr RosterJobs kStartRosterJobs = kAllRosterJobs & ~(1u << 4);
 
-    /// Whether `jobs` shows workers of `kind`. Jobs without a switch show always.
+    /// Whether `jobs` shows workers of `kind`. Jobs without a switch show always, but lifeguards never.
     [[nodiscard]] bool shows_job(RosterJobs jobs, save::StaffKind kind);
 
     /// A worker's row: who they are, what they do and what the player can change.

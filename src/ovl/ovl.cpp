@@ -174,15 +174,15 @@ namespace rct3::ovl
             }
 
             RCT3_TRY(version, c.read<std::uint32_t>());
-            h.version = *version;
-            if (h.version != 1 && h.version != 4 && h.version != 5)
+            if (*version != 1 && *version != 4 && *version != 5)
                 return std::unexpected(Error::UnsupportedVersion);
+            h.layout = static_cast<OvlLayout>(*version);
 
-            if (h.version >= 4)
+            if (h.layout != OvlLayout::NoStream)
             {
                 RCT3_TRY(discarded, c.read<std::uint32_t>()); // always 0x10 in observed files
             }
-            if (h.version == 5)
+            if (h.layout == OvlLayout::ManyStreams)
             {
                 RCT3_TRY(sub, c.read<std::int16_t>());
                 RCT3_TRY(extra, c.read<std::int16_t>());
@@ -230,7 +230,7 @@ namespace rct3::ovl
                 h.loaders.push_back(std::move(l));
             }
 
-            if (h.version == 5)
+            if (h.layout == OvlLayout::ManyStreams)
             {
                 // fileTypeCount x { loaderIdx, symbolCount }, index-mapped.
                 for (std::uint32_t i = 0; i < *loader_count; ++i)
@@ -282,14 +282,14 @@ namespace rct3::ovl
 
         File f;
         f.header = std::move(*header);
-        const std::uint32_t version = f.header.version;
-        const bool has_extra = version == 5 && f.header.stream_count != 0;
+        const OvlLayout layout = f.header.layout;
+        const bool has_extra = layout == OvlLayout::ManyStreams && f.header.stream_count != 0;
 
         // Block definitions. v1 keeps sizes inline with the data instead of here.
         for (auto& type : f.block_types)
         {
             RCT3_TRY(count, c.read<std::uint32_t>());
-            if (version > 1)
+            if (layout != OvlLayout::NoStream)
             {
                 RCT3_TRY(unknown, c.read<std::uint32_t>());
                 type.unknown = *unknown;
@@ -303,7 +303,7 @@ namespace rct3::ovl
             if (!c.plausible_count(*count, sizeof(std::uint32_t)))
                 return std::unexpected(Error::ImplausibleCount);
             type.blocks.resize(*count);
-            if (version > 1)
+            if (layout != OvlLayout::NoStream)
             {
                 for (auto& block : type.blocks)
                 {
@@ -314,7 +314,7 @@ namespace rct3::ovl
         }
 
         // Post-block metadata.
-        if (version == 4)
+        if (layout == OvlLayout::OneStream)
         {
             for (int i = 0; i < 2; ++i)
             {
@@ -322,7 +322,7 @@ namespace rct3::ovl
                 f.unknown_words.push_back(*word);
             }
         }
-        else if (version == 5)
+        else if (layout == OvlLayout::ManyStreams)
         {
             RCT3_TRY(byte_count, c.read<std::uint32_t>());
             if (!c.plausible_count(*byte_count, 1))
@@ -347,7 +347,7 @@ namespace rct3::ovl
         {
             for (auto& block : type.blocks)
             {
-                if (version == 1)
+                if (layout == OvlLayout::NoStream)
                 {
                     RCT3_TRY(size, c.read<std::uint32_t>());
                     block.size = *size;
@@ -378,7 +378,7 @@ namespace rct3::ovl
         }
 
         // One table per data stream: u32 count, then count pairs of u32 (location, value).
-        const std::size_t streams = version == 4 ? 1 : version == 5 ? static_cast<std::size_t>(f.header.stream_count) : 0;
+        const std::size_t streams = layout == OvlLayout::OneStream ? 1 : layout == OvlLayout::ManyStreams ? static_cast<std::size_t>(f.header.stream_count) : 0;
         f.stream_relocations.resize(streams);
         for (auto& table : f.stream_relocations)
         {
@@ -474,7 +474,7 @@ namespace rct3::ovl
             return std::vector<Symbol> { };
 
         // v1 rows are {name, data, isPointer:u32}. v4 and v5 rows are {name, data, isPointer:u16, unknown:u16, hash}.
-        const bool wide = file.header.version != 1;
+        const bool wide = file.header.layout != OvlLayout::NoStream;
         const std::size_t stride = wide ? 16 : 12;
 
         const Block& table = blocks[0];
@@ -523,7 +523,7 @@ namespace rct3::ovl
         if (blocks.size() <= kTableBlock)
             return std::vector<Reference> { };
 
-        const bool wide = file.header.version != 1;
+        const bool wide = file.header.layout != OvlLayout::NoStream;
         const std::size_t stride = wide ? 16 : 12;
 
         const Block& table = blocks[kTableBlock];
@@ -573,7 +573,7 @@ namespace rct3::ovl
             return std::unexpected(Error::Truncated);
         }
 
-        const bool v5 = file.header.version == 5;
+        const bool v5 = file.header.layout == OvlLayout::ManyStreams;
         out.entries.reserve(table.size / kRowSize);
         for (std::size_t off = 0; off < table.size; off += kRowSize)
         {

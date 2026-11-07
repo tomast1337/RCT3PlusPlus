@@ -14,13 +14,16 @@
 // pointer over the ground until it is built. A new ride picked from a build list whose kind has saved designs
 // first opens their window (ui/screens/design_browser.hpp): building a design lays it whole with the train
 // picked there, a custom track is built piece by piece, and cancelling closes the building as closing its
-// panel does.
+// panel does. A design in hand has a round panel of its own, as a flat ride being placed does: turning it with
+// its price, its name and tune with why it may not stand where it is, its colours, and whether the ground it
+// passes into is cut smoothly, sharply or not at all. Once laid its window opens and its doors are placed.
 //
 // The scene holds one TrackBuilding; it is idle until a ride is opened in it.
 #pragma once
 
 #include "config/game_install.hpp"
 #include "park/build_catalogue.hpp"
+#include "park/design_placement.hpp"
 #include "park/moving_meshes.hpp"
 #include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
@@ -96,9 +99,9 @@ namespace rct3::scene
         int brake_speed = 0;  ///< Whole m/s for brakes and block brakes; 0 until set, so they take the ride's
         std::uint8_t facing = 0;
         std::optional<save::RideColours> colours; ///< Painted in the ring's colour tab; else as the piece before
-        /// A track with no pieces yet starts on the tile the pointer was last over, turned `turns` quarters.
+        /// A track with no pieces yet starts on the tile the pointer was last over, turned `turn`.
         std::optional<save::Tile> aim;
-        std::int32_t turns = 0;
+        park::ModelTurn turn;
         /// The height Shift raised the first piece to, which it keeps once Shift is let go; never under the ground.
         std::optional<std::int32_t> raised;
         /// While Shift is held over the first piece: where the pointer met the ground when it went down, and the
@@ -156,6 +159,16 @@ namespace rct3::scene
         std::vector<DesignDoor> design_doors;
         /// The design's ride, whose settings and colours the ride takes once the design is laid whole.
         std::optional<save::Ride> design_ride;
+        /// While a design is in hand: why its ghost may not stand, if it may not; the name and tune (by place in
+        /// the scene's tunes, from 1; 0 for none) the ride takes once it is laid; and whether the ground it passes
+        /// into is cut (as smooth_cuts says) rather than refusing it. Its own round panel shows them.
+        park::DesignRefusal refusal = park::DesignRefusal::None;
+        std::vector<park::PoolOpening> pool_openings; ///< Where the design's ghost meets a pool beside it
+        std::u16string design_title;
+        std::size_t design_tune = 0;
+        bool cut_ground = false;
+        /// What the design's panel was last shown for: the ground choice and the colours.
+        std::optional<std::tuple<bool, bool, save::RideColours>> design_tabs_for;
         /// What the round panel's tabs were last shown for: whether the first piece was still to lay, the
         /// ride's state, whether the construction strip was hidden, and whether cuts were smooth.
         std::optional<std::tuple<bool, save::AttractionState, bool, bool>> tabs_for;

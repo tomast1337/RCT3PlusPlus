@@ -78,7 +78,7 @@ TEST_CASE("v5 header parses references, loaders and symbol counts")
     auto h = parse_header(file);
     REQUIRE(h.has_value());
 
-    CHECK(h->version == 5);
+    CHECK(h->layout == rct3::ovl::OvlLayout::ManyStreams);
     REQUIRE(h->external_refs.size() == 1);
     CHECK(h->external_refs[0] == "Sounds\\Sounds");
     CHECK(h->secondary_refs.empty());

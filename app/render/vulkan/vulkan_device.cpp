@@ -647,7 +647,8 @@ namespace rct3::render::vulkan
             VkDescriptorSetLayoutBinding binding { };
             binding.descriptorType = type;
             binding.descriptorCount = 1;
-            binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            // The vertex stage reads them too: the water shader moves a pool's surface by the waves in a texture.
+            binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
             VkDescriptorSetLayoutCreateInfo info { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
             info.bindingCount = 1;
             info.pBindings = &binding;

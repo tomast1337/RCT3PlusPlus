@@ -27,12 +27,48 @@ const saved_swimmers = people.list().filter((p) => p.state === "swimming").lengt
 log("swimming as saved", saved_swimmers);
 expect(saved_swimmers > 0, "the park's swimmers still in the water");
 
+// Its changing room, there once, opens its complex's window, where the complex opens.
+const room = map.objects().find((o) => o.overlay !== kPool && o.symbol.startsWith("CRoom"));
+expect(room !== undefined, "a changing room");
+expect(map.objects().filter((o) => o.col === room!.col && o.row === room!.row && o.symbol === room!.symbol).length === 1, "the changing room there once");
+camera.look({ col: room!.col + 0.5, row: room!.row + 0.5 }, { col: room!.col + 0.5, row: room!.row + 6, up: 5 });
+await frames(10);
+// Its roof, above the guests' heads.
+const middle = map.screen(room!.col + 0.5, room!.row + 0.5)!;
+await pointer.click(middle.x, middle.y - 0.12);
+await until(() => ui.find("info/Attraction_OpMode") !== undefined, 120, "the changing room's window");
+const state = () => (ui.find("info/Attraction_General_Open") !== undefined ? "Open" : "Closed");
+const saved_state = state();
+if (saved_state !== "Open")
+{
+    await ui.click("info/Attraction_General_Closed");
+    await until(() => ui.find("info/Attraction_Button_Open") !== undefined, 60, "the flag's lights");
+    await ui.click("info/Attraction_Button_Open");
+}
+await frames(3);
+log("changing room", saved_state, "then", state());
+expect(state() === "Open", `the complex open, not ${state()}`);
+await screenshot("pool_saved_room_open");
+await ui.click("info/close");
+
 // Saved and loaded again: the squares kept, and the pieces placed from them only once.
 async function click_tool(tool: string): Promise<void> {
     await ui.click(`tools/${tool}/${ui.children(`tools/${tool}`)![0]}`);
 }
 const objects = map.objects().length;
 park.setTemperature(28);
+// Squares stacked on a tile, the decks' heights and the ground under them, to find again after loading.
+const stacks = () => {
+    const decks = new Map<string, Set<number>>();
+    for (const o of map.objects().filter((o) => o.overlay === kPool && (o.symbol === "SolidTop" || o.symbol === "Base" || o.symbol === "StairsBase")))
+        decks.set(`${o.col},${o.row}`, (decks.get(`${o.col},${o.row}`) ?? new Set()).add(o.height!));
+    return JSON.stringify([...decks].filter(([, h]) => h.size > 1).sort().map(([k, h]) => {
+        const [col, row] = k.split(",").map(Number);
+        return [k, [...h].sort((a, b) => a - b), map.tile(col, row)!.corners];
+    }));
+};
+const saved_stacks = stacks();
+log("stacked tiles", saved_stacks);
 await click_tool("Files");
 await ui.click("tools/Files/File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
@@ -50,6 +86,7 @@ await ui.click("park_files/content/open");
 await until(() => park.loaded() && park.weatherLook().temperature > 20, 1200, "the saved park");
 await frames(10);
 const again = map.objects().filter((o) => o.overlay === kPool).length;
+expect(stacks() === saved_stacks, `the stacked squares and the ground under them as saved, ${saved_stacks}, not ${stacks()}`);
 expect(again === pieces.length, `${pieces.length} pool pieces after loading, not ${again}`);
 expect(map.objects().length === objects, `${objects} objects after loading, not ${map.objects().length}`);
 // Its swimmers saved with it, still in the water.

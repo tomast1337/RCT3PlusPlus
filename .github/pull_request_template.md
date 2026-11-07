@@ -12,7 +12,7 @@
 - [ ] New behaviour has tests, with inputs built in code
 - [ ] No new compiler warnings
 - [ ] Format descriptions in `docs/` are updated if a parser changed
-- [ ] Clean room: no game files, extracted assets, byte dumps, decompiler output, recovered names or
+- [ ] Original work: no game files, extracted assets, byte dumps, decompiler output, recovered names or
       addresses, and no absolute paths, in the code, tests, docs or this description
       ([ORIGINAL_WORK.md](../ORIGINAL_WORK.md))
 - [ ] Values borrowed from another project name their source at the place of use

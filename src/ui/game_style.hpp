@@ -876,6 +876,11 @@ namespace rct3::ui::game_skins
         s.close_icon = kCloseIcon;
         s.height = spinner_style(p);
         s.bottom = kOverToolRow;
+        // The paths page has the path panel's controls but its cut switch.
+        const FootpathPanelStyle paths = footpath_panel_style(p);
+        std::copy_n(paths.usable_icons.begin(), kPoolPathControls, s.path_icons.begin());
+        std::copy_n(paths.unusable_icons.begin(), kPoolPathControls, s.path_unusable_icons.begin());
+        std::copy_n(paths.control_help.begin(), kPoolPathControls, s.path_help.begin());
         return s;
     }
 

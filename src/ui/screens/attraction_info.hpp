@@ -160,6 +160,8 @@ namespace rct3::ui
         /// Of a tracked ride, whether its track has a station, which its entrance and exit stand beside; of a flat
         /// ride, whether it is placed.
         std::optional<bool> station { };
+        /// Of a pool ride, which has no entrance or exit: its stations join a pool complex's paving.
+        bool pool_ride = false;
         /// Of a tracked ride whose trains can still be changed, how far.
         std::optional<TrainLimits> trains { };
         /// String key: why it was last not opened, tested or edited. Shown on its view and state pages.
@@ -288,6 +290,9 @@ namespace rct3::ui
 
     /// The page of `tab`, at `section` when the page has several.
     [[nodiscard]] InfoPage attraction_page(AttractionTab tab, const AttractionFacts& facts, const StringTable& strings, const InfoUnits& units, std::size_t section = 0);
+
+    /// The latest of the thoughts `all` on `page`, newest first, as many as it has room for, each with its mood's face.
+    void add_thoughts(InfoPage& page, std::span<const save::ThoughtEntry> all, const StringTable& strings);
 
     /// What a saved design's browser says of it, worded as a ride's results are: the ground it covers, its
     /// price, its ratings when it was rated and its test results when it was tested.

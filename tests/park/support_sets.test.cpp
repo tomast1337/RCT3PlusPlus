@@ -46,14 +46,14 @@ TEST_CASE("a group keeps a set per facing, and finds one turned to face the way 
     const FoundSet slant = find_support_set(sets, "wood", kFirstDiagonal + 3);
     REQUIRE(slant.set != nullptr);
     CHECK(slant.set->middles.front().symbol == "Slant");
-    CHECK(slant.quarter_turns == 3);
+    CHECK(slant.turn == ModelTurn { 3 });
     CHECK(slant.set->stands_on_anything);
     CHECK(slant.set->stands_close);
 
     const FoundSet flat = find_support_set(sets, "wood", kAlongZ);
     CHECK(flat.set->middles.front().symbol == "Flat");
-    CHECK(flat.quarter_turns == 1);
-    CHECK(find_support_set(sets, "wood", kAlongX).quarter_turns == 0);
+    CHECK(flat.turn == ModelTurn { 1 });
+    CHECK(find_support_set(sets, "wood", kAlongX).turn == ModelTurn { 0 });
     CHECK(find_support_set(sets, "wood", kRoundSupport).set->middles.front().symbol == "Round");
     CHECK(find_support_set(sets, "metal", kRoundSupport).set == nullptr);
 

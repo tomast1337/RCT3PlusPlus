@@ -32,7 +32,7 @@
 //              the original park's mode.
 //   "ANML" v1  SavedAnimals: the enclosures, animal houses, animals and their dung. Saves made before it lack
 //              it; their enclosures are read again from the original park.
-//   "POOL" v7  park::PoolMap: the swimming pools the player laid, their extras and changing rooms; their
+//   "POOL" v9  park::PoolMap: the swimming pools the player laid, their extras and changing rooms; their
 //              pieces are built again on loading. Only when there are any.
 //   "BEDS" v1  std::vector<save::FlowerBedState>: how much water each flower bed holds. Only when there are any;
 //              without it, the beds' water is read again from the original park.

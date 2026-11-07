@@ -12,6 +12,7 @@
 #pragma once
 
 #include "math/glm.hpp"
+#include "ovl/ride_car.hpp"
 #include "ovl/ride_train.hpp"
 #include "park/asset_index.hpp"
 #include "park/bone_poses.hpp"
@@ -163,6 +164,15 @@ namespace rct3::park
         bool wake = false;           ///< A wake's, not a splash's
     };
 
+    /// Where a pool slide's water pours off its open end: the ends of the water's two edges, model space, and the
+    /// way it runs there.
+    struct SlidePour
+    {
+        glm::vec3 left { };
+        glm::vec3 right { };
+        glm::vec3 way { };
+    };
+
     struct ObjectModel
     {
         std::uint16_t positioning = 0; ///< How the item sits on its tile (see object_placement.hpp)
@@ -238,6 +248,17 @@ namespace rct3::park
         std::array<std::optional<glm::mat4>, 3> ride_eyes;
         ovl::RideCameraTuning ride_look; ///< How they move, as the car's train sets it
         ovl::BoatHandling boat_handling; ///< How it handles out on open water, as the car's train sets it
+        float mass = 0;                  ///< Of a car, kilograms, empty
+        float rolling = 0;               ///< Of a car, how its train is held back, as the train's file has it (ovl::RideTrain)
+        float air = 0;
+        /// Of a pool slide's car, how it swings in the trough, how far up from the car's origin its shape's
+        /// pivot stands, the point it is drawn swung about, and how far the swinging shape hangs under it: the
+        /// height of that shape's own pivot (a car of one shape, its car's).
+        std::optional<ovl::TroughRide> trough;
+        float swing_pivot = 0;
+        float swing_arm = 0;
+        /// Of a pool slide's open end piece, where its water pours off: the ends of its water's two edges.
+        std::optional<SlidePour> pour;
         /// Of a rowing boat whose rig moves its oars: its motions rowing straight on, turning to its left and to
         /// its right (ovl::RideCar::rowing).
         std::optional<std::array<std::size_t, 3>> rowing;

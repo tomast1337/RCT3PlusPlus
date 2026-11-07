@@ -108,6 +108,32 @@ TEST_CASE("particles fall with gravity, head along the run's up and slow with dr
     CHECK(glm::length(slowed.particles().velocity[0]) == doctest::Approx(2 * 0.3679).epsilon(0.02));
 }
 
+TEST_CASE("a scaled run is the same effect smaller, in the same time")
+{
+    Effect e = steady(10, 5);
+    e.emitters[0].end = 0; // All at once, at the start
+    e.emitters[0].speed = 4;
+    e.emitters[0].speed_circle = 2;
+    e.emitters[0].position_circle = 1;
+    e.particles[0].gravity = 1;
+    EffectRun whole(e, seeded(), false, 16);
+    EffectRun small(e, seeded(), false, 16, 1, 0.25f);
+    whole.place({ 3, 1, 0 });
+    small.place({ 3, 1, 0 });
+    run_for(whole, 1);
+    run_for(small, 1);
+    REQUIRE(whole.particles().count() == 10);
+    REQUIRE(small.particles().count() == 10);
+    for (std::size_t i = 0; i < 10; ++i)
+    {
+        const glm::vec3 far = whole.particles().position[i] - glm::vec3(3, 1, 0);
+        const glm::vec3 near = small.particles().position[i] - glm::vec3(3, 1, 0);
+        CHECK(near.x == doctest::Approx(far.x * 0.25f).epsilon(0.001));
+        CHECK(near.y == doctest::Approx(far.y * 0.25f).epsilon(0.001));
+        CHECK(near.z == doctest::Approx(far.z * 0.25f).epsilon(0.001));
+    }
+}
+
 TEST_CASE("a particle's own emitters send theirs from where it is")
 {
     Effect e = steady(1, 2);

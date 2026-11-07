@@ -4,7 +4,6 @@
 #include "park/object_placement.hpp"
 
 #include <array>
-#include <cmath>
 #include <optional>
 #include <string>
 
@@ -24,14 +23,6 @@ namespace rct3::park
             std::array<std::int32_t, 3> colours { };
         };
 
-        /// The tile across edge `turns` of `tile`. An edge is named by the quarter turn that points an edge
-        /// piece's outward side at it.
-        Tile across(Tile tile, std::int32_t turns)
-        {
-            const glm::vec2 x = turned_x(turns);
-            return { tile.col + static_cast<int>(std::lround(x.x)), tile.row + static_cast<int>(std::lround(x.y)) };
-        }
-
         Tile tile_of(const save::PlacementSpot& spot)
         {
             return { spot.col, spot.row };
@@ -46,7 +37,8 @@ namespace rct3::park
             {
             }
 
-            void add(Tile tile, std::int32_t turns, std::int32_t height)
+            /// A panel on the edge of `tile` that `turn` points its outward side at.
+            void add(Tile tile, ModelTurn turn, std::int32_t height)
             {
                 save::PlacedObject& o = pieces_.emplace_back();
                 o.id = ++last_id_;
@@ -56,7 +48,7 @@ namespace rct3::park
                 o.overlay = *look_.overlay;
                 o.col = tile.col;
                 o.row = tile.row;
-                o.rotation = turns & 3;
+                o.rotation = turn.value;
                 o.colours = look_.colours;
                 o.base_height = height;
                 o.force_absolute_height = true; // Level at the fenced thing's height, not following the ground
@@ -97,24 +89,24 @@ namespace rct3::park
                         continue;
                     const Tile tile = square_tile(placed, item.squares, x, z);
 
-                    // Each side, as the step to the neighbouring square and the edge's turn from the model's.
-                    // A rectangle is fenced on its rim only (both sides of one a single square across); an outline
-                    // wherever the neighbour is outside it.
-                    struct Side
+                    // Each side of the square, as the step to the neighbouring square and the quarter turns from
+                    // the model's turn to the edge's. A rectangle is fenced on its rim only (both sides of one a
+                    // single square across); an outline wherever the neighbour is outside it.
+                    struct SquareSide
                     {
                         int dx, dz;
                         std::int32_t turns;
                     };
-                    static constexpr std::array<Side, 4> kSides { Side { -1, 0, 0 }, Side { 0, 1, 1 }, Side { 1, 0, 2 }, Side { 0, -1, 3 } };
-                    for (const Side& side : kSides)
+                    static constexpr std::array<SquareSide, 4> kSquareSides { SquareSide { -1, 0, 0 }, SquareSide { 0, 1, 1 }, SquareSide { 1, 0, 2 }, SquareSide { 0, -1, 3 } };
+                    for (const SquareSide& side : kSquareSides)
                     {
                         if (inside(x + side.dx, z + side.dz))
                             continue;
-                        const std::int32_t turns = (spot.direction + side.turns) & 3;
-                        const Tile beyond = across(tile, turns);
+                        const ModelTurn turn = ModelTurn::from(spot.direction).turned(side.turns);
+                        const Tile beyond = faced_side(turn).beyond(tile);
                         if (beyond == gaps[0] || beyond == gaps[1])
                             continue;
-                        out.add(tile, turns, spot.height);
+                        out.add(tile, turn, spot.height);
                     }
                 }
             }
@@ -171,7 +163,8 @@ namespace rct3::park
             {
                 if (!spot)
                     continue;
-                for (const std::int32_t side : { spot->direction - 1, spot->direction + 1 })
+                const ModelTurn facing = ModelTurn::from(spot->direction);
+                for (const ModelTurn side : { facing.turned(-1), facing.turned(1) })
                     out.add(tile_of(*spot), side, spot->height);
             }
         }

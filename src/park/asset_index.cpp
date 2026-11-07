@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cctype>
 #include <system_error>
+#include <utility>
 
 namespace rct3::park
 {
@@ -142,13 +143,14 @@ namespace rct3::park
         overlays_.emplace(lower(path), std::string(path));
     }
 
-    std::optional<std::string> AssetIndex::find(std::string_view symbol, std::string_view near) const
+    std::optional<std::string> AssetIndex::find(std::string_view symbol, std::string_view near, std::string_view inside) const
     {
         const auto it = symbols_.find(symbol);
         if (it == symbols_.end() || it->second.empty())
             return std::nullopt;
         const std::string from = forward_slashes(near);
-        const auto best = std::ranges::max_element(it->second, std::less<> { }, [&](const std::string& file) { return shared_start(file, from); });
+        const std::string folder = forward_slashes(inside);
+        const auto best = std::ranges::max_element(it->second, std::less<> { }, [&](const std::string& file) { return std::pair { !folder.empty() && shared_start(file, folder) == folder.size(), shared_start(file, from) }; });
         return *best;
     }
 

@@ -8,14 +8,14 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kTag = "sta";
-        constexpr std::size_t kVersion1Size = 0x28;
+        constexpr std::size_t kNoStreamSize = 0x28;
         constexpr std::size_t kVersion1Goods = 0x44;  ///< Up to and including the pointer to the goods, in themed files
         constexpr std::size_t kLaterSize = 0x2C;      // up to and including the scenery item
         constexpr std::size_t kGoodsSize = 8;         // a carried-item reference and a price
         constexpr std::size_t kAttractionSize = 0x28; // the fields shared by all attractions
         constexpr std::uint32_t kMostGoods = 64;      // far more than any stall sells; guards a bad count
 
-        // The attraction fields: at the start of version 1 items, in a block of their own that later items
+        // The attraction fields: at the start of no-stream items, in a block of their own that later items
         // point at. Version 1 items keep the scenery item at 0x30 in some and 0x38 in others, so it is left out.
         constexpr detail::AttractionLayout kFields { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 };
 
@@ -32,7 +32,7 @@ namespace rct3::ovl
             return out;
         }
 
-        Stall read_later(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, const ItemRecord& record, std::uint32_t version)
+        Stall read_later(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, const ItemRecord& record, OvlLayout layout)
         {
             Stall stall;
             const std::uint32_t count = record.u32(0x04);
@@ -40,7 +40,7 @@ namespace rct3::ovl
             if (fields != 0)
             {
                 if (const auto block = ItemRecord::open(space, refs, fields, kAttractionSize))
-                    stall.info = detail::read_attraction(*block, kFields, version);
+                    stall.info = detail::read_attraction(*block, kFields, layout);
             }
             else if (count <= kMostGoods)
             {
@@ -48,7 +48,7 @@ namespace rct3::ovl
                 // the goods in the record, if the record reaches that far.
                 const std::size_t type_at = kLaterSize + count * kGoodsSize;
                 if (const auto whole = ItemRecord::open(space, refs, address, type_at + 4))
-                    stall.info = detail::read_attraction(*whole, { .type_id = static_cast<int>(type_at) }, version);
+                    stall.info = detail::read_attraction(*whole, { .type_id = static_cast<int>(type_at) }, layout);
             }
             stall.info.style = record.ref(0x28, "sid");
             stall.goods = read_goods(space, refs, count, record.u32(0x08));
@@ -61,8 +61,8 @@ namespace rct3::ovl
     {
         const AddressSpace space = overlay.space();
         const ReferenceIndex refs(part, space);
-        const std::uint32_t version = part.file.header.version;
-        const std::size_t size = version == 1 ? kVersion1Size : kLaterSize;
+        const OvlLayout layout = part.file.header.layout;
+        const std::size_t size = layout == OvlLayout::NoStream ? kNoStreamSize : kLaterSize;
 
         std::vector<StallItem> items;
         for (const auto& symbol : part.symbols)
@@ -76,15 +76,15 @@ namespace rct3::ovl
             StallItem item { parts.name, std::nullopt };
             if (const auto record = ItemRecord::open(space, refs, symbol.data, size))
             {
-                if (version == 1)
+                if (layout == OvlLayout::NoStream)
                 {
-                    item.stall = Stall { detail::read_attraction(*record, kFields, version), { } };
+                    item.stall = Stall { detail::read_attraction(*record, kFields, layout), { } };
                     // Themed files go on with the scenery item, the number of goods and a pointer to them.
                     if (const auto longer = ItemRecord::open(space, refs, symbol.data, kVersion1Goods); longer && !longer->ref(0x38, "sid").empty())
                         item.stall->goods = read_goods(space, refs, longer->u32(0x3C), longer->u32(0x40));
                 }
                 else
-                    item.stall = read_later(space, refs, symbol.data, *record, version);
+                    item.stall = read_later(space, refs, symbol.data, *record, layout);
             }
             items.push_back(item);
         }

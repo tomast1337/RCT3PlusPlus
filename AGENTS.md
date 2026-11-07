@@ -33,7 +33,7 @@ Suggested messages:
 - Verify format claims against real game files, not only against existing docs. `ovl-dump` over the game
   install is the oracle.
 
-## Clean room
+## Original work
 
 Read [ORIGINAL_WORK.md](ORIGINAL_WORK.md) before touching anything to do with the game's files. Summary:
 

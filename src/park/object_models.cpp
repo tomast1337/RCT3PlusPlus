@@ -153,10 +153,11 @@ namespace rct3::park
             return it->second.get();
         }
 
-        /// The file holding `symbol` nearest to `near`, with its path. Nothing when none does.
-        std::optional<std::pair<std::string, OpenFile*>> holding(std::string_view symbol, std::string_view near)
+        /// The file holding `symbol` nearest to `near`, one inside the folder `inside` first, with its path.
+        /// Nothing when none does.
+        std::optional<std::pair<std::string, OpenFile*>> holding(std::string_view symbol, std::string_view near, std::string_view inside = { })
         {
-            const auto path = index.find(symbol, near);
+            const auto path = index.find(symbol, near, inside);
             if (!path)
                 return std::nullopt;
             OpenFile* file = get(*path);
@@ -569,6 +570,10 @@ namespace rct3::park
         if (item == nullptr)
             return std::nullopt;
         const std::string near = item_file->first;
+        // Support sets kept in one file name their pieces' looks alike (two sets' one-level pieces both call theirs
+        // Support1m); each set's own looks are in the folder named after the set, beside that file.
+        const std::size_t slash = near.rfind('/');
+        const std::string own_folder = item->group.empty() || slash == std::string::npos ? std::string { } : std::format("{}/{}/", std::string_view(near).substr(0, slash), item->group);
 
         // The visuals that can be read, with the file each is in; a broken look apart.
         constexpr std::string_view kBroken = "_Broken";
@@ -576,7 +581,7 @@ namespace rct3::park
         std::optional<std::pair<const ovl::SceneryVisual*, std::string>> broken;
         for (const std::string_view visual_name : item->visuals)
         {
-            const auto visual_file = files_->holding(tagged(visual_name, kVisualTag), near);
+            const auto visual_file = files_->holding(tagged(visual_name, kVisualTag), near, own_folder);
             if (!visual_file)
                 continue;
             if (const ovl::SceneryVisual* visual = visual_in(*visual_file->second, visual_name))
@@ -862,6 +867,9 @@ namespace rct3::park
         const ovl::Spline* right = spline_in(*file, section->water_splines[1]);
         if (left == nullptr || right == nullptr)
             return;
+        // Off a slide's open end its water pours from where the water's edges end.
+        if (section->role == kRoleSlideEnd && left->nodes.size() >= 2 && !right->nodes.empty())
+            model.pour = SlidePour { .left = position(left->nodes.back()), .right = position(right->nodes.back()), .way = glm::normalize(position(left->nodes.back()) - position(left->nodes[left->nodes.size() - 2])) };
         const auto strip = flow_strip(*left, *right, track != nullptr ? *track : ovl::Spline { }, std::string(kFlowPicture));
         if (!strip)
             return;
@@ -1087,6 +1095,12 @@ namespace rct3::park
         model.ride_eyes = { bone_of(car->visual, "nosecamera").or_else([&] { return front; }), front, bone_of(car->visual, "camerarear") };
         model.ride_look = found->camera;
         model.boat_handling = found->boat;
+        model.mass = car->mass;
+        model.rolling = found->rolling;
+        model.air = found->air;
+        model.trough = car->trough;
+        model.swing_pivot = pivot.y;
+        model.swing_arm = car->part.empty() ? pivot.y : part_pivot.y;
         constexpr std::array<std::string_view, 3> kStrengths { "low", "med", "high" };
         for (std::uint8_t strength = 0; strength < kStrengths.size(); ++strength)
         {

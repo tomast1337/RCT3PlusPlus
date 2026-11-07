@@ -465,6 +465,8 @@ namespace rct3::park
             { 24, "bumbounce", "", "", "", "" },
             { 25, "jump", "", "", "", "" },
             { 26, "dance", "idlestandard", "", "", "" },
+            { kSlideBodySeating, "slidebodybackloop", "", "slidebodybackwave", "slidebodybackcovereyesloop", "" },
+            { kSlideRingSeating, "slideringsitloop", "", "slideringsitwave", "slideringsitcovereyesloop", "" },
             { 33, "sitbenchloop", "", "", "", "" },
         });
         const auto* names = std::ranges::find(kSeatings, seating, &Names::seating);

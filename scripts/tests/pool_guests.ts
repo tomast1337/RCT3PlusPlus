@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Guests swim. On the game's blank landscape a pool goes in beside the road, paved round with water in the
-// middle, and a changing room between the road and the pool, opened. On a warm day guests come in: those
-// wishing for a swim pay at the room, change out of sight and swim, in their swimwear, and lie on the sun loungers
-// and stand under the shower along the far side.
+// middle, and a changing room between the road and the pool, opened. On a warm day guests come in, a good share of
+// them to swim: those wishing for a swim pay at the room, change out of sight and swim, in their swimwear, and lie
+// on the sun loungers and stand under the shower along the far side.
 //
 //   ./nob script scripts/tests/pool_guests.ts -- --no-intro --no-audio --seed 1
 
@@ -59,23 +59,23 @@ for (const [symbol, col] of [["SunLoungers", c + 4], ["PoolShower", c + 6]] as c
     expect(map.objects().some((o) => o.symbol === symbol && o.col === col && o.row === r + 3), `${symbol} on the paving`);
 }
 
-// The changing room between the road and the pool, turned to open on it; placed, its window opens, where the
+// The changing room between the road and the pool, turned to open on it unasked; placed, its window opens, where the
 // complex opens.
 await until(() => ui.find("pool_panel/Pool_ChangingRoomPanel") !== undefined, 120, "the pool panel");
 await ui.click("pool_panel/Pool_ChangingRoomPanel");
 await frames(2);
 await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
-keys.press(".");
 await frames(3);
 await pointer.click(...on_view(c + 1.5, r + 0.5));
 await frames(3);
 expect(map.objects().some((o) => o.overlay !== kPool && o.col === c + 1 && o.row === r), "the changing room beside the road");
 await until(() => ui.find("info") !== undefined, 120, "the changing room's window");
-await ui.click("info/Attraction_OpMode");
+await ui.click("info/Attraction_General_Closed");
+await until(() => ui.find("info/Attraction_Button_Open") !== undefined, 60, "the flag's lights");
+await ui.click("info/Attraction_Button_Open");
 await frames(3);
-const choice = ui.find("info/body/AttractionStatusOpen")!;
-await pointer.drag([choice.x, choice.y], [choice.x, choice.bottom + (choice.bottom - choice.top) / 2], 6);
-await frames(3);
+expect(ui.find("info/Attraction_General_Open") !== undefined, `the complex open, not ${JSON.stringify(ui.children("info"))}`);
+await screenshot("pool_guests_open");
 await ui.click("info/close");
 
 // A warm, sunny day, and guests.
@@ -89,6 +89,10 @@ const swimmers = () => people.list().filter((p) => p.state === "swimming");
 const in_pool = () => swimmers().filter((p) => p.col !== undefined && p.col > c + 3.2 && p.col < c + 6.8 && p.row! > r + 0.2 && p.row! < r + 2.8);
 await until(() => in_pool().length >= 4, 6000, `guests in the pool (${JSON.stringify(swimmers())})`);
 log("swimming", swimmers().length, "in sight", in_pool().length, JSON.stringify(swimmers().slice(0, 6)), "pool at", c + 3, r);
+// On a warm day a good share of the guests swim, as many as half the room twelve squares of water make, at the least.
+const guests = () => people.list().filter((p) => !p.staff && !p.leaving).length;
+await until(() => swimmers().length >= Math.min(0.15 * guests(), 12), 3000, `a share of the guests swimming (${swimmers().length} of ${guests()})`);
+log("share swimming", swimmers().length, "of", guests());
 log("cash", cash, "then", park.cash());
 if (cash !== undefined)
     await until(() => park.cash()! > cash, 600, "the tickets paid");
@@ -111,10 +115,10 @@ await frames(10);
 const [room_x, room_y] = on_view(c + 1.5, r + 0.5);
 await pointer.click(room_x, room_y - 0.08);
 await until(() => ui.find("info") !== undefined, 120, "the changing room's window");
-await ui.click("info/Attraction_Customers");
+await ui.click("info/Guest_Rides");
 await frames(3);
-const inside = ui.find("info/body/PeopleInPoolComplexX_label") ?? ui.find("info/body/PeopleInPoolComplex4_label");
-expect(inside !== undefined, `the swimmers counted, not ${JSON.stringify(ui.children("info/body"))}`);
+const inside = ui.find("info/body/status_label")?.text ?? "";
+expect(/^([5-9]|\d\d+) people/.test(inside), `the swimmers counted, not ${inside}`);
 await screenshot("pool_guests_customers");
 await ui.click("info/Attraction_Maintenance");
 await frames(3);

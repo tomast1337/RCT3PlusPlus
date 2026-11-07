@@ -11,6 +11,8 @@
 // groups of alternatives, of which one is built.
 #pragma once
 
+#include "park/turns.hpp"
+
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -33,8 +35,8 @@ namespace rct3::park
     inline constexpr SupportKind kAlongX = 6;
     inline constexpr SupportKind kAlongZ = 7;
 
-    /// `kind` after the item it is under turns by `quarter_turns`.
-    [[nodiscard]] SupportKind turned(SupportKind kind, std::int32_t quarter_turns);
+    /// `kind` after the item it is under turns by `turn`.
+    [[nodiscard]] SupportKind turned(SupportKind kind, ModelTurn turn);
 
     struct SupportSquare
     {

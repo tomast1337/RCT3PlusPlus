@@ -33,12 +33,11 @@ async function lay(kind: string): Promise<number> {
     await frames(10);
     pointer.move(0.5, 0.45);
     await frames(30);
+    const ride = build.construction()!.ride;
+    // Laid, the design's building closes and its window opens.
     await pointer.click(0.5, 0.45);
     await frames(30);
-    const ride = build.construction()!.ride;
-    expect((rides.list()[ride].pieces ?? 0) > 0, `the ${kind} design laid`);
-    build.stop();
-    await ui.click("placing/close");
+    expect((rides.list()[ride].pieces ?? 0) > 0 && build.construction() === undefined, `the ${kind} design laid`);
     await frames(5);
     return ride;
 }

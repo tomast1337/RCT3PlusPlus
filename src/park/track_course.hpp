@@ -7,6 +7,7 @@
 #pragma once
 
 #include "park/object_mesh.hpp"
+#include "park/pools.hpp"
 #include "park/track_pieces.hpp"
 #include "save/model/rides.hpp"
 
@@ -30,21 +31,31 @@ namespace rct3::park
         BlockBrake, ///< Ends a block: a train may wait on it for the block ahead to clear (also holding pieces, lift tops)
         Launch,     ///< Pushes a launched train on, past its station
         Brake,      ///< Slows a train down to the piece's brake speed
+        Booster,    ///< Jets push the cars up to the piece's speed, as a water coaster's climbs have them
     };
 
     struct TrackCourse
     {
         std::vector<glm::vec3> points;
-        std::vector<glm::vec3> ups;                ///< Up for the track at each point, leaning with its bank; none is straight up
-        std::vector<float> distance;               ///< From the start to each point
-        std::vector<CourseKind> kinds;             ///< Of the stretch from each point to the next; the last is unused
-        std::vector<float> brake_speeds;           ///< Of the brake or block brake from each point, in m/s: 0 where it has none of its own, below 0 off them
-        std::vector<float> piece_starts;           ///< Distance at the start of each of the track's pieces
-        std::vector<bool> wet;                     ///< By piece, as piece_starts: runs through open water, not in a tube
-        bool closed = false;                       ///< The end joins the start, so cars go round
-        bool reverse_lift = false;                 ///< Has the hill a reverse cable lift pulls the train up
-        std::size_t first_piece = 0;               ///< Of the track's pieces, the one the course starts on
-        std::vector<glm::vec3> other_stations { }; ///< Where the track's other stretches with a station start, in their order
+        std::vector<glm::vec3> ups;                     ///< Up for the track at each point, leaning with its bank; none is straight up
+        std::vector<float> distance;                    ///< From the start to each point
+        std::vector<CourseKind> kinds;                  ///< Of the stretch from each point to the next; the last is unused
+        std::vector<float> brake_speeds;                ///< Of the brake or block brake from each point, in m/s: 0 where it has none of its own, below 0 off them; of a booster, the speed it pushes up to
+        std::vector<float> piece_starts;                ///< Distance at the start of each of the track's pieces
+        std::vector<bool> wet;                          ///< By piece, as piece_starts: runs through open water, not in a tube
+        std::vector<bool> covered;                      ///< By piece, as piece_starts: in a tube or tunnel
+        std::vector<bool> steady;                       ///< By piece: a slide's car's swing is not pushed by its turns
+        bool closed = false;                            ///< The end joins the start, so cars go round
+        bool reverse_lift = false;                      ///< Has the hill a reverse cable lift pulls the train up
+        bool splash_end = false;                        ///< Its last piece is a pool slide's open end
+        std::size_t first_piece = 0;                    ///< Of the track's pieces, the one the course starts on
+        std::vector<glm::vec3> other_stations { };      ///< Where the track's other stretches with a station start, in their order
+        std::vector<std::vector<glm::vec3>> climbs { }; ///< Of a slide climbed on foot, its pieces' ways up and down (PieceRecord::climbs)
+        std::vector<PoolOpening> pool_openings { };     ///< Where its pieces join a pool beside them (PieceRecord::pool_sides)
+        std::vector<float> drop_offs { };               ///< Distances where a slide's riders are let off into the pool, on the way back to its lift
+        /// Stretches, from and to a distance, where a slide's car on its way back to its lift is down in the pool's
+        /// water: from where its path first falls below the height its piece starts at, to that piece's end.
+        std::vector<std::array<float, 2>> wades { };
         [[nodiscard]] float length() const
         {
             return distance.empty() ? 0 : distance.back();

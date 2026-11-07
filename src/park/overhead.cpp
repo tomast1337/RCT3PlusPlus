@@ -66,7 +66,8 @@ namespace rct3::park
     bool is_roof(std::uint32_t category) noexcept
     {
         using enum ItemCategory;
-        for (const ItemCategory c : { Wall, SmallScenery, MediumScenery, Animatronic, ParkEntrance, Ride, RideEntrance, RideExit, Stall, Floor, Roof, WallCorner })
+        // Not the park's gate: guests out of the rain would crowd it, blocking those coming in and going home.
+        for (const ItemCategory c : { Wall, SmallScenery, MediumScenery, Animatronic, Ride, RideEntrance, RideExit, Stall, Floor, Roof, WallCorner })
             if (category == static_cast<std::uint32_t>(c))
                 return true;
         return false;

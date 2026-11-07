@@ -51,12 +51,12 @@ namespace
 
 TEST_CASE("quarter turns go round clockwise from -X")
 {
-    CHECK(turned_x(0) == glm::vec2(-1, 0));
-    CHECK(turned_x(1) == glm::vec2(0, 1));
-    CHECK(turned_x(2) == glm::vec2(1, 0));
-    CHECK(turned_x(3) == glm::vec2(0, -1));
-    CHECK(turned_x(4) == turned_x(0));
-    CHECK(turned_x(-1) == turned_x(3));
+    CHECK(turned_x(ModelTurn { 0 }) == glm::vec2(-1, 0));
+    CHECK(turned_x(ModelTurn { 1 }) == glm::vec2(0, 1));
+    CHECK(turned_x(ModelTurn { 2 }) == glm::vec2(1, 0));
+    CHECK(turned_x(ModelTurn { 3 }) == glm::vec2(0, -1));
+    CHECK(turned_x(ModelTurn::from(4)) == turned_x(ModelTurn { 0 }));
+    CHECK(turned_x(ModelTurn::from(-1)) == turned_x(ModelTurn { 3 }));
 }
 
 TEST_CASE("a tile item stands on the middle of its tile, on the ground")
@@ -104,7 +104,7 @@ TEST_CASE("turns keep a model's shape")
         const glm::mat4 m = object_transform(at(0, 1, turns), Positioning::Tile, g);
         CHECK(glm::determinant(glm::mat3(m)) == doctest::Approx(1));
         const glm::vec3 x = place(m, { 1, 0, 0 }) - place(m, { 0, 0, 0 });
-        CHECK(glm::vec2(x.x, x.z) == turned_x(turns));
+        CHECK(glm::vec2(x.x, x.z) == turned_x(ModelTurn { turns }));
     }
 }
 
@@ -129,26 +129,39 @@ TEST_CASE("a corner item's origin goes to the edge its turn faces, as an edge it
 
 TEST_CASE("an edge item snaps to the tile edge nearest the pointer")
 {
-    CHECK(snapped_turns(Positioning::Edge, { 0.1f, 0.5f }) == 0);
-    CHECK(snapped_turns(Positioning::Edge, { 0.5f, 0.9f }) == 1);
-    CHECK(snapped_turns(Positioning::Edge, { 0.9f, 0.5f }) == 2);
-    CHECK(snapped_turns(Positioning::Half, { 0.5f, 0.1f }) == 3);
+    CHECK(snapped_turn(Positioning::Edge, { 0.1f, 0.5f }) == ModelTurn { 0 });
+    CHECK(snapped_turn(Positioning::Edge, { 0.5f, 0.9f }) == ModelTurn { 1 });
+    CHECK(snapped_turn(Positioning::Edge, { 0.9f, 0.5f }) == ModelTurn { 2 });
+    CHECK(snapped_turn(Positioning::Half, { 0.5f, 0.1f }) == ModelTurn { 3 });
     // The turn faces the edge the pointer is nearest.
     for (const glm::vec2 at : { glm::vec2 { 0.2f, 0.4f }, glm::vec2 { 0.3f, 0.8f }, glm::vec2 { 0.7f, 0.6f }, glm::vec2 { 0.6f, 0.15f } })
     {
         const std::array gaps { at.x, 1 - at.y, 1 - at.x, at.y }; // To each edge, in turn order
-        CHECK(*snapped_turns(Positioning::Edge, at) == std::ranges::min_element(gaps) - gaps.begin());
+        CHECK(snapped_turn(Positioning::Edge, at)->value == std::ranges::min_element(gaps) - gaps.begin());
     }
+}
+
+TEST_CASE("an item against a side takes the side nearest the pointer of those it suits")
+{
+    const auto every = [](Side) { return true; };
+    CHECK(nearest_side({ 0.5f, 0.9f }, every) == Side::kNextRow);
+    CHECK(nearest_side({ 0.9f, 0.5f }, every) == Side::kNextCol);
+    CHECK(nearest_side({ 0.5f, 0.1f }, every) == Side::kRowBefore);
+    CHECK(nearest_side({ 0.1f, 0.5f }, every) == Side::kColBefore);
+    // Only the sides that suit: the nearer of them.
+    CHECK(nearest_side({ 0.9f, 0.6f }, [](Side side) { return !side.on_columns(); }) == Side::kNextRow);
+    CHECK(nearest_side({ 0.9f, 0.4f }, [](Side side) { return !side.on_columns(); }) == Side::kRowBefore);
+    CHECK(!nearest_side({ 0.5f, 0.5f }, [](Side) { return false; }));
 }
 
 TEST_CASE("a corner item turns to the pointer's quarter and other items keep the player's turns")
 {
-    CHECK(snapped_turns(Positioning::Corner, { 0.2f, 0.7f }) == 0);
-    CHECK(snapped_turns(Positioning::Corner, { 0.7f, 0.7f }) == 1);
-    CHECK(snapped_turns(Positioning::Corner, { 0.7f, 0.2f }) == 2);
-    CHECK(snapped_turns(Positioning::Corner, { 0.2f, 0.2f }) == 3);
-    CHECK(!snapped_turns(Positioning::Tile, { 0.2f, 0.2f }));
-    CHECK(!snapped_turns(Positioning::Quarter, { 0.2f, 0.2f }));
+    CHECK(snapped_turn(Positioning::Corner, { 0.2f, 0.7f }) == ModelTurn { 0 });
+    CHECK(snapped_turn(Positioning::Corner, { 0.7f, 0.7f }) == ModelTurn { 1 });
+    CHECK(snapped_turn(Positioning::Corner, { 0.7f, 0.2f }) == ModelTurn { 2 });
+    CHECK(snapped_turn(Positioning::Corner, { 0.2f, 0.2f }) == ModelTurn { 3 });
+    CHECK(!snapped_turn(Positioning::Tile, { 0.2f, 0.2f }));
+    CHECK(!snapped_turn(Positioning::Quarter, { 0.2f, 0.2f }));
 }
 
 TEST_CASE("a quarter-tile item goes to its quarter")

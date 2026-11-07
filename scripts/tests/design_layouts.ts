@@ -56,8 +56,8 @@ for (const [overlay, kind, place, pieces, name] of designs) {
     expect(r.pieces === pieces, `the ${kind} design laid whole, ${pieces} pieces, not ${r.pieces}`);
     const heights = map.objects().filter((o) => o.overlay.toLowerCase().startsWith("tracks/") && o.height !== null).map((o) => o.height!);
     expect(Math.min(...heights) >= ground, `the ${kind} design above the ground, its lowest piece at ${Math.min(...heights)}, not below ${ground}`);
-    build.stop();
-    await ui.click("placing/close");
+    // Laid, its building closes on its own.
+    expect(build.construction() === undefined, `the ${kind} building closed once laid`);
     await frames(5);
     expect(rides.list()[ride].entrance !== null, `the ${kind} design laid with its doors`);
     expect(rides.setState(ride, "testing") == null, `the ${kind} design closed round, to be tested`);

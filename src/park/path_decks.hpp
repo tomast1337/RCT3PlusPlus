@@ -37,6 +37,7 @@
 
 #include "park/edge_walls.hpp"
 #include "park/path_styles.hpp"
+#include "park/turns.hpp"
 #include "save/model/world.hpp"
 
 #include <array>
@@ -89,7 +90,7 @@ namespace rct3::park
     struct Deck
     {
         DeckPiece piece = DeckPiece::Flat;
-        std::uint8_t turns = 0; ///< Quarter turns, as the piece's object stores its rotation
+        ModelTurn turn; ///< As the piece's object stores its rotation
         friend bool operator==(const Deck&, const Deck&) = default;
     };
 
@@ -98,29 +99,36 @@ namespace rct3::park
     [[nodiscard]] Deck flat_deck(std::uint8_t sides, std::uint8_t corners) noexcept;
 
     /// The piece of a tile of stored slope `slope` (1 or 2 steep, 4 or 5 gentle) entered heading `heading`,
-    /// with a gentle slope beside it on side heading + 3 (`before`) or heading + 1 (`after`).
-    [[nodiscard]] Deck slope_deck(std::uint8_t slope, std::uint8_t heading, bool before, bool after) noexcept;
+    /// with a gentle slope beside it on the side left of the heading (`before`) or right of it (`after`).
+    [[nodiscard]] Deck slope_deck(std::uint8_t slope, Side heading, bool before, bool after) noexcept;
 
-    /// A heading as a park stores a path's direction (0 towards lower columns, 1 higher columns, 2 lower
-    /// rows, 3 higher rows), and back: the same swap both ways.
-    [[nodiscard]] std::uint8_t stored_direction(std::uint8_t heading) noexcept;
+    /// A heading as a park stores a path's direction: 0 towards lower columns, 1 higher columns, 2 lower rows,
+    /// 3 higher rows.
+    [[nodiscard]] std::uint8_t stored_direction(Side heading) noexcept;
+
+    /// The heading a park's stored path direction names; nothing for kNoDirection or any other value past 3.
+    [[nodiscard]] std::optional<Side> stored_heading(std::uint8_t direction) noexcept;
+
+    /// The heading a stored direction names, where a value past 3 is taken as its bare count of quarter turns,
+    /// so a path or queue without a direction keeps the piece it has always been drawn with.
+    [[nodiscard]] Side stored_heading_or_bare(std::uint8_t direction) noexcept;
 
     /// The two corners of a tile (in the terrain's corner order) on its edge on `side`.
-    [[nodiscard]] std::array<std::size_t, 2> edge_corners(std::uint8_t side) noexcept;
+    [[nodiscard]] std::array<std::size_t, 2> edge_corners(Side side) noexcept;
 
     /// The height at which `path` on its tile of `grid` meets the tile's edge on `side`; nothing when it does not
     /// reach that edge.
-    [[nodiscard]] std::optional<float> edge_height(const save::PathTile& path, const save::TerrainGrid& grid, std::uint8_t side);
+    [[nodiscard]] std::optional<float> edge_height(const save::PathTile& path, const save::TerrainGrid& grid, Side side);
 
     /// The deck piece of a raised path of `style` on a tile.
     [[nodiscard]] std::string deck_symbol(const PathStyle& style, DeckPiece piece);
 
-    /// The piece of a raised queue tile and its turns (Deck::piece is left Flat).
-    [[nodiscard]] std::pair<QueuePiece, std::uint8_t> queue_deck(const save::PathTile& queue);
+    /// The piece of a raised queue tile and its turn.
+    [[nodiscard]] std::pair<QueuePiece, ModelTurn> queue_deck(const save::PathTile& queue);
 
-    /// The symbol and turns of the object drawing raised path or queue `path` of `style` among `paths`; an empty
+    /// The symbol and turn of the object drawing raised path or queue `path` of `style` among `paths`; an empty
     /// symbol when the style lacks the piece.
-    [[nodiscard]] std::pair<std::string, std::uint8_t> deck_for(const PathStyle& style, const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    [[nodiscard]] std::pair<std::string, ModelTurn> deck_for(const PathStyle& style, const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
 
     /// Gives each raised path and queue on the tiles from `low` to `high` (inclusive) the piece and turn
     /// its neighbours call for, changing the symbol and rotation of the object that draws it. The pieces come

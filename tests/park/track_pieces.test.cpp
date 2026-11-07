@@ -105,13 +105,13 @@ TEST_CASE("banks lean left when the right rail is higher, upside down at four st
 TEST_CASE("headings count eighths of a turn from -X, turning right positive")
 {
     const glm::vec3 side { 0, 0, 1 };
-    CHECK(measure_end({ -1, 0, 0 }, side).heading == 0);
-    CHECK(measure_end({ -1, 0, 1 }, side).heading == 1);
-    CHECK(measure_end({ 0, 0, 1 }, side).heading == 2);
-    CHECK(measure_end({ 1, 0, 0 }, side).heading == 4);
-    CHECK(measure_end({ 0, 0, -1 }, side).heading == 6);
+    CHECK(measure_end({ -1, 0, 0 }, side).heading == Heading8 { 0 });
+    CHECK(measure_end({ -1, 0, 1 }, side).heading == Heading8 { 1 });
+    CHECK(measure_end({ 0, 0, 1 }, side).heading == Heading8 { 2 });
+    CHECK(measure_end({ 1, 0, 0 }, side).heading == Heading8 { 4 });
+    CHECK(measure_end({ 0, 0, -1 }, side).heading == Heading8 { 6 });
     // Straight up, the way the rails' level line faces stands in for the direction.
-    CHECK(measure_end({ 0, 1, 0 }, { 0, 0, 1 }).heading == 0);
+    CHECK(measure_end({ 0, 1, 0 }, { 0, 0, 1 }).heading == Heading8 { 0 });
 }
 
 TEST_CASE("a piece laid backwards swaps its ends, turning them round and negating slope and bank")
@@ -196,8 +196,8 @@ TEST_CASE("the tip of a placed piece is its line's end in the park, turned with 
     CHECK(tip.position.y == doctest::Approx(3));
     CHECK(tip.position.z == doctest::Approx(5.5f * kTile));
     CHECK(tip.end == PieceEnd { 0, 0, 0 });
-    CHECK(tip_of(placed(5, 5, 1, 3), s, false, g).end.heading == 2);
-    CHECK(tip_of(placed(5, 5, 0, 3), s, true, g).end.heading == 4);
+    CHECK(tip_of(placed(5, 5, 1, 3), s, false, g).end.heading == Heading8 { 2 });
+    CHECK(tip_of(placed(5, 5, 0, 3), s, true, g).end.heading == Heading8 { 4 });
     // Its start, as the end of a piece before it.
     const TrackTip start = start_of(placed(5, 5, 0, 3), s, false, g);
     CHECK(start.position.x == doctest::Approx(5 * kTile));
@@ -225,7 +225,7 @@ TEST_CASE("the next piece goes on the tile its start meets, turned to the tip")
     REQUIRE(back);
     CHECK(back->object.col == 6);
     CHECK(back->object.rotation == 2);
-    CHECK(back->next.end.heading == 0);
+    CHECK(back->next.end.heading == Heading8 { 0 });
 }
 
 TEST_CASE("a saved layout moved and turned keeps each piece where the one before it ends")
@@ -362,4 +362,18 @@ TEST_CASE("a track set's pieces are also looked for in the files beside it whose
     std::ofstream(dir / "Broken.common.ovl") << "not an overlay";
     CHECK(piece_files_beside(dir / "Set.common.ovl") == std::vector { dir / "Set_More.common.ovl" });
     fs::remove_all(dir);
+}
+
+TEST_CASE("slide_climbs: each slide is reached up the loop and along the path ending nearest its top")
+{
+    // A walk up from the water, a stub off each side at the top, and two slides down from the stubs' ends.
+    const std::vector<glm::vec3> loop { { 0, 0, 10 }, { 0, 2, 6 }, { 0, 4, 2 }, { 0, 5, 0 } };
+    const std::vector<std::vector<glm::vec3>> paths { { { 0, 4, 2 }, { -2, 4, 2 } }, { { 0, 5, 0 }, { 2, 5, 0 } } };
+    const std::vector<std::vector<glm::vec3>> slides { { { 2.1f, 5, 0 }, { 3, 0, 10 } }, { { -2.1f, 4, 2 }, { -3, 0, 10 } } };
+    const auto ways = slide_climbs(loop, paths, slides);
+    REQUIRE(ways.size() == 2);
+    CHECK(ways[0] == std::vector<glm::vec3> { { 0, 0, 10 }, { 0, 2, 6 }, { 0, 4, 2 }, { 0, 5, 0 }, { 0, 5, 0 }, { 2, 5, 0 }, { 2.1f, 5, 0 }, { 3, 0, 10 } });
+    CHECK(ways[1] == std::vector<glm::vec3> { { 0, 0, 10 }, { 0, 2, 6 }, { 0, 4, 2 }, { 0, 4, 2 }, { -2, 4, 2 }, { -2.1f, 4, 2 }, { -3, 0, 10 } });
+    // With no walk up, no ways.
+    CHECK(slide_climbs({ }, paths, slides).empty());
 }

@@ -1287,7 +1287,7 @@ TEST_CASE("a party waits on a tile every member can walk to, not behind a no-ent
     auto& paths = park.world().paths;
     const NodeId mouth = *paths.find({ 3, 1, 0 });
     const NodeId main = *paths.find({ 3, 0, 0 });
-    paths.set_no_entry(mouth, 3, true);
+    paths.set_no_entry(mouth, rct3::park::Side::kRowBefore, true);
     const auto leader = park.guest({ 6, 0 });
     const auto queasy = park.guest({ 6, 0 }, { .nausea = 0.9f }); // Too sick to ride
     const auto party = park.party({ leader, queasy });
@@ -1311,7 +1311,7 @@ TEST_CASE("one let go where they find no way to their party is lost a while, the
         park.path({ 0, 0 }, { 6, 0 }).path({ 3, 1 }, { 3, 2 }).path({ 10, 0 }, { 12, 0 });
         // A spur whose mouth bars guests coming in from the main path, and a stretch of path joined to nothing.
         auto& paths = park.world().paths;
-        paths.set_no_entry(*paths.find({ 3, 1, 0 }), 3, true);
+        paths.set_no_entry(*paths.find({ 3, 1, 0 }), rct3::park::Side::kRowBefore, true);
         const auto a = park.guest({ 3, 2 });
         const auto b = park.guest({ 3, 2 });
         const auto c = park.guest({ 3, 2 });

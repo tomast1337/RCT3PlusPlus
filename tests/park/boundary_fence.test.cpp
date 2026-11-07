@@ -77,13 +77,13 @@ TEST_CASE("a park fence panel's lean follows the ground under its edge as it is 
 {
     save::TerrainGrid g = small_park();
     const BoundaryFence fence = boundary_fence("Chain", "", g, { }, 0);
-    const auto on = [&](TileSide side) {
-        const auto found = std::ranges::find_if(fence.pieces, [&](const save::PlacedObject& o) { return o.col == 1 && o.row == 1 && o.rotation == edge_turns(side); });
+    const auto on = [&](Side side) {
+        const auto found = std::ranges::find_if(fence.pieces, [&](const save::PlacedObject& o) { return o.col == 1 && o.row == 1 && o.rotation == edge_turns(side).value; });
         REQUIRE(found != fence.pieces.end());
         return *found;
     };
-    const save::PlacedObject back = on(TileSide::Back);
-    const save::PlacedObject left = on(TileSide::Left);
+    const save::PlacedObject back = on(Side::kRowBefore);
+    const save::PlacedObject left = on(Side::kColBefore);
     CHECK(panel_lean(g, back) == glm::vec2(0.0f));
     g.cells[1 * 3 + 1].corners = { 0, 2, 1, 3 }; // Reshaped: up 2 along x, 1 along z, over a tile of 4
     CHECK(panel_lean(g, back) == glm::vec2(0.5f, 0.0f));

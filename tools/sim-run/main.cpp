@@ -289,6 +289,7 @@ int main(int argc, char** argv)
     }
     const std::size_t walking = simulation::start_guests(world);
     const std::size_t seated = simulation::board_saved_riders(world, *people, guests, *rides, ride_entities);
+    const std::size_t swimmers = simulation::resume_saved_swimmers(world, *people, guests);
     const std::size_t parties = simulation::import_parties(world, *people, guests);
     const auto park_model = save::load_park(*file, index);
     const std::size_t litter = simulation::import_litter(world, *people, simulation::park_state(park_model ? &*park_model : nullptr, *world_model).time);
@@ -375,7 +376,7 @@ int main(int argc, char** argv)
     for (const auto& stall : rides->stalls)
         for (const auto& item : stall.items)
             out.info("stall {} [{}] sells {} ({})", stall.base.name.c_str(), stall.base.symbol.c_str(), item.name.c_str(), item.kind_symbol.c_str());
-    out.info("paths {:d}  shops {:d}  rides {:d}  guests walking {:d}  seated {:d}  parties {:d}", world.paths.nodes().size(), shops, ride_count, walking, seated, parties);
+    out.info("paths {:d}  shops {:d}  rides {:d}  guests walking {:d}  seated {:d}  swimming {:d}  parties {:d}", world.paths.nodes().size(), shops, ride_count, walking, seated, swimmers, parties);
     {
         // Groups of path tiles joined to each other, to spot paths the import failed to join.
         const auto& nodes = world.paths.nodes();

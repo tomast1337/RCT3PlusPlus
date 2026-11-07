@@ -249,15 +249,27 @@ namespace rct3::park
             return { kEdge, t };
         }
 
-        /// Whether a path joins `square`, a path, at its side `side`: a path at its surface, or the foot or the
-        /// top of a slope or of stairs facing it at its surface.
-        bool path_joins(const PoolMap& map, const PoolSquare& square, Side side)
+        /// Whether one of `openings` joins `square` at its side `side`, at its surface.
+        bool opened(std::span<const PoolOpening> openings, const PoolSquare& square, Side side)
         {
             const auto [dc, dr] = side.step();
+            return std::ranges::any_of(openings, [&](const PoolOpening& o) { return o.col == square.col + dc && o.row == square.row + dr && o.side == side.opposite() && o.height == square.surface; });
+        }
+
+        /// Whether something meets `square`, a path, at its side `side`, at its surface: one of `openings` (a slide's
+        /// station or end), a square of the complex there level with it, the foot or the top of a slope or of steps
+        /// facing it, or the foot or the top of a spiral staircase.
+        bool path_joins(const PoolMap& map, const PoolSquare& square, Side side, std::span<const PoolOpening> openings)
+        {
+            if (opened(openings, square, side))
+                return true;
+            const auto [dc, dr] = side.step();
             const auto next = map.at(square.col + dc, square.row + dr, square.surface);
-            if (!next || !is_pool_path(next->kind))
+            if (!next)
                 return false;
-            if (next->kind == PoolKind::Path)
+            if (next->kind == PoolKind::Stairs)
+                return next->surface == square.surface || next->surface + std::max(next->board, kLowestStairs) == square.surface;
+            if (next->kind != PoolKind::PathSlope && next->kind != PoolKind::PathStairs)
                 return next->surface == square.surface;
             const std::int32_t rise = next->kind == PoolKind::PathSlope ? kPathSlopeRise : kPathStairsRise;
             const bool foot_here = next->side.opposite() == side;
@@ -515,10 +527,10 @@ namespace rct3::park
             return { { square.kind == PoolKind::PathSlope ? "PathSlope" : "PathStairs", square.surface, ModelTurn::toward(square.side) } };
         if (square.kind == PoolKind::Path)
         {
-            // One piece, its shape from the sides where a path joins it, turned as saved parks show.
+            // One piece, its shape from the sides where something joins it, turned as saved parks show.
             std::uint8_t joins = 0;
             for (const Side side : kSides)
-                if (path_joins(map, square, side))
+                if (path_joins(map, square, side, openings))
                     joins |= static_cast<std::uint8_t>(side.bit());
             const auto count = std::popcount(joins);
             const auto has = [&](Side side) { return (joins & side.bit()) != 0; };
@@ -526,9 +538,9 @@ namespace rct3::park
                 return { { "PathXRoads", square.surface, { } } };
             for (const Side side : kSides)
             {
-                // shortcut: no saved park has a junction, so its turn is a guess; check it once one does.
+                // Turned so its closed side, its model's side 1, is the side nothing joins.
                 if (count == 3 && !has(side))
-                    return { { "PathTJunction", square.surface, ModelTurn::toward(side.right()) } };
+                    return { { "PathTJunction", square.surface, ModelTurn::toward(side.left()) } };
                 if (count == 2 && has(side) && has(side.right()))
                     return { { "PathCorner", square.surface, ModelTurn::toward(side) } };
             }
@@ -595,8 +607,7 @@ namespace rct3::park
             const auto ramp_up = ramp_between(map, square.col + dc, square.row + dr, side.opposite());
             const bool stairs_up = std::ranges::any_of(map.squares, [&](const PoolSquare& s) { return s.kind == PoolKind::Stairs && s.col == square.col + dc && s.row == square.row + dr && s.surface + std::max(s.board, kLowestStairs) == square.surface; });
             const bool way = (own_ramp && own_ramp->first == square.surface) || (ramp_up && ramp_up->second == square.surface) || stairs_up;
-            const bool joined = std::ranges::any_of(openings, [&](const PoolOpening& o) { return o.col == square.col + dc && o.row == square.row + dr && o.side == side.opposite() && o.height == square.surface; });
-            if (!room && !way && !joined && (!next || next->surface != square.surface))
+            if (!room && !way && !opened(openings, square, side) && (!next || next->surface != square.surface))
                 out.push_back({ "Railing", square.surface, ModelTurn::toward(side) });
             // A staircase's top is railed where no square meets it.
             const std::int32_t top = square.surface + std::max(square.board, kLowestStairs);

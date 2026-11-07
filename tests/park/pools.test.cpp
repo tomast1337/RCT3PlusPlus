@@ -410,10 +410,41 @@ TEST_CASE("pools: a pool path's piece follows the paths joining it, slopes by th
         cross.squares.push_back({ .col = col, .row = row, .kind = PoolKind::Path, .surface = 4, .depth = 0 });
     CHECK(piece(cross, 1, 1).first == "PathXRoads");
     cross.squares.pop_back();
-    CHECK(piece(cross, 1, 1) == Piece { "PathTJunction", 1 });
+    CHECK(piece(cross, 1, 1) == Piece { "PathTJunction", 3 });
     // A path costs its flat price.
     CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Path, .depth = 0 }) == 11);
     CHECK(pool_refund(kPrices, { .kind = PoolKind::PathStairs, .depth = 0 }) == -9);
+}
+
+TEST_CASE("pools: a pool path joins a slide's station, the paving, the water and a spiral staircase's top beside it")
+{
+    const auto piece = [](const PoolMap& map, std::int32_t col, std::int32_t row, std::span<const PoolOpening> openings = { }) {
+        const auto pieces = pool_pieces(map, *map.at(col, row), openings);
+        REQUIRE(pieces.size() == 1);
+        return std::pair { pieces[0].symbol, pieces[0].turn.value };
+    };
+    using Piece = std::pair<std::string_view, std::int32_t>;
+    // A path down the rows past a station along the column before it: an L at its end, a T beside its middle.
+    const PoolMap map { {
+        { .col = 1, .row = 0, .kind = PoolKind::Path, .surface = 6, .depth = 0 },
+        { .col = 1, .row = 1, .kind = PoolKind::Path, .surface = 6, .depth = 0 },
+        { .col = 1, .row = 2, .kind = PoolKind::Path, .surface = 6, .depth = 0 },
+    } };
+    const std::array<PoolOpening, 2> station { { { .col = 0, .row = 0, .height = 6, .side = Side::kNextCol }, { .col = 0, .row = 1, .height = 6, .side = Side::kNextCol } } };
+    CHECK(piece(map, 1, 0, station) == Piece { "PathCorner", 3 });
+    CHECK(piece(map, 1, 1, station) == Piece { "PathTJunction", 0 });
+    CHECK(piece(map, 1, 2, station) == Piece { "PathStraight", 2 });
+    // Not at another height.
+    const std::array<PoolOpening, 1> higher { { { .col = 0, .row = 1, .height = 7, .side = Side::kNextCol } } };
+    CHECK(piece(map, 1, 1, higher) == Piece { "PathStraight", 2 });
+    // Paving and water level with it join it; a spiral staircase at its top.
+    PoolMap pool = map;
+    pool.squares.push_back({ .col = 2, .row = 0, .kind = PoolKind::Tile, .surface = 6 });
+    pool.squares.push_back({ .col = 2, .row = 1, .kind = PoolKind::Water, .surface = 6 });
+    pool.squares.push_back({ .col = 0, .row = 2, .kind = PoolKind::Stairs, .surface = 2, .board = 4 });
+    CHECK(piece(pool, 1, 0) == Piece { "PathCorner", 0 });
+    CHECK(piece(pool, 1, 1) == Piece { "PathTJunction", 2 });
+    CHECK(piece(pool, 1, 2) == Piece { "PathCorner", 2 });
 }
 
 TEST_CASE("pools: a trail lays the next pool path piece from where its last one ended, its slope's foot at the low end")

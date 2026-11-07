@@ -287,7 +287,7 @@ namespace rct3::park
     };
 
     /// The pieces `square` of `map` is built of, from the bottom up, railings last; none on a side one of `openings`
-    /// joins it at.
+    /// joins it at. A path is one piece, shaped by the sides something meets it at, `openings` among them.
     [[nodiscard]] std::vector<PoolPiece> pool_pieces(const PoolMap& map, const PoolSquare& square, std::span<const PoolOpening> openings = { });
 
     /// The pieces of every square of `map`, as placed objects of the pool type in `overlay`, each standing

@@ -74,4 +74,21 @@ expect(changed.length === 1, "the other platforms' steps as the game saved them"
 camera.look({ col: step.col + 0.5, row: step.row + 0.5, up: up }, { col: step.col + 6, row: step.row + 5, up: up + 5 });
 await frames(20);
 await screenshot("pool_visuals_steps_gone");
+
+// Each slide's water fades where it stops: out along a piece before a dry lift, and over the last stretch of an open
+// end. An open end over a pool keeps rings spreading on the water where its water falls in.
+const ends = rides.list().filter((r) => !r.demolished && r.name !== undefined);
+log("rides", ends.map((r) => r.name).join(", "));
+const slide_ends = map.objects().filter((o) => /^EndStraight|^SlideEnd/i.test(o.symbol));
+for (const [k, e] of slide_ends.entries()) {
+    const h = e.height ?? 0;
+    camera.look({ col: e.col + 0.5, row: e.row + 0.5, up: h }, { col: e.col + 2.5, row: e.row + 2.5, up: h + 7 });
+    await frames(90);
+    await screenshot(`pool_visuals_end_${k}`);
+    camera.look({ col: e.col + 0.5, row: e.row + 0.5, up: h }, { col: e.col - 3, row: e.row + 2, up: h + 5 });
+    await frames(30);
+    await screenshot(`pool_visuals_end_${k}_side`);
+    const rings = map.rings().filter((r) => Math.abs(r.col - e.col) < 4 && Math.abs(r.row - e.row) < 4);
+    log("end", e.symbol, e.col, e.row, "rings near", rings.length);
+}
 log("POOL_VISUALS ok");

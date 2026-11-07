@@ -1332,6 +1332,30 @@ namespace rct3::scene
             start_rings(scene, down.second, kDownRings);
             return true;
         });
+        // Off a pool slide's open end, a fine spray leaves the lip now and then, and where the water comes down rings
+        // keep spreading on a pool, or it splashes on the ground, each a little off the last.
+        if (scene.park_clock >= scene.pours_next && !scene.slide_pours.empty())
+        {
+            constexpr float kPourGap = 0.4f;     ///< Chosen by eye: seconds between one spray and ring and the next
+            constexpr float kPourSpray = 0.25f;  ///< Chosen by eye: the spray this small, off the lip
+            constexpr float kPourRings = 0.35f;  ///< Chosen by eye: the rings' strength where it falls in
+            constexpr float kPourSplash = 0.3f;  ///< Chosen by eye: the splash this small on the ground
+            constexpr float kPourScatter = 0.5f; ///< Chosen by eye: how far off the landing each comes down
+            scene.pours_next = scene.park_clock + kPourGap;
+            for (std::size_t k = 0; k < scene.slide_pours.size(); ++k)
+            {
+                const ParkScene::SlidePour& pour = scene.slide_pours[k];
+                // Spread as hash noise of the clock: no state to keep, and different for each end.
+                const auto noise = [&](float salt) { return glm::fract(std::sin(scene.park_clock * 12.9898f + static_cast<float>(k) * 78.233f + salt) * 43758.547f); };
+                const glm::vec3 lip = glm::mix(pour.left, pour.right, noise(1.0f));
+                fire_park_particles(scene.particles, kSplashEffects[0], lip, glm::normalize(pour.landing - lip), kPourSpray);
+                const glm::vec3 at = pour.landing + glm::vec3(noise(2.0f) - 0.5f, 0.0f, noise(3.0f) - 0.5f) * (2 * kPourScatter);
+                if (pour.water)
+                    start_rings(scene, at, kPourRings);
+                else
+                    fire_park_particles(scene.particles, kSplashEffects[0], at, glm::vec3(0, 1, 0), kPourSplash);
+            }
+        }
         scene.car_waters.resize(scene.cars.size());
         std::vector<float> moved(scene.cars.size()); // Along its course since the park kept it, by car
         for (std::size_t i = 0; i < scene.cars.size(); ++i)

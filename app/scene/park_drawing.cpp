@@ -580,13 +580,15 @@ namespace rct3::scene
                 device.begin_pass(back);
             }
         }
-        // Off each pool slide's open end its water pours down, from its lip onto the water or ground below.
+        // Off each pool slide's open end its water falls, from its lip onto the water or ground below; the
+        // spray and rings it makes are set off with the cars' splashes (park_refresh.cpp).
         // shortcut: found again only when the park's count of objects changes, upgrade if a moved end piece keeps
         // its old pour.
         if (scene.pours_found != scene.objects.size())
         {
             scene.pours_found = scene.objects.size();
             scene.slide_pours.clear();
+            scene.pours_next = 0;
             constexpr float kPourSpeed = 1.5f; ///< m/s the water leaves the lip at. Chosen by eye
             for (const save::PlacedObject& o : scene.objects)
             {
@@ -614,16 +616,13 @@ namespace rct3::scene
                 if (below >= lip.y)
                     continue;
                 const float throw_out = kPourSpeed * std::sqrt(2 * (lip.y - below) / 9.81f);
-                const auto point = [](glm::vec3 p) { return save::WorldPoint3 { p.x, p.y, p.z }; };
-                scene.slide_pours.push_back(save::Waterfall { .lip_left = point(left), .lip_right = point(right), .top = point(lip - glm::vec3(flow.x, 0, flow.y)), .bottom = point(glm::vec3(lip.x + flow.x * throw_out, below, lip.z + flow.y * throw_out)), .flow = point(glm::vec3(flow.x, 0, flow.y)) });
+                scene.slide_pours.push_back({ .left = left, .right = right, .landing = { lip.x + flow.x * throw_out, below, lip.z + flow.y * throw_out }, .water = below > scene.grid.height_at(lip.x, lip.z).value_or(below) });
             }
         }
         // Jets of water are drawn with the waterfalls, as running water of their picture.
-        if (!scene.footpaths.waterfalls.empty() || !scene.slide_pours.empty() || !scene.jets.empty() || !scene.waterfall_mesh.indices.empty())
+        if (!scene.footpaths.waterfalls.empty() || !scene.jets.empty() || !scene.waterfall_mesh.indices.empty())
             profiling::section("Waterfalls", [&] {
-                std::vector<save::Waterfall> falls = scene.footpaths.waterfalls;
-                falls.insert(falls.end(), scene.slide_pours.begin(), scene.slide_pours.end());
-                park::waterfall_mesh(falls, scene.park_clock, scene.waterfall_mesh);
+                park::waterfall_mesh(scene.footpaths.waterfalls, scene.park_clock, scene.waterfall_mesh);
                 std::vector<const park::WaterJet*> jets;
                 for (const ParkScene::Jet& jet : scene.jets)
                     jets.push_back(&jet.water);

@@ -512,10 +512,20 @@ namespace rct3::scene
         ui::UiTextures object_textures;
         std::uint32_t ripple_frame = 0;  ///< Of the still water of objects, the picture shown (park::water_picture)
         park::ObjectMesh waterfall_mesh; ///< The waterfalls' water, built again each frame as it runs
-        /// The water pouring off pool slides' open ends, drawn as waterfalls, and how many objects the park had
-        /// when they were found.
-        std::vector<save::Waterfall> slide_pours;
+        /// The water running off a pool slide's open end: it sprays off the lip and falls, and where it comes down
+        /// rings spread on a pool's water or it splashes.
+        struct SlidePour
+        {
+            glm::vec3 left { 0.0f };    ///< One end of the lip
+            glm::vec3 right { 0.0f };   ///< The other
+            glm::vec3 landing { 0.0f }; ///< Where the water comes down
+            bool water = false;         ///< On water rather than ground
+        };
+        /// The pools slides' open ends pour off, how many objects the park had when they were found, and park_clock
+        /// when they next spray and ring.
+        std::vector<SlidePour> slide_pours;
         std::size_t pours_found = 0;
+        float pours_next = 0;
         /// Water a park object shoots: a cannon a guest fires, or a jumping fountain at the next.
         struct Jet
         {

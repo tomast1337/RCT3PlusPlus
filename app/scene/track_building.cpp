@@ -11,6 +11,7 @@
 #include "park/asset_index.hpp"
 #include "park/build_arrows.hpp"
 #include "park/demolish_refund.hpp"
+#include "park/design_placement.hpp"
 #include "park/flexi_colours.hpp"
 #include "park/object_models.hpp"
 #include "park/relief_maps.hpp"
@@ -54,6 +55,7 @@
 #include <format>
 #include <fstream>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <set>
 #include <span>
@@ -472,6 +474,16 @@ namespace rct3::scene
             return stem.substr(close == std::string::npos ? 0 : close + 1);
         }
 
+        /// A design's name as the player reads it: translated where the game names it, else its file's.
+        std::u16string design_title(const ui::StringTable& strings, const std::filesystem::path& file)
+        {
+            const std::string name = design_name(file);
+            std::string key(kDesignText);
+            std::ranges::copy_if(name, std::back_inserter(key), [](char c) { return c != ' ' && c != '\'' && c != '-'; });
+            const std::u16string text(strings.get(key));
+            return text.empty() ? strings::to_utf16(name) : text;
+        }
+
         /// Whether `o`, a piece of the ride being built, goes only on water and has dry land under it. Pieces of
         /// other rides may run under water, as rides that splash through it need.
         bool off_water(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, save::PlacedObject o)
@@ -693,6 +705,33 @@ namespace rct3::scene
             b.in_ground = whole && !refused && cut_refused(scene, std::span(shown).first(pieces));
             b.clashes = !whole || refused.has_value() || b.in_ground;
             b.unowned = refused && refused->unowned;
+            b.refusal = park::DesignRefusal::None;
+            b.pool_openings.clear();
+            if (starting && !b.design.empty())
+            {
+                // A design is refused for the first of its reasons, in the order its panel tells them.
+                const std::span<const save::PlacedObject> laid = std::span(shown).first(pieces);
+                const auto ground = [&](const save::PlacedObject& p) { return static_cast<float>(park::ride_site({ p.col, p.row }, { 1, 1 }, { }, scene.grid).height); };
+                std::vector<float> grounds;
+                std::vector<park::PoolOpening>& openings = b.pool_openings;
+                float lowest = std::numeric_limits<float>::max();
+                // A piece whose own height is under the ground passes into it; one on the ground that only dips into
+                // it, as a banked piece does, is cut round as a piece built by hand is.
+                bool buried = false;
+                for (std::size_t i = 0; i < laid.size(); ++i)
+                {
+                    grounds.push_back(ground(laid[i]));
+                    const float base = laid[i].base_height ? static_cast<float>(*laid[i].base_height) : grounds.back();
+                    lowest = std::min(lowest, base);
+                    buried = buried || base < grounds.back();
+                    if (const auto piece = park::shape_named(*c, b.design[i].symbol))
+                        std::ranges::copy(park::piece_pool_openings(laid[i], piece->record), std::back_inserter(openings));
+                }
+                using enum park::DesignRefusal;
+                b.refusal = b.unowned ? NotOwned : whole && park::stands_too_high(lowest, grounds) ? TooHigh : !whole || refused ? Intersects : b.in_ground || (buried && !b.cut_ground) ? IntoGround : !park::meets_pools(scene.pools, openings) ? OffPoolEdge : None;
+                b.in_ground = b.refusal == IntoGround;
+                b.clashes = b.refusal != None;
+            }
             // A station piece shows its platform, as it will stand once laid between its neighbours.
             // shortcut: a design's ghost shows none; upgrade by laying its platforms along it the same way.
             const auto kit = has_platform(shape) && b.design.empty() ? ride_platforms(b, ride, assets) : std::nullopt;
@@ -1518,6 +1557,9 @@ namespace rct3::scene
         }
         if (auto arm = scene.desktop->root().find(kArmName))
             arm->close();
+        if (auto design = scene.desktop->root().find_as<ui::InfoPanel>(kDesignPlacingName); design && design->showing())
+            design->hide();
+        scene.building.design_tabs_for.reset();
         if (auto browser = scene.desktop->root().find(kBrowserName))
             browser->close();
         scene.building.offer_designs = false;
@@ -2082,6 +2124,16 @@ namespace rct3::scene
         {
             use_split(scene, b, split);
             logging::logger("park").info("design laid with {} of {} pieces for {}, mode {}, lift {} m/s", ride.track->pieces.size(), design.size(), cash - scene.park.cash.value_or(0), std::to_underlying(ride.mode), ride.options.lift_speed);
+            // Named and playing as its panel says; then, as a flat ride set down, on to its window and its doors,
+            // the entrance first, where the design brought none. A ride in a pool has none to place.
+            if (b.design_title.find_first_not_of(u' ') != std::u16string::npos)
+                ride.base.name = strings::to_utf8(b.design_title);
+            scene.ride_tunes[ride.base.id] = b.design_tune;
+            scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, *b.ride };
+            if (!(*b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].pool_ride))
+                scene.doors_requested = *b.ride;
+            close_track_building(scene);
+            return true;
         }
         // A ride that is one building is done once set down: on to its window, where its doors are placed.
         if (*b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].one_piece && !ride.track->pieces.empty())
@@ -2328,7 +2380,103 @@ namespace rct3::scene
             scene.refusal = change_ride_state(scene, *b.ride, states[choice->second].state).value_or("");
             b.tabs_for.reset();
         }
-        if (const std::tuple now { starting, scene.rides.rides.at(*b.ride).base.state, whole, b.smooth_cuts }; b.tabs_for != now || !placing->showing())
+        // A design in hand has its own round panel, as a flat ride being placed has, in this order: turning it, with
+        // the price of all its pieces beside it; its window's page, its name to type and its tune with why it may
+        // not stand where it is; its colours; and cutting the ground it passes into smoothly or sharply. At most one
+        // of the two is lit, pressing the lit one putting it out; with neither, ground in its way refuses it.
+        const bool holding = starting && !b.design.empty();
+        auto design = scene.desktop->root().find_as<ui::InfoPanel>(kDesignPlacingName);
+        if (design && holding)
+        {
+            enum DesignTab : std::size_t
+            {
+                Turn,
+                Page,
+                Paint,
+                Smoothly,
+                Sharply,
+            };
+            if (placing->showing())
+                placing->hide();
+            if (design->take_closed())
+            {
+                close_track_building(scene);
+                return;
+            }
+            if (const auto tab = design->take_action())
+            {
+                if (*tab == Turn)
+                {
+                    b.turn = b.turn.turned(1);
+                    changed = true;
+                }
+                if (*tab == Smoothly || *tab == Sharply)
+                {
+                    const bool smooth = *tab == Smoothly;
+                    b.cut_ground = !(b.cut_ground && b.smooth_cuts == smooth);
+                    b.smooth_cuts = smooth;
+                    changed = true;
+                }
+            }
+            if (const auto paint = design->take_paint(); paint && paint->pot < std::tuple_size_v<save::RideColours>)
+            {
+                save::RideColours colours = next_colours(scene, b);
+                colours.at(paint->pot) = static_cast<std::uint8_t>(paint->colour);
+                b.colours = colours;
+            }
+            if (const auto change = design->take_change())
+            {
+                if (change->id == ui::control_id(ui::AttractionControl::Name))
+                    b.design_title = change->text;
+                else if (change->id == ui::control_id(ui::AttractionControl::Music))
+                    b.design_tune = static_cast<std::size_t>(std::max(change->value, 0));
+            }
+            const auto page = [&] {
+                ui::InfoPage p;
+                ui::InfoControl name { .id = ui::control_id(ui::AttractionControl::Name), .name = "TT_AttractionDialogIconLabelButton", .kind = ui::InfoControlKind::Text, .maximum = ui::kLongestAttractionName, .text = b.design_title, .width = ui::kNameWidth, .help = std::u16string(assets.strings->get("TT_AttractionDialogIconLabelButton")) };
+                p.controls.push_back(std::move(name));
+                ui::InfoControl music { .id = ui::control_id(ui::AttractionControl::Music), .name = "AttractionViewDialogMusicToolTip", .kind = ui::InfoControlKind::Choice, .value = static_cast<int>(b.design_tune), .beside = true, .width = ui::kNameWidth, .help = std::u16string(assets.strings->get("AttractionViewDialogMusicToolTip")) };
+                music.items.emplace_back(assets.strings->get("AttractionViewDialogNoMusic"));
+                music.items.insert(music.items.end(), scene.tunes.begin(), scene.tunes.end());
+                p.controls.push_back(std::move(music));
+                p.controls.push_back({ .name = "status", .kind = ui::InfoControlKind::Words });
+                return p;
+            };
+            const save::RideColours colours = next_colours(scene, b);
+            if (const std::tuple now { b.cut_ground, b.smooth_cuts, colours }; b.design_tabs_for != now || !design->showing())
+            {
+                std::vector<ui::InfoTab> tabs(5);
+                tabs[Turn] = { .icon = "IconAttractionEditorRotate", .help = std::u16string(assets.strings->get("ATE_TT_Rotate")), .action = true };
+                for (const ui::AttractionTabInfo& t : ui::attraction_tabs(ui::AttractionKind::Tracked, save::AttractionState::Closed))
+                    if (t.tab == ui::AttractionTab::View)
+                        tabs[Page] = { .icon = std::string(t.icon), .help = std::u16string(assets.strings->get(t.help)) };
+                tabs[Paint] = { .icon = "Attraction_Colour", .help = std::u16string(assets.strings->get("Scenery_SetFlexiColours")), .paints = { colours.begin(), colours.end() } };
+                for (const auto& [tab, name, smooth] : { std::tuple { Smoothly, "Smooth", true }, std::tuple { Sharply, "Sharp", false } })
+                    tabs[tab] = { .icon = std::format("TerrainFlattener_{}{}", name, b.cut_ground && b.smooth_cuts == smooth ? "On" : "Off"), .help = std::u16string(assets.strings->get(std::format("TerrainFlattener_{}_ToolTip", name))), .action = true };
+                // The turn, the page and the colours where the original's three are; the ground's two down the
+                // disc's outer side under them, clear of the page.
+                for (std::size_t i = 0; i < tabs.size(); ++i)
+                    tabs[i].slot = i < Smoothly ? static_cast<int>(i) : static_cast<int>(Smoothly) - 1 - static_cast<int>(i);
+                design->show(std::move(tabs), Page);
+                design->show_page(page());
+                b.design_tabs_for = now;
+            }
+            if (const auto picked = design->take_picked(); picked && *picked == Page)
+                design->show_page(page());
+            if (auto status = design->find_as<ui::Label>("body/status_label"))
+                status->text = assets.strings->get(park::refusal_key(b.refusal));
+            std::int64_t price = 0;
+            for (const save::TrackPiece& p : b.design)
+                if (const auto shape = c != nullptr ? park::shape_named(*c, p.symbol) : std::nullopt)
+                    price += shape->record.cost;
+            design->show_view_text(ui::money_text(ui::currency(*assets.strings, currency), price));
+        }
+        else if (design && design->showing())
+        {
+            design->hide();
+            b.design_tabs_for.reset();
+        }
+        if (const std::tuple now { starting, scene.rides.rides.at(*b.ride).base.state, whole, b.smooth_cuts }; !holding && (b.tabs_for != now || !placing->showing()))
         {
             std::vector<ui::InfoTab> tabs(7);
             for (const ui::AttractionTabInfo& t : ui::attraction_tabs(ui::AttractionKind::Tracked, std::get<1>(now)))
@@ -2657,12 +2805,7 @@ namespace rct3::scene
             for (std::size_t i = 0; i < b.designs.size(); ++i)
             {
                 const save::DesignSummary& d = b.designs[i].summary;
-                const std::string name = design_name(b.designs[i].path);
-                std::string key(kDesignText);
-                std::ranges::copy_if(name, std::back_inserter(key), [](char c) { return c != ' ' && c != '\'' && c != '-'; });
-                std::u16string text(strings.get(key));
-                if (text.empty())
-                    text = strings::to_utf16(name);
+                std::u16string text = design_title(strings, b.designs[i].path);
                 const bool locked = career::design_locked(d.scenario, d.level, careers);
                 b.designs_locked.push_back(locked);
                 if (locked)
@@ -2750,6 +2893,10 @@ namespace rct3::scene
             const auto design = *build > 0 ? design_ride(b.designs.at(*build - 1).path) : std::nullopt;
             b.design = design ? design->ride.track->pieces : std::vector<save::TrackPiece> { };
             b.design_ride = design ? std::optional(design->ride) : std::nullopt;
+            // Named as its window names it, with no tune, and refused where its ground needs cutting until asked.
+            b.design_title = *build > 0 ? design_title(*assets.strings, b.designs.at(*build - 1).path) : std::u16string { };
+            b.design_tune = 0;
+            b.cut_ground = false;
             b.design_doors.clear();
             for (std::size_t i = 0; design && i < design->ride.stations.size(); ++i)
             {

@@ -812,6 +812,15 @@ namespace rct3::scene
                      { "ghostAt", b.ghost ? Json { { "col", b.ghost->object.col }, { "row", b.ghost->object.row }, { "height", b.ghost->object.base_height.value_or(0) } } : Json(nullptr) },
                      { "clashes", b.clashes },
                      { "unowned", b.unowned },
+                     { "refusal", std::string(park::refusal_key(b.refusal)) },
+                     { "turn", b.turn.value },
+                     { "poolSides",
+                       [&] {
+                           Json sides = Json::array();
+                           for (const park::PoolOpening& o : b.pool_openings)
+                               sides.push_back({ { "col", o.col }, { "row", o.row }, { "height", o.height }, { "side", o.side.value } });
+                           return sides;
+                       }() },
                      { "ghostDoors", b.ghost_doors },
                      { "ghostPlatform", b.ghost_platform },
                      { "completing", b.completing.has_value() },

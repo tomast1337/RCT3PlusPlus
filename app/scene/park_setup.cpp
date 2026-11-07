@@ -1619,6 +1619,7 @@ namespace rct3::scene
             scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), info);
             ui::InfoPanelStyle placing = std::move(info);
             placing.left = true;
+            scene.desktop->root().add<ui::InfoPanel>(std::string(kDesignPlacingName), placing);
             scene.desktop->root().add<ui::InfoPanel>(std::string(kPlacingName), std::move(placing));
             scene.desktop->root().add<ui::FootpathPanel>(std::string(kFootpathPanelName), skins::footpath_panel_style(palette), strings);
         }

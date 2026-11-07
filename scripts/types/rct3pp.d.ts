@@ -296,12 +296,14 @@ declare namespace build {
     function pick(overlay: string, symbol: string, offer?: "designs"): boolean;
     /** The construction panel's ride (its place in rides.list()), how many pieces fit where the track goes on,
      * the one picked, whether it can be built there (and its arrows show), whether it may not stand there (for a design,
-     * any of its pieces or doors) and whether for land the park does not own, the doors a design's ghost shows, and the files of the saved designs of its kind (the
+     * any of its pieces or doors) and whether for land the park does not own, for a design in hand the string key of why
+     * it may not stand ("" when it may) and the tiles where its ghost meets a pool beside them (each with the height and the side, as
+     * the pools' sides count, the pool square must be across), the quarter turns of the first piece, the doors a design's ghost shows, and the files of the saved designs of its kind (the
      * player's own, then the install's), the piece clicked mid-track to build over (its place in the ride's
      * track), null while building at the open end, and on a ride of two tracks side by side the split button's
      * state: 1 joined from the left track, 2 the left alone, 3 joined from the right, 4 the right alone; 0 on
      * other rides. Undefined while the panel is shut. */
-    function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; arrows: boolean; ghostAt: { col: number; row: number; height: number } | null; clashes: boolean; unowned: boolean; ghostDoors: number; ghostPlatform: string; completing: boolean; proposed: number; complaint: string; testing: boolean; testAt: number | null; testWrecks: number; designs: string[]; selected: number | null; split: number } | undefined;
+    function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; arrows: boolean; ghostAt: { col: number; row: number; height: number } | null; clashes: boolean; unowned: boolean; refusal: string; turn: number; poolSides: { col: number; row: number; height: number; side: number }[]; ghostDoors: number; ghostPlatform: string; completing: boolean; proposed: number; complaint: string; testing: boolean; testAt: number | null; testWrecks: number; designs: string[]; selected: number | null; split: number } | undefined;
     /** What building gave to be heard: how many thumps of something put down were asked for since the park opened
      * (several close together are heard as one), and while a shaping stroke goes the loudness of its rumble, 0..1. */
     function sounds(): { thumps: number; rumble: number | null };

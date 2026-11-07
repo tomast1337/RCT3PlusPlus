@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Every saved design of a pool slide the game ships, laid on the blank landscape, tested and then opened: each is laid
-// whole and runs several cars down with none crashing. Logs for each design its pieces, its cars' top speed, the most
+// whole, with pool water put down first where its pool sides must meet one, and runs several cars down with none
+// crashing. Logs for each design its pieces, its cars' top speed, the most
 // they swing up a trough's wall and any crash, and each train's place, speed and swing through its test.
 //
 //   ./nob script scripts/tests/slide_designs.ts -- --no-intro --no-audio --seed 1
@@ -24,43 +25,103 @@ const kDesigns: [string, string, number][] = [
     ["MasterBlaster", "Slipstream", 69], ["MasterBlaster", "Tubular", 63],
 ];
 
+const kPool = "Pool/Default/Default_Stub";
+let here: [number, number] = [0, 0]; // Where the pointer was last moved for a ghost
+const kSteps: [number, number][] = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // By side, as the pools count them
+
+/** Moves the pointer until the design in hand has its first piece on tile `goal`; whether it does. */
+async function aim(goal: { col: number; row: number }): Promise<boolean> {
+    let at = { ...goal };
+    for (let i = 0; i < 4; ++i) {
+        camera.look({ col: at.col, row: at.row }, { col: at.col, row: at.row + 30, up: 45 });
+        await frames(4);
+        const p = map.screen(at.col, at.row)!;
+        here = [p.x, p.y];
+        pointer.move(...here);
+        await frames(4);
+        const g = build.construction()?.ghostAt;
+        if (!g)
+            return false;
+        if (g.col === goal.col && g.row === goal.row)
+            return true;
+        at = { col: at.col + goal.col - g.col, row: at.row + goal.row - g.row };
+    }
+    return false;
+}
+
+/** With a slide's design in hand where only its pool sides keep it from standing: water laid with the pool tool on
+ * each tile across them, then the design picked again by `pick`, turned and aimed as before. Whether it may stand. */
+async function byPool(pick: () => Promise<void>): Promise<boolean> {
+    const c = build.construction()!;
+    const at = c.ghostAt!;
+    const turn = c.turn;
+    const across = c.poolSides.map((s) => ({ col: s.col + kSteps[s.side][0], row: s.row + kSteps[s.side][1] }));
+    await ui.click("design_placing/close");
+    await frames(5);
+    const rides_tab = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+    if (!ui.find("tools/Rides/Obj_Pools"))
+        await ui.click(rides_tab);
+    await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
+    await ui.click("tools/Rides/Obj_Pools");
+    await until(() => ui.find("pool_panel/body/editor/Pool_PlaceWater") !== undefined, 120, "the pool panel");
+    expect(build.pick(kPool, "Pool_DepthNormal"), "the water in the pool list");
+    for (const t of across) {
+        camera.look({ col: t.col, row: t.row }, { col: t.col, row: t.row + 30, up: 45 });
+        await frames(4);
+        const p = map.screen(t.col, t.row)!;
+        await pointer.drag([p.x, p.y], [p.x, p.y], 4);
+        await frames(3);
+    }
+    build.stop();
+    await frames(5);
+    await pick();
+    for (let i = 0; i < turn; ++i) {
+        await ui.click("design_placing/IconAttractionEditorRotate");
+        await frames(2);
+    }
+    return (await aim(at)) && build.construction()?.refusal === "";
+}
+
 const failed: string[] = [];
 let shown: string | undefined;
 for (const [kind, design, size] of kDesigns) {
     await park.open("Campaigns/Base/BlankLandscape.dat");
     await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
-    expect(build.pick(`tracks/TrackedRides/${kind}/${kind}`, kind, "designs"), `a ${kind} to build`);
-    await until(() => ui.find("design_browser") !== undefined, 600, "the designs window");
-    await frames(3);
-    const row = build.construction()!.designs.findIndex((d) => d.includes(design));
-    expect(row >= 0, `the ${design} design among ${build.construction()!.designs.join(", ")}`);
-    const list = ui.find("design_browser/content/list")!;
-    const button = ui.find("design_browser/content/build")!;
-    const unit = (button.bottom - button.top) / 22;
-    // Under the column heads and the custom track's row, which stays first.
-    await pointer.click(list.x, list.top + (18 + 16 * (row + 1) + 8) * unit);
-    await frames(5);
-    await ui.click("design_browser/content/build");
-    await frames(10);
-    let spot: [number, number] | undefined;
-    for (let k = 0; k < 60 && spot === undefined; ++k) {
-        const at: [number, number] = [0.05 + 0.06 * (k % 15), 0.3 + 0.1 * Math.floor(k / 15)];
-        pointer.move(...at);
+    const pick = async () => {
+        expect(build.pick(`tracks/TrackedRides/${kind}/${kind}`, kind, "designs"), `a ${kind} to build`);
+        await until(() => ui.find("design_browser") !== undefined, 600, "the designs window");
+        await frames(3);
+        const row = build.construction()!.designs.findIndex((d) => d.includes(design));
+        expect(row >= 0, `the ${design} design among ${build.construction()!.designs.join(", ")}`);
+        const list = ui.find("design_browser/content/list")!;
+        const button = ui.find("design_browser/content/build")!;
+        const unit = (button.bottom - button.top) / 22;
+        // Under the column heads and the custom track's row, which stays first.
+        await pointer.click(list.x, list.top + (18 + 16 * (row + 1) + 8) * unit);
+        await frames(5);
+        await ui.click("design_browser/content/build");
+        await frames(10);
+    };
+    await pick();
+    // Open ground where only its pool sides keep it from standing, then water laid across them for it.
+    let spot = false;
+    for (let k = 0; k < 60 && !spot; ++k) {
+        here = [0.05 + 0.06 * (k % 15), 0.3 + 0.1 * Math.floor(k / 15)];
+        pointer.move(...here);
         await frames(3);
         const c = build.construction();
-        if (c !== undefined && c.ghost && !c.clashes)
-            spot = at;
+        spot = c !== undefined && c.ghost && (c.refusal === "" || c.refusal === "PlaceObject_MustEndOnPoolEdge");
     }
-    if (spot === undefined) {
-        log("DESIGN", kind, design, "no clear ground");
+    if (!spot || (build.construction()!.refusal !== "" && !(await byPool(pick)))) {
+        log("DESIGN", kind, design, "no clear ground", build.construction()?.refusal);
         failed.push(`${design}: no clear ground`);
-        build.stop();
+        if (build.construction() !== undefined)
+            await ui.click("design_placing/close");
         continue;
     }
-    await pointer.click(...spot);
+    // Laid, its building closes and its window opens.
+    await pointer.click(...here);
     await frames(30);
-    build.stop();
-    await frames(10);
     // The construction panel shut, as when the player tests from the ride's window: taking out the ground tool and
     // putting it away shuts it.
     await ui.click("tools/Land/Land");

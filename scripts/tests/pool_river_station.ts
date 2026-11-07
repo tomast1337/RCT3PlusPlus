@@ -3,7 +3,8 @@
 // A lazy river is a pool ride: it has no entrance or exit, its stations join the pool paving, pool paths or path
 // stairs beside them. Closed and opened again it opens; swimmers walk to the square beside a station, get on from
 // it and get off onto it; riders keep floating round over time. A pool slide laid from a saved design away from
-// the pools asks for no entrance or exit and does not open till a station joins a pool. The river's window offers
+// the park's pools (its end in a pool of its own) asks for no entrance or exit and does not open till a station joins
+// a pool. The river's window offers
 // no entrance or exit. Give it a park the game saved with a lazy river joined to its pools and guests swimming:
 //
 //   ./nob script scripts/tests/pool_river_station.ts -- --no-intro --no-audio --seed 1 --park PARK
@@ -20,6 +21,63 @@ await frames(10);
 park.setWeather("sunny");
 park.setTemperature(28);
 park.setTime(0.5);
+const kPool = "Pool/Default/Default_Stub";
+let here: [number, number] = [0, 0]; // Where the pointer was last moved for a ghost
+const kSteps: [number, number][] = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // By side, as the pools count them
+
+/** Moves the pointer until the design in hand has its first piece on tile `goal`; whether it does. */
+async function aim(goal: { col: number; row: number }): Promise<boolean> {
+    let at = { ...goal };
+    for (let i = 0; i < 4; ++i) {
+        camera.look({ col: at.col, row: at.row }, { col: at.col, row: at.row + 30, up: 45 });
+        await frames(4);
+        const p = map.screen(at.col, at.row)!;
+        here = [p.x, p.y];
+        pointer.move(...here);
+        await frames(4);
+        const g = build.construction()?.ghostAt;
+        if (!g)
+            return false;
+        if (g.col === goal.col && g.row === goal.row)
+            return true;
+        at = { col: at.col + goal.col - g.col, row: at.row + goal.row - g.row };
+    }
+    return false;
+}
+
+/** With a slide's design in hand where only its pool sides keep it from standing: water laid with the pool tool on
+ * each tile across them, then the design picked again by `pick`, turned and aimed as before. Whether it may stand. */
+async function byPool(pick: () => Promise<void>): Promise<boolean> {
+    const c = build.construction()!;
+    const at = c.ghostAt!;
+    const turn = c.turn;
+    const across = c.poolSides.map((s) => ({ col: s.col + kSteps[s.side][0], row: s.row + kSteps[s.side][1] }));
+    await ui.click("design_placing/close");
+    await frames(5);
+    const rides_tab = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+    if (!ui.find("tools/Rides/Obj_Pools"))
+        await ui.click(rides_tab);
+    await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
+    await ui.click("tools/Rides/Obj_Pools");
+    await until(() => ui.find("pool_panel/body/editor/Pool_PlaceWater") !== undefined, 120, "the pool panel");
+    expect(build.pick(kPool, "Pool_DepthNormal"), "the water in the pool list");
+    for (const t of across) {
+        camera.look({ col: t.col, row: t.row }, { col: t.col, row: t.row + 30, up: 45 });
+        await frames(4);
+        const p = map.screen(t.col, t.row)!;
+        await pointer.drag([p.x, p.y], [p.x, p.y], 4);
+        await frames(3);
+    }
+    build.stop();
+    await frames(5);
+    await pick();
+    for (let i = 0; i < turn; ++i) {
+        await ui.click("design_placing/IconAttractionEditorRotate");
+        await frames(2);
+    }
+    return (await aim(at)) && build.construction()?.refusal === "";
+}
+
 const rivers = () => rides.list().flatMap((r, i) => (!r.flat && !r.demolished && /lazyriver/i.test(r.symbol) ? [i] : []));
 const river = rivers()[0];
 expect(river !== undefined, "a lazy river in the park");
@@ -89,42 +147,43 @@ expect(off.length > 0, "a rider getting off onto a joined square");
 expect(riders.every((n) => n > 0), `riders floating round all along, not ${riders.join(" ")}`);
 expect(info().open === true, "the river still open");
 
-// 3. A pool ride laid from a saved design away from the pools, a ring slide (the river's own saved design does not
+// 3. A pool ride laid from a saved design away from the park's pools, a ring slide (the river's own saved design does not
 // load as a design yet): no entrance or exit is asked for once it is laid, and it does not open till a station joins
 // a pool.
 await until(() => build.flatRides() !== undefined, 1200, "the build lists");
-expect(build.pick("tracks/TrackedRides/RingSlide/RingSlide", "RingSlide", "designs"), "a ring slide design to build");
-await until(() => ui.find("design_browser") !== undefined, 600, "the designs window");
-await frames(3);
-const row = build.construction()!.designs.findIndex((d) => d.includes("Undertow"));
-expect(row >= 0, `the Undertow design among ${build.construction()!.designs.join(", ")}`);
-const list = ui.find("design_browser/content/list")!;
-const button = ui.find("design_browser/content/build")!;
-const unit = (button.bottom - button.top) / 22;
-await pointer.click(list.x, list.top + (18 + 16 * row) * unit);
-await frames(5);
-await ui.click("design_browser/content/build");
-await frames(10);
+const pick = async () => {
+    expect(build.pick("tracks/TrackedRides/RingSlide/RingSlide", "RingSlide", "designs"), "a ring slide design to build");
+    await until(() => ui.find("design_browser") !== undefined, 600, "the designs window");
+    await frames(3);
+    const row = build.construction()!.designs.findIndex((d) => d.includes("Undertow"));
+    expect(row >= 0, `the Undertow design among ${build.construction()!.designs.join(", ")}`);
+    const list = ui.find("design_browser/content/list")!;
+    const button = ui.find("design_browser/content/build")!;
+    const unit = (button.bottom - button.top) / 22;
+    await pointer.click(list.x, list.top + (18 + 16 * row) * unit);
+    await frames(5);
+    await ui.click("design_browser/content/build");
+    await frames(10);
+};
+await pick();
 camera.look({ col: 20, row: 20, up: 0 }, { col: 20, row: 50, up: 60 });
 await frames(10);
-let spot: [number, number] | undefined;
-for (let k = 0; k < 60 && spot === undefined; ++k) {
-    const at: [number, number] = [0.05 + 0.06 * (k % 15), 0.3 + 0.1 * Math.floor(k / 15)];
-    pointer.move(...at);
+// Open ground where only its pool sides keep it from standing, then a pool of its own laid across them.
+let spot = false;
+for (let k = 0; k < 60 && !spot; ++k) {
+    here = [0.05 + 0.06 * (k % 15), 0.3 + 0.1 * Math.floor(k / 15)];
+    pointer.move(...here);
     await frames(3);
     const c = build.construction();
-    if (c !== undefined && c.ghost && !c.clashes)
-        spot = at;
+    spot = c !== undefined && c.ghost && (c.refusal === "" || c.refusal === "PlaceObject_MustEndOnPoolEdge");
 }
-expect(spot !== undefined, "clear ground for the design");
-await pointer.click(...spot!);
+expect(spot && (build.construction()!.refusal === "" || (await byPool(pick))), "clear ground for the design");
+await pointer.click(...here);
 await frames(30);
 await screenshot("slide_laid");
 const built = rides.list().length - 1;
 expect(/ringslide/i.test(rides.list()[built].symbol) && rides.list()[built].pieces! > 1, "the slide laid");
 expect(build.placing() === undefined, `no entrance or exit asked for, not ${JSON.stringify(build.placing())}`);
-build.stop();
-await frames(10);
 // Its construction panel shut: taking out the ground tool and putting it away shuts it.
 await ui.click("tools/Land/Land");
 await frames(3);

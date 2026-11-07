@@ -3,7 +3,7 @@
 Thank you for wanting to help. Bug reports, format findings, code, tests and documentation are all
 welcome.
 
-Before anything else, read the [Code of Conduct](CODE_OF_CONDUCT.md), including its clean-room standards,
+Before anything else, read the [Code of Conduct](CODE_OF_CONDUCT.md), including its original-work standards,
 and [ORIGINAL_WORK.md](ORIGINAL_WORK.md). They decide what can be accepted, and a contribution that breaks them
 is turned down however good it is.
 

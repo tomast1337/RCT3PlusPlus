@@ -142,6 +142,20 @@ namespace rct3::scene
             return std::nullopt;
         }
 
+        /// `shown` as they look now: in their swimwear inside a pool complex, riding its slides or held or
+        /// falling out of it, their clothes elsewhere (simulation::in_swimwear).
+        park::PlacedPerson dressed(const ShownPerson& shown)
+        {
+            park::PlacedPerson pose = shown.pose;
+            if (shown.swimwear)
+            {
+                pose.look.swimwear = true;
+                pose.look.body = shown.swim_body != nullptr ? shown.swim_body : pose.look.body;
+                pose.look.legs = shown.swim_legs != nullptr ? shown.swim_legs : pose.look.legs;
+            }
+            return pose;
+        }
+
         /// Where simulated guest `guest` sits in the park while riding, as seat_of finds it.
         std::optional<glm::mat4> seat_place(const ParkScene& scene, entt::entity guest)
         {
@@ -380,7 +394,7 @@ namespace rct3::scene
                 const auto seat = seat_of(scene, shown.guest);
                 if (!seat)
                     continue;
-                park::PlacedPerson pose = shown.pose;
+                park::PlacedPerson pose = dressed(shown);
                 pose.level = static_cast<std::size_t>(scene.people_levels[i]);
                 pose.time = shown.saved_time + scene.park_clock * shown.speed;
                 pose.world = seat->second;
@@ -735,15 +749,8 @@ namespace rct3::scene
     {
         const ShownPerson& shown = scene.shown_people[i];
         const bool simulated = simulate && shown.guest != entt::null;
-        park::PlacedPerson pose = shown.pose;
+        park::PlacedPerson pose = dressed(shown);
         pose.time = shown.walking ? shown.saved_time : shown.saved_time + clock * shown.speed;
-        // In their swimwear inside a pool complex, their clothes elsewhere (simulation::in_swimwear).
-        if (shown.swimwear)
-        {
-            pose.look.swimwear = true;
-            pose.look.body = shown.swim_body != nullptr ? shown.swim_body : pose.look.body;
-            pose.look.legs = shown.swim_legs != nullptr ? shown.swim_legs : pose.look.legs;
-        }
         if (simulated)
         {
             const auto& r = scene.sim.registry;

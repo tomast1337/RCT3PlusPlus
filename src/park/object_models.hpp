@@ -261,6 +261,9 @@ namespace rct3::park
         std::optional<ovl::TroughRide> trough;
         float swing_pivot = 0;
         float swing_arm = 0;
+        /// Of a car that is itself a stand-in rider, a dummy with a bone of that name, shown riding while the ride is
+        /// tested: a real rider takes its place, so it is not drawn under one.
+        bool stand_in = false;
         /// Of a pool slide's open end piece, where its water pours off: the ends of its water's two edges.
         std::optional<SlidePour> pour;
         /// Of a rowing boat whose rig moves its oars: its motions rowing straight on, turning to its left and to

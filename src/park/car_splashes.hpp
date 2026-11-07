@@ -24,6 +24,7 @@ namespace rct3::park
         std::uint8_t strength = 0;     ///< Of the last splash: 0 low, 1 medium, 2 high, by its speed
         bool off_end = false;          ///< Run off a pool slide's end; its riders' splashes are on their way
         bool landed = false;           ///< Flown off a pool slide's end, it has come down with its splash
+        bool ridden = false;           ///< Has carried a rider since it last stood empty, off a slide's end with them and back
     };
 
     /// What a car does in the water this step.

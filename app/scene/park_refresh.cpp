@@ -1380,6 +1380,8 @@ namespace rct3::scene
             else if (fleet && spot.train < fleet->trains.size() && scene.courses[spot.ride])
             {
                 const simulation::Coaster& train = fleet->trains[spot.train];
+                const bool aboard = spot.train < fleet->riders.size() && !fleet->riders[spot.train].empty();
+                scene.car_waters[i].ridden = aboard || (scene.car_waters[i].ridden && (train.splashed || train.running));
                 // Between where its last step began and ended, from where the park kept it. Off a pool slide's
                 // end, how long it has flown by now: below 0 while it is still running down to the end in the step
                 // it went off in.
@@ -1539,6 +1541,11 @@ namespace rct3::scene
             joints += arm.joints.size();
         scene.car_mesh_places.resize(scene.car_places.size() + joints);
         std::ranges::copy(scene.car_places, scene.car_mesh_places.begin());
+        // A car that is itself a stand-in rider, a test's dummy, gives way to a real rider from boarding till it
+        // stands empty again, off a slide's end and back with them.
+        for (std::size_t i = 0; i < scene.car_places.size() && i < scene.car_waters.size(); ++i)
+            if (const auto model = scene.car_waters[i].ridden ? scene.models.find(park::model_ref(scene.cars[i])) : scene.models.end(); model != scene.models.end() && model->second.stand_in)
+                scene.car_mesh_places[i] = glm::mat4(0.0f);
         // Cars their bones move are drawn apart. A boat out on the water rows, with the oars its turn calls for; one
         // on a course rows with both while its train moves.
         for (ParkScene::BonedCar& boned : scene.boned_cars)

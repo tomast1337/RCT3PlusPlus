@@ -1101,6 +1101,7 @@ namespace rct3::park
         model.trough = car->trough;
         model.swing_pivot = pivot.y;
         model.swing_arm = car->part.empty() ? pivot.y : part_pivot.y;
+        model.stand_in = bone_of(car->visual, "dummy") || bone_of(car->part, "dummy");
         constexpr std::array<std::string_view, 3> kStrengths { "low", "med", "high" };
         for (std::uint8_t strength = 0; strength < kStrengths.size(); ++strength)
         {

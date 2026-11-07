@@ -2112,11 +2112,19 @@ namespace rct3::scene
         const std::size_t ride = ref.index;
         const park::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : park::TrackRules { };
         const auto course = ride < scene.courses.size() && scene.courses[ride] ? maybe(&*scene.courses[ride]) : std::nullopt;
-        // A pool ride's doors are its stations joined to a pool complex, each run of station stretches one station.
-        // shortcut: only the course's own stretch, not a split track's other stretches with stations; upgrade
-        // when a pool ride may be split.
-        std::size_t joined = 0;
-        if (rules.pool_ride && course && course->points.size() == course->kinds.size())
+        // A pool ride's doors are its stations joined to a pool complex. A slide's station joins where the paving, a
+        // pool path or the top of path stairs meets a side of its platform off the track, at the deck's height; a lazy
+        // river's, which has no platform, where the paving lies across its track, each run of station stretches one
+        // station.
+        // shortcut: a river's only along the course's own stretch, not a split track's other stretches with
+        // stations; upgrade when a pool ride may be split.
+        const save::Ride& r = scene.rides.rides.at(ride);
+        std::vector<std::optional<park::SlidePlatform>> platforms;
+        if (rules.pool_ride && r.track)
+            for (const save::TrackPiece& p : r.track->pieces)
+                platforms.push_back(p.platform ? std::optional(park::SlidePlatform { .col = p.platform->tile_x, .row = p.platform->tile_z, .height = p.platform->height, .turn = park::ModelTurn::from(p.platform->direction) }) : std::nullopt);
+        std::size_t joined = park::joined_stations(scene.pools, platforms);
+        if (rules.pool_ride && course && course->points.size() == course->kinds.size() && std::ranges::none_of(platforms, [](const auto& p) { return p.has_value(); }))
             for (std::size_t k = 0; k + 1 < course->kinds.size(); ++k)
             {
                 if (course->kinds[k] != park::CourseKind::Station)
@@ -2126,7 +2134,7 @@ namespace rct3::scene
                     run.push_back(course->points[k + 1]);
                 joined += simulation::pool_beside(scene.sim, run).has_value() ? 1 : 0;
             }
-        return park::open_refusal(scene.rides.rides.at(ride), rules, state, scene.building.ride == ride, course, joined);
+        return park::open_refusal(r, rules, state, scene.building.ride == ride, course, joined);
     }
 
     std::vector<ui::StateChoice> state_choices(const ParkScene& scene, park::AttractionRef ref)

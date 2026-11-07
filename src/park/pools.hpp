@@ -223,6 +223,10 @@ namespace rct3::park
     /// height: the complex's paving joins the slide's station there, and its platform shows steps down that side.
     [[nodiscard]] bool slide_platform_joined(const PoolMap& map, const SlidePlatform& platform, Side side);
 
+    /// How many stations of a pool ride `map` joins. `platforms` holds each piece's platform square in track order,
+    /// none off its stations; pieces with one, one after another, are a station, joined where any of its squares is.
+    [[nodiscard]] std::size_t joined_stations(const PoolMap& map, std::span<const std::optional<SlidePlatform>> platforms);
+
     /// The shapes of wall a water square takes, each a set of pieces of the pool type.
     enum class PoolWall : std::uint8_t
     {

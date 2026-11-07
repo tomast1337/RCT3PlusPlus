@@ -353,6 +353,23 @@ namespace rct3::park
         return side.on_columns() == platform.turn.facing().on_columns() && met(map, platform.col, platform.row, side, platform.height);
     }
 
+    std::size_t joined_stations(const PoolMap& map, std::span<const std::optional<SlidePlatform>> platforms)
+    {
+        std::size_t joined = 0;
+        bool counted = false; // Whether the station this piece is on is already counted
+        for (const std::optional<SlidePlatform>& p : platforms)
+        {
+            if (!p)
+                counted = false;
+            else if (!counted && std::ranges::any_of(kSides, [&](Side side) { return slide_platform_joined(map, *p, side); }))
+            {
+                ++joined;
+                counted = true;
+            }
+        }
+        return joined;
+    }
+
     PoolExtraFit pool_extra_fit(std::string_view words)
     {
         PoolExtraFit fit;

@@ -532,6 +532,26 @@ TEST_CASE("pools: a slide's platform is joined where paving or steps meet a side
     CHECK_FALSE(slide_platform_joined(map, platform, Side { 3 }));
 }
 
+TEST_CASE("pools: a pool ride's station counts once as joined where any square of its platform is")
+{
+    PoolMap map;
+    // A station of three squares along column 5 at deck 16, a track piece off it, then a station of two squares
+    // along column 9 at the ground; its sides off the track face the columns.
+    const auto at = [](std::int32_t col, std::int32_t row, std::int32_t height) { return std::optional(SlidePlatform { .col = col, .row = row, .height = height, .turn = ModelTurn { 3 } }); };
+    const std::vector platforms { at(5, 4, 16), at(5, 5, 16), at(5, 6, 16), std::optional<SlidePlatform> { }, at(9, 6, 0), at(9, 5, 0) };
+    CHECK(joined_stations(map, platforms) == 0);
+    // A path along the first station's track, or level with it but a square off, joins neither.
+    map.squares.push_back({ .col = 5, .row = 7, .kind = PoolKind::Path, .surface = 16, .depth = 0 });
+    map.squares.push_back({ .col = 7, .row = 5, .kind = PoolKind::Path, .surface = 16, .depth = 0 });
+    CHECK(joined_stations(map, platforms) == 0);
+    // Paths beside two of its squares join it, once; the top of steps beside the second joins that too.
+    map.squares.push_back({ .col = 6, .row = 4, .kind = PoolKind::Path, .surface = 16, .depth = 0 });
+    map.squares.push_back({ .col = 4, .row = 6, .kind = PoolKind::Path, .surface = 16, .depth = 0 });
+    CHECK(joined_stations(map, platforms) == 1);
+    map.squares.push_back({ .col = 10, .row = 5, .kind = PoolKind::PathStairs, .surface = -kPathStairsRise, .depth = 0, .side = Side { 1 } });
+    CHECK(joined_stations(map, platforms) == 2);
+}
+
 TEST_CASE("pools: each square costs its kind's price and its depth's")
 {
     CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Water, .depth = 2 }) == 100 + 2 * 300);

@@ -2291,6 +2291,29 @@ namespace rct3::simulation
         return pool.open[square][step(at.z - pool.water[square].z) * kOpenSteps + step(at.x - pool.water[square].x)];
     }
 
+    glm::vec2 pool_stop(const SwimPool& pool, glm::vec2 from, glm::vec2 to, float tile)
+    {
+        const auto over = [&](glm::vec2 at) {
+            const auto square = std::ranges::find_if(pool.water, [&](const glm::vec3& w) { return std::abs(at.x - w.x) <= tile / 2 && std::abs(at.y - w.z) <= tile / 2; });
+            return square != pool.water.end() && open_water(pool, static_cast<std::size_t>(square - pool.water.begin()), { at.x, 0, at.y }, tile);
+        };
+        // In steps of the open water's marks, at most a few hundred squares' worth.
+        const float mark = tile / static_cast<float>(kOpenSteps);
+        const int steps = static_cast<int>(std::min(std::ceil(glm::distance(from, to) / mark), 4096.0f));
+        bool inside = over(from);
+        glm::vec2 last = from;
+        for (int i = 1; i <= steps; ++i)
+        {
+            const glm::vec2 at = glm::mix(from, to, static_cast<float>(i) / static_cast<float>(steps));
+            const bool wet = over(at);
+            if (inside && !wet)
+                return last;
+            inside = inside || wet;
+            last = at;
+        }
+        return to;
+    }
+
     std::optional<std::size_t> pool_walk_at(const SwimPool& pool, glm::vec3 at, float tile, float level)
     {
         std::optional<std::size_t> best;
@@ -2721,7 +2744,7 @@ namespace rct3::simulation
                 const float ground = pool != nullptr && !pool->water.empty() ? std::ranges::min_element(pool->water, { }, [&](const glm::vec3& w) { return glm::distance(glm::vec2(w.x, w.z), glm::vec2(at.x, at.z)); })->y : at.y;
                 step_out(r, g);
                 r.remove<Errand, Stride, Linger, Gesture, Watching, RideWalk>(g);
-                pose.position = pose.was = at;
+                pose.position = at; // On from where they were as the step began
                 pose.heading.value = std::atan2(velocity.x, velocity.z);
                 r.emplace<Dropped>(g, Dropped { .ground = ground, .fall = { -velocity.y }, .drift = { velocity.x, velocity.z }, .node = path_to_rejoin(world.paths, at).value_or(kNoNode), .swimwear = true, .pool = room, .slide = from });
             }
@@ -4541,7 +4564,17 @@ namespace rct3::simulation
                 drop.fall.value += kTuning.holding.gravity * dt;
                 if (!drop.thrown)
                     drop.fall.value = std::min(drop.fall.value, kTuning.holding.fastest_fall.value);
-                pose.position += glm::vec3 { drop.drift.x, 0, drop.drift.y } * dt;
+                glm::vec2 across = glm::vec2 { pose.position.x, pose.position.z } + drop.drift * dt;
+                // Off a slide's end into a pool, its far wall stops them, and they go on only down.
+                const auto* door = r.valid(drop.pool) ? r.try_get<PoolDoor>(drop.pool) : nullptr;
+                if (const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<SwimPool>(door->pool) : nullptr; pool != nullptr && r.valid(drop.slide))
+                    if (const glm::vec2 stop = pool_stop(*pool, { pose.position.x, pose.position.z }, across, paths.tile_size); stop != across)
+                    {
+                        across = stop;
+                        drop.drift = { };
+                    }
+                pose.position.x = across.x;
+                pose.position.z = across.y;
                 if (drop.thrown && surroundings != nullptr && surroundings->ground)
                     drop.ground = surroundings->ground({ pose.position.x, pose.position.z });
                 pose.position.y = std::max(pose.position.y - drop.fall.value * dt, drop.ground);
@@ -4712,6 +4745,8 @@ namespace rct3::simulation
             const auto* walks = r.try_get<RideWalks>(e);
             // Those getting off at `station`: where they meant to, or back where they got on.
             // `shift`: from where the train stands at the station's end to where it stands now.
+            // Of the step a pool slide's train ran off its end in, the time left after it got there.
+            const auto off_for = [&](const Coaster& c) { return std::clamp(dt - (c.at - c.was_at) / std::max(c.speed, 0.1f), 0.0f, dt); };
             const auto unload = [&](std::vector<entt::entity>& riders, std::size_t station, glm::vec3 shift = glm::vec3(0.0f), const Coaster* splashed = nullptr) {
                 std::vector<bool> off(riders.size());
                 float side_ahead = 0;
@@ -4810,7 +4845,9 @@ namespace rct3::simulation
                         step_out(r, guest);
                         r.remove<Errand, Stride, Linger, Gesture, Watching, RideWalk>(guest);
                         auto& pose = r.get<Pose>(guest);
-                        pose.position = pose.was = at;
+                        // From where their car was as the step began, as it is drawn, not still at the end for a step.
+                        pose.was = track_point(*splashed, splashed->was_at);
+                        pose.position = at + velocity * off_for(*splashed);
                         pose.heading.value = std::atan2(velocity.x, velocity.z);
                         r.emplace<Dropped>(guest, Dropped { .ground = nearest->y, .fall = { -velocity.y }, .drift = { velocity.x, velocity.z }, .node = *node, .swimwear = true, .pool = *door, .slide = e });
                     }
@@ -4981,7 +5018,19 @@ namespace rct3::simulation
                         if (pool != nullptr && !pool->water.empty())
                             water = std::ranges::min(pool->water, { }, [&](const glm::vec3& w) { return glm::distance(glm::vec2(w.x, w.z), glm::vec2(at.x, at.z)); }).y;
                         const glm::vec3 way = track_way(train, train.at);
-                        train.flight = Flight { .from = at, .way = way, .at = at, .velocity = way * train.speed, .water = std::min(water, at.y) };
+                        train.flight = Flight { .from = at, .way = way, .at = at, .velocity = way * train.speed, .water = std::min(water, at.y), .speed = train.speed };
+                        // A pool's far wall stops it, its middle half a car short of it, however far it would fly.
+                        constexpr float kFar = 100;   ///< Metres on it looks for the wall. Chosen by eye: past any slide's throw
+                        constexpr float kHalfCar = 1; ///< Metres from a slide car's middle to its nose. Chosen by eye
+                        if (const glm::vec2 level { way.x, way.z }; pool != nullptr && glm::length(level) > 1e-3f)
+                        {
+                            const glm::vec2 from { at.x, at.z };
+                            const glm::vec2 far = from + glm::normalize(level) * kFar;
+                            if (const glm::vec2 stop = pool_stop(*pool, from, far, world.paths.tile_size); stop != far)
+                                train.flight->reach = std::max(glm::distance(from, stop) - kHalfCar, 0.0f);
+                        }
+                        // It flies the rest of the step it ran off in.
+                        fly(*train.flight, off_for(train));
                         unload(fleet->riders[t], 0, glm::vec3(0.0f), &train);
                     }
                     const auto stop = round && !train.splashed ? std::optional<std::size_t> { 0 } : was_running ? standing_at(train) : std::nullopt;

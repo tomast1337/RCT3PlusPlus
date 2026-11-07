@@ -96,6 +96,30 @@ TEST_CASE("a swimmer goes up a slide ending in their pool, rides it free in thei
     CHECK(park.run_until([&] { return !train.splashed && standing_at(train).has_value(); }, 10 + kGone));
 }
 
+TEST_CASE("a fast slide's car and rider thrown at a small pool's far wall stop at it and come down in the water")
+{
+    Sandbox park;
+    const auto slide = slide_by_pool(park);
+    auto& r = park.world().registry;
+    r.get<Trains>(slide).trains.front().fixed_speed = 20; // Far past the far wall, two squares on
+    const SwimPool& pool = r.get<SwimPool>(r.get<PoolDoor>(r.view<const PoolDoor>().front()).pool);
+    const float wall = std::ranges::max(pool.water, { }, &glm::vec3::z).z + park.world().paths.tile_size / 2;
+    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    REQUIRE(park.run_until([&] { return r.all_of<Dropped>(guest); }, 900));
+    float furthest = 0;
+    REQUIRE(park.run_until(
+        [&] {
+            if (const auto& f = r.get<Trains>(slide).trains.front().flight)
+                furthest = std::max(furthest, f->at.z);
+            furthest = std::max(furthest, r.get<Pose>(guest).position.z);
+            return r.any_of<Errand>(guest) && r.get<Errand>(guest).kind == ErrandKind::Swimming;
+        },
+        10));
+    CHECK(furthest > wall - park.world().paths.tile_size);
+    CHECK(furthest < wall);
+    CHECK(r.get<Swimmer>(guest).in_water);
+}
+
 TEST_CASE("a swimmer in a slide's queue swims on when the slide breaks down")
 {
     Sandbox park;

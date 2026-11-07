@@ -1380,8 +1380,12 @@ namespace rct3::scene
             else if (fleet && spot.train < fleet->trains.size() && scene.courses[spot.ride])
             {
                 const simulation::Coaster& train = fleet->trains[spot.train];
-                // Between where its last step began and ended, from where the park kept it.
-                const float at = simulation::between_drives(train, scene.sim_time / simulation::kTickSeconds);
+                // Between where its last step began and ended, from where the park kept it. Off a pool slide's
+                // end, how long it has flown by now: below 0 while it is still running down to the end in the step
+                // it went off in.
+                const float along = std::clamp(scene.sim_time / simulation::kTickSeconds, 0.0f, 1.0f);
+                const float flown_for = train.flight ? train.flight->off - (1 - along) * simulation::kTickSeconds : 0.0f;
+                const float at = train.flight ? std::max(train.was_at, train.at + train.flight->speed * std::min(flown_for, 0.0f)) : simulation::between_drives(train, along);
                 moved[i] = at - scene.rides.rides[spot.ride].trains[spot.train].distance;
                 place = park::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, moved[i]);
                 // A slide's car swung up its trough's wall, turned about its shape's pivot.
@@ -1400,9 +1404,17 @@ namespace rct3::scene
                     scene.car_waters[i].off_end = scene.car_waters[i].landed = false;
                 if (train.splashed)
                 {
+                    // Between steps, flown again from where it left to now: its flight is the same however it is
+                    // stepped, and a step is far too long to draw it standing.
+                    std::optional<simulation::Flight> flight;
+                    if (const auto& f = train.flight)
+                    {
+                        flight = simulation::Flight { .from = f->from, .way = f->way, .at = f->from, .velocity = f->way * f->speed, .water = f->water, .speed = f->speed, .reach = f->reach };
+                        simulation::fly(*flight, std::max(flown_for, 0.0f));
+                    }
                     // The car comes down with a splash too, ridden or not.
-                    if (const auto& f = train.flight; f && f->afloat >= 0 && !std::exchange(scene.car_waters[i].landed, true))
-                        scene.splashdowns.emplace_back(scene.park_clock, f->at);
+                    if (flight && flight->afloat >= 0 && !std::exchange(scene.car_waters[i].landed, true))
+                        scene.splashdowns.emplace_back(scene.park_clock, flight->at);
                     if (!std::exchange(scene.car_waters[i].off_end, true))
                         for (const auto [guest, drop, pose] : scene.sim.registry.view<const simulation::Dropped, const simulation::Pose>().each())
                             if (drop.slide == ride && pose.position.y > drop.ground)
@@ -1411,9 +1423,14 @@ namespace rct3::scene
                                 const float g = simulation::kTuning.holding.gravity;
                                 const float f = drop.fall.value;
                                 const float t = (std::sqrt(f * f + 2 * g * (pose.position.y - drop.ground)) - f) / g;
-                                scene.splashdowns.emplace_back(scene.park_clock + t, glm::vec3 { pose.position.x + drop.drift.x * t, drop.ground, pose.position.z + drop.drift.y * t });
+                                glm::vec2 down = glm::vec2 { pose.position.x, pose.position.z } + drop.drift * t;
+                                // Short of the pool's far wall, as the simulation stops them there.
+                                const auto* door = scene.sim.registry.valid(drop.pool) ? scene.sim.registry.try_get<simulation::PoolDoor>(drop.pool) : nullptr;
+                                if (const auto* pool = door != nullptr && scene.sim.registry.valid(door->pool) ? scene.sim.registry.try_get<simulation::SwimPool>(door->pool) : nullptr)
+                                    down = simulation::pool_stop(*pool, { pose.position.x, pose.position.z }, down, scene.sim.paths.tile_size);
+                                scene.splashdowns.emplace_back(scene.park_clock + t, glm::vec3 { down.x, drop.ground, down.y });
                             }
-                    place = train.flight ? simulation::flown(*train.flight, place) : glm::mat4(0.0f);
+                    place = flight ? simulation::flown(*flight, place) : glm::mat4(0.0f);
                 }
                 else if (train.crashed)
                 {

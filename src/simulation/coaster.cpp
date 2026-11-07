@@ -33,6 +33,7 @@ namespace rct3::simulation
 
         constexpr float kWaterDrag = 1.5f; ///< Per second, how fast a car afloat slows. Chosen by eye
         constexpr float kSink = 1;         ///< Metres a car afloat sinks in its last second, out of sight. Chosen by eye
+        constexpr float kSettle = 0.5f;    ///< Seconds a car come down nose first takes to lie level afloat. Chosen by eye
 
         std::size_t point_at(const Coaster& c, float d)
         {
@@ -175,6 +176,16 @@ namespace rct3::simulation
 
     bool fly(Flight& f, float seconds)
     {
+        // Across the ground it goes straight on, so stopping it at its reach is the same in any steps.
+        const auto stopped = [&f] {
+            const glm::vec2 across { f.at.x - f.from.x, f.at.z - f.from.z };
+            if (glm::length(across) <= f.reach)
+                return;
+            const glm::vec2 kept = glm::normalize(across) * f.reach;
+            f.at.x = f.from.x + kept.x;
+            f.at.z = f.from.z + kept.y;
+            f.velocity.x = f.velocity.z = 0;
+        };
         f.off += seconds;
         if (f.afloat < 0)
         {
@@ -184,6 +195,7 @@ namespace rct3::simulation
             const float flown = std::min(t, seconds);
             f.at += f.velocity * flown + glm::vec3(0, -kGravity / 2 * flown * flown, 0);
             f.velocity.y -= kGravity * flown;
+            stopped();
             if (flown < t)
                 return f.off < kGone;
             f.at.y = f.water;
@@ -195,14 +207,19 @@ namespace rct3::simulation
         const float drift = (1 - std::exp(-kWaterDrag * seconds)) / kWaterDrag;
         f.at += f.velocity * drift;
         f.velocity *= std::exp(-kWaterDrag * seconds);
+        stopped();
         f.at.y = f.water - kSink * std::max(f.off - (kGone - 1), 0.0f);
         return f.off < kGone;
     }
 
     glm::mat4 flown(const Flight& f, const glm::mat4& place)
     {
-        const glm::vec3 level = glm::vec3(f.way.x, 0, f.way.z);
-        const glm::vec3 to = f.afloat < 0 && glm::length(f.velocity) > 1e-3f ? glm::normalize(f.velocity) : glm::length(level) > 1e-3f ? glm::normalize(level) : f.way;
+        // Nose along the way it flies, as if no wall stopped it, then levelling off once afloat. With nothing
+        // stored but how it left, so it turns the same between steps as at them.
+        const glm::vec3 level = glm::length(glm::vec2(f.way.x, f.way.z)) > 1e-3f ? glm::normalize(glm::vec3(f.way.x, 0, f.way.z)) : f.way;
+        const glm::vec3 fall = f.way * f.speed - glm::vec3(0, kGravity * (f.afloat < 0 ? f.off : f.off - f.afloat), 0);
+        const glm::vec3 nose = glm::length(fall) > 1e-3f ? glm::normalize(fall) : level;
+        const glm::vec3 to = f.afloat < 0 ? nose : glm::normalize(glm::mix(nose, level, std::min(f.afloat / kSettle, 1.0f)) + level * 1e-3f);
         const glm::vec3 axis = glm::cross(f.way, to);
         const float turn = std::atan2(glm::length(axis), glm::dot(f.way, to));
         const glm::mat4 turned = glm::length(axis) > 1e-6f ? glm::rotate(glm::mat4(1.0f), turn, glm::normalize(axis)) : glm::mat4(1.0f);

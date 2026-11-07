@@ -505,6 +505,10 @@ namespace rct3::simulation
     /// Whether `at` is over the open water of the square `square` of `pool`'s water, `tile` across.
     [[nodiscard]] bool open_water(const SwimPool& pool, std::size_t square, glm::vec3 at, float tile);
 
+    /// Where something going straight across `pool` (its squares `tile` across) from `from` to `to` is stopped by
+    /// its walls: once over its open water, at the last of it on the way; `to` if it never comes out of it.
+    [[nodiscard]] glm::vec2 pool_stop(const SwimPool& pool, glm::vec2 from, glm::vec2 to, float tile);
+
     /// The walk of `pool` (its squares `tile` across) that `at` is on, the one nearest its height where squares are
     /// stacked; off them, the nearest whose middle is within kTuning.pools.platform squares across and two height
     /// units `level` high, as a slide's station is from the path beside its platform. None further off.

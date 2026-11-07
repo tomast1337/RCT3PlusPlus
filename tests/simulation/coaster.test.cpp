@@ -838,16 +838,19 @@ TEST_CASE("a car off a slide's end flies on, comes down on its water ahead and f
     CHECK(f.afloat < 0);
     CHECK(f.at.y == doctest::Approx(3 - 9.81f / 2 * fall * fall / 4));
     CHECK(f.at.z == doctest::Approx(4 * fall));
-    // Nose down as it falls, level once afloat.
-    CHECK(flown(f, glm::mat4(1.0f))[2].y < 0);
+    // Nose down as it falls, levelling off once afloat.
+    const float dived = flown(f, glm::mat4(1.0f))[2].y;
+    CHECK(dived < 0);
     CHECK(fly(f, fall));
     CHECK(f.afloat >= 0);
     CHECK(f.at.y == doctest::Approx(1));
     CHECK(f.at.z > 8 * fall);
-    CHECK(flown(f, glm::mat4(1.0f))[2].y == doctest::Approx(0).epsilon(1e-5));
+    CHECK(flown(f, glm::mat4(1.0f))[2].y > dived);
+    CHECK(flown(f, glm::mat4(1.0f))[2].y < 0);
     // It drifts on slowing, then sinks and is gone.
     const float drifted = f.at.z;
     CHECK(fly(f, 1));
+    CHECK(flown(f, glm::mat4(1.0f))[2].y == doctest::Approx(0).epsilon(1e-5));
     CHECK(f.at.z > drifted);
     CHECK(glm::length(f.velocity) < 8);
     float t = 0;
@@ -855,4 +858,19 @@ TEST_CASE("a car off a slide's end flies on, comes down on its water ahead and f
         t += 0.1f;
     CHECK(t == doctest::Approx(kGone - 1 - fall * 1.5f - 0.1f).epsilon(0.05));
     CHECK(f.at.y < 1);
+}
+
+TEST_CASE("a car off a slide's end is stopped by its pool's far wall, and flies the same however its time is stepped")
+{
+    const Flight start { .from = { 0, 3, 0 }, .way = { 0, 0, 1 }, .at = { 0, 3, 0 }, .velocity = { 0, 0, 8 }, .water = 1, .speed = 8, .reach = 5 };
+    Flight stepped = start;
+    for (int i = 0; i < 20; ++i)
+        fly(stepped, 0.25f);
+    Flight whole = start;
+    fly(whole, 5);
+    CHECK(stepped.at.z == doctest::Approx(5));
+    CHECK(stepped.at.x == doctest::Approx(0));
+    CHECK(stepped.afloat >= 0);
+    CHECK(glm::distance(stepped.at, whole.at) < 1e-3f);
+    CHECK(stepped.velocity.z == 0);
 }

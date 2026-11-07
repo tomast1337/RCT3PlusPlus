@@ -77,6 +77,10 @@ namespace rct3::simulation
         float water = 0;        ///< Height it comes down at: the pool's water, or the ground with no pool under it
         float afloat = -1;      ///< Seconds since it came down; below 0 while it flies
         float off = 0;          ///< Seconds since it left the track
+        float speed = 0;        ///< Metres a second it left the track at, along `way`
+        /// Metres across the ground from `from` it goes at most: where the far wall of the pool it comes down in
+        /// stops it, going on only down.
+        float reach = std::numeric_limits<float>::infinity();
     };
 
     /// Seconds after it left the track a car off a slide's end is gone. Measured: a capture of the original game,
@@ -85,6 +89,8 @@ namespace rct3::simulation
 
     /// Moves `flight` on by `seconds`: flying it falls, and comes down on its water; afloat it drifts on slowing
     /// and sinks in its last second. False once kGone seconds have passed since it left the track and it is gone.
+    /// Where it is comes out the same however its time is cut into steps, so a flight can be flown again from its
+    /// start to any moment of it.
     bool fly(Flight& flight, float seconds);
 
     /// Moves a car drawn at `flight`'s start, as it left the track, to where the flight has it: nose along its

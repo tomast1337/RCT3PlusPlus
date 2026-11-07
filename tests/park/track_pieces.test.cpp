@@ -3,6 +3,7 @@
 
 #include "../ovl/builder.hpp"
 #include "../ovl/record_file.hpp"
+#include "ovl/spline.hpp"
 #include "park/object_placement.hpp"
 
 #include <algorithm>
@@ -376,4 +377,36 @@ TEST_CASE("slide_climbs: each slide is reached up the loop and along the path en
     CHECK(ways[1] == std::vector<glm::vec3> { { 0, 0, 10 }, { 0, 2, 6 }, { 0, 4, 2 }, { 0, 4, 2 }, { -2, 4, 2 }, { -2.1f, 4, 2 }, { -3, 0, 10 } });
     // With no walk up, no ways.
     CHECK(slide_climbs({ }, paths, slides).empty());
+}
+
+TEST_CASE("a piece's middle line follows its rails even when they are split into a different number of parts")
+{
+    // Straight rails 8 long along -X, a metre apart: the left in two parts, the right in one.
+    const auto rail = [](float z, std::vector<float> xs) {
+        ovl::Spline s;
+        for (std::size_t i = 0; i < xs.size(); ++i)
+        {
+            ovl::SplineNode n;
+            n.position = { xs[i], 0, z };
+            if (i > 0)
+                n.tangent_in = { (xs[i - 1] - xs[i]) / 3, 0, 0 };
+            if (i + 1 < xs.size())
+                n.tangent_out = { (xs[i + 1] - xs[i]) / 3, 0, 0 };
+            s.nodes.push_back(n);
+        }
+        return s;
+    };
+    const auto line = middle_line(rail(-0.5f, { 4, 0, -4 }), rail(0.5f, { 4, -4 }));
+    REQUIRE(line);
+    REQUIRE(line->path.size() > 2);
+    float length = 0;
+    for (std::size_t k = 0; k < line->path.size(); ++k)
+    {
+        CHECK(line->path[k].z == doctest::Approx(0));
+        CHECK(line->ups[k].y == doctest::Approx(1));
+        if (k > 0)
+            length += glm::distance(line->path[k - 1], line->path[k]);
+    }
+    CHECK(length == doctest::Approx(8));
+    CHECK(line->path[line->path.size() / 2].x == doctest::Approx(0));
 }

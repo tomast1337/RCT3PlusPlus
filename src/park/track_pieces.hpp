@@ -38,6 +38,7 @@
 namespace rct3::ovl
 {
     class Overlay;
+    struct Spline;
 } // namespace rct3::ovl
 
 namespace rct3::park
@@ -127,8 +128,7 @@ namespace rct3::park
         glm::vec3 end_direction { -1, 0, 0 };
         glm::vec3 start_side { 0, 0, 1 };
         glm::vec3 end_side { 0, 0, 1 };
-        /// Points along the middle line from start to end, a few to each part of the rails' splines; just the
-        /// two ends when the rails are split differently.
+        /// Points along the middle line from start to end, a few to each part of the rails' splines.
         std::vector<glm::vec3> path { };
         /// Which way is up for the track at each point of `path`: square to the rails, so it leans with
         /// the bank. A unit vector.
@@ -195,6 +195,11 @@ namespace rct3::park
     /// nearest where the path ending nearest the slide's top begins, along that path, then down the slide. With no
     /// path, straight from that nearest loop point to the slide's top.
     [[nodiscard]] std::vector<std::vector<glm::vec3>> slide_climbs(std::span<const glm::vec3> loop, std::span<const std::vector<glm::vec3>> paths, std::span<const std::vector<glm::vec3>> slides);
+
+    /// The middle line of a piece whose rails follow `left` and `right`, each walked by the same share of its parts, so
+    /// rails split into a different number of parts still pair up. Where an end stores no tangent, the line to the next
+    /// node stands in for it. Nothing when a rail has fewer than two nodes or an end has no direction.
+    [[nodiscard]] std::optional<PieceLine> middle_line(const ovl::Spline& left, const ovl::Spline& right);
 
     /// `line` measured in steps. Banks are counted from `base_bank`, in degrees.
     [[nodiscard]] PieceEnd measure_end(const glm::vec3& direction, const glm::vec3& side, float base_bank = 0);

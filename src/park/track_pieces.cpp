@@ -86,59 +86,57 @@ namespace rct3::park
             return { a[0], a[1], a[2] };
         }
 
-        /// The middle line of a piece whose rails follow `left` and `right`. Where an end stores no tangent,
-        /// the line to the next node stands in for it.
-        std::optional<PieceLine> middle_line(const ovl::Spline& left, const ovl::Spline& right)
-        {
-            const auto& l = left.nodes;
-            const auto& r = right.nodes;
-            if (l.size() < 2 || r.size() < 2)
-                return std::nullopt;
-            const auto middle = [](const ovl::SplineNode& a, const ovl::SplineNode& b) { return (vec(a.position) + vec(b.position)) / 2.0f; };
-            PieceLine line;
-            line.start = middle(l.front(), r.front());
-            line.end = middle(l.back(), r.back());
-            line.start_direction = vec(l.front().tangent_out) + vec(r.front().tangent_out);
-            line.end_direction = -(vec(l.back().tangent_in) + vec(r.back().tangent_in));
-            constexpr float kNone = 1e-6f;
-            if (glm::length(line.start_direction) < kNone)
-                line.start_direction = middle(l[1], r[1]) - line.start;
-            if (glm::length(line.end_direction) < kNone)
-                line.end_direction = line.end - middle(l[l.size() - 2], r[r.size() - 2]);
-            if (glm::length(line.start_direction) < kNone || glm::length(line.end_direction) < kNone)
-                return std::nullopt;
-            line.start_side = vec(r.front().position) - vec(l.front().position);
-            line.end_side = vec(r.back().position) - vec(l.back().position);
-            std::vector<glm::vec3> sides; // From the left rail to the right, at each point of the path
-            if (l.size() == r.size())
-            {
-                constexpr int kPerPart = 8;
-                for (std::size_t i = 0; i + 1 < l.size(); ++i)
-                {
-                    for (int k = 0; k < kPerPart; ++k)
-                    {
-                        const float t = static_cast<float>(k) / kPerPart;
-                        const glm::vec3 a = vec(ovl::spline_point(left, i, t));
-                        const glm::vec3 b = vec(ovl::spline_point(right, i, t));
-                        line.path.push_back((a + b) / 2.0f);
-                        sides.push_back(b - a);
-                    }
-                }
-                line.path.push_back(line.end);
-            }
-            else
-                line.path = { line.start, line.end };
-            sides.resize(line.path.size() - 1, line.start_side);
-            sides.push_back(line.end_side);
-            // Up is square to the way the track runs and to the line across its rails.
-            for (std::size_t k = 0; k < line.path.size(); ++k)
-            {
-                const glm::vec3 way = k == 0 ? line.start_direction : k + 1 == line.path.size() ? line.end_direction : line.path[k + 1] - line.path[k - 1];
-                line.ups.push_back(glm::normalize(glm::cross(glm::normalize(way), glm::normalize(sides[k]))));
-            }
-            return line;
-        }
     } // namespace
+
+    std::optional<PieceLine> middle_line(const ovl::Spline& left, const ovl::Spline& right)
+    {
+        const auto& l = left.nodes;
+        const auto& r = right.nodes;
+        if (l.size() < 2 || r.size() < 2)
+            return std::nullopt;
+        const auto middle = [](const ovl::SplineNode& a, const ovl::SplineNode& b) { return (vec(a.position) + vec(b.position)) / 2.0f; };
+        PieceLine line;
+        line.start = middle(l.front(), r.front());
+        line.end = middle(l.back(), r.back());
+        line.start_direction = vec(l.front().tangent_out) + vec(r.front().tangent_out);
+        line.end_direction = -(vec(l.back().tangent_in) + vec(r.back().tangent_in));
+        constexpr float kNone = 1e-6f;
+        if (glm::length(line.start_direction) < kNone)
+            line.start_direction = middle(l[1], r[1]) - line.start;
+        if (glm::length(line.end_direction) < kNone)
+            line.end_direction = line.end - middle(l[l.size() - 2], r[r.size() - 2]);
+        if (glm::length(line.start_direction) < kNone || glm::length(line.end_direction) < kNone)
+            return std::nullopt;
+        line.start_side = vec(r.front().position) - vec(l.front().position);
+        line.end_side = vec(r.back().position) - vec(l.back().position);
+        std::vector<glm::vec3> sides; // From the left rail to the right, at each point of the path
+        // Each rail is walked by the same share of its parts, so rails split into a different number of parts
+        // (as a funnel's are, one part apart) still pair up point by point.
+        const auto rail_at = [](const ovl::Spline& rail, float share) {
+            const float along = share * static_cast<float>(rail.nodes.size() - 1);
+            const std::size_t part = std::min(static_cast<std::size_t>(along), rail.nodes.size() - 2);
+            return vec(ovl::spline_point(rail, part, along - static_cast<float>(part)));
+        };
+        constexpr std::size_t kPerPart = 8;
+        const std::size_t steps = (std::max(l.size(), r.size()) - 1) * kPerPart;
+        for (std::size_t k = 0; k < steps; ++k)
+        {
+            const float share = static_cast<float>(k) / static_cast<float>(steps);
+            const glm::vec3 a = rail_at(left, share);
+            const glm::vec3 b = rail_at(right, share);
+            line.path.push_back((a + b) / 2.0f);
+            sides.push_back(b - a);
+        }
+        line.path.push_back(line.end);
+        sides.push_back(line.end_side);
+        // Up is square to the way the track runs and to the line across its rails.
+        for (std::size_t k = 0; k < line.path.size(); ++k)
+        {
+            const glm::vec3 way = k == 0 ? line.start_direction : k + 1 == line.path.size() ? line.end_direction : line.path[k + 1] - line.path[k - 1];
+            line.ups.push_back(glm::normalize(glm::cross(glm::normalize(way), glm::normalize(sides[k]))));
+        }
+        return line;
+    }
 
     std::vector<std::string> named_overlays(const ovl::Overlay& ride, std::string_view path)
     {

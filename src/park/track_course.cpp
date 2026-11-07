@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track_course.hpp"
 
+#include "park/design_placement.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <iterator>
 #include <limits>
 #include <unordered_map>
 #include <utility>
@@ -138,11 +141,7 @@ namespace rct3::park
                 course.wet.push_back(water && (shape->record.flags & kPieceEnclosed) == 0);
                 course.covered.push_back((shape->record.flags & kPieceEnclosed) != 0);
                 course.steady.push_back(shape->record.role >= kRoleSlideToLiftFirst && shape->record.role <= kRoleSlideToLiftLast);
-                for (const PieceOpening& o : shape->record.pool_sides)
-                {
-                    const save::Tile tile = square_tile(object, shape->record.squares, o.x, o.z);
-                    course.pool_openings.push_back({ .col = tile.col, .row = tile.row, .height = object.base_height.value_or(0) + o.height, .side = o.side.turned(object.rotation) });
-                }
+                std::ranges::copy(piece_pool_openings(object, shape->record), std::back_inserter(course.pool_openings));
                 if (shape->record.drop_off >= 0)
                     course.drop_offs.push_back(course.length() + shape->record.drop_off);
                 const float top = glm::vec3(to_world * glm::vec4(path.front(), 1.0f)).y;

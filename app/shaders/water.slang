@@ -527,6 +527,8 @@ float4 flowing(Varyings v, float3 view, float dist, float3 sky, float3 sun, floa
     const float3 water = (1.0 - fresnel) * (scattered * (1.0 - dot(kept, float3(1.0 / 3.0))) + sunlit) + fresnel * sky * kFlowColour * 2.5;
     float3 colour = (water * (1.0 - foam) + body_light * (foam + 0.5 * sunk * (1.0 - foam)) + glint) / max(alpha, 1e-3);
     alpha *= 1.0 - smoothstep(0.6, 0.95, dist / u_draw.sun_far.w);
+    // Where the water starts or stops along a slide it fades (park/water_flow.hpp, FlowFade).
+    alpha *= v.color.a;
     return float4(colour, alpha);
 }
 

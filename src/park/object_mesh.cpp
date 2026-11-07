@@ -3,6 +3,7 @@
 
 #include "park/ground_textures.hpp"
 #include "park/object_placement.hpp"
+#include "park/water_flow.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -281,7 +282,7 @@ namespace rct3::park
         return levels;
     }
 
-    ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels, const ColourOverrides& overrides, const Leans& leans, const Fitted& fitted, const Broken& broken, const Chains& chains)
+    ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels, const ColourOverrides& overrides, const Leans& leans, const Fitted& fitted, const Broken& broken, const Chains& chains, const FlowFades& fades)
     {
         const bool finest = levels.size() != objects.size();
         ObjectMesh mesh;
@@ -316,6 +317,7 @@ namespace rct3::park
             // Plants, rocks and the like on the ground bend to it: each point keeps its height above the ground.
             const bool fit = model->second.fits_ground && !stretched && on_ground(object);
             const auto chain = chains.find(object.id);
+            const auto fade = fades.find(object.id);
             for (const ModelPart& part : shown.parts)
             {
                 const auto paint = ground_paint_of(part.texture);
@@ -323,8 +325,10 @@ namespace rct3::park
                 run.picture = part.texture;
                 run.colours = used_colours(part.slots, colours);
                 const auto base = static_cast<std::uint32_t>(run.vertices.size());
-                for (const ModelVertex& v : part.vertices)
+                const bool faded = fade != fades.end() && part.flow.size() == part.vertices.size();
+                for (std::size_t k = 0; k < part.vertices.size(); ++k)
                 {
+                    const ModelVertex& v = part.vertices[k];
                     glm::vec3 at { transform * glm::vec4(v.position, 1.0f) };
                     at.y += glm::dot(glm::vec2(at.x, at.z) - anchor, rise);
                     if (fit)
@@ -333,7 +337,7 @@ namespace rct3::park
                             at.y += *ground - transform[3].y;
                     }
                     const glm::vec3 normal = stretched ? glm::normalize(turn * v.normal) : turn * v.normal;
-                    run.vertices.push_back({ at, glm::vec4(1.0f), paint ? ground_uv(at, normal) : v.uv, normal });
+                    run.vertices.push_back({ at, glm::vec4(1.0f, 1.0f, 1.0f, faded ? flow_alpha(fade->second, part.flow[k], part.flow_last) : 1.0f), paint ? ground_uv(at, normal) : v.uv, normal });
                 }
                 run.owners.resize(run.vertices.size(), static_cast<std::uint32_t>(index));
                 for (const std::uint32_t i : part.indices)

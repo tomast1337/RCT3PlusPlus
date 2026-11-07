@@ -8,6 +8,7 @@
 #include "park/person_motions.hpp"
 #include "park/ride_cars.hpp"
 #include "park/staff_motions.hpp"
+#include "park/water_flow.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -1855,7 +1856,12 @@ namespace rct3::scene
     /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`; without the
     /// supports unless `supports`. Reads only what is set when the park loads besides its arguments, so it
     /// may run beside the frame.
-    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band, const park::LevelScales& scales, bool supports, const park::Broken& broken, const park::Chains& chains)
+    park::FlowFades flow_fades(const ParkScene& scene)
+    {
+        return park::flow_fades(scene.rides, scene.objects, scene.models, [&](std::size_t ride) { return ride < scene.track_rules.size() && scene.track_rules[ride].pool_ride; });
+    }
+
+    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band, const park::LevelScales& scales, bool supports, const park::Broken& broken, const park::Chains& chains, const park::FlowFades& fades)
     {
         ObjectBuild built;
         built.plan = profiling::section("Levels", [&] { return park::plan_levels(scene.objects, scene.models, scene.anchors, eye, band, scales); });
@@ -1880,7 +1886,7 @@ namespace rct3::scene
             return std::nullopt;
         for (auto [shapes, levels] : { std::pair { &built.steady, &built.plan.steady }, std::pair { &built.finer, &built.plan.finer }, std::pair { &built.coarser, &built.plan.coarser } })
         {
-            shapes->mesh = profiling::section("Mesh", [&] { return park::object_mesh(scene.objects, scene.models, scene.grid, *levels, { }, scene.leans, scene.fitted, broken, chains); });
+            shapes->mesh = profiling::section("Mesh", [&] { return park::object_mesh(scene.objects, scene.models, scene.grid, *levels, { }, scene.leans, scene.fitted, broken, chains, fades); });
             shapes->billboards = profiling::section("Gather", [&] { return park::gather_billboards(scene.objects, scene.models, scene.anchors, *levels); });
         }
         return built;
@@ -1941,9 +1947,9 @@ namespace rct3::scene
         if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid() || scene.supports.stale)
             return; // Stale supports change the objects first (refresh_supports)
         scene.since_rebuild = 0;
-        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, scales = scene.level_scales, supports = scene.show_supports, broken = scene.broken_objects, chains = park::chain_runs(scene.rides, scene.objects, scene.models)] {
+        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, scales = scene.level_scales, supports = scene.show_supports, broken = scene.broken_objects, chains = park::chain_runs(scene.rides, scene.objects, scene.models), fades = flow_fades(scene)] {
             profiling::register_thread("ObjectWorker");
-            auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band, scales, supports, broken, chains); });
+            auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band, scales, supports, broken, chains, fades); });
             profiling::unregister_thread();
             return built;
         });

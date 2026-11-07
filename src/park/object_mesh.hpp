@@ -84,6 +84,17 @@ namespace rct3::park
     /// The run of the lift chains some objects show, by object id: their ride's place in the ride list plus 1,
     /// negative when the piece is laid against its section's own way (chain_lifts.hpp).
     using Chains = std::map<std::uint64_t, std::int32_t>;
+    /// How a piece's flowing water fades along it, by whether the pieces before and after it carry water: in from
+    /// nothing where the piece before is dry, out to nothing where the piece after is, so the water seems to start
+    /// and stop rather than being cut off. A pool slide's open end keeps its water to the last stretch of it.
+    struct FlowFade
+    {
+        bool in = false;  ///< Rises from nothing at its start
+        bool out = false; ///< Falls to nothing at its end
+        bool end = false; ///< Falls to nothing over the last stretch between its water's nodes
+    };
+    /// How some objects' flowing water fades along it, by object id (water_flow.hpp).
+    using FlowFades = std::map<std::uint64_t, FlowFade>;
     /// The objects vandals have broken, by id; those with a broken look are drawn with it.
     using Broken = std::set<std::uint64_t>;
 
@@ -165,7 +176,7 @@ namespace rct3::park
 
     /// The shapes of the objects at `levels` (by index; when it does not cover every object, each is drawn at
     /// its finest level), leaning those in `leans`. Billboard levels are left out.
-    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels = { }, const ColourOverrides& overrides = { }, const Leans& leans = { }, const Fitted& fitted = { }, const Broken& broken = { }, const Chains& chains = { });
+    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels = { }, const ColourOverrides& overrides = { }, const Leans& leans = { }, const Fitted& fitted = { }, const Broken& broken = { }, const Chains& chains = { }, const FlowFades& fades = { });
 
     /// Where a billboard stands and how big it is. Its four corners are the next four vertices of the mesh.
     struct BillboardStand

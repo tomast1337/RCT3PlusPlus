@@ -65,7 +65,11 @@ namespace rct3::park
             const float v = (backwards ? along.back() - along[i] : along[i]) / along.back() * repeats;
             part.vertices.push_back({ lefts[i], normal, { 0.0f, v } });
             part.vertices.push_back({ rights[i], normal, { 1.0f, v } });
+            // Samples are spaced evenly between nodes, so a sample's place counts nodes.
+            const float node = static_cast<float>(i) / static_cast<float>(lefts.size() - 1);
+            part.flow.insert(part.flow.end(), 2, backwards ? 1 - node : node);
         }
+        part.flow_last = 1.0f / static_cast<float>(left.nodes.size() - 1);
         for (std::uint32_t i = 0; i + 1 < lefts.size(); ++i)
         {
             const std::uint32_t a = i * 2;
@@ -88,6 +92,58 @@ namespace rct3::park
         const float ends = low->uv.y + high->uv.y;
         for (ModelVertex& v : sheet.vertices)
             v.uv.y = ends - v.uv.y;
+    }
+
+    FlowFades flow_fades(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const ObjectModels& models, const std::function<bool(std::size_t)>& pool_slides)
+    {
+        std::map<std::uint64_t, bool> wet;
+        for (const save::Ride& ride : rides.rides)
+            if (ride.track)
+                for (const save::TrackPiece& piece : ride.track->pieces)
+                    wet.emplace(piece.scenery, false);
+        for (const save::PlacedObject& o : objects)
+            if (const auto at = wet.find(o.id); at != wet.end())
+                if (const auto model = models.find(model_ref(o)); model != models.end())
+                    at->second = model->second.flows;
+        FlowFades fades;
+        for (std::size_t r = 0; r < rides.rides.size(); ++r)
+        {
+            if (!rides.rides[r].track)
+                continue;
+            const save::Track& track = *rides.rides[r].track;
+            const std::size_t count = track.pieces.size();
+            const auto wet_at = [&](std::size_t i) { return track.pieces[i].scenery != 0 && wet[track.pieces[i].scenery]; };
+            for (std::size_t i = 0; i < count; ++i)
+            {
+                if (!wet_at(i))
+                    continue;
+                const bool before = i > 0 ? wet_at(i - 1) : track.circuit && wet_at(count - 1);
+                const bool after = i + 1 < count ? wet_at(i + 1) : track.circuit && wet_at(0);
+                FlowFade fade { .in = !before, .out = !after };
+                // A pool slide's open end runs full to its last stretch and stops there.
+                if (i + 1 == count && !track.circuit && pool_slides(r))
+                    fade = { .in = fade.in, .out = false, .end = true };
+                if (track.pieces[i].reversed)
+                    std::swap(fade.in, fade.out);
+                if (fade.in || fade.out || fade.end)
+                    fades[track.pieces[i].scenery] = fade;
+            }
+        }
+        return fades;
+    }
+
+    float flow_alpha(const FlowFade& fade, float along, float last)
+    {
+        float alpha = 1;
+        if (fade.in && fade.out)
+            alpha = 1 - std::abs(2 * along - 1);
+        else if (fade.in)
+            alpha = along;
+        else if (fade.out)
+            alpha = 1 - along;
+        if (fade.end && last > 0)
+            alpha *= std::clamp((1 - along) / last, 0.0f, 1.0f);
+        return alpha;
     }
 
     TextureShift flow_scroll(float seconds, std::int32_t run)

@@ -39,6 +39,11 @@ TEST_CASE("a piece's water spans its two edges and its picture repeats a whole n
     CHECK(part->vertices.back().uv.x == 1);
     for (const ModelVertex& v : part->vertices)
         CHECK(v.normal.y == doctest::Approx(1));
+    // How far along each vertex is, by the edges' nodes: 0 at the start, 1 at the end, the last of 2 parts a half.
+    REQUIRE(part->flow.size() == part->vertices.size());
+    CHECK(part->flow.front() == 0);
+    CHECK(part->flow.back() == doctest::Approx(1));
+    CHECK(part->flow_last == doctest::Approx(0.5f));
 }
 
 TEST_CASE("water whose edges do not pair up is left out")
@@ -91,4 +96,17 @@ TEST_CASE("a piece's own water sheet flows as a strip does, its picture turned r
     flowing_sheet(kept, straight({ -4, 0, 0 }, -4, 1), "flow");
     CHECK(kept.vertices[0].uv.y == 0);
     CHECK(kept.vertices[2].uv.y == 1);
+}
+
+TEST_CASE("water fades in after a dry piece, out before one, and over the last stretch of an open end")
+{
+    CHECK(flow_alpha({ }, 0.0f, 0.25f) == doctest::Approx(1.0f));
+    CHECK(flow_alpha({ .in = true }, 0.25f, 0.25f) == doctest::Approx(0.25f));
+    CHECK(flow_alpha({ .out = true }, 0.25f, 0.25f) == doctest::Approx(0.75f));
+    CHECK(flow_alpha({ .in = true, .out = true }, 0.5f, 0.25f) == doctest::Approx(1.0f));
+    CHECK(flow_alpha({ .in = true, .out = true }, 1.0f, 0.25f) == doctest::Approx(0.0f));
+    // An open end keeps its water full to its last node but one, then falls to nothing at the lip.
+    CHECK(flow_alpha({ .end = true }, 0.75f, 0.25f) == doctest::Approx(1.0f));
+    CHECK(flow_alpha({ .end = true }, 0.875f, 0.25f) == doctest::Approx(0.5f));
+    CHECK(flow_alpha({ .end = true }, 1.0f, 0.25f) == doctest::Approx(0.0f));
 }

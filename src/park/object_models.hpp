@@ -82,6 +82,10 @@ namespace rct3::park
         /// Its picture slides along it: a lift piece's chain as the lift runs (chain_lifts.hpp), or a slide's
         /// flowing water (water_flow.hpp, whose parts the scene tells by their picture)
         bool chain = false;
+        /// Of a slide's flowing water strip (water_flow.hpp), by vertex: how far along the strip it is the way the
+        /// water runs, 0 to 1, by the water's spline nodes; empty for other parts.
+        std::vector<float> flow { };
+        float flow_last = 0; ///< Of such a strip, the share of it from its last node but one to its end
     };
 
     /// A flat picture standing upright on the item's anchor, turned to face the viewer round the vertical.

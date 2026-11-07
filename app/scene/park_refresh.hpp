@@ -63,7 +63,10 @@ namespace rct3::scene
     /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`; without the
     /// supports unless `supports`. Reads only what is set when the park loads besides its arguments, so it
     /// may run beside the frame.
-    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band, const park::LevelScales& scales, bool supports, const park::Broken& broken = { }, const park::Chains& chains = { });
+    /// The fades of the park's flowing water (park/water_flow.hpp), pool slides told by their kind's rules.
+    [[nodiscard]] park::FlowFades flow_fades(const ParkScene& scene);
+
+    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band, const park::LevelScales& scales, bool supports, const park::Broken& broken = { }, const park::Chains& chains = { }, const park::FlowFades& fades = { });
 
     /// `vertices` with the bands of `bands`, for the crossing shaders.
     std::vector<CrossingVertex> crossing_vertices(std::span<const park::GroundVertex> vertices, std::span<const std::pair<glm::vec4, glm::vec2>> bands);

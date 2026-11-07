@@ -15,12 +15,17 @@
 #include "math/texture_shift.hpp"
 #include "ovl/spline.hpp"
 #include "ovl/texture_image.hpp"
+#include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
+#include "save/model/rides.hpp"
 
 #include <cstdint>
 #include <expected>
 #include <filesystem>
+#include <functional>
+#include <map>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -47,6 +52,14 @@ namespace rct3::park
     /// Makes `sheet`, a piece's own see-through water, flowing water textured `texture` as flow_strip's are, its
     /// picture turned round where it runs from the far end of `track` (the piece's rails).
     void flowing_sheet(ModelPart& sheet, const ovl::Spline& track, std::string texture);
+
+    /// The fades of every ride's water pieces among `objects` drawn with `models`; `pool_slides` says by ride
+    /// which are pool slides, whose last piece is an open end when their track is not a circuit.
+    [[nodiscard]] FlowFades flow_fades(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const ObjectModels& models, const std::function<bool(std::size_t)>& pool_slides);
+
+    /// How much of the water shows (0 to 1) at `along` its strip (ModelPart::flow) faded by `fade`, `last` being
+    /// the strip's ModelPart::flow_last.
+    [[nodiscard]] float flow_alpha(const FlowFade& fade, float along, float last);
 
     /// How far along its picture the water of a piece of run `run` (see Chains) is moved after flowing for
     /// `seconds`, added to the picture's v: against the strip's v when the run is negative.

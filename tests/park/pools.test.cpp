@@ -475,6 +475,20 @@ TEST_CASE("pools: a trail starts at a slide's platform from the sides off its tr
     CHECK(slide_path_start(map, platform, Side { 3 }) == 16);
 }
 
+TEST_CASE("pools: a slide's platform is joined where paving or steps meet a side off its track at its deck")
+{
+    PoolMap map;
+    const SlidePlatform platform { .col = 5, .row = 5, .height = 16, .turn = ModelTurn { 3 } };
+    CHECK_FALSE(slide_platform_joined(map, platform, Side { 1 }));
+    // Steps whose top is at the deck's height join it; a path along its track, or one too low, does not.
+    map.squares.push_back({ .col = 6, .row = 5, .kind = PoolKind::PathStairs, .surface = 16 - kPathStairsRise, .depth = 0, .side = Side { 1 } });
+    map.squares.push_back({ .col = 5, .row = 6, .kind = PoolKind::Path, .surface = 16, .depth = 0 });
+    map.squares.push_back({ .col = 4, .row = 5, .kind = PoolKind::Path, .surface = 8, .depth = 0 });
+    CHECK(slide_platform_joined(map, platform, Side { 1 }));
+    CHECK_FALSE(slide_platform_joined(map, platform, Side { 0 }));
+    CHECK_FALSE(slide_platform_joined(map, platform, Side { 3 }));
+}
+
 TEST_CASE("pools: each square costs its kind's price and its depth's")
 {
     CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Water, .depth = 2 }) == 100 + 2 * 300);

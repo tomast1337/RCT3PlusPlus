@@ -219,6 +219,10 @@ namespace rct3::park
     /// that side there.
     [[nodiscard]] std::optional<std::int32_t> slide_path_start(const PoolMap& map, const SlidePlatform& platform, Side side);
 
+    /// Whether a square of `map` meets side `side` of `platform`, one of the two off its track, at its deck's
+    /// height: the complex's paving joins the slide's station there, and its platform shows steps down that side.
+    [[nodiscard]] bool slide_platform_joined(const PoolMap& map, const SlidePlatform& platform, Side side);
+
     /// The shapes of wall a water square takes, each a set of pieces of the pool type.
     enum class PoolWall : std::uint8_t
     {

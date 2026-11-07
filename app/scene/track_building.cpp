@@ -14,6 +14,8 @@
 #include "park/design_placement.hpp"
 #include "park/flexi_colours.hpp"
 #include "park/object_models.hpp"
+#include "park/object_placement.hpp"
+#include "park/pools.hpp"
 #include "park/relief_maps.hpp"
 #include "park/ride_placement.hpp"
 #include "park/support_columns.hpp"
@@ -1920,6 +1922,17 @@ namespace rct3::scene
             return;
         const std::string& platforms = kit->overlay;
         auto& pieces = ride.track->pieces;
+        // A pool ride's station has no doors; where the complex's paving meets a side of it, its platform shows
+        // steps down that side as it would for a door there.
+        std::vector<park::DoorSpot> doors = kit->doors;
+        if (ride_index < scene.track_rules.size() && scene.track_rules[ride_index].pool_ride)
+            for (const save::TrackPiece& p : pieces)
+                for (std::int32_t q = 0; q < 4; ++q)
+                    if (const park::Side side = park::Side::from(q); park::slide_platform_joined(scene.pools, { .col = p.tile_x, .row = p.tile_z, .height = p.height, .turn = park::ModelTurn::from(p.direction) }, side))
+                    {
+                        const auto [dc, dr] = side.step();
+                        doors.push_back({ .col = p.tile_x + dc, .row = p.tile_z + dr, .turn = park::turn_facing(side.opposite()), .height = p.height });
+                    }
         const auto station = [&](std::size_t i) {
             const auto shape = park::shape_named(*c, pieces[i].symbol);
             return pieces[i].platform.has_value() || (shape && has_platform(*shape));
@@ -1936,7 +1949,7 @@ namespace rct3::scene
             // shortcut: the open end being built on counts as the track's end, which only the aquarium's platforms
             // show; upgrade by leaving that end open while the construction panel is on it.
             const park::PlatformPlace place = platform_place(*shape, i > 0 ? station(i - 1) : ride.track->circuit && station(pieces.size() - 1), i + 1 < pieces.size() ? station(i + 1) : ride.track->circuit && station(0), i > 0 || ride.track->circuit, i + 1 < pieces.size() || ride.track->circuit);
-            const auto name = park::platform_symbol(ride.platform_type, pieces[i], place, kit->doors, kit->names);
+            const auto name = park::platform_symbol(ride.platform_type, pieces[i], place, doors, kit->names);
             if (!name)
             {
                 // Its type has no platform for it there, as some have none without stairs.

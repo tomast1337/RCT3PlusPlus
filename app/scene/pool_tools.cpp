@@ -844,6 +844,10 @@ namespace rct3::scene
             const auto found = std::ranges::find_if(scene.objects, [&](const save::PlacedObject& o) { return (!shown_piece && o.id == shown->id) || same_piece(o); });
             scene.shown_prop = found != scene.objects.end() ? std::optional(static_cast<std::size_t>(found - scene.objects.begin())) : std::nullopt;
         }
+        // Pool rides' platforms show steps down the sides the paving now meets, or no longer does.
+        for (std::size_t ride = 0; ride < scene.rides.rides.size() && ride < scene.track_rules.size(); ++ride)
+            if (scene.track_rules[ride].pool_ride && !scene.rides.rides[ride].base.demolished)
+                update_platforms(scene, ride, assets);
         objects_changed(scene);
         std::vector<save::PoolWater>& water = scene.footpaths.pools;
         water.resize(scene.saved_pool_water);

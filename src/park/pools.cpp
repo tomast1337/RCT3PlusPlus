@@ -336,6 +336,11 @@ namespace rct3::park
         return platform.height;
     }
 
+    bool slide_platform_joined(const PoolMap& map, const SlidePlatform& platform, Side side)
+    {
+        return side.on_columns() == platform.turn.facing().on_columns() && met(map, platform.col, platform.row, side, platform.height);
+    }
+
     PoolExtraFit pool_extra_fit(std::string_view words)
     {
         PoolExtraFit fit;

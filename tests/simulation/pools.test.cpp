@@ -861,3 +861,42 @@ TEST_CASE("swimmers never go where no way over the pool leads, and keep to the p
     }
     CHECK(up);
 }
+
+TEST_CASE("swimmers spread over the three lanes each way across a square, not one line through its middles")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    park::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+    for (std::int32_t row = 3; row < 9; ++row)
+        for (std::int32_t col = 2; col < 9; ++col)
+            pools.squares.push_back({ .col = col, .row = row });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    const auto& paths = park.world().paths;
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 12; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+    // How often a swimmer is on each lane, either way: left of the middle, on it, right of it.
+    std::array<int, 3> on { };
+    for (int t = 0; t < static_cast<int>(kTuning.pools.stay.value); ++t)
+    {
+        park.run_seconds(1);
+        for (const entt::entity g : guests)
+            if (const auto* swimmer = r.try_get<Swimmer>(g); swimmer != nullptr && swimmer->changed && swimmer->in_water && swimmer->edge == PoolEdge::None)
+            {
+                const glm::vec3 at = r.get<Pose>(g).position;
+                for (const float along : { at.x - paths.origin.x, at.z - paths.origin.y })
+                {
+                    const float off = along - (std::floor(along / paths.tile_size) + 0.5f) * paths.tile_size;
+                    for (std::size_t k = 0; k < 3; ++k)
+                        on[k] += std::abs(off - (static_cast<float>(k) - 1.0f) * kTuning.pools.lanes) < 0.05f;
+                }
+            }
+    }
+    CAPTURE(on);
+    CHECK(on[1] > 0);
+    CHECK(on[0] > on[1] / 4);
+    CHECK(on[2] > on[1] / 4);
+}

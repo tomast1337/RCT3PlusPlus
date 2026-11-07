@@ -4078,13 +4078,51 @@ namespace rct3::simulation
                 const auto from = pool_walk_at(*pool, pose.position, paths.tile_size, paths.level_height);
                 const auto to = pool_walk_at(*pool, swimmer.goal, paths.tile_size, paths.level_height);
                 const auto before = from ? pool_ways(*pool, *from) : std::vector<std::optional<std::size_t>> { };
-                for (std::size_t at = to.value_or(0); from && to && before[at] && at != *from; at = *before[at])
+                // They keep to the lane they are on of the three each way across a square, crossing from square to
+                // square on it, so a crowd spreads over the pool; on their way to a slide, to the middle one, so its
+                // line is one file. A lane taking them over the water's edge, they take the middle one.
+                const auto way = [&](glm::vec3 lane) {
+                    std::vector<PoolRoute::Point> via;
+                    for (std::size_t at = to.value_or(0); from && to && before[at] && at != *from; at = *before[at])
+                    {
+                        const PoolWalk& last = pool->walks[*before[at]];
+                        const auto join = std::ranges::find(last.joins, at, &PoolWalk::Join::to);
+                        for (std::size_t i = join->via.size(); i-- > 0;)
+                        {
+                            glm::vec3 p = join->via[i];
+                            if (join->via.size() == 1) // Where the two squares meet: along their side
+                            {
+                                const bool across_x = std::abs(p.x - last.at.x) > std::abs(p.z - last.at.z);
+                                (across_x ? p.z : p.x) += across_x ? lane.z : lane.x;
+                            }
+                            via.push_back({ .at = p, .water = i == 0 && last.water });
+                        }
+                    }
+                    return via;
+                };
+                const auto wet = [&](glm::vec3 at) {
+                    const auto w = std::ranges::find_if(pool->water, [&](const glm::vec3& s) { return std::abs(at.x - s.x) <= paths.tile_size / 2 && std::abs(at.z - s.z) <= paths.tile_size / 2; });
+                    return w != pool->water.end() && open_water(*pool, static_cast<std::size_t>(w - pool->water.begin()), at, paths.tile_size);
+                };
+                const auto clear = [&](const std::vector<PoolRoute::Point>& via) {
+                    std::vector<glm::vec3> points { pose.position };
+                    for (const PoolRoute::Point& p : via | std::views::reverse)
+                        points.push_back(p.at);
+                    points.push_back(swimmer.goal);
+                    for (std::size_t i = 1; i < points.size(); ++i)
+                        if (const glm::vec3 a = points[i - 1], b = points[i]; wet(a) && wet(b) && pool_stop(*pool, { a.x, a.z }, { b.x, b.z }, paths.tile_size) != glm::vec2 { b.x, b.z })
+                            return false;
+                    return true;
+                };
+                glm::vec3 lane { 0.0f };
+                if (from && !r.valid(swimmer.slide))
                 {
-                    const PoolWalk& last = pool->walks[*before[at]];
-                    const auto join = std::ranges::find(last.joins, at, &PoolWalk::Join::to);
-                    for (std::size_t i = join->via.size(); i-- > 0;)
-                        route->via.push_back({ .at = join->via[i], .water = i == 0 && last.water });
+                    const auto snap = [](float off) { return std::clamp(std::round(off / kTuning.pools.lanes), -1.0f, 1.0f) * kTuning.pools.lanes; };
+                    lane = { snap(pose.position.x - pool->walks[*from].at.x), 0, snap(pose.position.z - pool->walks[*from].at.z) };
                 }
+                route->via = way(lane);
+                if (lane != glm::vec3 { 0.0f } && !clear(route->via))
+                    route->via = way(glm::vec3 { 0.0f });
             }
             // Out of the water on their way to a slide whose line reaches back to them: at its end, there.
             if (const auto* line = r.valid(swimmer.slide) && !swimmer.in_water && r.all_of<Trains>(swimmer.slide) ? r.try_get<CycleRide>(swimmer.slide) : nullptr; line != nullptr && !line->queue.empty() && way_left(*route) <= static_cast<float>(line->queue.size()) * kTuning.pools.queue_gap)
@@ -4466,10 +4504,10 @@ namespace rct3::simulation
             }
             else
             {
-                // Within a quarter tile of a square's middle; in the water, a few tries for one clear of the paving
-                // round it, as a curved corner's square has only its open corner.
-                const float spread = 0.25f * paths.tile_size;
-                const auto near = [&](const glm::vec3& middle) { return middle + glm::vec3 { static_cast<float>(random::between(dice, -1.0, 1.0)) * spread, 0, static_cast<float>(random::between(dice, -1.0, 1.0)) * spread }; };
+                // Where two of a square's lanes cross; in the water, a few tries for one clear of the paving round it,
+                // as a curved corner's square has only its open corner.
+                const auto lane = [&] { return (static_cast<float>(random::below(dice, 3)) - 1.0f) * kTuning.pools.lanes; };
+                const auto near = [&](const glm::vec3& middle) { return middle + glm::vec3 { lane(), 0, lane() }; };
                 swimmer.goal = near(spot_at(pick));
                 for (std::size_t tries = 0; !out && tries < 8 && !open_water(*pool, pick, swimmer.goal, paths.tile_size); ++tries)
                 {

@@ -285,7 +285,7 @@ namespace rct3::scene
             std::int32_t surface = 0;
         };
         std::optional<Lift> lift;
-        std::optional<std::int32_t> lifted;        ///< The surface Shift raised or lowered the squares to, until let go
+        std::optional<std::int32_t> lifted;        ///< The surface Shift raised or lowered the squares to, or the deck of the slide platform a path starts beside, until let go
         std::optional<std::int32_t> worked_lifted; ///< And the one of the work shown
         bool faces = true;                         ///< The work shown is no high diving board facing away from the water
         /// The extra, changing room or next pool path piece where it would go, drawn see-through, and whether it may go there.

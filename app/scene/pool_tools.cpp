@@ -559,6 +559,20 @@ namespace rct3::scene
         // The paths page's trails start from pool slides' platforms too.
         const std::vector<park::SlidePlatform> decks = t.item && laying_paths(*t.item) ? slide_platforms(scene) : std::vector<park::SlidePlatform> { };
         auto spot = t.item && !over ? pointed_spot(scene, at, size, decks) : std::nullopt;
+        // On a slide's platform, a path starts beside it at its deck, off the side nearest the pointer that a
+        // trail may start from, as the pinned controls do.
+        std::optional<std::pair<save::Tile, std::int32_t>> deck_start;
+        if (spot)
+        {
+            const save::Tile on { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+            const auto deck = scene.pools.at(on.col, on.row) ? decks.end() : std::ranges::find_if(decks, [&](const park::SlidePlatform& d) { return d.col == on.col && d.row == on.row; });
+            if (deck != decks.end())
+                if (const auto side = park::nearest_side(*spot - glm::vec2 { on.col, on.row }, [&](park::Side side) { return park::slide_path_start(scene.pools, *deck, side).has_value(); }))
+                {
+                    const auto [dc, dr] = side->step();
+                    deck_start = { save::Tile { on.col + dc, on.row + dr }, *park::slide_path_start(scene.pools, *deck, *side) };
+                }
+        }
         swap_pool_work(scene);
         // Held before a drag, Shift keeps the square under the pointer and raises or lowers its surface with the
         // pointer, as it lifts scenery; the drag then lays the squares at that height. Let go of before a drag, the
@@ -567,7 +581,7 @@ namespace rct3::scene
         if (!shift && !t.corner)
         {
             t.lift.reset();
-            t.lifted.reset();
+            t.lifted = deck_start ? std::optional(deck_start->second) : std::nullopt;
         }
         else if (shift && squares && !t.corner && size.x > 0 && size.y > 0)
         {
@@ -694,11 +708,11 @@ namespace rct3::scene
         {
             if (!t.corner)
             {
-                t.corner = tile;
+                t.corner = deck_start ? deck_start->first : tile;
                 t.press_y = at.y;
             }
             if (tile)
-                t.other = single ? t.corner : tile;
+                t.other = single || deck_start ? t.corner : tile;
             if (climbs && t.press_y)
             {
                 const std::int32_t lowest = t.item->symbol == park::kPoolStairs ? park::kLowestStairs : park::kBoardLevel;
@@ -707,7 +721,7 @@ namespace rct3::scene
         }
         // The work is the drag's, else the square under the pointer. As it changes it is laid into the pools to
         // be seen, when it may be done; letting go keeps it.
-        const auto working = t.corner && t.other ? std::optional(std::pair { *t.corner, *t.other }) : (t.item && tile ? std::optional(std::pair { *tile, *tile }) : std::nullopt);
+        const auto working = t.corner && t.other ? std::optional(std::pair { *t.corner, *t.other }) : (deck_start ? std::optional(std::pair { deck_start->first, deck_start->first }) : t.item && tile ? std::optional(std::pair { *tile, *tile }) : std::nullopt);
         // A change waits while the objects are being built away from the frame, so the frame never waits on
         // them; the latest work is shown once they are done, or at once when let go.
         // shortcut: each change still rebuilds the whole park's ground and objects (~200 ms a change in the

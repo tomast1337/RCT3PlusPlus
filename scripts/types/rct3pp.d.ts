@@ -215,8 +215,8 @@ declare namespace map {
     /** The tiles with support columns standing on them, and how many pieces each has. */
     function supports(): { col: number; row: number; pieces: number }[];
     /** The placed objects that are shown: scenery, rides' parts, supports, fences and the rest, with the whole-unit
-     * height stored for each (null when unset). */
-    function objects(): { symbol: string; overlay: string; col: number; row: number; height: number | null }[];
+     * height stored for each (null when unset), and the quarter turns of its model. */
+    function objects(): { symbol: string; overlay: string; col: number; row: number; height: number | null; turn: number }[];
     /** The pieces the pools' squares place now, their extras and changing rooms, shaped as `objects` gives them: what
      * the pool tool's work should leave shown. */
     function poolPieces(): { symbol: string; overlay: string; col: number; row: number; height: number | null }[];

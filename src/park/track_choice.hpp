@@ -59,7 +59,7 @@ namespace rct3::park
         std::array<bool, kBankChoices> banks { };
         std::uint8_t any_toggles = 0; ///< Bits of the toggles some fitting piece has
         std::uint8_t toggles = 0;     ///< Bits of the toggles some piece of the picked curve, slope and bank has
-        std::vector<LaidPiece> named; ///< Pieces of their own use that fit, stations first
+        std::vector<LaidPiece> named; ///< Pieces of their own use that fit, stations first, each kind nearest the picked toggles first
     };
 
     /// The three picks a piece is chosen by.
@@ -81,7 +81,9 @@ namespace rct3::park
     /// with it when the picks as they are have none.
     [[nodiscard]] TrackChoice pick_value(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice, ChoiceAxis axis, int value);
 
-    /// The picks with `toggle` turned over, when some piece of the picked curve, slope and bank comes the other way.
+    /// The picks with `toggle` turned over, when some piece of the picked curve, slope and bank comes the other way. A
+    /// piece picked by name gives way to its twin with the toggle the other way (the same piece, open or enclosed),
+    /// when that fits too.
     [[nodiscard]] TrackChoice pick_toggle(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice, PieceToggle toggle);
 
     /// `choice` moved to the nearest picks that have a piece, as after a new open end. Unchanged when

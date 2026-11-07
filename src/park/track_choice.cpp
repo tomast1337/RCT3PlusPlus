@@ -98,9 +98,11 @@ namespace rct3::park
             if (matches(offer, choice))
                 o.toggles |= offer.toggles;
         }
-        // Stations first, then the rest; a piece that fits both ways is offered as drawn.
+        // Stations first, then the rest; a piece that fits both ways is offered as drawn. Of each kind, those
+        // nearest the picked toggles come first, so of a piece and its enclosed twin the one asked for leads.
         for (const PieceUse use : { PieceUse::Station, PieceUse::Special })
         {
+            const std::size_t from = o.named.size();
             for (const LaidPiece& c : candidates)
             {
                 if (c.index >= pieces.size() || pieces[c.index].use != use)
@@ -109,6 +111,8 @@ namespace rct3::park
                     continue;
                 o.named.push_back(c);
             }
+            const auto apart = [&](const LaidPiece& c) { return std::popcount(static_cast<unsigned>(pieces[c.index].toggles ^ choice.toggles)); };
+            std::ranges::stable_sort(o.named.begin() + static_cast<std::ptrdiff_t>(from), o.named.end(), { }, apart);
         }
         return o;
     }
@@ -161,6 +165,24 @@ namespace rct3::park
     {
         const std::uint8_t bit = toggle_bit(toggle);
         const std::uint8_t wanted = choice.toggles ^ bit;
+        // A piece picked by name turns into its twin the other way, as a funnel into its enclosed form, when one fits.
+        if (choice.named && choice.named->index < pieces.size())
+        {
+            const PieceShape& now = pieces[choice.named->index];
+            constexpr float kSameEnd = 0.01f; ///< Twins share their splines
+            const auto twin = std::ranges::find_if(candidates, [&](const LaidPiece& c) {
+                if (c.index >= pieces.size() || c.reversed != choice.named->reversed)
+                    return false;
+                const PieceShape& p = pieces[c.index];
+                return p.toggles == (now.toggles ^ bit) && p.use == now.use && p.record.role == now.record.role && p.exit == now.exit && p.curve == now.curve && glm::distance(p.line.end, now.line.end) < kSameEnd;
+            });
+            if (twin != candidates.end())
+            {
+                choice.named = *twin;
+                choice.toggles = static_cast<std::uint8_t>((choice.toggles & ~bit) | (pieces[twin->index].toggles & bit));
+                return choice;
+            }
+        }
         const std::vector<Offer> all = offers(pieces, candidates);
         if (std::ranges::any_of(all, [&](const Offer& o) { return matches(o, choice) && (o.toggles & bit) == (wanted & bit); }))
             choice.toggles = wanted;

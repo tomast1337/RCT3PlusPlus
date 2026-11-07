@@ -193,3 +193,31 @@ TEST_CASE("a track being begun starts on its first station, laid as drawn")
     // With no station to start on, the plain picks.
     CHECK(opening_choice(all, std::vector<LaidPiece> { { 0, false }, { 5, false } }) == TrackChoice { });
 }
+
+TEST_CASE("of a piece picked by name and its enclosed twin, the one nearest the picked toggles is listed first")
+{
+    // An enclosed funnel listed before the open one, and the open one's mirror image.
+    std::vector<PieceShape> all { piece({ 0, 0, 6 }, 0, PieceUse::Special, kEnclosed), piece({ 0, 0, 6 }, 0, PieceUse::Special), piece({ 0, 0, 2 }, 0, PieceUse::Special) };
+    const std::vector<LaidPiece> fits { { 0, false }, { 1, false }, { 2, false } };
+    CHECK(choice_options(all, fits, picks(0)).named == std::vector<LaidPiece> { { 1, false }, { 2, false }, { 0, false } });
+    CHECK(choice_options(all, fits, picks(0, 0, 0, kEnclosed)).named == std::vector<LaidPiece> { { 0, false }, { 1, false }, { 2, false } });
+}
+
+TEST_CASE("turning the enclosed toggle over swaps a piece picked by name for its twin")
+{
+    // An enclosed bowl and an open one, and an open bowl turning the other way: it leaves the same way but ends
+    // elsewhere, so it has no enclosed twin here.
+    std::vector<PieceShape> all { piece({ -3, 0, 4 }, 0, PieceUse::Special, kEnclosed), piece({ -3, 0, 4 }, 0, PieceUse::Special), piece({ -3, 0, 4 }, 0, PieceUse::Special) };
+    all[2].line.end = { 0, 0, 5 };
+    const std::vector<LaidPiece> fits { { 0, false }, { 1, false }, { 2, false } };
+    TrackChoice open = picks(0);
+    open.named = LaidPiece { 1, false };
+    const TrackChoice closed = pick_toggle(all, fits, open, PieceToggle::Enclosed);
+    CHECK(closed.named == LaidPiece { 0, false });
+    CHECK(closed.toggles == kEnclosed);
+    CHECK(pick_toggle(all, fits, closed, PieceToggle::Enclosed).named == LaidPiece { 1, false });
+    // The other way's bowl has no enclosed twin and stays picked.
+    TrackChoice mirror = picks(0);
+    mirror.named = LaidPiece { 2, false };
+    CHECK(pick_toggle(all, fits, mirror, PieceToggle::Enclosed).named == LaidPiece { 2, false });
+}

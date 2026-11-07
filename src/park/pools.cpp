@@ -818,7 +818,7 @@ namespace rct3::park
         }
         // A board faces the side it keeps, which may look down past water at its own level to a pool below; one kept
         // without it faces the water beside it. A spiral staircase has its foot at the side it keeps. A path's slope or stairs has its foot at the path beside it level
-        // with it.
+        // with it, or at the slope or stairs below whose top it carries on from.
         constexpr std::array kStoredSides { Side::kColBefore, Side::kNextRow, Side::kNextCol, Side::kRowBefore }; // By bit of the stored side
         for (std::size_t i = 0; i < map.squares.size(); ++i)
         {
@@ -831,7 +831,7 @@ namespace rct3::park
             }
             const bool climbs = square.kind == PoolKind::PathSlope || square.kind == PoolKind::PathStairs;
             for (std::size_t k = 0; (square.kind == PoolKind::HighDive || climbs) && k < kSides.size(); ++k)
-                if (const auto next = map.at(square.col + kSides[k].step()[0], square.row + kSides[k].step()[1], square.surface); next && (climbs ? next->kind == PoolKind::Path && next->surface == square.surface : next->kind == PoolKind::Water))
+                if (const auto next = map.at(square.col + kSides[k].step()[0], square.row + kSides[k].step()[1], square.surface); next && (climbs ? (next->kind == PoolKind::Path && next->surface == square.surface) || (next->kind == PoolKind::PathSlope && next->surface + kPathSlopeRise == square.surface) || (next->kind == PoolKind::PathStairs && next->surface + kPathStairsRise == square.surface) : next->kind == PoolKind::Water))
                 {
                     square.side = kSides[k];
                     break;

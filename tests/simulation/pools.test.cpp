@@ -618,6 +618,45 @@ TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into t
     CHECK((down.dive != DiveStep::Climb || r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool).boards[static_cast<std::size_t>(down.board)].high));
 }
 
+TEST_CASE("swimmers spend a good part of their time out on the paving round the water, mostly walking it")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    park::PoolMap pools;
+    for (std::int32_t row = 2; row < 9; ++row)
+        for (std::int32_t col = 2; col < 9; ++col)
+        {
+            const bool water = row > 2 && row < 8 && col > 2 && col < 8;
+            pools.squares.push_back({ .col = col, .row = row, .kind = water ? park::PoolKind::Water : park::PoolKind::Tile });
+        }
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    std::vector<entt::entity> guests;
+    for (int i = 0; i < 30; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+    // Looks at swimmers free to go where they like: in the water, out on the paving, and of those walking.
+    int in = 0;
+    int out = 0;
+    int walking = 0;
+    for (int t = 0; t < static_cast<int>(kTuning.pools.stay.value); ++t)
+    {
+        park.run_seconds(1);
+        for (const entt::entity g : guests)
+            if (const auto* swimmer = r.try_get<Swimmer>(g); swimmer != nullptr && swimmer->changed && swimmer->changing.value <= 0 && swimmer->left.value > 0 && swimmer->edge == PoolEdge::None && swimmer->spot < 0 && swimmer->board < 0 && swimmer->ladder < 0 && !swimmer->to_spa)
+            {
+                ++(swimmer->in_water ? in : out);
+                walking += !swimmer->in_water && glm::distance(r.get<Pose>(g).position, swimmer->goal) > 0.01f;
+            }
+    }
+    CAPTURE(in);
+    CAPTURE(out);
+    CAPTURE(walking);
+    CHECK(out > (in + out) / 4);
+    CHECK(out < (in + out) * 2 / 3);
+    CHECK(walking > out / 2);
+}
+
 TEST_CASE("swimmers waiting for a high diving board stand in a line behind its ladder, not on one spot")
 {
     Sandbox park;

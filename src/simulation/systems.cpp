@@ -4512,7 +4512,10 @@ namespace rct3::simulation
                 swimmer.to_spa = false;
                 continue;
             }
-            const bool out = !pool->paved.empty() && random::chance(dice, kTuning.pools.poolside.value);
+            // Out on the paving they mostly walk on along it, standing little, before going back in.
+            const bool out = !pool->paved.empty() && random::chance(dice, (swimmer.in_water ? kTuning.pools.poolside : kTuning.pools.stay_out).value);
+            if (out)
+                swimmer.idle.value = static_cast<float>(random::between(dice, 0.0, double { kTuning.pools.deck_rest.value }));
             if (out == swimmer.in_water && !pool->ladders.empty() && random::chance(dice, kTuning.dives.ladder.value))
                 if (const auto which = static_cast<std::int32_t>(random::below(dice, pool->ladders.size())); reach(pool->ladders[static_cast<std::size_t>(which)].water) && ladders_taken.insert({ door->pool, which }).second)
                 {

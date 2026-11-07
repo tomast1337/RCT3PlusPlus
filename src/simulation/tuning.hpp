@@ -540,7 +540,11 @@ namespace rct3::simulation::tuning
         Pace swim { 0.7f };          ///< Across the water
         Seconds shortest_rest { 3 }; ///< Floating or standing between swims
         Seconds longest_rest { 15 };
-        Chance poolside { 0.2 };                    ///< Of going to the paved squares next rather than the water
+        Chance poolside { 0.2 }; ///< Of going to the paved squares next rather than the water
+        // Fitted to saves: a third to a half of the swimmers in saved parks not queueing or at an extra are out on the
+        // paving, mostly walking it.
+        Chance stay_out { 0.85 };                   ///< Of those out on the paved squares, of going on to another rather than back in
+        Seconds deck_rest { 3 };                    ///< Most standing between walks on the paved squares; saved swimmers out on them seldom stand
         Chance extra { 0.3 };                       ///< Of going to a spa pool or an extra next, of those that go on from the water
         Chance slide { 0.25 };                      ///< Chosen by eye: of going up one of the pool's slides next, when it has any
         std::uint8_t lounger_places = 2;            ///< Swimmers a set of sun loungers takes at once, as the saved parks' do

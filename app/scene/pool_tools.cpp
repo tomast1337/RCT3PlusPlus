@@ -176,12 +176,13 @@ namespace rct3::scene
             return { std::move(map), cost };
         }
 
-        /// The station platform squares of the pool slides, whose decks a pool path trail may start from.
+        /// The station platform squares of the pool rides, those ending in a pool or back at a station, whose decks a
+        /// pool path trail may start from.
         std::vector<park::SlidePlatform> slide_platforms(const ParkScene& scene)
         {
             std::vector<park::SlidePlatform> out;
             for (std::size_t i = 0; i < scene.rides.rides.size() && i < scene.courses.size(); ++i)
-                if (const save::Ride& ride = scene.rides.rides[i]; !ride.base.demolished && ride.track && scene.courses[i] && scene.courses[i]->splash_end)
+                if (const save::Ride& ride = scene.rides.rides[i]; !ride.base.demolished && ride.track && i < scene.track_rules.size() && scene.track_rules[i].pool_ride)
                     for (const save::TrackPiece& p : ride.track->pieces)
                         if (p.platform)
                             out.push_back({ .col = p.platform->tile_x, .row = p.platform->tile_z, .height = p.platform->height, .turn = park::ModelTurn::from(p.platform->direction) });

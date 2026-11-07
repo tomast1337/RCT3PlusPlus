@@ -657,12 +657,16 @@ TEST_CASE("swimmers spend a good part of their time out on the paving round the 
     CHECK(walking > out / 2);
 }
 
-TEST_CASE("swimmers waiting for a high diving board stand in a line behind its ladder, not on one spot")
+TEST_CASE("swimmers waiting for a high diving board stand in a line behind its ladder, not on one spot, and only on the paving")
 {
     Sandbox park;
     park.path({ 0, 0 }, { 5, 0 });
     park::PoolMap pools;
-    pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+    // Paving behind the board for a short line, the room's door on it.
+    for (std::int32_t row = 1; row < 3; ++row)
+        for (std::int32_t col = 2; col < 9; ++col)
+            if ((col != 6 || row != 2) && (col != 5 || row != 1))
+                pools.squares.push_back({ .col = col, .row = row, .kind = park::PoolKind::Tile });
     pools.squares.push_back({ .col = 6, .row = 2, .kind = park::PoolKind::HighDive, .board = 6, .side = rct3::park::Side { 0 } });
     for (std::int32_t row = 3; row < 9; ++row)
         for (std::int32_t col = 2; col < 9; ++col)
@@ -676,6 +680,7 @@ TEST_CASE("swimmers waiting for a high diving board stand in a line behind its l
     // The most waiting at once, standing at their places a while, and the closest two of them ever came.
     std::size_t most = 0;
     float closest = std::numeric_limits<float>::max();
+    int off = 0;
     for (int t = 0; t < 2 * static_cast<int>(kTuning.pools.stay.value) * 10; ++t)
     {
         park.run_seconds(0.1f);
@@ -684,6 +689,9 @@ TEST_CASE("swimmers waiting for a high diving board stand in a line behind its l
             if (const auto* swimmer = r.try_get<Swimmer>(g); swimmer != nullptr && swimmer->board >= 0 && swimmer->dive == DiveStep::None && swimmer->waited.value >= 1 && glm::distance(r.get<Pose>(g).position, swimmer->goal) < 0.01f)
                 waiting.push_back(r.get<Pose>(g).position);
         most = std::max(most, waiting.size());
+        // None past the paving behind it, where a line too long for it would go.
+        for (const glm::vec3& w : waiting)
+            off += w.z < park.world().paths.tile_size || w.z > 3 * park.world().paths.tile_size;
         for (std::size_t i = 0; i < waiting.size(); ++i)
             for (std::size_t j = i + 1; j < waiting.size(); ++j)
                 closest = std::min(closest, glm::distance(waiting[i], waiting[j]));
@@ -691,6 +699,7 @@ TEST_CASE("swimmers waiting for a high diving board stand in a line behind its l
     CAPTURE(most);
     CHECK(most >= 2);
     CHECK(closest > kTuning.pools.queue_gap * 0.9f);
+    CHECK(off == 0);
 }
 
 TEST_CASE("a small diving board on the pool's wall is walked out on and dived off; a ladder is a way out")

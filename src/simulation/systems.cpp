@@ -4333,26 +4333,28 @@ namespace rct3::simulation
             {
                 const PoolBoard& board = pool->boards[static_cast<std::size_t>(swimmer.board)];
                 // Those waiting their turn stand in a line behind it, a high board's behind its ladder, not in the
-                // tower, a gap apart, the one nearest it first; each steps up as the line moves.
+                // tower, a gap apart, in the order they came to their places; each steps up as the line moves.
                 auto& line = board_lines[{ door->pool, swimmer.board }];
-                const float near = glm::distance(pose.position, board.foot);
                 const auto ahead = swimmer.waited.value == 0 ? line.size() : static_cast<std::size_t>(std::ranges::count_if(line, [&](entt::entity o) {
-                    const float d = glm::distance(r.get<Pose>(o).position, board.foot);
-                    return o != g && (d < near || (d == near && o < g));
+                    const float waited = r.get<Swimmer>(o).waited.value;
+                    return o != g && (waited > swimmer.waited.value || (waited == swimmer.waited.value && o < g));
                 }));
                 if (ahead > 0 || !boards_taken.insert({ door->pool, swimmer.board }).second)
                 {
                     const float back = (board.high ? kTuning.dives.ladder_queue : kTuning.pools.queue_gap) + static_cast<float>(ahead) * kTuning.pools.queue_gap;
-                    const glm::vec3 place = board.foot - glm::vec3 { std::sin(board.heading.value), 0, std::cos(board.heading.value) } * back;
-                    if (swimmer.waited.value == 0) // At its end, behind any joining before them this moment too
+                    glm::vec3 place = board.foot - glm::vec3 { std::sin(board.heading.value), 0, std::cos(board.heading.value) } * back;
+                    // A line as long as the paving behind it takes no more: the rest go off to do something else.
+                    const bool room = std::ranges::any_of(pool->walks, [&](const PoolWalk& w) { return !w.water && std::abs(place.x - w.at.x) <= paths.tile_size / 2 && std::abs(place.z - w.at.z) <= paths.tile_size / 2 && std::abs(place.y - w.at.y) < paths.level_height; });
+                    if (room && swimmer.waited.value == 0) // At its end, behind any joining before them this moment too
                         line.push_back(g);
-                    swimmer.waited.value = std::max(swimmer.waited.value, dt);
-                    if (glm::distance(place, swimmer.goal) > 0.01f)
+                    if (room)
+                        swimmer.waited.value = std::max(swimmer.waited.value, dt);
+                    if (room && glm::distance(place, swimmer.goal) > 0.01f)
                     {
                         swimmer.goal = place;
                         continue;
                     }
-                    if ((swimmer.waited.value += dt) < kTuning.pools.patience.value)
+                    if (room && (swimmer.waited.value += dt) < kTuning.pools.patience.value)
                         continue;
                     swimmer.board = -1;
                     swimmer.waited = { };

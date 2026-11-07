@@ -547,6 +547,8 @@ namespace rct3::simulation::tuning
         std::uint8_t shower_places = 3;             ///< And a shower
         Seconds lounging { 45 };                    ///< Chosen by eye: on a lounger
         float deck = 0.2f;                          ///< The paving's top over the pool's surface, in metres, where saved guests walk it
+        float queue_gap = 0.85f;                    ///< From one swimmer in a slide's line to the one ahead, in metres, as a saved park's stand
+        float slide_deck = 2;                       ///< Chosen by eye: most levels a slide's station track stands over the paving or steps beside its platform
         float lounger_reach = 1.44f;                ///< From a set of loungers' middle to where one lying on the last is placed, the way they face, in metres, as a saved park's are
         float lounger_side = 0.55f;                 ///< And sideways from there, as a saved park's are
         float lounger_gap = 1.75f;                  ///< Between the loungers of a set, the way those on them face, in metres, measured by eye on the model

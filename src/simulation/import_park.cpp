@@ -1704,6 +1704,23 @@ namespace rct3::simulation
             r.emplace<Pose>(e, position, -p.heading, position, -p.heading); // The original turns the other way
             if (walks)
                 start_walking(world, e, *at);
+            // An inspector the park left swimming, looking a pool complex over: in it still, a swimmer till their
+            // time there is up, then back to their rounds by its changing room.
+            if (const auto door = walks && role == StaffRole::Inspector && p.state == save::PersonState::Swimming ? pool_door_at(world, position) : std::nullopt)
+            {
+                const SwimPool& pool = r.get<SwimPool>(r.get<PoolDoor>(*door).pool);
+                const float half = world.paths.tile_size / 2;
+                const auto within = [&](const glm::vec3& w) { return std::abs(position.x - w.x) <= half && std::abs(position.z - w.z) <= half; };
+                r.emplace<Needs>(e);
+                r.emplace<Mood>(e);
+                r.emplace<Wallet>(e);
+                r.emplace<Rounds>(e, Rounds { .seen = { { *door, 0.0f } } });
+                r.get<Errand>(e) = { .kind = ErrandKind::Swimming, .target = *door };
+                const Seconds left = saved.time_in_pool ? Seconds { std::max(*saved.time_in_pool, 0.0f) } : kTuning.pools.stay;
+                r.emplace<Swimmer>(e, Swimmer { .changed = true, .left = left, .goal = position, .in_water = std::ranges::any_of(pool.water, within) });
+                auto& pose = r.get<Pose>(e);
+                pose.position = pose.was = position;
+            }
             out[i] = e;
         }
         return out;
@@ -1753,13 +1770,16 @@ namespace rct3::simulation
         auto& r = world.registry;
         std::unordered_map<save::ObjectId, entt::entity> ride_of;
         // Not a ride run with no doors on the paths, as its riders would have nowhere to get off, but for a pool
-        // slide, whose riders swim on in the pool it ends in.
+        // slide, whose riders swim on in the pool it ends in or lets them off into.
         const auto slide_room = [&](entt::entity ride) -> std::optional<entt::entity> {
             const auto* fleet = r.try_get<Trains>(ride);
-            if (fleet == nullptr || !fleet->trains.front().splash_out)
+            if (fleet == nullptr || fleet->trains.empty() || (!fleet->trains.front().splash_out && fleet->trains.front().drop_offs.empty()))
                 return std::nullopt;
-            const Coaster& train = fleet->trains.front();
-            return pool_door_at(world, track_point(train, train.length()));
+            const auto pool = pool_ride_pool(world, ride);
+            for (const auto [door, d] : r.view<const PoolDoor>().each())
+                if (pool && d.pool == *pool)
+                    return door;
+            return std::nullopt;
         };
         for (std::size_t i = 0; i < saved.rides.size() && i < rides.size(); ++i)
             if (rides[i] != entt::null && (r.get<Attraction>(rides[i]).entrance != kNoNode || slide_room(rides[i]) || r.all_of<River>(rides[i])))

@@ -1279,6 +1279,7 @@ namespace rct3::simulation
         KeeperBadZones,     ///< One that every such keeper has a patrol leaving out
         TroughsEmpty,       ///< A hungry animal (the finding's entity) finding its house's food trough empty, time and again
         TooMuchDung,        ///< An animal house whose enclosure has more dung than its animals put up with
+        DangerousFlume,     ///< A pool slide that threw a rider onto hard ground, not into water; it is shut
         // Not the inspector's: a worker's own news (staff_care.hpp), with the worker
         WantsToQuit,
         Quit, ///< The park lets them go once told

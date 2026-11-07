@@ -417,6 +417,7 @@ namespace rct3::save
         std::int32_t thinks_since_happy = -1;
         PatrolArea patrol { };
         std::int32_t task_flags = 0;
+        std::optional<float> time_in_pool { }; ///< Seconds still to swim, while in a pool (an inspector looking one over)
         std::variant<std::monostate, HandymanWork, MechanicWork, EntertainerWork, VendorWork, KeeperWork, LifeGuardWork> work { };
     };
 

@@ -3174,7 +3174,7 @@ namespace rct3::scene
                 if (auto* findings = scene.sim.registry.ctx().find<simulation::Findings>())
                 {
                     using enum simulation::Finding;
-                    constexpr std::array<std::string_view, 24> kKeys { // By Finding
+                    constexpr std::array<std::string_view, 25> kKeys { // By Finding
                                                                        "Thought_PI_Stall_TooExpensive1",
                                                                        "Thought_PI_Stall_TooCheap1",
                                                                        "Thought_PI_Ride_LongQueueTime1",
@@ -3197,6 +3197,7 @@ namespace rct3::scene
                                                                        "Thought_PI_AnimalKeepersBadZones1",
                                                                        "Thought_PI_AnimalHungryFoodTroughsEmpty1",
                                                                        "Thought_PI_TooMuchDung1",
+                                                                       "Thought_PI_DangerousFlume1",
                                                                        "StaffMessage_WantsToResign",
                                                                        "StaffMessage_Resigned"
                     };

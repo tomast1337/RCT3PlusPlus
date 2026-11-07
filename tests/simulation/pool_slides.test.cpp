@@ -146,3 +146,26 @@ TEST_CASE("a pool slide's train kept past its open end is out of sight there, an
     slide.closed = true;
     CHECK_FALSE(trains_of(slide, ride).trains[1].splashed);
 }
+
+TEST_CASE("a mechanic mends a broken pool slide from its complex's changing room door, never going in")
+{
+    Sandbox park;
+    const auto slide = slide_by_pool(park);
+    auto& r = park.world().registry;
+    auto& attraction = r.get<Attraction>(slide);
+    attraction.entrance = r.get<CycleRide>(slide).exit = kNoNode; // A pool slide's platform has no doors of its own
+    attraction.open = false;
+    r.emplace_or_replace<Upkeep>(slide, Upkeep { .broken = true, .inspect_every = -1 });
+    const auto mechanic = park.staff(StaffRole::Mechanic, { 0, 0 });
+    const float pool_edge = park.world().paths.tile_size; // Row 0's far side; the complex starts past it
+    bool kept_out = true;
+    CHECK(park.run_until(
+        [&] {
+            kept_out = kept_out && r.get<Pose>(mechanic).position.z <= pool_edge;
+            return r.get<Attraction>(slide).open;
+        },
+        300));
+    CHECK(kept_out);
+    CHECK(r.get<Staff>(mechanic).fixed == 1);
+    CHECK(r.get<Pose>(mechanic).position.x >= 4 * park.world().paths.tile_size); // Mended at the room's door at column 5
+}

@@ -1348,12 +1348,12 @@ namespace rct3::scene
                 // Spread as hash noise of the clock: no state to keep, and different for each end.
                 const auto noise = [&](float salt) { return glm::fract(std::sin(scene.park_clock * 12.9898f + static_cast<float>(k) * 78.233f + salt) * 43758.547f); };
                 const glm::vec3 lip = glm::mix(pour.left, pour.right, noise(1.0f));
-                fire_park_particles(scene.particles, kSplashEffects[0], lip, glm::normalize(pour.landing - lip), kPourSpray);
+                fire_park_particles(scene.particles, "rswaterspray", lip, glm::normalize(pour.landing - lip), kPourSpray);
                 const glm::vec3 at = pour.landing + glm::vec3(noise(2.0f) - 0.5f, 0.0f, noise(3.0f) - 0.5f) * (2 * kPourScatter);
                 if (pour.water)
                     start_rings(scene, at, kPourRings);
                 else
-                    fire_park_particles(scene.particles, kSplashEffects[0], at, glm::vec3(0, 1, 0), kPourSplash);
+                    fire_park_particles(scene.particles, "rswaterspray", at, glm::vec3(0, 1, 0), kPourSplash);
             }
         }
         scene.car_waters.resize(scene.cars.size());

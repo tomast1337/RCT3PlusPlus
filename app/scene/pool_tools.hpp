@@ -65,7 +65,7 @@ namespace rct3::scene
 
     /// Builds the pools' pieces and water again after they changed, on the tiles of `touched` or anywhere.
     /// shortcut: the old pieces stay hidden among the objects; drop them when objects can be taken out.
-    /// Where the rides' pieces join the pools: their railings are left open there.
+    /// Where the rides' pieces and slide stations join the pools: railings are left open there and paths join them.
     [[nodiscard]] std::vector<park::PoolOpening> pool_openings(const ParkScene& scene);
 
     void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<park::TileRect> touched = std::nullopt);

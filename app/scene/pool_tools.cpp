@@ -815,6 +815,10 @@ namespace rct3::scene
         for (std::size_t i = 0; i < scene.rides.rides.size() && i < scene.courses.size(); ++i)
             if (!scene.rides.rides[i].base.demolished && scene.courses[i])
                 std::ranges::copy(scene.courses[i]->pool_openings, std::back_inserter(out));
+        // A slide's station platform joins the pools at its deck on both sides off its track.
+        for (const park::SlidePlatform& p : slide_platforms(scene))
+            for (const park::Side side : { p.turn.facing(), p.turn.facing().opposite() })
+                out.push_back({ .col = p.col, .row = p.row, .height = p.height, .side = side });
         return out;
     }
 

@@ -20,10 +20,14 @@ local/
 # nob bootstrap binary
 /nob
 /nob.old
+/nob.exe
+/nob.exe.old
 *.dat
 
 # Dear ImGui writes window layout here when the viewer runs.
 imgui.ini
+
+# Compilation caches
 .ccache/
 __pycache__/
 *.pyc

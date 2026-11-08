@@ -33,8 +33,8 @@ build/debug/sound-play --null --tone 440                       # same path witho
 ```
 
 `./nob` rebuilds itself when `nob.cpp` or `nob.hpp` change. `CXX` selects the compiler (default `g++`). Fuzzing uses `CLANGXX` (default `clang++`).
-`build/compile_commands.json` is written for clangd. Needs a C++26 compiler (GCC 16+, or Clang 20+ with libstdc++ 16+). POSIX
-only for now.
+`build/compile_commands.json` is written for clangd. Needs a C++26 compiler (GCC 16+, or Clang 20+ with libstdc++ 16+). POSIX,
+or Windows with MSYS2 UCRT64: see [Windows](docs/windows.md).
 
 Audio (`src/audio/`) uses the vendored [miniaudio](third_party/miniaudio/) and is linked into the tests and
 the tools that use it only. It needs no audio package and no device to build or test: on Linux miniaudio

@@ -32,6 +32,12 @@ Suggested messages:
   the spec in the same change that corrects the parser.
 - Verify format claims against real game files, not only against existing docs. `ovl-dump` over the game
   install is the oracle.
+- Code in `third_party/` is off limits: do not edit it.
+- A change needs `./nob format --check` clean ([CONTRIBUTING.md](CONTRIBUTING.md#sending-a-change)).
+
+### Platforms
+
+- Windows: See [docs/windows.md](docs/windows.md)
 
 ## Clean room
 
@@ -40,7 +46,7 @@ Read [ORIGINAL_WORK.md](ORIGINAL_WORK.md) before touching anything to do with th
 - No game files or anything extracted from them, no byte dumps from real files, no code, names or
   addresses taken from the game's program, no copied code from other projects (vendored libraries in
   `third_party/` keep their own license files).
-- Tests build their inputs in code (see `tests/ovl_header_test.cpp`). Never commit files from the game
+- Tests build their inputs in code (see `tests/ovl/header.test.cpp`). Never commit files from the game
   install.
 - `local/` is git-ignored and holds fuzz corpora and other generated output. Never reference it from
   tracked files.

@@ -148,7 +148,7 @@ namespace rct3::ui
         if (choices_.empty())
             return { 0, 0 };
         const auto columns = (choices_.size() + pool_panel::kRows - 1) / pool_panel::kRows;
-        return { pool_panel::kCell * static_cast<float>(columns), pool_panel::kCell * static_cast<float>(pool_panel::kRows) };
+        return { std::max(pool_panel::kCell * static_cast<float>(columns), pool_panel::kChoicesNarrowest), pool_panel::kCell * static_cast<float>(pool_panel::kRows) };
     }
 
     Rect PoolPanel::disc() const

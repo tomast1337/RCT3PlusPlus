@@ -230,7 +230,8 @@ await screenshot("pool_extras");
 
 // A changing room on the ground beside the paved ring, opening on it: the railing there opens. Picked in the
 // panel, it follows the pointer as a ghost, shown in the panel's disc too, and turns to the pool unasked; placed,
-// the tool goes and the room's window opens, where the pool complex opens and its ticket price is set.
+// the panel stays out, as in the original. Closed, a click on the room opens its window, where the
+// pool complex opens and its ticket price is set.
 const room = () => map.objects().find((o) => o.overlay !== kPool && o.col === c0 - 1 && o.row === r0 + 4);
 const railings = count("Railing");
 if (!ui.find("tools/Rides/Obj_Pools"))
@@ -253,8 +254,11 @@ await pointer.click(...on_view(c0 - 0.5, r0 + 4.5));
 await frames(3);
 expect(room() !== undefined, "a changing room beside the pool");
 expect(count("Railing") === railings - 1, `the railing open towards it, not ${railings - count("Railing")} fewer`);
+expect(ui.find("pool_panel") !== undefined, "the pool panel still out once the room is placed");
+await ui.click("pool_panel/close");
+await until(() => ui.find("pool_panel") === undefined, 120, "the pool panel closed");
+await pointer.click(...on_view(c0 - 0.5, r0 + 4.5));
 await until(() => ui.find("info") !== undefined, 120, "the changing room's window");
-expect(ui.find("pool_panel") === undefined, "the pool panel gone, the room placed once");
 await frames(5);
 await screenshot("pool_changing_room");
 // Its window is an attraction's: details naming the complex, its mode, its money, its customers and upkeep.
@@ -474,8 +478,8 @@ for (const [col, row, x, y] of sides.slice(1))
     await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
     await frames(2);
     await pointer.click(...on_view(col + x, row + y));
-    await until(() => ui.find("info") !== undefined, 120, `the window of the room at ${col - c0}, ${row - r0}`);
-    await ui.click("info/close");
+    await until(() => map.objects().some((o) => o.overlay !== kPool && o.col === col && o.row === row), 120, `the room at ${col - c0}, ${row - r0}`);
+    await ui.click("pool_panel/close");
     await frames(3);
     expect(map.pavings().some((p) => p.col === col && p.row === row), `the floor of the room at ${col - c0}, ${row - r0} paved`);
 }

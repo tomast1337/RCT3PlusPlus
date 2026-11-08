@@ -138,6 +138,15 @@ await frames(2);
 await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
 await frames(3);
 await pointer.click(...on_view(c + 1.5, r + 0.5));
+// The pool panel stays out once the room is placed; closed, a click on the room opens its window.
+await ui.click("pool_panel/close");
+await frames(3);
+// Looked at from close by, as it stands at the view's edge here.
+camera.look({ col: c + 1.5, row: r + 0.5 }, { col: c + 4, row: r + 3.5, up: 3 });
+await frames(10);
+// Its walls, over the railing in front of it.
+const [hut_x, hut_y] = on_view(c + 1.5, r + 0.5);
+await pointer.click(hut_x, hut_y - 0.1);
 await until(() => ui.find("info") !== undefined, 120, "the changing room's window");
 await ui.click("info/Attraction_General_Closed");
 await until(() => ui.find("info/Attraction_Button_Open") !== undefined, 60, "the flag's lights");

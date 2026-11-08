@@ -113,7 +113,8 @@ namespace rct3::ui
         inline constexpr float kCell = 40;      ///< A picture on the extras and changing room pages, with the room round it
         inline constexpr float kStairCell = 32; ///< Chosen by eye: a way between levels in the paths page's column, three to the strip's height
         inline constexpr std::size_t kRows = 2;
-        inline constexpr float kBodyLeft = 40; ///< From the strip's left edge to the page, past the ring's tabs
+        inline constexpr float kChoicesNarrowest = 5 * kCell; ///< Chosen by eye: room on a page with few choices for a long name and price in its band
+        inline constexpr float kBodyLeft = 40;                ///< From the strip's left edge to the page, past the ring's tabs
         inline constexpr float kBodyRight = 16;
         inline constexpr float kBodyTop = 30;
         inline constexpr float kStatusGap = 8;

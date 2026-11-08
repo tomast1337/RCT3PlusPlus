@@ -2334,14 +2334,6 @@ namespace rct3::scene
             update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, elapsed);
             update_enclosing(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over);
             update_pooling(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, input.shift, typing(scene) ? std::span<const ui::PlayCommand> { } : std::span(input.commands));
-            // A changing room just placed opens its window, on the tab last open in a room's.
-            if (const auto room = scene.pooling.room_placed)
-                for (std::size_t i = 0; i < scene.objects.size(); ++i)
-                    if (pool_room(scene, scene.objects[i]) == room)
-                    {
-                        open_prop(scene, *info, i, assets, options, scene.room_tab.value_or(ui::SceneryTab::RoomDetails));
-                        break;
-                    }
             // The area delete tool marks the tiles a drag spans; its panel clears them or deletes what stands there.
             DeleteTools& deleting = scene.deleting;
             const bool area = deleting.tool == DeleteTools::Tool::Area;
@@ -2425,7 +2417,7 @@ namespace rct3::scene
                 // While painting a patrol area, the left button paints and does not pick.
                 if (scene.holding)
                     hold_person(scene, pointer.position, { screen.width(), screen.height() }, still && !over, false);
-                else if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab || scene.enclosing.item || scene.pooling.item || scene.pooling.room_placed)
+                else if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab || scene.enclosing.item || scene.pooling.item)
                     ;
                 else if (!still && scene.deleting.tool == DeleteTools::Tool::None && scene.structures.tool == StructureTools::Tool::None && !ride_placing(scene) && !scene.building.ride)
                 {

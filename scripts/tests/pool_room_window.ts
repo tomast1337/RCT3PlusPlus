@@ -31,7 +31,8 @@ const r = gate.row - 4;
 camera.look({ col: c + 3, row: r + 0.5 }, { col: c + 3, row: r + 12, up: 14 });
 await frames(10);
 
-// A small pool east of the road, and a changing room between them; its window opens once it is placed.
+// A small pool east of the road, and a changing room between them; the pool panel stays out once it is placed, and
+// a click on the room opens its window.
 const rides = `tools/Rides/${ui.children("tools/Rides")![0]}`;
 if (!ui.find("tools/Rides/Obj_Pools"))
     await ui.click(rides);
@@ -50,8 +51,17 @@ await frames(2);
 await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
 await frames(3);
 await pointer.click(...on_view(c + 1.5, r + 0.5));
+await frames(3);
+expect(ui.find("pool_panel") !== undefined, "the pool panel still out once the room is placed");
+// The room's name and price in the band fit the strip.
+const choice = ui.find(`pool_panel/body/${ui.children("pool_panel/body")![0]}`)!;
+pointer.move(choice.x, choice.y);
+await frames(3);
+await screenshot("pool_room_panel_wide");
+await ui.click("pool_panel/close");
+await until(() => ui.find("pool_panel") === undefined, 120, "the pool panel closed");
+await pointer.click(...on_view(c + 1.5, r + 0.5));
 await until(() => ui.find("info") !== undefined, 120, "the changing room's window");
-expect(ui.find("pool_panel") === undefined, "the pool panel gone once the room is placed");
 camera.look({ col: c + 3, row: r + 1 }, { col: c - 2, row: r + 6, up: 6 });
 await frames(5);
 

@@ -132,6 +132,10 @@ if (built)
     await frames(3);
     await from_above(c + 1, r);
     await pointer.click(...on_view(c + 1.5, r + 0.5));
+    // The pool panel stays out once the room is placed; closed, a click on the room opens its window.
+    await ui.click("pool_panel/close");
+    await frames(3);
+    await pointer.click(...on_view(c + 1.5, r + 0.5));
     await until(() => ui.find("info") !== undefined, 120, "the changing room's window");
     await ui.click("info/Attraction_General_Closed");
     await until(() => ui.find("info/Attraction_Button_Open") !== undefined, 60, "the flag's lights");

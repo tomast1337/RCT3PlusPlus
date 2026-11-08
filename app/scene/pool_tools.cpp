@@ -301,21 +301,16 @@ namespace rct3::scene
                 t.corner = tile;
             else if (t.corner && !down)
             {
-                // Let go: the extra goes in where the pointer is now. A changing room is placed once: the tool
-                // and its ghost go.
+                // Let go: the extra or changing room goes in where the pointer is now. The panel and its tool stay
+                // out, as in the original.
                 t.corner.reset();
                 if (ok && room)
                 {
                     scene.pools.rooms.push_back({ .symbol = item.symbol, .overlay = item.overlay, .col = tile->col, .row = tile->row, .side = side });
                     ++scene.built;
                     pools_changed(device, scene, assets);
-                    // It opens on a paved square, so it is in a complex: its window opens in place of the panel.
-                    const std::size_t placed = scene.pools.rooms.size() - 1;
-                    stop_pooling(scene);
-                    scene.pooling.room_placed = placed;
-                    return;
                 }
-                if (ok)
+                else if (ok)
                 {
                     save::PlacedObject model { .symbol = item.symbol, .overlay = item.overlay };
                     const bool loaded = load_object_model(scene, scene.placing.models, assets, model);
@@ -554,7 +549,6 @@ namespace rct3::scene
         follow_path_controls(device, scene, assets);
         follow_panel(scene);
         PoolTool& t = scene.pooling;
-        t.room_placed.reset(); // Its window opened, and the click that placed it was not taken as a pick
         // The pointer finds the park as it was before the work shown, which moves with it.
         swap_pool_work(scene);
         // The paths page's trails start from pool slides' platforms too.

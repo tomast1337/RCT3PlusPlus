@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ride_cars.hpp"
+#include "park/ride/cars.hpp"
 
 #include <cmath>
 #include <format>
 #include <glm/gtc/matrix_transform.hpp>
 
-namespace rct3::park
+namespace rct3::park::ride
 {
 
     std::vector<std::size_t> car_slots(int cars, const std::array<bool, 6>& filled)
@@ -58,4 +58,4 @@ namespace rct3::park
         return out;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::ride

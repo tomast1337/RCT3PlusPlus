@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/support_sets.hpp"
+#include "park/support/sets.hpp"
 
 #include "ovl/overlay.hpp"
 #include "ovl/scenery_item.hpp"
 
 #include <algorithm>
 
-namespace rct3::park
+namespace rct3::park::support
 {
 
     namespace
@@ -124,4 +124,4 @@ namespace rct3::park
         return { round != nullptr ? round : any, { } };
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::support

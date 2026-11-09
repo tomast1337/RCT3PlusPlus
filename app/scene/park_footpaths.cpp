@@ -16,7 +16,7 @@
 #include "park/queue_fences.hpp"
 #include "park/queue_lines.hpp"
 #include "park/relief_maps.hpp"
-#include "park/support_columns.hpp"
+#include "park/support/columns.hpp"
 #include "park/surrounding_land.hpp"
 #include "park/track/ground.hpp"
 #include "profiling/profiler.hpp"
@@ -44,14 +44,14 @@
 namespace rct3::scene
 {
 
-    const park::SupportSets* support_sets(ParkScene& scene, const ui::InterfaceAssets& assets)
+    const park::support::SupportSets* support_sets(ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         ParkFootpaths& f = scene.footpaths;
         if (!f.support_sets && assets.install)
         {
-            if (const auto found = assets.install->find(std::format("{}.common.ovl", park::kSupportOverlay)))
+            if (const auto found = assets.install->find(std::format("{}.common.ovl", park::support::kSupportOverlay)))
             {
-                if (auto sets = park::load_support_sets(*found))
+                if (auto sets = park::support::load_support_sets(*found))
                     f.support_sets = std::move(*sets);
                 else
                     logging::logger("park").warning("supports: {}", sets.error());
@@ -60,23 +60,23 @@ namespace rct3::scene
         return f.support_sets ? &*f.support_sets : nullptr;
     }
 
-    std::vector<save::PlacedObject> supports_under(const ParkScene& scene, std::span<const save::PlacedObject> ghosts, const park::SupportSets& sets)
+    std::vector<save::PlacedObject> supports_under(const ParkScene& scene, std::span<const save::PlacedObject> ghosts, const park::support::SupportSets& sets)
     {
         std::vector<save::PlacedObject> objects = scene.objects;
         std::uint64_t last = 0;
         for (const save::PlacedObject& o : objects)
             last = std::max(last, o.id);
-        std::set<park::SupportTile> tiles;
+        std::set<park::support::SupportTile> tiles;
         std::unordered_set<std::uint64_t> ids;
         for (const save::PlacedObject& ghost : ghosts)
         {
             save::PlacedObject& o = objects.emplace_back(ghost);
             o.id = ++last;
-            const auto under = park::support_tiles(o, scene.models);
+            const auto under = park::support::support_tiles(o, scene.models);
             tiles.insert(under.begin(), under.end());
             ids.insert(o.id);
         }
-        park::BuiltSupports built = park::support_columns(objects, scene.models, scene.footpaths.paths, scene.grid, sets, last, supports_passed(scene), tiles);
+        park::support::BuiltSupports built = park::support::support_columns(objects, scene.models, scene.footpaths.paths, scene.grid, sets, last, supports_passed(scene), tiles);
         std::vector<save::PlacedObject> out;
         for (std::size_t i = 0; i < built.pieces.size(); ++i)
         {
@@ -783,7 +783,7 @@ namespace rct3::scene
             for (const std::size_t i : raised)
                 shown.push_back(deck_object(style, with[i], with, scene.grid, with[i].elevation->scenery_ref));
             std::erase_if(shown, [&](const save::PlacedObject& o) { return !load_object_model(scene, f.models, assets, o); });
-            if (const park::SupportSets* sets = support_sets(scene, assets); sets != nullptr && !shown.empty())
+            if (const park::support::SupportSets* sets = support_sets(scene, assets); sets != nullptr && !shown.empty())
             {
                 for (save::PlacedObject& o : supports_under(scene, shown, *sets))
                 {
@@ -876,7 +876,7 @@ namespace rct3::scene
             std::erase_if(shown, [&](const save::PlacedObject& o) { return !load_object_model(scene, f.models, assets, o); });
             if (shown.empty() || shown.front().owner_ref != id)
                 return;
-            if (const park::SupportSets* sets = support_sets(scene, assets))
+            if (const park::support::SupportSets* sets = support_sets(scene, assets))
             {
                 for (save::PlacedObject& o : supports_under(scene, std::span(&shown.front(), 1), *sets))
                 {

@@ -6,7 +6,7 @@
 #include "park/object_models.hpp"
 #include "park/object_pick.hpp"
 #include "park/person_motions.hpp"
-#include "park/ride_cars.hpp"
+#include "park/ride/cars.hpp"
 #include "park/water/flow.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/rides.hpp"
@@ -1297,8 +1297,8 @@ namespace rct3::scene
         const auto model = car < scene.cars.size() ? scene.models.find(park::model_ref(scene.cars[car])) : scene.models.end();
         if (model == scene.models.end() || car >= scene.car_spots.size())
             return std::nullopt;
-        const park::CarSpot spot = scene.car_spots[car];
-        if (eye == park::RideEye::Nose && std::ranges::any_of(std::span(scene.car_spots).first(car), [&](const park::CarSpot& s) { return s.ride == spot.ride && s.train == spot.train; }))
+        const park::ride::CarSpot spot = scene.car_spots[car];
+        if (eye == park::RideEye::Nose && std::ranges::any_of(std::span(scene.car_spots).first(car), [&](const park::ride::CarSpot& s) { return s.ride == spot.ride && s.train == spot.train; }))
             return std::nullopt;
         return model->second.ride_eyes[std::to_underlying(eye)];
     }
@@ -1368,7 +1368,7 @@ namespace rct3::scene
         for (std::size_t i = 0; i < scene.cars.size(); ++i)
         {
             const std::uint64_t id = scene.cars[i].id;
-            const park::CarSpot spot = scene.car_spots[i];
+            const park::ride::CarSpot spot = scene.car_spots[i];
             glm::mat4 place = scene.saved_cars.at(id);
             const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
             const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
@@ -1444,7 +1444,7 @@ namespace rct3::scene
                 else if (train.crashed)
                 {
                     const auto* wrecks = scene.sim.registry.try_get<simulation::Wrecks>(ride);
-                    const std::size_t car = static_cast<std::size_t>(std::ranges::count_if(std::span(scene.car_spots).first(i), [&](const park::CarSpot& s) { return s.ride == spot.ride && s.train == spot.train; }));
+                    const std::size_t car = static_cast<std::size_t>(std::ranges::count_if(std::span(scene.car_spots).first(i), [&](const park::ride::CarSpot& s) { return s.ride == spot.ride && s.train == spot.train; }));
                     const auto* wreck = wrecks != nullptr && spot.train < wrecks->trains.size() && car < wrecks->trains[spot.train].size() ? &wrecks->trains[spot.train][car] : nullptr;
                     if (wreck == nullptr || wreck->state == simulation::WreckState::Gone)
                         place = glm::mat4(0.0f);
@@ -1486,7 +1486,7 @@ namespace rct3::scene
         if (const auto seat = scene.riding ? ride_eye(scene, *scene.riding, scene.riding_eye) : std::nullopt)
         {
             const std::size_t i = *scene.riding;
-            const park::CarSpot spot = scene.car_spots[i];
+            const park::ride::CarSpot spot = scene.car_spots[i];
             ovl::RideCameraTuning tuning = scene.models.at(park::model_ref(scene.cars[i])).ride_look;
             // On a lift chain the view shakes as the train sets for the chain, from when this car is on it.
             const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
@@ -1559,7 +1559,7 @@ namespace rct3::scene
         {
             scene.car_mesh_places[boned.car] = glm::mat4(0.0f);
             const park::ObjectModel& model = scene.models.at(park::model_ref(scene.cars[boned.car]));
-            const park::CarSpot spot = scene.car_spots[boned.car];
+            const park::ride::CarSpot spot = scene.car_spots[boned.car];
             const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
             const auto* boats = ride != entt::null ? scene.sim.registry.try_get<simulation::Boats>(ride) : nullptr;
             const simulation::Boat* boat = boats && spot.train < boats->boats.size() && boats->boats[spot.train].state != simulation::Sailing::Docked ? &boats->boats[spot.train] : nullptr;
@@ -1582,7 +1582,7 @@ namespace rct3::scene
         auto joint_place = scene.car_mesh_places.begin() + static_cast<std::ptrdiff_t>(scene.car_places.size());
         for (ParkScene::ArmCar& arm : scene.arm_cars)
         {
-            const park::CarSpot spot = scene.car_spots[arm.car];
+            const park::ride::CarSpot spot = scene.car_spots[arm.car];
             std::optional<park::track::ArmAngles> angles;
             if (const save::Ride& ride = scene.rides.rides[spot.ride]; ride.track && scene.courses[spot.ride])
             {
@@ -1934,7 +1934,7 @@ namespace rct3::scene
                 leave_out(i);
         for (std::size_t i = 0; !supports && i < scene.objects.size() && i < built.plan.steady.size(); ++i)
         {
-            if (scene.objects[i].overlay == park::kSupportOverlay)
+            if (scene.objects[i].overlay == park::support::kSupportOverlay)
                 leave_out(i);
         }
         if (built.plan == shown)
@@ -1991,7 +1991,7 @@ namespace rct3::scene
             std::vector<std::int8_t> levels(now[1] - from, 0);
             for (std::size_t i = from; i < now[1]; ++i)
             {
-                if (std::ranges::contains(moving, i) || (!scene.show_supports && scene.objects[i].overlay == park::kSupportOverlay))
+                if (std::ranges::contains(moving, i) || (!scene.show_supports && scene.objects[i].overlay == park::support::kSupportOverlay))
                     levels[i - from] = park::kNotDrawn;
             }
             scene.fresh_objects = park::object_mesh(std::span(scene.objects).subspan(from), scene.models, scene.grid, levels, { }, scene.leans, scene.fitted, scene.broken_objects);

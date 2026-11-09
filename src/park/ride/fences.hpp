@@ -24,7 +24,7 @@
 #include <functional>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::ride
 {
 
     /// The model of the placed object of that id, if it was found.
@@ -34,4 +34,4 @@ namespace rct3::park
     /// of its track pieces' objects; one not found is not fenced round. New objects take ids after `last_id`.
     [[nodiscard]] std::vector<save::PlacedObject> ride_fences(const save::Ride& ride, const ModelOf& model_of, std::uint64_t last_id);
 
-} // namespace rct3::park
+} // namespace rct3::park::ride

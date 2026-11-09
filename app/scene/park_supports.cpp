@@ -2,7 +2,7 @@
 #include "scene/park_supports.hpp"
 
 #include "logging/log.hpp"
-#include "park/support_columns.hpp"
+#include "park/support/columns.hpp"
 #include "profiling/profiler.hpp"
 #include "scene/park_refresh.hpp"
 #include "scene/park_scene.hpp"
@@ -20,7 +20,7 @@ namespace rct3::scene
 
         SupportWatch::Seen seen(const ParkScene& scene, const save::PlacedObject& o)
         {
-            return { o.symbol, o.overlay, o.col, o.row, o.rotation, o.base_height, o.hidden, o.support_set, park::support_tiles(o, scene.models) };
+            return { o.symbol, o.overlay, o.col, o.row, o.rotation, o.base_height, o.hidden, o.support_set, park::support::support_tiles(o, scene.models) };
         }
 
         bool same(const SupportWatch::Seen& s, const save::PlacedObject& o)
@@ -33,7 +33,7 @@ namespace rct3::scene
             std::vector<std::pair<int, int>> out;
             for (const save::PathTile& p : scene.footpaths.paths)
             {
-                if (park::path_at_ground(p, scene.grid))
+                if (park::support::path_at_ground(p, scene.grid))
                     out.emplace_back(p.col, p.row);
             }
             std::ranges::sort(out);
@@ -58,7 +58,7 @@ namespace rct3::scene
         w.objects.clear();
         for (const save::PlacedObject& o : scene.objects)
         {
-            if (o.overlay != park::kSupportOverlay)
+            if (o.overlay != park::support::kSupportOverlay)
                 w.objects.insert_or_assign(o.id, seen(scene, o));
         }
         w.ground_paths = ground_paths(scene);
@@ -79,11 +79,11 @@ namespace rct3::scene
         diff_zone.emplace("Diff");
 
         // The tiles where anything that holds up columns or is in their way changed.
-        std::set<park::SupportTile> tiles;
+        std::set<park::support::SupportTile> tiles;
         std::unordered_map<std::uint64_t, SupportWatch::Seen> now;
         for (const save::PlacedObject& o : scene.objects)
         {
-            if (o.overlay == park::kSupportOverlay)
+            if (o.overlay == park::support::kSupportOverlay)
                 continue;
             const auto before = w.objects.find(o.id);
             if (before != w.objects.end() && same(before->second, o))
@@ -110,7 +110,7 @@ namespace rct3::scene
                 tiles.emplace(static_cast<int>(i % static_cast<std::size_t>(scene.grid.width)), static_cast<int>(i / static_cast<std::size_t>(scene.grid.width)));
         }
         w.ground = std::move(corners);
-        const park::SupportSets* sets = support_sets(scene, assets);
+        const park::support::SupportSets* sets = support_sets(scene, assets);
         if (tiles.empty() || sets == nullptr)
             return;
 
@@ -124,7 +124,7 @@ namespace rct3::scene
         for (std::size_t i = 0; i < scene.objects.size(); ++i)
         {
             save::PlacedObject& o = scene.objects[i];
-            if (o.overlay != park::kSupportOverlay)
+            if (o.overlay != park::support::kSupportOverlay)
                 continue;
             if (const auto column = scene.columns.find(o.id); column != scene.columns.end() && tiles.contains(column->second))
             {
@@ -139,7 +139,7 @@ namespace rct3::scene
         for (const save::PlacedObject& o : scene.objects)
             last = std::max(last, o.id);
         place_objects(scene); // Their models, kept
-        park::BuiltSupports built = profiling::section("Columns", [&] { return park::support_columns(scene.objects, scene.models, scene.footpaths.paths, scene.grid, *sets, last, supports_passed(scene), tiles, scene.places.models); });
+        park::support::BuiltSupports built = profiling::section("Columns", [&] { return park::support::support_columns(scene.objects, scene.models, scene.footpaths.paths, scene.grid, *sets, last, supports_passed(scene), tiles, scene.places.models); });
         for (std::size_t i = 0; i < built.pieces.size(); ++i)
         {
             save::PlacedObject& piece = built.pieces[i];

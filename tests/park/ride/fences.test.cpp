@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ride_fences.hpp"
+#include "park/ride/fences.hpp"
 
 #include "park/object_placement.hpp"
 
@@ -11,6 +11,7 @@
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::ride;
 
 namespace
 {

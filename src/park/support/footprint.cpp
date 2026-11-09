@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/support_footprint.hpp"
+#include "park/support/footprint.hpp"
 
 #include "ovl/scenery_item.hpp"
 
 #include <bit>
 
-namespace rct3::park
+namespace rct3::park::support
 {
 
     namespace
@@ -94,4 +94,4 @@ namespace rct3::park
         return f;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::support

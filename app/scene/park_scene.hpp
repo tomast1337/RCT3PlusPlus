@@ -32,7 +32,7 @@
 #include "park/object_pick.hpp"
 #include "park/person_mesh.hpp"
 #include "park/pools/pools.hpp"
-#include "park/ride_cars.hpp"
+#include "park/ride/cars.hpp"
 #include "park/sky_mesh.hpp"
 #include "park/terrain_mesh.hpp"
 #include "park/track/course.hpp"
@@ -570,11 +570,11 @@ namespace rct3::scene
         float sim_time = 0;                ///< Park seconds the simulation has still to step
         /// Ride cars, drawn apart from the objects so the simulation can move them round their rides' courses.
         std::vector<save::PlacedObject> cars;
-        std::vector<park::CarSpot> car_spots;   ///< By car, as the park kept them
-        park::Fitted saved_cars;                ///< Where the park kept each car, by id
-        std::vector<glm::mat4> car_places;      ///< Where each car stands now, by car
-        std::vector<park::CarWater> car_waters; ///< Of each car, the water it runs through
-        std::optional<std::size_t> riding;      ///< The car the view rides along in, of `cars`
+        std::vector<park::ride::CarSpot> car_spots; ///< By car, as the park kept them
+        park::Fitted saved_cars;                    ///< Where the park kept each car, by id
+        std::vector<glm::mat4> car_places;          ///< Where each car stands now, by car
+        std::vector<park::CarWater> car_waters;     ///< Of each car, the water it runs through
+        std::optional<std::size_t> riding;          ///< The car the view rides along in, of `cars`
         /// The flat ride (of the park's rides) and the rider seat or fixed camera on it the view looks out from;
         /// never with `riding`.
         std::optional<std::pair<std::size_t, std::size_t>> riding_flat;
@@ -967,7 +967,7 @@ namespace rct3::scene
     void fit_car(simulation::Coaster& train, const park::ObjectModel& model, bool pool_slide);
 
     /// Loads the models of `cars` the scene does not have yet, and their pictures.
-    void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::RideCars& cars);
+    void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::ride::RideCars& cars);
 
     /// Has the simulated tracked ride `ride_index` (of scene.rides) carry riders in its scene cars, boarding its
     /// first train at the station. Nothing for a ride the simulation does not run.

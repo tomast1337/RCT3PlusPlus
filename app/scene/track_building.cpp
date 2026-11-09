@@ -17,8 +17,8 @@
 #include "park/object_placement.hpp"
 #include "park/pools/pools.hpp"
 #include "park/relief_maps.hpp"
-#include "park/ride_placement.hpp"
-#include "park/support_columns.hpp"
+#include "park/ride/placement.hpp"
+#include "park/support/columns.hpp"
 #include "park/track/completion.hpp"
 #include "park/track/edit.hpp"
 #include "park/track/ground.hpp"
@@ -266,7 +266,7 @@ namespace rct3::scene
         {
             std::string overlay;
             std::span<const std::string> names;
-            std::vector<park::DoorSpot> doors;
+            std::vector<park::ride::DoorSpot> doors;
         };
         std::optional<Platforms> ride_platforms(TrackBuilding& b, const save::Ride& ride, const ui::InterfaceAssets& assets)
         {
@@ -294,12 +294,12 @@ namespace rct3::scene
             for (const save::Station& s : ride.stations)
                 for (const auto& spot : { s.entrance_spot, s.exit_spot })
                     if (spot)
-                        p.doors.push_back(park::DoorSpot::of(*spot));
+                        p.doors.push_back(park::ride::DoorSpot::of(*spot));
             return p;
         }
 
         /// Where a station piece of `shape` stands, from which of its neighbours are stations and whether it has any.
-        park::PlatformPlace platform_place(const park::track::PieceShape& shape, bool station_before, bool station_after, bool track_before, bool track_after)
+        park::ride::PlatformPlace platform_place(const park::track::PieceShape& shape, bool station_before, bool station_after, bool track_before, bool track_after)
         {
             // A piece whose platform stands alone takes no part in a longer station.
             const bool alone = (shape.record.flags & park::track::kPiecePlatformAlone) != 0;
@@ -496,8 +496,8 @@ namespace rct3::scene
             const auto model = scene.models.find(park::model_ref(o));
             if (model == scene.models.end() || !model->second.water_only)
                 return false;
-            const park::SupportFootprint shape { .x_squares = model->second.squares[0], .z_squares = model->second.squares[1] };
-            return !std::ranges::all_of(park::footprint_tiles(o, shape), [&](const auto& t) { return park::water::holds_water(scene.footpaths.water.bodies, { t.first, t.second }); });
+            const park::support::SupportFootprint shape { .x_squares = model->second.squares[0], .z_squares = model->second.squares[1] };
+            return !std::ranges::all_of(park::support::footprint_tiles(o, shape), [&](const auto& t) { return park::water::holds_water(scene.footpaths.water.bodies, { t.first, t.second }); });
         }
 
         /// The room the park's solid items take, but the pieces a piece `b` builds would join: the track's ends, or
@@ -650,7 +650,7 @@ namespace rct3::scene
                 // Raised with Shift, never under the ground.
                 if (b.raised)
                 {
-                    on.base_height = std::max({ *b.raised, on.base_height.value_or(0), park::ride_site(*b.aim, shape.record.squares, b.turn, scene.grid).height });
+                    on.base_height = std::max({ *b.raised, on.base_height.value_or(0), park::ride::ride_site(*b.aim, shape.record.squares, b.turn, scene.grid).height });
                     on.force_absolute_height = true;
                 }
                 // A design stands with its lowest piece where its first would, as it was built on the ground.
@@ -658,7 +658,7 @@ namespace rct3::scene
                 {
                     if (const std::int32_t lift = b.design.front().height - std::ranges::min(b.design, { }, &save::TrackPiece::height).height; lift > 0)
                     {
-                        on.base_height = on.base_height.value_or(park::ride_site(*b.aim, shape.record.squares, b.turn, scene.grid).height) + lift;
+                        on.base_height = on.base_height.value_or(park::ride::ride_site(*b.aim, shape.record.squares, b.turn, scene.grid).height) + lift;
                         on.force_absolute_height = true;
                     }
                 }
@@ -713,7 +713,7 @@ namespace rct3::scene
             {
                 // A design is refused for the first of its reasons, in the order its panel tells them.
                 const std::span<const save::PlacedObject> laid = std::span(shown).first(pieces);
-                const auto ground = [&](const save::PlacedObject& p) { return static_cast<float>(park::ride_site({ p.col, p.row }, { 1, 1 }, { }, scene.grid).height); };
+                const auto ground = [&](const save::PlacedObject& p) { return static_cast<float>(park::ride::ride_site({ p.col, p.row }, { 1, 1 }, { }, scene.grid).height); };
                 std::vector<float> grounds;
                 std::vector<park::pools::PoolOpening>& openings = b.pool_openings;
                 float lowest = std::numeric_limits<float>::max();
@@ -748,9 +748,9 @@ namespace rct3::scene
                 // track is built back from it.
                 const std::optional<std::size_t> before = around ? std::optional(around->before) : starting ? std::nullopt : std::optional(b.backward ? 0 : ride.track->pieces.size() - 1);
                 const std::optional<std::size_t> after = around ? std::optional(around->after) : std::nullopt;
-                const park::PlatformPlace place = platform_place(shape, before && station(*before), after && station(*after), before.has_value(), after.has_value());
+                const park::ride::PlatformPlace place = platform_place(shape, before && station(*before), after && station(*after), before.has_value(), after.has_value());
                 const save::TrackPiece laid { .tile_x = o.col, .tile_z = o.row, .height = o.base_height.value_or(0), .direction = static_cast<std::uint8_t>(o.rotation) };
-                if (const auto name = park::platform_symbol(ride.platform_type, laid, place, kit->doors, kit->names))
+                if (const auto name = park::ride::platform_symbol(ride.platform_type, laid, place, kit->doors, kit->names))
                 {
                     save::PlacedObject platform = o;
                     platform.overlay = kit->overlay;
@@ -763,7 +763,7 @@ namespace rct3::scene
                 }
             }
             // Ghost track is held up as built track is, its supports ghosts too.
-            if (const park::SupportSets* sets = support_sets(scene, assets))
+            if (const park::support::SupportSets* sets = support_sets(scene, assets))
             {
                 for (save::PlacedObject& piece : supports_under(scene, shown, *sets))
                 {
@@ -1611,7 +1611,7 @@ namespace rct3::scene
             (void)found.add_file(*file);
         add_referenced(found, install); // Links between cars are often in files of their own
         park::ModelLoader loader(found);
-        // The train's designs by slot (park::car_slots), each that it fills.
+        // The train's designs by slot (park::ride::car_slots), each that it fills.
         std::array<std::optional<park::ObjectModel>, 6> designs;
         std::array<bool, 6> filled { };
         for (std::size_t slot = 0; slot < designs.size(); ++slot)
@@ -1632,14 +1632,14 @@ namespace rct3::scene
             const int fewest = std::min(limits != scene.train_limits.end() ? limits->second.fewest_cars : 1, cars);
             std::vector<float> lengths;
             for (int n = 1; n <= cars; ++n)
-                lengths.push_back(park::track::train_length(fits_of(park::car_slots(n, filled))));
+                lengths.push_back(park::track::train_length(fits_of(park::ride::car_slots(n, filled))));
             const int fit = park::track::cars_fitting(*course, lengths, fewest);
             cars = fit > 0 ? fit : fewest;
         }
         // A car more where those there have no seat, as a front car alone may have none.
-        while (cars < 2 && std::ranges::none_of(park::car_slots(cars, filled), [&](std::size_t slot) { return designs[slot] && designs[slot]->seats > 0; }))
+        while (cars < 2 && std::ranges::none_of(park::ride::car_slots(cars, filled), [&](std::size_t slot) { return designs[slot] && designs[slot]->seats > 0; }))
             ++cars;
-        const std::vector<std::size_t> slots = park::car_slots(cars, filled);
+        const std::vector<std::size_t> slots = park::ride::car_slots(cars, filled);
         std::vector<park::CarFit>& fits = scene.car_fits[index] = fits_of(slots);
         if (std::ranges::none_of(slots, [&](std::size_t slot) { return designs[slot] && designs[slot]->car_fit; }))
             fits.clear(); // Nothing to stand them by
@@ -1861,7 +1861,7 @@ namespace rct3::scene
         const auto colours = park::name_colours(item.symbol);
         ride.car_colours = { static_cast<std::uint8_t>(colours[0]), static_cast<std::uint8_t>(colours[1]), static_cast<std::uint8_t>(colours[2]) };
         // Its kind's name and a number, as the game names a new ride.
-        ride.base.name = park::numbered_name(scene.rides.rides, ride.base.symbol);
+        ride.base.name = park::ride::numbered_name(scene.rides.rides, ride.base.symbol);
         // Built closed, as in the game: the player tests it and opens it from its window.
         ride.base.state = save::AttractionState::Closed;
         ride.base.flags = save::AttractionCommon::kNeverOpened;
@@ -1924,7 +1924,7 @@ namespace rct3::scene
         auto& pieces = ride.track->pieces;
         // A pool ride's station has no doors; where the complex's paving meets a side of it, its platform shows
         // steps down that side as it would for a door there.
-        std::vector<park::DoorSpot> doors = kit->doors;
+        std::vector<park::ride::DoorSpot> doors = kit->doors;
         if (ride_index < scene.track_rules.size() && scene.track_rules[ride_index].pool_ride)
             for (const save::TrackPiece& p : pieces)
                 for (std::int32_t q = 0; q < 4; ++q)
@@ -1948,8 +1948,8 @@ namespace rct3::scene
                 continue;
             // shortcut: the open end being built on counts as the track's end, which only the aquarium's platforms
             // show; upgrade by leaving that end open while the construction panel is on it.
-            const park::PlatformPlace place = platform_place(*shape, i > 0 ? station(i - 1) : ride.track->circuit && station(pieces.size() - 1), i + 1 < pieces.size() ? station(i + 1) : ride.track->circuit && station(0), i > 0 || ride.track->circuit, i + 1 < pieces.size() || ride.track->circuit);
-            const auto name = park::platform_symbol(ride.platform_type, pieces[i], place, doors, kit->names);
+            const park::ride::PlatformPlace place = platform_place(*shape, i > 0 ? station(i - 1) : ride.track->circuit && station(pieces.size() - 1), i + 1 < pieces.size() ? station(i + 1) : ride.track->circuit && station(0), i > 0 || ride.track->circuit, i + 1 < pieces.size() || ride.track->circuit);
+            const auto name = park::ride::platform_symbol(ride.platform_type, pieces[i], place, doors, kit->names);
             if (!name)
             {
                 // Its type has no platform for it there, as some have none without stairs.
@@ -2686,7 +2686,7 @@ namespace rct3::scene
                 train->running = true;
                 train->speed = train->splash_out ? 0 : train->station_speed; // Sent off by the station, as the park sends a train; a slide's car is eased off
                 park::track::stand_train(*course, ghost.trains.front(), scene.car_fits.at(*b.ride), train->start);
-                const park::RideCars cars = park::ride_cars(std::span(&ghost, 1), 0);
+                const park::ride::RideCars cars = park::ride::ride_cars(std::span(&ghost, 1), 0);
                 load_car_models(scene, *assets.install, cars);
                 if (const auto model = cars.pieces.empty() ? scene.models.end() : scene.models.find(park::model_ref(cars.pieces.front())); model != scene.models.end())
                     fit_car(*train, model->second, *b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].pool_ride);

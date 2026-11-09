@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ride_walks.hpp"
+#include "park/ride/walks.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3::park;
+using namespace rct3::park::ride;
 
 namespace
 {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ride_placement.hpp"
+#include "park/ride/placement.hpp"
 
 #include "park/boundary_fence.hpp"
 #include "park/water/fill.hpp"
@@ -16,7 +16,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::ride
 {
 
     namespace
@@ -428,4 +428,4 @@ namespace rct3::park
         return tile_problem(door.col, door.row, site.height, grid, paths, solids);
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::ride

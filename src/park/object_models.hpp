@@ -19,8 +19,8 @@
 #include "park/flexi_colours.hpp"
 #include "park/item_category.hpp"
 #include "park/model_lights.hpp"
-#include "park/ride_walks.hpp"
-#include "park/support_footprint.hpp"
+#include "park/ride/walks.hpp"
+#include "park/support/footprint.hpp"
 
 #include <array>
 #include <cstdint>
@@ -207,7 +207,7 @@ namespace rct3::park
         /// For rides fenced round an outline, not their whole footprint: per square, row by row (X fastest),
         /// whether it is inside the outline. Empty for every other item.
         std::vector<bool> fence_outline;
-        std::optional<SupportFootprint> supports; ///< What it asks of the columns under it
+        std::optional<support::SupportFootprint> supports; ///< What it asks of the columns under it
         /// Per square, row by row (X fastest): the lowest level over its base it fills solid and the one over the highest, or
         /// nothing where nothing collides.
         std::vector<std::optional<std::array<std::int32_t, 2>>> solid;
@@ -270,7 +270,7 @@ namespace rct3::park
         /// its right (ovl::RideCar::rowing).
         std::optional<std::array<std::size_t, 3>> rowing;
         /// Of a flat ride, the walkways its riders take to and from their seats, model space; empty for most.
-        Walkways walkways;
+        ride::Walkways walkways;
         /// The lamps it carries, from the finest level that marks any (see model_lights.hpp). A lamp on a bone
         /// names the rig's bone, or the arm's joint for a car on an arm.
         std::vector<ModelLight> lights;

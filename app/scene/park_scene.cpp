@@ -16,7 +16,7 @@
 #include "park/object_pick.hpp"
 #include "park/object_placement.hpp"
 #include "park/person_motions.hpp"
-#include "park/ride_placement.hpp"
+#include "park/ride/placement.hpp"
 #include "park/sky_look.hpp"
 #include "park/tile_shaping.hpp"
 #include "parkfile/saved_park.hpp"
@@ -1293,7 +1293,7 @@ namespace rct3::scene
             scene.riding = car;
             scene.riding_eye = eye;
             // Named as the game names them: the ride, then the train and the car counting from 1.
-            const park::CarSpot spot = scene.car_spots[car];
+            const park::ride::CarSpot spot = scene.car_spots[car];
             std::size_t place = 1;
             for (std::size_t c = 0; c < car; ++c)
                 place += scene.car_spots[c].ride == spot.ride && scene.car_spots[c].train == spot.train ? 1 : 0;
@@ -1378,7 +1378,7 @@ namespace rct3::scene
             }
             if (!scene.riding)
                 return;
-            const park::CarSpot spot = scene.car_spots[*scene.riding];
+            const park::ride::CarSpot spot = scene.car_spots[*scene.riding];
             if (action == ChangeType)
             {
                 if (const auto next = next_eye(scene, *scene.riding, scene.riding_eye))
@@ -1498,7 +1498,7 @@ namespace rct3::scene
                     stall->items.insert(at, { .kind_symbol = std::format("{}:cid", g.item), .price = g.price, .name = "%ME%" });
                 }
                 else if (const auto moved = ui::listed(change.id, ItemMove); moved && *moved < stall->items.size())
-                    park::move_item(*stall, *moved, static_cast<std::size_t>(std::max(change.value, 0)));
+                    park::ride::move_item(*stall, *moved, static_cast<std::size_t>(std::max(change.value, 0)));
                 else if (const auto ticked = ui::listed(change.id, ItemExtras); ticked && *ticked < stall->items.size())
                     stall->items[*ticked].extras = static_cast<std::uint32_t>(change.value);
                 else if (const auto named = ui::listed(change.id, ItemName); named && *named < stall->items.size())
@@ -1510,7 +1510,7 @@ namespace rct3::scene
                 else
                     return;
                 if (stall->sync)
-                    park::copy_menu(scene.rides.stalls, index);
+                    park::ride::copy_menu(scene.rides.stalls, index);
                 for (std::size_t i = 0; i < scene.rides.stalls.size(); ++i)
                 {
                     save::Stall& s = scene.rides.stalls[i];
@@ -1521,7 +1521,7 @@ namespace rct3::scene
                     if (s.items.empty() && s.base.state == save::AttractionState::Open)
                         set_attraction_state(scene, s.base, save::AttractionState::Closed);
                     // An item put on brings the extras it takes.
-                    park::offer_extras(s, scene.carried.items);
+                    park::ride::offer_extras(s, scene.carried.items);
                     simulation::restock(scene.sim, s, scene.carried);
                 }
                 // The menu's rows follow what changed; a price typed in stays as it is.

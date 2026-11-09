@@ -23,7 +23,7 @@ namespace rct3::ovl
     struct SceneryItem;
 }
 
-namespace rct3::park
+namespace rct3::park::support
 {
 
     /// Which way a column faces under a square: none, any way, one of four diagonal turns, or along either
@@ -84,4 +84,4 @@ namespace rct3::park
     /// items with no footprint and those flagged for it.
     [[nodiscard]] std::optional<SupportFootprint> support_footprint(const ovl::SceneryItem& item);
 
-} // namespace rct3::park
+} // namespace rct3::park::support

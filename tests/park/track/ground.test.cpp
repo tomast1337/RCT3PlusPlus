@@ -78,7 +78,7 @@ TEST_CASE("track keeps the riders' room clear of the ground: over its levels, or
     REQUIRE(ground_cuts(pieces, models, g, false).footprint.size() == 1);
 
     // Hanging cars: the ground is cut down past the piece's floor, and a tunnel is hollowed under it too.
-    SupportFootprint f;
+    support::SupportFootprint f;
     f.points.emplace_back().hanging = true;
     models.begin()->second.supports = f;
     pieces[0].base_height = 2;

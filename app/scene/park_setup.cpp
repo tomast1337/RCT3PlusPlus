@@ -28,11 +28,11 @@
 #include "park/person_motions.hpp"
 #include "park/queue_fences.hpp"
 #include "park/relief_maps.hpp"
-#include "park/ride_cars.hpp"
-#include "park/ride_fences.hpp"
-#include "park/ride_walks.hpp"
+#include "park/ride/cars.hpp"
+#include "park/ride/fences.hpp"
+#include "park/ride/walks.hpp"
 #include "park/sky_models.hpp"
-#include "park/support_columns.hpp"
+#include "park/support/columns.hpp"
 #include "park/surrounding_land.hpp"
 #include "park/track/ground.hpp"
 #include "park/water/flow.hpp"
@@ -137,7 +137,7 @@ namespace rct3::scene
         /// The models of the park's objects, by model key, and the pictures they use.
         /// Adds the models of `objects` that `models` does not have yet, and their pictures.
         /// With `cars`, the objects are ride cars and these are their designs, by object.
-        void load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, bool modelled_plants, park::ObjectModels& models, park::ModelPictures& pictures, std::span<const park::CarDesign> cars = { })
+        void load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, bool modelled_plants, park::ObjectModels& models, park::ModelPictures& pictures, std::span<const park::ride::CarDesign> cars = { })
         {
             const profiling::Scope zone("Models");
             const std::vector<std::string> folders = object_folders(install, objects);
@@ -572,11 +572,11 @@ namespace rct3::scene
             };
             const glm::mat4 in = park::placed_transform(*entrance, model_of(*entrance), scene.grid, scene.fitted);
             const glm::mat4 out = park::placed_transform(*exit, model_of(*exit), scene.grid, scene.fitted);
-            park::RideWays ways = ways_of(in, out);
+            park::ride::RideWays ways = ways_of(in, out);
             ways.ticket = glm::vec3(in * glm::vec4(kTicketSpot, 0, 0, 1));
             ways.ticket_heading = std::atan2(in[0].x, in[0].z);
             if (model_of(*entrance) != nullptr && !model_of(*entrance)->seat_places.empty())
-                park::set_ticket_spot(ways, in, model_of(*entrance)->seat_places.front());
+                park::ride::set_ticket_spot(ways, in, model_of(*entrance)->seat_places.front());
             scene.sim.registry.emplace_or_replace<simulation::RideWalks>(entity, simulation::RideWalks { .ticket = ways.ticket, .ticket_heading = ways.ticket_heading, .on = std::move(ways.on), .off = std::move(ways.off) });
             // The entrance's and exit's gates, by the motions the buildings name ...Close, ...Open, and those ending
             // Idle that hold them there.
@@ -668,7 +668,7 @@ namespace rct3::scene
                     std::vector<glm::vec3> seats;
                     for (const glm::mat4& seat : model->second.seat_places)
                         seats.emplace_back((placed * seat)[3]);
-                    return park::flat_ride_ways(park::placed_walkways(model->second.walkways, placed), seats, entrance, exit);
+                    return park::ride::flat_ride_ways(park::ride::placed_walkways(model->second.walkways, placed), seats, entrance, exit);
                 });
                 if (model->second.rig)
                 {
@@ -712,8 +712,8 @@ namespace rct3::scene
         for (const auto& list : { std::span<const save::PlacedObject>(scene.objects), std::span<const save::PlacedObject>(scene.cars) })
             for (const save::PlacedObject& o : list)
                 last = std::max(last, o.id);
-        park::RideCars cars = park::ride_cars(std::span(scene.rides.rides).subspan(from, count), last);
-        for (park::CarSpot& spot : cars.spots)
+        park::ride::RideCars cars = park::ride::ride_cars(std::span(scene.rides.rides).subspan(from, count), last);
+        for (park::ride::CarSpot& spot : cars.spots)
             spot.ride += from;
         load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
         const std::size_t first = scene.cars.size();
@@ -798,7 +798,7 @@ namespace rct3::scene
         }
     }
 
-    void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::RideCars& cars)
+    void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::ride::RideCars& cars)
     {
         load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
     }
@@ -828,7 +828,7 @@ namespace rct3::scene
         // shortcut: rides built in the running park keep boarding straight in, upgrade with the station's
         // platform there.
         const auto file = install.find(std::format("tracks/Platforms/{}/{}.common.ovl", ride.platform_style, ride.platform_type));
-        const auto platform = file ? park::load_platform(*file) : std::unexpected(std::string("no platform file"));
+        const auto platform = file ? park::ride::load_platform(*file) : std::unexpected(std::string("no platform file"));
         walk_ride(device, scene, entity, ride, [&](const glm::mat4& entrance, const glm::mat4& exit) {
             std::vector<glm::vec3> seats;
             // A car without its model (from a file the game lacks) seats its share of the train at its middle.
@@ -836,7 +836,7 @@ namespace rct3::scene
             const std::size_t share = (scene.sim.registry.get<simulation::CycleRide>(entity).capacity + first_train - 1) / std::max<std::size_t>(first_train, 1);
             for (const std::size_t car : cars)
             {
-                const park::CarSpot& spot = scene.car_spots[car];
+                const park::ride::CarSpot& spot = scene.car_spots[car];
                 if (spot.train != 0)
                     continue;
                 const auto model = scene.models.find(park::model_ref(scene.cars[car]));
@@ -847,7 +847,7 @@ namespace rct3::scene
                     for (const glm::mat4& seat : model->second.seat_places)
                         seats.emplace_back((place * seat)[3]);
             }
-            return park::track_ride_ways(platform.value_or(park::Platform { }), seats, entrance, exit);
+            return park::ride::track_ride_ways(platform.value_or(park::ride::Platform { }), seats, entrance, exit);
         });
     }
 
@@ -1375,20 +1375,20 @@ namespace rct3::scene
                 }
                 return last;
             };
-            if (const auto found = install.find(std::format("{}.common.ovl", park::kSupportOverlay)))
+            if (const auto found = install.find(std::format("{}.common.ovl", park::support::kSupportOverlay)))
             {
-                if (const auto sets = park::load_support_sets(*found))
+                if (const auto sets = park::support::load_support_sets(*found))
                 {
                     // Tops, caps and beams are fitted to the points they join, so their shapes are needed first.
                     std::vector<save::PlacedObject> sized;
-                    const auto size = [&](const park::SupportPiece& piece) {
+                    const auto size = [&](const park::support::SupportPiece& piece) {
                         save::PlacedObject& o = sized.emplace_back();
                         o.symbol = piece.symbol;
-                        o.overlay = std::string(park::kSupportOverlay);
+                        o.overlay = std::string(park::support::kSupportOverlay);
                     };
                     for (const auto& [_, list] : *sets)
                     {
-                        for (const park::SupportSet& set : list)
+                        for (const park::support::SupportSet& set : list)
                         {
                             for (const auto& piece : { set.top, set.cap })
                             {
@@ -1400,7 +1400,7 @@ namespace rct3::scene
                     }
                     load_models(install, sized, false, scene.models, scene.pictures);
                     const auto started = std::chrono::steady_clock::now();
-                    park::BuiltSupports columns = park::support_columns(scene.objects, scene.models, world->paths, scene.grid, *sets, largest_id(), supports_passed(scene));
+                    park::support::BuiltSupports columns = park::support::support_columns(scene.objects, scene.models, world->paths, scene.grid, *sets, largest_id(), supports_passed(scene));
                     log.info("supports built in {} us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count());
                     for (std::size_t i = 0; i < columns.pieces.size(); ++i)
                         scene.columns.emplace(columns.pieces[i].id, columns.of[i].tile);
@@ -1429,7 +1429,7 @@ namespace rct3::scene
             };
             for (const save::Ride& ride : scene.rides.rides)
             {
-                std::vector<save::PlacedObject> pieces = park::ride_fences(ride, model_of, largest_id());
+                std::vector<save::PlacedObject> pieces = park::ride::ride_fences(ride, model_of, largest_id());
                 ride_fences += pieces.size();
                 for (const save::PlacedObject& piece : pieces)
                     scene.ride_fence_pieces[ride.base.id].push_back(piece.id);

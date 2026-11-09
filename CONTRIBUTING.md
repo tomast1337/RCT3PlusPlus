@@ -150,7 +150,7 @@ Security problems (for example a file that crashes the parser or reads out of bo
    bounds-checked parsing that returns `std::expected`, `std::format` for text, no new warnings.
    Lay code out by feature: a feature's data and its functions in one `.hpp`/`.cpp` pair, three or more
    files with one prefix in a folder without the prefix (`park/track/pieces.hpp`, not
-   `park/track/pieces.hpp`), and the namespace following the folder (`src/park/track/` is
+   `park/track_pieces.hpp`), and the namespace following the folder (`src/park/track/` is
    `rct3::park::track`, `app/a/b/` is `rct3::a::b`).
 4. Add tests for new behaviour under `tests/`, mirroring the `src/` path. Test inputs are built in code,
    never read from a game install.

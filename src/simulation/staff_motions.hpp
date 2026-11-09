@@ -11,7 +11,7 @@
 
 #include <string_view>
 
-namespace rct3::park
+namespace rct3::simulation
 {
 
     /// A job's motions: one played once as it starts, one repeated through it, one played once as it ends;
@@ -28,9 +28,9 @@ namespace rct3::park
 
     /// How a worker at `job` looks; a mechanic fixing a ride by how it broke down (`breakdown`). Nothing to
     /// play for StaffJob::None.
-    [[nodiscard]] WorkLook work_look(simulation::StaffJob job, simulation::Breakdown breakdown);
+    [[nodiscard]] WorkLook work_look(StaffJob job, Breakdown breakdown);
 
     /// The motion of a keeper at `job`, walking or standing: the troughs' container to fill them, else the shovel.
-    [[nodiscard]] std::string_view keeper_motion(simulation::KeeperJob job, bool walking);
+    [[nodiscard]] std::string_view keeper_motion(KeeperJob job, bool walking);
 
-} // namespace rct3::park
+} // namespace rct3::simulation

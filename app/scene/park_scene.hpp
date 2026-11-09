@@ -684,7 +684,7 @@ namespace rct3::scene
         std::map<const park::PartSet*, std::array<float, kGaits>> walk_paces; ///< Of each legs set measured so far, 0 for none
         /// Umbrellas guests hold up, for adults and teens, then for children; empty when missing.
         std::array<std::optional<park::ObjectModel>, 2> umbrellas;
-        /// The tools handymen hold at work, by shape name (see park::WorkLook::tool); those missing are left out.
+        /// The tools handymen hold at work, by shape name (see simulation::WorkLook::tool); those missing are left out.
         std::map<std::string, park::ObjectModel, std::less<>> staff_tools;
         /// How litter and sick look lying on the paths; either missing when its shape is.
         std::array<std::optional<park::ObjectModel>, 2> litter_looks;

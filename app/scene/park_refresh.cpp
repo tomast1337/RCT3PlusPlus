@@ -7,7 +7,6 @@
 #include "park/object_pick.hpp"
 #include "park/person_motions.hpp"
 #include "park/ride_cars.hpp"
-#include "park/staff_motions.hpp"
 #include "park/water_flow.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/rides.hpp"
@@ -20,6 +19,7 @@
 #include "simulation/components.hpp"
 #include "simulation/crowds.hpp"
 #include "simulation/import_park.hpp"
+#include "simulation/staff_motions.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 #include "ui/scale.hpp"
@@ -764,7 +764,7 @@ namespace rct3::scene
                 const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
                 const bool walking = now.was != now.position;
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = park::motion_number(park::keeper_motion(job, walking)).value_or(walking ? park::motion::kWalk : park::motion::kIdle);
+                pose.motion = park::motion_number(simulation::keeper_motion(job, walking)).value_or(walking ? park::motion::kWalk : park::motion::kIdle);
                 pose.time = walking && shown.paces[0] > 0 ? at.walked.value / shown.paces[0] : shown.saved_time + clock * shown.speed;
                 return pose;
             }
@@ -1189,7 +1189,7 @@ namespace rct3::scene
             if (staff != nullptr && staff->job != simulation::StaffJob::None && staff->busy.value > 0 && !walking)
             {
                 const auto* upkeep = r.valid(staff->ride) ? r.try_get<simulation::Upkeep>(staff->ride) : nullptr;
-                const park::WorkLook look = park::work_look(staff->job, upkeep != nullptr ? upkeep->kind : simulation::Breakdown::None);
+                const simulation::WorkLook look = simulation::work_look(staff->job, upkeep != nullptr ? upkeep->kind : simulation::Breakdown::None);
                 // Played once, the start and the end as long as they last; the rest of the job repeats its loop.
                 const auto once = [&](std::string_view name) -> std::optional<park::Clip> {
                     const auto number = name.empty() ? std::nullopt : park::motion_number(name);

@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/staff_motions.hpp"
+#include "simulation/staff_motions.hpp"
 
-namespace rct3::park
+namespace rct3::simulation
 {
 
-    WorkLook work_look(simulation::StaffJob job, simulation::Breakdown breakdown)
+    WorkLook work_look(StaffJob job, Breakdown breakdown)
     {
-        using simulation::Breakdown;
-        using simulation::StaffJob;
         switch (job)
         {
             case StaffJob::None:
@@ -52,20 +50,20 @@ namespace rct3::park
         return { .start = "fixvehicle2in", .loop = "fixvehicle2loop", .finish = "fixvehicle2out" };
     }
 
-    std::string_view keeper_motion(simulation::KeeperJob job, bool walking)
+    std::string_view keeper_motion(KeeperJob job, bool walking)
     {
-        const bool container = job == simulation::KeeperJob::Filling;
+        const bool container = job == KeeperJob::Filling;
         if (walking)
             return container ? "walkwithcontainer" : "walkwithshovel";
         switch (job)
         {
-            case simulation::KeeperJob::Filling:
+            case KeeperJob::Filling:
                 return "containerloop";
-            case simulation::KeeperJob::Clearing:
+            case KeeperJob::Clearing:
                 return "shovelloop";
             default:
                 return "standwithshovel";
         }
     }
 
-} // namespace rct3::park
+} // namespace rct3::simulation

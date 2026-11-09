@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "video/wmv_movie.hpp"
+#include "video/wmv/movie.hpp"
 
-#include "../audio/tiny_wmv.hpp"
+#include "../../audio/tiny_wmv.hpp"
 
 #include <array>
 #include <doctest/doctest.h>
 
-using namespace rct3::video;
+using namespace rct3::video::wmv;
 
 TEST_CASE("Y, U and V become RGBA: black, white and the primaries")
 {

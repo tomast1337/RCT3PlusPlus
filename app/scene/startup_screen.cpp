@@ -50,7 +50,7 @@ namespace rct3::scene
                     const auto file = install.find(name);
                     if (!file)
                         continue;
-                    auto movie = video::WmvMovie::open(*file);
+                    auto movie = video::wmv::WmvMovie::open(*file);
                     if (!movie)
                     {
                         logging::logger("startup").warning("startup movie: {}", movie.error());

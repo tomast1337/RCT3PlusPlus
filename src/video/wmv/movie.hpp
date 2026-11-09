@@ -2,8 +2,8 @@
 //
 // A Windows Media Video 9 movie (the first release's startup logos), its pictures read as they come due. The
 // file is an ASF file (audio/asf_file.hpp), held whole: the movies are small. Its frames are decoded by
-// FFmpeg's WMV3 decoder, built in (third_party/ffmpeg), and turned from Y, U and V into RGBA here. The sound
-// beside the pictures is the file's audio stream, which audio::WmaStream (or MusicPlayer) plays from the same
+// decoder.hpp and turned from Y, U and V into RGBA here. The sound
+// beside the pictures is the file's audio stream, which audio::wma::WmaStream (or MusicPlayer) plays from the same
 // file.
 #pragma once
 
@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::video
+namespace rct3::video::wmv
 {
 
     /// 4:2:0 Y, U and V (U and V at half the width and height, rounded up), limited range with the
@@ -51,4 +51,4 @@ namespace rct3::video
         std::unique_ptr<State> state_;
     };
 
-} // namespace rct3::video
+} // namespace rct3::video::wmv

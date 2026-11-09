@@ -8,7 +8,8 @@
 //                                                 scripts/tests; TypeScript compiles with tsc (npm install -g
 //                                                 typescript) first. Reports: build/scripts/report/NAME/
 //   ./nob fuzz [TARGET] [--seconds N]
-//   ./nob tidy                                    writes the compile database, then runs clang-tidy over src, tools and fuzz
+//   ./nob tidy [FILE...]                          writes the compile database, then runs clang-tidy over FILEs, or
+//                                                 over src, tools and fuzz
 //   ./nob format [--check]                        clang-format our sources (never third_party/)
 //   ./nob fetch                                   downloads optional assets (the fallback font) into downloads/
 //
@@ -630,16 +631,18 @@ namespace
         return run(cmd);
     }
 
-    // Runs clang-tidy over our library, tool and fuzz sources using the compile database written by the build.
-    // The checks come from .clang-tidy. The files are split across the available cores. CLANGTIDY overrides
-    // the binary.
-    bool run_tidy(std::size_t jobs)
+    // Runs clang-tidy over `files`, or over all our library, tool and fuzz sources when none are given, using the
+    // compile database written by the build. The checks come from .clang-tidy. The files are split across the
+    // available cores. CLANGTIDY overrides the binary.
+    bool run_tidy(std::size_t jobs, std::vector<fs::path> files)
     {
-        std::vector<fs::path> files;
-        for (const char* dir : { "src", "tools", "fuzz" })
+        if (files.empty())
         {
-            const auto found = find_files(dir, ".cpp");
-            files.insert(files.end(), found.begin(), found.end());
+            for (const char* dir : { "src", "tools", "fuzz" })
+            {
+                const auto found = find_files(dir, ".cpp");
+                files.insert(files.end(), found.begin(), found.end());
+            }
         }
         if (!fs::exists(kBuildDir / "compile_commands.json"))
         {
@@ -647,7 +650,7 @@ namespace
             return false;
         }
         const char* binary = std::getenv("CLANGTIDY");
-        const std::size_t chunk = (files.size() + jobs - 1) / jobs;
+        const std::size_t chunk = std::max<std::size_t>(1, (files.size() + jobs - 1) / jobs);
         std::vector<std::future<bool>> pending;
         for (std::size_t begin = 0; begin < files.size(); begin += chunk)
         {
@@ -757,7 +760,8 @@ int main(int argc, char** argv)
     bool tools = true;
     std::vector<std::string> test_args;
     std::string fuzz_target;
-    std::string script; ///< For ./nob script
+    std::string script;               ///< For ./nob script
+    std::vector<fs::path> tidy_files; ///< For ./nob tidy; empty for all
     int fuzz_seconds = 30;
     int jobs = 0;
 
@@ -787,6 +791,8 @@ int main(int argc, char** argv)
             command = arg;
         else if (command == "script" && !arg.starts_with("-"))
             script = arg;
+        else if (command == "tidy" && !arg.starts_with("-"))
+            tidy_files.emplace_back(arg);
         else if (arg == "--check")
             check = true;
         else if (command == "fuzz" && !arg.starts_with("-"))
@@ -795,7 +801,7 @@ int main(int argc, char** argv)
         {
             log(Level::Error,
                 "unknown argument '{}'. usage: ./nob [build|test|clean|app] [--release] [--sanitize] [--no-tools] [-j N] "
-                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy | ./nob fetch | ./nob script [FILE] [-- APP_ARGS...]",
+                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy [FILE...] | ./nob fetch | ./nob script [FILE] [-- APP_ARGS...]",
                 arg);
             return 2;
         }
@@ -918,7 +924,7 @@ int main(int argc, char** argv)
     if (!build_all(cfg, tools))
         return 1;
     if (command == "tidy")
-        return run_tidy(job_count(jobs)) ? 0 : 1;
+        return run_tidy(job_count(jobs), tidy_files) ? 0 : 1;
     if (command != "test")
         return 0;
 

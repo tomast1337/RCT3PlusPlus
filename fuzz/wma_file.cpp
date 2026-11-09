@@ -2,7 +2,7 @@
 //
 // libFuzzer target: a music file through the ASF reader and the built-in WMA decoder, as the music player
 // reads it. The stream reads from a file, so each input is written to a temporary one first.
-#include "audio/wma_stream.hpp"
+#include "audio/wma/stream.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -20,7 +20,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
         out.write(reinterpret_cast<const char*>(data), static_cast<std::streamsize>(size));
     }
-    auto stream = rct3::audio::WmaStream::open(path);
+    auto stream = rct3::audio::wma::WmaStream::open(path);
     if (!stream)
         return 0;
 

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // One piece of music played round and round from its file (or once, for a movie's sound), read a little ahead of where it plays
-// (wma_stream.hpp) and handed to the engine as a stream. The owner calls update() often, every frame; the
+// (wma/stream.hpp) and handed to the engine as a stream. The owner calls update() often, every frame; the
 // engine holds a second of music, so a stall shorter than that is not heard.
 #pragma once
 
 #include "audio/audio.hpp"
-#include "audio/wma_stream.hpp"
+#include "audio/wma/stream.hpp"
 
 #include <expected>
 #include <filesystem>
@@ -39,9 +39,9 @@ namespace rct3::audio
         }
 
     private:
-        MusicPlayer(WmaStream stream, VoiceHandle voice, bool loop);
+        MusicPlayer(wma::WmaStream stream, VoiceHandle voice, bool loop);
 
-        WmaStream stream_;
+        wma::WmaStream stream_;
         VoiceHandle voice_;
         std::vector<float> chunk_;
         bool loop_ = true;

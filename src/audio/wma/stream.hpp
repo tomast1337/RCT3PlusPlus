@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Windows Media Audio (versions 1 and 2) read from an ASF file a little at a time, for music too long to
-// hold decoded. The decoding is FFmpeg's WMA decoder, built in (third_party/ffmpeg); the file is read
-// with asf_file.hpp.
+// hold decoded. The file is read with asf_file.hpp and its packets decoded with decoder.hpp.
 //
-// The decoder starts two frames late (its windows overlap); those samples are dropped, so the first sample
-// read is the first of the sound. A block the decoder cannot read is skipped.
+// The samples the decoder gives before the sound (its delay) are dropped, so the first sample read is the
+// first of the sound. A block the decoder cannot read is skipped.
 #pragma once
 
 #include <cstddef>
@@ -16,7 +15,7 @@
 #include <span>
 #include <string>
 
-namespace rct3::audio
+namespace rct3::audio::wma
 {
 
     class WmaStream
@@ -46,4 +45,4 @@ namespace rct3::audio
         std::unique_ptr<State> state_;
     };
 
-} // namespace rct3::audio
+} // namespace rct3::audio::wma

@@ -163,7 +163,7 @@ namespace rct3::scene
         /// the scene's tunes, from 1; 0 for none) the ride takes once it is laid; and whether the ground it passes
         /// into is cut (as smooth_cuts says) rather than refusing it. Its own round panel shows them.
         park::DesignRefusal refusal = park::DesignRefusal::None;
-        std::vector<park::PoolOpening> pool_openings; ///< Where the design's ghost meets a pool beside it
+        std::vector<park::pools::PoolOpening> pool_openings; ///< Where the design's ghost meets a pool beside it
         std::u16string design_title;
         std::size_t design_tune = 0;
         bool cut_ground = false;

@@ -3794,7 +3794,7 @@ namespace rct3::simulation
                 // And lazy rivers with a station joined to it.
                 const auto rivers = static_cast<std::size_t>(std::ranges::count_if(r.view<const River>(), [&](entt::entity e) { return std::ranges::any_of(r.get<River>(e).stations, [&](const River::Station& s) { return s.pool == pool; }); }));
                 const auto* swim_pool = r.valid(pool) ? r.try_get<SwimPool>(pool) : nullptr;
-                const std::int64_t worth = swim_pool != nullptr ? park::pool_worth(swim_pool->tally, slides, rivers, swim_pool->dirt.value) : 0;
+                const std::int64_t worth = swim_pool != nullptr ? park::pools::pool_worth(swim_pool->tally, slides, rivers, swim_pool->dirt.value) : 0;
                 const auto swim = [&](entt::entity g) {
                     auto& attraction = r.get<Attraction>(arrived[i]);
                     const bool inspector = r.all_of<Staff>(g);

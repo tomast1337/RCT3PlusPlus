@@ -618,7 +618,7 @@ namespace rct3::scene
         {
             if (!o.fixture || !std::ranges::contains(scene.pool_pieces, o.id))
                 return std::nullopt;
-            const auto room = std::ranges::find_if(scene.pools.rooms, [&](const park::PoolRoom& r) { return r.col == o.col && r.row == o.row && r.symbol == o.symbol; });
+            const auto room = std::ranges::find_if(scene.pools.rooms, [&](const park::pools::PoolRoom& r) { return r.col == o.col && r.row == o.row && r.symbol == o.symbol; });
             return room == scene.pools.rooms.end() ? std::nullopt : std::optional(static_cast<std::size_t>(room - scene.pools.rooms.begin()));
         }
 
@@ -656,9 +656,9 @@ namespace rct3::scene
                 std::int64_t people = 0;
                 for (const auto [g, swimmer, errand] : r.view<const simulation::Swimmer, const simulation::Errand>().each())
                     people += door != nullptr && r.valid(errand.target) && r.all_of<simulation::PoolDoor>(errand.target) && r.get<simulation::PoolDoor>(errand.target).pool == door->pool;
-                const park::PoolRoom& at = scene.pools.rooms[*room];
+                const park::pools::PoolRoom& at = scene.pools.rooms[*room];
                 f.pool = ui::PoolComplexFacts {
-                    .name = strings::to_utf16(at.complex_name), .number = static_cast<std::size_t>(std::ranges::count(scene.pools.rooms.begin(), scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room) + 1, at.symbol, &park::PoolRoom::symbol)), .ticket = at.ticket, .open = at.open, .people = people, .dirt = pool != nullptr ? simulation::dirt_step(*pool) : 0, .fluid = at.fluid, .waves = at.waves, .refill = simulation::kTuning.pools.refill.at(std::min<std::size_t>(at.fluid, 2)).value
+                    .name = strings::to_utf16(at.complex_name), .number = static_cast<std::size_t>(std::ranges::count(scene.pools.rooms.begin(), scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room) + 1, at.symbol, &park::pools::PoolRoom::symbol)), .ticket = at.ticket, .open = at.open, .people = people, .dirt = pool != nullptr ? simulation::dirt_step(*pool) : 0, .fluid = at.fluid, .waves = at.waves, .refill = simulation::kTuning.pools.refill.at(std::min<std::size_t>(at.fluid, 2)).value
                 };
                 // The room's takings and upkeep, and what guests thought of it, as the simulation has them.
                 if (const auto* attraction = e != entt::null ? r.try_get<simulation::Attraction>(e) : nullptr)
@@ -677,8 +677,8 @@ namespace rct3::scene
                     for (const simulation::Thought& t : thoughts.recent)
                         if (e != entt::null && t.about == e)
                             f.pool->thoughts.push_back({ .thought = static_cast<std::int32_t>(std::to_underlying(t.kind)), .time = t.time.value, .variant = t.variant });
-                const std::vector<save::Tile> complex = park::pool_complex(scene.pools, *room);
-                const auto machine = [&](const park::PoolExtra& x) { return x.fit.wave_machine && std::ranges::contains(complex, save::Tile { x.col, x.row }); };
+                const std::vector<save::Tile> complex = park::pools::pool_complex(scene.pools, *room);
+                const auto machine = [&](const park::pools::PoolExtra& x) { return x.fit.wave_machine && std::ranges::contains(complex, save::Tile { x.col, x.row }); };
                 f.pool->machines = std::ranges::any_of(scene.pools.extras, machine) || std::ranges::any_of(scene.scenery_pool_extras, machine);
             }
             return f;
@@ -2119,11 +2119,11 @@ namespace rct3::scene
         // shortcut: a river's only along the course's own stretch, not a split track's other stretches with
         // stations; upgrade when a pool ride may be split.
         const save::Ride& r = scene.rides.rides.at(ride);
-        std::vector<std::optional<park::SlidePlatform>> platforms;
+        std::vector<std::optional<park::pools::SlidePlatform>> platforms;
         if (rules.pool_ride && r.track)
             for (const save::TrackPiece& p : r.track->pieces)
-                platforms.push_back(p.platform ? std::optional(park::SlidePlatform { .col = p.platform->tile_x, .row = p.platform->tile_z, .height = p.platform->height, .turn = park::ModelTurn::from(p.platform->direction) }) : std::nullopt);
-        std::size_t joined = park::joined_stations(scene.pools, platforms);
+                platforms.push_back(p.platform ? std::optional(park::pools::SlidePlatform { .col = p.platform->tile_x, .row = p.platform->tile_z, .height = p.platform->height, .turn = park::ModelTurn::from(p.platform->direction) }) : std::nullopt);
+        std::size_t joined = park::pools::joined_stations(scene.pools, platforms);
         if (rules.pool_ride && course && course->points.size() == course->kinds.size() && std::ranges::none_of(platforms, [](const auto& p) { return p.has_value(); }))
             for (std::size_t k = 0; k + 1 < course->kinds.size(); ++k)
             {
@@ -2405,7 +2405,7 @@ namespace rct3::scene
                 const glm::vec2 ndc { 2 * pointer.position.x / view.width() - 1, 1 - 2 * pointer.position.y / view.height() };
                 const park::Ray ray = park::view_ray(scene.camera, view.width() / view.height(), ndc);
                 if (const auto hit = park::water_hit(ray, scene.water.surface))
-                    if (const glm::vec3 at = ray.origin + ray.direction * *hit; park::on_pool_water(scene.pools, scene.grid, { at.x, at.z }))
+                    if (const glm::vec3 at = ray.origin + ray.direction * *hit; park::pools::on_pool_water(scene.pools, scene.grid, { at.x, at.z }))
                         scene.stroke.push_back({ at.x, at.z, scene.clock });
             }
             if (!pointer.down && scene.press)
@@ -2422,9 +2422,9 @@ namespace rct3::scene
                 else if (!still && scene.deleting.tool == DeleteTools::Tool::None && scene.structures.tool == StructureTools::Tool::None && !ride_placing(scene) && !scene.building.ride)
                 {
                     // With no tool out, a line or a circle drawn on a pool's water makes waves or a whirlpool there.
-                    if (auto wave = park::drawn_wave(scene.pools, scene.grid, scene.stroke, scene.park_clock))
+                    if (auto wave = park::pools::drawn_wave(scene.pools, scene.grid, scene.stroke, scene.park_clock))
                     {
-                        constexpr std::size_t kMostDrawn = park::kMaxPoolWaves / 2; ///< Chosen by eye: the rest are the machines'
+                        constexpr std::size_t kMostDrawn = park::pools::kMaxPoolWaves / 2; ///< Chosen by eye: the rest are the machines'
                         if (scene.drawn_waves.size() >= kMostDrawn)
                             scene.drawn_waves.erase(scene.drawn_waves.begin());
                         scene.drawn_waves.push_back(*wave);
@@ -2599,7 +2599,7 @@ namespace rct3::scene
                 {
                     // The whole complex is opened or closed, takes the ticket price, the name and the wave
                     // settings, all its rooms alike. A blank name keeps the old one, as an attraction's does.
-                    for (const std::size_t r : park::pool_complex_rooms(scene.pools, *room))
+                    for (const std::size_t r : park::pools::pool_complex_rooms(scene.pools, *room))
                     {
                         if (change->id == ui::kPoolTicketControl)
                             scene.pools.rooms[r].ticket = change->value;
@@ -2608,7 +2608,7 @@ namespace rct3::scene
                         else if (change->id == ui::kPoolWaveHeightControl)
                             scene.pools.rooms[r].waves.height = static_cast<float>(change->value);
                         else if (change->id == ui::kPoolWaveLengthControl)
-                            scene.pools.rooms[r].waves.frequency = park::kLeastWaveFrequency + park::kMostWaveFrequency - static_cast<float>(change->value);
+                            scene.pools.rooms[r].waves.frequency = park::pools::kLeastWaveFrequency + park::pools::kMostWaveFrequency - static_cast<float>(change->value);
                         else if (change->id == ui::kPoolWaveOnControl)
                             scene.pools.rooms[r].waves.on = static_cast<float>(change->value);
                         else if (change->id == ui::kPoolWaveEveryControl)
@@ -2698,7 +2698,7 @@ namespace rct3::scene
                 // The whole complex opened or closed, all its rooms alike; then shown again for the flag's new look.
                 const std::vector<ui::StateChoice> states = ui::state_choices(ui::AttractionKind::Stall);
                 if (choice->second < states.size())
-                    for (const std::size_t r : park::pool_complex_rooms(scene.pools, *room))
+                    for (const std::size_t r : park::pools::pool_complex_rooms(scene.pools, *room))
                         scene.pools.rooms[r].open = states[choice->second].state == save::AttractionState::Open;
                 open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
             }
@@ -2788,8 +2788,8 @@ namespace rct3::scene
         scene.ambient_occlusion = options.flag(config::GameOption::AmbientOcclusion);
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         advance_park_water(scene.water, park_seconds);
-        park::drop_spent_waves(scene.drawn_waves, scene.park_clock);
-        park::drop_spent_waves(scene.rings, scene.park_clock);
+        park::pools::drop_spent_waves(scene.drawn_waves, scene.park_clock);
+        park::pools::drop_spent_waves(scene.rings, scene.park_clock);
         scene.water.pool_waves = scene.machine_waves;
         scene.water.pool_waves.insert(scene.water.pool_waves.end(), scene.drawn_waves.begin(), scene.drawn_waves.end());
         scene.water.pool_waves.insert(scene.water.pool_waves.end(), scene.rings.begin(), scene.rings.end());
@@ -3061,17 +3061,17 @@ namespace rct3::scene
                 // other waves.
                 std::size_t pools = 14695981039346656037u;
                 const auto mix = [&](std::int64_t v) { pools = (pools ^ static_cast<std::size_t>(v)) * 1099511628211u; };
-                for (const park::PoolSquare& s : scene.pools.squares)
+                for (const park::pools::PoolSquare& s : scene.pools.squares)
                     for (const std::int64_t v : { std::int64_t { s.col }, std::int64_t { s.row }, std::int64_t { std::to_underlying(s.kind) }, std::int64_t { s.surface } })
                         mix(v);
-                for (const park::PoolRoom& room : scene.pools.rooms)
+                for (const park::pools::PoolRoom& room : scene.pools.rooms)
                     for (const std::int64_t v : { std::int64_t { room.col }, std::int64_t { room.row }, std::int64_t { room.side.value }, room.ticket, std::int64_t { room.open }, std::int64_t { room.fluid }, static_cast<std::int64_t>(std::llround(room.waves.height * 100)), static_cast<std::int64_t>(std::llround(room.waves.frequency * 100)), static_cast<std::int64_t>(std::llround(room.waves.on)), static_cast<std::int64_t>(std::llround(room.waves.every)) })
                         mix(v);
                 mix(static_cast<std::int64_t>(scene.pools.extras.size() + scene.scenery_pool_extras.size()));
                 if (std::exchange(scene.pools_seen, pools) != pools)
                 {
                     simulation::import_pools(scene.sim, scene.pools, scene.scenery_pool_extras);
-                    scene.machine_waves = park::machine_waves(scene.pools, scene.scenery_pool_extras, scene.grid);
+                    scene.machine_waves = park::pools::machine_waves(scene.pools, scene.scenery_pool_extras, scene.grid);
                 }
                 scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(scene.footpaths.pools.size()), .rating = scene.park.rating, .guest_cash = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_cash : 0 }, .guest_bank = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_bank_funds : 0 } });
                 // What a crashed train's wrecks fly over and into: the ground, and the scenery, stalls and flat rides
@@ -3258,11 +3258,11 @@ namespace rct3::scene
                 {
                     scene.chairs_changed = false;
                     std::unordered_set<std::string_view> chair_symbols;
-                    std::unordered_map<std::string_view, park::PoolExtraFit> extra_fits;
+                    std::unordered_map<std::string_view, park::pools::PoolExtraFit> extra_fits;
                     for (const park::BuildItem& item : scene.build.items.get())
                         if (!item.pool_extra.empty())
                         {
-                            const park::PoolExtraFit fit = park::pool_extra_fit(item.pool_extra);
+                            const park::pools::PoolExtraFit fit = park::pools::pool_extra_fit(item.pool_extra);
                             extra_fits.emplace(item.symbol, fit);
                             if (fit.lifeguard)
                                 chair_symbols.insert(item.symbol);

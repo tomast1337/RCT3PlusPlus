@@ -9,13 +9,13 @@
 // showers, lazy rivers), each kind counting only up to a few. Every weight is chosen by eye.
 #pragma once
 
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <span>
 
-namespace rct3::park
+namespace rct3::park::pools
 {
 
     /// What a pool complex has, counted from its squares and the extras on them.
@@ -45,4 +45,4 @@ namespace rct3::park
     /// to it.
     [[nodiscard]] std::int64_t pool_worth(const PoolTally& tally, std::size_t slides, std::size_t rivers, float dirt);
 
-} // namespace rct3::park
+} // namespace rct3::park::pools

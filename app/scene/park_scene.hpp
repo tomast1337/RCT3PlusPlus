@@ -31,7 +31,7 @@
 #include "park/object_mesh.hpp"
 #include "park/object_pick.hpp"
 #include "park/person_mesh.hpp"
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 #include "park/ride_cars.hpp"
 #include "park/sky_mesh.hpp"
 #include "park/terrain_mesh.hpp"
@@ -257,26 +257,26 @@ namespace rct3::scene
     /// click puts an extra in.
     struct PoolTool
     {
-        std::optional<park::BuildItem> item;              ///< The tool picked; none while put away
-        std::optional<save::Tile> corner;                 ///< Of the area marked, where the drag began
-        std::optional<save::Tile> other;                  ///< And the opposite corner, where it is now
-        std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
-        std::int32_t drawn_look = -1;                     ///< And how: the part of the tile marked, and the colour
-        std::optional<std::int32_t> height;               ///< Of the surface, when the pool panel does not snap it to the ground
-        bool grid = false;                                ///< The pool panel's grid switch, as last seen
-        park::PoolEdge edge = park::PoolEdge::Straight;   ///< The pool panel's edge setting, for the squares laid
+        std::optional<park::BuildItem> item;                          ///< The tool picked; none while put away
+        std::optional<save::Tile> corner;                             ///< Of the area marked, where the drag began
+        std::optional<save::Tile> other;                              ///< And the opposite corner, where it is now
+        std::optional<std::array<std::int32_t, 4>> drawn;             ///< Columns and rows the marks show now
+        std::int32_t drawn_look = -1;                                 ///< And how: the part of the tile marked, and the colour
+        std::optional<std::int32_t> height;                           ///< Of the surface, when the pool panel does not snap it to the ground
+        bool grid = false;                                            ///< The pool panel's grid switch, as last seen
+        park::pools::PoolEdge edge = park::pools::PoolEdge::Straight; ///< The pool panel's edge setting, for the squares laid
         /// The squares worked on now, from where the drag began to where it is, or the square under the pointer.
         std::optional<std::pair<save::Tile, save::Tile>> working;
         std::int64_t cost = 0; ///< Of the work, below zero for money back
         bool ok = false;       ///< Whether the work may be done
         /// The pools before the work was laid into them to be seen, and the ground it dug, to put back.
-        std::optional<park::PoolMap> before;
+        std::optional<park::pools::PoolMap> before;
         std::vector<std::pair<save::Tile, std::array<float, 4>>> dug;
-        bool redraw = false;                    ///< The pools were put back away from the frame and are drawn on the next
-        park::Side side { };                    ///< Of an extra, changing room or high diving board, as the turn keys turn it
-        std::optional<float> press_y;           ///< Where on the screen the drag began
-        std::int32_t board = park::kBoardLevel; ///< A high diving board's or a staircase's height, from the drag
-        std::int32_t worked_board = 0;          ///< And the turn and height of the work shown
+        bool redraw = false;                           ///< The pools were put back away from the frame and are drawn on the next
+        park::Side side { };                           ///< Of an extra, changing room or high diving board, as the turn keys turn it
+        std::optional<float> press_y;                  ///< Where on the screen the drag began
+        std::int32_t board = park::pools::kBoardLevel; ///< A high diving board's or a staircase's height, from the drag
+        std::int32_t worked_board = 0;                 ///< And the turn and height of the work shown
         park::Side worked_side { };
         /// While Shift is held: where the pointer was when it went down, in tiles, and the surface there then
         struct Lift
@@ -452,18 +452,18 @@ namespace rct3::scene
         std::vector<std::uint64_t> fence_panels; ///< The objects of the fence round the park's land, as last built
         /// By ride id, the objects of the fence the park built round the ride and beside its doors, as last built.
         std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> ride_fence_pieces;
-        save::EnclosureMap enclosures;                    ///< The animal enclosures' tiles and fences
-        std::vector<std::uint64_t> enclosure_panels;      ///< The objects of their fences, as last built
-        park::PoolMap pools;                              ///< The swimming pools the player laid
-        std::size_t pools_seen = 0;                       ///< A fingerprint of `pools` as the simulation last took them in
-        std::vector<park::PoolExtra> scenery_pool_extras; ///< Pool extras a park from the game placed as scenery, for its swimmers to use
-        std::vector<park::PoolWave> machine_waves;        ///< The pools' wave machines', as `pools` was last taken in
-        std::vector<park::PoolWave> drawn_waves;          ///< Drawn on the pools' water with the pointer, oldest first
-        std::vector<park::PoolWave> rings;                ///< Spreading where people fell into the pools' water, oldest first
-        std::vector<std::uint64_t> pool_pieces;           ///< Their pieces' objects, as last built
-        std::vector<park::PoolOpening> pool_openings;     ///< Where the rides joined them when their pieces were last built
-        std::size_t saved_pool_water = 0;                 ///< footpaths.pools of the park's own file; the pools' follow
-        std::size_t entrance_centred = 0;                 ///< Of the park's entrances, the one the view last went to
+        save::EnclosureMap enclosures;                           ///< The animal enclosures' tiles and fences
+        std::vector<std::uint64_t> enclosure_panels;             ///< The objects of their fences, as last built
+        park::pools::PoolMap pools;                              ///< The swimming pools the player laid
+        std::size_t pools_seen = 0;                              ///< A fingerprint of `pools` as the simulation last took them in
+        std::vector<park::pools::PoolExtra> scenery_pool_extras; ///< Pool extras a park from the game placed as scenery, for its swimmers to use
+        std::vector<park::pools::PoolWave> machine_waves;        ///< The pools' wave machines', as `pools` was last taken in
+        std::vector<park::pools::PoolWave> drawn_waves;          ///< Drawn on the pools' water with the pointer, oldest first
+        std::vector<park::pools::PoolWave> rings;                ///< Spreading where people fell into the pools' water, oldest first
+        std::vector<std::uint64_t> pool_pieces;                  ///< Their pieces' objects, as last built
+        std::vector<park::pools::PoolOpening> pool_openings;     ///< Where the rides joined them when their pieces were last built
+        std::size_t saved_pool_water = 0;                        ///< footpaths.pools of the park's own file; the pools' follow
+        std::size_t entrance_centred = 0;                        ///< Of the park's entrances, the one the view last went to
         std::vector<glm::vec3> anchors;
         std::vector<park::Lamp> lamps; ///< The objects' lamps at full strength; packed again when `lamps_due`
         bool lamps_due = true;

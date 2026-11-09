@@ -223,9 +223,9 @@ namespace rct3::ui
                     value = std::clamp(value, least, most);
                     page.controls.push_back({ .id = id, .name = std::string(label), .kind = InfoControlKind::Number, .label = text(label), .value = value, .minimum = least, .maximum = most, .step = step, .shown = numbered(strings.get(value == 1 ? one : many), value), .enabled = pool.machines, .help = text(help) });
                 };
-                const auto least_frequency = static_cast<int>(park::kLeastWaveFrequency);
-                const auto most_frequency = static_cast<int>(park::kMostWaveFrequency);
-                bar(kPoolWaveHeightControl, static_cast<int>(std::lround(pool.waves.height)), static_cast<int>(park::kLeastWaveHeight), static_cast<int>(park::kMostWaveHeight));
+                const auto least_frequency = static_cast<int>(park::pools::kLeastWaveFrequency);
+                const auto most_frequency = static_cast<int>(park::pools::kMostWaveFrequency);
+                bar(kPoolWaveHeightControl, static_cast<int>(std::lround(pool.waves.height)), static_cast<int>(park::pools::kLeastWaveHeight), static_cast<int>(park::pools::kMostWaveHeight));
                 bar(kPoolWaveLengthControl, least_frequency + most_frequency - static_cast<int>(std::lround(pool.waves.frequency)), least_frequency, most_frequency);
                 timed(kPoolWaveOnControl, static_cast<int>(std::lround(pool.waves.on)), 0, kMostWaveOn, kWaveOnStep, "OneSecond", "ManySeconds");
                 timed(kPoolWaveEveryControl, static_cast<int>(std::lround(pool.waves.every / kSecondsPerMinute)), 1, kMostWaveEvery, 1, "OneMinute", "ManyMinutes");

@@ -50,12 +50,12 @@ namespace rct3::scene
     {
 
         /// Starts rings spreading on the pool water at `at` in `delay` seconds, where someone falls in with
-        /// `strength` (park::entry_rings). When there are already the most, they take the place of the lowest, if
+        /// `strength` (park::pools::entry_rings). When there are already the most, they take the place of the lowest, if
         /// those are lower than the new ones start.
         void start_rings(ParkScene& scene, glm::vec3 at, float strength, float delay = 0)
         {
-            constexpr std::size_t kMostRings = park::kMaxPoolWaves / 2; ///< Chosen by eye: room left for the machines' and drawn waves
-            const auto rings = park::entry_rings(scene.pools, scene.grid, at, strength, scene.park_clock + delay);
+            constexpr std::size_t kMostRings = park::pools::kMaxPoolWaves / 2; ///< Chosen by eye: room left for the machines' and drawn waves
+            const auto rings = park::pools::entry_rings(scene.pools, scene.grid, at, strength, scene.park_clock + delay);
             if (!rings)
                 return;
             if (scene.rings.size() < kMostRings)
@@ -63,8 +63,8 @@ namespace rct3::scene
                 scene.rings.push_back(*rings);
                 return;
             }
-            const auto crest = [&](const park::PoolWave& w) { return w.start > scene.park_clock ? w.strength * park::kPoolWaveLook.ring_height : park::ring_crest(w, scene.park_clock); };
-            if (const auto lowest = std::ranges::min_element(scene.rings, { }, crest); crest(*lowest) < rings->strength * park::kPoolWaveLook.ring_height)
+            const auto crest = [&](const park::pools::PoolWave& w) { return w.start > scene.park_clock ? w.strength * park::pools::kPoolWaveLook.ring_height : park::pools::ring_crest(w, scene.park_clock); };
+            if (const auto lowest = std::ranges::min_element(scene.rings, { }, crest); crest(*lowest) < rings->strength * park::pools::kPoolWaveLook.ring_height)
                 *lowest = *rings;
         }
 
@@ -878,14 +878,14 @@ namespace rct3::scene
                     const int col = static_cast<int>(std::floor((at_xz.x - scene.grid.origin_x) / scene.grid.tile_size_x));
                     const int row = static_cast<int>(std::floor((at_xz.y - scene.grid.origin_z) / scene.grid.tile_size_z));
                     const auto square = scene.pools.at(col, row);
-                    if (!square || square->kind != park::PoolKind::Water || scene.grid.tile_size_x <= 0 || scene.grid.tile_size_z <= 0)
+                    if (!square || square->kind != park::pools::PoolKind::Water || scene.grid.tile_size_x <= 0 || scene.grid.tile_size_z <= 0)
                         return at.position;
                     const auto water = [&](int dc, int dr) {
                         const auto next = scene.pools.at(col + dc, row + dr);
-                        return next && next->kind == park::PoolKind::Water && next->surface == square->surface;
+                        return next && next->kind == park::pools::PoolKind::Water && next->surface == square->surface;
                     };
                     const float room = park::pool_wall_room(scene.grid, at_xz - glm::vec2 { scene.grid.world_x(col), scene.grid.world_z(row) }, water);
-                    return at.position + glm::vec3(0.0f, park::pool_wave_lift(park::pool_wave_height(scene.water.pool_waves, at_xz, clock, at.position.y), room), 0.0f);
+                    return at.position + glm::vec3(0.0f, park::pools::pool_wave_lift(park::pools::pool_wave_height(scene.water.pool_waves, at_xz, clock, at.position.y), room), 0.0f);
                 };
                 // Up a slide climbed on foot they walk, and slide down it on their backs.
                 if (const auto* climbing = r.try_get<simulation::Climbing>(shown.guest))

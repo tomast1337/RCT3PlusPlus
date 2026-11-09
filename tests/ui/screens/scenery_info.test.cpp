@@ -193,7 +193,7 @@ TEST_CASE("a changing room sets its complex's waves on bars, the machines' times
     CHECK(page.controls[0].value == 5);
     CHECK(page.controls[1].id == kPoolWaveLengthControl);
     CHECK(page.controls[1].kind == InfoControlKind::Bar);
-    CHECK(page.controls[1].value == static_cast<int>(park::kLeastWaveFrequency + park::kMostWaveFrequency) - 4); // Longer for a lower frequency
+    CHECK(page.controls[1].value == static_cast<int>(park::pools::kLeastWaveFrequency + park::pools::kMostWaveFrequency) - 4); // Longer for a lower frequency
     CHECK(page.controls[2].value == 40);
     CHECK(page.controls[2].shown == u"40 secs");
     CHECK(page.controls[3].value == 3);

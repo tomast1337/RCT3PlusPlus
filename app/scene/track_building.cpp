@@ -15,7 +15,7 @@
 #include "park/flexi_colours.hpp"
 #include "park/object_models.hpp"
 #include "park/object_placement.hpp"
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 #include "park/relief_maps.hpp"
 #include "park/ride_placement.hpp"
 #include "park/support_columns.hpp"
@@ -715,7 +715,7 @@ namespace rct3::scene
                 const std::span<const save::PlacedObject> laid = std::span(shown).first(pieces);
                 const auto ground = [&](const save::PlacedObject& p) { return static_cast<float>(park::ride_site({ p.col, p.row }, { 1, 1 }, { }, scene.grid).height); };
                 std::vector<float> grounds;
-                std::vector<park::PoolOpening>& openings = b.pool_openings;
+                std::vector<park::pools::PoolOpening>& openings = b.pool_openings;
                 float lowest = std::numeric_limits<float>::max();
                 // A piece whose own height is under the ground passes into it; one on the ground that only dips into
                 // it, as a banked piece does, is cut round as a piece built by hand is.
@@ -1928,7 +1928,7 @@ namespace rct3::scene
         if (ride_index < scene.track_rules.size() && scene.track_rules[ride_index].pool_ride)
             for (const save::TrackPiece& p : pieces)
                 for (std::int32_t q = 0; q < 4; ++q)
-                    if (const park::Side side = park::Side::from(q); park::slide_platform_joined(scene.pools, { .col = p.tile_x, .row = p.tile_z, .height = p.height, .turn = park::ModelTurn::from(p.direction) }, side))
+                    if (const park::Side side = park::Side::from(q); park::pools::slide_platform_joined(scene.pools, { .col = p.tile_x, .row = p.tile_z, .height = p.height, .turn = park::ModelTurn::from(p.direction) }, side))
                     {
                         const auto [dc, dr] = side.step();
                         doors.push_back({ .col = p.tile_x + dc, .row = p.tile_z + dr, .turn = park::turn_facing(side.opposite()), .height = p.height });

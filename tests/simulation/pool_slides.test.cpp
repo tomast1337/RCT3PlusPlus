@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 #include "simulation/coaster.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
@@ -22,8 +22,8 @@ namespace
     entt::entity slide_by_pool(Sandbox& park)
     {
         park.path({ 0, 0 }, { 5, 0 });
-        park::PoolMap pools;
-        pools.squares.push_back({ .col = 5, .row = 2, .kind = park::PoolKind::Tile });
+        park::pools::PoolMap pools;
+        pools.squares.push_back({ .col = 5, .row = 2, .kind = park::pools::PoolKind::Tile });
         for (std::int32_t row = 3; row < 5; ++row)
             for (std::int32_t col = 4; col < 7; ++col)
                 pools.squares.push_back({ .col = col, .row = row });

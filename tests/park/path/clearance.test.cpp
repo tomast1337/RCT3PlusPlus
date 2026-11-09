@@ -89,7 +89,7 @@ TEST_CASE("track keeps paths and scenery out of its riders' room, over it or und
     above[0].base_height = 4;
     CHECK(clash(solid_tiles(above, above_models, g), solids, { }, g) == Clash::None);
 
-    SupportFootprint f;
+    support::SupportFootprint f;
     f.points.emplace_back().hanging = true;
     models.begin()->second.supports = f;
     solids = solid_tiles(objects, models, g);
@@ -154,11 +154,11 @@ TEST_CASE("pieces of track filling other thirds of a tile pass each other, turne
     const save::TerrainGrid g = owned_grid(5, 3);
     const auto piece = [&](std::uint32_t cells, std::int32_t rotation) {
         auto [objects, models] = one_item(ItemCategory::TrackPiece);
-        SupportFootprint f;
+        support::SupportFootprint f;
         f.x_squares = 1;
         f.z_squares = 1;
         f.track = true;
-        f.squares = { SupportSquare { .low = 0, .high = 4, .cells = cells } };
+        f.squares = { support::SupportSquare { .low = 0, .high = 4, .cells = cells } };
         models.begin()->second.supports = f;
         objects[0].rotation = rotation;
         return solid_tiles(objects, models, g);

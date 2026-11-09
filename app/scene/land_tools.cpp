@@ -7,7 +7,7 @@
 #include "park/footpath_builder.hpp"
 #include "park/ground/brush.hpp"
 #include "park/object_pick.hpp"
-#include "park/ride_placement.hpp"
+#include "park/ride/placement.hpp"
 #include "park/water/fill.hpp"
 #include "park/waterfall_making.hpp"
 #include "park/waterfall_mesh.hpp"

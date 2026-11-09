@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ride_cars.hpp"
+#include "park/ride/cars.hpp"
 
 #include <doctest/doctest.h>
 #include <numbers>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::ride;
 
 TEST_CASE("ride cars stand where the park kept them, turned as it kept them")
 {

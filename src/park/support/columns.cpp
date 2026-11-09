@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/support_columns.hpp"
+#include "park/support/columns.hpp"
 
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
@@ -15,7 +15,7 @@
 #include <set>
 #include <utility>
 
-namespace rct3::park
+namespace rct3::park::support
 {
 
     namespace
@@ -428,4 +428,4 @@ namespace rct3::park
         return std::move(build.out);
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::support

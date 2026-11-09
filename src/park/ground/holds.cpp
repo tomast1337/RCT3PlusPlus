@@ -8,7 +8,7 @@
 #include "park/object_placement.hpp"
 #include "park/path/furniture.hpp"
 #include "park/queue_fences.hpp"
-#include "park/support_columns.hpp"
+#include "park/support/columns.hpp"
 #include "park/water/fill.hpp"
 
 #include <algorithm>
@@ -28,10 +28,10 @@ namespace rct3::park::ground
 
         std::vector<std::pair<int, int>> under(const save::PlacedObject& o, const ObjectModel& m)
         {
-            SupportFootprint shape;
+            support::SupportFootprint shape;
             shape.x_squares = m.squares[0];
             shape.z_squares = m.squares[1];
-            return footprint_tiles(o, shape);
+            return support::footprint_tiles(o, shape);
         }
     } // namespace
 

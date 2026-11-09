@@ -4,7 +4,7 @@
 #include "park/boundary_fence.hpp"
 #include "park/enclosures.hpp"
 #include "park/item_category.hpp"
-#include "park/support_columns.hpp"
+#include "park/support/columns.hpp"
 #include "park/tile_shaping.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
@@ -83,10 +83,10 @@ namespace rct3::scene
                 const auto model = scene.models.find(park::model_key(o));
                 if (o.hidden || o.fixture || model == scene.models.end() || !keeps_out(model->second.category))
                     continue;
-                park::SupportFootprint shape;
+                park::support::SupportFootprint shape;
                 shape.x_squares = model->second.squares[0];
                 shape.z_squares = model->second.squares[1];
-                for (const auto& [col, row] : park::footprint_tiles(o, shape))
+                for (const auto& [col, row] : park::support::footprint_tiles(o, shape))
                     keep(col, row);
             }
             const auto& r = scene.sim.registry;
@@ -246,7 +246,7 @@ namespace rct3::scene
         }
     }
 
-    void house_placed(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const park::BuildItem& item, const park::RideSite& site)
+    void house_placed(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const park::BuildItem& item, const park::ride::RideSite& site)
     {
         const std::int32_t enclosure = park::enclosure_under(scene.enclosures, { site.col, site.row }, site.span);
         // The hut goes on a tile beside the house in the same enclosure that nothing stands on, the side it
@@ -279,7 +279,7 @@ namespace rct3::scene
             hut.overlay = item.overlay;
             hut.col = spot->col;
             hut.row = spot->row;
-            hut.base_height = park::ride_site({ spot->col, spot->row }, { 1, 1 }, site.turn, scene.grid).height;
+            hut.base_height = park::ride::ride_site({ spot->col, spot->row }, { 1, 1 }, site.turn, scene.grid).height;
             hut.rotation = site.turn.value;
             hut.id = last_id(scene) + 1;
             hut.owner_ref = hut.id;

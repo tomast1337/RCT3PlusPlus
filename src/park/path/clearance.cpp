@@ -5,7 +5,7 @@
 #include "park/object_placement.hpp"
 #include "park/path/decks.hpp"
 #include "park/path/furniture.hpp"
-#include "park/support_columns.hpp"
+#include "park/support/columns.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -52,10 +52,10 @@ namespace rct3::park::path
                 continue;
             const ObjectModel& m = model->second;
             const float base = object_transform(o, static_cast<Positioning>(m.positioning), grid, m.squares, m.ground_height)[3].y;
-            SupportFootprint shape;
+            support::SupportFootprint shape;
             shape.x_squares = m.squares[0];
             shape.z_squares = m.squares[1];
-            const auto under = footprint_tiles(o, shape);
+            const auto under = support::footprint_tiles(o, shape);
             std::uint8_t room = kWholeTile;
             switch (static_cast<Positioning>(m.positioning))
             {
@@ -72,7 +72,7 @@ namespace rct3::park::path
                     break;
             }
             const bool track = m.category == std::to_underlying(ItemCategory::TrackPiece);
-            const bool hanging = m.supports && std::ranges::any_of(m.supports->points, &SupportPoint::hanging);
+            const bool hanging = m.supports && std::ranges::any_of(m.supports->points, &support::SupportPoint::hanging);
             for (std::size_t i = 0; i < under.size() && i < m.solid.size(); ++i)
             {
                 const auto& levels = m.solid[i];
@@ -89,7 +89,7 @@ namespace rct3::park::path
                     {
                         if ((m.supports->squares[i].cells & (1U << c)) == 0)
                             continue;
-                        const glm::vec2 at = spot_in_tiles(o, *m.supports, { { lx, lz }, { c % 3, c / 3 } }, true);
+                        const glm::vec2 at = support::spot_in_tiles(o, *m.supports, { { lx, lz }, { c % 3, c / 3 } }, true);
                         const int x = std::clamp(static_cast<int>((at.x - std::floor(at.x)) * 3), 0, 2);
                         const int z = std::clamp(static_cast<int>((at.y - std::floor(at.y)) * 3), 0, 2);
                         thirds |= static_cast<std::uint16_t>(1U << (3 * z + x));

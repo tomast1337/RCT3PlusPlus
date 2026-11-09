@@ -26,7 +26,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::ride
 {
 
     /// Where a ride placed whole stands.
@@ -185,4 +185,4 @@ namespace rct3::park
     /// What keeps an entrance or exit from `door`, if anything. `taken`: a door already placed for the ride.
     [[nodiscard]] SiteProblem door_problem(const RideSite& site, const DoorSpot& door, std::optional<DoorSpot> taken, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const path::SolidTiles& solids);
 
-} // namespace rct3::park
+} // namespace rct3::park::ride

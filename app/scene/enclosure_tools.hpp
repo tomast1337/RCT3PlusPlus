@@ -13,7 +13,7 @@
 #pragma once
 
 #include "park/build_catalogue.hpp"
-#include "park/ride_placement.hpp"
+#include "park/ride/placement.hpp"
 #include "render/device.hpp"
 #include "save/model/world.hpp"
 #include "ui/interface_assets.hpp"
@@ -36,7 +36,7 @@ namespace rct3::scene
 
     /// Puts up the keeper's hut beside animal house `house`, just placed at `site` from `item`, and hires its
     /// keeper, who starts at the hut.
-    void house_placed(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const park::BuildItem& item, const park::RideSite& site);
+    void house_placed(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const park::BuildItem& item, const park::ride::RideSite& site);
 
     /// Builds the enclosures' fences again after they changed.
     /// shortcut: the old panels stay hidden among the objects; drop them when objects can be taken out.

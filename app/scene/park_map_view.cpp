@@ -6,7 +6,7 @@
 #include "ovl/special_attraction.hpp"
 #include "ovl/stall.hpp"
 #include "park/map_shapes.hpp"
-#include "park/support_sets.hpp"
+#include "park/support/sets.hpp"
 #include "profiling/profiler.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
@@ -249,7 +249,7 @@ namespace rct3::scene
             if (owner == attractions.end())
             {
                 // What the park builds under paths and track is not scenery the player placed.
-                if (o.overlay == park::kSupportOverlay)
+                if (o.overlay == park::support::kSupportOverlay)
                     return std::nullopt;
                 return park::MapLayer::Scenery;
             }

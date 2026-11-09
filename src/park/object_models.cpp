@@ -362,7 +362,7 @@ namespace rct3::park
 
         /// The walkways of a flat ride in `f`: the spline whose name ends in "loop", and those ending in "path"
         /// and a number, in number order, each followed curve by curve.
-        Walkways walkways_in(OpenFile& f)
+        ride::Walkways walkways_in(OpenFile& f)
         {
             const auto points = [](const ovl::Spline& spline) {
                 constexpr int kSteps = 4; // Points a curve
@@ -378,7 +378,7 @@ namespace rct3::park
                 return out;
             };
             const auto ends_with = [](std::string_view name, std::string_view end) { return name.size() >= end.size() && strings::equals_ignoring_case(name.substr(name.size() - end.size()), end); };
-            Walkways ways;
+            ride::Walkways ways;
             std::vector<std::pair<int, std::vector<glm::vec3>>> paths;
             for (const auto& [name, spline] : entries(f.splines, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::Spline>(ovl::read_splines(o, p), &ovl::SplineItem::spline); }))
             {
@@ -606,7 +606,7 @@ namespace rct3::park
         model.support_group = item->group;
         if (!item->squares.empty())
             model.lowest_level = std::ranges::min(item->squares, { }, &ovl::SceneryItemSquare::min_height).min_height;
-        model.supports = support_footprint(*item);
+        model.supports = support::support_footprint(*item);
         if (item->squares.size() == static_cast<std::size_t>(model.squares[0]) * static_cast<std::size_t>(model.squares[1]))
         {
             for (const ovl::SceneryItemSquare& s : item->squares)

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/support_sets.hpp"
+#include "park/support/sets.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::support;
 
 TEST_CASE("support pieces gather by group and role, middles tallest first")
 {

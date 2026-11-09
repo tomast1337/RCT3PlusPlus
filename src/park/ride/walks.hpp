@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::ride
 {
 
     /// A flat ride's walkways, as points to walk through: the loop, closed, and each path from by the loop to
@@ -77,4 +77,4 @@ namespace rct3::park
     /// `entrance` and left at `exit`.
     [[nodiscard]] RideWays track_ride_ways(const Platform& platform, std::span<const glm::vec3> seats, const glm::mat4& entrance, const glm::mat4& exit);
 
-} // namespace rct3::park
+} // namespace rct3::park::ride

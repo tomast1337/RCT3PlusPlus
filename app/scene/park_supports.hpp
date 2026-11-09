@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Keeping the support columns (park/support_columns.hpp) up with the park as it changes. Whatever changes the
+// Keeping the support columns (park/support/columns.hpp) up with the park as it changes. Whatever changes the
 // park's objects, paths or ground marks the supports stale; once a frame, if they are, the objects, ground
 // paths and ground are compared with how they were when last looked at, and the columns are built again on the
 // tiles where any of them changed: under an item built, taken away, moved or swapped for another, beside it

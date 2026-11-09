@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::ride
 {
 
     /// Which car design a car piece shows: one of the up to six of a ride train.
@@ -51,4 +51,4 @@ namespace rct3::park
     /// The cars of `rides` whose place the park kept, with ids from `last_id` + 1.
     [[nodiscard]] RideCars ride_cars(std::span<const save::Ride> rides, std::uint64_t last_id);
 
-} // namespace rct3::park
+} // namespace rct3::park::ride

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ride_walks.hpp"
+#include "park/ride/walks.hpp"
 
 #include "ovl/float_value.hpp"
 #include "ovl/integer_value.hpp"
@@ -11,7 +11,7 @@
 #include <limits>
 #include <string_view>
 
-namespace rct3::park
+namespace rct3::park::ride
 {
 
     namespace
@@ -177,4 +177,4 @@ namespace rct3::park
         return ways;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::ride

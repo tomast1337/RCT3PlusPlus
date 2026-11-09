@@ -43,7 +43,7 @@
 #include "park/path/drag.hpp"
 #include "park/path/route.hpp"
 #include "park/path/styles.hpp"
-#include "park/support_sets.hpp"
+#include "park/support/sets.hpp"
 #include "park/terrain_mesh.hpp"
 #include "render/device.hpp"
 #include "save/model/world.hpp"
@@ -96,7 +96,7 @@ namespace rct3::scene
         park::TerrainMesh ghost;                                  ///< The next piece, drawn over the ground
         park::ObjectMesh raised_ghost;                            ///< The next piece when it is raised
         std::map<std::string, TrackModels, std::less<>> models;   ///< Of the raised pieces and supports laid
-        std::optional<park::SupportSets> support_sets;            ///< Read when the first raised piece is laid
+        std::optional<park::support::SupportSets> support_sets;   ///< Read when the first raised piece is laid
         /// Of the queue tiles laid here, the railings along them.
         std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> railings;
         park::TerrainMesh arrow;                              ///< Over the next piece, pointing the way it goes
@@ -165,7 +165,7 @@ namespace rct3::scene
     void refresh_pavings(ParkScene& scene);
 
     /// The supports' pieces, read when first needed; none when the install has none.
-    const park::SupportSets* support_sets(ParkScene& scene, const ui::InterfaceAssets& assets);
+    const park::support::SupportSets* support_sets(ParkScene& scene, const ui::InterfaceAssets& assets);
 
     /// What columns pass by as if it were not there: the rides' station platforms and the paving off the ground.
     [[nodiscard]] std::unordered_set<std::uint64_t> supports_passed(const ParkScene& scene);
@@ -173,7 +173,7 @@ namespace rct3::scene
     /// The support pieces that would hold up `ghosts`, were they added to the scene's objects.
     /// shortcut: the columns of what is there already stay as they are under a ghost; show them changed too if
     /// the difference shows.
-    [[nodiscard]] std::vector<save::PlacedObject> supports_under(const ParkScene& scene, std::span<const save::PlacedObject> ghosts, const park::SupportSets& sets);
+    [[nodiscard]] std::vector<save::PlacedObject> supports_under(const ParkScene& scene, std::span<const save::PlacedObject> ghosts, const park::support::SupportSets& sets);
 
     /// Acts on what the player did in the panel since the last frame, and shows the result.
     void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options);

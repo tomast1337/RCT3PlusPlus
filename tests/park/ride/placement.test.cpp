@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ride_placement.hpp"
+#include "park/ride/placement.hpp"
 
 #include <algorithm>
 #include <doctest/doctest.h>
@@ -8,6 +8,7 @@
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::ride;
 
 namespace
 {
@@ -359,7 +360,7 @@ TEST_CASE("a synchronised stall gives its menu to the other stalls of its kind")
     stalls[0].items = { save::StallItem { .kind_symbol = "Burger:cid", .price = 175 }, save::StallItem { .kind_symbol = "MedBurger:cid", .price = 260 } };
     stalls[0].extras[0].level = 3;
     stalls[1].items = { save::StallItem { .kind_symbol = "MedBurger:cid", .price = 250, .total_sold = 12 }, save::StallItem { .kind_symbol = "XLBurger:cid", .price = 450 } };
-    park::copy_menu(stalls, 0);
+    park::ride::copy_menu(stalls, 0);
     REQUIRE(stalls[1].items.size() == 2);
     CHECK(stalls[1].items[0].kind_symbol == "Burger:cid");
     CHECK(stalls[1].items[0].price == 175);
@@ -381,13 +382,13 @@ TEST_CASE("an item moved on a stall's menu takes its new place, the others closi
             out += i.kind_symbol.front();
         return out;
     };
-    park::move_item(stall, 0, 2);
+    park::ride::move_item(stall, 0, 2);
     CHECK(order() == "BCAD");
-    park::move_item(stall, 3, 0);
+    park::ride::move_item(stall, 3, 0);
     CHECK(order() == "DBCA");
-    park::move_item(stall, 1, 9);
+    park::ride::move_item(stall, 1, 9);
     CHECK(order() == "DCAB");
-    park::move_item(stall, 9, 0);
+    park::ride::move_item(stall, 9, 0);
     CHECK(order() == "DCAB");
 }
 
@@ -433,7 +434,7 @@ TEST_CASE("a stall offers each extra its items take once, at the usual amount, k
     save::Stall stall;
     stall.items = { { .kind_symbol = "burger:cid" }, { .kind_symbol = "Fries:cid" }, { .kind_symbol = "Cola:cid" }, { .kind_symbol = "Unknown:cid" } };
     stall.extras = { { .kind_symbol = "Cheese:ced", .level = save::StallExtra::kGuestChoice } };
-    park::offer_extras(stall, kinds);
+    park::ride::offer_extras(stall, kinds);
     REQUIRE(stall.extras.size() == 3);
     CHECK(stall.extras[0].level == save::StallExtra::kGuestChoice);
     CHECK(stall.extras[1].kind_symbol == "Ketchup:ced");

@@ -4,11 +4,11 @@
 // its group, and says by its item type what it is: a middle piece of some height to stack, a foot that
 // stands on something, a deeper foot that reaches into the ground below it for ground that is not level, a
 // top piece that meets the thing held up, a cap for the top of a column, or a beam. Pieces also say which
-// way they face (see support_footprint.hpp); a group may hold one set of pieces for columns that face any
+// way they face (see support/footprint.hpp); a group may hold one set of pieces for columns that face any
 // way and others for columns that face along an axis or a diagonal.
 #pragma once
 
-#include "park/support_footprint.hpp"
+#include "park/support/footprint.hpp"
 
 #include <cstdint>
 #include <expected>
@@ -19,7 +19,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::support
 {
 
     /// Item types of support pieces, as scenery items store them.
@@ -77,4 +77,4 @@ namespace rct3::park
     /// diagonal or the other axis. Failing that, the round set, and failing that any set of the group.
     [[nodiscard]] FoundSet find_support_set(const SupportSets& sets, std::string_view group, SupportKind kind);
 
-} // namespace rct3::park
+} // namespace rct3::park::support

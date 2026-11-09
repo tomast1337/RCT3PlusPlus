@@ -28,7 +28,7 @@
 #include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
 #include "park/path/clearance.hpp"
-#include "park/ride_cars.hpp"
+#include "park/ride/cars.hpp"
 #include "park/track/choice.hpp"
 #include "park/track/completion.hpp"
 #include "park/track/pieces.hpp"
@@ -186,7 +186,7 @@ namespace rct3::scene
         struct GhostTrain
         {
             simulation::Coaster train;
-            std::vector<park::CarSpot> spots;
+            std::vector<park::ride::CarSpot> spots;
             std::vector<glm::mat4> stood;                   ///< Where each car stood, by car
             float stood_at = 0;                             ///< Where the train's front stood
             float waited = 0;                               ///< Seconds it has stood still short of the open end
@@ -241,7 +241,7 @@ namespace rct3::scene
     bool open_track_building(ParkScene& scene, std::size_t ride, std::string overlay, const ui::InterfaceAssets& assets);
 
     /// Gives each station piece of the tracked ride `ride` the platform piece its type, its place in the
-    /// station and the doors beside it call for (park::platform_symbol), adding those it lacks. Nothing for a
+    /// station and the doors beside it call for (park::ride::platform_symbol), adding those it lacks. Nothing for a
     /// ride without a platform type.
     void update_platforms(ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
 

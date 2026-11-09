@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Placing a ride whole (a flat ride) picked in the build lists: its see-through ghost follows the pointer
-// over the ground, the turn keys turn it a quarter, and a click places it there if it fits (park/ride_placement.hpp),
+// over the ground, the turn keys turn it a quarter, and a click places it there if it fits (park/ride/placement.hpp),
 // levelling the ground under it and paying its price. Then its entrance and its exit are placed in turn
 // round its rim. A right click deletes what is under the pointer and Escape puts the tool away; a ride left
 // without an entrance or exit stays built but takes no riders. The ride is fenced round its rim as it is placed, and the fence opens for each door as it
@@ -32,7 +32,7 @@
 #include "park/moving_meshes.hpp"
 #include "park/object_mesh.hpp"
 #include "park/path/clearance.hpp"
-#include "park/ride_placement.hpp"
+#include "park/ride/placement.hpp"
 #include "render/device.hpp"
 #include "scene/track_building.hpp"
 #include "ui/key_map.hpp"
@@ -69,12 +69,12 @@ namespace rct3::scene
         std::optional<park::BuildItem> item; ///< Being placed; none while idle
         Step step = Step::Ride;
         park::ModelTurn turn;
-        std::optional<park::RideSite> site;     ///< Pointed at, then where the ride was placed
-        std::optional<park::DoorSpot> door;     ///< The entrance or exit pointed at
-        std::optional<park::DoorSpot> entrance; ///< Placed; of a tracked ride getting a door, its other door
-        std::int32_t quadrant = 0;              ///< Of the tile, for scenery that takes a quarter of one
-        std::int32_t ground = 0;                ///< Height of the ground under the site, of scenery or a ride
-        bool absolute = false;                  ///< Scenery on a raised path, at the deck's height
+        std::optional<park::ride::RideSite> site;     ///< Pointed at, then where the ride was placed
+        std::optional<park::ride::DoorSpot> door;     ///< The entrance or exit pointed at
+        std::optional<park::ride::DoorSpot> entrance; ///< Placed; of a tracked ride getting a door, its other door
+        std::int32_t quadrant = 0;                    ///< Of the tile, for scenery that takes a quarter of one
+        std::int32_t ground = 0;                      ///< Height of the ground under the site, of scenery or a ride
+        bool absolute = false;                        ///< Scenery on a raised path, at the deck's height
         /// While Shift is held: where the pointer met the park when it went down, and the height then.
         struct Lift
         {
@@ -82,12 +82,12 @@ namespace rct3::scene
             std::int32_t height = 0;
         };
         std::optional<Lift> lift;
-        park::SiteProblem problem = park::SiteProblem::None;
+        park::ride::SiteProblem problem = park::ride::SiteProblem::None;
         bool affordable = true;
-        park::Flatten flatten = park::Flatten::Off; ///< How a ride's ground is levelled, as the panel's tabs set it
-        park::ground::GroundCuts levelling;         ///< The ground levelled under the ride pointed at, when it may be
-        std::int64_t levelling_cost = 0;            ///< In hundredths
-        std::size_t ride = 0;                       ///< Of the scene's rides, once placed
+        park::ride::Flatten flatten = park::ride::Flatten::Off; ///< How a ride's ground is levelled, as the panel's tabs set it
+        park::ground::GroundCuts levelling;                     ///< The ground levelled under the ride pointed at, when it may be
+        std::int64_t levelling_cost = 0;                        ///< In hundredths
+        std::size_t ride = 0;                                   ///< Of the scene's rides, once placed
         park::ObjectMesh ghost_mesh;
         std::array<std::int32_t, 3> colours { }; ///< Of the scenery: its own when picked, then those the player paints
         std::string panel_item;                  ///< The scenery the placing panel is set up for
@@ -110,7 +110,7 @@ namespace rct3::scene
         /// Of a tracked ride getting a door: its station pieces, which the door stands beside
         std::vector<save::TrackPiece> stations;
         /// Of those, a base standing on ground of its own (a tower's): the ground it covers, which the door goes round
-        std::optional<park::RideSite> base;
+        std::optional<park::ride::RideSite> base;
     };
 
     /// The point of the ground under `at`, in a view of `size`, in tile units: column and row with fractions.

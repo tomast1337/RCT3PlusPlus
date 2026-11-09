@@ -5,7 +5,7 @@
 #include "park/camera.hpp"
 #include "park/edge_walls.hpp"
 #include "park/object_pick.hpp"
-#include "park/ride_placement.hpp"
+#include "park/ride/placement.hpp"
 #include "park/tile_shaping.hpp"
 #include "parkfile/saved_park.hpp"
 #include "parkfile/structure_file.hpp"
@@ -239,7 +239,7 @@ namespace rct3::scene
             t.lift_at.reset();
             if (tile && distance)
             {
-                t.ground = park::ride_site(*tile, { 1, 1 }, { }, scene.grid).height;
+                t.ground = park::ride::ride_site(*tile, { 1, 1 }, { }, scene.grid).height;
                 t.height = t.ground;
                 if (shift)
                 {

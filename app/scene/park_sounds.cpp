@@ -351,7 +351,7 @@ namespace rct3::scene
             const glm::vec3 at { scene.car_places[i][3] };
             const glm::vec3 velocity = elapsed > 0 ? (at - sounds.car_were[i]) / elapsed : glm::vec3 { 0.0f };
             sounds.car_were[i] = at;
-            const park::CarSpot spot = scene.car_spots[i];
+            const park::ride::CarSpot spot = scene.car_spots[i];
             const entt::entity ride = spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
             const auto* fleet = ride != entt::null ? r.try_get<simulation::Trains>(ride) : nullptr;
             if (fleet == nullptr || spot.train >= fleet->trains.size() || !trains.emplace(ride, spot.train).second)

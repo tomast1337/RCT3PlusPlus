@@ -238,9 +238,9 @@ namespace rct3::park
         return static_cast<std::int32_t>(std::ceil(top - kSlack));
     }
 
-    GroundCuts levelled_ground(const RideSite& site, Flatten flatten, const save::TerrainGrid& grid)
+    ground::GroundCuts levelled_ground(const RideSite& site, Flatten flatten, const save::TerrainGrid& grid)
     {
-        GroundCuts out;
+        ground::GroundCuts out;
         if (flatten == Flatten::Off)
             return out;
         const auto height = static_cast<float>(site.height);
@@ -252,7 +252,7 @@ namespace rct3::park
                 if (!grid.contains(c, r))
                     continue;
                 const bool inside = c >= site.col && c < site.col + site.span[0] && r >= site.row && r < site.row + site.span[1];
-                GroundCut cut { { c, r }, grid.at(c, r).corners };
+                ground::GroundCut cut { { c, r }, grid.at(c, r).corners };
                 // Corners go (col,row), (col+1,row), (col,row+1), (col+1,row+1); a tile round the footprint
                 // moves those on its edge.
                 for (std::size_t k = 0; k < 4; ++k)

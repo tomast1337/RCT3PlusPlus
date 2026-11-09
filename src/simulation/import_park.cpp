@@ -3,8 +3,8 @@
 
 #include "ovl/animated_ride.hpp"
 #include "ovl/tracked_ride.hpp"
-#include "park/ground_paths.hpp"
-#include "park/ground_queues.hpp"
+#include "park/ground/paths.hpp"
+#include "park/ground/queues.hpp"
 #include "park/object_placement.hpp"
 #include "park/path_decks.hpp"
 #include "park/path_furniture.hpp"
@@ -191,7 +191,7 @@ namespace rct3::simulation
             if (p.elevation && p.elevation->slope != save::kSlopeOnGround)
             {
                 // The stored height is at one end of a sloped piece; its middle is half the rise up or down.
-                const float rise = park::path_rise(p.elevation->slope);
+                const float rise = park::ground::path_rise(p.elevation->slope);
                 height = static_cast<float>(p.elevation->quantised_height) + (park::slope_falls(p.elevation->slope) ? -rise : rise) / 2;
             }
             else
@@ -225,7 +225,7 @@ namespace rct3::simulation
             {
                 const PathNode& node = paths.nodes()[n];
                 const int g = std::abs(node.tile.level - spot.height);
-                if (node.removed || node.queue != queues || node.tile.col != col || node.tile.row != row || static_cast<float>(g) > park::kPavingReach)
+                if (node.removed || node.queue != queues || node.tile.col != col || node.tile.row != row || static_cast<float>(g) > park::ground::kPavingReach)
                     continue;
                 if (found == kNoNode || g < gap)
                 {
@@ -471,9 +471,9 @@ namespace rct3::simulation
         // Its surface: the ground's own corners under a path on the ground, a ramp from the height of the edge behind
         // it to that of the edge it faces, else flat.
         std::array<float, 4> corners { height, height, height, height };
-        if ((park::is_ground_queue(path) || (!path.elevation && path.kind == save::PathKind::Ground)) && grid.contains(path.col, path.row))
+        if ((park::ground::is_ground_queue(path) || (!path.elevation && path.kind == save::PathKind::Ground)) && grid.contains(path.col, path.row))
             corners = grid.at(path.col, path.row).corners;
-        else if (path.elevation && park::path_rise(path.elevation->slope) > 0)
+        else if (path.elevation && park::ground::path_rise(path.elevation->slope) > 0)
         {
             // A ramp without a stored heading meets no edge ahead, so it keeps its flat corners.
             if (const auto ahead = park::stored_heading(path.direction))
@@ -538,7 +538,7 @@ namespace rct3::simulation
         const auto inside = [&](int col, int row) { return col >= first.col && col <= last.col && row >= first.row && row <= last.row; };
         for (const save::PathTile& p : paths)
         {
-            if (!inside(p.col, p.row) || !(park::is_ground_queue(p) || (!p.elevation && p.kind == save::PathKind::Ground)))
+            if (!inside(p.col, p.row) || !(park::ground::is_ground_queue(p) || (!p.elevation && p.kind == save::PathKind::Ground)))
                 continue;
             const auto node = world.paths.find(node_spot(world.paths, p, was).first);
             if (!node)

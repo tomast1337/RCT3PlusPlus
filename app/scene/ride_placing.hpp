@@ -5,7 +5,7 @@
 // levelling the ground under it and paying its price. Then its entrance and its exit are placed in turn
 // round its rim. A right click deletes what is under the pointer and Escape puts the tool away; a ride left
 // without an entrance or exit stays built but takes no riders. The ride is fenced round its rim as it is placed, and the fence opens for each door as it
-// goes in, beside it; the doors take the fence's colours. The ground under the ride is paved (park/ground_paths.hpp).
+// goes in, beside it; the doors take the fence's colours. The ground under the ride is paved (park/ground/paths.hpp).
 //
 // A ride placed with both is run by the simulation from the first frame its entrance has a path behind it.
 // A tracked ride's entrance or exit, asked for from its window or brought by a design, is placed the same way
@@ -85,7 +85,7 @@ namespace rct3::scene
         park::SiteProblem problem = park::SiteProblem::None;
         bool affordable = true;
         park::Flatten flatten = park::Flatten::Off; ///< How a ride's ground is levelled, as the panel's tabs set it
-        park::GroundCuts levelling;                 ///< The ground levelled under the ride pointed at, when it may be
+        park::ground::GroundCuts levelling;         ///< The ground levelled under the ride pointed at, when it may be
         std::int64_t levelling_cost = 0;            ///< In hundredths
         std::size_t ride = 0;                       ///< Of the scene's rides, once placed
         park::ObjectMesh ghost_mesh;
@@ -100,7 +100,7 @@ namespace rct3::scene
         std::uint32_t preview_pixels = 0;
         std::map<std::string, TrackModels, std::less<>> models;
         park::SolidTiles solids;
-        park::GroundHolds holds;                                                ///< What keeps the ground still, worked out with the solids
+        park::ground::GroundHolds holds;                                        ///< What keeps the ground still, worked out with the solids
         std::size_t solids_of = static_cast<std::size_t>(-1);                   ///< The scene's object count when worked out
         std::vector<std::size_t> unjoined;                                      ///< Rides placed here that the simulation does not run yet
         std::vector<std::size_t> unjoined_stalls;                               ///< The same of the stalls placed here

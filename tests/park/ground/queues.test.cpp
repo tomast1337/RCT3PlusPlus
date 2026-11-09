@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_queues.hpp"
+#include "park/ground/queues.hpp"
 
-#include "park/ground_paths.hpp"
+#include "park/ground/paths.hpp"
 #include "park/path_decks.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::ground;
 
 namespace
 {

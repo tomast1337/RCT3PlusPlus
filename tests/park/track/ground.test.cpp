@@ -99,16 +99,16 @@ TEST_CASE("a cut is refused off land the park owns outright and where the land t
     const auto [pieces, models] = one_piece();
     g.at(2, 1).corners = { 0, 0, 1, 2 };
     const auto cuts = ground_cuts(pieces, models, g, false).footprint;
-    GroundHolds holds;
-    CHECK_FALSE(cuts_refused(cuts, g, holds, { }));
-    GroundCuts all { .footprint = cuts, .rim = { } };
-    CHECK(allow_cuts(all, g, holds, { }));
+    ground::GroundHolds holds;
+    CHECK_FALSE(ground::cuts_refused(cuts, g, holds, { }));
+    ground::GroundCuts all { .footprint = cuts, .rim = { } };
+    CHECK(ground::allow_cuts(all, g, holds, { }));
     holds.held.insert(1U << 16 | 2U);
-    CHECK(cuts_refused(cuts, g, holds, { }));
-    CHECK_FALSE(allow_cuts(all, g, holds, { }));
+    CHECK(ground::cuts_refused(cuts, g, holds, { }));
+    CHECK_FALSE(ground::allow_cuts(all, g, holds, { }));
     CHECK(all.footprint.empty());
     g.at(2, 1).flags = 0;
-    CHECK(cuts_refused(cuts, g, { }, { }));
+    CHECK(ground::cuts_refused(cuts, g, { }, { }));
 }
 
 TEST_CASE("a smooth cut slopes the tiles round it down to meet it, leaving the far side of each as it was")
@@ -117,20 +117,20 @@ TEST_CASE("a smooth cut slopes the tiles round it down to meet it, leaving the f
     auto [pieces, models] = one_piece();
     for (save::TerrainCell& c : g.cells)
         c.corners.fill(2);
-    const GroundCuts sharp = ground_cuts(pieces, models, g, false);
+    const ground::GroundCuts sharp = ground_cuts(pieces, models, g, false);
     CHECK(sharp.footprint.size() == 1);
     CHECK(sharp.rim.empty());
-    const GroundCuts smooth = ground_cuts(pieces, models, g, true);
+    const ground::GroundCuts smooth = ground_cuts(pieces, models, g, true);
     REQUIRE(smooth.footprint.size() == 1);
     REQUIRE(smooth.rim.size() == 8);
-    for (const GroundCut& cut : smooth.rim)
+    for (const ground::GroundCut& cut : smooth.rim)
     {
         if (cut.tile == save::Tile { 3, 1 }) // East: its west corners meet the cut
             CHECK(cut.corners == std::array { 0.0f, 2.0f, 0.0f, 2.0f });
         if (cut.tile == save::Tile { 1, 0 }) // North-west: only the corner it shares
             CHECK(cut.corners == std::array { 2.0f, 2.0f, 2.0f, 0.0f });
     }
-    CHECK(cuts_cost(smooth, g) == std::lround(4 * 2 * kShapeCost + 4 * 2 * 2 * kShapeCost + 4 * 2 * kShapeCost));
+    CHECK(ground::cuts_cost(smooth, g) == std::lround(4 * 2 * ground::kShapeCost + 4 * 2 * 2 * ground::kShapeCost + 4 * 2 * ground::kShapeCost));
 }
 
 TEST_CASE("a piece, ride or stall under enough ground all round hollows its tile up to its top, scenery never does")

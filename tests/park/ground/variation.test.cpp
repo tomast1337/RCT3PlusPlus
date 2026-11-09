@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_variation.hpp"
+#include "park/ground/variation.hpp"
 
 #include <cstdlib>
 #include <doctest/doctest.h>
 
 using namespace rct3::park;
+using namespace rct3::park::ground;
 
 namespace
 {

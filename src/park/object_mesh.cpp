@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object_mesh.hpp"
 
-#include "park/ground_textures.hpp"
+#include "park/ground/textures.hpp"
 #include "park/object_placement.hpp"
 #include "park/water/flow.hpp"
 
@@ -51,9 +51,9 @@ namespace rct3::park
             const int col = grid.tile_size_x != 0 ? static_cast<int>(std::floor((anchor.x - grid.origin_x) / grid.tile_size_x)) : -1;
             const int row = grid.tile_size_z != 0 ? static_cast<int>(std::floor((anchor.y - grid.origin_z) / grid.tile_size_z)) : -1;
             if (!grid.contains(col, row))
-                return ground_key(paint, 0);
+                return ground::ground_key(paint, 0);
             const save::TerrainCell& cell = grid.at(col, row);
-            return ground_key(paint, paint == GroundPaint::Cliff ? cell.cliff : cell.surface);
+            return ground::ground_key(paint, paint == GroundPaint::Cliff ? cell.cliff : cell.surface);
         }
 
         /// Where a point of a ground-painted face falls on its picture, as the terrain mesh lays it.

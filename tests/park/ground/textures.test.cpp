@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_textures.hpp"
+#include "park/ground/textures.hpp"
 
 #include <doctest/doctest.h>
 #include <string_view>
 #include <vector>
 
 using namespace rct3::park;
+using namespace rct3::park::ground;
 
 TEST_CASE("cliff faces are told from land surfaces by their name")
 {

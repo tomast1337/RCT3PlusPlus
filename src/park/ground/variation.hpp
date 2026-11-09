@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     /// The picture's width and height in texels.
@@ -22,4 +22,4 @@ namespace rct3::park
     /// to 255, the same every time.
     [[nodiscard]] std::vector<std::byte> variation_texels();
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path_decks.hpp"
 
-#include "park/ground_paths.hpp"
-#include "park/ground_queues.hpp"
+#include "park/ground/paths.hpp"
+#include "park/ground/queues.hpp"
 #include "park/queue_fences.hpp"
 #include "park/terrain_mesh.hpp"
 #include "strings/ascii.hpp"
@@ -57,7 +57,7 @@ namespace rct3::park
 
         bool meets(float a, float b) noexcept
         {
-            return std::abs(a - b) <= kPathMeets;
+            return std::abs(a - b) <= ground::kPathMeets;
         }
 
         /// The paths by tile, to find a tile's paths without looking through them all.
@@ -170,7 +170,7 @@ namespace rct3::park
     {
         const bool up = !slope_falls(slope);
         const ModelTurn turn = ModelTurn::toward(up ? heading.left() : heading.right());
-        if (path_rise(slope) > 1)
+        if (ground::path_rise(slope) > 1)
             return { DeckPiece::Slope, turn };
         // The slope beside this one on the left going up is on the right going down.
         const bool left = up ? after : before;
@@ -214,7 +214,7 @@ namespace rct3::park
         const float ground = (corners[first] + corners[second]) / 2;
         // A queue reaches only the sides its line comes in and goes out by.
         const bool queue_side = path.queue && (stored_heading(path.queue->start_direction) == side || stored_heading(path.queue->end_direction) == side);
-        if (is_ground_queue(path))
+        if (ground::is_ground_queue(path))
             return queue_side ? std::optional(ground) : std::nullopt;
         if (!path.elevation)
             return path.kind == save::PathKind::Ground ? std::optional(ground) : std::nullopt;
@@ -224,7 +224,7 @@ namespace rct3::park
             return path.kind != save::PathKind::Queue || queue_side ? std::optional(height) : std::nullopt;
         // Without a stored heading only the end behind its bare count is met, as it always has been.
         if (stored_heading(path.direction) == side)
-            return height + (slope_falls(e.slope) ? -path_rise(e.slope) : path_rise(e.slope));
+            return height + (slope_falls(e.slope) ? -ground::path_rise(e.slope) : ground::path_rise(e.slope));
         if (side == stored_heading_or_bare(path.direction).opposite())
             return height;
         return std::nullopt;
@@ -244,7 +244,7 @@ namespace rct3::park
         if (slope != 0)
         {
             const ModelTurn turn = slope_deck(slope, stored_heading_or_bare(queue.direction), false, false).turn;
-            const QueuePiece piece = path_rise(slope) <= 1 ? QueuePiece::SlopeStraight : slope_falls(slope) ? QueuePiece::SlopeDown : QueuePiece::SlopeUp;
+            const QueuePiece piece = ground::path_rise(slope) <= 1 ? QueuePiece::SlopeStraight : slope_falls(slope) ? QueuePiece::SlopeDown : QueuePiece::SlopeUp;
             return { piece, turn };
         }
         const Side start = stored_heading_or_bare(queue.queue->start_direction);
@@ -286,7 +286,7 @@ namespace rct3::park
                 for (const save::PathTile* p : tiles.at(col, row))
                 {
                     const bool queue = p->kind == save::PathKind::Queue;
-                    if ((p->kind != save::PathKind::Flying && !queue) || !p->elevation || is_ground_queue(*p))
+                    if ((p->kind != save::PathKind::Flying && !queue) || !p->elevation || ground::is_ground_queue(*p))
                         continue;
                     const auto object = by_id.find(p->elevation->scenery_ref);
                     const auto style = std::ranges::find_if(styles, [&](const PathStyle& s) { return s.queue == queue && strings::equals_ignoring_case(s.name, p->surface_name); });

@@ -11,7 +11,7 @@
 
 #include "ovl/texture_image.hpp"
 #include "park/flexi_colours.hpp"
-#include "park/ground_queues.hpp"
+#include "park/ground/queues.hpp"
 #include "park/terrain_mesh.hpp"
 
 #include <array>
@@ -26,7 +26,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     using GroundImages = std::map<std::string, ovl::RgbaImage, std::less<>>;
@@ -129,4 +129,4 @@ namespace rct3::park
     /// as the picture of the park's painting number `index`, cut out by its mask when it has one. Returns false when the overlay has no such picture.
     [[nodiscard]] std::expected<bool, std::string> add_queue_image(GroundImages& images, const std::filesystem::path& path, const QueuePainting& painting, std::uint8_t index);
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

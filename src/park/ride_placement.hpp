@@ -12,7 +12,7 @@
 #pragma once
 
 #include "park/carried_goods.hpp"
-#include "park/ground_holds.hpp"
+#include "park/ground/holds.hpp"
 #include "park/object_placement.hpp"
 #include "park/path_clearance.hpp"
 #include "save/model/rides.hpp"
@@ -108,7 +108,7 @@ namespace rct3::park
     /// The ground under `site` levelled to its height, as the tiles that change: the footprint's own tiles, each
     /// corner at the height, and, levelling smoothly, the tiles round it, those of their corners on the
     /// footprint's edge at the height and the rest as they are.
-    [[nodiscard]] GroundCuts levelled_ground(const RideSite& site, Flatten flatten, const save::TerrainGrid& grid);
+    [[nodiscard]] ground::GroundCuts levelled_ground(const RideSite& site, Flatten flatten, const save::TerrainGrid& grid);
 
     /// Levels the ground under `site` to its height.
     void level_ground(save::TerrainGrid& grid, const RideSite& site);

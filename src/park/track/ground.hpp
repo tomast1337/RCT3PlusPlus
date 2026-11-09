@@ -12,12 +12,12 @@
 // lined. A ride, stall or ride door buried the same way hollows a cave round it alike. Nothing in a park's file
 // marks such a piece, so saved parks' tunnels and caves are found the same way.
 //
-// A cut may not reach what the land tools may not move (ground_holds.hpp), land the park does not own
+// A cut may not reach what the land tools may not move (ground/holds.hpp), land the park does not own
 // outright, or a tile holding water or beside one that does: then the piece may not stand. A tile round it that
 // may not move is left as it is.
 #pragma once
 
-#include "park/ground_holds.hpp"
+#include "park/ground/holds.hpp"
 #include "park/object_mesh.hpp"
 #include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
@@ -33,7 +33,7 @@ namespace rct3::park::track
 
     /// The cuts the solid squares of `items` (their models loaded) make in the ground, a tile at a time: the
     /// tiles they pass into, and when `smooth` the tiles round those sloped down to meet them.
-    [[nodiscard]] GroundCuts ground_cuts(std::span<const save::PlacedObject> items, const ObjectModels& models, const save::TerrainGrid& grid, bool smooth);
+    [[nodiscard]] ground::GroundCuts ground_cuts(std::span<const save::PlacedObject> items, const ObjectModels& models, const save::TerrainGrid& grid, bool smooth);
 
     /// The hollows of the pieces of track, rides, stalls and ride doors among `objects` (their models loaded)
     /// that lie under the ground.

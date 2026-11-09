@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/enclosures.hpp"
 
-#include "park/ground_queues.hpp"
+#include "park/ground/queues.hpp"
 #include "park/queue_fences.hpp"
 
 #include <algorithm>
@@ -18,7 +18,7 @@ namespace rct3::park
         /// The side of a tile a piece turned `turns` quarter turns fences.
         Side side_of(std::int32_t turns) noexcept
         {
-            for (const Side side : kSidesFromRowBefore)
+            for (const Side side : ground::kSidesFromRowBefore)
                 if (edge_turns(side) == ModelTurn::from(turns))
                     return side;
             return Side::kRowBefore;
@@ -67,7 +67,7 @@ namespace rct3::park
                     open.pop_back();
                     ++area.size;
                     ++area.was[static_cast<std::size_t>(map.tiles[static_cast<std::size_t>(k)])];
-                    for (const Side side : kSidesFromRowBefore)
+                    for (const Side side : ground::kSidesFromRowBefore)
                     {
                         const save::Tile t = across(k % map.cols, k / map.cols, side);
                         const std::int32_t other = map.at(t.col, t.row);
@@ -248,7 +248,7 @@ namespace rct3::park
         {
             for (std::int32_t col = 0; col < std::max(before.cols, after.cols); ++col)
             {
-                for (const Side side : kSidesFromRowBefore)
+                for (const Side side : ground::kSidesFromRowBefore)
                 {
                     const auto was = fenced(before, col, row, side);
                     const auto is = fenced(after, col, row, side);

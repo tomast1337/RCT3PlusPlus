@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/boundary_fence.hpp"
 
-#include "park/ground_queues.hpp"
+#include "park/ground/queues.hpp"
 #include "park/queue_fences.hpp"
 
 #include <unordered_set>
@@ -16,7 +16,7 @@ namespace rct3::park
 
     glm::vec2 panel_lean(const save::TerrainGrid& grid, const save::PlacedObject& panel)
     {
-        for (const Side side : kSidesFromRowBefore)
+        for (const Side side : ground::kSidesFromRowBefore)
             if (edge_turns(side) == ModelTurn::from(panel.rotation))
                 return edge_lean(grid, { panel.col, panel.row }, side);
         return { };
@@ -39,7 +39,7 @@ namespace rct3::park
             {
                 if (!owned(col, row))
                     continue;
-                for (const Side side : kSidesFromRowBefore)
+                for (const Side side : ground::kSidesFromRowBefore)
                 {
                     const auto [dc, dr] = side.step();
                     if (owned(col + dc, row + dr) || (has_path(col, row) && has_path(col + dc, row + dr)))

@@ -525,8 +525,8 @@ namespace rct3::scene
         /// Whether the ground `pieces` (their models loaded) would cut may not be cut.
         bool cut_refused(const ParkScene& scene, std::span<const save::PlacedObject> pieces)
         {
-            const std::vector<park::GroundCut> cuts = park::track::ground_cuts(pieces, scene.models, scene.grid, false).footprint;
-            return !cuts.empty() && park::cuts_refused(cuts, scene.grid, park::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid), scene.footpaths.water.bodies);
+            const std::vector<park::ground::GroundCut> cuts = park::track::ground_cuts(pieces, scene.models, scene.grid, false).footprint;
+            return !cuts.empty() && park::ground::cuts_refused(cuts, scene.grid, park::ground::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid), scene.footpaths.water.bodies);
         }
 
         /// Whether `o`, its model loaded, may not stand: it would take room `taken` or a path takes, stand off
@@ -1054,22 +1054,22 @@ namespace rct3::scene
             const std::span<const save::PlacedObject> ghost(&b.ghost->object, 1);
             if (!park::track::buried_hollows(ghost, scene.models, scene.grid).empty())
                 scene.footpaths.pavings_stale = true;
-            if (park::GroundCuts cuts = park::track::ground_cuts(ghost, scene.models, scene.grid, b.smooth_cuts); !cuts.footprint.empty())
+            if (park::ground::GroundCuts cuts = park::track::ground_cuts(ghost, scene.models, scene.grid, b.smooth_cuts); !cuts.footprint.empty())
             {
-                const park::GroundHolds holds = park::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
-                (void)park::allow_cuts(cuts, scene.grid, holds, scene.footpaths.water.bodies);
+                const park::ground::GroundHolds holds = park::ground::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
+                (void)park::ground::allow_cuts(cuts, scene.grid, holds, scene.footpaths.water.bodies);
                 save::Tile low = cuts.footprint.front().tile;
                 save::Tile high = low;
-                for (const std::vector<park::GroundCut>* part : { &cuts.footprint, &cuts.rim })
+                for (const std::vector<park::ground::GroundCut>* part : { &cuts.footprint, &cuts.rim })
                 {
-                    for (const park::GroundCut& cut : *part)
+                    for (const park::ground::GroundCut& cut : *part)
                     {
                         low = { std::min(low.col, cut.tile.col), std::min(low.row, cut.tile.row) };
                         high = { std::max(high.col, cut.tile.col), std::max(high.row, cut.tile.row) };
                     }
                 }
-                park::make_cuts(scene.grid, cuts);
-                if (park::seat_followers(scene.objects, holds, scene.models, scene.grid, low, high))
+                park::ground::make_cuts(scene.grid, cuts);
+                if (park::ground::seat_followers(scene.objects, holds, scene.models, scene.grid, low, high))
                     objects_changed(scene);
                 scene.footpaths.pavings_stale = true;
             }

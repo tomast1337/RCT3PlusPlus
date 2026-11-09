@@ -2,7 +2,7 @@
 #include "park/queue_lines.hpp"
 
 #include "park/footpath_builder.hpp"
-#include "park/ground_paths.hpp"
+#include "park/ground/paths.hpp"
 #include "park/path_decks.hpp"
 
 #include <algorithm>
@@ -53,7 +53,7 @@ namespace rct3::park
                 if (!p.queue || p.col != next.col || p.row != next.row || stored_heading(p.queue->start_direction) != side->opposite())
                     return false;
                 const auto other = edge_height(p, grid, side->opposite());
-                return edge && other && std::abs(*edge - *other) <= kPathMeets;
+                return edge && other && std::abs(*edge - *other) <= ground::kPathMeets;
             });
             if (found == paths.end())
                 return out;
@@ -81,7 +81,7 @@ namespace rct3::park
                        if (p.col != next.col || p.row != next.row || (!any_kind && p.queue))
                            return false;
                        const auto other = edge_height(p, grid, side.opposite());
-                       return other && std::abs(*edge - *other) <= kPathMeets;
+                       return other && std::abs(*edge - *other) <= ground::kPathMeets;
                    });
         };
         const auto start = stored_heading(here.queue->start_direction);
@@ -179,7 +179,7 @@ namespace rct3::park
                 if (!p.queue || p.queue->queue_line_ref == 0 || p.queue->queue_line_ref == here.queue->queue_line_ref || p.col != next.col || p.row != next.row || stored_heading(p.queue->start_direction) != side.opposite())
                     return false;
                 const auto other = edge_height(p, grid, side.opposite());
-                return edge && other && std::abs(*edge - *other) <= kPathMeets;
+                return edge && other && std::abs(*edge - *other) <= ground::kPathMeets;
             });
             if (head == paths.end())
                 continue;

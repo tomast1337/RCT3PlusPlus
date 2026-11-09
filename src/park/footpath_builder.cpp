@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/footpath_builder.hpp"
 
-#include "park/ground_paths.hpp"
-#include "park/ground_queues.hpp"
+#include "park/ground/paths.hpp"
+#include "park/ground/queues.hpp"
 #include "park/path_clearance.hpp"
 #include "park/path_decks.hpp"
 #include "park/queue_fences.hpp"
@@ -24,16 +24,16 @@ namespace rct3::park
             const save::TerrainCell& cell = grid.at(spot.col, spot.row);
             if (cell.max_height() - cell.min_height() <= kFlat)
                 return static_cast<std::int32_t>(std::lround(cell.min_height()));
-            return static_cast<std::int32_t>(std::ceil(cell.max_height() - kPathMeets));
+            return static_cast<std::int32_t>(std::ceil(cell.max_height() - ground::kPathMeets));
         }
 
         /// The lowest and highest heights `path` takes on its tile.
         std::pair<float, float> span_of(const save::PathTile& path, const save::TerrainGrid& grid)
         {
-            if (path.elevation && !is_ground_queue(path))
+            if (path.elevation && !ground::is_ground_queue(path))
             {
                 const save::PathElevation& e = *path.elevation;
-                const float rise = path_rise(e.slope);
+                const float rise = ground::path_rise(e.slope);
                 const float low = static_cast<float>(e.quantised_height) - (slope_falls(e.slope) ? rise : 0);
                 return { low, low + rise };
             }
@@ -117,7 +117,7 @@ namespace rct3::park
         bool level = builder.slope == PathSlope::Flat;
         const auto& corners = grid.at(spot->col, spot->row).corners;
         piece_corners(piece, builder.heading, [&](std::size_t corner, float height) {
-            piece.cut = piece.cut || corners[corner] > height + kPathMeets;
+            piece.cut = piece.cut || corners[corner] > height + ground::kPathMeets;
             // Once cut, a corner in the way stands at the piece.
             const float ground = builder.cut_into_ground ? std::min(corners[corner], height) : corners[corner];
             level = level && std::abs(ground - height) <= kFlat;
@@ -396,7 +396,7 @@ namespace rct3::park
 
     float slope_rise(PathSlope slope) noexcept
     {
-        const float rise = path_rise(stored_slope(slope));
+        const float rise = ground::path_rise(stored_slope(slope));
         return slope == PathSlope::Down || slope == PathSlope::SteepDown ? -rise : rise;
     }
 
@@ -416,11 +416,11 @@ namespace rct3::park
 
     std::int64_t laid_price(const save::PathTile& path, const save::TerrainGrid& grid, std::int32_t ground_cost)
     {
-        if (!path.elevation || is_ground_queue(path))
+        if (!path.elevation || ground::is_ground_queue(path))
             return ground_cost;
         const std::uint8_t slope = path.elevation->slope;
         const bool down = slope == stored_slope(PathSlope::Down) || slope == stored_slope(PathSlope::SteepDown);
-        const auto rise = static_cast<std::int32_t>(std::lround(path_rise(slope)));
+        const auto rise = static_cast<std::int32_t>(std::lround(ground::path_rise(slope)));
         const std::int32_t start = path.elevation->quantised_height;
         return piece_price(NextPiece { { path.col, path.row }, start, down ? start - rise : start + rise, false, false, path.elevation->underground }, grid, ground_cost);
     }

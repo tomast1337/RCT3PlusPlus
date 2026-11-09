@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_brush.hpp"
+#include "park/ground/brush.hpp"
 
 #include <algorithm>
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::ground;
 
 TEST_CASE("a land brush covers a square or a round of tiles round the pointer's, inside the grid")
 {

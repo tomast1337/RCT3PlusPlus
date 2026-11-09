@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path_tunnels.hpp"
 
-#include "park/ground_paths.hpp"
+#include "park/ground/paths.hpp"
 #include "park/path_decks.hpp"
 #include "park/queue_fences.hpp"
 
@@ -20,7 +20,7 @@ namespace rct3::park
         {
             if (!p.elevation || !p.elevation->underground || !grid.contains(p.col, p.row))
                 continue;
-            const float rise = path_rise(p.elevation->slope);
+            const float rise = ground::path_rise(p.elevation->slope);
             const float low = static_cast<float>(p.elevation->quantised_height) - (slope_falls(p.elevation->slope) ? rise : 0);
             const GroundOpening hollow { p.col, p.row, low - kTunnelFloor, low + rise + kTunnelHeight };
             if (grid.at(p.col, p.row).min_height() >= hollow.high)

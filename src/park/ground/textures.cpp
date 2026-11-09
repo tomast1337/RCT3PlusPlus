@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_textures.hpp"
+#include "park/ground/textures.hpp"
 
 #include "ovl/flexi_texture.hpp"
 #include "ovl/overlay.hpp"
@@ -16,7 +16,7 @@
 #include <ranges>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     namespace
@@ -318,4 +318,4 @@ namespace rct3::park
         return out;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

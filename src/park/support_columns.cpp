@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/support_columns.hpp"
 
-#include "park/ground_paths.hpp"
-#include "park/ground_queues.hpp"
+#include "park/ground/paths.hpp"
+#include "park/ground/queues.hpp"
 #include "park/object_placement.hpp"
 #include "park/queue_fences.hpp"
 
@@ -251,13 +251,13 @@ namespace rct3::park
 
     bool path_at_ground(const save::PathTile& path, const save::TerrainGrid& grid)
     {
-        if (!path.elevation || is_ground_queue(path))
+        if (!path.elevation || ground::is_ground_queue(path))
             return true;
         if (!grid.contains(path.col, path.row))
             return false;
         const save::TerrainCell& cell = grid.at(path.col, path.row);
         const auto height = static_cast<float>(path.elevation->quantised_height);
-        const float rise = path_rise(path.elevation->slope);
+        const float rise = ground::path_rise(path.elevation->slope);
         const float low = slope_falls(path.elevation->slope) ? height - rise : height;
         return low <= cell.max_height() && low + rise >= cell.min_height();
     }

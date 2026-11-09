@@ -13,7 +13,7 @@ import common;
 // render::SceneLight's shadow: the depth seen from the sun, and how it was seen (render/types.hpp).
 [[vk::binding(0, 2)]] Texture2D u_shadow;
 [[vk::binding(0, 3)]] Texture2D u_sun_view;
-// Tiling noise read over world x and z (park/ground_variation.hpp), when sky.w is 1; the second picture when layered.
+// Tiling noise read over world x and z (park/ground/variation.hpp), when sky.w is 1; the second picture when layered.
 [[vk::binding(0, 4)]] Texture2D u_variation;
 // An older drawing of the shadow, mixed in as sun_direction.w says; the second row of u_sun_view says how.
 [[vk::binding(0, 5)]] Texture2D u_shadow_before;

@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     /// The four sides clockwise from the row before: the order the railings and fences round a tile are made in,
@@ -76,4 +76,4 @@ namespace rct3::park
     /// paintings are still listed, so the paintings' order is the same for any area.
     [[nodiscard]] GroundQueues ground_queues(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::optional<TileRect> area = std::nullopt);
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

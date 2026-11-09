@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: ${{ matrix.name }}
+    name: ${{ matrix.cache == 'sanitize' && 'build and test (ASan + UBSan)' || 'build and test' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
@@ -38,17 +38,10 @@ jobs:
       matrix:
         cache: [plain, sanitize]
         # The sanitizer build takes 15+ minutes and often hit the timeout, so pull requests skip it; main and the
-        # weekly run keep it. Run `./nob test --sanitize` locally for a change that needs it.
+        # weekly run keep it. Run `./nob test --sanitize` locally for a change that needs it. No `include` here: it
+        # would add an excluded entry back.
         exclude:
           - cache: ${{ github.event_name == 'pull_request' && 'sanitize' || 'none' }}
-        include:
-          - cache: plain
-            name: build and test
-            flags: ""
-          # The tools are built and linked by the plain job already; this one only needs the tests.
-          - cache: sanitize
-            name: build and test (ASan + UBSan)
-            flags: "--sanitize --no-tools"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -80,14 +73,15 @@ jobs:
       - name: Bootstrap nob
         run: g++ -std=c++26 -o nob nob.cpp
 
+      # The tools are built and linked by the plain job already; the sanitizer job only needs the tests.
       - name: Build
         run: |
           ccache --zero-stats
-          ./nob build ${{ matrix.flags }}
+          ./nob build ${{ matrix.cache == 'sanitize' && '--sanitize --no-tools' || '' }}
           ccache --show-stats
 
       - name: Test
-        run: ./nob test ${{ matrix.flags }}
+        run: ./nob test ${{ matrix.cache == 'sanitize' && '--sanitize --no-tools' || '' }}
 
   # Formatting and static analysis. The tool versions are pinned from PyPI so the result does not depend on
   # what the base image ships: formatting differs between clang-format releases, so a floating version

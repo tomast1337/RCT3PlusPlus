@@ -25,7 +25,7 @@
 #include <span>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     /// Ground over a solid square's top, in world units, that leaves it wholly under the ground, as a tunnel.
@@ -43,4 +43,4 @@ namespace rct3::park
     /// their top there, so that each hollows a cave (buried_hollows).
     [[nodiscard]] bool lies_buried(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
 
-} // namespace rct3::park
+} // namespace rct3::park::track

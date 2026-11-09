@@ -19,7 +19,7 @@ namespace rct3::park
         constexpr float kHigh = 12.0f;       ///< And a high one
     } // namespace
 
-    CarSplash car_splash(CarWater& water, const TrackCourse& course, float distance, bool in_water, glm::vec3 velocity, float seconds)
+    CarSplash car_splash(CarWater& water, const track::TrackCourse& course, float distance, bool in_water, glm::vec3 velocity, float seconds)
     {
         const std::size_t pieces = std::min(course.piece_starts.size(), course.wet.size());
         const float length = course.length();

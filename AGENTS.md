@@ -74,7 +74,7 @@ callbacks or events. A pipeline is a function that calls its stages in order.
 **One topic per file, and the path says what it is.** Folder = domain, file name = what the code does.
 Glance test: from the path alone you can tell what is inside, without opening it. A feature's data and the
 functions that act on it share one `.hpp`/`.cpp` pair. Three or more files with one prefix become a folder,
-and the prefix goes: `park/track_pieces.hpp` becomes `park/track/pieces.hpp`. The namespace follows the
+and the prefix goes: `park/track/pieces.hpp` becomes `park/track/pieces.hpp`. The namespace follows the
 folder: `src/park/track/` is `rct3::park::track`, and `app/a/b/` is `rct3::a::b` likewise.
 
 **Product code and fixtures stay apart.** Probes and fixtures are not mixed into the folders of the code

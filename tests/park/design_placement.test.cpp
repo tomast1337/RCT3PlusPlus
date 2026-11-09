@@ -47,7 +47,7 @@ TEST_CASE("design placement: a design spans a gentle dip but not a deep valley")
 
 TEST_CASE("design placement: a piece's pool sides turn and move with it")
 {
-    PieceRecord record;
+    track::PieceRecord record;
     record.squares = { 1, 2 };
     record.pool_sides = { { .x = 0, .z = 1, .height = 2, .side = Side::kNextRow } };
     const save::PlacedObject unturned { .col = 5, .row = 7, .base_height = 4 };

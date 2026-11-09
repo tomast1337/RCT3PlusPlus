@@ -919,9 +919,9 @@ namespace rct3::simulation
         return ride.options.launch_speed;
     }
 
-    std::optional<Coaster> coaster_of(const park::TrackCourse& course, const save::Ride& ride)
+    std::optional<Coaster> coaster_of(const park::track::TrackCourse& course, const save::Ride& ride)
     {
-        if (!std::ranges::contains(course.kinds, park::CourseKind::Station))
+        if (!std::ranges::contains(course.kinds, park::track::CourseKind::Station))
             return std::nullopt;
         Coaster c;
         if (!course.closed)
@@ -976,9 +976,9 @@ namespace rct3::simulation
             c.covered.push_back(piece >= 0 && static_cast<std::size_t>(piece) < course.covered.size() && course.covered[static_cast<std::size_t>(piece)]);
             c.steady.push_back(piece >= 0 && static_cast<std::size_t>(piece) < course.steady.size() && course.steady[static_cast<std::size_t>(piece)]);
         }
-        for (const park::CourseKind k : course.kinds)
+        for (const park::track::CourseKind k : course.kinds)
         {
-            using enum park::CourseKind;
+            using enum park::track::CourseKind;
             c.kinds.push_back(k == Chain || k == Cable ? Stretch::Chain : k == Station ? Stretch::Station : k == BlockBrake ? Stretch::BlockBrake : k == Launch ? Stretch::Launch : k == Brake ? Stretch::Brake : k == Booster ? Stretch::Booster : Stretch::Plain);
         }
         // A brake or block brake with no speed of its own, under 1 m/s, slows to the ride's for its kind.
@@ -1286,7 +1286,7 @@ namespace rct3::simulation
         };
     }
 
-    entt::entity import_climb_slide(SimWorld& world, const save::Ride& ride, const park::TrackCourse& course)
+    entt::entity import_climb_slide(SimWorld& world, const save::Ride& ride, const park::track::TrackCourse& course)
     {
         if (ride.kind != save::RideKind::Tracked || course.climbs.empty())
             return entt::null;
@@ -1501,7 +1501,7 @@ namespace rct3::simulation
         return added;
     }
 
-    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::SolidTiles& solids)
+    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::SolidTiles& solids)
     {
         auto& r = world.registry;
         bool any = false;
@@ -1513,7 +1513,7 @@ namespace rct3::simulation
                 continue;
             any = true;
             const glm::vec3 leave = course->points.back();
-            const glm::vec3 heading = park::course_direction(*course, course->length());
+            const glm::vec3 heading = park::track::course_direction(*course, course->length());
             Boats boats { .dock = { .leave = { leave.x, leave.z }, .heading = { heading.x, heading.z }, .enter = { course->points.front().x, course->points.front().z } } };
             boats.roams = ride.mode == save::OperatingMode::Boat;
             if (ride.options.fixed_speed > 0)
@@ -1550,7 +1550,7 @@ namespace rct3::simulation
         r.ctx().insert_or_assign(std::move(tiles));
     }
 
-    void link_stations(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid)
+    void link_stations(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::TerrainGrid& grid)
     {
         if (grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
             return;
@@ -1572,7 +1572,7 @@ namespace rct3::simulation
                 continue;
             for (std::size_t k = 0; k + 1 < course->kinds.size() && k + 1 < course->points.size(); ++k)
             {
-                if (course->kinds[k] != park::CourseKind::Station)
+                if (course->kinds[k] != park::track::CourseKind::Station)
                     continue;
                 const glm::vec3 middle = (course->points[k] + course->points[k + 1]) / 2.0f;
                 stations[i].push_back({ static_cast<int>(std::floor((middle.x - grid.origin_x) / grid.tile_size_x)), static_cast<int>(std::floor((middle.z - grid.origin_z) / grid.tile_size_z)), middle.y });

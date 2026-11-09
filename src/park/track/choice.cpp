@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/track_choice.hpp"
+#include "park/track/choice.hpp"
 
 #include <algorithm>
 #include <bit>
@@ -7,7 +7,7 @@
 #include <tuple>
 #include <utility>
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     namespace
@@ -218,4 +218,4 @@ namespace rct3::park
         return { .curve = one[0].curve, .slope = one[0].slope, .bank = one[0].bank, .toggles = one[0].toggles, .named = std::nullopt };
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::track

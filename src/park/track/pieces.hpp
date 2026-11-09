@@ -41,7 +41,7 @@ namespace rct3::ovl
     struct Spline;
 } // namespace rct3::ovl
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     inline constexpr int kSlopeSteps = 3; ///< Up or down from level
@@ -306,4 +306,4 @@ namespace rct3::park
     /// The pieces a track may start with, each with the way it is laid.
     [[nodiscard]] std::vector<LaidPiece> starting_pieces(std::span<const PieceShape> pieces);
 
-} // namespace rct3::park
+} // namespace rct3::park::track

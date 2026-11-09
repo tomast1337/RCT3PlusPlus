@@ -17,7 +17,7 @@
 #include "park/ride_fences.hpp"
 #include "park/ride_placement.hpp"
 #include "park/support_columns.hpp"
-#include "park/track_ground.hpp"
+#include "park/track/ground.hpp"
 #include "park/water/fill.hpp"
 #include "scene/enclosure_tools.hpp"
 #include "scene/park_footpaths.hpp"
@@ -522,7 +522,7 @@ namespace rct3::scene
         // Lowered into the ground, the ghost must lie wholly under it, under enough ground for a cave.
         const auto buried = [&] {
             const auto o = ghost_object(p);
-            return o && load_object_model(scene, p.models, assets, *o) && park::lies_buried(std::span { &*o, 1 }, scene.models, scene.grid);
+            return o && load_object_model(scene, p.models, assets, *o) && park::track::lies_buried(std::span { &*o, 1 }, scene.models, scene.grid);
         };
         if (p.step == RidePlacing::Step::Scenery)
         {
@@ -744,8 +744,8 @@ namespace rct3::scene
         if (r.stations.size() <= station_index)
             r.stations.resize(station_index + 1);
         // One placed before moves: at this station, or anywhere on a ride that has just one of that door.
-        const park::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : park::TrackRules { };
-        const bool only_one = (exit ? rules.exits : rules.entrances) == park::kOneDoor;
+        const park::track::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : park::track::TrackRules { };
+        const bool only_one = (exit ? rules.exits : rules.entrances) == park::track::kOneDoor;
         for (std::size_t k = 0; k < r.stations.size(); ++k)
         {
             if (k != station_index && !only_one)
@@ -943,7 +943,7 @@ namespace rct3::scene
         else
         {
             // The door stands on ground levelled to the ride's height, as the ride does, unless it lies buried.
-            if (p.site->height == p.ground || (p.site->height < p.ground && !park::lies_buried(std::span { &*o, 1 }, scene.models, scene.grid)))
+            if (p.site->height == p.ground || (p.site->height < p.ground && !park::track::lies_buried(std::span { &*o, 1 }, scene.models, scene.grid)))
                 park::level_ground(scene.grid, park::RideSite { p.door->col, p.door->row, 0, p.site->height, { 1, 1 } });
             logging::logger("park").info("placed {} at {},{}", o->symbol, p.door->col, p.door->row);
             if (!p.stations.empty())

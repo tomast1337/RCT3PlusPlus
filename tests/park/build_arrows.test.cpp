@@ -46,8 +46,8 @@ TEST_CASE("a stall's arrow lies across the edge it faces, its head on the outer 
 
 TEST_CASE("track arrows float over the rails, white at the start, green or red at the end")
 {
-    const TrackTip start { .position = { 0, 1, 0 }, .end = { .heading = { 0 } } };
-    const TrackTip end { .position = { 4, 1, 0 }, .end = { .heading = { 0 } } };
+    const track::TrackTip start { .position = { 0, 1, 0 }, .end = { .heading = { 0 } } };
+    const track::TrackTip end { .position = { 4, 1, 0 }, .end = { .heading = { 0 } } };
     const TerrainMesh m = track_arrows(start, end, true);
     REQUIRE(m.batches.size() == 1);
     CHECK(m.batches[0].count == m.indices.size());

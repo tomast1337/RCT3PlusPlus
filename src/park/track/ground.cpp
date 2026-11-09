@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/track_ground.hpp"
+#include "park/track/ground.hpp"
 
 #include "park/item_category.hpp"
 #include "park/path_clearance.hpp"
@@ -13,7 +13,7 @@
 #include <unordered_set>
 #include <utility>
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     GroundCuts ground_cuts(std::span<const save::PlacedObject> items, const ObjectModels& models, const save::TerrainGrid& grid, bool smooth)
@@ -113,4 +113,4 @@ namespace rct3::park
         });
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::track

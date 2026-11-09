@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/track_choice.hpp"
+#include "park/track/choice.hpp"
 
 #include <doctest/doctest.h>
 #include <vector>
 
 using namespace rct3::park;
+using namespace rct3::park::track;
 
 namespace
 {

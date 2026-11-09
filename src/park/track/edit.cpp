@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/track_edit.hpp"
+#include "park/track/edit.hpp"
 
 #include <algorithm>
 #include <utility>
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     namespace
@@ -164,4 +164,4 @@ namespace rct3::park
         return *stretch;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::track

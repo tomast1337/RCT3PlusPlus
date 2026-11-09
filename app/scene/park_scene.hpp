@@ -35,8 +35,8 @@
 #include "park/ride_cars.hpp"
 #include "park/sky_mesh.hpp"
 #include "park/terrain_mesh.hpp"
-#include "park/track_course.hpp"
-#include "park/track_rules.hpp"
+#include "park/track/course.hpp"
+#include "park/track/rules.hpp"
 #include "park/water/jet.hpp"
 #include "park/weather_look.hpp"
 #include "random/generator.hpp"
@@ -616,9 +616,9 @@ namespace rct3::scene
             float since = 0;                          ///< scene.park_clock when the stroke began
         };
         std::vector<BonedCar> boned_cars;
-        std::vector<glm::mat4> car_mesh_places;                ///< car_places, then each arm car's joints from the base out
-        std::vector<std::optional<park::TrackCourse>> courses; ///< By ride, of those whose track is known whole
-        std::vector<park::TrackRules> track_rules;             ///< By ride, what its kind asks of its track; defaults past the end
+        std::vector<glm::mat4> car_mesh_places;                       ///< car_places, then each arm car's joints from the base out
+        std::vector<std::optional<park::track::TrackCourse>> courses; ///< By ride, of those whose track is known whole
+        std::vector<park::track::TrackRules> track_rules;             ///< By ride, what its kind asks of its track; defaults past the end
         std::vector<entt::entity> ride_entities;
         std::vector<simulation::RideGroup> ride_groups;     ///< By ride, for the scenario's coaster goals and the awards
         std::int32_t awards_month = -1;                     ///< The calendar month the awards were last looked at in

@@ -482,7 +482,7 @@ namespace rct3::scene
                 if (f.ride->kind == save::RideKind::Tracked)
                 {
                     const auto& course = ref.index < scene.courses.size() ? scene.courses[ref.index] : std::nullopt;
-                    f.station = !f.ride->stations.empty() || (course && std::ranges::contains(course->kinds, park::CourseKind::Station));
+                    f.station = !f.ride->stations.empty() || (course && std::ranges::contains(course->kinds, park::track::CourseKind::Station));
                     f.pool_ride = ref.index < scene.track_rules.size() && scene.track_rules[ref.index].pool_ride;
                     // Its trains can change while it is not open, as in the game, and while none of them has riders
                     // aboard (set_trains).
@@ -500,10 +500,10 @@ namespace rct3::scene
                         for (const save::Car& car : f.ride->trains.empty() ? std::vector<save::Car> { } : f.ride->trains.front().cars)
                             kept.push_back({ .length = car.length });
                         const auto fits = scene.car_fits.find(ref.index);
-                        const park::TrackRules rules = ref.index < scene.track_rules.size() ? scene.track_rules[ref.index] : park::TrackRules { };
+                        const park::track::TrackRules rules = ref.index < scene.track_rules.size() ? scene.track_rules[ref.index] : park::track::TrackRules { };
                         // A shuttle runs one (fit_trains).
                         const auto coaster = course ? simulation::coaster_of(*course, *f.ride) : std::nullopt;
-                        f.trains->most_trains = course && !(coaster && coaster->shuttle != simulation::Shuttle::None) ? park::trains_fitting(*course, fits != scene.car_fits.end() ? std::span<const park::CarFit>(fits->second) : kept, f.ride->options.block_sectioned, rules.most_trains) : 1;
+                        f.trains->most_trains = course && !(coaster && coaster->shuttle != simulation::Shuttle::None) ? park::track::trains_fitting(*course, fits != scene.car_fits.end() ? std::span<const park::CarFit>(fits->second) : kept, f.ride->options.block_sectioned, rules.most_trains) : 1;
                     }
                 }
             }
@@ -2110,7 +2110,7 @@ namespace rct3::scene
             return std::nullopt;
         }
         const std::size_t ride = ref.index;
-        const park::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : park::TrackRules { };
+        const park::track::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : park::track::TrackRules { };
         const auto course = ride < scene.courses.size() && scene.courses[ride] ? maybe(&*scene.courses[ride]) : std::nullopt;
         // A pool ride's doors are its stations joined to a pool complex. A slide's station joins where the paving, a
         // pool path or the top of path stairs meets a side of its platform off the track, at the deck's height; a lazy
@@ -2127,14 +2127,14 @@ namespace rct3::scene
         if (rules.pool_ride && course && course->points.size() == course->kinds.size() && std::ranges::none_of(platforms, [](const auto& p) { return p.has_value(); }))
             for (std::size_t k = 0; k + 1 < course->kinds.size(); ++k)
             {
-                if (course->kinds[k] != park::CourseKind::Station)
+                if (course->kinds[k] != park::track::CourseKind::Station)
                     continue;
                 std::vector<glm::vec3> run { course->points[k] };
-                for (; k + 1 < course->kinds.size() && course->kinds[k] == park::CourseKind::Station; ++k)
+                for (; k + 1 < course->kinds.size() && course->kinds[k] == park::track::CourseKind::Station; ++k)
                     run.push_back(course->points[k + 1]);
                 joined += simulation::pool_beside(scene.sim, run).has_value() ? 1 : 0;
             }
-        return park::open_refusal(r, rules, state, scene.building.ride == ride, course, joined);
+        return park::track::open_refusal(r, rules, state, scene.building.ride == ride, course, joined);
     }
 
     std::vector<ui::StateChoice> state_choices(const ParkScene& scene, park::AttractionRef ref)
@@ -2254,7 +2254,7 @@ namespace rct3::scene
             const save::Ride& r = scene.rides.rides[ride];
             const auto coaster = course ? simulation::coaster_of(*course, r) : std::nullopt;
             // Boats sail off a dock that is only station, which no train could run round.
-            const bool boats = (r.mode == save::OperatingMode::Boat || r.mode == save::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, park::CourseKind::Station);
+            const bool boats = (r.mode == save::OperatingMode::Boat || r.mode == save::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, park::track::CourseKind::Station);
             if (!assets.install || r.base.demolished || r.base.state == save::AttractionState::Closed || r.mode == save::OperatingMode::MiniGolf || (!coaster && !boats && !(course && !course->climbs.empty())))
                 continue;
             const bool ghosted = coaster && !coaster->closed && coaster->shuttle == simulation::Shuttle::None && scene.building.ride == ride;

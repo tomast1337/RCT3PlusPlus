@@ -1396,7 +1396,7 @@ namespace rct3::scene
                 const float flown_for = train.flight ? train.flight->off - (1 - along) * simulation::kTickSeconds : 0.0f;
                 const float at = train.flight ? std::max(train.was_at, train.at + train.flight->speed * std::min(flown_for, 0.0f)) : simulation::between_drives(train, along);
                 moved[i] = at - scene.rides.rides[spot.ride].trains[spot.train].distance;
-                place = park::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, moved[i]);
+                place = park::track::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, moved[i]);
                 // A slide's car swung up its trough's wall, turned about its shape's pivot.
                 if (train.trough && train.lean != 0)
                 {
@@ -1460,7 +1460,7 @@ namespace rct3::scene
                     const glm::vec3 velocity = elapsed > 0 ? (glm::vec3(place[3]) - glm::vec3(scene.car_places[i][3])) / elapsed : glm::vec3(0.0f);
                     // Only cars that spray, and the one ridden for the water on the lens, look for the park's water.
                     const bool looks = !model->second.splash_points.empty() || scene.riding == i;
-                    const park::TrackCourse& course = *scene.courses[spot.ride];
+                    const park::track::TrackCourse& course = *scene.courses[spot.ride];
                     // shortcut: a splash ride whose track says nothing of water (a sea serpent diving into its
                     // lake) is taken as wet all along, splashing where its fall stops short; upgrade once such a
                     // track's water is found in its files.
@@ -1502,7 +1502,7 @@ namespace rct3::scene
             // the nose does not sway. Running backwards, the view looks the way the car faces.
             std::optional<glm::vec3> ahead;
             if (const auto& course = scene.courses[spot.ride]; course && tuning.look_ahead > 0 && scene.riding_eye != park::RideEye::Rear && !(train && train->speed < 0))
-                ahead = glm::vec3(park::moved_along(*course, scene.saved_cars.at(scene.cars[i].id), { spot.front, spot.rear }, moved[i] + tuning.look_ahead) * (*seat)[3]);
+                ahead = glm::vec3(park::track::moved_along(*course, scene.saved_cars.at(scene.cars[i].id), { spot.front, spot.rear }, moved[i] + tuning.look_ahead) * (*seat)[3]);
             const glm::vec2 dice { static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1, static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1 };
             scene.seat = park::looked_round(park::ride_look(scene.ride_view, scene.car_places[i] * *seat, ahead, scene.riding_eye != park::RideEye::Nose, tuning, elapsed, dice), scene.ride_turn);
         }
@@ -1583,13 +1583,13 @@ namespace rct3::scene
         for (ParkScene::ArmCar& arm : scene.arm_cars)
         {
             const park::CarSpot spot = scene.car_spots[arm.car];
-            std::optional<park::ArmAngles> angles;
+            std::optional<park::track::ArmAngles> angles;
             if (const save::Ride& ride = scene.rides.rides[spot.ride]; ride.track && scene.courses[spot.ride])
             {
-                std::vector<std::optional<park::ArmAngles>> held;
+                std::vector<std::optional<park::track::ArmAngles>> held;
                 for (const save::TrackPiece& piece : std::span(ride.track->pieces).subspan(std::min(scene.courses[spot.ride]->first_piece, ride.track->pieces.size())))
                     held.push_back(piece.arm_angles);
-                angles = park::arm_angles_at(*scene.courses[spot.ride], held, (spot.front + spot.rear) / 2 + moved[arm.car]);
+                angles = park::track::arm_angles_at(*scene.courses[spot.ride], held, (spot.front + spot.rear) / 2 + moved[arm.car]);
             }
             const std::vector<glm::mat4> moves = park::arm_moves(arm.joints, angles ? std::span<const float>(*angles) : std::span<const float> { });
             for (const glm::mat4& move : moves)

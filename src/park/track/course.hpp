@@ -8,7 +8,7 @@
 
 #include "park/object_mesh.hpp"
 #include "park/pools/pools.hpp"
-#include "park/track_pieces.hpp"
+#include "park/track/pieces.hpp"
 #include "save/model/rides.hpp"
 
 #include <array>
@@ -18,7 +18,7 @@
 #include <span>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     /// What the stretch of track from a point to the next is.
@@ -139,4 +139,4 @@ namespace rct3::park
     /// those. Nothing where neither does.
     [[nodiscard]] std::optional<ArmAngles> arm_angles_at(const TrackCourse& course, std::span<const std::optional<ArmAngles>> held, float distance);
 
-} // namespace rct3::park
+} // namespace rct3::park::track

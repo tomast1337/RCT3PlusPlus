@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/track_completion.hpp"
+#include "park/track/completion.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -8,7 +8,7 @@
 #include <tuple>
 #include <utility>
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     namespace
@@ -93,4 +93,4 @@ namespace rct3::park
         return search_on(search, tries).value_or(std::unexpected(CompletionFailure::OutOfTries));
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::track

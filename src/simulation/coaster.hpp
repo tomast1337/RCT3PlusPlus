@@ -141,8 +141,8 @@ namespace rct3::simulation
         std::optional<Trough> trough;
         std::vector<bool> covered { };               ///< By point: the stretch from it is a tube, which no car goes out of
         std::vector<bool> steady { };                ///< By point: on the stretch from it a slide's car swings by its weight alone
-        std::vector<float> drop_offs { };            ///< As park::TrackCourse::drop_offs
-        std::vector<std::array<float, 2>> wades { }; ///< As park::TrackCourse::wades: in them the pool's water carries the car on slowly
+        std::vector<float> drop_offs { };            ///< As park::track::TrackCourse::drop_offs
+        std::vector<std::array<float, 2>> wades { }; ///< As park::track::TrackCourse::wades: in them the pool's water carries the car on slowly
         /// What holds it back as it goes: rolling, as this much of its weight on the track, and the air, as this
         /// much of its speed squared, in m/s² for each (m/s)². Those of a train in saved parks' tested coasters
         /// unless its train's file gives its own.

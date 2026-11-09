@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/track_course.hpp"
+#include "park/track/course.hpp"
 
 #include "park/design_placement.hpp"
 
@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <utility>
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     namespace
@@ -441,4 +441,4 @@ namespace rct3::park
         return out;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::track

@@ -49,12 +49,12 @@ namespace rct3::park
         return mesh;
     }
 
-    TerrainMesh track_arrows(const TrackTip& start, const TrackTip& end, bool forward)
+    TerrainMesh track_arrows(const track::TrackTip& start, const track::TrackTip& end, bool forward)
     {
         // The pitch of each slope step, near the middle of the pitches the step takes.
         // shortcut: the track's bank is not followed, upgrade if the arrows are seen to cut through banked rails.
         constexpr std::array<float, 4> kPitch { 0, 27, 63, 90 };
-        const auto frame = [&](const TrackTip& tip) {
+        const auto frame = [&](const track::TrackTip& tip) {
             const float heading = static_cast<float>(tip.end.heading.value) * std::numbers::pi_v<float> / 4;
             const float pitch = std::copysign(kPitch[static_cast<std::size_t>(std::min(std::abs(tip.end.slope), 3))], static_cast<float>(tip.end.slope)) * std::numbers::pi_v<float> / 180;
             const glm::vec3 level { std::cos(heading), 0, -std::sin(heading) }; // Heading 0 along +x, 2 along -z

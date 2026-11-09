@@ -30,7 +30,7 @@
 #pragma once
 
 #include "math/glm.hpp"
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 #include "park/water_ripples.hpp"
 #include "save/model/world.hpp"
 
@@ -41,7 +41,7 @@
 #include <span>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::pools
 {
 
     /// The most waves the water shows at once, wave machines' and drawn together.
@@ -147,4 +147,4 @@ namespace rct3::park
     using PoolWaveTexels = std::array<glm::vec4, 4 * kMaxPoolWaves>;
     [[nodiscard]] PoolWaveTexels pool_wave_texels(std::span<const PoolWave> waves, const PoolWaveLook& look = kPoolWaveLook);
 
-} // namespace rct3::park
+} // namespace rct3::park::pools

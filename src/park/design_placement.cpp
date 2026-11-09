@@ -33,9 +33,9 @@ namespace rct3::park
         return std::ranges::any_of(grounds, [&](float ground) { return lowest - ground > kDesignRaise; });
     }
 
-    std::vector<PoolOpening> piece_pool_openings(const save::PlacedObject& object, const PieceRecord& record)
+    std::vector<pools::PoolOpening> piece_pool_openings(const save::PlacedObject& object, const PieceRecord& record)
     {
-        std::vector<PoolOpening> out;
+        std::vector<pools::PoolOpening> out;
         for (const PieceOpening& o : record.pool_sides)
         {
             const save::Tile tile = square_tile(object, record.squares, o.x, o.z);
@@ -44,9 +44,9 @@ namespace rct3::park
         return out;
     }
 
-    bool meets_pools(const PoolMap& map, std::span<const PoolOpening> openings)
+    bool meets_pools(const pools::PoolMap& map, std::span<const pools::PoolOpening> openings)
     {
-        return std::ranges::all_of(openings, [&](const PoolOpening& o) {
+        return std::ranges::all_of(openings, [&](const pools::PoolOpening& o) {
             const auto [dc, dr] = o.side.step();
             const auto square = map.at(o.col + dc, o.row + dr, o.height);
             return square && square->surface == o.height;

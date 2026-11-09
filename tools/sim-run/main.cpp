@@ -18,7 +18,7 @@
 #include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
 #include "park/overhead.hpp"
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 #include "park/track_course.hpp"
 #include "park/track_pieces.hpp"
 #include "profiling/profiler.hpp"
@@ -150,7 +150,7 @@ int main(int argc, char** argv)
     simulation::SimWorld world;
     world.seed = rct3::random::Seed { seed };
     simulation::import_paths(world, world_model->paths, world_model->terrain);
-    simulation::import_pools(world, park::saved_pools(*world_model, world_model->objects));
+    simulation::import_pools(world, park::pools::saved_pools(*world_model, world_model->objects));
     const auto guests = simulation::import_guests(world, *people);
     const std::size_t shops = simulation::import_stalls(world, *rides);
     std::vector<std::optional<simulation::RideTiming>> timings;

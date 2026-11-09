@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 
 #include <algorithm>
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::pools;
 
 namespace
 {
@@ -644,7 +645,7 @@ TEST_CASE("pools: a park from the game keeps squares stacked on a tile, and the 
         { .id = 2, .col = 5, .row = 5, .type = 1, .surface = 16, .depth = 2, .ground = std::array { 0.0f, 0.0f, 0.0f, 0.0f } },
         { .id = 3, .col = 6, .row = 5, .type = 0, .surface = 0, .depth = 2, .ground = std::array { 0.0f, 0.0f, 0.0f, 0.0f } },
     };
-    const park::PoolMap map = park::saved_pools(world, { });
+    const park::pools::PoolMap map = park::pools::saved_pools(world, { });
     REQUIRE(map.squares.size() == 3);
     CHECK(map.at(5, 5, 0)->surface == 3);
     CHECK(map.at(5, 5)->surface == 16);
@@ -826,15 +827,15 @@ TEST_CASE("pools: a park from the game gives its squares, boards and changing ro
     world.pool_complexes = { { .index = 2, .ticket = 250, .name = "Lido", .wave_height = 5, .wave_frequency = 4, .wave_on = 45, .wave_every = 120 } };
     world.changing_rooms = { { .object_ref = 90, .segment = 3, .open = true, .fluid = 2 } };
     const std::vector<save::PlacedObject> objects { { .id = 90, .symbol = "Room", .col = 7, .row = 5 } };
-    const park::PoolMap map = park::saved_pools(world, objects);
+    const park::pools::PoolMap map = park::pools::saved_pools(world, objects);
     REQUIRE(map.squares.size() == 6);
-    CHECK(map.at(5, 5)->kind == park::PoolKind::Water);
-    CHECK(map.at(5, 6)->kind == park::PoolKind::HighDive);
+    CHECK(map.at(5, 5)->kind == park::pools::PoolKind::Water);
+    CHECK(map.at(5, 6)->kind == park::pools::PoolKind::HighDive);
     CHECK(map.at(5, 6)->board == 8);
     CHECK(map.at(5, 6)->side == Side { 2 }); // The water is a row back
-    CHECK(map.at(4, 5)->kind == park::PoolKind::Jacuzzi);
-    CHECK(map.at(5, 3)->kind == park::PoolKind::Path);
-    CHECK(map.at(5, 4)->kind == park::PoolKind::PathSlope);
+    CHECK(map.at(4, 5)->kind == park::pools::PoolKind::Jacuzzi);
+    CHECK(map.at(5, 3)->kind == park::pools::PoolKind::Path);
+    CHECK(map.at(5, 4)->kind == park::pools::PoolKind::PathSlope);
     CHECK(map.at(5, 4)->side == Side { 2 }); // Its foot at the path a row back
     REQUIRE(map.rooms.size() == 1);
     CHECK(map.rooms[0].side == Side::kColBefore); // Its paved square a column back

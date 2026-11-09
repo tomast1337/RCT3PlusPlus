@@ -46,7 +46,7 @@ using Json = nlohmann::ordered_json;
 
 namespace
 {
-    constexpr std::string_view kTouched[] = { "src/ovl/costume.cpp", "src/park/turns.hpp", "src/park/pools.hpp", "src/park/pools.cpp" };
+    constexpr std::string_view kTouched[] = { "src/ovl/costume.cpp", "src/park/turns.hpp", "src/park/pools/pools.hpp", "src/park/pools/pools.cpp" };
     constexpr std::string_view kOwnDirs[] = { "src/", "app/", "tools/", "tests/" };
 
     std::string read_file(const fs::path& path)

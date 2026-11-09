@@ -328,7 +328,7 @@ namespace rct3::scene
         };
         scene.footpaths.pavings = park::ride_pavings(scene.rides, [&](const save::PlacementSpot& spot) { return footprint_of(spot, false); }, [&](const save::PlacementSpot& spot) { return footprint_of(spot, true); });
         // A changing room's floor is paved as a stall's is, opening onto the tile on its side away from the pool.
-        for (const park::PoolRoom& room : scene.pools.rooms)
+        for (const park::pools::PoolRoom& room : scene.pools.rooms)
         {
             const auto o = std::ranges::find_if(scene.objects, [&](const save::PlacedObject& p) { return p.col == room.col && p.row == room.row && p.symbol == room.symbol; });
             if (o == scene.objects.end())

@@ -17,7 +17,7 @@
 
 #include "config/game_options.hpp"
 #include "park/camera.hpp"
-#include "park/pool_waves.hpp"
+#include "park/pools/waves.hpp"
 #include "park/terrain_mesh.hpp"
 #include "park/water_ripples.hpp"
 #include "park/water_surface.hpp"
@@ -68,7 +68,7 @@ namespace rct3::scene
         render::Extent behind_size;
         bool have_behind = false; ///< The copy this frame worked
         park::Ripples ripples;
-        std::vector<park::PoolWave> pool_waves; ///< The wave machines', then those drawn on the water, for the shader
+        std::vector<park::pools::PoolWave> pool_waves; ///< The wave machines', then those drawn on the water, for the shader
         WaterLook look;
         std::vector<float> levels;              ///< With a reflection this frame, by index in `reflections`
         std::optional<park::WaterAbove> eye_in; ///< The water the eye is under this frame

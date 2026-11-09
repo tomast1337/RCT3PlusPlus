@@ -6,7 +6,7 @@
 // that run into a pool, as a slide's way back to its lift does, are not on a pool's edge.
 #pragma once
 
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 #include "park/track_pieces.hpp"
 #include "save/model/world.hpp"
 
@@ -39,9 +39,9 @@ namespace rct3::park
     [[nodiscard]] bool stands_too_high(float lowest, std::span<const float> grounds) noexcept;
 
     /// Where the piece `object`, built of `record`, joins a pool beside it.
-    [[nodiscard]] std::vector<PoolOpening> piece_pool_openings(const save::PlacedObject& object, const PieceRecord& record);
+    [[nodiscard]] std::vector<pools::PoolOpening> piece_pool_openings(const save::PlacedObject& object, const PieceRecord& record);
 
     /// Whether each of `openings` has a square of `map` across its side, at the opening's height.
-    [[nodiscard]] bool meets_pools(const PoolMap& map, std::span<const PoolOpening> openings);
+    [[nodiscard]] bool meets_pools(const pools::PoolMap& map, std::span<const pools::PoolOpening> openings);
 
 } // namespace rct3::park

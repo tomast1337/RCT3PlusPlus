@@ -10,7 +10,7 @@
 #include "park/edge_walls.hpp"
 #include "park/object_models.hpp"
 #include "park/overhead.hpp"
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 #include "park/track_course.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
@@ -62,7 +62,7 @@ namespace rct3::simulation
     /// an attraction at the path tile before its door, at its complex's ticket price, open as it is. A room
     /// that still stands keeps its swimmers; those of a room gone come out at its door. `scenery` are extras the park
     /// placed as scenery, used as those of `pools` are. Call after import_paths.
-    void import_pools(SimWorld& world, const park::PoolMap& pools, std::span<const park::PoolExtra> scenery = { });
+    void import_pools(SimWorld& world, const park::pools::PoolMap& pools, std::span<const park::pools::PoolExtra> scenery = { });
     /// Adds a shop for every stall of `rides` that sells a drink or food and has a path on the tile in front of
     /// it, near its height; a path beside it does not count. Returns how many were added. Its wares take the extras `kinds` says their items can, where the stall puts them on.
     /// Call after import_paths.

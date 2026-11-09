@@ -6,7 +6,7 @@
 // an attraction's instead, about the pool complex it lets guests into.
 #pragma once
 
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "ui/money_text.hpp"
@@ -72,7 +72,7 @@ namespace rct3::ui
         std::int64_t people = 0; ///< In the complex
         std::size_t dirt = 0;    ///< How dirty its water is, in six steps, cleanest 0
         std::uint8_t fluid = 0;  ///< As kPoolFluidControl's value
-        park::PoolWaves waves { };
+        park::pools::PoolWaves waves { };
         bool machines = false; ///< It has wave machines; without, their times cannot be set
         Currency currency { };
         std::int64_t customers = 0;                   ///< The room's, so far

@@ -147,7 +147,7 @@ float3 ripples(float2 at)
     return float3(slope, crest);
 }
 
-// The pools' waves (park/pool_waves.hpp, whose look these follow): rows 2 to 5 of the ripples' texture, one
+// The pools' waves (park/pools/waves.hpp, whose look these follow): rows 2 to 5 of the ripples' texture, one
 // wave a column.
 static const float kPoolSpeed = 3.0;
 static const float kPoolReach = 8.0;

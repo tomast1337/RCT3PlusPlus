@@ -14,7 +14,7 @@
 #include "ovl/text.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "park/item_category.hpp"
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 
@@ -434,7 +434,7 @@ namespace rct3::park
                     continue;
                 // The pool panel picks these by symbol and shows the editor's own pictures; the icons here are
                 // for scripts and lists that name them.
-                const auto tool = [&](std::string_view symbol, std::optional<PoolSquare> square) -> BuildItem& {
+                const auto tool = [&](std::string_view symbol, std::optional<pools::PoolSquare> square) -> BuildItem& {
                     BuildItem& item = items.emplace_back();
                     item.list = BuildList::Pools;
                     item.kind = BuildKind::PoolSquare;
@@ -444,28 +444,28 @@ namespace rct3::park
                     item.icon = square ? std::string(e.pool->icon) : std::string(kEnclosureDeleteIcon);
                     item.group_icon = e.pool->icon;
                     item.group_text = kPoolPanelText;
-                    item.price = square ? static_cast<std::int32_t>(pool_build_cost(e.pool->prices, *square)) : 0;
+                    item.price = square ? static_cast<std::int32_t>(pools::pool_build_cost(e.pool->prices, *square)) : 0;
                     item.pool_prices.assign(e.pool->prices.begin(), e.pool->prices.end());
                     return item;
                 };
                 for (std::int32_t depth = 1; depth <= 3; ++depth)
-                    tool(kPoolWater[static_cast<std::size_t>(depth - 1)], PoolSquare { .kind = PoolKind::Water, .depth = depth });
-                tool(kPoolTiles, PoolSquare { .kind = PoolKind::Tile, .depth = 2 });
+                    tool(kPoolWater[static_cast<std::size_t>(depth - 1)], pools::PoolSquare { .kind = pools::PoolKind::Water, .depth = depth });
+                tool(kPoolTiles, pools::PoolSquare { .kind = pools::PoolKind::Tile, .depth = 2 });
                 tool(kPoolDelete, std::nullopt);
-                tool(kPoolPath, PoolSquare { .kind = PoolKind::Path, .depth = 0 });
-                tool(kPoolPathSlope, PoolSquare { .kind = PoolKind::PathSlope, .depth = 0 });
-                tool(kPoolPathStairs, PoolSquare { .kind = PoolKind::PathStairs, .depth = 0 });
+                tool(kPoolPath, pools::PoolSquare { .kind = pools::PoolKind::Path, .depth = 0 });
+                tool(kPoolPathSlope, pools::PoolSquare { .kind = pools::PoolKind::PathSlope, .depth = 0 });
+                tool(kPoolPathStairs, pools::PoolSquare { .kind = pools::PoolKind::PathStairs, .depth = 0 });
                 // The extras laid as squares, one at a time: the spa pool, the high diving board and the spiral
                 // staircase.
-                BuildItem& jacuzzi = tool(kPoolJacuzzi, PoolSquare { .kind = PoolKind::Jacuzzi, .depth = 2 });
+                BuildItem& jacuzzi = tool(kPoolJacuzzi, pools::PoolSquare { .kind = pools::PoolKind::Jacuzzi, .depth = 2 });
                 jacuzzi.icon = kJacuzziIcon;
                 jacuzzi.group_icon = kJacuzziIcon;
                 jacuzzi.group_text = kPoolExtraText;
-                BuildItem& dive = tool(kPoolHighDive, PoolSquare { .kind = PoolKind::HighDive, .depth = 2, .board = kBoardLevel });
+                BuildItem& dive = tool(kPoolHighDive, pools::PoolSquare { .kind = pools::PoolKind::HighDive, .depth = 2, .board = pools::kBoardLevel });
                 dive.icon = kHighDiveIcon;
                 dive.group_icon = kJacuzziIcon;
                 dive.group_text = kPoolExtraText;
-                BuildItem& stairs = tool(kPoolStairs, PoolSquare { .kind = PoolKind::Stairs, .depth = 2, .board = kLowestStairs });
+                BuildItem& stairs = tool(kPoolStairs, pools::PoolSquare { .kind = pools::PoolKind::Stairs, .depth = 2, .board = pools::kLowestStairs });
                 stairs.icon = kStairsIcon;
                 stairs.group_icon = kJacuzziIcon;
                 stairs.group_text = kPoolExtraText;

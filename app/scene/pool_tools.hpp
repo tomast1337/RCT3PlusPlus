@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The pool tools (park/pools.hpp), picked in the pool panel the rides menu's pools button opens, as it remembers
+// The pool tools (park/pools/pools.hpp), picked in the pool panel the rides menu's pools button opens, as it remembers
 // them; scripts may still pick them from the build items. With water or tiles picked, pressing the ground and dragging marks a
 // rectangle of squares; letting go lays them, joining any pool they touch, and lays over the squares already
 // there. The pool's surface is the ground's height where the drag began, or the surface of the pool begun
@@ -10,7 +10,7 @@
 // the squares up and refunds them, leaving the ground flat at their surface. An area with land the park does
 // not own outright, or that the park cannot pay for, shows its marks red and is refused. With an extra or a
 // changing room picked, it follows the pointer as a see-through ghost on the square under it, red where it does
-// not fit (park/pools.hpp) or cannot be paid for, and shows alone, turning, in the panel's disc; the turn keys
+// not fit (park/pools/pools.hpp) or cannot be paid for, and shows alone, turning, in the panel's disc; the turn keys
 // turn it a quarter. A click puts an extra in there. A changing room must open on a paved square of a pool; a
 // click builds it there once: the tool and the panel go, and the room's window opens. With any of the tools out,
 // a right click takes up the square pointed at as the delete tool does, or deletes what else is there as the
@@ -18,7 +18,7 @@
 #pragma once
 
 #include "park/build_catalogue.hpp"
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 #include "park/terrain_mesh.hpp"
 #include "render/device.hpp"
 #include "ui/interface_assets.hpp"
@@ -66,7 +66,7 @@ namespace rct3::scene
     /// Builds the pools' pieces and water again after they changed, on the tiles of `touched` or anywhere.
     /// shortcut: the old pieces stay hidden among the objects; drop them when objects can be taken out.
     /// Where the rides' pieces and slide stations join the pools: railings are left open there and paths join them.
-    [[nodiscard]] std::vector<park::PoolOpening> pool_openings(const ParkScene& scene);
+    [[nodiscard]] std::vector<park::pools::PoolOpening> pool_openings(const ParkScene& scene);
 
     void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<park::TileRect> touched = std::nullopt);
 

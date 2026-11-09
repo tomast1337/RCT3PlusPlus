@@ -620,8 +620,8 @@ namespace rct3::scene
         engine_.define("map.rings", [this](const Json&) {
             const save::TerrainGrid& g = grid_of(park_);
             Json rings = Json::array();
-            for (const park::PoolWave& w : park_->rings)
-                rings.push_back({ { "col", (w.from.x - g.origin_x) / g.tile_size_x }, { "row", (w.from.y - g.origin_z) / g.tile_size_z }, { "up", w.level }, { "age", park_->park_clock - w.start }, { "crest", park::ring_crest(w, park_->park_clock) } });
+            for (const park::pools::PoolWave& w : park_->rings)
+                rings.push_back({ { "col", (w.from.x - g.origin_x) / g.tile_size_x }, { "row", (w.from.y - g.origin_z) / g.tile_size_z }, { "up", w.level }, { "age", park_->park_clock - w.start }, { "crest", park::pools::ring_crest(w, park_->park_clock) } });
             return rings;
         });
         engine_.define("map.fire", [this](const Json& a) {
@@ -677,22 +677,22 @@ namespace rct3::scene
         });
         engine_.define("map.poolPieces", [this](const Json&) {
             Json pieces = Json::array();
-            for (const save::PlacedObject& o : park::pool_objects(park_of(park_).pools, park::kPoolOverlay, 0))
+            for (const save::PlacedObject& o : park::pools::pool_objects(park_of(park_).pools, park::kPoolOverlay, 0))
                 pieces.push_back({ { "symbol", o.symbol }, { "overlay", o.overlay }, { "col", o.col }, { "row", o.row }, { "height", o.base_height ? Json(*o.base_height) : Json(nullptr) } });
             return pieces;
         });
         engine_.define("map.pools", [this](const Json&) {
-            const park::PoolMap& pools = park_of(park_).pools;
-            constexpr std::array kKinds { "water", "tile", "spa", "high dive", "stairs", "path", "slope", "steps" }; // By park::PoolKind
+            const park::pools::PoolMap& pools = park_of(park_).pools;
+            constexpr std::array kKinds { "water", "tile", "spa", "high dive", "stairs", "path", "slope", "steps" }; // By park::pools::PoolKind
             Json squares = Json::array();
-            for (const park::PoolSquare& s : pools.squares)
+            for (const park::pools::PoolSquare& s : pools.squares)
                 squares.push_back({ { "col", s.col }, { "row", s.row }, { "kind", kKinds[std::to_underlying(s.kind)] }, { "surface", s.surface }, { "side", s.side.value }, { "board", s.board } });
             Json ramps = Json::array();
-            for (const park::PoolExtra& e : pools.extras)
+            for (const park::pools::PoolExtra& e : pools.extras)
                 if (e.fit.step > 0)
                     ramps.push_back({ { "col", e.col }, { "row", e.row }, { "side", e.side.value }, { "step", e.fit.step } });
             Json rooms = Json::array();
-            for (const park::PoolRoom& room : pools.rooms)
+            for (const park::pools::PoolRoom& room : pools.rooms)
                 rooms.push_back({ { "col", room.col }, { "row", room.row } });
             return Json { { "squares", squares }, { "ramps", ramps }, { "rooms", rooms } };
         });
@@ -817,7 +817,7 @@ namespace rct3::scene
                      { "poolSides",
                        [&] {
                            Json sides = Json::array();
-                           for (const park::PoolOpening& o : b.pool_openings)
+                           for (const park::pools::PoolOpening& o : b.pool_openings)
                                sides.push_back({ { "col", o.col }, { "row", o.row }, { "height", o.height }, { "side", o.side.value } });
                            return sides;
                        }() },

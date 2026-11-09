@@ -49,7 +49,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::pools
 {
 
     enum class PoolKind : std::uint8_t
@@ -349,4 +349,4 @@ namespace rct3::park
     /// them; returns the refund, below zero. Given a `level`, of squares stacked on a tile only the one nearest it.
     std::int64_t take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::Tile a, save::Tile b, std::optional<std::int32_t> level = std::nullopt);
 
-} // namespace rct3::park
+} // namespace rct3::park::pools

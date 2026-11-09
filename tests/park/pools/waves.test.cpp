@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/pool_waves.hpp"
+#include "park/pools/waves.hpp"
 
 #include "park/terrain_mesh.hpp"
 
@@ -10,6 +10,7 @@
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::pools;
 
 namespace
 {

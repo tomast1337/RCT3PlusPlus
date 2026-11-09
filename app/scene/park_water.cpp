@@ -95,13 +95,13 @@ namespace rct3::scene
         }
 
         /// The ripples' rows, then the pools' waves'.
-        using WaterTexels = std::array<glm::vec4, std::tuple_size_v<park::RippleTexels> + std::tuple_size_v<park::PoolWaveTexels>>;
+        using WaterTexels = std::array<glm::vec4, std::tuple_size_v<park::RippleTexels> + std::tuple_size_v<park::pools::PoolWaveTexels>>;
 
         WaterTexels water_texels(const ParkWater& water)
         {
             WaterTexels texels { };
             std::ranges::copy(park::ripple_texels(water.ripples), texels.begin());
-            std::ranges::copy(park::pool_wave_texels(water.pool_waves), texels.begin() + std::tuple_size_v<park::RippleTexels>);
+            std::ranges::copy(park::pools::pool_wave_texels(water.pool_waves), texels.begin() + std::tuple_size_v<park::RippleTexels>);
             return texels;
         }
 
@@ -163,7 +163,7 @@ namespace rct3::scene
         if (!white)
             return std::unexpected(white.error());
         water.white = *white;
-        static_assert(park::kMaxPoolWaves == park::kMaxRipples, "the pools' waves share the ripples' rows' width");
+        static_assert(park::pools::kMaxPoolWaves == park::kMaxRipples, "the pools' waves share the ripples' rows' width");
         const WaterTexels none = water_texels(water);
         auto ripples = device.create_texture({ .width = park::kMaxRipples, .height = 6, .format = render::TextureFormat::Rgba32Float, .pixels = std::as_bytes(std::span(none)), .label = "water ripples" });
         if (!ripples)

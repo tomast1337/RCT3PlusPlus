@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 
 #include "strings/ascii.hpp"
 
@@ -10,7 +10,7 @@
 #include <cstdlib>
 #include <set>
 
-namespace rct3::park
+namespace rct3::park::pools
 {
 
     namespace
@@ -883,4 +883,4 @@ namespace rct3::park
         return map;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::pools

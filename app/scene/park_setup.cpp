@@ -1189,19 +1189,19 @@ namespace rct3::scene
             {
                 if (!saved)
                 {
-                    scene.pools = park::saved_pools(*world, world->objects);
+                    scene.pools = park::pools::saved_pools(*world, world->objects);
                     // A room's scenery may be kept twice on its tile, once not named by the room: both go, or the one left
                     // over hides the room, a plain prop that cannot be opened.
-                    const auto room = [&](const save::PlacedObject& o) { return std::ranges::any_of(scene.pools.rooms, [&](const park::PoolRoom& r) { return r.col == o.col && r.row == o.row && r.symbol == o.symbol; }); };
+                    const auto room = [&](const save::PlacedObject& o) { return std::ranges::any_of(scene.pools.rooms, [&](const park::pools::PoolRoom& r) { return r.col == o.col && r.row == o.row && r.symbol == o.symbol; }); };
                     std::erase_if(world->objects, [&](const save::PlacedObject& o) { return std::ranges::contains(world->changing_rooms, o.id, &save::ChangingRoomState::object_ref) || room(o); });
-                    park::drop_saved_pool_pieces(scene.pools, park::kPoolOverlay, world->objects);
+                    park::pools::drop_saved_pool_pieces(scene.pools, park::kPoolOverlay, world->objects);
                 }
                 world->pool_water.clear();
             }
             if (saved && saved->pools)
                 scene.pools = *saved->pools;
             scene.saved_pool_water = world->pool_water.size();
-            std::ranges::copy(park::pool_water(scene.pools), std::back_inserter(world->pool_water));
+            std::ranges::copy(park::pools::pool_water(scene.pools), std::back_inserter(world->pool_water));
         }
 
         // ── 3. Ground, water and GPU textures ──
@@ -1454,7 +1454,7 @@ namespace rct3::scene
             built.insert(built.end(), std::make_move_iterator(enclosed.pieces.begin()), std::make_move_iterator(enclosed.pieces.end()));
             scene.leans.merge(enclosed.leans);
             scene.pool_openings = pool_openings(scene);
-            for (save::PlacedObject& piece : park::pool_objects(scene.pools, park::kPoolOverlay, largest_id(), scene.pool_openings))
+            for (save::PlacedObject& piece : park::pools::pool_objects(scene.pools, park::kPoolOverlay, largest_id(), scene.pool_openings))
             {
                 scene.pool_pieces.push_back(piece.id);
                 built.push_back(std::move(piece));

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/pool_score.hpp"
+#include "park/pools/score.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <set>
 #include <utility>
 
-namespace rct3::park
+namespace rct3::park::pools
 {
 
     PoolTally pool_tally(std::span<const PoolSquare> squares, std::span<const PoolExtra> extras)
@@ -78,4 +78,4 @@ namespace rct3::park
         return 300 + std::llround(500 * pool_excitement(t, dirt)) + up_to(t.jacuzzis, 4, 60) + up_to(t.high_dives, 3, 100) + up_to(static_cast<std::int64_t>(slides), 4, 150) + up_to(static_cast<std::int64_t>(rivers), 2, 200) + up_to(t.loungers, 8, 15) + up_to(t.showers, 4, 20);
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::pools

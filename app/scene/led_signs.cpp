@@ -13,6 +13,7 @@
 #include "ui/font_sets.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/management_pages.hpp"
+#include "ui/sign_text.hpp"
 
 #include <algorithm>
 #include <array>
@@ -283,7 +284,7 @@ namespace rct3::scene
             if (words == sign.shown)
                 continue;
             sign.shown = std::move(words);
-            sign.loop = park::sign_text_loop(*font, q.font_pages, sign.shown, park::kSignTextHeight);
+            sign.loop = ui::sign_text_loop(*font, q.font_pages, sign.shown, park::kSignTextHeight);
             sign.shift = UINT32_MAX;
         }
     }

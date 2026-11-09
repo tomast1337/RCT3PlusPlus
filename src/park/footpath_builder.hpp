@@ -124,7 +124,10 @@ namespace rct3::park
         Blocked,     ///< Something else is in the way: scenery, a ride or a stall
     };
 
-    struct SolidTiles;
+    namespace path
+    {
+        struct SolidTiles;
+    } // namespace path
 
     /// Clearance kept between a piece and another path on its tile, in world units: room for guests to walk
     /// under a raised path. A bridge over a path then climbs two ramp tiles each side, as in the original game.
@@ -162,8 +165,8 @@ namespace rct3::park
     [[nodiscard]] std::optional<NextPiece> next_piece(const FootpathBuilder& builder, const save::TerrainGrid& grid);
 
     /// Why the next piece cannot be laid on `grid` among `paths` and, when given, what else fills the tiles
-    /// (path_clearance.hpp).
-    [[nodiscard]] LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids = std::nullopt);
+    /// (path/clearance.hpp).
+    [[nodiscard]] LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const path::SolidTiles&> solids = std::nullopt);
 
     /// Lowers the corners of `piece`'s tile that stand above it, laid heading `heading`, down to it.
     void cut_down(save::TerrainGrid& grid, const NextPiece& piece, Side heading);
@@ -200,7 +203,7 @@ namespace rct3::park
     /// Which controls lead to a piece that can be laid from where the trail stands: a turn when some slope fits
     /// that way, a slope when it fits the way the trail heads, Straight when the piece as chosen fits. The cut
     /// switch can always be used, since cutting can make a piece fit; Remove is left to the caller.
-    [[nodiscard]] std::array<bool, kPathControlCount> fitting_controls(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids = std::nullopt);
+    [[nodiscard]] std::array<bool, kPathControlCount> fitting_controls(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const path::SolidTiles&> solids = std::nullopt);
 
     /// The slope control that picks `slope`, and the slope a control picks (Flat for those that pick none).
     [[nodiscard]] PathControl slope_control(PathSlope slope) noexcept;

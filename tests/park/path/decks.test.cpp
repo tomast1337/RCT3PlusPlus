@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 
 #include <doctest/doctest.h>
 #include <format>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::path;
 
 namespace
 {

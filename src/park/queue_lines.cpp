@@ -3,7 +3,7 @@
 
 #include "park/footpath_builder.hpp"
 #include "park/ground/paths.hpp"
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -44,15 +44,15 @@ namespace rct3::park
         while (true)
         {
             const save::PathTile& here = paths[at];
-            const auto side = stored_heading(here.queue->end_direction);
+            const auto side = path::stored_heading(here.queue->end_direction);
             if (!side)
                 return out; // It leads nowhere
-            const auto edge = edge_height(here, grid, *side);
+            const auto edge = path::edge_height(here, grid, *side);
             const save::Tile next = side->beyond({ here.col, here.row });
             const auto found = std::ranges::find_if(paths, [&](const save::PathTile& p) {
-                if (!p.queue || p.col != next.col || p.row != next.row || stored_heading(p.queue->start_direction) != side->opposite())
+                if (!p.queue || p.col != next.col || p.row != next.row || path::stored_heading(p.queue->start_direction) != side->opposite())
                     return false;
-                const auto other = edge_height(p, grid, side->opposite());
+                const auto other = path::edge_height(p, grid, side->opposite());
                 return edge && other && std::abs(*edge - *other) <= ground::kPathMeets;
             });
             if (found == paths.end())
@@ -74,25 +74,25 @@ namespace rct3::park
         const auto meets = [&](Side side, bool any_kind) {
             // A queue has edges only where its line passes: measure as if it came in on `side`.
             save::PathTile turned = here;
-            turned.queue->start_direction = stored_direction(side);
-            const auto edge = edge_height(turned, grid, side);
+            turned.queue->start_direction = path::stored_direction(side);
+            const auto edge = path::edge_height(turned, grid, side);
             const save::Tile next = side.beyond({ here.col, here.row });
             return edge && std::ranges::any_of(paths, [&](const save::PathTile& p) {
                        if (p.col != next.col || p.row != next.row || (!any_kind && p.queue))
                            return false;
-                       const auto other = edge_height(p, grid, side.opposite());
+                       const auto other = path::edge_height(p, grid, side.opposite());
                        return other && std::abs(*edge - *other) <= ground::kPathMeets;
                    });
         };
-        const auto start = stored_heading(here.queue->start_direction);
-        const auto end = stored_heading(here.queue->end_direction);
+        const auto start = path::stored_heading(here.queue->start_direction);
+        const auto end = path::stored_heading(here.queue->end_direction);
         if (start && meets(*start, true))
             return false;
         for (const Side side : kSides)
         {
             if (side != start && side != end && meets(side, false))
             {
-                here.queue->start_direction = stored_direction(side);
+                here.queue->start_direction = path::stored_direction(side);
                 return true;
             }
         }
@@ -106,7 +106,7 @@ namespace rct3::park
         void lead_out(std::vector<save::PathTile>& paths, const save::TerrainGrid& grid, std::size_t tile, Side side, std::uint64_t line)
         {
             save::PathQueueInfo& here = *paths[tile].queue;
-            const std::uint8_t toward = stored_direction(side);
+            const std::uint8_t toward = path::stored_direction(side);
             std::vector<std::size_t> joined;
             if (here.end_direction != toward)
             {
@@ -172,13 +172,13 @@ namespace rct3::park
         for (const Side side : kSides)
         {
             save::PathTile turned = here;
-            turned.queue->end_direction = stored_direction(side);
-            const auto edge = edge_height(turned, grid, side);
+            turned.queue->end_direction = path::stored_direction(side);
+            const auto edge = path::edge_height(turned, grid, side);
             const save::Tile next = side.beyond({ here.col, here.row });
             const auto head = std::ranges::find_if(paths, [&](const save::PathTile& p) {
-                if (!p.queue || p.queue->queue_line_ref == 0 || p.queue->queue_line_ref == here.queue->queue_line_ref || p.col != next.col || p.row != next.row || stored_heading(p.queue->start_direction) != side.opposite())
+                if (!p.queue || p.queue->queue_line_ref == 0 || p.queue->queue_line_ref == here.queue->queue_line_ref || p.col != next.col || p.row != next.row || path::stored_heading(p.queue->start_direction) != side.opposite())
                     return false;
-                const auto other = edge_height(p, grid, side.opposite());
+                const auto other = path::edge_height(p, grid, side.opposite());
                 return edge && other && std::abs(*edge - *other) <= ground::kPathMeets;
             });
             if (head == paths.end())

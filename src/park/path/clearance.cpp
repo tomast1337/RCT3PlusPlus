@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/path_clearance.hpp"
+#include "park/path/clearance.hpp"
 
 #include "park/item_category.hpp"
 #include "park/object_placement.hpp"
-#include "park/path_decks.hpp"
-#include "park/path_furniture.hpp"
+#include "park/path/decks.hpp"
+#include "park/path/furniture.hpp"
 #include "park/support_columns.hpp"
 
 #include <algorithm>
 #include <utility>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     namespace
@@ -164,4 +164,4 @@ namespace rct3::park
         return std::nullopt;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::path

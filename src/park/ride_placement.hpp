@@ -14,7 +14,7 @@
 #include "park/carried_goods.hpp"
 #include "park/ground/holds.hpp"
 #include "park/object_placement.hpp"
-#include "park/path_clearance.hpp"
+#include "park/path/clearance.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 
@@ -86,7 +86,7 @@ namespace rct3::park
     [[nodiscard]] SiteProblem water_problem(const RideSite& site, bool water_only, std::span<const save::WaterBody> bodies);
 
     /// What keeps a ride from `site`, if anything.
-    [[nodiscard]] SiteProblem site_problem(const RideSite& site, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles& solids);
+    [[nodiscard]] SiteProblem site_problem(const RideSite& site, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const path::SolidTiles& solids);
 
     /// What keeps a ride standing over the ground as it is, without levelling it, from `site`: the ground of a
     /// tile rising over its base.
@@ -183,6 +183,6 @@ namespace rct3::park
     [[nodiscard]] std::optional<std::string_view> platform_symbol(std::string_view type, const save::TrackPiece& piece, const PlatformPlace& place, std::span<const DoorSpot> doors, std::span<const std::string> names);
 
     /// What keeps an entrance or exit from `door`, if anything. `taken`: a door already placed for the ride.
-    [[nodiscard]] SiteProblem door_problem(const RideSite& site, const DoorSpot& door, std::optional<DoorSpot> taken, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles& solids);
+    [[nodiscard]] SiteProblem door_problem(const RideSite& site, const DoorSpot& door, std::optional<DoorSpot> taken, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const path::SolidTiles& solids);
 
 } // namespace rct3::park

@@ -9,7 +9,7 @@
 // station's line (park/queue_lines.hpp).
 //
 // With a path style chosen, the path a click would lay shows under the pointer; dragging over bare ground paints paths on the tiles the pointer passes over, and a
-// click lays one (park/path_drag.hpp); they show faintly while the button is held, are laid when it is let go,
+// click lays one (park/path/drag.hpp); they show faintly while the button is held, are laid when it is let go,
 // and the right button calls the stroke off. Taking a piece away right after a stroke takes the whole stroke
 // away. Pointing at a path shows an arrow on its edge nearest the pointer and the piece that would go on from
 // it; an arrow also shows over the trail's next piece. Pressing on either and moving up or down picks the
@@ -29,7 +29,7 @@
 // backing the arrow up over them. Taking a path away, by any means, pays back what laying it cost.
 //
 // With the panel's route tab on and a trail started, pointing at a tile shows the cheapest route from the
-// arrow to it (park/path_route.hpp) with its cost, and a click lays it piece by piece; taking a piece away
+// arrow to it (park/path/route.hpp) with its cost, and a click lays it piece by piece; taking a piece away
 // right after takes the whole route away. With cutting on, the route may cut through hills.
 //
 // The styles and their pictures are read from the install the first time the panel opens.
@@ -39,10 +39,10 @@
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
 #include "park/object_mesh.hpp"
-#include "park/path_clearance.hpp"
-#include "park/path_drag.hpp"
-#include "park/path_route.hpp"
-#include "park/path_styles.hpp"
+#include "park/path/clearance.hpp"
+#include "park/path/drag.hpp"
+#include "park/path/route.hpp"
+#include "park/path/styles.hpp"
 #include "park/support_sets.hpp"
 #include "park/terrain_mesh.hpp"
 #include "render/device.hpp"
@@ -78,7 +78,7 @@ namespace rct3::scene
 
     struct ParkFootpaths
     {
-        std::vector<park::PathStyle> styles; ///< Path styles, then queue styles; read when the panel first opens
+        std::vector<park::path::PathStyle> styles; ///< Path styles, then queue styles; read when the panel first opens
         bool loaded = false;
         std::optional<std::size_t> style; ///< Of styles, the one chosen
         park::FootpathBuilder builder;
@@ -118,32 +118,32 @@ namespace rct3::scene
             std::int32_t height = 0;
         };
         std::optional<Lift> lift;
-        std::optional<std::int32_t> last_height;           ///< Where the last piece laid here ended, for Control
-        bool drop = false;                                 ///< The stroke ended, so its paths are laid
-        std::optional<park::DragPlan> plan;                ///< What the stroke would lay, worked out when it changes
-        std::vector<std::uint64_t> stroke;                 ///< The paths the last stroke laid, until another piece is laid
-        bool routing = false;                              ///< The panel's route tab was on last frame
-        bool straight = false;                             ///< The panel's straight tab was on last frame
-        int brush_size = 1;                                ///< The panel's brush size last frame
-        std::optional<save::Tile> route_goal;              ///< With routing on: the tile pointed at
-        std::optional<std::int32_t> route_goal_height;     ///< And the height of the raised path pointed at there
-        std::optional<std::vector<park::RouteStep>> route; ///< The route there, worked out when it changes
-        bool route_blocked = false;                        ///< Only through what is in the way, so it is shown refused
-        park::SolidTiles solids;                           ///< What stands in the paths' way
-        std::size_t solids_of = 0;                         ///< The scene's object count when worked out
-        bool route_press = false;                          ///< The button went down to lay the route
-        bool lay_route = false;                            ///< And came up, so the route is laid
-        std::size_t route_laid = 0;                        ///< Pieces the last route laid, until another piece is laid
-        std::optional<std::uint64_t> sell;                 ///< A right click picked this path to sell
-        bool removing = false;                             ///< The panel's remove tab was on last frame
-        std::optional<std::uint64_t> remove_hover;         ///< With removing on: the path pointed at
-        std::vector<std::uint64_t> remove_marked;          ///< And the paths a press went over, until let go
-        bool remove_now = false;                           ///< Let go, so the marked paths are taken away
-        std::optional<bool> follow_changed;                ///< The follow tab was switched, for the options to keep
-        std::optional<save::Tile> followed;                ///< With camera follow on: the next piece's tile the camera went to
-        std::optional<glm::vec3> camera_goal;              ///< Where the camera glides to, until it is there or moved
-        bool dirty = false;                                ///< The next piece changed, so the ghost is built again
-        std::u16string notice;                             ///< Why the last piece was not laid, until the next control
+        std::optional<std::int32_t> last_height;                 ///< Where the last piece laid here ended, for Control
+        bool drop = false;                                       ///< The stroke ended, so its paths are laid
+        std::optional<park::path::DragPlan> plan;                ///< What the stroke would lay, worked out when it changes
+        std::vector<std::uint64_t> stroke;                       ///< The paths the last stroke laid, until another piece is laid
+        bool routing = false;                                    ///< The panel's route tab was on last frame
+        bool straight = false;                                   ///< The panel's straight tab was on last frame
+        int brush_size = 1;                                      ///< The panel's brush size last frame
+        std::optional<save::Tile> route_goal;                    ///< With routing on: the tile pointed at
+        std::optional<std::int32_t> route_goal_height;           ///< And the height of the raised path pointed at there
+        std::optional<std::vector<park::path::RouteStep>> route; ///< The route there, worked out when it changes
+        bool route_blocked = false;                              ///< Only through what is in the way, so it is shown refused
+        park::path::SolidTiles solids;                           ///< What stands in the paths' way
+        std::size_t solids_of = 0;                               ///< The scene's object count when worked out
+        bool route_press = false;                                ///< The button went down to lay the route
+        bool lay_route = false;                                  ///< And came up, so the route is laid
+        std::size_t route_laid = 0;                              ///< Pieces the last route laid, until another piece is laid
+        std::optional<std::uint64_t> sell;                       ///< A right click picked this path to sell
+        bool removing = false;                                   ///< The panel's remove tab was on last frame
+        std::optional<std::uint64_t> remove_hover;               ///< With removing on: the path pointed at
+        std::vector<std::uint64_t> remove_marked;                ///< And the paths a press went over, until let go
+        bool remove_now = false;                                 ///< Let go, so the marked paths are taken away
+        std::optional<bool> follow_changed;                      ///< The follow tab was switched, for the options to keep
+        std::optional<save::Tile> followed;                      ///< With camera follow on: the next piece's tile the camera went to
+        std::optional<glm::vec3> camera_goal;                    ///< Where the camera glides to, until it is there or moved
+        bool dirty = false;                                      ///< The next piece changed, so the ghost is built again
+        std::u16string notice;                                   ///< Why the last piece was not laid, until the next control
     };
 
     /// Opens the path panel, or closes it when it is open.

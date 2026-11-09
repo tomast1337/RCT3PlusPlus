@@ -33,7 +33,7 @@
 #include <span>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     /// In hundredths of the currency unit.
@@ -65,4 +65,4 @@ namespace rct3::park
     /// What laying `route` costs, as the pieces' prices add up (walking over a path already there is free).
     [[nodiscard]] std::int64_t route_price(std::span<const RouteStep> route, const FootpathBuilder& from, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost);
 
-} // namespace rct3::park
+} // namespace rct3::park::path

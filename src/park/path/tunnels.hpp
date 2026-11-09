@@ -16,7 +16,7 @@
 #include <span>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     /// Room over a tunnel piece's highest point, in world units: below kTunnelCover, so a lip of ground stays
@@ -32,4 +32,4 @@ namespace rct3::park
     /// The lining of `hollows`, in TunnelWall and TunnelCeiling batches by the tiles' cliff faces.
     [[nodiscard]] TerrainMesh tunnel_lining(std::span<const GroundOpening> hollows, const save::TerrainGrid& grid);
 
-} // namespace rct3::park
+} // namespace rct3::park::path

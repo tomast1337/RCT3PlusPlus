@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/path_styles.hpp"
+#include "park/path/styles.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::path;
 
 TEST_CASE("a path type and a queue type become styles with their first item's price")
 {

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/path_clearance.hpp"
+#include "park/path/clearance.hpp"
 
 #include "park/item_category.hpp"
 #include "park/object_placement.hpp"
-#include "park/path_drag.hpp"
-#include "park/path_route.hpp"
+#include "park/path/drag.hpp"
+#include "park/path/route.hpp"
 
 #include <algorithm>
 #include <doctest/doctest.h>
@@ -12,6 +12,7 @@
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::path;
 
 namespace
 {

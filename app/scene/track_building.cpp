@@ -504,11 +504,11 @@ namespace rct3::scene
         /// the piece built over and those either side of it. Joined pieces may share a tile, as diagonals do.
         /// shortcut: the track's far end is left out even where the new piece does not join it, so a piece may cross
         /// it; leave it in once a piece's ends tell which pieces it meets.
-        park::SolidTiles taken_room(const ParkScene& scene, const TrackBuilding& b)
+        park::path::SolidTiles taken_room(const ParkScene& scene, const TrackBuilding& b)
         {
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             if (!ride.track || ride.track->pieces.empty())
-                return park::solid_tiles(scene.objects, scene.models, scene.grid);
+                return park::path::solid_tiles(scene.objects, scene.models, scene.grid);
             const auto& pieces = ride.track->pieces;
             std::vector<std::uint64_t> joined { pieces.front().scenery, pieces.back().scenery };
             if (b.selected)
@@ -519,7 +519,7 @@ namespace rct3::scene
             }
             std::vector<save::PlacedObject> others;
             std::ranges::copy_if(scene.objects, std::back_inserter(others), [&](const save::PlacedObject& o) { return !std::ranges::contains(joined, o.id); });
-            return park::solid_tiles(others, scene.models, scene.grid);
+            return park::path::solid_tiles(others, scene.models, scene.grid);
         }
 
         /// Whether the ground `pieces` (their models loaded) would cut may not be cut.
@@ -531,9 +531,9 @@ namespace rct3::scene
 
         /// Whether `o`, its model loaded, may not stand: it would take room `taken` or a path takes, stand off
         /// land the park owns, or cut ground that may not be cut.
-        bool clashes(const ParkScene& scene, const park::SolidTiles& taken, const save::PlacedObject& o)
+        bool clashes(const ParkScene& scene, const park::path::SolidTiles& taken, const save::PlacedObject& o)
         {
-            return park::first_refused(std::span(&o, 1), scene.models, taken, scene.footpaths.paths, scene.grid).has_value() || cut_refused(scene, std::span(&o, 1));
+            return park::path::first_refused(std::span(&o, 1), scene.models, taken, scene.footpaths.paths, scene.grid).has_value() || cut_refused(scene, std::span(&o, 1));
         }
 
         /// Makes the park's own trains of `ride` ghosts, whose crash off an open end of the track harms nothing and
@@ -701,7 +701,7 @@ namespace rct3::scene
                 }
             }
             b.ghost_doors = shown.size() - pieces;
-            const auto refused = park::first_refused(shown, scene.models, taken_room(scene, b), scene.footpaths.paths, scene.grid);
+            const auto refused = park::path::first_refused(shown, scene.models, taken_room(scene, b), scene.footpaths.paths, scene.grid);
             // shortcut: the ground a ghost would cut is cut only once it is built, upgrade to show the cut under the
             // ghost if pieces into hills are hard to see.
             b.in_ground = whole && !refused && cut_refused(scene, std::span(shown).first(pieces));
@@ -1756,10 +1756,10 @@ namespace rct3::scene
             park::track::stand_train(*course, ride.trains[t], fits->second, fronts[t]);
     }
 
-    park::SolidTiles boat_obstacles(const ParkScene& scene)
+    park::path::SolidTiles boat_obstacles(const ParkScene& scene)
     {
-        park::SolidTiles solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
-        park::add_path_decks(solids, scene.footpaths.paths, scene.grid);
+        park::path::SolidTiles solids = park::path::solid_tiles(scene.objects, scene.models, scene.grid);
+        park::path::add_path_decks(solids, scene.footpaths.paths, scene.grid);
         return solids;
     }
 
@@ -2050,7 +2050,7 @@ namespace rct3::scene
         const std::int64_t cash = scene.park.cash.value_or(0);
         // shortcut: a design's pieces are not checked against each other, as it was built whole in the game and
         // our rule refuses some of its pieces that pass close; check them too once the rule matches the game's.
-        park::SolidTiles standing;
+        park::path::SolidTiles standing;
         if (!design.empty())
         {
             std::vector<save::PlacedObject> others;
@@ -2058,7 +2058,7 @@ namespace rct3::scene
                 const auto of = scene.attractions.find(o.id);
                 return of == scene.attractions.end() || of->second.kind != park::AttractionRef::Kind::Ride || of->second.index != *b.ride;
             });
-            standing = park::solid_tiles(others, scene.models, scene.grid);
+            standing = park::path::solid_tiles(others, scene.models, scene.grid);
         }
         const save::PlacedObject first = b.ghost->object;
         // A design of two tracks side by side holds both halves of each joined piece, laid as they come rather

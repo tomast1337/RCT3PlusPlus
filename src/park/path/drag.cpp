@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/path_drag.hpp"
+#include "park/path/drag.hpp"
 
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
 #include "park/object_pick.hpp"
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 #include "park/queue_fences.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     std::vector<save::Tile> brush_line(save::Tile from, save::Tile to)
@@ -164,4 +164,4 @@ namespace rct3::park
         builder.trail.push_back({ spot, 0, door.height });
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::path

@@ -2,8 +2,8 @@
 #include "park/track/ground.hpp"
 
 #include "park/item_category.hpp"
-#include "park/path_clearance.hpp"
-#include "park/path_tunnels.hpp"
+#include "park/path/clearance.hpp"
+#include "park/path/tunnels.hpp"
 
 #include <algorithm>
 #include <array>
@@ -20,14 +20,14 @@ namespace rct3::park::track
     {
         constexpr float kSlack = 0.05f; // Standing on the ground is not in it
         ground::GroundCuts out;
-        for (const auto& [key, spans] : solid_tiles(items, models, grid).tiles)
+        for (const auto& [key, spans] : path::solid_tiles(items, models, grid).tiles)
         {
             const save::Tile tile { static_cast<std::int32_t>(key & 0xFFFF), static_cast<std::int32_t>(key >> 16) };
             if (!grid.contains(tile.col, tile.row))
                 continue;
             const save::TerrainCell& cell = grid.at(tile.col, tile.row);
             float floor = std::numeric_limits<float>::max();
-            for (const SolidSpan& s : spans)
+            for (const path::SolidSpan& s : spans)
             {
                 if (cell.max_height() > s.low - s.below + kSlack && cell.min_height() < s.high + s.above + kGroundCover)
                     floor = std::min(floor, s.low - s.below);
@@ -88,16 +88,16 @@ namespace rct3::park::track
             return model != models.end() && std::ranges::contains(kHollowing, model->second.category, [](ItemCategory c) { return std::to_underlying(c); });
         });
         std::vector<GroundOpening> hollows;
-        for (const auto& [key, spans] : solid_tiles(buried, models, grid).tiles)
+        for (const auto& [key, spans] : path::solid_tiles(buried, models, grid).tiles)
         {
             const auto col = static_cast<std::int32_t>(key & 0xFFFF);
             const auto row = static_cast<std::int32_t>(key >> 16);
             if (!grid.contains(col, row))
                 continue;
-            for (const SolidSpan& s : spans)
+            for (const path::SolidSpan& s : spans)
             {
                 if (grid.at(col, row).min_height() >= s.high + s.above + kGroundCover)
-                    hollows.push_back({ col, row, s.low - s.below - kTunnelFloor, s.high + s.above });
+                    hollows.push_back({ col, row, s.low - s.below - path::kTunnelFloor, s.high + s.above });
             }
         }
         return hollows;
@@ -105,11 +105,11 @@ namespace rct3::park::track
 
     bool lies_buried(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
     {
-        const SolidTiles solids = solid_tiles(objects, models, grid);
+        const path::SolidTiles solids = path::solid_tiles(objects, models, grid);
         return !solids.tiles.empty() && std::ranges::all_of(solids.tiles, [&](const auto& tile) {
             const auto col = static_cast<std::int32_t>(tile.first & 0xFFFF);
             const auto row = static_cast<std::int32_t>(tile.first >> 16);
-            return grid.contains(col, row) && std::ranges::all_of(tile.second, [&](const SolidSpan& s) { return grid.at(col, row).min_height() >= s.high + s.above + kGroundCover; });
+            return grid.contains(col, row) && std::ranges::all_of(tile.second, [&](const path::SolidSpan& s) { return grid.at(col, row).min_height() >= s.high + s.above + kGroundCover; });
         });
     }
 

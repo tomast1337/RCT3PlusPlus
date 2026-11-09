@@ -4,7 +4,7 @@
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
 #include "park/object_pick.hpp"
-#include "park/path_drag.hpp"
+#include "park/path/drag.hpp"
 #include "park/water/surface.hpp"
 #include "scene/park_scene.hpp"
 #include "simulation/systems.hpp"
@@ -56,7 +56,7 @@ namespace rct3::scene
             std::optional<glm::vec3> spot;
             bool allowed = false;
             // A path under the pointer, at the height the simulation walks it there.
-            if (const auto under = park::path_under(ray, scene.footpaths.paths, scene.grid); under && std::abs(ray.direction.y) > 1e-6f)
+            if (const auto under = park::path::path_under(ray, scene.footpaths.paths, scene.grid); under && std::abs(ray.direction.y) > 1e-6f)
             {
                 const save::PathTile& p = scene.footpaths.paths[under->path];
                 float nearest = std::numeric_limits<float>::max();

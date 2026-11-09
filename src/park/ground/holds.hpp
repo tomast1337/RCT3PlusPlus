@@ -14,7 +14,7 @@
 #pragma once
 
 #include "park/object_mesh.hpp"
-#include "park/path_clearance.hpp"
+#include "park/path/clearance.hpp"
 #include "save/model/world.hpp"
 
 #include <array>
@@ -35,7 +35,7 @@ namespace rct3::park::ground
     struct GroundHolds
     {
         std::unordered_set<std::uint32_t> held;         ///< Tiles under items that hold the ground
-        SolidTiles raised;                              ///< Solid squares of items that keep a height of their own
+        path::SolidTiles raised;                        ///< Solid squares of items that keep a height of their own
         std::unordered_map<std::uint32_t, float> decks; ///< The lowest underside of the raised paths over a tile
         std::unordered_set<std::uint32_t> paved;        ///< Tiles with a path on the ground
         std::vector<std::size_t> followers;             ///< Items that stand on the ground and follow it, of the objects

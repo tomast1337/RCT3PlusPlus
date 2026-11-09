@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/path_route.hpp"
+#include "park/path/route.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -7,7 +7,7 @@
 #include <queue>
 #include <unordered_map>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     namespace
@@ -205,4 +205,4 @@ namespace rct3::park
         return total;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::path

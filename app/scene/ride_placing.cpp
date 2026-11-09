@@ -12,8 +12,8 @@
 #include "park/object_pick.hpp"
 #include "park/object_placement.hpp"
 #include "park/off_map_trees.hpp"
-#include "park/path_decks.hpp"
-#include "park/path_furniture.hpp"
+#include "park/path/decks.hpp"
+#include "park/path/furniture.hpp"
 #include "park/ride_fences.hpp"
 #include "park/ride_placement.hpp"
 #include "park/support_columns.hpp"
@@ -489,7 +489,7 @@ namespace rct3::scene
         // shortcut: worked out again only when objects come or go, as path building does.
         if (p.solids_of != scene.objects.size())
         {
-            p.solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
+            p.solids = park::path::solid_tiles(scene.objects, scene.models, scene.grid);
             p.holds = park::ground::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
             p.solids_of = scene.objects.size();
         }
@@ -556,10 +556,10 @@ namespace rct3::scene
             const auto model = load_object_model(scene, p.models, assets, probe) ? scene.models.find(park::model_ref(probe)) : scene.models.end();
             const auto positioning = model != scene.models.end() ? static_cast<park::Positioning>(model->second.positioning) : park::Positioning::Tile;
             p.absolute = false;
-            if (park::on_paths(positioning))
+            if (park::path::on_paths(positioning))
             {
                 p.lift.reset();
-                const auto spot = hit ? park::furniture_spot(scene.footpaths.paths, scene.grid, *hit, positioning, p.turn, model != scene.models.end() ? model->second.path_rules : park::PathRules { }) : std::nullopt;
+                const auto spot = hit ? park::path::furniture_spot(scene.footpaths.paths, scene.grid, *hit, positioning, p.turn, model != scene.models.end() ? model->second.path_rules : park::PathRules { }) : std::nullopt;
                 if (!spot)
                 {
                     p.site.reset();
@@ -572,7 +572,7 @@ namespace rct3::scene
                 p.ground = spot->raised ? park::ride_site({ spot->tile.col, spot->tile.row }, squares, { }, scene.grid).height : spot->height;
                 p.absolute = spot->raised;
                 const save::PlacedObject o = *ghost_object(p);
-                p.problem = !park::on_owned_land(o, squares, scene.grid) ? park::SiteProblem::NotOwned : spot->refused || park::furniture_taken(scene.objects, scene.models, o, positioning) ? park::SiteProblem::Blocked : park::SiteProblem::None;
+                p.problem = !park::on_owned_land(o, squares, scene.grid) ? park::SiteProblem::NotOwned : spot->refused || park::path::furniture_taken(scene.objects, scene.models, o, positioning) ? park::SiteProblem::Blocked : park::SiteProblem::None;
                 p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
                 show_ghost();
                 return;
@@ -612,8 +612,8 @@ namespace rct3::scene
                 if (!load_object_model(scene, p.models, assets, o))
                     return park::SiteProblem::None;
                 // The room the item's solid squares take may not be taken already, by a solid item or a path.
-                const park::Clash clash = park::clash(park::solid_tiles(std::span(&o, 1), scene.models, scene.grid), p.solids, scene.footpaths.paths, scene.grid);
-                return clash == park::Clash::None ? park::SiteProblem::None : clash == park::Clash::Path ? park::SiteProblem::Path : park::SiteProblem::Blocked;
+                const park::path::Clash clash = park::path::clash(park::path::solid_tiles(std::span(&o, 1), scene.models, scene.grid), p.solids, scene.footpaths.paths, scene.grid);
+                return clash == park::path::Clash::None ? park::SiteProblem::None : clash == park::path::Clash::Path ? park::SiteProblem::Path : park::SiteProblem::Blocked;
             };
             p.problem = problem();
             // Raised with Shift into something, it climbs onto the top of what is there; with no room near, it

@@ -6,7 +6,7 @@
 #include "park/ground/queues.hpp"
 #include "park/item_category.hpp"
 #include "park/object_placement.hpp"
-#include "park/path_furniture.hpp"
+#include "park/path/furniture.hpp"
 #include "park/queue_fences.hpp"
 #include "park/support_columns.hpp"
 #include "park/water/fill.hpp"
@@ -53,12 +53,12 @@ namespace rct3::park::ground
                 for (const auto [c, r] : under(o, m))
                     out.held.insert(key_of(c, r));
             }
-            else if (on_ground(o) && is_prop(m.category) && !on_paths(static_cast<Positioning>(m.positioning)))
+            else if (on_ground(o) && is_prop(m.category) && !path::on_paths(static_cast<Positioning>(m.positioning)))
                 out.followers.push_back(i);
             else if (!m.solid.empty())
                 raised.push_back(o);
         }
-        out.raised = solid_tiles(raised, models, grid);
+        out.raised = path::solid_tiles(raised, models, grid);
         for (const save::PathTile& p : paths)
         {
             if (p.elevation && p.elevation->underground)
@@ -95,7 +95,7 @@ namespace rct3::park::ground
                 continue;
             if (deck != holds.decks.end() && now[k] > deck->second - kDeckRoom)
                 return true;
-            if (spans != holds.raised.tiles.end() && std::ranges::any_of(spans->second, [&](const SolidSpan& s) { return was[k] <= s.low - s.below + kSame && now[k] > s.low - s.below + kSame; }))
+            if (spans != holds.raised.tiles.end() && std::ranges::any_of(spans->second, [&](const path::SolidSpan& s) { return was[k] <= s.low - s.below + kSame && now[k] > s.low - s.below + kSame; }))
                 return true;
         }
         return false;

@@ -19,7 +19,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     struct PathStyle
@@ -58,4 +58,4 @@ namespace rct3::park
     /// name. Folders without a readable description are skipped.
     [[nodiscard]] std::vector<PathStyle> folder_path_styles(const std::filesystem::path& folder);
 
-} // namespace rct3::park
+} // namespace rct3::park::path

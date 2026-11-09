@@ -3,7 +3,7 @@
 
 #include "park/ground/paths.hpp"
 #include "park/object_placement.hpp"
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 
 #include <algorithm>
 
@@ -44,13 +44,13 @@ namespace rct3::park
                 continue;
             const bool on_ground = ground::is_ground_queue(p);
             const float rise = on_ground ? 0.0f : ground::path_rise(p.elevation->slope);
-            const auto in = stored_heading(p.queue->start_direction);
-            const auto out_side = stored_heading(p.queue->end_direction);
+            const auto in = path::stored_heading(p.queue->start_direction);
+            const auto out_side = path::stored_heading(p.queue->end_direction);
             // A slope is fenced along the way its deck faces, leaning as the deck rises, whichever way the
             // line runs over it.
-            const auto facing = stored_heading(p.direction);
-            const auto ahead = facing ? edge_height(p, grid, *facing) : std::nullopt;
-            const auto behind = facing ? edge_height(p, grid, facing->opposite()) : std::nullopt;
+            const auto facing = path::stored_heading(p.direction);
+            const auto ahead = facing ? path::edge_height(p, grid, *facing) : std::nullopt;
+            const auto behind = facing ? path::edge_height(p, grid, facing->opposite()) : std::nullopt;
             if (rise > 0 && (!facing || !ahead || !behind))
                 continue;
 

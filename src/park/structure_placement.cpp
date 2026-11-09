@@ -152,7 +152,7 @@ namespace rct3::park
         return out;
     }
 
-    StructureProblem structure_problem(const save::Structure& structure, save::Tile at, ModelTurn turn, std::span<const save::PlacedObject> placed, const ObjectModels& models, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    StructureProblem structure_problem(const save::Structure& structure, save::Tile at, ModelTurn turn, std::span<const save::PlacedObject> placed, const ObjectModels& models, const path::SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
     {
         for (std::int32_t row = 0; row < structure.rows; ++row)
             for (std::int32_t col = 0; col < structure.cols; ++col)
@@ -163,8 +163,8 @@ namespace rct3::park
                 if (!grid.contains(t) || grid.at(t.col, t.row).ownership() != save::Ownership::Owned)
                     return StructureProblem::NotOwned;
             }
-        const Clash c = clash(solid_tiles(placed, models, grid), solids, paths, grid);
-        return c == Clash::None ? StructureProblem::None : c == Clash::Path ? StructureProblem::Path : StructureProblem::Blocked;
+        const path::Clash c = path::clash(path::solid_tiles(placed, models, grid), solids, paths, grid);
+        return c == path::Clash::None ? StructureProblem::None : c == path::Clash::Path ? StructureProblem::Path : StructureProblem::Blocked;
     }
 
 } // namespace rct3::park

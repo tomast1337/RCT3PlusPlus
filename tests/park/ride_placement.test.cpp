@@ -81,8 +81,8 @@ TEST_CASE("a ride needs owned land clear of paths and of solid things above its 
     path.col = 1;
     path.row = 3;
     CHECK(site_problem(site, grid, std::span(&path, 1), { }) == SiteProblem::Path);
-    SolidTiles solids;
-    solids.tiles[3 << 16 | 2] = { SolidSpan { 0, 1 } }; // Under the base: no matter
+    path::SolidTiles solids;
+    solids.tiles[3 << 16 | 2] = { path::SolidSpan { 0, 1 } }; // Under the base: no matter
     CHECK(site_problem(site, grid, { }, solids) == SiteProblem::None);
     solids.tiles[3 << 16 | 2].push_back({ 1, 4 });
     CHECK(site_problem(site, grid, { }, solids) == SiteProblem::Blocked);

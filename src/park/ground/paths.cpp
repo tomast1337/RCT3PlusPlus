@@ -3,7 +3,7 @@
 
 #include "park/ground/queues.hpp"
 #include "park/object_placement.hpp"
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 
 #include <algorithm>
 #include <array>
@@ -81,7 +81,7 @@ namespace rct3::park::ground
                 auto& sides = map.queues[at];
                 for (const std::uint8_t d : { p.queue->start_direction, p.queue->end_direction })
                 {
-                    if (const auto side = stored_heading(d))
+                    if (const auto side = path::stored_heading(d))
                         sides = static_cast<std::uint8_t>(sides | side->bit());
                 }
                 continue;

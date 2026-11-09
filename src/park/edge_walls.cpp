@@ -3,7 +3,7 @@
 
 #include "park/item_category.hpp"
 #include "park/object_placement.hpp"
-#include "park/path_furniture.hpp"
+#include "park/path/furniture.hpp"
 
 #include <algorithm>
 #include <array>

@@ -2,7 +2,7 @@
 #include "park/queue_fences.hpp"
 
 #include "park/object_placement.hpp"
-#include "park/path_furniture.hpp"
+#include "park/path/furniture.hpp"
 
 #include <doctest/doctest.h>
 

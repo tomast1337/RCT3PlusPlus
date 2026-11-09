@@ -36,7 +36,7 @@
 #pragma once
 
 #include "park/edge_walls.hpp"
-#include "park/path_styles.hpp"
+#include "park/path/styles.hpp"
 #include "park/turns.hpp"
 #include "save/model/world.hpp"
 
@@ -49,7 +49,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     enum class DeckPiece : std::uint8_t
@@ -139,4 +139,4 @@ namespace rct3::park
     /// The piece a raised path should have now, given the other paths and the walls between them.
     [[nodiscard]] Deck choose_deck(const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::optional<const EdgeWalls&> walls = std::nullopt);
 
-} // namespace rct3::park
+} // namespace rct3::park::path

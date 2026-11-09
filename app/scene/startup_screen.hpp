@@ -19,7 +19,7 @@
 #include "ui/startup_sequence.hpp"
 #include "ui/ui_renderer.hpp"
 #include "ui/ui_textures.hpp"
-#include "video/wmv_movie.hpp"
+#include "video/wmv/movie.hpp"
 
 #include <expected>
 #include <filesystem>
@@ -32,7 +32,7 @@ namespace rct3::scene
 
     struct StartupMovie
     {
-        video::WmvMovie movie;
+        video::wmv::WmvMovie movie;
         std::filesystem::path file; ///< Also holds the sound
         ui::UiTexture picture;
         std::optional<audio::MusicPlayer> sound;

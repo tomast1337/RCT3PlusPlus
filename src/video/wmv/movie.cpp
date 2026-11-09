@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "video/wmv_movie.hpp"
+#include "video/wmv/movie.hpp"
 
 #include "audio/asf_file.hpp"
+#include "video/wmv/decoder.hpp"
 
 #include <algorithm>
 #include <cmath>
-#include <ffmpeg/rct3_wmv.h>
 #include <format>
 #include <fstream>
 #include <optional>
 
-namespace rct3::video
+namespace rct3::video::wmv
 {
 
     namespace
@@ -22,14 +22,6 @@ namespace rct3::video
         {
             return static_cast<std::uint8_t>(std::clamp(value, 0, 255));
         }
-
-        struct DecoderClose
-        {
-            void operator()(Rct3WmvDecoder* d) const
-            {
-                rct3_wmv_close(d);
-            }
-        };
     } // namespace
 
     void yuv_to_rgba(std::uint32_t width, std::uint32_t height, std::span<const std::uint8_t> y, std::size_t y_stride, std::span<const std::uint8_t> u, std::size_t u_stride, std::span<const std::uint8_t> v, std::size_t v_stride, std::span<std::uint8_t> rgba)
@@ -53,7 +45,7 @@ namespace rct3::video
     {
         std::vector<std::byte> file;
         audio::AsfHeader header;
-        std::unique_ptr<Rct3WmvDecoder, DecoderClose> decoder;
+        std::optional<Decoder> decoder;
         audio::AsfObjects frames { 0 };
         std::size_t next_packet = 0; ///< In the file
         std::optional<audio::AsfObject> due;
@@ -78,15 +70,14 @@ namespace rct3::video
             return frames.take();
         }
 
-        bool show(const std::uint8_t* data, int size)
+        bool show(std::span<const std::byte> frame)
         {
-            Rct3WmvPicture p { };
-            if (rct3_wmv_decode(decoder.get(), data, size, &p) != 1 || p.width <= 0 || p.height <= 0)
+            const auto p = decoder->decode(frame);
+            if (!p)
                 return false;
-            const auto w = static_cast<std::uint32_t>(std::min<int>(p.width, static_cast<int>(header.video->width)));
-            const auto h = static_cast<std::uint32_t>(std::min<int>(p.height, static_cast<int>(header.video->height)));
-            const auto plane = [&](int i, std::uint32_t rows) { return std::span(p.planes[i], static_cast<std::size_t>(p.strides[i]) * rows); };
-            yuv_to_rgba(w, h, plane(0, h), static_cast<std::size_t>(p.strides[0]), plane(1, (h + 1) / 2), static_cast<std::size_t>(p.strides[1]), plane(2, (h + 1) / 2), static_cast<std::size_t>(p.strides[2]), picture);
+            const std::uint32_t w = std::min(p->width, header.video->width);
+            const std::uint32_t h = std::min(p->height, header.video->height);
+            yuv_to_rgba(w, h, p->planes[0], p->strides[0], p->planes[1], p->strides[1], p->planes[2], p->strides[2], picture);
             return true;
         }
     };
@@ -135,13 +126,7 @@ namespace rct3::video
         const audio::AsfVideoFormat& f = *s->header.video;
         if (f.codec != kWmv3)
             return std::unexpected(std::format("not Windows Media Video 9 (codec {:#x})", f.codec));
-        const Rct3WmvFormat format {
-            .width = static_cast<int>(f.width),
-            .height = static_cast<int>(f.height),
-            .extra = reinterpret_cast<const std::uint8_t*>(f.extra.data()),
-            .extra_size = static_cast<int>(f.extra.size()),
-        };
-        s->decoder.reset(rct3_wmv_open(&format));
+        s->decoder = Decoder::open({ .width = f.width, .height = f.height, .extra = f.extra });
         if (!s->decoder)
             return std::unexpected(std::format("the decoder cannot take this stream ({} by {})", f.width, f.height));
         s->frames = audio::AsfObjects(s->header.video_stream);
@@ -171,14 +156,14 @@ namespace rct3::video
         bool changed = false;
         while (s.due && (static_cast<double>(s.due->time) - s.header.preroll) / 1000 <= seconds)
         {
-            changed = s.show(reinterpret_cast<const std::uint8_t*>(s.due->data.data()), static_cast<int>(s.due->data.size())) || changed;
+            changed = s.show(s.due->data) || changed;
             s.due = s.next();
         }
         // The decoder may hold the last picture back; it shows once the frames run out.
         if (!s.due && !s.drained)
         {
             s.drained = true;
-            changed = s.show(nullptr, 0) || changed;
+            changed = s.show({ }) || changed;
         }
         return changed;
     }
@@ -193,4 +178,4 @@ namespace rct3::video
         return !state_->due && state_->drained;
     }
 
-} // namespace rct3::video
+} // namespace rct3::video::wmv

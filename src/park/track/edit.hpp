@@ -8,7 +8,7 @@
 // stretch whose start the open end reaches is joined on after it.
 #pragma once
 
-#include "park/track_pieces.hpp"
+#include "park/track/pieces.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 
@@ -17,7 +17,7 @@
 #include <span>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     /// The pieces either side of a piece along its stretch, by place in the track's pieces.
@@ -50,4 +50,4 @@ namespace rct3::park
     /// last when none, keeping the last where building goes on. Returns the stretch it is in.
     std::size_t add_piece(save::Track& track, std::optional<std::size_t> stretch, save::TrackPiece piece);
 
-} // namespace rct3::park
+} // namespace rct3::park::track

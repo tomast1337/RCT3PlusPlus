@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/track_ground.hpp"
+#include "park/track/ground.hpp"
 
 #include "park/item_category.hpp"
 
@@ -9,6 +9,7 @@
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::track;
 
 namespace
 {

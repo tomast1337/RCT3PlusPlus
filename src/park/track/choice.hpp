@@ -10,7 +10,7 @@
 // the like) are picked by name instead and stay picked until a curve, slope or bank is picked again.
 #pragma once
 
-#include "park/track_pieces.hpp"
+#include "park/track/pieces.hpp"
 
 #include <array>
 #include <cstddef>
@@ -19,7 +19,7 @@
 #include <span>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     inline constexpr std::size_t kCurveChoices = 2 * kCurveSizes + 1;
@@ -98,4 +98,4 @@ namespace rct3::park
     /// and toggles, or the piece itself when it is picked by name.
     [[nodiscard]] TrackChoice choice_of(std::span<const PieceShape> pieces, LaidPiece laid);
 
-} // namespace rct3::park
+} // namespace rct3::park::track

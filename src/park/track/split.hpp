@@ -11,12 +11,12 @@
 // stepped over.
 #pragma once
 
-#include "park/track_pieces.hpp"
+#include "park/track/pieces.hpp"
 
 #include <array>
 #include <cstdint>
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     enum class SplitState : std::uint8_t
@@ -41,4 +41,4 @@ namespace rct3::park
     /// only one laying the same kind of pieces when `same_kind`. `now` when there is none.
     [[nodiscard]] SplitState next_split(SplitState now, std::array<bool, 2> closed, bool same_kind);
 
-} // namespace rct3::park
+} // namespace rct3::park::track

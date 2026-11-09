@@ -258,12 +258,12 @@ TEST_CASE("a boat ride given boats again has them all back at its dock, as many 
     save::RideModel rides;
     rides.rides.push_back({ .mode = save::OperatingMode::Boat, .trains = { save::Train { }, save::Train { } } });
     // A dock of one 4 m station piece on the second tile of a lake three tiles long.
-    const park::TrackCourse course { .points = { { 4, 5, 2 }, { 8, 5, 2 } }, .distance = { 0, 4 }, .kinds = { park::CourseKind::Station, park::CourseKind::Station } };
+    const park::track::TrackCourse course { .points = { { 4, 5, 2 }, { 8, 5, 2 } }, .distance = { 0, 4 }, .kinds = { park::track::CourseKind::Station, park::track::CourseKind::Station } };
     const save::TerrainGrid grid { .width = 3, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
     save::WaterBody body { .level = 5 };
     for (std::uint8_t col = 0; col < 2; ++col)
         body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
-    const std::optional<park::TrackCourse> courses[] { course };
+    const std::optional<park::track::TrackCourse> courses[] { course };
     simulation::import_boats(world, rides, std::span(&ride, 1), courses, grid, std::span(&body, 1));
     REQUIRE(r.all_of<simulation::Boats>(ride));
     CHECK(r.get<simulation::Boats>(ride).boats.size() == 2);

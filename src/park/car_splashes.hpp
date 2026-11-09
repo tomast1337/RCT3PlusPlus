@@ -5,7 +5,7 @@
 // sounds a splash. Running on through water fast enough, it leaves a wake now and then.
 #pragma once
 
-#include "park/track_course.hpp"
+#include "park/track/course.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -36,6 +36,6 @@ namespace rct3::park
 
     /// Moves `water` on by `seconds` for a car at `distance` along `course`, moving at `velocity`; `in_water`
     /// when it is in water its track does not carry, the park's own.
-    [[nodiscard]] CarSplash car_splash(CarWater& water, const TrackCourse& course, float distance, bool in_water, glm::vec3 velocity, float seconds);
+    [[nodiscard]] CarSplash car_splash(CarWater& water, const track::TrackCourse& course, float distance, bool in_water, glm::vec3 velocity, float seconds);
 
 } // namespace rct3::park

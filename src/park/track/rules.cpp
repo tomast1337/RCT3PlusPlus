@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/track_rules.hpp"
+#include "park/track/rules.hpp"
 
 #include "core/maybe.hpp"
 #include "ovl/overlay.hpp"
@@ -10,7 +10,7 @@
 #include <format>
 #include <ranges>
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     namespace
@@ -183,4 +183,4 @@ namespace rct3::park
         return track;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::track

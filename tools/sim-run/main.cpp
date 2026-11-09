@@ -19,8 +19,8 @@
 #include "park/object_models.hpp"
 #include "park/overhead.hpp"
 #include "park/pools/pools.hpp"
-#include "park/track_course.hpp"
-#include "park/track_pieces.hpp"
+#include "park/track/course.hpp"
+#include "park/track/pieces.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
@@ -155,7 +155,7 @@ int main(int argc, char** argv)
     const std::size_t shops = simulation::import_stalls(world, *rides);
     std::vector<std::optional<simulation::RideTiming>> timings;
     std::vector<std::optional<simulation::Coaster>> coasters(rides->rides.size());
-    std::vector<std::optional<park::TrackCourse>> courses(rides->rides.size());
+    std::vector<std::optional<park::track::TrackCourse>> courses(rides->rides.size());
     std::vector<std::optional<std::uint32_t>> guests_room;
     std::map<std::uint64_t, simulation::PathItemKind> sights;   // Placed objects guests stop at
     std::map<std::uint64_t, std::array<std::int32_t, 2>> gates; // Park entrances, with the tiles each covers
@@ -231,19 +231,19 @@ int main(int argc, char** argv)
                     piece_models.emplace(park::model_key(o), std::move(*model));
         const std::size_t roofed = simulation::import_cover(world, [&](std::span<const glm::vec3> points) { return park::overheads(points, world_model->objects, piece_models, world_model->terrain, { }); });
         out.info("paths under a roof {:d}, in the shade {:d} of {:d}", roofed, static_cast<std::size_t>(std::ranges::count_if(world.paths.nodes(), &simulation::PathNode::shaded)), world.paths.nodes().size());
-        std::map<std::string, std::optional<park::PieceCatalogue>, std::less<>> catalogues;
+        std::map<std::string, std::optional<park::track::PieceCatalogue>, std::less<>> catalogues;
         for (std::size_t index = 0; index < rides->rides.size(); ++index)
         {
             const save::Ride& ride = rides->rides[index];
-            const auto course = park::track_course(ride, world_model->objects, piece_models, world_model->terrain, { }, [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> std::optional<const park::PieceShape&> {
+            const auto course = park::track::track_course(ride, world_model->objects, piece_models, world_model->terrain, { }, [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> std::optional<const park::track::PieceShape&> {
                 auto [at, added] = catalogues.try_emplace(object.overlay);
                 if (added)
                     if (const auto file = install->find(std::format("{}.common.ovl", object.overlay)))
-                        if (auto loaded = park::load_piece_catalogue(*file, object.overlay))
+                        if (auto loaded = park::track::load_piece_catalogue(*file, object.overlay))
                             at->second = std::move(*loaded);
                 if (!at->second)
                     return std::nullopt;
-                return park::shape_named(*at->second, piece.symbol);
+                return park::track::shape_named(*at->second, piece.symbol);
             });
             if (!course)
                 continue;
@@ -253,7 +253,7 @@ int main(int argc, char** argv)
                 for (const save::Car& car : train.cars)
                     if (car.position_valid)
                     {
-                        worst = std::max(worst, glm::distance(park::course_point(*course, car.distance), glm::vec3 { car.position[0], car.position[1], car.position[2] }));
+                        worst = std::max(worst, glm::distance(park::track::course_point(*course, car.distance), glm::vec3 { car.position[0], car.position[1], car.position[2] }));
                         ++cars;
                     }
             out.info("course {} closed {:d}: {:.1f} m (lap tested {:.1f} m), {:d} points; {:d} cars, farthest {:.2f} m off", ride.base.symbol.c_str(), course->closed, static_cast<double>(course->length()), static_cast<double>(ride.stats.last_lap ? ride.stats.last_lap->ride_length : 0), course->points.size(), cars, static_cast<double>(worst));

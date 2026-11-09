@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/track_pieces.hpp"
+#include "park/track/pieces.hpp"
 
 #include "core/maybe.hpp"
 #include "ovl/overlay.hpp"
@@ -22,7 +22,7 @@
 #include <ranges>
 #include <tuple>
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     namespace
@@ -539,4 +539,4 @@ namespace rct3::park
         return found != catalogue.pieces.end() ? maybe(&*found) : std::nullopt;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::track

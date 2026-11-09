@@ -34,7 +34,7 @@
 #include "park/sky_models.hpp"
 #include "park/support_columns.hpp"
 #include "park/surrounding_land.hpp"
-#include "park/track_ground.hpp"
+#include "park/track/ground.hpp"
 #include "park/water/flow.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "parkfile/saved_park.hpp"
@@ -840,7 +840,7 @@ namespace rct3::scene
                 if (spot.train != 0)
                     continue;
                 const auto model = scene.models.find(park::model_ref(scene.cars[car]));
-                const glm::mat4 place = park::moved_along(*scene.courses[ride_index], scene.saved_cars.at(scene.cars[car].id), { spot.front, spot.rear }, fleet->trains.front().start - ride.trains.front().distance);
+                const glm::mat4 place = park::track::moved_along(*scene.courses[ride_index], scene.saved_cars.at(scene.cars[car].id), { spot.front, spot.rear }, fleet->trains.front().start - ride.trains.front().distance);
                 if (model == scene.models.end())
                     seats.insert(seats.end(), share, glm::vec3(place[3]));
                 else
@@ -909,24 +909,24 @@ namespace rct3::scene
                         return found != scene.models.end() ? &found->second : nullptr;
                     });
                     // The courses of the rides whose trains go round, for the simulation to run them on.
-                    std::map<std::string, std::optional<park::PieceCatalogue>, std::less<>> catalogues;
-                    const park::PieceShapeOf shape_of = [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> std::optional<const park::PieceShape&> {
+                    std::map<std::string, std::optional<park::track::PieceCatalogue>, std::less<>> catalogues;
+                    const park::track::PieceShapeOf shape_of = [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> std::optional<const park::track::PieceShape&> {
                         auto [at, added] = catalogues.try_emplace(object.overlay);
                         if (added)
                         {
                             if (const auto file = install.find(std::format("{}.common.ovl", object.overlay)))
                             {
-                                if (auto loaded = park::load_piece_catalogue(*file, object.overlay))
+                                if (auto loaded = park::track::load_piece_catalogue(*file, object.overlay))
                                     at->second = std::move(*loaded);
                             }
                         }
-                        return at->second ? park::shape_named(*at->second, piece.symbol) : std::nullopt;
+                        return at->second ? park::track::shape_named(*at->second, piece.symbol) : std::nullopt;
                     };
                     std::vector<std::optional<simulation::Coaster>> coasters(scene.rides.rides.size());
                     scene.courses.assign(scene.rides.rides.size(), std::nullopt);
                     for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
                     {
-                        if (auto course = park::track_course(scene.rides.rides[i], scene.objects, scene.models, scene.grid, scene.fitted, shape_of))
+                        if (auto course = park::track::track_course(scene.rides.rides[i], scene.objects, scene.models, scene.grid, scene.fitted, shape_of))
                         {
                             coasters[i] = simulation::coaster_of(*course, scene.rides.rides[i]);
                             scene.courses[i] = std::move(*course);
@@ -953,16 +953,16 @@ namespace rct3::scene
                     for (const save::RideShow& show : scene.shows)
                         stage_show(scene, show);
                     // Each kind's rules read once, before their trains are boarded, however many of its rides the park has.
-                    std::map<std::pair<std::string, std::string>, park::TrackRules> kinds;
+                    std::map<std::pair<std::string, std::string>, park::track::TrackRules> kinds;
                     for (const save::Ride& ride : scene.rides.rides)
                     {
                         const auto key = std::pair { ride.base.overlay_path, ride.base.symbol };
                         if (ride.kind == save::RideKind::Tracked && !kinds.contains(key))
                         {
                             const auto file = install.find(std::format("{}.common.ovl", ride.base.overlay_path));
-                            kinds[key] = file ? park::load_track_rules(*file, ride.base.symbol) : park::TrackRules { };
+                            kinds[key] = file ? park::track::load_track_rules(*file, ride.base.symbol) : park::track::TrackRules { };
                         }
-                        scene.track_rules.push_back(kinds.contains(key) ? kinds[key] : park::TrackRules { });
+                        scene.track_rules.push_back(kinds.contains(key) ? kinds[key] : park::track::TrackRules { });
                     }
                     for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
                     {
@@ -1487,7 +1487,7 @@ namespace rct3::scene
             // The ground was drawn before the fences, walls and track were known; drawn again if one parts two paths
             // or track, a ride or a stall lies under the ground.
             scene.footpaths.walls = park::edge_walls(scene.objects, scene.models, scene.grid);
-            scene.footpaths.pavings_stale = scene.footpaths.pavings_stale || !park::buried_hollows(scene.objects, scene.models, scene.grid).empty() || std::ranges::any_of(scene.footpaths.paths, [&](const save::PathTile& p) {
+            scene.footpaths.pavings_stale = scene.footpaths.pavings_stale || !park::track::buried_hollows(scene.objects, scene.models, scene.grid).empty() || std::ranges::any_of(scene.footpaths.paths, [&](const save::PathTile& p) {
                                                 return !p.elevation && std::ranges::any_of(park::kSides, [&](park::Side side) {
                                                     const auto edge = park::edge_height(p, scene.grid, side);
                                                     return edge && park::walled(scene.footpaths.walls, { p.col, p.row }, side, *edge);

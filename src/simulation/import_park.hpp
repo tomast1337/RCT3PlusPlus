@@ -11,7 +11,7 @@
 #include "park/object_models.hpp"
 #include "park/overhead.hpp"
 #include "park/pools/pools.hpp"
-#include "park/track_course.hpp"
+#include "park/track/course.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -99,14 +99,14 @@ namespace rct3::simulation
     /// The coaster model's view of `ride` on `course`: heights along it, its chains and stations, and the
     /// ride's speeds and first train's length as its park keeps them. Nothing unless the course goes round and
     /// has a station; shuttles, slides and open water are left to their timing.
-    [[nodiscard]] std::optional<Coaster> coaster_of(const park::TrackCourse& course, const save::Ride& ride);
+    [[nodiscard]] std::optional<Coaster> coaster_of(const park::track::TrackCourse& course, const save::Ride& ride);
 
     /// Boats for the boat-hire and water-transport rides of `added` (the entities import_rides gave `rides`),
     /// one for each train, leaving the dock where its course in `courses` ends and coming back where it starts
     /// (transport boats calling at the course's other stations on the way), and the park's water for them to
     /// float on, closed where `solids` stand in it. Rides without a course keep their timing alone; those whose track goes round follow it as trains.
     /// A ride that has boats already gets them afresh, all back at its dock; the water is taken again as it is now.
-    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::SolidTiles& solids = { });
+    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::SolidTiles& solids = { });
 
     /// Takes again the water the park's boats float on, `water` closed where `solids` stand in it but open at each
     /// boat ride's dock, as after the park's paths or water change. Nothing while no ride has boats.
@@ -114,7 +114,7 @@ namespace rct3::simulation
 
     /// Links the rides of `added` whose stations, as their courses in `courses` run through them, stand on tiles
     /// side by side on the same level, so trains told to may leave them together.
-    void link_stations(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid);
+    void link_stations(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::TerrainGrid& grid);
 
     /// The saved litter lying on the paths, each piece on the path tile under it, aged from when it was dropped
     /// to `now` (calendar units, as the park keeps them). Returns how many pieces came over. Call after
@@ -229,7 +229,7 @@ namespace rct3::simulation
     /// open and working. Call after import_paths.
     /// The park's run of `ride`, a pool slide with no cars that swimmers climb on foot (TrackCourse::climbs of
     /// `course`); none for another ride.
-    entt::entity import_climb_slide(SimWorld& world, const save::Ride& ride, const park::TrackCourse& course);
+    entt::entity import_climb_slide(SimWorld& world, const save::Ride& ride, const park::track::TrackCourse& course);
 
     std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters = { }, std::span<const std::optional<std::uint32_t>> guests = { });
 

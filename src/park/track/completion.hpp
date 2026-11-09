@@ -7,7 +7,7 @@
 // pieces are laid (no stations, chains or pieces picked by name), and only where each meets the last.
 #pragma once
 
-#include "park/track_pieces.hpp"
+#include "park/track/pieces.hpp"
 #include "save/model/world.hpp"
 
 #include <cstddef>
@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     /// A piece the finished track lays: which and where.
@@ -73,4 +73,4 @@ namespace rct3::park
     /// The whole search at once, giving up with OutOfTries after `tries` ends.
     [[nodiscard]] std::expected<std::vector<LaidPlacement>, CompletionFailure> complete_track(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::TerrainGrid& grid, const std::function<bool(const save::PlacedObject&)>& allowed, std::size_t tries);
 
-} // namespace rct3::park
+} // namespace rct3::park::track

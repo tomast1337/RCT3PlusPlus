@@ -5,8 +5,8 @@
 // station's ends or a waterfall's parts are always the right pieces without the player picking them.
 #pragma once
 
-#include "park/track_course.hpp"
-#include "park/track_pieces.hpp"
+#include "park/track/course.hpp"
+#include "park/track/pieces.hpp"
 #include "save/model/rides.hpp"
 
 #include <cstdint>
@@ -22,7 +22,7 @@ namespace rct3::ovl
     struct TrackedRide;
 } // namespace rct3::ovl
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     /// Which piece of a track a pattern step takes.
@@ -113,4 +113,4 @@ namespace rct3::park
     /// On a `circuit` no piece is first or last.
     [[nodiscard]] std::vector<LaidPiece> apply_patterns(std::span<const PieceShape> pieces, std::vector<LaidPiece> track, std::span<const PiecePattern> patterns, bool circuit);
 
-} // namespace rct3::park
+} // namespace rct3::park::track

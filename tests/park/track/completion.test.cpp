@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/track_completion.hpp"
+#include "park/track/completion.hpp"
 
 #include <algorithm>
 #include <doctest/doctest.h>
@@ -8,6 +8,7 @@
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::track;
 
 namespace
 {

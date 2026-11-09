@@ -14,7 +14,7 @@
 #include "ovl/track_section.hpp"
 #include "park/item_category.hpp"
 #include "park/terrain_mesh.hpp"
-#include "park/track_pieces.hpp"
+#include "park/track/pieces.hpp"
 #include "park/water/flow.hpp"
 #include "strings/ascii.hpp"
 
@@ -831,7 +831,7 @@ namespace rct3::park
         // Only lift pieces move the parts marked as chain; on other pieces those stay still.
         // shortcut: marked parts of pieces that are no lift stay still; upgrade if such a piece is seen moving its
         // picture in the game.
-        const bool lift = section != nullptr && (section->flags[0] & kPieceChain) != 0;
+        const bool lift = section != nullptr && (section->flags[0] & track::kPieceChain) != 0;
         model.fenced_round = section != nullptr && (section->ground & ovl::TrackSection::kFencedRound) != 0;
         model.paved_under = section != nullptr && (section->ground & ovl::TrackSection::kPavedUnder) != 0;
         for (ModelLevel& level : model.levels)
@@ -852,7 +852,7 @@ namespace rct3::park
         if (section->water_splines[0].empty() || section->water_splines[1].empty())
         {
             // A piece through water with no water edges carries its water as its own see-through parts.
-            if ((section->flags[0] & kPieceWater) == 0)
+            if ((section->flags[0] & track::kPieceWater) == 0)
                 return;
             for (ModelLevel& level : model.levels)
                 for (ModelPart& part : level.parts)
@@ -868,7 +868,7 @@ namespace rct3::park
         if (left == nullptr || right == nullptr)
             return;
         // Off a slide's open end its water pours from where the water's edges end.
-        if (section->role == kRoleSlideEnd && left->nodes.size() >= 2 && !right->nodes.empty())
+        if (section->role == track::kRoleSlideEnd && left->nodes.size() >= 2 && !right->nodes.empty())
             model.pour = SlidePour { .left = position(left->nodes.back()), .right = position(right->nodes.back()), .way = glm::normalize(position(left->nodes.back()) - position(left->nodes[left->nodes.size() - 2])) };
         const auto strip = water::flow_strip(*left, *right, track != nullptr ? *track : ovl::Spline { }, std::string(water::kFlowPicture));
         if (!strip)

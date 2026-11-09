@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/track_split.hpp"
+#include "park/track/split.hpp"
 
-namespace rct3::park
+namespace rct3::park::track
 {
 
     std::uint32_t split_side(SplitState state)
@@ -48,4 +48,4 @@ namespace rct3::park
         return now;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::track

@@ -13,7 +13,7 @@
 #pragma once
 
 #include "park/terrain_mesh.hpp"
-#include "park/track_pieces.hpp"
+#include "park/track/pieces.hpp"
 #include "save/model/world.hpp"
 
 #include <cstdint>
@@ -27,6 +27,6 @@ namespace rct3::park
 
     /// The track's arrows: the open one at `start`, the triangle at `end`, green when `forward` else red. Thin
     /// flat strips in their vertex colours, drawn with no picture. One batch.
-    [[nodiscard]] TerrainMesh track_arrows(const TrackTip& start, const TrackTip& end, bool forward);
+    [[nodiscard]] TerrainMesh track_arrows(const track::TrackTip& start, const track::TrackTip& end, bool forward);
 
 } // namespace rct3::park

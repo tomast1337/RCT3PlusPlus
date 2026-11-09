@@ -10,12 +10,12 @@ namespace
 {
 
     // A closed course of three 10 m pieces, the middle one through water.
-    TrackCourse course()
+    track::TrackCourse course()
     {
-        TrackCourse c;
+        track::TrackCourse c;
         c.points = { { 0, 0, 0 }, { 10, 0, 0 }, { 20, 0, 0 }, { 30, 0, 0 } };
         c.distance = { 0, 10, 20, 30 };
-        c.kinds.assign(4, CourseKind::Plain);
+        c.kinds.assign(4, track::CourseKind::Plain);
         c.piece_starts = { 0, 10, 20 };
         c.wet = { false, true, false };
         c.closed = true;
@@ -28,7 +28,7 @@ namespace
 
 TEST_CASE("a car splashes as it runs into water, once, and harder the faster it runs")
 {
-    const TrackCourse c = course();
+    const track::TrackCourse c = course();
     CarWater water;
     CHECK_FALSE(car_splash(water, c, 9, false, { 5, 0, 0 }, kStep).splash);
     const CarSplash in = car_splash(water, c, 10.5f, false, { 5, 0, 0 }, kStep);
@@ -45,7 +45,7 @@ TEST_CASE("a car splashes as it runs into water, once, and harder the faster it 
 
 TEST_CASE("a car splashes where water stops its fall short, but not crawling through or on dry track")
 {
-    const TrackCourse c = course();
+    const track::TrackCourse c = course();
     CarWater water;
     (void)car_splash(water, c, 12, false, { 2, 0, 0 }, kStep); // In slowly: no splash
     CHECK(water.splashes == 0);
@@ -58,7 +58,7 @@ TEST_CASE("a car splashes where water stops its fall short, but not crawling thr
 
 TEST_CASE("a car running on through water leaves a wake now and then")
 {
-    const TrackCourse c = course();
+    const track::TrackCourse c = course();
     CarWater water { .wet = true };
     int wakes = 0;
     for (int i = 0; i < 20; ++i)
@@ -69,7 +69,7 @@ TEST_CASE("a car running on through water leaves a wake now and then")
 
 TEST_CASE("a car splashes as it dives into the park's water off its track's own")
 {
-    const TrackCourse c = course();
+    const track::TrackCourse c = course();
     CarWater water;
     CHECK_FALSE(car_splash(water, c, 3, false, { 6, -6, 0 }, kStep).splash);
     CHECK(car_splash(water, c, 4, true, { 6, -6, 0 }, kStep).splash);

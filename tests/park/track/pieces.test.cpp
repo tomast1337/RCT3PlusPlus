@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/track_pieces.hpp"
+#include "park/track/pieces.hpp"
 
-#include "../ovl/builder.hpp"
-#include "../ovl/record_file.hpp"
+#include "../../ovl/builder.hpp"
+#include "../../ovl/record_file.hpp"
 #include "ovl/spline.hpp"
 #include "park/object_placement.hpp"
 
@@ -16,6 +16,7 @@
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::track;
 
 namespace
 {

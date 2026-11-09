@@ -33,10 +33,10 @@ namespace rct3::park
         return std::ranges::any_of(grounds, [&](float ground) { return lowest - ground > kDesignRaise; });
     }
 
-    std::vector<pools::PoolOpening> piece_pool_openings(const save::PlacedObject& object, const PieceRecord& record)
+    std::vector<pools::PoolOpening> piece_pool_openings(const save::PlacedObject& object, const track::PieceRecord& record)
     {
         std::vector<pools::PoolOpening> out;
-        for (const PieceOpening& o : record.pool_sides)
+        for (const track::PieceOpening& o : record.pool_sides)
         {
             const save::Tile tile = square_tile(object, record.squares, o.x, o.z);
             out.push_back({ .col = tile.col, .row = tile.row, .height = object.base_height.value_or(0) + o.height, .side = o.side.turned(object.rotation) });

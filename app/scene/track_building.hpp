@@ -29,10 +29,10 @@
 #include "park/object_models.hpp"
 #include "park/path_clearance.hpp"
 #include "park/ride_cars.hpp"
-#include "park/track_choice.hpp"
-#include "park/track_completion.hpp"
-#include "park/track_pieces.hpp"
-#include "park/track_split.hpp"
+#include "park/track/choice.hpp"
+#include "park/track/completion.hpp"
+#include "park/track/pieces.hpp"
+#include "park/track/split.hpp"
 #include "render/device.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -85,11 +85,11 @@ namespace rct3::scene
     {
         std::optional<std::size_t> ride; ///< Of the scene's rides; none while idle
         std::string overlay;             ///< The ride's track overlay, as its objects name it
-        std::map<std::string, park::PieceCatalogue, std::less<>> catalogues;
+        std::map<std::string, park::track::PieceCatalogue, std::less<>> catalogues;
         std::map<std::string, TrackModels, std::less<>> models;
         /// The platform pieces of each platform type's file, by the file as a park names it, read once.
         std::map<std::string, std::vector<std::string>, std::less<>> platform_names;
-        std::optional<park::TrackTip> tip; ///< None while the track is a closed circuit
+        std::optional<park::track::TrackTip> tip; ///< None while the track is a closed circuit
         /// The track is built on before its first piece, as a giant slide is from its bottom up to its top.
         bool backward = false;
         bool heights = false; ///< The track's heights are shown while it is built
@@ -112,18 +112,18 @@ namespace rct3::scene
             std::int32_t height = 0;
         };
         std::optional<Lift> lift;
-        std::vector<park::LaidPiece> candidates;
-        park::TrackChoice choice;
+        std::vector<park::track::LaidPiece> candidates;
+        park::track::TrackChoice choice;
         bool station_first = false; ///< The choice is still to be set to the station of a track being begun
-        std::optional<park::LaidPiece> picked;
-        std::optional<park::PiecePlacement> ghost;
+        std::optional<park::track::LaidPiece> picked;
+        std::optional<park::track::PiecePlacement> ghost;
         /// A piece between two others clicked in the park, by place in the ride's track: the panel offers what
         /// may stand in its place, and building steps on along the track to the piece after it, or before it
         /// when `selected_back`. None while building at the track's open end.
         std::optional<std::size_t> selected;
         bool selected_back = false;
         /// On a ride of two tracks side by side, which open end is built on and with which pieces.
-        park::SplitState split = park::SplitState::None;
+        park::track::SplitState split = park::track::SplitState::None;
         park::ObjectMesh ghost_mesh;
         bool off_water = false;      ///< The ghost's piece stands only on water, and some of it is on dry land
         bool clashes = false;        ///< The ghost's piece (or any of a design) takes room a solid item or a path takes, or is off owned land
@@ -176,8 +176,8 @@ namespace rct3::scene
         std::string preview_item; ///< The piece shown on the round panel's disc
         /// Auto-complete: while it looks for a way, the way nearest the station so far shows as the ghost; the way
         /// it found shows until a second click on the button lays it, or any other action turns it down.
-        std::optional<park::CompletionSearch> completing;
-        std::vector<park::LaidPlacement> proposed;
+        std::optional<park::track::CompletionSearch> completing;
+        std::vector<park::track::LaidPlacement> proposed;
         float clock = 0; ///< Seconds the panel has been open, which the button flashes by
         /// While the ride is testing and its track is not yet a circuit, a see-through copy of its first train
         /// runs from the station to the open end and crashes off it, its see-through wrecks flying, blowing up and
@@ -201,7 +201,7 @@ namespace rct3::scene
     /// Gives the tracked ride `index` of the scene's rides `trains` trains of `cars` cars, of the kind its first
     /// train already is, with their seats and (in car_fits) how each car of a train sits on the track. On a course
     /// with a station the cars are as many as its shortest station takes, and the trains as many as the course
-    /// takes (park::trains_fitting); a shuttle runs one. Whether its riders sit on arms.
+    /// takes (park::track::trains_fitting); a shuttle runs one. Whether its riders sit on arms.
     bool fit_trains(ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars);
 
     /// Reads, the first time it is asked of the tracked ride `index`, the trains its kind offers and the car

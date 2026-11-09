@@ -24,7 +24,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     inline constexpr float kDeckRoom = 0.25f; ///< Chosen by eye: kept between the ground and a raised path's underside
@@ -77,4 +77,4 @@ namespace rct3::park
     /// Seats the followers with a tile from `first` to `last` under them on the ground again; whether there were any.
     bool seat_followers(std::span<save::PlacedObject> objects, const GroundHolds& holds, const ObjectModels& models, const save::TerrainGrid& grid, save::Tile first, save::Tile last);
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

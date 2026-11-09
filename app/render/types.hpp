@@ -182,7 +182,7 @@ namespace rct3::render
         /// As Textured, with location 3 the surface normal (Float3, any length), and the result lit by
         /// `DrawCommand::light`, sunlight held back where the light's shadow map says. Positions and normals are
         /// in world space. Both sides of a surface are lit as its normal says; a zero normal is lit as facing up.
-        /// With a first extra texture (a tiling noise picture, park/ground_variation.hpp), its red channel,
+        /// With a first extra texture (a tiling noise picture, park/ground/variation.hpp), its red channel,
         /// read at a few sizes over world x and z, makes the colour a little lighter or darker from place to
         /// place. A second extra texture is the texture's relief map (park/relief_maps.hpp), read as
         /// `SceneLight::surface_detail` says.

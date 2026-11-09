@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_shapes.hpp"
+#include "park/ground/shapes.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::ground;
 
 namespace
 {

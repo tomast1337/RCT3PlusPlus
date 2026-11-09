@@ -46,7 +46,7 @@ namespace
 
 TEST_CASE("an edge piece is turned to face out of its side")
 {
-    for (const Side side : kSidesFromRowBefore)
+    for (const Side side : ground::kSidesFromRowBefore)
     {
         const glm::vec2 x = turned_x(edge_turns(side));
         const auto [dc, dr] = side.step();

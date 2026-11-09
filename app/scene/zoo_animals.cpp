@@ -23,7 +23,7 @@ namespace rct3::scene
         void upload_new_pictures(render::Device& device, ParkScene& scene)
         {
             DrawnAnimals& drawn = scene.drawn_animals;
-            park::GroundImages fresh;
+            park::ground::GroundImages fresh;
             for (const auto& [key, picture] : drawn.library->pictures())
                 if (!drawn.textures.contains(key))
                     fresh.emplace(key, picture);

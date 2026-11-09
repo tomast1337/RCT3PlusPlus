@@ -10,7 +10,7 @@
 // stands at the height halfway up and leans as the deck rises.
 #pragma once
 
-#include "park/ground_queues.hpp"
+#include "park/ground/queues.hpp"
 #include "park/object_mesh.hpp"
 #include "save/model/world.hpp"
 

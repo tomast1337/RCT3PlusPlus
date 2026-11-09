@@ -646,11 +646,11 @@ namespace rct3::scene
         engine_.define("map.pavings", [this](const Json&) {
             Json tiles = Json::array();
             const ParkFootpaths& f = park_of(park_).footpaths;
-            const std::vector<park::PavedTile> laid = park::lay_pavings(f.paths, f.pavings, park_->grid);
-            for (const park::Paving& p : f.pavings)
+            const std::vector<park::ground::PavedTile> laid = park::ground::lay_pavings(f.paths, f.pavings, park_->grid);
+            for (const park::ground::Paving& p : f.pavings)
                 for (const save::Tile t : p.tiles)
                 {
-                    const auto paved = std::ranges::find_if(laid, [&](const park::PavedTile& l) { return l.path.col == t.col && l.path.row == t.row; });
+                    const auto paved = std::ranges::find_if(laid, [&](const park::ground::PavedTile& l) { return l.path.col == t.col && l.path.row == t.row; });
                     tiles.push_back({ { "col", t.col }, { "row", t.row }, { "height", p.height }, { "style", paved != laid.end() ? paved->path.surface_name : "" } });
                 }
             return tiles;

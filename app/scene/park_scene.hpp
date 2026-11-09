@@ -442,7 +442,7 @@ namespace rct3::scene
         bool free_camera = false;   ///< Developer switch: no camera limits, and the camera leaves the ground
         ui::UiTextures ground_textures;
         render::TextureHandle blank;     ///< For ground without a picture
-        render::TextureHandle variation; ///< Noise the ground's shade wanders by (park/ground_variation.hpp)
+        render::TextureHandle variation; ///< Noise the ground's shade wanders by (park/ground/variation.hpp)
         std::vector<save::PlacedObject> objects;
         park::ObjectModels models;
         park::ModelPictures pictures;            ///< For painting the batches new levels bring

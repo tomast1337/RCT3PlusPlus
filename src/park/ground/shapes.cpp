@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_shapes.hpp"
+#include "park/ground/shapes.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <glm/geometric.hpp>
 #include <numbers>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     namespace
@@ -137,4 +137,4 @@ namespace rct3::park
         return moved;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

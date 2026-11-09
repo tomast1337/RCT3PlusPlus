@@ -48,7 +48,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     /// How one quarter of a ground path tile looks.
@@ -166,4 +166,4 @@ namespace rct3::park
     /// Only those on the tiles of `area` when given.
     [[nodiscard]] TerrainMesh ground_path_mesh(const GroundPathMap& map, const save::TerrainGrid& grid, std::optional<TileRect> area = std::nullopt);
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

@@ -408,13 +408,13 @@ TEST_CASE("levelling sharply sets the footprint's own corners; smoothly, also th
     CHECK(levelled_ground(site, Flatten::Sharp, grid).footprint.empty()); // Already level
     site.height = 2;
     CHECK(levelled_ground(site, Flatten::Off, grid).footprint.empty());
-    const GroundCuts sharp = levelled_ground(site, Flatten::Sharp, grid);
+    const ground::GroundCuts sharp = levelled_ground(site, Flatten::Sharp, grid);
     REQUIRE(sharp.footprint.size() == 1);
     CHECK(sharp.footprint[0].corners == std::array { 2.0f, 2.0f, 2.0f, 2.0f });
     CHECK(sharp.rim.empty());
-    const GroundCuts smooth = levelled_ground(site, Flatten::Smooth, grid);
+    const ground::GroundCuts smooth = levelled_ground(site, Flatten::Smooth, grid);
     REQUIRE(smooth.rim.size() == 8);
-    for (const GroundCut& cut : smooth.rim)
+    for (const ground::GroundCut& cut : smooth.rim)
     {
         if (cut.tile == save::Tile { 4, 3 }) // East of it: its west corners meet the footprint
             CHECK(cut.corners == std::array { 2.0f, 4.0f, 2.0f, 4.0f });

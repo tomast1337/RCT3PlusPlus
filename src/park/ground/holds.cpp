@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_holds.hpp"
+#include "park/ground/holds.hpp"
 
 #include "park/boundary_fence.hpp"
-#include "park/ground_paths.hpp"
-#include "park/ground_queues.hpp"
+#include "park/ground/paths.hpp"
+#include "park/ground/queues.hpp"
 #include "park/item_category.hpp"
 #include "park/object_placement.hpp"
 #include "park/path_furniture.hpp"
@@ -14,7 +14,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     namespace
@@ -160,4 +160,4 @@ namespace rct3::park
         return moved;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

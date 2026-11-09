@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_variation.hpp"
+#include "park/ground/variation.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     namespace
@@ -50,4 +50,4 @@ namespace rct3::park
         return texels;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

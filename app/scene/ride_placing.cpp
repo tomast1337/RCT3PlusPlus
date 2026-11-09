@@ -490,7 +490,7 @@ namespace rct3::scene
         if (p.solids_of != scene.objects.size())
         {
             p.solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
-            p.holds = park::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
+            p.holds = park::ground::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
             p.solids_of = scene.objects.size();
         }
         const auto show_ghost = [&] {
@@ -686,9 +686,9 @@ namespace rct3::scene
                 p.problem = park::water_problem(*p.site, p.item->water_only, scene.footpaths.water.bodies);
             // The ground under it is levelled, unless a tile of its footprint may not be; then, as when it is not
             // levelled, the ground may not rise over its base. A tile round it that may not be levelled stays.
-            p.levelling = p.item->water_only ? park::GroundCuts { } : park::levelled_ground(*p.site, p.flatten, scene.grid);
-            (void)park::allow_cuts(p.levelling, scene.grid, p.holds, scene.footpaths.water.bodies);
-            p.levelling_cost = park::cuts_cost(p.levelling, scene.grid);
+            p.levelling = p.item->water_only ? park::ground::GroundCuts { } : park::levelled_ground(*p.site, p.flatten, scene.grid);
+            (void)park::ground::allow_cuts(p.levelling, scene.grid, p.holds, scene.footpaths.water.bodies);
+            p.levelling_cost = park::ground::cuts_cost(p.levelling, scene.grid);
             if (p.problem == park::SiteProblem::None && p.levelling.footprint.empty())
                 p.problem = park::ground_problem(*p.site, scene.grid);
             p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price + p.levelling_cost;
@@ -829,8 +829,8 @@ namespace rct3::scene
             const auto price = p.item->price + (levels ? p.levelling_cost : 0);
             if (levels)
             {
-                park::make_cuts(scene.grid, p.levelling);
-                if (park::seat_followers(scene.objects, p.holds, scene.models, scene.grid, { p.site->col - 1, p.site->row - 1 }, { p.site->col + p.site->span[0], p.site->row + p.site->span[1] }))
+                park::ground::make_cuts(scene.grid, p.levelling);
+                if (park::ground::seat_followers(scene.objects, p.holds, scene.models, scene.grid, { p.site->col - 1, p.site->row - 1 }, { p.site->col + p.site->span[0], p.site->row + p.site->span[1] }))
                     objects_changed(scene);
             }
             if (p.item->stall)
@@ -1007,7 +1007,7 @@ namespace rct3::scene
     {
         if (scene.placing.item && !scene.placing.ghost_mesh.vertices.empty())
             draw_ghost_mesh(device, scene, scene.placing.ghost_mesh, transform, light);
-        draw_build_arrow(device, scene, stall_arrow(scene), park::kStallArrowPicture, transform);
+        draw_build_arrow(device, scene, stall_arrow(scene), park::ground::kStallArrowPicture, transform);
     }
 
 } // namespace rct3::scene

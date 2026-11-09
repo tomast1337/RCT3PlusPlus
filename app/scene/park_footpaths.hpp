@@ -36,8 +36,8 @@
 #pragma once
 
 #include "park/footpath_builder.hpp"
-#include "park/ground_paths.hpp"
-#include "park/ground_queues.hpp"
+#include "park/ground/paths.hpp"
+#include "park/ground/queues.hpp"
 #include "park/object_mesh.hpp"
 #include "park/path_clearance.hpp"
 #include "park/path_drag.hpp"
@@ -82,21 +82,21 @@ namespace rct3::scene
         bool loaded = false;
         std::optional<std::size_t> style; ///< Of styles, the one chosen
         park::FootpathBuilder builder;
-        std::vector<save::PathTile> paths;       ///< The park's paths as they are now
-        save::WaterLayer water;                  ///< To build the ground again with
-        std::vector<save::PoolWater> pools;      ///< The same
-        std::vector<save::Waterfall> waterfalls; ///< The park's waterfalls as they are now
-        std::vector<park::Paving> pavings;       ///< What the rides and stalls pave: doors, stalls, flat rides' floors
-        bool pavings_stale = false;              ///< The ground was built without the pavings as they are now
-        park::EdgeWalls walls;                   ///< The fences and walls paths do not join across
-        std::vector<std::uint64_t> paving_decks; ///< Objects drawing the paving off the ground
+        std::vector<save::PathTile> paths;         ///< The park's paths as they are now
+        save::WaterLayer water;                    ///< To build the ground again with
+        std::vector<save::PoolWater> pools;        ///< The same
+        std::vector<save::Waterfall> waterfalls;   ///< The park's waterfalls as they are now
+        std::vector<park::ground::Paving> pavings; ///< What the rides and stalls pave: doors, stalls, flat rides' floors
+        bool pavings_stale = false;                ///< The ground was built without the pavings as they are now
+        park::EdgeWalls walls;                     ///< The fences and walls paths do not join across
+        std::vector<std::uint64_t> paving_decks;   ///< Objects drawing the paving off the ground
         /// The path styles whose ground pictures the scene has, by the index the ground's batches use.
         std::vector<std::string> pictured;
-        std::vector<park::QueuePainting> queues_pictured;       ///< The same for the ground queues' pictures
-        park::TerrainMesh ghost;                                ///< The next piece, drawn over the ground
-        park::ObjectMesh raised_ghost;                          ///< The next piece when it is raised
-        std::map<std::string, TrackModels, std::less<>> models; ///< Of the raised pieces and supports laid
-        std::optional<park::SupportSets> support_sets;          ///< Read when the first raised piece is laid
+        std::vector<park::ground::QueuePainting> queues_pictured; ///< The same for the ground queues' pictures
+        park::TerrainMesh ghost;                                  ///< The next piece, drawn over the ground
+        park::ObjectMesh raised_ghost;                            ///< The next piece when it is raised
+        std::map<std::string, TrackModels, std::less<>> models;   ///< Of the raised pieces and supports laid
+        std::optional<park::SupportSets> support_sets;            ///< Read when the first raised piece is laid
         /// Of the queue tiles laid here, the railings along them.
         std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> railings;
         park::TerrainMesh arrow;                              ///< Over the next piece, pointing the way it goes

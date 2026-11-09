@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/queue_fences.hpp"
 
-#include "park/ground_paths.hpp"
+#include "park/ground/paths.hpp"
 #include "park/object_placement.hpp"
 #include "park/path_decks.hpp"
 
@@ -42,8 +42,8 @@ namespace rct3::park
         {
             if (p.kind != save::PathKind::Queue || !p.queue || !p.elevation || p.queue->fence_symbol.empty())
                 continue;
-            const bool on_ground = is_ground_queue(p);
-            const float rise = on_ground ? 0.0f : path_rise(p.elevation->slope);
+            const bool on_ground = ground::is_ground_queue(p);
+            const float rise = on_ground ? 0.0f : ground::path_rise(p.elevation->slope);
             const auto in = stored_heading(p.queue->start_direction);
             const auto out_side = stored_heading(p.queue->end_direction);
             // A slope is fenced along the way its deck faces, leaning as the deck rises, whichever way the
@@ -64,7 +64,7 @@ namespace rct3::park
                 low = std::min(*ahead, *behind);
             }
 
-            for (const Side side : kSidesFromRowBefore)
+            for (const Side side : ground::kSidesFromRowBefore)
             {
                 if (rise > 0 ? side.on_columns() == facing->on_columns() : side == in || side == out_side)
                     continue;

@@ -947,8 +947,8 @@ namespace rct3::scene
     {
         if (scene.pooling.item && !scene.pooling.ghost.vertices.empty())
             draw_ghost_mesh(device, scene, scene.pooling.ghost, transform, light);
-        if (scene.pooling.item && !scene.pooling.arrow.vertices.empty() && scene.ground_textures.contains(park::kPathArrowPicture))
-            draw_build_arrow(device, scene, scene.pooling.arrow, park::kPathArrowPicture, transform);
+        if (scene.pooling.item && !scene.pooling.arrow.vertices.empty() && scene.ground_textures.contains(park::ground::kPathArrowPicture))
+            draw_build_arrow(device, scene, scene.pooling.arrow, park::ground::kPathArrowPicture, transform);
     }
 
 } // namespace rct3::scene

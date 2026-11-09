@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_queues.hpp"
+#include "park/ground/queues.hpp"
 
-#include "park/ground_paths.hpp"
+#include "park/ground/paths.hpp"
 #include "park/path_decks.hpp"
 
 #include <algorithm>
 #include <limits>
 #include <map>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     QueueShape queue_shape(std::uint8_t start, std::uint8_t end) noexcept
@@ -111,4 +111,4 @@ namespace rct3::park
         return out;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

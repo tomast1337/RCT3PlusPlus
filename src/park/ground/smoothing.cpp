@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_smoothing.hpp"
+#include "park/ground/smoothing.hpp"
 
-#include "park/ground_shapes.hpp"
+#include "park/ground/shapes.hpp"
 #include "random/generator.hpp"
 
 #include <algorithm>
@@ -9,7 +9,7 @@
 #include <glm/geometric.hpp>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     namespace
@@ -162,4 +162,4 @@ namespace rct3::park
         return moved;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

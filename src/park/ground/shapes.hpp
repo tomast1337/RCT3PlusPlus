@@ -20,7 +20,7 @@
 #include <glm/vec2.hpp>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     enum class GroundShape : std::uint8_t
@@ -57,4 +57,4 @@ namespace rct3::park
     /// over the heights `before`. Returns the sum of how far every corner point moved from where it stood.
     float shape_ground(save::TerrainGrid& grid, const CornerHeights& before, GroundShape shape, glm::vec2 middle, float reach, glm::vec2 along, float amount);
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

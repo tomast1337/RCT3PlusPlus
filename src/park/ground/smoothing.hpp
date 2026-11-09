@@ -2,7 +2,7 @@
 //
 // Smoothing the ground under a brush, a little more for every moment the brush is held: our own tools.
 //
-// Most work on the tiles' shared corner points (park/ground_shapes.hpp), each moved part of the way to where
+// Most work on the tiles' shared corner points (park/ground/shapes.hpp), each moved part of the way to where
 // the tool wants it, the share growing with `strength` (the part of the way a pass goes, 0 to 1). Points the
 // owner holds and cliff edges stay.
 //   - Average eases each point towards the mean of the four next to it.
@@ -22,7 +22,7 @@
 #include <functional>
 #include <glm/vec2.hpp>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     enum class GroundSmoothing : std::uint8_t
@@ -42,4 +42,4 @@ namespace rct3::park
     /// picks Random's ups and downs. Returns the sum of how far the corners moved.
     float smooth_ground(save::TerrainGrid& grid, GroundSmoothing tool, glm::vec2 middle, float reach, float strength, float target, std::uint64_t seed, const std::function<bool(save::Tile)>& free);
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

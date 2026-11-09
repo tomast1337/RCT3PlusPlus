@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_paths.hpp"
+#include "park/ground/paths.hpp"
 
-#include "park/ground_queues.hpp"
+#include "park/ground/queues.hpp"
 #include "park/object_placement.hpp"
 #include "park/path_decks.hpp"
 
@@ -12,7 +12,7 @@
 #include <map>
 #include <utility>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     PathCell path_cell(PathLook look) noexcept
@@ -463,4 +463,4 @@ namespace rct3::park
         return mesh;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

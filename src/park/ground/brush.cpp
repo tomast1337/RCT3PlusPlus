@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_brush.hpp"
+#include "park/ground/brush.hpp"
 
 #include <algorithm>
 
-namespace rct3::park
+namespace rct3::park::ground
 {
 
     std::vector<save::Tile> brush_tiles(save::Tile middle, int size, bool round, int columns, int rows)
@@ -28,4 +28,4 @@ namespace rct3::park
         return tiles;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::ground

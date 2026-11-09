@@ -3,7 +3,7 @@
 #include "park/chain_lifts.hpp"
 #include "park/daylight.hpp"
 #include "park/flexi_colours.hpp"
-#include "park/ground_textures.hpp"
+#include "park/ground/textures.hpp"
 #include "park/object_models.hpp"
 #include "park/person_mesh.hpp"
 #include "park/person_motions.hpp"
@@ -180,7 +180,7 @@ namespace rct3::scene
                     {
                         if (!wanted(batch))
                             continue;
-                        const auto texture = scene.ground_textures.find(park::ground_key(batch.paint, batch.index));
+                        const auto texture = scene.ground_textures.find(park::ground::ground_key(batch.paint, batch.index));
                         render::DrawCommand draw;
                         draw.pipeline = pipeline;
                         draw.vertices = { chunk.vertices };
@@ -195,7 +195,7 @@ namespace rct3::scene
                         draw.light = light;
                         draw.light.cut_clear = !earth(batch); // The grass round a path's shape stays clear of its depth
                         draw.extra_textures[0] = scene.variation;
-                        draw.extra_textures[1] = relief_of(scene.ground_textures, park::ground_key(batch.paint, batch.index));
+                        draw.extra_textures[1] = relief_of(scene.ground_textures, park::ground::ground_key(batch.paint, batch.index));
                         device.draw(draw);
                     }
                 }

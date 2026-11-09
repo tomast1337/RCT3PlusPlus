@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_smoothing.hpp"
+#include "park/ground/smoothing.hpp"
 
 #include <cmath>
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::ground;
 
 namespace
 {

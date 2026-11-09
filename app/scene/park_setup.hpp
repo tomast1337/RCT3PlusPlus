@@ -6,7 +6,7 @@
 
 #include "config/game_install.hpp"
 #include "park/asset_index.hpp"
-#include "park/ground_textures.hpp"
+#include "park/ground/textures.hpp"
 #include "park/object_mesh.hpp"
 #include "render/device.hpp"
 #include "ui/ui_textures.hpp"
@@ -45,7 +45,7 @@ namespace rct3::scene
     render::TextureHandle relief_of(const ui::UiTextures& textures, std::string_view name);
 
     /// Shrinks the park's pictures to the texture detail it loaded with (ovl::texture_halvings), before upload.
-    void fit_texture_detail(const ParkScene& scene, park::GroundImages& images);
+    void fit_texture_detail(const ParkScene& scene, park::ground::GroundImages& images);
 
     /// Paints and uploads the pictures of `batches` the scene does not have yet.
     void add_textures(render::Device& device, ParkScene& scene, std::span<const park::ObjectBatch> batches);

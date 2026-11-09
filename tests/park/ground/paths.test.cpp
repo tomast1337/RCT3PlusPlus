@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/ground_paths.hpp"
+#include "park/ground/paths.hpp"
 
 #include <doctest/doctest.h>
 #include <set>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::ground;
 
 namespace
 {
@@ -25,7 +26,7 @@ namespace
         return g;
     }
 
-    save::PathTile ground(int col, int row, std::string style = "Gravel")
+    save::PathTile ground_tile(int col, int row, std::string style = "Gravel")
     {
         save::PathTile p;
         p.kind = save::PathKind::Ground;
@@ -73,8 +74,8 @@ TEST_CASE("every look has a cell of its own")
 TEST_CASE("the map keeps ground paths and the ends of raised ones, and their styles in the order met")
 {
     const save::TerrainGrid g = flat_grid(4, 3);
-    std::vector<save::PathTile> paths { ground(0, 0), ground(1, 0, "Brick"), ground(2, 2), ground(9, 9), ground(3, 0, "") };
-    save::PathTile raised = ground(1, 1);
+    std::vector<save::PathTile> paths { ground_tile(0, 0), ground_tile(1, 0, "Brick"), ground_tile(2, 2), ground_tile(9, 9), ground_tile(3, 0, "") };
+    save::PathTile raised = ground_tile(1, 1);
     raised.kind = save::PathKind::Flying;
     raised.elevation = save::PathElevation { };
     paths.push_back(raised);
@@ -95,7 +96,7 @@ TEST_CASE("the map keeps ground paths and the ends of raised ones, and their sty
 TEST_CASE("a lone path tile is drawn whole, closed all round")
 {
     const save::TerrainGrid g = flat_grid(3, 3, 2);
-    const std::vector<save::PathTile> paths { ground(1, 1) };
+    const std::vector<save::PathTile> paths { ground_tile(1, 1) };
     const TerrainMesh m = ground_path_mesh(ground_path_map(paths, g), g);
     REQUIRE(m.batches.size() == 1);
     CHECK(m.batches[0].paint == (path_cell(PathLook::Closed).sheet == 0 ? GroundPaint::PathA : GroundPaint::PathB));
@@ -107,7 +108,7 @@ TEST_CASE("a lone path tile is drawn whole, closed all round")
 TEST_CASE("a straight run along x shows edges along z, and its ends split into quarters")
 {
     const save::TerrainGrid g = flat_grid(5, 3);
-    const std::vector<save::PathTile> paths { ground(1, 1), ground(2, 1), ground(3, 1) };
+    const std::vector<save::PathTile> paths { ground_tile(1, 1), ground_tile(2, 1), ground_tile(3, 1) };
     const TerrainMesh m = ground_path_mesh(ground_path_map(paths, g), g);
     // The middle tile is one quad; each end has two quarters closed and two edged.
     CHECK(m.vertices.size() == 6 + 2 * 4 * 6);
@@ -119,7 +120,7 @@ TEST_CASE("the path follows the ground's slope")
     save::TerrainGrid g = flat_grid(2, 1);
     g.cells[0].corners = { 0, 4, 0, 4 }; // Rising along x
     g.cells[1].corners = { 4, 4, 4, 4 };
-    const std::vector<save::PathTile> paths { ground(0, 0), ground(1, 0) };
+    const std::vector<save::PathTile> paths { ground_tile(0, 0), ground_tile(1, 0) };
     const TerrainMesh m = ground_path_mesh(ground_path_map(paths, g), g);
     for (const GroundVertex& v : m.vertices)
     {
@@ -131,7 +132,7 @@ TEST_CASE("the path follows the ground's slope")
 TEST_CASE("a map for another grid draws nothing")
 {
     const save::TerrainGrid g = flat_grid(3, 3);
-    const std::vector<save::PathTile> paths { ground(1, 1) };
+    const std::vector<save::PathTile> paths { ground_tile(1, 1) };
     const GroundPathMap map = ground_path_map(paths, g);
     CHECK(ground_path_mesh(map, flat_grid(4, 4)).vertices.empty());
 }
@@ -139,16 +140,16 @@ TEST_CASE("a map for another grid draws nothing")
 TEST_CASE("a ground path runs on into the foot of a raised path that meets the ground")
 {
     save::TerrainGrid g = flat_grid(4, 1, 3);
-    save::PathTile slope = ground(1, 0);
+    save::PathTile slope = ground_tile(1, 0);
     slope.kind = save::PathKind::Flying;
     slope.elevation = save::PathElevation { };
     slope.elevation->slope = 4; // Gentle, low end on the ground
     slope.elevation->quantised_height = 3;
-    save::PathTile bridge = ground(3, 0);
+    save::PathTile bridge = ground_tile(3, 0);
     bridge.kind = save::PathKind::Flying;
     bridge.elevation = save::PathElevation { };
     bridge.elevation->quantised_height = 9; // Flat, high above
-    const std::vector<save::PathTile> paths { ground(0, 0), slope, ground(2, 0), bridge };
+    const std::vector<save::PathTile> paths { ground_tile(0, 0), slope, ground_tile(2, 0), bridge };
     const GroundPathMap map = ground_path_map(paths, g);
     CHECK(path_continues(map, g, { 0, 0 }, 1, 0));
     CHECK(path_continues(map, g, { 2, 0 }, -1, 0));
@@ -162,7 +163,7 @@ TEST_CASE("a ground path runs on into the foot of a raised path that meets the g
 TEST_CASE("a mesh cut down to some tiles keeps their triangles in their batches")
 {
     const save::TerrainGrid g = flat_grid(5, 3);
-    const std::vector<save::PathTile> paths { ground(1, 1), ground(2, 1), ground(3, 1) };
+    const std::vector<save::PathTile> paths { ground_tile(1, 1), ground_tile(2, 1), ground_tile(3, 1) };
     const TerrainMesh m = ground_path_mesh(ground_path_map(paths, g), g);
     std::vector<bool> keep(15, false);
     keep[1 * 5 + 2] = true; // The middle tile only
@@ -301,12 +302,12 @@ TEST_CASE("paving looks like the path at its source; only an entrance takes a qu
     CHECK(laid[0].path.surface_name == kPavingStyle);
     CHECK_FALSE(laid[0].path.elevation);
 
-    const std::array marble { ground(3, 2, "Marble") };
+    const std::array marble { ground_tile(3, 2, "Marble") };
     laid = lay_pavings(marble, std::span(&door, 1), g);
     CHECK(laid[0].path.surface_name == "Marble");
     CHECK(laid[0].path.col == 2);
 
-    save::PathTile queue = ground(3, 2, "QueueRed");
+    save::PathTile queue = ground_tile(3, 2, "QueueRed");
     queue.kind = save::PathKind::Queue;
     queue.queue = save::PathQueueInfo { .start_direction = 2, .end_direction = 3 };
     queue.elevation = save::PathElevation { .slope = save::kSlopeOnGround };
@@ -331,7 +332,7 @@ TEST_CASE("paving off level ground is raised at its height, and tiles holding a 
     save::TerrainGrid g = flat_grid(6, 6);
     g.cells[static_cast<std::size_t>(2 * 6 + 3)].corners = { 0, 1, 0, 1 };
     const Paving stall { .tiles = { { 2, 2 }, { 3, 2 }, { 4, 2 }, { 9, 9 } }, .height = 0 };
-    const std::array paths { ground(4, 2) };
+    const std::array paths { ground_tile(4, 2) };
     const std::vector<PavedTile> laid = lay_pavings(paths, std::span(&stall, 1), g);
     REQUIRE(laid.size() == 2);
     CHECK_FALSE(laid[0].path.elevation);
@@ -345,7 +346,7 @@ TEST_CASE("paving joins only itself and its links, never a path beside it, fence
     const save::TerrainGrid g = flat_grid(6, 6);
     // A two-tile floor at row 2 with its door at (1, 2); a park path runs past along row 3 and on to the door.
     const std::array pavings { Paving { .tiles = { { 2, 2 }, { 3, 2 } }, .links = { { 1, 2 } } }, Paving { .tiles = { { 1, 2 } }, .source = save::Tile { 0, 2 }, .links = { { 2, 2 }, { 0, 2 } } } };
-    std::vector<save::PathTile> paths { ground(0, 2), ground(1, 3), ground(2, 3), ground(3, 3) };
+    std::vector<save::PathTile> paths { ground_tile(0, 2), ground_tile(1, 3), ground_tile(2, 3), ground_tile(3, 3) };
     const std::vector<PavedTile> laid = lay_pavings(paths, pavings, g);
     REQUIRE(laid.size() == 3);
     for (const PavedTile& t : laid)
@@ -363,7 +364,7 @@ TEST_CASE("paving joins only itself and its links, never a path beside it, fence
     CHECK(may_join(map, { 1, 3 }, { 2, 3 }));
 
     // The path past draws its edge along the floor: closed on the floor's side all the way.
-    const TerrainMesh alone = ground_path_mesh(ground_path_map(std::array { ground(1, 3), ground(2, 3), ground(3, 3) }, g), g);
+    const TerrainMesh alone = ground_path_mesh(ground_path_map(std::array { ground_tile(1, 3), ground_tile(2, 3), ground_tile(3, 3) }, g), g);
     const TerrainMesh beside = ground_path_mesh(map, g);
     CHECK(vertices_of(beside, GroundPaint::PathA) + vertices_of(beside, GroundPaint::PathB) > vertices_of(alone, GroundPaint::PathA) + vertices_of(alone, GroundPaint::PathB));
 }

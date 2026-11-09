@@ -15,10 +15,10 @@
 #include "park/chain_lifts.hpp"
 #include "park/enclosures.hpp"
 #include "park/flexi_colours.hpp"
-#include "park/ground_paths.hpp"
-#include "park/ground_queues.hpp"
-#include "park/ground_textures.hpp"
-#include "park/ground_variation.hpp"
+#include "park/ground/paths.hpp"
+#include "park/ground/queues.hpp"
+#include "park/ground/textures.hpp"
+#include "park/ground/variation.hpp"
 #include "park/item_category.hpp"
 #include "park/object_models.hpp"
 #include "park/off_map_trees.hpp"
@@ -484,7 +484,7 @@ namespace rct3::scene
                     }
             }
             library.close_files();
-            park::GroundImages shrunk; // Copied only when they are shrunk; the library keeps its own
+            park::ground::GroundImages shrunk; // Copied only when they are shrunk; the library keeps its own
             if (scene.texture_detail < 1)
             {
                 shrunk = library.pictures();
@@ -618,7 +618,7 @@ namespace rct3::scene
         return found != textures.end() ? found->second.handle : render::TextureHandle { };
     }
 
-    void fit_texture_detail(const ParkScene& scene, park::GroundImages& images)
+    void fit_texture_detail(const ParkScene& scene, park::ground::GroundImages& images)
     {
         for (auto& [name, image] : images)
             image = ovl::halved(std::move(image), ovl::texture_halvings(scene.texture_detail, image.width, image.height));
@@ -1212,12 +1212,12 @@ namespace rct3::scene
         };
         const render::VertexLayout ground_layout { sizeof(park::GroundVertex), kGroundAttributes };
         // Also drawn into the map at the end.
-        park::GroundImages images;
+        park::ground::GroundImages images;
         {
             // The ground itself is built on the first frame (rebuild_ground), with the pavings known by then; the
             // paths' and queues' pictures are read here.
-            const park::GroundPathMap paths = park::ground_path_map(world->paths, scene.grid);
-            const park::GroundQueues queues = park::ground_queues(world->paths, scene.grid);
+            const park::ground::GroundPathMap paths = park::ground::ground_path_map(world->paths, scene.grid);
+            const park::ground::GroundQueues queues = park::ground::ground_queues(world->paths, scene.grid);
             scene.footpaths.pavings_stale = true;
             scene.footpaths.paths = world->paths;
             scene.footpaths.water = world->water;
@@ -1239,36 +1239,36 @@ namespace rct3::scene
             if (!ground_faded)
                 return fail(ground_faded.error());
             scene.ground_faded_pipeline = *ground_faded;
-            const std::vector<std::byte> noise = park::variation_texels();
+            const std::vector<std::byte> noise = park::ground::variation_texels();
             // Without it the ground is drawn plain.
-            if (auto variation = device.create_texture({ .width = park::kVariationSize, .height = park::kVariationSize, .pixels = noise, .label = "ground variation" }))
+            if (auto variation = device.create_texture({ .width = park::ground::kVariationSize, .height = park::ground::kVariationSize, .pixels = noise, .label = "ground variation" }))
                 scene.variation = *variation;
 
-            for (const std::string_view name : park::kGroundFiles)
+            for (const std::string_view name : park::ground::kGroundFiles)
             {
                 const auto found = install.find(name);
                 if (!found)
                     continue;
-                if (const auto added = park::add_ground_images(images, *found); !added)
+                if (const auto added = park::ground::add_ground_images(images, *found); !added)
                     log.warning("{}: {}", name, added.error());
             }
-            std::vector<park::TunnelPictures> tunnels;
-            for (const park::TunnelStyle& style : park::kTunnelStyles)
+            std::vector<park::ground::TunnelPictures> tunnels;
+            for (const park::ground::TunnelStyle& style : park::ground::kTunnelStyles)
             {
-                const std::string name = park::tunnel_texture_file(style.name);
+                const std::string name = park::ground::tunnel_texture_file(style.name);
                 const auto found = install.find(name);
-                auto loaded = found ? park::load_tunnel_pictures(*found, style) : std::unexpected(std::string("not found"));
+                auto loaded = found ? park::ground::load_tunnel_pictures(*found, style) : std::unexpected(std::string("not found"));
                 if (loaded && *loaded)
                     tunnels.push_back(std::move(**loaded));
                 else
                     log.warning("{}: {}", name, loaded ? "no picture" : loaded.error());
             }
-            park::add_tunnel_images(images, tunnels);
+            park::ground::add_tunnel_images(images, tunnels);
             for (std::size_t i = 0; i < paths.styles.size(); ++i)
             {
-                const std::string name = park::path_texture_file(paths.styles[i]);
+                const std::string name = park::ground::path_texture_file(paths.styles[i]);
                 const auto found = install.find(name);
-                const auto missing = found ? park::add_path_images(images, *found, paths.styles[i], static_cast<std::uint8_t>(i)) : std::expected<std::size_t, std::string>(std::unexpected("not found"));
+                const auto missing = found ? park::ground::add_path_images(images, *found, paths.styles[i], static_cast<std::uint8_t>(i)) : std::expected<std::size_t, std::string>(std::unexpected("not found"));
                 if (!missing)
                     log.warning("{}: {}", name, missing.error());
                 else if (*missing > 0)
@@ -1276,21 +1276,21 @@ namespace rct3::scene
             }
             for (std::size_t i = 0; i < queues.paintings.size(); ++i)
             {
-                const std::string name = park::queue_texture_file(queues.paintings[i].style);
+                const std::string name = park::ground::queue_texture_file(queues.paintings[i].style);
                 const auto found = install.find(name);
-                const auto added = found ? park::add_queue_image(images, *found, queues.paintings[i], static_cast<std::uint8_t>(i)) : std::expected<bool, std::string>(std::unexpected("not found"));
+                const auto added = found ? park::ground::add_queue_image(images, *found, queues.paintings[i], static_cast<std::uint8_t>(i)) : std::expected<bool, std::string>(std::unexpected("not found"));
                 if (!added)
                     log.warning("{}: {}", name, added.error());
                 else if (!*added)
                     log.warning("{}: no ground picture", name);
             }
             // The arrows the path tool and stall placing lay on the ground, by their own names.
-            for (const std::string_view arrow : { park::kPathArrowPicture, park::kStallArrowPicture })
+            for (const std::string_view arrow : { park::ground::kPathArrowPicture, park::ground::kStallArrowPicture })
             {
-                const auto tool = install.find(park::kPathToolFile);
-                const auto added = tool ? park::add_named_image(images, *tool, arrow, arrow) : std::expected<bool, std::string>(false);
+                const auto tool = install.find(park::ground::kPathToolFile);
+                const auto added = tool ? park::ground::add_named_image(images, *tool, arrow, arrow) : std::expected<bool, std::string>(false);
                 if (!added || !*added)
-                    log.warning("{}: no {}", park::kPathToolFile, arrow);
+                    log.warning("{}: no {}", park::ground::kPathToolFile, arrow);
             }
             fit_texture_detail(scene, images);
             if (scene.relief_maps)

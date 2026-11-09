@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path_drag.hpp"
 
-#include "park/ground_paths.hpp"
-#include "park/ground_queues.hpp"
+#include "park/ground/paths.hpp"
+#include "park/ground/queues.hpp"
 #include "park/object_pick.hpp"
 #include "park/path_decks.hpp"
 #include "park/queue_fences.hpp"
@@ -87,7 +87,7 @@ namespace rct3::park
             if (!grid.contains(p.col, p.row))
                 continue;
             float t = 0;
-            if (!p.elevation || is_ground_queue(p))
+            if (!p.elevation || ground::is_ground_queue(p))
             {
                 if (!ground)
                     continue;
@@ -96,7 +96,7 @@ namespace rct3::park
             else
             {
                 const save::PathElevation& e = *p.elevation;
-                const float rise = path_rise(e.slope);
+                const float rise = ground::path_rise(e.slope);
                 const float middle = static_cast<float>(e.quantised_height) + (slope_falls(e.slope) ? -rise : rise) / 2;
                 if (std::abs(ray.direction.y) < 1e-6f)
                     continue;

@@ -16,10 +16,10 @@
 namespace rct3::park::track
 {
 
-    GroundCuts ground_cuts(std::span<const save::PlacedObject> items, const ObjectModels& models, const save::TerrainGrid& grid, bool smooth)
+    ground::GroundCuts ground_cuts(std::span<const save::PlacedObject> items, const ObjectModels& models, const save::TerrainGrid& grid, bool smooth)
     {
         constexpr float kSlack = 0.05f; // Standing on the ground is not in it
-        GroundCuts out;
+        ground::GroundCuts out;
         for (const auto& [key, spans] : solid_tiles(items, models, grid).tiles)
         {
             const save::Tile tile { static_cast<std::int32_t>(key & 0xFFFF), static_cast<std::int32_t>(key >> 16) };
@@ -34,7 +34,7 @@ namespace rct3::park::track
             }
             if (floor == std::numeric_limits<float>::max())
                 continue;
-            GroundCut cut { tile, cell.corners };
+            ground::GroundCut cut { tile, cell.corners };
             for (float& corner : cut.corners)
                 corner = std::min(corner, floor);
             out.footprint.push_back(cut);
@@ -44,7 +44,7 @@ namespace rct3::park::track
         // Each corner point of a cut tile, keyed row << 16 | col, at its lowest; the tiles round take it.
         std::unordered_map<std::uint32_t, float> points;
         const auto point = [](std::int32_t col, std::int32_t row) { return static_cast<std::uint32_t>(row) << 16 | static_cast<std::uint32_t>(col); };
-        for (const GroundCut& cut : out.footprint)
+        for (const ground::GroundCut& cut : out.footprint)
         {
             for (std::size_t k = 0; k < 4; ++k)
             {
@@ -53,7 +53,7 @@ namespace rct3::park::track
             }
         }
         std::unordered_set<std::uint32_t> seen;
-        for (const GroundCut& cut : out.footprint)
+        for (const ground::GroundCut& cut : out.footprint)
             seen.insert(point(cut.tile.col, cut.tile.row));
         const std::size_t cuts = out.footprint.size();
         for (std::size_t i = 0; i < cuts; ++i)
@@ -65,7 +65,7 @@ namespace rct3::park::track
                     const save::Tile tile { out.footprint[i].tile.col + dc, out.footprint[i].tile.row + dr };
                     if (!grid.contains(tile.col, tile.row) || !seen.insert(point(tile.col, tile.row)).second)
                         continue;
-                    GroundCut rim { tile, grid.at(tile.col, tile.row).corners };
+                    ground::GroundCut rim { tile, grid.at(tile.col, tile.row).corners };
                     for (std::size_t k = 0; k < 4; ++k)
                     {
                         if (const auto it = points.find(point(tile.col + static_cast<std::int32_t>(k % 2), tile.row + static_cast<std::int32_t>(k / 2))); it != points.end())

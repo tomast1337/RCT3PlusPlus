@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "audio/wma_stream.hpp"
+#include "audio/wma/stream.hpp"
 
 #include "audio/asf_file.hpp"
+#include "audio/wma/decoder.hpp"
 
 #include <algorithm>
-#include <ffmpeg/rct3_wma.h>
 #include <format>
 #include <fstream>
+#include <optional>
 #include <vector>
 
-namespace rct3::audio
+namespace rct3::audio::wma
 {
 
     namespace
@@ -17,14 +18,6 @@ namespace rct3::audio
 
         constexpr std::uint16_t kWma1 = 0x160;
         constexpr std::uint16_t kWma2 = 0x161;
-
-        struct CloseDecoder
-        {
-            void operator()(Rct3WmaDecoder* d) const
-            {
-                rct3_wma_close(d);
-            }
-        };
 
         // At most `size` bytes from `at`: fewer where the file ends, so a size the file claims never makes us
         // hold more than the file has.
@@ -47,7 +40,7 @@ namespace rct3::audio
         std::ifstream file;
         std::uint64_t file_size = 0;
         AsfHeader header;
-        std::unique_ptr<Rct3WmaDecoder, CloseDecoder> decoder;
+        std::optional<Decoder> decoder;
         AsfAudioBlocks blocks { 0, 0 };
         std::uint64_t next_packet = 0;
         bool flushed = false;
@@ -57,11 +50,11 @@ namespace rct3::audio
 
         std::expected<void, std::string> start()
         {
-            rct3_wma_reset(decoder.get());
+            decoder->reset();
             blocks.clear();
             next_packet = 0;
             flushed = false;
-            skip = rct3_wma_delay(decoder.get());
+            skip = decoder->delay();
             ready.clear();
             ready_at = 0;
             return { };
@@ -86,7 +79,7 @@ namespace rct3::audio
             if (!blocks.empty())
             {
                 const auto block = blocks.take();
-                const int n = rct3_wma_decode(decoder.get(), reinterpret_cast<const std::uint8_t*>(block.data()), static_cast<int>(block.size()), &planes);
+                const int n = decoder->decode(block, planes);
                 if (n > 0)
                     take_samples(n, planes);
                 return true;
@@ -113,7 +106,7 @@ namespace rct3::audio
             if (flushed)
                 return false;
             flushed = true;
-            const int n = rct3_wma_decode(decoder.get(), nullptr, 0, &planes);
+            const int n = decoder->decode({ }, planes);
             if (n > 0)
                 take_samples(n, planes);
             return true;
@@ -157,16 +150,15 @@ namespace rct3::audio
         const AsfAudioFormat& f = s->header.audio;
         if (f.codec != kWma1 && f.codec != kWma2)
             return fail(std::format("not Windows Media Audio 1 or 2 (codec {:#x})", f.codec));
-        const Rct3WmaFormat format {
-            .version = f.codec == kWma1 ? 1 : 2,
-            .sample_rate = static_cast<int>(f.sample_rate),
-            .channels = f.channels,
-            .bit_rate = static_cast<int>(std::min<std::uint64_t>(f.bytes_per_second * 8ull, 0x7FFFFFFF)),
-            .block_align = f.block_align,
-            .extra = reinterpret_cast<const std::uint8_t*>(f.extra.data()),
-            .extra_size = static_cast<int>(f.extra.size()),
-        };
-        s->decoder.reset(rct3_wma_open(&format));
+        s->decoder = Decoder::open(
+            {
+                .version = f.codec == kWma1 ? 1 : 2,
+                .sample_rate = f.sample_rate,
+                .channels = f.channels,
+                .bit_rate = static_cast<std::uint32_t>(std::min<std::uint64_t>(f.bytes_per_second * 8ull, 0x7FFFFFFF)),
+                .block_align = f.block_align,
+                .extra = f.extra,
+            });
         if (!s->decoder)
             return fail(std::format("the decoder cannot take this stream ({} Hz, {} channels, {} bytes a second)", f.sample_rate, f.channels, f.bytes_per_second));
         s->blocks = AsfAudioBlocks(s->header.stream, f.block_align);
@@ -222,4 +214,4 @@ namespace rct3::audio
         return state_->start();
     }
 
-} // namespace rct3::audio
+} // namespace rct3::audio::wma

@@ -15,7 +15,7 @@ namespace rct3::audio
 
     } // namespace
 
-    MusicPlayer::MusicPlayer(WmaStream stream, VoiceHandle voice, bool loop)
+    MusicPlayer::MusicPlayer(wma::WmaStream stream, VoiceHandle voice, bool loop)
         : stream_(std::move(stream))
         , voice_(voice)
         , chunk_(kChunkFrames * stream_.channels())
@@ -25,7 +25,7 @@ namespace rct3::audio
 
     std::expected<MusicPlayer, std::string> MusicPlayer::start(AudioEngine& engine, const std::filesystem::path& file, float volume, bool loop)
     {
-        auto stream = WmaStream::open(file);
+        auto stream = wma::WmaStream::open(file);
         if (!stream)
             return std::unexpected(stream.error());
         const StreamFormat format {

@@ -76,6 +76,8 @@ Glance test: from the path alone you can tell what is inside, without opening it
 functions that act on it share one `.hpp`/`.cpp` pair. Three or more files with one prefix become a folder,
 and the prefix goes: `park/track_pieces.hpp` becomes `park/track/pieces.hpp`. The namespace follows the
 folder: `src/park/track/` is `rct3::park::track`, and `app/a/b/` is `rct3::a::b` likewise.
+Platform code goes in files whose name ends in `_windows` (built only on Windows) or `_ffmpeg` (built
+everywhere else), beside a header every platform shares: `audio/wma/decoder.hpp` with `decoder_ffmpeg.cpp`.
 
 **Product code and fixtures stay apart.** Probes and fixtures are not mixed into the folders of the code
 they check. Tests live in `tests/`, tools in `tools/`, library code in `src/`.

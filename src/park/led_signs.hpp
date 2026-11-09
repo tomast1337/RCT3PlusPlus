@@ -18,7 +18,6 @@
 #include "ovl/texture_image.hpp"
 #include "park/turns.hpp"
 #include "save/model/world.hpp"
-#include "ui/font.hpp"
 
 #include <array>
 #include <cstdint>
@@ -49,11 +48,6 @@ namespace rct3::park
     /// Of a theme's items, the sign it puts over queues: a sign whose settings name it a queue sign. Empty when
     /// the theme has none.
     [[nodiscard]] std::string queue_sign_item(std::span<const ovl::SceneryItemEntry> items);
-
-    /// The text loop for `text`, `height` pixels tall, in `font` at its own size: how much the letters cover
-    /// each pixel, 0 to 255 in every channel, as wide as a whole number of lamps. The glyphs' pages are
-    /// `pages`, by the index the glyphs give, with coverage in alpha.
-    [[nodiscard]] ovl::RgbaImage sign_text_loop(const ui::Font& font, std::span<const ovl::RgbaImage> pages, std::u16string_view text, std::uint32_t height);
 
     /// A lamp colour, red, green and blue.
     using LampColour = std::array<std::uint8_t, 3>;

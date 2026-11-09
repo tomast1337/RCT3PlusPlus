@@ -15,7 +15,7 @@
 #include "park/item_category.hpp"
 #include "park/terrain_mesh.hpp"
 #include "park/track_pieces.hpp"
-#include "park/water_flow.hpp"
+#include "park/water/flow.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
@@ -858,7 +858,7 @@ namespace rct3::park
                 for (ModelPart& part : level.parts)
                     if (part.blend == PartBlend::Blended)
                     {
-                        flowing_sheet(part, track != nullptr ? *track : ovl::Spline { }, std::string(kFlowPicture));
+                        water::flowing_sheet(part, track != nullptr ? *track : ovl::Spline { }, std::string(water::kFlowPicture));
                         model.flows = true;
                     }
             return;
@@ -870,7 +870,7 @@ namespace rct3::park
         // Off a slide's open end its water pours from where the water's edges end.
         if (section->role == kRoleSlideEnd && left->nodes.size() >= 2 && !right->nodes.empty())
             model.pour = SlidePour { .left = position(left->nodes.back()), .right = position(right->nodes.back()), .way = glm::normalize(position(left->nodes.back()) - position(left->nodes[left->nodes.size() - 2])) };
-        const auto strip = flow_strip(*left, *right, track != nullptr ? *track : ovl::Spline { }, std::string(kFlowPicture));
+        const auto strip = water::flow_strip(*left, *right, track != nullptr ? *track : ovl::Spline { }, std::string(water::kFlowPicture));
         if (!strip)
             return;
         for (ModelLevel& level : model.levels)

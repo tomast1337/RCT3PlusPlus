@@ -31,7 +31,7 @@
 
 #include "math/glm.hpp"
 #include "park/pools/pools.hpp"
-#include "park/water_ripples.hpp"
+#include "park/water/ripples.hpp"
 #include "save/model/world.hpp"
 
 #include <array>
@@ -45,7 +45,7 @@ namespace rct3::park::pools
 {
 
     /// The most waves the water shows at once, wave machines' and drawn together.
-    inline constexpr std::size_t kMaxPoolWaves = kMaxRipples;
+    inline constexpr std::size_t kMaxPoolWaves = water::kMaxRipples;
 
     /// How the waves look and behave. Lengths in world units (about a metre), times in seconds; all chosen by eye.
     struct PoolWaveLook

@@ -20,7 +20,7 @@
 #include <span>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::water
 {
 
     /// The water at one height: a run of triangles of WaterSurface::vertices.
@@ -80,4 +80,4 @@ namespace rct3::park
     /// The water `point` is under, if it is under any: the eye there sees the park from inside the water.
     [[nodiscard]] std::optional<WaterAbove> water_above(const WaterSurface& surface, glm::vec3 point);
 
-} // namespace rct3::park
+} // namespace rct3::park::water

@@ -9,7 +9,7 @@
 #include "park/path_furniture.hpp"
 #include "park/queue_fences.hpp"
 #include "park/support_columns.hpp"
-#include "park/water_fill.hpp"
+#include "park/water/fill.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -105,7 +105,7 @@ namespace rct3::park
     {
         return std::ranges::any_of(cuts, [&](const GroundCut& cut) {
             const auto [col, row] = cut.tile;
-            const auto wet = [&](std::int32_t c, std::int32_t r) { return holds_water(bodies, { c, r }); };
+            const auto wet = [&](std::int32_t c, std::int32_t r) { return water::holds_water(bodies, { c, r }); };
             return !owned_outright(grid.at(col, row)) || wet(col, row) || wet(col - 1, row) || wet(col + 1, row) || wet(col, row - 1) || wet(col, row + 1) || refuses(holds, cut.tile, grid.at(col, row).corners, cut.corners);
         });
     }

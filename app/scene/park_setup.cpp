@@ -35,7 +35,7 @@
 #include "park/support_columns.hpp"
 #include "park/surrounding_land.hpp"
 #include "park/track_ground.hpp"
-#include "park/water_flow.hpp"
+#include "park/water/flow.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
@@ -1311,12 +1311,12 @@ namespace rct3::scene
         // ── 4. Objects ──
         begin(ParkLoadStage::Objects);
         {
-            if (const auto flow_file = install.find(park::kFlowFile))
+            if (const auto flow_file = install.find(park::water::kFlowFile))
             {
                 // The water running down slides; without it they are drawn dry.
-                if (auto flow = park::load_flow_picture(*flow_file))
+                if (auto flow = park::water::load_flow_picture(*flow_file))
                 {
-                    if (auto uploaded = ui::upload_textures(device, { { std::string(park::kFlowPicture), *flow } }))
+                    if (auto uploaded = ui::upload_textures(device, { { std::string(park::water::kFlowPicture), *flow } }))
                         scene.object_textures.merge(*uploaded);
                 }
                 else
@@ -1329,7 +1329,7 @@ namespace rct3::scene
                 for (const park::WaterfallPicture& picture : park::kWaterfallPictures)
                     for (const auto& [texture, key] : { std::pair { picture.texture, picture.key }, std::pair { picture.layer_texture, picture.layer_key } })
                     {
-                        if (auto image = park::load_flow_picture(*falls_file, texture))
+                        if (auto image = park::water::load_flow_picture(*falls_file, texture))
                             pictures.emplace(key, std::move(*image));
                         else
                             logging::logger("park").warning("waterfalls: {}", image.error());

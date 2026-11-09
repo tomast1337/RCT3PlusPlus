@@ -16,7 +16,7 @@
 #include <array>
 #include <cstddef>
 
-namespace rct3::park
+namespace rct3::park::water
 {
 
     inline constexpr std::size_t kMaxRipples = 16;
@@ -63,4 +63,4 @@ namespace rct3::park
     using RippleTexels = std::array<glm::vec4, 2 * kMaxRipples>;
     [[nodiscard]] RippleTexels ripple_texels(const Ripples& ripples, const RippleLook& look = kRippleLook);
 
-} // namespace rct3::park
+} // namespace rct3::park::water

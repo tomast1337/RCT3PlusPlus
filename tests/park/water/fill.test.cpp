@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/water_fill.hpp"
+#include "park/water/fill.hpp"
 
 #include <array>
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::water;
 
 namespace
 {

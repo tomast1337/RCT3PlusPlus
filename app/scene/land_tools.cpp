@@ -8,7 +8,7 @@
 #include "park/ground_brush.hpp"
 #include "park/object_pick.hpp"
 #include "park/ride_placement.hpp"
-#include "park/water_fill.hpp"
+#include "park/water/fill.hpp"
 #include "park/waterfall_making.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "scene/park_footpaths.hpp"
@@ -195,7 +195,7 @@ namespace rct3::scene
                     (*step)[1] = { std::max((*step)[1].col, c), std::max((*step)[1].row, r) };
                 }
             // Water the new ground may not hold goes, as do the waterfalls beside it.
-            const bool drained = drain && park::drain_moved(scene.footpaths.water, scene.footpaths.waterfalls, was, scene.grid);
+            const bool drained = drain && park::water::drain_moved(scene.footpaths.water, scene.footpaths.waterfalls, was, scene.grid);
             if (drained)
                 show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
             // A drained lake may reach far from the step; a moved corner shades the tiles beside those round it.
@@ -436,10 +436,10 @@ namespace rct3::scene
             const save::Tile tile { static_cast<int>(std::floor((top.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((top.z - g.origin_z) / g.tile_size_z)) };
             for (save::WaterBody& b : scene.footpaths.water.bodies)
             {
-                if (!park::holds(b, tile))
+                if (!park::water::holds(b, tile))
                     continue;
-                const auto within = [&](save::Tile t) { return park::holds(b, t) || std::ranges::any_of(more, [&](const save::CarvedTile& c) { return c.tile.col == t.col && c.tile.row == t.row; }); };
-                if (auto refilled = park::fill_water(g, tile, b.level, within))
+                const auto within = [&](save::Tile t) { return park::water::holds(b, t) || std::ranges::any_of(more, [&](const save::CarvedTile& c) { return c.tile.col == t.col && c.tile.row == t.row; }); };
+                if (auto refilled = park::water::fill_water(g, tile, b.level, within))
                     b = std::move(*refilled);
                 return;
             }
@@ -467,7 +467,7 @@ namespace rct3::scene
             const auto& paths = scene.footpaths.paths;
             const auto allowed = [&](save::Tile t) { return park::owned_outright(g.at(t)) && std::ranges::none_of(paths, [&](const save::PathTile& p) { return p.col == t.col && p.row == t.row && !p.elevation; }); };
             const auto& bodies = scene.footpaths.water.bodies;
-            const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return park::holds(b, *l.tile); });
+            const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return park::water::holds(b, *l.tile); });
             if (lake != bodies.end() && height < lake->level)
             {
                 // The ground clicked is under the lake: the click was on its surface.
@@ -475,7 +475,7 @@ namespace rct3::scene
                     return say(scene, kWaterRefused);
                 // Its waterfalls go with it, putting back the ground they cut.
                 save::TerrainGrid ground = g;
-                park::remove_lake(scene.footpaths.water, scene.footpaths.waterfalls, ground, *l.tile);
+                park::water::remove_lake(scene.footpaths.water, scene.footpaths.waterfalls, ground, *l.tile);
                 show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
                 start_stroke(scene);
                 take_ground(device, scene, assets, std::move(ground), false);
@@ -483,7 +483,7 @@ namespace rct3::scene
             }
             // shortcut: waterfalls of a lake raised this way keep their old heights, ask before covering them when
             // falls get a yes/no question
-            else if (auto poured = park::pour_water(scene.footpaths.water, g, *l.tile, height, allowed))
+            else if (auto poured = park::water::pour_water(scene.footpaths.water, g, *l.tile, height, allowed))
                 scene.footpaths.water = std::move(*poured);
             else
                 return say(scene, kWaterRefused);
@@ -502,7 +502,7 @@ namespace rct3::scene
             const save::Tile tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
             l.tile = tile;
             const auto& bodies = scene.footpaths.water.bodies;
-            const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return park::holds(b, tile); });
+            const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return park::water::holds(b, tile); });
             if (lake == bodies.end())
                 return;
             const auto index = static_cast<std::size_t>(lake - bodies.begin());

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/water_fill.hpp"
+#include "park/water/fill.hpp"
 
 #include "park/waterfall_making.hpp"
 
@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::water
 {
 
     namespace
@@ -188,4 +188,4 @@ namespace rct3::park
         return static_cast<std::int32_t>(std::ceil(lake->level));
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::water

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/water_ripples.hpp"
+#include "park/water/ripples.hpp"
 
 #include <cmath>
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::water;
 
 TEST_CASE("a ripple's ring widens at its speed and its crests fall as it ages")
 {

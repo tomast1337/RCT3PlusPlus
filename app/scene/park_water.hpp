@@ -19,8 +19,8 @@
 #include "park/camera.hpp"
 #include "park/pools/waves.hpp"
 #include "park/terrain_mesh.hpp"
-#include "park/water_ripples.hpp"
-#include "park/water_surface.hpp"
+#include "park/water/ripples.hpp"
+#include "park/water/surface.hpp"
 #include "render/device.hpp"
 #include "save/model/world.hpp"
 
@@ -55,7 +55,7 @@ namespace rct3::scene
 
     struct ParkWater
     {
-        park::WaterSurface surface;
+        park::water::WaterSurface surface;
         render::BufferHandle vertices;
         render::PipelineHandle shaded; ///< The water shader; none where the device has not got it
         render::PipelineHandle simple; ///< Lit and see-through
@@ -67,11 +67,11 @@ namespace rct3::scene
         render::TextureHandle behind; ///< The opaque scene and its depth, copied from the screen
         render::Extent behind_size;
         bool have_behind = false; ///< The copy this frame worked
-        park::Ripples ripples;
+        park::water::Ripples ripples;
         std::vector<park::pools::PoolWave> pool_waves; ///< The wave machines', then those drawn on the water, for the shader
         WaterLook look;
-        std::vector<float> levels;              ///< With a reflection this frame, by index in `reflections`
-        std::optional<park::WaterAbove> eye_in; ///< The water the eye is under this frame
+        std::vector<float> levels;                     ///< With a reflection this frame, by index in `reflections`
+        std::optional<park::water::WaterAbove> eye_in; ///< The water the eye is under this frame
     };
 
     /// Makes the water's buffers, pictures and pipelines. `layout` is that of park::GroundVertex.

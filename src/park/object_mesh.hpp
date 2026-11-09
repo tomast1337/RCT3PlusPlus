@@ -93,7 +93,7 @@ namespace rct3::park
         bool out = false; ///< Falls to nothing at its end
         bool end = false; ///< Falls to nothing over the last stretch between its water's nodes
     };
-    /// How some objects' flowing water fades along it, by object id (water_flow.hpp).
+    /// How some objects' flowing water fades along it, by object id (water/flow.hpp).
     using FlowFades = std::map<std::uint64_t, FlowFade>;
     /// The objects vandals have broken, by id; those with a broken look are drawn with it.
     using Broken = std::set<std::uint64_t>;

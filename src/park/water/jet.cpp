@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/water_jet.hpp"
+#include "park/water/jet.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <numbers>
 
-namespace rct3::park
+namespace rct3::park::water
 {
 
     namespace
@@ -188,4 +188,4 @@ namespace rct3::park
         }
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::water

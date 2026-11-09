@@ -17,7 +17,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::water
 {
 
     inline constexpr float kJetGravity = 9.81f; ///< Metres a second squared
@@ -98,4 +98,4 @@ namespace rct3::park
     /// for `seconds`. A jet too thin to see from afar is drawn wider and fainter.
     void jet_mesh(std::span<const WaterJet* const> jets, glm::vec3 eye, float seconds, ObjectMesh& mesh);
 
-} // namespace rct3::park
+} // namespace rct3::park::water

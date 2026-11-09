@@ -35,7 +35,7 @@
 // the same way, with the cliff faces the terrain files list. Closing the panel puts the tool away.
 //
 // Water: a click on the ground pours a lake up to the height clicked, rounded up to a whole unit, so clicking
-// higher up a bank fills it deeper; it spreads over every tile it can reach below that (park/water_fill.hpp)
+// higher up a bank fills it deeper; it spreads over every tile it can reach below that (park/water/fill.hpp)
 // and takes in the lakes it meets. A click on a lake takes it away, with its waterfalls. Water only goes on land
 // the park owns outright without paths on the ground, and never under a higher lake; a message says when it
 // cannot. Water is free.

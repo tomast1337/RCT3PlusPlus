@@ -80,9 +80,9 @@ namespace rct3::park
         std::int32_t bone = -1;
         bool board = false; ///< A board for words (ovl::kMeshFlagBoard)
         /// Its picture slides along it: a lift piece's chain as the lift runs (chain_lifts.hpp), or a slide's
-        /// flowing water (water_flow.hpp, whose parts the scene tells by their picture)
+        /// flowing water (water/flow.hpp, whose parts the scene tells by their picture)
         bool chain = false;
-        /// Of a slide's flowing water strip (water_flow.hpp), by vertex: how far along the strip it is the way the
+        /// Of a slide's flowing water strip (water/flow.hpp), by vertex: how far along the strip it is the way the
         /// water runs, 0 to 1, by the water's spline nodes; empty for other parts.
         std::vector<float> flow { };
         float flow_last = 0; ///< Of such a strip, the share of it from its last node but one to its end
@@ -195,7 +195,7 @@ namespace rct3::park
         bool water_only = false;                         ///< A ride that stands only on water
         bool fenced_round = false;                       ///< A track piece fenced round its footprint, a tower's base
         bool paved_under = false;                        ///< A track piece whose footprint is paved, a tower's base
-        bool flows = false;                              ///< A track piece water flows along (water_flow.hpp)
+        bool flows = false;                              ///< A track piece water flows along (water/flow.hpp)
         PathFeature feature = PathFeature::None;         ///< What a path feature is for
         std::optional<float> water_capacity { };         ///< A flower bed's water when full; none for what is not watered
         bool no_entry = false;                           ///< A sign that can be set to forbid entry
@@ -384,7 +384,7 @@ namespace rct3::park
         /// Adds the meshes of static shape `name`, looked for near `near`, to `level`; false when it is missing.
         const ovl::StaticShape* add_static(ModelLevel& level, std::string_view name, std::string_view near);
         /// Adds to every level of `model` the water running down it, when it is a track piece of the file at
-        /// `path` that carries water (see water_flow.hpp).
+        /// `path` that carries water (see water/flow.hpp).
         void add_flow(ObjectModel& model, std::string_view symbol, std::string_view path);
     };
 

@@ -8,8 +8,8 @@
 #include "park/person_mesh.hpp"
 #include "park/person_motions.hpp"
 #include "park/sun_view.hpp"
-#include "park/water_flow.hpp"
-#include "park/water_jet.hpp"
+#include "park/water/flow.hpp"
+#include "park/water/jet.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "profiling/profiler.hpp"
 #include "scene/park_footpaths.hpp"
@@ -147,7 +147,7 @@ namespace rct3::scene
                 {
                     if (pass ? batch.blend != *pass : batch.blend == park::PartBlend::Blended || batch.blend == park::PartBlend::DepthOnly)
                         continue;
-                    if (shaded_flow && &shown == &scene.steady_objects && batch.texture == park::kFlowPicture)
+                    if (shaded_flow && &shown == &scene.steady_objects && batch.texture == park::water::kFlowPicture)
                         continue;
                     // Parts painted like the ground take the ground's pictures (see object_mesh.hpp).
                     const ui::UiTextures& textures = scene.object_textures.contains(batch.texture) ? scene.object_textures : scene.ground_textures;
@@ -165,7 +165,7 @@ namespace rct3::scene
                     draw.address = render::AddressMode::Repeat;
                     draw.light = light;
                     draw.extra_textures[1] = relief_of(textures, batch.texture);
-                    draw.v_shift = batch.texture == park::kFlowPicture ? park::flow_scroll(scene.park_clock, batch.chain) : park::chain_scroll(scene.chain_shifts, batch.chain);
+                    draw.v_shift = batch.texture == park::water::kFlowPicture ? park::water::flow_scroll(scene.park_clock, batch.chain) : park::chain_scroll(scene.chain_shifts, batch.chain);
                     device.draw(draw);
                 }
             };
@@ -264,12 +264,12 @@ namespace rct3::scene
             if (parts.water)
                 profiling::section("Water", [&] {
                     draw_park_water(device, scene.water, transform, light, parts.eye, scene.park_clock, parts.shaded_water);
-                    const auto flow = scene.object_textures.find(park::kFlowPicture);
+                    const auto flow = scene.object_textures.find(park::water::kFlowPicture);
                     if (!shaded_flow || !scene.steady_objects.indices || flow == scene.object_textures.end())
                         return;
                     for (const park::ObjectBatch& batch : scene.steady_objects.batches)
                     {
-                        if (batch.texture != park::kFlowPicture)
+                        if (batch.texture != park::water::kFlowPicture)
                             continue;
                         render::DrawCommand draw { .pipeline = scene.water.shaded, .vertices = { scene.steady_objects.vertices }, .indices = { scene.steady_objects.indices }, .index_type = render::IndexType::U32, .count = batch.count, .first = batch.first, .transform = transform };
                         draw.texture = flow->second.handle;
@@ -278,7 +278,7 @@ namespace rct3::scene
                         draw.light = light;
                         draw.extra_textures = { render::TextureHandle { }, render::TextureHandle { }, render::TextureHandle { }, scene.water.ripple_texture };
                         draw.water = { .eye = parts.eye, .time = scene.park_clock, .near = park::kNear, .far = park::kFar, .waves = scene.water.look.waves, .flow = true };
-                        draw.v_shift = park::flow_scroll(scene.park_clock, batch.chain);
+                        draw.v_shift = park::water::flow_scroll(scene.park_clock, batch.chain);
                         device.draw(draw);
                     }
                 });
@@ -608,7 +608,7 @@ namespace rct3::scene
                 // Down onto the water under the lip, or the ground with none there.
                 float below = scene.grid.height_at(lip.x, lip.z).value_or(lip.y);
                 for (float y = lip.y; y > below - 1; y -= 0.25f)
-                    if (const auto water = park::water_above(scene.water.surface, { lip.x, y, lip.z }))
+                    if (const auto water = park::water::water_above(scene.water.surface, { lip.x, y, lip.z }))
                     {
                         below = water->level;
                         break;
@@ -623,10 +623,10 @@ namespace rct3::scene
         if (!scene.footpaths.waterfalls.empty() || !scene.jets.empty() || !scene.waterfall_mesh.indices.empty())
             profiling::section("Waterfalls", [&] {
                 park::waterfall_mesh(scene.footpaths.waterfalls, scene.park_clock, scene.waterfall_mesh);
-                std::vector<const park::WaterJet*> jets;
+                std::vector<const park::water::WaterJet*> jets;
                 for (const ParkScene::Jet& jet : scene.jets)
                     jets.push_back(&jet.water);
-                park::jet_mesh(jets, park::eye(scene.camera, scene.seat), scene.park_clock, scene.waterfall_mesh);
+                park::water::jet_mesh(jets, park::eye(scene.camera, scene.seat), scene.park_clock, scene.waterfall_mesh);
             });
         profiling::section("LedSigns", [&] { roll_led_signs(device, scene); });
         // A person shows alone on a light ground, turning as the build list's pieces do; the rest in the park.

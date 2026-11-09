@@ -2,7 +2,7 @@
 #include "park/ride_placement.hpp"
 
 #include "park/boundary_fence.hpp"
-#include "park/water_fill.hpp"
+#include "park/water/fill.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
@@ -203,7 +203,7 @@ namespace rct3::park
         {
             for (std::int32_t c = site.col; c < site.col + site.span[0]; ++c)
             {
-                const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return holds(b, { c, r }); });
+                const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return water::holds(b, { c, r }); });
                 if (water_only && lake == bodies.end())
                     return SiteProblem::OffWater;
                 if (!water_only && lake != bodies.end() && lake->level > static_cast<float>(site.height))

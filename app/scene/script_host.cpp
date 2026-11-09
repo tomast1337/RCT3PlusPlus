@@ -5,7 +5,7 @@
 #include "logging/log.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
-#include "park/water_fill.hpp"
+#include "park/water/fill.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "platform/window.hpp"
 #include "random/generator.hpp"
@@ -521,7 +521,7 @@ namespace rct3::scene
             const save::TerrainCell& c = g.at(col, row);
             Json tile { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff }, { "owned", park::owned_outright(c) }, { "enclosure", park_->enclosures.at(col, row) } };
             for (const save::WaterBody& b : park_->footpaths.water.bodies)
-                if (park::holds(b, { col, row }))
+                if (park::water::holds(b, { col, row }))
                     tile["water"] = b.level;
             return tile;
         });

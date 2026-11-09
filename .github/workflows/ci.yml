@@ -16,6 +16,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "0 5 * * 1" # Mondays, so the sanitizer job runs even in weeks without a push to main
 
 permissions:
   contents: read
@@ -34,13 +36,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        cache: [plain, sanitize]
+        # The sanitizer build takes 15+ minutes and often hit the timeout, so pull requests skip it; main and the
+        # weekly run keep it. Run `./nob test --sanitize` locally for a change that needs it.
+        exclude:
+          - cache: ${{ github.event_name == 'pull_request' && 'sanitize' || 'none' }}
         include:
-          - name: build and test
-            cache: plain
+          - cache: plain
+            name: build and test
             flags: ""
           # The tools are built and linked by the plain job already; this one only needs the tests.
-          - name: build and test (ASan + UBSan)
-            cache: sanitize
+          - cache: sanitize
+            name: build and test (ASan + UBSan)
             flags: "--sanitize --no-tools"
     steps:
       - uses: actions/checkout@v4

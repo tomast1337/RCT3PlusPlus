@@ -16,6 +16,9 @@
 // The audio module (src/audio/, vendored miniaudio) is compiled into the tests and the tools that use it
 // only. It needs no audio device or system audio package.
 //
+// Platform files: a source whose name (up to its first dot) ends in _windows is built only when nob itself is
+// built for Windows, and one ending in _ffmpeg only when it is not; Windows skips the FFmpeg cut too.
+//
 // -j N (or --jobs N) limits how many compilers run at once, to keep a build from taking the whole machine;
 // without it, NOB_JOBS does the same, and by default there is one per core, fewer when memory is short.
 //
@@ -341,10 +344,26 @@ namespace
         return output;
     }
 
+    // find_files without the other platform's files (see the top of this file). Every source list goes through it.
+    std::vector<fs::path> find_sources(const fs::path& dir, std::string_view ext)
+    {
+#ifdef _WIN32
+        constexpr std::string_view kOtherPlatform = "_ffmpeg";
+#else
+        constexpr std::string_view kOtherPlatform = "_windows";
+#endif
+        auto out = find_files(dir, ext);
+        std::erase_if(out, [&](const fs::path& p) {
+            const std::string name = p.filename().string();
+            return std::string_view(name).substr(0, name.find('.')).ends_with(kOtherPlatform);
+        });
+        return out;
+    }
+
     std::vector<fs::path> core_sources(const Config& cfg)
     {
         std::vector<fs::path> out;
-        for (auto& p : find_files("src", ".cpp"))
+        for (auto& p : find_sources("src", ".cpp"))
         {
             if (!is_audio_source(p))
                 out.push_back(std::move(p));
@@ -396,7 +415,7 @@ namespace
     bool compile_audio(const Config& cfg, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
     {
         std::vector<fs::path> sources;
-        for (auto& p : find_files("src", ".cpp"))
+        for (auto& p : find_sources("src", ".cpp"))
         {
             if (is_audio_source(p))
                 sources.push_back(std::move(p));
@@ -408,6 +427,9 @@ namespace
         vendored.compile_flags.push_back("-w");
         if (!compile(vendored, { "third_party/miniaudio/miniaudio_impl.cpp" }, objects, database))
             return false;
+#ifdef _WIN32
+        return true;
+#else
         // The FFmpeg cut and our parts of it: the sources its sources.txt lists (the others are included by
         // them), with the defines FFmpeg's own build compiles them with.
         std::vector<fs::path> ffmpeg;
@@ -423,6 +445,7 @@ namespace
             return false;
         }
         return compile(c_config(cfg, { "-Ithird_party/ffmpeg", "-DHAVE_AV_CONFIG_H", "-D_ISOC11_SOURCE", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-D_POSIX_C_SOURCE=200112", "-D_XOPEN_SOURCE=600" }), ffmpeg, objects, database);
+#endif
     }
 
     // Vendored code every target links: the stb_truetype and stb_image implementation units and the QuickJS-NG
@@ -469,7 +492,7 @@ namespace
         if (!compile_audio(cfg, audio_objects, database))
             return false;
 
-        for (const auto& main_cpp : tools ? find_files("tools", ".cpp") : std::vector<fs::path> { })
+        for (const auto& main_cpp : tools ? find_sources("tools", ".cpp") : std::vector<fs::path> { })
         {
             const bool audio = uses_audio(main_cpp);
             std::vector<fs::path> objects = lib_objects;
@@ -485,14 +508,14 @@ namespace
         // with the audio module.
         std::vector<fs::path> test_objects = lib_objects;
         test_objects.insert(test_objects.end(), audio_objects.begin(), audio_objects.end());
-        if (!compile(cfg, find_files("tests", ".cpp"), test_objects, database))
+        if (!compile(cfg, find_sources("tests", ".cpp"), test_objects, database))
             return false;
         if (!link(with_audio_link(cfg), cfg.test_binary(), test_objects))
             return false;
 
         // The app's sources too, as build_app compiles them, so editors find their headers.
         const Config app = app_config(cfg);
-        for (const auto& source : find_files("app", ".cpp"))
+        for (const auto& source : find_sources("app", ".cpp"))
             database.push_back({ source, compile_cmd(app, source, object_path(app, source)).args });
         write_compile_commands(database);
         return true;
@@ -560,7 +583,7 @@ namespace
             return false;
         if (!compile_audio(cfg, objects, ignored))
             return false;
-        if (!compile(app, find_files("app", ".cpp"), objects, ignored))
+        if (!compile(app, find_sources("app", ".cpp"), objects, ignored))
             return false;
 
         binary = cfg.out_dir() / "rct3pp";
@@ -584,7 +607,7 @@ namespace
             return false;
 
         std::vector<fs::path> audio_objects;
-        for (const auto& source : find_files("fuzz", ".cpp"))
+        for (const auto& source : find_sources("fuzz", ".cpp"))
         {
             const bool audio = uses_audio(source);
             if (audio && audio_objects.empty() && !compile_audio(cfg, audio_objects, database))
@@ -640,7 +663,7 @@ namespace
         {
             for (const char* dir : { "src", "tools", "fuzz" })
             {
-                const auto found = find_files(dir, ".cpp");
+                const auto found = find_sources(dir, ".cpp");
                 files.insert(files.end(), found.begin(), found.end());
             }
         }

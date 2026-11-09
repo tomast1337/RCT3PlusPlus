@@ -16,7 +16,7 @@
 // the option on, the pointer at an edge of the screen slides the view that way. Nothing moves
 // the camera while the pointer is over a window. A click on an attraction opens the
 // round panel that tells about it; a click on open water starts a ripple there. The Files menu's options and
-// about items are left for the owner to open (park_windows.hpp).
+// about items are left for the owner to open (park_files_menu.hpp).
 //
 // The scene borrows the interface's skins, strings and fonts from the front end, which must outlive it.
 #pragma once
@@ -842,7 +842,7 @@ namespace rct3::scene
         std::optional<ui::SceneryTab> room_tab;                         ///< Last open in a changing room's window
         std::vector<park::AttractionRef> demolish_asked;                ///< Waiting on the question whether to pull them down
         std::vector<std::string> prizes;                                ///< Text keys told one box at a time, oldest first: prizes won, deletes refused
-        std::vector<ui::ToolItem> window_requests;                      ///< Files menu items that open a window the owner opens (park_windows.hpp)
+        std::vector<ui::ToolItem> window_requests;                      ///< Files menu items that open a window the owner opens (park_files_menu.hpp)
         std::unique_ptr<ui::OptionsSession> options;                    ///< The options window over the park, once opened
         std::filesystem::path file;                                     ///< The park file loaded, whose name saving offers
         std::vector<std::byte> base;                                    ///< The original park file the park started from, kept for saving

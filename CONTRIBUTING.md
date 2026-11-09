@@ -148,6 +148,10 @@ Security problems (for example a file that crashes the parser or reads out of bo
    bytes gets a fuzz target in `fuzz/`.
 3. Follow the design and code style in [AGENTS.md](AGENTS.md): plain data and free functions where they fit,
    bounds-checked parsing that returns `std::expected`, `std::format` for text, no new warnings.
+   Lay code out by feature: a feature's data and its functions in one `.hpp`/`.cpp` pair, three or more
+   files with one prefix in a folder without the prefix (`park/track/pieces.hpp`, not
+   `park/track_pieces.hpp`), and the namespace following the folder (`src/park/track/` is
+   `rct3::park::track`, `app/a/b/` is `rct3::a::b`).
 4. Add tests for new behaviour under `tests/`, mirroring the `src/` path. Test inputs are built in code,
    never read from a game install.
 5. Commit messages follow `type(scope): subject` (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`),

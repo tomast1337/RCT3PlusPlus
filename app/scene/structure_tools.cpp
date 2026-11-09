@@ -256,7 +256,7 @@ namespace rct3::scene
         }
         if (t.solids_of != scene.objects.size())
         {
-            t.solids = park::solid_tiles(scene.objects, scene.models, scene.grid);
+            t.solids = park::path::solid_tiles(scene.objects, scene.models, scene.grid);
             t.solids_of = scene.objects.size();
         }
         std::vector<save::PlacedObject> placed = park::structure_objects(*t.structure, *t.at, t.turn, t.height, scene.models);

@@ -35,7 +35,7 @@ namespace rct3::scene
 
     namespace
     {
-        // Prices, in hundredths: painting one tile (moving the ground is park::kShapeCost).
+        // Prices, in hundredths: painting one tile (moving the ground is park::ground::kShapeCost).
         constexpr std::int32_t kPaintCost = 50;
         constexpr float kSmoothRate = 2.5f;   ///< Of the way to where a smoothing brush wants the ground, a second
         constexpr float kSmoothPass = 0.05f;  ///< Seconds between smoothing passes

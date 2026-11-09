@@ -4,7 +4,7 @@
 #include "park/ground/paths.hpp"
 #include "park/item_category.hpp"
 #include "park/object_placement.hpp"
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 
 #include <doctest/doctest.h>
 #include <format>
@@ -99,6 +99,6 @@ TEST_CASE("paths on the ground and on decks do not join across a wall")
         decks.push_back(p);
     }
     // Joined both ways, a straight; parted on +X, an end.
-    CHECK(choose_deck(decks[1], decks, grid).piece == DeckPiece::StraightA);
-    CHECK(choose_deck(decks[1], decks, grid, walls).piece == DeckPiece::TurnU);
+    CHECK(path::choose_deck(decks[1], decks, grid).piece == path::DeckPiece::StraightA);
+    CHECK(path::choose_deck(decks[1], decks, grid, walls).piece == path::DeckPiece::TurnU);
 }

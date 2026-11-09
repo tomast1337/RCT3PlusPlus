@@ -26,7 +26,7 @@
 #include <span>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     /// What a stroke over some tiles would do.
@@ -83,4 +83,4 @@ namespace rct3::park
     /// door's height.
     void start_from_door(FootpathBuilder& builder, const save::PlacementSpot& door, Side side);
 
-} // namespace rct3::park
+} // namespace rct3::park::path

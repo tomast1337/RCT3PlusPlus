@@ -3,8 +3,8 @@
 
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
-#include "park/path_clearance.hpp"
-#include "park/path_decks.hpp"
+#include "park/path/clearance.hpp"
+#include "park/path/decks.hpp"
 #include "park/queue_fences.hpp"
 #include "park/terrain_mesh.hpp"
 
@@ -47,7 +47,7 @@ namespace rct3::park
         /// corners on the edge it leaves by take its end, the others its start.
         template<typename Visit> void piece_corners(const NextPiece& piece, Side heading, Visit visit)
         {
-            const auto exit = edge_corners(heading);
+            const auto exit = path::edge_corners(heading);
             for (std::size_t corner = 0; corner < 4; ++corner)
             {
                 const bool leaving = corner == exit[0] || corner == exit[1];
@@ -71,8 +71,8 @@ namespace rct3::park
         std::array<float, 4> heights = grid.at(piece.spot.col, piece.spot.row).corners;
         if (!piece.ground || piece.cut)
             piece_corners(piece, heading, [&](std::size_t corner, float height) { heights[corner] = height; });
-        const auto front = edge_corners(heading);
-        const auto right = edge_corners(heading.right());
+        const auto front = path::edge_corners(heading);
+        const auto right = path::edge_corners(heading.right());
         for (std::size_t corner = 0; corner < 4; ++corner)
         {
             GroundVertex& v = mesh.vertices.emplace_back();
@@ -130,7 +130,7 @@ namespace rct3::park
         return piece;
     }
 
-    LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids)
+    LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const path::SolidTiles&> solids)
     {
         const auto spot = next_spot(builder);
         if (!spot)
@@ -154,7 +154,7 @@ namespace rct3::park
             if (other_low < high + kPathHeadroom && low < other_high + kPathHeadroom)
                 return LayProblem::Occupied;
         }
-        if (solids && blocked(*solids, piece->spot, low, high))
+        if (solids && path::blocked(*solids, piece->spot, low, high))
             return LayProblem::Blocked;
         return LayProblem::None;
     }
@@ -205,7 +205,7 @@ namespace rct3::park
                 return false;
             const save::PathElevation& e = *p.elevation;
             // A queue's direction is its line's business; any queue piece of the same shape is the same.
-            return e.slope == stored && e.quantised_height == piece.start && (stored == 0 || stored == save::kSlopeOnGround || builder.queue || p.direction == stored_direction(builder.heading));
+            return e.slope == stored && e.quantised_height == piece.start && (stored == 0 || stored == save::kSlopeOnGround || builder.queue || p.direction == path::stored_direction(builder.heading));
         });
         if (found == paths.end())
             return std::nullopt;
@@ -225,13 +225,13 @@ namespace rct3::park
         {
             p.kind = save::PathKind::Queue;
             p.queue = save::PathQueueInfo { };
-            p.queue->start_direction = stored_direction(builder.heading);
-            p.queue->end_direction = stored_direction(builder.heading.opposite());
+            p.queue->start_direction = path::stored_direction(builder.heading);
+            p.queue->end_direction = path::stored_direction(builder.heading.opposite());
             // The tile laid before now leads on to this one, on the same line and with the same railing.
             const auto last = std::ranges::find(paths, before, &save::PathTile::id);
             if (before != 0 && last != paths.end() && last->queue)
             {
-                last->queue->start_direction = stored_direction(builder.heading);
+                last->queue->start_direction = path::stored_direction(builder.heading);
                 p.queue->queue_line_ref = last->queue->queue_line_ref;
                 p.queue->fence_symbol = last->queue->fence_symbol;
                 p.queue->fence_overlay = last->queue->fence_overlay;
@@ -252,7 +252,7 @@ namespace rct3::park
         {
             if (!builder.queue)
                 p.kind = save::PathKind::Flying;
-            p.direction = stored_direction(builder.heading);
+            p.direction = path::stored_direction(builder.heading);
             p.elevation->slope = stored_slope(builder.slope);
             p.elevation->scenery_ref = deck;
             p.elevation->underground = piece.tunnel;
@@ -320,7 +320,7 @@ namespace rct3::park
         return static_cast<PathSlope>(static_cast<std::uint8_t>(control) - static_cast<std::uint8_t>(PathControl::SteepDown));
     }
 
-    std::array<bool, kPathControlCount> fitting_controls(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids)
+    std::array<bool, kPathControlCount> fitting_controls(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const path::SolidTiles&> solids)
     {
         FootpathBuilder trial = builder;
         const auto fits = [&](Side heading, PathSlope slope) {

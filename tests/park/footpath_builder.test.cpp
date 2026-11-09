@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/footpath_builder.hpp"
 
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 
 #include <algorithm>
 #include <doctest/doctest.h>
@@ -334,19 +334,19 @@ TEST_CASE("queue tiles lead guests back along the trail")
     (void)press(b, PathControl::TurnLeft);
     CHECK(lay_path(b, paths, *next_piece(b, g), "QueueSet", 11, 0));
     CHECK(paths.back().row == 2);
-    CHECK(paths[0].queue->start_direction == stored_direction(Side { 0 }));
+    CHECK(paths[0].queue->start_direction == path::stored_direction(Side { 0 }));
     CHECK(paths.back().queue->queue_line_ref == 5);
     (void)press(b, PathControl::TurnRight);
     CHECK(lay_path(b, paths, *next_piece(b, g), "QueueSet", 12, 0));
-    CHECK(paths[1].queue->start_direction == stored_direction(Side { 1 }));
-    CHECK(paths[1].queue->end_direction == stored_direction(Side { 2 }));
+    CHECK(paths[1].queue->start_direction == path::stored_direction(Side { 1 }));
+    CHECK(paths[1].queue->end_direction == path::stored_direction(Side { 2 }));
 
     // Going up off the ground makes a raised queue piece drawn by its own object.
     b.slope = PathSlope::Up;
     CHECK(lay_path(b, paths, *next_piece(b, g), "QueueSet", 13, 14));
     CHECK(paths.back().elevation->slope == 4);
     CHECK(paths.back().elevation->scenery_ref == 14);
-    CHECK(paths.back().direction == stored_direction(Side { 1 }));
+    CHECK(paths.back().direction == path::stored_direction(Side { 1 }));
 }
 
 TEST_CASE("dragging steps the slope one at a time, no further than stairs")

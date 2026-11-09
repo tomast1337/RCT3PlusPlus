@@ -106,11 +106,11 @@ namespace rct3::simulation
     /// (transport boats calling at the course's other stations on the way), and the park's water for them to
     /// float on, closed where `solids` stand in it. Rides without a course keep their timing alone; those whose track goes round follow it as trains.
     /// A ride that has boats already gets them afresh, all back at its dock; the water is taken again as it is now.
-    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::SolidTiles& solids = { });
+    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::path::SolidTiles& solids = { });
 
     /// Takes again the water the park's boats float on, `water` closed where `solids` stand in it but open at each
     /// boat ride's dock, as after the park's paths or water change. Nothing while no ride has boats.
-    void boat_water(SimWorld& world, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::SolidTiles& solids = { });
+    void boat_water(SimWorld& world, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::path::SolidTiles& solids = { });
 
     /// Links the rides of `added` whose stations, as their courses in `courses` run through them, stand on tiles
     /// side by side on the same level, so trains told to may leave them together.

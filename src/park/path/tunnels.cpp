@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/path_tunnels.hpp"
+#include "park/path/tunnels.hpp"
 
 #include "park/ground/paths.hpp"
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 #include "park/queue_fences.hpp"
 
 #include <algorithm>
@@ -10,7 +10,7 @@
 #include <map>
 #include <utility>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     std::vector<GroundOpening> tunnel_hollows(std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
@@ -122,4 +122,4 @@ namespace rct3::park
         return mesh;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::path

@@ -140,6 +140,6 @@ TEST_CASE("a structure fits on the park's own land, clear of solid items and pat
     g.cells[3 * 8 + 4].flags = 0;
     CHECK(structure_problem(s, { 4, 3 }, { }, at({ 4, 3 }), m, { }, { }, g) == StructureProblem::NotOwned);
     const std::vector<save::PlacedObject> standing { item("tree", 3, 3, 0) };
-    CHECK(structure_problem(s, { 3, 3 }, { }, at({ 3, 3 }), m, solid_tiles(standing, m, g), { }, g) == StructureProblem::Blocked);
-    CHECK(structure_problem(s, { 3, 3 }, { }, structure_objects(s, { 3, 3 }, ModelTurn { 0 }, 8, m), m, solid_tiles(standing, m, g), { }, g) == StructureProblem::None);
+    CHECK(structure_problem(s, { 3, 3 }, { }, at({ 3, 3 }), m, path::solid_tiles(standing, m, g), { }, g) == StructureProblem::Blocked);
+    CHECK(structure_problem(s, { 3, 3 }, { }, structure_objects(s, { 3, 3 }, ModelTurn { 0 }, 8, m), m, path::solid_tiles(standing, m, g), { }, g) == StructureProblem::None);
 }

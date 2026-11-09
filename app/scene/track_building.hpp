@@ -27,7 +27,7 @@
 #include "park/moving_meshes.hpp"
 #include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
-#include "park/path_clearance.hpp"
+#include "park/path/clearance.hpp"
 #include "park/ride_cars.hpp"
 #include "park/track/choice.hpp"
 #include "park/track/completion.hpp"
@@ -219,7 +219,7 @@ namespace rct3::scene
 
     /// What boats cannot sail through or under: what stands in the park's water or hangs low over it, paths' decks
     /// among them.
-    [[nodiscard]] park::SolidTiles boat_obstacles(const ParkScene& scene);
+    [[nodiscard]] park::path::SolidTiles boat_obstacles(const ParkScene& scene);
 
     /// Gives the tracked ride `index` new trains as fit_trains does (its kind's first when it has none), stood at
     /// its station, and has the park run them and draw their cars. False, and nothing changed, while riders are

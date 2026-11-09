@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// How track meets the ground. Each solid square of a piece, with the riders' room past it (path_clearance.hpp),
+// How track meets the ground. Each solid square of a piece, with the riders' room past it (path/clearance.hpp),
 // either stands wholly over its tile's ground, lies under at least kGroundCover of it all round, as in a
 // tunnel, or passes into it. Where it passes into it,
 // the tile's ground is cut down to the square's floor: sharply, the tile's own corners only, so the trench round
@@ -8,7 +8,7 @@
 // it. Cutting leaves the ground as it is when the piece is taken away again.
 //
 // A piece in a tunnel hollows the ground round each of its squares, up to the square's top, as a tunnel path
-// does (path_tunnels.hpp): it opens where the ground beside it lies lower, as at a cut or a cliff, and is
+// does (path/tunnels.hpp): it opens where the ground beside it lies lower, as at a cut or a cliff, and is
 // lined. A ride, stall or ride door buried the same way hollows a cave round it alike. Nothing in a park's file
 // marks such a piece, so saved parks' tunnels and caves are found the same way.
 //

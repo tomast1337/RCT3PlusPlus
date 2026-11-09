@@ -26,7 +26,7 @@ namespace rct3::park
             return std::ranges::any_of(paths, [&](const save::PathTile& p) { return p.col == col && p.row == row; });
         }
 
-        SiteProblem tile_problem(std::int32_t col, std::int32_t row, std::int32_t height, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles& solids)
+        SiteProblem tile_problem(std::int32_t col, std::int32_t row, std::int32_t height, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const path::SolidTiles& solids)
         {
             if (!grid.contains(col, row) || !owned_outright(grid.at(col, row)))
                 return SiteProblem::NotOwned;
@@ -36,7 +36,7 @@ namespace rct3::park
             // check against once their models' heights are read.
             if (const auto spans = solids.tiles.find(static_cast<std::uint32_t>(row) << 16 | static_cast<std::uint32_t>(col)); spans != solids.tiles.end())
             {
-                if (std::ranges::any_of(spans->second, [&](const SolidSpan& s) { return s.high > static_cast<float>(height); }))
+                if (std::ranges::any_of(spans->second, [&](const path::SolidSpan& s) { return s.high > static_cast<float>(height); }))
                     return SiteProblem::Blocked;
             }
             return SiteProblem::None;
@@ -184,7 +184,7 @@ namespace rct3::park
         return site;
     }
 
-    SiteProblem site_problem(const RideSite& site, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles& solids)
+    SiteProblem site_problem(const RideSite& site, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const path::SolidTiles& solids)
     {
         for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
         {
@@ -421,7 +421,7 @@ namespace rct3::park
         return std::nullopt;
     }
 
-    SiteProblem door_problem(const RideSite& site, const DoorSpot& door, std::optional<DoorSpot> taken, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const SolidTiles& solids)
+    SiteProblem door_problem(const RideSite& site, const DoorSpot& door, std::optional<DoorSpot> taken, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const path::SolidTiles& solids)
     {
         if (taken && taken->col == door.col && taken->row == door.row)
             return SiteProblem::Blocked;

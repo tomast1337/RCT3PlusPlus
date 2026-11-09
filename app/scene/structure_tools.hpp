@@ -13,7 +13,7 @@
 #pragma once
 
 #include "park/object_mesh.hpp"
-#include "park/path_clearance.hpp"
+#include "park/path/clearance.hpp"
 #include "park/structure_placement.hpp"
 #include "save/model/structure.hpp"
 #include "scene/save_browser.hpp"
@@ -63,7 +63,7 @@ namespace rct3::scene
         bool affordable = true;
         park::ObjectMesh ghost_mesh;
         std::map<std::string, TrackModels, std::less<>> models;
-        park::SolidTiles solids;
+        park::path::SolidTiles solids;
         std::size_t solids_of = static_cast<std::size_t>(-1);
         // The windows that save and load them
         std::optional<ui::FileDialogMode> asked; ///< A window to open, until the owner opens it

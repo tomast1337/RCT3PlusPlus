@@ -13,7 +13,7 @@
 #pragma once
 
 #include "park/object_mesh.hpp"
-#include "park/path_clearance.hpp"
+#include "park/path/clearance.hpp"
 #include "park/turns.hpp"
 #include "save/model/structure.hpp"
 #include "save/model/world.hpp"
@@ -48,6 +48,6 @@ namespace rct3::park
     };
 
     /// Whether `placed` (from structure_objects) may be built.
-    [[nodiscard]] StructureProblem structure_problem(const save::Structure& structure, save::Tile at, ModelTurn turn, std::span<const save::PlacedObject> placed, const ObjectModels& models, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    [[nodiscard]] StructureProblem structure_problem(const save::Structure& structure, save::Tile at, ModelTurn turn, std::span<const save::PlacedObject> placed, const ObjectModels& models, const path::SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
 
 } // namespace rct3::park

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
@@ -13,7 +13,7 @@
 #include <tuple>
 #include <unordered_map>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     namespace
@@ -313,4 +313,4 @@ namespace rct3::park
         return changed;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::path

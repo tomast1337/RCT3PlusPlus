@@ -31,7 +31,7 @@
 #include "park/camera.hpp"
 #include "park/moving_meshes.hpp"
 #include "park/object_mesh.hpp"
-#include "park/path_clearance.hpp"
+#include "park/path/clearance.hpp"
 #include "park/ride_placement.hpp"
 #include "render/device.hpp"
 #include "scene/track_building.hpp"
@@ -99,7 +99,7 @@ namespace rct3::scene
         render::TextureHandle preview_target;
         std::uint32_t preview_pixels = 0;
         std::map<std::string, TrackModels, std::less<>> models;
-        park::SolidTiles solids;
+        park::path::SolidTiles solids;
         park::ground::GroundHolds holds;                                        ///< What keeps the ground still, worked out with the solids
         std::size_t solids_of = static_cast<std::size_t>(-1);                   ///< The scene's object count when worked out
         std::vector<std::size_t> unjoined;                                      ///< Rides placed here that the simulation does not run yet

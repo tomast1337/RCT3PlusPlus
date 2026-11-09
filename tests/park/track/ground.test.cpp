@@ -63,7 +63,7 @@ TEST_CASE("a piece passing into the ground cuts its tile's corners down to its f
     pieces[0].base_height = 2;
     CHECK(ground_cuts(pieces, models, g, false).footprint.empty());
     pieces[0].base_height = 0;
-    g.at(2, 1).corners.fill(4 + kRiderRoom + kGroundCover); // Deep enough for a tunnel
+    g.at(2, 1).corners.fill(4 + path::kRiderRoom + kGroundCover); // Deep enough for a tunnel
     CHECK(ground_cuts(pieces, models, g, false).footprint.empty());
 }
 
@@ -85,11 +85,11 @@ TEST_CASE("track keeps the riders' room clear of the ground: over its levels, or
     g.at(2, 1).corners.fill(3);
     const auto cuts = ground_cuts(pieces, models, g, false).footprint;
     REQUIRE(cuts.size() == 1);
-    CHECK(cuts[0].corners[0] == doctest::Approx(2 - kRiderRoom));
+    CHECK(cuts[0].corners[0] == doctest::Approx(2 - path::kRiderRoom));
     g.at(2, 1).corners.fill(6 + kGroundCover);
     const auto hollows = buried_hollows(pieces, models, g);
     REQUIRE(hollows.size() == 1);
-    CHECK(hollows[0].low < 2 - kRiderRoom);
+    CHECK(hollows[0].low < 2 - path::kRiderRoom);
     CHECK(hollows[0].high == doctest::Approx(6));
 }
 
@@ -137,16 +137,16 @@ TEST_CASE("a piece, ride or stall under enough ground all round hollows its tile
 {
     save::TerrainGrid g = owned_grid(5, 3);
     auto [pieces, models] = one_piece();
-    g.at(2, 1).corners.fill(4 + kRiderRoom + kGroundCover);
+    g.at(2, 1).corners.fill(4 + path::kRiderRoom + kGroundCover);
     const auto hollows = buried_hollows(pieces, models, g);
     REQUIRE(hollows.size() == 1);
     CHECK(hollows[0].col == 2);
     CHECK(hollows[0].row == 1);
     CHECK(hollows[0].low < 0);
-    CHECK(hollows[0].high == doctest::Approx(4 + kRiderRoom));
+    CHECK(hollows[0].high == doctest::Approx(4 + path::kRiderRoom));
     g.at(2, 1).corners[0] = 4.5f;
     CHECK(buried_hollows(pieces, models, g).empty());
-    g.at(2, 1).corners.fill(4 + kRiderRoom + kGroundCover);
+    g.at(2, 1).corners.fill(4 + path::kRiderRoom + kGroundCover);
     models.begin()->second.category = std::to_underlying(ItemCategory::Stall);
     CHECK(buried_hollows(pieces, models, g).size() == 1);
     models.begin()->second.category = std::to_underlying(ItemCategory::Ride);
@@ -160,17 +160,17 @@ TEST_CASE("an item lies buried only under enough ground on every tile it fills")
     save::TerrainGrid g = owned_grid(5, 3);
     auto [pieces, models] = one_piece();
     CHECK_FALSE(lies_buried(pieces, models, g));
-    g.at(2, 1).corners.fill(4 + kRiderRoom + kGroundCover);
+    g.at(2, 1).corners.fill(4 + path::kRiderRoom + kGroundCover);
     CHECK(lies_buried(pieces, models, g));
     // Partly buried, its top in the ground.
     g.at(2, 1).corners[3] = 4.5f;
     CHECK_FALSE(lies_buried(pieces, models, g));
     // Two squares, one of them under too little ground.
-    g.at(2, 1).corners.fill(4 + kRiderRoom + kGroundCover);
+    g.at(2, 1).corners.fill(4 + path::kRiderRoom + kGroundCover);
     models.begin()->second.solid.push_back(std::array<std::int32_t, 2> { 0, 4 });
     models.begin()->second.squares = { 1, 2 };
     CHECK_FALSE(lies_buried(pieces, models, g));
     for (save::TerrainCell& c : g.cells)
-        c.corners.fill(4 + kRiderRoom + kGroundCover);
+        c.corners.fill(4 + path::kRiderRoom + kGroundCover);
     CHECK(lies_buried(pieces, models, g));
 }

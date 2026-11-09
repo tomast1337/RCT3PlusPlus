@@ -28,7 +28,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     /// The room of a tile an item takes, as bits: one per quarter, as save::PlacedObject::quadrant counts them,
@@ -114,4 +114,4 @@ namespace rct3::park
     /// is placed whole or not at all.
     [[nodiscard]] std::optional<Refused> first_refused(std::span<const save::PlacedObject> items, const ObjectModels& models, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
 
-} // namespace rct3::park
+} // namespace rct3::park::path

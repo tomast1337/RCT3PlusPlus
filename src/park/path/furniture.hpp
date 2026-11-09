@@ -25,7 +25,7 @@
 #include <optional>
 #include <span>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     /// Whether an item positioned `positioning` stands on a path tile.
@@ -53,4 +53,4 @@ namespace rct3::park
     /// the middle of its tile, or against the same side, at about its height.
     [[nodiscard]] bool furniture_taken(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::PlacedObject& item, Positioning positioning);
 
-} // namespace rct3::park
+} // namespace rct3::park::path

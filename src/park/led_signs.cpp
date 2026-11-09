@@ -3,7 +3,7 @@
 
 #include "park/footpath_builder.hpp"
 #include "park/item_category.hpp"
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 #include "park/queue_fences.hpp"
 #include "strings/ascii.hpp"
 
@@ -38,17 +38,17 @@ namespace rct3::park
             const auto led_into = [&](std::size_t tile) {
                 return std::ranges::any_of(tiles, [&](std::size_t from) {
                     const save::PathTile& p = paths[from];
-                    return from != tile && stored_heading_or_bare(p.queue->end_direction).beyond({ p.col, p.row }) == save::Tile { paths[tile].col, paths[tile].row };
+                    return from != tile && path::stored_heading_or_bare(p.queue->end_direction).beyond({ p.col, p.row }) == save::Tile { paths[tile].col, paths[tile].row };
                 });
             };
             const auto head = std::ranges::find_if(tiles, [&](std::size_t tile) { return !led_into(tile); });
             if (head == tiles.end())
                 continue;
             const save::PathTile& p = paths[*head];
-            const auto side = stored_heading(p.queue->start_direction);
+            const auto side = path::stored_heading(p.queue->start_direction);
             if (!side)
                 continue;
-            spots.push_back({ line, p.col, p.row, edge_height(p, grid, *side).value_or(0), edge_turns(*side) });
+            spots.push_back({ line, p.col, p.row, path::edge_height(p, grid, *side).value_or(0), edge_turns(*side) });
         }
         return spots;
     }

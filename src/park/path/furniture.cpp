@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/path_furniture.hpp"
+#include "park/path/furniture.hpp"
 
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <limits>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     namespace
@@ -101,8 +101,8 @@ namespace rct3::park
         const float in_x = fx - static_cast<float>(tile.col);
         const float in_z = fz - static_cast<float>(tile.row);
         const bool wants_joined = positioning == Positioning::PathSideJoin;
-        const std::optional<Side> best = nearest_side({ in_x, in_z }, [&](Side side) { return joined(side) == wants_joined && (!ends_only || at_end(side)); });
-        const std::optional<Side> any = nearest_side({ in_x, in_z }, [](Side) { return true; });
+        const std::optional<Side> best = park::nearest_side({ in_x, in_z }, [&](Side side) { return joined(side) == wants_joined && (!ends_only || at_end(side)); });
+        const std::optional<Side> any = park::nearest_side({ in_x, in_z }, [](Side) { return true; });
         spot.refused = !best || forbidden;
         const Side side = best.value_or(*any);
         spot.turn = turn_facing(side);
@@ -127,4 +127,4 @@ namespace rct3::park
         });
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::path

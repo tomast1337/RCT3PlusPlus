@@ -23,8 +23,8 @@
 #include "park/object_models.hpp"
 #include "park/off_map_trees.hpp"
 #include "park/overhead.hpp"
-#include "park/path_decks.hpp"
-#include "park/path_tunnels.hpp"
+#include "park/path/decks.hpp"
+#include "park/path/tunnels.hpp"
 #include "park/person_motions.hpp"
 #include "park/queue_fences.hpp"
 #include "park/relief_maps.hpp"
@@ -1489,7 +1489,7 @@ namespace rct3::scene
             scene.footpaths.walls = park::edge_walls(scene.objects, scene.models, scene.grid);
             scene.footpaths.pavings_stale = scene.footpaths.pavings_stale || !park::track::buried_hollows(scene.objects, scene.models, scene.grid).empty() || std::ranges::any_of(scene.footpaths.paths, [&](const save::PathTile& p) {
                                                 return !p.elevation && std::ranges::any_of(park::kSides, [&](park::Side side) {
-                                                    const auto edge = park::edge_height(p, scene.grid, side);
+                                                    const auto edge = park::path::edge_height(p, scene.grid, side);
                                                     return edge && park::walled(scene.footpaths.walls, { p.col, p.row }, side, *edge);
                                                 });
                                             });

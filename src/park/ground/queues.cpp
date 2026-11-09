@@ -2,7 +2,7 @@
 #include "park/ground/queues.hpp"
 
 #include "park/ground/paths.hpp"
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -13,8 +13,8 @@ namespace rct3::park::ground
 
     QueueShape queue_shape(std::uint8_t start, std::uint8_t end) noexcept
     {
-        const auto in = stored_heading(start);
-        const auto out = stored_heading(end);
+        const auto in = path::stored_heading(start);
+        const auto out = path::stored_heading(end);
         if (!in || !out)
             return { };
         // Counted as the picture turns, from its top.

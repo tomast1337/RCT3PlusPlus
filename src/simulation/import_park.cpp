@@ -6,8 +6,8 @@
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
 #include "park/object_placement.hpp"
-#include "park/path_decks.hpp"
-#include "park/path_furniture.hpp"
+#include "park/path/decks.hpp"
+#include "park/path/furniture.hpp"
 #include "park/queue_fences.hpp"
 #include "park/terrain_mesh.hpp"
 #include "simulation/animals.hpp"
@@ -476,12 +476,12 @@ namespace rct3::simulation
         else if (path.elevation && park::ground::path_rise(path.elevation->slope) > 0)
         {
             // A ramp without a stored heading meets no edge ahead, so it keeps its flat corners.
-            if (const auto ahead = park::stored_heading(path.direction))
+            if (const auto ahead = park::path::stored_heading(path.direction))
             {
                 const park::Side behind = ahead->opposite();
-                if (const auto up = park::edge_height(path, grid, *ahead), down = park::edge_height(path, grid, behind); up && down)
+                if (const auto up = park::path::edge_height(path, grid, *ahead), down = park::path::edge_height(path, grid, behind); up && down)
                     for (const park::Side side : { *ahead, behind })
-                        for (const std::size_t k : park::edge_corners(side))
+                        for (const std::size_t k : park::path::edge_corners(side))
                             corners[k] = side == *ahead ? *up : *down;
             }
         }
@@ -491,7 +491,7 @@ namespace rct3::simulation
         {
             open = 0;
             for (const park::Side side : park::kSides)
-                if (park::edge_height(path, grid, side))
+                if (park::path::edge_height(path, grid, side))
                     open |= static_cast<std::uint8_t>(1U << simulation::network_side(side));
         }
         world.paths.set_corners(id, corners, open);
@@ -1501,7 +1501,7 @@ namespace rct3::simulation
         return added;
     }
 
-    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::SolidTiles& solids)
+    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::path::SolidTiles& solids)
     {
         auto& r = world.registry;
         bool any = false;
@@ -1533,7 +1533,7 @@ namespace rct3::simulation
             boat_water(world, grid, water, solids);
     }
 
-    void boat_water(SimWorld& world, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::SolidTiles& solids)
+    void boat_water(SimWorld& world, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::path::SolidTiles& solids)
     {
         auto& r = world.registry;
         if (r.view<const Boats>().empty())

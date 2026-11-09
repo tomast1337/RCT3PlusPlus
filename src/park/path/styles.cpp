@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/path_styles.hpp"
+#include "park/path/styles.hpp"
 
 #include "strings/ascii.hpp"
 
@@ -7,7 +7,7 @@
 #include <format>
 #include <system_error>
 
-namespace rct3::park
+namespace rct3::park::path
 {
 
     namespace
@@ -123,4 +123,4 @@ namespace rct3::park
         return styles;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::path

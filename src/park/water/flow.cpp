@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/water_flow.hpp"
+#include "park/water/flow.hpp"
 
 #include "ovl/overlay.hpp"
 #include "ovl/texture.hpp"
@@ -10,7 +10,7 @@
 #include <cmath>
 #include <format>
 
-namespace rct3::park
+namespace rct3::park::water
 {
 
     namespace
@@ -174,4 +174,4 @@ namespace rct3::park
         return std::unexpected(std::format("{} is not in {}", name, file.string()));
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::water

@@ -2,7 +2,7 @@
 #include "scene/park_rain.hpp"
 
 #include "logging/log.hpp"
-#include "park/water_flow.hpp"
+#include "park/water/flow.hpp"
 #include "random/generator.hpp"
 
 #include <algorithm>
@@ -59,7 +59,7 @@ namespace rct3::scene
         const auto file = install.find(kRainFile);
         if (!file)
             return;
-        const auto image = park::load_flow_picture(*file, kRainTexture);
+        const auto image = park::water::load_flow_picture(*file, kRainTexture);
         if (!image)
         {
             logging::logger("weather").warning("no rain: {}", image.error());

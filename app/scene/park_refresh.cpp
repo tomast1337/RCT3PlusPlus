@@ -7,7 +7,7 @@
 #include "park/object_pick.hpp"
 #include "park/person_motions.hpp"
 #include "park/ride_cars.hpp"
-#include "park/water_flow.hpp"
+#include "park/water/flow.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -541,7 +541,7 @@ namespace rct3::scene
                             {
                                 yaw = *turn;
                                 // The lower of the two arcs that land on them, else the farthest throw.
-                                const float g = park::kJetGravity;
+                                const float g = park::water::kJetGravity;
                                 const float v2 = kSpeed * kSpeed;
                                 const float room = v2 * v2 - g * (g * across * across + 2 * local.y * v2);
                                 pitch = room >= 0 ? std::atan((v2 - std::sqrt(room)) / (g * across)) : std::numbers::pi_v<float> / 4;
@@ -641,10 +641,10 @@ namespace rct3::scene
                     {
                         const glm::vec3 out(at * glm::vec4(nozzle, 1));
                         const auto landing = std::ranges::min(b->second.nozzles | std::views::transform([&](const glm::vec3& n) { return glm::vec3(into * glm::vec4(n, 1)); }), { }, [&](const glm::vec3& n) { return glm::distance(n, out + step); });
-                        if (const auto thrown = park::throw_to(out, landing, kJumpAngle))
+                        if (const auto thrown = park::water::throw_to(out, landing, kJumpAngle))
                         {
                             // Chosen by eye: a thin, even stream.
-                            ParkScene::Jet& jet = scene.jets.emplace_back(ParkScene::Jet { .object = from, .to = to, .pours = scene.park_clock + kPour, .lands = scene.park_clock + thrown->seconds + kPour, .water = park::WaterJet(thrown->seconds + kPour, 0.04f, 0) });
+                            ParkScene::Jet& jet = scene.jets.emplace_back(ParkScene::Jet { .object = from, .to = to, .pours = scene.park_clock + kPour, .lands = scene.park_clock + thrown->seconds + kPour, .water = park::water::WaterJet(thrown->seconds + kPour, 0.04f, 0) });
                             jet.water.aim(out, thrown->velocity);
                         }
                     }
@@ -1466,7 +1466,7 @@ namespace rct3::scene
                     // track's water is found in its files.
                     const auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(ride);
                     const bool dry_splasher = cycle != nullptr && cycle->splash && std::ranges::none_of(course.wet, std::identity { });
-                    const bool in_water = dry_splasher || (looks && park::water_above(scene.water.surface, glm::vec3(place[3])).has_value());
+                    const bool in_water = dry_splasher || (looks && park::water::water_above(scene.water.surface, glm::vec3(place[3])).has_value());
                     const park::CarSplash splash = park::car_splash(scene.car_waters[i], course, spot.front + moved[i], in_water, velocity, elapsed);
                     for (const park::SplashPoint& point : model->second.splash_points)
                         if (point.wake ? splash.wake : splash.splash)
@@ -1913,7 +1913,7 @@ namespace rct3::scene
     /// may run beside the frame.
     park::FlowFades flow_fades(const ParkScene& scene)
     {
-        return park::flow_fades(scene.rides, scene.objects, scene.models, [&](std::size_t ride) { return ride < scene.track_rules.size() && scene.track_rules[ride].pool_ride; });
+        return park::water::flow_fades(scene.rides, scene.objects, scene.models, [&](std::size_t ride) { return ride < scene.track_rules.size() && scene.track_rules[ride].pool_ride; });
     }
 
     std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band, const park::LevelScales& scales, bool supports, const park::Broken& broken, const park::Chains& chains, const park::FlowFades& fades)

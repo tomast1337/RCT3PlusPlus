@@ -24,7 +24,7 @@
 #include "park/track_ground.hpp"
 #include "park/track_rules.hpp"
 #include "park/track_split.hpp"
-#include "park/water_fill.hpp"
+#include "park/water/fill.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/design.hpp"
 #include "save/save_file.hpp"
@@ -497,7 +497,7 @@ namespace rct3::scene
             if (model == scene.models.end() || !model->second.water_only)
                 return false;
             const park::SupportFootprint shape { .x_squares = model->second.squares[0], .z_squares = model->second.squares[1] };
-            return !std::ranges::all_of(park::footprint_tiles(o, shape), [&](const auto& t) { return park::holds_water(scene.footpaths.water.bodies, { t.first, t.second }); });
+            return !std::ranges::all_of(park::footprint_tiles(o, shape), [&](const auto& t) { return park::water::holds_water(scene.footpaths.water.bodies, { t.first, t.second }); });
         }
 
         /// The room the park's solid items take, but the pieces a piece `b` builds would join: the track's ends, or
@@ -641,7 +641,7 @@ namespace rct3::scene
                 on.symbol = shape.record.item;
                 on.overlay = b.overlay;
                 // A piece that goes only on water floats on it, not on the lake's floor.
-                const auto surface = park::water_surface(scene.footpaths.water.bodies, *b.aim);
+                const auto surface = park::water::water_surface(scene.footpaths.water.bodies, *b.aim);
                 if (const auto model = load_object_model(scene, b.models, assets, on) ? scene.models.find(park::model_ref(on)) : scene.models.end(); surface && model != scene.models.end() && model->second.water_only)
                 {
                     on.base_height = *surface;

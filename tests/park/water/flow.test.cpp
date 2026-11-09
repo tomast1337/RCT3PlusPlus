@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/water_flow.hpp"
+#include "park/water/flow.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::water;
 
 namespace
 {

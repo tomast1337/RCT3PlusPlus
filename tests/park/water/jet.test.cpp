@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/water_jet.hpp"
+#include "park/water/jet.hpp"
 
 #include <array>
 #include <cmath>
@@ -7,6 +7,7 @@
 #include <utility>
 
 using namespace rct3::park;
+using namespace rct3::park::water;
 
 namespace
 {

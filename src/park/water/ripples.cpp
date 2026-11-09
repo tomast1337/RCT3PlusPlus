@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/water_ripples.hpp"
+#include "park/water/ripples.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <numbers>
 
-namespace rct3::park
+namespace rct3::park::water
 {
 
     void start_ripple(Ripples& ripples, glm::vec2 middle, float strength, const RippleLook&)
@@ -76,4 +76,4 @@ namespace rct3::park
         return texels;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::water

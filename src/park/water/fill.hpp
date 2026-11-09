@@ -18,7 +18,7 @@
 #include <span>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::water
 {
 
     /// The water body filled from tile `col`, `row` to `level`. Its triangles are empty when the tile has no
@@ -51,4 +51,4 @@ namespace rct3::park
     /// nothing on dry land.
     [[nodiscard]] std::optional<std::int32_t> water_surface(std::span<const save::WaterBody> bodies, save::Tile tile);
 
-} // namespace rct3::park
+} // namespace rct3::park::water

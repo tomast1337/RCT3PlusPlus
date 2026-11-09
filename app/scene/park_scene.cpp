@@ -2404,7 +2404,7 @@ namespace rct3::scene
             {
                 const glm::vec2 ndc { 2 * pointer.position.x / view.width() - 1, 1 - 2 * pointer.position.y / view.height() };
                 const park::Ray ray = park::view_ray(scene.camera, view.width() / view.height(), ndc);
-                if (const auto hit = park::water_hit(ray, scene.water.surface))
+                if (const auto hit = park::water::water_hit(ray, scene.water.surface))
                     if (const glm::vec3 at = ray.origin + ray.direction * *hit; park::pools::on_pool_water(scene.pools, scene.grid, { at.x, at.z }))
                         scene.stroke.push_back({ at.x, at.z, scene.clock });
             }

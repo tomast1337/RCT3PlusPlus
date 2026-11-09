@@ -18,7 +18,7 @@
 #include "park/ride_placement.hpp"
 #include "park/support_columns.hpp"
 #include "park/track_ground.hpp"
-#include "park/water_fill.hpp"
+#include "park/water/fill.hpp"
 #include "scene/enclosure_tools.hpp"
 #include "scene/park_footpaths.hpp"
 #include "scene/park_scene.hpp"
@@ -672,7 +672,7 @@ namespace rct3::scene
                 p.site->height = park::clear_height(*p.site, scene.grid);
             p.ground = p.site->height;
             // A ride that goes only on water floats on it, the lake's floor left as it is.
-            if (const auto surface = park::water_surface(scene.footpaths.water.bodies, *tile); p.item->water_only && surface)
+            if (const auto surface = park::water::water_surface(scene.footpaths.water.bodies, *tile); p.item->water_only && surface)
                 p.site->height = std::max(p.site->height, *surface);
             p.lift.reset();
             if (shift && size.x > 0 && size.y > 0)

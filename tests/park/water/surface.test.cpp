@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/water_surface.hpp"
+#include "park/water/surface.hpp"
 
 #include <doctest/doctest.h>
 #include <vector>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::water;
 
 namespace
 {

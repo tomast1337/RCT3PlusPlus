@@ -29,7 +29,7 @@
 #include <string>
 #include <string_view>
 
-namespace rct3::park
+namespace rct3::park::water
 {
 
     /// The overlay and texture of the flowing water: seen in the game's install.
@@ -69,4 +69,4 @@ namespace rct3::park
     /// `file`.
     [[nodiscard]] std::expected<ovl::RgbaImage, std::string> load_flow_picture(const std::filesystem::path& file, std::string_view name = kFlowTexture);
 
-} // namespace rct3::park
+} // namespace rct3::park::water

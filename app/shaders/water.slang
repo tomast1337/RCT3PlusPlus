@@ -21,7 +21,7 @@
 // Pool water's second texture coordinate is the distance to its nearest wall, which the waves die down towards.
 //
 // The flowing water of slides and water rides (kFlow) is a cheaper look: a thin sheet on the track with no mirror
-// and no copy of the scene behind it. Its own picture (park/water_flow.hpp) slides along it, and a second read of
+// and no copy of the scene behind it. Its own picture (park/water/flow.hpp) slides along it, and a second read of
 // the picture, set deeper and seen through the first, gives it depth; it slopes the surface for the glint and the
 // sky it shows, and the bottom catches the caustics.
 import common;
@@ -527,7 +527,7 @@ float4 flowing(Varyings v, float3 view, float dist, float3 sky, float3 sun, floa
     const float3 water = (1.0 - fresnel) * (scattered * (1.0 - dot(kept, float3(1.0 / 3.0))) + sunlit) + fresnel * sky * kFlowColour * 2.5;
     float3 colour = (water * (1.0 - foam) + body_light * (foam + 0.5 * sunk * (1.0 - foam)) + glint) / max(alpha, 1e-3);
     alpha *= 1.0 - smoothstep(0.6, 0.95, dist / u_draw.sun_far.w);
-    // Where the water starts or stops along a slide it fades (park/water_flow.hpp, FlowFade).
+    // Where the water starts or stops along a slide it fades (park/water/flow.hpp, FlowFade).
     alpha *= v.color.a;
     return float4(colour, alpha);
 }

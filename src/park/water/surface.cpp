@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/water_surface.hpp"
+#include "park/water/surface.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <map>
 
-namespace rct3::park
+namespace rct3::park::water
 {
 
     WaterSurface water_surface(std::span<const WaterVertex> water)
@@ -181,4 +181,4 @@ namespace rct3::park
         return std::nullopt;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::water

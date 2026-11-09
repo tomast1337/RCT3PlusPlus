@@ -5,7 +5,7 @@
 #include "park/camera.hpp"
 #include "park/object_pick.hpp"
 #include "park/path_drag.hpp"
-#include "park/water_surface.hpp"
+#include "park/water/surface.hpp"
 #include "scene/park_scene.hpp"
 #include "simulation/systems.hpp"
 
@@ -95,7 +95,7 @@ namespace rct3::scene
                 const int col = static_cast<int>(std::floor((spot->x - scene.grid.origin_x) / scene.grid.tile_size_x));
                 const int row = static_cast<int>(std::floor((spot->z - scene.grid.origin_z) / scene.grid.tile_size_z));
                 // shortcut: the park's lakes never take them, as nobody treads water there yet; let them in once they do.
-                const auto water = park::water_hit(ray, scene.water.surface);
+                const auto water = park::water::water_hit(ray, scene.water.surface);
                 allowed = scene.grid.contains(col, row) && park::owned_outright(scene.grid.at(col, row)) && !(water && *water < *ground + 1e-3f);
             }
             if (spot)

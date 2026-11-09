@@ -215,7 +215,7 @@ namespace rct3::render
         /// whose red channel is read as height, and the extra textures are, in order: the scene mirrored in the
         /// surface, the scene behind the surface, that scene's depth, and the ripples (Rgba32Float, a column per
         /// ripple: its middle's x and z, ring radius and height, 0 for none, then its wave number and ring width;
-        /// see park/water_ripples.hpp). Lit by `DrawCommand::light`, with `DrawCommand::water`. Draws without the
+        /// see park/water/ripples.hpp). Lit by `DrawCommand::light`, with `DrawCommand::water`. Draws without the
         /// pictures `water` says are missing.
         Water,
         /// A shape of ui/shape.hpp, shaded by its distance from the edge. Inputs: location 0 position (Float2),
@@ -361,7 +361,7 @@ namespace rct3::render
         /// with the water the line of sight crosses. Its vertices carry the water's colour and, as their depth,
         /// the height of the surface over the eye.
         bool underwater = false;
-        /// A slide's flowing water (park/water_flow.hpp): its vertices are an object's, and the texture is its
+        /// A slide's flowing water (park/water/flow.hpp): its vertices are an object's, and the texture is its
         /// picture, moved along its v by `DrawCommand::v_shift`. Neither the mirror nor the scene behind is read.
         bool flow = false;
     };

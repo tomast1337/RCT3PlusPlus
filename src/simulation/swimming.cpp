@@ -3,6 +3,7 @@
 
 #include "simulation/components.hpp"
 #include "simulation/parties.hpp"
+#include "simulation/ride_walks.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"

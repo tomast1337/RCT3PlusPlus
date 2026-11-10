@@ -60,6 +60,7 @@
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/import_people.hpp"
+#include "simulation/ride_walks.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "strings/ascii.hpp"

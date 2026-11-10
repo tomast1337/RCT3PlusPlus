@@ -486,18 +486,6 @@ namespace rct3::simulation
         std::vector<NodeId> route { };
     };
 
-    /// The ways riders walk on and off a ride, in the park's space, worked out from the ride's models where it
-    /// is drawn. Seats are counted as a load fills them: a ride's riders, or a train's. A ride without one lets
-    /// its riders on and off where they stand.
-    struct RideWalks
-    {
-        glm::vec3 ticket { 0.0f };  ///< Where a guest stands at the entrance to hand over their ticket
-        Radians ticket_heading { }; ///< The way they face there, as Pose::heading
-        /// By seat: from the ticket spot to the seat, and from the seat out past the exit.
-        std::vector<std::vector<glm::vec3>> on { };
-        std::vector<std::vector<glm::vec3>> off { };
-    };
-
     /// How full a train must be to leave: Departure::wait_for, in the order the operating panel lists them.
     enum class LoadWait : std::uint8_t
     {
@@ -743,18 +731,6 @@ namespace rct3::simulation
     struct Thrill
     {
         RideReaction reaction = RideReaction::Waiting;
-    };
-
-    /// A rider walking on to their seat from the ticket spot, or off it to the paths: still riding, but on
-    /// their feet. `points` are walked in turn; the first, on the way on, is the ticket spot, where they stand
-    /// for `pause` seconds first.
-    struct RideWalk
-    {
-        std::vector<glm::vec3> points;
-        std::size_t next = 0; ///< The point walked to now
-        Seconds pause { };
-        bool off = false;
-        std::optional<GestureKind> gesture { }; ///< Shown once off, on the paths
     };
 
     /// A party member with no way over to the others: they stand looking about for `left` ticks, then are put

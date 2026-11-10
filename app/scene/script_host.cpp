@@ -20,6 +20,7 @@
 #include "simulation/import_park.hpp"
 #include "simulation/park/messages.hpp"
 #include "simulation/parties.hpp"
+#include "simulation/ride_walks.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "strings/unicode.hpp"

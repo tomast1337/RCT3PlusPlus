@@ -180,6 +180,10 @@ namespace rct3::simulation
     /// Where riders come off `ride` on to the paths at its station `station` (0 the first).
     [[nodiscard]] NodeId exit_of(const entt::registry& r, entt::entity ride, std::size_t station = 0);
 
+    /// A rider off `ride` and on the paths at the exit of the station they get off at: on to what they do
+    /// next, showing how the ride left them, and sick there if it turned their stomach.
+    void let_out(entt::registry& r, const PathNetwork& paths, entt::entity guest, entt::entity ride, std::optional<GestureKind> gesture);
+
     /// Stops `stride` at `node`, its route dropped, and stands `pose` there.
     void stop_at(const PathNetwork& paths, NodeId node, Stride& stride, Pose& pose);
 

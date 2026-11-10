@@ -10,6 +10,7 @@
 #include "simulation/day_clock.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/parties.hpp"
+#include "simulation/ride_walks.hpp"
 #include "simulation/staff_care.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/tuning.hpp"
@@ -572,30 +573,25 @@ namespace rct3::simulation
         return cycle.exit != kNoNode ? cycle.exit : r.get<Attraction>(ride).entrance;
     }
 
-    namespace
+    void let_out(entt::registry& r, const PathNetwork& paths, entt::entity guest, entt::entity ride, std::optional<GestureKind> gesture)
     {
-        /// A rider off `ride` and on the paths at the exit of the station they get off at: on to what they do
-        /// next, showing how the ride left them, and sick there if it turned their stomach.
-        void let_out(entt::registry& r, const PathNetwork& paths, entt::entity guest, entt::entity ride, std::optional<GestureKind> gesture)
+        const NodeId out = exit_of(r, ride, r.get<Errand>(guest).off);
+        r.get<Errand>(guest) = after_ride(r, guest, ride);
+        stop_at(paths, out, r.get<Stride>(guest), r.get<Pose>(guest));
+        // Riding across the park, they walk on where they were going; one in a party waits for the others
+        // first (phase 5).
+        if (auto* crossing = r.try_get<Crossing>(guest); crossing != nullptr && crossing->ride == ride && !r.all_of<Member>(guest))
         {
-            const NodeId out = exit_of(r, ride, r.get<Errand>(guest).off);
-            r.get<Errand>(guest) = after_ride(r, guest, ride);
-            stop_at(paths, out, r.get<Stride>(guest), r.get<Pose>(guest));
-            // Riding across the park, they walk on where they were going; one in a party waits for the others
-            // first (phase 5).
-            if (auto* crossing = r.try_get<Crossing>(guest); crossing != nullptr && crossing->ride == ride && !r.all_of<Member>(guest))
-            {
-                r.get<Errand>(guest) = crossing->errand;
-                r.get<Stride>(guest).route = std::move(crossing->route);
-                r.remove<Crossing>(guest);
-            }
-            auto& dice = r.get<Dice>(guest).state;
-            if (gesture && random::chance(dice, kTuning.gestures.chance.value))
-                r.emplace_or_replace<Gesture>(guest, *gesture, kTuning.gestures.shown.value);
-            if (r.get<Mood>(guest).nausea.value >= kTuning.sickness.sick.value && random::chance(dice, kTuning.sickness.sick_after_ride.value))
-                be_sick(r, guest, out);
+            r.get<Errand>(guest) = crossing->errand;
+            r.get<Stride>(guest).route = std::move(crossing->route);
+            r.remove<Crossing>(guest);
         }
-    } // namespace
+        auto& dice = r.get<Dice>(guest).state;
+        if (gesture && random::chance(dice, kTuning.gestures.chance.value))
+            r.emplace_or_replace<Gesture>(guest, *gesture, kTuning.gestures.shown.value);
+        if (r.get<Mood>(guest).nausea.value >= kTuning.sickness.sick.value && random::chance(dice, kTuning.sickness.sick_after_ride.value))
+            be_sick(r, guest, out);
+    }
 
     void think(entt::registry& r, entt::entity guest, ThoughtKind kind, entt::entity about, float now)
     {
@@ -3430,45 +3426,8 @@ namespace rct3::simulation
         // Pools, swimmers, lazy rivers and slides climbed on foot (simulation/swimming.cpp).
         step_pools(world, phase);
 
-        phase.emplace("Ride walks");
-        // Riders on their feet walk on to their seats, stopping at the ticket spot first, or off to the paths.
-        for (const entt::entity g : sorted(r.view<RideWalk>()))
-        {
-            auto& walk = r.get<RideWalk>(g);
-            auto& pose = r.get<Pose>(g);
-            const entt::entity ride = r.get<Errand>(g).target;
-            if (!walk.off && walk.next == 1 && walk.pause.value > 0)
-            {
-                walk.pause.value -= dt;
-                if (const auto* walks = r.valid(ride) ? r.try_get<RideWalks>(ride) : nullptr)
-                    pose.heading.value = walks->ticket_heading.value;
-                continue;
-            }
-            float stride = r.get<Stride>(g).speed.value * dt;
-            while (stride > 0 && walk.next < walk.points.size())
-            {
-                const glm::vec3 to = walk.points[walk.next] - pose.position;
-                const float left = glm::length(to);
-                if (glm::length(glm::vec2(to.x, to.z)) > 0)
-                    pose.heading.value = std::atan2(to.x, to.z);
-                if (left > stride)
-                {
-                    pose.position += to * (stride / left);
-                    break;
-                }
-                pose.position = walk.points[walk.next++];
-                stride -= left;
-                if (!walk.off && walk.next == 1)
-                    break; // At the ticket spot
-            }
-            if (walk.next < walk.points.size())
-                continue;
-            const std::optional<GestureKind> gesture = walk.gesture;
-            const bool off = walk.off;
-            r.remove<RideWalk>(g);
-            if (off && r.valid(ride) && r.all_of<CycleRide>(ride))
-                let_out(r, paths, g, ride, gesture);
-        }
+        // Riders on their feet walk to their seats or off to the paths (simulation/ride_walks.cpp).
+        step_ride_walks(world, phase);
 
         phase.emplace("Let go");
         // Those the player let go of fall to the ground, then walk straight to the path they go on from. Those

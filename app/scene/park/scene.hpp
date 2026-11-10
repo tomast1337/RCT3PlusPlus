@@ -896,9 +896,6 @@ namespace rct3::scene::park
     /// Whether a box of the park's interface has the keyboard, or selected text to copy, so keys are not the game's.
     [[nodiscard]] bool typing(const ParkScene& scene);
 
-    /// Fires the member of staff shown as `shown` of shown_people: they leave the park at once, as in the game.
-    void fire(ParkScene& scene, std::size_t shown);
-
     /// Has the simulated flat ride `ride_index` (of scene.rides) seat its riders on the object that has the
     /// seats, as flat_ride_timings finds it. Nothing for other rides, or one the simulation does not run.
     void seat_flat_ride(render::Device& device, ParkScene& scene, std::size_t ride_index);

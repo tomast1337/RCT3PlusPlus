@@ -32,7 +32,7 @@ namespace rct3::ovl
         std::string_view display_name; ///< English name string stored next to it
         /// How riders sit in the car, in its low byte, the same for cars of one kind of ride: as the cars'
         /// shapes show, 0 in stand-up coaster cars, 3 in lie-down ones, 4 on bikes, 11 behind a lap bar, 13
-        /// with feet dangling under inverted cars (see park::rider_motions). 35 leaves it to the ride. Higher
+        /// with feet dangling under inverted cars (see park::person::rider_motions). 35 leaves it to the ride. Higher
         /// bits are set in some later cars; their meaning is unconfirmed.
         std::uint32_t kind = 0;
         std::string_view visual; ///< "svd" item that draws the car

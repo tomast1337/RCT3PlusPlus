@@ -32,7 +32,7 @@ namespace rct3::ui
         std::string pin;    ///< To pin it
         std::string unpin;  ///< Pinned, to let it hide again
         std::string leave;
-        /// By park::RideEye the nose, front seat and rear seat cameras, then a flat ride's seats and its fixed
+        /// By park::object::RideEye the nose, front seat and rear seat cameras, then a flat ride's seats and its fixed
         /// cameras (kFlatSeatType, kFlatFixedType).
         std::array<std::string, 5> types;
         /// Previous camera, next camera, previous train, next train; and the same with nowhere to go.
@@ -68,7 +68,7 @@ namespace rct3::ui
 
         /// What its line says, and whether there are other cameras on the train and other trains to step to; the
         /// train buttons name what they step to as `noun` (a train, or on a flat ride a ride). `next_type` is the
-        /// kind of camera the type button changes to, by park::RideEye, named `next_name`; nothing when the train
+        /// kind of camera the type button changes to, by park::object::RideEye, named `next_name`; nothing when the train
         /// has one kind.
         void show(std::u16string info, bool cameras, bool trains, std::u16string_view noun, std::optional<std::size_t> next_type = std::nullopt, std::u16string_view next_name = { });
         /// The pointer moved `distance` units since the last update.

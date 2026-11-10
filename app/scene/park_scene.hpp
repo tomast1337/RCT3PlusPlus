@@ -468,7 +468,7 @@ namespace rct3::scene
         std::vector<park::Lamp> lamps; ///< The objects' lamps at full strength; packed again when `lamps_due`
         bool lamps_due = true;
         bool car_lamps = false;             ///< Some ride car carries lamps, so they are packed again each frame
-        float darkness = 0;                 ///< How dark the sky is, 0 by day to 1 at night (park::sky_darkness)
+        float darkness = 0;                 ///< How dark the sky is, 0 by day to 1 at night (park::sky::sky_darkness)
         render::TextureHandle lamp_texture; ///< render::SceneLight::lamps
         std::uint32_t lamp_rows = 0;        ///< Of that texture
         float lamp_strength = -1;           ///< The strength it was packed with
@@ -509,7 +509,7 @@ namespace rct3::scene
         /// By the id of each object pipeline above, the same pipeline drawing only the front of one-sided parts.
         std::map<std::uint32_t, render::PipelineHandle> front_only;
         ui::UiTextures object_textures;
-        std::uint32_t ripple_frame = 0;          ///< Of the still water of objects, the picture shown (park::water_picture)
+        std::uint32_t ripple_frame = 0;          ///< Of the still water of objects, the picture shown (park::object::water_picture)
         park::object::ObjectMesh waterfall_mesh; ///< The waterfalls' water, built again each frame as it runs
         /// The water running off a pool slide's open end: it sprays off the lip and falls, and where it comes down
         /// rings spread on a pool's water or it splashes.
@@ -645,7 +645,7 @@ namespace rct3::scene
         std::map<std::size_t, std::vector<std::string>> train_choices;
         /// The object each simulated flat ride stands as, the one with seats, by its place in `objects`.
         std::map<entt::entity, std::size_t> ride_seats;
-        /// How the riders of each simulated flat ride sit, where its item says (see park::rider_motions).
+        /// How the riders of each simulated flat ride sit, where its item says (see park::person::rider_motions).
         std::map<entt::entity, std::uint8_t> ride_seatings;
         /// A rider's last change of reaction as their pose shows it: from what to what, and scene.park_clock then.
         struct RiderTurn

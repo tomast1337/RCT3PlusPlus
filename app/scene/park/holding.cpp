@@ -7,6 +7,7 @@
 #include "park/path/drag.hpp"
 #include "park/water/surface.hpp"
 #include "scene/park/scene.hpp"
+#include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 
 #include <cmath>

@@ -22,11 +22,14 @@
 #include "simulation/sim_world.hpp"
 #include "simulation/tuning.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <ranges>
 #include <span>
+#include <vector>
 
 namespace rct3::simulation
 {
@@ -173,6 +176,29 @@ namespace rct3::simulation
     /// The inspector tells the player `finding` about `about` at `now`, unless they told it lately.
     void tell(entt::registry& r, entt::entity inspector, Finding finding, entt::entity about, float now);
 
+    /// The guest thinks `kind` about `about` at `now` (seconds into the run), unless they thought it lately.
+    void think(entt::registry& r, entt::entity guest, ThoughtKind kind, entt::entity about, float now);
+
+    /// Stops `stride` at `node`, its route dropped, and stands `pose` there.
+    void stop_at(const PathNetwork& paths, NodeId node, Stride& stride, Pose& pose);
+
+    /// Takes `person` out of what they were doing on foot: out of the queue they stood in, away from their party
+    /// till they land (rejoin), and, a mechanic, off the job in hand.
+    void step_out(entt::registry& r, entt::entity person);
+
+    /// The path under `ground`, else the nearest one a person there may walk on; nothing without paths.
+    /// shortcut: off the paths they walk straight to it, over whatever lies between; route round scenery once
+    /// the ground is walkable.
+    [[nodiscard]] std::optional<NodeId> path_to_rejoin(const PathNetwork& paths, glm::vec3 ground);
+
+    /// The entities of `view`, in ascending order, so serial phases go the same way every time.
+    template<typename View> std::vector<entt::entity> sorted(const View& view)
+    {
+        auto out = view | std::ranges::to<std::vector<entt::entity>>();
+        std::ranges::sort(out);
+        return out;
+    }
+
     /// Gives guest `guest` what it needs to walk, standing on path node `at` with nothing to do. Its dice are
     /// seeded from the world's seed and its id, so the same park always plays out the same way.
     void start_walking(SimWorld& world, entt::entity guest, NodeId at);
@@ -196,31 +222,6 @@ namespace rct3::simulation
     /// as if they had come in through its changing room. False, and still held, where there are no paths to
     /// walk to.
     bool let_go(SimWorld& world, entt::entity person, glm::vec3 ground);
-
-    /// The changing room of the pool complex whose water, paving or spa pool lies under `point`, if any.
-    [[nodiscard]] std::optional<entt::entity> pool_door_at(const SimWorld& world, glm::vec3 point);
-
-    /// Where a pool ride's station joins a pool complex.
-    struct PoolJoin
-    {
-        entt::entity pool = entt::null; ///< The complex (its SwimPool)
-        glm::vec3 square { 0.0f };      ///< The middle of the square beside the station that joins it, where guests come and go
-    };
-
-    /// The pool complex a pool ride's station joins, its track running through `station`: one whose paving,
-    /// pool path or path stairs lie on a square along one of the station's sides, at its level, the nearest when
-    /// several do, the track standing up to `raised` over it (a slide's over its platform's deck). Pool rides have no
-    /// entrance or exit: their guests board from that square and get off onto it.
-    [[nodiscard]] std::optional<PoolJoin> pool_beside(const SimWorld& world, std::span<const glm::vec3> station, float raised = 0);
-
-    /// The pool complex (its SwimPool) a pool ride belongs to: a lazy river by its joined stations, a slide climbed
-    /// on foot by its foot, a slide ending in a pool by that pool, and a slide with no entrance of its own going
-    /// round back to its station by the complex its station joins. None for every other ride.
-    [[nodiscard]] std::optional<entt::entity> pool_ride_pool(const SimWorld& world, entt::entity ride);
-
-    /// Whether `person` wears their swimwear now: inside a pool complex, from changing into it till changing
-    /// back, and held or falling out of one till they land; their clothes everywhere else.
-    [[nodiscard]] bool in_swimwear(const entt::registry& r, entt::entity person);
 
     /// Where a worker just hired goes when the player gives them back without putting them down: the middle of
     /// the walkway staff may use nearest the park's entrance. None without an entrance or such a walkway.

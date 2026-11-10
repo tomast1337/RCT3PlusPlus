@@ -3,6 +3,7 @@
 #include "simulation/coaster.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
+#include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 

@@ -3,6 +3,7 @@
 
 #include "parkfile/binary.hpp"
 #include "simulation/import_park.hpp"
+#include "simulation/swimming.hpp"
 #include "simulation/units.hpp"
 
 #include <doctest/doctest.h>

@@ -67,6 +67,7 @@
 #include "simulation/park/graphs.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/sim_world.hpp"
+#include "simulation/swimming.hpp"
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/interface_assets.hpp"

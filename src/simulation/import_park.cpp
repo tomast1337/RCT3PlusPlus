@@ -16,6 +16,7 @@
 #include "simulation/park/state.hpp"
 #include "simulation/ratings.hpp"
 #include "simulation/staff_care.hpp"
+#include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 #include "strings/ascii.hpp"

@@ -3,6 +3,7 @@
 
 #include "parkfile/binary.hpp"
 #include "simulation/staff_care.hpp"
+#include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 
 #include <algorithm>

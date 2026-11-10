@@ -100,7 +100,10 @@ namespace rct3::scene
 {
 
     struct FrontEndScene;
-    struct ParkScene;
+    namespace park
+    {
+        struct ParkScene;
+    }
 
     class ScriptHost
     {
@@ -111,7 +114,7 @@ namespace rct3::scene
 
         /// Moves the script on a frame, seeing `park` (none while no park is open) and the front end `front`
         /// drawn by `device`.
-        void tick(const render::Device& device, ParkScene* park, FrontEndScene* front);
+        void tick(const render::Device& device, park::ParkScene* park, FrontEndScene* front);
 
         /// The pointer the script holds, in the game view's pixels, and whether its button is down; none
         /// until the script first moves it.
@@ -179,7 +182,7 @@ namespace rct3::scene
         std::optional<int> quit_;
         float advance_ = 0;
         const render::Device* device_ = nullptr; ///< While a tick runs
-        ParkScene* park_ = nullptr;
+        park::ParkScene* park_ = nullptr;
         FrontEndScene* front_ = nullptr;
     };
 

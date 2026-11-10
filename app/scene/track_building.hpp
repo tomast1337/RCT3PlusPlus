@@ -65,7 +65,10 @@ namespace rct3::ui
 namespace rct3::scene
 {
 
-    struct ParkScene;
+    namespace park
+    {
+        struct ParkScene;
+    }
 
     /// The models of one track overlay's pieces, loaded as they are first shown.
     struct TrackModels
@@ -202,99 +205,99 @@ namespace rct3::scene
     /// train already is, with their seats and (in car_fits) how each car of a train sits on the track. On a course
     /// with a station the cars are as many as its shortest station takes, and the trains as many as the course
     /// takes (rct3::park::track::trains_fitting); a shuttle runs one. Whether its riders sit on arms.
-    bool fit_trains(ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars);
+    bool fit_trains(park::ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars);
 
     /// Reads, the first time it is asked of the tracked ride `index`, the trains its kind offers and the car
     /// counts its train allows (the scene's train_choices and train_limits).
-    void ready_trains(ParkScene& scene, const config::GameInstall& install, std::size_t index);
+    void ready_trains(park::ParkScene& scene, const config::GameInstall& install, std::size_t index);
 
     /// Stands the trains of the tracked ride `index` at its station: the first's front where trains set off, each
     /// other queued behind the one before; boats back along their dock from its end. Nothing for a ride whose cars
     /// are not fitted (car_fits) or whose course runs no train.
-    void stand_trains(ParkScene& scene, std::size_t index);
+    void stand_trains(park::ParkScene& scene, std::size_t index);
 
     /// Gives the boat ride `index`, once the park runs it, a boat for each of its trains, all at its dock, sailing
     /// on the park's water as it is now and handling as its boats' kind does.
-    void ready_boats(ParkScene& scene, std::size_t index);
+    void ready_boats(park::ParkScene& scene, std::size_t index);
 
     /// What boats cannot sail through or under: what stands in the park's water or hangs low over it, paths' decks
     /// among them.
-    [[nodiscard]] rct3::park::path::SolidTiles boat_obstacles(const ParkScene& scene);
+    [[nodiscard]] rct3::park::path::SolidTiles boat_obstacles(const park::ParkScene& scene);
 
     /// Gives the tracked ride `index` new trains as fit_trains does (its kind's first when it has none), stood at
     /// its station, and has the park run them and draw their cars. False, and nothing changed, while riders are
     /// aboard or when no train can be found.
-    bool set_trains(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars);
+    bool set_trains(render::Device& device, park::ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars);
 
     /// Gives the tracked ride `index` one train of the kind named `train_name`, as many cars long as that kind
     /// usually is, and sets the ride's limits to the kind's. Whether its riders sit on arms; nothing when the
     /// install has no such train.
-    std::optional<bool> use_train(ParkScene& scene, const config::GameInstall& install, std::size_t index, std::string_view train_name);
+    std::optional<bool> use_train(park::ParkScene& scene, const config::GameInstall& install, std::size_t index, std::string_view train_name);
 
     /// Adds a new tracked ride of `item` (a ride built piece by piece) to the park, closed and without pieces, and
     /// opens the construction panel on it. False when its pieces cannot be found.
-    bool new_tracked_ride(ParkScene& scene, const rct3::park::BuildItem& item, const ui::InterfaceAssets& assets);
+    bool new_tracked_ride(park::ParkScene& scene, const rct3::park::BuildItem& item, const ui::InterfaceAssets& assets);
 
     /// Opens the construction panel on the tracked ride `ride` of the scene's rides, its pieces coming from
     /// the track overlay `overlay` (as a park names it). False when the ride has no track or the overlay
     /// cannot be read. The selection windows open new rides through this.
-    bool open_track_building(ParkScene& scene, std::size_t ride, std::string overlay, const ui::InterfaceAssets& assets);
+    bool open_track_building(park::ParkScene& scene, std::size_t ride, std::string overlay, const ui::InterfaceAssets& assets);
 
     /// Gives each station piece of the tracked ride `ride` the platform piece its type, its place in the
     /// station and the doors beside it call for (rct3::park::ride::platform_symbol), adding those it lacks. Nothing for a
     /// ride without a platform type.
-    void update_platforms(ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
+    void update_platforms(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
 
     /// A click on the park at `at`, in interface units on a screen of `size`, while a ride is built. With no
     /// pieces yet, lays its first piece where the ghost shows it. Otherwise a click on one of its pieces picks
     /// it to build over, stepping on toward the end of it nearer the click; one at the track's open end goes
     /// back to building there. False, doing nothing, at other times.
-    bool track_building_click(ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size);
+    bool track_building_click(park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size);
 
     /// Closes the construction panel and leaves the building idle.
-    void close_track_building(ParkScene& scene);
+    void close_track_building(park::ParkScene& scene);
 
     /// The track overlay of the ride's built pieces, if it has any.
-    [[nodiscard]] std::optional<std::string> ride_track_overlay(const ParkScene& scene, std::size_t ride);
+    [[nodiscard]] std::optional<std::string> ride_track_overlay(const park::ParkScene& scene, std::size_t ride);
 
     /// What ride `ride`'s track pieces cost to lay, hundredths; 0 when its pieces cannot be read.
-    [[nodiscard]] std::int64_t track_cost(ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
+    [[nodiscard]] std::int64_t track_cost(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
 
     /// The station pieces of the ride's track, which its entrance and exit stand beside.
-    [[nodiscard]] std::vector<save::TrackPiece> station_pieces(ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
+    [[nodiscard]] std::vector<save::TrackPiece> station_pieces(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
 
     /// Handles the panel's events, and for a track with no pieces the pointer at `at` on a view of `size` (`over`
     /// the interface or not), the turn commands and `shift`, held to raise or sink the first piece. Call once per
     /// update after the interface, `elapsed` seconds after the last.
-    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed);
+    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed);
 
     /// The arrows where the picked piece starts and ends (see park/build_arrows.hpp); empty while no piece is.
-    [[nodiscard]] rct3::park::TerrainMesh track_arrows(const ParkScene& scene);
+    [[nodiscard]] rct3::park::TerrainMesh track_arrows(const park::ParkScene& scene);
 
     /// Draws the ghost of the picked piece and its arrows, and any test train, with `transform` and `light`.
-    void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
+    void draw_track_ghost(render::Device& device, const park::ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
     // Shared with path building, which places objects the same way.
 
     /// Makes sure the model of `object` is loaded, reading it through its overlay's own index kept in `cache`.
-    bool load_object_model(ParkScene& scene, std::map<std::string, TrackModels, std::less<>>& cache, const ui::InterfaceAssets& assets, const save::PlacedObject& object);
+    bool load_object_model(park::ParkScene& scene, std::map<std::string, TrackModels, std::less<>>& cache, const ui::InterfaceAssets& assets, const save::PlacedObject& object);
 
     /// Hands the scene's objects to the mesh builder again after a change, once a build reading them is done.
-    void objects_changed(ParkScene& scene);
+    void objects_changed(park::ParkScene& scene);
 
     /// Puts `pieces` in the place of the objects `ids` names, which then names the pieces. A piece the same as
     /// one standing keeps it, with its id and its place among the objects; the others take the places of those
     /// that went, so the objects after them do not move. Whether any object changed.
-    bool replace_fixtures(ParkScene& scene, std::vector<std::uint64_t>& ids, std::vector<save::PlacedObject> pieces);
+    bool replace_fixtures(park::ParkScene& scene, std::vector<std::uint64_t>& ids, std::vector<save::PlacedObject> pieces);
 
     /// Brings the objects' places and pick boxes up to date, working out again only the objects that changed.
-    void place_objects(const ParkScene& scene);
+    void place_objects(const park::ParkScene& scene);
 
     /// Waits for a mesh build that is reading the objects, before they change.
-    void wait_for_build(ParkScene& scene);
+    void wait_for_build(park::ParkScene& scene);
 
     /// Paints and uploads the pictures of `ghost` the scene does not have yet.
-    void ghost_textures(render::Device& device, ParkScene& scene, const rct3::park::object::ObjectMesh& ghost);
+    void ghost_textures(render::Device& device, park::ParkScene& scene, const rct3::park::object::ObjectMesh& ghost);
 
     /// Ghosts' tints: bluish where the piece can be built, red where it cannot.
     inline constexpr glm::vec4 kGhostTint { 0.45f, 0.75f, 1.0f, 0.7f };
@@ -305,6 +308,6 @@ namespace rct3::scene
     [[nodiscard]] render::SceneLight ghost_light(render::SceneLight light, float clock);
     /// Draws `mesh` see-through with `transform` and `light`; `solid`, as a built object is drawn instead, for a
     /// picture of it alone.
-    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const rct3::park::object::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light, bool solid = false);
+    void draw_ghost_mesh(render::Device& device, const park::ParkScene& scene, const rct3::park::object::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light, bool solid = false);
 
 } // namespace rct3::scene

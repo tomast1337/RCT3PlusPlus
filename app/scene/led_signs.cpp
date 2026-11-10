@@ -6,7 +6,7 @@
 #include "ovl/scenery_item.hpp"
 #include "park/item_category.hpp"
 #include "park/led_signs.hpp"
-#include "scene/park_scene.hpp"
+#include "scene/park/scene.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 #include "ui/font/images.hpp"
@@ -104,7 +104,7 @@ namespace rct3::scene
         }
 
         /// Uploads the pictures of `mesh`'s batches other than its board's that the scene lacks.
-        void frame_textures(render::Device& device, ParkScene& scene, const rct3::park::object::ObjectMesh& mesh)
+        void frame_textures(render::Device& device, park::ParkScene& scene, const rct3::park::object::ObjectMesh& mesh)
         {
             std::vector<rct3::park::object::ObjectBatch> missing;
             for (const rct3::park::object::ObjectBatch& batch : mesh.batches)
@@ -119,7 +119,7 @@ namespace rct3::scene
                 scene.object_textures.merge(*uploaded);
         }
 
-        void put_up(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+        void put_up(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets)
         {
             LedSigns& q = scene.led_signs;
             ui::destroy_textures(device, q.textures);
@@ -237,7 +237,7 @@ namespace rct3::scene
         }
     } // namespace
 
-    void update_led_signs(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+    void update_led_signs(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         LedSigns& q = scene.led_signs;
         const std::array counts { scene.footpaths.paths.size(), scene.rides.rides.size(), scene.objects.size() };
@@ -289,7 +289,7 @@ namespace rct3::scene
         }
     }
 
-    void roll_led_signs(render::Device& device, ParkScene& scene)
+    void roll_led_signs(render::Device& device, park::ParkScene& scene)
     {
         bool in_pass = true;
         for (LedSign& sign : scene.led_signs.signs)
@@ -312,7 +312,7 @@ namespace rct3::scene
         }
     }
 
-    void draw_led_signs(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
+    void draw_led_signs(render::Device& device, const park::ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {
         // Boards give their own light.
         render::SceneLight unlit = light;

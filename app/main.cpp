@@ -49,11 +49,11 @@
 #include "render/backend.hpp"
 #include "scene/front_end_scene.hpp"
 #include "scene/menu_audio.hpp"
-#include "scene/park_files_menu.hpp"
-#include "scene/park_loading.hpp"
-#include "scene/park_scene.hpp"
-#include "scene/park_setup.hpp"
-#include "scene/park_sounds.hpp"
+#include "scene/park/files_menu.hpp"
+#include "scene/park/loading.hpp"
+#include "scene/park/scene.hpp"
+#include "scene/park/setup.hpp"
+#include "scene/park/sounds.hpp"
 #include "scene/script_host.hpp"
 #include "scene/startup_screen.hpp"
 #include "scene/ui_demo.hpp"
@@ -234,7 +234,7 @@ namespace
     }
 
     // Switches for looking into the park while it runs.
-    void draw_park_debug(rct3::scene::ParkScene& park)
+    void draw_park_debug(rct3::scene::park::ParkScene& park)
     {
         ImGui::Checkbox("Wireframe", &park.wireframe);
         ImGui::Checkbox("Free camera", &park.free_camera);
@@ -243,13 +243,13 @@ namespace
         if (ImGui::Checkbox("Show level blending", &park.tint_crossing))
         {
             park.levels = { }; // The crossing objects are built again with or without the tint
-            park.since_rebuild = rct3::scene::kObjectRebuildInterval;
+            park.since_rebuild = rct3::scene::park::kObjectRebuildInterval;
         }
         ImGui::SetItemTooltip("Objects blending between two levels of detail show the finer level blue, the coarser red");
         if (ImGui::Checkbox("Simulate guests", &park.simulate))
         {
             park.people_levels.clear(); // The still people are built again without or with the simulated ones
-            park.since_people_levels = rct3::scene::kObjectRebuildInterval;
+            park.since_people_levels = rct3::scene::park::kObjectRebuildInterval;
         }
         ImGui::SetItemTooltip("Guests walk the paths and visit shops; the park as saved is left as it was");
         ImGui::Text("Simulation tick %llu", static_cast<unsigned long long>(park.sim.tick));
@@ -760,7 +760,7 @@ int main(int argc, char** argv)
     std::optional<rct3::scene::StartupScreen> startup;
     std::optional<rct3::scene::WidgetDemo> widgets;
     std::optional<rct3::scene::FrontEndScene> front;
-    std::optional<rct3::scene::ParkScene> park; ///< Played over the front end, which lends it the interface
+    std::optional<rct3::scene::park::ParkScene> park; ///< Played over the front end, which lends it the interface
     std::optional<std::filesystem::path> park_to_load = park_file;
     rct3::scene::ParkGame park_game; ///< What that park is played as
     std::uint64_t park_log_from = 0; ///< The log's last entry before the park loading now began; 0 before ///< Asked for this frame; its loading screen shows first
@@ -788,7 +788,7 @@ int main(int argc, char** argv)
     // reads are the front end's once there is one; until then, those in the file.
     std::optional<rct3::audio::AudioEngine> audio;
     std::optional<rct3::scene::MenuAudio> menu_audio;
-    std::optional<rct3::scene::ParkSounds> park_sounds; ///< While a park is open
+    std::optional<rct3::scene::park::ParkSounds> park_sounds; ///< While a park is open
     config::GameOptions audio_options;
     // The engine starts before the menus' sound where the startup logos have sound of their own.
     const auto create_audio = [&] {
@@ -953,35 +953,35 @@ int main(int argc, char** argv)
     // The log says how long each stage took, and where a load that failed stopped.
     const auto load_park = [&](const std::filesystem::path& path) {
         const prof::Scope zone("LoadingScreen");
-        auto shown = rct3::scene::ParkLoadStage::ReadFile; // The frame before loading began drew it
+        auto shown = rct3::scene::park::ParkLoadStage::ReadFile; // The frame before loading began drew it
         const std::uint64_t log_from = park_log_from != 0 ? park_log_from : rct3::logging::global().latest_sequence();
         const double started = window->time();
         double stage_started = started;
         log.info("loading park {}", path.string());
-        const auto report = [&](rct3::scene::ParkLoadStage stage) {
+        const auto report = [&](rct3::scene::park::ParkLoadStage stage) {
             window->poll_events();
             if (audio && menu_audio)
                 rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, { }, false, 0);
             if (stage == shown)
                 return;
             const double now = window->time();
-            log.info("park loading: {} took {:.2f} s", rct3::scene::park_load_name(shown), now - stage_started);
+            log.info("park loading: {} took {:.2f} s", rct3::scene::park::park_load_name(shown), now - stage_started);
             stage_started = now;
             shown = stage;
             device->begin_frame();
             device->begin_pass({ .clear_color = kBackground });
-            rct3::scene::draw_park_loading(*device, front->assets, front->list, stage, log_from);
+            rct3::scene::park::draw_park_loading(*device, front->assets, front->list, stage, log_from);
             device->end_pass();
             device->end_frame();
         };
-        auto loaded = rct3::scene::create_park_scene(*device, *install, *front->assets.strings, front->assets.palette, front->live->options, path, seed.value_or(rct3::random::fresh_seed()), ride_ratings, report);
+        auto loaded = rct3::scene::park::create_park_scene(*device, *install, *front->assets.strings, front->assets.palette, front->live->options, path, seed.value_or(rct3::random::fresh_seed()), ride_ratings, report);
         const double now = window->time();
         if (loaded)
         {
-            log.info("park loading: {} took {:.2f} s; loaded in {:.2f} s", rct3::scene::park_load_name(shown), now - stage_started, now - started);
+            log.info("park loading: {} took {:.2f} s; loaded in {:.2f} s", rct3::scene::park::park_load_name(shown), now - stage_started, now - started);
             park = std::move(*loaded);
             if (audio)
-                park_sounds = rct3::scene::load_park_sounds(*install, std::random_device { }());
+                park_sounds = rct3::scene::park::load_park_sounds(*install, std::random_device { }());
             park->simulate = simulate;
             park->scale = scale;
             if (front)
@@ -1001,11 +1001,11 @@ int main(int argc, char** argv)
                 park->day.fade = 0;
             }
             // In a career, leaving goes back to the career's map, under the park.
-            if (auto tools = park->desktop->root().find_as<rct3::ui::screens::ToolRow>(rct3::scene::kToolsName))
+            if (auto tools = park->desktop->root().find_as<rct3::ui::screens::ToolRow>(rct3::scene::park::kToolsName))
                 tools->set_career(!park_game.career.empty());
         }
         else
-            log.error("park loading failed during {} after {:.2f} s: {}: {}", rct3::scene::park_load_name(shown), now - started, path.string(), loaded.error());
+            log.error("park loading failed during {} after {:.2f} s: {}: {}", rct3::scene::park::park_load_name(shown), now - started, path.string(), loaded.error());
     };
     if (install && !startup)
         load_widgets(false);
@@ -1117,7 +1117,7 @@ int main(int argc, char** argv)
                     if (script)
                         std::ranges::move(script->take_keys(), std::back_inserter(keys.presses));
                     std::vector<rct3::ui::PlayCommand> play_commands;
-                    const bool binding = (front && rct3::scene::front_end_waiting_for_keys(*front)) || (park && rct3::scene::park_waiting_for_keys(*park));
+                    const bool binding = (front && rct3::scene::front_end_waiting_for_keys(*front)) || (park && rct3::scene::park::park_waiting_for_keys(*park));
                     if (!binding)
                     {
                         auto translated = key_map.translate(keys);
@@ -1161,7 +1161,7 @@ int main(int argc, char** argv)
                     if (phase == Phase::Running && park && front)
                     {
                         const auto p = game_pointer();
-                        rct3::scene::ParkInput input;
+                        rct3::scene::park::ParkInput input;
                         // The wheel over a developer window scrolls it, not the park.
                         const bool ours = !ImGui::GetIO().WantCaptureMouse;
                         input.pointer = { { p.x, p.y }, p.left, ours, ours ? rct3::ui::Point { p.wheel_x, p.wheel_y } : rct3::ui::Point { } };
@@ -1170,7 +1170,7 @@ int main(int argc, char** argv)
                         input.middle = p.middle && input.pointer.present;
                         input.shift = p.shift;
                         input.control = p.control;
-                        if (!ImGui::GetIO().WantCaptureKeyboard && !rct3::scene::typing(*park))
+                        if (!ImGui::GetIO().WantCaptureKeyboard && !rct3::scene::park::typing(*park))
                         {
                             // On the keys the player bound to the game's camera commands, unless they are being bound
                             // or typed into a box.
@@ -1196,38 +1196,38 @@ int main(int argc, char** argv)
                         // not drawn, with the pointer still and no keys.
                         if (const float ahead = script ? script->take_advance() : 0; ahead > 0)
                         {
-                            rct3::scene::ParkInput still = input;
+                            rct3::scene::park::ParkInput still = input;
                             still.pointer.wheel = { };
                             still.commands.clear();
                             for (float left = ahead; left > 0 && rct3::simulation::time_factor(park->park.speed) > 0; left -= rct3::simulation::kTickSeconds)
-                                rct3::scene::update_park_scene(*device, *park, front->assets, front->live->options, still, no_keys, std::min(left, rct3::simulation::kTickSeconds) / rct3::simulation::time_factor(park->park.speed));
+                                rct3::scene::park::update_park_scene(*device, *park, front->assets, front->live->options, still, no_keys, std::min(left, rct3::simulation::kTickSeconds) / rct3::simulation::time_factor(park->park.speed));
                         }
-                        prof::section("Park", [&] { rct3::scene::update_park_scene(*device, *park, front->assets, front->live->options, input, ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys, static_cast<float>(delta)); });
-                        rct3::scene::update_park_windows(*device, *park, *front);
-                        auto park_requests = rct3::scene::take_park_window_requests(*park, *front);
+                        prof::section("Park", [&] { rct3::scene::park::update_park_scene(*device, *park, front->assets, front->live->options, input, ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys, static_cast<float>(delta)); });
+                        rct3::scene::park::update_park_windows(*device, *park, *front);
+                        auto park_requests = rct3::scene::park::take_park_window_requests(*park, *front);
                         apply_requests(park_requests);
                         if (const auto copied = park->desktop->take_clipboard())
                             window->set_clipboard(*copied);
                         auto sounds = park->desktop->take_sounds();
-                        if (rct3::scene::take_park_alert(*park))
+                        if (rct3::scene::park::take_park_alert(*park))
                             sounds.push_back(rct3::ui::InterfaceSound::Message);
                         // shortcut: heard by the camera's height alone, there being no view from a ride yet; silence it there once there is.
                         const float music_level = rct3::audio::park_music_level(rct3::park::eye(park->camera).y - park->camera.target.y);
                         if (audio && menu_audio)
                             prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true, music_level); });
                         if (audio && park_sounds)
-                            prof::section("ParkSounds", [&] { rct3::scene::update_park_sounds(*audio, *park_sounds, *park, static_cast<float>(delta)); });
+                            prof::section("ParkSounds", [&] { rct3::scene::park::update_park_sounds(*audio, *park_sounds, *park, static_cast<float>(delta)); });
                         // Leaving, or loading another park in its place (asked for here or by a script): its loading
                         // screen shows next.
-                        const bool leave = rct3::scene::take_park_leave(*park);
+                        const bool leave = rct3::scene::park::take_park_leave(*park);
                         if (leave || park_requests.park || park_to_load)
                         {
                             const prof::Scope zone("LeavePark");
-                            rct3::scene::close_park_windows(*device, *park, *front);
-                            rct3::scene::destroy_park_scene(*device, *park);
+                            rct3::scene::park::close_park_windows(*device, *park, *front);
+                            rct3::scene::park::destroy_park_scene(*device, *park);
                             park.reset();
                             if (audio && park_sounds)
-                                rct3::scene::stop_park_sounds(*audio, *park_sounds);
+                                rct3::scene::park::stop_park_sounds(*audio, *park_sounds);
                             park_sounds.reset();
                             if (park_requests.park)
                             {
@@ -1269,7 +1269,7 @@ int main(int argc, char** argv)
                     if (ImGui::GetIO().WantCaptureMouse)
                         cursor = rct3::platform::Window::developer_cursor();
                     else if (phase == Phase::Running && park && front)
-                        cursor = rct3::scene::park_scene_cursor(*park);
+                        cursor = rct3::scene::park::park_scene_cursor(*park);
                     else if (phase == Phase::Running && widgets)
                         cursor = widgets->desktop.cursor().value_or(cursor);
                     else if (phase == Phase::Running && front)
@@ -1289,7 +1289,7 @@ int main(int argc, char** argv)
                     prof::section("BeginFrame", [&] { device->begin_frame(); });
                     if (phase == Phase::Intro)
                         rct3::scene::update_startup_movie(*device, *startup, audio ? &*audio : nullptr);
-                    device->begin_pass({ .clear_color = park ? rct3::scene::park_background(*park) : kBackground });
+                    device->begin_pass({ .clear_color = park ? rct3::scene::park::park_background(*park) : kBackground });
                     if (phase == Phase::Intro)
                     {
                         rct3::scene::draw_startup_logo(*device, *startup);
@@ -1304,13 +1304,13 @@ int main(int argc, char** argv)
                         if (widgets)
                             rct3::scene::draw_widget_demo(*device, *widgets);
                         else if (park && front)
-                            rct3::scene::draw_park_scene(*device, *park, front->assets, !screenshot || !script_shot.empty());
+                            rct3::scene::park::draw_park_scene(*device, *park, front->assets, !screenshot || !script_shot.empty());
                         else if (park_to_load && front)
                         {
                             // Warnings from here on are this load's.
                             if (park_log_from == 0)
                                 park_log_from = rct3::logging::global().latest_sequence();
-                            rct3::scene::draw_park_loading(*device, front->assets, front->list, rct3::scene::ParkLoadStage::ReadFile, park_log_from);
+                            rct3::scene::park::draw_park_loading(*device, front->assets, front->list, rct3::scene::park::ParkLoadStage::ReadFile, park_log_from);
                         }
                         else if (front)
                             rct3::scene::draw_front_end_scene(*device, *front);
@@ -1393,8 +1393,8 @@ int main(int argc, char** argv)
     if (park)
     {
         if (front)
-            rct3::scene::close_park_windows(*device, *park, *front);
-        rct3::scene::destroy_park_scene(*device, *park);
+            rct3::scene::park::close_park_windows(*device, *park, *front);
+        rct3::scene::park::destroy_park_scene(*device, *park);
     }
     if (front)
         rct3::scene::destroy_front_end_scene(*device, *front);

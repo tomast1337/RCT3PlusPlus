@@ -22,24 +22,27 @@
 namespace rct3::scene
 {
 
-    struct ParkScene;
+    namespace park
+    {
+        struct ParkScene;
+    }
 
     /// Takes out the fence tool for `item` when it is an enclosure fence or the delete tool, or the tool putting
     /// down an animal of the animal list; false otherwise.
-    bool start_enclosing(ParkScene& scene, const rct3::park::BuildItem& item);
+    bool start_enclosing(park::ParkScene& scene, const rct3::park::BuildItem& item);
 
     /// Puts the fence tool away.
-    void stop_enclosing(ParkScene& scene);
+    void stop_enclosing(park::ParkScene& scene);
 
     /// Marks the tiles under a drag at `at`, in a view of `size`, while `down`; works on them when it ends.
-    void update_enclosing(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over);
+    void update_enclosing(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over);
 
     /// Puts up the keeper's hut beside animal house `house`, just placed at `site` from `item`, and hires its
     /// keeper, who starts at the hut.
-    void house_placed(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const rct3::park::BuildItem& item, const rct3::park::ride::RideSite& site);
+    void house_placed(park::ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const rct3::park::BuildItem& item, const rct3::park::ride::RideSite& site);
 
     /// Builds the enclosures' fences again after they changed.
     /// shortcut: the old panels stay hidden among the objects; drop them when objects can be taken out.
-    void enclosures_changed(ParkScene& scene, const ui::InterfaceAssets& assets);
+    void enclosures_changed(park::ParkScene& scene, const ui::InterfaceAssets& assets);
 
 } // namespace rct3::scene

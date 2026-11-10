@@ -55,7 +55,10 @@ namespace rct3::scene
     inline constexpr float kPreviewPitch = 0.5f;
     inline constexpr float kPreviewClosest = 1.5f;
 
-    struct ParkScene;
+    namespace park
+    {
+        struct ParkScene;
+    }
 
     struct RidePlacing
     {
@@ -114,11 +117,11 @@ namespace rct3::scene
     };
 
     /// The point of the ground under `at`, in a view of `size`, in tile units: column and row with fractions.
-    [[nodiscard]] std::optional<glm::vec2> ground_spot(const ParkScene& scene, ui::Point at, ui::Point size);
+    [[nodiscard]] std::optional<glm::vec2> ground_spot(const park::ParkScene& scene, ui::Point at, ui::Point size);
     /// The highest id the park's objects, rides and stalls use; a new one takes the next.
-    [[nodiscard]] std::uint64_t last_id(const ParkScene& scene);
+    [[nodiscard]] std::uint64_t last_id(const park::ParkScene& scene);
     /// The tile of the ground under `at`, in a view of `size`.
-    [[nodiscard]] std::optional<save::Tile> ground_tile(const ParkScene& scene, ui::Point at, ui::Point size);
+    [[nodiscard]] std::optional<save::Tile> ground_tile(const park::ParkScene& scene, ui::Point at, ui::Point size);
 
     /// The height of something raised or sunk with Shift, the pointer's ray now being `ray`: its `height` when
     /// Shift went down with the pointer meeting the park at `at`, moved as far as the ray has moved up or down an
@@ -127,35 +130,35 @@ namespace rct3::scene
 
     /// Starts placing `item`, in place of anything being placed before. Items other than rides placed
     /// whole, stalls and scenery are left alone; false for those.
-    bool start_ride_placing(ParkScene& scene, const rct3::park::BuildItem& item);
+    bool start_ride_placing(park::ParkScene& scene, const rct3::park::BuildItem& item);
 
     /// Starts placing the entrance, or the `exit`, of the ride `ride` as `item` (the ride's) has it: of a tracked
     /// ride beside its `stations`, of a placed flat ride (no stations) round its ground; one placed before moves.
     /// False without stations on a tracked ride or a door in the item.
-    bool start_door_placing(ParkScene& scene, std::size_t ride, const rct3::park::BuildItem& item, std::vector<save::TrackPiece> stations, bool exit);
+    bool start_door_placing(park::ParkScene& scene, std::size_t ride, const rct3::park::BuildItem& item, std::vector<save::TrackPiece> stations, bool exit);
     /// Gives the new ride `ride` the fence of `item` (its theme's), in the fence's own colours.
-    void take_fence(ParkScene& scene, const ui::InterfaceAssets& assets, save::Ride& ride, const rct3::park::BuildItem& item);
+    void take_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::Ride& ride, const rct3::park::BuildItem& item);
     /// Adds `door`, whose model is loaded, as the entrance (or `exit`) of station `station` of the tracked ride
     /// `ride`, standing at `height`, in place of the one it had.
-    void place_station_door(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t station, const save::PlacedObject& door, std::int32_t height, bool exit);
+    void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t station, const save::PlacedObject& door, std::int32_t height, bool exit);
 
     /// Puts the tool away.
-    void stop_ride_placing(ParkScene& scene);
+    void stop_ride_placing(park::ParkScene& scene);
 
-    [[nodiscard]] bool ride_placing(const ParkScene& scene);
+    [[nodiscard]] bool ride_placing(const park::ParkScene& scene);
 
     /// Each frame: follows the pointer at `at` (of a view `size`, not `over` the interface), the game's
     /// `commands` and the placing panel, and has the simulation take on the rides placed here as their entrances
     /// join the paths. `shift`: whether Shift is held, which raises and lowers scenery.
-    void update_ride_placing(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands);
+    void update_ride_placing(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands);
 
     /// A click on the park while placing: places what the ghost shows. False when not placing.
-    bool ride_placing_click(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
+    bool ride_placing_click(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets);
 
     /// The arrow a stall being placed shows on the side it serves from (see park/build_arrows.hpp); empty while
     /// no stall's ghost shows.
-    [[nodiscard]] rct3::park::TerrainMesh stall_arrow(const ParkScene& scene);
+    [[nodiscard]] rct3::park::TerrainMesh stall_arrow(const park::ParkScene& scene);
 
-    void draw_ride_placing_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
+    void draw_ride_placing_ghost(render::Device& device, const park::ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
 } // namespace rct3::scene

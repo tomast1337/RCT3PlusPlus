@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// render::Shader::Shafts, sunlight seen in the air (app/scene/park_glow.hpp). Each pixel steps along the line
+// render::Shader::Shafts, sunlight seen in the air (app/scene/park/glow.hpp). Each pixel steps along the line
 // from the eye to what it shows and asks the sun's shadow map, at each step, whether that bit of air is in
 // sunlight. The lit length of the line, scattered towards the eye, comes out as haze in the sun's colour, so the
 // shadow of anything between the sun and the air leaves a dark gap in it: the shafts. This is the shadow map ray

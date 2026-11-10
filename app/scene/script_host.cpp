@@ -11,8 +11,8 @@
 #include "random/generator.hpp"
 #include "scene/enclosure_tools.hpp"
 #include "scene/front_end_scene.hpp"
-#include "scene/park_refresh.hpp"
-#include "scene/park_scene.hpp"
+#include "scene/park/refresh.hpp"
+#include "scene/park/scene.hpp"
 #include "scene/pool_tools.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
@@ -71,14 +71,14 @@ namespace rct3::scene
             return { x, g.height_at(x, z).value_or(0) + up, z };
         }
 
-        const save::TerrainGrid& grid_of(const ParkScene* park)
+        const save::TerrainGrid& grid_of(const park::ParkScene* park)
         {
             if (park == nullptr)
                 throw std::runtime_error("no park is open");
             return park->grid;
         }
 
-        ParkScene& park_of(ParkScene* park)
+        park::ParkScene& park_of(park::ParkScene* park)
         {
             if (park == nullptr)
                 throw std::runtime_error("no park is open");
@@ -86,7 +86,7 @@ namespace rct3::scene
         }
 
         /// The install's flat rides, once read; none until then.
-        std::optional<std::span<const rct3::park::BuildItem>> build_items(const ParkScene& park)
+        std::optional<std::span<const rct3::park::BuildItem>> build_items(const park::ParkScene& park)
         {
             const auto& items = park.build.items;
             if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
@@ -443,7 +443,7 @@ namespace rct3::scene
             return Json(true);
         });
         engine_.define("park.postMessage", [this](const Json& a) -> Json {
-            ParkScene& park = park_of(park_);
+            park::ParkScene& park = park_of(park_);
             if (a.empty() || !a[0].is_string())
                 throw std::invalid_argument("park.postMessage takes a text key, and may take a ride's place in rides.list() and a tab number");
             simulation::ParkMessage message { .text_key = a[0].get<std::string>() };
@@ -484,7 +484,7 @@ namespace rct3::scene
             throw std::invalid_argument("park.setWeather takes the name of a weather, such as \"light rain\"");
         });
         engine_.define("park.weatherLook", [this](const Json&) {
-            const ParkScene& p = park_of(park_);
+            const park::ParkScene& p = park_of(park_);
             const rct3::park::WeatherLook& look = p.weather_look;
             return Json { { "rain", look.rain }, { "gloom", look.gloom }, { "flash", look.flash }, { "forecast", p.park.forecast ? save::to_string(*p.park.forecast) : "" }, { "climate", p.park.climate }, { "temperature", p.park.temperature.value_or(0.0f) } };
         });
@@ -496,12 +496,12 @@ namespace rct3::scene
             return out;
         });
         engine_.define("park.vips", [this](const Json&) {
-            const ParkScene& park = park_of(park_);
+            const park::ParkScene& park = park_of(park_);
             const auto& r = park.sim.registry;
             Json out = Json::array();
             for (const auto [e, vip, visitor] : r.view<const simulation::Vip, const simulation::Visitor>().each())
             {
-                const auto shown = std::ranges::find(park.shown_people, e, &ShownPerson::guest);
+                const auto shown = std::ranges::find(park.shown_people, e, &park::ShownPerson::guest);
                 const glm::vec3 at = r.all_of<simulation::Pose>(e) ? r.get<simulation::Pose>(e).position : glm::vec3 { };
                 const save::TerrainGrid& g = park.grid;
                 out.push_back({ { "name", visitor.name }, { "col", g.tile_size_x > 0 ? (at.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (at.z - g.origin_z) / g.tile_size_z : 0 }, { "patience", vip.patience.value }, { "leaving", vip.leaving }, { "gone", r.all_of<simulation::Left>(e) }, { "shown", shown != park.shown_people.end() ? Json(shown - park.shown_people.begin()) : Json(nullptr) } });
@@ -583,7 +583,7 @@ namespace rct3::scene
             return { { "drops", static_cast<std::int64_t>(drops.size()) - sheets }, { "sheets", sheets } };
         });
         engine_.define("camera.riding", [this](const Json&) -> Json {
-            const ParkScene& park = park_of(park_);
+            const park::ParkScene& park = park_of(park_);
             Json out;
             if (park.riding_person)
                 out = { { "ride", -1 }, { "car", *park.riding_person }, { "kind", park.person_behind ? "behind" : "guest" } };
@@ -610,7 +610,7 @@ namespace rct3::scene
             const save::TerrainGrid& g = grid_of(park_);
             Json effects = Json::array();
             for (const auto* list : { &park_->particles.shown, &park_->particles.fired, &park_->particles.sprays })
-                for (const ParkParticles::Shown& s : *list)
+                for (const park::ParkParticles::Shown& s : *list)
                 {
                     const glm::vec3 p = s.position;
                     effects.push_back({ { "effect", s.effect }, { "col", (p.x - g.origin_x) / g.tile_size_x }, { "row", (p.z - g.origin_z) / g.tile_size_z }, { "up", p.y - g.height_at(p.x, p.z).value_or(0) }, { "live", s.run.particles().count() } });
@@ -628,7 +628,7 @@ namespace rct3::scene
             const save::TerrainGrid& g = grid_of(park_);
             if (a.empty() || !a[0].is_object() || !a[0].contains("effect"))
                 return Json(false);
-            return Json(fire_park_particles(park_->particles, a[0]["effect"].get<std::string>(), world_point(g, a[0]), glm::vec3(0, 1, 0)));
+            return Json(park::fire_park_particles(park_->particles, a[0]["effect"].get<std::string>(), world_point(g, a[0]), glm::vec3(0, 1, 0)));
         });
         engine_.define("map.paths", [this](const Json&) {
             grid_of(park_);
@@ -645,7 +645,7 @@ namespace rct3::scene
         });
         engine_.define("map.pavings", [this](const Json&) {
             Json tiles = Json::array();
-            const ParkFootpaths& f = park_of(park_).footpaths;
+            const park::ParkFootpaths& f = park_of(park_).footpaths;
             const std::vector<rct3::park::ground::PavedTile> laid = rct3::park::ground::lay_pavings(f.paths, f.pavings, park_->grid);
             for (const rct3::park::ground::Paving& p : f.pavings)
                 for (const save::Tile t : p.tiles)
@@ -733,7 +733,7 @@ namespace rct3::scene
             return stalls;
         });
         engine_.define("stalls.list", [this](const Json&) {
-            const ParkScene& park = park_of(park_);
+            const park::ParkScene& park = park_of(park_);
             Json stalls = Json::array();
             for (std::size_t i = 0; i < park.rides.stalls.size(); ++i)
             {
@@ -746,7 +746,7 @@ namespace rct3::scene
                     extras.push_back({ { "extra", extra.kind_symbol }, { "level", extra.level } });
                 const bool shown = park.shown && park.shown->kind == rct3::park::AttractionRef::Kind::Stall && park.shown->index == i;
                 Json one { { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::AttractionState::Open }, { "items", std::move(items) }, { "extras", std::move(extras) }, { "sync", stall.sync }, { "shown", shown }, { "joined", false }, { "demolished", stall.base.demolished }, { "moving", false } };
-                for (const ParkScene::BonedRide& boned : park.boned_rides)
+                for (const park::ParkScene::BonedRide& boned : park.boned_rides)
                     if (const auto owner = boned.object < park.objects.size() ? park.attractions.find(park.objects[boned.object].id) : park.attractions.end(); owner != park.attractions.end() && owner->second == rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Stall, i })
                         one["moving"] = true;
                 for (const auto [e, a] : park.sim.registry.view<const simulation::Attraction>().each())
@@ -766,7 +766,7 @@ namespace rct3::scene
         engine_.define("build.pick", [this](const Json& a) -> Json {
             if (a.size() < 2 || !a[0].is_string() || !a[1].is_string())
                 throw std::invalid_argument("build.pick takes an overlay, a symbol and, for a tracked ride, \"designs\" to offer its saved designs");
-            ParkScene& park = park_of(park_);
+            park::ParkScene& park = park_of(park_);
             const auto items = build_items(park);
             if (!items)
                 return false;
@@ -840,17 +840,17 @@ namespace rct3::scene
             return Json(nullptr);
         });
         engine_.define("rides.setState", [this](const Json& a) {
-            ParkScene& park = park_of(park_);
+            park::ParkScene& park = park_of(park_);
             constexpr std::array<std::pair<std::string_view, save::AttractionState>, 3> kStates { { { "closed", save::AttractionState::Closed }, { "testing", save::AttractionState::Testing }, { "open", save::AttractionState::Open } } };
             const auto state = a.size() == 2 && a[1].is_string() ? std::ranges::find(kStates, a[1].get<std::string>(), &std::pair<std::string_view, save::AttractionState>::first) : kStates.end();
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.rides.size() || state == kStates.end())
                 throw std::invalid_argument("rides.setState takes a ride's place in rides.list() and \"closed\", \"testing\" or \"open\"");
             // The reason it stays as it was, as a string key; null once changed.
-            const auto refused = change_ride_state(park, a[0].get<std::size_t>(), state->second);
+            const auto refused = park::change_ride_state(park, a[0].get<std::size_t>(), state->second);
             return refused ? Json(*refused) : Json(nullptr);
         });
         engine_.define("rides.setFixedSpeed", [this](const Json& a) {
-            ParkScene& park = park_of(park_);
+            park::ParkScene& park = park_of(park_);
             const std::size_t i = a.size() == 2 && a[0].is_number_unsigned() && a[1].is_number() ? a[0].get<std::size_t>() : park.ride_entities.size();
             auto* fleet = i < park.ride_entities.size() && park.ride_entities[i] != entt::null ? park.sim.registry.try_get<simulation::Trains>(park.ride_entities[i]) : nullptr;
             if (fleet == nullptr)
@@ -860,15 +860,15 @@ namespace rct3::scene
             return Json(nullptr);
         });
         engine_.define("stalls.setState", [this](const Json& a) {
-            ParkScene& park = park_of(park_);
+            park::ParkScene& park = park_of(park_);
             const bool open = a.size() == 2 && a[1] == "open";
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size() || !(open || (a.size() == 2 && a[1] == "closed")))
                 throw std::invalid_argument("stalls.setState takes a stall's place in stalls.list() and \"closed\" or \"open\"");
-            const auto refused = change_stall_state(park, a[0].get<std::size_t>(), open ? save::AttractionState::Open : save::AttractionState::Closed);
+            const auto refused = park::change_stall_state(park, a[0].get<std::size_t>(), open ? save::AttractionState::Open : save::AttractionState::Closed);
             return refused ? Json(*refused) : Json(nullptr);
         });
         engine_.define("stalls.setPrice", [this](const Json& a) {
-            ParkScene& park = park_of(park_);
+            park::ParkScene& park = park_of(park_);
             if (a.size() != 3 || !a[0].is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size() || !a[1].is_number_unsigned() || a[1].get<std::size_t>() >= park.rides.stalls[a[0].get<std::size_t>()].items.size() || !a[2].is_number_integer())
                 throw std::invalid_argument("stalls.setPrice takes a stall's place in stalls.list(), an item's place in its menu and hundredths");
             save::Stall& stall = park.rides.stalls[a[0].get<std::size_t>()];
@@ -877,14 +877,14 @@ namespace rct3::scene
             return Json(nullptr);
         });
         engine_.define("rides.show", [this](const Json& a) {
-            ParkScene& park = park_of(park_);
+            park::ParkScene& park = park_of(park_);
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.rides.size())
                 throw std::invalid_argument("rides.show takes a ride's place in rides.list()");
             park.info_requested = rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Ride, a[0].get<std::size_t>() };
             return Json(nullptr);
         });
         engine_.define("stalls.breakDown", [this](const Json& a) -> Json {
-            ParkScene& park = park_of(park_);
+            park::ParkScene& park = park_of(park_);
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size())
                 throw std::invalid_argument("stalls.breakDown takes a stall's place in stalls.list()");
             auto& r = park.sim.registry;
@@ -898,33 +898,33 @@ namespace rct3::scene
             return Json(false);
         });
         engine_.define("stalls.show", [this](const Json& a) {
-            ParkScene& park = park_of(park_);
+            park::ParkScene& park = park_of(park_);
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size())
                 throw std::invalid_argument("stalls.show takes a stall's place in stalls.list()");
             park.info_requested = rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Stall, a[0].get<std::size_t>() };
             return Json(nullptr);
         });
         engine_.define("people.rename", [this](const Json& a) {
-            ParkScene& park = park_of(park_);
+            park::ParkScene& park = park_of(park_);
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.shown_people.size() || !a.at(1).is_string())
                 throw std::invalid_argument("people.rename takes a person's place in people.list() and a name");
             park.rename_requested = std::pair { a[0].get<std::size_t>(), strings::to_utf16(a[1].get<std::string>()) };
             return Json(nullptr);
         });
         engine_.define("people.show", [this](const Json& a) {
-            ParkScene& park = park_of(park_);
+            park::ParkScene& park = park_of(park_);
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.shown_people.size())
                 throw std::invalid_argument("people.show takes a person's place in people.list()");
             park.person_requested = a[0].get<std::size_t>();
             return Json(nullptr);
         });
         engine_.define("people.list", [this](const Json&) {
-            const ParkScene& park = park_of(park_);
+            const park::ParkScene& park = park_of(park_);
             Json out = Json::array();
-            for (const ShownPerson& p : park.shown_people)
+            for (const park::ShownPerson& p : park.shown_people)
             {
                 const save::Person* saved = p.staff ? (p.saved < park.people.staff.size() ? &park.people.staff[p.saved].person : nullptr) : (p.saved < park.people.guests.size() ? &park.people.guests[p.saved].person : nullptr);
-                const glm::vec3 standing = standing_at(park, p);
+                const glm::vec3 standing = park::standing_at(park, p);
                 const save::TerrainGrid& g = park.grid;
                 const Json tile = g.tile_size_x > 0 && g.tile_size_z > 0 ? Json { { "col", (standing.x - g.origin_x) / g.tile_size_x }, { "row", (standing.z - g.origin_z) / g.tile_size_z } } : Json(nullptr);
                 Json person { { "name", saved != nullptr ? saved->name : std::string { } }, { "staff", p.staff }, { "at", tile } };
@@ -1068,14 +1068,14 @@ namespace rct3::scene
                     }
                     // Sliding down a slope, the motion they slide in.
                     if (const auto* drop = r.try_get<simulation::Dropped>(p.guest); drop != nullptr && drop->sliding)
-                        person["slide"] = slide_motion(r.get<simulation::Pose>(p.guest).heading.value, drop->drift, p.staff);
+                        person["slide"] = park::slide_motion(r.get<simulation::Pose>(p.guest).heading.value, drop->drift, p.staff);
                 }
                 out.push_back(std::move(person));
             }
             return out;
         });
         engine_.define("animals.list", [this](const Json&) {
-            const ParkScene& park = park_of(park_);
+            const park::ParkScene& park = park_of(park_);
             const save::TerrainGrid& g = park.grid;
             Json out = Json::array();
             for (const auto [e, animal, pose] : park.sim.registry.view<const simulation::Animal, const simulation::Pose>().each())
@@ -1086,7 +1086,7 @@ namespace rct3::scene
             return out;
         });
         engine_.define("rides.shown", [this](const Json&) -> Json {
-            const ParkScene& park = park_of(park_);
+            const park::ParkScene& park = park_of(park_);
             if (!park.shown || park.shown->kind != rct3::park::AttractionRef::Kind::Ride || park.shown->index >= park.rides.rides.size())
                 return nullptr;
             const save::Ride& ride = park.rides.rides[park.shown->index];
@@ -1110,7 +1110,7 @@ namespace rct3::scene
             return placing;
         });
         engine_.define("build.pooling", [this](const Json&) -> Json {
-            const PoolTool& t = park_of(park_).pooling;
+            const park::PoolTool& t = park_of(park_).pooling;
             if (!t.item)
                 return nullptr;
             Json pooling { { "ghost", t.ghost.vertices.empty() || !t.ghost_of ? Json(nullptr) : Json(t.ghost_of->symbol) }, { "arrow", !t.arrow.vertices.empty() } };
@@ -1120,7 +1120,7 @@ namespace rct3::scene
         });
         engine_.define("build.sounds", [this](const Json&) -> Json { return Json { { "thumps", park_of(park_).built }, { "rumble", park_of(park_).land.rumble ? Json(*park_of(park_).land.rumble) : Json(nullptr) } }; });
         engine_.define("build.enclosing", [this](const Json&) -> Json {
-            const ParkScene& scene = park_of(park_);
+            const park::ParkScene& scene = park_of(park_);
             const auto& m = scene.enclosing.marked;
             if (!scene.enclosing.corner || !m)
                 return nullptr;
@@ -1144,7 +1144,7 @@ namespace rct3::scene
             return std::ranges::count(t.marks, std::uint8_t { 1 });
         });
         engine_.define("rides.list", [this](const Json&) {
-            const ParkScene& park = park_of(park_);
+            const park::ParkScene& park = park_of(park_);
             Json rides = Json::array();
             for (std::size_t i = 0; i < park.rides.rides.size(); ++i)
             {
@@ -1200,7 +1200,7 @@ namespace rct3::scene
                         const float row = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
                         // Facing: radians round the vertical its +Z points, 0 along +Z.
                         Json car = { { "col", col }, { "row", row }, { "up", at.y - park.grid.height_at(at.x, at.z).value_or(0) }, { "facing", std::atan2(park.car_places[k][2].x, park.car_places[k][2].z) } };
-                        if (const auto boned = std::ranges::find(park.boned_cars, k, &ParkScene::BonedCar::car); boned != park.boned_cars.end() && boned->stroke)
+                        if (const auto boned = std::ranges::find(park.boned_cars, k, &park::ParkScene::BonedCar::car); boned != park.boned_cars.end() && boned->stroke)
                             car["stroke"] = std::array { "both", "left", "right" }[std::to_underlying(*boned->stroke)];
                         cars.push_back(std::move(car));
                     }
@@ -1326,7 +1326,7 @@ namespace rct3::scene
         });
     }
 
-    void ScriptHost::tick(const render::Device& device, ParkScene* park, FrontEndScene* front)
+    void ScriptHost::tick(const render::Device& device, park::ParkScene* park, FrontEndScene* front)
     {
         wheel_ = 0; // Turned for one frame only
         if (quit_)
@@ -1373,7 +1373,7 @@ namespace rct3::scene
         if (device_ == nullptr)
             return std::nullopt;
         if (park_ != nullptr)
-            return std::pair<ui::Widget&, float> { park_->desktop->root(), park_interface_scale(*device_, *park_) };
+            return std::pair<ui::Widget&, float> { park_->desktop->root(), park::park_interface_scale(*device_, *park_) };
         if (front_ != nullptr)
             return std::pair<ui::Widget&, float> { front_->live->desktop.root(), front_end_scale(*device_, *front_) };
         return std::nullopt;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// render::Shader::Glow, one step of the glow chain (app/scene/park_glow.hpp), drawn with the Textured vertex
+// render::Shader::Glow, one step of the glow chain (app/scene/park/glow.hpp), drawn with the Textured vertex
 // stage. With `color.a` at 1 it shrinks: thirteen filtered reads round the point, weighted so every source
 // pixel counts once, and keeps the part above `color.g` with a soft knee. With `color.a` at 0 it grows: a three
 // by three tent of reads `color.r` texels apart. Either way the result is times `color.b`. The weights follow

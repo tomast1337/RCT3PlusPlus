@@ -19,7 +19,10 @@
 namespace rct3::scene
 {
 
-    struct ParkScene;
+    namespace park
+    {
+        struct ParkScene;
+    }
 
     struct DrawnAnimals
     {
@@ -33,16 +36,16 @@ namespace rct3::scene
     };
 
     /// Finds the animals' models in `install`, to read as animals come.
-    void load_zoo_animals(ParkScene& scene, const config::GameInstall& install);
+    void load_zoo_animals(park::ParkScene& scene, const config::GameInstall& install);
 
     /// The crate animals come in, as an object to load the model of.
     [[nodiscard]] save::PlacedObject animal_crate();
 
     /// Reads the models of animals that came since and uploads their pictures, and the crate's; the crate's
     /// model must be loaded.
-    void animals_changed(render::Device& device, ParkScene& scene);
+    void animals_changed(render::Device& device, park::ParkScene& scene);
 
     /// Poses the animals and their crates as they are now, at the park's clock.
-    void place_animals(ParkScene& scene);
+    void place_animals(park::ParkScene& scene);
 
 } // namespace rct3::scene

@@ -14,15 +14,14 @@ UCRT64** shell. Other shells, such as Git Bash, do not put `/ucrt64/bin` on
 - The packages below, installed once in the UCRT64 shell:
 
 ```
-pacman -S --needed make mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-glfw mingw-w64-ucrt-x86_64-vulkan-loader
+pacman -S --needed mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-glfw mingw-w64-ucrt-x86_64-vulkan-loader
 ```
 
-| Package                               | Provides                                     |
-| ------------------------------------- | -------------------------------------------- |
-| `make`                                | GNU `make`, which FFmpeg's `configure` needs |
-| `mingw-w64-ucrt-x86_64-gcc`           | `g++`; rct3++ needs GCC 16 or later          |
-| `mingw-w64-ucrt-x86_64-glfw`          | `libglfw3.dll.a`                             |
-| `mingw-w64-ucrt-x86_64-vulkan-loader` | `libvulkan-1.dll.a`                          |
+| Package                               | Provides                            |
+| ------------------------------------- | ----------------------------------- |
+| `mingw-w64-ucrt-x86_64-gcc`           | `g++`; rct3++ needs GCC 16 or later |
+| `mingw-w64-ucrt-x86_64-glfw`          | `libglfw3.dll.a`                    |
+| `mingw-w64-ucrt-x86_64-vulkan-loader` | `libvulkan-1.dll.a`                 |
 
 The shaders are compiled with `slangc`, which MSYS2 does not package. Download
 `slang-<version>-windows-x86_64.zip` from the
@@ -83,11 +82,9 @@ Should open the game window. `./nob run -- --frames 120` exits after 120 frames.
 Other `nob` commands are listed in
 [Building and running](../CONTRIBUTING.md#building-and-running).
 
-The first build downloads the pinned FFmpeg source into `downloads/` and runs
-its `configure` once, into `build/ffmpeg/`. The cut in
-[third_party/ffmpeg](../third_party/ffmpeg/) is compiled against the `config.h`
-that writes, because the one in the repository was made on Linux. Delete
-`build/ffmpeg/` to run `configure` again.
+WMA music and WMV movies are decoded by Windows' own Media Foundation codecs
+(`src/audio/wma/decoder_windows.cpp`, `src/video/wmv/decoder_windows.cpp`), so
+the build downloads and compiles no FFmpeg.
 
 ## direnv
 

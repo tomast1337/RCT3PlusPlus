@@ -84,7 +84,8 @@ and the prefix goes: `park/track_pieces.hpp` becomes `park/track/pieces.hpp`. Th
 folder: `src/park/track/` is `rct3::park::track`, and `app/a/b/` is `rct3::a::b` likewise.
 Platform code goes in files whose name ends in `_windows` (built only on Windows), `_linux` (only on Linux) or
 `_ffmpeg` (everywhere but Windows), beside a header every platform shares: `audio/wma/decoder.hpp` with
-`decoder_ffmpeg.cpp`, `config/game/install.hpp` with `install_linux.cpp` and `install_windows.cpp`.
+`decoder_ffmpeg.cpp` and `decoder_windows.cpp`, `config/game/install.hpp` with `install_linux.cpp` and
+`install_windows.cpp`.
 
 **Product code and fixtures stay apart.** Probes and fixtures are not mixed into the folders of the code
 they check. Tests live in `tests/`, tools in `tools/`, library code in `src/`.

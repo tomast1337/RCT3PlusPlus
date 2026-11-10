@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The models of zoo animals, read from the game's animal files (see ovl/animal_model.hpp and
-// ovl/animal_motions.hpp for the items).
+// The models of zoo animals, read from the game's animal files (see ovl/animal/model.hpp and
+// ovl/animal/motions.hpp for the items).
 //
 // A park names an animal's species by symbol; the species names a model and a motion set for each of its
 // four animals (adult or young, male or female), the motion set names a model animation for each motion,
@@ -12,7 +12,7 @@
 #pragma once
 
 #include "math/glm.hpp"
-#include "ovl/animal_motions.hpp"
+#include "ovl/animal/motions.hpp"
 #include "ovl/texture_image.hpp"
 #include "park/object/models.hpp"
 
@@ -69,16 +69,16 @@ namespace rct3::park
         std::vector<glm::vec3> rest_positions { };        ///< By bone, from the parent
         std::vector<glm::quat> rest_rotations { };        ///< By bone, from the parent
         std::vector<std::vector<AnimalPiece>> levels { }; ///< Finest first; coarse ones may be empty
-        /// By motion slot (ovl::AnimalMotion), nothing where the animal has no such motion.
+        /// By motion slot (ovl::animal::AnimalMotion), nothing where the animal has no such motion.
         std::vector<std::optional<AnimalClip>> motions { };
     };
 
     /// How long motion `motion` of `body` lasts, 0 when it has none.
-    [[nodiscard]] float motion_seconds(const AnimalBody& body, ovl::AnimalMotion motion);
+    [[nodiscard]] float motion_seconds(const AnimalBody& body, ovl::animal::AnimalMotion motion);
 
     /// By bone: how `time` seconds into `motion` moves the bone and the vertices it carries, from where they
     /// rest to where they are (model space). The motion repeats; a motion the body lacks leaves it at rest.
-    [[nodiscard]] std::vector<glm::mat4> animal_pose(const AnimalBody& body, ovl::AnimalMotion motion, float time);
+    [[nodiscard]] std::vector<glm::mat4> animal_pose(const AnimalBody& body, ovl::animal::AnimalMotion motion, float time);
 
     class AnimalLibrary
     {

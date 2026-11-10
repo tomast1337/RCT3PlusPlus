@@ -21,7 +21,7 @@ namespace rct3::park
     {
         const AnimalBody* body = nullptr;
         std::size_t level = 0; ///< Of detail, 0 the finest; past the coarsest drawn level, that one
-        ovl::AnimalMotion motion = ovl::AnimalMotion::Stand;
+        ovl::animal::AnimalMotion motion = ovl::animal::AnimalMotion::Stand;
         float time = 0;           ///< Seconds into the motion
         glm::mat4 world { 1.0f }; ///< Model to park
     };

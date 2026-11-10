@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ovl/animal_model.hpp"
+#include "ovl/animal/model.hpp"
 
-#include "builder.hpp"
+#include "../builder.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -10,7 +10,7 @@
 
 using namespace rct3::test;
 using rct3::ovl::Overlay;
-using rct3::ovl::read_animal_models;
+using rct3::ovl::animal::read_animal_models;
 
 namespace
 {

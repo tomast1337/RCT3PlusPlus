@@ -4,7 +4,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::park;
-using rct3::ovl::AnimalMotion;
+using rct3::ovl::animal::AnimalMotion;
 
 namespace
 {

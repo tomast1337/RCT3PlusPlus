@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ovl/animal_motions.hpp"
+#include "ovl/animal/motions.hpp"
 
-#include "record_file.hpp"
+#include "../record_file.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3::test;
-using rct3::ovl::read_animal_motions;
+using rct3::ovl::animal::read_animal_motions;
 
 TEST_CASE("an animal motion set names an animation and a length for each slot")
 {

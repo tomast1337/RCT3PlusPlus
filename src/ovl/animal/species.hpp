@@ -12,14 +12,14 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::ovl
+namespace rct3::ovl::animal
 {
 
     /// One animal of a species that can be bought.
     struct AnimalVariant
     {
-        std::string_view model;            ///< "mdl" item (animal_model.hpp)
-        std::string_view motions;          ///< "wad" item (animal_motions.hpp)
+        std::string_view model;            ///< "mdl" item (animal/model.hpp)
+        std::string_view motions;          ///< "wad" item (animal/motions.hpp)
         std::string_view description_text; ///< "txt" item
         std::string_view icon;             ///< "gsi" item; adults of both sexes often share one
         std::int32_t price = 0;            ///< Hundredths of the currency unit
@@ -58,4 +58,4 @@ namespace rct3::ovl
     /// result point into the overlay's bytes.
     [[nodiscard]] std::vector<AnimalSpeciesItem> read_animal_species(const Overlay& overlay, const Part& part);
 
-} // namespace rct3::ovl
+} // namespace rct3::ovl::animal

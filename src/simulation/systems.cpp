@@ -1908,7 +1908,6 @@ namespace rct3::simulation
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;
         constexpr float dt = kTickSeconds;
-        const float now = static_cast<float>(world.tick) * kTickSeconds;
 
         std::optional<profiling::Scope> phase; // Each phase timed in turn, for the profiler's table
         const Weather weather = weather_in(r);

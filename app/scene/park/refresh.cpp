@@ -12,6 +12,7 @@
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "scene/park/patrol.hpp"
+#include "scene/park/people.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
 #include "scene/park/view.hpp"

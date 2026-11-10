@@ -2111,7 +2111,7 @@ namespace rct3::scene::park
         }
         const std::size_t ride = ref.index;
         const rct3::park::track::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : rct3::park::track::TrackRules { };
-        const auto course = ride < scene.courses.size() && scene.courses[ride] ? maybe(&*scene.courses[ride]) : std::nullopt;
+        const auto course = ride < scene.courses.size() && scene.courses[ride] ? core::maybe(&*scene.courses[ride]) : std::nullopt;
         // A pool ride's doors are its stations joined to a pool complex. A slide's station joins where the paving, a
         // pool path or the top of path stairs meets a side of its platform off the track, at the deck's height; a lazy
         // river's, which has no platform, where the paving lies across its track, each run of station stretches one
@@ -2185,7 +2185,7 @@ namespace rct3::scene::park
     bool typing(const ParkScene& scene)
     {
         // A label has the focus only while its text is selected for copying, and Control+C is a game key too.
-        const ui::Widget* focus = scene.desktop ? as_pointer(scene.desktop->keyboard_focus()) : nullptr;
+        const ui::Widget* focus = scene.desktop ? core::as_pointer(scene.desktop->keyboard_focus()) : nullptr;
         return dynamic_cast<const ui::EditBox*>(focus) != nullptr || dynamic_cast<const ui::Label*>(focus) != nullptr;
     }
 

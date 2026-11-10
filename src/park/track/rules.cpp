@@ -89,7 +89,7 @@ namespace rct3::park::track
         auto overlay = ovl::Overlay::load(file);
         if (!overlay)
             return { };
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;

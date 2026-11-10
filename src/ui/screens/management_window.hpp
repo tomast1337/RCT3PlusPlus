@@ -146,7 +146,7 @@ namespace rct3::ui::screens
         }
         [[nodiscard]] std::optional<ColumnTable&> table() const
         {
-            return maybe(table_);
+            return core::maybe(table_);
         }
 
         void update(const UpdateContext& context) override;

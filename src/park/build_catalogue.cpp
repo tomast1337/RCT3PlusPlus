@@ -367,7 +367,7 @@ namespace rct3::park
         const auto overlay = ovl::Overlay::load(file);
         if (!overlay)
             return std::nullopt;
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
             if (part)
                 for (const auto& e : ovl::read_special_attractions(*overlay, *part))
                     if (e.attraction && strings::equals_ignoring_case(e.name, name))

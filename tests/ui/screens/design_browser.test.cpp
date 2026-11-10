@@ -71,7 +71,7 @@ TEST_CASE("a locked design cannot be built")
     f.window->table().select(1);
     f.desktop.update({ });
     f.window->show_design(0, { { u"Locked", { } } }, false);
-    auto build = dynamic_cast<Button*>(rct3::as_pointer(f.window->find("content/build")));
+    auto build = dynamic_cast<Button*>(rct3::core::as_pointer(f.window->find("content/build")));
     REQUIRE(build != nullptr);
     build->click();
     f.desktop.update({ });

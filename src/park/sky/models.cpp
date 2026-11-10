@@ -105,7 +105,7 @@ namespace rct3::park::sky
         const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
 
         LoadedSky sky;
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;

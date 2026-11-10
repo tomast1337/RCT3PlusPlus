@@ -42,21 +42,21 @@ namespace
 TEST_CASE("the focus order is tree order, wrapping both ways")
 {
     Tree t;
-    CHECK(rct3::as_pointer(next_focus(t.root, std::nullopt, false)) == &t.a);
-    CHECK(rct3::as_pointer(next_focus(t.root, std::nullopt, true)) == &t.d);
-    CHECK(rct3::as_pointer(next_focus(t.root, t.a, false)) == &t.b);
-    CHECK(rct3::as_pointer(next_focus(t.root, t.c, false)) == &t.d);
-    CHECK(rct3::as_pointer(next_focus(t.root, t.d, false)) == &t.a);
-    CHECK(rct3::as_pointer(next_focus(t.root, t.a, true)) == &t.d);
-    CHECK(rct3::as_pointer(next_focus(t.root, t.b, true)) == &t.a);
+    CHECK(rct3::core::as_pointer(next_focus(t.root, std::nullopt, false)) == &t.a);
+    CHECK(rct3::core::as_pointer(next_focus(t.root, std::nullopt, true)) == &t.d);
+    CHECK(rct3::core::as_pointer(next_focus(t.root, t.a, false)) == &t.b);
+    CHECK(rct3::core::as_pointer(next_focus(t.root, t.c, false)) == &t.d);
+    CHECK(rct3::core::as_pointer(next_focus(t.root, t.d, false)) == &t.a);
+    CHECK(rct3::core::as_pointer(next_focus(t.root, t.a, true)) == &t.d);
+    CHECK(rct3::core::as_pointer(next_focus(t.root, t.b, true)) == &t.a);
 
     SUBCASE("hidden and disabled widgets are skipped, with what is inside them")
     {
         t.group.visible = false;
-        CHECK(rct3::as_pointer(next_focus(t.root, t.a, false)) == &t.d);
+        CHECK(rct3::core::as_pointer(next_focus(t.root, t.a, false)) == &t.d);
         t.group.visible = true;
         t.d.enabled = false;
-        CHECK(rct3::as_pointer(next_focus(t.root, t.c, false)) == &t.a);
+        CHECK(rct3::core::as_pointer(next_focus(t.root, t.c, false)) == &t.a);
     }
     SUBCASE("nothing when nothing takes it")
     {
@@ -76,14 +76,14 @@ TEST_CASE("tab moves the focus within the top-most window and shows it")
     desktop.layout({ 0, 0, 100, 100 });
 
     desktop.update({ }, tab());
-    CHECK(rct3::as_pointer(desktop.keyboard_focus()) == &first);
+    CHECK(rct3::core::as_pointer(desktop.keyboard_focus()) == &first);
     CHECK(desktop.keyboard_focus_shown());
     desktop.update({ }, tab());
-    CHECK(rct3::as_pointer(desktop.keyboard_focus()) == &second);
+    CHECK(rct3::core::as_pointer(desktop.keyboard_focus()) == &second);
     desktop.update({ }, tab());
-    CHECK(rct3::as_pointer(desktop.keyboard_focus()) == &first);
+    CHECK(rct3::core::as_pointer(desktop.keyboard_focus()) == &first);
     desktop.update({ }, tab(true));
-    CHECK(rct3::as_pointer(desktop.keyboard_focus()) == &second);
+    CHECK(rct3::core::as_pointer(desktop.keyboard_focus()) == &second);
 
     SUBCASE("a press hides the mark")
     {

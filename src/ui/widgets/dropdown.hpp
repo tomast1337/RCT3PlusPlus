@@ -63,7 +63,7 @@ namespace rct3::ui
         /// The open menu, if any; it lives on the desktop's root.
         [[nodiscard]] std::optional<Menu&> menu() const
         {
-            return maybe(menu_);
+            return core::maybe(menu_);
         }
 
         [[nodiscard]] bool takes_pointer() const override

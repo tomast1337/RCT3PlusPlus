@@ -74,7 +74,7 @@ namespace rct3::park::object
             if (!cache)
             {
                 cache.emplace();
-                for (const auto part : { maybe(&overlay.common()), overlay.unique() })
+                for (const auto part : { core::maybe(&overlay.common()), overlay.unique() })
                 {
                     if (!part)
                         continue;

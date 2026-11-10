@@ -373,7 +373,7 @@ namespace rct3::ui::screens
         }
         [[nodiscard]] std::optional<ColourPalette&> palette() const
         {
-            return maybe(palette_);
+            return core::maybe(palette_);
         }
         /// Puts the colours away, as when the player presses elsewhere.
         void close_palette();

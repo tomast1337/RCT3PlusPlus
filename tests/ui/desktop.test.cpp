@@ -91,15 +91,15 @@ TEST_CASE("the pointer goes to the top-most widget that takes it")
     label.placement = fill();
     desktop.layout(kView);
 
-    CHECK(rct3::as_pointer(desktop.hit({ 10, 10 })) == &back);
-    CHECK(rct3::as_pointer(desktop.hit({ 60, 10 })) == &front);
-    CHECK_FALSE(rct3::as_pointer(desktop.hit({ 190, 90 })) == &back);
-    CHECK_FALSE(rct3::as_pointer(desktop.hit({ 199, 99 })) == &label);
+    CHECK(rct3::core::as_pointer(desktop.hit({ 10, 10 })) == &back);
+    CHECK(rct3::core::as_pointer(desktop.hit({ 60, 10 })) == &front);
+    CHECK_FALSE(rct3::core::as_pointer(desktop.hit({ 190, 90 })) == &back);
+    CHECK_FALSE(rct3::core::as_pointer(desktop.hit({ 199, 99 })) == &label);
 
     SUBCASE("invisible widgets and their children are skipped")
     {
         front.visible = false;
-        CHECK(rct3::as_pointer(desktop.hit({ 60, 10 })) == &back);
+        CHECK(rct3::core::as_pointer(desktop.hit({ 60, 10 })) == &back);
     }
     SUBCASE("update reports whether the interface has the pointer")
     {
@@ -222,7 +222,7 @@ TEST_CASE("clipped parents hide children outside them")
     p.placement = top_left(40, 0, 40, 10);
     desktop.layout(kView);
 
-    CHECK(rct3::as_pointer(desktop.hit({ 45, 5 })) == &p);
+    CHECK(rct3::core::as_pointer(desktop.hit({ 45, 5 })) == &p);
     CHECK_FALSE(desktop.hit({ 60, 5 }));
 
     DrawList list;
@@ -305,7 +305,7 @@ TEST_CASE("pressing gives the focus to the nearest widget that takes it")
     Fixture f;
     f.desktop.update(at(120, 20, true)); // On `inner`, which does not take the focus
     f.desktop.update(at(120, 20));
-    CHECK(rct3::as_pointer(f.desktop.keyboard_focus()) == &f.field);
+    CHECK(rct3::core::as_pointer(f.desktop.keyboard_focus()) == &f.field);
     CHECK(f.field.has_keyboard_focus());
     CHECK_FALSE(f.top.has_keyboard_focus());
 
@@ -331,7 +331,7 @@ TEST_CASE("pressing gives the focus to the nearest widget that takes it")
     {
         f.field.enabled = false;
         f.desktop.update(at(0, 0), keys({ Key::Up }));
-        CHECK(rct3::as_pointer(f.desktop.keyboard_focus()) == &f.top);
+        CHECK(rct3::core::as_pointer(f.desktop.keyboard_focus()) == &f.top);
         CHECK(f.field.seen.empty());
         CHECK(f.top.seen == std::vector { Key::Up });
     }
@@ -397,7 +397,7 @@ TEST_CASE("a key that hides the focused widget sends the next keys to its parent
     desktop.update({ }, keys);
     CHECK(field.keys == 1);
     CHECK(window.keys == 1);
-    CHECK(rct3::as_pointer(desktop.keyboard_focus()) == &window);
+    CHECK(rct3::core::as_pointer(desktop.keyboard_focus()) == &window);
 }
 
 TEST_CASE("a modal widget shuts out the widgets below it")
@@ -405,7 +405,7 @@ TEST_CASE("a modal widget shuts out the widgets below it")
     Fixture f;
     f.desktop.update(at(120, 20, true));
     f.desktop.update(at(120, 20));
-    REQUIRE(rct3::as_pointer(f.desktop.keyboard_focus()) == &f.field);
+    REQUIRE(rct3::core::as_pointer(f.desktop.keyboard_focus()) == &f.field);
 
     KeyProbe& modal = f.desktop.root().add<KeyProbe>("modal");
     modal.modal = true;
@@ -422,7 +422,7 @@ TEST_CASE("a modal widget shuts out the widgets below it")
     SUBCASE("the pointer does not reach below it, nor the 3D view")
     {
         CHECK(!f.desktop.hit({ 120, 20 }));
-        CHECK(rct3::as_pointer(f.desktop.hit({ 70, 70 })) == &modal);
+        CHECK(rct3::core::as_pointer(f.desktop.hit({ 70, 70 })) == &modal);
         CHECK(f.desktop.update(at(10, 10, true)));
         CHECK(f.desktop.root().children().back().get() == &modal); // Nothing below was raised
         f.desktop.update(at(10, 10));
@@ -433,7 +433,7 @@ TEST_CASE("a modal widget shuts out the widgets below it")
         KeyProbe& above = f.desktop.root().add<KeyProbe>("above");
         above.placement = top_left(0, 0, 20, 20);
         f.desktop.layout(kView);
-        CHECK(rct3::as_pointer(f.desktop.hit({ 10, 10 })) == &above);
+        CHECK(rct3::core::as_pointer(f.desktop.hit({ 10, 10 })) == &above);
         f.desktop.update(at(0, 0), keys({ Key::Escape }));
         CHECK(above.seen == std::vector { Key::Escape });
     }
@@ -451,7 +451,7 @@ TEST_CASE("a modal widget shuts out the widgets below it")
     {
         modal.close();
         f.desktop.update(at(0, 0));
-        CHECK(rct3::as_pointer(f.desktop.hit({ 120, 20 })) == &f.field);
+        CHECK(rct3::core::as_pointer(f.desktop.hit({ 120, 20 })) == &f.field);
     }
 }
 

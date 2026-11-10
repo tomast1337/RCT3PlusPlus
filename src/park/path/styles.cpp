@@ -54,7 +54,7 @@ namespace rct3::park::path
     {
         std::vector<PathStyle> paths;
         std::vector<PathStyle> queues;
-        for (const auto part : { maybe(&overlay.common()), overlay.unique() })
+        for (const auto part : { core::maybe(&overlay.common()), overlay.unique() })
         {
             if (!part)
                 continue;

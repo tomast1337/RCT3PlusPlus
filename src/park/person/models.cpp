@@ -128,7 +128,7 @@ namespace rct3::park::person
             if (!cache)
             {
                 cache.emplace();
-                for (const auto part : { maybe(&file.overlay.common()), file.overlay.unique() })
+                for (const auto part : { core::maybe(&file.overlay.common()), file.overlay.unique() })
                 {
                     if (!part)
                         continue;
@@ -178,7 +178,7 @@ namespace rct3::park::person
         auto it = sets_.find(key);
         if (it == sets_.end())
             it = sets_.emplace(key, read_set(symbol)).first;
-        return it->second ? maybe(&*it->second) : std::nullopt;
+        return it->second ? core::maybe(&*it->second) : std::nullopt;
     }
 
     std::optional<PartSet> PersonLibrary::read_set(std::string_view symbol)

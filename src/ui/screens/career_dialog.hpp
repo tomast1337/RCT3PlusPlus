@@ -129,7 +129,7 @@ namespace rct3::ui::screens
         }
         [[nodiscard]] std::optional<QuestionBox&> question() const
         {
-            return maybe(question_);
+            return core::maybe(question_);
         }
         void click_row(std::size_t index);
 

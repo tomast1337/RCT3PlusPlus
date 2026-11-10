@@ -79,7 +79,7 @@ namespace rct3::ui
         // A toggle on a face with one picture for every state would look held down, so dimmed, while on: it
         // shows lit while on and dimmed while off instead.
         skin::SkinState look = s;
-        if (toggle && s != skin::SkinState::Pressed && s != skin::SkinState::Disabled && as_pointer(context.skins.find(skin, skin::SkinState::Down)) == as_pointer(context.skins.find(skin, skin::SkinState::Up)))
+        if (toggle && s != skin::SkinState::Pressed && s != skin::SkinState::Disabled && core::as_pointer(context.skins.find(skin, skin::SkinState::Down)) == core::as_pointer(context.skins.find(skin, skin::SkinState::Up)))
             look = on ? (hovered() ? skin::SkinState::UpOver : skin::SkinState::Up) : skin::SkinState::Down;
         skin::draw_skin_state(context.list, context.skins, skin, look, r);
 

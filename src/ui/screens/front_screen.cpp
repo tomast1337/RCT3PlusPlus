@@ -292,7 +292,7 @@ namespace rct3::ui::screens
     std::optional<FrontButton&> FrontScreen::button(FrontMenu menu, std::size_t index_in_menu) const
     {
         const auto& list = buttons_.at(index(menu));
-        return index_in_menu < list.size() ? maybe(list[index_in_menu].button) : std::nullopt;
+        return index_in_menu < list.size() ? core::maybe(list[index_in_menu].button) : std::nullopt;
     }
 
     std::u16string_view FrontScreen::label(std::size_t i) const

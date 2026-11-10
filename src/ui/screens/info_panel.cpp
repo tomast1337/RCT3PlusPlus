@@ -634,7 +634,7 @@ namespace rct3::ui::screens
     std::optional<Widget&> InfoPanel::control(int id) const
     {
         const auto found = std::ranges::find_if(controls_, [&](const auto& c) { return c.first.id == id; });
-        return found == controls_.end() ? std::nullopt : maybe(found->second);
+        return found == controls_.end() ? std::nullopt : core::maybe(found->second);
     }
 
     void InfoPanel::read_controls()

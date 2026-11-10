@@ -156,7 +156,7 @@ namespace rct3::ui::screens
         /// Only when saving.
         [[nodiscard]] std::optional<EditBox&> name_box() const
         {
-            return maybe(name_box_);
+            return core::maybe(name_box_);
         }
         [[nodiscard]] EditBox& row_name_box(std::size_t index) const;
         [[nodiscard]] const std::array<std::u16string, 3>& row_lines(std::size_t index) const;
@@ -171,7 +171,7 @@ namespace rct3::ui::screens
         /// The question or message showing, if any.
         [[nodiscard]] std::optional<QuestionBox&> question() const
         {
-            return maybe(question_);
+            return core::maybe(question_);
         }
         /// Clicks row `index`, as the pointer does.
         void click_row(std::size_t index);

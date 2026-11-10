@@ -235,7 +235,7 @@ TEST_CASE("find_glyph with a code table")
 
     SUBCASE("the first of duplicate codes wins")
     {
-        CHECK(rct3::as_pointer(find_glyph(font, 66)) == &font.glyphs[1]);
+        CHECK(rct3::core::as_pointer(find_glyph(font, 66)) == &font.glyphs[1]);
     }
 
     SUBCASE("a missing code gives no glyph and there is no fallback")
@@ -262,8 +262,8 @@ TEST_CASE("find_glyph with a code range")
 
     SUBCASE("indexes from the first code")
     {
-        CHECK(rct3::as_pointer(find_glyph(font, 31)) == &font.glyphs[0]);
-        CHECK(rct3::as_pointer(find_glyph(font, 33)) == &font.glyphs[2]);
+        CHECK(rct3::core::as_pointer(find_glyph(font, 31)) == &font.glyphs[0]);
+        CHECK(rct3::core::as_pointer(find_glyph(font, 33)) == &font.glyphs[2]);
     }
 
     SUBCASE("outside the range there is no glyph")
@@ -275,6 +275,6 @@ TEST_CASE("find_glyph with a code range")
     SUBCASE("a range starting at 0 includes code 0")
     {
         const Font zero = synthetic_font(false, 0, { 0, 1 });
-        CHECK(rct3::as_pointer(find_glyph(zero, 0)) == &zero.glyphs[0]);
+        CHECK(rct3::core::as_pointer(find_glyph(zero, 0)) == &zero.glyphs[0]);
     }
 }

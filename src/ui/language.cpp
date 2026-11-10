@@ -35,7 +35,7 @@ namespace rct3::ui
     std::optional<const LanguageInfo&> find_language(std::string_view name)
     {
         const auto it = std::ranges::find_if(kLanguages, [&](const LanguageInfo& l) { return same_ignoring_case(l.name, name); });
-        return it != kLanguages.end() ? maybe(&*it) : std::nullopt;
+        return it != kLanguages.end() ? core::maybe(&*it) : std::nullopt;
     }
 
     std::vector<std::string> languages_in(std::span<const std::string> file_names)

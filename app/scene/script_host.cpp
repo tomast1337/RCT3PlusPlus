@@ -214,13 +214,13 @@ namespace rct3::scene
             const float across = scale / static_cast<float>(view.width);
             const float down = scale / static_cast<float>(view.height);
             Json found { { "x", (r.x0 + r.x1) / 2 * across }, { "y", (r.y0 + r.y1) / 2 * down }, { "left", r.x0 * across }, { "top", r.y0 * down }, { "right", r.x1 * across }, { "bottom", r.y1 * down } };
-            if (const auto* b = dynamic_cast<const ui::Button*>(as_pointer(w)); b != nullptr && b->toggle)
+            if (const auto* b = dynamic_cast<const ui::Button*>(core::as_pointer(w)); b != nullptr && b->toggle)
                 found["on"] = b->on;
-            if (const auto* t = dynamic_cast<const ui::Tickbox*>(as_pointer(w)); t != nullptr)
+            if (const auto* t = dynamic_cast<const ui::Tickbox*>(core::as_pointer(w)); t != nullptr)
                 found["on"] = t->ticked;
-            if (const auto* e = dynamic_cast<const ui::EditBox*>(as_pointer(w)); e != nullptr)
+            if (const auto* e = dynamic_cast<const ui::EditBox*>(core::as_pointer(w)); e != nullptr)
                 found["text"] = strings::to_utf8(e->text);
-            if (const auto* l = dynamic_cast<const ui::Label*>(as_pointer(w)); l != nullptr)
+            if (const auto* l = dynamic_cast<const ui::Label*>(core::as_pointer(w)); l != nullptr)
                 found["text"] = strings::to_utf8(l->text);
             if (!w->tooltip.empty())
                 found["tooltip"] = strings::to_utf8(w->tooltip);

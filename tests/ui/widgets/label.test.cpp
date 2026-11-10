@@ -46,7 +46,7 @@ TEST_CASE("a copyable label is selected by a press and copied whole")
 
     desktop.update({ { 10, 10 }, true, true });
     desktop.update({ { 10, 10 }, false, true });
-    CHECK(rct3::as_pointer(desktop.keyboard_focus()) == &name);
+    CHECK(rct3::core::as_pointer(desktop.keyboard_focus()) == &name);
     KeyboardState keys;
     keys.presses.push_back({ Key::Copy, false, true });
     desktop.update({ { 10, 10 }, false, true }, keys);

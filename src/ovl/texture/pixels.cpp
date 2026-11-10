@@ -10,7 +10,7 @@ namespace rct3::ovl::texture
     TexturePixels TexturePixels::index(const Overlay& overlay)
     {
         TexturePixels out;
-        for (const auto part : { maybe(&overlay.common()), overlay.unique() })
+        for (const auto part : { core::maybe(&overlay.common()), overlay.unique() })
         {
             if (!part)
                 continue;

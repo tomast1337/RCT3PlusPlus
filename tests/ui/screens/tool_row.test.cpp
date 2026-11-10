@@ -179,7 +179,7 @@ TEST_CASE("each tool holds its button and its menu's items, named by their icons
     const Widget& view = *f.desktop.root().find("tools/View");
     CHECK(f.row->button(ParkTool::View).parent() == &view);
     CHECK(f.row->item(ToolItem::People).parent() == &view);
-    CHECK(rct3::as_pointer(f.desktop.root().find("tools/View/Land_PeopleOff")) == &f.row->item(ToolItem::People));
+    CHECK(rct3::core::as_pointer(f.desktop.root().find("tools/View/Land_PeopleOff")) == &f.row->item(ToolItem::People));
     CHECK(f.row->item(ToolItem::DeleteOne).parent()->name() == "Delete");
 }
 
@@ -196,7 +196,7 @@ TEST_CASE("an item with a smaller menu opens it a step above itself instead of b
     CHECK(grab.rect().y1 == doctest::Approx(f.row->item(ToolItem::SavedStructures).rect().y1 - tool_row::kItemStep));
     f.press(grab);
     CHECK(f.row->take_item() == ToolItem::StructureGrab);
-    CHECK(rct3::as_pointer(f.desktop.root().find("tools/Scenery/SavedSelection_Grab")) == &grab);
+    CHECK(rct3::core::as_pointer(f.desktop.root().find("tools/Scenery/SavedSelection_Grab")) == &grab);
     f.press(f.row->item(ToolItem::SavedStructures));
     CHECK_FALSE(grab.visible);
     f.press(f.row->item(ToolItem::SavedStructures));

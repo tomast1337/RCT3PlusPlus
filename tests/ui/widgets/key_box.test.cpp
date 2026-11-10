@@ -75,7 +75,7 @@ TEST_CASE("while waiting the key box takes tab and shifted escape")
     Fixture f;
     f.press({ Key::Enter });
     f.press({ Key::Tab, true });
-    CHECK(rct3::as_pointer(f.desktop.keyboard_focus()) == f.box);
+    CHECK(rct3::core::as_pointer(f.desktop.keyboard_focus()) == f.box);
     CHECK(f.box->combos == std::vector { KeyCombo { Key::Tab, 0, false, true } });
     f.press({ Key::Enter });
     f.press({ Key::Escape, true });

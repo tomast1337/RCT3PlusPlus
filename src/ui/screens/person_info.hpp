@@ -80,7 +80,7 @@ namespace rct3::ui::screens
 
         [[nodiscard]] std::optional<const save::model::Person&> person() const
         {
-            return guest != nullptr ? maybe(&guest->person) : staff != nullptr ? maybe(&staff->person) : std::nullopt;
+            return guest != nullptr ? core::maybe(&guest->person) : staff != nullptr ? core::maybe(&staff->person) : std::nullopt;
         }
     };
 

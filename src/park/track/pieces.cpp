@@ -141,7 +141,7 @@ namespace rct3::park::track
     std::vector<std::string> named_overlays(const ovl::Overlay& ride, std::string_view path)
     {
         std::vector<std::string> out;
-        for (const auto part : { maybe(&ride.common()), ride.unique() })
+        for (const auto part : { core::maybe(&ride.common()), ride.unique() })
         {
             if (!part)
                 continue;
@@ -222,7 +222,7 @@ namespace rct3::park::track
         std::map<std::string, ovl::SceneryItem, strings::LessIgnoringCase> items;
         std::vector<ovl::TrackSectionItem> sections;
         for (const ovl::Overlay& o : loaded)
-            for (const auto part : { maybe(&o.common()), o.unique() })
+            for (const auto part : { core::maybe(&o.common()), o.unique() })
             {
                 if (!part)
                     continue;
@@ -502,7 +502,7 @@ namespace rct3::park::track
 
     std::vector<LaidPiece> pieces_after(std::span<const PieceShape> pieces, const PieceEnd& tip, std::optional<LaidPiece> last)
     {
-        const std::optional<const PieceShape&> before = last && last->index < pieces.size() ? maybe(&pieces[last->index]) : std::nullopt;
+        const std::optional<const PieceShape&> before = last && last->index < pieces.size() ? core::maybe(&pieces[last->index]) : std::nullopt;
         std::vector<LaidPiece> fit;
         for (std::size_t i = 0; i < pieces.size(); ++i)
         {
@@ -536,7 +536,7 @@ namespace rct3::park::track
     {
         const std::string_view name = symbol.substr(0, symbol.find(':'));
         const auto found = std::ranges::find_if(catalogue.pieces, [&](const PieceShape& p) { return strings::equals_ignoring_case(p.record.name, name); });
-        return found != catalogue.pieces.end() ? maybe(&*found) : std::nullopt;
+        return found != catalogue.pieces.end() ? core::maybe(&*found) : std::nullopt;
     }
 
 } // namespace rct3::park::track

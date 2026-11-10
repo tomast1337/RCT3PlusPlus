@@ -4,7 +4,7 @@
 // pictures they cut from, in the particle overlay) and the effect files, read when first asked for by name.
 #pragma once
 
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 #include "particles/effect.hpp"
 #include "strings/ascii.hpp"
 
@@ -45,14 +45,14 @@ namespace rct3::particles
         [[nodiscard]] const Effect* effect(std::string_view name);
         /// The sprite named `name`, any case.
         [[nodiscard]] const Sprite* sprite(std::string_view name) const;
-        [[nodiscard]] const std::map<std::string, ovl::RgbaImage>& atlases() const noexcept
+        [[nodiscard]] const std::map<std::string, ovl::texture::RgbaImage>& atlases() const noexcept
         {
             return atlases_;
         }
 
     private:
         std::map<std::string, Sprite, strings::LessIgnoringCase> sprites_;
-        std::map<std::string, ovl::RgbaImage> atlases_;                                 ///< By the name sprites give
+        std::map<std::string, ovl::texture::RgbaImage> atlases_;                        ///< By the name sprites give
         std::map<std::string, std::filesystem::path, strings::LessIgnoringCase> files_; ///< Effect files by name
         std::map<std::string, std::optional<Effect>, strings::LessIgnoringCase> effects_;
     };

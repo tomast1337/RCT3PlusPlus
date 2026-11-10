@@ -4,7 +4,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::park;
-using rct3::ovl::RgbaImage;
+using rct3::ovl::texture::RgbaImage;
 
 namespace
 {

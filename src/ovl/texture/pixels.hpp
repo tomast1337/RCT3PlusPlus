@@ -7,15 +7,15 @@
 
 #include "ovl/bitmap_table.hpp"
 #include "ovl/flic.hpp"
-#include "ovl/texture.hpp"
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
+#include "ovl/texture/texture.hpp"
 
 #include <cstdint>
 #include <optional>
 #include <unordered_map>
 #include <vector>
 
-namespace rct3::ovl
+namespace rct3::ovl::texture
 {
 
     /// The flics and bitmap tables of one overlay, indexed by address. Views point into the overlay, which
@@ -61,4 +61,4 @@ namespace rct3::ovl
     /// The image with its rows in the opposite order.
     [[nodiscard]] RgbaImage flipped_vertically(RgbaImage image);
 
-} // namespace rct3::ovl
+} // namespace rct3::ovl::texture

@@ -22,7 +22,7 @@
 #pragma once
 
 #include "config/game_options.hpp"
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 #include "park/attraction_objects.hpp"
 #include "park/bone_poses.hpp"
 #include "park/camera.hpp"

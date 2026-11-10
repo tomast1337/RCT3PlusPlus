@@ -64,10 +64,10 @@ namespace rct3::ui
         return count;
     }
 
-    std::vector<ovl::RgbaImage> atlas_pages(std::span<const CoverageBitmap> bitmaps, std::span<const AtlasSlot> slots, std::uint32_t page_side)
+    std::vector<ovl::texture::RgbaImage> atlas_pages(std::span<const CoverageBitmap> bitmaps, std::span<const AtlasSlot> slots, std::uint32_t page_side)
     {
-        std::vector<ovl::RgbaImage> pages(atlas_page_count(slots));
-        for (ovl::RgbaImage& p : pages)
+        std::vector<ovl::texture::RgbaImage> pages(atlas_page_count(slots));
+        for (ovl::texture::RgbaImage& p : pages)
         {
             p.width = page_side;
             p.height = page_side;
@@ -82,7 +82,7 @@ namespace rct3::ui
             const AtlasSlot& s = slots[i];
             if (s.page == kNoPage || b.coverage.size() < std::size_t { b.width } * b.height)
                 continue;
-            ovl::RgbaImage& page = pages[s.page];
+            ovl::texture::RgbaImage& page = pages[s.page];
             for (std::uint32_t row = 0; row < b.height && s.y + row < page_side; ++row)
             {
                 for (std::uint32_t col = 0; col < b.width && s.x + col < page_side; ++col)

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ovl/texture.hpp"
+#include "ovl/texture/texture.hpp"
 
 #include "ovl/reference_names.hpp"
 
 #include <cstring>
 
-namespace rct3::ovl
+namespace rct3::ovl::texture
 {
 
     namespace
@@ -97,4 +97,4 @@ namespace rct3::ovl
         return items;
     }
 
-} // namespace rct3::ovl
+} // namespace rct3::ovl::texture

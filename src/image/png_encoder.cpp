@@ -89,7 +89,7 @@ namespace rct3::image
 
     } // namespace
 
-    std::vector<std::byte> encode_png(const ovl::RgbaImage& image)
+    std::vector<std::byte> encode_png(const ovl::texture::RgbaImage& image)
     {
         const std::size_t row = std::size_t { image.width } * 4;
         if (image.width == 0 || image.height == 0 || image.pixels.size() < row * image.height)
@@ -121,7 +121,7 @@ namespace rct3::image
         return out;
     }
 
-    std::expected<void, std::string> save_png(const std::filesystem::path& path, const ovl::RgbaImage& image)
+    std::expected<void, std::string> save_png(const std::filesystem::path& path, const ovl::texture::RgbaImage& image)
     {
         const std::vector<std::byte> bytes = encode_png(image);
         if (bytes.empty())
@@ -133,7 +133,7 @@ namespace rct3::image
         return { };
     }
 
-    std::expected<std::filesystem::path, std::string> save_numbered_png(const std::filesystem::path& folder, std::string_view named, const ovl::RgbaImage& image)
+    std::expected<std::filesystem::path, std::string> save_numbered_png(const std::filesystem::path& folder, std::string_view named, const ovl::texture::RgbaImage& image)
     {
         // Prefixes carry names players type, so nothing in them may lead out of the folder or upset a file system.
         std::string prefix { named };

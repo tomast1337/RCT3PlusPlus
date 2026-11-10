@@ -14,7 +14,7 @@ namespace rct3::ui
         constexpr std::size_t kChannels = 4;
     } // namespace
 
-    ovl::RgbaImage sign_text_loop(const Font& font, std::span<const ovl::RgbaImage> pages, std::u16string_view text, std::uint32_t height)
+    ovl::texture::RgbaImage sign_text_loop(const Font& font, std::span<const ovl::texture::RgbaImage> pages, std::u16string_view text, std::uint32_t height)
     {
         float width = 0;
         for (const char16_t c : text)
@@ -22,7 +22,7 @@ namespace rct3::ui
             if (const auto g = font.find(c))
                 width += g->advance;
         }
-        ovl::RgbaImage loop;
+        ovl::texture::RgbaImage loop;
         loop.width = static_cast<std::uint32_t>(std::ceil(width)) + park::kSignGap * height;
         loop.width += (park::kSignLamp - loop.width % park::kSignLamp) % park::kSignLamp;
         loop.height = height;
@@ -39,7 +39,7 @@ namespace rct3::ui
                 continue;
             if (g->page < pages.size() && g->box.width() > 0 && g->box.height() > 0)
             {
-                const ovl::RgbaImage& page = pages[g->page];
+                const ovl::texture::RgbaImage& page = pages[g->page];
                 const auto left = static_cast<int>(std::lround(pen + g->box.x0));
                 const auto top = static_cast<int>(std::lround(baseline + g->box.y0));
                 const auto wide = static_cast<int>(std::lround(g->box.width()));

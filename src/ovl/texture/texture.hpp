@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::ovl
+namespace rct3::ovl::texture
 {
 
     /// A three-word record some textures point at.
@@ -48,4 +48,4 @@ namespace rct3::ovl
     /// overlay's bytes. Two old-format items in one file use a different record and read as unreadable.
     [[nodiscard]] std::vector<TextureItem> read_textures(const Overlay& overlay, const Part& part);
 
-} // namespace rct3::ovl
+} // namespace rct3::ovl::texture

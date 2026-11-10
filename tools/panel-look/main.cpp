@@ -302,7 +302,7 @@ namespace
         return p[0] == kBackground.r && p[1] == kBackground.g && p[2] == kBackground.b;
     }
 
-    Score compare(const ovl::RgbaImage& a, const ovl::RgbaImage& b, ovl::RgbaImage& diff)
+    Score compare(const ovl::texture::RgbaImage& a, const ovl::texture::RgbaImage& b, ovl::texture::RgbaImage& diff)
     {
         Score score;
         double total = 0;
@@ -337,7 +337,7 @@ namespace
         return score;
     }
 
-    ovl::RgbaImage render(const PanelCase& panel, PanelLook look, const Assets& assets, float scale)
+    ovl::texture::RgbaImage render(const PanelCase& panel, PanelLook look, const Assets& assets, float scale)
     {
         // The coded look draws this panel's skins in code, whatever the game's look has them on.
         ui::SkinLibrary skins = assets.skins;
@@ -379,7 +379,7 @@ namespace
             const auto id = ids.find(skin.texture);
             if (id == ids.end())
                 continue;
-            const ovl::RgbaImage& image = assets.textures.at(id->second);
+            const ovl::texture::RgbaImage& image = assets.textures.at(id->second);
             assets.skins.add(name, { skin.layout, id->second, static_cast<float>(image.width), static_cast<float>(image.height), nullptr });
         }
         return assets;
@@ -472,9 +472,9 @@ int main(int argc, char** argv)
     {
         if (!wanted.empty() && !std::ranges::contains(wanted, panel.name))
             continue;
-        const ovl::RgbaImage texture = render(panel, PanelLook::Texture, *assets, scale);
-        const ovl::RgbaImage coded = render(panel, PanelLook::Coded, *assets, scale);
-        ovl::RgbaImage diff;
+        const ovl::texture::RgbaImage texture = render(panel, PanelLook::Texture, *assets, scale);
+        const ovl::texture::RgbaImage coded = render(panel, PanelLook::Coded, *assets, scale);
+        ovl::texture::RgbaImage diff;
         const Score score = compare(texture, coded, diff);
         const std::string stem = std::string(panel.name);
         for (const auto& [suffix, picture] : { std::pair { "texture", &texture }, { "coded", &coded }, { "diff", &diff } })

@@ -2,8 +2,8 @@
 #include "ui/skin_set.hpp"
 
 #include "ovl/gui_skin.hpp"
-#include "ovl/texture.hpp"
-#include "ovl/texture_pixels.hpp"
+#include "ovl/texture/pixels.hpp"
+#include "ovl/texture/texture.hpp"
 #include "strings/ascii.hpp"
 
 namespace rct3::ui
@@ -14,15 +14,15 @@ namespace rct3::ui
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
-        const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
+        const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
 
         // Skins do not always spell their picture's name as the picture does.
-        std::map<std::string, ovl::Texture, strings::LessIgnoringCase> textures;
+        std::map<std::string, ovl::texture::Texture, strings::LessIgnoringCase> textures;
         for (const auto part : { maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
-            for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+            for (const ovl::texture::TextureItem& item : ovl::texture::read_textures(*overlay, *part))
             {
                 if (item.texture)
                     textures.emplace(item.name, *item.texture);
@@ -52,7 +52,7 @@ namespace rct3::ui
                         ++set.skipped;
                         continue;
                     }
-                    set.images.emplace(texture, ovl::flipped_vertically(std::move(*image)));
+                    set.images.emplace(texture, ovl::texture::flipped_vertically(std::move(*image)));
                 }
                 set.skins.insert_or_assign(std::string(item.name), NamedSkin { *layout, texture });
             }
@@ -65,7 +65,7 @@ namespace rct3::ui
                 continue;
             auto image = set.images.contains(name) ? std::nullopt : pixels.first_frame(source->second);
             if (image)
-                set.images.emplace(std::string(name), ovl::flipped_vertically(std::move(*image)));
+                set.images.emplace(std::string(name), ovl::texture::flipped_vertically(std::move(*image)));
             const auto it = set.images.find(name);
             if (it == set.images.end())
             {

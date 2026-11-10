@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ovl/texture_pixels.hpp"
+#include "ovl/texture/pixels.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3::ovl;
+using namespace rct3::ovl::texture;
 
 TEST_CASE("flipping reverses the row order and keeps each row intact")
 {

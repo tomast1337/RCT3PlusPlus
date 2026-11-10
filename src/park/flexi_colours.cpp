@@ -121,7 +121,7 @@ namespace rct3::park
     std::optional<PaletteImage> palette_image(const ovl::FlexiFrame& frame, std::uint32_t slots)
     {
         const std::size_t count = static_cast<std::size_t>(frame.width) * frame.height;
-        if (count == 0 || frame.width > ovl::kMaxImageSide || frame.height > ovl::kMaxImageSide || frame.palette.size() < ovl::kFlexiPaletteSize || frame.pixels.size() < count || (frame.alpha && frame.alpha->size() < count))
+        if (count == 0 || frame.width > ovl::texture::kMaxImageSide || frame.height > ovl::texture::kMaxImageSide || frame.palette.size() < ovl::kFlexiPaletteSize || frame.pixels.size() < count || (frame.alpha && frame.alpha->size() < count))
             return std::nullopt;
         PaletteImage image;
         image.width = frame.width;
@@ -153,7 +153,7 @@ namespace rct3::park
         return colours;
     }
 
-    ovl::RgbaImage paint(const PaletteImage& image, FlexiColours colours)
+    ovl::texture::RgbaImage paint(const PaletteImage& image, FlexiColours colours)
     {
         std::array<Rgb, 256> palette = image.palette;
         for (std::size_t k = 0; k < kFlexiSlotCount; ++k)
@@ -163,7 +163,7 @@ namespace rct3::park
             for (std::size_t s = 0; s < kFlexiShades; ++s)
                 palette[1 + k * kFlexiShades + s] = flexi_shade(colours[k], s);
         }
-        ovl::RgbaImage out;
+        ovl::texture::RgbaImage out;
         out.width = image.width;
         out.height = image.height;
         out.pixels.resize(image.indices.size() * 4);

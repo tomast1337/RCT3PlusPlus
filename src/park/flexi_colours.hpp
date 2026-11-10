@@ -12,7 +12,7 @@
 #pragma once
 
 #include "ovl/flexi_texture.hpp"
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 
 #include <array>
 #include <cstddef>
@@ -74,7 +74,7 @@ namespace rct3::park
     [[nodiscard]] FlexiColours used_colours(std::uint32_t slots, FlexiColours colours);
 
     /// The picture with each recoloured slot's run replaced by the picked colour's shades.
-    [[nodiscard]] ovl::RgbaImage paint(const PaletteImage& image, FlexiColours colours);
+    [[nodiscard]] ovl::texture::RgbaImage paint(const PaletteImage& image, FlexiColours colours);
 
     /// A name for `texture` painted in `colours`: the texture's own name when it recolours nothing.
     [[nodiscard]] std::string painted_name(std::string_view texture, std::uint32_t slots, FlexiColours colours);

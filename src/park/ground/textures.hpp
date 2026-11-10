@@ -9,7 +9,7 @@
 // does each queue style its one recolourable ground picture.
 #pragma once
 
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 #include "park/flexi_colours.hpp"
 #include "park/ground/queues.hpp"
 #include "park/terrain_mesh.hpp"
@@ -29,7 +29,7 @@
 namespace rct3::park::ground
 {
 
-    using GroundImages = std::map<std::string, ovl::RgbaImage, std::less<>>;
+    using GroundImages = std::map<std::string, ovl::texture::RgbaImage, std::less<>>;
 
     [[nodiscard]] GroundPaint ground_paint(std::string_view terrain_type);
     [[nodiscard]] std::string ground_key(GroundPaint paint, std::uint8_t index);
@@ -102,8 +102,8 @@ namespace rct3::park::ground
 
     struct TunnelPictures
     {
-        ovl::RgbaImage wall;
-        ovl::RgbaImage ceiling;
+        ovl::texture::RgbaImage wall;
+        ovl::texture::RgbaImage ceiling;
     };
 
     /// The wall and ceiling pictures of `style`, cut out of the overlay at `path`. Nothing when it has no picture.
@@ -123,7 +123,7 @@ namespace rct3::park::ground
 
     /// Makes `picture` as see-through as `mask` is dark: the mask is a grey picture of the same size, white where
     /// the queue shows and black where the ground below does. A mask of another size is left unused.
-    void apply_queue_mask(ovl::RgbaImage& picture, const PaletteImage& mask);
+    void apply_queue_mask(ovl::texture::RgbaImage& picture, const PaletteImage& mask);
 
     /// Adds the ground picture of `painting`'s queue style, from the overlay at `path`, painted in its colours,
     /// as the picture of the park's painting number `index`, cut out by its mask when it has one. Returns false when the overlay has no such picture.

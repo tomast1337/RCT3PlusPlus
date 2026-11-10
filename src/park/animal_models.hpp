@@ -13,7 +13,7 @@
 
 #include "math/glm.hpp"
 #include "ovl/animal/motions.hpp"
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 #include "park/object/models.hpp"
 
 #include <array>
@@ -95,7 +95,7 @@ namespace rct3::park
         [[nodiscard]] std::optional<const AnimalBody&> body(std::string_view species, bool adult, bool male);
 
         /// The pictures the bodies name, by key, rows as stored.
-        [[nodiscard]] const std::map<std::string, ovl::RgbaImage, std::less<>>& pictures() const
+        [[nodiscard]] const std::map<std::string, ovl::texture::RgbaImage, std::less<>>& pictures() const
         {
             return pictures_;
         }
@@ -108,7 +108,7 @@ namespace rct3::park
 
         std::unique_ptr<Files> files_;
         std::map<std::string, std::optional<AnimalBody>, std::less<>> bodies_; ///< By "species|variant", lower case
-        std::map<std::string, ovl::RgbaImage, std::less<>> pictures_;
+        std::map<std::string, ovl::texture::RgbaImage, std::less<>> pictures_;
 
         std::optional<AnimalBody> read_body(std::string_view species, bool adult, bool male);
     };

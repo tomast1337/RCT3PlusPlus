@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/font_images.hpp"
 
-#include "ovl/texture.hpp"
-#include "ovl/texture_pixels.hpp"
+#include "ovl/texture/pixels.hpp"
+#include "ovl/texture/texture.hpp"
 
 #include <map>
 
@@ -14,15 +14,15 @@ namespace rct3::ui
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
-        const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
+        const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
 
-        std::map<std::string, ovl::Texture, std::less<>> textures;
+        std::map<std::string, ovl::texture::Texture, std::less<>> textures;
         std::vector<FontImages> fonts;
         for (const auto part : { maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
-            for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+            for (const ovl::texture::TextureItem& item : ovl::texture::read_textures(*overlay, *part))
             {
                 if (item.texture)
                     textures.emplace(std::string(item.name), *item.texture);
@@ -44,7 +44,7 @@ namespace rct3::ui
                 continue;
             const std::size_t count = pixels.frame_count(texture->second);
             for (std::size_t i = 0; i < count; ++i)
-                f.pages.push_back(pixels.frame(texture->second, i).value_or(ovl::RgbaImage { }));
+                f.pages.push_back(pixels.frame(texture->second, i).value_or(ovl::texture::RgbaImage { }));
             if (f.pages.empty())
                 continue;
             f.face = std::string(f.font.face);

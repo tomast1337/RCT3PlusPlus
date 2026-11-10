@@ -47,7 +47,7 @@ namespace rct3::scene
         std::uint32_t width = 0;                    ///< Of the board's picture, whole lamps
         park::LampColour colour = park::kSignWhite; ///< Of its lamps
         std::u16string shown;
-        ovl::RgbaImage loop;
+        ovl::texture::RgbaImage loop;
         std::uint32_t shift = UINT32_MAX; ///< Of the loop the board shows; UINT32_MAX before it shows any
     };
 
@@ -58,7 +58,7 @@ namespace rct3::scene
         std::map<std::string, TrackModels, std::less<>> models;
         std::map<std::string, std::string, std::less<>> sign_of; ///< A theme's queue sign, by its overlay
         std::optional<ui::Font> font;
-        std::vector<ovl::RgbaImage> font_pages; ///< Of `font`, by its glyphs' page index
+        std::vector<ovl::texture::RgbaImage> font_pages; ///< Of `font`, by its glyphs' page index
         bool font_tried = false;
         ui::UiTextures textures; ///< The boards' pictures
         bool stale = true;       ///< Put the signs up again at the next update

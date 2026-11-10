@@ -79,7 +79,7 @@ TEST_CASE("frames keep their indices and are painted per slot")
 
     // Index 200 lies in the third slot's run, at shade 200 - 171.
     const Rgb orange { 250, 120, 10 };
-    const ovl::RgbaImage painted = paint(*image, { Rgb { }, Rgb { }, orange });
+    const ovl::texture::RgbaImage painted = paint(*image, { Rgb { }, Rgb { }, orange });
     const Rgb shade = flexi_shade(orange, 200 - 1 - 2 * kFlexiShades);
     CHECK(painted.pixels == std::vector<std::uint8_t> { 255, 0, 0, 255, shade.r, shade.g, shade.b, 7 });
 

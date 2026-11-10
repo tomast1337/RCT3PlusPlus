@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
 
 using namespace rct3::ovl;
+using namespace rct3::ovl::texture;
 
 namespace
 {

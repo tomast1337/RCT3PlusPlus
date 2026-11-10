@@ -17,7 +17,7 @@
 #include "ovl/frame_mesh.hpp"
 #include "ovl/simple_anim.hpp"
 #include "ovl/simple_skin.hpp"
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 #include "park/asset_index.hpp"
 
 #include <array>
@@ -127,7 +127,7 @@ namespace rct3::park::person
             return heads_[index];
         }
         /// The pictures the pieces and heads name, by key, rows as stored.
-        [[nodiscard]] const std::map<std::string, ovl::RgbaImage, std::less<>>& pictures() const
+        [[nodiscard]] const std::map<std::string, ovl::texture::RgbaImage, std::less<>>& pictures() const
         {
             return pictures_;
         }
@@ -144,7 +144,7 @@ namespace rct3::park::person
         std::map<std::string, std::optional<PartSet>, std::less<>> sets_; ///< Lower-case names
         std::map<std::string, std::optional<std::size_t>, std::less<>> loaded_pieces_;
         std::map<std::string, std::optional<std::size_t>, std::less<>> loaded_heads_;
-        std::map<std::string, ovl::RgbaImage, std::less<>> pictures_;
+        std::map<std::string, ovl::texture::RgbaImage, std::less<>> pictures_;
 
         std::optional<PartSet> read_set(std::string_view symbol);
         std::optional<PartLevel> read_level(std::span<const std::string_view> fixed, std::span<const std::string_view> optional, std::string_view near);

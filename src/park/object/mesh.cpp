@@ -412,9 +412,9 @@ namespace rct3::park::object
         return std::move(boards.mesh);
     }
 
-    std::map<std::string, ovl::RgbaImage, std::less<>> paint_batches(std::span<const ObjectBatch> batches, const ModelPictures& pictures)
+    std::map<std::string, ovl::texture::RgbaImage, std::less<>> paint_batches(std::span<const ObjectBatch> batches, const ModelPictures& pictures)
     {
-        std::map<std::string, ovl::RgbaImage, std::less<>> out;
+        std::map<std::string, ovl::texture::RgbaImage, std::less<>> out;
         for (const ObjectBatch& batch : batches)
         {
             if (out.contains(batch.texture))

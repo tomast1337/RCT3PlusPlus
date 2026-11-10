@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ovl/texture.hpp"
+#include "ovl/texture/texture.hpp"
 
-#include "builder.hpp"
+#include "../builder.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -10,7 +10,7 @@
 
 using namespace rct3::test;
 using rct3::ovl::Overlay;
-using rct3::ovl::read_textures;
+using rct3::ovl::texture::read_textures;
 
 namespace
 {

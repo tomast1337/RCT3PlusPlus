@@ -17,9 +17,9 @@ namespace rct3::ui
     {
 
         // Uploads `images` under their names and returns the page references in order, keeping the textures.
-        std::expected<std::vector<Font::Page>, std::string> upload_pages(render::Device& device, InterfaceFonts& fonts, const std::string& prefix, std::vector<ovl::RgbaImage> images)
+        std::expected<std::vector<Font::Page>, std::string> upload_pages(render::Device& device, InterfaceFonts& fonts, const std::string& prefix, std::vector<ovl::texture::RgbaImage> images)
         {
-            std::map<std::string, ovl::RgbaImage, std::less<>> named;
+            std::map<std::string, ovl::texture::RgbaImage, std::less<>> named;
             for (std::size_t i = 0; i < images.size(); ++i)
                 named.emplace(prefix + std::to_string(i), std::move(images[i]));
             auto uploaded = upload_textures(device, named);

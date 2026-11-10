@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 
 #include <algorithm>
 #include <array>
@@ -7,7 +7,7 @@
 #include <cmath>
 #include <cstring>
 
-namespace rct3::ovl
+namespace rct3::ovl::texture
 {
 
     namespace
@@ -313,4 +313,4 @@ namespace rct3::ovl
         return image;
     }
 
-} // namespace rct3::ovl
+} // namespace rct3::ovl::texture

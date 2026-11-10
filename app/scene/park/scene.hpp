@@ -47,6 +47,7 @@
 #include "scene/build_menus.hpp"
 #include "scene/land_tools.hpp"
 #include "scene/led_signs.hpp"
+#include "scene/park/deleting.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/glow.hpp"
 #include "scene/park/lens.hpp"
@@ -207,32 +208,6 @@ namespace rct3::scene::park
         render::BufferHandle indices;
         std::uint32_t count = 0;
         bool stale = true; ///< The ground changed since they were made
-    };
-
-    /// The delete menu's tools: one deletes what a click lands on, the other what stands on the tiles dragged over.
-    struct DeleteTools
-    {
-        enum class Tool : std::uint8_t
-        {
-            None,
-            One,
-            Area,
-        };
-        Tool tool = Tool::None;
-        std::optional<save::model::Tile> corner; ///< Of the area marked, where the drag began
-        std::optional<save::model::Tile> other;  ///< And the opposite corner, where it is now or ended
-        bool dragging = false;
-        std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
-        std::vector<bool> kept { };                       ///< Tiles the drag may not take in or out, row by row; filled as it begins
-        /// What letting go would do: the enclosures it would leave, and what that costs (below 0 when the fence
-        /// taken down pays back more than any put up), for the columns and rows marked.
-        struct Marked
-        {
-            std::array<std::int32_t, 4> area { };
-            save::model::EnclosureMap enclosures { };
-            std::int64_t cost = 0;
-        };
-        std::optional<Marked> marked { };
     };
 
     /// The enclosure list's fence tool out (scene/enclosure_tools.hpp): a drag marks tiles into an enclosure, or
@@ -921,11 +896,6 @@ namespace rct3::scene::park
     /// Whether a box of the park's interface has the keyboard, or selected text to copy, so keys are not the game's.
     [[nodiscard]] bool typing(const ParkScene& scene);
 
-    /// Pulls attraction `ref` down: it goes from the park with its doors, track and fence, its guests walk off
-    /// (out of its queue at the entrance, riders off at the exit), and what it is worth comes back. It keeps its
-    /// place in the scene's rides or stalls, marked, and saving leaves it out.
-    void demolish(ParkScene& scene, const ui::InterfaceAssets& assets, rct3::park::AttractionRef ref);
-
     /// Fires the member of staff shown as `shown` of shown_people: they leave the park at once, as in the game.
     void fire(ParkScene& scene, std::size_t shown);
 
@@ -958,6 +928,31 @@ namespace rct3::scene::park
     /// Has object `k` (of scene.objects) move on its own when its model has bones and it is scenery of no attraction,
     /// as animatronics are.
     void animate_scenery(render::Device& device, ParkScene& scene, std::size_t k);
+
+    /// The part every attraction has of `ref`, the ride's or the stall's; nothing when the park has no such one.
+    [[nodiscard]] save::model::AttractionCommon* attraction_common(ParkScene& scene, rct3::park::AttractionRef ref);
+
+    /// Whether the object is a prop the panel can tell about: one of the park's own.
+    [[nodiscard]] bool clickable_prop(const ParkScene& scene, const save::model::PlacedObject& o);
+    /// Changes the object `index` by `change`. The objects' meshes are built beside the frame from the
+    /// objects, so the build in hand is dropped first and another started with the change.
+    template<typename Change> void change_object(render::Device& device, ParkScene& scene, std::size_t index, Change&& change)
+    {
+        if (index >= scene.objects.size())
+            return;
+        if (scene.object_build.valid())
+            (void)scene.object_build.get();
+        change(scene.objects[index]);
+        // Scenery its bones move is built again, in its new colours or not at all.
+        if (const auto boned = std::ranges::find_if(scene.boned_rides, [&](const ParkScene::BonedRide& b) { return b.object == index && b.ride == entt::null; }); boned != scene.boned_rides.end())
+        {
+            scene.boned_rides.erase(boned);
+            animate_scenery(device, scene, index);
+        }
+        scene.levels = { };
+        scene.since_rebuild = kObjectRebuildInterval;
+        scene.supports.stale = true;
+    }
 
     void destroy_park_scene(render::Device& device, ParkScene& scene);
 

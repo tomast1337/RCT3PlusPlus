@@ -18,9 +18,9 @@
 #include "park/object_mesh.hpp"
 #include "park/object_models.hpp"
 #include "park/overhead.hpp"
-#include "park/pools.hpp"
-#include "park/track_course.hpp"
-#include "park/track_pieces.hpp"
+#include "park/pools/pools.hpp"
+#include "park/track/course.hpp"
+#include "park/track/pieces.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
@@ -150,12 +150,12 @@ int main(int argc, char** argv)
     simulation::SimWorld world;
     world.seed = rct3::random::Seed { seed };
     simulation::import_paths(world, world_model->paths, world_model->terrain);
-    simulation::import_pools(world, park::saved_pools(*world_model, world_model->objects));
+    simulation::import_pools(world, park::pools::saved_pools(*world_model, world_model->objects));
     const auto guests = simulation::import_guests(world, *people);
     const std::size_t shops = simulation::import_stalls(world, *rides);
     std::vector<std::optional<simulation::RideTiming>> timings;
     std::vector<std::optional<simulation::Coaster>> coasters(rides->rides.size());
-    std::vector<std::optional<park::TrackCourse>> courses(rides->rides.size());
+    std::vector<std::optional<park::track::TrackCourse>> courses(rides->rides.size());
     std::vector<std::optional<std::uint32_t>> guests_room;
     std::map<std::uint64_t, simulation::PathItemKind> sights;   // Placed objects guests stop at
     std::map<std::uint64_t, std::array<std::int32_t, 2>> gates; // Park entrances, with the tiles each covers
@@ -231,19 +231,19 @@ int main(int argc, char** argv)
                     piece_models.emplace(park::model_key(o), std::move(*model));
         const std::size_t roofed = simulation::import_cover(world, [&](std::span<const glm::vec3> points) { return park::overheads(points, world_model->objects, piece_models, world_model->terrain, { }); });
         out.info("paths under a roof {:d}, in the shade {:d} of {:d}", roofed, static_cast<std::size_t>(std::ranges::count_if(world.paths.nodes(), &simulation::PathNode::shaded)), world.paths.nodes().size());
-        std::map<std::string, std::optional<park::PieceCatalogue>, std::less<>> catalogues;
+        std::map<std::string, std::optional<park::track::PieceCatalogue>, std::less<>> catalogues;
         for (std::size_t index = 0; index < rides->rides.size(); ++index)
         {
             const save::Ride& ride = rides->rides[index];
-            const auto course = park::track_course(ride, world_model->objects, piece_models, world_model->terrain, { }, [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> std::optional<const park::PieceShape&> {
+            const auto course = park::track::track_course(ride, world_model->objects, piece_models, world_model->terrain, { }, [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> std::optional<const park::track::PieceShape&> {
                 auto [at, added] = catalogues.try_emplace(object.overlay);
                 if (added)
                     if (const auto file = install->find(std::format("{}.common.ovl", object.overlay)))
-                        if (auto loaded = park::load_piece_catalogue(*file, object.overlay))
+                        if (auto loaded = park::track::load_piece_catalogue(*file, object.overlay))
                             at->second = std::move(*loaded);
                 if (!at->second)
                     return std::nullopt;
-                return park::shape_named(*at->second, piece.symbol);
+                return park::track::shape_named(*at->second, piece.symbol);
             });
             if (!course)
                 continue;
@@ -253,7 +253,7 @@ int main(int argc, char** argv)
                 for (const save::Car& car : train.cars)
                     if (car.position_valid)
                     {
-                        worst = std::max(worst, glm::distance(park::course_point(*course, car.distance), glm::vec3 { car.position[0], car.position[1], car.position[2] }));
+                        worst = std::max(worst, glm::distance(park::track::course_point(*course, car.distance), glm::vec3 { car.position[0], car.position[1], car.position[2] }));
                         ++cars;
                     }
             out.info("course {} closed {:d}: {:.1f} m (lap tested {:.1f} m), {:d} points; {:d} cars, farthest {:.2f} m off", ride.base.symbol.c_str(), course->closed, static_cast<double>(course->length()), static_cast<double>(ride.stats.last_lap ? ride.stats.last_lap->ride_length : 0), course->points.size(), cars, static_cast<double>(worst));
@@ -289,6 +289,7 @@ int main(int argc, char** argv)
     }
     const std::size_t walking = simulation::start_guests(world);
     const std::size_t seated = simulation::board_saved_riders(world, *people, guests, *rides, ride_entities);
+    const std::size_t swimmers = simulation::resume_saved_swimmers(world, *people, guests);
     const std::size_t parties = simulation::import_parties(world, *people, guests);
     const auto park_model = save::load_park(*file, index);
     const std::size_t litter = simulation::import_litter(world, *people, simulation::park_state(park_model ? &*park_model : nullptr, *world_model).time);
@@ -375,7 +376,7 @@ int main(int argc, char** argv)
     for (const auto& stall : rides->stalls)
         for (const auto& item : stall.items)
             out.info("stall {} [{}] sells {} ({})", stall.base.name.c_str(), stall.base.symbol.c_str(), item.name.c_str(), item.kind_symbol.c_str());
-    out.info("paths {:d}  shops {:d}  rides {:d}  guests walking {:d}  seated {:d}  parties {:d}", world.paths.nodes().size(), shops, ride_count, walking, seated, parties);
+    out.info("paths {:d}  shops {:d}  rides {:d}  guests walking {:d}  seated {:d}  swimming {:d}  parties {:d}", world.paths.nodes().size(), shops, ride_count, walking, seated, swimmers, parties);
     {
         // Groups of path tiles joined to each other, to spot paths the import failed to join.
         const auto& nodes = world.paths.nodes();
@@ -479,8 +480,14 @@ int main(int argc, char** argv)
             std::array<std::size_t, 3> in { };
             for (const auto [_, visitor] : world.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>).each())
                 ++in[static_cast<std::size_t>(visitor.age)];
+            // At a pool (changing, swimming, or on its slides and river) and walking to one.
+            std::size_t to_pool = 0;
+            for (const auto [_, errand] : world.registry.view<const simulation::Errand>(entt::exclude<simulation::Left>).each())
+                if (errand.kind == simulation::ErrandKind::Heading && world.registry.valid(errand.target))
+                    to_pool += world.registry.all_of<simulation::PoolDoor>(errand.target);
+            const auto swimming = static_cast<std::size_t>(std::ranges::distance(world.registry.view<const simulation::Swimmer>(entt::exclude<simulation::Left>)));
             const auto& turnstile = world.registry.ctx().emplace<simulation::Turnstile>();
-            out.info("{:02d}:00{} in the park: {:d} children, {:d} teens, {:d} adults; came {:d}/{:d}/{:d}, went {:d}/{:d}/{:d}", now, simulation::is_night(day.time) ? " (dark)" : "", in[0], in[1], in[2], turnstile.in[0], turnstile.in[1], turnstile.in[2], turnstile.out[0], turnstile.out[1], turnstile.out[2]);
+            out.info("{:02d}:00{} in the park: {:d} children, {:d} teens, {:d} adults; came {:d}/{:d}/{:d}, went {:d}/{:d}/{:d}; at a pool {:d}, going to one {:d}", now, simulation::is_night(day.time) ? " (dark)" : "", in[0], in[1], in[2], turnstile.in[0], turnstile.in[1], turnstile.in[2], turnstile.out[0], turnstile.out[1], turnstile.out[2], swimming, to_pool);
         }
         profiling::section("Step", [&] { simulation::step(world, maybe(workers.get())); });
         profiling::capture_frame();

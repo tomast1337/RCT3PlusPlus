@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/boat.hpp"
 
-#include "park/path_clearance.hpp"
+#include "park/path/clearance.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
@@ -40,11 +40,11 @@ TEST_CASE("a rock in the water or a low bridge over it closes its tile to boats,
     save::WaterBody body { .level = 5 };
     for (std::uint8_t col = 0; col < 5; ++col)
         body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
-    park::SolidTiles solids;
-    solids.tiles[0] = { { .low = 2, .high = 6 } };                             // A rock standing up out of it
-    solids.tiles[1] = { { .low = 5.5f, .high = 6 } };                          // A low bridge
-    solids.tiles[2] = { { .low = 9, .high = 10 } };                            // A high one
-    solids.tiles[3] = { { .low = 2, .high = 6, .room = park::edge_room(0) } }; // A fence along its edge
+    park::path::SolidTiles solids;
+    solids.tiles[0] = { { .low = 2, .high = 6 } };                                                       // A rock standing up out of it
+    solids.tiles[1] = { { .low = 5.5f, .high = 6 } };                                                    // A low bridge
+    solids.tiles[2] = { { .low = 9, .high = 10 } };                                                      // A high one
+    solids.tiles[3] = { { .low = 2, .high = 6, .room = park::path::edge_room(park::ModelTurn { 0 }) } }; // A fence along its edge
     const auto water = simulation::water_tiles(grid, std::span { &body, 1 }, solids);
     CHECK_FALSE(water.at(0, 0));
     CHECK_FALSE(water.at(1, 0));
@@ -62,8 +62,8 @@ TEST_CASE("a path bridge low over the water closes its tiles to boats, a high on
         body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
     const auto bridge = [](std::uint8_t col, std::int32_t height) { return save::PathTile { .kind = save::PathKind::Flying, .col = col, .row = 0, .elevation = save::PathElevation { .quantised_height = height } }; };
     const std::array paths { bridge(0, 2), bridge(1, 6) };
-    park::SolidTiles solids;
-    park::add_path_decks(solids, paths, grid);
+    park::path::SolidTiles solids;
+    park::path::add_path_decks(solids, paths, grid);
     const auto water = simulation::water_tiles(grid, std::span { &body, 1 }, solids);
     CHECK_FALSE(water.at(0, 0)); // Its deck on the water
     CHECK(water.at(1, 0));       // Four metres over it
@@ -258,12 +258,12 @@ TEST_CASE("a boat ride given boats again has them all back at its dock, as many 
     save::RideModel rides;
     rides.rides.push_back({ .mode = save::OperatingMode::Boat, .trains = { save::Train { }, save::Train { } } });
     // A dock of one 4 m station piece on the second tile of a lake three tiles long.
-    const park::TrackCourse course { .points = { { 4, 5, 2 }, { 8, 5, 2 } }, .distance = { 0, 4 }, .kinds = { park::CourseKind::Station, park::CourseKind::Station } };
+    const park::track::TrackCourse course { .points = { { 4, 5, 2 }, { 8, 5, 2 } }, .distance = { 0, 4 }, .kinds = { park::track::CourseKind::Station, park::track::CourseKind::Station } };
     const save::TerrainGrid grid { .width = 3, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
     save::WaterBody body { .level = 5 };
     for (std::uint8_t col = 0; col < 2; ++col)
         body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
-    const std::optional<park::TrackCourse> courses[] { course };
+    const std::optional<park::track::TrackCourse> courses[] { course };
     simulation::import_boats(world, rides, std::span(&ride, 1), courses, grid, std::span(&body, 1));
     REQUIRE(r.all_of<simulation::Boats>(ride));
     CHECK(r.get<simulation::Boats>(ride).boats.size() == 2);

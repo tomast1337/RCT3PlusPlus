@@ -3,7 +3,7 @@
 // The park's water on the GPU. Where the device can, it is drawn with the water shader: the scene mirrored in
 // it (drawn again into a half-size picture for each of the few heights of water that cover most of the view),
 // what lies under it (the opaque scene copied from the screen, with its depth), waves from a tiling height
-// picture, the ripples a click starts and a faint foam. Otherwise, and in the info panel's small round view,
+// picture, the ripples a click starts, the pools' waves and a faint foam. Otherwise, and in the info panel's small round view,
 // it is drawn as before: a lit, see-through surface.
 //
 // A frame with water goes:
@@ -17,9 +17,10 @@
 
 #include "config/game_options.hpp"
 #include "park/camera.hpp"
+#include "park/pools/waves.hpp"
 #include "park/terrain_mesh.hpp"
-#include "park/water_ripples.hpp"
-#include "park/water_surface.hpp"
+#include "park/water/ripples.hpp"
+#include "park/water/surface.hpp"
 #include "render/device.hpp"
 #include "save/model/world.hpp"
 
@@ -54,7 +55,7 @@ namespace rct3::scene
 
     struct ParkWater
     {
-        park::WaterSurface surface;
+        park::water::WaterSurface surface;
         render::BufferHandle vertices;
         render::PipelineHandle shaded; ///< The water shader; none where the device has not got it
         render::PipelineHandle simple; ///< Lit and see-through
@@ -66,10 +67,11 @@ namespace rct3::scene
         render::TextureHandle behind; ///< The opaque scene and its depth, copied from the screen
         render::Extent behind_size;
         bool have_behind = false; ///< The copy this frame worked
-        park::Ripples ripples;
+        park::water::Ripples ripples;
+        std::vector<park::pools::PoolWave> pool_waves; ///< The wave machines', then those drawn on the water, for the shader
         WaterLook look;
-        std::vector<float> levels;              ///< With a reflection this frame, by index in `reflections`
-        std::optional<park::WaterAbove> eye_in; ///< The water the eye is under this frame
+        std::vector<float> levels;                     ///< With a reflection this frame, by index in `reflections`
+        std::optional<park::water::WaterAbove> eye_in; ///< The water the eye is under this frame
     };
 
     /// Makes the water's buffers, pictures and pipelines. `layout` is that of park::GroundVertex.

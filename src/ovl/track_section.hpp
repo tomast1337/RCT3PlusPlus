@@ -26,6 +26,20 @@ namespace rct3::ovl
         std::vector<std::string_view> forbids;
     };
 
+    /// A square of a piece's footprint that meets things beside it, in the piece's own squares and heights.
+    struct TrackSquare
+    {
+        std::int32_t x = 0;
+        std::int32_t z = 0;
+        std::int32_t height = 0;
+        /// Low four bits: the sides of the square it meets things on, as the piece is drawn: 0x1 its +X side, 0x4 its
+        /// -X side, 0x8 its +Z side and 0x2 its -Z side. With kJoinsPool or kOverPool it joins a pool square across
+        /// those sides. Others unconfirmed.
+        std::uint32_t flags = 0;
+        static constexpr std::uint32_t kJoinsPool = 0x200; ///< As at a pool slide's open end
+        static constexpr std::uint32_t kOverPool = 0x400;  ///< As where a slide's track swings out over the pool beside
+    };
+
     struct TrackSection
     {
         std::string_view name; ///< Name string stored in the item, the same as the symbol name in all files
@@ -76,6 +90,11 @@ namespace rct3::ovl
         std::uint32_t ground = 0;
         static constexpr std::uint32_t kPavedUnder = 0x8;   ///< Its footprint is paved as a flat ride's floor is
         static constexpr std::uint32_t kFencedRound = 0x10; ///< Its footprint is fenced round as a flat ride's is
+        /// Of a pool slide's end that runs on back to its lift: how far along it, in metres, its riders are let off
+        /// into the pool. Below 0 on other pieces. Version 4 and 5 files only.
+        float drop_off = -1;
+        /// Squares of its footprint that meet things beside them. Version 4 and 5 files only.
+        std::vector<TrackSquare> squares;
         /// Join tags of the start and of the end.
         std::array<JoinTags, 2> tags;
         /// Every reference in the record, in file order, including those above.

@@ -18,11 +18,11 @@ Status: in development, not yet complete.
 How to build rct3++, point it at your game install, configure it and run its test scripts is in
 [CONTRIBUTING.md](CONTRIBUTING.md#building-and-running).
 
-## Clean-room policy
+## Original work
 
-rct3++ is a clean-room reimplementation. This repository contains original code and format descriptions
-written in our own words, and nothing else: no game files or assets, no text or data copied from them, and
-no decompiled or disassembled code.
+rct3++ is an original reimplementation: its code and format descriptions are our own work, written in our
+own words. The repository holds nothing else: no game files or assets, no text or data copied from them,
+and no decompiled or disassembled code.
 
 Where our knowledge comes from:
 
@@ -35,8 +35,8 @@ Where our knowledge comes from:
   for number.
 
 We do not accept contributions based on decompiling, disassembling or debugging the game's executables, or
-on leaked source or documents. See the clean-room standards in the [Code of Conduct](CODE_OF_CONDUCT.md)
-and the detailed rules in [ORIGINAL_WORK.md](ORIGINAL_WORK.md).
+on leaked source or documents. See the standards in the [Code of Conduct](CODE_OF_CONDUCT.md) and the
+detailed rules in [ORIGINAL_WORK.md](ORIGINAL_WORK.md).
 
 ## Contributing
 

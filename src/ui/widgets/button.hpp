@@ -27,6 +27,7 @@ namespace rct3::ui
         std::string skin;                   ///< Family base name
         std::string icon;                   ///< Optional skin drawn on top
         float icon_scale = 1;               ///< Of the icon's own size
+        float icon_fit = 0;                 ///< Above 0: units the icon's longer side is drawn at, whatever its own size
         Color icon_colour = hex("#ffffff"); ///< Multiplies the icon while enabled
         std::u16string text;
         FontRole font = FontRole::Small;

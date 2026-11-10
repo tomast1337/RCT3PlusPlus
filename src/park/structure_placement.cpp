@@ -29,11 +29,11 @@ namespace rct3::park
         }
 
         /// A point of the box, in tiles from its first corner, turned with it: where it lies in the turned box.
-        glm::vec2 turned(glm::vec2 p, std::int32_t turns, const save::Structure& s)
+        glm::vec2 turned(glm::vec2 p, ModelTurn turn, const save::Structure& s)
         {
             const auto cols = static_cast<float>(s.cols);
             const auto rows = static_cast<float>(s.rows);
-            switch (turns & 3)
+            switch (turn.value)
             {
                 case 1:
                     return { p.y, cols - p.x };
@@ -48,11 +48,11 @@ namespace rct3::park
 
         /// The first corner of the turned box centred on `at`: the box's middle tile, rounded down before it
         /// turns, stays on `at`.
-        glm::vec2 corner(const save::Structure& s, save::Tile at, std::int32_t turns)
+        glm::vec2 corner(const save::Structure& s, save::Tile at, ModelTurn turn)
         {
             const std::int32_t c = s.cols / 2;
             const std::int32_t r = s.rows / 2;
-            switch (turns & 3)
+            switch (turn.value)
             {
                 case 1:
                     return { static_cast<float>(at.col - r), static_cast<float>(at.row + c + 1 - s.cols) };
@@ -117,54 +117,54 @@ namespace rct3::park
         return s;
     }
 
-    save::Tile structure_tile(const save::Structure& structure, save::Tile at, std::int32_t turns, std::int32_t col, std::int32_t row)
+    save::Tile structure_tile(const save::Structure& structure, save::Tile at, ModelTurn turn, std::int32_t col, std::int32_t row)
     {
-        const glm::vec2 p = corner(structure, at, turns) + turned({ static_cast<float>(col) + 0.5f, static_cast<float>(row) + 0.5f }, turns, structure);
+        const glm::vec2 p = corner(structure, at, turn) + turned({ static_cast<float>(col) + 0.5f, static_cast<float>(row) + 0.5f }, turn, structure);
         return { static_cast<int>(std::floor(p.x)), static_cast<int>(std::floor(p.y)) };
     }
 
-    std::vector<save::PlacedObject> structure_objects(const save::Structure& structure, save::Tile at, std::int32_t turns, std::int32_t height, const ObjectModels& models)
+    std::vector<save::PlacedObject> structure_objects(const save::Structure& structure, save::Tile at, ModelTurn turn, std::int32_t height, const ObjectModels& models)
     {
         std::vector<save::PlacedObject> out;
         out.reserve(structure.pieces.size());
-        const glm::vec2 origin = corner(structure, at, turns);
+        const glm::vec2 origin = corner(structure, at, turn);
         for (const save::StructurePiece& p : structure.pieces)
         {
             save::PlacedObject o;
             o.symbol = p.symbol;
             o.overlay = p.overlay;
-            o.rotation = (p.rotation + turns) & 3;
+            o.rotation = ModelTurn::from(p.rotation).turned(turn.value).value;
             o.colours = p.colours;
             o.base_height = height + p.height;
             o.height_offset = p.height;
             o.force_absolute_height = true;
             // Its tiles turn with the box; it stands from the first of them.
             const auto span = span_of(p.rotation, model_of(o, models));
-            const glm::vec2 a = turned({ static_cast<float>(p.col), static_cast<float>(p.row) }, turns, structure);
-            const glm::vec2 b = turned({ static_cast<float>(p.col + span[0]), static_cast<float>(p.row + span[1]) }, turns, structure);
+            const glm::vec2 a = turned({ static_cast<float>(p.col), static_cast<float>(p.row) }, turn, structure);
+            const glm::vec2 b = turned({ static_cast<float>(p.col + span[0]), static_cast<float>(p.row + span[1]) }, turn, structure);
             o.col = static_cast<std::int32_t>(origin.x + std::min(a.x, b.x));
             o.row = static_cast<std::int32_t>(origin.y + std::min(a.y, b.y));
             // A quarter of a tile turns with it too.
-            const glm::vec2 q = turned({ static_cast<float>(p.col) + ((p.quadrant & 1) != 0 ? 0.75f : 0.25f), static_cast<float>(p.row) + ((p.quadrant & 2) != 0 ? 0.75f : 0.25f) }, turns, structure);
+            const glm::vec2 q = turned({ static_cast<float>(p.col) + ((p.quadrant & 1) != 0 ? 0.75f : 0.25f), static_cast<float>(p.row) + ((p.quadrant & 2) != 0 ? 0.75f : 0.25f) }, turn, structure);
             o.quadrant = (q.x - std::floor(q.x) >= 0.5f ? 1 : 0) + (q.y - std::floor(q.y) >= 0.5f ? 2 : 0);
             out.push_back(std::move(o));
         }
         return out;
     }
 
-    StructureProblem structure_problem(const save::Structure& structure, save::Tile at, std::int32_t turns, std::span<const save::PlacedObject> placed, const ObjectModels& models, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    StructureProblem structure_problem(const save::Structure& structure, save::Tile at, ModelTurn turn, std::span<const save::PlacedObject> placed, const ObjectModels& models, const path::SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
     {
         for (std::int32_t row = 0; row < structure.rows; ++row)
             for (std::int32_t col = 0; col < structure.cols; ++col)
             {
                 if (!structure.has_tile(col, row))
                     continue;
-                const save::Tile t = structure_tile(structure, at, turns, col, row);
+                const save::Tile t = structure_tile(structure, at, turn, col, row);
                 if (!grid.contains(t) || grid.at(t.col, t.row).ownership() != save::Ownership::Owned)
                     return StructureProblem::NotOwned;
             }
-        const Clash c = clash(solid_tiles(placed, models, grid), solids, paths, grid);
-        return c == Clash::None ? StructureProblem::None : c == Clash::Path ? StructureProblem::Path : StructureProblem::Blocked;
+        const path::Clash c = path::clash(path::solid_tiles(placed, models, grid), solids, paths, grid);
+        return c == path::Clash::None ? StructureProblem::None : c == path::Clash::Path ? StructureProblem::Path : StructureProblem::Blocked;
     }
 
 } // namespace rct3::park

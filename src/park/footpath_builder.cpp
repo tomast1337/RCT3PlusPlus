@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/footpath_builder.hpp"
 
-#include "park/ground_paths.hpp"
-#include "park/ground_queues.hpp"
-#include "park/path_clearance.hpp"
-#include "park/path_decks.hpp"
+#include "park/ground/paths.hpp"
+#include "park/ground/queues.hpp"
+#include "park/path/clearance.hpp"
+#include "park/path/decks.hpp"
 #include "park/queue_fences.hpp"
 #include "park/terrain_mesh.hpp"
 
@@ -18,24 +18,22 @@ namespace rct3::park
     namespace
     {
 
-        constexpr std::uint8_t kQuarterTurns = 4;
-
         /// Where a trail picked on `spot` starts: on flat ground, else just above the tile's highest corner.
         std::int32_t ground_start(const save::TerrainGrid& grid, save::Tile spot)
         {
             const save::TerrainCell& cell = grid.at(spot.col, spot.row);
             if (cell.max_height() - cell.min_height() <= kFlat)
                 return static_cast<std::int32_t>(std::lround(cell.min_height()));
-            return static_cast<std::int32_t>(std::ceil(cell.max_height() - kPathMeets));
+            return static_cast<std::int32_t>(std::ceil(cell.max_height() - ground::kPathMeets));
         }
 
         /// The lowest and highest heights `path` takes on its tile.
         std::pair<float, float> span_of(const save::PathTile& path, const save::TerrainGrid& grid)
         {
-            if (path.elevation && !is_ground_queue(path))
+            if (path.elevation && !ground::is_ground_queue(path))
             {
                 const save::PathElevation& e = *path.elevation;
-                const float rise = path_rise(e.slope);
+                const float rise = ground::path_rise(e.slope);
                 const float low = static_cast<float>(e.quantised_height) - (slope_falls(e.slope) ? rise : 0);
                 return { low, low + rise };
             }
@@ -47,9 +45,9 @@ namespace rct3::park
 
         /// Calls `visit(corner, height)` for each corner of `piece`'s tile with the piece's height over it: the
         /// corners on the edge it leaves by take its end, the others its start.
-        template<typename Visit> void piece_corners(const NextPiece& piece, std::uint8_t heading, Visit visit)
+        template<typename Visit> void piece_corners(const NextPiece& piece, Side heading, Visit visit)
         {
-            const auto exit = edge_corners(heading);
+            const auto exit = path::edge_corners(heading);
             for (std::size_t corner = 0; corner < 4; ++corner)
             {
                 const bool leaving = corner == exit[0] || corner == exit[1];
@@ -65,7 +63,7 @@ namespace rct3::park
         return static_cast<PathSlope>(at);
     }
 
-    TerrainMesh heading_arrow(const NextPiece& piece, std::uint8_t heading, const save::TerrainGrid& grid)
+    TerrainMesh heading_arrow(const NextPiece& piece, Side heading, const save::TerrainGrid& grid)
     {
         TerrainMesh mesh;
         if (!grid.contains(piece.spot.col, piece.spot.row))
@@ -73,8 +71,8 @@ namespace rct3::park
         std::array<float, 4> heights = grid.at(piece.spot.col, piece.spot.row).corners;
         if (!piece.ground || piece.cut)
             piece_corners(piece, heading, [&](std::size_t corner, float height) { heights[corner] = height; });
-        const auto front = edge_corners(heading);
-        const auto right = edge_corners(static_cast<std::uint8_t>((heading + 1) % kQuarterTurns));
+        const auto front = path::edge_corners(heading);
+        const auto right = path::edge_corners(heading.right());
         for (std::size_t corner = 0; corner < 4; ++corner)
         {
             GroundVertex& v = mesh.vertices.emplace_back();
@@ -87,19 +85,9 @@ namespace rct3::park
         return mesh;
     }
 
-    save::Tile step(save::Tile from, std::uint8_t heading) noexcept
+    save::Tile step(save::Tile from, Side heading) noexcept
     {
-        switch (heading % kQuarterTurns)
-        {
-            case 0:
-                return { from.col, from.row + 1 };
-            case 1:
-                return { from.col + 1, from.row };
-            case 2:
-                return { from.col, from.row - 1 };
-            default:
-                return { from.col - 1, from.row };
-        }
+        return heading.beyond(from);
     }
 
     void start_at(FootpathBuilder& builder, save::Tile spot)
@@ -129,7 +117,7 @@ namespace rct3::park
         bool level = builder.slope == PathSlope::Flat;
         const auto& corners = grid.at(spot->col, spot->row).corners;
         piece_corners(piece, builder.heading, [&](std::size_t corner, float height) {
-            piece.cut = piece.cut || corners[corner] > height + kPathMeets;
+            piece.cut = piece.cut || corners[corner] > height + ground::kPathMeets;
             // Once cut, a corner in the way stands at the piece.
             const float ground = builder.cut_into_ground ? std::min(corners[corner], height) : corners[corner];
             level = level && std::abs(ground - height) <= kFlat;
@@ -142,7 +130,7 @@ namespace rct3::park
         return piece;
     }
 
-    LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids)
+    LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const path::SolidTiles&> solids)
     {
         const auto spot = next_spot(builder);
         if (!spot)
@@ -166,12 +154,12 @@ namespace rct3::park
             if (other_low < high + kPathHeadroom && low < other_high + kPathHeadroom)
                 return LayProblem::Occupied;
         }
-        if (solids && blocked(*solids, piece->spot, low, high))
+        if (solids && path::blocked(*solids, piece->spot, low, high))
             return LayProblem::Blocked;
         return LayProblem::None;
     }
 
-    void cut_down(save::TerrainGrid& grid, const NextPiece& piece, std::uint8_t heading)
+    void cut_down(save::TerrainGrid& grid, const NextPiece& piece, Side heading)
     {
         if (!grid.contains(piece.spot.col, piece.spot.row))
             return;
@@ -217,7 +205,7 @@ namespace rct3::park
                 return false;
             const save::PathElevation& e = *p.elevation;
             // A queue's direction is its line's business; any queue piece of the same shape is the same.
-            return e.slope == stored && e.quantised_height == piece.start && (stored == 0 || stored == save::kSlopeOnGround || builder.queue || p.direction == stored_direction(builder.heading));
+            return e.slope == stored && e.quantised_height == piece.start && (stored == 0 || stored == save::kSlopeOnGround || builder.queue || p.direction == path::stored_direction(builder.heading));
         });
         if (found == paths.end())
             return std::nullopt;
@@ -237,13 +225,13 @@ namespace rct3::park
         {
             p.kind = save::PathKind::Queue;
             p.queue = save::PathQueueInfo { };
-            p.queue->start_direction = stored_direction(builder.heading);
-            p.queue->end_direction = stored_direction(static_cast<std::uint8_t>((builder.heading + 2) % kQuarterTurns));
+            p.queue->start_direction = path::stored_direction(builder.heading);
+            p.queue->end_direction = path::stored_direction(builder.heading.opposite());
             // The tile laid before now leads on to this one, on the same line and with the same railing.
             const auto last = std::ranges::find(paths, before, &save::PathTile::id);
             if (before != 0 && last != paths.end() && last->queue)
             {
-                last->queue->start_direction = stored_direction(builder.heading);
+                last->queue->start_direction = path::stored_direction(builder.heading);
                 p.queue->queue_line_ref = last->queue->queue_line_ref;
                 p.queue->fence_symbol = last->queue->fence_symbol;
                 p.queue->fence_overlay = last->queue->fence_overlay;
@@ -264,7 +252,7 @@ namespace rct3::park
         {
             if (!builder.queue)
                 p.kind = save::PathKind::Flying;
-            p.direction = stored_direction(builder.heading);
+            p.direction = path::stored_direction(builder.heading);
             p.elevation->slope = stored_slope(builder.slope);
             p.elevation->scenery_ref = deck;
             p.elevation->underground = piece.tunnel;
@@ -332,23 +320,23 @@ namespace rct3::park
         return static_cast<PathSlope>(static_cast<std::uint8_t>(control) - static_cast<std::uint8_t>(PathControl::SteepDown));
     }
 
-    std::array<bool, kPathControlCount> fitting_controls(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids)
+    std::array<bool, kPathControlCount> fitting_controls(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const path::SolidTiles&> solids)
     {
         FootpathBuilder trial = builder;
-        const auto fits = [&](std::uint8_t heading, PathSlope slope) {
+        const auto fits = [&](Side heading, PathSlope slope) {
             trial.heading = heading;
             trial.slope = slope;
             return lay_problem(trial, grid, paths, solids) == LayProblem::None;
         };
         constexpr std::array kSlopes { PathControl::SteepDown, PathControl::Down, PathControl::Flat, PathControl::Up, PathControl::SteepUp };
-        const auto some_slope = [&](std::uint8_t heading) { return std::ranges::any_of(kSlopes, [&](PathControl c) { return fits(heading, control_slope(c)); }); };
+        const auto some_slope = [&](Side heading) { return std::ranges::any_of(kSlopes, [&](PathControl c) { return fits(heading, control_slope(c)); }); };
 
         std::array<bool, kPathControlCount> out { };
         const auto at = [&](PathControl c) -> bool& { return out.at(static_cast<std::size_t>(c)); };
         if (can_turn(builder))
         {
-            at(PathControl::TurnLeft) = some_slope(static_cast<std::uint8_t>((builder.heading + kQuarterTurns - 1) % kQuarterTurns));
-            at(PathControl::TurnRight) = some_slope(static_cast<std::uint8_t>((builder.heading + 1) % kQuarterTurns));
+            at(PathControl::TurnLeft) = some_slope(builder.heading.left());
+            at(PathControl::TurnRight) = some_slope(builder.heading.right());
         }
         for (const PathControl c : kSlopes)
             at(c) = fits(builder.heading, control_slope(c));
@@ -363,11 +351,11 @@ namespace rct3::park
         {
             case PathControl::TurnLeft:
                 if (can_turn(builder))
-                    builder.heading = static_cast<std::uint8_t>((builder.heading + kQuarterTurns - 1) % kQuarterTurns);
+                    builder.heading = builder.heading.left();
                 return PathStep::None;
             case PathControl::TurnRight:
                 if (can_turn(builder))
-                    builder.heading = static_cast<std::uint8_t>((builder.heading + 1) % kQuarterTurns);
+                    builder.heading = builder.heading.right();
                 return PathStep::None;
             case PathControl::Straight:
                 return PathStep::Lay;
@@ -408,7 +396,7 @@ namespace rct3::park
 
     float slope_rise(PathSlope slope) noexcept
     {
-        const float rise = path_rise(stored_slope(slope));
+        const float rise = ground::path_rise(stored_slope(slope));
         return slope == PathSlope::Down || slope == PathSlope::SteepDown ? -rise : rise;
     }
 
@@ -428,11 +416,11 @@ namespace rct3::park
 
     std::int64_t laid_price(const save::PathTile& path, const save::TerrainGrid& grid, std::int32_t ground_cost)
     {
-        if (!path.elevation || is_ground_queue(path))
+        if (!path.elevation || ground::is_ground_queue(path))
             return ground_cost;
         const std::uint8_t slope = path.elevation->slope;
         const bool down = slope == stored_slope(PathSlope::Down) || slope == stored_slope(PathSlope::SteepDown);
-        const auto rise = static_cast<std::int32_t>(std::lround(path_rise(slope)));
+        const auto rise = static_cast<std::int32_t>(std::lround(ground::path_rise(slope)));
         const std::int32_t start = path.elevation->quantised_height;
         return piece_price(NextPiece { { path.col, path.row }, start, down ? start - rise : start + rise, false, false, path.elevation->underground }, grid, ground_cost);
     }

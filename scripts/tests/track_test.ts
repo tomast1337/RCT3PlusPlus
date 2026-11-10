@@ -45,6 +45,11 @@ await frames(30);
 await pointer.click(0.5, 0.45);
 await frames(30);
 expect(rides.list().some((r) => (r.pieces ?? 0) > 0), "the design laid");
+// Laid, its building closes and its window opens; the window's crane opens the building again.
+expect(build.construction() === undefined, "the building closed once the design is laid");
+await until(() => ui.find("info/Attraction_Construction") !== undefined, 120, "the ride's window");
+await ui.click("info/Attraction_Construction");
+await until(() => build.construction() !== undefined, 120, "the building open again");
 
 // The crane hides the strip, and shows it again.
 await ui.click("placing/Attraction_Construction");

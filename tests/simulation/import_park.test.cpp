@@ -817,9 +817,9 @@ TEST_CASE("rides whose stations stand side by side on one level are linked, othe
     const save::TerrainGrid grid { .tile_size_x = 4, .tile_size_z = 4 };
     // A station two tiles long running along the rows, in column `col`, at height `up`.
     const auto station = [](float col, float up) {
-        park::TrackCourse c;
+        park::track::TrackCourse c;
         c.points = { { col * 4 + 2, up, 0 }, { col * 4 + 2, up, 8 }, { col * 4 + 2, up, 20 } };
-        c.kinds = { park::CourseKind::Station, park::CourseKind::Plain, park::CourseKind::Plain };
+        c.kinds = { park::track::CourseKind::Station, park::track::CourseKind::Plain, park::track::CourseKind::Plain };
         return std::optional(c);
     };
     const std::array courses { station(0, 0), station(1, 0), station(3, 0), station(1, 5) }; // Beside, apart, above

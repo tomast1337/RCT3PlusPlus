@@ -809,6 +809,7 @@ namespace rct3::save
             .thinks_since_happy = i32(get(at::thinks_happy), -1),
             .patrol = { u8(get(at::start_col)), u8(get(at::start_row)), u8(get(at::grid_x)), u8(get(at::grid_y)), flag(get(at::start_state)) },
             .task_flags = i32(get(at::task_flags)),
+            .time_in_pool = opt_f32(get(at::time_in_pool)),
         };
         switch (c->kind)
         {

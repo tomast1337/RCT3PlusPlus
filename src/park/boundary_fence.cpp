@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/boundary_fence.hpp"
 
-#include "park/ground_queues.hpp"
+#include "park/ground/queues.hpp"
 #include "park/queue_fences.hpp"
 
 #include <unordered_set>
@@ -16,8 +16,8 @@ namespace rct3::park
 
     glm::vec2 panel_lean(const save::TerrainGrid& grid, const save::PlacedObject& panel)
     {
-        for (const TileSide side : { TileSide::Back, TileSide::Right, TileSide::Front, TileSide::Left })
-            if (edge_turns(side) == ((panel.rotation % 4) + 4) % 4)
+        for (const Side side : ground::kSidesFromRowBefore)
+            if (edge_turns(side) == ModelTurn::from(panel.rotation))
                 return edge_lean(grid, { panel.col, panel.row }, side);
         return { };
     }
@@ -39,9 +39,9 @@ namespace rct3::park
             {
                 if (!owned(col, row))
                     continue;
-                for (const TileSide side : { TileSide::Back, TileSide::Right, TileSide::Front, TileSide::Left })
+                for (const Side side : ground::kSidesFromRowBefore)
                 {
-                    const auto [dc, dr] = side_step(side);
+                    const auto [dc, dr] = side.step();
                     if (owned(col + dc, row + dr) || (has_path(col, row) && has_path(col + dc, row + dr)))
                         continue;
                     save::PlacedObject& o = out.pieces.emplace_back();
@@ -52,7 +52,7 @@ namespace rct3::park
                     o.overlay = overlay;
                     o.col = col;
                     o.row = row;
-                    o.rotation = edge_turns(side);
+                    o.rotation = edge_turns(side).value;
                     if (const glm::vec2 lean = panel_lean(grid, o); lean != glm::vec2(0.0f))
                         out.leans.emplace(o.id, lean);
                 }

@@ -3,7 +3,7 @@
 Thank you for wanting to help. Bug reports, format findings, code, tests and documentation are all
 welcome.
 
-Before anything else, read the [Code of Conduct](CODE_OF_CONDUCT.md), including its clean-room standards,
+Before anything else, read the [Code of Conduct](CODE_OF_CONDUCT.md), including its original-work standards,
 and [ORIGINAL_WORK.md](ORIGINAL_WORK.md). They decide what can be accepted, and a contribution that breaks them
 is turned down however good it is.
 
@@ -148,6 +148,10 @@ Security problems (for example a file that crashes the parser or reads out of bo
    bytes gets a fuzz target in `fuzz/`.
 3. Follow the design and code style in [AGENTS.md](AGENTS.md): plain data and free functions where they fit,
    bounds-checked parsing that returns `std::expected`, `std::format` for text, no new warnings.
+   Lay code out by feature: a feature's data and its functions in one `.hpp`/`.cpp` pair, three or more
+   files with one prefix in a folder without the prefix (`park/track/pieces.hpp`, not
+   `park/track_pieces.hpp`), and the namespace following the folder (`src/park/track/` is
+   `rct3::park::track`, `app/a/b/` is `rct3::a::b`).
 4. Add tests for new behaviour under `tests/`, mirroring the `src/` path. Test inputs are built in code,
    never read from a game install.
 5. Commit messages follow `type(scope): subject` (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`),

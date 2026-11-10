@@ -4,7 +4,7 @@
 #include "park/boundary_fence.hpp"
 #include "park/enclosures.hpp"
 #include "park/item_category.hpp"
-#include "park/support_columns.hpp"
+#include "park/support/columns.hpp"
 #include "park/tile_shaping.hpp"
 #include "scene/park_scene.hpp"
 #include "scene/park_setup.hpp"
@@ -83,10 +83,10 @@ namespace rct3::scene
                 const auto model = scene.models.find(park::model_key(o));
                 if (o.hidden || o.fixture || model == scene.models.end() || !keeps_out(model->second.category))
                     continue;
-                park::SupportFootprint shape;
+                park::support::SupportFootprint shape;
                 shape.x_squares = model->second.squares[0];
                 shape.z_squares = model->second.squares[1];
-                for (const auto& [col, row] : park::footprint_tiles(o, shape))
+                for (const auto& [col, row] : park::support::footprint_tiles(o, shape))
                     keep(col, row);
             }
             const auto& r = scene.sim.registry;
@@ -246,7 +246,7 @@ namespace rct3::scene
         }
     }
 
-    void house_placed(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const park::BuildItem& item, const park::RideSite& site)
+    void house_placed(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const park::BuildItem& item, const park::ride::RideSite& site)
     {
         const std::int32_t enclosure = park::enclosure_under(scene.enclosures, { site.col, site.row }, site.span);
         // The hut goes on a tile beside the house in the same enclosure that nothing stands on, the side it
@@ -257,11 +257,12 @@ namespace rct3::scene
         std::optional<save::Tile> spot;
         for (std::int32_t side = 0; side < 4 && !spot; ++side)
         {
-            const std::int32_t way = (side + site.turns) % 4; // 0 past the last row, then round
-            const std::int32_t across = way % 2 == 0 ? site.span[0] : site.span[1];
+            // The house's turn counted as sides from the next row, as a pool piece's is.
+            const park::Side way = site.turn.facing().turned(side);
+            const std::int32_t across = way.on_columns() ? site.span[1] : site.span[0];
             for (std::int32_t i = across / 2, n = 0; n < across && !spot; ++n, i = (i + 1) % across)
             {
-                const save::Tile t = way == 0 ? save::Tile { site.col + i, site.row + site.span[1] } : way == 1 ? save::Tile { site.col + site.span[0], site.row + i } : way == 2 ? save::Tile { site.col + i, site.row - 1 } : save::Tile { site.col - 1, site.row + i };
+                const save::Tile t = way == park::Side::kNextRow ? save::Tile { site.col + i, site.row + site.span[1] } : way == park::Side::kNextCol ? save::Tile { site.col + site.span[0], site.row + i } : way == park::Side::kRowBefore ? save::Tile { site.col + i, site.row - 1 } : save::Tile { site.col - 1, site.row + i };
                 if (free(t))
                     spot = t;
             }
@@ -278,8 +279,8 @@ namespace rct3::scene
             hut.overlay = item.overlay;
             hut.col = spot->col;
             hut.row = spot->row;
-            hut.base_height = park::ride_site({ spot->col, spot->row }, { 1, 1 }, site.turns, scene.grid).height;
-            hut.rotation = site.turns;
+            hut.base_height = park::ride::ride_site({ spot->col, spot->row }, { 1, 1 }, site.turn, scene.grid).height;
+            hut.rotation = site.turn.value;
             hut.id = last_id(scene) + 1;
             hut.owner_ref = hut.id;
             if (load_object_model(scene, scene.placing.models, assets, hut))

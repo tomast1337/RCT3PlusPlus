@@ -16,7 +16,7 @@
 #include "park/object_pick.hpp"
 #include "park/object_placement.hpp"
 #include "park/person_motions.hpp"
-#include "park/ride_placement.hpp"
+#include "park/ride/placement.hpp"
 #include "park/sky_look.hpp"
 #include "park/tile_shaping.hpp"
 #include "parkfile/saved_park.hpp"
@@ -54,6 +54,7 @@
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/delete_area_panel.hpp"
 #include "ui/screens/message_drawer.hpp"
+#include "ui/screens/pool_panel.hpp"
 #include "ui/screens/ride_camera_panel.hpp"
 #include "ui/screens/tool_menus.hpp"
 #include "ui/screens/tool_row.hpp"
@@ -481,7 +482,8 @@ namespace rct3::scene
                 if (f.ride->kind == save::RideKind::Tracked)
                 {
                     const auto& course = ref.index < scene.courses.size() ? scene.courses[ref.index] : std::nullopt;
-                    f.station = !f.ride->stations.empty() || (course && std::ranges::contains(course->kinds, park::CourseKind::Station));
+                    f.station = !f.ride->stations.empty() || (course && std::ranges::contains(course->kinds, park::track::CourseKind::Station));
+                    f.pool_ride = ref.index < scene.track_rules.size() && scene.track_rules[ref.index].pool_ride;
                     // Its trains can change while it is not open, as in the game, and while none of them has riders
                     // aboard (set_trains).
                     const entt::entity e = scene.simulate && ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null;
@@ -498,10 +500,10 @@ namespace rct3::scene
                         for (const save::Car& car : f.ride->trains.empty() ? std::vector<save::Car> { } : f.ride->trains.front().cars)
                             kept.push_back({ .length = car.length });
                         const auto fits = scene.car_fits.find(ref.index);
-                        const park::TrackRules rules = ref.index < scene.track_rules.size() ? scene.track_rules[ref.index] : park::TrackRules { };
+                        const park::track::TrackRules rules = ref.index < scene.track_rules.size() ? scene.track_rules[ref.index] : park::track::TrackRules { };
                         // A shuttle runs one (fit_trains).
                         const auto coaster = course ? simulation::coaster_of(*course, *f.ride) : std::nullopt;
-                        f.trains->most_trains = course && !(coaster && coaster->shuttle != simulation::Shuttle::None) ? park::trains_fitting(*course, fits != scene.car_fits.end() ? std::span<const park::CarFit>(fits->second) : kept, f.ride->options.block_sectioned, rules.most_trains) : 1;
+                        f.trains->most_trains = course && !(coaster && coaster->shuttle != simulation::Shuttle::None) ? park::track::trains_fitting(*course, fits != scene.car_fits.end() ? std::span<const park::CarFit>(fits->second) : kept, f.ride->options.block_sectioned, rules.most_trains) : 1;
                     }
                 }
             }
@@ -616,7 +618,7 @@ namespace rct3::scene
         {
             if (!o.fixture || !std::ranges::contains(scene.pool_pieces, o.id))
                 return std::nullopt;
-            const auto room = std::ranges::find_if(scene.pools.rooms, [&](const park::PoolRoom& r) { return r.col == o.col && r.row == o.row && r.symbol == o.symbol; });
+            const auto room = std::ranges::find_if(scene.pools.rooms, [&](const park::pools::PoolRoom& r) { return r.col == o.col && r.row == o.row && r.symbol == o.symbol; });
             return room == scene.pools.rooms.end() ? std::nullopt : std::optional(static_cast<std::size_t>(room - scene.pools.rooms.begin()));
         }
 
@@ -654,7 +656,30 @@ namespace rct3::scene
                 std::int64_t people = 0;
                 for (const auto [g, swimmer, errand] : r.view<const simulation::Swimmer, const simulation::Errand>().each())
                     people += door != nullptr && r.valid(errand.target) && r.all_of<simulation::PoolDoor>(errand.target) && r.get<simulation::PoolDoor>(errand.target).pool == door->pool;
-                f.pool = ui::PoolComplexFacts { .name = strings::to_utf16(scene.pools.rooms[*room].complex_name), .ticket = scene.pools.rooms[*room].ticket, .open = scene.pools.rooms[*room].open, .people = people, .dirt = pool != nullptr ? simulation::dirt_step(*pool) : 0, .fluid = scene.pools.rooms[*room].fluid };
+                const park::pools::PoolRoom& at = scene.pools.rooms[*room];
+                f.pool = ui::PoolComplexFacts {
+                    .name = strings::to_utf16(at.complex_name), .number = static_cast<std::size_t>(std::ranges::count(scene.pools.rooms.begin(), scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room) + 1, at.symbol, &park::pools::PoolRoom::symbol)), .ticket = at.ticket, .open = at.open, .people = people, .dirt = pool != nullptr ? simulation::dirt_step(*pool) : 0, .fluid = at.fluid, .waves = at.waves, .refill = simulation::kTuning.pools.refill.at(std::min<std::size_t>(at.fluid, 2)).value
+                };
+                // The room's takings and upkeep, and what guests thought of it, as the simulation has them.
+                if (const auto* attraction = e != entt::null ? r.try_get<simulation::Attraction>(e) : nullptr)
+                {
+                    f.pool->customers = attraction->customers;
+                    f.pool->income = attraction->income.value;
+                }
+                if (const auto* upkeep = e != entt::null ? r.try_get<simulation::Upkeep>(e) : nullptr)
+                {
+                    f.pool->reliability = upkeep->reliability.value;
+                    f.pool->since_inspection = upkeep->since_inspection.value;
+                    if (const auto interval = std::ranges::find(simulation::kInspectionSeconds, upkeep->inspect_every.value); interval != simulation::kInspectionSeconds.end())
+                        f.pool->inspection = static_cast<int>(interval - simulation::kInspectionSeconds.begin());
+                }
+                for (const auto [g, thoughts] : r.view<const simulation::Thoughts>().each())
+                    for (const simulation::Thought& t : thoughts.recent)
+                        if (e != entt::null && t.about == e)
+                            f.pool->thoughts.push_back({ .thought = static_cast<std::int32_t>(std::to_underlying(t.kind)), .time = t.time.value, .variant = t.variant });
+                const std::vector<save::Tile> complex = park::pools::pool_complex(scene.pools, *room);
+                const auto machine = [&](const park::pools::PoolExtra& x) { return x.fit.wave_machine && std::ranges::contains(complex, save::Tile { x.col, x.row }); };
+                f.pool->machines = std::ranges::any_of(scene.pools.extras, machine) || std::ranges::any_of(scene.scenery_pool_extras, machine);
             }
             return f;
         }
@@ -733,7 +758,12 @@ namespace rct3::scene
             if (!scene.shown_party.empty())
                 panel.show_page(ui::party_page(scene.party_tab, party_facts(scene), *assets.strings, info_units(assets, options)));
             else if (scene.shown_prop)
-                panel.show_page(ui::scenery_page(scene.prop_tab, prop_facts(scene, *scene.shown_prop), *assets.strings));
+            {
+                ui::SceneryFacts f = prop_facts(scene, *scene.shown_prop);
+                if (f.pool)
+                    f.pool->currency = info_units(assets, options).currency;
+                panel.show_page(ui::scenery_page(scene.prop_tab, f, *assets.strings));
+            }
             else if (scene.shown_person)
                 panel.show_page(ui::person_page(scene.person_tab, person_facts(scene, *scene.shown_person), *assets.strings, info_units(assets, options)));
             else if (scene.shown)
@@ -888,6 +918,10 @@ namespace rct3::scene
                 tab.slot = t.slot;
                 tab.action = t.action;
                 tab.paints = t.paints;
+                // A changing room's flag opens or closes its complex, as a stall's does.
+                if (t.tab == ui::SceneryTab::RoomState)
+                    for (const ui::StateChoice& c : ui::state_choices(ui::AttractionKind::Stall))
+                        tab.choices.push_back({ std::string(c.icon), std::u16string(assets.strings->get(c.help)) });
                 scene.prop_tabs.push_back(t.tab);
             }
             if (scene.shown_prop != index)
@@ -1259,7 +1293,7 @@ namespace rct3::scene
             scene.riding = car;
             scene.riding_eye = eye;
             // Named as the game names them: the ride, then the train and the car counting from 1.
-            const park::CarSpot spot = scene.car_spots[car];
+            const park::ride::CarSpot spot = scene.car_spots[car];
             std::size_t place = 1;
             for (std::size_t c = 0; c < car; ++c)
                 place += scene.car_spots[c].ride == spot.ride && scene.car_spots[c].train == spot.train ? 1 : 0;
@@ -1344,7 +1378,7 @@ namespace rct3::scene
             }
             if (!scene.riding)
                 return;
-            const park::CarSpot spot = scene.car_spots[*scene.riding];
+            const park::ride::CarSpot spot = scene.car_spots[*scene.riding];
             if (action == ChangeType)
             {
                 if (const auto next = next_eye(scene, *scene.riding, scene.riding_eye))
@@ -1464,7 +1498,7 @@ namespace rct3::scene
                     stall->items.insert(at, { .kind_symbol = std::format("{}:cid", g.item), .price = g.price, .name = "%ME%" });
                 }
                 else if (const auto moved = ui::listed(change.id, ItemMove); moved && *moved < stall->items.size())
-                    park::move_item(*stall, *moved, static_cast<std::size_t>(std::max(change.value, 0)));
+                    park::ride::move_item(*stall, *moved, static_cast<std::size_t>(std::max(change.value, 0)));
                 else if (const auto ticked = ui::listed(change.id, ItemExtras); ticked && *ticked < stall->items.size())
                     stall->items[*ticked].extras = static_cast<std::uint32_t>(change.value);
                 else if (const auto named = ui::listed(change.id, ItemName); named && *named < stall->items.size())
@@ -1476,7 +1510,7 @@ namespace rct3::scene
                 else
                     return;
                 if (stall->sync)
-                    park::copy_menu(scene.rides.stalls, index);
+                    park::ride::copy_menu(scene.rides.stalls, index);
                 for (std::size_t i = 0; i < scene.rides.stalls.size(); ++i)
                 {
                     save::Stall& s = scene.rides.stalls[i];
@@ -1487,7 +1521,7 @@ namespace rct3::scene
                     if (s.items.empty() && s.base.state == save::AttractionState::Open)
                         set_attraction_state(scene, s.base, save::AttractionState::Closed);
                     // An item put on brings the extras it takes.
-                    park::offer_extras(s, scene.carried.items);
+                    park::ride::offer_extras(s, scene.carried.items);
                     simulation::restock(scene.sim, s, scene.carried);
                 }
                 // The menu's rows follow what changed; a price typed in stays as it is.
@@ -2076,9 +2110,31 @@ namespace rct3::scene
             return std::nullopt;
         }
         const std::size_t ride = ref.index;
-        const park::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : park::TrackRules { };
+        const park::track::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : park::track::TrackRules { };
         const auto course = ride < scene.courses.size() && scene.courses[ride] ? maybe(&*scene.courses[ride]) : std::nullopt;
-        return park::open_refusal(scene.rides.rides.at(ride), rules, state, scene.building.ride == ride, course);
+        // A pool ride's doors are its stations joined to a pool complex. A slide's station joins where the paving, a
+        // pool path or the top of path stairs meets a side of its platform off the track, at the deck's height; a lazy
+        // river's, which has no platform, where the paving lies across its track, each run of station stretches one
+        // station.
+        // shortcut: a river's only along the course's own stretch, not a split track's other stretches with
+        // stations; upgrade when a pool ride may be split.
+        const save::Ride& r = scene.rides.rides.at(ride);
+        std::vector<std::optional<park::pools::SlidePlatform>> platforms;
+        if (rules.pool_ride && r.track)
+            for (const save::TrackPiece& p : r.track->pieces)
+                platforms.push_back(p.platform ? std::optional(park::pools::SlidePlatform { .col = p.platform->tile_x, .row = p.platform->tile_z, .height = p.platform->height, .turn = park::ModelTurn::from(p.platform->direction) }) : std::nullopt);
+        std::size_t joined = park::pools::joined_stations(scene.pools, platforms);
+        if (rules.pool_ride && course && course->points.size() == course->kinds.size() && std::ranges::none_of(platforms, [](const auto& p) { return p.has_value(); }))
+            for (std::size_t k = 0; k + 1 < course->kinds.size(); ++k)
+            {
+                if (course->kinds[k] != park::track::CourseKind::Station)
+                    continue;
+                std::vector<glm::vec3> run { course->points[k] };
+                for (; k + 1 < course->kinds.size() && course->kinds[k] == park::track::CourseKind::Station; ++k)
+                    run.push_back(course->points[k + 1]);
+                joined += simulation::pool_beside(scene.sim, run).has_value() ? 1 : 0;
+            }
+        return park::track::open_refusal(r, rules, state, scene.building.ride == ride, course, joined);
     }
 
     std::vector<ui::StateChoice> state_choices(const ParkScene& scene, park::AttractionRef ref)
@@ -2153,8 +2209,8 @@ namespace rct3::scene
         desktop.layout({ 0, 0, static_cast<float>(extent.width) / scale, static_cast<float>(extent.height) / scale });
 
         // Escape asks to leave, as the guide's quit does, unless the question is already open: then it
-        // answers it. An open build list takes it first, to empty its search and then to close; a path trail
-        // going on is let go before anything closes.
+        // answers it. An open build list takes it first, to empty its search and then to close; a tool out is
+        // put away, and a path trail going on let go, before anything closes.
         const bool asking = desktop.root().find(kQuestionName).has_value();
         ui::KeyboardState keys = keyboard;
         if (!asking && !build_list_open(desktop.root()))
@@ -2167,6 +2223,15 @@ namespace rct3::scene
                 stop_riding(scene);
             else if (!escape.empty() && tools && tools->open_menu())
                 tools->close_menu();
+            else if (!escape.empty() && (ride_placing(scene) || scene.structures.tool != StructureTools::Tool::None || scene.deleting.tool != DeleteTools::Tool::None || scene.pooling.item || scene.enclosing.item || land_tool(scene)))
+            {
+                stop_ride_placing(scene);
+                stop_structure_tools(scene);
+                stop_deleting(scene);
+                stop_pooling(scene);
+                stop_enclosing(scene);
+                stop_land_tools(scene);
+            }
             else if (!escape.empty() && !drop_footpath_trail(scene) && !close_top_management_window(desktop))
                 ask_leave(scene, *assets.strings, assets.palette);
             keys.presses.erase(escape.begin(), escape.end());
@@ -2189,11 +2254,12 @@ namespace rct3::scene
             const save::Ride& r = scene.rides.rides[ride];
             const auto coaster = course ? simulation::coaster_of(*course, r) : std::nullopt;
             // Boats sail off a dock that is only station, which no train could run round.
-            const bool boats = (r.mode == save::OperatingMode::Boat || r.mode == save::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, park::CourseKind::Station);
-            if (!assets.install || r.base.demolished || r.base.state == save::AttractionState::Closed || r.mode == save::OperatingMode::MiniGolf || (!coaster && !boats))
+            const bool boats = (r.mode == save::OperatingMode::Boat || r.mode == save::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, park::track::CourseKind::Station);
+            if (!assets.install || r.base.demolished || r.base.state == save::AttractionState::Closed || r.mode == save::OperatingMode::MiniGolf || (!coaster && !boats && !(course && !course->climbs.empty())))
                 continue;
             const bool ghosted = coaster && !coaster->closed && coaster->shuttle == simulation::Shuttle::None && scene.building.ride == ride;
-            if (set_trains(device, scene, *assets.install, ride, r.train_count, r.cars_per_train) && !ghosted && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
+            // A lazy river has no trains: swimmers float round it; nor has a slide climbed on foot.
+            if ((r.mode == save::OperatingMode::LazyRiver || (!coaster && !boats) || set_trains(device, scene, *assets.install, ride, r.train_count, r.cars_per_train)) && !ghosted && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
                 scene.placing.unjoined.push_back(ride);
             if (auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName); info && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && scene.shown->index == ride)
                 show_info_page(scene, *info, assets, options);
@@ -2267,15 +2333,7 @@ namespace rct3::scene
             update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, over, input.shift, input.commands);
             update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, elapsed);
             update_enclosing(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over);
-            update_pooling(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, typing(scene) ? std::span<const ui::PlayCommand> { } : std::span(input.commands));
-            // A changing room just placed opens its window, on the tab last open in a room's.
-            if (const auto room = scene.pooling.room_placed)
-                for (std::size_t i = 0; i < scene.objects.size(); ++i)
-                    if (pool_room(scene, scene.objects[i]) == room)
-                    {
-                        open_prop(scene, *info, i, assets, options, scene.room_tab.value_or(ui::SceneryTab::RoomDetails));
-                        break;
-                    }
+            update_pooling(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, input.shift, typing(scene) ? std::span<const ui::PlayCommand> { } : std::span(input.commands));
             // The area delete tool marks the tiles a drag spans; its panel clears them or deletes what stands there.
             DeleteTools& deleting = scene.deleting;
             const bool area = deleting.tool == DeleteTools::Tool::Area;
@@ -2316,10 +2374,41 @@ namespace rct3::scene
                 deleting.drawn = marks;
             }
             update_structure_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, input.shift, input.commands);
+            // What the delete menu's tool takes at `at`: an attraction is asked about first; a changing room, a prop
+            // or a path goes at once, and the tool stays out.
+            const auto delete_under = [&](ui::Point at, ui::Point size) {
+                const Picked picked = picked_at(scene, at, size);
+                if (picked.attraction)
+                    ask_demolish(scene, *assets.strings, assets.palette, { *picked.attraction });
+                else if (const auto room = picked.prop ? pool_room(scene, scene.objects[*picked.prop]) : std::nullopt)
+                {
+                    scene.pools.rooms.erase(scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room));
+                    pools_changed(device, scene, assets);
+                }
+                else if (picked.prop)
+                    delete_props(device, scene, assets, std::span(&*picked.prop, 1));
+                else if (const auto path = footpath_at(scene, at, size))
+                    delete_paths(device, scene, assets, std::span(&*path, 1));
+                // What was taken stays among the objects, hidden: the tools out see its room free again.
+                scene.placing.solids_of = static_cast<std::size_t>(-1);
+                scene.footpaths.solids_of = static_cast<std::size_t>(-1);
+            };
             // A click is the left button pressed and let go over the park without the pointer going far.
             if (pointer.down && !scene.press && !over && !input.right && !input.middle)
+            {
                 scene.press = pointer.position;
-            else if (!pointer.down && scene.press)
+                scene.stroke.clear();
+            }
+            // While pressed, the pointer's way over a pool's water, for the waves it may draw there.
+            if (pointer.down && scene.press && view.width() > 0 && view.height() > 0)
+            {
+                const glm::vec2 ndc { 2 * pointer.position.x / view.width() - 1, 1 - 2 * pointer.position.y / view.height() };
+                const park::Ray ray = park::view_ray(scene.camera, view.width() / view.height(), ndc);
+                if (const auto hit = park::water::water_hit(ray, scene.water.surface))
+                    if (const glm::vec3 at = ray.origin + ray.direction * *hit; park::pools::on_pool_water(scene.pools, scene.grid, { at.x, at.z }))
+                        scene.stroke.push_back({ at.x, at.z, scene.clock });
+            }
+            if (!pointer.down && scene.press)
             {
                 const ui::Point from = *std::exchange(scene.press, std::nullopt);
                 const bool still = std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack;
@@ -2328,19 +2417,21 @@ namespace rct3::scene
                 // While painting a patrol area, the left button paints and does not pick.
                 if (scene.holding)
                     hold_person(scene, pointer.position, { screen.width(), screen.height() }, still && !over, false);
-                else if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab || scene.enclosing.item || scene.pooling.item || scene.pooling.room_placed)
+                else if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab || scene.enclosing.item || scene.pooling.item)
                     ;
-                else if (still && !over && scene.deleting.tool == DeleteTools::Tool::One)
+                else if (!still && scene.deleting.tool == DeleteTools::Tool::None && scene.structures.tool == StructureTools::Tool::None && !ride_placing(scene) && !scene.building.ride)
                 {
-                    // An attraction is asked about first; a prop or a path goes at once, and the tool stays out.
-                    const Picked picked = picked_at(scene, pointer.position, { screen.width(), screen.height() });
-                    if (picked.attraction)
-                        ask_demolish(scene, *assets.strings, assets.palette, { *picked.attraction });
-                    else if (picked.prop)
-                        delete_props(device, scene, assets, std::span(&*picked.prop, 1));
-                    else if (const auto path = footpath_at(scene, pointer.position, { screen.width(), screen.height() }))
-                        delete_paths(device, scene, assets, std::span(&*path, 1));
+                    // With no tool out, a line or a circle drawn on a pool's water makes waves or a whirlpool there.
+                    if (auto wave = park::pools::drawn_wave(scene.pools, scene.grid, scene.stroke, scene.park_clock))
+                    {
+                        constexpr std::size_t kMostDrawn = park::pools::kMaxPoolWaves / 2; ///< Chosen by eye: the rest are the machines'
+                        if (scene.drawn_waves.size() >= kMostDrawn)
+                            scene.drawn_waves.erase(scene.drawn_waves.begin());
+                        scene.drawn_waves.push_back(*wave);
+                    }
                 }
+                else if (still && !over && scene.deleting.tool == DeleteTools::Tool::One)
+                    delete_under(pointer.position, { screen.width(), screen.height() });
                 else if (still && !over && (structure_tools_click(device, scene, assets) || ride_placing_click(device, scene, assets) || track_building_click(scene, assets, pointer.position, { screen.width(), screen.height() })))
                     ;
                 else if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }, input.control))
@@ -2368,7 +2459,8 @@ namespace rct3::scene
             }
             if (input.right || input.middle)
                 scene.press.reset();
-            // A right click on a path while the path panel shows its controls sells it.
+            // A right click deletes what is under the pointer with the tools that build or place things one by one, as
+            // the delete menu's tool does, and the tool stays out; the other tools are put away. Escape puts any away.
             if (input.right && !scene.right_press && !over)
                 scene.right_press = pointer.position;
             else if (!input.right && scene.right_press)
@@ -2379,16 +2471,21 @@ namespace rct3::scene
                 const bool still = std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack;
                 if (!still)
                     ;
-                else if (ride_placing(scene))
-                    stop_ride_placing(scene); // A right click puts the placing away, as in the game
                 else if (scene.structures.tool != StructureTools::Tool::None)
                     stop_structure_tools(scene);
-                else if (scene.deleting.tool != DeleteTools::Tool::None)
+                else if (scene.deleting.tool == DeleteTools::Tool::Area)
                     stop_deleting(scene);
-                else if (scene.enclosing.item)
-                    stop_enclosing(scene);
                 else if (scene.pooling.item)
-                    stop_pooling(scene);
+                {
+                    // A pool tool takes up the pool square pointed at first.
+                    if (!over && !delete_pool_square(device, scene, assets, pointer.position, { screen.width(), screen.height() }))
+                        delete_under(pointer.position, { screen.width(), screen.height() });
+                }
+                else if (ride_placing(scene) || scene.deleting.tool == DeleteTools::Tool::One || scene.enclosing.item)
+                {
+                    if (!over)
+                        delete_under(pointer.position, { screen.width(), screen.height() });
+                }
                 else if (land_tool(scene))
                 {
                     if (!delete_waterfall(device, scene, assets, pointer.position, { screen.width(), screen.height() }))
@@ -2415,6 +2512,10 @@ namespace rct3::scene
                     info->hide();
                 }
             }
+            // A changing room's construction tab opens the pool panel, to build on at its complex.
+            if (action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::SceneryTab::RoomConstruction)
+                if (const auto pools = scene.desktop->root().find_as<ui::PoolPanel>("pool_panel"); !pools || !pools->showing())
+                    toggle_pool_panel(device, scene, assets, info_units(assets, options).currency);
             if (action && scene.shown_person && *action < scene.person_tabs.size() && scene.person_tabs[*action] == ui::PersonTab::Party)
                 open_party(scene, *info, *scene.shown_person, assets, options);
             if (action && scene.shown && *action < scene.shown_tabs.size() && scene.shown_tabs[*action] == ui::AttractionTab::Construction)
@@ -2455,6 +2556,9 @@ namespace rct3::scene
             }
             else if (change && scene.shown && change->id == ui::control_id(ui::AttractionControl::Demolish))
                 ask_demolish(scene, *assets.strings, assets.palette, { *scene.shown });
+            // A pool ride's join button opens the pool panel on its paths page, the window staying, as in the game.
+            else if (change && scene.shown && change->id == ui::control_id(ui::AttractionControl::JoinPool))
+                toggle_pool_panel(device, scene, assets, info_units(assets, options).currency, ui::PoolPage::Paths);
             else if (change && scene.shown)
             {
                 change_attraction(device, scene, *info, *scene.shown, *change, assets, options);
@@ -2480,6 +2584,12 @@ namespace rct3::scene
                     if (const entt::entity e = room_entity(scene, *room); e != entt::null)
                         scene.sim.registry.get_or_emplace<simulation::Upkeep>(e).called = true;
                 }
+                else if (change->id == ui::kPoolInspectionControl)
+                {
+                    // Each room is inspected on its own, as each ride is.
+                    if (const entt::entity e = room_entity(scene, *room); e != entt::null && change->value >= 0 && std::cmp_less(change->value, simulation::kInspectionSeconds.size()))
+                        scene.sim.registry.get_or_emplace<simulation::Upkeep>(e).inspect_every = { simulation::kInspectionSeconds[static_cast<std::size_t>(change->value)] };
+                }
                 else if (change->id == ui::kPoolLocateControl)
                 {
                     const auto model = scene.models.find(park::model_ref(o));
@@ -2487,16 +2597,22 @@ namespace rct3::scene
                 }
                 else
                 {
-                    // The whole complex is opened or closed, takes the ticket price and the name, all its rooms
-                    // alike. A blank name keeps the old one, as an attraction's does.
-                    for (const std::size_t r : park::pool_complex_rooms(scene.pools, *room))
+                    // The whole complex is opened or closed, takes the ticket price, the name and the wave
+                    // settings, all its rooms alike. A blank name keeps the old one, as an attraction's does.
+                    for (const std::size_t r : park::pools::pool_complex_rooms(scene.pools, *room))
                     {
-                        if (change->id == ui::kPoolStateControl)
-                            scene.pools.rooms[r].open = change->value == 0;
-                        else if (change->id == ui::kPoolTicketControl)
+                        if (change->id == ui::kPoolTicketControl)
                             scene.pools.rooms[r].ticket = change->value;
                         else if (change->id == ui::kPoolFluidControl)
                             scene.pools.rooms[r].fluid = static_cast<std::uint8_t>(std::clamp(change->value, 0, 2));
+                        else if (change->id == ui::kPoolWaveHeightControl)
+                            scene.pools.rooms[r].waves.height = static_cast<float>(change->value);
+                        else if (change->id == ui::kPoolWaveLengthControl)
+                            scene.pools.rooms[r].waves.frequency = park::pools::kLeastWaveFrequency + park::pools::kMostWaveFrequency - static_cast<float>(change->value);
+                        else if (change->id == ui::kPoolWaveOnControl)
+                            scene.pools.rooms[r].waves.on = static_cast<float>(change->value);
+                        else if (change->id == ui::kPoolWaveEveryControl)
+                            scene.pools.rooms[r].waves.every = static_cast<float>(change->value) * 60;
                         else if (change->id == ui::kPoolNameControl && change->text.find_first_not_of(u' ') != std::u16string::npos)
                             scene.pools.rooms[r].complex_name = strings::to_utf8(change->text);
                     }
@@ -2576,7 +2692,17 @@ namespace rct3::scene
                 scene.info_section = *section;
                 show_info_page(scene, *info, assets, options);
             }
-            if (const auto choice = info->take_choice(); choice && scene.shown)
+            const auto choice = info->take_choice();
+            if (const auto room = choice && scene.shown_prop ? pool_room(scene, scene.objects[*scene.shown_prop]) : std::nullopt)
+            {
+                // The whole complex opened or closed, all its rooms alike; then shown again for the flag's new look.
+                const std::vector<ui::StateChoice> states = ui::state_choices(ui::AttractionKind::Stall);
+                if (choice->second < states.size())
+                    for (const std::size_t r : park::pools::pool_complex_rooms(scene.pools, *room))
+                        scene.pools.rooms[r].open = states[choice->second].state == save::AttractionState::Open;
+                open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
+            }
+            if (choice && scene.shown)
             {
                 // Put in the state picked, then shown again for the state tab's new look.
                 const ui::AttractionFacts f = facts(scene, *scene.shown);
@@ -2630,6 +2756,9 @@ namespace rct3::scene
             const ui::Rect screen = desktop.root().rect();
             update_track_building(device, scene, assets, options.choice(config::GameOption::Currency), info_units(assets, options).distance, pointer.position, { screen.width(), screen.height() }, over, input.shift, input.commands, elapsed);
         });
+        // A slide built up to a pool, or taken away, opens or closes its railing there.
+        if (!scene.pools.squares.empty() && pool_openings(scene) != scene.pool_openings)
+            pools_changed(device, scene, assets);
         scene.view_camera.yaw += kViewTurn * elapsed;
         if (scene.shown_person && *scene.shown_person < scene.shown_people.size())
             scene.view_camera = person_view(scene, *scene.shown_person, scene.view_camera.yaw);
@@ -2659,6 +2788,11 @@ namespace rct3::scene
         scene.ambient_occlusion = options.flag(config::GameOption::AmbientOcclusion);
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         advance_park_water(scene.water, park_seconds);
+        park::pools::drop_spent_waves(scene.drawn_waves, scene.park_clock);
+        park::pools::drop_spent_waves(scene.rings, scene.park_clock);
+        scene.water.pool_waves = scene.machine_waves;
+        scene.water.pool_waves.insert(scene.water.pool_waves.end(), scene.drawn_waves.begin(), scene.drawn_waves.end());
+        scene.water.pool_waves.insert(scene.water.pool_waves.end(), scene.rings.begin(), scene.rings.end());
         profiling::section("LensWater", [&] {
             using save::WeatherType;
             const WeatherType w = scene.park.weather;
@@ -2923,18 +3057,22 @@ namespace rct3::scene
                 scene.sim.registry.ctx().insert_or_assign(simulation::guest_weather(scene.park));
                 scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day.time });
                 const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;
-                // The pools taken in again once built on, or their rooms opened, closed, priced or given another fluid.
+                // The pools taken in again once built on, or their rooms opened, closed, priced or given another fluid or
+                // other waves.
                 std::size_t pools = 14695981039346656037u;
                 const auto mix = [&](std::int64_t v) { pools = (pools ^ static_cast<std::size_t>(v)) * 1099511628211u; };
-                for (const park::PoolSquare& s : scene.pools.squares)
+                for (const park::pools::PoolSquare& s : scene.pools.squares)
                     for (const std::int64_t v : { std::int64_t { s.col }, std::int64_t { s.row }, std::int64_t { std::to_underlying(s.kind) }, std::int64_t { s.surface } })
                         mix(v);
-                for (const park::PoolRoom& room : scene.pools.rooms)
-                    for (const std::int64_t v : { std::int64_t { room.col }, std::int64_t { room.row }, std::int64_t { room.turn }, room.ticket, std::int64_t { room.open }, std::int64_t { room.fluid } })
+                for (const park::pools::PoolRoom& room : scene.pools.rooms)
+                    for (const std::int64_t v : { std::int64_t { room.col }, std::int64_t { room.row }, std::int64_t { room.side.value }, room.ticket, std::int64_t { room.open }, std::int64_t { room.fluid }, static_cast<std::int64_t>(std::llround(room.waves.height * 100)), static_cast<std::int64_t>(std::llround(room.waves.frequency * 100)), static_cast<std::int64_t>(std::llround(room.waves.on)), static_cast<std::int64_t>(std::llround(room.waves.every)) })
                         mix(v);
                 mix(static_cast<std::int64_t>(scene.pools.extras.size() + scene.scenery_pool_extras.size()));
                 if (std::exchange(scene.pools_seen, pools) != pools)
+                {
                     simulation::import_pools(scene.sim, scene.pools, scene.scenery_pool_extras);
+                    scene.machine_waves = park::pools::machine_waves(scene.pools, scene.scenery_pool_extras, scene.grid);
+                }
                 scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(scene.footpaths.pools.size()), .rating = scene.park.rating, .guest_cash = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_cash : 0 }, .guest_bank = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_bank_funds : 0 } });
                 // What a crashed train's wrecks fly over and into: the ground, and the scenery, stalls and flat rides
                 // standing in the park, each as the box it is clicked in.
@@ -3036,7 +3174,7 @@ namespace rct3::scene
                 if (auto* findings = scene.sim.registry.ctx().find<simulation::Findings>())
                 {
                     using enum simulation::Finding;
-                    constexpr std::array<std::string_view, 24> kKeys { // By Finding
+                    constexpr std::array<std::string_view, 25> kKeys { // By Finding
                                                                        "Thought_PI_Stall_TooExpensive1",
                                                                        "Thought_PI_Stall_TooCheap1",
                                                                        "Thought_PI_Ride_LongQueueTime1",
@@ -3059,6 +3197,7 @@ namespace rct3::scene
                                                                        "Thought_PI_AnimalKeepersBadZones1",
                                                                        "Thought_PI_AnimalHungryFoodTroughsEmpty1",
                                                                        "Thought_PI_TooMuchDung1",
+                                                                       "Thought_PI_DangerousFlume1",
                                                                        "StaffMessage_WantsToResign",
                                                                        "StaffMessage_Resigned"
                     };
@@ -3113,15 +3252,17 @@ namespace rct3::scene
                         }
                 }
                 // One lifeguard sits in each lifeguard chair, come with it and gone with it, as the game has them.
+                // shortcut: a sacked lifeguard's chair gets a new one when the chairs next change; match the game once
+                // what it does with the empty chair is known.
                 if (scene.chairs_changed && scene.anchors.size() == scene.objects.size() && scene.places.transforms.size() == scene.objects.size() && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
                 {
                     scene.chairs_changed = false;
                     std::unordered_set<std::string_view> chair_symbols;
-                    std::unordered_map<std::string_view, park::PoolExtraFit> extra_fits;
+                    std::unordered_map<std::string_view, park::pools::PoolExtraFit> extra_fits;
                     for (const park::BuildItem& item : scene.build.items.get())
                         if (!item.pool_extra.empty())
                         {
-                            const park::PoolExtraFit fit = park::pool_extra_fit(item.pool_extra);
+                            const park::pools::PoolExtraFit fit = park::pools::pool_extra_fit(item.pool_extra);
                             extra_fits.emplace(item.symbol, fit);
                             if (fit.lifeguard)
                                 chair_symbols.insert(item.symbol);
@@ -3130,7 +3271,7 @@ namespace rct3::scene
                     scene.scenery_pool_extras.clear();
                     for (const save::PlacedObject& o : scene.objects)
                         if (const auto fit = extra_fits.find(o.symbol); fit != extra_fits.end() && !o.hidden && !std::ranges::contains(scene.pool_pieces, o.id))
-                            scene.scenery_pool_extras.push_back({ .symbol = o.symbol, .overlay = o.overlay, .col = o.col, .row = o.row, .turn = o.rotation, .fit = fit->second });
+                            scene.scenery_pool_extras.push_back({ .symbol = o.symbol, .overlay = o.overlay, .col = o.col, .row = o.row, .side = park::ModelTurn::from(o.rotation).facing(), .fit = fit->second });
                     const save::TerrainGrid& g = scene.grid;
                     const auto tile_of = [&g](glm::vec3 p) { return glm::ivec2 { static_cast<int>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((p.z - g.origin_z) / g.tile_size_z)) }; };
                     std::vector<std::size_t> chairs;
@@ -3157,12 +3298,20 @@ namespace rct3::scene
                         else
                             r.destroy(e);
                     }
+                    // Saved lifeguards too: their saved heading is wherever they were looking about at the time.
                     for (const std::size_t c : chairs)
-                        if (std::ranges::none_of(lifeguards, [&](entt::entity e) { return r.valid(e) && seated(e, c); }))
+                    {
+                        // Facing out over the front of the chair, which its model has along -Z.
+                        const glm::mat4& m = scene.places.transforms[c];
+                        const simulation::Radians facing { std::atan2(-m[2][0], -m[2][2]) };
+                        if (const auto sitter = std::ranges::find_if(lifeguards, [&](entt::entity e) { return r.valid(e) && seated(e, c); }); sitter != lifeguards.end())
                         {
-                            const glm::mat4& m = scene.places.transforms[c];
-                            (void)simulation::add_lifeguard(scene.sim, scene.anchors[c], { std::atan2(m[2][0], m[2][2]) });
+                            auto& pose = r.get<simulation::Pose>(*sitter);
+                            pose.heading = pose.was_heading = facing;
                         }
+                        else
+                            (void)simulation::add_lifeguard(scene.sim, scene.anchors[c], facing);
+                    }
                 }
                 // What is broken looks it, and looks whole again once mended.
                 park::Broken broken;
@@ -3557,7 +3706,7 @@ namespace rct3::scene
                     stop_structure_tools(scene);
                     stop_enclosing(scene);
                     close_build_list(desktop.root());
-                    toggle_pool_panel(device, scene, assets);
+                    toggle_pool_panel(device, scene, assets, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
                 }
                 else if (*item == ui::ToolItem::People)
                     scene.show_people = tools->switched_on(*item);

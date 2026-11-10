@@ -57,8 +57,9 @@ namespace rct3::particles
     public:
         /// `effect` must outlive the run. A looping run starts the effect again each time its life ends;
         /// otherwise it ends once the effect and its last particle have. `strength` 0 to 1 scales the emitters
-        /// whose count follows it.
-        EffectRun(const Effect& effect, random::RandomState random, bool loops, std::size_t capacity, float strength = 1);
+        /// whose count follows it. `scale` shrinks or grows the whole effect in space, keeping its timing: how far
+        /// its particles go and how fast, and how far they fall (their sizes are the drawing's, Look::size).
+        EffectRun(const Effect& effect, random::RandomState random, bool loops, std::size_t capacity, float strength = 1, float scale = 1);
 
         /// Where the run is: position, its axes (columns; the second is its up) and its speed. Particles
         /// that move with it are carried along.
@@ -91,6 +92,7 @@ namespace rct3::particles
         bool loops_;
         std::size_t capacity_;
         float strength_;
+        float scale_;
         glm::vec3 position_ { 0.0f };
         glm::mat3 axes_ { 1.0f };
         glm::vec3 velocity_ { 0.0f };

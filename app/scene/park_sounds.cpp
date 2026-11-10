@@ -107,6 +107,10 @@ namespace rct3::scene
                 const auto items = ovl::read_sounds(*overlay, overlay->common());
                 for (std::size_t i = 0; i < kScreams.size(); ++i)
                     s.screams[i] = sounds_named(items, kScreams[i]);
+                // Chosen by eye: a small splash off a small board, a bigger one off a high board.
+                constexpr std::array<std::array<std::string_view, 1>, 2> kDives { { { "Splash2Sml" }, { "SplashMedium1" } } };
+                for (std::size_t i = 0; i < kDives.size(); ++i)
+                    s.dives[i] = sounds_named(items, kDives[i]);
             }
         constexpr std::array<std::string_view, 4> kExplosions { "CoasterExplosion01", "CoasterExplosion02", "CoasterExplosion03", "CoasterExplosion04" };
         s.explosions = main(kExplosions);
@@ -262,6 +266,22 @@ namespace rct3::scene
         }
         sounds.heard = std::move(heard);
 
+        // Divers going under, heard as they come back up.
+        std::set<entt::entity> under;
+        for (const auto [e, swimmer, pose, errand] : r.view<const simulation::Swimmer, const simulation::Pose, const simulation::Errand>().each())
+        {
+            if (swimmer.dive != simulation::DiveStep::Surface)
+                continue;
+            under.insert(e);
+            if (sounds.under.contains(e))
+                continue;
+            const auto* door = r.valid(errand.target) ? r.try_get<simulation::PoolDoor>(errand.target) : nullptr;
+            const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
+            const bool high = pool != nullptr && swimmer.board >= 0 && static_cast<std::size_t>(swimmer.board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(swimmer.board)].high;
+            play_any(engine, sounds.dives[high ? 1 : 0], sounds.random, audio::heard(pose.position, kGestureLevel));
+        }
+        sounds.under = std::move(under);
+
         // Crashed trains' wrecks: heard landing, softer, and blowing up, and their fires burning where they lie.
         std::map<std::tuple<entt::entity, std::size_t, std::size_t>, std::pair<int, simulation::WreckState>> wrecks_heard;
         std::map<entt::entity, audio::VoiceHandle> fires;
@@ -331,7 +351,7 @@ namespace rct3::scene
             const glm::vec3 at { scene.car_places[i][3] };
             const glm::vec3 velocity = elapsed > 0 ? (at - sounds.car_were[i]) / elapsed : glm::vec3 { 0.0f };
             sounds.car_were[i] = at;
-            const park::CarSpot spot = scene.car_spots[i];
+            const park::ride::CarSpot spot = scene.car_spots[i];
             const entt::entity ride = spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
             const auto* fleet = ride != entt::null ? r.try_get<simulation::Trains>(ride) : nullptr;
             if (fleet == nullptr || spot.train >= fleet->trains.size() || !trains.emplace(ride, spot.train).second)

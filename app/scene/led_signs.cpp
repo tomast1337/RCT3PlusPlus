@@ -13,6 +13,7 @@
 #include "ui/font_sets.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/management_pages.hpp"
+#include "ui/sign_text.hpp"
 
 #include <algorithm>
 #include <array>
@@ -200,7 +201,7 @@ namespace rct3::scene
                 o.col = spot.col;
                 o.row = spot.row;
                 o.base_height = static_cast<std::int32_t>(std::lround(spot.height));
-                o.rotation = spot.turns;
+                o.rotation = spot.turn.value;
                 if (!load_object_model(scene, q.models, assets, o))
                     continue;
                 // A copy: the same item placed as scenery keeps its own board.
@@ -283,7 +284,7 @@ namespace rct3::scene
             if (words == sign.shown)
                 continue;
             sign.shown = std::move(words);
-            sign.loop = park::sign_text_loop(*font, q.font_pages, sign.shown, park::kSignTextHeight);
+            sign.loop = ui::sign_text_loop(*font, q.font_pages, sign.shown, park::kSignTextHeight);
             sign.shift = UINT32_MAX;
         }
     }

@@ -34,7 +34,7 @@ body:
   - type: checkboxes
     id: clean
     attributes:
-      label: Clean room
+      label: Original work
       options:
         - label: This comes from reading data files or watching the game play, not from the game's program, and contains no copied bytes.
           required: true

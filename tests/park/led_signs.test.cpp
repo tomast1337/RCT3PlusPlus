@@ -4,6 +4,7 @@
 #include "park/footpath_builder.hpp"
 #include "park/item_category.hpp"
 #include "park/queue_fences.hpp"
+#include "ui/sign_text.hpp"
 
 #include <array>
 #include <doctest/doctest.h>
@@ -33,7 +34,7 @@ namespace
     {
         FootpathBuilder b;
         b.queue = true;
-        b.heading = heading;
+        b.heading = Side::from(heading);
         start_at(b, from);
         std::vector<save::PathTile> paths;
         for (int i = 0; i < count; ++i)
@@ -54,7 +55,7 @@ TEST_CASE("a line's sign stands on the tile no other leads into, facing the way 
     CHECK(spots[0].line == 7);
     CHECK(spots[0].col == last.col);
     CHECK(spots[0].row == last.row);
-    CHECK(spots[0].turns == edge_turns(TileSide::Front)); // Its start side, +row
+    CHECK(spots[0].turn == edge_turns(Side::kNextRow)); // Its start side, +row
 
     // Tiles of no line, and a line of tiles all leading into each other, get none.
     paths.back().queue->queue_line_ref = 0;
@@ -89,7 +90,7 @@ TEST_CASE("the board's text loops and scrolls round in lamps")
     const std::vector<ovl::RgbaImage> pages { page };
     const std::array glyphs { ui::CodedGlyph { u'A', { { 0, -4, 4, 0 }, { 0, 1, 1, 0 }, 0, 5 } } };
     const ui::Font font = ui::Font::from_glyphs(glyphs, 8, 0);
-    const ovl::RgbaImage loop = sign_text_loop(font, pages, u"AA?", 8);
+    const ovl::RgbaImage loop = ui::sign_text_loop(font, pages, u"AA?", 8);
     // Two glyphs of 5 and a missing one, then the gap, out to whole lamps.
     REQUIRE(kSignLamp == 3); // The places below count on it
     CHECK(loop.width == 27);

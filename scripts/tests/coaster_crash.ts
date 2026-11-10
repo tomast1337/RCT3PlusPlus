@@ -32,10 +32,14 @@ await ui.click("design_browser/content/build");
 await frames(10);
 pointer.move(0.5, 0.45);
 await frames(30);
+const ride = build.construction()!.ride;
 await pointer.click(0.5, 0.45);
 await frames(30);
-const ride = build.construction()!.ride;
 expect((rides.list()[ride].pieces ?? 0) > 0, "the design laid");
+// Laid, its building closes and its window opens; the window's crane opens the building again.
+await until(() => ui.find("info/Attraction_Construction") !== undefined, 120, "the ride's window");
+await ui.click("info/Attraction_Construction");
+await until(() => build.construction() !== undefined, 120, "the building open again");
 
 // A piece of the circuit taken out leaves it open.
 const before = rides.list()[ride].pieces ?? 0;

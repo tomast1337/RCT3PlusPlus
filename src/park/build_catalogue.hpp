@@ -93,7 +93,7 @@ namespace rct3::park
         Shelter,        ///< A scenery item placed inside an enclosure for its animals
         AnimalToy,      ///< Put inside an enclosure for the animals to play with
         Animal,         ///< One animal of a species, bought into an enclosure
-        PoolSquare,     ///< A tool laying squares of a pool, or taking them up (park/pools.hpp)
+        PoolSquare,     ///< A tool laying squares of a pool, or taking them up (park/pools/pools.hpp)
         PoolExtra,      ///< A scenery item put in a pool, against a side of one of its squares
         PoolRoom,       ///< A changing room, built beside a paved square of a pool
     };
@@ -107,8 +107,7 @@ namespace rct3::park
     inline constexpr std::string_view kPoolJacuzzi = "SceneryItem_Jacuzzi";
     /// The tool laying high diving boards, listed with the extras.
     inline constexpr std::string_view kPoolHighDive = "SegmentTypeHighDive";
-    /// The tool laying spiral staircases, listed with the extras.
-    /// shortcut: no text of the game names it, so its button has no help; add one once rct3++ ships texts.
+    /// The tool laying spiral staircases, listed with the paths. These three are named as the piece they are built from.
     inline constexpr std::string_view kPoolStairs = "SegmentTypeSpiralStairs";
     /// The tools of the pool panel's paths page: flat paths, laid along an L from where the drag began, and a
     /// slope or stairs on one square.
@@ -185,7 +184,7 @@ namespace rct3::park
         std::vector<Goods> goods;
         /// Pool tools: the pool type's price list (ovl::PoolType::prices), what their squares cost.
         std::vector<std::int32_t> pool_prices { };
-        std::string pool_extra { }; ///< Pool extras: the words of their setting, read by park::pool_extra_fit
+        std::string pool_extra { }; ///< Pool extras: the words of their setting, read by park::pools::pool_extra_fit
     };
 
     /// Names the theme of each item that has only its number, after another item of that number.

@@ -18,6 +18,14 @@
 namespace rct3::ovl
 {
 
+    /// How a pool slide's car rides its open trough: swung up the trough's wall in a turn, it may go over the rim.
+    struct TroughRide
+    {
+        float damping = 0;  ///< Per second, how fast its swing dies down
+        float centring = 0; ///< Per second, how fast it is drawn back to the trough's middle
+        float friction = 0; ///< Of the car on the wall, held back as it swings by this much of the weight pressing it there
+    };
+
     struct RideCar
     {
         std::string_view name;         ///< Name string stored in the item. Empty in some version 4 and 5 files.
@@ -28,6 +36,7 @@ namespace rct3::ovl
         /// bits are set in some later cars; their meaning is unconfirmed.
         std::uint32_t kind = 0;
         std::string_view visual; ///< "svd" item that draws the car
+        float mass = 0;          ///< Kilograms, empty: 40 a body slide's mat, 300 a raft blasted up by jets
         /// "svd" item of the part of the car that spins or swings on it, such as a spinning tub or a hanging
         /// seat; empty when the car is one piece. The two line up where each has a bone named "pivot".
         std::string_view part;
@@ -48,6 +57,9 @@ namespace rct3::ovl
         /// The whole record: 240 bytes in version 1 files, 292 in version 4 and 336 in version 5. Starting at
         /// byte 16 it is mostly single-precision numbers and -1 markers. Their meanings are unconfirmed.
         std::span<const std::byte> record;
+        /// Of a car that rides an open trough and can fly out of it (bit 0x200 of the word at byte 272, set in the
+        /// pool slides' cars), its swing in it; nothing for every other car.
+        std::optional<TroughRide> trough;
     };
 
     struct RideCarItem

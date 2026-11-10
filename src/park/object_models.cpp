@@ -14,8 +14,8 @@
 #include "ovl/track_section.hpp"
 #include "park/item_category.hpp"
 #include "park/terrain_mesh.hpp"
-#include "park/track_pieces.hpp"
-#include "park/water_flow.hpp"
+#include "park/track/pieces.hpp"
+#include "park/water/flow.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
@@ -153,10 +153,11 @@ namespace rct3::park
             return it->second.get();
         }
 
-        /// The file holding `symbol` nearest to `near`, with its path. Nothing when none does.
-        std::optional<std::pair<std::string, OpenFile*>> holding(std::string_view symbol, std::string_view near)
+        /// The file holding `symbol` nearest to `near`, one inside the folder `inside` first, with its path.
+        /// Nothing when none does.
+        std::optional<std::pair<std::string, OpenFile*>> holding(std::string_view symbol, std::string_view near, std::string_view inside = { })
         {
-            const auto path = index.find(symbol, near);
+            const auto path = index.find(symbol, near, inside);
             if (!path)
                 return std::nullopt;
             OpenFile* file = get(*path);
@@ -361,7 +362,7 @@ namespace rct3::park
 
         /// The walkways of a flat ride in `f`: the spline whose name ends in "loop", and those ending in "path"
         /// and a number, in number order, each followed curve by curve.
-        Walkways walkways_in(OpenFile& f)
+        ride::Walkways walkways_in(OpenFile& f)
         {
             const auto points = [](const ovl::Spline& spline) {
                 constexpr int kSteps = 4; // Points a curve
@@ -377,7 +378,7 @@ namespace rct3::park
                 return out;
             };
             const auto ends_with = [](std::string_view name, std::string_view end) { return name.size() >= end.size() && strings::equals_ignoring_case(name.substr(name.size() - end.size()), end); };
-            Walkways ways;
+            ride::Walkways ways;
             std::vector<std::pair<int, std::vector<glm::vec3>>> paths;
             for (const auto& [name, spline] : entries(f.splines, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::Spline>(ovl::read_splines(o, p), &ovl::SplineItem::spline); }))
             {
@@ -569,6 +570,10 @@ namespace rct3::park
         if (item == nullptr)
             return std::nullopt;
         const std::string near = item_file->first;
+        // Support sets kept in one file name their pieces' looks alike (two sets' one-level pieces both call theirs
+        // Support1m); each set's own looks are in the folder named after the set, beside that file.
+        const std::size_t slash = near.rfind('/');
+        const std::string own_folder = item->group.empty() || slash == std::string::npos ? std::string { } : std::format("{}/{}/", std::string_view(near).substr(0, slash), item->group);
 
         // The visuals that can be read, with the file each is in; a broken look apart.
         constexpr std::string_view kBroken = "_Broken";
@@ -576,7 +581,7 @@ namespace rct3::park
         std::optional<std::pair<const ovl::SceneryVisual*, std::string>> broken;
         for (const std::string_view visual_name : item->visuals)
         {
-            const auto visual_file = files_->holding(tagged(visual_name, kVisualTag), near);
+            const auto visual_file = files_->holding(tagged(visual_name, kVisualTag), near, own_folder);
             if (!visual_file)
                 continue;
             if (const ovl::SceneryVisual* visual = visual_in(*visual_file->second, visual_name))
@@ -601,7 +606,7 @@ namespace rct3::park
         model.support_group = item->group;
         if (!item->squares.empty())
             model.lowest_level = std::ranges::min(item->squares, { }, &ovl::SceneryItemSquare::min_height).min_height;
-        model.supports = support_footprint(*item);
+        model.supports = support::support_footprint(*item);
         if (item->squares.size() == static_cast<std::size_t>(model.squares[0]) * static_cast<std::size_t>(model.squares[1]))
         {
             for (const ovl::SceneryItemSquare& s : item->squares)
@@ -826,7 +831,7 @@ namespace rct3::park
         // Only lift pieces move the parts marked as chain; on other pieces those stay still.
         // shortcut: marked parts of pieces that are no lift stay still; upgrade if such a piece is seen moving its
         // picture in the game.
-        const bool lift = section != nullptr && (section->flags[0] & kPieceChain) != 0;
+        const bool lift = section != nullptr && (section->flags[0] & track::kPieceChain) != 0;
         model.fenced_round = section != nullptr && (section->ground & ovl::TrackSection::kFencedRound) != 0;
         model.paved_under = section != nullptr && (section->ground & ovl::TrackSection::kPavedUnder) != 0;
         for (ModelLevel& level : model.levels)
@@ -847,13 +852,13 @@ namespace rct3::park
         if (section->water_splines[0].empty() || section->water_splines[1].empty())
         {
             // A piece through water with no water edges carries its water as its own see-through parts.
-            if ((section->flags[0] & kPieceWater) == 0)
+            if ((section->flags[0] & track::kPieceWater) == 0)
                 return;
             for (ModelLevel& level : model.levels)
                 for (ModelPart& part : level.parts)
                     if (part.blend == PartBlend::Blended)
                     {
-                        flowing_sheet(part, track != nullptr ? *track : ovl::Spline { }, std::string(kFlowPicture));
+                        water::flowing_sheet(part, track != nullptr ? *track : ovl::Spline { }, std::string(water::kFlowPicture));
                         model.flows = true;
                     }
             return;
@@ -862,7 +867,10 @@ namespace rct3::park
         const ovl::Spline* right = spline_in(*file, section->water_splines[1]);
         if (left == nullptr || right == nullptr)
             return;
-        const auto strip = flow_strip(*left, *right, track != nullptr ? *track : ovl::Spline { }, std::string(kFlowPicture));
+        // Off a slide's open end its water pours from where the water's edges end.
+        if (section->role == track::kRoleSlideEnd && left->nodes.size() >= 2 && !right->nodes.empty())
+            model.pour = SlidePour { .left = position(left->nodes.back()), .right = position(right->nodes.back()), .way = glm::normalize(position(left->nodes.back()) - position(left->nodes[left->nodes.size() - 2])) };
+        const auto strip = water::flow_strip(*left, *right, track != nullptr ? *track : ovl::Spline { }, std::string(water::kFlowPicture));
         if (!strip)
             return;
         for (ModelLevel& level : model.levels)
@@ -1087,6 +1095,13 @@ namespace rct3::park
         model.ride_eyes = { bone_of(car->visual, "nosecamera").or_else([&] { return front; }), front, bone_of(car->visual, "camerarear") };
         model.ride_look = found->camera;
         model.boat_handling = found->boat;
+        model.mass = car->mass;
+        model.rolling = found->rolling;
+        model.air = found->air;
+        model.trough = car->trough;
+        model.swing_pivot = pivot.y;
+        model.swing_arm = car->part.empty() ? pivot.y : part_pivot.y;
+        model.stand_in = bone_of(car->visual, "dummy") || bone_of(car->part, "dummy");
         constexpr std::array<std::string_view, 3> kStrengths { "low", "med", "high" };
         for (std::uint8_t strength = 0; strength < kStrengths.size(); ++strength)
         {

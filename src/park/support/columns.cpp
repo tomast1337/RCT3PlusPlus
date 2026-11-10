@@ -1,0 +1,431 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "park/support/columns.hpp"
+
+#include "park/ground/paths.hpp"
+#include "park/ground/queues.hpp"
+#include "park/object_placement.hpp"
+#include "park/queue_fences.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <format>
+#include <limits>
+#include <map>
+#include <optional>
+#include <set>
+#include <utility>
+
+namespace rct3::park::support
+{
+
+    namespace
+    {
+
+        /// How far an item must be above the ground's lowest corner for a column to fit under it.
+        constexpr float kLeastGap = 0.5f;
+        /// Thirds of a tile across: support points sit on these.
+        constexpr int kCells = 3;
+        /// How near the middle of its third a point must be, as a fraction of the third, for its column to
+        /// stand right under it.
+        constexpr float kStraightUnder = 0.2f;
+
+        using Tile = std::pair<int, int>;
+
+        /// One square of an item, on the tile it covers.
+        struct Covered
+        {
+            const save::PlacedObject* object = nullptr;
+            const SupportFootprint* footprint = nullptr;
+            const SupportSquare* square = nullptr;
+            std::int32_t low = 0; ///< Levels, absolute
+            std::int32_t high = 0;
+        };
+
+        using Covering = std::map<Tile, std::vector<Covered>>;
+
+        struct Piece
+        {
+            const SupportPiece* piece = nullptr;
+            float level = 0;
+            float stretch = 1; ///< Up and down, for a top piece that ends between levels
+        };
+
+        /// Middles of `set` filling `low` to `high`, from the tallest down, each lined up on whole multiples of
+        /// its height so that neighbouring columns show their joints at the same levels.
+        void fill_middles(const SupportSet& set, std::size_t from, std::int32_t low, std::int32_t high, std::vector<Piece>& out)
+        {
+            for (std::size_t i = from; i < set.middles.size() && low < high; ++i)
+            {
+                const std::int32_t h = set.middles[i].levels;
+                const std::int32_t start = static_cast<std::int32_t>(std::ceil(static_cast<float>(low) / static_cast<float>(h)));
+                const std::int32_t end = static_cast<std::int32_t>(std::floor(static_cast<float>(high) / static_cast<float>(h)));
+                if (start >= end)
+                    continue;
+                for (std::int32_t k = start; k < end; ++k)
+                    out.push_back({ &set.middles[i], static_cast<float>(k * h) });
+                fill_middles(set, i + 1, low, start * h, out);
+                fill_middles(set, i + 1, end * h, high, out);
+                return;
+            }
+        }
+
+        /// The pieces of a column of `set` from `bottom` up to `top`. A column whose top falls between levels
+        /// gives it as `exact_top`; its top piece stretches to end there.
+        std::vector<Piece> column(const SupportSet& set, std::int32_t bottom, std::int32_t top, bool on_ground, std::optional<float> exact_top = std::nullopt)
+        {
+            std::vector<Piece> out;
+            const auto& first = on_ground ? set.deep_foot : set.foot;
+            const auto& second = on_ground ? set.foot : set.deep_foot;
+            if (const auto& foot = first ? first : second; foot && bottom + foot->levels <= top)
+            {
+                out.push_back({ &*foot, static_cast<float>(bottom) });
+                bottom += foot->levels;
+            }
+            if (set.top && bottom + set.top->levels <= top)
+            {
+                top -= set.top->levels;
+                const float end = exact_top.value_or(static_cast<float>(top + set.top->levels));
+                out.push_back({ &*set.top, static_cast<float>(top), (end - static_cast<float>(top)) / static_cast<float>(set.top->levels) });
+            }
+            fill_middles(set, 0, bottom, top, out);
+            return out;
+        }
+
+        /// The lowest and highest corner of the finest shape of `symbol` among the support pieces.
+        std::optional<std::pair<glm::vec3, glm::vec3>> extent(const ObjectModels& models, std::string_view symbol)
+        {
+            const auto model = models.find(std::format("{}|{}", kSupportOverlay, symbol));
+            if (model == models.end() || model->second.levels.empty())
+                return std::nullopt;
+            glm::vec3 low { std::numeric_limits<float>::max() };
+            glm::vec3 high { std::numeric_limits<float>::lowest() };
+            for (const ModelPart& part : model->second.levels.front().parts)
+            {
+                for (const ModelVertex& v : part.vertices)
+                {
+                    low = glm::min(low, v.position);
+                    high = glm::max(high, v.position);
+                }
+            }
+            if (low.x > high.x)
+                return std::nullopt;
+            return std::pair { low, high };
+        }
+
+        glm::vec3 in_park(const save::TerrainGrid& grid, glm::vec2 tiles, float y)
+        {
+            return { grid.world_x(0) + tiles.x * grid.tile_size_x, y, grid.world_z(0) + tiles.y * grid.tile_size_z };
+        }
+
+        /// Where a column of `set` on `tile` starts, and whether on the ground, when it is under the items before
+        /// `below` there (their undersides higher than its top). Of the items from `below` on, the first in the way
+        /// decides: one that carries columns, or any when the set stands on anything, carries it, a level clear of
+        /// track when `gap_over_track` and the set does not stand close; others leave no column. `cell` limits the
+        /// items in the way to those that fill that third of the tile, when they say which thirds they fill. With
+        /// nothing in the way the column stands on the ground, if no ground path is there and there is room.
+        std::optional<std::pair<std::int32_t, bool>> column_base(std::span<const Covered> below, const std::set<Tile>& ground_paths, const save::TerrainGrid& grid, const Tile& tile, const save::PlacedObject* self, float top, const SupportSet& set, std::optional<int> cell, bool gap_over_track)
+        {
+            const bool known = grid.contains(tile.first, tile.second);
+            const float ground = known ? grid.at(tile.first, tile.second).min_height() : 0.0f;
+            for (const Covered& b : below)
+            {
+                if (b.object == self)
+                    continue;
+                if (cell && b.footprint->by_points && (b.square->cells & (1u << *cell)) == 0)
+                    continue;
+                // Buried deeper than a level, as track in a tunnel: the column stands on the ground over it.
+                if (known && static_cast<float>(b.high) < ground - 1)
+                    return std::pair { static_cast<std::int32_t>(std::ceil(ground)), false };
+                if (!set.stands_on_anything && !b.footprint->carries_columns)
+                    return std::nullopt;
+                return std::pair { b.high + (gap_over_track && b.footprint->track && !set.stands_close ? 1 : 0), false };
+            }
+            if (ground_paths.contains(tile) || !known || top - ground <= kLeastGap)
+                return std::nullopt;
+            return std::pair { static_cast<std::int32_t>(std::ceil(ground)), true };
+        }
+
+        Tile tile_of(glm::vec2 tiles)
+        {
+            return { static_cast<int>(std::floor(tiles.x)), static_cast<int>(std::floor(tiles.y)) };
+        }
+
+        /// Builds the pieces into placed objects.
+        struct Builder
+        {
+            const save::TerrainGrid& grid;
+            std::uint64_t last_id = 0;
+            BuiltSupports out;
+
+            save::PlacedObject& add(const save::PlacedObject& held, const SupportPiece& piece, const Tile& tile, std::int32_t level, ModelTurn turn)
+            {
+                save::PlacedObject& o = out.pieces.emplace_back();
+                o.id = ++last_id;
+                o.owner_ref = o.id;
+                o.symbol = piece.symbol;
+                o.overlay = std::string(kSupportOverlay);
+                o.col = tile.first;
+                o.row = tile.second;
+                o.base_height = level;
+                o.height_adjust = 0.0f;
+                o.force_absolute_height = true;
+                o.rotation = turn.value;
+                o.colours = held.colours;
+                return o;
+            }
+
+            /// A piece stood at `at`, turned `turn` and stretched up by `stretch`.
+            void stand(const save::PlacedObject& held, const SupportPiece& piece, glm::vec2 tiles, float level, ModelTurn turn, float stretch)
+            {
+                save::PlacedObject& o = add(held, piece, tile_of(tiles), static_cast<std::int32_t>(std::floor(level)), turn);
+                const glm::vec2 x = turned_x(turn);
+                glm::mat4 m { 1.0f };
+                m[0] = glm::vec4(x.x, 0, x.y, 0);
+                m[1] = glm::vec4(0, stretch, 0, 0);
+                m[2] = glm::vec4(-x.y, 0, x.x, 0);
+                m[3] = glm::vec4(in_park(grid, tiles, level), 1);
+                out.fitted.emplace(o.id, m);
+            }
+
+            /// A beam from `from` to `to`, its middle halfway, running along its length and reaching `overhang`
+            /// past both ends.
+            void beam(const save::PlacedObject& held, const SupportPiece& piece, float length, glm::vec3 from, glm::vec3 to, float overhang)
+            {
+                const glm::vec3 run = to - from;
+                const float distance = glm::length(run);
+                if (distance <= 0 || length <= 0)
+                    return;
+                const glm::vec3 along = run / distance;
+                const glm::vec3 side = glm::normalize(glm::cross(along, glm::vec3 { 0, 1, 0 }));
+                const glm::vec3 up = glm::cross(side, along);
+                const glm::vec3 middle = (from + to) / 2.0f;
+                save::PlacedObject& o = add(held, piece, { static_cast<int>(std::floor((middle.x - grid.world_x(0)) / grid.tile_size_x)), static_cast<int>(std::floor((middle.z - grid.world_z(0)) / grid.tile_size_z)) }, static_cast<std::int32_t>(std::floor(middle.y)), ModelTurn::from(held.rotation));
+                glm::mat4 m { 1.0f };
+                m[0] = glm::vec4(along * ((distance + 2 * overhang) / length), 0);
+                m[1] = glm::vec4(up, 0);
+                m[2] = glm::vec4(side, 0);
+                m[3] = glm::vec4(middle, 1);
+                out.fitted.emplace(o.id, m);
+            }
+        };
+
+    } // namespace
+
+    glm::vec2 spot_in_tiles(const save::PlacedObject& object, const SupportFootprint& footprint, const SupportSpot& spot, bool middle_of_third)
+    {
+        const glm::vec2 x = turned_x(ModelTurn::from(object.rotation));
+        const glm::vec2 z { -x.y, x.x };
+        const auto along = [&](int i) {
+            const float within = middle_of_third ? 0.5f : spot.within[static_cast<std::size_t>(i)];
+            return static_cast<float>(spot.square[static_cast<std::size_t>(i)]) + (static_cast<float>(spot.cell[static_cast<std::size_t>(i)]) + within) / kCells;
+        };
+        const float u = along(0) - static_cast<float>(footprint.x_squares) / 2;
+        const float v = along(1) - static_cast<float>(footprint.z_squares) / 2;
+        return footprint_middle(object, { footprint.x_squares, footprint.z_squares }) - u * x - v * z;
+    }
+
+    std::vector<Tile> footprint_tiles(const save::PlacedObject& object, const SupportFootprint& footprint)
+    {
+        std::vector<Tile> out;
+        for (std::int32_t lz = 0; lz < footprint.z_squares; ++lz)
+        {
+            for (std::int32_t lx = 0; lx < footprint.x_squares; ++lx)
+                out.push_back(tile_of(spot_in_tiles(object, footprint, { { lx, lz }, { 1, 1 } }, true)));
+        }
+        return out;
+    }
+
+    std::vector<SupportTile> support_tiles(const save::PlacedObject& object, const ObjectModels& models)
+    {
+        const auto model = models.find(model_ref(object));
+        if (model == models.end() || !model->second.supports)
+            return { };
+        const SupportFootprint& f = *model->second.supports;
+        std::vector<Tile> out = footprint_tiles(object, f);
+        for (const SupportPoint& p : f.points)
+            out.push_back(tile_of(spot_in_tiles(object, f, p.column, true)));
+        std::ranges::sort(out);
+        out.erase(std::ranges::unique(out).begin(), out.end());
+        return out;
+    }
+
+    bool path_at_ground(const save::PathTile& path, const save::TerrainGrid& grid)
+    {
+        if (!path.elevation || ground::is_ground_queue(path))
+            return true;
+        if (!grid.contains(path.col, path.row))
+            return false;
+        const save::TerrainCell& cell = grid.at(path.col, path.row);
+        const auto height = static_cast<float>(path.elevation->quantised_height);
+        const float rise = ground::path_rise(path.elevation->slope);
+        const float low = slope_falls(path.elevation->slope) ? height - rise : height;
+        return low <= cell.max_height() && low + rise >= cell.min_height();
+    }
+
+    BuiltSupports support_columns(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, const SupportSets& sets, std::uint64_t last_id, const std::unordered_set<std::uint64_t>& passed, std::optional<const std::set<SupportTile>&> tiles, std::span<const ObjectModel* const> found)
+    {
+        std::set<Tile> ground_paths;
+        for (const save::PathTile& p : paths)
+        {
+            if (path_at_ground(p, grid))
+                ground_paths.emplace(p.col, p.row);
+        }
+        const auto wanted = [&](const Tile& t) { return !tiles || tiles->contains(t); };
+
+        // Items with support points whose columns stand on those tiles; which point of a group gets one depends
+        // on what is under each, so the tiles under all their points are looked at.
+        std::vector<std::pair<const save::PlacedObject*, const ObjectModel*>> by_points;
+        std::set<Tile> needed;
+        const auto model_of = [&](std::size_t i) -> const ObjectModel* {
+            const save::PlacedObject& o = objects[i];
+            if (o.hidden || passed.contains(o.id) || o.overlay == kSupportOverlay)
+                return nullptr;
+            if (i < found.size())
+                return found[i] != nullptr && found[i]->supports ? found[i] : nullptr;
+            const auto model = models.find(model_ref(o));
+            return model != models.end() && model->second.supports ? &model->second : nullptr;
+        };
+        for (std::size_t i = 0; i < objects.size(); ++i)
+        {
+            const save::PlacedObject& o = objects[i];
+            const ObjectModel* m = model_of(i);
+            if (m == nullptr || !m->supports->by_points || !m->supports->wants_supports)
+                continue;
+            const SupportFootprint& f = *m->supports;
+            std::vector<Tile> under;
+            for (const SupportPoint& p : f.points)
+                under.push_back(tile_of(spot_in_tiles(o, f, p.column, true)));
+            if (!std::ranges::any_of(under, wanted))
+                continue;
+            by_points.emplace_back(&o, m);
+            needed.insert(under.begin(), under.end());
+        }
+
+        // What covers each tile, by underside, highest first.
+        Covering covering;
+        for (std::size_t n = 0; n < objects.size(); ++n)
+        {
+            const save::PlacedObject& o = objects[n];
+            const ObjectModel* m = model_of(n);
+            if (m == nullptr)
+                continue;
+            const SupportFootprint& f = *m->supports;
+            const auto under = footprint_tiles(o, f);
+            // Items standing on the ground say so by having no height of their own.
+            std::optional<std::int32_t> base = o.base_height;
+            for (std::size_t i = 0; i < under.size() && i < f.squares.size(); ++i)
+            {
+                if (!wanted(under[i]) && !needed.contains(under[i]))
+                    continue;
+                if (!base)
+                    base = static_cast<std::int32_t>(std::lround(object_transform(o, static_cast<Positioning>(m->positioning), grid, m->squares, m->ground_height)[3].y));
+                covering[under[i]].push_back({ &o, &f, &f.squares[i], *base + f.squares[i].low, *base + f.squares[i].high });
+            }
+        }
+        for (auto& [_, covered] : covering)
+            std::ranges::stable_sort(covered, std::greater { }, &Covered::low);
+
+        Builder build { grid, last_id, { } };
+
+        // A column under each square that asks for one, under the middle of its tile.
+        for (const auto& [tile, covered] : covering)
+        {
+            if (!wanted(tile))
+                continue;
+            const bool odd_tile = ((tile.first ^ tile.second) & 1) != 0;
+            for (std::size_t i = 0; i < covered.size(); ++i)
+            {
+                const Covered& c = covered[i];
+                const SupportFootprint& f = *c.footprint;
+                if (!f.wants_supports || f.by_points || !c.square->wants_column || c.square->kind == kNoSupport || (f.alternate_tiles && !odd_tile) || !c.object->base_height)
+                    continue;
+                const std::string& group = c.object->support_set.empty() ? models.at(model_key(*c.object)).support_group : c.object->support_set;
+                const FoundSet found = find_support_set(sets, group, turned(c.square->kind, ModelTurn::from(c.object->rotation)));
+                if (found.set == nullptr)
+                    continue;
+                const auto base = column_base(std::span(covered).subspan(i + 1), ground_paths, grid, tile, c.object, static_cast<float>(c.low), *found.set, std::nullopt, true);
+                if (!base || base->first >= c.low || c.low - base->first >= kTallestColumn)
+                    continue;
+                for (const Piece& p : column(*found.set, base->first, c.low, base->second))
+                {
+                    build.add(*c.object, *p.piece, tile, static_cast<std::int32_t>(p.level), found.turn);
+                    build.out.of.push_back({ c.object->id, tile });
+                }
+            }
+        }
+
+        // A column under each group of support points, at the first point of the group that can have one.
+        const std::vector<Covered> none;
+        for (const auto& [object, model] : by_points)
+        {
+            const SupportFootprint& f = *model->supports;
+            const FoundSet found = find_support_set(sets, object->support_set.empty() ? model->support_group : object->support_set, kRoundSupport);
+            if (found.set == nullptr || !object->base_height)
+                continue;
+            const SupportSet& set = *found.set;
+            const auto cap = set.cap && f.capped ? extent(models, set.cap->symbol) : std::nullopt;
+            const float cap_height = cap ? cap->second.y : 0.0f;
+            std::vector<std::pair<const SupportPiece*, float>> beams;
+            for (const SupportPiece& b : set.beams)
+            {
+                if (const auto e = extent(models, b.symbol))
+                    beams.emplace_back(&b, e->second.x - e->first.x);
+            }
+            std::ranges::sort(beams, { }, &std::pair<const SupportPiece*, float>::second);
+            const auto top_size = set.top ? extent(models, set.top->symbol) : std::nullopt;
+            const float overhang = top_size ? (top_size->second.x - top_size->first.x) / 2 : 0.0f;
+
+            std::set<std::uint32_t> groups_built;
+            std::set<std::pair<Tile, int>> thirds_built;
+            const auto base_level = static_cast<float>(*object->base_height);
+            for (const SupportPoint& p : f.points)
+            {
+                if (groups_built.contains(p.group))
+                    continue;
+                const glm::vec2 top_spot = spot_in_tiles(*object, f, p.top, false);
+                const glm::vec2 column_spot = spot_in_tiles(*object, f, p.column, true);
+                const Tile top_tile = tile_of(top_spot);
+                const Tile tile = tile_of(column_spot);
+                if (f.alternate_tiles && ((top_tile.first ^ top_tile.second) & 1) == 0)
+                    continue;
+                const glm::vec2 third_in_tile = (column_spot - glm::vec2 { static_cast<float>(tile.first), static_cast<float>(tile.second) }) * static_cast<float>(kCells);
+                const int third = std::clamp(static_cast<int>(third_in_tile.x), 0, kCells - 1) + kCells * std::clamp(static_cast<int>(third_in_tile.y), 0, kCells - 1);
+
+                const glm::vec2 off_middle { p.top.within[0] - 0.5f, p.top.within[1] - 0.5f };
+                const bool straight = !p.hanging && p.top.square == p.column.square && p.top.cell == p.column.cell && glm::dot(off_middle, off_middle) < kStraightUnder * kStraightUnder;
+                if (!straight && p.straight_only)
+                    continue;
+                float exact_top = base_level + (straight ? p.top_height : p.column_height);
+                if (cap)
+                    exact_top -= cap_height;
+                const auto top = static_cast<std::int32_t>(std::ceil(exact_top));
+                // In the way: what is on the column's tile with its underside under the column's top.
+                const auto here = covering.find(tile);
+                std::span<const Covered> below = here != covering.end() ? std::span<const Covered>(here->second) : std::span<const Covered>(none);
+                const auto first_below = std::ranges::find_if(below, [&](const Covered& b) { return static_cast<float>(b.low) < exact_top; });
+                const auto base = column_base(below.subspan(static_cast<std::size_t>(first_below - below.begin())), ground_paths, grid, tile, object, exact_top, set, third, false);
+                if (!base || static_cast<float>(base->first) >= exact_top || top - base->first >= kTallestColumn)
+                    continue;
+                groups_built.insert(p.group);
+                if (!thirds_built.emplace(tile, third).second || !wanted(tile))
+                    continue;
+                for (const Piece& piece : column(set, base->first, top, base->second, exact_top))
+                    build.stand(*object, *piece.piece, column_spot, piece.level, ModelTurn::from(object->rotation), piece.stretch);
+                if (cap)
+                    build.stand(*object, *set.cap, column_spot, exact_top, ModelTurn::from(object->rotation), 1);
+                if (!straight && !beams.empty())
+                {
+                    const glm::vec3 from = in_park(grid, top_spot, base_level + p.top_height);
+                    const glm::vec3 to = in_park(grid, column_spot, base_level + p.column_height);
+                    const float across = glm::length(glm::vec2 { to.x - from.x, to.z - from.z });
+                    const auto fits = std::ranges::find_if(beams, [&](const auto& b) { return b.second >= across; });
+                    const auto& [piece, length] = fits != beams.end() ? *fits : beams.back();
+                    build.beam(*object, *piece, length, from, to, overhang);
+                }
+                build.out.of.resize(build.out.pieces.size(), { object->id, tile });
+            }
+        }
+        return std::move(build.out);
+    }
+
+} // namespace rct3::park::support

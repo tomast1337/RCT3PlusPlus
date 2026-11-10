@@ -14,27 +14,28 @@
 #include "park/carried_goods.hpp"
 #include "park/chain_lifts.hpp"
 #include "park/enclosures.hpp"
-#include "park/ground_paths.hpp"
-#include "park/ground_queues.hpp"
-#include "park/ground_textures.hpp"
-#include "park/ground_variation.hpp"
+#include "park/flexi_colours.hpp"
+#include "park/ground/paths.hpp"
+#include "park/ground/queues.hpp"
+#include "park/ground/textures.hpp"
+#include "park/ground/variation.hpp"
 #include "park/item_category.hpp"
 #include "park/object_models.hpp"
 #include "park/off_map_trees.hpp"
 #include "park/overhead.hpp"
-#include "park/path_decks.hpp"
-#include "park/path_tunnels.hpp"
+#include "park/path/decks.hpp"
+#include "park/path/tunnels.hpp"
 #include "park/person_motions.hpp"
 #include "park/queue_fences.hpp"
 #include "park/relief_maps.hpp"
-#include "park/ride_cars.hpp"
-#include "park/ride_fences.hpp"
-#include "park/ride_walks.hpp"
+#include "park/ride/cars.hpp"
+#include "park/ride/fences.hpp"
+#include "park/ride/walks.hpp"
 #include "park/sky_models.hpp"
-#include "park/support_columns.hpp"
+#include "park/support/columns.hpp"
 #include "park/surrounding_land.hpp"
-#include "park/track_ground.hpp"
-#include "park/water_flow.hpp"
+#include "park/track/ground.hpp"
+#include "park/water/flow.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
@@ -55,6 +56,7 @@
 #include "scene/park_scene.hpp"
 #include "scene/park_view.hpp"
 #include "scene/park_water.hpp"
+#include "scene/pool_tools.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/import_people.hpp"
@@ -135,7 +137,7 @@ namespace rct3::scene
         /// The models of the park's objects, by model key, and the pictures they use.
         /// Adds the models of `objects` that `models` does not have yet, and their pictures.
         /// With `cars`, the objects are ride cars and these are their designs, by object.
-        void load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, bool modelled_plants, park::ObjectModels& models, park::ModelPictures& pictures, std::span<const park::CarDesign> cars = { })
+        void load_models(const config::GameInstall& install, std::span<const save::PlacedObject> objects, bool modelled_plants, park::ObjectModels& models, park::ModelPictures& pictures, std::span<const park::ride::CarDesign> cars = { })
         {
             const profiling::Scope zone("Models");
             const std::vector<std::string> folders = object_folders(install, objects);
@@ -182,18 +184,21 @@ namespace rct3::scene
         constexpr std::string_view kCarriedOverlay = "CarriedItems/MainCarriedItems";
         constexpr std::string_view kLitterFolder = "Objects/Litter";
         constexpr std::string_view kToolFolder = "People/Handyman";
+        constexpr std::string_view kRingFolder = "Cars/TrackedRideCars/RingSlide";
         /// The umbrella shapes, in the order of ParkScene::umbrellas.
         constexpr std::array<std::string_view, 2> kUmbrellaShapes { "UmbrellaOpen", "KidsUmbrellaOpen" };
 
         /// Reads the umbrellas guests carry, the food and drink as stalls hand it over and as its empty is left,
-        /// the litter and sick on the paths and the handymen's tools, and uploads their pictures with the people's.
+        /// the litter and sick on the paths, the handymen's tools and the lazy river's swim ring, and uploads their
+        /// pictures with the people's.
         void load_carried_models(render::Device& device, ParkScene& scene, const config::GameInstall& install)
         {
             const auto found = install.find(kCarriedFolder);
             const std::string folder = found.value_or(std::filesystem::path(kCarriedFolder)).filename().string();
             const std::string litter = install.find(kLitterFolder).value_or(install.root() / kLitterFolder).lexically_relative(install.root()).generic_string();
             const std::string tools = install.find(kToolFolder).value_or(install.root() / kToolFolder).lexically_relative(install.root()).generic_string();
-            const std::array<std::string_view, 3> folders { folder, litter, tools };
+            const std::string ring = install.find(kRingFolder).value_or(install.root() / kRingFolder).lexically_relative(install.root()).generic_string();
+            const std::array<std::string_view, 4> folders { folder, litter, tools, ring };
             const park::AssetIndex index = park::AssetIndex::scan(install.root(), folders);
             park::ModelLoader loader(index);
             std::vector<park::ObjectBatch> batches;
@@ -219,6 +224,59 @@ namespace rct3::scene
                 scene.litter_looks[i] = loader.load_shape(kLitterShapes[i], std::format("{}/Litter", litter));
                 add_pictures(scene.litter_looks[i]);
             }
+            // Chosen by eye, not shown to be what the game draws: lazy river riders float in the ring slide's ring.
+            scene.swim_ring = loader.load_car("ringslide", std::format("{}/RingSlide", ring), 0);
+            if (!scene.swim_ring)
+                scene.swim_ring = loader.load("ringslide", std::format("{}/RingSlide", ring));
+            // The car is a raft of four rings round its middle, one each way, raised to its track, with a frame
+            // between them and a seat in each: keep the ring one way, moved to the middle, without frame or seat.
+            if (scene.swim_ring && !scene.swim_ring->levels.empty())
+            {
+                std::vector<park::ModelPart>& parts = scene.swim_ring->levels.front().parts;
+                const auto corners = [](const park::ModelPart& part, std::size_t t) { return std::array { part.vertices[part.indices[t]].position, part.vertices[part.indices[t + 1]].position, part.vertices[part.indices[t + 2]].position }; };
+                const auto ring_way = [&](const park::ModelPart& part, std::size_t t) {
+                    if (std::max({ part.indices[t], part.indices[t + 1], part.indices[t + 2] }) >= part.vertices.size())
+                        return false;
+                    const auto c = corners(part, t);
+                    const glm::vec3 centre = (c[0] + c[1] + c[2]) / 3.0f;
+                    return centre.x > std::abs(centre.z);
+                };
+                glm::vec3 middle { 0.0f };
+                float count = 0;
+                for (const park::ModelPart& part : parts)
+                    for (std::size_t t = 0; t + 2 < part.indices.size(); t += 3)
+                        if (ring_way(part, t))
+                        {
+                            const auto c = corners(part, t);
+                            middle += (c[0] + c[1] + c[2]) / 3.0f;
+                            ++count;
+                        }
+                middle = count > 0 ? middle / count : glm::vec3(0.0f);
+                const auto across = [&](const glm::vec3& p) { return glm::length(glm::vec2(p.x - middle.x, p.z - middle.z)); };
+                float reach = 0;
+                for (const park::ModelPart& part : parts)
+                    for (std::size_t t = 0; t + 2 < part.indices.size(); t += 3)
+                        if (ring_way(part, t))
+                            for (const glm::vec3& p : corners(part, t))
+                                reach += across(p) / (3.0f * count);
+                // Chosen by eye: the farthest a kept corner and the nearest a kept middle is, over the average, leaving out the frame
+                // and the seat across the hole, which the rider in it would be under.
+                constexpr float kRingReach = 1.5f, kHoleReach = 0.6f;
+                for (park::ModelPart& part : parts)
+                {
+                    std::vector<std::uint32_t> kept;
+                    for (std::size_t t = 0; t + 2 < part.indices.size(); t += 3)
+                        if (ring_way(part, t) && std::ranges::all_of(corners(part, t), [&](const glm::vec3& p) { return across(p) <= kRingReach * reach; }) && across((corners(part, t)[0] + corners(part, t)[1] + corners(part, t)[2]) / 3.0f) >= kHoleReach * reach)
+                            kept.insert(kept.end(), { part.indices[t], part.indices[t + 1], part.indices[t + 2] });
+                    for (park::ModelVertex& v : part.vertices)
+                        v.position -= middle;
+                    part.indices = std::move(kept);
+                }
+            }
+            // Painted in the car's own colours, under the plain name the people's mesh asks for.
+            if (scene.swim_ring)
+                for (const park::ModelPart& part : scene.swim_ring->levels.front().parts)
+                    batches.push_back({ park::painted_name(part.texture, part.slots, { }), part.texture, park::flexi_colours(scene.swim_ring->default_colours), part.blend, 0, 0 });
             // Each item's shape, and what it leaves, by name, with the overlay they are in.
             struct Item
             {
@@ -426,7 +484,7 @@ namespace rct3::scene
                     }
             }
             library.close_files();
-            park::GroundImages shrunk; // Copied only when they are shrunk; the library keeps its own
+            park::ground::GroundImages shrunk; // Copied only when they are shrunk; the library keeps its own
             if (scene.texture_detail < 1)
             {
                 shrunk = library.pictures();
@@ -514,11 +572,11 @@ namespace rct3::scene
             };
             const glm::mat4 in = park::placed_transform(*entrance, model_of(*entrance), scene.grid, scene.fitted);
             const glm::mat4 out = park::placed_transform(*exit, model_of(*exit), scene.grid, scene.fitted);
-            park::RideWays ways = ways_of(in, out);
+            park::ride::RideWays ways = ways_of(in, out);
             ways.ticket = glm::vec3(in * glm::vec4(kTicketSpot, 0, 0, 1));
             ways.ticket_heading = std::atan2(in[0].x, in[0].z);
             if (model_of(*entrance) != nullptr && !model_of(*entrance)->seat_places.empty())
-                park::set_ticket_spot(ways, in, model_of(*entrance)->seat_places.front());
+                park::ride::set_ticket_spot(ways, in, model_of(*entrance)->seat_places.front());
             scene.sim.registry.emplace_or_replace<simulation::RideWalks>(entity, simulation::RideWalks { .ticket = ways.ticket, .ticket_heading = ways.ticket_heading, .on = std::move(ways.on), .off = std::move(ways.off) });
             // The entrance's and exit's gates, by the motions the buildings name ...Close, ...Open, and those ending
             // Idle that hold them there.
@@ -560,7 +618,7 @@ namespace rct3::scene
         return found != textures.end() ? found->second.handle : render::TextureHandle { };
     }
 
-    void fit_texture_detail(const ParkScene& scene, park::GroundImages& images)
+    void fit_texture_detail(const ParkScene& scene, park::ground::GroundImages& images)
     {
         for (auto& [name, image] : images)
             image = ovl::halved(std::move(image), ovl::texture_halvings(scene.texture_detail, image.width, image.height));
@@ -610,7 +668,7 @@ namespace rct3::scene
                     std::vector<glm::vec3> seats;
                     for (const glm::mat4& seat : model->second.seat_places)
                         seats.emplace_back((placed * seat)[3]);
-                    return park::flat_ride_ways(park::placed_walkways(model->second.walkways, placed), seats, entrance, exit);
+                    return park::ride::flat_ride_ways(park::ride::placed_walkways(model->second.walkways, placed), seats, entrance, exit);
                 });
                 if (model->second.rig)
                 {
@@ -654,8 +712,8 @@ namespace rct3::scene
         for (const auto& list : { std::span<const save::PlacedObject>(scene.objects), std::span<const save::PlacedObject>(scene.cars) })
             for (const save::PlacedObject& o : list)
                 last = std::max(last, o.id);
-        park::RideCars cars = park::ride_cars(std::span(scene.rides.rides).subspan(from, count), last);
-        for (park::CarSpot& spot : cars.spots)
+        park::ride::RideCars cars = park::ride::ride_cars(std::span(scene.rides.rides).subspan(from, count), last);
+        for (park::ride::CarSpot& spot : cars.spots)
             spot.ride += from;
         load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
         const std::size_t first = scene.cars.size();
@@ -727,7 +785,20 @@ namespace rct3::scene
         board_tracked_ride(device, scene, install, ride_index);
     }
 
-    void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::RideCars& cars)
+    void fit_car(simulation::Coaster& train, const park::ObjectModel& model, bool pool_slide)
+    {
+        train.trough = model.trough ? std::optional(simulation::Trough { .damping = model.trough->damping, .centring = model.trough->centring, .friction = model.trough->friction, .length = model.swing_arm > 0 ? model.swing_arm : simulation::Trough { }.length, .pivot = model.swing_pivot }) : std::nullopt;
+        // shortcut: other trains keep the losses fitted to saved parks' test times, upgrade when their laps are
+        // checked against their files' losses.
+        // shortcut: the air is taken on one empty car, as every pool slide's train is; upgrade with riders' weight.
+        if (pool_slide && model.mass > 0)
+        {
+            train.rolling = model.rolling;
+            train.air = model.air / model.mass;
+        }
+    }
+
+    void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::ride::RideCars& cars)
     {
         load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
     }
@@ -742,17 +813,22 @@ namespace rct3::scene
         for (std::size_t i = 0; i < scene.car_spots.size(); ++i)
             if (scene.car_spots[i].ride == ride_index)
                 cars.push_back(i);
-        const auto* fleet = scene.sim.registry.try_get<simulation::Trains>(entity);
+        auto* fleet = scene.sim.registry.try_get<simulation::Trains>(entity);
         const save::Ride& ride = scene.rides.rides[ride_index];
         if (cars.empty())
             scene.ride_cars.erase(entity);
+        // A pool slide's cars swing in their trough as their car's file has them.
+        if (fleet != nullptr && !cars.empty())
+            if (const auto model = scene.models.find(park::model_ref(scene.cars[cars.front()])); model != scene.models.end())
+                for (simulation::Coaster& train : fleet->trains)
+                    fit_car(train, model->second, ride_index < scene.track_rules.size() && scene.track_rules[ride_index].pool_ride);
         if (cars.empty() || fleet == nullptr || fleet->trains.empty() || !scene.courses[ride_index] || ride.trains.empty())
             return;
         // Riders of tracked rides board the first train as it waits at the station, seats front to back.
         // shortcut: rides built in the running park keep boarding straight in, upgrade with the station's
         // platform there.
         const auto file = install.find(std::format("tracks/Platforms/{}/{}.common.ovl", ride.platform_style, ride.platform_type));
-        const auto platform = file ? park::load_platform(*file) : std::unexpected(std::string("no platform file"));
+        const auto platform = file ? park::ride::load_platform(*file) : std::unexpected(std::string("no platform file"));
         walk_ride(device, scene, entity, ride, [&](const glm::mat4& entrance, const glm::mat4& exit) {
             std::vector<glm::vec3> seats;
             // A car without its model (from a file the game lacks) seats its share of the train at its middle.
@@ -760,18 +836,18 @@ namespace rct3::scene
             const std::size_t share = (scene.sim.registry.get<simulation::CycleRide>(entity).capacity + first_train - 1) / std::max<std::size_t>(first_train, 1);
             for (const std::size_t car : cars)
             {
-                const park::CarSpot& spot = scene.car_spots[car];
+                const park::ride::CarSpot& spot = scene.car_spots[car];
                 if (spot.train != 0)
                     continue;
                 const auto model = scene.models.find(park::model_ref(scene.cars[car]));
-                const glm::mat4 place = park::moved_along(*scene.courses[ride_index], scene.saved_cars.at(scene.cars[car].id), { spot.front, spot.rear }, fleet->trains.front().start - ride.trains.front().distance);
+                const glm::mat4 place = park::track::moved_along(*scene.courses[ride_index], scene.saved_cars.at(scene.cars[car].id), { spot.front, spot.rear }, fleet->trains.front().start - ride.trains.front().distance);
                 if (model == scene.models.end())
                     seats.insert(seats.end(), share, glm::vec3(place[3]));
                 else
                     for (const glm::mat4& seat : model->second.seat_places)
                         seats.emplace_back((place * seat)[3]);
             }
-            return park::track_ride_ways(platform.value_or(park::Platform { }), seats, entrance, exit);
+            return park::ride::track_ride_ways(platform.value_or(park::ride::Platform { }), seats, entrance, exit);
         });
     }
 
@@ -794,6 +870,250 @@ namespace rct3::scene
         add_textures(device, scene, boned.mesh.mesh.batches);
     }
 
+    namespace
+    {
+        /// The park's people read and handed to the simulation, with the rides, path items, animals and the rest it runs.
+        void start_simulation(render::Device& device, ParkScene& scene, const config::GameInstall& install, const save::SaveFile& file, const save::ObjectIndex& index, const std::optional<parkfile::SavedPark>& saved, const save::WorldModel& world, const std::expected<save::ParkModel, save::Error>& park_model, random::Seed seed, const simulation::RatingModel& ratings)
+        {
+            const auto log = logging::logger("park");
+            auto people = profiling::section("ReadPeople", [&] { return save::load_people(file, index); });
+            // Saves made before people were kept start them again from the original park.
+            const parkfile::SavedPeople* kept = saved && saved->people ? &*saved->people : nullptr;
+            if (people && kept != nullptr)
+                *people = kept->model;
+            if (people)
+            {
+                scene.people = std::move(*people);
+                load_people_models(device, scene, install, seed);
+                load_zoo_animals(scene, install);
+                profiling::section("Simulation", [&] {
+                    scene.sim.seed = seed;
+                    scene.sim.ratings = ratings;
+                    simulation::import_paths(scene.sim, world.paths, scene.grid);
+                    // The saved ones by their place in scene.people, null for those not drawn.
+                    const auto by_look = [](std::size_t count, std::span<const entt::entity> placed, const auto& records) {
+                        std::vector<entt::entity> out(count, entt::null);
+                        for (std::size_t i = 0; i < placed.size() && i < records.size(); ++i)
+                        {
+                            if (const std::int32_t look = records[i].look; look >= 0 && std::cmp_less(look, count))
+                                out[static_cast<std::size_t>(look)] = placed[i];
+                        }
+                        return out;
+                    };
+                    const auto placed = kept != nullptr ? parkfile::place_guests(scene.sim, *kept) : std::vector<entt::entity> { };
+                    const auto guests = kept != nullptr ? by_look(scene.people.guests.size(), placed, kept->guests) : simulation::import_guests(scene.sim, scene.people);
+                    simulation::import_stalls(scene.sim, scene.rides, scene.carried);
+                    simulation::import_pools(scene.sim, scene.pools, scene.scenery_pool_extras);
+                    const auto timings = simulation::flat_ride_timings(scene.rides, scene.objects, [&](const save::PlacedObject& o) -> const park::ObjectModel* {
+                        const auto found = scene.models.find(park::model_ref(o));
+                        return found != scene.models.end() ? &found->second : nullptr;
+                    });
+                    // The courses of the rides whose trains go round, for the simulation to run them on.
+                    std::map<std::string, std::optional<park::track::PieceCatalogue>, std::less<>> catalogues;
+                    const park::track::PieceShapeOf shape_of = [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> std::optional<const park::track::PieceShape&> {
+                        auto [at, added] = catalogues.try_emplace(object.overlay);
+                        if (added)
+                        {
+                            if (const auto file = install.find(std::format("{}.common.ovl", object.overlay)))
+                            {
+                                if (auto loaded = park::track::load_piece_catalogue(*file, object.overlay))
+                                    at->second = std::move(*loaded);
+                            }
+                        }
+                        return at->second ? park::track::shape_named(*at->second, piece.symbol) : std::nullopt;
+                    };
+                    std::vector<std::optional<simulation::Coaster>> coasters(scene.rides.rides.size());
+                    scene.courses.assign(scene.rides.rides.size(), std::nullopt);
+                    for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
+                    {
+                        if (auto course = park::track::track_course(scene.rides.rides[i], scene.objects, scene.models, scene.grid, scene.fitted, shape_of))
+                        {
+                            coasters[i] = simulation::coaster_of(*course, scene.rides.rides[i]);
+                            scene.courses[i] = std::move(*course);
+                        }
+                    }
+                    const auto guests_room = simulation::ride_guests(scene.rides, [&](std::string_view path) { return install.find(path); });
+                    scene.ride_entities = simulation::import_rides(scene.sim, scene.rides, timings, coasters, guests_room);
+                    for (std::size_t i = 0; i < scene.ride_entities.size(); ++i)
+                        if (scene.ride_entities[i] == entt::null && scene.courses[i])
+                            scene.ride_entities[i] = simulation::import_climb_slide(scene.sim, scene.rides.rides[i], *scene.courses[i]);
+                    for (std::size_t i = 0; const auto seating : simulation::ride_seatings(scene.rides, [&](std::string_view path) { return install.find(path); }))
+                        if (const entt::entity e = scene.ride_entities[i++]; seating && e != entt::null)
+                            scene.ride_seatings[e] = static_cast<std::uint8_t>(*seating);
+                    for (const auto kind : simulation::ride_kinds(scene.rides, [&](std::string_view path) { return install.find(path); }))
+                        scene.ride_groups.push_back(kind ? simulation::ride_group(*kind) : simulation::RideGroup::Other);
+                    simulation::import_boats(scene.sim, scene.rides, scene.ride_entities, scene.courses, scene.grid, world.water.bodies, boat_obstacles(scene));
+                    // Each kind of boat handles as its train sets it.
+                    for (std::size_t k = 0; k < scene.cars.size(); ++k)
+                        if (const std::size_t ride = scene.car_spots[k].ride; ride < scene.ride_entities.size() && scene.ride_entities[ride] != entt::null)
+                            if (auto* boats = scene.sim.registry.try_get<simulation::Boats>(scene.ride_entities[ride]))
+                                if (const auto model = scene.models.find(park::model_ref(scene.cars[k])); model != scene.models.end() && model->second.boat_handling.turn_most > 0)
+                                    boats->handling = model->second.boat_handling;
+                    simulation::link_stations(scene.sim, scene.ride_entities, scene.courses, scene.grid);
+                    for (const save::RideShow& show : scene.shows)
+                        stage_show(scene, show);
+                    // Each kind's rules read once, before their trains are boarded, however many of its rides the park has.
+                    std::map<std::pair<std::string, std::string>, park::track::TrackRules> kinds;
+                    for (const save::Ride& ride : scene.rides.rides)
+                    {
+                        const auto key = std::pair { ride.base.overlay_path, ride.base.symbol };
+                        if (ride.kind == save::RideKind::Tracked && !kinds.contains(key))
+                        {
+                            const auto file = install.find(std::format("{}.common.ovl", ride.base.overlay_path));
+                            kinds[key] = file ? park::track::load_track_rules(*file, ride.base.symbol) : park::track::TrackRules { };
+                        }
+                        scene.track_rules.push_back(kinds.contains(key) ? kinds[key] : park::track::TrackRules { });
+                    }
+                    for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
+                    {
+                        seat_flat_ride(device, scene, i);
+                        board_tracked_ride(device, scene, install, i);
+                    }
+                    simulation::start_guests(scene.sim);
+                    if (kept != nullptr)
+                    {
+                        parkfile::place_parties(scene.sim, *kept, placed);
+                        parkfile::place_swimmers(scene.sim, *kept, placed);
+                    }
+                    else
+                    {
+                        simulation::board_saved_riders(scene.sim, scene.people, guests, scene.rides, scene.ride_entities);
+                        simulation::resume_saved_swimmers(scene.sim, scene.people, guests);
+                        simulation::import_parties(scene.sim, scene.people, guests);
+                    }
+                    simulation::import_litter(scene.sim, scene.people, scene.park.time);
+                    // The benches the game's park lists, and those placed in ours, which it does not.
+                    // Each seats as many as its model has seats for.
+                    std::vector<std::uint64_t> benches = world.benches;
+                    std::unordered_map<std::uint64_t, std::size_t> seats;
+                    for (const save::PlacedObject& o : scene.objects)
+                    {
+                        const auto model = scene.models.find(park::model_ref(o));
+                        if (o.hidden || model == scene.models.end() || model->second.category != std::to_underlying(park::ItemCategory::Bench))
+                            continue;
+                        seats[o.id] = model->second.seat_places.size();
+                        if (!std::ranges::contains(benches, o.id))
+                            benches.push_back(o.id);
+                    }
+                    simulation::import_path_items(scene.sim, scene.objects, scene.bins, benches, scene.signs);
+                    simulation::import_flower_beds(scene.sim, scene.objects, saved && !saved->flower_beds.empty() ? saved->flower_beds : world.flower_beds, [&](const save::PlacedObject& o) {
+                        const auto model = scene.models.find(park::model_ref(o));
+                        return model != scene.models.end() ? model->second.water_capacity : std::nullopt;
+                    });
+                    // What vandals broke stays broken until mended.
+                    for (auto [e, item] : scene.sim.registry.view<simulation::PathItem>().each())
+                    {
+                        item.broken = scene.broken_objects.contains(item.object);
+                        if (const auto bench = seats.find(item.object); bench != seats.end() && bench->second > 0)
+                            item.seats = static_cast<std::uint8_t>(std::min<std::size_t>(bench->second, 255));
+                    }
+                    for (const save::PlacedObject& o : scene.objects)
+                        if (const auto wall = park::edge_wall(o, scene.models, scene.grid))
+                            simulation::set_wall(scene.sim, *wall, true);
+                    simulation::import_cover(scene.sim, [&](std::span<const glm::vec3> points) { return park::overheads(points, scene.objects, scene.models, scene.grid, scene.fitted); });
+                    simulation::import_facilities(scene.sim, scene.rides, [&](const save::Ride& ride) -> std::optional<std::uint32_t> {
+                        const auto file = install.find(std::format("{}.common.ovl", ride.base.overlay_path));
+                        return file ? park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))) : std::nullopt;
+                    });
+                    simulation::import_sights(scene.sim, scene.objects, [&](const save::PlacedObject& o) -> std::optional<simulation::PathItemKind> {
+                        const auto model = scene.models.find(park::model_ref(o));
+                        return model == scene.models.end() ? std::nullopt : simulation::sight_of(model->second.category, model->second.feature);
+                    });
+                    simulation::import_scenery(scene.sim, scene.objects, [&](const save::PlacedObject& o) {
+                        const auto model = scene.models.find(park::model_ref(o));
+                        return model == scene.models.end() ? 0.0f : simulation::scenery_weight(model->second.category, model->second.feature);
+                    });
+                    simulation::import_gate(scene.sim, scene.objects, [&](const save::PlacedObject& o) -> std::optional<std::array<std::int32_t, 2>> {
+                        const auto model = scene.models.find(park::model_ref(o));
+                        if (model == scene.models.end() || model->second.category != std::to_underlying(park::ItemCategory::ParkEntrance))
+                            return std::nullopt;
+                        return model->second.squares;
+                    });
+                    simulation::keep_staff_in(scene.sim, scene.grid);
+                    for (auto [e, gate] : scene.sim.registry.view<simulation::ParkGate>().each())
+                        gate.closed = park_model && park_model->has_park && !park_model->park.flags.has(save::ParkFlag::Open);
+                    if (park_model && park_model->group_mix)
+                        simulation::import_party_mix(scene.sim, *park_model->group_mix);
+                    const auto placed_staff = kept != nullptr ? parkfile::place_staff(scene.sim, *kept) : std::vector<entt::entity> { };
+                    const auto staff = kept != nullptr ? by_look(scene.people.staff.size(), placed_staff, kept->staff) : simulation::import_staff(scene.sim, scene.people);
+                    // The animals as our save kept them, else as the original park did.
+                    if (kept != nullptr && saved->animals)
+                        parkfile::place_animals(scene.sim, *saved->animals, placed_staff);
+                    else
+                    {
+                        const save::TerrainGrid& g = scene.grid;
+                        const auto enclosure_at = [&](glm::vec2 p) {
+                            const auto col = g.tile_size_x > 0 ? static_cast<std::int32_t>(std::floor((p.x - g.origin_x) / g.tile_size_x)) : -1;
+                            const auto row = g.tile_size_z > 0 ? static_cast<std::int32_t>(std::floor((p.y - g.origin_z) / g.tile_size_z)) : -1;
+                            return scene.enclosures.at(col, row);
+                        };
+                        // The park's own animal houses, beside the keepers' huts the park placed with them.
+                        // shortcut: a house's ground is taken as its model's tiles round the tile it is placed on, with
+                        // its troughs there too; read the saved troughs' places if animals end up eating off the house.
+                        constexpr std::string_view kShelters = "Enclosures\\Shelters\\Shelters"; // As the park names it
+                        constexpr std::string_view kHut = "WardensShed";
+                        std::vector<simulation::AnimalHouse> houses;
+                        for (const save::PlacedObject& o : scene.objects)
+                        {
+                            // The park keeps two records of each house, alike but for their ids.
+                            if (o.overlay != kShelters || o.symbol == kHut || std::ranges::any_of(houses, [&](const simulation::AnimalHouse& h) { return h.troughs == tile_point(g, { o.col, o.row }); }))
+                                continue;
+                            const auto model = scene.models.find(park::model_key(o));
+                            std::array<std::int32_t, 2> span = model != scene.models.end() ? model->second.squares : std::array<std::int32_t, 2> { 1, 1 };
+                            if (o.rotation % 2 != 0)
+                                std::swap(span[0], span[1]);
+                            const glm::vec3 middle = tile_point(g, { o.col, o.row });
+                            const glm::vec2 half { static_cast<float>(span[0]) * g.tile_size_x / 2, static_cast<float>(span[1]) * g.tile_size_z / 2 };
+                            simulation::AnimalHouse house { .object = o.id, .enclosure = enclosure_at({ middle.x, middle.z }), .troughs = middle, .low = glm::vec2 { middle.x, middle.z } - half, .high = glm::vec2 { middle.x, middle.z } + half };
+                            const auto hut = std::ranges::min_element(scene.objects, { }, [&](const save::PlacedObject& h) { return h.symbol == kHut ? std::abs(h.col - o.col) + std::abs(h.row - o.row) : std::numeric_limits<std::int32_t>::max(); });
+                            if (hut != scene.objects.end() && hut->symbol == kHut && std::abs(hut->col - o.col) + std::abs(hut->row - o.row) <= span[0] + span[1])
+                                house.hut = hut->id;
+                            houses.push_back(house);
+                        }
+                        // Each keeper keeps the enclosure the park gave them.
+                        std::vector<std::pair<entt::entity, std::int32_t>> keepers;
+                        for (std::size_t i = 0; kept == nullptr && i < scene.people.staff.size() && i < staff.size(); ++i)
+                            if (const auto* work = std::get_if<save::KeeperWork>(&scene.people.staff[i].work); work != nullptr && staff[i] != entt::null)
+                                keepers.emplace_back(staff[i], work->enclosure_id);
+                        simulation::import_animal_houses(scene.sim, houses, keepers);
+                        simulation::import_animals(scene.sim, scene.people.zoo_animals, enclosure_at);
+                    }
+                    if (!scene.sim.registry.view<const simulation::Animal>().empty())
+                    {
+                        const save::PlacedObject crate = animal_crate();
+                        load_models(install, std::span(&crate, 1), false, scene.models, scene.pictures);
+                        animals_changed(device, scene);
+                    }
+                    for (const auto [e, upkeep] : scene.sim.registry.view<const simulation::Upkeep>().each())
+                    {
+                        if (upkeep.broken)
+                            scene.broken_rides.push_back({ e });
+                        if (upkeep.reliability.value < kLowReliability)
+                            scene.unreliable_rides.push_back(e);
+                    }
+                    scene.known_guests.insert(guests.begin(), guests.end());
+                    for (ShownPerson& p : scene.shown_people)
+                    {
+                        if (!p.staff && p.saved < guests.size() && guests[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(guests[p.saved]))
+                        {
+                            p.guest = guests[p.saved];
+                            p.swimwear = simulation::in_swimwear(scene.sim.registry, p.guest); // As the simulation has them, not as saved
+                        }
+                        // A vendor stands in their booth as saved, serving the riders handing over their tickets, and a
+                        // lifeguard sits in their chair.
+                        else if (p.staff && p.saved < staff.size() && staff[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Staff>(staff[p.saved]))
+                        {
+                            p.guest = staff[p.saved];
+                            scene.known_guests.insert(p.guest); // A keeper is not hired again
+                        }
+                    }
+                });
+            }
+            else
+                log.warning("people: {}", save::to_string(people.error()));
+        }
+    } // namespace
+
     std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const ui::Palette& palette, const config::GameOptions& options, const std::filesystem::path& path, random::Seed seed, const simulation::RatingModel& ratings, const ParkLoadReport& report)
     {
         const profiling::Scope zone("LoadPark");
@@ -802,6 +1122,9 @@ namespace rct3::scene
             if (report)
                 report(stage);
         };
+        // ── 1. Read the file ──
+        // A game save, or one of ours over the game save it started from. What it reads stays for the steps below;
+        // the save file reads from `bytes`.
         begin(ParkLoadStage::ReadFile);
         auto bytes = profiling::section("ReadFile", [&] { return read_file(path); });
         if (!bytes)
@@ -855,172 +1178,190 @@ namespace rct3::scene
             scene.day.mode = mode;
             scene.day.park_hours = from_file.park_hours;
         }
-        begin(ParkLoadStage::Ground);
-        // The park's own pools, then those the player laid, which the park keeps as squares. A park from the game
-        // has its pools taken in as squares too, the pieces and rooms it placed for them left for those the squares
-        // place, so the pool tool works on them; a park saved since keeps them as squares itself.
-        if (!world->pool_segments.empty())
-        {
-            if (!saved)
-            {
-                scene.pools = park::saved_pools(*world, world->objects);
-                std::erase_if(world->objects, [&](const save::PlacedObject& o) { return o.overlay == park::kPoolOverlay || std::ranges::contains(world->changing_rooms, o.id, &save::ChangingRoomState::object_ref); });
-            }
-            world->pool_water.clear();
-        }
-        if (saved && saved->pools)
-            scene.pools = *saved->pools;
-        scene.saved_pool_water = world->pool_water.size();
-        std::ranges::copy(park::pool_water(scene.pools), std::back_inserter(world->pool_water));
-        // The ground itself is built on the first frame (rebuild_ground), with the pavings known by then; the
-        // paths' and queues' pictures are read here.
-        const park::GroundPathMap paths = park::ground_path_map(world->paths, scene.grid);
-        const park::GroundQueues queues = park::ground_queues(world->paths, scene.grid);
-        scene.footpaths.pavings_stale = true;
-        scene.footpaths.paths = world->paths;
-        scene.footpaths.water = world->water;
-        scene.footpaths.pools = world->pool_water;
-        scene.footpaths.waterfalls = saved && saved->waterfalls ? *saved->waterfalls : world->waterfalls;
-        scene.enclosures = saved && saved->animals ? saved->animals->enclosures : world->enclosures;
-        scene.footpaths.pictured = paths.styles;
 
+        // ── 2. Pools ──
+        begin(ParkLoadStage::Ground);
+        {
+            // The park's own pools, then those the player laid, which the park keeps as squares. A park from the game
+            // has its pools taken in as squares too, the pieces and rooms it placed for them left for those the squares
+            // place, so the pool tool works on them; a park saved since keeps them as squares itself.
+            if (!world->pool_segments.empty())
+            {
+                if (!saved)
+                {
+                    scene.pools = park::pools::saved_pools(*world, world->objects);
+                    // A room's scenery may be kept twice on its tile, once not named by the room: both go, or the one left
+                    // over hides the room, a plain prop that cannot be opened.
+                    const auto room = [&](const save::PlacedObject& o) { return std::ranges::any_of(scene.pools.rooms, [&](const park::pools::PoolRoom& r) { return r.col == o.col && r.row == o.row && r.symbol == o.symbol; }); };
+                    std::erase_if(world->objects, [&](const save::PlacedObject& o) { return std::ranges::contains(world->changing_rooms, o.id, &save::ChangingRoomState::object_ref) || room(o); });
+                    park::pools::drop_saved_pool_pieces(scene.pools, park::kPoolOverlay, world->objects);
+                }
+                world->pool_water.clear();
+            }
+            if (saved && saved->pools)
+                scene.pools = *saved->pools;
+            scene.saved_pool_water = world->pool_water.size();
+            std::ranges::copy(park::pools::pool_water(scene.pools), std::back_inserter(world->pool_water));
+        }
+
+        // ── 3. Ground, water and GPU textures ──
         // Built one by one; whatever fails leaves the rest for destroy_park_scene.
         const auto fail = [&](std::string message) -> std::expected<ParkScene, std::string> {
             destroy_park_scene(device, scene);
             return std::unexpected(std::move(message));
         };
         const render::VertexLayout ground_layout { sizeof(park::GroundVertex), kGroundAttributes };
-        if (auto water = create_park_water(device, scene.water, { }, ground_layout); !water)
-            return fail(water.error());
-        auto ground = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .label = "ground" });
-        if (!ground)
-            return fail(ground.error());
-        scene.ground_pipeline = *ground;
-        auto ground_depth = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .colour_write = false, .label = "ground depth" });
-        if (!ground_depth)
-            return fail(ground_depth.error());
-        scene.ground_depth_pipeline = *ground_depth;
-        auto ground_faded = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Faded, .depth_write = false, .fade = kFadedGround, .label = "faded ground" });
-        if (!ground_faded)
-            return fail(ground_faded.error());
-        scene.ground_faded_pipeline = *ground_faded;
-        const std::vector<std::byte> noise = park::variation_texels();
-        // Without it the ground is drawn plain.
-        if (auto variation = device.create_texture({ .width = park::kVariationSize, .height = park::kVariationSize, .pixels = noise, .label = "ground variation" }))
-            scene.variation = *variation;
+        // Also drawn into the map at the end.
+        park::ground::GroundImages images;
+        {
+            // The ground itself is built on the first frame (rebuild_ground), with the pavings known by then; the
+            // paths' and queues' pictures are read here.
+            const park::ground::GroundPathMap paths = park::ground::ground_path_map(world->paths, scene.grid);
+            const park::ground::GroundQueues queues = park::ground::ground_queues(world->paths, scene.grid);
+            scene.footpaths.pavings_stale = true;
+            scene.footpaths.paths = world->paths;
+            scene.footpaths.water = world->water;
+            scene.footpaths.pools = world->pool_water;
+            scene.footpaths.waterfalls = saved && saved->waterfalls ? *saved->waterfalls : world->waterfalls;
+            scene.enclosures = saved && saved->animals ? saved->animals->enclosures : world->enclosures;
+            scene.footpaths.pictured = paths.styles;
+            if (auto water = create_park_water(device, scene.water, { }, ground_layout); !water)
+                return fail(water.error());
+            auto ground = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .label = "ground" });
+            if (!ground)
+                return fail(ground.error());
+            scene.ground_pipeline = *ground;
+            auto ground_depth = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .colour_write = false, .label = "ground depth" });
+            if (!ground_depth)
+                return fail(ground_depth.error());
+            scene.ground_depth_pipeline = *ground_depth;
+            auto ground_faded = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Faded, .depth_write = false, .fade = kFadedGround, .label = "faded ground" });
+            if (!ground_faded)
+                return fail(ground_faded.error());
+            scene.ground_faded_pipeline = *ground_faded;
+            const std::vector<std::byte> noise = park::ground::variation_texels();
+            // Without it the ground is drawn plain.
+            if (auto variation = device.create_texture({ .width = park::ground::kVariationSize, .height = park::ground::kVariationSize, .pixels = noise, .label = "ground variation" }))
+                scene.variation = *variation;
 
-        park::GroundImages images;
-        for (const std::string_view name : park::kGroundFiles)
-        {
-            const auto found = install.find(name);
-            if (!found)
-                continue;
-            if (const auto added = park::add_ground_images(images, *found); !added)
-                log.warning("{}: {}", name, added.error());
-        }
-        std::vector<park::TunnelPictures> tunnels;
-        for (const park::TunnelStyle& style : park::kTunnelStyles)
-        {
-            const std::string name = park::tunnel_texture_file(style.name);
-            const auto found = install.find(name);
-            auto loaded = found ? park::load_tunnel_pictures(*found, style) : std::unexpected(std::string("not found"));
-            if (loaded && *loaded)
-                tunnels.push_back(std::move(**loaded));
-            else
-                log.warning("{}: {}", name, loaded ? "no picture" : loaded.error());
-        }
-        park::add_tunnel_images(images, tunnels);
-        for (std::size_t i = 0; i < paths.styles.size(); ++i)
-        {
-            const std::string name = park::path_texture_file(paths.styles[i]);
-            const auto found = install.find(name);
-            const auto missing = found ? park::add_path_images(images, *found, paths.styles[i], static_cast<std::uint8_t>(i)) : std::expected<std::size_t, std::string>(std::unexpected("not found"));
-            if (!missing)
-                log.warning("{}: {}", name, missing.error());
-            else if (*missing > 0)
-                log.warning("{}: {} ground pictures missing", name, *missing);
-        }
-        for (std::size_t i = 0; i < queues.paintings.size(); ++i)
-        {
-            const std::string name = park::queue_texture_file(queues.paintings[i].style);
-            const auto found = install.find(name);
-            const auto added = found ? park::add_queue_image(images, *found, queues.paintings[i], static_cast<std::uint8_t>(i)) : std::expected<bool, std::string>(std::unexpected("not found"));
-            if (!added)
-                log.warning("{}: {}", name, added.error());
-            else if (!*added)
-                log.warning("{}: no ground picture", name);
-        }
-        // The arrows the path tool and stall placing lay on the ground, by their own names.
-        for (const std::string_view arrow : { park::kPathArrowPicture, park::kStallArrowPicture })
-        {
-            const auto tool = install.find(park::kPathToolFile);
-            const auto added = tool ? park::add_named_image(images, *tool, arrow, arrow) : std::expected<bool, std::string>(false);
-            if (!added || !*added)
-                log.warning("{}: no {}", park::kPathToolFile, arrow);
-        }
-        fit_texture_detail(scene, images);
-        if (scene.relief_maps)
-            park::add_relief_maps(images, kGroundRelief);
-        auto textures = ui::upload_textures(device, images);
-        if (!textures)
-            return fail(textures.error());
-        scene.ground_textures = std::move(*textures);
-        constexpr std::array<std::byte, 4> kWhite { std::byte { 255 }, std::byte { 255 }, std::byte { 255 }, std::byte { 255 } };
-        auto blank = device.create_texture({ 1, 1, render::TextureFormat::Rgba8, kWhite, "blank ground" });
-        if (!blank)
-            return fail(blank.error());
-        scene.blank = *blank;
-
-        const auto park_model = save::load_park(*file, index);
-        begin(ParkLoadStage::Objects);
-        if (const auto flow_file = install.find(park::kFlowFile))
-        {
-            // The water running down slides; without it they are drawn dry.
-            if (auto flow = park::load_flow_picture(*flow_file))
+            for (const std::string_view name : park::ground::kGroundFiles)
             {
-                if (auto uploaded = ui::upload_textures(device, { { std::string(park::kFlowPicture), *flow } }))
+                const auto found = install.find(name);
+                if (!found)
+                    continue;
+                if (const auto added = park::ground::add_ground_images(images, *found); !added)
+                    log.warning("{}: {}", name, added.error());
+            }
+            std::vector<park::ground::TunnelPictures> tunnels;
+            for (const park::ground::TunnelStyle& style : park::ground::kTunnelStyles)
+            {
+                const std::string name = park::ground::tunnel_texture_file(style.name);
+                const auto found = install.find(name);
+                auto loaded = found ? park::ground::load_tunnel_pictures(*found, style) : std::unexpected(std::string("not found"));
+                if (loaded && *loaded)
+                    tunnels.push_back(std::move(**loaded));
+                else
+                    log.warning("{}: {}", name, loaded ? "no picture" : loaded.error());
+            }
+            park::ground::add_tunnel_images(images, tunnels);
+            for (std::size_t i = 0; i < paths.styles.size(); ++i)
+            {
+                const std::string name = park::ground::path_texture_file(paths.styles[i]);
+                const auto found = install.find(name);
+                const auto missing = found ? park::ground::add_path_images(images, *found, paths.styles[i], static_cast<std::uint8_t>(i)) : std::expected<std::size_t, std::string>(std::unexpected("not found"));
+                if (!missing)
+                    log.warning("{}: {}", name, missing.error());
+                else if (*missing > 0)
+                    log.warning("{}: {} ground pictures missing", name, *missing);
+            }
+            for (std::size_t i = 0; i < queues.paintings.size(); ++i)
+            {
+                const std::string name = park::ground::queue_texture_file(queues.paintings[i].style);
+                const auto found = install.find(name);
+                const auto added = found ? park::ground::add_queue_image(images, *found, queues.paintings[i], static_cast<std::uint8_t>(i)) : std::expected<bool, std::string>(std::unexpected("not found"));
+                if (!added)
+                    log.warning("{}: {}", name, added.error());
+                else if (!*added)
+                    log.warning("{}: no ground picture", name);
+            }
+            // The arrows the path tool and stall placing lay on the ground, by their own names.
+            for (const std::string_view arrow : { park::ground::kPathArrowPicture, park::ground::kStallArrowPicture })
+            {
+                const auto tool = install.find(park::ground::kPathToolFile);
+                const auto added = tool ? park::ground::add_named_image(images, *tool, arrow, arrow) : std::expected<bool, std::string>(false);
+                if (!added || !*added)
+                    log.warning("{}: no {}", park::ground::kPathToolFile, arrow);
+            }
+            fit_texture_detail(scene, images);
+            if (scene.relief_maps)
+                park::add_relief_maps(images, kGroundRelief);
+            auto textures = ui::upload_textures(device, images);
+            if (!textures)
+                return fail(textures.error());
+            scene.ground_textures = std::move(*textures);
+            constexpr std::array<std::byte, 4> kWhite { std::byte { 255 }, std::byte { 255 }, std::byte { 255 }, std::byte { 255 } };
+            auto blank = device.create_texture({ 1, 1, render::TextureFormat::Rgba8, kWhite, "blank ground" });
+            if (!blank)
+                return fail(blank.error());
+            scene.blank = *blank;
+        }
+        // The park's settings, for its fence, state, gate and guest mix below.
+        const auto park_model = save::load_park(*file, index);
+
+        // ── 4. Objects ──
+        begin(ParkLoadStage::Objects);
+        {
+            if (const auto flow_file = install.find(park::water::kFlowFile))
+            {
+                // The water running down slides; without it they are drawn dry.
+                if (auto flow = park::water::load_flow_picture(*flow_file))
+                {
+                    if (auto uploaded = ui::upload_textures(device, { { std::string(park::water::kFlowPicture), *flow } }))
+                        scene.object_textures.merge(*uploaded);
+                }
+                else
+                    logging::logger("park").warning("flowing water: {}", flow.error());
+            }
+            if (const auto falls_file = install.find(park::kWaterfallFile))
+            {
+                // The waterfalls' pictures; without them the falls are drawn as plain see-through water.
+                std::map<std::string, ovl::RgbaImage, std::less<>> pictures;
+                for (const park::WaterfallPicture& picture : park::kWaterfallPictures)
+                    for (const auto& [texture, key] : { std::pair { picture.texture, picture.key }, std::pair { picture.layer_texture, picture.layer_key } })
+                    {
+                        if (auto image = park::water::load_flow_picture(*falls_file, texture))
+                            pictures.emplace(key, std::move(*image));
+                        else
+                            logging::logger("park").warning("waterfalls: {}", image.error());
+                    }
+                if (auto uploaded = ui::upload_textures(device, pictures))
                     scene.object_textures.merge(*uploaded);
             }
+            scene.modelled_plants = options.flag(config::GameOption::Trees3D);
+            load_models(install, world->objects, scene.modelled_plants, scene.models, scene.pictures);
+            scene.objects = std::move(world->objects);
+            scene.own_objects = scene.objects.size();
+            scene.bins = std::move(world->bins);
+            scene.signs = std::move(world->signs);
+            if (saved)
+            {
+                scene.rides = std::move(saved->rides);
+                scene.led_signs.hidden.insert(saved->no_queue_signs.begin(), saved->no_queue_signs.end());
+                scene.broken_objects.insert(saved->broken_items.begin(), saved->broken_items.end());
+            }
+            else if (auto rides = save::load_rides(*file, index))
+                scene.rides = std::move(*rides);
             else
-                logging::logger("park").warning("flowing water: {}", flow.error());
+                log.warning("rides: {}", save::to_string(rides.error()));
+            if (saved && saved->shows)
+                scene.shows = std::move(*saved->shows);
+            else if (auto shows = save::load_shows(*file, index))
+                scene.shows = std::move(*shows);
+            else
+                log.warning("shows: {}", save::to_string(shows.error()));
         }
-        if (const auto falls_file = install.find(park::kWaterfallFile))
-        {
-            // The waterfalls' pictures; without them the falls are drawn as plain see-through water.
-            std::map<std::string, ovl::RgbaImage, std::less<>> pictures;
-            for (const park::WaterfallPicture& picture : park::kWaterfallPictures)
-                for (const auto& [texture, key] : { std::pair { picture.texture, picture.key }, std::pair { picture.layer_texture, picture.layer_key } })
-                {
-                    if (auto image = park::load_flow_picture(*falls_file, texture))
-                        pictures.emplace(key, std::move(*image));
-                    else
-                        logging::logger("park").warning("waterfalls: {}", image.error());
-                }
-            if (auto uploaded = ui::upload_textures(device, pictures))
-                scene.object_textures.merge(*uploaded);
-        }
-        scene.modelled_plants = options.flag(config::GameOption::Trees3D);
-        load_models(install, world->objects, scene.modelled_plants, scene.models, scene.pictures);
-        scene.objects = std::move(world->objects);
-        scene.own_objects = scene.objects.size();
-        scene.bins = std::move(world->bins);
-        scene.signs = std::move(world->signs);
-        if (saved)
-        {
-            scene.rides = std::move(saved->rides);
-            scene.led_signs.hidden.insert(saved->no_queue_signs.begin(), saved->no_queue_signs.end());
-            scene.broken_objects.insert(saved->broken_items.begin(), saved->broken_items.end());
-        }
-        else if (auto rides = save::load_rides(*file, index))
-            scene.rides = std::move(*rides);
-        else
-            log.warning("rides: {}", save::to_string(rides.error()));
-        if (saved && saved->shows)
-            scene.shows = std::move(*saved->shows);
-        else if (auto shows = save::load_shows(*file, index))
-            scene.shows = std::move(*shows);
-        else
-            log.warning("shows: {}", save::to_string(shows.error()));
+
+        // ── 5. What the park builds ──
         {
             // What a park does not keep but builds when it loads: supports under raised paths and track, railings
             // along queues and fences round rides.
@@ -1034,20 +1375,20 @@ namespace rct3::scene
                 }
                 return last;
             };
-            if (const auto found = install.find(std::format("{}.common.ovl", park::kSupportOverlay)))
+            if (const auto found = install.find(std::format("{}.common.ovl", park::support::kSupportOverlay)))
             {
-                if (const auto sets = park::load_support_sets(*found))
+                if (const auto sets = park::support::load_support_sets(*found))
                 {
                     // Tops, caps and beams are fitted to the points they join, so their shapes are needed first.
                     std::vector<save::PlacedObject> sized;
-                    const auto size = [&](const park::SupportPiece& piece) {
+                    const auto size = [&](const park::support::SupportPiece& piece) {
                         save::PlacedObject& o = sized.emplace_back();
                         o.symbol = piece.symbol;
-                        o.overlay = std::string(park::kSupportOverlay);
+                        o.overlay = std::string(park::support::kSupportOverlay);
                     };
                     for (const auto& [_, list] : *sets)
                     {
-                        for (const park::SupportSet& set : list)
+                        for (const park::support::SupportSet& set : list)
                         {
                             for (const auto& piece : { set.top, set.cap })
                             {
@@ -1059,7 +1400,7 @@ namespace rct3::scene
                     }
                     load_models(install, sized, false, scene.models, scene.pictures);
                     const auto started = std::chrono::steady_clock::now();
-                    park::BuiltSupports columns = park::support_columns(scene.objects, scene.models, world->paths, scene.grid, *sets, largest_id(), supports_passed(scene));
+                    park::support::BuiltSupports columns = park::support::support_columns(scene.objects, scene.models, world->paths, scene.grid, *sets, largest_id(), supports_passed(scene));
                     log.info("supports built in {} us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count());
                     for (std::size_t i = 0; i < columns.pieces.size(); ++i)
                         scene.columns.emplace(columns.pieces[i].id, columns.of[i].tile);
@@ -1088,7 +1429,7 @@ namespace rct3::scene
             };
             for (const save::Ride& ride : scene.rides.rides)
             {
-                std::vector<save::PlacedObject> pieces = park::ride_fences(ride, model_of, largest_id());
+                std::vector<save::PlacedObject> pieces = park::ride::ride_fences(ride, model_of, largest_id());
                 ride_fences += pieces.size();
                 for (const save::PlacedObject& piece : pieces)
                     scene.ride_fence_pieces[ride.base.id].push_back(piece.id);
@@ -1112,7 +1453,8 @@ namespace rct3::scene
                 scene.enclosure_panels.push_back(panel.id);
             built.insert(built.end(), std::make_move_iterator(enclosed.pieces.begin()), std::make_move_iterator(enclosed.pieces.end()));
             scene.leans.merge(enclosed.leans);
-            for (save::PlacedObject& piece : park::pool_objects(scene.pools, park::kPoolOverlay, largest_id()))
+            scene.pool_openings = pool_openings(scene);
+            for (save::PlacedObject& piece : park::pools::pool_objects(scene.pools, park::kPoolOverlay, largest_id(), scene.pool_openings))
             {
                 scene.pool_pieces.push_back(piece.id);
                 built.push_back(std::move(piece));
@@ -1128,88 +1470,93 @@ namespace rct3::scene
             add_ride_cars(device, scene, install, 0, scene.rides.rides.size());
             log.info("{} ride cars, {} on arms, {} vertices{}", scene.cars.size(), scene.arm_cars.size(), scene.car_meshes.own.size(), scene.car_lamps ? ", some with lamps" : "");
             refresh_pavings(scene);
-        }
-        if (options.flag(config::GameOption::OffMapTrees))
-        {
-            scene.off_map_stream = random::stream(seed, random::RandomStream::Scenery);
-            // The park's own list where it has one; grown round its trees where not.
-            const park::LandRings land = park::land_rings(scene.grid, scene.footpaths.water);
-            std::vector<save::PlacedObject> trees = world->skirt_trees.empty() ? park::off_map_trees(scene.objects, 0, scene.models, scene.grid, land, *scene.off_map_stream) : park::listed_off_map_trees(world->skirt_trees, scene.objects, scene.models, scene.grid, land);
-            log.info("{} trees beyond the edge", trees.size());
-            scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
-        }
-        begin(ParkLoadStage::Scene);
-        // The ground was drawn before the fences, walls and track were known; drawn again if one parts two paths
-        // or track, a ride or a stall lies under the ground.
-        scene.footpaths.walls = park::edge_walls(scene.objects, scene.models, scene.grid);
-        scene.footpaths.pavings_stale = scene.footpaths.pavings_stale || !park::buried_hollows(scene.objects, scene.models, scene.grid).empty() || std::ranges::any_of(scene.footpaths.paths, [&](const save::PathTile& p) {
-                                            return !p.elevation && std::ranges::any_of(std::array<std::uint8_t, 4> { 0, 1, 2, 3 }, [&](std::uint8_t side) {
-                                                const auto edge = park::edge_height(p, scene.grid, side);
-                                                return edge && park::walled(scene.footpaths.walls, { p.col, p.row }, side, *edge);
-                                            });
-                                        });
-        scene.blend_band = options.get(config::GameOption::DetailBlendBand);
-        scene.level_scales = level_scales(options);
-        place_objects(scene);
-        std::ranges::transform(scene.places.transforms, std::back_inserter(scene.anchors), [](const glm::mat4& m) { return glm::vec3(m[3]); });
-        scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted, scene.places.transforms, scene.places.models);
-        log.info("{} lamps", scene.lamps.size());
-        load_park_particles(device, scene.particles, install.root(), random::stream(seed, random::RandomStream::Particles));
-        load_park_rain(device, scene.rain, install);
-        // The tunes are the music files the install has, by name.
-        std::error_code missing;
-        for (const auto& file : std::filesystem::directory_iterator(install.root() / "Music", missing))
-            if (strings::equals_ignoring_case(file.path().extension().string(), ".wma"))
-                scene.tunes.push_back(file.path().stem().u16string());
-        std::ranges::sort(scene.tunes);
-        show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted, scene.places.transforms, scene.places.models));
-        show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
-        const render::VertexLayout crossing_layout { sizeof(CrossingVertex), kCrossingAttributes };
-        for (auto [pipeline, desc] : { std::pair { &scene.object_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" } }, std::pair { &scene.cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" } },
-                                       std::pair { &scene.see_through_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "see-through objects" } }, std::pair { &scene.crossing_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .label = "crossing objects" } },
-                                       std::pair { &scene.crossing_cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossingCutout, .layout = crossing_layout, .label = "crossing object cut-outs" } }, std::pair { &scene.crossing_see_through_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "crossing see-through objects" } },
-                                       std::pair { &scene.depth_only_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .colour_write = false, .label = "depth-only objects" } }, std::pair { &scene.crossing_depth_only_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .colour_write = false, .label = "crossing depth-only objects" } },
-                                       std::pair { &scene.chrome_pipeline, render::PipelineDesc { .shader = render::Shader::LitChrome, .layout = ground_layout, .label = "chrome objects" } }, std::pair { &scene.crossing_chrome_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossingChrome, .layout = crossing_layout, .label = "crossing chrome objects" } },
-                                       std::pair { &scene.waterfall_added_pipeline, render::PipelineDesc { .shader = render::Shader::LitLayerAdded, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "waterfalls" } }, std::pair { &scene.waterfall_multiplied_pipeline, render::PipelineDesc { .shader = render::Shader::LitLayerMultiplied, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "waterfall foam" } } })
-        {
-            auto made = device.create_pipeline(desc);
-            if (!made)
-                return fail(made.error());
-            *pipeline = *made;
-            // The models' front faces wind as the device's do (seen in the park: culling the other way turned
-            // slides inside out).
-            desc.cull = render::CullMode::Back;
-            auto front = device.create_pipeline(desc);
-            if (!front)
-                return fail(front.error());
-            scene.front_only[made->id] = *front;
-        }
-        // The surroundings chrome parts mirror, from the install's picture for chrome; without it they draw white.
-        if (const auto main = install.find(ui::game_skins::kMainOverlay))
-        {
-            if (auto overlay = ovl::Overlay::load(*main))
+            if (options.flag(config::GameOption::OffMapTrees))
             {
-                const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
-                std::map<std::string, ovl::RgbaImage, std::less<>> chrome;
-                for (const auto part : { maybe(&overlay->common()), overlay->unique() })
-                {
-                    if (!part)
-                        continue;
-                    for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
-                        if (auto image = item.texture && item.name == "EnvMapChrome" ? pixels.first_frame(*item.texture) : std::nullopt)
-                            chrome.insert_or_assign(std::string(park::kChromePicture), std::move(*image));
-                }
-                if (auto uploaded = ui::upload_textures(device, chrome))
-                    scene.object_textures.merge(*uploaded);
+                scene.off_map_stream = random::stream(seed, random::RandomStream::Scenery);
+                // The park's own list where it has one; grown round its trees where not.
+                const park::LandRings land = park::land_rings(scene.grid, scene.footpaths.water);
+                std::vector<save::PlacedObject> trees = world->skirt_trees.empty() ? park::off_map_trees(scene.objects, 0, scene.models, scene.grid, land, *scene.off_map_stream) : park::listed_off_map_trees(world->skirt_trees, scene.objects, scene.models, scene.grid, land);
+                log.info("{} trees beyond the edge", trees.size());
+                scene.objects.insert(scene.objects.end(), std::make_move_iterator(trees.begin()), std::make_move_iterator(trees.end()));
             }
         }
-        profiling::section("ObjectBuffers", [&] {
-            if (auto built = build_objects(scene, park::eye(scene.camera), { }, scene.blend_band, scene.level_scales, scene.show_supports, { }, park::chain_runs(scene.rides, scene.objects, scene.models)))
-                show_objects(device, scene, std::move(*built));
-        });
-        if (auto sky = load_sky(device, install, options, park::background_theme(world->sky_background), scene); !sky)
-            return fail(sky.error());
 
+        // ── 6. Scene: ground redraw, effects, music, pipelines, chrome, sky ──
+        begin(ParkLoadStage::Scene);
+        {
+            // The ground was drawn before the fences, walls and track were known; drawn again if one parts two paths
+            // or track, a ride or a stall lies under the ground.
+            scene.footpaths.walls = park::edge_walls(scene.objects, scene.models, scene.grid);
+            scene.footpaths.pavings_stale = scene.footpaths.pavings_stale || !park::track::buried_hollows(scene.objects, scene.models, scene.grid).empty() || std::ranges::any_of(scene.footpaths.paths, [&](const save::PathTile& p) {
+                                                return !p.elevation && std::ranges::any_of(park::kSides, [&](park::Side side) {
+                                                    const auto edge = park::path::edge_height(p, scene.grid, side);
+                                                    return edge && park::walled(scene.footpaths.walls, { p.col, p.row }, side, *edge);
+                                                });
+                                            });
+            scene.blend_band = options.get(config::GameOption::DetailBlendBand);
+            scene.level_scales = level_scales(options);
+            place_objects(scene);
+            std::ranges::transform(scene.places.transforms, std::back_inserter(scene.anchors), [](const glm::mat4& m) { return glm::vec3(m[3]); });
+            scene.lamps = park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted, scene.places.transforms, scene.places.models);
+            log.info("{} lamps", scene.lamps.size());
+            load_park_particles(device, scene.particles, install.root(), random::stream(seed, random::RandomStream::Particles));
+            load_park_rain(device, scene.rain, install);
+            // The tunes are the music files the install has, by name.
+            std::error_code missing;
+            for (const auto& file : std::filesystem::directory_iterator(install.root() / "Music", missing))
+                if (strings::equals_ignoring_case(file.path().extension().string(), ".wma"))
+                    scene.tunes.push_back(file.path().stem().u16string());
+            std::ranges::sort(scene.tunes);
+            show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted, scene.places.transforms, scene.places.models));
+            show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
+            const render::VertexLayout crossing_layout { sizeof(CrossingVertex), kCrossingAttributes };
+            for (auto [pipeline, desc] : { std::pair { &scene.object_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" } }, std::pair { &scene.cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" } },
+                                           std::pair { &scene.see_through_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "see-through objects" } }, std::pair { &scene.crossing_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .label = "crossing objects" } },
+                                           std::pair { &scene.crossing_cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossingCutout, .layout = crossing_layout, .label = "crossing object cut-outs" } }, std::pair { &scene.crossing_see_through_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "crossing see-through objects" } },
+                                           std::pair { &scene.depth_only_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .colour_write = false, .label = "depth-only objects" } }, std::pair { &scene.crossing_depth_only_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .colour_write = false, .label = "crossing depth-only objects" } },
+                                           std::pair { &scene.chrome_pipeline, render::PipelineDesc { .shader = render::Shader::LitChrome, .layout = ground_layout, .label = "chrome objects" } }, std::pair { &scene.crossing_chrome_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossingChrome, .layout = crossing_layout, .label = "crossing chrome objects" } },
+                                           std::pair { &scene.waterfall_added_pipeline, render::PipelineDesc { .shader = render::Shader::LitLayerAdded, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "waterfalls" } }, std::pair { &scene.waterfall_multiplied_pipeline, render::PipelineDesc { .shader = render::Shader::LitLayerMultiplied, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "waterfall foam" } } })
+            {
+                auto made = device.create_pipeline(desc);
+                if (!made)
+                    return fail(made.error());
+                *pipeline = *made;
+                // The models' front faces wind as the device's do (seen in the park: culling the other way turned
+                // slides inside out).
+                desc.cull = render::CullMode::Back;
+                auto front = device.create_pipeline(desc);
+                if (!front)
+                    return fail(front.error());
+                scene.front_only[made->id] = *front;
+            }
+            // The surroundings chrome parts mirror, from the install's picture for chrome; without it they draw white.
+            if (const auto main = install.find(ui::game_skins::kMainOverlay))
+            {
+                if (auto overlay = ovl::Overlay::load(*main))
+                {
+                    const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
+                    std::map<std::string, ovl::RgbaImage, std::less<>> chrome;
+                    for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+                    {
+                        if (!part)
+                            continue;
+                        for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+                            if (auto image = item.texture && item.name == "EnvMapChrome" ? pixels.first_frame(*item.texture) : std::nullopt)
+                                chrome.insert_or_assign(std::string(park::kChromePicture), std::move(*image));
+                    }
+                    if (auto uploaded = ui::upload_textures(device, chrome))
+                        scene.object_textures.merge(*uploaded);
+                }
+            }
+            profiling::section("ObjectBuffers", [&] {
+                if (auto built = build_objects(scene, park::eye(scene.camera), { }, scene.blend_band, scene.level_scales, scene.show_supports, { }, park::chain_runs(scene.rides, scene.objects, scene.models), flow_fades(scene)))
+                    show_objects(device, scene, std::move(*built));
+            });
+            if (auto sky = load_sky(device, install, options, park::background_theme(world->sky_background), scene); !sky)
+                return fail(sky.error());
+        }
+
+        // ── 7. Park state ──
         {
             const auto& model = park_model;
             scene.park = simulation::park_state(model ? &*model : nullptr, *world);
@@ -1246,280 +1593,59 @@ namespace rct3::scene
                 }
             }
         }
-        // Under everything else, as part of the park.
-        scene.desktop->root().add<ui::WorldLabels>(std::string(kHeightsName)).stays_behind = true;
-        scene.desktop->root().add<ui::MoneyFloaters>(std::string(kMoneyName)).stays_behind = true;
-        // Behind the bar, which it hangs from.
-        // Under the bar, even while it is dragged.
-        scene.desktop->root().add<ui::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(palette), strings).stays_behind = true;
-        auto& tools = scene.desktop->root().add<ui::ToolRow>(std::string(kToolsName), skins::tool_row_style(palette), strings);
-        // Only these menu items do anything yet; the rest show faded until their tools exist.
-        for (std::size_t t = 0; t < ui::kParkToolCount; ++t)
+
+        // ── 8. UI layout ──
         {
-            for (const ui::ToolMenuItem& entry : ui::tool_menu(static_cast<ui::ParkTool>(t)))
-                tools.set_available(
-                    entry.item,
-                    entry.item == ui::ToolItem::DeleteOne || entry.item == ui::ToolItem::DeleteArea || entry.item == ui::ToolItem::ShapeGround || entry.item == ui::ToolItem::PaintGround || entry.item == ui::ToolItem::Water || entry.item == ui::ToolItem::Waterfalls || entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Grid || entry.item == ui::ToolItem::Contours || entry.item == ui::ToolItem::PathHeights
-                        || entry.item == ui::ToolItem::RideHeights || entry.item == ui::ToolItem::Supports || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || entry.item == ui::ToolItem::SavedStructures || ui::build_list(entry.item) || ui::management_topic(entry.item));
+            // Under everything else, as part of the park.
+            scene.desktop->root().add<ui::WorldLabels>(std::string(kHeightsName)).stays_behind = true;
+            scene.desktop->root().add<ui::MoneyFloaters>(std::string(kMoneyName)).stays_behind = true;
+            // Behind the bar, which it hangs from.
+            // Under the bar, even while it is dragged.
+            scene.desktop->root().add<ui::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(palette), strings).stays_behind = true;
+            auto& tools = scene.desktop->root().add<ui::ToolRow>(std::string(kToolsName), skins::tool_row_style(palette), strings);
+            // Only these menu items do anything yet; the rest show faded until their tools exist.
+            for (std::size_t t = 0; t < ui::kParkToolCount; ++t)
+            {
+                for (const ui::ToolMenuItem& entry : ui::tool_menu(static_cast<ui::ParkTool>(t)))
+                    tools.set_available(
+                        entry.item,
+                        entry.item == ui::ToolItem::DeleteOne || entry.item == ui::ToolItem::DeleteArea || entry.item == ui::ToolItem::ShapeGround || entry.item == ui::ToolItem::PaintGround || entry.item == ui::ToolItem::Water || entry.item == ui::ToolItem::Waterfalls || entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Grid || entry.item == ui::ToolItem::Contours || entry.item == ui::ToolItem::PathHeights
+                            || entry.item == ui::ToolItem::RideHeights || entry.item == ui::ToolItem::Supports || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || entry.item == ui::ToolItem::SavedStructures || ui::build_list(entry.item) || ui::management_topic(entry.item));
+            }
+            scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(palette), strings);
+            // Both round panels stand over the tool row, as the path and land panels do.
+            ui::InfoPanelStyle info = skins::info_panel_style(palette);
+            info.raise = skins::kOverToolRow - ui::info_panel::kDiscMargin;
+            scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), info);
+            ui::InfoPanelStyle placing = std::move(info);
+            placing.left = true;
+            scene.desktop->root().add<ui::InfoPanel>(std::string(kDesignPlacingName), placing);
+            scene.desktop->root().add<ui::InfoPanel>(std::string(kPlacingName), std::move(placing));
+            scene.desktop->root().add<ui::FootpathPanel>(std::string(kFootpathPanelName), skins::footpath_panel_style(palette), strings);
         }
-        scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(palette), strings);
-        // Both round panels stand over the tool row, as the path and land panels do.
-        ui::InfoPanelStyle info = skins::info_panel_style(palette);
-        info.raise = skins::kOverToolRow - ui::info_panel::kDiscMargin;
-        scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), info);
-        ui::InfoPanelStyle placing = std::move(info);
-        placing.left = true;
-        scene.desktop->root().add<ui::InfoPanel>(std::string(kPlacingName), std::move(placing));
-        scene.desktop->root().add<ui::FootpathPanel>(std::string(kFootpathPanelName), skins::footpath_panel_style(palette), strings);
+
+        // ── 9. People and simulation ──
         scene.attractions = park::attraction_objects(scene.rides, scene.objects);
         for (std::size_t k = 0; k < scene.objects.size(); ++k)
             animate_scenery(device, scene, k);
-        auto people = profiling::section("ReadPeople", [&] { return save::load_people(*file, index); });
-        // Saves made before people were kept start them again from the original park.
-        const parkfile::SavedPeople* kept = saved && saved->people ? &*saved->people : nullptr;
-        if (people && kept != nullptr)
-            *people = kept->model;
-        if (people)
-        {
-            scene.people = std::move(*people);
-            load_people_models(device, scene, install, seed);
-            load_zoo_animals(scene, install);
-            profiling::section("Simulation", [&] {
-                scene.sim.seed = seed;
-                scene.sim.ratings = ratings;
-                simulation::import_paths(scene.sim, world->paths, scene.grid);
-                // The saved ones by their place in scene.people, null for those not drawn.
-                const auto by_look = [](std::size_t count, std::span<const entt::entity> placed, const auto& records) {
-                    std::vector<entt::entity> out(count, entt::null);
-                    for (std::size_t i = 0; i < placed.size() && i < records.size(); ++i)
-                    {
-                        if (const std::int32_t look = records[i].look; look >= 0 && std::cmp_less(look, count))
-                            out[static_cast<std::size_t>(look)] = placed[i];
-                    }
-                    return out;
-                };
-                const auto placed = kept != nullptr ? parkfile::place_guests(scene.sim, *kept) : std::vector<entt::entity> { };
-                const auto guests = kept != nullptr ? by_look(scene.people.guests.size(), placed, kept->guests) : simulation::import_guests(scene.sim, scene.people);
-                simulation::import_stalls(scene.sim, scene.rides, scene.carried);
-                simulation::import_pools(scene.sim, scene.pools, scene.scenery_pool_extras);
-                const auto timings = simulation::flat_ride_timings(scene.rides, scene.objects, [&](const save::PlacedObject& o) -> const park::ObjectModel* {
-                    const auto found = scene.models.find(park::model_ref(o));
-                    return found != scene.models.end() ? &found->second : nullptr;
-                });
-                // The courses of the rides whose trains go round, for the simulation to run them on.
-                std::map<std::string, std::optional<park::PieceCatalogue>, std::less<>> catalogues;
-                const park::PieceShapeOf shape_of = [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> std::optional<const park::PieceShape&> {
-                    auto [at, added] = catalogues.try_emplace(object.overlay);
-                    if (added)
-                    {
-                        if (const auto file = install.find(std::format("{}.common.ovl", object.overlay)))
-                        {
-                            if (auto loaded = park::load_piece_catalogue(*file, object.overlay))
-                                at->second = std::move(*loaded);
-                        }
-                    }
-                    return at->second ? park::shape_named(*at->second, piece.symbol) : std::nullopt;
-                };
-                std::vector<std::optional<simulation::Coaster>> coasters(scene.rides.rides.size());
-                scene.courses.assign(scene.rides.rides.size(), std::nullopt);
-                for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
-                {
-                    if (auto course = park::track_course(scene.rides.rides[i], scene.objects, scene.models, scene.grid, scene.fitted, shape_of))
-                    {
-                        coasters[i] = simulation::coaster_of(*course, scene.rides.rides[i]);
-                        scene.courses[i] = std::move(*course);
-                    }
-                }
-                const auto guests_room = simulation::ride_guests(scene.rides, [&](std::string_view path) { return install.find(path); });
-                scene.ride_entities = simulation::import_rides(scene.sim, scene.rides, timings, coasters, guests_room);
-                for (std::size_t i = 0; const auto seating : simulation::ride_seatings(scene.rides, [&](std::string_view path) { return install.find(path); }))
-                    if (const entt::entity e = scene.ride_entities[i++]; seating && e != entt::null)
-                        scene.ride_seatings[e] = static_cast<std::uint8_t>(*seating);
-                for (const auto kind : simulation::ride_kinds(scene.rides, [&](std::string_view path) { return install.find(path); }))
-                    scene.ride_groups.push_back(kind ? simulation::ride_group(*kind) : simulation::RideGroup::Other);
-                simulation::import_boats(scene.sim, scene.rides, scene.ride_entities, scene.courses, scene.grid, world->water.bodies, boat_obstacles(scene));
-                // Each kind of boat handles as its train sets it.
-                for (std::size_t k = 0; k < scene.cars.size(); ++k)
-                    if (const std::size_t ride = scene.car_spots[k].ride; ride < scene.ride_entities.size() && scene.ride_entities[ride] != entt::null)
-                        if (auto* boats = scene.sim.registry.try_get<simulation::Boats>(scene.ride_entities[ride]))
-                            if (const auto model = scene.models.find(park::model_ref(scene.cars[k])); model != scene.models.end() && model->second.boat_handling.turn_most > 0)
-                                boats->handling = model->second.boat_handling;
-                simulation::link_stations(scene.sim, scene.ride_entities, scene.courses, scene.grid);
-                for (const save::RideShow& show : scene.shows)
-                    stage_show(scene, show);
-                for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
-                {
-                    seat_flat_ride(device, scene, i);
-                    board_tracked_ride(device, scene, install, i);
-                }
-                simulation::start_guests(scene.sim);
-                if (kept != nullptr)
-                {
-                    parkfile::place_parties(scene.sim, *kept, placed);
-                    parkfile::place_swimmers(scene.sim, *kept, placed);
-                }
-                else
-                {
-                    simulation::board_saved_riders(scene.sim, scene.people, guests, scene.rides, scene.ride_entities);
-                    simulation::resume_saved_swimmers(scene.sim, scene.people, guests);
-                    simulation::import_parties(scene.sim, scene.people, guests);
-                }
-                simulation::import_litter(scene.sim, scene.people, scene.park.time);
-                // The benches the game's park lists, and those placed in ours, which it does not.
-                // Each seats as many as its model has seats for.
-                std::vector<std::uint64_t> benches = world->benches;
-                std::unordered_map<std::uint64_t, std::size_t> seats;
-                for (const save::PlacedObject& o : scene.objects)
-                {
-                    const auto model = scene.models.find(park::model_ref(o));
-                    if (o.hidden || model == scene.models.end() || model->second.category != std::to_underlying(park::ItemCategory::Bench))
-                        continue;
-                    seats[o.id] = model->second.seat_places.size();
-                    if (!std::ranges::contains(benches, o.id))
-                        benches.push_back(o.id);
-                }
-                simulation::import_path_items(scene.sim, scene.objects, scene.bins, benches, scene.signs);
-                simulation::import_flower_beds(scene.sim, scene.objects, saved && !saved->flower_beds.empty() ? saved->flower_beds : world->flower_beds, [&](const save::PlacedObject& o) {
-                    const auto model = scene.models.find(park::model_ref(o));
-                    return model != scene.models.end() ? model->second.water_capacity : std::nullopt;
-                });
-                // What vandals broke stays broken until mended.
-                for (auto [e, item] : scene.sim.registry.view<simulation::PathItem>().each())
-                {
-                    item.broken = scene.broken_objects.contains(item.object);
-                    if (const auto bench = seats.find(item.object); bench != seats.end() && bench->second > 0)
-                        item.seats = static_cast<std::uint8_t>(std::min<std::size_t>(bench->second, 255));
-                }
-                for (const save::PlacedObject& o : scene.objects)
-                    if (const auto wall = park::edge_wall(o, scene.models, scene.grid))
-                        simulation::set_wall(scene.sim, *wall, true);
-                simulation::import_cover(scene.sim, [&](std::span<const glm::vec3> points) { return park::overheads(points, scene.objects, scene.models, scene.grid, scene.fitted); });
-                // Each kind's rules read once, however many of its rides the park has.
-                std::map<std::pair<std::string, std::string>, park::TrackRules> kinds;
-                for (const save::Ride& ride : scene.rides.rides)
-                {
-                    const auto key = std::pair { ride.base.overlay_path, ride.base.symbol };
-                    if (ride.kind == save::RideKind::Tracked && !kinds.contains(key))
-                    {
-                        const auto file = install.find(std::format("{}.common.ovl", ride.base.overlay_path));
-                        kinds[key] = file ? park::load_track_rules(*file, ride.base.symbol) : park::TrackRules { };
-                    }
-                    scene.track_rules.push_back(kinds.contains(key) ? kinds[key] : park::TrackRules { });
-                }
-                simulation::import_facilities(scene.sim, scene.rides, [&](const save::Ride& ride) -> std::optional<std::uint32_t> {
-                    const auto file = install.find(std::format("{}.common.ovl", ride.base.overlay_path));
-                    return file ? park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))) : std::nullopt;
-                });
-                simulation::import_sights(scene.sim, scene.objects, [&](const save::PlacedObject& o) -> std::optional<simulation::PathItemKind> {
-                    const auto model = scene.models.find(park::model_ref(o));
-                    return model == scene.models.end() ? std::nullopt : simulation::sight_of(model->second.category, model->second.feature);
-                });
-                simulation::import_scenery(scene.sim, scene.objects, [&](const save::PlacedObject& o) {
-                    const auto model = scene.models.find(park::model_ref(o));
-                    return model == scene.models.end() ? 0.0f : simulation::scenery_weight(model->second.category, model->second.feature);
-                });
-                simulation::import_gate(scene.sim, scene.objects, [&](const save::PlacedObject& o) -> std::optional<std::array<std::int32_t, 2>> {
-                    const auto model = scene.models.find(park::model_ref(o));
-                    if (model == scene.models.end() || model->second.category != std::to_underlying(park::ItemCategory::ParkEntrance))
-                        return std::nullopt;
-                    return model->second.squares;
-                });
-                simulation::keep_staff_in(scene.sim, scene.grid);
-                for (auto [e, gate] : scene.sim.registry.view<simulation::ParkGate>().each())
-                    gate.closed = park_model && park_model->has_park && !park_model->park.flags.has(save::ParkFlag::Open);
-                if (park_model && park_model->group_mix)
-                    simulation::import_party_mix(scene.sim, *park_model->group_mix);
-                const auto placed_staff = kept != nullptr ? parkfile::place_staff(scene.sim, *kept) : std::vector<entt::entity> { };
-                const auto staff = kept != nullptr ? by_look(scene.people.staff.size(), placed_staff, kept->staff) : simulation::import_staff(scene.sim, scene.people);
-                // The animals as our save kept them, else as the original park did.
-                if (kept != nullptr && saved->animals)
-                    parkfile::place_animals(scene.sim, *saved->animals, placed_staff);
-                else
-                {
-                    const save::TerrainGrid& g = scene.grid;
-                    const auto enclosure_at = [&](glm::vec2 p) {
-                        const auto col = g.tile_size_x > 0 ? static_cast<std::int32_t>(std::floor((p.x - g.origin_x) / g.tile_size_x)) : -1;
-                        const auto row = g.tile_size_z > 0 ? static_cast<std::int32_t>(std::floor((p.y - g.origin_z) / g.tile_size_z)) : -1;
-                        return scene.enclosures.at(col, row);
-                    };
-                    // The park's own animal houses, beside the keepers' huts the park placed with them.
-                    // shortcut: a house's ground is taken as its model's tiles round the tile it is placed on, with
-                    // its troughs there too; read the saved troughs' places if animals end up eating off the house.
-                    constexpr std::string_view kShelters = "Enclosures\\Shelters\\Shelters"; // As the park names it
-                    constexpr std::string_view kHut = "WardensShed";
-                    std::vector<simulation::AnimalHouse> houses;
-                    for (const save::PlacedObject& o : scene.objects)
-                    {
-                        // The park keeps two records of each house, alike but for their ids.
-                        if (o.overlay != kShelters || o.symbol == kHut || std::ranges::any_of(houses, [&](const simulation::AnimalHouse& h) { return h.troughs == tile_point(g, { o.col, o.row }); }))
-                            continue;
-                        const auto model = scene.models.find(park::model_key(o));
-                        std::array<std::int32_t, 2> span = model != scene.models.end() ? model->second.squares : std::array<std::int32_t, 2> { 1, 1 };
-                        if (o.rotation % 2 != 0)
-                            std::swap(span[0], span[1]);
-                        const glm::vec3 middle = tile_point(g, { o.col, o.row });
-                        const glm::vec2 half { static_cast<float>(span[0]) * g.tile_size_x / 2, static_cast<float>(span[1]) * g.tile_size_z / 2 };
-                        simulation::AnimalHouse house { .object = o.id, .enclosure = enclosure_at({ middle.x, middle.z }), .troughs = middle, .low = glm::vec2 { middle.x, middle.z } - half, .high = glm::vec2 { middle.x, middle.z } + half };
-                        const auto hut = std::ranges::min_element(scene.objects, { }, [&](const save::PlacedObject& h) { return h.symbol == kHut ? std::abs(h.col - o.col) + std::abs(h.row - o.row) : std::numeric_limits<std::int32_t>::max(); });
-                        if (hut != scene.objects.end() && hut->symbol == kHut && std::abs(hut->col - o.col) + std::abs(hut->row - o.row) <= span[0] + span[1])
-                            house.hut = hut->id;
-                        houses.push_back(house);
-                    }
-                    // Each keeper keeps the enclosure the park gave them.
-                    std::vector<std::pair<entt::entity, std::int32_t>> keepers;
-                    for (std::size_t i = 0; kept == nullptr && i < scene.people.staff.size() && i < staff.size(); ++i)
-                        if (const auto* work = std::get_if<save::KeeperWork>(&scene.people.staff[i].work); work != nullptr && staff[i] != entt::null)
-                            keepers.emplace_back(staff[i], work->enclosure_id);
-                    simulation::import_animal_houses(scene.sim, houses, keepers);
-                    simulation::import_animals(scene.sim, scene.people.zoo_animals, enclosure_at);
-                }
-                if (!scene.sim.registry.view<const simulation::Animal>().empty())
-                {
-                    const save::PlacedObject crate = animal_crate();
-                    load_models(install, std::span(&crate, 1), false, scene.models, scene.pictures);
-                    animals_changed(device, scene);
-                }
-                for (const auto [e, upkeep] : scene.sim.registry.view<const simulation::Upkeep>().each())
-                {
-                    if (upkeep.broken)
-                        scene.broken_rides.push_back({ e });
-                    if (upkeep.reliability.value < kLowReliability)
-                        scene.unreliable_rides.push_back(e);
-                }
-                scene.known_guests.insert(guests.begin(), guests.end());
-                for (ShownPerson& p : scene.shown_people)
-                {
-                    if (!p.staff && p.saved < guests.size() && guests[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(guests[p.saved]))
-                    {
-                        p.guest = guests[p.saved];
-                        p.swimwear = simulation::in_swimwear(scene.sim.registry, p.guest); // As the simulation has them, not as saved
-                    }
-                    // A vendor stands in their booth as saved, serving the riders handing over their tickets, and a
-                    // lifeguard sits in their chair.
-                    else if (p.staff && p.saved < staff.size() && staff[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Staff>(staff[p.saved]))
-                    {
-                        p.guest = staff[p.saved];
-                        scene.known_guests.insert(p.guest); // A keeper is not hired again
-                    }
-                }
-            });
-        }
-        else
-            log.warning("people: {}", save::to_string(people.error()));
+        start_simulation(device, scene, install, *file, index, saved, *world, park_model, seed, ratings);
 
-        auto tutorial = save::load_tutorial(*file);
-        if (!tutorial)
-            log.warning("tutorial: {}", save::to_string(tutorial.error()));
-        else if (*tutorial)
-            scene.desktop->root().add<ui::TutorialGuide>(std::string(kGuideName), skins::tutorial_guide_style(palette), strings, std::move(**tutorial));
-        scene.desktop->tooltip_style = skins::tooltip_style(palette);
-        scene.map = park_map(scene.grid, world->paths, world->water, scene.objects, scene.models, scene.fitted, scene.attractions, scene.rides, images, install);
-        log.info("{}: {} by {} tiles", path.filename().string(), scene.grid.width, scene.grid.height);
-        const auto drawn = std::ranges::count_if(scene.levels.steady, [](std::int8_t l) { return l != park::kNotDrawn; }) + std::ranges::count_if(scene.levels.finer, [](std::int8_t l) { return l != park::kNotDrawn; });
-        const auto modelled = std::ranges::count_if(scene.objects, [&](const save::PlacedObject& o) { return !o.hidden && scene.models.contains(park::model_key(o)); });
-        const auto shown = std::ranges::count_if(scene.objects, [](const save::PlacedObject& o) { return !o.hidden; });
-        log.info("{} objects in view, {} without a model, {} models, {} pictures", drawn, shown - modelled, scene.models.size(), scene.object_textures.size());
-        watch_supports(scene);
+        // ── 10. Tutorial, map and summary ──
+        {
+            auto tutorial = save::load_tutorial(*file);
+            if (!tutorial)
+                log.warning("tutorial: {}", save::to_string(tutorial.error()));
+            else if (*tutorial)
+                scene.desktop->root().add<ui::TutorialGuide>(std::string(kGuideName), skins::tutorial_guide_style(palette), strings, std::move(**tutorial));
+            scene.desktop->tooltip_style = skins::tooltip_style(palette);
+            scene.map = park_map(scene.grid, world->paths, world->water, scene.objects, scene.models, scene.fitted, scene.attractions, scene.rides, images, install);
+            log.info("{}: {} by {} tiles", path.filename().string(), scene.grid.width, scene.grid.height);
+            const auto drawn = std::ranges::count_if(scene.levels.steady, [](std::int8_t l) { return l != park::kNotDrawn; }) + std::ranges::count_if(scene.levels.finer, [](std::int8_t l) { return l != park::kNotDrawn; });
+            const auto modelled = std::ranges::count_if(scene.objects, [&](const save::PlacedObject& o) { return !o.hidden && scene.models.contains(park::model_key(o)); });
+            const auto shown = std::ranges::count_if(scene.objects, [](const save::PlacedObject& o) { return !o.hidden; });
+            log.info("{} objects in view, {} without a model, {} models, {} pictures", drawn, shown - modelled, scene.models.size(), scene.object_textures.size());
+            watch_supports(scene);
+        }
         return scene;
     }
 

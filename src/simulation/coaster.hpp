@@ -8,7 +8,10 @@
 // station speed, slowing it there too when it comes back. Brakes slow it down to their speed and no further,
 // each car over one braking it, so a short run of brakes may not bring a fast train all the way down. Block brakes
 // do the same and push a slower train up to their speed; one held for the block ahead brakes it to a stop. A ride
-// with a fixed speed moves at that speed everywhere. On a shuttle the train runs back and forth between the
+// with a fixed speed moves at that speed everywhere. Boosters' jets shove a car on hard while it is slower than their
+// speed, as a water coaster's climbs have them. A pool slide's car is not carried off its platform but eased off at a
+// walk, the slope taking it from there. In its turns an open slide's car swings up the trough's wall, as far as the
+// turn's pull outweighs gravity and the wall's friction; swung up past the rims it flies out and crashes. On a shuttle the train runs back and forth between the
 // track's ends, counting its passes through the station. A train that runs off either end of a track with two
 // ends, a shuttle's or an unfinished circuit's, crashes. The speeds are the ride's own, as its park keeps them.
 //
@@ -20,6 +23,7 @@
 #include "save/model/rides.hpp"
 #include "simulation/crash.hpp"
 
+#include <array>
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -36,6 +40,7 @@ namespace rct3::simulation
         BlockBrake, ///< Slows or pushes the train to the stretch's brake speed; ends a block, where a train may be held
         Launch,     ///< Goes on pushing a launched train as hard as its platform began to
         Brake,      ///< Slows the train to the stretch's brake speed
+        Booster,    ///< Jets push the cars over it up to the stretch's brake speed, hard, the way they are going
     };
 
     /// How a train on a track with two ends runs back and forth through its station.
@@ -47,6 +52,50 @@ namespace rct3::simulation
         Tower, ///< Pushed up, braked as it falls back into the station and pushed up again, softer
         Drop,  ///< As a tower, but held at the top of its first climb before it falls
     };
+
+    /// How a pool slide's car rides its open trough, as its car file has it: a turn swings it up the trough's wall,
+    /// gravity swings it back down, and taken too fast it goes over the rim.
+    struct Trough
+    {
+        float damping = 0;  ///< Per second, how fast its swing dies down
+        float centring = 0; ///< Per second, how fast it is drawn back to the trough's middle
+        float friction = 0; ///< Of the car on the wall, held back as it swings by this much of the weight pressing it there
+        /// Metres from the middle of its swing, on the track's line, down to the car: its shape's pivot height. A
+        /// body slide's car's, matching one under way in a saved park, unless the car's shape gives its own.
+        float length = 0.77f;
+        float pivot = 0; ///< Metres up from where the car is drawn to the middle of its swing on the car's shape
+    };
+
+    /// Of a car run off a pool slide's open end: flying on as fast as it left, falling, then afloat where it came
+    /// down, drifting to a stop, till it sinks out of sight.
+    struct Flight
+    {
+        glm::vec3 from { };     ///< Where it left the track
+        glm::vec3 way { };      ///< The track's way there
+        glm::vec3 at { };       ///< Where it is now
+        glm::vec3 velocity { }; ///< Metres a second
+        float water = 0;        ///< Height it comes down at: the pool's water, or the ground with no pool under it
+        float afloat = -1;      ///< Seconds since it came down; below 0 while it flies
+        float off = 0;          ///< Seconds since it left the track
+        float speed = 0;        ///< Metres a second it left the track at, along `way`
+        /// Metres across the ground from `from` it goes at most: where the far wall of the pool it comes down in
+        /// stops it, going on only down.
+        float reach = std::numeric_limits<float>::infinity();
+    };
+
+    /// Seconds after it left the track a car off a slide's end is gone. Measured: a capture of the original game,
+    /// where such a car is back on its track ten seconds after it left it.
+    inline constexpr float kGone = 10;
+
+    /// Moves `flight` on by `seconds`: flying it falls, and comes down on its water; afloat it drifts on slowing
+    /// and sinks in its last second. False once kGone seconds have passed since it left the track and it is gone.
+    /// Where it is comes out the same however its time is cut into steps, so a flight can be flown again from its
+    /// start to any moment of it.
+    bool fly(Flight& flight, float seconds);
+
+    /// Moves a car drawn at `flight`'s start, as it left the track, to where the flight has it: nose along its
+    /// way while it flies, level once afloat.
+    [[nodiscard]] glm::mat4 flown(const Flight& flight, const glm::mat4& place);
 
     struct Coaster
     {
@@ -82,9 +131,23 @@ namespace rct3::simulation
         /// The track's end joins its start. When it does not, as on one left unfinished, a train going round
         /// runs off its end.
         bool closed = true;
+        /// Of a track with two ends, the far end is a pool slide's: a train running off it drops its riders
+        /// into the pool and is gone, not crashed, till it is back at the station.
+        bool splash_out = false;
         /// A test train shown while the track is built: it crashes as any train does, but its wrecks hurt no one
         /// and the crash is not the park's
         bool ghost = false;
+        /// Of a pool slide's car, how it swings in its trough; nothing for every other train.
+        std::optional<Trough> trough;
+        std::vector<bool> covered { };               ///< By point: the stretch from it is a tube, which no car goes out of
+        std::vector<bool> steady { };                ///< By point: on the stretch from it a slide's car swings by its weight alone
+        std::vector<float> drop_offs { };            ///< As park::track::TrackCourse::drop_offs
+        std::vector<std::array<float, 2>> wades { }; ///< As park::track::TrackCourse::wades: in them the pool's water carries the car on slowly
+        /// What holds it back as it goes: rolling, as this much of its weight on the track, and the air, as this
+        /// much of its speed squared, in m/s² for each (m/s)². Those of a train in saved parks' tested coasters
+        /// unless its train's file gives its own.
+        float rolling = 0.003f;
+        float air = 0.0004f;
         // The train
         bool running = false;
         float at = 0;              ///< Distance of the front of the train
@@ -94,13 +157,19 @@ namespace rct3::simulation
         float speed = 0;           ///< Along the track
         float slow = 0;            ///< Seconds it has been all but stopped away from a chain or station
         bool launched = false;     ///< Its tail has left the platform since it set off, so it is pushed no more there
+        float lean = 0;            ///< Of a slide's car, radians it has swung up the trough's wall from the bottom, to its right
+        float lean_rate = 0;       ///< How fast that swing is changing, in radians a second
         // A shuttle's train
         int passed = 0;   ///< Times it has come into the station since it set off
         float push = 0;   ///< The speed it is being pushed to, negative backwards; 0 when it is not
         float pushed = 0; ///< Metres it has moved under that push
         float held = 0;   ///< Seconds it has been held at the top of its climb
-        /// Run off an end of its track: stopped running, where it left the track and at the speed it left at
+        /// Run off an end of its track, or a slide's car over its trough's rim: stopped running, where it left the
+        /// track and at the speed it left at
         bool crashed = false;
+        /// Run off the end of a pool slide: off the track, where it left it and at the speed it left at
+        bool splashed = false;
+        std::optional<Flight> flight; ///< Of a car run off the end of a pool slide, till it is gone
 
         [[nodiscard]] float length() const
         {
@@ -131,7 +200,8 @@ namespace rct3::simulation
     /// Moves `coaster`'s running train on by `seconds`, but no further than `room` (the clear track ahead of it,
     /// up to the train in front), where it stops and waits; whether it has come round to its start (on a shuttle,
     /// back to it for the last time), where it stops. At one of its other stops it stops too, no longer running,
-    /// but this gives false. A train that runs off an end of a track with two ends is left crashed instead.
+    /// but this gives false. A train that runs off an end of a track with two ends is left crashed instead, or
+    /// off the end of a pool slide left splashed, which counts as coming round.
     bool drive(Coaster& coaster, float seconds, float room = std::numeric_limits<float>::infinity());
 
     /// What riders of a train feel at its front, from the bend of the track at its speed and gravity: in g, up

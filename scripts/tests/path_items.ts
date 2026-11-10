@@ -134,8 +134,8 @@ build.stop();
 await frames(1);
 
 // Through the interface now: the bench's row in the path extras list. A right drag moves the camera and keeps the
-// placing and its ghost; a still right click puts it away; its row picks it again, also once the tool row's
-// button has been pressed again while its menu is out.
+// placing and its ghost; put away, its row picks it again, also once the tool row's button has been pressed again
+// while its menu is out.
 const scenery = `tools/Scenery/${ui.children("tools/Scenery")![0]}`;
 const extras = "tools/Scenery/Obj_Scenery_PathExtras";
 const bench = "build_list/content/list/view/content/Bench";
@@ -169,13 +169,14 @@ expect(build.placing() !== undefined, "the bench still placing after a right dra
 await hover(road[1].col, road[1].row);
 expect(build.placing()?.ghost === true, "the bench's ghost after a right drag");
 await screenshot("path_items_after_right_drag");
-const still = await hover(road[1].col, road[1].row);
-await pointer.click(still.x, still.y, "right");
-expect(build.placing() === undefined, "a right click to put the placing away");
+build.stop();
+await frames(1);
+expect(build.placing() === undefined, "the placing put away");
 await pickBench();
 await hover(road[1].col, road[1].row);
 expect(build.placing()?.ghost === true, "the bench picked again from its row");
-await pointer.click(still.x, still.y, "right");
+build.stop();
+await frames(1);
 // The tool row's button again while its menu is out folds the menu; the list's row still picks.
 if (!ui.find(extras))
     await ui.click(scenery);

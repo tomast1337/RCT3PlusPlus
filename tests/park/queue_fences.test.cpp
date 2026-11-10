@@ -2,6 +2,7 @@
 #include "park/queue_fences.hpp"
 
 #include "park/object_placement.hpp"
+#include "park/path/furniture.hpp"
 
 #include <doctest/doctest.h>
 
@@ -45,12 +46,13 @@ namespace
 
 TEST_CASE("an edge piece is turned to face out of its side")
 {
-    for (const TileSide side : { TileSide::Back, TileSide::Right, TileSide::Front, TileSide::Left })
+    for (const Side side : ground::kSidesFromRowBefore)
     {
         const glm::vec2 x = turned_x(edge_turns(side));
-        const auto [dc, dr] = side_step(side);
+        const auto [dc, dr] = side.step();
         CHECK(x.x == doctest::Approx(static_cast<float>(dc)));
         CHECK(x.y == doctest::Approx(static_cast<float>(dr)));
+        CHECK(edge_turns(side) == turn_facing(side)); // An edge piece counts its turns as path furniture does
     }
 }
 
@@ -59,8 +61,8 @@ TEST_CASE("a ground queue is fenced on every side but its two open ones, standin
     const std::vector<save::PathTile> paths { queue(0, 1, save::kSlopeOnGround) }; // Open towards -x and +x
     const auto fences = queue_fences(paths, flat_grid(), 100).pieces;
     REQUIRE(fences.size() == 2);
-    CHECK(fences[0].rotation == edge_turns(TileSide::Back));
-    CHECK(fences[1].rotation == edge_turns(TileSide::Front));
+    CHECK(fences[0].rotation == edge_turns(Side::kRowBefore).value);
+    CHECK(fences[1].rotation == edge_turns(Side::kNextRow).value);
     for (const save::PlacedObject& f : fences)
     {
         CHECK(f.symbol == "Rail");
@@ -110,8 +112,8 @@ TEST_CASE("a sloping queue is fenced along its slope, halfway up and leaning wit
     REQUIRE(falling.pieces.size() == 2);
     for (const save::PlacedObject& f : falling.pieces)
     {
-        CHECK(f.rotation != edge_turns(TileSide::Left));
-        CHECK(f.rotation != edge_turns(TileSide::Right));
+        CHECK(f.rotation != edge_turns(Side::kColBefore).value);
+        CHECK(f.rotation != edge_turns(Side::kNextCol).value);
         CHECK(f.base_height == 4);
         CHECK(f.height_adjust == doctest::Approx(1.0f));
         CHECK(f.force_absolute_height);

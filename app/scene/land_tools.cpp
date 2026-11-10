@@ -5,10 +5,10 @@
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
 #include "park/footpath_builder.hpp"
-#include "park/ground_brush.hpp"
+#include "park/ground/brush.hpp"
 #include "park/object_pick.hpp"
-#include "park/ride_placement.hpp"
-#include "park/water_fill.hpp"
+#include "park/ride/placement.hpp"
+#include "park/water/fill.hpp"
 #include "park/waterfall_making.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "scene/park_footpaths.hpp"
@@ -35,7 +35,7 @@ namespace rct3::scene
 
     namespace
     {
-        // Prices, in hundredths: painting one tile (moving the ground is park::kShapeCost).
+        // Prices, in hundredths: painting one tile (moving the ground is park::ground::kShapeCost).
         constexpr std::int32_t kPaintCost = 50;
         constexpr float kSmoothRate = 2.5f;   ///< Of the way to where a smoothing brush wants the ground, a second
         constexpr float kSmoothPass = 0.05f;  ///< Seconds between smoothing passes
@@ -87,14 +87,14 @@ namespace rct3::scene
         };
         struct SmoothTool
         {
-            park::GroundSmoothing tool;
+            park::ground::GroundSmoothing tool;
             Level level = Level::None;
         };
         constexpr std::array kSmoothTools {
-            SmoothTool { park::GroundSmoothing::Average }, SmoothTool { park::GroundSmoothing::Level, Level::Pointer }, SmoothTool { park::GroundSmoothing::Level, Level::Press }, SmoothTool { park::GroundSmoothing::WholeUnits }, SmoothTool { park::GroundSmoothing::JoinEdges }, SmoothTool { park::GroundSmoothing::TileEdges },
+            SmoothTool { park::ground::GroundSmoothing::Average }, SmoothTool { park::ground::GroundSmoothing::Level, Level::Pointer }, SmoothTool { park::ground::GroundSmoothing::Level, Level::Press }, SmoothTool { park::ground::GroundSmoothing::WholeUnits }, SmoothTool { park::ground::GroundSmoothing::JoinEdges }, SmoothTool { park::ground::GroundSmoothing::TileEdges },
         };
         /// The brushes' tab, in its order: those that raise when dragged up, then those that lower when dragged down.
-        constexpr std::array kShapeBrushes { park::GroundShape::Ridge, park::GroundShape::Mountain, park::GroundShape::Mesa, park::GroundShape::Hill, park::GroundShape::Canyon, park::GroundShape::Trough, park::GroundShape::Crater };
+        constexpr std::array kShapeBrushes { park::ground::GroundShape::Ridge, park::ground::GroundShape::Mountain, park::ground::GroundShape::Mesa, park::ground::GroundShape::Hill, park::ground::GroundShape::Canyon, park::ground::GroundShape::Trough, park::ground::GroundShape::Crater };
 
         std::uint32_t tile_key(save::Tile t)
         {
@@ -111,7 +111,7 @@ namespace rct3::scene
         void start_stroke(ParkScene& scene)
         {
             LandTools& l = scene.land;
-            l.holds = park::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
+            l.holds = park::ground::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
             l.refused = l.holds.held;
             if (l.tool == LandTools::Tool::Shape)
                 l.rumble = kRumbleQuiet;
@@ -126,7 +126,7 @@ namespace rct3::scene
                 return;
             if (scene.object_build.valid())
                 (void)scene.object_build.get(); // It reads the items being moved
-            if (park::seat_followers(scene.objects, l.holds, scene.models, scene.grid, (*l.stirred)[0], (*l.stirred)[1]))
+            if (park::ground::seat_followers(scene.objects, l.holds, scene.models, scene.grid, (*l.stirred)[0], (*l.stirred)[1]))
             {
                 scene.levels = { };
                 scene.since_rebuild = kObjectRebuildInterval;
@@ -151,7 +151,7 @@ namespace rct3::scene
                     {
                         const auto& was = from.at(c, r).corners;
                         const auto& now = trial.at(c, r).corners;
-                        if (was == now || !park::refuses(l.holds, { c, r }, was, now))
+                        if (was == now || !park::ground::refuses(l.holds, { c, r }, was, now))
                             continue;
                         if (!l.refused.insert(tile_key({ c, r })).second)
                             return std::nullopt;
@@ -195,7 +195,7 @@ namespace rct3::scene
                     (*step)[1] = { std::max((*step)[1].col, c), std::max((*step)[1].row, r) };
                 }
             // Water the new ground may not hold goes, as do the waterfalls beside it.
-            const bool drained = drain && park::drain_moved(scene.footpaths.water, scene.footpaths.waterfalls, was, scene.grid);
+            const bool drained = drain && park::water::drain_moved(scene.footpaths.water, scene.footpaths.waterfalls, was, scene.grid);
             if (drained)
                 show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
             // A drained lake may reach far from the step; a moved corner shades the tiles beside those round it.
@@ -242,7 +242,7 @@ namespace rct3::scene
             // The first of each pair works on one tile, the second on the brush's square.
             if (scene.land.tile_tool % 2 == 0)
                 return TileTarget { tile, tile, park::part_at({ spot->x - static_cast<float>(tile.col), spot->y - static_cast<float>(tile.row) }) };
-            const auto tiles = park::brush_tiles(tile, scene.land.brush, false, scene.grid.width, scene.grid.height);
+            const auto tiles = park::ground::brush_tiles(tile, scene.land.brush, false, scene.grid.width, scene.grid.height);
             TileTarget t { tile, tile };
             for (const save::Tile s : tiles)
             {
@@ -274,7 +274,7 @@ namespace rct3::scene
             if (!trial)
                 return;
             const float moved = trial->second;
-            const auto cost = static_cast<std::int32_t>(std::lround(std::max(moved - l.paid_for, 0.0f) * park::kShapeCost));
+            const auto cost = static_cast<std::int32_t>(std::lround(std::max(moved - l.paid_for, 0.0f) * park::ground::kShapeCost));
             if (!affordable(scene, cost))
                 return;
             pay(scene, cost, *l.tile);
@@ -312,7 +312,7 @@ namespace rct3::scene
                     whole(*middle);
                 else if (middle)
                 {
-                    for (const save::Tile t : park::brush_tiles(*middle, l.brush, l.tool != LandTools::Tool::Buy, scene.grid.width, scene.grid.height))
+                    for (const save::Tile t : park::ground::brush_tiles(*middle, l.brush, l.tool != LandTools::Tool::Buy, scene.grid.width, scene.grid.height))
                         whole(t);
                 }
             }
@@ -341,19 +341,19 @@ namespace rct3::scene
                 // Across the view: the camera looks along (sin yaw, cos yaw) over the ground.
                 l.along = { std::cos(scene.camera.yaw), -std::sin(scene.camera.yaw) };
                 start_stroke(scene);
-                l.before = park::corner_heights(scene.grid, [&](save::Tile t) { return shapeable(scene, t); });
+                l.before = park::ground::corner_heights(scene.grid, [&](save::Tile t) { return shapeable(scene, t); });
             }
             const float steps = (l.press_y - at.y) / park::kSlopeDragStep;
             // A lowering brush digs as the pointer goes down; the other way, each brush makes its shape upside down.
-            const bool lowers = park::shape_share(*l.shape, 0) < 0;
+            const bool lowers = park::ground::shape_share(*l.shape, 0) < 0;
             const float amount = std::round((lowers ? -steps : steps) * 4) / 4; // In quarter units
             if (amount == l.amount)
                 return;
-            auto trial = try_shape(scene, scene.grid, [&](save::TerrainGrid& g) { return park::shape_ground(g, l.before, *l.shape, l.middle, static_cast<float>(l.brush) / 2, l.along, amount); });
+            auto trial = try_shape(scene, scene.grid, [&](save::TerrainGrid& g) { return park::ground::shape_ground(g, l.before, *l.shape, l.middle, static_cast<float>(l.brush) / 2, l.along, amount); });
             if (!trial)
                 return;
             const float moved = trial->second;
-            const auto cost = static_cast<std::int32_t>(std::lround(std::max(moved - l.paid_for, 0.0f) * park::kShapeCost));
+            const auto cost = static_cast<std::int32_t>(std::lround(std::max(moved - l.paid_for, 0.0f) * park::ground::kShapeCost));
             if (!affordable(scene, cost))
                 return;
             pay(scene, cost, *l.tile);
@@ -375,21 +375,21 @@ namespace rct3::scene
                 l.tile = save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
                 start_stroke(scene);
                 l.held = kSmoothPass; // A click smooths once
-                l.target = park::mean_height(scene.grid, *spot, std::max(reach, 1.0f));
+                l.target = park::ground::mean_height(scene.grid, *spot, std::max(reach, 1.0f));
             }
             if (!spot)
                 return;
             if (tool.level == Level::Pointer)
-                l.target = park::mean_height(scene.grid, *spot, 1);
+                l.target = park::ground::mean_height(scene.grid, *spot, 1);
             l.held += elapsed;
             std::optional<save::TerrainGrid> shaped; // By this frame's passes
             for (; l.held >= kSmoothPass; l.held -= kSmoothPass)
             {
                 const std::uint64_t seed = ++l.passes;
-                auto trial = try_shape(scene, shaped ? *shaped : scene.grid, [&](save::TerrainGrid& g) { return park::smooth_ground(g, tool.tool, *spot, reach, kSmoothRate * kSmoothPass, l.target, seed, [&](save::Tile t) { return shapeable(scene, t); }); });
+                auto trial = try_shape(scene, shaped ? *shaped : scene.grid, [&](save::TerrainGrid& g) { return park::ground::smooth_ground(g, tool.tool, *spot, reach, kSmoothRate * kSmoothPass, l.target, seed, [&](save::Tile t) { return shapeable(scene, t); }); });
                 if (!trial)
                     continue;
-                const auto cost = static_cast<std::int32_t>(std::lround(trial->second * park::kShapeCost));
+                const auto cost = static_cast<std::int32_t>(std::lround(trial->second * park::ground::kShapeCost));
                 if (trial->second <= 0 || !affordable(scene, cost))
                     continue;
                 pay(scene, cost, { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) });
@@ -408,7 +408,7 @@ namespace rct3::scene
             l.tile = tile;
             const std::uint8_t surface = l.cliff ? l.cliffs[*l.cliff].index : l.surfaces[l.surface].index;
             std::optional<park::TileRect> painted;
-            for (const save::Tile t : park::brush_tiles(*tile, l.brush, true, scene.grid.width, scene.grid.height))
+            for (const save::Tile t : park::ground::brush_tiles(*tile, l.brush, true, scene.grid.width, scene.grid.height))
             {
                 save::TerrainCell& cell = scene.grid.at(t.col, t.row);
                 std::uint8_t& face = l.cliff ? cell.cliff : cell.surface;
@@ -436,10 +436,10 @@ namespace rct3::scene
             const save::Tile tile { static_cast<int>(std::floor((top.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((top.z - g.origin_z) / g.tile_size_z)) };
             for (save::WaterBody& b : scene.footpaths.water.bodies)
             {
-                if (!park::holds(b, tile))
+                if (!park::water::holds(b, tile))
                     continue;
-                const auto within = [&](save::Tile t) { return park::holds(b, t) || std::ranges::any_of(more, [&](const save::CarvedTile& c) { return c.tile.col == t.col && c.tile.row == t.row; }); };
-                if (auto refilled = park::fill_water(g, tile, b.level, within))
+                const auto within = [&](save::Tile t) { return park::water::holds(b, t) || std::ranges::any_of(more, [&](const save::CarvedTile& c) { return c.tile.col == t.col && c.tile.row == t.row; }); };
+                if (auto refilled = park::water::fill_water(g, tile, b.level, within))
                     b = std::move(*refilled);
                 return;
             }
@@ -467,7 +467,7 @@ namespace rct3::scene
             const auto& paths = scene.footpaths.paths;
             const auto allowed = [&](save::Tile t) { return park::owned_outright(g.at(t)) && std::ranges::none_of(paths, [&](const save::PathTile& p) { return p.col == t.col && p.row == t.row && !p.elevation; }); };
             const auto& bodies = scene.footpaths.water.bodies;
-            const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return park::holds(b, *l.tile); });
+            const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return park::water::holds(b, *l.tile); });
             if (lake != bodies.end() && height < lake->level)
             {
                 // The ground clicked is under the lake: the click was on its surface.
@@ -475,7 +475,7 @@ namespace rct3::scene
                     return say(scene, kWaterRefused);
                 // Its waterfalls go with it, putting back the ground they cut.
                 save::TerrainGrid ground = g;
-                park::remove_lake(scene.footpaths.water, scene.footpaths.waterfalls, ground, *l.tile);
+                park::water::remove_lake(scene.footpaths.water, scene.footpaths.waterfalls, ground, *l.tile);
                 show_park_particles(scene.particles, park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
                 start_stroke(scene);
                 take_ground(device, scene, assets, std::move(ground), false);
@@ -483,7 +483,7 @@ namespace rct3::scene
             }
             // shortcut: waterfalls of a lake raised this way keep their old heights, ask before covering them when
             // falls get a yes/no question
-            else if (auto poured = park::pour_water(scene.footpaths.water, g, *l.tile, height, allowed))
+            else if (auto poured = park::water::pour_water(scene.footpaths.water, g, *l.tile, height, allowed))
                 scene.footpaths.water = std::move(*poured);
             else
                 return say(scene, kWaterRefused);
@@ -502,7 +502,7 @@ namespace rct3::scene
             const save::Tile tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
             l.tile = tile;
             const auto& bodies = scene.footpaths.water.bodies;
-            const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return park::holds(b, tile); });
+            const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return park::water::holds(b, tile); });
             if (lake == bodies.end())
                 return;
             const auto index = static_cast<std::size_t>(lake - bodies.begin());
@@ -521,7 +521,7 @@ namespace rct3::scene
             start_stroke(scene);
             for (const save::CarvedTile& c : fall->carved)
             {
-                if (park::refuses(l.holds, c.tile, c.corners, ground.at(c.tile.col, c.tile.row).corners))
+                if (park::ground::refuses(l.holds, c.tile, c.corners, ground.at(c.tile.col, c.tile.row).corners))
                     return say(scene, park::kWaterfallLandUnsuitable);
             }
             take_ground(device, scene, assets, std::move(ground), false);
@@ -571,7 +571,7 @@ namespace rct3::scene
             l.tile = tile;
             const save::Finance& prices = scene.park_model.finance;
             const std::int32_t price = l.buying == park::LandBuy::Land ? prices.land_buy_cost : prices.rights_buy_cost;
-            const park::LandBought bought = park::buy_land(scene.grid, park::brush_tiles(tile, l.brush, false, scene.grid.width, scene.grid.height), l.buying, price, scene.park.cash);
+            const park::LandBought bought = park::buy_land(scene.grid, park::ground::brush_tiles(tile, l.brush, false, scene.grid.width, scene.grid.height), l.buying, price, scene.park.cash);
             if (bought.short_of_cash)
                 say(scene, kNoMoney);
             if (bought.tiles == 0)
@@ -586,14 +586,14 @@ namespace rct3::scene
         {
             if (std::exchange(l.surfaces_read, true) || !assets.install)
                 return;
-            for (const std::string_view name : park::kGroundFiles)
+            for (const std::string_view name : park::ground::kGroundFiles)
             {
                 const auto found = assets.install->find(name);
                 if (!found)
                     continue;
                 for (const auto& [paint, into] : { std::pair { park::GroundPaint::Surface, &l.surfaces }, std::pair { park::GroundPaint::Cliff, &l.cliffs } })
                 {
-                    auto more = park::ground_surfaces(*found, paint);
+                    auto more = park::ground::ground_surfaces(*found, paint);
                     if (!more)
                     {
                         logging::logger("park").warning("{}: {}", name, more.error());
@@ -630,11 +630,11 @@ namespace rct3::scene
             else if (l.tool == LandTools::Tool::Paint)
             {
                 ui::LandTab base { "Land_Brush_Paint_Base", std::u16string(strings.get("Land_Brush_Paint_BaseHelp")), 4, { } };
-                for (const park::GroundSurface& s : l.surfaces)
+                for (const park::ground::GroundSurface& s : l.surfaces)
                     base.tools.push_back({ s.icon, std::u16string(strings.get(s.help)), true });
                 tabs.push_back(std::move(base));
                 ui::LandTab cliff { "Land_Brush_Paint_Cliff", std::u16string(strings.get("Land_Brush_Paint_CliffHelp")), 5, { } };
-                for (const park::GroundSurface& s : l.cliffs)
+                for (const park::ground::GroundSurface& s : l.cliffs)
                     cliff.tools.push_back({ s.icon, std::u16string(strings.get(s.help)), true });
                 tabs.push_back(std::move(cliff));
                 chosen = l.cliff ? ui::LandPick { kCliffTab, *l.cliff } : ui::LandPick { 0, l.surface };
@@ -652,7 +652,7 @@ namespace rct3::scene
                 else if (l.shape)
                     chosen = { kBrushTab, static_cast<std::size_t>(std::ranges::find(kShapeBrushes, *l.shape) - kShapeBrushes.begin()) };
             }
-            panel->show(std::move(tabs), chosen, l.brush, park::kLargestBrush);
+            panel->show(std::move(tabs), chosen, l.brush, park::ground::kLargestBrush);
         }
     } // namespace
 

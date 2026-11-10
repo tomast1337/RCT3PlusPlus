@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/ride_car.hpp"
 
+#include <utility>
+
 namespace rct3::ovl
 {
 
@@ -9,17 +11,23 @@ namespace rct3::ovl
 
         constexpr std::string_view kTag = "ric";
 
-        std::size_t record_size(std::uint32_t version)
+        // Bytes in one ride car record, per file layout: later layouts add fields at the end.
+        constexpr std::size_t kNoStreamSize = 240;
+        constexpr std::size_t kOneStreamSize = 292;
+        constexpr std::size_t kManyStreamsSize = 336;
+
+        std::size_t record_size(OvlLayout layout)
         {
-            switch (version)
+            switch (layout)
             {
-                case 1:
-                    return 240;
-                case 4:
-                    return 292;
-                default:
-                    return 336;
+                case OvlLayout::NoStream:
+                    return kNoStreamSize;
+                case OvlLayout::OneStream:
+                    return kOneStreamSize;
+                case OvlLayout::ManyStreams:
+                    return kManyStreamsSize;
             }
+            std::unreachable();
         }
 
     } // namespace
@@ -28,7 +36,7 @@ namespace rct3::ovl
     {
         const AddressSpace space = overlay.space();
         const ReferenceIndex refs(part, space);
-        const std::size_t size = record_size(part.file.header.version);
+        const std::size_t size = record_size(part.file.header.layout);
 
         std::vector<RideCarItem> items;
         for (const auto& symbol : part.symbols)
@@ -46,6 +54,7 @@ namespace rct3::ovl
                 car.name = record->text(0x00);
                 car.display_name = record->text(0x04);
                 car.kind = record->u32(0x08);
+                car.mass = record->real(0x1C);
                 car.visual = record->ref(0x0C, "svd");
                 car.part = record->ref(0x14, "svd");
                 for (std::size_t i = 0; i < car.wheels.size(); ++i)
@@ -58,6 +67,8 @@ namespace rct3::ovl
                     car.rowing[i] = record->i32(0x7C + 4 * i);
                 car.references = record->references(static_cast<std::uint32_t>(size));
                 car.record = record->bytes();
+                if ((record->u32(0x110) & 0x200) != 0)
+                    car.trough = TroughRide { .damping = record->real(0x20), .centring = record->real(0x24), .friction = record->real(0x34) };
                 item.car = std::move(car);
             }
             items.push_back(std::move(item));

@@ -657,22 +657,6 @@ namespace rct3::ui
             }
         }
 
-        void thoughts(InfoPage& page, std::span<const save::ThoughtEntry> all, const StringTable& strings)
-        {
-            std::vector<const save::ThoughtEntry*> latest;
-            for (const save::ThoughtEntry& t : all)
-                if (t.thought > 0)
-                    latest.push_back(&t);
-            std::ranges::stable_sort(latest, std::ranges::greater { }, &save::ThoughtEntry::time);
-            for (const save::ThoughtEntry* t : latest)
-            {
-                if (page.lines.size() == kThoughtLines)
-                    break;
-                if (std::u16string said = thought_text(strings, t->thought, t->variant, page.title); !said.empty())
-                    page.lines.push_back({ .label = std::move(said), .value = { }, .icon = mood_icon(thought_mood(t->thought)) });
-            }
-        }
-
         void maintenance(InfoPage& page, const save::Ride& ride, const StringTable& strings)
         {
             // Reliability on a green bar, down time on a red one.
@@ -793,6 +777,22 @@ namespace rct3::ui
         }
 
     } // namespace
+
+    void add_thoughts(InfoPage& page, std::span<const save::ThoughtEntry> all, const StringTable& strings)
+    {
+        std::vector<const save::ThoughtEntry*> latest;
+        for (const save::ThoughtEntry& t : all)
+            if (t.thought > 0)
+                latest.push_back(&t);
+        std::ranges::stable_sort(latest, std::ranges::greater { }, &save::ThoughtEntry::time);
+        for (const save::ThoughtEntry* t : latest)
+        {
+            if (page.lines.size() == kThoughtLines)
+                break;
+            if (std::u16string said = thought_text(strings, t->thought, t->variant, page.title); !said.empty())
+                page.lines.push_back({ .label = std::move(said), .value = { }, .icon = mood_icon(thought_mood(t->thought)) });
+        }
+    }
 
     std::string_view breakdown_key(save::BreakdownKind kind)
     {
@@ -1012,7 +1012,11 @@ namespace rct3::ui
                     button(AttractionControl::SceneryClear, "SavedSelectionGrabber_ClearIcon", "SavedSelection_Coaster_Clear_TT", false);
                     button(AttractionControl::SaveDesign, "File_SaveGame", "TT_AttractionDialogIconSaveButton", false);
                 }
-                if (f.station)
+                // A pool ride has no fence, entrance or exit: its stations are joined to a pool complex's paving
+                // with the pool's path tool instead.
+                if (f.pool_ride)
+                    button(AttractionControl::JoinPool, "Pool_PathPanel", "TT_AttractionDialogIconPoolPathButton");
+                else if (f.station)
                 {
                     button(AttractionControl::Fence, "Attraction_General_PickFence", *f.station ? "TT_AttractionDialogIconSetFenceButton" : "CantChooseFenceAsRideIsNotPlaced", false);
                     for (const bool exit : { false, true })
@@ -1021,7 +1025,7 @@ namespace rct3::ui
                         button(exit ? AttractionControl::Exit : AttractionControl::Entrance, exit ? "Attraction_General_Exit" : "Attraction_General_Entrance", *f.station ? help : exit ? "CantPlaceExitAsRideHasNoStation" : "CantPlaceEntranceAsRideHasNoStation", *f.station);
                     }
                 }
-                if (f.queue_signs)
+                if (f.queue_signs && !f.pool_ride) // A pool ride has no queue
                     button(AttractionControl::QueueSigns, "Attraction_General_ToggleQueueSigns", "TT_AttractionDialogIconToggleQueueSigns");
                 button(AttractionControl::Locate, "CenterInViewIcon", "TT_AttractionDialogIconFocusCameraButton");
                 if (f.ride)
@@ -1091,9 +1095,9 @@ namespace rct3::ui
                 break;
             case AttractionTab::Thoughts:
                 if (f.ride)
-                    thoughts(page, f.ride->thoughts, strings);
+                    add_thoughts(page, f.ride->thoughts, strings);
                 else if (f.stall)
-                    thoughts(page, f.stall->thoughts, strings);
+                    add_thoughts(page, f.stall->thoughts, strings);
                 break;
             case AttractionTab::Construction:
                 break;

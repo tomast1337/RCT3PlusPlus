@@ -6,7 +6,7 @@
 
 #include "config/game_install.hpp"
 #include "park/asset_index.hpp"
-#include "park/ground_textures.hpp"
+#include "park/ground/textures.hpp"
 #include "park/object_mesh.hpp"
 #include "render/device.hpp"
 #include "ui/ui_textures.hpp"
@@ -32,8 +32,9 @@ namespace rct3::scene
     inline constexpr std::string_view kMoneyName = "money";
     inline constexpr std::uint8_t kColourCells = 16; ///< Colours a person's clothes and skin pick from
     inline constexpr std::string_view kInfoName = "info";
-    inline constexpr std::string_view kRideCameraName = "ride_camera"; ///< The panel shown while riding along
-    inline constexpr std::string_view kPlacingName = "placing";        ///< The round panel of the scenery being placed
+    inline constexpr std::string_view kRideCameraName = "ride_camera";       ///< The panel shown while riding along
+    inline constexpr std::string_view kPlacingName = "placing";              ///< The round panel of the scenery being placed
+    inline constexpr std::string_view kDesignPlacingName = "design_placing"; ///< The round panel of a ride's design being placed
 
     template<typename T> std::expected<render::BufferHandle, std::string> upload(render::Device& device, render::BufferUsage usage, const std::vector<T>& items, std::string_view label)
     {
@@ -44,7 +45,7 @@ namespace rct3::scene
     render::TextureHandle relief_of(const ui::UiTextures& textures, std::string_view name);
 
     /// Shrinks the park's pictures to the texture detail it loaded with (ovl::texture_halvings), before upload.
-    void fit_texture_detail(const ParkScene& scene, park::GroundImages& images);
+    void fit_texture_detail(const ParkScene& scene, park::ground::GroundImages& images);
 
     /// Paints and uploads the pictures of `batches` the scene does not have yet.
     void add_textures(render::Device& device, ParkScene& scene, std::span<const park::ObjectBatch> batches);

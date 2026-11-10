@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
@@ -174,12 +174,12 @@ TEST_CASE("an inspector swims free in a pool and tells how dirty it is")
 {
     Sandbox park;
     park.path({ 0, 0 }, { 5, 0 });
-    rct3::park::PoolMap pools;
-    pools.squares.push_back({ .col = 5, .row = 2, .kind = rct3::park::PoolKind::Tile });
+    rct3::park::pools::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = rct3::park::pools::PoolKind::Tile });
     for (std::int32_t row = 3; row < 5; ++row)
         for (std::int32_t col = 4; col < 7; ++col)
             pools.squares.push_back({ .col = col, .row = row });
-    pools.rooms.push_back({ .col = 5, .row = 1, .turn = 0, .ticket = 200, .open = true });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
     import_pools(park.world(), pools);
     auto& r = park.world().registry;
     const entt::entity room = r.view<const PoolDoor>().front();

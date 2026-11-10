@@ -23,6 +23,9 @@ namespace rct3::ui
 
     bool shows_job(RosterJobs jobs, save::StaffKind kind)
     {
+        // Lifeguards belong to their chairs, not to the list.
+        if (kind == save::StaffKind::LifeGuard)
+            return false;
         const std::size_t rank = job_rank(kind);
         return rank >= kRosterJobs.size() || (jobs & (1u << rank)) != 0;
     }

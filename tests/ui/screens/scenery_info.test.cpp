@@ -108,7 +108,7 @@ TEST_CASE("a sign shows its words, or that it forbids entry")
     CHECK(scenery_page(SceneryTab::Sign, facts, s).lines[0].label == u"Keep out");
 }
 
-TEST_CASE("a changing room's window is an attraction's, about its pool complex")
+TEST_CASE("a changing room's window is an attraction's, its tabs round the ring as the game has them")
 {
     StringTable s = table();
     s.add("PoolComplexDefaultName", u"Pool complex");
@@ -120,51 +120,101 @@ TEST_CASE("a changing room's window is an attraction's, about its pool complex")
         kinds.push_back(t.tab);
         slots.push_back(t.slot);
     }
-    CHECK(kinds == std::vector { SceneryTab::RoomDetails, SceneryTab::RoomFinances, SceneryTab::RoomMode, SceneryTab::RoomCustomers, SceneryTab::RoomMaintenance });
-    CHECK(slots == std::vector { 0, 1, 6, 8, 10 });
-    CHECK(scenery_page(SceneryTab::RoomFinances, { .pool = PoolComplexFacts { } }, s).title == u"Pool complex");
-    CHECK(scenery_page(SceneryTab::RoomFinances, { .pool = PoolComplexFacts { .name = u"Lagoon" } }, s).title == u"Lagoon");
+    using enum SceneryTab;
+    CHECK(kinds == std::vector { RoomDetails, RoomFinances, RoomThoughts, RoomState, RoomMode, RoomConstruction, RoomCustomers, RoomMaintenance });
+    CHECK(slots == std::vector { 0, 1, 2, 4, 6, 7, 8, 10 });
+    // The construction tab acts at once, and the flag shows the complex's state.
+    CHECK(std::ranges::count_if(tabs, &SceneryTabInfo::action) == 1);
+    CHECK(tabs[5].action);
+    CHECK(tabs[3].icon == "Attraction_General_Closed");
+    CHECK(scenery_tabs({ .pool = PoolComplexFacts { .open = true } })[3].icon == "Attraction_General_Open");
+    CHECK(scenery_page(RoomFinances, { .pool = PoolComplexFacts { } }, s).title == u"Pool complex");
+    CHECK(scenery_page(RoomFinances, { .pool = PoolComplexFacts { .name = u"Lagoon" } }, s).title == u"Lagoon");
 }
 
-TEST_CASE("a changing room's details name the complex, pull down the room or the complex, and find it")
+TEST_CASE("a changing room's details name the room and the complex, tell its state, and pull either down")
 {
-    const InfoPage page = scenery_page(SceneryTab::RoomDetails, { .pool = PoolComplexFacts { .name = u"Lagoon" } }, table());
+    StringTable s = table();
+    s.add("SceneryItem_Hut", u"Hut room");
+    s.add("AttractionStatusClosed", u"Closed");
+    s.add("PeopleInPoolComplex1", u"# person inside");
+    s.add("PeopleInPoolComplexX", u"# people inside");
+    const auto details = [&](bool open, std::int64_t people) { return scenery_page(SceneryTab::RoomDetails, { .symbol = "Hut", .pool = PoolComplexFacts { .name = u"Lagoon", .number = 3, .open = open, .people = people } }, s); };
+    const InfoPage page = details(false, 0);
     std::vector<int> ids;
     for (const InfoControl& c : page.controls)
         ids.push_back(c.id);
-    CHECK(ids == std::vector { kPoolNameControl, kPoolDeleteRoomControl, kPoolDeleteComplexControl, kPoolLocateControl });
-    CHECK(page.controls[0].kind == InfoControlKind::Text);
-    CHECK(page.controls[0].text == u"Lagoon");
+    CHECK(ids == std::vector { 0, kPoolNameControl, 0, kPoolDeleteRoomControl, kPoolDeleteComplexControl, kPoolSaveControl, kPoolLocateControl });
+    CHECK(page.controls[0].text == u"Hut room 3");
+    CHECK(page.controls[1].kind == InfoControlKind::Text);
+    CHECK(page.controls[1].text == u"Lagoon");
+    CHECK(page.controls[1].beside);
+    CHECK(page.controls[2].label == u"Closed");
+    CHECK_FALSE(page.controls[5].enabled);
+    // Open, the state counts the people in the complex in the game's words for one and for many.
+    CHECK(details(true, 1).controls[2].label == u"1 person inside");
+    CHECK(details(true, 12).controls[2].label == u"12 people inside");
 }
 
-TEST_CASE("a changing room opens and closes its pool complex and sets its ticket price")
+TEST_CASE("a changing room's finances put its ticket price over its sums, in money")
 {
     StringTable s = table();
-    s.add("AttractionStatusOpen", u"Open");
-    s.add("AttractionStatusClosed", u"Closed");
-    const SceneryFacts facts { .pool = PoolComplexFacts { .ticket = 150, .open = true } };
-    const InfoPage mode = scenery_page(SceneryTab::RoomMode, facts, s);
-    REQUIRE(mode.controls.size() == 1);
-    CHECK(mode.controls[0].id == kPoolStateControl);
-    CHECK(mode.controls[0].value == 0);
-    CHECK(mode.controls[0].label == u"Open");
-    const InfoPage finances = scenery_page(SceneryTab::RoomFinances, facts, s);
-    REQUIRE(finances.controls.size() == 1);
-    CHECK(finances.controls[0].id == kPoolTicketControl);
-    CHECK(finances.controls[0].value == 150);
-    CHECK(finances.controls[0].decimals == 2);
+    s.add("AttractionNumberArea_PerHour", u"# an hour");
+    s.add("AttractionFinancesDialogLabel_CostPerInspection", u"Inspection");
+    s.add("AttractionFinancesDialogLabel_TotalProfit", u"Total");
+    const InfoPage page = scenery_page(SceneryTab::RoomFinances, { .pool = PoolComplexFacts { .ticket = 150, .currency = { .before = u"$", .after = u"", .decimal = u"." }, .income = 450, .refill = 2000 } }, s);
+    REQUIRE(page.controls.size() == 1);
+    CHECK(page.controls[0].id == kPoolTicketControl);
+    CHECK(page.controls[0].value == 150);
+    CHECK(page.controls[0].shown == u"$1.50");
+    CHECK(page.controls_after == 0);
+    REQUIRE(page.lines.size() == 5);
+    CHECK(page.lines[0].value == u"$0.00 an hour");
+    CHECK(page.lines[1].label == u"Inspection");
+    CHECK(page.lines[1].value == u"$20.00");
+    CHECK(page.lines[4].label == u"Total");
+    CHECK(page.lines[4].value == u"$4.50");
 }
 
-TEST_CASE("a changing room counts the people in its complex in the game's words")
+TEST_CASE("a changing room sets its complex's waves on bars, the machines' times only with a machine there")
 {
     StringTable s = table();
-    s.add("PeopleInPoolComplex1", u"# person inside");
-    s.add("PeopleInPoolComplexX", u"# people inside");
-    CHECK(scenery_page(SceneryTab::RoomCustomers, { .pool = PoolComplexFacts { .people = 1 } }, s).lines.at(0).label == u"1 person inside");
-    CHECK(scenery_page(SceneryTab::RoomCustomers, { .pool = PoolComplexFacts { .people = 12 } }, s).lines.at(0).label == u"12 people inside");
+    s.add("WaveHeightText", u"Height");
+    s.add("WaveLengthText", u"Length");
+    s.add("ManySeconds", u"# secs");
+    s.add("OneMinute", u"# min");
+    s.add("ManyMinutes", u"# mins");
+    const auto mode = [&](bool machines, float every) { return scenery_page(SceneryTab::RoomMode, { .pool = PoolComplexFacts { .waves = { .height = 5, .frequency = 4, .on = 40, .every = every }, .machines = machines } }, s); };
+    const InfoPage page = mode(true, 180);
+    REQUIRE(page.controls.size() == 4);
+    CHECK(page.controls[0].id == kPoolWaveHeightControl);
+    CHECK(page.controls[0].kind == InfoControlKind::Bar);
+    CHECK(page.controls[0].label == u"Height");
+    CHECK(page.controls[0].value == 5);
+    CHECK(page.controls[1].id == kPoolWaveLengthControl);
+    CHECK(page.controls[1].kind == InfoControlKind::Bar);
+    CHECK(page.controls[1].value == static_cast<int>(park::pools::kLeastWaveFrequency + park::pools::kMostWaveFrequency) - 4); // Longer for a lower frequency
+    CHECK(page.controls[2].value == 40);
+    CHECK(page.controls[2].shown == u"40 secs");
+    CHECK(page.controls[3].value == 3);
+    CHECK(page.controls[3].shown == u"3 mins");
+    CHECK(mode(true, 60).controls[3].shown == u"1 min");
+    CHECK(page.controls[3].enabled);
+    CHECK_FALSE(mode(false, 180).controls[2].enabled);
+    CHECK_FALSE(mode(false, 180).controls[3].enabled);
 }
 
-TEST_CASE("a changing room's upkeep shows its water's dirt and picks its cleaning fluid")
+TEST_CASE("a changing room's customers count those it let in")
+{
+    StringTable s = table();
+    s.add("AttractionCustomersDialogLabel_TotalCustomers", u"Total");
+    const InfoPage page = scenery_page(SceneryTab::RoomCustomers, { .pool = PoolComplexFacts { .customers = 12 } }, s);
+    REQUIRE(page.lines.size() == 6);
+    CHECK(page.lines[4].label == u"Total");
+    CHECK(page.lines[4].value == u"12");
+}
+
+TEST_CASE("a changing room's upkeep shows its reliability and water, and picks its inspections and cleaning fluid")
 {
     StringTable s = table();
     s.add("PoolDirt_Label", u"Water:");
@@ -173,17 +223,23 @@ TEST_CASE("a changing room's upkeep shows its water's dirt and picks its cleanin
     s.add("Fluid_ZaniClenz", u"Mild");
     s.add("Fluid_MegaKleen", u"Strong");
     s.add("Fluid_ToxiScrub", u"Harsh");
-    const InfoPage page = scenery_page(SceneryTab::RoomMaintenance, { .pool = PoolComplexFacts { .dirt = 3, .fluid = 1 } }, s);
-    REQUIRE(page.lines.size() == 1);
-    CHECK(page.lines[0].label == u"Water:");
-    CHECK(page.lines[0].value == u"Murky");
-    REQUIRE(page.controls.size() == 2);
-    CHECK(page.controls[0].id == kPoolFluidControl);
-    CHECK(page.controls[0].value == 1);
-    CHECK(page.controls[0].label == u"Fluid:");
-    CHECK(page.controls[0].items.size() == 3);
-    CHECK(page.controls[1].id == kPoolMechanicControl);
-    CHECK(page.controls[1].enabled);
+    const InfoPage page = scenery_page(SceneryTab::RoomMaintenance, { .pool = PoolComplexFacts { .dirt = 3, .fluid = 1, .reliability = 0.75f, .since_inspection = 150 } }, s);
+    REQUIRE(page.lines.size() == 3);
+    CHECK(page.lines[0].bar == 0.75f);
+    CHECK(page.controls_after == 1);
+    CHECK(page.lines[1].value == u"3"); // Minutes, rounded
+    CHECK(page.lines[2].label == u"Water:");
+    CHECK(page.lines[2].value == u"Murky");
+    REQUIRE(page.controls.size() == 3);
+    CHECK(page.controls[0].id == kPoolInspectionControl);
+    CHECK(page.controls[0].value == kPoolInspection);
+    CHECK(page.controls[0].items.size() == 7);
+    CHECK(page.controls[1].id == kPoolFluidControl);
+    CHECK(page.controls[1].value == 1);
+    CHECK(page.controls[1].label == u"Fluid:");
+    CHECK(page.controls[1].items.size() == 3);
+    CHECK(page.controls[2].id == kPoolMechanicControl);
+    CHECK(page.controls[2].beside);
 }
 
 TEST_CASE("paths, rides, supports and what lies about are not props")

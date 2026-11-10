@@ -200,6 +200,24 @@ namespace rct3::simulation
     /// The changing room of the pool complex whose water, paving or spa pool lies under `point`, if any.
     [[nodiscard]] std::optional<entt::entity> pool_door_at(const SimWorld& world, glm::vec3 point);
 
+    /// Where a pool ride's station joins a pool complex.
+    struct PoolJoin
+    {
+        entt::entity pool = entt::null; ///< The complex (its SwimPool)
+        glm::vec3 square { 0.0f };      ///< The middle of the square beside the station that joins it, where guests come and go
+    };
+
+    /// The pool complex a pool ride's station joins, its track running through `station`: one whose paving,
+    /// pool path or path stairs lie on a square along one of the station's sides, at its level, the nearest when
+    /// several do, the track standing up to `raised` over it (a slide's over its platform's deck). Pool rides have no
+    /// entrance or exit: their guests board from that square and get off onto it.
+    [[nodiscard]] std::optional<PoolJoin> pool_beside(const SimWorld& world, std::span<const glm::vec3> station, float raised = 0);
+
+    /// The pool complex (its SwimPool) a pool ride belongs to: a lazy river by its joined stations, a slide climbed
+    /// on foot by its foot, a slide ending in a pool by that pool, and a slide with no entrance of its own going
+    /// round back to its station by the complex its station joins. None for every other ride.
+    [[nodiscard]] std::optional<entt::entity> pool_ride_pool(const SimWorld& world, entt::entity ride);
+
     /// Whether `person` wears their swimwear now: inside a pool complex, from changing into it till changing
     /// back, and held or falling out of one till they land; their clothes everywhere else.
     [[nodiscard]] bool in_swimwear(const entt::registry& r, entt::entity person);

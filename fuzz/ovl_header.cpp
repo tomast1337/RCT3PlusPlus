@@ -19,8 +19,10 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     // A successful parse never claims more bytes than it was given, and every block lies inside the input.
     if (file->end_offset > size)
         __builtin_trap();
-    const auto streams = file->header.version == 4 ? 1u : file->header.version == 5 ? file->header.stream_count : 0;
-    if (file->stream_relocations.size() != static_cast<std::size_t>(streams))
+    using rct3::ovl::OvlLayout;
+    const auto layout = file->header.layout;
+    const std::size_t streams = layout == OvlLayout::OneStream ? 1 : layout == OvlLayout::ManyStreams ? static_cast<std::size_t>(file->header.stream_count) : 0;
+    if (file->stream_relocations.size() != streams)
         __builtin_trap();
     for (const auto& type : file->block_types)
     {

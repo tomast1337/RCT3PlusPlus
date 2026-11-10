@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/track_section.hpp"
 
+#include <utility>
+
 namespace rct3::ovl
 {
 
@@ -9,17 +11,23 @@ namespace rct3::ovl
 
         constexpr std::string_view kTag = "tks";
 
-        std::size_t record_size(std::uint32_t version)
+        // Bytes in one track piece record, per file layout: later layouts add fields at the end.
+        constexpr std::size_t kNoStreamSize = 228;
+        constexpr std::size_t kOneStreamSize = 364;
+        constexpr std::size_t kManyStreamsSize = 392;
+
+        std::size_t record_size(OvlLayout layout)
         {
-            switch (version)
+            switch (layout)
             {
-                case 1:
-                    return 228;
-                case 4:
-                    return 364;
-                default:
-                    return 392;
+                case OvlLayout::NoStream:
+                    return kNoStreamSize;
+                case OvlLayout::OneStream:
+                    return kOneStreamSize;
+                case OvlLayout::ManyStreams:
+                    return kManyStreamsSize;
             }
+            std::unreachable();
         }
 
         /// The strings of the list of `count` string pointers at `address`; empty when it does not fit.
@@ -38,7 +46,7 @@ namespace rct3::ovl
     {
         const AddressSpace space = overlay.space();
         const ReferenceIndex refs(part, space);
-        const std::uint32_t version = part.file.header.version;
+        const OvlLayout layout = part.file.header.layout;
 
         std::vector<TrackSectionItem> items;
         for (const auto& symbol : part.symbols)
@@ -50,7 +58,7 @@ namespace rct3::ovl
                 continue;
 
             TrackSectionItem item { parts.name, std::nullopt };
-            const auto size = record_size(version);
+            const auto size = record_size(layout);
             if (const auto record = ItemRecord::open(space, refs, symbol.data, size))
             {
                 TrackSection s;
@@ -71,26 +79,31 @@ namespace rct3::ovl
                 s.platform_run = record->text(0xE0);
                 for (std::size_t i = 0; i < s.scale.size(); ++i)
                     s.scale[i] = record->real(0xBC + i * 4);
-                if (version >= 4)
+                if (layout != OvlLayout::NoStream)
                 {
                     s.start_join = record->text(0x50);
                     s.end_join = record->text(0x6C);
                     s.widths = { record->u32(0x114), record->u32(0x118) };
                 }
-                // Later records number their own layout, 2 in version 4 files and 3 in version 5: the group and
+                // Later records number their own layout, 2 in one-stream files and 3 in many-stream files: the group and
                 // tags come with 2, the side and the other half with 3.
-                const std::uint32_t layout = version >= 4 ? record->u32(0xE4) : 0;
-                if (layout >= 2)
+                const std::uint32_t record_layout = layout != OvlLayout::NoStream ? record->u32(0xE4) : 0;
+                if (record_layout >= 2)
                 {
                     s.group = record->text(0x104);
                     s.ground = record->u32(0x128);
+                    s.drop_off = record->real(0x124);
+                    const std::uint32_t count = record->u32(0xF4);
+                    if (const auto list = count == 0 ? std::nullopt : ItemRecord::open(space, refs, record->u32(0xF8), std::size_t { count } * 16))
+                        for (std::uint32_t i = 0; i < count; ++i)
+                            s.squares.push_back({ list->i32(i * 16), list->i32(i * 16 + 4), list->i32(i * 16 + 8), list->u32(i * 16 + 12) });
                     for (std::size_t end = 0; end < 2; ++end)
                     {
                         const auto list = [&](std::size_t at) { return strings(space, refs, record->u32(at + end * 8), record->u32(at + end * 8 + 4)); };
                         s.tags[end] = { list(0x13C), list(0x14C), list(0x15C) };
                     }
                 }
-                if (layout >= 3)
+                if (record_layout >= 3)
                 {
                     s.side = record->u32(0x16C);
                     s.partner = record->ref(0x170, kTag);

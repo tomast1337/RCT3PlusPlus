@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 namespace rct3::simulation
 {
@@ -12,9 +13,6 @@ namespace rct3::simulation
     namespace
     {
         constexpr float kGravity = 9.81f;
-        // Our model's losses, picked so the laps of saved parks' tested coasters come out near their test times.
-        constexpr float kRolling = 0.003f;    ///< Of the train's weight
-        constexpr float kAir = 0.0004f;       ///< Times speed squared, per metre of the train's mass
         constexpr float kStep = 0.05f;        ///< Seconds per part step, short enough for the steepest drops
         constexpr float kStuck = 4;           ///< Seconds all but stopped before the track's tyres take over
         constexpr float kLaunchLeast = 0.5f;  ///< Metres of platform left that a launch is still sized over
@@ -23,6 +21,19 @@ namespace rct3::simulation
         constexpr float kTopHold = 3;         ///< Seconds a drop tower's train is held at the top
         constexpr float kStationBrake = 3;    ///< m/s² a station's brakes slow an arriving train by. Chosen by eye
         constexpr float kStationCreep = 0.5f; ///< m/s an arriving train is brought the last of the way in at. Chosen by eye
+        constexpr float kSlideLeave = 1;      ///< m/s a pool slide's car is eased off its platform at. Measured: a car setting off in a saved park
+        constexpr float kSlideEase = 4;       ///< m/s² it is eased up to that by. Chosen by eye
+        constexpr float kWadeSpeed = 2.9f;    ///< m/s a slide's car is carried through the pool at on its way back to its lift. Measured: a car of a tested slide in the original game
+        constexpr float kWadeDrag = 40;       ///< m/s² the water slows a faster car by, down to that. Measured likewise: 13 m/s down to 3 in 2 m
+        constexpr float kJetPull = 15;        ///< m/s² booster jets push a car over them by. Chosen by eye
+        /// Radians a slide's car swings up its trough's wall to go over a rim. The rims are the piece's rails,
+        /// level with the track's line the car swings from, so it goes over once swung out level with them.
+        // shortcut: every piece's rims are taken as level with its line, upgrade when each piece's own rails are read.
+        constexpr float kRim = std::numbers::pi_v<float> / 2;
+
+        constexpr float kWaterDrag = 1.5f; ///< Per second, how fast a car afloat slows. Chosen by eye
+        constexpr float kSink = 1;         ///< Metres a car afloat sinks in its last second, out of sight. Chosen by eye
+        constexpr float kSettle = 0.5f;    ///< Seconds a car come down nose first takes to lie level afloat. Chosen by eye
 
         std::size_t point_at(const Coaster& c, float d)
         {
@@ -163,6 +174,58 @@ namespace rct3::simulation
         return chain_at(c, c.at) || chain_at(c, c.at - c.train_length);
     }
 
+    bool fly(Flight& f, float seconds)
+    {
+        // Across the ground it goes straight on, so stopping it at its reach is the same in any steps.
+        const auto stopped = [&f] {
+            const glm::vec2 across { f.at.x - f.from.x, f.at.z - f.from.z };
+            if (glm::length(across) <= f.reach)
+                return;
+            const glm::vec2 kept = glm::normalize(across) * f.reach;
+            f.at.x = f.from.x + kept.x;
+            f.at.z = f.from.z + kept.y;
+            f.velocity.x = f.velocity.z = 0;
+        };
+        f.off += seconds;
+        if (f.afloat < 0)
+        {
+            const float down = f.at.y - f.water;
+            // Down on its water within the step: at the moment the fall from its height takes.
+            const float t = (f.velocity.y + std::sqrt(f.velocity.y * f.velocity.y + 2 * kGravity * std::max(down, 0.0f))) / kGravity;
+            const float flown = std::min(t, seconds);
+            f.at += f.velocity * flown + glm::vec3(0, -kGravity / 2 * flown * flown, 0);
+            f.velocity.y -= kGravity * flown;
+            stopped();
+            if (flown < t)
+                return f.off < kGone;
+            f.at.y = f.water;
+            f.velocity.y = 0;
+            f.afloat = 0;
+            seconds -= flown;
+        }
+        f.afloat += seconds;
+        const float drift = (1 - std::exp(-kWaterDrag * seconds)) / kWaterDrag;
+        f.at += f.velocity * drift;
+        f.velocity *= std::exp(-kWaterDrag * seconds);
+        stopped();
+        f.at.y = f.water - kSink * std::max(f.off - (kGone - 1), 0.0f);
+        return f.off < kGone;
+    }
+
+    glm::mat4 flown(const Flight& f, const glm::mat4& place)
+    {
+        // Nose along the way it flies, as if no wall stopped it, then levelling off once afloat. With nothing
+        // stored but how it left, so it turns the same between steps as at them.
+        const glm::vec3 level = glm::length(glm::vec2(f.way.x, f.way.z)) > 1e-3f ? glm::normalize(glm::vec3(f.way.x, 0, f.way.z)) : f.way;
+        const glm::vec3 fall = f.way * f.speed - glm::vec3(0, kGravity * (f.afloat < 0 ? f.off : f.off - f.afloat), 0);
+        const glm::vec3 nose = glm::length(fall) > 1e-3f ? glm::normalize(fall) : level;
+        const glm::vec3 to = f.afloat < 0 ? nose : glm::normalize(glm::mix(nose, level, std::min(f.afloat / kSettle, 1.0f)) + level * 1e-3f);
+        const glm::vec3 axis = glm::cross(f.way, to);
+        const float turn = std::atan2(glm::length(axis), glm::dot(f.way, to));
+        const glm::mat4 turned = glm::length(axis) > 1e-6f ? glm::rotate(glm::mat4(1.0f), turn, glm::normalize(axis)) : glm::mat4(1.0f);
+        return glm::translate(glm::mat4(1.0f), f.at) * turned * glm::translate(glm::mat4(1.0f), -f.from) * place;
+    }
+
     bool drive(Coaster& c, float seconds, float room)
     {
         if (!c.running || c.distance.size() < 2 || c.length() <= 0)
@@ -208,15 +271,27 @@ namespace rct3::simulation
                 c.speed = *c.fixed_speed;
             else
             {
-                // Pulled down the slope between the train's ends, held back by rolling and the air.
+                // Pulled down the slope between the train's ends, held back by rolling, as much as it presses on the
+                // track, and by the air.
                 const float back = c.at - c.train_length;
-                const float slope = (height_at(c, c.at) - height_at(c, back)) / c.train_length;
-                c.speed += (-kGravity * slope - kGravity * kRolling - kAir * c.speed * std::abs(c.speed)) * dt;
+                const float slope = std::clamp((height_at(c, c.at) - height_at(c, back)) / c.train_length, -1.0f, 1.0f);
+                c.speed += (-kGravity * slope - kGravity * c.rolling * std::sqrt(1 - slope * slope) - c.air * c.speed * std::abs(c.speed)) * dt;
+                // A slide's way back to its lift has a chain under the water too, which the water's pace overrides.
+                // shortcut: slowed so whether or not a pool is there; upgrade once a run in the original game with no
+                // pool joined is known.
+                if (std::ranges::any_of(c.wades, [&](const std::array<float, 2>& w) { return c.at >= w[0] && c.at < w[1]; }))
+                    c.speed = std::max(c.speed - kWadeDrag * dt, kWadeSpeed);
                 // A shuttle's chain carries the train either way, the way it is going.
-                if (chained)
+                else if (chained)
                     c.speed = open && c.speed < 0 ? std::min(c.speed, -c.lift_speed) : std::max(c.speed, c.lift_speed);
                 else if (home)
                     c.speed = std::copysign(c.station_speed, c.start - c.at);
+                else if (c.splash_out && c.travelled < c.train_length)
+                {
+                    // A pool slide's car is eased off its platform, no faster than a walk; the slope takes it from there.
+                    if (c.speed < kSlideLeave)
+                        c.speed = std::min(c.speed + kSlideEase * dt, kSlideLeave);
+                }
                 else if (under == Stretch::Station)
                 {
                     // A shuttle's train rolls through the station on its passes before the last. Others are carried
@@ -242,20 +317,33 @@ namespace rct3::simulation
                 }
                 // Each car over a brake or block brake slows the train while it is faster than that brake's speed,
                 // down to it and no further, whichever way it goes; each over a block brake pushes it on while it is
-                // slower. A brake set to nothing lets it through.
+                // slower. A brake set to nothing lets it through. Each car over a booster is shoved on by its jets,
+                // much harder, while slower than the booster's speed.
                 const int cars = std::max(c.cars, 1);
                 const float car = c.train_length / static_cast<float>(cars);
                 float pull = 0;
                 float push = 0;
                 float least = 0;
                 float most = 0;
+                float jets = 0;
+                float jet_most = 0;
                 bool blocked = false;
                 for (int k = 0; k < cars; ++k)
                 {
                     const std::size_t i = point_at(c, wrap(c, c.at - (static_cast<float>(k) + 0.5f) * car));
                     const bool block = c.kinds[i] == Stretch::BlockBrake;
-                    if ((!block && c.kinds[i] != Stretch::Brake) || i >= c.brake_speeds.size() || c.brake_speeds[i] <= 0)
+                    const bool jet = c.kinds[i] == Stretch::Booster;
+                    if ((!block && !jet && c.kinds[i] != Stretch::Brake) || i >= c.brake_speeds.size() || c.brake_speeds[i] <= 0)
                         continue;
+                    if (jet)
+                    {
+                        if (c.speed < c.brake_speeds[i])
+                        {
+                            jets += kJetPull / static_cast<float>(cars);
+                            jet_most = std::max(jet_most, c.brake_speeds[i]);
+                        }
+                        continue;
+                    }
                     blocked = blocked || block;
                     if (std::abs(c.speed) > c.brake_speeds[i])
                     {
@@ -272,6 +360,8 @@ namespace rct3::simulation
                     c.speed = std::copysign(std::max(std::abs(c.speed) - pull * dt, least), c.speed);
                 else if (push > 0)
                     c.speed = std::min(c.speed + push * dt, most);
+                if (jets > 0)
+                    c.speed = std::max(c.speed, std::min(c.speed + jets * dt, jet_most));
                 // Held on a block brake for the block ahead to clear, the brakes bring it to a stop where its room
                 // runs out.
                 if (blocked && std::isfinite(room))
@@ -320,6 +410,39 @@ namespace rct3::simulation
                 c.speed = 0;
             }
             room -= moved;
+            // A slide's car swings in its trough as a weight hung from the middle of the swing: gravity, less the
+            // turn's pull, swings it on along its arc; the wall's friction holds it, enough to stop a slow swing dead;
+            // the swing dies down and drifts back to the middle. Swung out past the rails of an open trough, it flies
+            // out and crashes, going as fast as it left; a tube holds it in.
+            if (c.trough && !c.points.empty())
+            {
+                const Trough& t = *c.trough;
+                constexpr float kReach = 2; ///< Metres either side the bend is taken over, so corners between points do not jolt
+                const float d = c.at - c.train_length / 2;
+                const glm::vec3 here = track_point(c, d);
+                const glm::vec3 bend = (track_point(c, d + kReach) - 2.0f * here + track_point(c, d - kReach)) / (kReach * kReach);
+                const glm::vec3 up = track_up(c, d);
+                const glm::vec3 across = glm::cross(track_way(c, d), up);
+                const glm::vec3 right = glm::length(across) > 1e-6f ? glm::normalize(across) : glm::vec3(1, 0, 0);
+                const std::size_t i = point_at(c, wrap(c, d));
+                const bool steady = i < c.steady.size() && c.steady[i];
+                const glm::vec3 weight = glm::vec3(0, -kGravity, 0) - (steady ? glm::vec3(0) : bend * c.speed * c.speed);
+                const glm::vec3 hang = right * std::sin(c.lean) - up * std::cos(c.lean);
+                const glm::vec3 arc = right * std::cos(c.lean) + up * std::sin(c.lean);
+                // Turned by the pull along its arc times its arm, as a weight its own size.
+                float rate = c.lean_rate + glm::dot(weight, arc) * t.length * dt;
+                const float held = t.friction * std::max(glm::dot(weight, hang), 0.0f) * t.length * dt;
+                rate = std::abs(rate) <= held ? 0.0f : (rate - std::copysign(held, rate)) * std::exp(-t.damping * dt);
+                c.lean = (c.lean + rate * dt) * std::exp(-t.centring * dt);
+                c.lean_rate = rate;
+                if (std::abs(c.lean) > kRim && !(i < c.covered.size() && c.covered[i]))
+                {
+                    c.crashed = true;
+                    c.running = false;
+                    c.lean = c.lean_rate = 0;
+                    return false;
+                }
+            }
             // Run off either end of its track, the train crashes there, going as fast as it left.
             if (two_ends(c))
             {
@@ -327,10 +450,13 @@ namespace rct3::simulation
                 const float kept = std::clamp(to, std::min(c.train_length, c.length()), c.length());
                 if (kept != to)
                 {
+                    const bool splash = c.splash_out && to > kept;
                     c.at = kept;
-                    c.crashed = true;
+                    c.crashed = !splash;
+                    c.splashed = splash;
                     c.running = false;
-                    return false;
+                    c.lean = c.lean_rate = 0;
+                    return splash;
                 }
             }
             if (open)
@@ -400,7 +526,7 @@ namespace rct3::simulation
 
     std::optional<std::size_t> standing_at(const Coaster& c)
     {
-        if (c.running || c.crashed)
+        if (c.running || c.crashed || c.splashed)
             return std::nullopt;
         return c.travelled == 0 ? 0 : c.next_stop;
     }

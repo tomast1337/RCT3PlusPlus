@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/boat.hpp"
 
-#include "park/water_fill.hpp"
+#include "park/water/fill.hpp"
 
 #include <algorithm>
 #include <array>
@@ -73,7 +73,7 @@ namespace rct3::simulation
         return { origin_x + (static_cast<float>(tile.x) + 0.5f) * tile_size, origin_z + (static_cast<float>(tile.y) + 0.5f) * tile_size };
     }
 
-    WaterTiles water_tiles(const save::TerrainGrid& grid, std::span<const save::WaterBody> bodies, const park::SolidTiles& solids)
+    WaterTiles water_tiles(const save::TerrainGrid& grid, std::span<const save::WaterBody> bodies, const park::path::SolidTiles& solids)
     {
         WaterTiles w { .cols = grid.width, .rows = grid.height, .origin_x = grid.origin_x, .origin_z = grid.origin_z, .tile_size = grid.tile_size_x > 0 ? grid.tile_size_x : 4 };
         w.level.assign(static_cast<std::size_t>(std::max(grid.width, 0)) * static_cast<std::size_t>(std::max(grid.height, 0)), std::nullopt);
@@ -96,7 +96,7 @@ namespace rct3::simulation
         {
             const int col = static_cast<int>(key & 0xFFFF), row = static_cast<int>(key >> 16);
             const auto level = w.at(col, row);
-            if (level && std::ranges::any_of(spans, [&](const park::SolidSpan& s) { return (s.room & park::kWholeTile) != 0 && s.low < *level + kClear && *level - kUnder < s.high; }))
+            if (level && std::ranges::any_of(spans, [&](const park::path::SolidSpan& s) { return (s.room & park::path::kWholeTile) != 0 && s.low < *level + kClear && *level - kUnder < s.high; }))
                 w.level[static_cast<std::size_t>(row) * static_cast<std::size_t>(w.cols) + static_cast<std::size_t>(col)] = std::nullopt;
         }
         return w;

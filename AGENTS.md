@@ -39,7 +39,7 @@ Suggested messages:
 
 - Windows: See [docs/windows.md](docs/windows.md)
 
-## Clean room
+## Original work
 
 Read [ORIGINAL_WORK.md](ORIGINAL_WORK.md) before touching anything to do with the game's files. Summary:
 
@@ -78,7 +78,10 @@ visible in code, so you can see where each dependency comes from.
 callbacks or events. A pipeline is a function that calls its stages in order.
 
 **One topic per file, and the path says what it is.** Folder = domain, file name = what the code does.
-Glance test: from the path alone you can tell what is inside, without opening it.
+Glance test: from the path alone you can tell what is inside, without opening it. A feature's data and the
+functions that act on it share one `.hpp`/`.cpp` pair. Three or more files with one prefix become a folder,
+and the prefix goes: `park/track_pieces.hpp` becomes `park/track/pieces.hpp`. The namespace follows the
+folder: `src/park/track/` is `rct3::park::track`, and `app/a/b/` is `rct3::a::b` likewise.
 
 **Product code and fixtures stay apart.** Probes and fixtures are not mixed into the folders of the code
 they check. Tests live in `tests/`, tools in `tools/`, library code in `src/`.

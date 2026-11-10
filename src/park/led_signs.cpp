@@ -3,7 +3,7 @@
 
 #include "park/footpath_builder.hpp"
 #include "park/item_category.hpp"
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 #include "park/queue_fences.hpp"
 #include "strings/ascii.hpp"
 
@@ -38,17 +38,17 @@ namespace rct3::park
             const auto led_into = [&](std::size_t tile) {
                 return std::ranges::any_of(tiles, [&](std::size_t from) {
                     const save::PathTile& p = paths[from];
-                    return from != tile && step({ p.col, p.row }, stored_direction(p.queue->end_direction)) == save::Tile { paths[tile].col, paths[tile].row };
+                    return from != tile && path::stored_heading_or_bare(p.queue->end_direction).beyond({ p.col, p.row }) == save::Tile { paths[tile].col, paths[tile].row };
                 });
             };
             const auto head = std::ranges::find_if(tiles, [&](std::size_t tile) { return !led_into(tile); });
             if (head == tiles.end())
                 continue;
             const save::PathTile& p = paths[*head];
-            const auto side = side_of(p.queue->start_direction);
+            const auto side = path::stored_heading(p.queue->start_direction);
             if (!side)
                 continue;
-            spots.push_back({ line, p.col, p.row, edge_height(p, grid, stored_direction(p.queue->start_direction)).value_or(0), edge_turns(*side) });
+            spots.push_back({ line, p.col, p.row, path::edge_height(p, grid, *side).value_or(0), edge_turns(*side) });
         }
         return spots;
     }
@@ -70,61 +70,6 @@ namespace rct3::park
             }
         }
         return { };
-    }
-
-    ovl::RgbaImage sign_text_loop(const ui::Font& font, std::span<const ovl::RgbaImage> pages, std::u16string_view text, std::uint32_t height)
-    {
-        float width = 0;
-        for (const char16_t c : text)
-        {
-            if (const auto g = font.find(c))
-                width += g->advance;
-        }
-        ovl::RgbaImage loop;
-        loop.width = static_cast<std::uint32_t>(std::ceil(width)) + kSignGap * height;
-        loop.width += (kSignLamp - loop.width % kSignLamp) % kSignLamp;
-        loop.height = height;
-        loop.pixels.assign(static_cast<std::size_t>(loop.width) * height * kChannels, 0);
-        for (std::size_t i = kChannels - 1; i < loop.pixels.size(); i += kChannels)
-            loop.pixels[i] = 255;
-        // The line's middle on the board's middle.
-        const float baseline = (static_cast<float>(height) - font.line_height()) / 2 + font.ascent();
-        float pen = 0;
-        for (const char16_t c : text)
-        {
-            const auto g = font.find(c);
-            if (!g)
-                continue;
-            if (g->page < pages.size() && g->box.width() > 0 && g->box.height() > 0)
-            {
-                const ovl::RgbaImage& page = pages[g->page];
-                const auto left = static_cast<int>(std::lround(pen + g->box.x0));
-                const auto top = static_cast<int>(std::lround(baseline + g->box.y0));
-                const auto wide = static_cast<int>(std::lround(g->box.width()));
-                const auto tall = static_cast<int>(std::lround(g->box.height()));
-                for (int y = 0; y < tall; ++y)
-                {
-                    // Glyph texture coordinates may run either way down the page.
-                    const float v = g->uv.y0 + (g->uv.y1 - g->uv.y0) * (static_cast<float>(y) + 0.5f) / static_cast<float>(tall);
-                    const auto from_y = std::clamp(static_cast<std::int64_t>(v * static_cast<float>(page.height)), std::int64_t { 0 }, static_cast<std::int64_t>(page.height) - 1);
-                    for (int x = 0; x < wide; ++x)
-                    {
-                        const int tx = left + x;
-                        const int ty = top + y;
-                        if (tx < 0 || ty < 0 || tx >= static_cast<int>(loop.width) || ty >= static_cast<int>(height))
-                            continue;
-                        const float u = g->uv.x0 + (g->uv.x1 - g->uv.x0) * (static_cast<float>(x) + 0.5f) / static_cast<float>(wide);
-                        const auto from_x = std::clamp(static_cast<std::int64_t>(u * static_cast<float>(page.width)), std::int64_t { 0 }, static_cast<std::int64_t>(page.width) - 1);
-                        const std::uint8_t cover = page.pixels[(static_cast<std::size_t>(from_y) * page.width + static_cast<std::size_t>(from_x)) * kChannels + 3];
-                        const std::size_t at = (static_cast<std::size_t>(ty) * loop.width + static_cast<std::size_t>(tx)) * kChannels;
-                        for (std::size_t k = 0; k < 3; ++k)
-                            loop.pixels[at + k] = std::max(loop.pixels[at + k], cover);
-                    }
-                }
-            }
-            pen += g->advance;
-        }
-        return loop;
     }
 
     ovl::RgbaImage sign_window(const ovl::RgbaImage& loop, std::uint32_t shift, std::uint32_t width, LampColour colour)

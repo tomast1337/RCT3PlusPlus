@@ -42,6 +42,7 @@
 #pragma once
 
 #include "park/terrain_mesh.hpp"
+#include "park/turns.hpp"
 #include "save/model/world.hpp"
 
 #include <array>
@@ -101,9 +102,7 @@ namespace rct3::park
 
     struct FootpathBuilder
     {
-        /// Quarter turns clockwise as the park is drawn: 0 towards higher rows, 1 towards higher columns, 2
-        /// towards lower rows, 3 towards lower columns.
-        std::uint8_t heading = 0;
+        Side heading { }; ///< The way the trail goes on: the side of its last tile the next piece is beyond
         PathSlope slope = PathSlope::Flat;
         bool cut_into_ground = false;
         bool queue = false;                           ///< Lays queue tiles rather than paths
@@ -125,7 +124,10 @@ namespace rct3::park
         Blocked,     ///< Something else is in the way: scenery, a ride or a stall
     };
 
-    struct SolidTiles;
+    namespace path
+    {
+        struct SolidTiles;
+    } // namespace path
 
     /// Clearance kept between a piece and another path on its tile, in world units: room for guests to walk
     /// under a raised path. A bridge over a path then climbs two ramp tiles each side, as in the original game.
@@ -151,7 +153,7 @@ namespace rct3::park
     [[nodiscard]] PathStep press(FootpathBuilder& builder, PathControl control);
 
     /// The tile one step from `from` in `heading`.
-    [[nodiscard]] save::Tile step(save::Tile from, std::uint8_t heading) noexcept;
+    [[nodiscard]] save::Tile step(save::Tile from, Side heading) noexcept;
 
     /// Begins a new trail at `spot`, its first piece on the ground; what was laid stays.
     void start_at(FootpathBuilder& builder, save::Tile spot);
@@ -163,11 +165,11 @@ namespace rct3::park
     [[nodiscard]] std::optional<NextPiece> next_piece(const FootpathBuilder& builder, const save::TerrainGrid& grid);
 
     /// Why the next piece cannot be laid on `grid` among `paths` and, when given, what else fills the tiles
-    /// (path_clearance.hpp).
-    [[nodiscard]] LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids = std::nullopt);
+    /// (path/clearance.hpp).
+    [[nodiscard]] LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const path::SolidTiles&> solids = std::nullopt);
 
     /// Lowers the corners of `piece`'s tile that stand above it, laid heading `heading`, down to it.
-    void cut_down(save::TerrainGrid& grid, const NextPiece& piece, std::uint8_t heading);
+    void cut_down(save::TerrainGrid& grid, const NextPiece& piece, Side heading);
 
     /// How far the middle of `piece` is above the ground of its tile, in world units.
     [[nodiscard]] float height_above_ground(const NextPiece& piece, const save::TerrainGrid& grid);
@@ -201,7 +203,7 @@ namespace rct3::park
     /// Which controls lead to a piece that can be laid from where the trail stands: a turn when some slope fits
     /// that way, a slope when it fits the way the trail heads, Straight when the piece as chosen fits. The cut
     /// switch can always be used, since cutting can make a piece fit; Remove is left to the caller.
-    [[nodiscard]] std::array<bool, kPathControlCount> fitting_controls(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids = std::nullopt);
+    [[nodiscard]] std::array<bool, kPathControlCount> fitting_controls(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const path::SolidTiles&> solids = std::nullopt);
 
     /// The slope control that picks `slope`, and the slope a control picks (Flat for those that pick none).
     [[nodiscard]] PathControl slope_control(PathSlope slope) noexcept;
@@ -217,7 +219,7 @@ namespace rct3::park
 
     /// A square over `piece`'s tile, at the piece's height, whose pictures' bottom edge (v = 1) lies on the edge
     /// the piece leaves by in `heading`: the arrow showing where the trail goes. One batch.
-    [[nodiscard]] TerrainMesh heading_arrow(const NextPiece& piece, std::uint8_t heading, const save::TerrainGrid& grid);
+    [[nodiscard]] TerrainMesh heading_arrow(const NextPiece& piece, Side heading, const save::TerrainGrid& grid);
 
     /// The slope as a park stores it on a raised path piece.
     [[nodiscard]] std::uint8_t stored_slope(PathSlope slope) noexcept;

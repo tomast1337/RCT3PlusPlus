@@ -5,7 +5,7 @@
 // sounds a splash. Running on through water fast enough, it leaves a wake now and then.
 #pragma once
 
-#include "park/track_course.hpp"
+#include "park/track/course.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -22,6 +22,9 @@ namespace rct3::park
         float wake = 0;                ///< Seconds before its next wake
         std::uint32_t splashes = 0;    ///< Times it has splashed
         std::uint8_t strength = 0;     ///< Of the last splash: 0 low, 1 medium, 2 high, by its speed
+        bool off_end = false;          ///< Run off a pool slide's end; its riders' splashes are on their way
+        bool landed = false;           ///< Flown off a pool slide's end, it has come down with its splash
+        bool ridden = false;           ///< Has carried a rider since it last stood empty, off a slide's end with them and back
     };
 
     /// What a car does in the water this step.
@@ -33,6 +36,6 @@ namespace rct3::park
 
     /// Moves `water` on by `seconds` for a car at `distance` along `course`, moving at `velocity`; `in_water`
     /// when it is in water its track does not carry, the park's own.
-    [[nodiscard]] CarSplash car_splash(CarWater& water, const TrackCourse& course, float distance, bool in_water, glm::vec3 velocity, float seconds);
+    [[nodiscard]] CarSplash car_splash(CarWater& water, const track::TrackCourse& course, float distance, bool in_water, glm::vec3 velocity, float seconds);
 
 } // namespace rct3::park

@@ -182,7 +182,7 @@ namespace rct3::render
         /// As Textured, with location 3 the surface normal (Float3, any length), and the result lit by
         /// `DrawCommand::light`, sunlight held back where the light's shadow map says. Positions and normals are
         /// in world space. Both sides of a surface are lit as its normal says; a zero normal is lit as facing up.
-        /// With a first extra texture (a tiling noise picture, park/ground_variation.hpp), its red channel,
+        /// With a first extra texture (a tiling noise picture, park/ground/variation.hpp), its red channel,
         /// read at a few sizes over world x and z, makes the colour a little lighter or darker from place to
         /// place. A second extra texture is the texture's relief map (park/relief_maps.hpp), read as
         /// `SceneLight::surface_detail` says.
@@ -215,7 +215,7 @@ namespace rct3::render
         /// whose red channel is read as height, and the extra textures are, in order: the scene mirrored in the
         /// surface, the scene behind the surface, that scene's depth, and the ripples (Rgba32Float, a column per
         /// ripple: its middle's x and z, ring radius and height, 0 for none, then its wave number and ring width;
-        /// see park/water_ripples.hpp). Lit by `DrawCommand::light`, with `DrawCommand::water`. Draws without the
+        /// see park/water/ripples.hpp). Lit by `DrawCommand::light`, with `DrawCommand::water`. Draws without the
         /// pictures `water` says are missing.
         Water,
         /// A shape of ui/shape.hpp, shaded by its distance from the edge. Inputs: location 0 position (Float2),
@@ -361,7 +361,7 @@ namespace rct3::render
         /// with the water the line of sight crosses. Its vertices carry the water's colour and, as their depth,
         /// the height of the surface over the eye.
         bool underwater = false;
-        /// A slide's flowing water (park/water_flow.hpp): its vertices are an object's, and the texture is its
+        /// A slide's flowing water (park/water/flow.hpp): its vertices are an object's, and the texture is its
         /// picture, moved along its v by `DrawCommand::v_shift`. Neither the mirror nor the scene behind is read.
         bool flow = false;
     };

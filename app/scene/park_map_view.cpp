@@ -6,7 +6,7 @@
 #include "ovl/special_attraction.hpp"
 #include "ovl/stall.hpp"
 #include "park/map_shapes.hpp"
-#include "park/support_sets.hpp"
+#include "park/support/sets.hpp"
 #include "profiling/profiler.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
@@ -189,12 +189,12 @@ namespace rct3::scene
         }
 
         /// The mean colour of each surface's picture, by the surface's index.
-        std::vector<std::optional<park::MapRgba>> surface_colours(const park::GroundImages& images)
+        std::vector<std::optional<park::MapRgba>> surface_colours(const park::ground::GroundImages& images)
         {
             std::vector<std::optional<park::MapRgba>> colours;
             for (std::size_t index = 0; index <= std::numeric_limits<std::uint8_t>::max(); ++index)
             {
-                const auto image = images.find(park::ground_key(park::GroundPaint::Surface, static_cast<std::uint8_t>(index)));
+                const auto image = images.find(park::ground::ground_key(park::GroundPaint::Surface, static_cast<std::uint8_t>(index)));
                 if (image == images.end() || image->second.pixels.empty())
                 {
                     colours.emplace_back();
@@ -238,7 +238,7 @@ namespace rct3::scene
 
     } // namespace
 
-    ParkMap park_map(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water, std::span<const save::PlacedObject> objects, const park::ObjectModels& models, const park::Fitted& fitted, const park::AttractionObjects& attractions, const save::RideModel& rides, const park::GroundImages& images, const config::GameInstall& install)
+    ParkMap park_map(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water, std::span<const save::PlacedObject> objects, const park::ObjectModels& models, const park::Fitted& fitted, const park::AttractionObjects& attractions, const save::RideModel& rides, const park::ground::GroundImages& images, const config::GameInstall& install)
     {
         const profiling::Scope zone("Map");
         ParkMap map;
@@ -249,7 +249,7 @@ namespace rct3::scene
             if (owner == attractions.end())
             {
                 // What the park builds under paths and track is not scenery the player placed.
-                if (o.overlay == park::kSupportOverlay)
+                if (o.overlay == park::support::kSupportOverlay)
                     return std::nullopt;
                 return park::MapLayer::Scenery;
             }

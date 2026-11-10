@@ -10,19 +10,19 @@
 // tile under the pointer, where the pointer's place in it picks the whole tile, an edge or a corner; the second
 // on the brush's square of tiles. The pairs, in order: snap to the heights of the tiles round, move freely,
 // move in whole units. Only the tiles' own corners move, so cliffs open at their sides. A tile is only shaped
-// on land the park owns outright, and only as far as what stands on it lets it (park/ground_holds.hpp); a tile
+// on land the park owns outright, and only as far as what stands on it lets it (park/ground/holds.hpp); a tile
 // refused keeps its corners for the rest of the stroke. Scenery standing on the ground moves with it. A lake on
 // ground that moves, or beside ground that sinks under its level, goes, as does a waterfall beside it.
 //
 // Raising and lowering, one tab: press on the ground and move the pointer up to raise a ridge, mountain, mesa or
 // hill there, or down to sink a canyon, trough or crater, a height unit for each kSlopeDragStep moved
-// (park/ground_shapes.hpp). Moved the other way, each makes its shape upside down: a mountain dragged down digs
+// (park/ground/shapes.hpp). Moved the other way, each makes its shape upside down: a mountain dragged down digs
 // a pit, a crater dragged up builds a mound. The shape is as wide as the brush's number, centred where the pointer pressed;
 // a ridge runs across the view. Ground the park does not own outright or that what stands on it holds stays,
 // as do cliff edges. Each unit of ground moved is paid for, once.
 //
 // Smoothing: holding the button works the ground under the brush a little more every moment
-// (park/ground_smoothing.hpp), following the pointer. Its tools by their place in the tab: average, level to
+// (park/ground/smoothing.hpp), following the pointer. Its tools by their place in the tab: average, level to
 // the height under the pointer as it moves, level to the height where the stroke began, to whole units, join
 // the tiles' edges, and square them. The game's data also holds pictures for roughening and a second whole-unit
 // level, but they are not usable (one picture is malformed, the other repeats a third), so those are left out.
@@ -30,12 +30,12 @@
 //
 // Paint ground: the panel's surface tab shows the land surfaces the game's terrain files list, each by its
 // own picture. Pressing the ground and moving over it paints the tiles a round brush covers, as wide as the
-// number on the panel's disc (park/ground_brush.hpp), with the surface chosen, on land the park owns
+// number on the panel's disc (park/ground/brush.hpp), with the surface chosen, on land the park owns
 // outright, each tile paid for. The cliff tab paints the faces of the cliffs on the tiles under the brush
 // the same way, with the cliff faces the terrain files list. Closing the panel puts the tool away.
 //
 // Water: a click on the ground pours a lake up to the height clicked, rounded up to a whole unit, so clicking
-// higher up a bank fills it deeper; it spreads over every tile it can reach below that (park/water_fill.hpp)
+// higher up a bank fills it deeper; it spreads over every tile it can reach below that (park/water/fill.hpp)
 // and takes in the lakes it meets. A click on a lake takes it away, with its waterfalls. Water only goes on land
 // the park owns outright without paths on the ground, and never under a higher lake; a message says when it
 // cannot. Water is free.
@@ -51,15 +51,15 @@
 // the ground and moving over it buys the tiles on sale under the brush's square (park/land_buying.hpp), each
 // paid for, and a message says when money ran short. The park's fence and where its staff may walk follow.
 //
-// Every other change is paid for. A right click puts either tool away.
+// Every other change is paid for. A right click or Escape puts either tool away.
 //
 // A shaping stroke rumbles from press to release, softly while the ground stays still and loudest as it moves.
 #pragma once
 
-#include "park/ground_holds.hpp"
-#include "park/ground_shapes.hpp"
-#include "park/ground_smoothing.hpp"
-#include "park/ground_textures.hpp"
+#include "park/ground/holds.hpp"
+#include "park/ground/shapes.hpp"
+#include "park/ground/smoothing.hpp"
+#include "park/ground/textures.hpp"
 #include "park/land_buying.hpp"
 #include "park/tile_shaping.hpp"
 #include "render/device.hpp"
@@ -95,30 +95,30 @@ namespace rct3::scene
         Tool tool = Tool::None;
         std::optional<save::Tile> tile; ///< Being shaped, or last painted, while the button is held
         float press_y = 0;
-        std::size_t tile_tool = 0;                        ///< The tile tool chosen, by its place in its tab
-        park::TileStroke stroke;                          ///< Of a tile tool
-        std::vector<glm::vec3> marked;                    ///< Where the marks on the ground were made, to make them again only on a change
-        park::GroundHolds holds;                          ///< Gathered as a stroke starts
-        std::unordered_set<std::uint32_t> refused;        ///< Tiles the stroke may not move, as GroundHolds keys them
-        std::optional<std::array<save::Tile, 2>> stirred; ///< The first and last tiles the stroke moved
-        std::vector<park::GroundSurface> surfaces;        ///< Read once, the first time the paint tool opens
+        std::size_t tile_tool = 0;                         ///< The tile tool chosen, by its place in its tab
+        park::TileStroke stroke;                           ///< Of a tile tool
+        std::vector<glm::vec3> marked;                     ///< Where the marks on the ground were made, to make them again only on a change
+        park::ground::GroundHolds holds;                   ///< Gathered as a stroke starts
+        std::unordered_set<std::uint32_t> refused;         ///< Tiles the stroke may not move, as GroundHolds keys them
+        std::optional<std::array<save::Tile, 2>> stirred;  ///< The first and last tiles the stroke moved
+        std::vector<park::ground::GroundSurface> surfaces; ///< Read once, the first time the paint tool opens
         bool surfaces_read = false;
-        std::size_t surface = 0;                 ///< Chosen, of `surfaces`
-        std::vector<park::GroundSurface> cliffs; ///< The cliff faces, read with the surfaces
-        std::optional<std::size_t> cliff;        ///< Chosen, of `cliffs`, in place of a surface
-        int brush = 3;                           ///< Tiles across the brushes cover
-        std::optional<park::GroundShape> shape;  ///< The raising or lowering brush chosen; none for the tile tool
-        park::CornerHeights before;              ///< As a brush stroke found them
-        glm::vec2 middle { 0 };                  ///< Of a brush stroke, in tile units
-        glm::vec2 along { 1, 0 };                ///< Of a ridge: across the view as the stroke began
-        float amount = 0;                        ///< Of the brush stroke so far, in height units
-        float paid_for = 0;                      ///< The most ground the stroke has moved, already paid for
-        std::optional<std::size_t> smoothing;    ///< The smoothing brush chosen, by its place in its tab
-        float target = 0;                        ///< Of a levelling stroke
-        float held = 0;                          ///< Seconds of smoothing not yet applied
-        std::uint64_t passes = 0;                ///< Of smoothing, the seed of each pass
-        std::optional<std::size_t> upper_lake;   ///< Of a waterfall: the lake picked first, of the park's water
-        save::Tile upper_tile;                   ///< Where it was picked
+        std::size_t surface = 0;                         ///< Chosen, of `surfaces`
+        std::vector<park::ground::GroundSurface> cliffs; ///< The cliff faces, read with the surfaces
+        std::optional<std::size_t> cliff;                ///< Chosen, of `cliffs`, in place of a surface
+        int brush = 3;                                   ///< Tiles across the brushes cover
+        std::optional<park::ground::GroundShape> shape;  ///< The raising or lowering brush chosen; none for the tile tool
+        park::ground::CornerHeights before;              ///< As a brush stroke found them
+        glm::vec2 middle { 0 };                          ///< Of a brush stroke, in tile units
+        glm::vec2 along { 1, 0 };                        ///< Of a ridge: across the view as the stroke began
+        float amount = 0;                                ///< Of the brush stroke so far, in height units
+        float paid_for = 0;                              ///< The most ground the stroke has moved, already paid for
+        std::optional<std::size_t> smoothing;            ///< The smoothing brush chosen, by its place in its tab
+        float target = 0;                                ///< Of a levelling stroke
+        float held = 0;                                  ///< Seconds of smoothing not yet applied
+        std::uint64_t passes = 0;                        ///< Of smoothing, the seed of each pass
+        std::optional<std::size_t> upper_lake;           ///< Of a waterfall: the lake picked first, of the park's water
+        save::Tile upper_tile;                           ///< Where it was picked
         park::LandBuy buying = park::LandBuy::Land;
         std::optional<float> rumble; ///< While a shaping stroke goes: how loud its ground is heard moving, 0..1
     };

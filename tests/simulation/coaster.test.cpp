@@ -131,6 +131,29 @@ TEST_CASE("a train is pulled up the chain, runs down the drop faster and comes r
     CHECK(running.at == 10);
 }
 
+TEST_CASE("a slide's car down in the pool on its way back is slowed in the water and carried on to the lift")
+{
+    // The drop's foot to the lift's foot is the pool, the level 30 m back from 70 m.
+    Coaster c = hill();
+    c.wades = { { { 70, 100 } } };
+    c.running = true;
+    float in_pool = 0;
+    float slowest = 100;
+    for (int t = 0; t < 4000 && c.running; ++t)
+    {
+        drive(c, 0.01f);
+        if (c.at > 75 && c.at < 100)
+        {
+            in_pool = std::max(in_pool, c.speed);
+            slowest = std::min(slowest, c.speed);
+        }
+    }
+    // Some 17 m/s off the drop, under 3 m/s once 5 m into the water, never stopping.
+    CHECK(in_pool < 3);
+    CHECK(slowest > 2.5f);
+    CHECK(c.at == 10);
+}
+
 TEST_CASE("a point on the track is on a chain only along the chain's stretch, round again past either end")
 {
     const Coaster c = hill();
@@ -251,6 +274,58 @@ TEST_CASE("a block brake pushes a slow train on up to its speed, and no faster")
     for (int i = 0; i < 20; ++i)
         drive(c, 0.1f);
     CHECK(c.speed == doctest::Approx(4).epsilon(0.05));
+}
+
+TEST_CASE("booster jets shove a car up a climb, hard, to their speed and no faster")
+{
+    // A 20 m climb up 8 m from 10 m on, boosters along it set to 9 m/s.
+    Coaster c = hill();
+    c.distance = { 0, 10, 30, 40 };
+    c.height = { 0, 0, 8, 8 };
+    c.kinds = { Stretch::Station, Stretch::Booster, Stretch::Plain, Stretch::Plain };
+    c.brake_speeds = { -1, 9, -1, -1 };
+    c.train_length = 2;
+    c.cars = 1;
+    c.running = true;
+    c.launched = true;
+    c.travelled = 5;
+    c.at = 12;
+    c.speed = 1;
+    drive(c, 0.5f);
+    CHECK(c.speed > 5); // Much harder than any station or block brake pushes
+    for (int i = 0; i < 10; ++i)
+        drive(c, 0.1f);
+    CHECK(c.speed <= 9);
+    CHECK(c.speed > 8);
+}
+
+TEST_CASE("a pool slide's car is eased off its platform, then taken by the slope")
+{
+    // A 4 m platform, then a 20 m slope down 10 m.
+    Coaster c;
+    c.distance = { 0, 4, 24 };
+    c.height = { 10, 10, 0 };
+    c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain };
+    c.station_speed = 4;
+    c.train_length = 2.5f;
+    c.start = 4;
+    c.at = 4;
+    c.closed = false;
+    c.splash_out = true;
+    c.running = true;
+    drive(c, 0.1f);
+    CHECK(c.speed > 0);
+    CHECK(c.speed < 1); // Eased up, not put straight to the station's speed
+    float most = 0;
+    while (c.travelled < 0.5f && c.running)
+    {
+        drive(c, 0.05f);
+        most = std::max(most, c.speed);
+    }
+    CHECK(most < 1.5f); // Nothing like the station speed it would be carried at, though the slope has begun to tell
+    for (int i = 0; i < 20 && c.running; ++i)
+        drive(c, 0.05f);
+    CHECK(c.speed > 2); // Gravity's, down the slope
 }
 
 TEST_CASE("a train held at a block brake is braked to a stop where its room ends, not stopped dead")
@@ -448,6 +523,26 @@ TEST_CASE("a train going round an unfinished track runs off its end and crashes 
     CHECK(c.speed > 5);
 }
 
+TEST_CASE("a train off the end of a pool slide splashes out, not crashed, still going, and that ends its lap")
+{
+    Coaster c = unfinished();
+    c.splash_out = true;
+    bool back = false;
+    for (int i = 0; i < 4000 && c.running; ++i)
+        back = drive(c, 0.05f);
+    CHECK(back);
+    CHECK(c.splashed);
+    CHECK_FALSE(c.crashed);
+    CHECK(c.at == 80);
+    CHECK(c.speed > 5);
+    CHECK_FALSE(standing_at(c)); // Not in the station to load
+    Coaster tested = unfinished();
+    tested.splash_out = true;
+    const auto test = test_lap(tested); // Rated as a ride that comes round
+    REQUIRE(test);
+    CHECK(test->ride_length == doctest::Approx(80));
+}
+
 TEST_CASE("a shuttle's train pushed too hard runs off an end and crashes")
 {
     Coaster c = spikes(Shuttle::Back, 2);
@@ -625,4 +720,157 @@ TEST_CASE("a train is drawn between where its last step began and ended, the sho
     c.was_at = c.length() - 1;
     c.at = 1;
     CHECK(between_drives(c, 0.5f) == doctest::Approx(c.length()));
+}
+
+namespace
+{
+    /// A pool slide's car going round a flat circle of radius `r` to its left at `speed`, swinging in its trough as a
+    /// body slide's car does.
+    Coaster circling(float r, float speed)
+    {
+        Coaster c;
+        constexpr int kPoints = 64;
+        for (int k = 0; k <= kPoints; ++k)
+        {
+            const float a = 2 * std::numbers::pi_v<float> * static_cast<float>(k) / kPoints;
+            c.points.emplace_back(r * std::cos(a), 0, r * std::sin(a));
+            c.distance.push_back(r * a);
+            c.height.push_back(0);
+            c.ups.emplace_back(0, 1, 0);
+            c.kinds.push_back(Stretch::Plain);
+        }
+        c.train_length = 2;
+        c.at = 2;
+        c.fixed_speed = speed;
+        c.speed = speed;
+        c.running = true;
+        c.launched = true;
+        c.trough = Trough { .damping = 2, .centring = 1, .friction = 0.5f };
+        return c;
+    }
+} // namespace
+
+TEST_CASE("a slide's car swings up its trough's wall in a turn, the further the faster, and stays in")
+{
+    Coaster slow = circling(10, 9);
+    Coaster fast = circling(10, 13);
+    for (int i = 0; i < 80; ++i)
+    {
+        drive(slow, 0.05f);
+        drive(fast, 0.05f);
+    }
+    // A gentle turn's pull is not enough to slide it up the wall against the wall's friction.
+    Coaster gentle = circling(10, 5);
+    for (int i = 0; i < 80; ++i)
+        drive(gentle, 0.05f);
+    CHECK(gentle.lean == 0);
+    REQUIRE(slow.running);
+    REQUIRE(fast.running);
+    CHECK(std::abs(slow.lean) > 0.05f);
+    CHECK(std::abs(fast.lean) > std::abs(slow.lean));
+    CHECK(slow.lean * fast.lean > 0); // Both out of the turn, the same way
+}
+
+TEST_CASE("a slide's car taken round a tight turn too fast flies out of its trough and crashes, but not in a tube")
+{
+    Coaster c = circling(3, 22);
+    for (int i = 0; i < 12 && c.running; ++i)
+        drive(c, 0.05f);
+    CHECK(c.crashed);
+    CHECK_FALSE(c.running);
+    Coaster tube = circling(3, 22);
+    tube.covered.assign(tube.distance.size(), true);
+    for (int i = 0; i < 12; ++i) // Short of coming round to its start
+        drive(tube, 0.05f);
+    CHECK_FALSE(tube.crashed);
+    CHECK(tube.running);
+}
+
+TEST_CASE("a slide's car taken round onto its lift is not swung up the wall by the turn")
+{
+    Coaster c = circling(3, 22);
+    c.steady.assign(c.distance.size(), true);
+    for (int i = 0; i < 12; ++i)
+        drive(c, 0.05f);
+    CHECK_FALSE(c.crashed);
+    CHECK(c.lean == 0);
+}
+
+TEST_CASE("a slide's car on the straight stays in the middle of its trough")
+{
+    Coaster c = hill();
+    c.trough = Trough { .damping = 2, .centring = 1, .friction = 0.5f };
+    c.points = { { 0, 0, 0 }, { 0, 0, 10 }, { 0, 15, 40 }, { 0, 0, 70 }, { 0, 0, 100 } };
+    c.running = true;
+    for (int i = 0; i < 200 && c.running; ++i)
+    {
+        drive(c, 0.05f);
+        CHECK(c.lean == doctest::Approx(0).epsilon(1e-4));
+    }
+}
+
+TEST_CASE("a car on the level is slowed by rolling as much of its weight as it is given, and by the air with speed")
+{
+    Coaster c = hill();
+    c.kinds[1] = Stretch::Plain;
+    c.height = { 0, 0, 0, 0, 0 };
+    c.running = true;
+    c.launched = true;
+    c.at = 40;
+    c.speed = 10;
+    c.rolling = 0.06f;
+    c.air = 0;
+    drive(c, 1);
+    CHECK(c.speed == doctest::Approx(10 - 0.06f * 9.81f).epsilon(0.01));
+    Coaster windy = c;
+    windy.speed = 10;
+    windy.air = 0.01f;
+    drive(windy, 0.1f);
+    CHECK(windy.speed == doctest::Approx(10 - (0.06f * 9.81f + 0.01f * 100) * 0.1f).epsilon(0.01));
+}
+
+TEST_CASE("a car off a slide's end flies on, comes down on its water ahead and floats till it is gone ten seconds on")
+{
+    Flight f { .from = { 0, 3, 0 }, .way = { 0, 0, 1 }, .at = { 0, 3, 0 }, .velocity = { 0, 0, 8 }, .water = 1 };
+    // From 2 m over the water it falls for sqrt(2 * 2 / g) seconds, going on at its speed.
+    const float fall = std::sqrt(4 / 9.81f);
+    CHECK(fly(f, fall / 2));
+    CHECK(f.afloat < 0);
+    CHECK(f.at.y == doctest::Approx(3 - 9.81f / 2 * fall * fall / 4));
+    CHECK(f.at.z == doctest::Approx(4 * fall));
+    // Nose down as it falls, levelling off once afloat.
+    const float dived = flown(f, glm::mat4(1.0f))[2].y;
+    CHECK(dived < 0);
+    CHECK(fly(f, fall));
+    CHECK(f.afloat >= 0);
+    CHECK(f.at.y == doctest::Approx(1));
+    CHECK(f.at.z > 8 * fall);
+    CHECK(flown(f, glm::mat4(1.0f))[2].y > dived);
+    CHECK(flown(f, glm::mat4(1.0f))[2].y < 0);
+    // It drifts on slowing, then sinks and is gone.
+    const float drifted = f.at.z;
+    CHECK(fly(f, 1));
+    CHECK(flown(f, glm::mat4(1.0f))[2].y == doctest::Approx(0).epsilon(1e-5));
+    CHECK(f.at.z > drifted);
+    CHECK(glm::length(f.velocity) < 8);
+    float t = 0;
+    while (fly(f, 0.1f) && t < 20)
+        t += 0.1f;
+    CHECK(t == doctest::Approx(kGone - 1 - fall * 1.5f - 0.1f).epsilon(0.05));
+    CHECK(f.at.y < 1);
+}
+
+TEST_CASE("a car off a slide's end is stopped by its pool's far wall, and flies the same however its time is stepped")
+{
+    const Flight start { .from = { 0, 3, 0 }, .way = { 0, 0, 1 }, .at = { 0, 3, 0 }, .velocity = { 0, 0, 8 }, .water = 1, .speed = 8, .reach = 5 };
+    Flight stepped = start;
+    for (int i = 0; i < 20; ++i)
+        fly(stepped, 0.25f);
+    Flight whole = start;
+    fly(whole, 5);
+    CHECK(stepped.at.z == doctest::Approx(5));
+    CHECK(stepped.at.x == doctest::Approx(0));
+    CHECK(stepped.afloat >= 0);
+    CHECK(glm::distance(stepped.at, whole.at) < 1e-3f);
+    CHECK(stepped.velocity.z == 0);
 }

@@ -32,7 +32,7 @@
 //              the original park's mode.
 //   "ANML" v1  SavedAnimals: the enclosures, animal houses, animals and their dung. Saves made before it lack
 //              it; their enclosures are read again from the original park.
-//   "POOL" v7  park::PoolMap: the swimming pools the player laid, their extras and changing rooms; their
+//   "POOL" v9  park::pools::PoolMap: the swimming pools the player laid, their extras and changing rooms; their
 //              pieces are built again on loading. Only when there are any.
 //   "BEDS" v1  std::vector<save::FlowerBedState>: how much water each flower bed holds. Only when there are any;
 //              without it, the beds' water is read again from the original park.
@@ -41,7 +41,7 @@
 #pragma once
 
 #include "park/camera.hpp"
-#include "park/pools.hpp"
+#include "park/pools/pools.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -200,7 +200,7 @@ namespace rct3::parkfile
         std::optional<std::vector<save::Waterfall>> waterfalls; ///< None in saves made before waterfalls were kept
         std::optional<simulation::DayMode> day_mode;            ///< None in saves made before the mode was kept
         std::optional<SavedAnimals> animals;                    ///< None in saves made before animals were kept
-        std::optional<park::PoolMap> pools;                     ///< The pools the player laid; none when they laid none
+        std::optional<park::pools::PoolMap> pools;              ///< The pools the player laid; none when they laid none
         std::vector<save::FlowerBedState> flower_beds;          ///< Their water, as the simulation has it
     };
 

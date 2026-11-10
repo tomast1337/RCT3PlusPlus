@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/edge_walls.hpp"
 
-#include "park/ground_paths.hpp"
+#include "park/ground/paths.hpp"
 #include "park/item_category.hpp"
 #include "park/object_placement.hpp"
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
 
 #include <doctest/doctest.h>
 #include <format>
@@ -26,7 +26,7 @@ namespace
         return g;
     }
 
-    save::PathTile ground(int col, int row)
+    save::PathTile ground_tile(int col, int row)
     {
         save::PathTile p;
         p.kind = save::PathKind::Ground;
@@ -61,12 +61,12 @@ TEST_CASE("a fence stands along the side its +X faces, listed on both tiles it p
     const auto [o, models] = fence(2); // +X
     const auto wall = edge_wall(o, models, grid);
     REQUIRE(wall);
-    CHECK(wall->side == 1);
+    CHECK(wall->side == Side::kNextCol);
     const EdgeWalls walls = edge_walls(std::vector { o }, models, grid);
-    CHECK(walled(walls, { 2, 1 }, 1, 0));
-    CHECK(walled(walls, { 3, 1 }, 3, 0));
-    CHECK_FALSE(walled(walls, { 2, 1 }, 0, 0));
-    CHECK_FALSE(walled(walls, { 2, 1 }, 1, 6)); // A deck high over it
+    CHECK(walled(walls, { 2, 1 }, Side { 1 }, 0));
+    CHECK(walled(walls, { 3, 1 }, Side { 3 }, 0));
+    CHECK_FALSE(walled(walls, { 2, 1 }, Side { 0 }, 0));
+    CHECK_FALSE(walled(walls, { 2, 1 }, Side { 1 }, 6)); // A deck high over it
     // Neither a fence item set elsewhere than an edge, nor a stall, nor a hidden fence is a wall.
     const auto [lamp, lamp_models] = fence(2, ItemCategory::Fence, Positioning::PathSide);
     CHECK_FALSE(edge_wall(lamp, lamp_models, grid));
@@ -82,23 +82,23 @@ TEST_CASE("paths on the ground and on decks do not join across a wall")
     const save::TerrainGrid grid = flat_grid(5, 5);
     const auto [o, models] = fence(2);
     const EdgeWalls walls = edge_walls(std::vector { o }, models, grid);
-    const std::vector<save::PathTile> line { ground(1, 1), ground(2, 1), ground(3, 1) };
-    GroundPathMap map = ground_path_map(line, grid);
-    CHECK(path_continues(map, grid, { 2, 1 }, 1, 0));
+    const std::vector<save::PathTile> line { ground_tile(1, 1), ground_tile(2, 1), ground_tile(3, 1) };
+    ground::GroundPathMap map = ground::ground_path_map(line, grid);
+    CHECK(ground::path_continues(map, grid, { 2, 1 }, 1, 0));
     map.walls = walls;
-    CHECK_FALSE(path_continues(map, grid, { 2, 1 }, 1, 0));
-    CHECK_FALSE(path_continues(map, grid, { 3, 1 }, -1, 0));
-    CHECK(path_continues(map, grid, { 2, 1 }, -1, 0));
+    CHECK_FALSE(ground::path_continues(map, grid, { 2, 1 }, 1, 0));
+    CHECK_FALSE(ground::path_continues(map, grid, { 3, 1 }, -1, 0));
+    CHECK(ground::path_continues(map, grid, { 2, 1 }, -1, 0));
 
     std::vector<save::PathTile> decks;
     for (int col = 1; col <= 3; ++col)
     {
-        save::PathTile p = ground(col, 1);
+        save::PathTile p = ground_tile(col, 1);
         p.kind = save::PathKind::Flying;
         p.elevation = save::PathElevation { };
         decks.push_back(p);
     }
     // Joined both ways, a straight; parted on +X, an end.
-    CHECK(choose_deck(decks[1], decks, grid).piece == DeckPiece::StraightA);
-    CHECK(choose_deck(decks[1], decks, grid, walls).piece == DeckPiece::TurnU);
+    CHECK(path::choose_deck(decks[1], decks, grid).piece == path::DeckPiece::StraightA);
+    CHECK(path::choose_deck(decks[1], decks, grid, walls).piece == path::DeckPiece::TurnU);
 }

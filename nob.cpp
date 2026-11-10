@@ -6,9 +6,10 @@
 //   ./nob app|run [--release] [-- APP_ARGS...]    graphical viewer (needs GLFW, Vulkan, slangc)
 //   ./nob script [FILE.ts|FILE.js] [-- APP_ARGS...] runs the viewer with the script FILE, or each of
 //                                                 scripts/tests; TypeScript compiles with tsc (npm install -g
-//                                                 typescript) first. Report: build/scripts/report/index.html
+//                                                 typescript) first. Reports: build/scripts/report/NAME/
 //   ./nob fuzz [TARGET] [--seconds N]
-//   ./nob tidy                                    writes the compile database, then runs clang-tidy over src, tools and fuzz
+//   ./nob tidy [FILE...]                          writes the compile database, then runs clang-tidy over FILEs, or
+//                                                 over src, tools and fuzz
 //   ./nob format [--check]                        clang-format our sources (never third_party/)
 //   ./nob fetch                                   downloads optional assets (the fallback font) into downloads/
 //
@@ -736,16 +737,18 @@ namespace
         return run(cmd);
     }
 
-    // Runs clang-tidy over our library, tool and fuzz sources using the compile database written by the build.
-    // The checks come from .clang-tidy. The files are split across the available cores. CLANGTIDY overrides
-    // the binary.
-    bool run_tidy(std::size_t jobs)
+    // Runs clang-tidy over `files`, or over all our library, tool and fuzz sources when none are given, using the
+    // compile database written by the build. The checks come from .clang-tidy. The files are split across the
+    // available cores. CLANGTIDY overrides the binary.
+    bool run_tidy(std::size_t jobs, std::vector<fs::path> files)
     {
-        std::vector<fs::path> files;
-        for (const char* dir : { "src", "tools", "fuzz" })
+        if (files.empty())
         {
-            const auto found = find_files(dir, ".cpp");
-            files.insert(files.end(), found.begin(), found.end());
+            for (const char* dir : { "src", "tools", "fuzz" })
+            {
+                const auto found = find_files(dir, ".cpp");
+                files.insert(files.end(), found.begin(), found.end());
+            }
         }
         if (!fs::exists(kBuildDir / "compile_commands.json"))
         {
@@ -753,7 +756,7 @@ namespace
             return false;
         }
         const char* binary = std::getenv("CLANGTIDY");
-        const std::size_t chunk = (files.size() + jobs - 1) / jobs;
+        const std::size_t chunk = std::max<std::size_t>(1, (files.size() + jobs - 1) / jobs);
         std::vector<std::future<bool>> pending;
         for (std::size_t begin = 0; begin < files.size(); begin += chunk)
         {
@@ -779,73 +782,6 @@ namespace
     };
 
     // Downloads what is missing (needs curl and sha256sum). A file that fails the check is removed.
-    struct ScriptRun
-    {
-        std::string name;
-        bool passed = false;
-    };
-
-    std::string html_escaped(std::string_view text)
-    {
-        std::string out;
-        for (const char c : text)
-        {
-            switch (c)
-            {
-                case '&':
-                    out += "&amp;";
-                    break;
-                case '<':
-                    out += "&lt;";
-                    break;
-                case '>':
-                    out += "&gt;";
-                    break;
-                default:
-                    out += c;
-            }
-        }
-        return out;
-    }
-
-    /// One page over the scripts run: whether each passed, its log and its screenshots, from the folder each
-    /// wrote under `report`.
-    bool write_script_report(const fs::path& report, std::span<const ScriptRun> runs)
-    {
-        std::string body;
-        for (const ScriptRun& r : runs)
-        {
-            std::ifstream in(report / r.name / "log.txt");
-            const std::string log_text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-            body += std::format("<section><h2>{} <span class=\"{}\">{}</span></h2><pre>{}</pre>\n", html_escaped(r.name), r.passed ? "pass" : "fail", r.passed ? "passed" : "failed", html_escaped(log_text));
-            for (const fs::path& shot : find_files(report / r.name, ".png"))
-            {
-                const std::string src = (fs::path(r.name) / shot.filename()).generic_string();
-                body += std::format("<figure><a href=\"{0}\"><img src=\"{0}\" loading=\"lazy\"></a><figcaption>{1}</figcaption></figure>\n", html_escaped(src), html_escaped(shot.stem().string()));
-            }
-            body += "</section>\n";
-        }
-        std::ofstream out(report / "index.html");
-        out << R"(<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Script Report</title>
-<style>
-:root { --bg: #f6f6f4; --fg: #1d1d1b; --muted: #6b6b66; --card: #fff; --pass: #2e7d32; --fail: #c62828; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161615; --fg: #e8e8e4; --muted: #9a9a94; --card: #22221f; --pass: #81c784; --fail: #ef9a9a; } }
-:root[data-theme="dark"] { --bg: #161615; --fg: #e8e8e4; --muted: #9a9a94; --card: #22221f; --pass: #81c784; --fail: #ef9a9a; }
-body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
-main { max-width: 1100px; margin: 0 auto; }
-section { background: var(--card); border-radius: 8px; padding: 16px; margin: 16px 0; }
-h2 { margin: 0 0 8px; font-size: 18px; }
-.pass { color: var(--pass); } .fail { color: var(--fail); }
-pre { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); font-size: 13px; }
-figure { margin: 12px 0; } img { width: 100%; height: auto; border-radius: 4px; display: block; }
-figcaption { color: var(--muted); font-size: 13px; }
-</style></head><body><main><h1>Script report</h1>
-)" << body << "</main></body></html>\n";
-        return static_cast<bool>(out);
-    }
-
     bool run_fetch()
     {
         for (const Download& d : kDownloads)
@@ -889,7 +825,8 @@ int main(int argc, char** argv)
     bool tools = true;
     std::vector<std::string> test_args;
     std::string fuzz_target;
-    std::string script; ///< For ./nob script
+    std::string script;               ///< For ./nob script
+    std::vector<fs::path> tidy_files; ///< For ./nob tidy; empty for all
     int fuzz_seconds = 30;
     int jobs = 0;
 
@@ -919,6 +856,8 @@ int main(int argc, char** argv)
             command = arg;
         else if (command == "script" && !arg.starts_with("-"))
             script = arg;
+        else if (command == "tidy" && !arg.starts_with("-"))
+            tidy_files.emplace_back(arg);
         else if (arg == "--check")
             check = true;
         else if (command == "fuzz" && !arg.starts_with("-"))
@@ -927,7 +866,7 @@ int main(int argc, char** argv)
         {
             log(Level::Error,
                 "unknown argument '{}'. usage: ./nob [build|test|clean|app] [--release] [--sanitize] [--no-tools] [-j N] "
-                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy | ./nob fetch | ./nob script [FILE] [-- APP_ARGS...]",
+                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy [FILE...] | ./nob fetch | ./nob script [FILE] [-- APP_ARGS...]",
                 arg);
             return 2;
         }
@@ -1054,7 +993,7 @@ int main(int argc, char** argv)
     if (!build_all(cfg, tools))
         return 1;
     if (command == "tidy")
-        return run_tidy(job_count(jobs)) ? 0 : 1;
+        return run_tidy(job_count(jobs), tidy_files) ? 0 : 1;
     if (command != "test")
         return 0;
 

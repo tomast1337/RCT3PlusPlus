@@ -1,0 +1,136 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "park/water/jet.hpp"
+
+#include <array>
+#include <cmath>
+#include <doctest/doctest.h>
+#include <utility>
+
+using namespace rct3::park;
+using namespace rct3::park::water;
+
+namespace
+{
+
+    float flat(glm::vec2)
+    {
+        return 0;
+    }
+
+} // namespace
+
+TEST_CASE("a level jet lands as far as a thrown stone would")
+{
+    WaterJet jet(3, 0.1f, 0);
+    jet.aim({ 0, 5, 0 }, { 6, 0, 0 });
+    for (int i = 0; i < 120; ++i)
+        jet.advance(1 / 60.0f);
+    const auto land = jet.landing(flat);
+    REQUIRE(land.has_value());
+    // Falling 5 m takes sqrt(2 * 5 / g) seconds.
+    CHECK(land->x == doctest::Approx(6 * std::sqrt(10 / kJetGravity)).epsilon(0.05));
+    CHECK(land->y == doctest::Approx(0).epsilon(0.01));
+    CHECK(land->z == doctest::Approx(0));
+}
+
+TEST_CASE("a jet's newest drop stays on the nozzle as it swings")
+{
+    WaterJet jet(1, 0.1f, 0.5f);
+    jet.aim({ 0, 1, 0 }, { 0, 0, 5 });
+    jet.advance(0.5f);
+    jet.aim({ 1, 1, 0 }, { 5, 0, 0 });
+    CHECK(jet.drops().front().position == glm::vec3(1, 1, 0));
+    CHECK(jet.drops().back().velocity.z == doctest::Approx(5));
+    CHECK(jet.radius(jet.drops().back()) > 0.1f);
+}
+
+TEST_CASE("a stopped jet runs out once its last drop has lived")
+{
+    WaterJet jet(0.5f, 0.1f, 0);
+    jet.aim({ 0, 1, 0 }, { 0, 0, 5 });
+    jet.advance(0.3f);
+    jet.stop();
+    CHECK_FALSE(jet.finished());
+    jet.advance(0.6f);
+    CHECK(jet.finished());
+}
+
+TEST_CASE("a jet's tube is rings round its drops, more see-through face on")
+{
+    WaterJet jet(1, 0.1f, 0);
+    jet.aim({ 0, 1, 0 }, { 0, 0, 5 });
+    jet.advance(0.2f);
+    const std::array<const WaterJet*, 1> jets { &jet };
+    ObjectMesh mesh;
+    jet_mesh(jets, { 10, 1, 0 }, 0, mesh);
+    REQUIRE(mesh.batches.size() == 1);
+    CHECK(mesh.batches[0].texture == kJetPicture);
+    CHECK(mesh.vertices.size() == jet.drops().size() * 9);
+    CHECK(mesh.indices.size() == (jet.drops().size() - 1) * 8 * 6);
+    // At the nozzle the ring's side facing the eye is clearer than its top, seen edge on.
+    float facing = 1, edge = 0;
+    for (std::size_t k = 0; k < 9; ++k)
+    {
+        const GroundVertex& v = mesh.vertices[k];
+        if (v.normal.x > 0.9f)
+            facing = v.colour.a;
+        if (v.normal.y > 0.9f)
+            edge = v.colour.a;
+    }
+    CHECK(facing < edge);
+}
+
+TEST_CASE("a throw lands where it is aimed, up or down hill")
+{
+    for (const float rise : { 0.0f, 0.5f, -1.0f })
+    {
+        const glm::vec3 from { 1, 2, 3 };
+        const glm::vec3 to { 5, 2 + rise, 0 };
+        const auto t = throw_to(from, to, 0.9f);
+        REQUIRE(t.has_value());
+        const glm::vec3 at = from + t->velocity * t->seconds + glm::vec3(0, -kJetGravity / 2, 0) * t->seconds * t->seconds;
+        CHECK(glm::distance(at, to) < 1e-3f);
+        CHECK(std::atan2(t->velocity.y, std::hypot(t->velocity.x, t->velocity.z)) == doctest::Approx(0.9f));
+    }
+    CHECK_FALSE(throw_to({ 0, 0, 0 }, { 1, 5, 0 }, 0.9f).has_value());
+}
+
+TEST_CASE("a jet that breaks up is wider, whiter and clearer toward its end, and fades away there")
+{
+    WaterJet jet(2, 0.1f, 0.1f, 1);
+    jet.aim({ 0, 50, 0 }, { 0, 0, 5 });
+    jet.advance(2.5f);
+    const auto drops = jet.drops();
+    REQUIRE(drops.size() > 30);
+    CHECK(jet.radius(drops[drops.size() / 2]) > 0.1f + 0.1f * drops[drops.size() / 2].age);
+    const std::array<const WaterJet*, 1> jets { &jet };
+    ObjectMesh mesh;
+    jet_mesh(jets, { 10, 50, 0 }, 0, mesh);
+    REQUIRE(mesh.batches.size() == 2);
+    CHECK(mesh.batches[1].texture == kJetSpray);
+    const auto ring = [&](std::size_t i) {
+        float alpha = 0;
+        for (std::size_t k = 0; k < 9; ++k)
+            alpha += mesh.vertices[i * 9 + k].colour.a / 9;
+        return std::pair { mesh.vertices[i * 9].colour.r, alpha };
+    };
+    const auto [near_white, near_alpha] = ring(1);
+    const auto [far_white, far_alpha] = ring(drops.size() * 3 / 5);
+    CHECK(far_white > near_white);
+    CHECK(far_alpha < near_alpha);
+    CHECK(ring(drops.size() - 2).second < 0.05f);
+}
+
+TEST_CASE("a thin jet seen from afar is drawn wider and fainter")
+{
+    WaterJet jet(1, 0.02f, 0);
+    jet.aim({ 0, 1, 0 }, { 0, 0, 5 });
+    jet.advance(0.5f);
+    const std::array<const WaterJet*, 1> jets { &jet };
+    ObjectMesh close, far;
+    jet_mesh(jets, { 2, 1, 0 }, 0, close);
+    jet_mesh(jets, { 200, 1, 0 }, 0, far);
+    const auto width = [](const ObjectMesh& m) { return glm::distance(m.vertices[0].position, m.vertices[4].position); };
+    CHECK(width(far) > 2 * width(close));
+    CHECK(far.vertices[0].colour.a < close.vertices[0].colour.a);
+}

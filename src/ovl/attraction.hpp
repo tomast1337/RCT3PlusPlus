@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ovl/item_record.hpp"
+#include "ovl/ovl.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -15,8 +16,8 @@ namespace rct3::ovl
 
     struct AttractionInfo
     {
-        /// Kind of attraction within its item type. Files store it directly in version 1 and with an offset of
-        /// 512 (version 4) or 768 (version 5) later, which is removed here.
+        /// Kind of attraction within its item type. Files store it directly in no-stream files and with an offset of
+        /// 512 (one-stream) or 768 (many-stream) later, which is removed here.
         std::uint32_t type_id = 0;
         std::string_view name_text;        ///< "txt" item: name shown in the park builder
         std::string_view description_text; ///< "txt" item: description shown there
@@ -37,7 +38,7 @@ namespace rct3::ovl
     namespace detail
     {
 
-        /// Byte offsets of the fields of `AttractionInfo` in one item type and file version, -1 where it has none.
+        /// Byte offsets of the fields of `AttractionInfo` in one item type and file layout, -1 where it has none.
         struct AttractionLayout
         {
             int type_id = -1;
@@ -49,7 +50,7 @@ namespace rct3::ovl
             int value_a = -1;
             int value_b = -1;
             int value_c = -1;
-            int addon = -1; ///< Read from version 4 files on
+            int addon = -1; ///< Read from one-stream and many-stream files
         };
 
         /// Guests a ride makes room for in the park, from the small block of a ride item that holds it: its
@@ -77,13 +78,13 @@ namespace rct3::ovl
             return static_cast<std::uint8_t>(block->u32(4));
         }
 
-        [[nodiscard]] inline AttractionInfo read_attraction(const ItemRecord& record, const AttractionLayout& at, std::uint32_t version)
+        [[nodiscard]] inline AttractionInfo read_attraction(const ItemRecord& record, const AttractionLayout& at, OvlLayout layout)
         {
             const auto word = [&](int offset) -> std::uint32_t { return offset < 0 ? 0 : record.u32(offset); };
             const auto ref = [&](int offset, std::string_view tag) -> std::string_view { return offset < 0 ? std::string_view { } : record.ref(offset, tag); };
 
             AttractionInfo info;
-            const std::uint32_t offset = version == 4 ? 512 : version == 5 ? 768 : 0;
+            const std::uint32_t offset = layout == OvlLayout::OneStream ? 512 : layout == OvlLayout::ManyStreams ? 768 : 0;
             const std::uint32_t stored = word(at.type_id);
             info.type_id = stored >= offset ? stored - offset : stored;
             info.name_text = ref(at.name_text, "txt");
@@ -94,7 +95,7 @@ namespace rct3::ovl
             info.value_a = static_cast<std::int32_t>(word(at.value_a));
             info.value_b = static_cast<std::int32_t>(word(at.value_b));
             info.value_c = word(at.value_c);
-            info.addon = version >= 4 ? word(at.addon) : 0;
+            info.addon = layout != OvlLayout::NoStream ? word(at.addon) : 0;
             return info;
         }
 

@@ -72,3 +72,16 @@ TEST_CASE("a roof overhead keeps the rain off, trees only shade, and track and l
         CHECK_FALSE(over[i].shade);
     }
 }
+
+TEST_CASE("the park's gate is no roof, so guests do not crowd it out of the rain")
+{
+    ObjectModels models;
+    models.emplace("Things/Things|Gate", slab(4, ItemCategory::ParkEntrance));
+    const std::vector<save::PlacedObject> objects { object(1, "Gate") };
+    const Fitted fitted { { 1, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 2)) } };
+    const std::vector<glm::vec3> points { { 2, 0, 2 } };
+    const std::vector<Overhead> over = overheads(points, objects, models, flat(), fitted);
+    REQUIRE(over.size() == 1);
+    CHECK_FALSE(over[0].roof);
+    CHECK_FALSE(is_roof(std::to_underlying(ItemCategory::ParkEntrance)));
+}

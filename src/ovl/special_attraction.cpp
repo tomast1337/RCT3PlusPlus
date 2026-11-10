@@ -15,8 +15,8 @@ namespace rct3::ovl
     {
         const AddressSpace space = overlay.space();
         const ReferenceIndex refs(part, space);
-        const std::uint32_t version = part.file.header.version;
-        const bool first = version == 1;
+        const OvlLayout layout = part.file.header.layout;
+        const bool first = layout == OvlLayout::NoStream;
         const std::size_t size = first ? 52 : 80;
         const detail::AttractionLayout at = first ? detail::AttractionLayout { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .style = 0x30, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 } : detail::AttractionLayout { .type_id = 0x0C, .name_text = 0x10, .description_text = 0x14, .icon = 0x18, .style = 0x08, .spline = 0x30, .value_a = 0x1C, .value_b = 0x20, .value_c = 0x2C };
 
@@ -30,8 +30,8 @@ namespace rct3::ovl
                 continue;
 
             SpecialAttractionItem item { parts.name, std::nullopt };
-            // No version 4 file holds one, so that layout is not known.
-            if (version == 4)
+            // No one-stream file holds one, so that layout is not known.
+            if (layout == OvlLayout::OneStream)
             {
                 items.push_back(item);
                 continue;
@@ -39,7 +39,7 @@ namespace rct3::ovl
             if (const auto record = ItemRecord::open(space, refs, symbol.data, size))
             {
                 SpecialAttraction a;
-                a.info = detail::read_attraction(*record, at, version);
+                a.info = detail::read_attraction(*record, at, layout);
                 if (!first)
                     a.name = record->text(0x04);
                 item.attraction = a;

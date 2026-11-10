@@ -10,6 +10,7 @@
 // open start side turns to a path beside it, so the line bends to meet the path as it is laid.
 #pragma once
 
+#include "park/turns.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 
@@ -27,7 +28,7 @@ namespace rct3::park
     {
         std::size_t ride = 0;    ///< Of the rides
         std::size_t station = 0; ///< Of the ride's stations
-        std::uint8_t side = 0;   ///< Heading from the tile to the entrance, as the path builder counts them
+        Side side;               ///< Heading from the tile to the entrance
         friend bool operator==(const EntranceBeside&, const EntranceBeside&) = default;
     };
 

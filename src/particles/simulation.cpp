@@ -57,12 +57,13 @@ namespace rct3::particles
         return { colour, std::lerp(kind.start_size, kind.end_size, t) * particles.scale[i], kind.stretch > 0 ? particles.velocity[i] * kind.stretch : glm::vec3(0.0f) };
     }
 
-    EffectRun::EffectRun(const Effect& effect, random::RandomState random, bool loops, std::size_t capacity, float strength)
+    EffectRun::EffectRun(const Effect& effect, random::RandomState random, bool loops, std::size_t capacity, float strength, float scale)
         : effect_(&effect)
         , random_(random)
         , loops_(loops)
         , capacity_(capacity)
         , strength_(strength)
+        , scale_(scale)
         , root_emitted_(effect.roots.size(), 0.0f)
     {
         for (const Particle& p : effect.particles)
@@ -113,8 +114,8 @@ namespace rct3::particles
             const glm::vec3 place_disc = in_disc(random_, up);
             const glm::vec3 speed_ball = in_ball(random_);
             const glm::vec3 speed_disc = in_disc(random_, up);
-            live_.position.push_back(position + place_ball * emitter.position_random + place_disc * emitter.position_circle);
-            live_.velocity.push_back(up * emitter.speed + speed_ball * emitter.speed_random + speed_disc * emitter.speed_circle + velocity * emitter.parent_speed);
+            live_.position.push_back(position + (place_ball * emitter.position_random + place_disc * emitter.position_circle) * scale_);
+            live_.velocity.push_back((up * emitter.speed + speed_ball * emitter.speed_random + speed_disc * emitter.speed_circle) * scale_ + velocity * emitter.parent_speed);
             live_.age.push_back(-fraction(random_) * emitter.time_random * life);
             live_.life.push_back(std::max(kind.lifetime * (1 - fraction(random_) * kind.lifetime_random), 1 / kParticleSteps));
             live_.scale.push_back(1 - fraction(random_) * kind.size_random);
@@ -153,7 +154,7 @@ namespace rct3::particles
             if (live_.age[i] <= 0)
                 continue;
             const Particle& kind = effect_->particles[live_.kind[i]];
-            live_.velocity[i] += down * kind.gravity * dt;
+            live_.velocity[i] += down * kind.gravity * scale_ * dt;
             live_.velocity[i] *= std::max(0.0f, 1 - kind.drag * dt);
             live_.position[i] += live_.velocity[i] * dt;
             live_.roll[i] += kind.roll * dt;

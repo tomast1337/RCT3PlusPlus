@@ -26,13 +26,22 @@ namespace rct3::ovl
         std::uint32_t symbol_count = 0; ///< v5 only; 0 otherwise
     };
 
+    /// OVL file layout, by how its data is split into streams; the header stores it as a version number.
+    /// Later layouts also grow item records.
+    enum class OvlLayout : std::uint32_t
+    {
+        NoStream = 1,    ///< data only, no extra streams
+        OneStream = 4,   ///< one extra data stream
+        ManyStreams = 5, ///< a stream count in the header, plus per-loader symbol counts
+    };
+
     struct Header
     {
         std::uint8_t flags = 0;
-        std::uint32_t version = 0;     ///< 1, 4 or 5
-        std::int16_t stream_count = 0; ///< v5 only: number of data streams. v4 always has one, v1 none.
-        std::int16_t extra_flag = 0;   ///< v5 only, purpose unknown
-        std::string stream_tag;        ///< v5 with streams only; may be empty
+        OvlLayout layout = OvlLayout::NoStream;
+        std::int16_t stream_count = 0; ///< ManyStreams only: number of data streams
+        std::int16_t extra_flag = 0;   ///< ManyStreams only, purpose unknown
+        std::string stream_tag;        ///< ManyStreams with streams only; may be empty
         std::vector<std::string> external_refs;
         std::vector<std::string> secondary_refs;
         std::vector<Loader> loaders;

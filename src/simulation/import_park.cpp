@@ -3,10 +3,11 @@
 
 #include "ovl/animated_ride.hpp"
 #include "ovl/tracked_ride.hpp"
-#include "park/ground_paths.hpp"
-#include "park/ground_queues.hpp"
+#include "park/ground/paths.hpp"
+#include "park/ground/queues.hpp"
 #include "park/object_placement.hpp"
-#include "park/path_decks.hpp"
+#include "park/path/decks.hpp"
+#include "park/path/furniture.hpp"
 #include "park/queue_fences.hpp"
 #include "park/terrain_mesh.hpp"
 #include "simulation/animals.hpp"
@@ -190,7 +191,7 @@ namespace rct3::simulation
             if (p.elevation && p.elevation->slope != save::kSlopeOnGround)
             {
                 // The stored height is at one end of a sloped piece; its middle is half the rise up or down.
-                const float rise = park::path_rise(p.elevation->slope);
+                const float rise = park::ground::path_rise(p.elevation->slope);
                 height = static_cast<float>(p.elevation->quantised_height) + (park::slope_falls(p.elevation->slope) ? -rise : rise) / 2;
             }
             else
@@ -224,7 +225,7 @@ namespace rct3::simulation
             {
                 const PathNode& node = paths.nodes()[n];
                 const int g = std::abs(node.tile.level - spot.height);
-                if (node.removed || node.queue != queues || node.tile.col != col || node.tile.row != row || static_cast<float>(g) > park::kPavingReach)
+                if (node.removed || node.queue != queues || node.tile.col != col || node.tile.row != row || static_cast<float>(g) > park::ground::kPavingReach)
                     continue;
                 if (found == kNoNode || g < gap)
                 {
@@ -238,7 +239,7 @@ namespace rct3::simulation
         /// The path behind the ride door `door`, on the tile away from the ride.
         NodeId behind_door(const PathNetwork& paths, const save::PlacementSpot& door, bool queues)
         {
-            return path_at(paths, door, park::turned_x(door.direction + 2), queues);
+            return path_at(paths, door, park::turned_x(park::ModelTurn::from(door.direction).turned(2)), queues);
         }
 
         /// The path a facility such as a toilet opens onto: it opens onto every side, so the first side with a path.
@@ -247,7 +248,7 @@ namespace rct3::simulation
         {
             NodeId entrance = kNoNode;
             for (std::int32_t side = 0; side < 4 && entrance == kNoNode; ++side)
-                entrance = path_at(paths, spot, park::turned_x(side), false);
+                entrance = path_at(paths, spot, park::turned_x(park::ModelTurn { side }), false);
             return entrance;
         }
 
@@ -255,7 +256,7 @@ namespace rct3::simulation
         /// +col.
         NodeId stall_front(const PathNetwork& paths, const save::PlacementSpot& spot, std::int32_t facing)
         {
-            return path_at(paths, spot, park::turned_x(facing + 3), false);
+            return path_at(paths, spot, park::turned_x(park::ModelTurn::from(facing).turned(3)), false);
         }
 
         /// Guests line up on the queue that reaches the entrance, or walk straight in from a path; none when
@@ -470,26 +471,28 @@ namespace rct3::simulation
         // Its surface: the ground's own corners under a path on the ground, a ramp from the height of the edge behind
         // it to that of the edge it faces, else flat.
         std::array<float, 4> corners { height, height, height, height };
-        if ((park::is_ground_queue(path) || (!path.elevation && path.kind == save::PathKind::Ground)) && grid.contains(path.col, path.row))
+        if ((park::ground::is_ground_queue(path) || (!path.elevation && path.kind == save::PathKind::Ground)) && grid.contains(path.col, path.row))
             corners = grid.at(path.col, path.row).corners;
-        else if (path.elevation && park::path_rise(path.elevation->slope) > 0)
+        else if (path.elevation && park::ground::path_rise(path.elevation->slope) > 0)
         {
-            const std::uint8_t ahead = park::stored_direction(path.direction);
-            const auto behind = static_cast<std::uint8_t>((ahead + 2) % 4);
-            if (const auto up = park::edge_height(path, grid, ahead), down = park::edge_height(path, grid, behind); up && down)
-                for (const std::uint8_t side : { ahead, behind })
-                    for (const std::size_t k : park::edge_corners(side))
-                        corners[k] = side == ahead ? *up : *down;
+            // A ramp without a stored heading meets no edge ahead, so it keeps its flat corners.
+            if (const auto ahead = park::path::stored_heading(path.direction))
+            {
+                const park::Side behind = ahead->opposite();
+                if (const auto up = park::path::edge_height(path, grid, *ahead), down = park::path::edge_height(path, grid, behind); up && down)
+                    for (const park::Side side : { *ahead, behind })
+                        for (const std::size_t k : park::path::edge_corners(side))
+                            corners[k] = side == *ahead ? *up : *down;
+            }
         }
         // A queue joins only across the two ends its line passes through.
         std::uint8_t open = 0b1111;
         if (path.queue)
         {
             open = 0;
-            // path_decks counts the sides from +row, the network from +col: the same sides, each pair swapped.
-            for (std::uint8_t side = 0; side < 4; ++side)
-                if (park::edge_height(path, grid, side ^ 1U))
-                    open |= static_cast<std::uint8_t>(1U << side);
+            for (const park::Side side : park::kSides)
+                if (park::path::edge_height(path, grid, side))
+                    open |= static_cast<std::uint8_t>(1U << simulation::network_side(side));
         }
         world.paths.set_corners(id, corners, open);
         world.paths.keep_staff_off(id, kept_from_staff(world, grid, id));
@@ -535,7 +538,7 @@ namespace rct3::simulation
         const auto inside = [&](int col, int row) { return col >= first.col && col <= last.col && row >= first.row && row <= last.row; };
         for (const save::PathTile& p : paths)
         {
-            if (!inside(p.col, p.row) || !(park::is_ground_queue(p) || (!p.elevation && p.kind == save::PathKind::Ground)))
+            if (!inside(p.col, p.row) || !(park::ground::is_ground_queue(p) || (!p.elevation && p.kind == save::PathKind::Ground)))
                 continue;
             const auto node = world.paths.find(node_spot(world.paths, p, was).first);
             if (!node)
@@ -645,62 +648,193 @@ namespace rct3::simulation
         return changed;
     }
 
-    void import_pools(SimWorld& world, const park::PoolMap& pools, std::span<const park::PoolExtra> scenery)
+    void import_pools(SimWorld& world, const park::pools::PoolMap& pools, std::span<const park::pools::PoolExtra> scenery)
     {
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;
         const auto middle = [&](std::int32_t col, std::int32_t row, float height) { return glm::vec3 { paths.origin.x + (static_cast<float>(col) + 0.5f) * paths.tile_size, height * paths.level_height, paths.origin.y + (static_cast<float>(row) + 0.5f) * paths.tile_size }; };
-        // Each square's complex, found by spreading from square to square side by side.
-        std::map<std::pair<std::int32_t, std::int32_t>, const park::PoolSquare*> squares;
-        for (const park::PoolSquare& s : pools.squares)
+        // Each square's complex, found by spreading from square to square side by side, at any level.
+        std::multimap<std::pair<std::int32_t, std::int32_t>, const park::pools::PoolSquare*> squares;
+        for (const park::pools::PoolSquare& s : pools.squares)
             squares.emplace(std::pair { s.col, s.row }, &s);
-        constexpr std::array<std::array<std::int32_t, 2>, 4> kSides { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } }; // By turn
-        std::map<std::pair<std::int32_t, std::int32_t>, std::size_t> complex_of;
+        std::map<const park::pools::PoolSquare*, std::size_t> complex_of;
         std::vector<SwimPool> complexes;
-        for (const park::PoolSquare& first : pools.squares)
+        std::vector<std::vector<park::pools::PoolSquare>> members; // By complex
+        for (const park::pools::PoolSquare& first : pools.squares)
         {
-            if (!complex_of.try_emplace({ first.col, first.row }, complexes.size()).second)
+            if (!complex_of.try_emplace(&first, complexes.size()).second)
                 continue;
             SwimPool& complex = complexes.emplace_back();
-            for (std::vector<const park::PoolSquare*> todo { &first }; !todo.empty();)
+            auto& member = members.emplace_back();
+            for (std::vector<const park::pools::PoolSquare*> todo { &first }; !todo.empty();)
             {
-                const park::PoolSquare& s = *todo.back();
+                const park::pools::PoolSquare& s = *todo.back();
                 todo.pop_back();
-                if (s.kind == park::PoolKind::Water)
+                member.push_back(s);
+                if (s.kind == park::pools::PoolKind::Water)
+                {
                     complex.water.push_back(middle(s.col, s.row, static_cast<float>(s.surface) + park::kPoolBrim));
-                else if (s.kind == park::PoolKind::Jacuzzi)
+                    auto& open = complex.open.emplace_back();
+                    for (std::size_t i = 0; i < open.size(); ++i)
+                    {
+                        const auto mark = [](std::size_t step) { return (static_cast<float>(step) + 0.5f) / static_cast<float>(kOpenSteps) - 0.5f; };
+                        open[i] = park::pools::pool_water_at(pools, s, mark(i % kOpenSteps), mark(i / kOpenSteps));
+                    }
+                }
+                else if (s.kind == park::pools::PoolKind::Jacuzzi)
                     complex.spa.push_back(middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.spa_water));
-                else if (s.kind == park::PoolKind::Tile || s.kind == park::PoolKind::Path) // Not a diving board's, a slope or stairs
+                else if (s.kind == park::pools::PoolKind::Tile || s.kind == park::pools::PoolKind::Path) // Not a diving board's, a slope or stairs
                     complex.paved.push_back(middle(s.col, s.row, static_cast<float>(s.surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 });
-                for (const auto [dc, dr] : kSides)
-                    if (const auto next = squares.find({ s.col + dc, s.row + dr }); next != squares.end() && complex_of.try_emplace(next->first, complexes.size() - 1).second)
-                        todo.push_back(next->second);
+                else if (s.kind == park::pools::PoolKind::PathStairs) // At their top, where a station beside them joins them
+                    complex.steps.push_back(middle(s.col, s.row, static_cast<float>(s.surface + park::pools::kPathStairsRise)) + glm::vec3 { 0, kTuning.pools.deck, 0 });
+                for (const park::Side side : park::kSides)
+                    for (auto [it, end] = squares.equal_range({ s.col + side.step()[0], s.row + side.step()[1] }); it != end; ++it)
+                        if (complex_of.try_emplace(it->second, complexes.size() - 1).second)
+                            todo.push_back(it->second);
             }
         }
-        // Swimmers lie on loungers, stand under showers and stand by the other extras a while. High diving boards go
-        // unused until the swimmers can climb and dive.
+        // Swimmers lie on loungers, stand under showers and stand by the other extras a while.
         for (const auto& extras : { std::span(pools.extras), scenery })
-            for (const park::PoolExtra& extra : extras)
-                if (const auto square = squares.find({ extra.col, extra.row }); square != squares.end() && square->second->kind == park::PoolKind::Tile)
+            for (const park::pools::PoolExtra& extra : extras)
+                if (const auto square = pools.at(extra.col, extra.row); square && square->kind == park::pools::PoolKind::Tile && extra.fit.step > 0)
+                    continue; // A ramp, a way between two squares, not a spot of its own
+                else if (square && square->kind == park::pools::PoolKind::Tile)
                 {
                     // Facing along the extra's length, as those on a saved park's loungers lie.
-                    const auto [dc, dr] = kSides[static_cast<std::size_t>((extra.turn + 1) & 3)];
+                    const auto [dc, dr] = extra.side.right().step();
                     const PoolUse use = extra.fit.lounger ? PoolUse::Lounge : extra.fit.shower ? PoolUse::Shower : PoolUse::Stand;
-                    complexes[complex_of.at(square->first)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<float>(square->second->surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 }, .heading = { std::atan2(static_cast<float>(dc), static_cast<float>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : std::uint8_t { 1 } });
+                    complexes[complex_of.at(&*square)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<float>(square->surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 }, .heading = { std::atan2(static_cast<float>(dc), static_cast<float>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : std::uint8_t { 1 } });
                 }
+                // Small diving boards stand in the water against its wall: swimmers step on from the paving just
+                // behind it. Ladders stand at the open water's edge, a quarter tile in from the square's side, the
+                // climb's motion taking those climbing out on to the coping.
+                else if (square && square->kind == park::pools::PoolKind::Water && (extra.fit.board || extra.fit.ladder))
+                {
+                    const auto [dc, dr] = extra.side.step();
+                    const glm::vec3 back { static_cast<float>(dc), 0, static_cast<float>(dr) };
+                    const float deck = static_cast<float>(square->surface) + kTuning.pools.deck / paths.level_height;
+                    const glm::vec3 foot = middle(extra.col, extra.row, deck) + back * (paths.tile_size / 2 + kTuning.dives.behind);
+                    SwimPool& complex = complexes[complex_of.at(&*square)];
+                    if (extra.fit.ladder)
+                    {
+                        const glm::vec3 water = middle(extra.col, extra.row, static_cast<float>(square->surface) + park::kPoolBrim) + back * (paths.tile_size / 4);
+                        complex.ladders.push_back({ .water = water, .deck = glm::vec3 { water.x, deck * paths.level_height, water.z } + back * kTuning.pools.ladder_reach, .heading = { std::atan2(back.x, back.z) } });
+                    }
+                    else
+                        complex.boards.push_back({ .foot = foot, .heading = { std::atan2(-back.x, -back.z) }, .levels = { foot.y + kTuning.dives.small_board }, .reach = kTuning.dives.behind + kTuning.dives.small_reach });
+                }
+        // A high diving board's ladder rises at the back of its tower, which stands at the front of its square; its
+        // boards, one a level, reach out over the water it faces.
+        for (const park::pools::PoolSquare& s : pools.squares)
+            if (s.kind == park::pools::PoolKind::HighDive)
+            {
+                const auto [dc, dr] = s.side.step();
+                const glm::vec3 ahead { static_cast<float>(dc), 0, static_cast<float>(dr) };
+                PoolBoard board { .foot = middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.deck / paths.level_height) + ahead * kTuning.dives.ladder_foot + glm::vec3 { -ahead.z, 0, ahead.x } * kTuning.dives.ladder_side, .heading = { std::atan2(ahead.x, ahead.z) }, .reach = kTuning.dives.high_reach, .high = true };
+                for (std::int32_t level = 0; level < std::max(s.board / park::pools::kBoardLevel, 1); ++level)
+                    board.levels.push_back(static_cast<float>(s.surface + 2 + park::pools::kBoardLevel * level) * paths.level_height + kTuning.dives.board_top);
+                complexes[complex_of.at(&s)].boards.push_back(std::move(board));
+            }
+        // The squares as swimmers go from one to the next. Two meet across a side where both are at the same height
+        // there: paving, the coping round water and the water itself at the square's surface, a slope or steps at
+        // its foot on the side it is entered by going up and at its top on the other. Railings stand where none
+        // meets, so nobody goes off the paving, nor up or down but by a ramp or staircase.
+        // shortcut: a square at a time, through the middles of the sides between; upgrade to spots within a square
+        // should walkers need to go round things standing on it.
+        const glm::vec3 deck { 0, kTuning.pools.deck, 0 };
+        struct Meet
+        {
+            std::size_t complex = 0;
+            std::size_t walk = 0;
+            std::array<std::optional<std::int32_t>, 4> sides { }; ///< The height it meets each side of its square at
+        };
+        std::multimap<std::pair<std::int32_t, std::int32_t>, Meet> meets; // By tile
+        for (std::size_t c = 0; c < complexes.size(); ++c)
+            for (const park::pools::PoolSquare& s : members[c])
+            {
+                auto& walks = complexes[c].walks;
+                const auto add = [&](glm::vec3 at, bool water, bool end, std::array<std::optional<std::int32_t>, 4> sides) {
+                    meets.emplace(std::pair { s.col, s.row }, Meet { .complex = c, .walk = walks.size(), .sides = sides });
+                    walks.push_back({ .at = at, .water = water, .end = end });
+                };
+                const auto level = [](std::int32_t h) { return std::array<std::optional<std::int32_t>, 4> { h, h, h, h }; };
+                if (s.kind == park::pools::PoolKind::Water)
+                    add(middle(s.col, s.row, static_cast<float>(s.surface) + park::kPoolBrim), true, false, level(s.surface));
+                else if (park::pools::is_pool_path(s.kind) && s.kind != park::pools::PoolKind::Path)
+                {
+                    const std::int32_t rise = s.kind == park::pools::PoolKind::PathSlope ? park::pools::kPathSlopeRise : park::pools::kPathStairsRise;
+                    std::array<std::optional<std::int32_t>, 4> sides { };
+                    sides[static_cast<std::size_t>(s.side.value)] = s.surface;
+                    sides[static_cast<std::size_t>(s.side.opposite().value)] = s.surface + rise;
+                    add(middle(s.col, s.row, static_cast<float>(s.surface) + static_cast<float>(rise) / 2) + deck, false, false, sides);
+                }
+                else
+                    add(middle(s.col, s.row, static_cast<float>(s.surface)) + deck, false, s.kind == park::pools::PoolKind::Jacuzzi || s.kind == park::pools::PoolKind::HighDive, level(s.surface));
+                // A spiral staircase is climbed from its middle at its foot to its middle at its top.
+                // shortcut: straight up its middle, not round its turns; upgrade with the steps' own path.
+                if (s.kind == park::pools::PoolKind::Stairs)
+                {
+                    const std::int32_t top = s.surface + std::max(s.board, park::pools::kLowestStairs);
+                    const glm::vec3 foot = walks.back().at;
+                    add(middle(s.col, s.row, static_cast<float>(top)) + deck, false, false, level(top));
+                    walks[walks.size() - 2].joins.push_back({ .to = walks.size() - 1, .via = { foot, walks.back().at } });
+                    walks.back().joins.push_back({ .to = walks.size() - 2, .via = { walks.back().at, foot } });
+                }
+            }
+        for (const auto& [tile, a] : meets)
+            for (const park::Side side : park::kSides)
+                for (auto [it, end] = meets.equal_range({ tile.first + side.step()[0], tile.second + side.step()[1] }); it != end; ++it)
+                    if (const auto& b = it->second; a.sides[static_cast<std::size_t>(side.value)] && a.sides[static_cast<std::size_t>(side.value)] == b.sides[static_cast<std::size_t>(side.opposite().value)])
+                    {
+                        auto& walks = complexes[a.complex].walks;
+                        const bool swim = walks[a.walk].water && walks[b.walk].water;
+                        const float height = static_cast<float>(*a.sides[static_cast<std::size_t>(side.value)]);
+                        const glm::vec3 meet = middle(tile.first, tile.second, swim ? height + park::kPoolBrim : height) + glm::vec3 { static_cast<float>(side.step()[0]), 0, static_cast<float>(side.step()[1]) } * (paths.tile_size / 2) + (swim ? glm::vec3 { 0.0f } : deck);
+                        walks[a.walk].joins.push_back({ .to = b.walk, .via = { meet } });
+                    }
+        // A ramp climbs from its foot on its square to its side, where the square it meets is as much higher.
+        for (const auto& extras : { std::span(pools.extras), scenery })
+            for (const park::pools::PoolExtra& extra : extras)
+                if (const auto square = pools.at(extra.col, extra.row); square && square->kind == park::pools::PoolKind::Tile && extra.fit.step > 0)
+                {
+                    const auto [dc, dr] = extra.side.step();
+                    const std::int32_t top = square->surface + extra.fit.step;
+                    const auto walk_at = [&](std::int32_t col, std::int32_t row, std::int32_t height) -> std::optional<std::size_t> {
+                        for (auto [it, end] = meets.equal_range({ col, row }); it != end; ++it)
+                            if (it->second.sides[0] == height)
+                                return it->second.walk;
+                        return std::nullopt;
+                    };
+                    const auto low = walk_at(extra.col, extra.row, square->surface);
+                    const auto high = walk_at(extra.col + dc, extra.row + dr, top);
+                    if (!low || !high)
+                        continue;
+                    const glm::vec3 ahead { static_cast<float>(dc), 0, static_cast<float>(dr) };
+                    const float back = extra.fit.step > 1 ? kTuning.pools.long_ramp : kTuning.pools.short_ramp;
+                    const glm::vec3 side = ahead * (paths.tile_size / 2);
+                    const glm::vec3 foot = middle(extra.col, extra.row, static_cast<float>(square->surface)) + side - ahead * (back * paths.tile_size) + deck;
+                    const glm::vec3 brow = middle(extra.col, extra.row, static_cast<float>(top)) + side + deck;
+                    auto& walks = complexes[complex_of.at(&*square)].walks;
+                    walks[*low].joins.push_back({ .to = *high, .via = { foot, brow } });
+                    walks[*high].joins.push_back({ .to = *low, .via = { brow, foot } });
+                }
+        std::vector<park::pools::PoolExtra> all_extras(pools.extras.begin(), pools.extras.end());
+        all_extras.append_range(scenery);
+        for (std::size_t c = 0; c < complexes.size(); ++c)
+            complexes[c].tally = park::pools::pool_tally(members[c], all_extras);
         // The rooms there were, by tile, and the complexes they opened on.
         std::map<std::pair<std::int32_t, std::int32_t>, entt::entity> rooms;
         for (const auto [e, door] : r.view<const PoolDoor>().each())
             rooms.emplace(std::pair { door.col, door.row }, e);
         std::vector<entt::entity> pool_entities(complexes.size(), entt::null);
         std::vector<entt::entity> kept;
-        for (const park::PoolRoom& room : pools.rooms)
+        for (const park::pools::PoolRoom& room : pools.rooms)
         {
-            const auto [dc, dr] = kSides[static_cast<std::size_t>(room.turn & 3)];
-            const auto square = squares.find({ room.col + dc, room.row + dr });
-            if (square == squares.end())
+            const auto [dc, dr] = room.side.step();
+            const auto square = pools.at(room.col + dc, room.row + dr);
+            if (!square)
                 continue;
-            const std::size_t complex = complex_of.at(square->first);
+            const std::size_t complex = complex_of.at(&*square);
             const auto was = rooms.find({ room.col, room.row });
             const entt::entity e = was != rooms.end() ? was->second : r.create();
             kept.push_back(e);
@@ -709,7 +843,7 @@ namespace rct3::simulation
                 pool = r.get<PoolDoor>(e).pool;
             if (pool == entt::null)
                 pool = r.create();
-            const auto surface = static_cast<float>(square->second->surface);
+            const auto surface = static_cast<float>(square->surface);
             // The door opens on the path tile on the room's side away from the pool.
             const glm::vec3 outside = middle(room.col - dc, room.row - dr, surface);
             const auto node = paths.nearest(outside);
@@ -720,7 +854,7 @@ namespace rct3::simulation
             attraction.price = { room.ticket };
             attraction.open = room.open;
             r.get_or_emplace<PoolTank>(e).fluid = static_cast<PoolFluid>(std::min<std::uint8_t>(room.fluid, 2));
-            r.emplace_or_replace<PoolDoor>(e, PoolDoor { .pool = pool, .col = room.col, .row = room.row, .room = middle(room.col, room.row, surface), .poolside = middle(square->second->col, square->second->row, surface) + glm::vec3 { 0, kTuning.pools.deck, 0 } });
+            r.emplace_or_replace<PoolDoor>(e, PoolDoor { .pool = pool, .col = room.col, .row = room.row, .room = middle(room.col, room.row, surface), .poolside = middle(square->col, square->row, surface) + glm::vec3 { 0, kTuning.pools.deck, 0 } });
         }
         // A complex kept keeps its dirt.
         for (std::size_t c = 0; c < complexes.size(); ++c)
@@ -785,20 +919,22 @@ namespace rct3::simulation
         return ride.options.launch_speed;
     }
 
-    std::optional<Coaster> coaster_of(const park::TrackCourse& course, const save::Ride& ride)
+    std::optional<Coaster> coaster_of(const park::track::TrackCourse& course, const save::Ride& ride)
     {
-        if (!std::ranges::contains(course.kinds, park::CourseKind::Station))
+        if (!std::ranges::contains(course.kinds, park::track::CourseKind::Station))
             return std::nullopt;
         Coaster c;
         if (!course.closed)
         {
             // A track with two ends runs back and forth: how depends on the ride's mode, how long on its circuits.
-            // In a mode that goes round, the track is unfinished, and its train runs on off the end.
+            // In a mode that goes round, the track is unfinished, and its train runs on off the end; a pool slide's
+            // runs off into the pool.
             // shortcut: a drop tower's car is pushed up like a launched tower's, not hauled up; plain shuttle mode
             // and the other modes run no train; upgrade when a park has them.
             using enum save::OperatingMode;
             const int circuits = std::max(ride.options.circuits, 1);
             c.closed = false;
+            c.splash_out = course.splash_end && ride.mode == ContinuousCircuit;
             switch (ride.mode)
             {
                 case ContinuousCircuit:
@@ -828,20 +964,31 @@ namespace rct3::simulation
                 return std::nullopt;
         }
         c.distance = course.distance;
+        c.drop_offs = course.drop_offs;
+        c.wades = course.wades;
         c.points = course.points;
         c.ups = course.ups;
         for (const glm::vec3& p : course.points)
             c.height.push_back(p.y);
-        for (const park::CourseKind k : course.kinds)
+        for (const float d : course.distance)
         {
-            using enum park::CourseKind;
-            c.kinds.push_back(k == Chain || k == Cable ? Stretch::Chain : k == Station ? Stretch::Station : k == BlockBrake ? Stretch::BlockBrake : k == Launch ? Stretch::Launch : k == Brake ? Stretch::Brake : Stretch::Plain);
+            const auto piece = std::ranges::upper_bound(course.piece_starts, d) - course.piece_starts.begin() - 1;
+            c.covered.push_back(piece >= 0 && static_cast<std::size_t>(piece) < course.covered.size() && course.covered[static_cast<std::size_t>(piece)]);
+            c.steady.push_back(piece >= 0 && static_cast<std::size_t>(piece) < course.steady.size() && course.steady[static_cast<std::size_t>(piece)]);
+        }
+        for (const park::track::CourseKind k : course.kinds)
+        {
+            using enum park::track::CourseKind;
+            c.kinds.push_back(k == Chain || k == Cable ? Stretch::Chain : k == Station ? Stretch::Station : k == BlockBrake ? Stretch::BlockBrake : k == Launch ? Stretch::Launch : k == Brake ? Stretch::Brake : k == Booster ? Stretch::Booster : Stretch::Plain);
         }
         // A brake or block brake with no speed of its own, under 1 m/s, slows to the ride's for its kind.
+        // shortcut: a booster with no speed of its own pushes up to the lift speed, upgrade when the speed a newly
+        // built booster gets is known.
         for (std::size_t i = 0; i < course.brake_speeds.size(); ++i)
         {
             const float speed = course.brake_speeds[i];
-            const float ride_speed = i < c.kinds.size() && c.kinds[i] == Stretch::BlockBrake ? ride.options.block_brake_off_speed : ride.options.brake_speed;
+            const Stretch kind = i < c.kinds.size() ? c.kinds[i] : Stretch::Plain;
+            const float ride_speed = kind == Stretch::BlockBrake ? ride.options.block_brake_off_speed : kind == Stretch::Booster ? ride.options.lift_speed : ride.options.brake_speed;
             c.brake_speeds.push_back(speed < 0 ? -1.0f : speed >= 1 ? speed : ride_speed);
         }
         // Trains set off from where a station stretch ends.
@@ -897,6 +1044,15 @@ namespace rct3::simulation
                 train.speed = train.running ? saved.speed : 0;
                 out.trains.push_back(train);
                 break;
+            }
+            // One kept at or past a pool slide's open end is out of sight, as if gone off it, till the station is clear.
+            if (coaster.splash_out && length > 0 && saved.distance >= length)
+            {
+                train.at = length;
+                train.running = false;
+                train.splashed = true;
+                out.trains.push_back(train);
+                continue;
             }
             train.at = length > 0 ? std::fmod(std::fmod(saved.distance, length) + length, length) : 0;
             train.travelled = length > 0 ? std::fmod(train.at - train.start + length, length) : 0;
@@ -1049,7 +1205,7 @@ namespace rct3::simulation
                 continue;
             if (const auto at = path_by(world.paths, o))
             {
-                const glm::vec2 x = park::turned_x(o.rotation);
+                const glm::vec2 x = park::turned_x(park::ModelTurn::from(o.rotation));
                 world.registry.emplace<PathItem>(world.registry.create(), PathItem { .node = *at, .kind = *kind, .object = o.id, .heading = std::atan2(x.x, x.y) });
                 ++added;
             }
@@ -1100,12 +1256,9 @@ namespace rct3::simulation
             world.paths.keep_staff_off(n, kept_from_staff(world, grid, n));
     }
 
-    std::size_t no_entry_side(const save::PlacedObject& sign)
+    park::Side no_entry_side(const save::PlacedObject& sign)
     {
-        // The front faces lower columns unturned, then a quarter clockwise each: higher rows, higher columns,
-        // lower rows (park::turned_x); the network numbers the sides +col, +row, -col, -row.
-        constexpr std::array<std::size_t, 4> kSide { 2, 1, 0, 3 };
-        return kSide[static_cast<std::size_t>(((sign.rotation % 4) + 4) % 4)];
+        return park::faced_side(park::ModelTurn::from(sign.rotation));
     }
 
     void import_party_mix(SimWorld& world, const save::GroupMix& mix)
@@ -1116,9 +1269,7 @@ namespace rct3::simulation
 
     Upkeep upkeep_of(const save::Ride& ride)
     {
-        // The intervals the maintenance page lists, in its order: every 10, 20, 30 and 45 minutes, every hour,
-        // every two hours, never.
-        constexpr std::array<float, 7> kIntervals { 600, 1200, 1800, 2700, 3600, 7200, -1 };
+        constexpr auto& kIntervals = kInspectionSeconds;
         const std::int32_t interval = ride.breakdown.inspection_interval;
         // Broken by its flag alone: saves keep a breakdown kind on most open, running rides too, and a repair
         // status on some fixed ones.
@@ -1133,6 +1284,47 @@ namespace rct3::simulation
             .last = static_cast<Breakdown>(std::to_underlying(ride.breakdown.last)),
             .downtime = ride.breakdown.downtime_windows,
         };
+    }
+
+    entt::entity import_climb_slide(SimWorld& world, const save::Ride& ride, const park::track::TrackCourse& course)
+    {
+        if (ride.kind != save::RideKind::Tracked || course.climbs.empty())
+            return entt::null;
+        ClimbSlide slide;
+        for (const auto& points : course.climbs)
+        {
+            if (points.size() < 2)
+                continue;
+            ClimbSlide::Way& way = slide.ways.emplace_back();
+            Coaster& c = way.course;
+            c.closed = false;
+            c.points = points;
+            for (const glm::vec3& p : points)
+            {
+                c.distance.push_back(c.distance.empty() ? 0 : c.distance.back() + glm::distance(c.points[c.distance.size() - 1], p));
+                c.height.push_back(p.y);
+                c.kinds.push_back(Stretch::Plain);
+            }
+            // The slide begins at the top of the climb.
+            way.top = c.distance[static_cast<std::size_t>(std::ranges::max_element(points, { }, &glm::vec3::y) - points.begin())];
+        }
+        if (slide.ways.empty())
+            return entt::null;
+        auto& r = world.registry;
+        const entt::entity e = r.create();
+        r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::AttractionState::Open, .testing = ride.base.state == save::AttractionState::Testing, .saved = ride.base.id });
+        const auto& rated = kTuning.climbs.rated;
+        const bool valid = ride.assessment.valid;
+        CycleRide cycle { .capacity = 0, .splash = true };
+        cycle.excitement.value = rating(valid ? ride.assessment.excitement : rated[0]);
+        cycle.intensity.value = rating(valid ? ride.assessment.intensity : rated[1]);
+        cycle.nausea.value = rating(valid ? ride.assessment.nausea : rated[2]);
+        r.emplace<CycleRide>(e, std::move(cycle));
+        r.emplace<ClimbSlide>(e, std::move(slide));
+        r.emplace<Upkeep>(e, upkeep_of(ride));
+        if (r.get<Upkeep>(e).broken)
+            r.get<Attraction>(e).open = false;
+        return e;
     }
 
     std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters, std::span<const std::optional<std::uint32_t>> guests)
@@ -1152,6 +1344,47 @@ namespace rct3::simulation
                 // shortcut: boats that sail off their dock go out all at once and come back after a set trip, with
                 // no boat moving on the water; upgrade with boats steering over the lake.
                 timing = RideTiming { .seats = static_cast<std::uint32_t>(ride.seats.size()), .run = kTuning.boats.trip.value };
+            // A lazy river runs no trains: swimmers float round it, free on their complex's ticket, getting on and off
+            // at its stations. Rated as the park has it, else as a saved park rates its river.
+            if (ride.kind == save::RideKind::Tracked && ride.mode == save::OperatingMode::LazyRiver && coaster != nullptr && coaster->closed && coaster->points.size() == coaster->kinds.size())
+            {
+                auto& r = world.registry;
+                const entt::entity e = r.create();
+                r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::AttractionState::Open, .testing = ride.base.state == save::AttractionState::Testing, .saved = ride.base.id });
+                const auto& rated = kTuning.rivers.rated;
+                const auto valid = ride.assessment.valid;
+                CycleRide cycle { .capacity = 0, .splash = true };
+                cycle.excitement.value = rating(valid ? ride.assessment.excitement : rated[0]);
+                cycle.intensity.value = rating(valid ? ride.assessment.intensity : rated[1]);
+                cycle.nausea.value = rating(valid ? ride.assessment.nausea : rated[2]);
+                if (i < guests.size() && guests[i])
+                    cycle.room = *guests[i];
+                r.emplace<CycleRide>(e, std::move(cycle));
+                River river { .course = *coaster };
+                const auto& kinds = coaster->kinds;
+                float from = 0;
+                // shortcut: a station broken by the lap's start counts as two, upgrade if a river is built that way.
+                for (std::size_t k = 0; k + 1 < kinds.size(); ++k)
+                {
+                    if (kinds[k] != Stretch::Station)
+                        continue;
+                    if (k == 0 || kinds[k - 1] != Stretch::Station)
+                    {
+                        river.stations.emplace_back();
+                        from = coaster->distance[k];
+                    }
+                    if (river.stations.back().points.empty())
+                        river.stations.back().points.push_back(coaster->points[k]);
+                    river.stations.back().points.push_back(coaster->points[k + 1]);
+                    river.stations.back().at = (from + coaster->distance[k + 1]) / 2;
+                }
+                r.emplace<River>(e, std::move(river));
+                r.emplace<Upkeep>(e, upkeep_of(ride));
+                if (r.get<Upkeep>(e).broken)
+                    r.get<Attraction>(e).open = false;
+                added[i] = e;
+                continue;
+            }
             // Rides left out still make room in the park while open and working.
             const auto elsewhere = [&] {
                 if (i < guests.size() && guests[i] && ride.base.state == save::AttractionState::Open && (ride.base.flags & save::AttractionCommon::kBrokenDown) == 0)
@@ -1268,7 +1501,7 @@ namespace rct3::simulation
         return added;
     }
 
-    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::SolidTiles& solids)
+    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::path::SolidTiles& solids)
     {
         auto& r = world.registry;
         bool any = false;
@@ -1280,7 +1513,7 @@ namespace rct3::simulation
                 continue;
             any = true;
             const glm::vec3 leave = course->points.back();
-            const glm::vec3 heading = park::course_direction(*course, course->length());
+            const glm::vec3 heading = park::track::course_direction(*course, course->length());
             Boats boats { .dock = { .leave = { leave.x, leave.z }, .heading = { heading.x, heading.z }, .enter = { course->points.front().x, course->points.front().z } } };
             boats.roams = ride.mode == save::OperatingMode::Boat;
             if (ride.options.fixed_speed > 0)
@@ -1300,7 +1533,7 @@ namespace rct3::simulation
             boat_water(world, grid, water, solids);
     }
 
-    void boat_water(SimWorld& world, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::SolidTiles& solids)
+    void boat_water(SimWorld& world, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::path::SolidTiles& solids)
     {
         auto& r = world.registry;
         if (r.view<const Boats>().empty())
@@ -1317,7 +1550,7 @@ namespace rct3::simulation
         r.ctx().insert_or_assign(std::move(tiles));
     }
 
-    void link_stations(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<park::TrackCourse>> courses, const save::TerrainGrid& grid)
+    void link_stations(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::TerrainGrid& grid)
     {
         if (grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
             return;
@@ -1339,7 +1572,7 @@ namespace rct3::simulation
                 continue;
             for (std::size_t k = 0; k + 1 < course->kinds.size() && k + 1 < course->points.size(); ++k)
             {
-                if (course->kinds[k] != park::CourseKind::Station)
+                if (course->kinds[k] != park::track::CourseKind::Station)
                     continue;
                 const glm::vec3 middle = (course->points[k] + course->points[k + 1]) / 2.0f;
                 stations[i].push_back({ static_cast<int>(std::floor((middle.x - grid.origin_x) / grid.tile_size_x)), static_cast<int>(std::floor((middle.z - grid.origin_z) / grid.tile_size_z)), middle.y });
@@ -1397,12 +1630,10 @@ namespace rct3::simulation
 
     void set_wall(SimWorld& world, const park::EdgeWall& wall, bool standing)
     {
-        // path_decks counts the sides from +row, the network from +col: the same sides, each pair swapped.
-        const std::size_t side = wall.side ^ 1U;
         if (standing)
-            world.paths.add_wall(wall.tile.col, wall.tile.row, side, wall.low, wall.high);
+            world.paths.add_wall(wall.tile.col, wall.tile.row, wall.side, wall.low, wall.high);
         else
-            world.paths.remove_wall(wall.tile.col, wall.tile.row, side, wall.low, wall.high);
+            world.paths.remove_wall(wall.tile.col, wall.tile.row, wall.side, wall.low, wall.high);
     }
 
     entt::entity add_path_item(SimWorld& world, const save::PlacedObject& o, PathItemKind kind)
@@ -1416,7 +1647,7 @@ namespace rct3::simulation
             return entt::null;
         auto& r = world.registry;
         const entt::entity e = r.create();
-        const glm::vec2 x = park::turned_x(o.rotation);
+        const glm::vec2 x = park::turned_x(park::ModelTurn::from(o.rotation));
         r.emplace<PathItem>(e, PathItem { .node = *at, .kind = kind, .object = o.id, .heading = std::atan2(x.x, x.y) });
         if (kind == PathItemKind::Bin)
             r.emplace<Bin>(e, Bin { kNewBinPieces, 0 });
@@ -1473,6 +1704,23 @@ namespace rct3::simulation
             r.emplace<Pose>(e, position, -p.heading, position, -p.heading); // The original turns the other way
             if (walks)
                 start_walking(world, e, *at);
+            // An inspector the park left swimming, looking a pool complex over: in it still, a swimmer till their
+            // time there is up, then back to their rounds by its changing room.
+            if (const auto door = walks && role == StaffRole::Inspector && p.state == save::PersonState::Swimming ? pool_door_at(world, position) : std::nullopt)
+            {
+                const SwimPool& pool = r.get<SwimPool>(r.get<PoolDoor>(*door).pool);
+                const float half = world.paths.tile_size / 2;
+                const auto within = [&](const glm::vec3& w) { return std::abs(position.x - w.x) <= half && std::abs(position.z - w.z) <= half; };
+                r.emplace<Needs>(e);
+                r.emplace<Mood>(e);
+                r.emplace<Wallet>(e);
+                r.emplace<Rounds>(e, Rounds { .seen = { { *door, 0.0f } } });
+                r.get<Errand>(e) = { .kind = ErrandKind::Swimming, .target = *door };
+                const Seconds left = saved.time_in_pool ? Seconds { std::max(*saved.time_in_pool, 0.0f) } : kTuning.pools.stay;
+                r.emplace<Swimmer>(e, Swimmer { .changed = true, .left = left, .goal = position, .in_water = std::ranges::any_of(pool.water, within) });
+                auto& pose = r.get<Pose>(e);
+                pose.position = pose.was = position;
+            }
             out[i] = e;
         }
         return out;
@@ -1521,9 +1769,20 @@ namespace rct3::simulation
     {
         auto& r = world.registry;
         std::unordered_map<save::ObjectId, entt::entity> ride_of;
-        // Not a ride run with no doors on the paths, as its riders would have nowhere to get off.
+        // Not a ride run with no doors on the paths, as its riders would have nowhere to get off, but for a pool
+        // slide, whose riders swim on in the pool it ends in or lets them off into.
+        const auto slide_room = [&](entt::entity ride) -> std::optional<entt::entity> {
+            const auto* fleet = r.try_get<Trains>(ride);
+            if (fleet == nullptr || fleet->trains.empty() || (!fleet->trains.front().splash_out && fleet->trains.front().drop_offs.empty()))
+                return std::nullopt;
+            const auto pool = pool_ride_pool(world, ride);
+            for (const auto [door, d] : r.view<const PoolDoor>().each())
+                if (pool && d.pool == *pool)
+                    return door;
+            return std::nullopt;
+        };
         for (std::size_t i = 0; i < saved.rides.size() && i < rides.size(); ++i)
-            if (rides[i] != entt::null && r.get<Attraction>(rides[i]).entrance != kNoNode)
+            if (rides[i] != entt::null && (r.get<Attraction>(rides[i]).entrance != kNoNode || slide_room(rides[i]) || r.all_of<River>(rides[i])))
                 ride_of.emplace(saved.rides[i].base.id, rides[i]);
         std::size_t seated = 0;
         for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
@@ -1534,9 +1793,42 @@ namespace rct3::simulation
             if (e == entt::null || p.state != save::PersonState::OnRide || ride == ride_of.end())
                 continue;
             auto& cycle = r.get<CycleRide>(ride->second);
-            // Off the ride they get off where its riders do.
+            // On a lazy river, at the nearest of its course to where the park kept them, in their ring; they swim on
+            // in the complex they get off in.
+            // shortcut: the room they swim on from till then is the nearest, upgrade when the save's own is read.
+            if (const auto* river = r.try_get<River>(ride->second); river != nullptr && r.all_of<Pose, Dice>(e))
+            {
+                const glm::vec3 at { p.position.x, p.position.y, p.position.z };
+                const auto& points = river->course.points;
+                std::optional<entt::entity> room;
+                float closest = std::numeric_limits<float>::max();
+                for (const entt::entity door : r.view<const PoolDoor>())
+                    if (const float d = glm::distance(r.get<PoolDoor>(door).poolside, at); d < closest)
+                    {
+                        closest = d;
+                        room = door;
+                    }
+                if (points.empty() || !room)
+                    continue;
+                const auto near = std::ranges::min_element(points, { }, [&](const glm::vec3& q) { return glm::distance(q, at); });
+                auto& dice = r.get<Dice>(e).state;
+                const auto& tuning = kTuning.rivers;
+                const float length = river->course.length();
+                r.emplace_or_replace<Floating>(
+                    e, Floating { .river = ride->second, .along = river->course.distance[static_cast<std::size_t>(near - points.begin())], .stay = static_cast<float>(random::between(dice, tuning.least_stay, tuning.most_stay)) * length, .lane = static_cast<float>(random::between(dice, -1.0, 1.0)), .spin = static_cast<float>(random::between(dice, -tuning.spin, tuning.spin)), .paddle = { static_cast<float>(random::between(dice, tuning.least_paddle.value, tuning.most_paddle.value)) } });
+                r.emplace_or_replace<Swimmer>(e, Swimmer { .changed = true, .left = kTuning.pools.stay, .in_water = true, .room = *room });
+                r.get<Errand>(e) = { ErrandKind::Riding, ride->second, 0 };
+                cycle.riders.push_back(e);
+                ++seated;
+                continue;
+            }
+            // Off the ride they get off where its riders do; off a slide, in their swimwear, into its pool.
+            const auto room = slide_room(ride->second);
+            const NodeId off = cycle.exit != kNoNode ? cycle.exit : r.get<Attraction>(ride->second).entrance;
+            if (!r.all_of<Stride>(e) && off == kNoNode)
+                continue;
             if (!r.all_of<Stride>(e))
-                start_walking(world, e, cycle.exit != kNoNode ? cycle.exit : r.get<Attraction>(ride->second).entrance);
+                start_walking(world, e, off);
             std::vector<entt::entity>* riders = nullptr;
             if (auto* fleet = r.try_get<Trains>(ride->second))
             {
@@ -1560,6 +1852,8 @@ namespace rct3::simulation
                 continue;
             riders->push_back(e);
             r.get<Errand>(e) = { ErrandKind::Riding, ride->second, 0 };
+            if (room)
+                r.emplace_or_replace<Swimmer>(e, Swimmer { .changed = true, .left = kTuning.pools.stay, .room = *room });
             ++seated;
         }
         return seated;

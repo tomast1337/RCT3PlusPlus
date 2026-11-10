@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object_mesh.hpp"
 
-#include "park/ground_textures.hpp"
+#include "park/ground/textures.hpp"
 
 #include <algorithm>
 #include <doctest/doctest.h>
@@ -371,7 +371,7 @@ TEST_CASE("parts painted like the ground take the pictures of the tile they stan
     for (const ObjectBatch& b : m.batches)
         textures.push_back(b.texture);
     std::ranges::sort(textures);
-    CHECK(textures == std::vector<std::string> { ground_key(GroundPaint::Cliff, 0), ground_key(GroundPaint::Cliff, 2), ground_key(GroundPaint::Surface, 3), ground_key(GroundPaint::Surface, 5) });
+    CHECK(textures == std::vector<std::string> { ground::ground_key(GroundPaint::Cliff, 0), ground::ground_key(GroundPaint::Cliff, 2), ground::ground_key(GroundPaint::Surface, 3), ground::ground_key(GroundPaint::Surface, 5) });
 
     // Laid by place, not by the model's own coordinates: a top by x and z, a side by x and height.
     for (std::size_t i = 0; i < m.vertices.size(); ++i)

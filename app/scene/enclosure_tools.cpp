@@ -35,7 +35,7 @@ namespace rct3::scene
 
         bool deleting(const EnclosureTool& t)
         {
-            return t.item && t.item->symbol == park::kEnclosureDelete;
+            return t.item && t.item->symbol == rct3::park::kEnclosureDelete;
         }
 
         /// The area marked, as its least and greatest column and row.
@@ -46,12 +46,12 @@ namespace rct3::scene
 
         /// What a length of fence `fence` costs and pays back, as the enclosure list prices it; nothing until
         /// the list is read.
-        park::FencePrice fence_price(const ParkScene& scene, std::string_view fence)
+        rct3::park::FencePrice fence_price(const ParkScene& scene, std::string_view fence)
         {
             const auto& items = scene.build.items;
             if (items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-                for (const park::BuildItem& i : items.get())
-                    if (i.kind == park::BuildKind::EnclosureFence && i.symbol == fence)
+                for (const rct3::park::BuildItem& i : items.get())
+                    if (i.kind == rct3::park::BuildKind::EnclosureFence && i.symbol == fence)
                         return { .build = i.price, .refund = i.refund };
             return { };
         }
@@ -60,7 +60,7 @@ namespace rct3::scene
         /// and the floors and roofs of buildings do; plants, scenery, fences and what stands on paths do not.
         bool keeps_out(std::uint32_t category) noexcept
         {
-            using park::ItemCategory;
+            using rct3::park::ItemCategory;
             return std::ranges::contains(std::array { ItemCategory::TrackPiece, ItemCategory::ParkEntrance, ItemCategory::Ride, ItemCategory::RideEntrance, ItemCategory::RideExit, ItemCategory::Stall, ItemCategory::Floor, ItemCategory::Roof }, category, [](ItemCategory c) { return std::to_underlying(c); });
         }
 
@@ -80,13 +80,13 @@ namespace rct3::scene
             const auto keep_at = [&](float x, float z) { keep(static_cast<std::int32_t>(std::floor((x - g.origin_x) / g.tile_size_x)), static_cast<std::int32_t>(std::floor((z - g.origin_z) / g.tile_size_z))); };
             for (const save::PlacedObject& o : scene.objects)
             {
-                const auto model = scene.models.find(park::object::model_key(o));
+                const auto model = scene.models.find(rct3::park::object::model_key(o));
                 if (o.hidden || o.fixture || model == scene.models.end() || !keeps_out(model->second.category))
                     continue;
-                park::support::SupportFootprint shape;
+                rct3::park::support::SupportFootprint shape;
                 shape.x_squares = model->second.squares[0];
                 shape.z_squares = model->second.squares[1];
-                for (const auto& [col, row] : park::support::footprint_tiles(o, shape))
+                for (const auto& [col, row] : rct3::park::support::footprint_tiles(o, shape))
                     keep(col, row);
             }
             const auto& r = scene.sim.registry;
@@ -102,7 +102,7 @@ namespace rct3::scene
             }
             for (std::int32_t row = 0; row < g.height; ++row)
                 for (std::int32_t col = 0; col < g.width; ++col)
-                    if (!park::owned_outright(g.at(col, row)))
+                    if (!rct3::park::owned_outright(g.at(col, row)))
                         keep(col, row);
             for (const save::PathTile& p : scene.footpaths.paths)
                 keep(p.col, p.row);
@@ -119,11 +119,11 @@ namespace rct3::scene
             save::EnclosureMap map = scene.enclosures;
             const auto free = [&](save::Tile at) { return scene.grid.contains(at.col, at.row) && !t.kept[static_cast<std::size_t>(at.row * scene.grid.width + at.col)]; };
             if (deleting(t))
-                park::unenclose(map, *t.corner, *t.other, free);
+                rct3::park::unenclose(map, *t.corner, *t.other, free);
             else
-                (void)park::enclose(map, scene.grid, *t.corner, *t.other, t.item->symbol, free);
+                (void)rct3::park::enclose(map, scene.grid, *t.corner, *t.other, t.item->symbol, free);
             const auto price = [&](std::string_view fence) { return fence_price(scene, fence); };
-            const std::int64_t cost = park::fence_cost(scene.enclosures, map, price);
+            const std::int64_t cost = rct3::park::fence_cost(scene.enclosures, map, price);
             return t.marked.emplace(EnclosureTool::Marked { .area = area, .enclosures = std::move(map), .cost = cost });
         }
 
@@ -137,11 +137,11 @@ namespace rct3::scene
         /// enclosure it gets out as its crate opens.
         bool crate_allowed(const ParkScene& scene, save::Tile tile)
         {
-            return scene.grid.contains(tile.col, tile.row) && park::owned_outright(scene.grid.at(tile.col, tile.row)) && affordable(scene, scene.enclosing.item->price);
+            return scene.grid.contains(tile.col, tile.row) && rct3::park::owned_outright(scene.grid.at(tile.col, tile.row)) && affordable(scene, scene.enclosing.item->price);
         }
 
         /// The animal of `item` in its crate on `tile`, paid for.
-        void put_animal(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const park::BuildItem& item, save::Tile tile)
+        void put_animal(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const rct3::park::BuildItem& item, save::Tile tile)
         {
             const glm::vec3 at = tile_point(scene.grid, tile);
             const std::string name = strings::to_utf8(assets.strings->get(item.name_text));
@@ -155,9 +155,9 @@ namespace rct3::scene
         }
     } // namespace
 
-    bool start_enclosing(ParkScene& scene, const park::BuildItem& item)
+    bool start_enclosing(ParkScene& scene, const rct3::park::BuildItem& item)
     {
-        if (item.kind != park::BuildKind::EnclosureFence && item.kind != park::BuildKind::Animal)
+        if (item.kind != rct3::park::BuildKind::EnclosureFence && item.kind != rct3::park::BuildKind::Animal)
             return false;
         scene.enclosing.item = item;
         scene.enclosing.corner.reset();
@@ -173,7 +173,7 @@ namespace rct3::scene
     void update_enclosing(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over)
     {
         EnclosureTool& t = scene.enclosing;
-        const bool animal = t.item && t.item->kind == park::BuildKind::Animal;
+        const bool animal = t.item && t.item->kind == rct3::park::BuildKind::Animal;
         const auto tile = t.item && !over ? ground_tile(scene, at, size) : std::nullopt;
         if (t.item && down && (t.corner || tile))
         {
@@ -227,9 +227,9 @@ namespace rct3::scene
         const bool moved = dragging && (!t.marked || t.marked->area != *marks);
         if (marks != t.drawn || moved)
         {
-            park::TerrainMesh mesh;
+            rct3::park::TerrainMesh mesh;
             if (animal && marks)
-                park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], park::TilePart::Whole, crate_allowed(scene, { (*marks)[0], (*marks)[1] }) ? kMarkColour : kRefusedColour);
+                rct3::park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], rct3::park::TilePart::Whole, crate_allowed(scene, { (*marks)[0], (*marks)[1] }) ? kMarkColour : kRefusedColour);
             else if (dragging)
             {
                 const EnclosureTool::Marked& m = marked_now(scene);
@@ -237,18 +237,18 @@ namespace rct3::scene
                 for (std::int32_t row = m.area[1]; row <= m.area[3]; ++row)
                     for (std::int32_t col = m.area[0]; col <= m.area[2]; ++col)
                         if ((m.enclosures.at(col, row) >= 0) != (scene.enclosures.at(col, row) >= 0))
-                            park::tile_marks(mesh, scene.grid, col, row, col, row, park::TilePart::Whole, colour);
+                            rct3::park::tile_marks(mesh, scene.grid, col, row, col, row, rct3::park::TilePart::Whole, colour);
             }
             else if (marks)
-                park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], park::TilePart::Whole, kMarkColour);
+                rct3::park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], rct3::park::TilePart::Whole, kMarkColour);
             set_view_lines(device, scene.enclosure_marks, mesh);
             t.drawn = marks;
         }
     }
 
-    void house_placed(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const park::BuildItem& item, const park::ride::RideSite& site)
+    void house_placed(ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const rct3::park::BuildItem& item, const rct3::park::ride::RideSite& site)
     {
-        const std::int32_t enclosure = park::enclosure_under(scene.enclosures, { site.col, site.row }, site.span);
+        const std::int32_t enclosure = rct3::park::enclosure_under(scene.enclosures, { site.col, site.row }, site.span);
         // The hut goes on a tile beside the house in the same enclosure that nothing stands on, the side it
         // faces first.
         // shortcut: a tile is taken when an object's corner is on it; check the hut's footprint against solid
@@ -258,11 +258,11 @@ namespace rct3::scene
         for (std::int32_t side = 0; side < 4 && !spot; ++side)
         {
             // The house's turn counted as sides from the next row, as a pool piece's is.
-            const park::Side way = site.turn.facing().turned(side);
+            const rct3::park::Side way = site.turn.facing().turned(side);
             const std::int32_t across = way.on_columns() ? site.span[1] : site.span[0];
             for (std::int32_t i = across / 2, n = 0; n < across && !spot; ++n, i = (i + 1) % across)
             {
-                const save::Tile t = way == park::Side::kNextRow ? save::Tile { site.col + i, site.row + site.span[1] } : way == park::Side::kNextCol ? save::Tile { site.col + site.span[0], site.row + i } : way == park::Side::kRowBefore ? save::Tile { site.col + i, site.row - 1 } : save::Tile { site.col - 1, site.row + i };
+                const save::Tile t = way == rct3::park::Side::kNextRow ? save::Tile { site.col + i, site.row + site.span[1] } : way == rct3::park::Side::kNextCol ? save::Tile { site.col + site.span[0], site.row + i } : way == rct3::park::Side::kRowBefore ? save::Tile { site.col + i, site.row - 1 } : save::Tile { site.col - 1, site.row + i };
                 if (free(t))
                     spot = t;
             }
@@ -279,13 +279,13 @@ namespace rct3::scene
             hut.overlay = item.overlay;
             hut.col = spot->col;
             hut.row = spot->row;
-            hut.base_height = park::ride::ride_site({ spot->col, spot->row }, { 1, 1 }, site.turn, scene.grid).height;
+            hut.base_height = rct3::park::ride::ride_site({ spot->col, spot->row }, { 1, 1 }, site.turn, scene.grid).height;
             hut.rotation = site.turn.value;
             hut.id = last_id(scene) + 1;
             hut.owner_ref = hut.id;
             if (load_object_model(scene, scene.placing.models, assets, hut))
             {
-                hut.colours = scene.models.at(park::object::model_key(hut)).default_colours;
+                hut.colours = scene.models.at(rct3::park::object::model_key(hut)).default_colours;
                 home.hut = hut.id;
                 scene.placed.insert(hut.id);
                 scene.objects.push_back(std::move(hut));
@@ -302,12 +302,12 @@ namespace rct3::scene
             if (std::ranges::contains(scene.enclosure_panels, o.id))
                 o.hidden = true;
         scene.enclosure_panels.clear();
-        park::BoundaryFence fence = park::enclosure_fences(scene.enclosures, scene.grid, last_id(scene));
+        rct3::park::BoundaryFence fence = rct3::park::enclosure_fences(scene.enclosures, scene.grid, last_id(scene));
         for (save::PlacedObject& panel : fence.pieces)
         {
             if (!load_object_model(scene, scene.placing.models, assets, panel))
                 continue;
-            panel.colours = scene.models.at(park::object::model_key(panel)).default_colours;
+            panel.colours = scene.models.at(rct3::park::object::model_key(panel)).default_colours;
             scene.enclosure_panels.push_back(panel.id);
             scene.objects.push_back(std::move(panel));
         }

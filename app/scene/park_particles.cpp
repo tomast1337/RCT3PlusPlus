@@ -69,13 +69,13 @@ namespace rct3::scene
                 *pipeline = *made;
     }
 
-    void show_park_particles(ParkParticles& particles, std::span<const park::object::PlacedEffect> effects, std::vector<ParkParticles::Shown> ParkParticles::* list)
+    void show_park_particles(ParkParticles& particles, std::span<const rct3::park::object::PlacedEffect> effects, std::vector<ParkParticles::Shown> ParkParticles::* list)
     {
         (particles.*list).clear();
         if (!particles.library)
             return;
         std::size_t missing = 0;
-        for (const park::object::PlacedEffect& placed : effects)
+        for (const rct3::park::object::PlacedEffect& placed : effects)
         {
             if (auto shown = start(particles, placed.effect, placed.position, placed.axes, true))
             {

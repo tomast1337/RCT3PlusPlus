@@ -40,9 +40,9 @@ namespace rct3::scene
     BuildMenus start_build_menus(const config::GameInstall& install, const save::RequiredContent* content)
     {
         BuildMenus menus;
-        menus.items = std::async(std::launch::async, [root = install.root()] { return park::read_build_catalogue(root); }).share();
+        menus.items = std::async(std::launch::async, [root = install.root()] { return rct3::park::read_build_catalogue(root); }).share();
         if (content != nullptr)
-            menus.offer = park::BuildOffer(*content);
+            menus.offer = rct3::park::BuildOffer(*content);
         return menus;
     }
 
@@ -143,7 +143,7 @@ namespace rct3::scene
         return root.find(kListName).has_value();
     }
 
-    std::optional<park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<std::int64_t> cash)
+    std::optional<rct3::park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<std::int64_t> cash)
     {
         if (menus.asked)
         {

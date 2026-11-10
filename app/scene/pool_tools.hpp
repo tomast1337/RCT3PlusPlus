@@ -36,7 +36,7 @@ namespace rct3::scene
     struct ParkScene;
 
     /// Takes out the pool tool for `item` when it is one; false otherwise.
-    bool start_pooling(ParkScene& scene, const park::BuildItem& item);
+    bool start_pooling(ParkScene& scene, const rct3::park::BuildItem& item);
 
     /// Puts the pool tool away, and the pool panel.
     void stop_pooling(ParkScene& scene);
@@ -66,8 +66,8 @@ namespace rct3::scene
     /// Builds the pools' pieces and water again after they changed, on the tiles of `touched` or anywhere.
     /// shortcut: the old pieces stay hidden among the objects; drop them when objects can be taken out.
     /// Where the rides' pieces and slide stations join the pools: railings are left open there and paths join them.
-    [[nodiscard]] std::vector<park::pools::PoolOpening> pool_openings(const ParkScene& scene);
+    [[nodiscard]] std::vector<rct3::park::pools::PoolOpening> pool_openings(const ParkScene& scene);
 
-    void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<park::TileRect> touched = std::nullopt);
+    void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<rct3::park::TileRect> touched = std::nullopt);
 
 } // namespace rct3::scene

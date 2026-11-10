@@ -95,38 +95,38 @@ namespace rct3::scene
         Tool tool = Tool::None;
         std::optional<save::Tile> tile; ///< Being shaped, or last painted, while the button is held
         float press_y = 0;
-        std::size_t tile_tool = 0;                         ///< The tile tool chosen, by its place in its tab
-        park::TileStroke stroke;                           ///< Of a tile tool
-        std::vector<glm::vec3> marked;                     ///< Where the marks on the ground were made, to make them again only on a change
-        park::ground::GroundHolds holds;                   ///< Gathered as a stroke starts
-        std::unordered_set<std::uint32_t> refused;         ///< Tiles the stroke may not move, as GroundHolds keys them
-        std::optional<std::array<save::Tile, 2>> stirred;  ///< The first and last tiles the stroke moved
-        std::vector<park::ground::GroundSurface> surfaces; ///< Read once, the first time the paint tool opens
+        std::size_t tile_tool = 0;                               ///< The tile tool chosen, by its place in its tab
+        rct3::park::TileStroke stroke;                           ///< Of a tile tool
+        std::vector<glm::vec3> marked;                           ///< Where the marks on the ground were made, to make them again only on a change
+        rct3::park::ground::GroundHolds holds;                   ///< Gathered as a stroke starts
+        std::unordered_set<std::uint32_t> refused;               ///< Tiles the stroke may not move, as GroundHolds keys them
+        std::optional<std::array<save::Tile, 2>> stirred;        ///< The first and last tiles the stroke moved
+        std::vector<rct3::park::ground::GroundSurface> surfaces; ///< Read once, the first time the paint tool opens
         bool surfaces_read = false;
-        std::size_t surface = 0;                         ///< Chosen, of `surfaces`
-        std::vector<park::ground::GroundSurface> cliffs; ///< The cliff faces, read with the surfaces
-        std::optional<std::size_t> cliff;                ///< Chosen, of `cliffs`, in place of a surface
-        int brush = 3;                                   ///< Tiles across the brushes cover
-        std::optional<park::ground::GroundShape> shape;  ///< The raising or lowering brush chosen; none for the tile tool
-        park::ground::CornerHeights before;              ///< As a brush stroke found them
-        glm::vec2 middle { 0 };                          ///< Of a brush stroke, in tile units
-        glm::vec2 along { 1, 0 };                        ///< Of a ridge: across the view as the stroke began
-        float amount = 0;                                ///< Of the brush stroke so far, in height units
-        float paid_for = 0;                              ///< The most ground the stroke has moved, already paid for
-        std::optional<std::size_t> smoothing;            ///< The smoothing brush chosen, by its place in its tab
-        float target = 0;                                ///< Of a levelling stroke
-        float held = 0;                                  ///< Seconds of smoothing not yet applied
-        std::uint64_t passes = 0;                        ///< Of smoothing, the seed of each pass
-        std::optional<std::size_t> upper_lake;           ///< Of a waterfall: the lake picked first, of the park's water
-        save::Tile upper_tile;                           ///< Where it was picked
-        park::LandBuy buying = park::LandBuy::Land;
+        std::size_t surface = 0;                               ///< Chosen, of `surfaces`
+        std::vector<rct3::park::ground::GroundSurface> cliffs; ///< The cliff faces, read with the surfaces
+        std::optional<std::size_t> cliff;                      ///< Chosen, of `cliffs`, in place of a surface
+        int brush = 3;                                         ///< Tiles across the brushes cover
+        std::optional<rct3::park::ground::GroundShape> shape;  ///< The raising or lowering brush chosen; none for the tile tool
+        rct3::park::ground::CornerHeights before;              ///< As a brush stroke found them
+        glm::vec2 middle { 0 };                                ///< Of a brush stroke, in tile units
+        glm::vec2 along { 1, 0 };                              ///< Of a ridge: across the view as the stroke began
+        float amount = 0;                                      ///< Of the brush stroke so far, in height units
+        float paid_for = 0;                                    ///< The most ground the stroke has moved, already paid for
+        std::optional<std::size_t> smoothing;                  ///< The smoothing brush chosen, by its place in its tab
+        float target = 0;                                      ///< Of a levelling stroke
+        float held = 0;                                        ///< Seconds of smoothing not yet applied
+        std::uint64_t passes = 0;                              ///< Of smoothing, the seed of each pass
+        std::optional<std::size_t> upper_lake;                 ///< Of a waterfall: the lake picked first, of the park's water
+        save::Tile upper_tile;                                 ///< Where it was picked
+        rct3::park::LandBuy buying = rct3::park::LandBuy::Land;
         std::optional<float> rumble; ///< While a shaping stroke goes: how loud its ground is heard moving, 0..1
     };
 
     /// Picks `tool` from the land menu, or puts it away when it is already out.
     void toggle_land_tool(ParkScene& scene, LandTools::Tool tool, const ui::InterfaceAssets& assets);
     /// Takes out the tool that buys `what` of the land on sale, opening the panel on it.
-    void buy_land_tool(ParkScene& scene, park::LandBuy what, const ui::InterfaceAssets& assets);
+    void buy_land_tool(ParkScene& scene, rct3::park::LandBuy what, const ui::InterfaceAssets& assets);
     void stop_land_tools(ParkScene& scene);
     [[nodiscard]] bool land_tool(const ParkScene& scene);
 

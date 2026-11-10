@@ -23,12 +23,12 @@ namespace rct3::scene
 
     struct DrawnAnimals
     {
-        std::optional<park::AnimalLibrary> library;
-        std::vector<park::PlacedAnimal> placed; ///< Those drawn with their models, as last posed; bodies point into `library`
-        park::AnimalRuns runs { };
-        park::object::ObjectMesh mesh; ///< As last posed
+        std::optional<rct3::park::AnimalLibrary> library;
+        std::vector<rct3::park::PlacedAnimal> placed; ///< Those drawn with their models, as last posed; bodies point into `library`
+        rct3::park::AnimalRuns runs { };
+        rct3::park::object::ObjectMesh mesh; ///< As last posed
         ui::UiTextures textures;
-        park::MovingMeshes crates;            ///< The animals still in their crates
+        rct3::park::MovingMeshes crates;      ///< The animals still in their crates
         std::vector<entt::entity> crated { }; ///< By crate, its animal
     };
 

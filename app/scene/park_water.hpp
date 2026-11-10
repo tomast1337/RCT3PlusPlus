@@ -55,7 +55,7 @@ namespace rct3::scene
 
     struct ParkWater
     {
-        park::water::WaterSurface surface;
+        rct3::park::water::WaterSurface surface;
         render::BufferHandle vertices;
         render::PipelineHandle shaded; ///< The water shader; none where the device has not got it
         render::PipelineHandle simple; ///< Lit and see-through
@@ -67,24 +67,24 @@ namespace rct3::scene
         render::TextureHandle behind; ///< The opaque scene and its depth, copied from the screen
         render::Extent behind_size;
         bool have_behind = false; ///< The copy this frame worked
-        park::water::Ripples ripples;
-        std::vector<park::pools::PoolWave> pool_waves; ///< The wave machines', then those drawn on the water, for the shader
+        rct3::park::water::Ripples ripples;
+        std::vector<rct3::park::pools::PoolWave> pool_waves; ///< The wave machines', then those drawn on the water, for the shader
         WaterLook look;
-        std::vector<float> levels;                     ///< With a reflection this frame, by index in `reflections`
-        std::optional<park::water::WaterAbove> eye_in; ///< The water the eye is under this frame
+        std::vector<float> levels;                           ///< With a reflection this frame, by index in `reflections`
+        std::optional<rct3::park::water::WaterAbove> eye_in; ///< The water the eye is under this frame
     };
 
-    /// Makes the water's buffers, pictures and pipelines. `layout` is that of park::GroundVertex.
-    [[nodiscard]] std::expected<void, std::string> create_park_water(render::Device& device, ParkWater& water, std::span<const park::WaterVertex> mesh, const render::VertexLayout& layout);
+    /// Makes the water's buffers, pictures and pipelines. `layout` is that of rct3::park::GroundVertex.
+    [[nodiscard]] std::expected<void, std::string> create_park_water(render::Device& device, ParkWater& water, std::span<const rct3::park::WaterVertex> mesh, const render::VertexLayout& layout);
     /// Puts the water's surface in place of the one it had, as the ground changed.
-    [[nodiscard]] std::expected<void, std::string> replace_park_water(render::Device& device, ParkWater& water, std::span<const park::WaterVertex> mesh);
+    [[nodiscard]] std::expected<void, std::string> replace_park_water(render::Device& device, ParkWater& water, std::span<const rct3::park::WaterVertex> mesh);
     void destroy_park_water(render::Device& device, ParkWater& water);
 
     /// Ages the ripples.
     void advance_park_water(ParkWater& water, float seconds);
 
     /// Starts a ripple where `ray` meets the water, unless the ground is in front of it. True if it did.
-    bool ripple_park_water(ParkWater& water, const park::Ray& ray, const save::TerrainGrid& grid);
+    bool ripple_park_water(ParkWater& water, const rct3::park::Ray& ray, const save::TerrainGrid& grid);
 
     /// Draws the world mirrored by the transform given, without its water.
     using MirroredDraw = std::function<void(const glm::mat4& transform)>;

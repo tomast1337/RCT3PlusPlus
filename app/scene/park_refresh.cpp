@@ -50,12 +50,12 @@ namespace rct3::scene
     {
 
         /// Starts rings spreading on the pool water at `at` in `delay` seconds, where someone falls in with
-        /// `strength` (park::pools::entry_rings). When there are already the most, they take the place of the lowest, if
+        /// `strength` (rct3::park::pools::entry_rings). When there are already the most, they take the place of the lowest, if
         /// those are lower than the new ones start.
         void start_rings(ParkScene& scene, glm::vec3 at, float strength, float delay = 0)
         {
-            constexpr std::size_t kMostRings = park::pools::kMaxPoolWaves / 2; ///< Chosen by eye: room left for the machines' and drawn waves
-            const auto rings = park::pools::entry_rings(scene.pools, scene.grid, at, strength, scene.park_clock + delay);
+            constexpr std::size_t kMostRings = rct3::park::pools::kMaxPoolWaves / 2; ///< Chosen by eye: room left for the machines' and drawn waves
+            const auto rings = rct3::park::pools::entry_rings(scene.pools, scene.grid, at, strength, scene.park_clock + delay);
             if (!rings)
                 return;
             if (scene.rings.size() < kMostRings)
@@ -63,8 +63,8 @@ namespace rct3::scene
                 scene.rings.push_back(*rings);
                 return;
             }
-            const auto crest = [&](const park::pools::PoolWave& w) { return w.start > scene.park_clock ? w.strength * park::pools::kPoolWaveLook.ring_height : park::pools::ring_crest(w, scene.park_clock); };
-            if (const auto lowest = std::ranges::min_element(scene.rings, { }, crest); crest(*lowest) < rings->strength * park::pools::kPoolWaveLook.ring_height)
+            const auto crest = [&](const rct3::park::pools::PoolWave& w) { return w.start > scene.park_clock ? w.strength * rct3::park::pools::kPoolWaveLook.ring_height : rct3::park::pools::ring_crest(w, scene.park_clock); };
+            if (const auto lowest = std::ranges::min_element(scene.rings, { }, crest); crest(*lowest) < rings->strength * rct3::park::pools::kPoolWaveLook.ring_height)
                 *lowest = *rings;
         }
 
@@ -118,13 +118,13 @@ namespace rct3::scene
             if (const auto object = scene.ride_seats.find(errand.target); object != scene.ride_seats.end())
             {
                 const save::PlacedObject& o = scene.objects[object->second];
-                const auto model = scene.models.find(park::object::model_ref(o));
+                const auto model = scene.models.find(rct3::park::object::model_ref(o));
                 if (model == scene.models.end() || seat >= model->second.seat_places.size())
                     return std::nullopt;
                 // On a ride its bones move, the seat's bone carries the seat.
                 if (const auto boned = std::ranges::find(scene.boned_rides, object->second, &ParkScene::BonedRide::object); boned != scene.boned_rides.end() && seat < boned->seats)
                     return std::pair { scene.cars.size() + boned->first_seat + seat, model->second.seat_places[seat] };
-                return std::pair { kNoCar, park::object::placed_transform(o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[seat] };
+                return std::pair { kNoCar, rct3::park::object::placed_transform(o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[seat] };
             }
             const auto cars = scene.ride_cars.find(errand.target);
             if (cars == scene.ride_cars.end())
@@ -133,7 +133,7 @@ namespace rct3::scene
             {
                 if (fleet != nullptr && scene.car_spots[car].train != train)
                     continue;
-                const auto model = scene.models.find(park::object::model_ref(scene.cars[car]));
+                const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[car]));
                 const std::size_t seats = model != scene.models.end() ? model->second.seat_places.size() : 0;
                 if (seat < seats)
                     return std::pair { car, model->second.seat_places[seat] };
@@ -144,9 +144,9 @@ namespace rct3::scene
 
         /// `shown` as they look now: in their swimwear inside a pool complex, riding its slides or held or
         /// falling out of it, their clothes elsewhere (simulation::in_swimwear).
-        park::person::PlacedPerson dressed(const ShownPerson& shown)
+        rct3::park::person::PlacedPerson dressed(const ShownPerson& shown)
         {
-            park::person::PlacedPerson pose = shown.pose;
+            rct3::park::person::PlacedPerson pose = shown.pose;
             if (shown.swimwear)
             {
                 pose.look.swimwear = true;
@@ -175,10 +175,10 @@ namespace rct3::scene
             if (item == nullptr || linger->at == simulation::PathItemKind::Sight || linger->at == simulation::PathItemKind::PhotoSpot)
                 return std::nullopt;
             const auto o = std::ranges::find(scene.objects, item->object, &save::PlacedObject::id);
-            const auto model = o != scene.objects.end() && !o->hidden ? scene.models.find(park::object::model_ref(*o)) : scene.models.end();
+            const auto model = o != scene.objects.end() && !o->hidden ? scene.models.find(rct3::park::object::model_ref(*o)) : scene.models.end();
             if (model == scene.models.end() || linger->seat >= model->second.seat_places.size())
                 return std::nullopt;
-            return park::object::placed_transform(*o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[linger->seat];
+            return rct3::park::object::placed_transform(*o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[linger->seat];
         }
 
         /// Where path item `item` stands in the park, as its placed object; nothing once it is gone.
@@ -189,34 +189,34 @@ namespace rct3::scene
             const auto o = path_item != nullptr ? std::ranges::find(scene.objects, path_item->object, &save::PlacedObject::id) : scene.objects.end();
             if (o == scene.objects.end() || o->hidden)
                 return std::nullopt;
-            const auto model = scene.models.find(park::object::model_ref(*o));
-            return glm::vec3(park::object::placed_transform(*o, model != scene.models.end() ? &model->second : nullptr, scene.grid, scene.fitted)[3]);
+            const auto model = scene.models.find(rct3::park::object::model_ref(*o));
+            return glm::vec3(rct3::park::object::placed_transform(*o, model != scene.models.end() ? &model->second : nullptr, scene.grid, scene.fitted)[3]);
         }
 
         /// How guests sit on a bench, as the game's motions name them: down onto it, sitting, turned to talk to
         /// someone on the seat to one side or the other, and up again.
-        const std::int32_t kSitDownMotion = park::person::motion_number("sitbenchin").value_or(park::person::motion::kIdle);
-        const std::int32_t kSitMotion = park::person::motion_number("sitbenchloop").value_or(park::person::motion::kIdle);
-        const std::array<std::int32_t, 2> kSitChatMotions { park::person::motion_number("sitbenchconvl").value_or(park::person::motion::kIdle), park::person::motion_number("sitbenchconvr").value_or(park::person::motion::kIdle) };
-        const std::int32_t kStandUpMotion = park::person::motion_number("sitbenchout").value_or(park::person::motion::kIdle);
-        const std::int32_t kSitEatMotion = park::person::motion_number("sitbencheatlhand").value_or(park::person::motion::kIdle);
-        const std::int32_t kSitDrinkMotion = park::person::motion_number("sitbenchdrinkl").value_or(park::person::motion::kIdle);
+        const std::int32_t kSitDownMotion = rct3::park::person::motion_number("sitbenchin").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kSitMotion = rct3::park::person::motion_number("sitbenchloop").value_or(rct3::park::person::motion::kIdle);
+        const std::array<std::int32_t, 2> kSitChatMotions { rct3::park::person::motion_number("sitbenchconvl").value_or(rct3::park::person::motion::kIdle), rct3::park::person::motion_number("sitbenchconvr").value_or(rct3::park::person::motion::kIdle) };
+        const std::int32_t kStandUpMotion = rct3::park::person::motion_number("sitbenchout").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kSitEatMotion = rct3::park::person::motion_number("sitbencheatlhand").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kSitDrinkMotion = rct3::park::person::motion_number("sitbenchdrinkl").value_or(rct3::park::person::motion::kIdle);
         constexpr float kStepToSeat = 0.8f; ///< Chosen by eye: seconds from the path to the seat and back
         /// How guests fire a water cannon, as the game's motions name them: taking hold, firing, letting go.
-        const std::int32_t kCannonInMotion = park::person::motion_number("watercannonin").value_or(park::person::motion::kIdle);
-        const std::int32_t kCannonMotion = park::person::motion_number("watercannonloop").value_or(park::person::motion::kIdle);
-        const std::int32_t kCannonOutMotion = park::person::motion_number("watercannonout").value_or(park::person::motion::kIdle);
+        const std::int32_t kCannonInMotion = rct3::park::person::motion_number("watercannonin").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kCannonMotion = rct3::park::person::motion_number("watercannonloop").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kCannonOutMotion = rct3::park::person::motion_number("watercannonout").value_or(rct3::park::person::motion::kIdle);
         /// How a party poses at a view, as the game's motions name them: one filming the rest, teens slouching.
-        const std::int32_t kVideoInMotion = park::person::motion_number("videoin").value_or(park::person::motion::kIdle);
-        const std::int32_t kVideoMotion = park::person::motion_number("videoloop").value_or(park::person::motion::kIdle);
-        const std::int32_t kVideoOutMotion = park::person::motion_number("videoout").value_or(park::person::motion::kIdle);
-        const std::int32_t kSlouchInMotion = park::person::motion_number("slouchin").value_or(park::person::motion::kIdle);
-        const std::int32_t kSlouchMotion = park::person::motion_number("slouchloop").value_or(park::person::motion::kIdle);
-        const std::int32_t kSlouchOutMotion = park::person::motion_number("slouchout").value_or(park::person::motion::kIdle);
+        const std::int32_t kVideoInMotion = rct3::park::person::motion_number("videoin").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kVideoMotion = rct3::park::person::motion_number("videoloop").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kVideoOutMotion = rct3::park::person::motion_number("videoout").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kSlouchInMotion = rct3::park::person::motion_number("slouchin").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kSlouchMotion = rct3::park::person::motion_number("slouchloop").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kSlouchOutMotion = rct3::park::person::motion_number("slouchout").value_or(rct3::park::person::motion::kIdle);
 
         /// What a guest holds of what they carry from a stall: it while there is some left, then its empty; nothing
         /// once only empties in their pockets are left, or when its look is not known.
-        const park::object::ObjectModel* held_model(const ParkScene& scene, const simulation::Carried& carried)
+        const rct3::park::object::ObjectModel* held_model(const ParkScene& scene, const simulation::Carried& carried)
         {
             const auto& r = scene.sim.registry;
             const auto* shop = r.valid(carried.stall) ? r.try_get<simulation::Shop>(carried.stall) : nullptr;
@@ -226,51 +226,51 @@ namespace rct3::scene
         }
 
         /// How guests go on foot in each gait (simulation::Gait), as the game's motions name them.
-        const std::array<std::int32_t, kGaits> kGaitMotions { park::person::motion::kWalk, park::person::motion_number("run").value_or(park::person::motion::kWalk), park::person::motion_number("walktired").value_or(park::person::motion::kWalk), park::person::motion_number("walksick").value_or(park::person::motion::kWalk), park::person::motion_number("walktoilet").value_or(park::person::motion::kWalk) };
+        const std::array<std::int32_t, kGaits> kGaitMotions { rct3::park::person::motion::kWalk, rct3::park::person::motion_number("run").value_or(rct3::park::person::motion::kWalk), rct3::park::person::motion_number("walktired").value_or(rct3::park::person::motion::kWalk), rct3::park::person::motion_number("walksick").value_or(rct3::park::person::motion::kWalk), rct3::park::person::motion_number("walktoilet").value_or(rct3::park::person::motion::kWalk) };
         /// How guests walk holding an umbrella up, as the game's motions name it.
-        const std::int32_t kUmbrellaMotion = park::person::motion_number("walkumbrella").value_or(park::person::motion::kWalk);
+        const std::int32_t kUmbrellaMotion = rct3::park::person::motion_number("walkumbrella").value_or(rct3::park::person::motion::kWalk);
         /// How guests carry food or drink: walking with it held up, taking a bite or a sip on the way, and
         /// standing holding it, as the game's motions name them.
-        const std::int32_t kCarryMotion = park::person::motion_number("walkumbrella").value_or(park::person::motion::kWalk);
-        const std::int32_t kEatMotion = park::person::motion_number("walkeatlhand").value_or(park::person::motion::kWalk);
-        const std::int32_t kDrinkMotion = park::person::motion_number("walkdrinklhand").value_or(park::person::motion::kWalk);
-        const std::int32_t kHoldMotion = park::person::motion_number("holditem").value_or(park::person::motion::kIdle);
+        const std::int32_t kCarryMotion = rct3::park::person::motion_number("walkumbrella").value_or(rct3::park::person::motion::kWalk);
+        const std::int32_t kEatMotion = rct3::park::person::motion_number("walkeatlhand").value_or(rct3::park::person::motion::kWalk);
+        const std::int32_t kDrinkMotion = rct3::park::person::motion_number("walkdrinklhand").value_or(rct3::park::person::motion::kWalk);
+        const std::int32_t kHoldMotion = rct3::park::person::motion_number("holditem").value_or(rct3::park::person::motion::kIdle);
         constexpr float kBiteSeconds = 1.5f; ///< Chosen by eye: how long a bite or a sip shows
         /// How a guest hands over their ticket at a ride's entrance, as the game's motions name it.
-        const std::int32_t kTicketMotion = park::person::motion_number("handticket").value_or(park::person::motion::kIdle);
+        const std::int32_t kTicketMotion = rct3::park::person::motion_number("handticket").value_or(rct3::park::person::motion::kIdle);
         /// How a guest counts the cash a cash machine gave them, as the game's motions name it.
-        const std::int32_t kCountCashMotion = park::person::motion_number("checkchange").value_or(park::person::motion::kIdle);
+        const std::int32_t kCountCashMotion = rct3::park::person::motion_number("checkchange").value_or(rct3::park::person::motion::kIdle);
         /// How a person picked up hangs, enjoying it or cross, as the game's motions name it.
-        const std::int32_t kDangleHappyMotion = park::person::motion_number("danglehappy").value_or(park::person::motion::kIdle);
-        const std::int32_t kDangleCrossMotion = park::person::motion_number("dangleangry").value_or(park::person::motion::kIdle);
+        const std::int32_t kDangleHappyMotion = rct3::park::person::motion_number("danglehappy").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kDangleCrossMotion = rct3::park::person::motion_number("dangleangry").value_or(rct3::park::person::motion::kIdle);
         /// How riders sit in a car, as the game's motions name it.
-        const std::int32_t kRideMotion = park::person::motion_number("ridecar").value_or(park::person::motion::kIdle);
+        const std::int32_t kRideMotion = rct3::park::person::motion_number("ridecar").value_or(rct3::park::person::motion::kIdle);
         /// Swimming along, and treading water while still.
-        const std::int32_t kSwimMotion = park::person::motion_number("swimloop").value_or(park::person::motion::kIdle);
-        const std::int32_t kTreadMotion = park::person::motion_number("swimtreadwaterloop").value_or(park::person::motion::kIdle);
+        const std::int32_t kSwimMotion = rct3::park::person::motion_number("swimloop").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kTreadMotion = rct3::park::person::motion_number("swimtreadwaterloop").value_or(rct3::park::person::motion::kIdle);
         /// Sitting on their own float, still or paddling it along.
-        const std::int32_t kFloatSitMotion = park::person::motion_number("inflatablesitloop").value_or(park::person::motion::kIdle);
-        const std::int32_t kFloatPaddleMotion = park::person::motion_number("inflatablepaddleloop").value_or(park::person::motion::kIdle);
-        const std::int32_t kTreadInMotion = park::person::motion_number("swimtreadwaterin").value_or(park::person::motion::kIdle);
+        const std::int32_t kFloatSitMotion = rct3::park::person::motion_number("inflatablesitloop").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kFloatPaddleMotion = rct3::park::person::motion_number("inflatablepaddleloop").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kTreadInMotion = rct3::park::person::motion_number("swimtreadwaterin").value_or(rct3::park::person::motion::kIdle);
         /// Diving in off the pool's edge or a small board, and climbing out over its wall or by a ladder.
-        const std::int32_t kDiveMotion = park::person::motion_number("swimdive").value_or(park::person::motion::kIdle);
-        const std::int32_t kClimbOutMotion = park::person::motion_number("swimout").value_or(park::person::motion::kIdle);
-        const std::int32_t kOutByLadderMotion = park::person::motion_number("swimoutladder").value_or(park::person::motion::kIdle);
+        const std::int32_t kDiveMotion = rct3::park::person::motion_number("swimdive").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kClimbOutMotion = rct3::park::person::motion_number("swimout").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kOutByLadderMotion = rct3::park::person::motion_number("swimoutladder").value_or(rct3::park::person::motion::kIdle);
         /// Up a high diving board's ladder, and off its end: springing, falling and coming back up.
-        const std::int32_t kClimbLadderMotion = park::person::motion_number("swimclimbladderloop").value_or(park::person::motion::kIdle);
-        const std::int32_t kHighDiveInMotion = park::person::motion_number("swimdivehiin").value_or(park::person::motion::kIdle);
-        const std::int32_t kHighDiveMotion = park::person::motion_number("swimdivehiloop").value_or(park::person::motion::kIdle);
-        const std::int32_t kHighDiveOutMotion = park::person::motion_number("swimdivehiout").value_or(park::person::motion::kIdle);
+        const std::int32_t kClimbLadderMotion = rct3::park::person::motion_number("swimclimbladderloop").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kHighDiveInMotion = rct3::park::person::motion_number("swimdivehiin").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kHighDiveMotion = rct3::park::person::motion_number("swimdivehiloop").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kHighDiveOutMotion = rct3::park::person::motion_number("swimdivehiout").value_or(rct3::park::person::motion::kIdle);
         /// Lying down on a sun lounger, lying there and getting up.
-        const std::int32_t kLieDownMotion = park::person::motion_number("sunloungerin").value_or(park::person::motion::kIdle);
-        const std::int32_t kLoungeMotion = park::person::motion_number("sunloungerloop").value_or(park::person::motion::kIdle);
-        const std::int32_t kGetUpMotion = park::person::motion_number("sunloungerout").value_or(park::person::motion::kIdle);
+        const std::int32_t kLieDownMotion = rct3::park::person::motion_number("sunloungerin").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kLoungeMotion = rct3::park::person::motion_number("sunloungerloop").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kGetUpMotion = rct3::park::person::motion_number("sunloungerout").value_or(rct3::park::person::motion::kIdle);
         /// What party members standing together in a ring do, in turns: chatting, laughing, nodding, pointing.
-        const std::array<std::int32_t, 4> kChatMotions { park::person::motion::kIdle, park::person::motion_number("laugh").value_or(park::person::motion::kIdle), park::person::motion_number("nodhead").value_or(park::person::motion::kIdle), park::person::motion_number("point").value_or(park::person::motion::kIdle) };
+        const std::array<std::int32_t, 4> kChatMotions { rct3::park::person::motion::kIdle, rct3::park::person::motion_number("laugh").value_or(rct3::park::person::motion::kIdle), rct3::park::person::motion_number("nodhead").value_or(rct3::park::person::motion::kIdle), rct3::park::person::motion_number("point").value_or(rct3::park::person::motion::kIdle) };
         constexpr float kChatTurnSeconds = 4; ///< How long one of them keeps at one thing
 
         /// What guests who have queued for ages do now and then: look at their watch, tap a foot.
-        const std::array<std::int32_t, 2> kImpatientMotions { park::person::motion_number("lookwatch").value_or(park::person::motion::kIdle), park::person::motion_number("tapfoot").value_or(park::person::motion::kIdle) };
+        const std::array<std::int32_t, 2> kImpatientMotions { rct3::park::person::motion_number("lookwatch").value_or(rct3::park::person::motion::kIdle), rct3::park::person::motion_number("tapfoot").value_or(rct3::park::person::motion::kIdle) };
         constexpr std::size_t kImpatientEvery = 3; ///< Of their turns, one is impatient; the others idle
 
         /// The motion of a simulated guest standing still: something from kChatMotions while their party
@@ -281,10 +281,10 @@ namespace rct3::scene
             // Each by turns, offset by who they are so they do not all move at once.
             const auto turn = static_cast<std::size_t>(scene.park_clock / kChatTurnSeconds) + entt::to_integral(shown.guest);
             if (const auto& errand = r.get<simulation::Errand>(shown.guest); errand.kind == simulation::ErrandKind::Queueing && errand.queued.value >= simulation::kLongQueue)
-                return turn % kImpatientEvery == 0 ? kImpatientMotions[turn / kImpatientEvery % kImpatientMotions.size()] : park::person::motion::kIdle;
+                return turn % kImpatientEvery == 0 ? kImpatientMotions[turn / kImpatientEvery % kImpatientMotions.size()] : rct3::park::person::motion::kIdle;
             const auto* member = r.try_get<simulation::Member>(shown.guest);
             if (member == nullptr || r.get<simulation::Party>(member->party).huddle == 0)
-                return park::person::motion::kIdle;
+                return rct3::park::person::motion::kIdle;
             return kChatMotions[turn % kChatMotions.size()];
         }
 
@@ -296,10 +296,10 @@ namespace rct3::scene
 
         /// What vendors do: serve a guest at their counter within kServeReach, then take their money; take the
         /// money from a rider handing over their ticket; else stand bored, now and then stacking the shelves.
-        const std::int32_t kServeMotion = park::person::motion_number("serve").value_or(park::person::motion::kIdle);
-        const std::int32_t kTakeMoneyMotion = park::person::motion_number("takemoney").value_or(park::person::motion::kIdle);
-        const std::int32_t kBoredMotion = park::person::motion_number("idlebored").value_or(park::person::motion::kIdle);
-        const std::int32_t kShelvesMotion = park::person::motion_number("idlestackshelfs").value_or(park::person::motion::kIdle);
+        const std::int32_t kServeMotion = rct3::park::person::motion_number("serve").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kTakeMoneyMotion = rct3::park::person::motion_number("takemoney").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kBoredMotion = rct3::park::person::motion_number("idlebored").value_or(rct3::park::person::motion::kIdle);
+        const std::int32_t kShelvesMotion = rct3::park::person::motion_number("idlestackshelfs").value_or(rct3::park::person::motion::kIdle);
         constexpr float kServeReach = 3;         ///< From a vendor to the ticket spot they serve
         constexpr float kVendorTurnSeconds = 5;  ///< How long a vendor keeps at one idle thing
         constexpr std::size_t kShelvesEvery = 6; ///< Of a vendor's idle turns, one stacks the shelves
@@ -323,14 +323,14 @@ namespace rct3::scene
         }
 
         /// Whether their swimwear shows a float of their own, an optional body piece whose picture names it.
-        bool own_float(const park::person::PersonLibrary& library, const park::person::PlacedPerson& person)
+        bool own_float(const rct3::park::person::PersonLibrary& library, const rct3::park::person::PlacedPerson& person)
         {
             if (!person.look.swimwear || person.look.body == nullptr)
                 return false;
-            const park::person::PartLevel& pieces = person.look.body->swim_levels[0];
+            const rct3::park::person::PartLevel& pieces = person.look.body->swim_levels[0];
             for (std::size_t k = 0; k < pieces.optional.size() && k < 32; ++k)
             {
-                if ((person.look.optionals[1] >> k & 1u) != 0 && pieces.optional[k] != park::person::kNoPiece && library.piece(pieces.optional[k]).texture.contains("inflatable"))
+                if ((person.look.optionals[1] >> k & 1u) != 0 && pieces.optional[k] != rct3::park::person::kNoPiece && library.piece(pieces.optional[k]).texture.contains("inflatable"))
                     return true;
             }
             return false;
@@ -340,15 +340,15 @@ namespace rct3::scene
         /// they are at `clock`, at `levels`. With `simulate`, the simulated guests count as moving and stand
         /// where the simulation has them. The still ones read only what is set when the park loads besides the
         /// arguments, so they may be placed beside the frame; the moving ones only on it.
-        std::vector<park::person::PlacedPerson> place_people(const ParkScene& scene, const park::object::ObjectLevels& levels, float clock, bool moving, const glm::mat4& view, bool simulate)
+        std::vector<rct3::park::person::PlacedPerson> place_people(const ParkScene& scene, const rct3::park::object::ObjectLevels& levels, float clock, bool moving, const glm::mat4& view, bool simulate)
         {
-            std::vector<park::person::PlacedPerson> placed;
+            std::vector<rct3::park::person::PlacedPerson> placed;
             for (std::size_t i = 0; i < scene.shown_people.size() && i < levels.size(); ++i)
             {
                 const ShownPerson& shown = scene.shown_people[i];
-                if (levels[i] == park::object::kNotDrawn || ((simulate && shown.guest != entt::null) || !shown.walking) != moving)
+                if (levels[i] == rct3::park::object::kNotDrawn || ((simulate && shown.guest != entt::null) || !shown.walking) != moving)
                     continue;
-                std::optional<park::person::PlacedPerson> pose = pose_person(scene, i, clock, simulate);
+                std::optional<rct3::park::person::PlacedPerson> pose = pose_person(scene, i, clock, simulate);
                 if (!pose || (moving && !maybe_in_view(view, glm::vec3(pose->world[3]))))
                     continue;
                 pose->level = static_cast<std::size_t>(levels[i]);
@@ -384,17 +384,17 @@ namespace rct3::scene
         /// space; place_cars moves them with their cars. Riders drawn at no level of detail are left out.
         std::future<RidersBuild> pose_riders(ParkScene& scene)
         {
-            std::map<std::size_t, std::vector<park::person::PlacedPerson>> by_car;
+            std::map<std::size_t, std::vector<rct3::park::person::PlacedPerson>> by_car;
             std::map<entt::entity, ParkScene::RiderTurn> turns;
             for (std::size_t i = 0; i < scene.shown_people.size() && i < scene.people_levels.size(); ++i)
             {
                 const ShownPerson& shown = scene.shown_people[i];
-                if (shown.guest == entt::null || scene.people_levels[i] == park::object::kNotDrawn)
+                if (shown.guest == entt::null || scene.people_levels[i] == rct3::park::object::kNotDrawn)
                     continue;
                 const auto seat = seat_of(scene, shown.guest);
                 if (!seat)
                     continue;
-                park::person::PlacedPerson pose = dressed(shown);
+                rct3::park::person::PlacedPerson pose = dressed(shown);
                 pose.level = static_cast<std::size_t>(scene.people_levels[i]);
                 pose.time = shown.saved_time + scene.park_clock * shown.speed;
                 pose.world = seat->second;
@@ -403,12 +403,12 @@ namespace rct3::scene
                 std::optional<std::uint8_t> seating;
                 if (seat->first < scene.cars.size())
                 {
-                    if (const auto model = scene.models.find(park::object::model_ref(scene.cars[seat->first])); model != scene.models.end())
+                    if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[seat->first])); model != scene.models.end())
                         seating = model->second.seating;
                 }
                 else if (const auto flat = scene.ride_seatings.find(scene.sim.registry.get<simulation::Errand>(shown.guest).target); flat != scene.ride_seatings.end())
                     seating = flat->second;
-                if (const auto motions = seating ? park::person::rider_motions(*seating) : std::nullopt)
+                if (const auto motions = seating ? rct3::park::person::rider_motions(*seating) : std::nullopt)
                 {
                     using simulation::RideReaction;
                     const auto* thrill = scene.sim.registry.try_get<simulation::Thrill>(shown.guest);
@@ -419,12 +419,12 @@ namespace rct3::scene
                     if (turn.now != now)
                         turn = { turn.now, now, scene.park_clock };
                     // Bringing down their hands or their arms from their eyes, then raising them, then the loop.
-                    std::inplace_vector<park::person::Clip, 3> clips;
+                    std::inplace_vector<rct3::park::person::Clip, 3> clips;
                     const auto add = [&](RideReaction reaction, const std::optional<std::int32_t>& hands, const std::optional<std::int32_t>& eyes) {
                         if (const auto& once = reaction == RideReaction::HandsUp ? hands : reaction == RideReaction::CoverEyes ? eyes : std::nullopt; once && turn.was != turn.now)
                         {
                             pose.motion = *once;
-                            clips.push_back({ *once, park::person::motion_seconds(*scene.person_models, pose) });
+                            clips.push_back({ *once, rct3::park::person::motion_seconds(*scene.person_models, pose) });
                         }
                     };
                     add(turn.was, motions->hands_up_out, motions->cover_eyes_out);
@@ -435,7 +435,7 @@ namespace rct3::scene
                     pose.motion = clips.back().motion;
                     if (clips.size() > 1)
                     {
-                        const park::person::Clip at = park::person::clip_at(clips, scene.park_clock - turn.since);
+                        const rct3::park::person::Clip at = rct3::park::person::clip_at(clips, scene.park_clock - turn.since);
                         pose.motion = at.motion;
                         pose.time = at.seconds;
                     }
@@ -444,14 +444,14 @@ namespace rct3::scene
             }
             scene.rider_turns = std::move(turns);
             return std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.rider_runs, &gathered = scene.rider_gathered, by_car = std::move(by_car)] {
-                std::vector<std::span<const park::person::PlacedPerson>> groups;
+                std::vector<std::span<const rct3::park::person::PlacedPerson>> groups;
                 RidersBuild built;
                 for (const auto& [car, riders] : by_car)
                 {
                     groups.emplace_back(riders);
                     built.cars.push_back(car);
                 }
-                built.riders = park::person::carried_people_meshes(library, groups, runs, gathered);
+                built.riders = rct3::park::person::carried_people_meshes(library, groups, runs, gathered);
                 return built;
             });
         }
@@ -468,7 +468,7 @@ namespace rct3::scene
                 const glm::vec3 at(boned.placed[3]);
                 if ((boned.ride == entt::null || boned.gate) && (glm::distance(eye, at) > kPropMoveDistance || !maybe_in_view(view, at, boned.reach)))
                     continue;
-                const auto model = scene.models.find(park::object::model_ref(scene.objects[boned.object]));
+                const auto model = scene.models.find(rct3::park::object::model_ref(scene.objects[boned.object]));
                 if (model == scene.models.end() || !model->second.rig)
                     continue;
                 const auto& seconds = model->second.animation_seconds;
@@ -484,7 +484,7 @@ namespace rct3::scene
                     const std::size_t now = (*boned.gate)[boned.step];
                     if (scene.park_clock - boned.since >= (now < seconds.size() ? seconds[now] : 0.0f))
                     {
-                        boned.step = park::next_gate_motion(boned.step, scene.park_clock < boned.open_until);
+                        boned.step = rct3::park::next_gate_motion(boned.step, scene.park_clock < boned.open_until);
                         boned.since = scene.park_clock;
                     }
                     playing = { (*boned.gate)[boned.step], scene.park_clock - boned.since };
@@ -496,10 +496,10 @@ namespace rct3::scene
                     const float length = cycle != nullptr ? simulation::cycle_seconds(*cycle) : 0.0f;
                     // Scenery and stalls carry on from where the save left them, each at its own point in its loop.
                     const float idle = scene.park_clock + (boned.ride == entt::null ? scene.objects[boned.object].motion_time : 0.0f);
-                    playing = park::flat_ride_motion(seconds, length, into ? std::min(*into + scene.sim_time, length) : 0.0f, into.has_value(), idle);
+                    playing = rct3::park::flat_ride_motion(seconds, length, into ? std::min(*into + scene.sim_time, length) : 0.0f, into.has_value(), idle);
                 }
                 const auto [motion, time] = playing;
-                std::vector<glm::mat4> moves = park::bone_moves(*model->second.rig, motion, time);
+                std::vector<glm::mat4> moves = rct3::park::bone_moves(*model->second.rig, motion, time);
                 // A water cannon a guest fires turns its gun to the guest they spray, or sweeps it about with no
                 // one in reach, and shoots water from its nozzle.
                 if (const auto& aim = model->second.aim_bones; aim && scene.simulate)
@@ -517,7 +517,7 @@ namespace rct3::scene
                         jet = scene.jets.insert(scene.jets.end(), ParkScene::Jet { .object = boned.object });
                     if (jet != scene.jets.end())
                     {
-                        const park::BoneRig& rig = *model->second.rig;
+                        const rct3::park::BoneRig& rig = *model->second.rig;
                         const auto [turret, nozzle] = *aim;
                         const glm::vec3 pivot(rig.rest_world[static_cast<std::size_t>(turret)][3]);
                         const glm::vec3 muzzle(rig.rest_world[static_cast<std::size_t>(nozzle)][3]);
@@ -541,7 +541,7 @@ namespace rct3::scene
                             {
                                 yaw = *turn;
                                 // The lower of the two arcs that land on them, else the farthest throw.
-                                const float g = park::water::kJetGravity;
+                                const float g = rct3::park::water::kJetGravity;
                                 const float v2 = kSpeed * kSpeed;
                                 const float room = v2 * v2 - g * (g * across * across + 2 * local.y * v2);
                                 pitch = room >= 0 ? std::atan((v2 - std::sqrt(room)) / (g * across)) : std::numbers::pi_v<float> / 4;
@@ -586,7 +586,7 @@ namespace rct3::scene
                 std::vector<glm::mat4> places(boned.bones.size());
                 for (std::size_t p = 0; p < places.size(); ++p)
                     places[p] = boned.placed * moves[static_cast<std::size_t>(boned.bones[p])];
-                park::move_meshes(boned.mesh, places);
+                rct3::park::move_meshes(boned.mesh, places);
                 const auto& seat_bones = model->second.seat_bones;
                 for (std::size_t seat = 0; seat < std::min(boned.seats, seat_bones.size()); ++seat)
                     if (seat_bones[seat] >= 0 && static_cast<std::size_t>(seat_bones[seat]) < moves.size())
@@ -630,21 +630,21 @@ namespace rct3::scene
                     return simulation::kNoNode;
                 };
                 const auto jump = [&](std::size_t from, std::size_t to) {
-                    const auto a = scene.models.find(park::object::model_ref(scene.objects[from]));
-                    const auto b = scene.models.find(park::object::model_ref(scene.objects[to]));
+                    const auto a = scene.models.find(rct3::park::object::model_ref(scene.objects[from]));
+                    const auto b = scene.models.find(rct3::park::object::model_ref(scene.objects[to]));
                     if (a == scene.models.end() || b == scene.models.end() || b->second.nozzles.empty())
                         return;
-                    const glm::mat4 at = park::object::placed_transform(scene.objects[from], &a->second, scene.grid, scene.fitted);
-                    const glm::mat4 into = park::object::placed_transform(scene.objects[to], &b->second, scene.grid, scene.fitted);
+                    const glm::mat4 at = rct3::park::object::placed_transform(scene.objects[from], &a->second, scene.grid, scene.fitted);
+                    const glm::mat4 into = rct3::park::object::placed_transform(scene.objects[to], &b->second, scene.grid, scene.fitted);
                     const glm::vec3 step = glm::vec3(into[3]) - glm::vec3(at[3]);
                     for (const glm::vec3& nozzle : a->second.nozzles)
                     {
                         const glm::vec3 out(at * glm::vec4(nozzle, 1));
                         const auto landing = std::ranges::min(b->second.nozzles | std::views::transform([&](const glm::vec3& n) { return glm::vec3(into * glm::vec4(n, 1)); }), { }, [&](const glm::vec3& n) { return glm::distance(n, out + step); });
-                        if (const auto thrown = park::water::throw_to(out, landing, kJumpAngle))
+                        if (const auto thrown = rct3::park::water::throw_to(out, landing, kJumpAngle))
                         {
                             // Chosen by eye: a thin, even stream.
-                            ParkScene::Jet& jet = scene.jets.emplace_back(ParkScene::Jet { .object = from, .to = to, .pours = scene.park_clock + kPour, .lands = scene.park_clock + thrown->seconds + kPour, .water = park::water::WaterJet(thrown->seconds + kPour, 0.04f, 0) });
+                            ParkScene::Jet& jet = scene.jets.emplace_back(ParkScene::Jet { .object = from, .to = to, .pours = scene.park_clock + kPour, .lands = scene.park_clock + thrown->seconds + kPour, .water = rct3::park::water::WaterJet(thrown->seconds + kPour, 0.04f, 0) });
                             jet.water.aim(out, thrown->velocity);
                         }
                     }
@@ -691,7 +691,7 @@ namespace rct3::scene
         }
 
         /// The band and side of each of `owners`' vertices: `side` 0 for objects drawn whole.
-        std::vector<std::pair<glm::vec4, glm::vec2>> crossing_bands(const ParkScene& scene, const park::object::LevelPlan& plan, std::span<const std::uint32_t> owners, float side)
+        std::vector<std::pair<glm::vec4, glm::vec2>> crossing_bands(const ParkScene& scene, const rct3::park::object::LevelPlan& plan, std::span<const std::uint32_t> owners, float side)
         {
             std::vector<std::pair<glm::vec4, glm::vec2>> out;
             out.reserve(owners.size());
@@ -701,7 +701,7 @@ namespace rct3::scene
         }
 
         /// Puts `shapes` in `shown`'s buffers, dropping what they held.
-        void show_shapes(render::Device& device, ParkScene& scene, ShownObjects& shown, ObjectShapes&& shapes, const park::object::LevelPlan& plan, float side = 0)
+        void show_shapes(render::Device& device, ParkScene& scene, ShownObjects& shown, ObjectShapes&& shapes, const rct3::park::object::LevelPlan& plan, float side = 0)
         {
             for (const render::BufferHandle b : { shown.vertices, shown.indices })
             {
@@ -745,11 +745,11 @@ namespace rct3::scene
         return ahead > kFacing ? "frontslide" : ahead < -kFacing ? "backslide" : "sitslide";
     }
 
-    std::optional<park::person::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate)
+    std::optional<rct3::park::person::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate)
     {
         const ShownPerson& shown = scene.shown_people[i];
         const bool simulated = simulate && shown.guest != entt::null;
-        park::person::PlacedPerson pose = dressed(shown);
+        rct3::park::person::PlacedPerson pose = dressed(shown);
         pose.time = shown.walking ? shown.saved_time : shown.saved_time + clock * shown.speed;
         if (simulated)
         {
@@ -764,7 +764,7 @@ namespace rct3::scene
                 const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
                 const bool walking = now.was != now.position;
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = park::person::motion_number(simulation::keeper_motion(job, walking)).value_or(walking ? park::person::motion::kWalk : park::person::motion::kIdle);
+                pose.motion = rct3::park::person::motion_number(simulation::keeper_motion(job, walking)).value_or(walking ? rct3::park::person::motion::kWalk : rct3::park::person::motion::kIdle);
                 pose.time = walking && shown.paces[0] > 0 ? at.walked.value / shown.paces[0] : shown.saved_time + clock * shown.speed;
                 return pose;
             }
@@ -776,7 +776,7 @@ namespace rct3::scene
                 const float turn = scene.park_clock / kLookSeconds + static_cast<float>(entt::to_integral(shown.guest));
                 const auto whole = static_cast<std::size_t>(turn);
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = park::person::motion_number(whole % kLookEvery == 0 ? "lifeguardidle01" : "lifeguardidlestandard").value_or(park::person::motion::kIdle);
+                pose.motion = rct3::park::person::motion_number(whole % kLookEvery == 0 ? "lifeguardidle01" : "lifeguardidlestandard").value_or(rct3::park::person::motion::kIdle);
                 pose.time = (turn - static_cast<float>(whole)) * kLookSeconds;
                 return pose;
             }
@@ -792,7 +792,7 @@ namespace rct3::scene
                 constexpr std::array<std::string_view, 9> kShowMotions { "wave", "idle1", "idle2", "dancelevel1", "dancelevel2", "dancelevel3", "falloverin", "falloverout", "dejection" };
                 const auto [move, into] = simulation::show_move_at(*show);
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = park::person::motion_number(kShowMotions[std::to_underlying(move)]).value_or(park::person::motion::kIdle);
+                pose.motion = rct3::park::person::motion_number(kShowMotions[std::to_underlying(move)]).value_or(rct3::park::person::motion::kIdle);
                 pose.time = into + scene.sim_time;
                 return pose;
             }
@@ -803,7 +803,7 @@ namespace rct3::scene
                     return;
                 // By the names the people's meshes give these motions, in GestureKind's order.
                 constexpr std::array<std::string_view, 13> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop", "handticket", "applause", "lookwatch", "disapproval", "cry", "horror" };
-                pose.motion = park::person::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(park::person::motion::kIdle);
+                pose.motion = rct3::park::person::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(rct3::park::person::motion::kIdle);
                 pose.time = simulation::kTuning.gestures.shown.value - gesture->left.value + scene.sim_time;
                 // Rubbish into a bin: a quick step over to it, facing it, and back.
                 if (const auto bin = gesture->kind == simulation::GestureKind::HandOver ? item_at(scene, gesture->at) : std::nullopt)
@@ -823,7 +823,7 @@ namespace rct3::scene
                 {
                     const float into = simulation::kTuning.shows.clap.value - gesture->left.value + scene.sim_time;
                     const float left = gesture->left.value - scene.sim_time;
-                    pose.motion = park::person::motion_number(into < kClapEnds ? "applausein" : left < kClapEnds ? "applauseout" : "applause").value_or(park::person::motion::kIdle);
+                    pose.motion = rct3::park::person::motion_number(into < kClapEnds ? "applausein" : left < kClapEnds ? "applauseout" : "applause").value_or(rct3::park::person::motion::kIdle);
                     pose.time = into < kClapEnds ? into : left < kClapEnds ? kClapEnds - left : into - kClapEnds;
                 }
                 // Knocked over, they go down, lie there, and get up for the last of it.
@@ -832,7 +832,7 @@ namespace rct3::scene
                 {
                     const float down = simulation::kTuning.crashes.knocked.value - gesture->left.value + scene.sim_time;
                     const bool up = gesture->left.value - scene.sim_time < kGettingUp;
-                    pose.motion = park::person::motion_number(down < kGettingUp ? "knockdownin" : up ? "knockdownout" : "knockdownloop").value_or(park::person::motion::kIdle);
+                    pose.motion = rct3::park::person::motion_number(down < kGettingUp ? "knockdownin" : up ? "knockdownout" : "knockdownloop").value_or(rct3::park::person::motion::kIdle);
                     pose.time = down < kGettingUp ? down : up ? kGettingUp - gesture->left.value + scene.sim_time : down - kGettingUp;
                 }
             };
@@ -844,20 +844,20 @@ namespace rct3::scene
                 if (const auto* drop = held == nullptr ? &r.get<simulation::Dropped>(shown.guest) : nullptr; drop != nullptr && drop->sliding)
                 {
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                    pose.motion = park::person::motion_number(slide_motion(at.heading.value, drop->drift, shown.staff)).value_or(park::person::motion::kIdle);
+                    pose.motion = rct3::park::person::motion_number(slide_motion(at.heading.value, drop->drift, shown.staff)).value_or(rct3::park::person::motion::kIdle);
                     return pose;
                 }
                 const bool falling = held == nullptr && now.position.y > r.get<simulation::Dropped>(shown.guest).ground;
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), held != nullptr ? now.position : at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = held != nullptr ? (held->happy ? kDangleHappyMotion : kDangleCrossMotion) : falling ? kDangleCrossMotion : park::person::motion::kWalk;
+                pose.motion = held != nullptr ? (held->happy ? kDangleHappyMotion : kDangleCrossMotion) : falling ? kDangleCrossMotion : rct3::park::person::motion::kWalk;
                 // Falling into a pool they tip over as they go, to land in the water.
                 // Off the end of a pool slide, they splash down as they rode it, on their back or in their ring.
                 if (const auto* drop = held == nullptr ? &r.get<simulation::Dropped>(shown.guest) : nullptr; falling && drop->pool != entt::null)
                 {
                     const auto cars = drop->slide != entt::null ? scene.ride_cars.find(drop->slide) : scene.ride_cars.end();
-                    const auto model = cars != scene.ride_cars.end() && !cars->second.empty() ? scene.models.find(park::object::model_ref(scene.cars[cars->second.front()])) : scene.models.end();
-                    const bool body = (model != scene.models.end() && model->second.seating == park::person::kSlideBodySeating) || (r.valid(drop->slide) && r.all_of<simulation::ClimbSlide>(drop->slide));
-                    pose.motion = park::person::motion_number(drop->slide == entt::null ? "knockdownin" : body ? "slidebodybacksplashdownin" : "slideringsplashdownin").value_or(pose.motion);
+                    const auto model = cars != scene.ride_cars.end() && !cars->second.empty() ? scene.models.find(rct3::park::object::model_ref(scene.cars[cars->second.front()])) : scene.models.end();
+                    const bool body = (model != scene.models.end() && model->second.seating == rct3::park::person::kSlideBodySeating) || (r.valid(drop->slide) && r.all_of<simulation::ClimbSlide>(drop->slide));
+                    pose.motion = rct3::park::person::motion_number(drop->slide == entt::null ? "knockdownin" : body ? "slidebodybacksplashdownin" : "slideringsplashdownin").value_or(pose.motion);
                     pose.time = drop->fall.value / simulation::kTuning.holding.gravity;
                 }
                 if (held == nullptr && !falling && shown.paces[0] > 0)
@@ -878,14 +878,14 @@ namespace rct3::scene
                     const int col = static_cast<int>(std::floor((at_xz.x - scene.grid.origin_x) / scene.grid.tile_size_x));
                     const int row = static_cast<int>(std::floor((at_xz.y - scene.grid.origin_z) / scene.grid.tile_size_z));
                     const auto square = scene.pools.at(col, row);
-                    if (!square || square->kind != park::pools::PoolKind::Water || scene.grid.tile_size_x <= 0 || scene.grid.tile_size_z <= 0)
+                    if (!square || square->kind != rct3::park::pools::PoolKind::Water || scene.grid.tile_size_x <= 0 || scene.grid.tile_size_z <= 0)
                         return at.position;
                     const auto water = [&](int dc, int dr) {
                         const auto next = scene.pools.at(col + dc, row + dr);
-                        return next && next->kind == park::pools::PoolKind::Water && next->surface == square->surface;
+                        return next && next->kind == rct3::park::pools::PoolKind::Water && next->surface == square->surface;
                     };
-                    const float room = park::pool_wall_room(scene.grid, at_xz - glm::vec2 { scene.grid.world_x(col), scene.grid.world_z(row) }, water);
-                    return at.position + glm::vec3(0.0f, park::pools::pool_wave_lift(park::pools::pool_wave_height(scene.water.pool_waves, at_xz, clock, at.position.y), room), 0.0f);
+                    const float room = rct3::park::pool_wall_room(scene.grid, at_xz - glm::vec2 { scene.grid.world_x(col), scene.grid.world_z(row) }, water);
+                    return at.position + glm::vec3(0.0f, rct3::park::pools::pool_wave_lift(rct3::park::pools::pool_wave_height(scene.water.pool_waves, at_xz, clock, at.position.y), room), 0.0f);
                 };
                 // Up a slide climbed on foot they walk, and slide down it on their backs.
                 if (const auto* climbing = r.try_get<simulation::Climbing>(shown.guest))
@@ -893,7 +893,7 @@ namespace rct3::scene
                     const auto* slide = r.valid(climbing->slide) ? r.try_get<simulation::ClimbSlide>(climbing->slide) : nullptr;
                     const bool down = slide != nullptr && climbing->way < slide->ways.size() && climbing->along >= slide->ways[climbing->way].top;
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                    pose.motion = down ? park::person::motion_number("slidebodybackloop").value_or(park::person::motion::kWalk) : park::person::motion::kWalk;
+                    pose.motion = down ? rct3::park::person::motion_number("slidebodybackloop").value_or(rct3::park::person::motion::kWalk) : rct3::park::person::motion::kWalk;
                     pose.time = scene.sim_time;
                     return pose;
                 }
@@ -910,13 +910,13 @@ namespace rct3::scene
                 const bool moving = now.was != now.position;
                 const bool lounging = swimmer->place >= 0 && swimmer->use == simulation::PoolUse::Lounge;
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), swimmer->in_water && !swimmer->to_spa ? bobbed() : at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : moving ? park::person::motion::kWalk : park::person::motion::kIdle;
+                pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : moving ? rct3::park::person::motion::kWalk : rct3::park::person::motion::kIdle;
                 if (!swimmer->in_water && moving && shown.paces[0] > 0)
                     pose.time = at.walked.value / shown.paces[0];
                 const auto length = [&](std::int32_t motion) {
-                    park::person::PlacedPerson probe = pose;
+                    rct3::park::person::PlacedPerson probe = pose;
                     probe.motion = motion;
-                    return park::person::motion_seconds(*scene.person_models, probe);
+                    return rct3::park::person::motion_seconds(*scene.person_models, probe);
                 };
                 // Off a diving board: up its ladder, out along it, off its end and through the air, up again after.
                 if (swimmer->dive != simulation::DiveStep::None && swimmer->dive != simulation::DiveStep::Walk)
@@ -971,8 +971,8 @@ namespace rct3::scene
                     const float into = (lounging ? stay - swimmer->idle.value : swimmer->stayed.value) + scene.sim_time;
                     const std::int32_t down = lounging ? kLieDownMotion : kSitDownMotion;
                     const std::int32_t up = lounging ? kGetUpMotion : kStandUpMotion;
-                    const std::array clips { park::person::Clip { down, length(down) }, park::person::Clip { lounging ? kLoungeMotion : kSitMotion, std::max(stay - length(down) - length(up), 0.0f) }, park::person::Clip { up, length(up) } };
-                    const park::person::Clip step = park::person::clip_at(clips, std::min(into, stay));
+                    const std::array clips { rct3::park::person::Clip { down, length(down) }, rct3::park::person::Clip { lounging ? kLoungeMotion : kSitMotion, std::max(stay - length(down) - length(up), 0.0f) }, rct3::park::person::Clip { up, length(up) } };
+                    const rct3::park::person::Clip step = rct3::park::person::clip_at(clips, std::min(into, stay));
                     pose.motion = step.motion;
                     pose.time = step.seconds;
                 }
@@ -989,8 +989,8 @@ namespace rct3::scene
                     constexpr float kRowGap = 0.6f;  ///< Chosen by eye: between two in the row
                     constexpr float kRowBack = 0.8f; ///< Chosen by eye: from the view to the row
                     constexpr float kFilming = 1.2f; ///< Chosen by eye: from the row's end to the one filming it
-                    const auto model = scene.models.find(park::object::model_ref(*o));
-                    const glm::mat4 placed = park::object::placed_transform(*o, model != scene.models.end() ? &model->second : nullptr, scene.grid, scene.fitted);
+                    const auto model = scene.models.find(rct3::park::object::model_ref(*o));
+                    const glm::mat4 placed = rct3::park::object::placed_transform(*o, model != scene.models.end() ? &model->second : nullptr, scene.grid, scene.fitted);
                     // It looks out from the path, from the middle of the path's tile across the item.
                     const glm::vec3 outward = glm::vec3(placed[3]) - scene.sim.paths.centre(item->node);
                     const glm::vec3 ahead = glm::length(glm::vec2(outward.x, outward.z)) > 0.01f ? glm::normalize(glm::vec3(outward.x, 0.0f, outward.z)) : glm::normalize(glm::vec3(placed[2].x, 0.0f, placed[2].z));
@@ -1016,25 +1016,25 @@ namespace rct3::scene
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), glm::mix(at.position, glm::vec3(stand.x, at.position.y, stand.z), part)), at.heading.value + turn * part, glm::vec3(0.0f, 1.0f, 0.0f));
                     if (off < kStepToSeat)
                     {
-                        pose.motion = park::person::motion::kWalk;
+                        pose.motion = rct3::park::person::motion::kWalk;
                         if (shown.paces[0] > 0)
                             pose.time = off * glm::distance(at.position, stand) / kStepToSeat / shown.paces[0];
                         return pose;
                     }
                     const auto length = [&](std::int32_t motion) {
-                        park::person::PlacedPerson probe = pose;
+                        rct3::park::person::PlacedPerson probe = pose;
                         probe.motion = motion;
-                        return park::person::motion_seconds(*scene.person_models, probe);
+                        return rct3::park::person::motion_seconds(*scene.person_models, probe);
                     };
                     const auto* visitor = r.try_get<simulation::Visitor>(shown.guest);
                     const bool slouch = !linger->camera && visitor != nullptr && visitor->age == simulation::AgeGroup::Teen && entt::to_integral(shown.guest) % 2 == 0;
-                    const std::int32_t in = linger->camera ? kVideoInMotion : slouch ? kSlouchInMotion : park::person::motion::kIdle;
-                    const std::int32_t out = linger->camera ? kVideoOutMotion : slouch ? kSlouchOutMotion : park::person::motion::kIdle;
+                    const std::int32_t in = linger->camera ? kVideoInMotion : slouch ? kSlouchInMotion : rct3::park::person::motion::kIdle;
+                    const std::int32_t out = linger->camera ? kVideoOutMotion : slouch ? kSlouchOutMotion : rct3::park::person::motion::kIdle;
                     const float stay = watch - 2 * kStepToSeat;
-                    const float begin = in == park::person::motion::kIdle ? 0.0f : length(in);
-                    const float end = out == park::person::motion::kIdle ? 0.0f : length(out);
-                    const std::array clips { park::person::Clip { in, begin }, park::person::Clip { linger->camera ? kVideoMotion : slouch ? kSlouchMotion : park::person::motion::kIdle, std::max(stay - begin - end, 0.0f) }, park::person::Clip { out, end } };
-                    const park::person::Clip step = park::person::clip_at(clips, std::min(into - kStepToSeat, stay));
+                    const float begin = in == rct3::park::person::motion::kIdle ? 0.0f : length(in);
+                    const float end = out == rct3::park::person::motion::kIdle ? 0.0f : length(out);
+                    const std::array clips { rct3::park::person::Clip { in, begin }, rct3::park::person::Clip { linger->camera ? kVideoMotion : slouch ? kSlouchMotion : rct3::park::person::motion::kIdle, std::max(stay - begin - end, 0.0f) }, rct3::park::person::Clip { out, end } };
+                    const rct3::park::person::Clip step = rct3::park::person::clip_at(clips, std::min(into - kStepToSeat, stay));
                     pose.motion = step.motion;
                     pose.time = step.seconds;
                     if (!linger->camera)
@@ -1053,14 +1053,14 @@ namespace rct3::scene
                     const float facing = std::atan2((*seat)[2][0], (*seat)[2][2]);
                     const float turn = std::remainder(facing - at.heading.value, glm::two_pi<float>());
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), glm::mix(at.position, to, part)), at.heading.value + turn * part, glm::vec3(0.0f, 1.0f, 0.0f));
-                    pose.motion = park::person::motion::kWalk;
+                    pose.motion = rct3::park::person::motion::kWalk;
                     if (shown.paces[0] > 0)
                         pose.time = part * glm::distance(at.position, to) / shown.paces[0];
                 };
                 const auto length = [&](std::int32_t motion) {
-                    park::person::PlacedPerson probe = pose;
+                    rct3::park::person::PlacedPerson probe = pose;
                     probe.motion = motion;
-                    return park::person::motion_seconds(*scene.person_models, probe);
+                    return rct3::park::person::motion_seconds(*scene.person_models, probe);
                 };
                 pose.world = *seat;
                 // At a water cannon: a step over behind it, taking hold, firing a while, letting go and a step back.
@@ -1076,8 +1076,8 @@ namespace rct3::scene
                     }
                     const float hold = length(kCannonInMotion);
                     const float release = length(kCannonOutMotion);
-                    const std::array clips { park::person::Clip { kCannonInMotion, hold }, park::person::Clip { kCannonMotion, std::max(firing - 2 * kStepToSeat - hold - release, 0.0f) }, park::person::Clip { kCannonOutMotion, release } };
-                    const park::person::Clip step = park::person::clip_at(clips, into - kStepToSeat);
+                    const std::array clips { rct3::park::person::Clip { kCannonInMotion, hold }, rct3::park::person::Clip { kCannonMotion, std::max(firing - 2 * kStepToSeat - hold - release, 0.0f) }, rct3::park::person::Clip { kCannonOutMotion, release } };
+                    const rct3::park::person::Clip step = rct3::park::person::clip_at(clips, into - kStepToSeat);
                     pose.motion = step.motion;
                     pose.time = step.seconds;
                     return pose;
@@ -1170,7 +1170,7 @@ namespace rct3::scene
                     const glm::vec3 ahead { std::sin(at.heading.value), 0.0f, std::cos(at.heading.value) };
                     const float facing = at.heading.value + (left < into ? glm::pi<float>() : 0.0f);
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position + ahead * kIndoors * part), facing, glm::vec3(0.0f, 1.0f, 0.0f));
-                    pose.motion = park::person::motion::kWalk;
+                    pose.motion = rct3::park::person::motion::kWalk;
                     pose.time = shown.paces[0] > 0 ? kIndoors * part / shown.paces[0] : 0.0f;
                 }
                 else if (product == simulation::Product::CashMachine)
@@ -1191,33 +1191,33 @@ namespace rct3::scene
                 const auto* upkeep = r.valid(staff->ride) ? r.try_get<simulation::Upkeep>(staff->ride) : nullptr;
                 const simulation::WorkLook look = simulation::work_look(staff->job, upkeep != nullptr ? upkeep->kind : simulation::Breakdown::None);
                 // Played once, the start and the end as long as they last; the rest of the job repeats its loop.
-                const auto once = [&](std::string_view name) -> std::optional<park::person::Clip> {
-                    const auto number = name.empty() ? std::nullopt : park::person::motion_number(name);
+                const auto once = [&](std::string_view name) -> std::optional<rct3::park::person::Clip> {
+                    const auto number = name.empty() ? std::nullopt : rct3::park::person::motion_number(name);
                     if (!number)
                         return std::nullopt;
-                    park::person::PlacedPerson probe = pose;
+                    rct3::park::person::PlacedPerson probe = pose;
                     probe.motion = *number;
-                    return park::person::Clip { *number, park::person::motion_seconds(*scene.person_models, probe) };
+                    return rct3::park::person::Clip { *number, rct3::park::person::motion_seconds(*scene.person_models, probe) };
                 };
                 const auto start = once(look.start);
                 const auto finish = once(look.finish);
                 const float length = staff->job_length.value;
-                std::vector<park::person::Clip> clips;
+                std::vector<rct3::park::person::Clip> clips;
                 if (start)
                     clips.push_back(*start);
-                clips.push_back({ park::person::motion_number(look.loop).value_or(park::person::motion::kIdle), std::max(length - (start ? start->seconds : 0.0f) - (finish ? finish->seconds : 0.0f), 0.0f) });
+                clips.push_back({ rct3::park::person::motion_number(look.loop).value_or(rct3::park::person::motion::kIdle), std::max(length - (start ? start->seconds : 0.0f) - (finish ? finish->seconds : 0.0f), 0.0f) });
                 if (finish)
                     clips.push_back(*finish);
-                const park::person::Clip step = park::person::clip_at(clips, std::min(length - staff->busy.value + scene.sim_time, length));
+                const rct3::park::person::Clip step = rct3::park::person::clip_at(clips, std::min(length - staff->busy.value + scene.sim_time, length));
                 pose.motion = step.motion;
                 pose.time = step.seconds;
                 const auto tool = scene.staff_tools.find(look.tool);
                 pose.tool = tool != scene.staff_tools.end() ? &tool->second : nullptr;
             }
             // Guards have no plain standing motion; they tap a foot instead.
-            else if (staff != nullptr && staff->role == simulation::StaffRole::Guard && pose.motion == park::person::motion::kIdle)
-                pose.motion = park::person::motion_number("tapfoot").value_or(park::person::motion::kIdle);
-            const bool idle = pose.motion == park::person::motion::kIdle;
+            else if (staff != nullptr && staff->role == simulation::StaffRole::Guard && pose.motion == rct3::park::person::motion::kIdle)
+                pose.motion = rct3::park::person::motion_number("tapfoot").value_or(rct3::park::person::motion::kIdle);
+            const bool idle = pose.motion == rct3::park::person::motion::kIdle;
             gestured(r.try_get<simulation::Gesture>(shown.guest));
             // Food or drink from a stall in their left hand, or its empty once it is gone.
             if (const auto* carried = r.try_get<simulation::Carried>(shown.guest))
@@ -1292,13 +1292,13 @@ namespace rct3::scene
 
     /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
     /// while it does not run.
-    std::optional<glm::mat4> ride_eye(const ParkScene& scene, std::size_t car, park::object::RideEye eye)
+    std::optional<glm::mat4> ride_eye(const ParkScene& scene, std::size_t car, rct3::park::object::RideEye eye)
     {
-        const auto model = car < scene.cars.size() ? scene.models.find(park::object::model_ref(scene.cars[car])) : scene.models.end();
+        const auto model = car < scene.cars.size() ? scene.models.find(rct3::park::object::model_ref(scene.cars[car])) : scene.models.end();
         if (model == scene.models.end() || car >= scene.car_spots.size())
             return std::nullopt;
-        const park::ride::CarSpot spot = scene.car_spots[car];
-        if (eye == park::object::RideEye::Nose && std::ranges::any_of(std::span(scene.car_spots).first(car), [&](const park::ride::CarSpot& s) { return s.ride == spot.ride && s.train == spot.train; }))
+        const rct3::park::ride::CarSpot spot = scene.car_spots[car];
+        if (eye == rct3::park::object::RideEye::Nose && std::ranges::any_of(std::span(scene.car_spots).first(car), [&](const rct3::park::ride::CarSpot& s) { return s.ride == spot.ride && s.train == spot.train; }))
             return std::nullopt;
         return model->second.ride_eyes[std::to_underlying(eye)];
     }
@@ -1309,7 +1309,7 @@ namespace rct3::scene
         if (object == scene.ride_seats.end())
             return std::nullopt;
         const save::PlacedObject& o = scene.objects[object->second];
-        const auto model = scene.models.find(park::object::model_ref(o));
+        const auto model = scene.models.find(rct3::park::object::model_ref(o));
         const std::vector<glm::mat4>* places = model == scene.models.end() ? nullptr : fixed ? &model->second.view_places : &model->second.seat_places;
         if (places == nullptr || at >= places->size())
             return std::nullopt;
@@ -1318,7 +1318,7 @@ namespace rct3::scene
             return boned->placed * boned->views[at] * (*places)[at];
         if (boned != scene.boned_rides.end() && !fixed && at < boned->seats)
             return scene.seat_carriers[boned->first_seat + at] * (*places)[at];
-        return park::object::placed_transform(o, &model->second, scene.grid, scene.fitted) * (*places)[at];
+        return rct3::park::object::placed_transform(o, &model->second, scene.grid, scene.fitted) * (*places)[at];
     }
 
     void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed)
@@ -1368,7 +1368,7 @@ namespace rct3::scene
         for (std::size_t i = 0; i < scene.cars.size(); ++i)
         {
             const std::uint64_t id = scene.cars[i].id;
-            const park::ride::CarSpot spot = scene.car_spots[i];
+            const rct3::park::ride::CarSpot spot = scene.car_spots[i];
             glm::mat4 place = scene.saved_cars.at(id);
             const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
             const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
@@ -1396,7 +1396,7 @@ namespace rct3::scene
                 const float flown_for = train.flight ? train.flight->off - (1 - along) * simulation::kTickSeconds : 0.0f;
                 const float at = train.flight ? std::max(train.was_at, train.at + train.flight->speed * std::min(flown_for, 0.0f)) : simulation::between_drives(train, along);
                 moved[i] = at - scene.rides.rides[spot.ride].trains[spot.train].distance;
-                place = park::track::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, moved[i]);
+                place = rct3::park::track::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, moved[i]);
                 // A slide's car swung up its trough's wall, turned about its shape's pivot.
                 if (train.trough && train.lean != 0)
                 {
@@ -1444,7 +1444,7 @@ namespace rct3::scene
                 else if (train.crashed)
                 {
                     const auto* wrecks = scene.sim.registry.try_get<simulation::Wrecks>(ride);
-                    const std::size_t car = static_cast<std::size_t>(std::ranges::count_if(std::span(scene.car_spots).first(i), [&](const park::ride::CarSpot& s) { return s.ride == spot.ride && s.train == spot.train; }));
+                    const std::size_t car = static_cast<std::size_t>(std::ranges::count_if(std::span(scene.car_spots).first(i), [&](const rct3::park::ride::CarSpot& s) { return s.ride == spot.ride && s.train == spot.train; }));
                     const auto* wreck = wrecks != nullptr && spot.train < wrecks->trains.size() && car < wrecks->trains[spot.train].size() ? &wrecks->trains[spot.train][car] : nullptr;
                     if (wreck == nullptr || wreck->state == simulation::WreckState::Gone)
                         place = glm::mat4(0.0f);
@@ -1454,21 +1454,21 @@ namespace rct3::scene
                         place = glm::translate(glm::mat4(1.0f), left + wreck->at - wreck->from) * glm::mat4_cast(wreck->turned) * glm::translate(glm::mat4(1.0f), -left) * place;
                     }
                 }
-                else if (const auto model = scene.models.find(park::object::model_ref(scene.cars[i])); model != scene.models.end())
+                else if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[i])); model != scene.models.end())
                 {
                     // Through the water: sprays from its splash points as it splashes, a wake behind it now and then.
                     const glm::vec3 velocity = elapsed > 0 ? (glm::vec3(place[3]) - glm::vec3(scene.car_places[i][3])) / elapsed : glm::vec3(0.0f);
                     // Only cars that spray, and the one ridden for the water on the lens, look for the park's water.
                     const bool looks = !model->second.splash_points.empty() || scene.riding == i;
-                    const park::track::TrackCourse& course = *scene.courses[spot.ride];
+                    const rct3::park::track::TrackCourse& course = *scene.courses[spot.ride];
                     // shortcut: a splash ride whose track says nothing of water (a sea serpent diving into its
                     // lake) is taken as wet all along, splashing where its fall stops short; upgrade once such a
                     // track's water is found in its files.
                     const auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(ride);
                     const bool dry_splasher = cycle != nullptr && cycle->splash && std::ranges::none_of(course.wet, std::identity { });
-                    const bool in_water = dry_splasher || (looks && park::water::water_above(scene.water.surface, glm::vec3(place[3])).has_value());
-                    const park::CarSplash splash = park::car_splash(scene.car_waters[i], course, spot.front + moved[i], in_water, velocity, elapsed);
-                    for (const park::object::SplashPoint& point : model->second.splash_points)
+                    const bool in_water = dry_splasher || (looks && rct3::park::water::water_above(scene.water.surface, glm::vec3(place[3])).has_value());
+                    const rct3::park::CarSplash splash = rct3::park::car_splash(scene.car_waters[i], course, spot.front + moved[i], in_water, velocity, elapsed);
+                    for (const rct3::park::object::SplashPoint& point : model->second.splash_points)
                         if (point.wake ? splash.wake : splash.splash)
                             fire_park_particles(scene.particles, point.wake ? kWakeEffect : kSplashEffects[std::min<std::size_t>(point.strength, 2)], glm::vec3(place * glm::vec4(point.position, 1.0f)), glm::vec3(place[1]));
                 }
@@ -1482,12 +1482,12 @@ namespace rct3::scene
         // Riding along, the view looks out from the rider's eyes in the car where it is now, at the track as far
         // ahead as its train looks.
         scene.seat.reset();
-        scene.seat_across = park::kRideWideView;
+        scene.seat_across = rct3::park::kRideWideView;
         if (const auto seat = scene.riding ? ride_eye(scene, *scene.riding, scene.riding_eye) : std::nullopt)
         {
             const std::size_t i = *scene.riding;
-            const park::ride::CarSpot spot = scene.car_spots[i];
-            ovl::RideCameraTuning tuning = scene.models.at(park::object::model_ref(scene.cars[i])).ride_look;
+            const rct3::park::ride::CarSpot spot = scene.car_spots[i];
+            ovl::RideCameraTuning tuning = scene.models.at(rct3::park::object::model_ref(scene.cars[i])).ride_look;
             // On a lift chain the view shakes as the train sets for the chain, from when this car is on it.
             const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
             const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
@@ -1501,18 +1501,18 @@ namespace rct3::scene
             // The nose and front seat look at the track ahead rather than straight out, so a curve stays in view;
             // the nose does not sway. Running backwards, the view looks the way the car faces.
             std::optional<glm::vec3> ahead;
-            if (const auto& course = scene.courses[spot.ride]; course && tuning.look_ahead > 0 && scene.riding_eye != park::object::RideEye::Rear && !(train && train->speed < 0))
-                ahead = glm::vec3(park::track::moved_along(*course, scene.saved_cars.at(scene.cars[i].id), { spot.front, spot.rear }, moved[i] + tuning.look_ahead) * (*seat)[3]);
+            if (const auto& course = scene.courses[spot.ride]; course && tuning.look_ahead > 0 && scene.riding_eye != rct3::park::object::RideEye::Rear && !(train && train->speed < 0))
+                ahead = glm::vec3(rct3::park::track::moved_along(*course, scene.saved_cars.at(scene.cars[i].id), { spot.front, spot.rear }, moved[i] + tuning.look_ahead) * (*seat)[3]);
             const glm::vec2 dice { static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1, static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1 };
-            scene.seat = park::looked_round(park::ride_look(scene.ride_view, scene.car_places[i] * *seat, ahead, scene.riding_eye != park::object::RideEye::Nose, tuning, elapsed, dice), scene.ride_turn);
+            scene.seat = rct3::park::looked_round(rct3::park::ride_look(scene.ride_view, scene.car_places[i] * *seat, ahead, scene.riding_eye != rct3::park::object::RideEye::Nose, tuning, elapsed, dice), scene.ride_turn);
         }
         // On a flat ride, from one of its fixed cameras, or from a rider's eyes over their seat, as they move. A
         // seat faces +Z with +Y up, as the people sat on it are modelled.
         constexpr glm::vec3 kSeatEyes { 0, 0.75f, 0.2f }; ///< Where a sitting rider's eyes are, just before their face
         if (const auto seat = scene.riding_flat ? flat_view(scene, scene.riding_flat->first, scene.riding_fixed, scene.riding_flat->second) : std::nullopt)
         {
-            scene.seat = park::looked_round(scene.riding_fixed ? *seat : glm::translate(*seat, kSeatEyes), scene.ride_turn);
-            scene.seat_across = scene.riding_fixed ? park::kRideWideView : park::kRideNarrowView;
+            scene.seat = rct3::park::looked_round(scene.riding_fixed ? *seat : glm::translate(*seat, kSeatEyes), scene.ride_turn);
+            scene.seat_across = scene.riding_fixed ? rct3::park::kRideWideView : rct3::park::kRideNarrowView;
         }
         // With a person, from their eyes, or from behind and over them looking down a little; people are
         // modelled facing +Z with +Y up.
@@ -1523,11 +1523,11 @@ namespace rct3::scene
         if (scene.riding_person && *scene.riding_person < scene.shown_people.size())
         {
             const glm::mat4 place = person_place(scene, scene.shown_people[*scene.riding_person]);
-            scene.seat_across = park::kRideNarrowView;
+            scene.seat_across = rct3::park::kRideNarrowView;
             if (scene.person_behind)
-                scene.seat = park::looked_round(glm::rotate(glm::translate(place, glm::vec3(0, kBehindHeight, 0)), kBehindPitch, glm::vec3(1, 0, 0)), scene.ride_turn);
+                scene.seat = rct3::park::looked_round(glm::rotate(glm::translate(place, glm::vec3(0, kBehindHeight, 0)), kBehindPitch, glm::vec3(1, 0, 0)), scene.ride_turn);
             else
-                scene.seat = park::looked_round(glm::translate(place, glm::vec3(0, kEyeHeight, 0)), scene.ride_turn);
+                scene.seat = rct3::park::looked_round(glm::translate(place, glm::vec3(0, kEyeHeight, 0)), scene.ride_turn);
         }
         // The wheel pulls the view back off its mount, the farther the more it is turned. Pulled back, it stays
         // over the ground, unless the mount itself is under it, as in a tunnel.
@@ -1538,7 +1538,7 @@ namespace rct3::scene
             const glm::vec3 mount((*scene.seat)[3]);
             scene.seat = glm::translate(*scene.seat, glm::vec3(0, 0, -back));
             glm::vec3 eye((*scene.seat)[3]);
-            const auto down = [&](glm::vec3 from) { return park::object::ground_hit(park::Ray { from, glm::vec3(0, -1, 0) }, scene.grid, kGroundLook); };
+            const auto down = [&](glm::vec3 from) { return rct3::park::object::ground_hit(rct3::park::Ray { from, glm::vec3(0, -1, 0) }, scene.grid, kGroundLook); };
             if (const auto under = down(glm::vec3(eye.x, eye.y + kGroundLook / 2, eye.z)); under && down(mount))
                 (*scene.seat)[3].y = std::max(eye.y, eye.y + kGroundLook / 2 - *under + kOverGround);
         }
@@ -1551,15 +1551,15 @@ namespace rct3::scene
         // A car that is itself a stand-in rider, a test's dummy, gives way to a real rider from boarding till it
         // stands empty again, off a slide's end and back with them.
         for (std::size_t i = 0; i < scene.car_places.size() && i < scene.car_waters.size(); ++i)
-            if (const auto model = scene.car_waters[i].ridden ? scene.models.find(park::object::model_ref(scene.cars[i])) : scene.models.end(); model != scene.models.end() && model->second.stand_in)
+            if (const auto model = scene.car_waters[i].ridden ? scene.models.find(rct3::park::object::model_ref(scene.cars[i])) : scene.models.end(); model != scene.models.end() && model->second.stand_in)
                 scene.car_mesh_places[i] = glm::mat4(0.0f);
         // Cars their bones move are drawn apart. A boat out on the water rows, with the oars its turn calls for; one
         // on a course rows with both while its train moves.
         for (ParkScene::BonedCar& boned : scene.boned_cars)
         {
             scene.car_mesh_places[boned.car] = glm::mat4(0.0f);
-            const park::object::ObjectModel& model = scene.models.at(park::object::model_ref(scene.cars[boned.car]));
-            const park::ride::CarSpot spot = scene.car_spots[boned.car];
+            const rct3::park::object::ObjectModel& model = scene.models.at(rct3::park::object::model_ref(scene.cars[boned.car]));
+            const rct3::park::ride::CarSpot spot = scene.car_spots[boned.car];
             const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
             const auto* boats = ride != entt::null ? scene.sim.registry.try_get<simulation::Boats>(ride) : nullptr;
             const simulation::Boat* boat = boats && spot.train < boats->boats.size() && boats->boats[spot.train].state != simulation::Sailing::Docked ? &boats->boats[spot.train] : nullptr;
@@ -1573,36 +1573,36 @@ namespace rct3::scene
                 boned.since = boned.stroke && scene.park_clock - boned.since < 2 * length ? boned.since + length : scene.park_clock;
                 boned.stroke = boat ? std::optional(simulation::stroke(boat->turning)) : coursing ? std::optional(simulation::Stroke::Both) : std::nullopt;
             }
-            const std::vector<glm::mat4> moves = park::bone_moves(*model.rig, boned.stroke ? motion(*boned.stroke) : model.rig->motions.size(), scene.park_clock - boned.since);
+            const std::vector<glm::mat4> moves = rct3::park::bone_moves(*model.rig, boned.stroke ? motion(*boned.stroke) : model.rig->motions.size(), scene.park_clock - boned.since);
             std::vector<glm::mat4> places(moves.size());
             for (std::size_t b = 0; b < places.size(); ++b)
                 places[b] = scene.car_places[boned.car] * moves[b];
-            park::move_meshes(boned.mesh, places);
+            rct3::park::move_meshes(boned.mesh, places);
         }
         auto joint_place = scene.car_mesh_places.begin() + static_cast<std::ptrdiff_t>(scene.car_places.size());
         for (ParkScene::ArmCar& arm : scene.arm_cars)
         {
-            const park::ride::CarSpot spot = scene.car_spots[arm.car];
-            std::optional<park::track::ArmAngles> angles;
+            const rct3::park::ride::CarSpot spot = scene.car_spots[arm.car];
+            std::optional<rct3::park::track::ArmAngles> angles;
             if (const save::Ride& ride = scene.rides.rides[spot.ride]; ride.track && scene.courses[spot.ride])
             {
-                std::vector<std::optional<park::track::ArmAngles>> held;
+                std::vector<std::optional<rct3::park::track::ArmAngles>> held;
                 for (const save::TrackPiece& piece : std::span(ride.track->pieces).subspan(std::min(scene.courses[spot.ride]->first_piece, ride.track->pieces.size())))
                     held.push_back(piece.arm_angles);
-                angles = park::track::arm_angles_at(*scene.courses[spot.ride], held, (spot.front + spot.rear) / 2 + moved[arm.car]);
+                angles = rct3::park::track::arm_angles_at(*scene.courses[spot.ride], held, (spot.front + spot.rear) / 2 + moved[arm.car]);
             }
-            const std::vector<glm::mat4> moves = park::arm_moves(arm.joints, angles ? std::span<const float>(*angles) : std::span<const float> { });
+            const std::vector<glm::mat4> moves = rct3::park::arm_moves(arm.joints, angles ? std::span<const float>(*angles) : std::span<const float> { });
             for (const glm::mat4& move : moves)
                 *joint_place++ = scene.car_places[arm.car] * move;
             arm.seats = moves.empty() ? glm::mat4(1.0f) : moves.back();
         }
         profiling::section("Rides", [&] { swing_rides(scene, eye, view); });
         profiling::section("Mesh", [&] {
-            park::move_meshes(scene.car_meshes, scene.car_mesh_places);
+            rct3::park::move_meshes(scene.car_meshes, scene.car_mesh_places);
             scene.rider_places.resize(scene.rider_cars.size());
             for (std::size_t k = 0; k < scene.rider_cars.size(); ++k)
                 scene.rider_places[k] = carrier_place(scene, scene.rider_cars[k]);
-            park::move_meshes(scene.riders, scene.rider_places);
+            rct3::park::move_meshes(scene.riders, scene.rider_places);
         });
     }
 
@@ -1670,13 +1670,13 @@ namespace rct3::scene
                 if (worn[4] != nullptr)
                     a.swim_legs = { worn[4]->id };
                 ShownPerson& shown = scene.shown_people.emplace_back(ShownPerson { .walking = true, .saved = scene.people.guests.size() - 1, .guest = e, .swim_body = worn[3] != nullptr ? worn[3]->set : nullptr, .swim_legs = worn[4] != nullptr ? worn[4]->set : nullptr });
-                park::person::PersonLook& look = shown.pose.look;
+                rct3::park::person::PersonLook& look = shown.pose.look;
                 look.head = worn[0]->set;
                 look.body = worn[1]->set;
                 look.legs = worn[2]->set;
                 for (std::size_t i = 0; i < look.colours.size(); ++i)
                     look.colours[i] = a.palettes[i] = static_cast<std::uint8_t>(random::below(scene.looks, kColourCells));
-                shown.pose.motion = park::person::motion::kWalk;
+                shown.pose.motion = rct3::park::person::motion::kWalk;
             }
             // Keepers hired with animal houses since, and lifeguards come with lifeguard chairs, in their jobs' clothes.
             for (const auto [e, staff, at] : r.view<const simulation::Staff, const simulation::Pose>(entt::exclude<simulation::Stride>).each())
@@ -1706,7 +1706,7 @@ namespace rct3::scene
                 shown.pose.look.head = worn[0]->set;
                 shown.pose.look.body = worn[1]->set;
                 shown.pose.look.legs = worn[2]->set;
-                shown.pose.motion = keeper ? park::person::motion::kWalk : park::person::motion::kIdle;
+                shown.pose.motion = keeper ? rct3::park::person::motion::kWalk : rct3::park::person::motion::kIdle;
                 shown.pose.world = glm::translate(glm::mat4(1.0f), at.position); // Where they stand while the park is still
             }
             // Sellers, as the game keeps them: one stands at each stall and ride entrance whose model has a place
@@ -1752,7 +1752,7 @@ namespace rct3::scene
                 for (const std::uint64_t post : posts)
                 {
                     const auto object = found.find(post);
-                    const auto model = object != found.end() && !object->second->hidden ? scene.models.find(park::object::model_key(*object->second)) : scene.models.end();
+                    const auto model = object != found.end() && !object->second->hidden ? scene.models.find(rct3::park::object::model_key(*object->second)) : scene.models.end();
                     if (served.contains(post) || model == scene.models.end() || !model->second.vendor_place)
                         continue;
                     const save::Sex sex = random::below(scene.looks, 2) == 0 ? save::Sex::Male : save::Sex::Female;
@@ -1762,7 +1762,7 @@ namespace rct3::scene
                             worn[o.section] = &o;
                     if (std::ranges::contains(worn, nullptr))
                         continue;
-                    const glm::mat4 place = park::object::placed_transform(*object->second, &model->second, scene.grid, scene.fitted) * *model->second.vendor_place;
+                    const glm::mat4 place = rct3::park::object::placed_transform(*object->second, &model->second, scene.grid, scene.fitted) * *model->second.vendor_place;
                     const entt::entity e = simulation::add_vendor(scene.sim, glm::vec3(place[3]));
                     scene.known_guests.insert(e);
                     save::Staff& kept = scene.people.staff.emplace_back();
@@ -1795,26 +1795,26 @@ namespace rct3::scene
             {
                 for (ShownPerson& shown : scene.shown_people)
                 {
-                    const park::person::PartSet* legs = shown.pose.look.legs;
+                    const rct3::park::person::PartSet* legs = shown.pose.look.legs;
                     if (shown.paces[0] > 0 || legs == nullptr)
                         continue;
                     auto [paces, fresh] = scene.walk_paces.try_emplace(legs);
                     if (fresh)
                         for (std::size_t gait = 0; gait < kGaits; ++gait)
                             for (const std::size_t piece : legs->levels[0].fixed)
-                                if (const auto measured = park::person::walk_pace(scene.person_models->piece(piece), kGaitMotions[gait]); measured && paces->second[gait] == 0)
+                                if (const auto measured = rct3::park::person::walk_pace(scene.person_models->piece(piece), kGaitMotions[gait]); measured && paces->second[gait] == 0)
                                     paces->second[gait] = *measured;
                     shown.paces = paces->second;
                 }
             }
-            park::object::ObjectLevels levels(scene.shown_people.size(), park::object::kNotDrawn);
+            rct3::park::object::ObjectLevels levels(scene.shown_people.size(), rct3::park::object::kNotDrawn);
             for (std::size_t i = 0; i < levels.size(); ++i)
             {
                 if (const ShownPerson& p = scene.shown_people[i]; scene.simulate && p.guest != entt::null && scene.sim.registry.all_of<simulation::Left>(p.guest))
                     continue; // Gone home
                 const float distance = glm::distance(eye, standing_at(scene, scene.shown_people[i]));
                 // Scaled as objects' levels are: detail for the finer ones, draw distance for the last.
-                const park::object::LevelScale scale = scene.level_scales[static_cast<std::size_t>(park::DetailKind::People)];
+                const rct3::park::object::LevelScale scale = scene.level_scales[static_cast<std::size_t>(rct3::park::DetailKind::People)];
                 const float last = kPersonDistances.back() * scale.distance;
                 for (std::size_t k = 0; k < kPersonDistances.size(); ++k)
                 {
@@ -1830,8 +1830,8 @@ namespace rct3::scene
                 scene.people_build = std::async(std::launch::async, [&scene, levels = std::move(levels), view, simulate = scene.simulate] {
                     profiling::register_thread("PeopleWorker");
                     PeopleBuild built;
-                    park::person::PersonRuns runs;
-                    built.mesh = profiling::section("Still", [&] { return park::person::person_mesh(*scene.person_models, place_people(scene, levels, 0, false, view, simulate), runs); });
+                    rct3::park::person::PersonRuns runs;
+                    built.mesh = profiling::section("Still", [&] { return rct3::park::person::person_mesh(*scene.person_models, place_people(scene, levels, 0, false, view, simulate), runs); });
                     built.levels = levels;
                     built.simulate = simulate;
                     profiling::unregister_thread();
@@ -1854,7 +1854,7 @@ namespace rct3::scene
                 const auto* swimmer = r.try_get<simulation::Swimmer>(shown.guest);
                 const bool changing = swimmer != nullptr && swimmer->changing.value > 0;
                 const bool swimwear = simulation::in_swimwear(r, shown.guest);
-                if (swimwear != shown.swimwear && !changing && !shown.changing && i < scene.people_levels.size() && scene.people_levels[i] != park::object::kNotDrawn)
+                if (swimwear != shown.swimwear && !changing && !shown.changing && i < scene.people_levels.size() && scene.people_levels[i] != rct3::park::object::kNotDrawn)
                     fire_park_particles(scene.particles, kChangePuff, r.get<simulation::Pose>(shown.guest).position + glm::vec3 { 0, kPuffHeight, 0 }, glm::vec3 { 0, 1, 0 });
                 shown.swimwear = swimwear;
                 shown.changing = changing;
@@ -1892,7 +1892,7 @@ namespace rct3::scene
         if (!scene.moving_build.valid())
         {
             const profiling::Scope zone("Moving");
-            scene.moving_build = std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.moving_runs, placed = place_people(scene, scene.people_levels, scene.park_clock, true, view, scene.simulate)] { return park::person::person_mesh(library, placed, runs); });
+            scene.moving_build = std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.moving_runs, placed = place_people(scene, scene.people_levels, scene.park_clock, true, view, scene.simulate)] { return rct3::park::person::person_mesh(library, placed, runs); });
         }
         if (ready(scene.riders_build))
         {
@@ -1911,44 +1911,44 @@ namespace rct3::scene
     /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`; without the
     /// supports unless `supports`. Reads only what is set when the park loads besides its arguments, so it
     /// may run beside the frame.
-    park::object::FlowFades flow_fades(const ParkScene& scene)
+    rct3::park::object::FlowFades flow_fades(const ParkScene& scene)
     {
-        return park::water::flow_fades(scene.rides, scene.objects, scene.models, [&](std::size_t ride) { return ride < scene.track_rules.size() && scene.track_rules[ride].pool_ride; });
+        return rct3::park::water::flow_fades(scene.rides, scene.objects, scene.models, [&](std::size_t ride) { return ride < scene.track_rules.size() && scene.track_rules[ride].pool_ride; });
     }
 
-    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::object::LevelPlan& shown, float band, const park::object::LevelScales& scales, bool supports, const park::object::Broken& broken, const park::object::Chains& chains, const park::object::FlowFades& fades)
+    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const rct3::park::object::LevelPlan& shown, float band, const rct3::park::object::LevelScales& scales, bool supports, const rct3::park::object::Broken& broken, const rct3::park::object::Chains& chains, const rct3::park::object::FlowFades& fades)
     {
         ObjectBuild built;
-        built.plan = profiling::section("Levels", [&] { return park::object::plan_levels(scene.objects, scene.models, scene.anchors, eye, band, scales); });
+        built.plan = profiling::section("Levels", [&] { return rct3::park::object::plan_levels(scene.objects, scene.models, scene.anchors, eye, band, scales); });
         const auto leave_out = [&](std::size_t i) {
-            built.plan.steady[i] = park::object::kNotDrawn;
-            built.plan.finer[i] = park::object::kNotDrawn;
-            built.plan.coarser[i] = park::object::kNotDrawn;
+            built.plan.steady[i] = rct3::park::object::kNotDrawn;
+            built.plan.finer[i] = rct3::park::object::kNotDrawn;
+            built.plan.coarser[i] = rct3::park::object::kNotDrawn;
         };
         std::vector<std::size_t> moving;
         for (const ParkScene::BonedRide& boned : scene.boned_rides)
             moving.push_back(boned.object);
         // Drawn apart, moving; a twin the save keeps of one would stand still in it.
-        for (const auto& list : { moving, park::twins(scene.objects, moving) })
+        for (const auto& list : { moving, rct3::park::twins(scene.objects, moving) })
             for (const std::size_t i : list)
                 leave_out(i);
         for (std::size_t i = 0; !supports && i < scene.objects.size() && i < built.plan.steady.size(); ++i)
         {
-            if (scene.objects[i].overlay == park::support::kSupportOverlay)
+            if (scene.objects[i].overlay == rct3::park::support::kSupportOverlay)
                 leave_out(i);
         }
         if (built.plan == shown)
             return std::nullopt;
         for (auto [shapes, levels] : { std::pair { &built.steady, &built.plan.steady }, std::pair { &built.finer, &built.plan.finer }, std::pair { &built.coarser, &built.plan.coarser } })
         {
-            shapes->mesh = profiling::section("Mesh", [&] { return park::object::object_mesh(scene.objects, scene.models, scene.grid, *levels, { }, scene.leans, scene.fitted, broken, chains, fades); });
-            shapes->billboards = profiling::section("Gather", [&] { return park::object::gather_billboards(scene.objects, scene.models, scene.anchors, *levels); });
+            shapes->mesh = profiling::section("Mesh", [&] { return rct3::park::object::object_mesh(scene.objects, scene.models, scene.grid, *levels, { }, scene.leans, scene.fitted, broken, chains, fades); });
+            shapes->billboards = profiling::section("Gather", [&] { return rct3::park::object::gather_billboards(scene.objects, scene.models, scene.anchors, *levels); });
         }
         return built;
     }
 
     /// `vertices` with the bands of `bands`, for the crossing shaders.
-    std::vector<CrossingVertex> crossing_vertices(std::span<const park::GroundVertex> vertices, std::span<const std::pair<glm::vec4, glm::vec2>> bands)
+    std::vector<CrossingVertex> crossing_vertices(std::span<const rct3::park::GroundVertex> vertices, std::span<const std::pair<glm::vec4, glm::vec2>> bands)
     {
         std::vector<CrossingVertex> out;
         out.reserve(vertices.size());
@@ -1986,15 +1986,15 @@ namespace rct3::scene
             std::vector<std::size_t> moving;
             for (const ParkScene::BonedRide& boned : scene.boned_rides)
                 moving.push_back(boned.object);
-            moving.append_range(park::twins(scene.objects, moving));
+            moving.append_range(rct3::park::twins(scene.objects, moving));
             // Drawn as the build would: moving ones apart, supports only when shown.
             std::vector<std::int8_t> levels(now[1] - from, 0);
             for (std::size_t i = from; i < now[1]; ++i)
             {
-                if (std::ranges::contains(moving, i) || (!scene.show_supports && scene.objects[i].overlay == park::support::kSupportOverlay))
-                    levels[i - from] = park::object::kNotDrawn;
+                if (std::ranges::contains(moving, i) || (!scene.show_supports && scene.objects[i].overlay == rct3::park::support::kSupportOverlay))
+                    levels[i - from] = rct3::park::object::kNotDrawn;
             }
-            scene.fresh_objects = park::object::object_mesh(std::span(scene.objects).subspan(from), scene.models, scene.grid, levels, { }, scene.leans, scene.fitted, scene.broken_objects);
+            scene.fresh_objects = rct3::park::object::object_mesh(std::span(scene.objects).subspan(from), scene.models, scene.grid, levels, { }, scene.leans, scene.fitted, scene.broken_objects);
             add_textures(device, scene, scene.fresh_objects.batches);
             scene.fresh_for = now;
         }
@@ -2002,7 +2002,7 @@ namespace rct3::scene
         if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid() || scene.supports.stale)
             return; // Stale supports change the objects first (refresh_supports)
         scene.since_rebuild = 0;
-        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, scales = scene.level_scales, supports = scene.show_supports, broken = scene.broken_objects, chains = park::chain_runs(scene.rides, scene.objects, scene.models), fades = flow_fades(scene)] {
+        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, scales = scene.level_scales, supports = scene.show_supports, broken = scene.broken_objects, chains = rct3::park::chain_runs(scene.rides, scene.objects, scene.models), fades = flow_fades(scene)] {
             profiling::register_thread("ObjectWorker");
             auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band, scales, supports, broken, chains, fades); });
             profiling::unregister_thread();

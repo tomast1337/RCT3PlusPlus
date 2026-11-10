@@ -41,13 +41,13 @@ namespace rct3::scene
 
     struct BuildMenus
     {
-        std::shared_future<std::vector<park::BuildItem>> items;
-        park::BuildOffer offer;
+        std::shared_future<std::vector<rct3::park::BuildItem>> items;
+        rct3::park::BuildOffer offer;
         std::optional<ui::Point> size;                       ///< Of the last list resized, for the next one opened
         std::set<std::string, std::less<>> kinds_off;        ///< Object filters turned off; the lists share them
         std::set<std::string, std::less<>> styles_off;       ///< Theme filters turned off
         std::set<std::uint32_t> packs_only;                  ///< Pack filters turned on
-        std::optional<park::BuildItem> asked;                ///< Picked by a script, taken as a pick from a list
+        std::optional<rct3::park::BuildItem> asked;          ///< Picked by a script, taken as a pick from a list
         bool asked_designs = false;                          ///< The script asks for the saved designs, as a list does
         bool offer_designs = false;                          ///< The last pick offers the ride's saved designs
         std::shared_future<std::vector<DesignFile>> designs; ///< In the order of their folders, then their names
@@ -78,6 +78,6 @@ namespace rct3::scene
 
     /// Each frame: keeps what the open list changed and shades its items dearer than `cash`; returns the item
     /// picked in it, if one was.
-    [[nodiscard]] std::optional<park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<std::int64_t> cash);
+    [[nodiscard]] std::optional<rct3::park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<std::int64_t> cash);
 
 } // namespace rct3::scene

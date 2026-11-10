@@ -32,7 +32,7 @@ namespace rct3::scene
             std::vector<const particles::Sprite*> sprites;
             glm::vec3 position { 0.0f };
             std::string effect { }; ///< Its file's name
-            float size = 1;         ///< As park::object::PlacedEffect::size
+            float size = 1;         ///< As rct3::park::object::PlacedEffect::size
             bool awake = false;     ///< Ran in the last advance, so it is drawn
         };
 
@@ -50,7 +50,7 @@ namespace rct3::scene
     /// out when the install has no particle sprites; nothing is shown then.
     void load_park_particles(render::Device& device, ParkParticles& particles, const std::filesystem::path& root, random::RandomState random);
     /// Starts the effects `effects` name, in place of any running in `list`.
-    void show_park_particles(ParkParticles& particles, std::span<const park::object::PlacedEffect> effects, std::vector<ParkParticles::Shown> ParkParticles::* list = &ParkParticles::shown);
+    void show_park_particles(ParkParticles& particles, std::span<const rct3::park::object::PlacedEffect> effects, std::vector<ParkParticles::Shown> ParkParticles::* list = &ParkParticles::shown);
     /// Sets off the effect `effect` once at `position`, pointing along `up`, `scale` times its size: how far its
     /// particles go and how big they are drawn. False when there is no such effect.
     bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up, float scale = 1);

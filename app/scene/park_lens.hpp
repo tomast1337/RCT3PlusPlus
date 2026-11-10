@@ -34,14 +34,14 @@ namespace rct3::scene
 
     struct ParkLens
     {
-        park::LensWater water;
+        rct3::park::LensWater water;
         render::PipelineHandle pipeline;
         render::TextureHandle screen; ///< The world as drawn, seen through the drops
         render::Extent screen_size;
         bool was_under = false;              ///< The eye was under water a frame ago
         std::optional<glm::vec3> last_eye;   ///< A frame ago
         std::optional<glm::vec3> last_ahead; ///< The way the view looked a frame ago
-        /// The car ridden a frame ago and the times it had splashed (park::CarWater::splashes)
+        /// The car ridden a frame ago and the times it had splashed (rct3::park::CarWater::splashes)
         std::optional<std::pair<std::size_t, std::uint32_t>> car_splashes;
         float rain_due = 0;              ///< Drops the rain owes the lens, landed once whole
         float clock = 0;                 ///< Seconds, for the wind's slow turning
@@ -57,7 +57,7 @@ namespace rct3::scene
         bool under_water = false;
         int rain = 0;   ///< 0 none, 1 light, 2 heavy, 3 a storm
         float wind = 0; ///< The park's wind, 0 calm to 1 strong
-        /// The car ridden and the times it has splashed through water (park::CarWater::splashes); none while
+        /// The car ridden and the times it has splashed through water (rct3::park::CarWater::splashes); none while
         /// no car is ridden.
         std::optional<std::pair<std::size_t, std::uint32_t>> car_splashes;
     };

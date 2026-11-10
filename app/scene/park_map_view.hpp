@@ -30,9 +30,9 @@ namespace rct3::scene
 
     struct ParkMap
     {
-        park::MapFeatures features;
-        std::optional<park::MapGround> ground; ///< Drawn when the window first opens
-        park::MapLayers layers = park::all_map_layers();
+        rct3::park::MapFeatures features;
+        std::optional<rct3::park::MapGround> ground; ///< Drawn when the window first opens
+        rct3::park::MapLayers layers = rct3::park::all_map_layers();
         render::TextureHandle picture;
         render::TextureHandle people;
         bool stale = true;         ///< The picture no longer shows the layers picked
@@ -42,7 +42,7 @@ namespace rct3::scene
     /// What a park's map shows: its paths, water, scenery and attractions by kind, and the ground in the
     /// colours of its surfaces' pictures in `images`. The kinds of stalls and facilities are read from the
     /// overlays that hold them, under `install`.
-    [[nodiscard]] ParkMap park_map(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water, std::span<const save::PlacedObject> objects, const park::object::ObjectModels& models, const park::object::Fitted& fitted, const park::AttractionObjects& attractions, const save::RideModel& rides, const park::ground::GroundImages& images, const config::GameInstall& install);
+    [[nodiscard]] ParkMap park_map(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water, std::span<const save::PlacedObject> objects, const rct3::park::object::ObjectModels& models, const rct3::park::object::Fitted& fitted, const rct3::park::AttractionObjects& attractions, const save::RideModel& rides, const rct3::park::ground::GroundImages& images, const config::GameInstall& install);
 
     /// Opens the map window, or closes it when it is open.
     void toggle_park_map(ParkMap& map, ui::Desktop& desktop, const ui::StringTable& strings, const ui::Palette& palette);
@@ -50,7 +50,7 @@ namespace rct3::scene
     /// Brings the open window up to date: its pictures, the people (`people` is asked only when they are
     /// drawn again) and the camera, seen in a view `aspect` times as wide as it is tall. Returns the park
     /// point (x, z) the player picked on the map since the last frame, if any.
-    [[nodiscard]] std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::TerrainGrid& grid, const park::ParkCamera& camera, float aspect, const std::function<park::MapPeople()>& people, float elapsed);
+    [[nodiscard]] std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::TerrainGrid& grid, const rct3::park::ParkCamera& camera, float aspect, const std::function<rct3::park::MapPeople()>& people, float elapsed);
 
     void destroy_park_map(render::Device& device, ParkMap& map);
 

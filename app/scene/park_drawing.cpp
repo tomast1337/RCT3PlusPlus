@@ -47,7 +47,7 @@ namespace rct3::scene
 
         /// Draws `mesh` from buffers made for this frame, each batch with `pipeline_of(batch)`, none leaving it out;
         /// with its vertices as `vertex_bytes` when given, for pipelines of another layout.
-        void draw_transient(render::Device& device, const ParkScene& scene, const park::object::ObjectMesh& mesh, const ui::UiTextures& textures, const glm::mat4& transform, const render::SceneLight& light, auto&& pipeline_of, auto&& address_of, std::span<const std::byte> vertex_bytes = { })
+        void draw_transient(render::Device& device, const ParkScene& scene, const rct3::park::object::ObjectMesh& mesh, const ui::UiTextures& textures, const glm::mat4& transform, const render::SceneLight& light, auto&& pipeline_of, auto&& address_of, std::span<const std::byte> vertex_bytes = { })
         {
             if (mesh.indices.empty())
                 return;
@@ -55,7 +55,7 @@ namespace rct3::scene
             const auto indices = device.allocate_transient(std::as_bytes(std::span(mesh.indices)));
             if (!vertices || !indices)
                 return;
-            for (const park::object::ObjectBatch& batch : mesh.batches)
+            for (const rct3::park::object::ObjectBatch& batch : mesh.batches)
             {
                 const auto texture = textures.find(batch.texture);
                 render::DrawCommand draw;
@@ -115,39 +115,39 @@ namespace rct3::scene
             {
                 const profiling::Scope zone("Sky");
                 // The dome reads one column of its picture, so it must not wrap into the next.
-                draw_transient(device, scene, scene.sky_mesh, scene.sky_textures, transform, light, [&](const park::object::ObjectBatch&) { return scene.sky_pipeline; }, [&](const park::object::ObjectBatch& b) { return b.texture == scene.sky.dome.texture ? render::AddressMode::Clamp : render::AddressMode::Repeat; });
+                draw_transient(device, scene, scene.sky_mesh, scene.sky_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.sky_pipeline; }, [&](const rct3::park::object::ObjectBatch& b) { return b.texture == scene.sky.dome.texture ? render::AddressMode::Clamp : render::AddressMode::Repeat; });
             }
             // Before the ground, writing depth, so land reaching beyond the ring stays hidden behind it.
             if (parts.background)
-                profiling::section("Mountains", [&] { draw_transient(device, scene, scene.mountains, scene.sky_textures, transform, light, [&](const park::object::ObjectBatch&) { return scene.cutout_pipeline; }, [](const park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
-            const auto pipeline_for = [&](const ShownObjects& shown, park::object::PartBlend blend, std::string_view texture = { }) {
+                profiling::section("Mountains", [&] { draw_transient(device, scene, scene.mountains, scene.sky_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.cutout_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
+            const auto pipeline_for = [&](const ShownObjects& shown, rct3::park::object::PartBlend blend, std::string_view texture = { }) {
                 const bool crossing = &shown != &scene.steady_objects;
-                if (texture == park::object::kChromePicture && blend != park::object::PartBlend::DepthOnly)
+                if (texture == rct3::park::object::kChromePicture && blend != rct3::park::object::PartBlend::DepthOnly)
                     return crossing ? scene.crossing_chrome_pipeline : scene.chrome_pipeline;
-                if (blend == park::object::PartBlend::Opaque)
+                if (blend == rct3::park::object::PartBlend::Opaque)
                     return crossing ? scene.crossing_pipeline : scene.object_pipeline;
-                if (blend == park::object::PartBlend::Cutout)
+                if (blend == rct3::park::object::PartBlend::Cutout)
                     return crossing ? scene.crossing_cutout_pipeline : scene.cutout_pipeline;
-                if (blend == park::object::PartBlend::DepthOnly)
+                if (blend == rct3::park::object::PartBlend::DepthOnly)
                     return crossing ? scene.crossing_depth_only_pipeline : scene.depth_only_pipeline;
                 return crossing ? scene.crossing_see_through_pipeline : scene.see_through_pipeline;
             };
-            const auto sided = [&](render::PipelineHandle pipeline, const park::object::ObjectBatch& batch) { return batch.one_sided ? scene.front_only.at(pipeline.id) : pipeline; };
+            const auto sided = [&](render::PipelineHandle pipeline, const rct3::park::object::ObjectBatch& batch) { return batch.one_sided ? scene.front_only.at(pipeline.id) : pipeline; };
             // Depth-only parts are left to their own pass, after the solid ones.
-            const auto object_pipeline = [&](const park::object::ObjectBatch& b) { return b.blend == park::object::PartBlend::DepthOnly ? render::PipelineHandle { } : sided(pipeline_for(scene.steady_objects, b.blend, b.texture), b); };
-            const auto depth_pipeline = [&](const park::object::ObjectBatch& b) { return b.blend == park::object::PartBlend::DepthOnly ? sided(scene.depth_only_pipeline, b) : render::PipelineHandle { }; };
+            const auto object_pipeline = [&](const rct3::park::object::ObjectBatch& b) { return b.blend == rct3::park::object::PartBlend::DepthOnly ? render::PipelineHandle { } : sided(pipeline_for(scene.steady_objects, b.blend, b.texture), b); };
+            const auto depth_pipeline = [&](const rct3::park::object::ObjectBatch& b) { return b.blend == rct3::park::object::PartBlend::DepthOnly ? sided(scene.depth_only_pipeline, b) : render::PipelineHandle { }; };
             // Slides' flowing water takes the water shader with the water, unless crossing a band of detail: those
             // objects' vertices carry the band too, which the water shader does not read.
             const bool shaded_flow = parts.shaded_water && scene.water.shaded && parts.water && scene.show_scenery && parts.scenery && parts.see_through;
             // Opaque and cut-out parts in the solid pass, the others in their own.
-            const auto draw_shown = [&](const ShownObjects& shown, std::optional<park::object::PartBlend> pass) {
+            const auto draw_shown = [&](const ShownObjects& shown, std::optional<rct3::park::object::PartBlend> pass) {
                 if (!shown.indices)
                     return;
-                for (const park::object::ObjectBatch& batch : shown.batches)
+                for (const rct3::park::object::ObjectBatch& batch : shown.batches)
                 {
-                    if (pass ? batch.blend != *pass : batch.blend == park::object::PartBlend::Blended || batch.blend == park::object::PartBlend::DepthOnly)
+                    if (pass ? batch.blend != *pass : batch.blend == rct3::park::object::PartBlend::Blended || batch.blend == rct3::park::object::PartBlend::DepthOnly)
                         continue;
-                    if (shaded_flow && &shown == &scene.steady_objects && batch.texture == park::water::kFlowPicture)
+                    if (shaded_flow && &shown == &scene.steady_objects && batch.texture == rct3::park::water::kFlowPicture)
                         continue;
                     // Parts painted like the ground take the ground's pictures (see object/mesh.hpp).
                     const ui::UiTextures& textures = scene.object_textures.contains(batch.texture) ? scene.object_textures : scene.ground_textures;
@@ -165,22 +165,22 @@ namespace rct3::scene
                     draw.address = render::AddressMode::Repeat;
                     draw.light = light;
                     draw.extra_textures[1] = relief_of(textures, batch.texture);
-                    draw.v_shift = batch.texture == park::water::kFlowPicture ? park::water::flow_scroll(scene.park_clock, batch.chain) : park::chain_scroll(scene.chain_shifts, batch.chain);
+                    draw.v_shift = batch.texture == rct3::park::water::kFlowPicture ? rct3::park::water::flow_scroll(scene.park_clock, batch.chain) : rct3::park::chain_scroll(scene.chain_shifts, batch.chain);
                     device.draw(draw);
                 }
             };
             // Land, cliffs and tunnels, as against the paths and queues drawn on the ground.
-            const auto earth = [](const park::GroundBatch& batch) { return batch.paint == park::GroundPaint::Surface || batch.paint == park::GroundPaint::Cliff || batch.paint == park::GroundPaint::TunnelWall || batch.paint == park::GroundPaint::TunnelCeiling; };
+            const auto earth = [](const rct3::park::GroundBatch& batch) { return batch.paint == rct3::park::GroundPaint::Surface || batch.paint == rct3::park::GroundPaint::Cliff || batch.paint == rct3::park::GroundPaint::TunnelWall || batch.paint == rct3::park::GroundPaint::TunnelCeiling; };
             const auto draw_ground = [&](render::PipelineHandle pipeline, auto&& wanted) {
                 for (const GroundChunk& chunk : scene.ground_chunks)
                 {
                     if (!chunk.vertices || !box_in_view(transform, chunk.low, chunk.high))
                         continue;
-                    for (const park::GroundBatch& batch : chunk.batches)
+                    for (const rct3::park::GroundBatch& batch : chunk.batches)
                     {
                         if (!wanted(batch))
                             continue;
-                        const auto texture = scene.ground_textures.find(park::ground::ground_key(batch.paint, batch.index));
+                        const auto texture = scene.ground_textures.find(rct3::park::ground::ground_key(batch.paint, batch.index));
                         render::DrawCommand draw;
                         draw.pipeline = pipeline;
                         draw.vertices = { chunk.vertices };
@@ -195,26 +195,26 @@ namespace rct3::scene
                         draw.light = light;
                         draw.light.cut_clear = !earth(batch); // The grass round a path's shape stays clear of its depth
                         draw.extra_textures[0] = scene.variation;
-                        draw.extra_textures[1] = relief_of(scene.ground_textures, park::ground::ground_key(batch.paint, batch.index));
+                        draw.extra_textures[1] = relief_of(scene.ground_textures, rct3::park::ground::ground_key(batch.paint, batch.index));
                         device.draw(draw);
                     }
                 }
             };
             if (parts.terrain)
                 profiling::section("Ground", [&] {
-                    draw_ground(scene.ground_pipeline, [&](const park::GroundBatch& batch) { return !parts.faded_ground || !earth(batch); });
+                    draw_ground(scene.ground_pipeline, [&](const rct3::park::GroundBatch& batch) { return !parts.faded_ground || !earth(batch); });
                     draw_view_lines(device, scene, transform, light);
                     draw_footpath_ghost(device, scene, transform, light);
                     draw_patrol(device, scene, transform, light);
                 });
-            const auto draw_objects = [&](std::optional<park::object::PartBlend> pass) {
+            const auto draw_objects = [&](std::optional<rct3::park::object::PartBlend> pass) {
                 for (const ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })
                     draw_shown(*shown, pass);
             };
             if (scene.show_scenery && parts.scenery)
                 profiling::section("Objects", [&] {
                     draw_objects(std::nullopt);
-                    draw_transient(device, scene, scene.fresh_objects, scene.object_textures, transform, light, object_pipeline, [](const park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                    draw_transient(device, scene, scene.fresh_objects, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
                 });
             if (scene.show_scenery && parts.scenery)
                 profiling::section("Billboards", [&] {
@@ -223,53 +223,53 @@ namespace rct3::scene
                         // shortcut: crossing billboards are copied with their bands each frame; fine for the
                         // few in bands, upgrade to a second vertex stream if many trees cross at once.
                         const std::vector<CrossingVertex> crossing = crossing_vertices(shown->billboards.mesh.vertices, shown->bands);
-                        draw_transient(device, scene, shown->billboards.mesh, scene.object_textures, transform, light, [&](const park::object::ObjectBatch& b) { return sided(pipeline_for(*shown, b.blend), b); }, [](const park::object::ObjectBatch&) { return render::AddressMode::Clamp; }, std::as_bytes(std::span(crossing)));
+                        draw_transient(device, scene, shown->billboards.mesh, scene.object_textures, transform, light, [&](const rct3::park::object::ObjectBatch& b) { return sided(pipeline_for(*shown, b.blend), b); }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }, std::as_bytes(std::span(crossing)));
                     }
                 });
             if (scene.show_people && parts.people)
                 profiling::section("People", [&] {
-                    draw_transient(device, scene, scene.still_people, scene.people_textures, transform, light, [&](const park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
-                    draw_transient(device, scene, scene.moving_people, scene.people_textures, transform, light, [&](const park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
+                    draw_transient(device, scene, scene.still_people, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
+                    draw_transient(device, scene, scene.moving_people, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
                     if (scene.simulate)
-                        draw_transient(device, scene, scene.riders.mesh, scene.people_textures, transform, light, [&](const park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
+                        draw_transient(device, scene, scene.riders.mesh, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
                 });
             if (parts.people)
-                profiling::section("ZooAnimals", [&] { draw_transient(device, scene, scene.drawn_animals.mesh, scene.drawn_animals.textures, transform, light, object_pipeline, [](const park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
+                profiling::section("ZooAnimals", [&] { draw_transient(device, scene, scene.drawn_animals.mesh, scene.drawn_animals.textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
             if (scene.show_scenery && parts.scenery)
                 profiling::section("LedSigns", [&] { draw_led_signs(device, scene, transform, light); });
             if (scene.show_scenery && parts.scenery)
                 profiling::section("Cars", [&] {
-                    draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                    draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
                     for (const ParkScene::BonedCar& boned : scene.boned_cars)
-                        draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                        draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
                 });
             if (scene.show_scenery && parts.scenery && !scene.drawn_animals.crated.empty())
-                profiling::section("Crates", [&] { draw_transient(device, scene, scene.drawn_animals.crates.mesh, scene.object_textures, transform, light, object_pipeline, [](const park::object::ObjectBatch&) { return render::AddressMode::Repeat; }); });
+                profiling::section("Crates", [&] { draw_transient(device, scene, scene.drawn_animals.crates.mesh, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; }); });
             const auto draw_rides = [&](auto&& pipeline_of) {
                 for (const ParkScene::BonedRide& boned : scene.boned_rides)
                     if ((boned.ride != entt::null && !boned.gate) || maybe_in_view(transform, glm::vec3(boned.placed[3]), boned.reach))
-                        draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, pipeline_of, [](const park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                        draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, pipeline_of, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
             };
             profiling::section("Rides", [&] { draw_rides(object_pipeline); });
             // After everything solid, before the water and the see-through parts it is there to hide.
             if (scene.show_scenery && parts.scenery && parts.water)
                 profiling::section("DepthOnly", [&] {
-                    draw_objects(park::object::PartBlend::DepthOnly);
-                    draw_transient(device, scene, scene.fresh_objects, scene.object_textures, transform, light, depth_pipeline, [](const park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
-                    draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, depth_pipeline, [](const park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                    draw_objects(rct3::park::object::PartBlend::DepthOnly);
+                    draw_transient(device, scene, scene.fresh_objects, scene.object_textures, transform, light, depth_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                    draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, depth_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
                     for (const ParkScene::BonedCar& boned : scene.boned_cars)
-                        draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, depth_pipeline, [](const park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                        draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, depth_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
                     draw_rides(depth_pipeline);
                 });
             if (parts.water)
                 profiling::section("Water", [&] {
                     draw_park_water(device, scene.water, transform, light, parts.eye, scene.park_clock, parts.shaded_water);
-                    const auto flow = scene.object_textures.find(park::water::kFlowPicture);
+                    const auto flow = scene.object_textures.find(rct3::park::water::kFlowPicture);
                     if (!shaded_flow || !scene.steady_objects.indices || flow == scene.object_textures.end())
                         return;
-                    for (const park::object::ObjectBatch& batch : scene.steady_objects.batches)
+                    for (const rct3::park::object::ObjectBatch& batch : scene.steady_objects.batches)
                     {
-                        if (batch.texture != park::water::kFlowPicture)
+                        if (batch.texture != rct3::park::water::kFlowPicture)
                             continue;
                         render::DrawCommand draw { .pipeline = scene.water.shaded, .vertices = { scene.steady_objects.vertices }, .indices = { scene.steady_objects.indices }, .index_type = render::IndexType::U32, .count = batch.count, .first = batch.first, .transform = transform };
                         draw.texture = flow->second.handle;
@@ -277,24 +277,24 @@ namespace rct3::scene
                         draw.address = render::AddressMode::Repeat;
                         draw.light = light;
                         draw.extra_textures = { render::TextureHandle { }, render::TextureHandle { }, render::TextureHandle { }, scene.water.ripple_texture };
-                        draw.water = { .eye = parts.eye, .time = scene.park_clock, .near = park::kNear, .far = park::kFar, .waves = scene.water.look.waves, .flow = true };
-                        draw.v_shift = park::water::flow_scroll(scene.park_clock, batch.chain);
+                        draw.water = { .eye = parts.eye, .time = scene.park_clock, .near = rct3::park::kNear, .far = rct3::park::kFar, .waves = scene.water.look.waves, .flow = true };
+                        draw.v_shift = rct3::park::water::flow_scroll(scene.park_clock, batch.chain);
                         device.draw(draw);
                     }
                 });
             if (parts.water && parts.see_through)
                 profiling::section("Waterfalls", [&] {
                     // As draw_transient, each picture with its second (park/waterfall_mesh.hpp).
-                    const park::object::ObjectMesh& mesh = scene.waterfall_mesh;
+                    const rct3::park::object::ObjectMesh& mesh = scene.waterfall_mesh;
                     if (mesh.indices.empty())
                         return;
                     const auto vertices = device.allocate_transient(std::as_bytes(std::span(mesh.vertices)));
                     const auto indices = device.allocate_transient(std::as_bytes(std::span(mesh.indices)));
                     if (!vertices || !indices)
                         return;
-                    for (const park::object::ObjectBatch& batch : mesh.batches)
+                    for (const rct3::park::object::ObjectBatch& batch : mesh.batches)
                     {
-                        const auto picture = std::ranges::find(park::kWaterfallPictures, batch.texture, &park::WaterfallPicture::key);
+                        const auto picture = std::ranges::find(rct3::park::kWaterfallPictures, batch.texture, &rct3::park::WaterfallPicture::key);
                         const auto texture = scene.object_textures.find(batch.texture);
                         const auto layer = scene.object_textures.find(picture->layer_key);
                         render::DrawCommand draw { .pipeline = picture->multiplied ? scene.waterfall_multiplied_pipeline : scene.waterfall_added_pipeline, .vertices = *vertices, .indices = *indices, .index_type = render::IndexType::U32, .count = batch.count, .first = batch.first, .transform = transform };
@@ -306,12 +306,12 @@ namespace rct3::scene
                             draw.pipeline = scene.see_through_pipeline;
                         draw.address = render::AddressMode::Repeat;
                         draw.light = light;
-                        draw.v_shift = park::waterfall_layer_scroll(*picture, scene.park_clock);
+                        draw.v_shift = rct3::park::waterfall_layer_scroll(*picture, scene.park_clock);
                         device.draw(draw);
                     }
                 });
             if (scene.show_scenery && parts.scenery && parts.see_through)
-                profiling::section("SeeThrough", [&] { draw_objects(park::object::PartBlend::Blended); });
+                profiling::section("SeeThrough", [&] { draw_objects(rct3::park::object::PartBlend::Blended); });
             if (parts.ghosts)
             {
                 draw_track_ghost(device, scene, transform, light);
@@ -341,11 +341,11 @@ namespace rct3::scene
         }
 
         /// Draws the park round the camera from `drawing.sun` into its map, outside any pass.
-        void draw_shadow(render::Device& device, ParkScene& scene, ShadowDrawing& drawing, const park::SunView& sun)
+        void draw_shadow(render::Device& device, ParkScene& scene, ShadowDrawing& drawing, const rct3::park::SunView& sun)
         {
             // The depth bias: about a tenth of a world unit, in the map's depth.
             const std::array<float, 20> values
-                = { sun.view_projection[0][0], sun.view_projection[0][1], sun.view_projection[0][2], sun.view_projection[0][3], sun.view_projection[1][0], sun.view_projection[1][1], sun.view_projection[1][2], sun.view_projection[1][3], sun.view_projection[2][0], sun.view_projection[2][1], sun.view_projection[2][2], sun.view_projection[2][3], sun.view_projection[3][0], sun.view_projection[3][1], sun.view_projection[3][2], sun.view_projection[3][3], sun.texel, 0.1f / (2 * park::kSunViewDepth), 0, 0 };
+                = { sun.view_projection[0][0], sun.view_projection[0][1], sun.view_projection[0][2], sun.view_projection[0][3], sun.view_projection[1][0], sun.view_projection[1][1], sun.view_projection[1][2], sun.view_projection[1][3], sun.view_projection[2][0], sun.view_projection[2][1], sun.view_projection[2][2], sun.view_projection[2][3], sun.view_projection[3][0], sun.view_projection[3][1], sun.view_projection[3][2], sun.view_projection[3][3], sun.texel, 0.1f / (2 * rct3::park::kSunViewDepth), 0, 0 };
             drawing.drawn = sun.view_projection;
             drawing.view = values;
             render::PassDesc into;
@@ -398,7 +398,7 @@ namespace rct3::scene
             const float step = glm::radians(0.5f);
             const glm::vec3 to_sun = glm::normalize(scene.light.sun_direction);
             ShadowDrawing* now = &scene.shadow_drawings[scene.shadow_now];
-            const bool stepped = park::steady_sun(now->sun, to_sun, step) != now->sun;
+            const bool stepped = rct3::park::steady_sun(now->sun, to_sun, step) != now->sun;
             if (stepped)
             {
                 scene.shadow_now = 1 - scene.shadow_now;
@@ -409,10 +409,10 @@ namespace rct3::scene
             const bool blend = scene.blend_shadows && before.drawn != glm::mat4(0.0f);
             // Riding along, round the rider, as far as an overhead view from a middling height shadows.
             constexpr float kRideShadowDistance = 60;
-            const float centre_radius = park::shadow_radius(scene.seat ? kRideShadowDistance : scene.camera.distance);
+            const float centre_radius = rct3::park::shadow_radius(scene.seat ? kRideShadowDistance : scene.camera.distance);
             const glm::vec3 centre = scene.seat ? glm::vec3((*scene.seat)[3]) : scene.camera.target;
-            const park::SunView sun = park::sun_view(now->sun, centre, centre_radius, kShadowTexels);
-            const park::SunView sun_before = park::sun_view(before.sun, centre, centre_radius, kShadowTexels);
+            const rct3::park::SunView sun = rct3::park::sun_view(now->sun, centre, centre_radius, kShadowTexels);
+            const rct3::park::SunView sun_before = rct3::park::sun_view(before.sun, centre, centre_radius, kShadowTexels);
             // Static shadows redraw when the view moves, or every two seconds to catch what changed in the park;
             // the older drawing then too, so both cover the same ground and show the same park. A step alone
             // draws only the new one: the older is the one drawn before it.
@@ -428,7 +428,7 @@ namespace rct3::scene
             if (blend)
             {
                 scene.light.shadow_map_before = device.depth_texture(before.target);
-                scene.light.shadow_before = 1 - park::sun_step_share(now->sun, to_sun, step);
+                scene.light.shadow_before = 1 - rct3::park::sun_step_share(now->sun, to_sun, step);
             }
             if (!draw_now && !draw_before)
                 return;
@@ -499,28 +499,28 @@ namespace rct3::scene
             constexpr float kGap = 0.7f;    ///< Between neighbours in the row
             constexpr float kHeight = 2.0f; ///< Of the box the view fits, a tall adult's and a little over
             const float first = -0.5f * kGap * static_cast<float>(shown.size() - 1);
-            std::vector<park::person::PlacedPerson> placed;
+            std::vector<rct3::park::person::PlacedPerson> placed;
             for (std::size_t k = 0; k < shown.size(); ++k)
             {
                 if (shown[k] >= scene.shown_people.size())
                     continue;
                 // Seated on a ride they stand idle instead.
-                park::person::PlacedPerson pose = pose_person(scene, shown[k], scene.park_clock, scene.simulate).value_or(park::person::PlacedPerson { .look = scene.shown_people[shown[k]].pose.look, .motion = park::person::motion::kIdle, .time = scene.clock });
+                rct3::park::person::PlacedPerson pose = pose_person(scene, shown[k], scene.park_clock, scene.simulate).value_or(rct3::park::person::PlacedPerson { .look = scene.shown_people[shown[k]].pose.look, .motion = rct3::park::person::motion::kIdle, .time = scene.clock });
                 pose.level = 0;
                 pose.world = glm::translate(glm::mat4(1.0f), glm::vec3(first + kGap * static_cast<float>(k), 0, 0));
                 placed.push_back(pose);
             }
             const std::array<glm::vec3, 2> box { glm::vec3(first - kGap / 2, 0, -kGap / 2), glm::vec3(kGap / 2 - first, kHeight, kGap / 2) };
-            const park::ParkCamera camera = park::framed(box, kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
+            const rct3::park::ParkCamera camera = rct3::park::framed(box, kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
             // shortcut: posed and built afresh each frame the panel shows, a few small allocations; keep the lists in
             // the scene if it ever shows in a profile.
-            park::person::PersonRuns runs;
-            const park::object::ObjectMesh mesh = park::person::person_mesh(*scene.person_models, placed, runs);
+            rct3::park::person::PersonRuns runs;
+            const rct3::park::object::ObjectMesh mesh = rct3::park::person::person_mesh(*scene.person_models, placed, runs);
             // Lit by the noon sun whatever the park's hour, so they look the same by night; no shadows, lamps or haze.
             constexpr float kNoon = 0.5f; ///< Of a day from midnight
-            const park::Daylight noon = park::daylight(kNoon);
+            const rct3::park::Daylight noon = rct3::park::daylight(kNoon);
             const render::SceneLight light { .sun_direction = noon.sun_direction, .sun = noon.sun, .sky = noon.sky, .ground = noon.ground };
-            draw_transient(device, scene, mesh, scene.people_textures, park::view_projection(camera, 1), light, [&](const park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
+            draw_transient(device, scene, mesh, scene.people_textures, rct3::park::view_projection(camera, 1), light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
         }
 
         /// Draws the first photo waiting into the photo target and asks for its pixels, for the app to save.
@@ -545,7 +545,7 @@ namespace rct3::scene
             into.target = scene.photo_target;
             into.clear_color = scene.horizon;
             device.begin_pass(into);
-            draw_world(device, scene, park::view_projection(shot.camera, static_cast<float>(kPhotoWidth) / kPhotoHeight), scene.light);
+            draw_world(device, scene, rct3::park::view_projection(shot.camera, static_cast<float>(kPhotoWidth) / kPhotoHeight), scene.light);
             device.end_pass();
             if (device.read_screen(scene.photo_target))
                 scene.photo_reading = shot.name;
@@ -563,16 +563,16 @@ namespace rct3::scene
 
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool interface)
     {
-        // The ripples on the still water of objects (fountain basins, park::kWaterPicture) move on to now.
-        if (const auto texture = scene.object_textures.find(park::object::kWaterPicture); texture != scene.object_textures.end())
+        // The ripples on the still water of objects (fountain basins, rct3::park::kWaterPicture) move on to now.
+        if (const auto texture = scene.object_textures.find(rct3::park::object::kWaterPicture); texture != scene.object_textures.end())
         {
             constexpr float kRate = 12; ///< Chosen by eye: pictures a second, smooth enough for slow ripples
             if (const auto frame = static_cast<std::uint32_t>(scene.park_clock * kRate); frame != scene.ripple_frame)
             {
                 scene.ripple_frame = frame;
-                const park::PaletteImage picture = park::object::water_picture(static_cast<float>(frame) / kRate);
+                const rct3::park::PaletteImage picture = rct3::park::object::water_picture(static_cast<float>(frame) / kRate);
                 // Halved as it was when first uploaded, to fit the texture.
-                const ovl::texture::RgbaImage rippled = ovl::texture::halved(park::paint(picture, { }), ovl::texture::texture_halvings(scene.texture_detail, picture.width, picture.height));
+                const ovl::texture::RgbaImage rippled = ovl::texture::halved(rct3::park::paint(picture, { }), ovl::texture::texture_halvings(scene.texture_detail, picture.width, picture.height));
                 device.end_pass();
                 device.update_texture(texture->second.handle, std::as_bytes(std::span(rippled.pixels)));
                 render::PassDesc back;
@@ -592,11 +592,11 @@ namespace rct3::scene
             constexpr float kPourSpeed = 1.5f; ///< m/s the water leaves the lip at. Chosen by eye
             for (const save::PlacedObject& o : scene.objects)
             {
-                const auto model = scene.models.find(park::object::model_ref(o));
+                const auto model = scene.models.find(rct3::park::object::model_ref(o));
                 if (o.hidden || model == scene.models.end() || !model->second.pour)
                     continue;
-                const park::object::SlidePour& pour = *model->second.pour;
-                const glm::mat4 place = park::object::placed_transform(o, &model->second, scene.grid, scene.fitted);
+                const rct3::park::object::SlidePour& pour = *model->second.pour;
+                const glm::mat4 place = rct3::park::object::placed_transform(o, &model->second, scene.grid, scene.fitted);
                 const glm::vec3 left(place * glm::vec4(pour.left, 1));
                 const glm::vec3 right(place * glm::vec4(pour.right, 1));
                 const glm::vec3 way(place * glm::vec4(pour.way, 0));
@@ -608,7 +608,7 @@ namespace rct3::scene
                 // Down onto the water under the lip, or the ground with none there.
                 float below = scene.grid.height_at(lip.x, lip.z).value_or(lip.y);
                 for (float y = lip.y; y > below - 1; y -= 0.25f)
-                    if (const auto water = park::water::water_above(scene.water.surface, { lip.x, y, lip.z }))
+                    if (const auto water = rct3::park::water::water_above(scene.water.surface, { lip.x, y, lip.z }))
                     {
                         below = water->level;
                         break;
@@ -622,11 +622,11 @@ namespace rct3::scene
         // Jets of water are drawn with the waterfalls, as running water of their picture.
         if (!scene.footpaths.waterfalls.empty() || !scene.jets.empty() || !scene.waterfall_mesh.indices.empty())
             profiling::section("Waterfalls", [&] {
-                park::waterfall_mesh(scene.footpaths.waterfalls, scene.park_clock, scene.waterfall_mesh);
-                std::vector<const park::water::WaterJet*> jets;
+                rct3::park::waterfall_mesh(scene.footpaths.waterfalls, scene.park_clock, scene.waterfall_mesh);
+                std::vector<const rct3::park::water::WaterJet*> jets;
                 for (const ParkScene::Jet& jet : scene.jets)
                     jets.push_back(&jet.water);
-                park::water::jet_mesh(jets, park::eye(scene.camera, scene.seat), scene.park_clock, scene.waterfall_mesh);
+                rct3::park::water::jet_mesh(jets, rct3::park::eye(scene.camera, scene.seat), scene.park_clock, scene.waterfall_mesh);
             });
         profiling::section("LedSigns", [&] { roll_led_signs(device, scene); });
         // A person shows alone on a light ground, turning as the build list's pieces do; the rest in the park.
@@ -635,19 +635,19 @@ namespace rct3::scene
             // A person, or a party, stands alone; anything else is seen where it is in the park.
             const std::array person { scene.shown_person.value_or(0) };
             const std::span<const std::size_t> alone = scene.shown_person ? std::span<const std::size_t>(person) : std::span<const std::size_t>(scene.shown_party);
-            profiling::section("InfoView", [&] { draw_view(device, scene, *info, scene.view_target, scene.view_pixels, "attraction view", !alone.empty() ? kPeopleViewBack : scene.horizon, [&] { !alone.empty() ? draw_people_alone(device, scene, alone) : draw_world(device, scene, park::view_projection(scene.view_camera, 1), scene.light); }); });
+            profiling::section("InfoView", [&] { draw_view(device, scene, *info, scene.view_target, scene.view_pixels, "attraction view", !alone.empty() ? kPeopleViewBack : scene.horizon, [&] { !alone.empty() ? draw_people_alone(device, scene, alone) : draw_world(device, scene, rct3::park::view_projection(scene.view_camera, 1), scene.light); }); });
         }
         // The item being placed, alone on the disc's grey, lit as the park is.
         // shortcut: its see-through parts are drawn in the mesh's order, not after the rest; sort them if a
         // preview shows a part hidden behind glass.
         if (auto pools = scene.desktop->root().find_as<ui::screens::PoolPanel>("pool_panel"); pools && pools->showing() && scene.pooling.item && !scene.pooling.preview.indices.empty())
-            draw_view(device, scene, *pools, scene.pooling.preview_target, scene.pooling.preview_pixels, "pool view", render::hex("#7f7f7f"), [&] { draw_ghost_mesh(device, scene, scene.pooling.preview, park::view_projection(scene.pooling.preview_camera, 1), scene.light, true); });
+            draw_view(device, scene, *pools, scene.pooling.preview_target, scene.pooling.preview_pixels, "pool view", render::hex("#7f7f7f"), [&] { draw_ghost_mesh(device, scene, scene.pooling.preview, rct3::park::view_projection(scene.pooling.preview_camera, 1), scene.light, true); });
         if (auto placing = scene.desktop->root().find_as<ui::screens::InfoPanel>(kPlacingName); placing && placing->showing() && !scene.placing.preview_mesh.indices.empty())
-            profiling::section("PlacingView", [&] { draw_view(device, scene, *placing, scene.placing.preview_target, scene.placing.preview_pixels, "placing view", render::hex("#7f7f7f"), [&] { draw_ghost_mesh(device, scene, scene.placing.preview_bones.empty() ? scene.placing.preview_mesh : scene.placing.preview_moving.mesh, park::view_projection(scene.placing.preview_camera, 1), scene.light, true); }); });
+            profiling::section("PlacingView", [&] { draw_view(device, scene, *placing, scene.placing.preview_target, scene.placing.preview_pixels, "placing view", render::hex("#7f7f7f"), [&] { draw_ghost_mesh(device, scene, scene.placing.preview_bones.empty() ? scene.placing.preview_mesh : scene.placing.preview_moving.mesh, rct3::park::view_projection(scene.placing.preview_camera, 1), scene.light, true); }); });
         if (!scene.photos.empty() && !scene.photo_reading)
             profiling::section("Photo", [&] { draw_photo(device, scene); });
-        const glm::mat4 view_projection = park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across);
-        const glm::vec3 eye = park::eye(scene.camera, scene.seat);
+        const glm::mat4 view_projection = rct3::park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across);
+        const glm::vec3 eye = rct3::park::eye(scene.camera, scene.seat);
         profiling::section("Shadows", [&] { draw_shadow_map(device, scene); });
         profiling::section("Lamps", [&] {
             // Lamps come on as the sky darkens, packed again when the strength has moved enough to see.
@@ -658,15 +658,15 @@ namespace rct3::scene
                 return;
             if (scene.lamps_due || scene.car_lamps || std::abs(strength - scene.lamp_strength) > 0.01f)
             {
-                std::vector<park::Lamp> lamps = scene.lamps;
+                std::vector<rct3::park::Lamp> lamps = scene.lamps;
                 if (scene.car_lamps)
-                    std::ranges::copy(park::object::object_lamps(scene.cars, scene.models, scene.grid, { }, scene.car_places), std::back_inserter(lamps));
+                    std::ranges::copy(rct3::park::object::object_lamps(scene.cars, scene.models, scene.grid, { }, scene.car_places), std::back_inserter(lamps));
                 if (lamps.empty())
                     return;
-                for (park::Lamp& l : lamps)
+                for (rct3::park::Lamp& l : lamps)
                     l.colour *= strength;
                 constexpr float kCell = 8; // Two tiles, a lamp's usual reach
-                const park::LampTexels texels = park::lamp_texels(lamps, kCell);
+                const rct3::park::LampTexels texels = rct3::park::lamp_texels(lamps, kCell);
                 if (scene.lamp_texture && scene.lamp_rows != texels.rows)
                 {
                     device.destroy_texture(scene.lamp_texture);
@@ -675,7 +675,7 @@ namespace rct3::scene
                 const auto bytes = std::as_bytes(std::span(texels.values));
                 if (!scene.lamp_texture)
                 {
-                    auto made = device.create_texture({ .width = park::kLampTexelsAcross, .height = texels.rows, .format = render::TextureFormat::Rgba32Float, .pixels = bytes, .label = "lamps" });
+                    auto made = device.create_texture({ .width = rct3::park::kLampTexelsAcross, .height = texels.rows, .format = render::TextureFormat::Rgba32Float, .pixels = bytes, .label = "lamps" });
                     if (!made)
                         return;
                     scene.lamp_texture = *made;
@@ -705,7 +705,7 @@ namespace rct3::scene
             device.set_wireframe(false);
         });
         if (scene.ambient_occlusion)
-            profiling::section("Occlusion", [&] { draw_park_occlusion(device, scene.occlusion, view_projection, park::projection(aspect(device), scene.seat, scene.seat_across)); });
+            profiling::section("Occlusion", [&] { draw_park_occlusion(device, scene.occlusion, view_projection, rct3::park::projection(aspect(device), scene.seat, scene.seat_across)); });
         else
             scene.occlusion.before = false;
         if (scene.show_scenery)
@@ -722,7 +722,7 @@ namespace rct3::scene
             // the air as the shadow map reaches, beyond which nothing shadows it.
             constexpr float kShaftStrength = 0.22f;
             const float risen = glm::smoothstep(0.0f, 0.1f, glm::normalize(scene.light.sun_direction).y);
-            shafts = { .from_clip = glm::inverse(view_projection), .light = scene.light, .reach = park::shadow_radius(scene.camera.distance), .strength = kShaftStrength * risen };
+            shafts = { .from_clip = glm::inverse(view_projection), .light = scene.light, .reach = rct3::park::shadow_radius(scene.camera.distance), .strength = kShaftStrength * risen };
         }
         if (scene.bloom || shafts.strength > 0.0f)
             profiling::section("Glow", [&] { draw_park_glow(device, scene.glow, scene.bloom, shafts); });

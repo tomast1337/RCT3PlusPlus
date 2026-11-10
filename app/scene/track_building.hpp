@@ -70,8 +70,8 @@ namespace rct3::scene
     /// The models of one track overlay's pieces, loaded as they are first shown.
     struct TrackModels
     {
-        std::unique_ptr<park::AssetIndex> index;
-        std::unique_ptr<park::object::ModelLoader> loader;
+        std::unique_ptr<rct3::park::AssetIndex> index;
+        std::unique_ptr<rct3::park::object::ModelLoader> loader;
         std::set<std::string, std::less<>> missing;      ///< Symbols looked for and not found, so not looked for again
         std::set<std::string, std::less<>> folders_read; ///< Folders every overlay below which was added
 
@@ -85,11 +85,11 @@ namespace rct3::scene
     {
         std::optional<std::size_t> ride; ///< Of the scene's rides; none while idle
         std::string overlay;             ///< The ride's track overlay, as its objects name it
-        std::map<std::string, park::track::PieceCatalogue, std::less<>> catalogues;
+        std::map<std::string, rct3::park::track::PieceCatalogue, std::less<>> catalogues;
         std::map<std::string, TrackModels, std::less<>> models;
         /// The platform pieces of each platform type's file, by the file as a park names it, read once.
         std::map<std::string, std::vector<std::string>, std::less<>> platform_names;
-        std::optional<park::track::TrackTip> tip; ///< None while the track is a closed circuit
+        std::optional<rct3::park::track::TrackTip> tip; ///< None while the track is a closed circuit
         /// The track is built on before its first piece, as a giant slide is from its bottom up to its top.
         bool backward = false;
         bool heights = false; ///< The track's heights are shown while it is built
@@ -101,7 +101,7 @@ namespace rct3::scene
         std::optional<save::RideColours> colours; ///< Painted in the ring's colour tab; else as the piece before
         /// A track with no pieces yet starts on the tile the pointer was last over, turned `turn`.
         std::optional<save::Tile> aim;
-        park::ModelTurn turn;
+        rct3::park::ModelTurn turn;
         /// The height Shift raised the first piece to, which it keeps once Shift is let go; never under the ground.
         std::optional<std::int32_t> raised;
         /// While Shift is held over the first piece: where the pointer met the ground when it went down, and the
@@ -112,19 +112,19 @@ namespace rct3::scene
             std::int32_t height = 0;
         };
         std::optional<Lift> lift;
-        std::vector<park::track::LaidPiece> candidates;
-        park::track::TrackChoice choice;
+        std::vector<rct3::park::track::LaidPiece> candidates;
+        rct3::park::track::TrackChoice choice;
         bool station_first = false; ///< The choice is still to be set to the station of a track being begun
-        std::optional<park::track::LaidPiece> picked;
-        std::optional<park::track::PiecePlacement> ghost;
+        std::optional<rct3::park::track::LaidPiece> picked;
+        std::optional<rct3::park::track::PiecePlacement> ghost;
         /// A piece between two others clicked in the park, by place in the ride's track: the panel offers what
         /// may stand in its place, and building steps on along the track to the piece after it, or before it
         /// when `selected_back`. None while building at the track's open end.
         std::optional<std::size_t> selected;
         bool selected_back = false;
         /// On a ride of two tracks side by side, which open end is built on and with which pieces.
-        park::track::SplitState split = park::track::SplitState::None;
-        park::object::ObjectMesh ghost_mesh;
+        rct3::park::track::SplitState split = rct3::park::track::SplitState::None;
+        rct3::park::object::ObjectMesh ghost_mesh;
         bool off_water = false;      ///< The ghost's piece stands only on water, and some of it is on dry land
         bool clashes = false;        ///< The ghost's piece (or any of a design) takes room a solid item or a path takes, or is off owned land
         bool unowned = false;        ///< Of those, it stands off land the park owns
@@ -162,8 +162,8 @@ namespace rct3::scene
         /// While a design is in hand: why its ghost may not stand, if it may not; the name and tune (by place in
         /// the scene's tunes, from 1; 0 for none) the ride takes once it is laid; and whether the ground it passes
         /// into is cut (as smooth_cuts says) rather than refusing it. Its own round panel shows them.
-        park::DesignRefusal refusal = park::DesignRefusal::None;
-        std::vector<park::pools::PoolOpening> pool_openings; ///< Where the design's ghost meets a pool beside it
+        rct3::park::DesignRefusal refusal = rct3::park::DesignRefusal::None;
+        std::vector<rct3::park::pools::PoolOpening> pool_openings; ///< Where the design's ghost meets a pool beside it
         std::u16string design_title;
         std::size_t design_tune = 0;
         bool cut_ground = false;
@@ -176,8 +176,8 @@ namespace rct3::scene
         std::string preview_item; ///< The piece shown on the round panel's disc
         /// Auto-complete: while it looks for a way, the way nearest the station so far shows as the ghost; the way
         /// it found shows until a second click on the button lays it, or any other action turns it down.
-        std::optional<park::track::CompletionSearch> completing;
-        std::vector<park::track::LaidPlacement> proposed;
+        std::optional<rct3::park::track::CompletionSearch> completing;
+        std::vector<rct3::park::track::LaidPlacement> proposed;
         float clock = 0; ///< Seconds the panel has been open, which the button flashes by
         /// While the ride is testing and its track is not yet a circuit, a see-through copy of its first train
         /// runs from the station to the open end and crashes off it, its see-through wrecks flying, blowing up and
@@ -186,13 +186,13 @@ namespace rct3::scene
         struct GhostTrain
         {
             simulation::Coaster train;
-            std::vector<park::ride::CarSpot> spots;
+            std::vector<rct3::park::ride::CarSpot> spots;
             std::vector<glm::mat4> stood;                   ///< Where each car stood, by car
             float stood_at = 0;                             ///< Where the train's front stood
             float waited = 0;                               ///< Seconds it has stood still short of the open end
             std::vector<simulation::Wreck> wrecks;          ///< Its cars, once crashed, front to back
             random::RandomState dice = random::seeded({ }); ///< How its wrecks tumble
-            park::MovingMeshes meshes;                      ///< The cars, then the joints of those on arms
+            rct3::park::MovingMeshes meshes;                ///< The cars, then the joints of those on arms
             std::vector<std::size_t> joints;                ///< The car each joint rides with, in the order of the meshes
         };
         std::optional<GhostTrain> test;
@@ -201,7 +201,7 @@ namespace rct3::scene
     /// Gives the tracked ride `index` of the scene's rides `trains` trains of `cars` cars, of the kind its first
     /// train already is, with their seats and (in car_fits) how each car of a train sits on the track. On a course
     /// with a station the cars are as many as its shortest station takes, and the trains as many as the course
-    /// takes (park::track::trains_fitting); a shuttle runs one. Whether its riders sit on arms.
+    /// takes (rct3::park::track::trains_fitting); a shuttle runs one. Whether its riders sit on arms.
     bool fit_trains(ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars);
 
     /// Reads, the first time it is asked of the tracked ride `index`, the trains its kind offers and the car
@@ -219,7 +219,7 @@ namespace rct3::scene
 
     /// What boats cannot sail through or under: what stands in the park's water or hangs low over it, paths' decks
     /// among them.
-    [[nodiscard]] park::path::SolidTiles boat_obstacles(const ParkScene& scene);
+    [[nodiscard]] rct3::park::path::SolidTiles boat_obstacles(const ParkScene& scene);
 
     /// Gives the tracked ride `index` new trains as fit_trains does (its kind's first when it has none), stood at
     /// its station, and has the park run them and draw their cars. False, and nothing changed, while riders are
@@ -233,7 +233,7 @@ namespace rct3::scene
 
     /// Adds a new tracked ride of `item` (a ride built piece by piece) to the park, closed and without pieces, and
     /// opens the construction panel on it. False when its pieces cannot be found.
-    bool new_tracked_ride(ParkScene& scene, const park::BuildItem& item, const ui::InterfaceAssets& assets);
+    bool new_tracked_ride(ParkScene& scene, const rct3::park::BuildItem& item, const ui::InterfaceAssets& assets);
 
     /// Opens the construction panel on the tracked ride `ride` of the scene's rides, its pieces coming from
     /// the track overlay `overlay` (as a park names it). False when the ride has no track or the overlay
@@ -241,7 +241,7 @@ namespace rct3::scene
     bool open_track_building(ParkScene& scene, std::size_t ride, std::string overlay, const ui::InterfaceAssets& assets);
 
     /// Gives each station piece of the tracked ride `ride` the platform piece its type, its place in the
-    /// station and the doors beside it call for (park::ride::platform_symbol), adding those it lacks. Nothing for a
+    /// station and the doors beside it call for (rct3::park::ride::platform_symbol), adding those it lacks. Nothing for a
     /// ride without a platform type.
     void update_platforms(ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
 
@@ -269,7 +269,7 @@ namespace rct3::scene
     void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed);
 
     /// The arrows where the picked piece starts and ends (see park/build_arrows.hpp); empty while no piece is.
-    [[nodiscard]] park::TerrainMesh track_arrows(const ParkScene& scene);
+    [[nodiscard]] rct3::park::TerrainMesh track_arrows(const ParkScene& scene);
 
     /// Draws the ghost of the picked piece and its arrows, and any test train, with `transform` and `light`.
     void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
@@ -294,7 +294,7 @@ namespace rct3::scene
     void wait_for_build(ParkScene& scene);
 
     /// Paints and uploads the pictures of `ghost` the scene does not have yet.
-    void ghost_textures(render::Device& device, ParkScene& scene, const park::object::ObjectMesh& ghost);
+    void ghost_textures(render::Device& device, ParkScene& scene, const rct3::park::object::ObjectMesh& ghost);
 
     /// Ghosts' tints: bluish where the piece can be built, red where it cannot.
     inline constexpr glm::vec4 kGhostTint { 0.45f, 0.75f, 1.0f, 0.7f };
@@ -305,6 +305,6 @@ namespace rct3::scene
     [[nodiscard]] render::SceneLight ghost_light(render::SceneLight light, float clock);
     /// Draws `mesh` see-through with `transform` and `light`; `solid`, as a built object is drawn instead, for a
     /// picture of it alone.
-    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::object::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light, bool solid = false);
+    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const rct3::park::object::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light, bool solid = false);
 
 } // namespace rct3::scene

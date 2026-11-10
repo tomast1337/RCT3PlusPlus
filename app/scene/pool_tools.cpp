@@ -46,9 +46,9 @@ namespace rct3::scene
         /// What the pool panel offers to pick, each in its order.
         struct Offered
         {
-            std::vector<const park::BuildItem*> extras; ///< The pool type's extras, its high diving board and spa pool last
-            std::vector<const park::BuildItem*> rooms;  ///< Every changing room
-            std::vector<const park::BuildItem*> stairs; ///< On the paths page: the ramps, its spiral staircase last
+            std::vector<const rct3::park::BuildItem*> extras; ///< The pool type's extras, its high diving board and spa pool last
+            std::vector<const rct3::park::BuildItem*> rooms;  ///< Every changing room
+            std::vector<const rct3::park::BuildItem*> stairs; ///< On the paths page: the ramps, its spiral staircase last
         };
 
         /// What the pool panel offers; nothing while the build items are still being read. An extra that changes
@@ -59,26 +59,26 @@ namespace rct3::scene
             const auto& items = scene.build.items;
             if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
                 return out;
-            const park::BuildItem* spa = nullptr;
-            const park::BuildItem* dive = nullptr;
-            const park::BuildItem* stairs = nullptr;
-            for (const park::BuildItem& i : items.get())
+            const rct3::park::BuildItem* spa = nullptr;
+            const rct3::park::BuildItem* dive = nullptr;
+            const rct3::park::BuildItem* stairs = nullptr;
+            for (const rct3::park::BuildItem& i : items.get())
             {
-                if (i.list != park::BuildList::Pools)
+                if (i.list != rct3::park::BuildList::Pools)
                     continue;
                 // shortcut: the default pool type only; offer the others once the panel can choose a type.
-                if (i.kind == park::BuildKind::PoolRoom)
+                if (i.kind == rct3::park::BuildKind::PoolRoom)
                     out.rooms.push_back(&i);
-                else if (i.overlay == park::kPoolOverlay && i.kind == park::BuildKind::PoolExtra)
-                    (park::pools::pool_extra_fit(i.pool_extra).step > 0 ? out.stairs : out.extras).push_back(&i);
-                else if (i.overlay == park::kPoolOverlay && i.symbol == park::kPoolJacuzzi)
+                else if (i.overlay == rct3::park::kPoolOverlay && i.kind == rct3::park::BuildKind::PoolExtra)
+                    (rct3::park::pools::pool_extra_fit(i.pool_extra).step > 0 ? out.stairs : out.extras).push_back(&i);
+                else if (i.overlay == rct3::park::kPoolOverlay && i.symbol == rct3::park::kPoolJacuzzi)
                     spa = &i;
-                else if (i.overlay == park::kPoolOverlay && i.symbol == park::kPoolHighDive)
+                else if (i.overlay == rct3::park::kPoolOverlay && i.symbol == rct3::park::kPoolHighDive)
                     dive = &i;
-                else if (i.overlay == park::kPoolOverlay && i.symbol == park::kPoolStairs)
+                else if (i.overlay == rct3::park::kPoolOverlay && i.symbol == rct3::park::kPoolStairs)
                     stairs = &i;
             }
-            for (const park::BuildItem* last : { dive, spa })
+            for (const rct3::park::BuildItem* last : { dive, spa })
                 if (last != nullptr)
                     out.extras.push_back(last);
             if (stairs != nullptr)
@@ -98,13 +98,13 @@ namespace rct3::scene
                 return;
             const ui::screens::PoolEditor& e = panel->editor();
             scene.pooling.height = e.snap ? std::nullopt : std::optional(e.height);
-            scene.pooling.edge = static_cast<park::pools::PoolEdge>(std::clamp(e.edge, 0, 3));
+            scene.pooling.edge = static_cast<rct3::park::pools::PoolEdge>(std::clamp(e.edge, 0, 3));
             if (e.grid != scene.pooling.grid)
                 scene.show_grid = scene.pooling.grid = e.grid;
             if (!panel->take_change())
                 return;
             const Offered offer = offered(scene);
-            const park::BuildItem* item = nullptr;
+            const rct3::park::BuildItem* item = nullptr;
             if (const auto p = panel->placing())
             {
                 const auto& from = p->first == ui::screens::PoolPage::Extras ? offer.extras : p->first == ui::screens::PoolPage::Paths ? offer.stairs : offer.rooms;
@@ -113,11 +113,11 @@ namespace rct3::scene
             else if (const auto& items = scene.build.items; items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
             {
                 // The paths page's tool lays the piece of the slope chosen.
-                const park::PathSlope slope = scene.pooling.trail.slope;
-                const std::string_view path = slope == park::PathSlope::Flat ? park::kPoolPath : slope == park::PathSlope::Up || slope == park::PathSlope::Down ? park::kPoolPathSlope : park::kPoolPathStairs;
-                constexpr std::array<std::string_view, 3> kTools { "", park::kPoolTiles, park::kPoolDelete };
-                const std::string_view symbol = e.mode == ui::screens::PoolMode::Water ? park::kPoolWater[static_cast<std::size_t>(std::clamp(e.depth, 1, 3) - 1)] : e.mode == ui::screens::PoolMode::Path ? path : kTools[std::to_underlying(e.mode)];
-                const auto found = std::ranges::find_if(items.get(), [&](const park::BuildItem& i) { return i.list == park::BuildList::Pools && i.overlay == park::kPoolOverlay && i.symbol == symbol; });
+                const rct3::park::PathSlope slope = scene.pooling.trail.slope;
+                const std::string_view path = slope == rct3::park::PathSlope::Flat ? rct3::park::kPoolPath : slope == rct3::park::PathSlope::Up || slope == rct3::park::PathSlope::Down ? rct3::park::kPoolPathSlope : rct3::park::kPoolPathStairs;
+                constexpr std::array<std::string_view, 3> kTools { "", rct3::park::kPoolTiles, rct3::park::kPoolDelete };
+                const std::string_view symbol = e.mode == ui::screens::PoolMode::Water ? rct3::park::kPoolWater[static_cast<std::size_t>(std::clamp(e.depth, 1, 3) - 1)] : e.mode == ui::screens::PoolMode::Path ? path : kTools[std::to_underlying(e.mode)];
+                const auto found = std::ranges::find_if(items.get(), [&](const rct3::park::BuildItem& i) { return i.list == rct3::park::BuildList::Pools && i.overlay == rct3::park::kPoolOverlay && i.symbol == symbol; });
                 item = found != items.get().end() ? &*found : nullptr;
             }
             if (item != nullptr)
@@ -131,40 +131,40 @@ namespace rct3::scene
         }
 
         /// The pools with the area marked laid or taken up, and what that costs; below zero, money back.
-        std::pair<park::pools::PoolMap, std::int64_t> marked_pools(const ParkScene& scene, save::Tile a, save::Tile b)
+        std::pair<rct3::park::pools::PoolMap, std::int64_t> marked_pools(const ParkScene& scene, save::Tile a, save::Tile b)
         {
-            const park::BuildItem& item = *scene.pooling.item;
-            park::pools::PoolMap map = scene.pools;
+            const rct3::park::BuildItem& item = *scene.pooling.item;
+            rct3::park::pools::PoolMap map = scene.pools;
             const auto prices = std::span<const std::int32_t, 18>(item.pool_prices.data(), 18);
             // Where squares are stacked, the one on top where the drag began is taken up, and those level with it.
             const auto begun = scene.pools.at(a.col, a.row);
-            if (item.symbol == park::kPoolDelete)
+            if (item.symbol == rct3::park::kPoolDelete)
             {
-                const std::int64_t cost = park::pools::take_up_pool(map, prices, a, b, begun ? std::optional(begun->surface) : std::nullopt);
+                const std::int64_t cost = rct3::park::pools::take_up_pool(map, prices, a, b, begun ? std::optional(begun->surface) : std::nullopt);
                 return { std::move(map), cost };
             }
             // Raised or lowered with Shift, the surface is where Shift took it. Snapped to the ground, it is the
             // ground's where the drag began, or the surface of the pool begun there; else the height the pool panel
             // sets. Raised, a pool stands over the ground, which stays where it is (pools_changed).
             const std::int32_t surface = scene.pooling.lifted.value_or(scene.pooling.height.value_or(begun ? begun->surface : static_cast<std::int32_t>(std::lround(scene.grid.at(a.col, a.row).max_height()))));
-            const auto water = std::ranges::find(park::kPoolWater, item.symbol);
-            const park::pools::PoolKind kind = water != park::kPoolWater.end() ? park::pools::PoolKind::Water
-                : item.symbol == park::kPoolJacuzzi                            ? park::pools::PoolKind::Jacuzzi
-                : item.symbol == park::kPoolHighDive                           ? park::pools::PoolKind::HighDive
-                : item.symbol == park::kPoolStairs                             ? park::pools::PoolKind::Stairs
-                : item.symbol == park::kPoolPath                               ? park::pools::PoolKind::Path
-                : item.symbol == park::kPoolPathSlope                          ? park::pools::PoolKind::PathSlope
-                : item.symbol == park::kPoolPathStairs                         ? park::pools::PoolKind::PathStairs
-                                                                               : park::pools::PoolKind::Tile;
-            const bool climbs = kind == park::pools::PoolKind::HighDive || kind == park::pools::PoolKind::Stairs;
-            const bool turned = climbs || kind == park::pools::PoolKind::PathSlope || kind == park::pools::PoolKind::PathStairs;
+            const auto water = std::ranges::find(rct3::park::kPoolWater, item.symbol);
+            const rct3::park::pools::PoolKind kind = water != rct3::park::kPoolWater.end() ? rct3::park::pools::PoolKind::Water
+                : item.symbol == rct3::park::kPoolJacuzzi                                  ? rct3::park::pools::PoolKind::Jacuzzi
+                : item.symbol == rct3::park::kPoolHighDive                                 ? rct3::park::pools::PoolKind::HighDive
+                : item.symbol == rct3::park::kPoolStairs                                   ? rct3::park::pools::PoolKind::Stairs
+                : item.symbol == rct3::park::kPoolPath                                     ? rct3::park::pools::PoolKind::Path
+                : item.symbol == rct3::park::kPoolPathSlope                                ? rct3::park::pools::PoolKind::PathSlope
+                : item.symbol == rct3::park::kPoolPathStairs                               ? rct3::park::pools::PoolKind::PathStairs
+                                                                                           : rct3::park::pools::PoolKind::Tile;
+            const bool climbs = kind == rct3::park::pools::PoolKind::HighDive || kind == rct3::park::pools::PoolKind::Stairs;
+            const bool turned = climbs || kind == rct3::park::pools::PoolKind::PathSlope || kind == rct3::park::pools::PoolKind::PathStairs;
             // Paved squares take the normal depth, the one the pool type prices them at.
             // Paths go no deeper than their surface.
-            const std::int32_t depth = water != park::kPoolWater.end() ? static_cast<std::int32_t>(water - park::kPoolWater.begin()) + 1 : park::pools::is_pool_path(kind) ? 0 : 2;
-            std::vector<park::pools::PoolSquare> squares;
-            const auto square = [&](std::int32_t col, std::int32_t row) { squares.push_back({ .col = col, .row = row, .kind = kind, .surface = surface, .depth = depth, .board = climbs ? scene.pooling.board : 0, .side = turned ? scene.pooling.side : park::Side { }, .edge = scene.pooling.edge }); };
+            const std::int32_t depth = water != rct3::park::kPoolWater.end() ? static_cast<std::int32_t>(water - rct3::park::kPoolWater.begin()) + 1 : rct3::park::pools::is_pool_path(kind) ? 0 : 2;
+            std::vector<rct3::park::pools::PoolSquare> squares;
+            const auto square = [&](std::int32_t col, std::int32_t row) { squares.push_back({ .col = col, .row = row, .kind = kind, .surface = surface, .depth = depth, .board = climbs ? scene.pooling.board : 0, .side = turned ? scene.pooling.side : rct3::park::Side { }, .edge = scene.pooling.edge }); };
             const auto area = marked(a, b);
-            if (kind == park::pools::PoolKind::Path)
+            if (kind == rct3::park::pools::PoolKind::Path)
             {
                 // Along the row where the drag began, then down the column where it is.
                 // shortcut: the marks and the check of the land owned cover the drag's whole rectangle; mark the L
@@ -179,32 +179,32 @@ namespace rct3::scene
                 for (std::int32_t row = area[1]; row <= area[3]; ++row)
                     for (std::int32_t col = area[0]; col <= area[2]; ++col)
                         square(col, row);
-            const std::int64_t cost = park::pools::lay_pool(map, prices, squares);
+            const std::int64_t cost = rct3::park::pools::lay_pool(map, prices, squares);
             return { std::move(map), cost };
         }
 
         /// The station platform squares of the pool rides, those ending in a pool or back at a station, whose decks a
         /// pool path trail may start from.
-        std::vector<park::pools::SlidePlatform> slide_platforms(const ParkScene& scene)
+        std::vector<rct3::park::pools::SlidePlatform> slide_platforms(const ParkScene& scene)
         {
-            std::vector<park::pools::SlidePlatform> out;
+            std::vector<rct3::park::pools::SlidePlatform> out;
             for (std::size_t i = 0; i < scene.rides.rides.size() && i < scene.courses.size(); ++i)
                 if (const save::Ride& ride = scene.rides.rides[i]; !ride.base.demolished && ride.track && i < scene.track_rules.size() && scene.track_rules[i].pool_ride)
                     for (const save::TrackPiece& p : ride.track->pieces)
                         if (p.platform)
-                            out.push_back({ .col = p.platform->tile_x, .row = p.platform->tile_z, .height = p.platform->height, .turn = park::ModelTurn::from(p.platform->direction) });
+                            out.push_back({ .col = p.platform->tile_x, .row = p.platform->tile_z, .height = p.platform->height, .turn = rct3::park::ModelTurn::from(p.platform->direction) });
             return out;
         }
 
         /// Where the pointer is on the grid, in tiles with fractions: on the top of a pool square or of one of
         /// `decks` where one is in the way, as the player sees it, else on the ground; the ground under the pools
         /// is dug down out of sight.
-        std::optional<glm::vec2> pointed_spot(const ParkScene& scene, ui::Point at, ui::Point size, std::span<const park::pools::SlidePlatform> decks)
+        std::optional<glm::vec2> pointed_spot(const ParkScene& scene, ui::Point at, ui::Point size, std::span<const rct3::park::pools::SlidePlatform> decks)
         {
             if (size.x <= 0 || size.y <= 0)
                 return std::nullopt;
-            const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
-            std::optional<float> nearest = park::object::ground_hit(ray, scene.grid);
+            const rct3::park::Ray ray = rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
+            std::optional<float> nearest = rct3::park::object::ground_hit(ray, scene.grid);
             const save::TerrainGrid& g = scene.grid;
             const auto top = [&](std::int32_t col, std::int32_t row, std::int32_t height) {
                 const float along = (static_cast<float>(height) - ray.origin.y) / ray.direction.y;
@@ -213,9 +213,9 @@ namespace rct3::scene
                 if (along > 0 && on && (!nearest || along < *nearest))
                     nearest = along;
             };
-            for (const park::pools::PoolSquare& s : scene.pools.squares)
+            for (const rct3::park::pools::PoolSquare& s : scene.pools.squares)
                 top(s.col, s.row, s.surface);
-            for (const park::pools::SlidePlatform& d : decks)
+            for (const rct3::park::pools::SlidePlatform& d : decks)
                 top(d.col, d.row, d.height);
             if (!nearest)
                 return std::nullopt;
@@ -225,24 +225,24 @@ namespace rct3::scene
         }
 
         /// Draws the marks over the area, at the pools' surface where squares are, and remembers them.
-        void draw_marks(render::Device& device, ParkScene& scene, std::optional<std::array<std::int32_t, 4>> marks, park::TilePart part, bool ok)
+        void draw_marks(render::Device& device, ParkScene& scene, std::optional<std::array<std::int32_t, 4>> marks, rct3::park::TilePart part, bool ok)
         {
             const std::int32_t look = std::to_underlying(part) * 2 + (ok ? 1 : 0);
             if (marks == scene.pooling.drawn && look == scene.pooling.drawn_look)
                 return;
-            park::TerrainMesh mesh;
+            rct3::park::TerrainMesh mesh;
             if (marks)
             {
                 // The ground under the squares is dug out of sight: the marks are drawn as on their surface.
                 std::vector<std::pair<save::Tile, std::array<float, 4>>> dug;
-                for (const park::pools::PoolSquare& s : scene.pools.squares)
+                for (const rct3::park::pools::PoolSquare& s : scene.pools.squares)
                     if (s.col >= (*marks)[0] && s.col <= (*marks)[2] && s.row >= (*marks)[1] && s.row <= (*marks)[3])
                     {
                         auto& corners = scene.grid.at(s.col, s.row).corners;
                         dug.emplace_back(save::Tile { s.col, s.row }, corners);
                         corners.fill(static_cast<float>(s.surface));
                     }
-                park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], part, ok ? kMarkColour : kRefusedColour);
+                rct3::park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], part, ok ? kMarkColour : kRefusedColour);
                 // Backwards: a tile with squares stacked is in it more than once.
                 for (const auto& [tile, corners] : std::views::reverse(dug))
                     scene.grid.at(tile.col, tile.row).corners = corners;
@@ -266,11 +266,11 @@ namespace rct3::scene
             if (t.preview_of != symbol && load_object_model(scene, scene.placing.models, assets, alone))
             {
                 t.preview_of = symbol;
-                t.preview = park::object::object_mesh(std::span(&alone, 1), scene.models, scene.grid);
+                t.preview = rct3::park::object::object_mesh(std::span(&alone, 1), scene.models, scene.grid);
                 ghost_textures(device, scene, t.preview);
             }
             if (t.preview_of == symbol)
-                t.preview_camera = park::framed(park::object::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
+                t.preview_camera = rct3::park::framed(rct3::park::object::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
         }
 
         /// Draws `ghost` see-through, tinted as refused unless `ok`; none takes the ghost away.
@@ -282,8 +282,8 @@ namespace rct3::scene
                 return;
             t.ghost_of = ghost;
             t.ghost_ok = ok;
-            t.ghost = ghost ? park::object::object_mesh(std::span(&*ghost, 1), scene.models, scene.grid) : park::object::ObjectMesh { };
-            for (park::GroundVertex& v : t.ghost.vertices)
+            t.ghost = ghost ? rct3::park::object::object_mesh(std::span(&*ghost, 1), scene.models, scene.grid) : rct3::park::object::ObjectMesh { };
+            for (rct3::park::GroundVertex& v : t.ghost.vertices)
                 v.colour *= ok ? kGhostTint : kRefusedTint;
             ghost_textures(device, scene, t.ghost);
         }
@@ -293,16 +293,16 @@ namespace rct3::scene
         void update_extra(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<glm::vec2> spot, bool down)
         {
             PoolTool& t = scene.pooling;
-            const park::BuildItem& item = *t.item;
+            const rct3::park::BuildItem& item = *t.item;
             const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
-            const park::pools::PoolExtraFit fit = park::pools::pool_extra_fit(item.pool_extra);
-            const bool room = item.kind == park::BuildKind::PoolRoom;
-            const auto fits_at = [&](park::Side side) { return tile && (room ? park::pools::pool_room_fits(scene.pools, tile->col, tile->row, side) : park::pools::pool_extra_fits(scene.pools, tile->col, tile->row, fit, side)); };
+            const rct3::park::pools::PoolExtraFit fit = rct3::park::pools::pool_extra_fit(item.pool_extra);
+            const bool room = item.kind == rct3::park::BuildKind::PoolRoom;
+            const auto fits_at = [&](rct3::park::Side side) { return tile && (room ? rct3::park::pools::pool_room_fits(scene.pools, tile->col, tile->row, side) : rct3::park::pools::pool_extra_fits(scene.pools, tile->col, tile->row, fit, side)); };
             // It takes the side nearest the pointer that it fits against, as a bench on a path does; the turn keys
             // turn it only where it fits every way or none.
-            const auto nearest = tile ? park::object::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, fits_at) : std::nullopt;
-            const park::Side side = nearest && !std::ranges::all_of(park::kSides, fits_at) ? *nearest : t.side;
-            const bool fits = fits_at(side) && (!room || park::owned_outright(scene.grid.at(tile->col, tile->row)));
+            const auto nearest = tile ? rct3::park::object::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, fits_at) : std::nullopt;
+            const rct3::park::Side side = nearest && !std::ranges::all_of(rct3::park::kSides, fits_at) ? *nearest : t.side;
+            const bool fits = fits_at(side) && (!room || rct3::park::owned_outright(scene.grid.at(tile->col, tile->row)));
             const bool ok = fits && (!scene.park.cash || *scene.park.cash >= item.price);
             if (down && tile)
                 t.corner = tile;
@@ -328,7 +328,7 @@ namespace rct3::scene
                             .col = tile->col,
                             .row = tile->row,
                             .side = side,
-                            .refund = loaded ? scene.models.at(park::object::model_key(model)).removal_cost : 0,
+                            .refund = loaded ? scene.models.at(rct3::park::object::model_key(model)).removal_cost : 0,
                             .fit = fit,
                         });
                     ++scene.built;
@@ -341,18 +341,18 @@ namespace rct3::scene
                 else if (fits)
                     simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(kNoMoney) });
             }
-            draw_marks(device, scene, tile ? std::optional(marked(*tile, *tile)) : std::nullopt, park::TilePart::Whole, ok);
+            draw_marks(device, scene, tile ? std::optional(marked(*tile, *tile)) : std::nullopt, rct3::park::TilePart::Whole, ok);
             turn_preview(device, scene, assets, item.symbol, item.overlay);
             // The ghost: the extra or room as it would stand there, on its square's surface, else on the ground.
             std::optional<save::PlacedObject> ghost;
             if (tile)
             {
-                park::pools::PoolMap alone { .squares = scene.pools.squares };
+                rct3::park::pools::PoolMap alone { .squares = scene.pools.squares };
                 if (room)
                     alone.rooms.push_back({ .symbol = item.symbol, .overlay = item.overlay, .col = tile->col, .row = tile->row, .side = side });
                 else
                     alone.extras.push_back({ .symbol = item.symbol, .overlay = item.overlay, .col = tile->col, .row = tile->row, .side = side, .fit = fit });
-                ghost = park::pools::pool_objects(alone, item.overlay, 0).back();
+                ghost = rct3::park::pools::pool_objects(alone, item.overlay, 0).back();
                 const bool on_square = room ? fits : scene.pools.at(tile->col, tile->row).has_value();
                 if (!on_square)
                     ghost->base_height = static_cast<std::int32_t>(std::lround(scene.grid.at(tile->col, tile->row).max_height()));
@@ -368,7 +368,7 @@ namespace rct3::scene
         {
             for (std::int32_t row = area[1]; row <= area[3]; ++row)
                 for (std::int32_t col = area[0]; col <= area[2]; ++col)
-                    if (!scene.grid.contains(col, row) || !park::owned_outright(scene.grid.at(col, row)))
+                    if (!scene.grid.contains(col, row) || !rct3::park::owned_outright(scene.grid.at(col, row)))
                         return false;
             return !scene.park.cash || cost <= 0 || *scene.park.cash >= cost;
         }
@@ -392,9 +392,9 @@ namespace rct3::scene
     namespace
     {
         /// Whether `item` is the paths page's tool.
-        bool laying_paths(const park::BuildItem& item)
+        bool laying_paths(const rct3::park::BuildItem& item)
         {
-            return item.symbol == park::kPoolPath || item.symbol == park::kPoolPathSlope || item.symbol == park::kPoolPathStairs;
+            return item.symbol == rct3::park::kPoolPath || item.symbol == rct3::park::kPoolPathSlope || item.symbol == rct3::park::kPoolPathStairs;
         }
 
         /// Acts on the paths page's control pressed: turns and slopes change the trail, and laying or taking a
@@ -407,32 +407,32 @@ namespace rct3::scene
             if (!panel || !panel->showing())
                 return;
             const auto control = panel->take_path_control();
-            const park::PathStep step = control ? park::press(t.trail, static_cast<park::PathControl>(*control)) : park::PathStep::None;
-            if (step != park::PathStep::None && t.item && t.item->pool_prices.size() == 18)
+            const rct3::park::PathStep step = control ? rct3::park::press(t.trail, static_cast<rct3::park::PathControl>(*control)) : rct3::park::PathStep::None;
+            if (step != rct3::park::PathStep::None && t.item && t.item->pool_prices.size() == 18)
             {
                 const auto prices = std::span<const std::int32_t, 18>(t.item->pool_prices.data(), 18);
                 const bool redraw = put_back(scene);
                 t.working.reset();
                 std::optional<save::Tile> done;
                 std::int64_t cost = 0;
-                if (const auto piece = park::pools::next_pool_path(t.trail); step == park::PathStep::Lay && piece)
+                if (const auto piece = rct3::park::pools::next_pool_path(t.trail); step == rct3::park::PathStep::Lay && piece)
                 {
                     const save::Tile spot { piece->square.col, piece->square.row };
-                    park::pools::PoolMap map = scene.pools;
-                    cost = park::pools::lay_pool(map, prices, std::span(&piece->square, 1));
+                    rct3::park::pools::PoolMap map = scene.pools;
+                    cost = rct3::park::pools::lay_pool(map, prices, std::span(&piece->square, 1));
                     if (allowed(scene, marked(spot, spot), cost))
                     {
                         t.trail_ground.resize(t.trail.trail.size());
                         t.trail_ground.push_back(scene.grid.at(spot.col, spot.row).corners);
                         scene.pools = std::move(map);
                         t.trail.trail.push_back({ .spot = spot, .laid = 1, .height = piece->end });
-                        t.trail.on_slope = piece->square.kind != park::pools::PoolKind::Path;
+                        t.trail.on_slope = piece->square.kind != rct3::park::pools::PoolKind::Path;
                         done = spot;
                     }
                     else if (allowed(scene, marked(spot, spot), 0))
                         simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(kNoMoney) });
                 }
-                else if (step == park::PathStep::Remove && !t.trail.trail.empty() && t.trail.trail.back().laid != 0)
+                else if (step == rct3::park::PathStep::Remove && !t.trail.trail.empty() && t.trail.trail.back().laid != 0)
                 {
                     // The trail steps back; the piece goes when it is still a pool path, the ground put back as it was
                     // before the trail laid it, else left at its surface.
@@ -440,18 +440,18 @@ namespace rct3::scene
                     t.trail.trail.pop_back();
                     const auto ground = t.trail_ground.size() > t.trail.trail.size() ? t.trail_ground[t.trail.trail.size()] : std::nullopt;
                     t.trail_ground.resize(t.trail.trail.size());
-                    if (const auto square = scene.pools.at(spot.col, spot.row); square && park::pools::is_pool_path(square->kind))
+                    if (const auto square = scene.pools.at(spot.col, spot.row); square && rct3::park::pools::is_pool_path(square->kind))
                     {
                         auto& corners = scene.grid.at(spot.col, spot.row).corners;
                         if (ground)
                             corners = *ground;
                         else if (square->ground)
                             corners = *square->ground;
-                        cost = park::pools::take_up_pool(scene.pools, prices, spot, spot, square->surface);
+                        cost = rct3::park::pools::take_up_pool(scene.pools, prices, spot, spot, square->surface);
                         done = spot;
                     }
                     const auto back = t.trail.trail.empty() ? std::nullopt : scene.pools.at(t.trail.trail.back().spot.col, t.trail.trail.back().spot.row);
-                    t.trail.on_slope = back && back->kind != park::pools::PoolKind::Path;
+                    t.trail.on_slope = back && back->kind != rct3::park::pools::PoolKind::Path;
                 }
                 if (done)
                 {
@@ -463,9 +463,9 @@ namespace rct3::scene
                     scene.supports.stale = true;
                 }
                 if (done || redraw)
-                    pools_changed(device, scene, assets, done ? std::optional(park::TileRect { done->col, done->row, done->col + 1, done->row + 1 }.grown(1)) : std::nullopt);
+                    pools_changed(device, scene, assets, done ? std::optional(rct3::park::TileRect { done->col, done->row, done->col + 1, done->row + 1 }.grown(1)) : std::nullopt);
                 // Following, the camera glides to the trail's next square as the path panel's does.
-                if (const auto next = park::next_spot(t.trail); done && next && panel->following())
+                if (const auto next = rct3::park::next_spot(t.trail); done && next && panel->following())
                 {
                     const std::int32_t height = t.trail.trail.empty() ? t.trail.start_height.value_or(0) : t.trail.trail.back().height;
                     scene.footpaths.camera_goal = glm::vec3 { scene.grid.world_x(next->col) + scene.grid.tile_size_x / 2, static_cast<float>(height), scene.grid.world_z(next->row) + scene.grid.tile_size_z / 2 };
@@ -473,12 +473,12 @@ namespace rct3::scene
             }
             std::array<bool, ui::screens::kPoolPathControls> usable;
             usable.fill(true);
-            const bool going = park::next_spot(t.trail).has_value();
-            usable[std::to_underlying(park::PathControl::TurnLeft)] = going && park::can_turn(t.trail);
-            usable[std::to_underlying(park::PathControl::TurnRight)] = going && park::can_turn(t.trail);
-            usable[std::to_underlying(park::PathControl::Straight)] = going;
-            usable[std::to_underlying(park::PathControl::Remove)] = !t.trail.trail.empty() && t.trail.trail.back().laid != 0;
-            panel->set_path_controls(usable, std::to_underlying(park::slope_control(t.trail.slope)));
+            const bool going = rct3::park::next_spot(t.trail).has_value();
+            usable[std::to_underlying(rct3::park::PathControl::TurnLeft)] = going && rct3::park::can_turn(t.trail);
+            usable[std::to_underlying(rct3::park::PathControl::TurnRight)] = going && rct3::park::can_turn(t.trail);
+            usable[std::to_underlying(rct3::park::PathControl::Straight)] = going;
+            usable[std::to_underlying(rct3::park::PathControl::Remove)] = !t.trail.trail.empty() && t.trail.trail.back().laid != 0;
+            panel->set_path_controls(usable, std::to_underlying(rct3::park::slope_control(t.trail.slope)));
         }
     } // namespace
 
@@ -496,7 +496,7 @@ namespace rct3::scene
     {
 
         /// Lays `map`, the pools with the work done, in their place, keeping what to put back.
-        void lay_work(ParkScene& scene, park::pools::PoolMap map)
+        void lay_work(ParkScene& scene, rct3::park::pools::PoolMap map)
         {
             PoolTool& t = scene.pooling;
             const auto area = marked(t.working->first, t.working->second);
@@ -504,16 +504,16 @@ namespace rct3::scene
                 for (std::int32_t col = area[0]; col <= area[2]; ++col)
                     t.dug.emplace_back(save::Tile { col, row }, scene.grid.at(col, row).corners);
             // The ground a square taken up had dug is put back.
-            for (const park::pools::PoolSquare& s : scene.pools.squares)
+            for (const rct3::park::pools::PoolSquare& s : scene.pools.squares)
                 if (const auto now = map.at(s.col, s.row, s.surface); s.ground && (!now || now->surface != s.surface))
                     scene.grid.at(s.col, s.row).corners = *s.ground;
             t.before = std::exchange(scene.pools, std::move(map));
         }
     } // namespace
 
-    bool start_pooling(ParkScene& scene, const park::BuildItem& item)
+    bool start_pooling(ParkScene& scene, const rct3::park::BuildItem& item)
     {
-        if ((item.kind != park::BuildKind::PoolSquare || item.pool_prices.size() != 18) && item.kind != park::BuildKind::PoolExtra && item.kind != park::BuildKind::PoolRoom)
+        if ((item.kind != rct3::park::BuildKind::PoolSquare || item.pool_prices.size() != 18) && item.kind != rct3::park::BuildKind::PoolExtra && item.kind != rct3::park::BuildKind::PoolRoom)
             return false;
         const bool redraw = put_back(scene) || scene.pooling.redraw;
         scene.pooling = PoolTool { .item = item, .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .height = scene.pooling.height, .grid = scene.pooling.grid, .edge = scene.pooling.edge, .redraw = redraw, .side = scene.pooling.side, .preview_target = scene.pooling.preview_target, .preview_pixels = scene.pooling.preview_pixels, .trail = std::move(scene.pooling.trail), .trail_ground = std::move(scene.pooling.trail_ground) };
@@ -542,9 +542,9 @@ namespace rct3::scene
         }
         const Offered offer = offered(scene);
         // Each choice's help is its name, and its price where it has one.
-        const auto choices = [&](const std::vector<const park::BuildItem*>& items) {
+        const auto choices = [&](const std::vector<const rct3::park::BuildItem*>& items) {
             std::vector<ui::screens::PoolChoice> out;
-            for (const park::BuildItem* i : items)
+            for (const rct3::park::BuildItem* i : items)
                 out.push_back({ i->icon, std::u16string(assets.strings->get(i->name_text)) + (i->price > 0 ? u" : " + ui::money_text(currency, i->price) : std::u16string { }) });
             return out;
         };
@@ -559,7 +559,7 @@ namespace rct3::scene
         // The pointer finds the park as it was before the work shown, which moves with it.
         swap_pool_work(scene);
         // The paths page's trails start from pool slides' platforms too.
-        const std::vector<park::pools::SlidePlatform> decks = t.item && laying_paths(*t.item) ? slide_platforms(scene) : std::vector<park::pools::SlidePlatform> { };
+        const std::vector<rct3::park::pools::SlidePlatform> decks = t.item && laying_paths(*t.item) ? slide_platforms(scene) : std::vector<rct3::park::pools::SlidePlatform> { };
         auto spot = t.item && !over ? pointed_spot(scene, at, size, decks) : std::nullopt;
         // On a slide's platform, a path starts beside it at its deck, off the side nearest the pointer that a
         // trail may start from, as the pinned controls do.
@@ -567,19 +567,19 @@ namespace rct3::scene
         if (spot)
         {
             const save::Tile on { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
-            const auto deck = scene.pools.at(on.col, on.row) ? decks.end() : std::ranges::find_if(decks, [&](const park::pools::SlidePlatform& d) { return d.col == on.col && d.row == on.row; });
+            const auto deck = scene.pools.at(on.col, on.row) ? decks.end() : std::ranges::find_if(decks, [&](const rct3::park::pools::SlidePlatform& d) { return d.col == on.col && d.row == on.row; });
             if (deck != decks.end())
-                if (const auto side = park::object::nearest_side(*spot - glm::vec2 { on.col, on.row }, [&](park::Side side) { return park::pools::slide_path_start(scene.pools, *deck, side).has_value(); }))
+                if (const auto side = rct3::park::object::nearest_side(*spot - glm::vec2 { on.col, on.row }, [&](rct3::park::Side side) { return rct3::park::pools::slide_path_start(scene.pools, *deck, side).has_value(); }))
                 {
                     const auto [dc, dr] = side->step();
-                    deck_start = { save::Tile { on.col + dc, on.row + dr }, *park::pools::slide_path_start(scene.pools, *deck, *side) };
+                    deck_start = { save::Tile { on.col + dc, on.row + dr }, *rct3::park::pools::slide_path_start(scene.pools, *deck, *side) };
                 }
         }
         swap_pool_work(scene);
         // Held before a drag, Shift keeps the square under the pointer and raises or lowers its surface with the
         // pointer, as it lifts scenery; the drag then lays the squares at that height. Let go of before a drag, the
         // surface goes back.
-        const bool squares = t.item && t.item->kind == park::BuildKind::PoolSquare;
+        const bool squares = t.item && t.item->kind == rct3::park::BuildKind::PoolSquare;
         if (!shift && !t.corner)
         {
             t.lift.reset();
@@ -597,7 +597,7 @@ namespace rct3::scene
             {
                 const save::TerrainGrid& g = scene.grid;
                 const glm::vec3 lift_at { g.origin_x + t.lift->spot.x * g.tile_size_x, static_cast<float>(t.lift->surface), g.origin_z + t.lift->spot.y * g.tile_size_z };
-                const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
+                const rct3::park::Ray ray = rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
                 if (const auto h = lifted_height(ray, lift_at, t.lift->surface))
                     t.lifted = std::clamp(*h, ui::screens::pool_panel::kHeightLowest, ui::screens::pool_panel::kHeightHighest);
                 spot = t.lift->spot;
@@ -610,15 +610,15 @@ namespace rct3::scene
             else if (c == ui::PlayCommand::TurnItemLeft)
                 t.side = t.side.left();
         }
-        if (t.item && (t.item->kind == park::BuildKind::PoolExtra || t.item->kind == park::BuildKind::PoolRoom))
+        if (t.item && (t.item->kind == rct3::park::BuildKind::PoolExtra || t.item->kind == rct3::park::BuildKind::PoolRoom))
             return update_extra(device, scene, assets, spot, down);
         // The disc shows the piece the tool lays: the floor of a water square, the paving, or the extra laid as
         // a square; nothing while taking squares up.
         if (t.item)
         {
             const std::string_view s = t.item->symbol;
-            const std::string_view piece = s == park::kPoolDelete ? "" : s == park::kPoolTiles ? "SolidTop" : s == park::kPoolJacuzzi ? "Jacuzzi" : s == park::kPoolHighDive ? "DBTopBoard" : s == park::kPoolStairs ? "StairsBase" : s == park::kPoolPath ? "PathStraight" : s == park::kPoolPathSlope ? "PathSlope" : s == park::kPoolPathStairs ? "PathStairs" : "Base";
-            turn_preview(device, scene, assets, piece, park::kPoolOverlay);
+            const std::string_view piece = s == rct3::park::kPoolDelete ? "" : s == rct3::park::kPoolTiles ? "SolidTop" : s == rct3::park::kPoolJacuzzi ? "Jacuzzi" : s == rct3::park::kPoolHighDive ? "DBTopBoard" : s == rct3::park::kPoolStairs ? "StairsBase" : s == rct3::park::kPoolPath ? "PathStraight" : s == rct3::park::kPoolPathSlope ? "PathSlope" : s == rct3::park::kPoolPathStairs ? "PathStairs" : "Base";
+            turn_preview(device, scene, assets, piece, rct3::park::kPoolOverlay);
         }
         const auto tile = spot ? std::optional(save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
         // Pinned, the paths page starts a trail where pressed: at the side of the pool square nearest the pointer
@@ -629,18 +629,18 @@ namespace rct3::scene
                 pools_changed(device, scene, assets);
             t.working.reset();
             const auto square = tile ? scene.pools.at(tile->col, tile->row) : std::nullopt;
-            const auto deck = tile && !square ? std::ranges::find_if(decks, [&](const park::pools::SlidePlatform& d) { return d.col == tile->col && d.row == tile->row; }) : decks.end();
-            const auto start_height = [&](park::Side side) { return square ? park::pools::pool_path_start(scene.pools, *square, side) : deck != decks.end() ? park::pools::slide_path_start(scene.pools, *deck, side) : std::nullopt; };
-            const auto side = tile ? park::object::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, [&](park::Side side) { return start_height(side).has_value(); }) : std::nullopt;
+            const auto deck = tile && !square ? std::ranges::find_if(decks, [&](const rct3::park::pools::SlidePlatform& d) { return d.col == tile->col && d.row == tile->row; }) : decks.end();
+            const auto start_height = [&](rct3::park::Side side) { return square ? rct3::park::pools::pool_path_start(scene.pools, *square, side) : deck != decks.end() ? rct3::park::pools::slide_path_start(scene.pools, *deck, side) : std::nullopt; };
+            const auto side = tile ? rct3::park::object::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, [&](rct3::park::Side side) { return start_height(side).has_value(); }) : std::nullopt;
             // The trail as it would be, started where the pointer is, else the one laid.
-            park::FootpathBuilder hovered = t.trail;
+            rct3::park::FootpathBuilder hovered = t.trail;
             if (side)
             {
-                park::start_at(hovered, *tile);
+                rct3::park::start_at(hovered, *tile);
                 hovered.heading = *side;
                 hovered.start_height = start_height(*side);
                 hovered.trail.push_back({ .spot = *tile, .laid = 0, .height = *hovered.start_height });
-                hovered.on_slope = square && (square->kind == park::pools::PoolKind::PathSlope || square->kind == park::pools::PoolKind::PathStairs);
+                hovered.on_slope = square && (square->kind == rct3::park::pools::PoolKind::PathSlope || square->kind == rct3::park::pools::PoolKind::PathStairs);
             }
             if (down && !t.corner && side)
             {
@@ -653,26 +653,26 @@ namespace rct3::scene
                 t.corner.reset();
             // The next piece shown as the path tool shows it: the piece see-through, and the arrow over it the way
             // the trail goes on.
-            const auto piece = park::pools::next_pool_path(hovered);
+            const auto piece = rct3::park::pools::next_pool_path(hovered);
             std::optional<save::PlacedObject> ghost;
             t.arrow = { };
             if (piece)
             {
                 const save::Tile at_spot { piece->square.col, piece->square.row };
-                park::pools::PoolMap near;
-                for (const park::pools::PoolSquare& s : scene.pools.squares)
+                rct3::park::pools::PoolMap near;
+                for (const rct3::park::pools::PoolSquare& s : scene.pools.squares)
                     if (std::abs(s.col - at_spot.col) <= 1 && std::abs(s.row - at_spot.row) <= 1 && (s.col != at_spot.col || s.row != at_spot.row))
                         near.squares.push_back(s);
                 near.squares.push_back(piece->square);
-                for (save::PlacedObject& o : park::pools::pool_objects(near, park::kPoolOverlay, 0))
+                for (save::PlacedObject& o : rct3::park::pools::pool_objects(near, rct3::park::kPoolOverlay, 0))
                     if (o.col == at_spot.col && o.row == at_spot.row && o.base_height == piece->square.surface && o.symbol.starts_with("Path"))
                         ghost = std::move(o);
                 if (ghost && !load_object_model(scene, scene.placing.models, assets, *ghost))
                     ghost.reset();
-                const bool ok = t.item->pool_prices.size() == 18 && allowed(scene, marked(at_spot, at_spot), park::pools::pool_build_cost(std::span<const std::int32_t, 18>(t.item->pool_prices.data(), 18), piece->square));
+                const bool ok = t.item->pool_prices.size() == 18 && allowed(scene, marked(at_spot, at_spot), rct3::park::pools::pool_build_cost(std::span<const std::int32_t, 18>(t.item->pool_prices.data(), 18), piece->square));
                 const std::int32_t from = hovered.trail.empty() ? hovered.start_height.value_or(0) : hovered.trail.back().height;
-                t.arrow = park::heading_arrow({ .spot = at_spot, .start = from, .end = piece->end }, hovered.heading, scene.grid);
-                for (park::GroundVertex& v : t.arrow.vertices)
+                t.arrow = rct3::park::heading_arrow({ .spot = at_spot, .start = from, .end = piece->end }, hovered.heading, scene.grid);
+                for (rct3::park::GroundVertex& v : t.arrow.vertices)
                 {
                     v.colour = ok ? glm::vec4(1.0f) : kRefusedTint;
                     v.position.y += kArrowLift;
@@ -681,22 +681,22 @@ namespace rct3::scene
             }
             else
                 show_ghost(device, scene, std::nullopt, true);
-            draw_marks(device, scene, std::nullopt, park::TilePart::Whole, true);
+            draw_marks(device, scene, std::nullopt, rct3::park::TilePart::Whole, true);
             return;
         }
         // A high diving board faces the water beside it nearest the pointer, as an extra takes its side; the turn
         // keys turn it only where water lies on every side or none. Sides with no water behind come first, so one
         // laid on water at a pool's wall reaches straight out from the wall, not along it.
-        if (t.item && t.item->symbol == park::kPoolHighDive && !t.corner && tile)
+        if (t.item && t.item->symbol == rct3::park::kPoolHighDive && !t.corner && tile)
         {
-            const auto water = [&](park::Side side) {
+            const auto water = [&](rct3::park::Side side) {
                 const auto [dc, dr] = side.step();
                 const auto square = scene.pools.at(tile->col + dc, tile->row + dr);
-                return square && square->kind == park::pools::PoolKind::Water;
+                return square && square->kind == rct3::park::pools::PoolKind::Water;
             };
-            const bool backed = std::ranges::any_of(park::kSides, [&](park::Side side) { return water(side) && !water(side.opposite()); });
-            const auto faces = [&](park::Side side) { return water(side) && (!backed || !water(side.opposite())); };
-            if (const auto side = park::object::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, faces); side && !std::ranges::all_of(park::kSides, faces))
+            const bool backed = std::ranges::any_of(rct3::park::kSides, [&](rct3::park::Side side) { return water(side) && !water(side.opposite()); });
+            const auto faces = [&](rct3::park::Side side) { return water(side) && (!backed || !water(side.opposite())); };
+            if (const auto side = rct3::park::object::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, faces); side && !std::ranges::all_of(rct3::park::kSides, faces))
                 t.side = *side;
         }
         if (std::exchange(t.redraw, false))
@@ -704,8 +704,8 @@ namespace rct3::scene
         const bool dragging = t.item && down && (t.corner || tile);
         // A spa pool, a high diving board or a spiral staircase goes on the square pressed; dragging up or down
         // raises or lowers the board or the staircase's top.
-        const bool climbs = t.item && (t.item->symbol == park::kPoolHighDive || t.item->symbol == park::kPoolStairs);
-        const bool single = t.item && (t.item->symbol == park::kPoolJacuzzi || t.item->symbol == park::kPoolPathSlope || t.item->symbol == park::kPoolPathStairs || climbs);
+        const bool climbs = t.item && (t.item->symbol == rct3::park::kPoolHighDive || t.item->symbol == rct3::park::kPoolStairs);
+        const bool single = t.item && (t.item->symbol == rct3::park::kPoolJacuzzi || t.item->symbol == rct3::park::kPoolPathSlope || t.item->symbol == rct3::park::kPoolPathStairs || climbs);
         if (dragging)
         {
             if (!t.corner)
@@ -717,7 +717,7 @@ namespace rct3::scene
                 t.other = single || deck_start ? t.corner : tile;
             if (climbs && t.press_y)
             {
-                const std::int32_t lowest = t.item->symbol == park::kPoolStairs ? park::pools::kLowestStairs : park::pools::kBoardLevel;
+                const std::int32_t lowest = t.item->symbol == rct3::park::kPoolStairs ? rct3::park::pools::kLowestStairs : rct3::park::pools::kBoardLevel;
                 t.board = std::clamp(lowest + static_cast<std::int32_t>((*t.press_y - at.y) / kPixelsPerBoardUnit), lowest, kHighestBoard);
             }
         }
@@ -734,14 +734,14 @@ namespace rct3::scene
         {
             bool changed = put_back(scene);
             // The work shown before and now, with the walls and railings round each.
-            std::optional<park::TileRect> touched;
+            std::optional<rct3::park::TileRect> touched;
             for (const auto& work : { t.working, working })
             {
                 if (!work)
                     continue;
                 const auto [c0, r0, c1, r1] = marked(work->first, work->second);
-                const park::TileRect area = park::TileRect { c0, r0, c1 + 1, r1 + 1 }.grown(1);
-                touched = !touched ? area : park::TileRect { std::min(touched->col, area.col), std::min(touched->row, area.row), std::max(touched->end_col, area.end_col), std::max(touched->end_row, area.end_row) };
+                const rct3::park::TileRect area = rct3::park::TileRect { c0, r0, c1 + 1, r1 + 1 }.grown(1);
+                touched = !touched ? area : rct3::park::TileRect { std::min(touched->col, area.col), std::min(touched->row, area.row), std::max(touched->end_col, area.end_col), std::max(touched->end_row, area.end_row) };
             }
             t.working = working;
             t.worked_board = t.board;
@@ -755,7 +755,7 @@ namespace rct3::scene
                 const auto [dc, dr] = t.side.step();
                 const auto faced = map.at(working->first.col + dc, working->first.row + dr);
                 const auto tower = map.at(working->first.col, working->first.row);
-                t.faces = t.item->symbol != park::kPoolHighDive || (faced && tower && faced->kind == park::pools::PoolKind::Water && faced->surface <= tower->surface);
+                t.faces = t.item->symbol != rct3::park::kPoolHighDive || (faced && tower && faced->kind == rct3::park::pools::PoolKind::Water && faced->surface <= tower->surface);
                 t.ok = t.faces && allowed(scene, marked(working->first, working->second), cost);
                 if (t.ok)
                 {
@@ -788,16 +788,16 @@ namespace rct3::scene
                 // The paths page's controls go on from the last piece laid: up a slope, or the way an L's last
                 // leg went.
                 const auto last = scene.pools.at(t.other->col, t.other->row);
-                if (last && park::pools::is_pool_path(last->kind))
+                if (last && rct3::park::pools::is_pool_path(last->kind))
                 {
-                    const std::int32_t rise = last->kind == park::pools::PoolKind::PathSlope ? park::pools::kPathSlopeRise : last->kind == park::pools::PoolKind::PathStairs ? park::pools::kPathStairsRise : 0;
+                    const std::int32_t rise = last->kind == rct3::park::pools::PoolKind::PathSlope ? rct3::park::pools::kPathSlopeRise : last->kind == rct3::park::pools::PoolKind::PathStairs ? rct3::park::pools::kPathStairsRise : 0;
                     if (rise > 0)
                         t.trail.heading = last->side.opposite();
                     else if (t.other->row != t.corner->row)
-                        t.trail.heading = t.other->row > t.corner->row ? park::Side::kNextRow : park::Side::kRowBefore;
+                        t.trail.heading = t.other->row > t.corner->row ? rct3::park::Side::kNextRow : rct3::park::Side::kRowBefore;
                     else if (t.other->col != t.corner->col)
-                        t.trail.heading = t.other->col > t.corner->col ? park::Side::kNextCol : park::Side::kColBefore;
-                    park::start_at(t.trail, *t.other);
+                        t.trail.heading = t.other->col > t.corner->col ? rct3::park::Side::kNextCol : rct3::park::Side::kColBefore;
+                    rct3::park::start_at(t.trail, *t.other);
                     t.trail.start_height = last->surface;
                     t.trail.trail.push_back({ .spot = *t.other, .laid = 1, .height = last->surface + rise });
                     t.trail_ground.assign(1, std::nullopt);
@@ -820,25 +820,25 @@ namespace rct3::scene
         auto marks = working ? std::optional(marked(working->first, working->second)) : std::nullopt;
         // Else the square the paths page's controls lay next.
         // shortcut: marked flat; show the piece itself once the marks mislead.
-        if (const auto next = park::next_spot(t.trail); !marks && next && t.item && laying_paths(*t.item))
+        if (const auto next = rct3::park::next_spot(t.trail); !marks && next && t.item && laying_paths(*t.item))
             marks = marked(*next, *next);
-        draw_marks(device, scene, marks, park::TilePart::Whole, !working || t.ok);
+        draw_marks(device, scene, marks, rct3::park::TilePart::Whole, !working || t.ok);
     }
 
-    std::vector<park::pools::PoolOpening> pool_openings(const ParkScene& scene)
+    std::vector<rct3::park::pools::PoolOpening> pool_openings(const ParkScene& scene)
     {
-        std::vector<park::pools::PoolOpening> out;
+        std::vector<rct3::park::pools::PoolOpening> out;
         for (std::size_t i = 0; i < scene.rides.rides.size() && i < scene.courses.size(); ++i)
             if (!scene.rides.rides[i].base.demolished && scene.courses[i])
                 std::ranges::copy(scene.courses[i]->pool_openings, std::back_inserter(out));
         // A slide's station platform joins the pools at its deck on both sides off its track.
-        for (const park::pools::SlidePlatform& p : slide_platforms(scene))
-            for (const park::Side side : { p.turn.facing(), p.turn.facing().opposite() })
+        for (const rct3::park::pools::SlidePlatform& p : slide_platforms(scene))
+            for (const rct3::park::Side side : { p.turn.facing(), p.turn.facing().opposite() })
                 out.push_back({ .col = p.col, .row = p.row, .height = p.height, .side = side });
         return out;
     }
 
-    void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<park::TileRect> touched)
+    void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<rct3::park::TileRect> touched)
     {
         const profiling::Scope zone("PoolsChanged");
         wait_for_build(scene);
@@ -847,14 +847,14 @@ namespace rct3::scene
         // same room.
         const auto shown = scene.shown_prop && *scene.shown_prop < scene.objects.size() ? std::optional(scene.objects[*scene.shown_prop]) : std::nullopt;
         const bool shown_piece = shown && std::ranges::contains(scene.pool_pieces, shown->id);
-        park::pools::dig_under_pools(scene.pools, scene.grid);
+        rct3::park::pools::dig_under_pools(scene.pools, scene.grid);
         scene.pool_openings = pool_openings(scene);
         std::vector<save::PlacedObject> pieces;
-        for (save::PlacedObject& piece : park::pools::pool_objects(scene.pools, park::kPoolOverlay, last_id(scene), scene.pool_openings))
+        for (save::PlacedObject& piece : rct3::park::pools::pool_objects(scene.pools, rct3::park::kPoolOverlay, last_id(scene), scene.pool_openings))
         {
             if (!load_object_model(scene, scene.placing.models, assets, piece))
                 continue;
-            piece.colours = scene.models.at(park::object::model_key(piece)).default_colours;
+            piece.colours = scene.models.at(rct3::park::object::model_key(piece)).default_colours;
             pieces.push_back(std::move(piece));
         }
         replace_fixtures(scene, scene.pool_pieces, std::move(pieces));
@@ -871,7 +871,7 @@ namespace rct3::scene
         objects_changed(scene);
         std::vector<save::PoolWater>& water = scene.footpaths.pools;
         water.resize(scene.saved_pool_water);
-        std::ranges::copy(park::pools::pool_water(scene.pools), std::back_inserter(water));
+        std::ranges::copy(rct3::park::pools::pool_water(scene.pools), std::back_inserter(water));
         refresh_pavings(scene); // The changing rooms pave their floors
         rebuild_ground(device, scene, assets, touched);
     }
@@ -881,11 +881,11 @@ namespace rct3::scene
         const auto& items = scene.build.items;
         if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
             return;
-        const auto type = std::ranges::find_if(items.get(), [](const park::BuildItem& i) { return i.overlay == park::kPoolOverlay && i.pool_prices.size() == 18; });
+        const auto type = std::ranges::find_if(items.get(), [](const rct3::park::BuildItem& i) { return i.overlay == rct3::park::kPoolOverlay && i.pool_prices.size() == 18; });
         if (type == items.get().end())
             return;
         const auto prices = std::span<const std::int32_t, 18>(type->pool_prices.data(), 18);
-        const std::vector<save::Tile> complex = park::pools::pool_complex(scene.pools, room);
+        const std::vector<save::Tile> complex = rct3::park::pools::pool_complex(scene.pools, room);
         if (complex.empty())
             return;
         // Each square goes as the delete tool takes it up, the ground it dug put back; the rooms opening on them go
@@ -893,10 +893,10 @@ namespace rct3::scene
         std::int64_t cost = 0;
         for (const save::Tile tile : complex)
         {
-            for (const park::pools::PoolSquare& s : scene.pools.squares)
+            for (const rct3::park::pools::PoolSquare& s : scene.pools.squares)
                 if (s.col == tile.col && s.row == tile.row && s.ground)
                     scene.grid.at(tile.col, tile.row).corners = *s.ground;
-            cost += park::pools::take_up_pool(scene.pools, prices, tile, tile);
+            cost += rct3::park::pools::take_up_pool(scene.pools, prices, tile, tile);
         }
         if (scene.park.cash)
             *scene.park.cash -= cost;
@@ -918,7 +918,7 @@ namespace rct3::scene
         const auto top = tile ? scene.pools.at(tile->col, tile->row) : std::nullopt;
         const auto& items = scene.build.items;
         const bool ready = items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
-        const auto type = ready ? std::ranges::find_if(items.get(), [](const park::BuildItem& i) { return i.overlay == park::kPoolOverlay && i.pool_prices.size() == 18; }) : decltype(items.get().end()) { };
+        const auto type = ready ? std::ranges::find_if(items.get(), [](const rct3::park::BuildItem& i) { return i.overlay == rct3::park::kPoolOverlay && i.pool_prices.size() == 18; }) : decltype(items.get().end()) { };
         if (!top || !ready || type == items.get().end())
         {
             if (shown)
@@ -927,9 +927,9 @@ namespace rct3::scene
         }
         // The top square there goes as the delete tool takes it up, with what stands on it, the ground it dug put back.
         const std::int32_t level = top->surface;
-        park::pools::PoolMap map = scene.pools;
-        const std::int64_t cost = park::pools::take_up_pool(map, std::span<const std::int32_t, 18>(type->pool_prices.data(), 18), *tile, *tile, level);
-        for (const park::pools::PoolSquare& s : scene.pools.squares)
+        rct3::park::pools::PoolMap map = scene.pools;
+        const std::int64_t cost = rct3::park::pools::take_up_pool(map, std::span<const std::int32_t, 18>(type->pool_prices.data(), 18), *tile, *tile, level);
+        for (const rct3::park::pools::PoolSquare& s : scene.pools.squares)
             if (const auto now = map.at(s.col, s.row, s.surface); s.ground && (!now || now->surface != s.surface))
                 scene.grid.at(s.col, s.row).corners = *s.ground;
         scene.pools = std::move(map);
@@ -947,8 +947,8 @@ namespace rct3::scene
     {
         if (scene.pooling.item && !scene.pooling.ghost.vertices.empty())
             draw_ghost_mesh(device, scene, scene.pooling.ghost, transform, light);
-        if (scene.pooling.item && !scene.pooling.arrow.vertices.empty() && scene.ground_textures.contains(park::ground::kPathArrowPicture))
-            draw_build_arrow(device, scene, scene.pooling.arrow, park::ground::kPathArrowPicture, transform);
+        if (scene.pooling.item && !scene.pooling.arrow.vertices.empty() && scene.ground_textures.contains(rct3::park::ground::kPathArrowPicture))
+            draw_build_arrow(device, scene, scene.pooling.arrow, rct3::park::ground::kPathArrowPicture, transform);
     }
 
 } // namespace rct3::scene

@@ -97,8 +97,8 @@ namespace rct3::scene
         /// How far each joint may be turned either way, degrees, and the spinners' step.
         constexpr int kArmTurns = 360;
         constexpr int kArmStep = 10;
-        /// In the order of park::track::PieceToggle.
-        constexpr std::array<std::string_view, park::track::kPieceToggles> kToggleHelps { "ATE_TT_Chain", "ATE_TT_Enclosed", "ATE_TT_Water", "ATE_TT_Wide", "ATE_TT_Booster" };
+        /// In the order of rct3::park::track::PieceToggle.
+        constexpr std::array<std::string_view, rct3::park::track::kPieceToggles> kToggleHelps { "ATE_TT_Chain", "ATE_TT_Enclosed", "ATE_TT_Water", "ATE_TT_Wide", "ATE_TT_Booster" };
         constexpr std::string_view kDemolishHelp = "ATE_TT_Demolish";
         constexpr std::string_view kCannotPlace = "IllegalTrackPlacement";
         constexpr std::string_view kNotOwned = "PlaceObject_NotOwned"; ///< A piece off land the park owns
@@ -148,13 +148,13 @@ namespace rct3::scene
         constexpr float kControlsHeight = ui::screens::construction_panel::kHeight - kControlsTop;
         /// The ghost's tint and how much of what is behind it shows through.
 
-        using park::track::kBankSteps;
+        using rct3::park::track::kBankSteps;
 
         /// The panel's bank buttons run from hardest left to hardest right, upside down last; banks count left
         /// as positive.
         int panel_bank(std::size_t i)
         {
-            return i + 1 == ui::screens::construction_panel::kBanks ? park::track::kUpsideDown : kBankSteps - 1 - static_cast<int>(i);
+            return i + 1 == ui::screens::construction_panel::kBanks ? rct3::park::track::kUpsideDown : kBankSteps - 1 - static_cast<int>(i);
         }
 
         std::string slashes(std::string path)
@@ -163,21 +163,21 @@ namespace rct3::scene
             return path;
         }
 
-        const park::track::PieceCatalogue* catalogue(const TrackBuilding& b)
+        const rct3::park::track::PieceCatalogue* catalogue(const TrackBuilding& b)
         {
             const auto found = b.catalogues.find(b.overlay);
             return found != b.catalogues.end() ? &found->second : nullptr;
         }
 
         /// The pieces of the track overlay `overlay`, read once.
-        std::optional<const park::track::PieceCatalogue&> load_catalogue(TrackBuilding& b, const std::string& overlay, const ui::InterfaceAssets& assets)
+        std::optional<const rct3::park::track::PieceCatalogue&> load_catalogue(TrackBuilding& b, const std::string& overlay, const ui::InterfaceAssets& assets)
         {
             if (const auto found = b.catalogues.find(overlay); found != b.catalogues.end())
                 return found->second;
             const auto file = assets.install ? assets.install->find(std::format("{}.common.ovl", slashes(overlay))) : std::nullopt;
             if (!file)
                 return std::nullopt;
-            auto loaded = park::track::load_piece_catalogue(*file, overlay);
+            auto loaded = rct3::park::track::load_piece_catalogue(*file, overlay);
             if (!loaded)
             {
                 logging::logger("park").warning("track pieces of {}: {}", overlay, loaded.error());
@@ -208,9 +208,9 @@ namespace rct3::scene
         }
 
         /// The open end of the ride's track: past its last piece, unless the track closes on itself.
-        std::optional<park::track::TrackTip> track_tip(const ParkScene& scene, const TrackBuilding& b)
+        std::optional<rct3::park::track::TrackTip> track_tip(const ParkScene& scene, const TrackBuilding& b)
         {
-            const park::track::PieceCatalogue* c = catalogue(b);
+            const rct3::park::track::PieceCatalogue* c = catalogue(b);
             if (c == nullptr || !b.ride)
                 return std::nullopt;
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
@@ -219,32 +219,32 @@ namespace rct3::scene
             const save::TrackPiece& last = ride.track->pieces.back();
             const auto objects = object_indices(scene);
             const auto object = objects.find(last.scenery);
-            auto shape = park::track::shape_named(*c, last.symbol);
+            auto shape = rct3::park::track::shape_named(*c, last.symbol);
             if (object == objects.end() || !shape)
                 return std::nullopt;
-            return park::track::tip_of(scene.objects[object->second], *shape, last.reversed, scene.grid);
+            return rct3::park::track::tip_of(scene.objects[object->second], *shape, last.reversed, scene.grid);
         }
 
         /// The catalogue's piece the ride's track ends with, laid as it is.
-        std::optional<park::track::LaidPiece> last_piece(const ParkScene& scene, const TrackBuilding& b)
+        std::optional<rct3::park::track::LaidPiece> last_piece(const ParkScene& scene, const TrackBuilding& b)
         {
-            const park::track::PieceCatalogue* c = catalogue(b);
+            const rct3::park::track::PieceCatalogue* c = catalogue(b);
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             if (c == nullptr || !ride.track || ride.track->pieces.empty())
                 return std::nullopt;
             const save::TrackPiece& last = ride.track->pieces.back();
-            const auto shape = park::track::shape_named(*c, last.symbol);
+            const auto shape = rct3::park::track::shape_named(*c, last.symbol);
             if (!shape)
                 return std::nullopt;
-            return park::track::LaidPiece { static_cast<std::size_t>(&*shape - c->pieces.data()), last.reversed };
+            return rct3::park::track::LaidPiece { static_cast<std::size_t>(&*shape - c->pieces.data()), last.reversed };
         }
 
         /// The colours a new track starts in, as its kind's file sets them.
         save::RideColours starting_colours(const ParkScene& scene, const TrackBuilding& b)
         {
-            const park::track::PieceCatalogue* c = catalogue(b);
-            const park::track::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::track::TrackRules { };
-            return c != nullptr ? park::track::starting_colours(rules, c->pieces) : save::RideColours { };
+            const rct3::park::track::PieceCatalogue* c = catalogue(b);
+            const rct3::park::track::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : rct3::park::track::TrackRules { };
+            return c != nullptr ? rct3::park::track::starting_colours(rules, c->pieces) : save::RideColours { };
         }
 
         /// The colours the next piece is built in: as painted, else as the last piece, else as a new track starts.
@@ -255,9 +255,9 @@ namespace rct3::scene
         }
 
         /// Whether `shape` stands beside a platform.
-        bool has_platform(const park::track::PieceShape& shape)
+        bool has_platform(const rct3::park::track::PieceShape& shape)
         {
-            return (shape.record.flags & park::track::kPieceStation) != 0 || shape.record.role == park::track::kRoleStation;
+            return (shape.record.flags & rct3::park::track::kPieceStation) != 0 || shape.record.role == rct3::park::track::kRoleStation;
         }
 
         /// What the ride's station pieces take their platforms from: its platform type's file as a park names it,
@@ -266,7 +266,7 @@ namespace rct3::scene
         {
             std::string overlay;
             std::span<const std::string> names;
-            std::vector<park::ride::DoorSpot> doors;
+            std::vector<rct3::park::ride::DoorSpot> doors;
         };
         std::optional<Platforms> ride_platforms(TrackBuilding& b, const save::Ride& ride, const ui::InterfaceAssets& assets)
         {
@@ -294,33 +294,33 @@ namespace rct3::scene
             for (const save::Station& s : ride.stations)
                 for (const auto& spot : { s.entrance_spot, s.exit_spot })
                     if (spot)
-                        p.doors.push_back(park::ride::DoorSpot::of(*spot));
+                        p.doors.push_back(rct3::park::ride::DoorSpot::of(*spot));
             return p;
         }
 
         /// Where a station piece of `shape` stands, from which of its neighbours are stations and whether it has any.
-        park::ride::PlatformPlace platform_place(const park::track::PieceShape& shape, bool station_before, bool station_after, bool track_before, bool track_after)
+        rct3::park::ride::PlatformPlace platform_place(const rct3::park::track::PieceShape& shape, bool station_before, bool station_after, bool track_before, bool track_after)
         {
             // A piece whose platform stands alone takes no part in a longer station.
-            const bool alone = (shape.record.flags & park::track::kPiecePlatformAlone) != 0;
+            const bool alone = (shape.record.flags & rct3::park::track::kPiecePlatformAlone) != 0;
             return { .station_before = !alone && station_before, .station_after = !alone && station_after, .track_before = track_before, .track_after = track_after, .run = shape.record.platform_run, .side = shape.record.side };
         }
 
         /// The catalogue's piece a track piece is, laid as it is.
-        std::optional<park::track::LaidPiece> laid_piece(const park::track::PieceCatalogue& c, const save::TrackPiece& piece)
+        std::optional<rct3::park::track::LaidPiece> laid_piece(const rct3::park::track::PieceCatalogue& c, const save::TrackPiece& piece)
         {
-            const auto shape = park::track::shape_named(c, piece.symbol);
-            return shape ? std::optional(park::track::LaidPiece { static_cast<std::size_t>(&*shape - c.pieces.data()), piece.reversed }) : std::nullopt;
+            const auto shape = rct3::park::track::shape_named(c, piece.symbol);
+            return shape ? std::optional(rct3::park::track::LaidPiece { static_cast<std::size_t>(&*shape - c.pieces.data()), piece.reversed }) : std::nullopt;
         }
 
         /// A track piece as built: its object, of the scene's, and the catalogue's piece it is.
         struct BuiltPiece
         {
             std::size_t object = 0;
-            park::track::LaidPiece laid;
+            rct3::park::track::LaidPiece laid;
         };
 
-        std::optional<BuiltPiece> built_piece(const ParkScene& scene, const park::track::PieceCatalogue& c, const save::TrackPiece& piece)
+        std::optional<BuiltPiece> built_piece(const ParkScene& scene, const rct3::park::track::PieceCatalogue& c, const save::TrackPiece& piece)
         {
             const auto object = std::ranges::find(scene.objects, piece.scenery, &save::PlacedObject::id);
             const auto laid = laid_piece(c, piece);
@@ -331,15 +331,15 @@ namespace rct3::scene
 
         /// Pays back what piece `piece` of ride `ride`, standing as object `object`, cost to build, as pulling the
         /// whole ride down would, floating it up from where the piece starts.
-        void refund_piece(ParkScene& scene, const park::track::PieceCatalogue& c, const save::Ride& ride, const save::TrackPiece& piece, const save::PlacedObject& object)
+        void refund_piece(ParkScene& scene, const rct3::park::track::PieceCatalogue& c, const save::Ride& ride, const save::TrackPiece& piece, const save::PlacedObject& object)
         {
-            const auto shape = park::track::shape_named(c, piece.symbol);
+            const auto shape = rct3::park::track::shape_named(c, piece.symbol);
             if (!shape)
                 return;
-            const std::int64_t back = park::demolish_refund(shape->record.cost, (ride.base.flags & save::AttractionCommon::kNeverOpened) == 0);
+            const std::int64_t back = rct3::park::demolish_refund(shape->record.cost, (ride.base.flags & save::AttractionCommon::kNeverOpened) == 0);
             if (scene.park.cash)
                 *scene.park.cash += back;
-            float_money(scene, park::track::start_of(object, *shape, piece.reversed, scene.grid).position, back);
+            float_money(scene, rct3::park::track::start_of(object, *shape, piece.reversed, scene.grid).position, back);
         }
 
         /// Hides the platform built beside a station piece, which goes with it.
@@ -352,20 +352,20 @@ namespace rct3::scene
 
         /// Builds on in `state`, at the open end of its track: the last stretch of that track still open, made the
         /// track's last.
-        void use_split(ParkScene& scene, TrackBuilding& b, park::track::SplitState state)
+        void use_split(ParkScene& scene, TrackBuilding& b, rct3::park::track::SplitState state)
         {
             b.split = state;
-            const park::track::PieceCatalogue* c = catalogue(b);
+            const rct3::park::track::PieceCatalogue* c = catalogue(b);
             save::Ride& ride = scene.rides.rides.at(*b.ride);
-            if (c == nullptr || !ride.track || state == park::track::SplitState::None)
+            if (c == nullptr || !ride.track || state == rct3::park::track::SplitState::None)
                 return;
             const auto& segments = ride.track->segments;
             for (std::size_t s = segments.size(); s-- > 0;)
             {
-                const auto end = segments[s].closed || segments[s].piece_count == 0 ? std::nullopt : park::track::shape_named(*c, ride.track->pieces.at(segments[s].first_piece + segments[s].piece_count - 1).symbol);
-                if (end && end->record.side == park::track::split_side(state))
+                const auto end = segments[s].closed || segments[s].piece_count == 0 ? std::nullopt : rct3::park::track::shape_named(*c, ride.track->pieces.at(segments[s].first_piece + segments[s].piece_count - 1).symbol);
+                if (end && end->record.side == rct3::park::track::split_side(state))
                 {
-                    park::track::make_last(*ride.track, s);
+                    rct3::park::track::make_last(*ride.track, s);
                     return;
                 }
             }
@@ -375,11 +375,11 @@ namespace rct3::scene
         std::array<bool, 2> split_closed(const ParkScene& scene, const TrackBuilding& b)
         {
             std::array<bool, 2> closed { }, open { };
-            const park::track::PieceCatalogue* c = catalogue(b);
+            const rct3::park::track::PieceCatalogue* c = catalogue(b);
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             for (const save::TrackSegment& s : c != nullptr && ride.track ? ride.track->segments : std::vector<save::TrackSegment> { })
             {
-                const auto first = s.piece_count == 0 ? std::nullopt : park::track::shape_named(*c, ride.track->pieces.at(s.first_piece).symbol);
+                const auto first = s.piece_count == 0 ? std::nullopt : rct3::park::track::shape_named(*c, ride.track->pieces.at(s.first_piece).symbol);
                 if (first && (first->record.side == 1 || first->record.side == 2))
                     (s.closed ? closed : open).at(first->record.side - 1) = true;
             }
@@ -428,17 +428,17 @@ namespace rct3::scene
         /// Where piece `i` of `design` goes when the design is moved and turned as its first piece is to stand as
         /// `to`, as it was saved rather than on after the piece before: some pieces' ends do not quite meet their
         /// neighbours' as their shapes are read. Nothing when the catalogue has no such piece.
-        std::optional<park::track::PiecePlacement> design_piece(const park::track::PieceCatalogue& c, std::span<const save::TrackPiece> design, std::size_t i, const save::PlacedObject& to, const save::TerrainGrid& grid)
+        std::optional<rct3::park::track::PiecePlacement> design_piece(const rct3::park::track::PieceCatalogue& c, std::span<const save::TrackPiece> design, std::size_t i, const save::PlacedObject& to, const save::TerrainGrid& grid)
         {
-            const auto first = park::track::shape_named(c, design.front().symbol);
-            const auto shape = park::track::shape_named(c, design[i].symbol);
+            const auto first = rct3::park::track::shape_named(c, design.front().symbol);
+            const auto shape = rct3::park::track::shape_named(c, design[i].symbol);
             if (!first || !shape)
                 return std::nullopt;
             const auto saved = [](const save::TrackPiece& p) { return save::PlacedObject { .col = p.tile_x, .row = p.tile_z, .base_height = p.height, .rotation = p.direction, .force_absolute_height = true }; };
-            park::track::PiecePlacement placed { .object = park::object::moved_with(saved(design[i]), shape->record.squares, saved(design.front()), first->record.squares, to) };
+            rct3::park::track::PiecePlacement placed { .object = rct3::park::object::moved_with(saved(design[i]), shape->record.squares, saved(design.front()), first->record.squares, to) };
             placed.object.symbol = shape->record.item;
             placed.object.overlay = to.overlay;
-            placed.next = park::track::tip_of(placed.object, *shape, design[i].reversed, grid);
+            placed.next = rct3::park::track::tip_of(placed.object, *shape, design[i].reversed, grid);
             return placed;
         }
 
@@ -493,47 +493,47 @@ namespace rct3::scene
             o.overlay = b.overlay;
             if (!load_object_model(scene, b.models, assets, o))
                 return false;
-            const auto model = scene.models.find(park::object::model_ref(o));
+            const auto model = scene.models.find(rct3::park::object::model_ref(o));
             if (model == scene.models.end() || !model->second.water_only)
                 return false;
-            const park::support::SupportFootprint shape { .x_squares = model->second.squares[0], .z_squares = model->second.squares[1] };
-            return !std::ranges::all_of(park::support::footprint_tiles(o, shape), [&](const auto& t) { return park::water::holds_water(scene.footpaths.water.bodies, { t.first, t.second }); });
+            const rct3::park::support::SupportFootprint shape { .x_squares = model->second.squares[0], .z_squares = model->second.squares[1] };
+            return !std::ranges::all_of(rct3::park::support::footprint_tiles(o, shape), [&](const auto& t) { return rct3::park::water::holds_water(scene.footpaths.water.bodies, { t.first, t.second }); });
         }
 
         /// The room the park's solid items take, but the pieces a piece `b` builds would join: the track's ends, or
         /// the piece built over and those either side of it. Joined pieces may share a tile, as diagonals do.
         /// shortcut: the track's far end is left out even where the new piece does not join it, so a piece may cross
         /// it; leave it in once a piece's ends tell which pieces it meets.
-        park::path::SolidTiles taken_room(const ParkScene& scene, const TrackBuilding& b)
+        rct3::park::path::SolidTiles taken_room(const ParkScene& scene, const TrackBuilding& b)
         {
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             if (!ride.track || ride.track->pieces.empty())
-                return park::path::solid_tiles(scene.objects, scene.models, scene.grid);
+                return rct3::park::path::solid_tiles(scene.objects, scene.models, scene.grid);
             const auto& pieces = ride.track->pieces;
             std::vector<std::uint64_t> joined { pieces.front().scenery, pieces.back().scenery };
             if (b.selected)
             {
                 joined.push_back(pieces.at(*b.selected).scenery);
-                if (const auto around = park::track::piece_neighbours(*ride.track, *b.selected))
+                if (const auto around = rct3::park::track::piece_neighbours(*ride.track, *b.selected))
                     joined.insert(joined.end(), { pieces[around->before].scenery, pieces[around->after].scenery });
             }
             std::vector<save::PlacedObject> others;
             std::ranges::copy_if(scene.objects, std::back_inserter(others), [&](const save::PlacedObject& o) { return !std::ranges::contains(joined, o.id); });
-            return park::path::solid_tiles(others, scene.models, scene.grid);
+            return rct3::park::path::solid_tiles(others, scene.models, scene.grid);
         }
 
         /// Whether the ground `pieces` (their models loaded) would cut may not be cut.
         bool cut_refused(const ParkScene& scene, std::span<const save::PlacedObject> pieces)
         {
-            const std::vector<park::ground::GroundCut> cuts = park::track::ground_cuts(pieces, scene.models, scene.grid, false).footprint;
-            return !cuts.empty() && park::ground::cuts_refused(cuts, scene.grid, park::ground::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid), scene.footpaths.water.bodies);
+            const std::vector<rct3::park::ground::GroundCut> cuts = rct3::park::track::ground_cuts(pieces, scene.models, scene.grid, false).footprint;
+            return !cuts.empty() && rct3::park::ground::cuts_refused(cuts, scene.grid, rct3::park::ground::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid), scene.footpaths.water.bodies);
         }
 
         /// Whether `o`, its model loaded, may not stand: it would take room `taken` or a path takes, stand off
         /// land the park owns, or cut ground that may not be cut.
-        bool clashes(const ParkScene& scene, const park::path::SolidTiles& taken, const save::PlacedObject& o)
+        bool clashes(const ParkScene& scene, const rct3::park::path::SolidTiles& taken, const save::PlacedObject& o)
         {
-            return park::path::first_refused(std::span(&o, 1), scene.models, taken, scene.footpaths.paths, scene.grid).has_value() || cut_refused(scene, std::span(&o, 1));
+            return rct3::park::path::first_refused(std::span(&o, 1), scene.models, taken, scene.footpaths.paths, scene.grid).has_value() || cut_refused(scene, std::span(&o, 1));
         }
 
         /// Makes the park's own trains of `ride` ghosts, whose crash off an open end of the track harms nothing and
@@ -551,7 +551,7 @@ namespace rct3::scene
         {
             const profiling::Scope zone("Ghost");
             b.test.reset(); // A test runs the track as it was
-            const park::track::PieceCatalogue* c = catalogue(b);
+            const rct3::park::track::PieceCatalogue* c = catalogue(b);
             b.candidates.clear();
             b.picked.reset();
             b.ghost.reset();
@@ -565,28 +565,28 @@ namespace rct3::scene
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             const bool starting = opening(ride);
             b.backward = false;
-            const park::track::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::track::TrackRules { };
+            const rct3::park::track::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : rct3::park::track::TrackRules { };
             if (!starting)
                 b.tip = track_tip(scene, b);
             // Over a piece picked between two others, what fits both, laid on from the end of the one before.
-            std::optional<std::vector<park::track::LaidPiece>> between;
-            if (const auto around = b.selected && c != nullptr && !starting ? park::track::piece_neighbours(*ride.track, *b.selected) : std::nullopt)
+            std::optional<std::vector<rct3::park::track::LaidPiece>> between;
+            if (const auto around = b.selected && c != nullptr && !starting ? rct3::park::track::piece_neighbours(*ride.track, *b.selected) : std::nullopt)
             {
                 const auto before = built_piece(scene, *c, ride.track->pieces[around->before]);
                 const auto after = built_piece(scene, *c, ride.track->pieces[around->after]);
                 b.tip.reset();
                 if (before && after)
                 {
-                    b.tip = park::track::tip_of(scene.objects[before->object], c->pieces[before->laid.index], before->laid.reversed, scene.grid);
-                    const park::track::TrackTip goal = park::track::start_of(scene.objects[after->object], c->pieces[after->laid.index], after->laid.reversed, scene.grid);
-                    between = park::track::pieces_between(c->pieces, *b.tip, before->laid, goal, after->laid, scene.grid);
+                    b.tip = rct3::park::track::tip_of(scene.objects[before->object], c->pieces[before->laid.index], before->laid.reversed, scene.grid);
+                    const rct3::park::track::TrackTip goal = rct3::park::track::start_of(scene.objects[after->object], c->pieces[after->laid.index], after->laid.reversed, scene.grid);
+                    between = rct3::park::track::pieces_between(c->pieces, *b.tip, before->laid, goal, after->laid, scene.grid);
                 }
             }
             else
                 b.selected.reset();
             if (c == nullptr || (starting ? !b.aim : !b.tip) || (!starting && rules.one_piece))
                 return;
-            b.candidates = between ? std::move(*between) : starting ? park::track::starting_pieces(c->pieces) : park::track::pieces_after(c->pieces, b.tip->end, last_piece(scene, b));
+            b.candidates = between ? std::move(*between) : starting ? rct3::park::track::starting_pieces(c->pieces) : rct3::park::track::pieces_after(c->pieces, b.tip->end, last_piece(scene, b));
             // A ride built back from its station goes on from where its first piece starts: pieces laid backwards
             // from there, then kept in the track's own direction.
             // shortcut: the way follows the ride's file, never the player, upgrade with a forward and backward button.
@@ -597,40 +597,40 @@ namespace rct3::scene
                 const save::TrackPiece& first = ride.track->pieces.front();
                 const auto objects = object_indices(scene);
                 const auto object = objects.find(first.scenery);
-                const auto shape = park::track::shape_named(*c, first.symbol);
+                const auto shape = rct3::park::track::shape_named(*c, first.symbol);
                 if (object != objects.end() && shape)
                 {
                     // The first piece laid backwards, and its far end.
-                    const park::track::LaidPiece turned { static_cast<std::size_t>(&*shape - c->pieces.data()), !first.reversed };
-                    b.tip = park::track::tip_of(scene.objects[object->second], *shape, turned.reversed, scene.grid);
-                    b.candidates = park::track::pieces_after(c->pieces, b.tip->end, turned);
+                    const rct3::park::track::LaidPiece turned { static_cast<std::size_t>(&*shape - c->pieces.data()), !first.reversed };
+                    b.tip = rct3::park::track::tip_of(scene.objects[object->second], *shape, turned.reversed, scene.grid);
+                    b.candidates = rct3::park::track::pieces_after(c->pieces, b.tip->end, turned);
                 }
             }
             // Only the pieces its kind lists, not others of the same track overlay.
-            std::erase_if(b.candidates, [&](const park::track::LaidPiece& l) { return !park::track::lists_piece(rules, c->pieces[l.index].record.name); });
+            std::erase_if(b.candidates, [&](const rct3::park::track::LaidPiece& l) { return !rct3::park::track::lists_piece(rules, c->pieces[l.index].record.name); });
             // Only pieces that can be laid there, so a piece offered one way round is not hidden by the other.
             if (!starting)
-                std::erase_if(b.candidates, [&](const park::track::LaidPiece& l) { return !park::track::place_after(*b.tip, c->pieces[l.index], l.reversed, scene.grid); });
+                std::erase_if(b.candidates, [&](const rct3::park::track::LaidPiece& l) { return !rct3::park::track::place_after(*b.tip, c->pieces[l.index], l.reversed, scene.grid); });
             // Of side by side tracks, only joined pieces or only pieces alone, as the split button says.
-            if (b.split != park::track::SplitState::None)
-                std::erase_if(b.candidates, [&](const park::track::LaidPiece& l) {
-                    const park::track::PieceRecord& r = c->pieces[l.index].record;
-                    return park::track::split_joined(b.split) == r.partner.empty() || (starting && r.side != park::track::split_side(b.split));
+            if (b.split != rct3::park::track::SplitState::None)
+                std::erase_if(b.candidates, [&](const rct3::park::track::LaidPiece& l) {
+                    const rct3::park::track::PieceRecord& r = c->pieces[l.index].record;
+                    return rct3::park::track::split_joined(b.split) == r.partner.empty() || (starting && r.side != rct3::park::track::split_side(b.split));
                 });
             // A track being begun starts on its station, as the panel picks the station before the player picks.
             if (std::exchange(b.station_first, false) && starting)
-                b.choice = park::track::opening_choice(c->pieces, b.candidates);
-            b.choice = park::track::settle_choice(c->pieces, b.candidates, b.choice);
-            b.picked = park::track::chosen_piece(c->pieces, b.candidates, b.choice);
+                b.choice = rct3::park::track::opening_choice(c->pieces, b.candidates);
+            b.choice = rct3::park::track::settle_choice(c->pieces, b.candidates, b.choice);
+            b.picked = rct3::park::track::chosen_piece(c->pieces, b.candidates, b.choice);
             if (starting && !b.design.empty())
             {
                 // A design starts with its own first piece, wherever the choice stands.
-                const auto first = park::track::shape_named(*c, b.design.front().symbol);
-                b.picked = first ? std::optional(park::track::LaidPiece { static_cast<std::size_t>(&*first - c->pieces.data()), b.design.front().reversed }) : std::nullopt;
+                const auto first = rct3::park::track::shape_named(*c, b.design.front().symbol);
+                b.picked = first ? std::optional(rct3::park::track::LaidPiece { static_cast<std::size_t>(&*first - c->pieces.data()), b.design.front().reversed }) : std::nullopt;
             }
             if (!b.picked)
                 return;
-            const park::track::PieceShape& shape = c->pieces[b.picked->index];
+            const rct3::park::track::PieceShape& shape = c->pieces[b.picked->index];
             if (starting)
             {
                 // Laid from where it would start standing on the aimed tile.
@@ -641,8 +641,8 @@ namespace rct3::scene
                 on.symbol = shape.record.item;
                 on.overlay = b.overlay;
                 // A piece that goes only on water floats on it, not on the lake's floor.
-                const auto surface = park::water::water_surface(scene.footpaths.water.bodies, *b.aim);
-                if (const auto model = load_object_model(scene, b.models, assets, on) ? scene.models.find(park::object::model_ref(on)) : scene.models.end(); surface && model != scene.models.end() && model->second.water_only)
+                const auto surface = rct3::park::water::water_surface(scene.footpaths.water.bodies, *b.aim);
+                if (const auto model = load_object_model(scene, b.models, assets, on) ? scene.models.find(rct3::park::object::model_ref(on)) : scene.models.end(); surface && model != scene.models.end() && model->second.water_only)
                 {
                     on.base_height = *surface;
                     on.force_absolute_height = true;
@@ -650,7 +650,7 @@ namespace rct3::scene
                 // Raised with Shift, never under the ground.
                 if (b.raised)
                 {
-                    on.base_height = std::max({ *b.raised, on.base_height.value_or(0), park::ride::ride_site(*b.aim, shape.record.squares, b.turn, scene.grid).height });
+                    on.base_height = std::max({ *b.raised, on.base_height.value_or(0), rct3::park::ride::ride_site(*b.aim, shape.record.squares, b.turn, scene.grid).height });
                     on.force_absolute_height = true;
                 }
                 // A design stands with its lowest piece where its first would, as it was built on the ground.
@@ -658,13 +658,13 @@ namespace rct3::scene
                 {
                     if (const std::int32_t lift = b.design.front().height - std::ranges::min(b.design, { }, &save::TrackPiece::height).height; lift > 0)
                     {
-                        on.base_height = on.base_height.value_or(park::ride::ride_site(*b.aim, shape.record.squares, b.turn, scene.grid).height) + lift;
+                        on.base_height = on.base_height.value_or(rct3::park::ride::ride_site(*b.aim, shape.record.squares, b.turn, scene.grid).height) + lift;
                         on.force_absolute_height = true;
                     }
                 }
-                b.tip = park::track::start_of(on, shape, b.picked->reversed, scene.grid);
+                b.tip = rct3::park::track::start_of(on, shape, b.picked->reversed, scene.grid);
             }
-            b.ghost = park::track::place_after(*b.tip, shape, b.picked->reversed, scene.grid);
+            b.ghost = rct3::park::track::place_after(*b.tip, shape, b.picked->reversed, scene.grid);
             if (!b.ghost)
                 return;
             save::PlacedObject& o = b.ghost->object;
@@ -701,21 +701,21 @@ namespace rct3::scene
                 }
             }
             b.ghost_doors = shown.size() - pieces;
-            const auto refused = park::path::first_refused(shown, scene.models, taken_room(scene, b), scene.footpaths.paths, scene.grid);
+            const auto refused = rct3::park::path::first_refused(shown, scene.models, taken_room(scene, b), scene.footpaths.paths, scene.grid);
             // shortcut: the ground a ghost would cut is cut only once it is built, upgrade to show the cut under the
             // ghost if pieces into hills are hard to see.
             b.in_ground = whole && !refused && cut_refused(scene, std::span(shown).first(pieces));
             b.clashes = !whole || refused.has_value() || b.in_ground;
             b.unowned = refused && refused->unowned;
-            b.refusal = park::DesignRefusal::None;
+            b.refusal = rct3::park::DesignRefusal::None;
             b.pool_openings.clear();
             if (starting && !b.design.empty())
             {
                 // A design is refused for the first of its reasons, in the order its panel tells them.
                 const std::span<const save::PlacedObject> laid = std::span(shown).first(pieces);
-                const auto ground = [&](const save::PlacedObject& p) { return static_cast<float>(park::ride::ride_site({ p.col, p.row }, { 1, 1 }, { }, scene.grid).height); };
+                const auto ground = [&](const save::PlacedObject& p) { return static_cast<float>(rct3::park::ride::ride_site({ p.col, p.row }, { 1, 1 }, { }, scene.grid).height); };
                 std::vector<float> grounds;
-                std::vector<park::pools::PoolOpening>& openings = b.pool_openings;
+                std::vector<rct3::park::pools::PoolOpening>& openings = b.pool_openings;
                 float lowest = std::numeric_limits<float>::max();
                 // A piece whose own height is under the ground passes into it; one on the ground that only dips into
                 // it, as a banked piece does, is cut round as a piece built by hand is.
@@ -726,11 +726,11 @@ namespace rct3::scene
                     const float base = laid[i].base_height ? static_cast<float>(*laid[i].base_height) : grounds.back();
                     lowest = std::min(lowest, base);
                     buried = buried || base < grounds.back();
-                    if (const auto piece = park::track::shape_named(*c, b.design[i].symbol))
-                        std::ranges::copy(park::piece_pool_openings(laid[i], piece->record), std::back_inserter(openings));
+                    if (const auto piece = rct3::park::track::shape_named(*c, b.design[i].symbol))
+                        std::ranges::copy(rct3::park::piece_pool_openings(laid[i], piece->record), std::back_inserter(openings));
                 }
-                using enum park::DesignRefusal;
-                b.refusal = b.unowned ? NotOwned : whole && park::stands_too_high(lowest, grounds) ? TooHigh : !whole || refused ? Intersects : b.in_ground || (buried && !b.cut_ground) ? IntoGround : !park::meets_pools(scene.pools, openings) ? OffPoolEdge : None;
+                using enum rct3::park::DesignRefusal;
+                b.refusal = b.unowned ? NotOwned : whole && rct3::park::stands_too_high(lowest, grounds) ? TooHigh : !whole || refused ? Intersects : b.in_ground || (buried && !b.cut_ground) ? IntoGround : !rct3::park::meets_pools(scene.pools, openings) ? OffPoolEdge : None;
                 b.in_ground = b.refusal == IntoGround;
                 b.clashes = b.refusal != None;
             }
@@ -740,17 +740,17 @@ namespace rct3::scene
             if (kit)
             {
                 const auto station = [&](std::size_t i) {
-                    const auto s = park::track::shape_named(*c, ride.track->pieces[i].symbol);
+                    const auto s = rct3::park::track::shape_named(*c, ride.track->pieces[i].symbol);
                     return ride.track->pieces[i].platform.has_value() || (s && has_platform(*s));
                 };
-                const auto around = b.selected ? park::track::piece_neighbours(*ride.track, *b.selected) : std::nullopt;
+                const auto around = b.selected ? rct3::park::track::piece_neighbours(*ride.track, *b.selected) : std::nullopt;
                 // Built on from the open end the piece follows the last piece, or goes before the first when the
                 // track is built back from it.
                 const std::optional<std::size_t> before = around ? std::optional(around->before) : starting ? std::nullopt : std::optional(b.backward ? 0 : ride.track->pieces.size() - 1);
                 const std::optional<std::size_t> after = around ? std::optional(around->after) : std::nullopt;
-                const park::ride::PlatformPlace place = platform_place(shape, before && station(*before), after && station(*after), before.has_value(), after.has_value());
+                const rct3::park::ride::PlatformPlace place = platform_place(shape, before && station(*before), after && station(*after), before.has_value(), after.has_value());
                 const save::TrackPiece laid { .tile_x = o.col, .tile_z = o.row, .height = o.base_height.value_or(0), .direction = static_cast<std::uint8_t>(o.rotation) };
-                if (const auto name = park::ride::platform_symbol(ride.platform_type, laid, place, kit->doors, kit->names))
+                if (const auto name = rct3::park::ride::platform_symbol(ride.platform_type, laid, place, kit->doors, kit->names))
                 {
                     save::PlacedObject platform = o;
                     platform.overlay = kit->overlay;
@@ -763,7 +763,7 @@ namespace rct3::scene
                 }
             }
             // Ghost track is held up as built track is, its supports ghosts too.
-            if (const park::support::SupportSets* sets = support_sets(scene, assets))
+            if (const rct3::park::support::SupportSets* sets = support_sets(scene, assets))
             {
                 for (save::PlacedObject& piece : supports_under(scene, shown, *sets))
                 {
@@ -771,8 +771,8 @@ namespace rct3::scene
                         shown.push_back(std::move(piece));
                 }
             }
-            b.ghost_mesh = park::object::object_mesh(shown, scene.models, scene.grid);
-            for (park::GroundVertex& v : b.ghost_mesh.vertices)
+            b.ghost_mesh = rct3::park::object::object_mesh(shown, scene.models, scene.grid);
+            for (rct3::park::GroundVertex& v : b.ghost_mesh.vertices)
                 v.colour *= b.off_water || b.clashes ? kRefusedTint : kGhostTint;
         }
 
@@ -792,14 +792,14 @@ namespace rct3::scene
         struct ListedPiece
         {
             ui::screens::NamedPiece shown;
-            std::optional<park::track::LaidPiece> laid;
+            std::optional<rct3::park::track::LaidPiece> laid;
         };
 
         /// Every piece of `c` with a use of its own that `rules` let the ride build, stations first, then in the
         /// file's order, once for each name and marks; those `o` offers where the track ends are offered.
-        std::vector<ListedPiece> listed_pieces(const ui::StringTable& strings, const park::track::PieceCatalogue& c, const park::track::TrackRules& rules, const park::track::ChoiceOptions& o)
+        std::vector<ListedPiece> listed_pieces(const ui::StringTable& strings, const rct3::park::track::PieceCatalogue& c, const rct3::park::track::TrackRules& rules, const rct3::park::track::ChoiceOptions& o)
         {
-            const auto shown_as = [&](const park::track::PieceShape& p) {
+            const auto shown_as = [&](const rct3::park::track::PieceShape& p) {
                 ui::screens::NamedPiece n { .name = piece_name(strings, p.record.name), .offered = false };
                 // Its kind, as its name says.
                 // shortcut: read from the section's name, upgrade if a ride names its pieces otherwise.
@@ -821,18 +821,18 @@ namespace rct3::scene
             };
             const auto same = [](const ui::screens::NamedPiece& a, const ui::screens::NamedPiece& b) { return a.name == b.name && a.marks == b.marks; };
             std::vector<ListedPiece> list;
-            for (const park::track::PieceUse use : { park::track::PieceUse::Station, park::track::PieceUse::Special })
+            for (const rct3::park::track::PieceUse use : { rct3::park::track::PieceUse::Station, rct3::park::track::PieceUse::Special })
             {
-                for (const park::track::PieceShape& p : c.pieces)
+                for (const rct3::park::track::PieceShape& p : c.pieces)
                 {
-                    if (p.use != use || !park::track::lists_piece(rules, p.record.name))
+                    if (p.use != use || !rct3::park::track::lists_piece(rules, p.record.name))
                         continue;
                     ui::screens::NamedPiece n = shown_as(p);
                     if (std::ranges::none_of(list, [&](const ListedPiece& l) { return same(l.shown, n); }))
                         list.push_back({ std::move(n), std::nullopt });
                 }
             }
-            for (const park::track::LaidPiece& laid : o.named)
+            for (const rct3::park::track::LaidPiece& laid : o.named)
             {
                 const ui::screens::NamedPiece n = shown_as(c.pieces[laid.index]);
                 const auto found = std::ranges::find_if(list, [&](const ListedPiece& l) { return same(l.shown, n) && !l.laid; });
@@ -857,31 +857,31 @@ namespace rct3::scene
             v.complete_dim = !b.proposed.empty() && std::fmod(b.clock, 2 * kFlashSeconds) >= kFlashSeconds;
             v.heights = b.heights;
             v.heights_locked = scene.show_ride_heights;
-            const park::track::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::track::TrackRules { };
+            const rct3::park::track::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : rct3::park::track::TrackRules { };
             if (rules.car_facing)
                 v.facing = b.facing;
             // A ride whose track may lie in several stretches, or a water transport, can begin another.
             if (rules.may_be_split || ride.mode == save::OperatingMode::WaterTransport)
                 v.new_segment = v.can_demolish && !opening(ride) && !b.backward && !b.selected;
-            if (b.split != park::track::SplitState::None)
-                v.split = park::track::split_joined(b.split) ? 0 : park::track::split_side(b.split);
-            const park::track::PieceCatalogue* c = catalogue(b);
+            if (b.split != rct3::park::track::SplitState::None)
+                v.split = rct3::park::track::split_joined(b.split) ? 0 : rct3::park::track::split_side(b.split);
+            const rct3::park::track::PieceCatalogue* c = catalogue(b);
             if (c == nullptr || !b.tip)
                 return v;
-            const park::track::ChoiceOptions o = park::track::choice_options(c->pieces, b.candidates, b.choice);
+            const rct3::park::track::ChoiceOptions o = rct3::park::track::choice_options(c->pieces, b.candidates, b.choice);
             const bool by_shape = !b.choice.named.has_value();
-            for (int curve = -park::track::kCurveSizes; curve <= park::track::kCurveSizes; ++curve)
-                v.curves.at(park::track::curve_index(curve)) = state_of(by_shape && curve == b.choice.curve, o.curves.at(park::track::curve_index(curve)));
-            for (int slope = -park::track::kSlopeSteps; slope <= park::track::kSlopeSteps; ++slope)
-                v.slopes.at(park::track::slope_index(slope)) = state_of(by_shape && slope == b.choice.slope, o.slopes.at(park::track::slope_index(slope)));
+            for (int curve = -rct3::park::track::kCurveSizes; curve <= rct3::park::track::kCurveSizes; ++curve)
+                v.curves.at(rct3::park::track::curve_index(curve)) = state_of(by_shape && curve == b.choice.curve, o.curves.at(rct3::park::track::curve_index(curve)));
+            for (int slope = -rct3::park::track::kSlopeSteps; slope <= rct3::park::track::kSlopeSteps; ++slope)
+                v.slopes.at(rct3::park::track::slope_index(slope)) = state_of(by_shape && slope == b.choice.slope, o.slopes.at(rct3::park::track::slope_index(slope)));
             for (std::size_t i = 0; i < ui::screens::construction_panel::kBanks; ++i)
             {
                 const int bank = panel_bank(i);
-                v.banks.at(i) = state_of(by_shape && bank == b.choice.bank, o.banks.at(park::track::bank_index(bank)));
+                v.banks.at(i) = state_of(by_shape && bank == b.choice.bank, o.banks.at(rct3::park::track::bank_index(bank)));
             }
-            for (std::size_t i = 0; i < park::track::kPieceToggles; ++i)
+            for (std::size_t i = 0; i < rct3::park::track::kPieceToggles; ++i)
             {
-                const std::uint8_t bit = park::track::toggle_bit(static_cast<park::track::PieceToggle>(i));
+                const std::uint8_t bit = rct3::park::track::toggle_bit(static_cast<rct3::park::track::PieceToggle>(i));
                 if ((o.any_toggles & bit) != 0)
                     v.toggles.at(i) = state_of((b.choice.toggles & o.toggles & bit) != 0, (o.toggles & bit) != 0);
             }
@@ -893,7 +893,7 @@ namespace rct3::scene
             }
             if (b.picked)
             {
-                const park::track::PieceShape& shape = c->pieces[b.picked->index];
+                const rct3::park::track::PieceShape& shape = c->pieces[b.picked->index];
                 v.piece = piece_name(*assets.strings, shape.record.name);
                 if (!b.ghost || b.clashes)
                     v.piece = assets.strings->get(b.unowned ? kNotOwned : b.in_ground ? kInGround : kCannotPlace);
@@ -914,9 +914,9 @@ namespace rct3::scene
                 // shortcut: nothing holds a train for the time or turns the cars yet, upgrade with holding brakes
                 // and turning cars.
                 using enum ui::screens::PieceParam;
-                if (shape.record.role == park::track::kRoleBrakes || shape.record.role == park::track::kRoleBlockBrake)
+                if (shape.record.role == rct3::park::track::kRoleBrakes || shape.record.role == rct3::park::track::kRoleBlockBrake)
                 {
-                    const float ride_speed = shape.record.role == park::track::kRoleBrakes ? ride.options.brake_speed : ride.options.block_brake_off_speed;
+                    const float ride_speed = shape.record.role == rct3::park::track::kRoleBrakes ? ride.options.brake_speed : ride.options.block_brake_off_speed;
                     const float speed = b.brake_speed > 0 ? static_cast<float>(b.brake_speed) : std::round(ride_speed);
                     const auto tenths = [&](float metres) { return static_cast<int>(std::lround(metres * ui::screens::speed_scale(units) * 10)); };
                     v.params.at(std::to_underlying(Speed)) = ui::screens::ParamBox { .value = tenths(speed), .least = tenths(1), .most = tenths(kMostBrakeSpeed), .decimals = 1, .unit = std::u16string(ui::screens::speed_unit(units)), .step = std::max(tenths(1), 1) };
@@ -934,16 +934,16 @@ namespace rct3::scene
         void track_changed(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets)
         {
             const profiling::Scope zone("TrackChanged");
-            const park::track::PieceCatalogue* c = catalogue(b);
+            const rct3::park::track::PieceCatalogue* c = catalogue(b);
             save::Ride& ride = scene.rides.rides.at(*b.ride);
             if (c == nullptr || !ride.track)
                 return;
-            std::vector<park::track::LaidPiece> laid;
+            std::vector<rct3::park::track::LaidPiece> laid;
             for (const save::TrackPiece& p : ride.track->pieces)
-                if (const auto shape = park::track::shape_named(*c, p.symbol))
+                if (const auto shape = rct3::park::track::shape_named(*c, p.symbol))
                     laid.push_back({ static_cast<std::size_t>(&*shape - c->pieces.data()), p.reversed });
             const bool patterned = laid.size() == ride.track->pieces.size() && *b.ride < scene.track_rules.size();
-            const std::vector<park::track::LaidPiece> swapped = patterned ? park::track::apply_patterns(c->pieces, laid, scene.track_rules[*b.ride].patterns, ride.track->circuit) : laid;
+            const std::vector<rct3::park::track::LaidPiece> swapped = patterned ? rct3::park::track::apply_patterns(c->pieces, laid, scene.track_rules[*b.ride].patterns, ride.track->circuit) : laid;
             if (swapped != laid)
             {
                 wait_for_build(scene);
@@ -960,9 +960,9 @@ namespace rct3::scene
                         continue;
                     // Where the piece starts: past the piece before it, or where it starts itself.
                     const auto before = i > 0 ? object_of(ride.track->pieces[i - 1]) : std::nullopt;
-                    const park::track::TrackTip start = before ? park::track::tip_of(*before, c->pieces[swapped[i - 1].index], swapped[i - 1].reversed, scene.grid) : park::track::start_of(*object, c->pieces[laid[i].index], laid[i].reversed, scene.grid);
-                    const park::track::PieceShape& shape = c->pieces[swapped[i].index];
-                    const auto placed = park::track::place_after(start, shape, swapped[i].reversed, scene.grid);
+                    const rct3::park::track::TrackTip start = before ? rct3::park::track::tip_of(*before, c->pieces[swapped[i - 1].index], swapped[i - 1].reversed, scene.grid) : rct3::park::track::start_of(*object, c->pieces[laid[i].index], laid[i].reversed, scene.grid);
+                    const rct3::park::track::PieceShape& shape = c->pieces[swapped[i].index];
+                    const auto placed = rct3::park::track::place_after(start, shape, swapped[i].reversed, scene.grid);
                     if (!placed)
                         continue;
                     object->symbol = placed->object.symbol;
@@ -983,7 +983,7 @@ namespace rct3::scene
             // shortcut: the simulation keeps running the trains on the course the park loaded with, upgrade when
             // a changed track is taken into the running park.
             if (*b.ride < scene.courses.size())
-                scene.courses[*b.ride] = park::track::track_course(ride, scene.objects, scene.models, scene.grid, scene.fitted, [&](const save::TrackPiece& p, const save::PlacedObject&) { return park::track::shape_named(*c, p.symbol); });
+                scene.courses[*b.ride] = rct3::park::track::track_course(ride, scene.objects, scene.models, scene.grid, scene.fitted, [&](const save::TrackPiece& p, const save::PlacedObject&) { return rct3::park::track::shape_named(*c, p.symbol); });
             update_platforms(scene, *b.ride, assets);
         }
 
@@ -992,7 +992,7 @@ namespace rct3::scene
         /// same piece, which is left as it stands; either way the next piece along is picked.
         void build(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, bool forced = false)
         {
-            const park::track::PieceCatalogue* c = catalogue(b);
+            const rct3::park::track::PieceCatalogue* c = catalogue(b);
             save::Ride& ride = scene.rides.rides.at(*b.ride);
             if (c == nullptr || !b.ghost || b.off_water || b.clashes || !b.picked || !ride.track)
                 return;
@@ -1001,12 +1001,12 @@ namespace rct3::scene
             if (b.selected && !over)
                 return;
             const auto step_on = [&] {
-                const auto around = park::track::piece_neighbours(*ride.track, *b.selected);
+                const auto around = rct3::park::track::piece_neighbours(*ride.track, *b.selected);
                 const std::size_t next = around ? (b.selected_back ? around->before : around->after) : 0;
                 // Off the end of a stretch, building goes back to the open end.
-                b.selected = around && park::track::piece_neighbours(*ride.track, next) ? std::optional(next) : std::nullopt;
+                b.selected = around && rct3::park::track::piece_neighbours(*ride.track, next) ? std::optional(next) : std::nullopt;
                 if (const auto laid = b.selected ? laid_piece(*c, ride.track->pieces[next]) : std::nullopt)
-                    b.choice = park::track::choice_of(c->pieces, *laid);
+                    b.choice = rct3::park::track::choice_of(c->pieces, *laid);
                 if (!b.selected)
                     use_split(scene, b, b.split);
                 refresh(scene, b, assets);
@@ -1040,7 +1040,7 @@ namespace rct3::scene
                 piece.colours = *b.colours;
                 object.colours = { (*b.colours)[0], (*b.colours)[1], (*b.colours)[2] };
             }
-            const park::track::PieceShape& shape = c->pieces[b.picked->index];
+            const rct3::park::track::PieceShape& shape = c->pieces[b.picked->index];
             if (scene.park.cash)
             {
                 if (*scene.park.cash < shape.record.cost && !forced)
@@ -1052,24 +1052,24 @@ namespace rct3::scene
             // again; the ground is built again for that, or for the tunnel it lies in.
             // shortcut: the cut costs nothing, upgrade when the original's price for moving ground is matched.
             const std::span<const save::PlacedObject> ghost(&b.ghost->object, 1);
-            if (!park::track::buried_hollows(ghost, scene.models, scene.grid).empty())
+            if (!rct3::park::track::buried_hollows(ghost, scene.models, scene.grid).empty())
                 scene.footpaths.pavings_stale = true;
-            if (park::ground::GroundCuts cuts = park::track::ground_cuts(ghost, scene.models, scene.grid, b.smooth_cuts); !cuts.footprint.empty())
+            if (rct3::park::ground::GroundCuts cuts = rct3::park::track::ground_cuts(ghost, scene.models, scene.grid, b.smooth_cuts); !cuts.footprint.empty())
             {
-                const park::ground::GroundHolds holds = park::ground::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
-                (void)park::ground::allow_cuts(cuts, scene.grid, holds, scene.footpaths.water.bodies);
+                const rct3::park::ground::GroundHolds holds = rct3::park::ground::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
+                (void)rct3::park::ground::allow_cuts(cuts, scene.grid, holds, scene.footpaths.water.bodies);
                 save::Tile low = cuts.footprint.front().tile;
                 save::Tile high = low;
-                for (const std::vector<park::ground::GroundCut>* part : { &cuts.footprint, &cuts.rim })
+                for (const std::vector<rct3::park::ground::GroundCut>* part : { &cuts.footprint, &cuts.rim })
                 {
-                    for (const park::ground::GroundCut& cut : *part)
+                    for (const rct3::park::ground::GroundCut& cut : *part)
                     {
                         low = { std::min(low.col, cut.tile.col), std::min(low.row, cut.tile.row) };
                         high = { std::max(high.col, cut.tile.col), std::max(high.row, cut.tile.row) };
                     }
                 }
-                park::ground::make_cuts(scene.grid, cuts);
-                if (park::ground::seat_followers(scene.objects, holds, scene.models, scene.grid, low, high))
+                rct3::park::ground::make_cuts(scene.grid, cuts);
+                if (rct3::park::ground::seat_followers(scene.objects, holds, scene.models, scene.grid, low, high))
                     objects_changed(scene);
                 scene.footpaths.pavings_stale = true;
             }
@@ -1079,10 +1079,10 @@ namespace rct3::scene
             {
                 const save::TrackPiece& first = stretch_start(*ride.track);
                 const auto first_object = objects.find(first.scenery);
-                const auto first_shape = park::track::shape_named(*c, first.symbol);
+                const auto first_shape = rct3::park::track::shape_named(*c, first.symbol);
                 if (first_object != objects.end() && first_shape)
                 {
-                    const park::track::TrackTip start = park::track::start_of(scene.objects[first_object->second], *first_shape, first.reversed, scene.grid);
+                    const rct3::park::track::TrackTip start = rct3::park::track::start_of(scene.objects[first_object->second], *first_shape, first.reversed, scene.grid);
                     const bool closes = glm::length(b.ghost->next.position - start.position) < kCloses && b.ghost->next.end == start.end;
                     if (!ride.track->segments.empty())
                         ride.track->segments.back().closed = closes;
@@ -1098,7 +1098,7 @@ namespace rct3::scene
             piece.direction = static_cast<std::uint8_t>(object.rotation);
             piece.reversed = b.picked->reversed != b.backward;
             // Brake speeds are stored in whole metres a second, as the files do; none until set, so the ride's.
-            if (shape.record.role == park::track::kRoleBrakes || shape.record.role == park::track::kRoleBlockBrake)
+            if (shape.record.role == rct3::park::track::kRoleBrakes || shape.record.role == rct3::park::track::kRoleBlockBrake)
                 piece.brake_speed = b.brake_speed > 0 ? b.brake_speed : -1;
             if (shape.record.role == kHoldingRole)
                 piece.holding_time = b.holding_time;
@@ -1107,7 +1107,7 @@ namespace rct3::scene
             // The first piece down, the station, opens the ride's window, as in the game; a closed circuit goes on to
             // its doors.
             if (ride.track->pieces.empty())
-                scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, *b.ride };
+                scene.info_requested = rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Ride, *b.ride };
             if (over)
             {
                 save::TrackPiece& old = ride.track->pieces[*b.selected];
@@ -1123,13 +1123,13 @@ namespace rct3::scene
             ride.track->pieces.insert(b.backward ? ride.track->pieces.begin() : ride.track->pieces.end(), piece);
             if (!ride.track->segments.empty())
                 ++ride.track->segments.back().piece_count;
-            scene.attractions[object.id] = { park::AttractionRef::Kind::Ride, *b.ride };
+            scene.attractions[object.id] = { rct3::park::AttractionRef::Kind::Ride, *b.ride };
             scene.objects.push_back(std::move(object));
             // A joined piece is laid with its other half on the other track: on after that track's open end where
             // it starts, else as a stretch of its own.
             // shortcut: demolishing or building over one half leaves the other as it is, upgrade by finding the
             // other half on the same tiles.
-            if (const auto other = b.split != park::track::SplitState::None && !shape.record.partner.empty() ? park::track::shape_named(*c, shape.record.partner) : std::nullopt)
+            if (const auto other = b.split != rct3::park::track::SplitState::None && !shape.record.partner.empty() ? rct3::park::track::shape_named(*c, shape.record.partner) : std::nullopt)
             {
                 save::PlacedObject half = scene.objects.back();
                 half.id = last_id(scene) + 1;
@@ -1138,24 +1138,24 @@ namespace rct3::scene
                 save::TrackPiece joined = piece;
                 joined.id = joined.scenery = half.id;
                 joined.symbol = other->record.name + std::string(kSectionTag);
-                const park::track::TrackTip start = park::track::start_of(half, *other, joined.reversed, scene.grid);
-                const park::track::TrackTip end = park::track::tip_of(half, *other, joined.reversed, scene.grid);
-                const auto meets = [](const park::track::TrackTip& a, const park::track::TrackTip& b) { return glm::length(a.position - b.position) < kCloses && a.end == b.end; };
+                const rct3::park::track::TrackTip start = rct3::park::track::start_of(half, *other, joined.reversed, scene.grid);
+                const rct3::park::track::TrackTip end = rct3::park::track::tip_of(half, *other, joined.reversed, scene.grid);
+                const auto meets = [](const rct3::park::track::TrackTip& a, const rct3::park::track::TrackTip& b) { return glm::length(a.position - b.position) < kCloses && a.end == b.end; };
                 std::optional<std::size_t> onto;
                 const auto& segments = ride.track->segments;
                 for (std::size_t s = 0; !onto && s + 1 < segments.size(); ++s)
                 {
                     const auto last = segments[s].closed || segments[s].piece_count == 0 ? std::nullopt : built_piece(scene, *c, ride.track->pieces.at(segments[s].first_piece + segments[s].piece_count - 1));
-                    if (last && c->pieces[last->laid.index].record.side == other->record.side && meets(park::track::tip_of(scene.objects[last->object], c->pieces[last->laid.index], last->laid.reversed, scene.grid), start))
+                    if (last && c->pieces[last->laid.index].record.side == other->record.side && meets(rct3::park::track::tip_of(scene.objects[last->object], c->pieces[last->laid.index], last->laid.reversed, scene.grid), start))
                         onto = s;
                 }
-                const std::size_t s = park::track::add_piece(*ride.track, onto, std::move(joined));
+                const std::size_t s = rct3::park::track::add_piece(*ride.track, onto, std::move(joined));
                 // Its end meeting where its stretch starts closes that stretch.
                 if (const auto first = segments[s].piece_count > 1 ? built_piece(scene, *c, ride.track->pieces.at(segments[s].first_piece)) : std::nullopt)
-                    ride.track->segments[s].closed = meets(end, park::track::start_of(scene.objects[first->object], c->pieces[first->laid.index], first->laid.reversed, scene.grid));
+                    ride.track->segments[s].closed = meets(end, rct3::park::track::start_of(scene.objects[first->object], c->pieces[first->laid.index], first->laid.reversed, scene.grid));
                 ride.track->circuit = std::ranges::all_of(ride.track->segments, &save::TrackSegment::closed);
                 (void)load_object_model(scene, b.models, assets, half);
-                scene.attractions[half.id] = { park::AttractionRef::Kind::Ride, *b.ride };
+                scene.attractions[half.id] = { rct3::park::AttractionRef::Kind::Ride, *b.ride };
                 scene.objects.push_back(std::move(half));
             }
             // A pool ride has no doors: its stations join a pool complex's paving.
@@ -1166,10 +1166,10 @@ namespace rct3::scene
             for (std::size_t s = 0; !b.backward && segments.size() > 1 && !segments.back().closed && s + 1 < segments.size(); ++s)
             {
                 const auto start = segments[s].closed || segments[s].piece_count == 0 ? std::nullopt : built_piece(scene, *c, ride.track->pieces.at(segments[s].first_piece));
-                const auto at = start ? std::optional(park::track::start_of(scene.objects[start->object], c->pieces[start->laid.index], start->laid.reversed, scene.grid)) : std::nullopt;
+                const auto at = start ? std::optional(rct3::park::track::start_of(scene.objects[start->object], c->pieces[start->laid.index], start->laid.reversed, scene.grid)) : std::nullopt;
                 if (at && c->pieces[start->laid.index].record.side == shape.record.side && glm::length(b.ghost->next.position - at->position) < kCloses && b.ghost->next.end == at->end)
                 {
-                    park::track::join_stretch(*ride.track, s);
+                    rct3::park::track::join_stretch(*ride.track, s);
                     break;
                 }
             }
@@ -1180,18 +1180,18 @@ namespace rct3::scene
         }
 
         /// Shows `way` as the ghost, the pieces it lays.
-        void show_way(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, std::span<const park::track::LaidPlacement> way)
+        void show_way(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, std::span<const rct3::park::track::LaidPlacement> way)
         {
             std::vector<save::PlacedObject> shown;
-            for (const park::track::LaidPlacement& p : way)
+            for (const rct3::park::track::LaidPlacement& p : way)
             {
                 save::PlacedObject o = p.object;
                 o.overlay = b.overlay;
                 if (load_object_model(scene, b.models, assets, o))
                     shown.push_back(std::move(o));
             }
-            b.ghost_mesh = park::object::object_mesh(shown, scene.models, scene.grid);
-            for (park::GroundVertex& v : b.ghost_mesh.vertices)
+            b.ghost_mesh = rct3::park::object::object_mesh(shown, scene.models, scene.grid);
+            for (rct3::park::GroundVertex& v : b.ghost_mesh.vertices)
                 v.colour *= kGhostTint;
         }
 
@@ -1199,7 +1199,7 @@ namespace rct3::scene
         /// and lays the way found, paid for if the park has the money.
         void complete(ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets)
         {
-            const park::track::PieceCatalogue* c = catalogue(b);
+            const rct3::park::track::PieceCatalogue* c = catalogue(b);
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             const auto last = last_piece(scene, b);
             if (b.completing)
@@ -1214,23 +1214,23 @@ namespace rct3::scene
                 const save::TrackPiece& first = stretch_start(*ride.track);
                 const auto objects = object_indices(scene);
                 const auto object = objects.find(first.scenery);
-                const auto shape = park::track::shape_named(*c, first.symbol);
+                const auto shape = rct3::park::track::shape_named(*c, first.symbol);
                 if (object == objects.end() || !shape)
                     return;
-                const park::track::LaidPiece start { static_cast<std::size_t>(&*shape - c->pieces.data()), first.reversed };
+                const rct3::park::track::LaidPiece start { static_cast<std::size_t>(&*shape - c->pieces.data()), first.reversed };
                 // shortcut: the way found may cross itself, as only what stands already is in its way; keep the pieces
                 // laid in thought in its way too if a found way does.
-                const park::track::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::track::TrackRules { };
-                b.completing = park::track::start_completion(c->pieces, *b.tip, *last, park::track::start_of(scene.objects[object->second], *shape, first.reversed, scene.grid), start, scene.grid, [&scene, &b, &assets, c, rules, taken = taken_room(scene, b)](save::PlacedObject o) {
+                const rct3::park::track::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : rct3::park::track::TrackRules { };
+                b.completing = rct3::park::track::start_completion(c->pieces, *b.tip, *last, rct3::park::track::start_of(scene.objects[object->second], *shape, first.reversed, scene.grid), start, scene.grid, [&scene, &b, &assets, c, rules, taken = taken_room(scene, b)](save::PlacedObject o) {
                     o.overlay = b.overlay;
-                    const bool listed = std::ranges::any_of(c->pieces, [&](const park::track::PieceShape& p) { return p.record.item == o.symbol && park::track::lists_piece(rules, p.record.name); });
+                    const bool listed = std::ranges::any_of(c->pieces, [&](const rct3::park::track::PieceShape& p) { return p.record.item == o.symbol && rct3::park::track::lists_piece(rules, p.record.name); });
                     return listed && !off_water(scene, b, assets, o) && !clashes(scene, taken, o);
                 });
                 return;
             }
-            const std::vector<park::track::LaidPlacement> way = std::exchange(b.proposed, { });
+            const std::vector<rct3::park::track::LaidPlacement> way = std::exchange(b.proposed, { });
             std::int64_t cost = 0;
-            for (const park::track::LaidPlacement& p : way)
+            for (const rct3::park::track::LaidPlacement& p : way)
                 cost += c->pieces[p.piece.index].record.cost;
             if (scene.park.cash && *scene.park.cash < cost)
             {
@@ -1238,15 +1238,15 @@ namespace rct3::scene
                 return;
             }
             logging::logger("park").info("track finished with {} pieces", way.size());
-            for (const park::track::LaidPlacement& p : way)
+            for (const rct3::park::track::LaidPlacement& p : way)
             {
-                const park::track::PieceShape& laid = c->pieces[p.piece.index];
+                const rct3::park::track::PieceShape& laid = c->pieces[p.piece.index];
                 save::PlacedObject o = p.object;
                 o.overlay = b.overlay;
                 if (!load_object_model(scene, b.models, assets, o))
                     return;
                 b.picked = p.piece;
-                b.ghost = park::track::PiecePlacement { o, park::track::tip_of(o, laid, p.piece.reversed, scene.grid) };
+                b.ghost = rct3::park::track::PiecePlacement { o, rct3::park::track::tip_of(o, laid, p.piece.reversed, scene.grid) };
                 b.off_water = false; // The way was found on water
                 b.clashes = false;   // and clear of what stands
                 build(scene, b, assets);
@@ -1271,12 +1271,12 @@ namespace rct3::scene
             }
             wait_for_build(scene);
             save::TrackPiece last;
-            const park::track::PieceCatalogue* c = catalogue(b);
+            const rct3::park::track::PieceCatalogue* c = catalogue(b);
             if (b.selected)
             {
-                last = park::track::take_out_piece(*ride.track, *std::exchange(b.selected, std::nullopt));
+                last = rct3::park::track::take_out_piece(*ride.track, *std::exchange(b.selected, std::nullopt));
                 if (const auto laid = c != nullptr ? laid_piece(*c, last) : std::nullopt)
-                    b.choice = park::track::choice_of(c->pieces, *laid);
+                    b.choice = rct3::park::track::choice_of(c->pieces, *laid);
                 use_split(scene, b, b.split);
             }
             else
@@ -1300,7 +1300,7 @@ namespace rct3::scene
                 if (c != nullptr)
                     refund_piece(scene, *c, ride, last, scene.objects[found->second]);
                 // Its tunnel closes; the ground it cut stays cut.
-                if (!park::track::buried_hollows(std::span(&scene.objects[found->second], 1), scene.models, scene.grid).empty())
+                if (!rct3::park::track::buried_hollows(std::span(&scene.objects[found->second], 1), scene.models, scene.grid).empty())
                     scene.footpaths.pavings_stale = true;
                 scene.objects[found->second].hidden = true;
             }
@@ -1316,7 +1316,7 @@ namespace rct3::scene
 
     bool load_object_model(ParkScene& scene, std::map<std::string, TrackModels, std::less<>>& cache, const ui::InterfaceAssets& assets, const save::PlacedObject& object)
     {
-        const std::string key = park::object::model_key(object);
+        const std::string key = rct3::park::object::model_key(object);
         if (scene.models.contains(key))
             return true;
         if (!assets.install)
@@ -1345,10 +1345,10 @@ namespace rct3::scene
         if (added)
         {
             // Only the overlay and those it takes assets from: scanning the whole track folder would be slow.
-            m.index = std::make_unique<park::AssetIndex>(park::AssetIndex::scan(assets.install->root(), { }));
+            m.index = std::make_unique<rct3::park::AssetIndex>(rct3::park::AssetIndex::scan(assets.install->root(), { }));
             if (const auto file = assets.install->find(std::format("{}.common.ovl", slashes(object.overlay))))
                 (void)add_with_references(*file);
-            m.loader = std::make_unique<park::object::ModelLoader>(*m.index);
+            m.loader = std::make_unique<rct3::park::object::ModelLoader>(*m.index);
         }
         if (m.missing.contains(object.symbol))
             return false;
@@ -1374,7 +1374,7 @@ namespace rct3::scene
             }
             if (file && add_with_references(*file))
             {
-                m.loader = std::make_unique<park::object::ModelLoader>(*m.index);
+                m.loader = std::make_unique<rct3::park::object::ModelLoader>(*m.index);
                 model = m.loader->load(object.symbol, object.overlay, scene.modelled_plants);
             }
             // A theme keeps its rides and entrances in overlays of their own, named apart from the items they
@@ -1395,7 +1395,7 @@ namespace rct3::scene
                 }
                 if (added)
                 {
-                    m.loader = std::make_unique<park::object::ModelLoader>(*m.index);
+                    m.loader = std::make_unique<rct3::park::object::ModelLoader>(*m.index);
                     model = m.loader->load(object.symbol, object.overlay, scene.modelled_plants);
                 }
             }
@@ -1417,12 +1417,12 @@ namespace rct3::scene
         scene.supports.stale = true;
         wait_for_build(scene); // The build beside the frame reads the anchors written here
         profiling::section("Places", [&] { place_objects(scene); });
-        const park::object::ObjectPlaces& places = scene.places;
+        const rct3::park::object::ObjectPlaces& places = scene.places;
         scene.anchors.resize(places.transforms.size());
         std::ranges::transform(places.transforms, scene.anchors.begin(), [](const glm::mat4& m) { return glm::vec3(m[3]); });
-        scene.lamps = profiling::section("Lamps", [&] { return park::object::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted, places.transforms, places.models); });
+        scene.lamps = profiling::section("Lamps", [&] { return rct3::park::object::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted, places.transforms, places.models); });
         scene.lamps_due = true;
-        profiling::section("Effects", [&] { show_park_particles(scene.particles, park::object::object_effects(scene.objects, scene.models, scene.grid, scene.fitted, places.transforms, places.models)); });
+        profiling::section("Effects", [&] { show_park_particles(scene.particles, rct3::park::object::object_effects(scene.objects, scene.models, scene.grid, scene.fitted, places.transforms, places.models)); });
         scene.levels = { };
         scene.since_rebuild = kObjectRebuildInterval;
         scene.chairs_changed = true;
@@ -1480,8 +1480,8 @@ namespace rct3::scene
 
     void place_objects(const ParkScene& scene)
     {
-        const std::vector<std::size_t> changed = park::object::update_places(scene.places, scene.objects, scene.models, scene.grid, scene.fitted);
-        park::object::update_pick_boxes(scene.pick_boxes, scene.places, changed);
+        const std::vector<std::size_t> changed = rct3::park::object::update_places(scene.places, scene.objects, scene.models, scene.grid, scene.fitted);
+        rct3::park::object::update_pick_boxes(scene.pick_boxes, scene.places, changed);
         scene.pick_boxes_of = scene.objects.size();
     }
 
@@ -1496,27 +1496,27 @@ namespace rct3::scene
         /// The texture a ghost draws `batch` with. Ghosts are drawn see-through, which takes a picture's alpha
         /// as coverage; opaque parts may keep other things in their alpha (a path's surface does), so they get
         /// a copy of their own with it filled.
-        std::string ghost_texture(const park::object::ObjectBatch& batch)
+        std::string ghost_texture(const rct3::park::object::ObjectBatch& batch)
         {
-            return batch.blend == park::object::PartBlend::Opaque ? std::format("ghost:{}", batch.texture) : batch.texture;
+            return batch.blend == rct3::park::object::PartBlend::Opaque ? std::format("ghost:{}", batch.texture) : batch.texture;
         }
     } // namespace
 
-    void ghost_textures(render::Device& device, ParkScene& scene, const park::object::ObjectMesh& ghost)
+    void ghost_textures(render::Device& device, ParkScene& scene, const rct3::park::object::ObjectMesh& ghost)
     {
-        std::vector<park::object::ObjectBatch> missing;
-        for (const park::object::ObjectBatch& batch : ghost.batches)
+        std::vector<rct3::park::object::ObjectBatch> missing;
+        for (const rct3::park::object::ObjectBatch& batch : ghost.batches)
         {
             if (!scene.object_textures.contains(ghost_texture(batch)))
                 missing.push_back(batch);
         }
         if (missing.empty())
             return;
-        auto pictures = park::object::paint_batches(missing, scene.pictures);
-        for (const park::object::ObjectBatch& batch : missing)
+        auto pictures = rct3::park::object::paint_batches(missing, scene.pictures);
+        for (const rct3::park::object::ObjectBatch& batch : missing)
         {
             const auto painted = pictures.find(batch.texture);
-            if (batch.blend != park::object::PartBlend::Opaque || painted == pictures.end())
+            if (batch.blend != rct3::park::object::PartBlend::Opaque || painted == pictures.end())
                 continue;
             ovl::texture::RgbaImage filled = painted->second;
             for (std::size_t i = 3; i < filled.pixels.size(); i += 4)
@@ -1525,7 +1525,7 @@ namespace rct3::scene
         }
         fit_texture_detail(scene, pictures);
         if (scene.relief_maps)
-            park::add_relief_maps(pictures); // The pictures stay for the object once it is built
+            rct3::park::add_relief_maps(pictures); // The pictures stay for the object once it is built
         std::erase_if(pictures, [&](const auto& entry) { return scene.object_textures.contains(entry.first); });
         auto uploaded = ui::upload_textures(device, pictures);
         if (uploaded)
@@ -1593,7 +1593,7 @@ namespace rct3::scene
         const auto c = overlay ? load_catalogue(scene.building, *overlay, assets) : std::nullopt;
         std::int64_t cost = 0;
         for (const save::TrackPiece& piece : c ? scene.rides.rides[ride].track->pieces : std::vector<save::TrackPiece> { })
-            if (const auto shape = park::track::shape_named(*c, piece.symbol))
+            if (const auto shape = rct3::park::track::shape_named(*c, piece.symbol))
                 cost += shape->record.cost;
         return cost;
     }
@@ -1606,48 +1606,48 @@ namespace rct3::scene
         const std::string symbol = ride.trains.front().symbol;
         const std::string path = ride.trains.front().overlay_path;
         const std::string_view name = std::string_view(symbol).substr(0, symbol.find(':'));
-        park::AssetIndex found = park::AssetIndex::scan(install.root(), { });
+        rct3::park::AssetIndex found = rct3::park::AssetIndex::scan(install.root(), { });
         if (const auto file = install.find(std::format("{}.common.ovl", path)))
             (void)found.add_file(*file);
         add_referenced(found, install); // Links between cars are often in files of their own
-        park::object::ModelLoader loader(found);
-        // The train's designs by slot (park::ride::car_slots), each that it fills.
-        std::array<std::optional<park::object::ObjectModel>, 6> designs;
+        rct3::park::object::ModelLoader loader(found);
+        // The train's designs by slot (rct3::park::ride::car_slots), each that it fills.
+        std::array<std::optional<rct3::park::object::ObjectModel>, 6> designs;
         std::array<bool, 6> filled { };
         for (std::size_t slot = 0; slot < designs.size(); ++slot)
             filled[slot] = (designs[slot] = loader.load_car(name, path, slot)).has_value();
         // How each car of a train filling `slots` sits, by car; one without a model of its own takes no room.
         const auto fits_of = [&](const std::vector<std::size_t>& slots) {
-            std::vector<park::object::CarFit> fits;
+            std::vector<rct3::park::object::CarFit> fits;
             for (const std::size_t slot : slots)
-                fits.push_back(designs[slot] && designs[slot]->car_fit ? *designs[slot]->car_fit : park::object::CarFit { });
+                fits.push_back(designs[slot] && designs[slot]->car_fit ? *designs[slot]->car_fit : rct3::park::object::CarFit { });
             return fits;
         };
         // On a course with a station, as many cars as its shortest station takes, as in the game; where even the
         // fewest its kind allows do not fit, that many all the same, so that any circuit runs.
         const auto& course = index < scene.courses.size() ? scene.courses[index] : std::nullopt;
-        if (course && ride.mode != save::OperatingMode::MiniGolf && std::ranges::contains(course->kinds, park::track::CourseKind::Station))
+        if (course && ride.mode != save::OperatingMode::MiniGolf && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station))
         {
             const auto limits = scene.train_limits.find(index);
             const int fewest = std::min(limits != scene.train_limits.end() ? limits->second.fewest_cars : 1, cars);
             std::vector<float> lengths;
             for (int n = 1; n <= cars; ++n)
-                lengths.push_back(park::track::train_length(fits_of(park::ride::car_slots(n, filled))));
-            const int fit = park::track::cars_fitting(*course, lengths, fewest);
+                lengths.push_back(rct3::park::track::train_length(fits_of(rct3::park::ride::car_slots(n, filled))));
+            const int fit = rct3::park::track::cars_fitting(*course, lengths, fewest);
             cars = fit > 0 ? fit : fewest;
         }
         // A car more where those there have no seat, as a front car alone may have none.
-        while (cars < 2 && std::ranges::none_of(park::ride::car_slots(cars, filled), [&](std::size_t slot) { return designs[slot] && designs[slot]->seats > 0; }))
+        while (cars < 2 && std::ranges::none_of(rct3::park::ride::car_slots(cars, filled), [&](std::size_t slot) { return designs[slot] && designs[slot]->seats > 0; }))
             ++cars;
-        const std::vector<std::size_t> slots = park::ride::car_slots(cars, filled);
-        std::vector<park::object::CarFit>& fits = scene.car_fits[index] = fits_of(slots);
+        const std::vector<std::size_t> slots = rct3::park::ride::car_slots(cars, filled);
+        std::vector<rct3::park::object::CarFit>& fits = scene.car_fits[index] = fits_of(slots);
         if (std::ranges::none_of(slots, [&](std::size_t slot) { return designs[slot] && designs[slot]->car_fit; }))
             fits.clear(); // Nothing to stand them by
         // As many trains as the course takes; a shuttle runs one.
         if (const auto coaster = course ? simulation::coaster_of(*course, ride) : std::nullopt; coaster && coaster->shuttle != simulation::Shuttle::None)
             trains = 1;
         else if (course)
-            trains = std::min(trains, park::track::trains_fitting(*course, fits, ride.options.block_sectioned, index < scene.track_rules.size() ? scene.track_rules[index].most_trains : std::nullopt));
+            trains = std::min(trains, rct3::park::track::trains_fitting(*course, fits, ride.options.block_sectioned, index < scene.track_rules.size() ? scene.track_rules[index].most_trains : std::nullopt));
         ride.trains.assign(static_cast<std::size_t>(trains), save::Train { });
         ride.seats.clear();
         bool arm = false;
@@ -1664,7 +1664,7 @@ namespace rct3::scene
                 for (std::uint32_t seat = 0; seated && seat < seated->seats; ++seat)
                     ride.seats.push_back({ .car = static_cast<std::int32_t>(car), .seat = static_cast<std::int32_t>(seat), .train = t });
             }
-            train.length = park::track::train_length(fits);
+            train.length = rct3::park::track::train_length(fits);
         }
         ride.train_count = trains;
         ride.cars_per_train = cars;
@@ -1733,8 +1733,8 @@ namespace rct3::scene
             float front = course->length();
             for (save::Train& train : ride.trains)
             {
-                park::track::stand_train(*course, train, fits->second, std::max(front, 0.0f));
-                front -= train.length + park::track::kTrainGap;
+                rct3::park::track::stand_train(*course, train, fits->second, std::max(front, 0.0f));
+                front -= train.length + rct3::park::track::kTrainGap;
             }
             return;
         }
@@ -1743,23 +1743,23 @@ namespace rct3::scene
         if (coaster->splash_out)
         {
             for (std::size_t t = 0; t < ride.trains.size(); ++t)
-                park::track::stand_train(*course, ride.trains[t], fits->second, t == 0 ? coaster->start : course->length());
+                rct3::park::track::stand_train(*course, ride.trains[t], fits->second, t == 0 ? coaster->start : course->length());
             return;
         }
         // Spread over its stations; those with no room are left out, as the game does.
-        const std::vector<float> fronts = park::track::train_fronts(*course, coaster->start, ride.trains.front().length, static_cast<int>(ride.trains.size()), ride.options.block_sectioned);
+        const std::vector<float> fronts = rct3::park::track::train_fronts(*course, coaster->start, ride.trains.front().length, static_cast<int>(ride.trains.size()), ride.options.block_sectioned);
         const auto kept = static_cast<std::int32_t>(fronts.size());
         ride.trains.resize(fronts.size());
         std::erase_if(ride.seats, [&](const auto& seat) { return seat.train >= kept; });
         ride.train_count = kept;
         for (std::size_t t = 0; t < fronts.size(); ++t)
-            park::track::stand_train(*course, ride.trains[t], fits->second, fronts[t]);
+            rct3::park::track::stand_train(*course, ride.trains[t], fits->second, fronts[t]);
     }
 
-    park::path::SolidTiles boat_obstacles(const ParkScene& scene)
+    rct3::park::path::SolidTiles boat_obstacles(const ParkScene& scene)
     {
-        park::path::SolidTiles solids = park::path::solid_tiles(scene.objects, scene.models, scene.grid);
-        park::path::add_path_decks(solids, scene.footpaths.paths, scene.grid);
+        rct3::park::path::SolidTiles solids = rct3::park::path::solid_tiles(scene.objects, scene.models, scene.grid);
+        rct3::park::path::add_path_decks(solids, scene.footpaths.paths, scene.grid);
         return solids;
     }
 
@@ -1773,7 +1773,7 @@ namespace rct3::scene
         simulation::import_boats(scene.sim, one, std::span(&e, 1), std::span(&scene.courses[index], 1), scene.grid, scene.footpaths.water.bodies, boat_obstacles(scene));
         auto* boats = scene.sim.registry.try_get<simulation::Boats>(e);
         for (std::size_t k = 0; boats && k < scene.cars.size(); ++k)
-            if (const auto model = scene.car_spots[k].ride == index ? scene.models.find(park::object::model_ref(scene.cars[k])) : scene.models.end(); model != scene.models.end() && model->second.boat_handling.turn_most > 0)
+            if (const auto model = scene.car_spots[k].ride == index ? scene.models.find(rct3::park::object::model_ref(scene.cars[k])) : scene.models.end(); model != scene.models.end() && model->second.boat_handling.turn_most > 0)
                 boats->handling = model->second.boat_handling;
     }
 
@@ -1820,9 +1820,9 @@ namespace rct3::scene
         return true;
     }
 
-    bool new_tracked_ride(ParkScene& scene, const park::BuildItem& item, const ui::InterfaceAssets& assets)
+    bool new_tracked_ride(ParkScene& scene, const rct3::park::BuildItem& item, const ui::InterfaceAssets& assets)
     {
-        if (item.kind != park::BuildKind::TrackedRide || !assets.install)
+        if (item.kind != rct3::park::BuildKind::TrackedRide || !assets.install)
             return false;
         const auto file = assets.install->find(std::format("{}.common.ovl", item.overlay));
         if (!file)
@@ -1832,13 +1832,13 @@ namespace rct3::scene
             return false;
         // The first overlay the ride's file names that holds pieces.
         std::optional<std::string> pieces;
-        for (std::string named : park::track::named_overlays(*overlay, item.overlay))
+        for (std::string named : rct3::park::track::named_overlays(*overlay, item.overlay))
         {
             if (scene.building.catalogues.contains(named))
                 pieces = std::move(named);
             else if (const auto found = assets.install->find(std::format("{}.common.ovl", named)))
             {
-                if (auto loaded = park::track::load_piece_catalogue(*found, named); loaded && !loaded->pieces.empty())
+                if (auto loaded = rct3::park::track::load_piece_catalogue(*found, named); loaded && !loaded->pieces.empty())
                 {
                     scene.building.catalogues.emplace(named, std::move(*loaded));
                     pieces = std::move(named);
@@ -1858,10 +1858,10 @@ namespace rct3::scene
         ride.base.id = last_id(scene) + 1;
         ride.base.symbol = std::format("{}:trr", item.symbol);
         ride.base.overlay_path = item.overlay;
-        const auto colours = park::name_colours(item.symbol);
+        const auto colours = rct3::park::name_colours(item.symbol);
         ride.car_colours = { static_cast<std::uint8_t>(colours[0]), static_cast<std::uint8_t>(colours[1]), static_cast<std::uint8_t>(colours[2]) };
         // Its kind's name and a number, as the game names a new ride.
-        ride.base.name = park::ride::numbered_name(scene.rides.rides, ride.base.symbol);
+        ride.base.name = rct3::park::ride::numbered_name(scene.rides.rides, ride.base.symbol);
         // Built closed, as in the game: the player tests it and opens it from its window.
         ride.base.state = save::AttractionState::Closed;
         ride.base.flags = save::AttractionCommon::kNeverOpened;
@@ -1901,7 +1901,7 @@ namespace rct3::scene
             logging::logger("park").info("new {} runs {} with {} seats, lift {} m/s", item.symbol, train_name, ride.seats.size(), ride.options.lift_speed);
         // The simulation takes it on once its entrance and exit are placed beside its station (ride_placing.hpp).
         scene.track_rules.resize(scene.rides.rides.size());
-        scene.track_rules[index] = park::track::load_track_rules(*file, ride.base.symbol);
+        scene.track_rules[index] = rct3::park::track::load_track_rules(*file, ride.base.symbol);
         scene.courses.resize(scene.rides.rides.size());
         logging::logger("park").info("new {} built from {}", item.symbol, *pieces);
         const bool opened = open_track_building(scene, index, *pieces, assets);
@@ -1924,17 +1924,17 @@ namespace rct3::scene
         auto& pieces = ride.track->pieces;
         // A pool ride's station has no doors; where the complex's paving meets a side of it, its platform shows
         // steps down that side as it would for a door there.
-        std::vector<park::ride::DoorSpot> doors = kit->doors;
+        std::vector<rct3::park::ride::DoorSpot> doors = kit->doors;
         if (ride_index < scene.track_rules.size() && scene.track_rules[ride_index].pool_ride)
             for (const save::TrackPiece& p : pieces)
                 for (std::int32_t q = 0; q < 4; ++q)
-                    if (const park::Side side = park::Side::from(q); park::pools::slide_platform_joined(scene.pools, { .col = p.tile_x, .row = p.tile_z, .height = p.height, .turn = park::ModelTurn::from(p.direction) }, side))
+                    if (const rct3::park::Side side = rct3::park::Side::from(q); rct3::park::pools::slide_platform_joined(scene.pools, { .col = p.tile_x, .row = p.tile_z, .height = p.height, .turn = rct3::park::ModelTurn::from(p.direction) }, side))
                     {
                         const auto [dc, dr] = side.step();
-                        doors.push_back({ .col = p.tile_x + dc, .row = p.tile_z + dr, .turn = park::object::turn_facing(side.opposite()), .height = p.height });
+                        doors.push_back({ .col = p.tile_x + dc, .row = p.tile_z + dr, .turn = rct3::park::object::turn_facing(side.opposite()), .height = p.height });
                     }
         const auto station = [&](std::size_t i) {
-            const auto shape = park::track::shape_named(*c, pieces[i].symbol);
+            const auto shape = rct3::park::track::shape_named(*c, pieces[i].symbol);
             return pieces[i].platform.has_value() || (shape && has_platform(*shape));
         };
         wait_for_build(scene);
@@ -1943,13 +1943,13 @@ namespace rct3::scene
         {
             if (!station(i))
                 continue;
-            const auto shape = park::track::shape_named(*c, pieces[i].symbol);
+            const auto shape = rct3::park::track::shape_named(*c, pieces[i].symbol);
             if (!shape)
                 continue;
             // shortcut: the open end being built on counts as the track's end, which only the aquarium's platforms
             // show; upgrade by leaving that end open while the construction panel is on it.
-            const park::ride::PlatformPlace place = platform_place(*shape, i > 0 ? station(i - 1) : ride.track->circuit && station(pieces.size() - 1), i + 1 < pieces.size() ? station(i + 1) : ride.track->circuit && station(0), i > 0 || ride.track->circuit, i + 1 < pieces.size() || ride.track->circuit);
-            const auto name = park::ride::platform_symbol(ride.platform_type, pieces[i], place, doors, kit->names);
+            const rct3::park::ride::PlatformPlace place = platform_place(*shape, i > 0 ? station(i - 1) : ride.track->circuit && station(pieces.size() - 1), i + 1 < pieces.size() ? station(i + 1) : ride.track->circuit && station(0), i > 0 || ride.track->circuit, i + 1 < pieces.size() || ride.track->circuit);
+            const auto name = rct3::park::ride::platform_symbol(ride.platform_type, pieces[i], place, doors, kit->names);
             if (!name)
             {
                 // Its type has no platform for it there, as some have none without stairs.
@@ -1996,21 +1996,21 @@ namespace rct3::scene
         b.completing.reset();
         b.proposed.clear();
         save::Ride& ride = scene.rides.rides.at(*b.ride);
-        const park::track::PieceCatalogue* c = catalogue(b);
+        const rct3::park::track::PieceCatalogue* c = catalogue(b);
         if (c == nullptr || !ride.track)
             return false;
         if (!opening(ride))
         {
             if (size.x <= 0 || size.y <= 0)
                 return false;
-            const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
+            const rct3::park::Ray ray = rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
             if (scene.pick_boxes_of != scene.objects.size())
                 place_objects(scene);
             // Only its pieces, not its doors or platforms.
             std::unordered_set<std::uint64_t> pieces;
             for (const save::TrackPiece& p : ride.track->pieces)
                 pieces.insert(p.scenery);
-            const auto hit = park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return !scene.objects[i].hidden && pieces.contains(scene.objects[i].id); });
+            const auto hit = rct3::park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return !scene.objects[i].hidden && pieces.contains(scene.objects[i].id); });
             const auto piece = hit ? std::ranges::find(ride.track->pieces, scene.objects[hit->index].id, &save::TrackPiece::scenery) : ride.track->pieces.end();
             if (piece == ride.track->pieces.end())
                 return false;
@@ -2018,20 +2018,20 @@ namespace rct3::scene
             // shortcut: only the last stretch's far end is built on, upgrade by building on from the end clicked.
             const std::size_t index = static_cast<std::size_t>(piece - ride.track->pieces.begin());
             const auto laid = laid_piece(*c, *piece);
-            b.selected = laid && park::track::piece_neighbours(*ride.track, index) ? std::optional(index) : std::nullopt;
+            b.selected = laid && rct3::park::track::piece_neighbours(*ride.track, index) ? std::optional(index) : std::nullopt;
             b.complaint.clear();
             if (!b.selected)
                 use_split(scene, b, b.split);
-            else if (b.split != park::track::SplitState::None)
-                b.split = park::track::split_of(c->pieces[laid->index].record);
+            else if (b.split != rct3::park::track::SplitState::None)
+                b.split = rct3::park::track::split_of(c->pieces[laid->index].record);
             if (b.selected)
             {
                 // Building steps on toward the end of the piece nearer the click.
                 const save::PlacedObject& o = scene.objects[hit->index];
-                const park::track::PieceShape& shape = c->pieces[laid->index];
+                const rct3::park::track::PieceShape& shape = c->pieces[laid->index];
                 const glm::vec3 point = ray.origin + ray.direction * hit->distance;
-                b.selected_back = glm::length(point - park::track::start_of(o, shape, laid->reversed, scene.grid).position) < glm::length(point - park::track::tip_of(o, shape, laid->reversed, scene.grid).position);
-                b.choice = park::track::choice_of(c->pieces, *laid);
+                b.selected_back = glm::length(point - rct3::park::track::start_of(o, shape, laid->reversed, scene.grid).position) < glm::length(point - rct3::park::track::tip_of(o, shape, laid->reversed, scene.grid).position);
+                b.choice = rct3::park::track::choice_of(c->pieces, *laid);
             }
             refresh(scene, b, assets);
             return true;
@@ -2050,20 +2050,20 @@ namespace rct3::scene
         const std::int64_t cash = scene.park.cash.value_or(0);
         // shortcut: a design's pieces are not checked against each other, as it was built whole in the game and
         // our rule refuses some of its pieces that pass close; check them too once the rule matches the game's.
-        park::path::SolidTiles standing;
+        rct3::park::path::SolidTiles standing;
         if (!design.empty())
         {
             std::vector<save::PlacedObject> others;
             std::ranges::copy_if(scene.objects, std::back_inserter(others), [&](const save::PlacedObject& o) {
                 const auto of = scene.attractions.find(o.id);
-                return of == scene.attractions.end() || of->second.kind != park::AttractionRef::Kind::Ride || of->second.index != *b.ride;
+                return of == scene.attractions.end() || of->second.kind != rct3::park::AttractionRef::Kind::Ride || of->second.index != *b.ride;
             });
-            standing = park::path::solid_tiles(others, scene.models, scene.grid);
+            standing = rct3::park::path::solid_tiles(others, scene.models, scene.grid);
         }
         const save::PlacedObject first = b.ghost->object;
         // A design of two tracks side by side holds both halves of each joined piece, laid as they come rather
         // than each laying its other half.
-        const park::track::SplitState split = design.empty() ? b.split : std::exchange(b.split, park::track::SplitState::None);
+        const rct3::park::track::SplitState split = design.empty() ? b.split : std::exchange(b.split, rct3::park::track::SplitState::None);
         for (std::size_t i = 0; i < std::max<std::size_t>(design.size(), 1); ++i)
         {
             if (i > 0)
@@ -2071,7 +2071,7 @@ namespace rct3::scene
                 auto placed = design_piece(*c, design, i, first, scene.grid);
                 if (!placed || !load_object_model(scene, b.models, assets, placed->object))
                     break;
-                b.picked = park::track::LaidPiece { static_cast<std::size_t>(&*park::track::shape_named(*c, design[i].symbol) - c->pieces.data()), design[i].reversed };
+                b.picked = rct3::park::track::LaidPiece { static_cast<std::size_t>(&*rct3::park::track::shape_named(*c, design[i].symbol) - c->pieces.data()), design[i].reversed };
                 // Laid in the design's own order, even on a ride built back from its station.
                 b.backward = false;
                 // Refused where it would clash with what stands, as a piece built by hand is; the flag left by the
@@ -2142,7 +2142,7 @@ namespace rct3::scene
             if (b.design_title.find_first_not_of(u' ') != std::u16string::npos)
                 ride.base.name = strings::to_utf8(b.design_title);
             scene.ride_tunes[ride.base.id] = b.design_tune;
-            scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, *b.ride };
+            scene.info_requested = rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Ride, *b.ride };
             if (!(*b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].pool_ride))
                 scene.doors_requested = *b.ride;
             close_track_building(scene);
@@ -2151,7 +2151,7 @@ namespace rct3::scene
         // A ride that is one building is done once set down: on to its window, where its doors are placed.
         if (*b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].one_piece && !ride.track->pieces.empty())
         {
-            scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, *b.ride };
+            scene.info_requested = rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Ride, *b.ride };
             close_track_building(scene);
         }
         return true;
@@ -2167,7 +2167,7 @@ namespace rct3::scene
         // Golf paths are never banked, and their pieces list the path's edges either way round, which reads as
         // upside down against the station.
         if (scene.rides.rides[ride].mode == save::OperatingMode::MiniGolf)
-            for (park::track::PieceShape& p : b.catalogues.at(overlay).pieces)
+            for (rct3::park::track::PieceShape& p : b.catalogues.at(overlay).pieces)
                 p.entry.bank = p.exit.bank = 0;
         b.ride = ride;
         b.overlay = std::move(overlay);
@@ -2190,7 +2190,7 @@ namespace rct3::scene
         b.preview_item.clear();
         // A ride of two tracks side by side starts with joined pieces, from the left track's end.
         const auto& pieces = b.catalogues.at(b.overlay).pieces;
-        use_split(scene, b, std::ranges::any_of(pieces, [](const park::track::PieceShape& p) { return p.record.side != 0; }) ? park::track::SplitState::JoinedLeft : park::track::SplitState::None);
+        use_split(scene, b, std::ranges::any_of(pieces, [](const rct3::park::track::PieceShape& p) { return p.record.side != 0; }) ? rct3::park::track::SplitState::JoinedLeft : rct3::park::track::SplitState::None);
         refresh(scene, b, assets);
         auto placing = scene.desktop->root().find_as<ui::screens::InfoPanel>(kPlacingName);
         if (!placing)
@@ -2286,7 +2286,7 @@ namespace rct3::scene
             strip->find_as<ui::Label>("piece_label")->text = strings::to_utf16(std::format("{}/{}", index + 1, pieces.size()));
             auto& enable = *strip->find_as<ui::Tickbox>("enable");
             // The nearest piece before or after this one (round a circuit) with angles of its own.
-            const auto nearest = [&](bool before) -> std::optional<park::track::ArmAngles> {
+            const auto nearest = [&](bool before) -> std::optional<rct3::park::track::ArmAngles> {
                 for (std::size_t k = 1; k < pieces.size(); ++k)
                     if (const auto& other = pieces[before ? (index + pieces.size() - k) % pieces.size() : (index + k) % pieces.size()]; other.arm_angles)
                         return other.arm_angles;
@@ -2295,7 +2295,7 @@ namespace rct3::scene
             bool shown = b.arm_piece == piece.id;
             if (enable.take_change())
             {
-                piece.arm_angles = enable.ticked ? nearest(true).value_or(park::track::ArmAngles { }) : std::optional<park::track::ArmAngles> { };
+                piece.arm_angles = enable.ticked ? nearest(true).value_or(rct3::park::track::ArmAngles { }) : std::optional<rct3::park::track::ArmAngles> { };
                 shown = false;
             }
             for (const auto& [name, before] : { std::pair { "copy_prev", true }, { "copy_next", false } })
@@ -2307,7 +2307,7 @@ namespace rct3::scene
                     }
             if (strip->find_as<ui::Button>("zero")->take_click())
             {
-                piece.arm_angles = park::track::ArmAngles { };
+                piece.arm_angles = rct3::park::track::ArmAngles { };
                 shown = false;
             }
             for (std::size_t j = 0; j < kArmJoints.size(); ++j)
@@ -2344,7 +2344,7 @@ namespace rct3::scene
             close_track_building(scene);
             return;
         }
-        const park::track::PieceCatalogue* c = catalogue(b);
+        const rct3::park::track::PieceCatalogue* c = catalogue(b);
         bool changed = false;
         // The round panel's ring, in this order: the ride's window, turning the first piece, the construction
         // strip, its state, the colours of the pieces built next, and cutting the ground smoothly or sharply, one
@@ -2365,7 +2365,7 @@ namespace rct3::scene
         if (const auto tab = placing->take_action())
         {
             if (*tab == Info)
-                scene.info_requested = park::AttractionRef { park::AttractionRef::Kind::Ride, *b.ride };
+                scene.info_requested = rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Ride, *b.ride };
             // Each press turns the first piece a quarter, as a flat ride's turn does.
             if (*tab == Rotate && starting)
             {
@@ -2386,7 +2386,7 @@ namespace rct3::scene
             b.colours = colours;
             b.tabs_for.reset();
         }
-        const park::AttractionRef ref { .kind = park::AttractionRef::Kind::Ride, .index = *b.ride };
+        const rct3::park::AttractionRef ref { .kind = rct3::park::AttractionRef::Kind::Ride, .index = *b.ride };
         const std::vector<ui::screens::StateChoice> states = state_choices(scene, ref);
         if (const auto choice = placing->take_choice(); choice && choice->first == State && choice->second < states.size())
         {
@@ -2477,10 +2477,10 @@ namespace rct3::scene
             if (const auto picked = design->take_picked(); picked && *picked == Page)
                 design->show_page(page());
             if (auto status = design->find_as<ui::Label>("body/status_label"))
-                status->text = assets.strings->get(park::refusal_key(b.refusal));
+                status->text = assets.strings->get(rct3::park::refusal_key(b.refusal));
             std::int64_t price = 0;
             for (const save::TrackPiece& p : b.design)
-                if (const auto shape = c != nullptr ? park::track::shape_named(*c, p.symbol) : std::nullopt)
+                if (const auto shape = c != nullptr ? rct3::park::track::shape_named(*c, p.symbol) : std::nullopt)
                     price += shape->record.cost;
             design->show_view_text(ui::money_text(ui::currency(*assets.strings, currency), price));
         }
@@ -2529,7 +2529,7 @@ namespace rct3::scene
         {
             // The pointer off the ground, say over the panel, leaves the first piece where it was aimed. With Shift held
             // the piece stays on its tile and rises or sinks with the pointer, as scenery does.
-            const auto ray = !over && size.x > 0 && size.y > 0 ? std::optional(park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y })) : std::nullopt;
+            const auto ray = !over && size.x > 0 && size.y > 0 ? std::optional(rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y })) : std::nullopt;
             if (!shift || !b.ghost || !ray)
                 b.lift.reset();
             if (b.lift)
@@ -2542,7 +2542,7 @@ namespace rct3::scene
             }
             else if (shift && b.ghost && ray)
             {
-                if (const auto distance = park::object::ground_hit(*ray, scene.grid))
+                if (const auto distance = rct3::park::object::ground_hit(*ray, scene.grid))
                     b.lift = TrackBuilding::Lift { ray->origin + ray->direction * *distance, b.ghost->object.base_height.value_or(0) };
             }
             else if (const auto pointed = ray ? ground_tile(scene, at, size) : std::nullopt; pointed && pointed != b.aim)
@@ -2573,21 +2573,21 @@ namespace rct3::scene
             switch (event->action)
             {
                 case Curve:
-                    b.choice = park::track::pick_value(c->pieces, b.candidates, b.choice, park::track::ChoiceAxis::Curve, static_cast<int>(event->index) - park::track::kCurveSizes);
+                    b.choice = rct3::park::track::pick_value(c->pieces, b.candidates, b.choice, rct3::park::track::ChoiceAxis::Curve, static_cast<int>(event->index) - rct3::park::track::kCurveSizes);
                     break;
                 case Slope:
-                    b.choice = park::track::pick_value(c->pieces, b.candidates, b.choice, park::track::ChoiceAxis::Slope, static_cast<int>(event->index) - park::track::kSlopeSteps);
+                    b.choice = rct3::park::track::pick_value(c->pieces, b.candidates, b.choice, rct3::park::track::ChoiceAxis::Slope, static_cast<int>(event->index) - rct3::park::track::kSlopeSteps);
                     break;
                 case Bank:
-                    b.choice = park::track::pick_value(c->pieces, b.candidates, b.choice, park::track::ChoiceAxis::Bank, panel_bank(event->index));
+                    b.choice = rct3::park::track::pick_value(c->pieces, b.candidates, b.choice, rct3::park::track::ChoiceAxis::Bank, panel_bank(event->index));
                     break;
                 case Toggle:
-                    b.choice = park::track::pick_toggle(c->pieces, b.candidates, b.choice, static_cast<park::track::PieceToggle>(event->index));
+                    b.choice = rct3::park::track::pick_toggle(c->pieces, b.candidates, b.choice, static_cast<rct3::park::track::PieceToggle>(event->index));
                     break;
                 case Named:
                 {
-                    const park::track::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : park::track::TrackRules { };
-                    const std::vector<ListedPiece> list = listed_pieces(*assets.strings, *c, rules, park::track::choice_options(c->pieces, b.candidates, b.choice));
+                    const rct3::park::track::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : rct3::park::track::TrackRules { };
+                    const std::vector<ListedPiece> list = listed_pieces(*assets.strings, *c, rules, rct3::park::track::choice_options(c->pieces, b.candidates, b.choice));
                     if (event->index < list.size() && list[event->index].laid)
                         b.choice.named = list[event->index].laid;
                     break;
@@ -2635,16 +2635,16 @@ namespace rct3::scene
                 case Split:
                     // Over a piece picked mid-track, only the kind of pieces changes.
                     if (b.selected)
-                        b.split = park::track::next_split(b.split, split_closed(scene, b), true);
+                        b.split = rct3::park::track::next_split(b.split, split_closed(scene, b), true);
                     else
-                        use_split(scene, b, park::track::next_split(b.split, split_closed(scene, b), false));
+                        use_split(scene, b, rct3::park::track::next_split(b.split, split_closed(scene, b), false));
                     break;
             }
             changed = true;
         }
         if (b.completing)
         {
-            if (const auto found = park::track::search_on(*b.completing, kCompletionTriesPerFrame))
+            if (const auto found = rct3::park::track::search_on(*b.completing, kCompletionTriesPerFrame))
             {
                 if (*found)
                     b.proposed = std::move(**found);
@@ -2668,7 +2668,7 @@ namespace rct3::scene
         // Boats sail off the end of theirs instead.
         const save::Ride& tested = scene.rides.rides.at(*b.ride);
         const auto& course = *b.ride < scene.courses.size() ? scene.courses[*b.ride] : std::nullopt;
-        const bool testable = tested.base.state == save::AttractionState::Testing && course && !course->closed && std::ranges::contains(course->kinds, park::track::CourseKind::Station) && !tested.trains.empty() && tested.mode != save::OperatingMode::Boat && tested.mode != save::OperatingMode::WaterTransport && scene.car_fits.contains(*b.ride) && assets.install && (*b.ride >= scene.ride_entities.size() || scene.ride_entities[*b.ride] == entt::null);
+        const bool testable = tested.base.state == save::AttractionState::Testing && course && !course->closed && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station) && !tested.trains.empty() && tested.mode != save::OperatingMode::Boat && tested.mode != save::OperatingMode::WaterTransport && scene.car_fits.contains(*b.ride) && assets.install && (*b.ride >= scene.ride_entities.size() || scene.ride_entities[*b.ride] == entt::null);
         if (!testable)
             b.test.reset();
         else if (!b.test)
@@ -2677,7 +2677,7 @@ namespace rct3::scene
             // to make the train, which is then told the track has ends.
             save::Ride ghost = tested;
             ghost.trains.resize(1);
-            park::track::TrackCourse round = *course;
+            rct3::park::track::TrackCourse round = *course;
             round.closed = true;
             if (auto train = simulation::coaster_of(round, ghost))
             {
@@ -2685,20 +2685,20 @@ namespace rct3::scene
                 train->ghost = true;
                 train->running = true;
                 train->speed = train->splash_out ? 0 : train->station_speed; // Sent off by the station, as the park sends a train; a slide's car is eased off
-                park::track::stand_train(*course, ghost.trains.front(), scene.car_fits.at(*b.ride), train->start);
-                const park::ride::RideCars cars = park::ride::ride_cars(std::span(&ghost, 1), 0);
+                rct3::park::track::stand_train(*course, ghost.trains.front(), scene.car_fits.at(*b.ride), train->start);
+                const rct3::park::ride::RideCars cars = rct3::park::ride::ride_cars(std::span(&ghost, 1), 0);
                 load_car_models(scene, *assets.install, cars);
-                if (const auto model = cars.pieces.empty() ? scene.models.end() : scene.models.find(park::object::model_ref(cars.pieces.front())); model != scene.models.end())
+                if (const auto model = cars.pieces.empty() ? scene.models.end() : scene.models.find(rct3::park::object::model_ref(cars.pieces.front())); model != scene.models.end())
                     fit_car(*train, model->second, *b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].pool_ride);
                 TrackBuilding::GhostTrain& t = b.test.emplace(TrackBuilding::GhostTrain { .train = *train, .spots = cars.spots, .stood_at = ghost.trains.front().distance });
                 for (const save::PlacedObject& car : cars.pieces)
                     t.stood.push_back(cars.fitted.at(car.id));
-                t.meshes = park::moving_meshes(cars.pieces, scene.models, scene.grid);
+                t.meshes = rct3::park::moving_meshes(cars.pieces, scene.models, scene.grid);
                 for (std::size_t i = 0; i < cars.pieces.size(); ++i)
-                    if (const auto model = scene.models.find(park::object::model_ref(cars.pieces[i])); model != scene.models.end())
+                    if (const auto model = scene.models.find(rct3::park::object::model_ref(cars.pieces[i])); model != scene.models.end())
                         t.joints.insert(t.joints.end(), model->second.arm_joints.size(), i);
                 for (auto* vertices : { &t.meshes.mesh.vertices, &t.meshes.own })
-                    for (park::GroundVertex& v : *vertices)
+                    for (rct3::park::GroundVertex& v : *vertices)
                         v.colour *= kGhostTint;
                 ghost_textures(device, scene, t.meshes.mesh);
             }
@@ -2743,7 +2743,7 @@ namespace rct3::scene
             std::vector<glm::mat4> places;
             for (std::size_t i = 0; i < t.stood.size(); ++i)
             {
-                glm::mat4 place = park::track::moved_along(*course, t.stood[i], { t.spots[i].front, t.spots[i].rear }, t.train.at - t.stood_at);
+                glm::mat4 place = rct3::park::track::moved_along(*course, t.stood[i], { t.spots[i].front, t.spots[i].rear }, t.train.at - t.stood_at);
                 if (t.train.splashed)
                     place = t.train.flight ? simulation::flown(*t.train.flight, place) : glm::mat4(0.0f); // Off a pool slide's end, flying on and afloat till gone
                 // Crashed, each car flies and tumbles as its wreck does, and is gone with it.
@@ -2761,10 +2761,10 @@ namespace rct3::scene
                 const glm::mat4 place = places[car];
                 places.push_back(place);
             }
-            park::move_meshes(t.meshes, places);
+            rct3::park::move_meshes(t.meshes, places);
         }
         if (b.completing)
-            show_way(scene, b, assets, park::track::nearest_way(*b.completing));
+            show_way(scene, b, assets, rct3::park::track::nearest_way(*b.completing));
         else if (!b.proposed.empty())
             show_way(scene, b, assets, b.proposed);
         ghost_textures(device, scene, b.ghost_mesh);
@@ -2780,12 +2780,12 @@ namespace rct3::scene
             if (b.preview_item != alone.symbol)
             {
                 const std::array<save::PlacedObject, 1> one { alone };
-                scene.placing.preview_mesh = park::object::object_mesh(one, scene.models, scene.grid);
+                scene.placing.preview_mesh = rct3::park::object::object_mesh(one, scene.models, scene.grid);
                 ghost_textures(device, scene, scene.placing.preview_mesh);
                 scene.placing.preview_bones.clear();
                 b.preview_item = alone.symbol;
             }
-            scene.placing.preview_camera = park::framed(park::object::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
+            scene.placing.preview_camera = rct3::park::framed(rct3::park::object::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
             price = ui::money_text(ui::currency(*assets.strings, currency), c->pieces[b.picked->index].record.cost);
         }
         else
@@ -2927,12 +2927,12 @@ namespace rct3::scene
         }
     }
 
-    park::TerrainMesh track_arrows(const ParkScene& scene)
+    rct3::park::TerrainMesh track_arrows(const ParkScene& scene)
     {
         const TrackBuilding& b = scene.building;
         if (!b.ride || !b.ghost || !b.tip)
             return { };
-        return park::track_arrows(*b.tip, b.ghost->next, !b.backward);
+        return rct3::park::track_arrows(*b.tip, b.ghost->next, !b.backward);
     }
 
     void draw_track_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
@@ -2963,7 +2963,7 @@ namespace rct3::scene
         return light;
     }
 
-    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::object::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light, bool solid)
+    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const rct3::park::object::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light, bool solid)
     {
         if (mesh.indices.empty() || !scene.see_through_pipeline)
             return;
@@ -2971,13 +2971,13 @@ namespace rct3::scene
         const auto indices = device.allocate_transient(std::as_bytes(std::span(mesh.indices)));
         if (!vertices || !indices)
             return;
-        for (const park::object::ObjectBatch& batch : mesh.batches)
+        for (const rct3::park::object::ObjectBatch& batch : mesh.batches)
         {
-            if (batch.blend == park::object::PartBlend::DepthOnly) // It would hide the ghost's own insides
+            if (batch.blend == rct3::park::object::PartBlend::DepthOnly) // It would hide the ghost's own insides
                 continue;
             const auto texture = scene.object_textures.find(ghost_texture(batch));
             render::DrawCommand draw;
-            draw.pipeline = !solid || batch.blend == park::object::PartBlend::Blended ? scene.see_through_pipeline : (batch.blend == park::object::PartBlend::Cutout ? scene.cutout_pipeline : scene.object_pipeline);
+            draw.pipeline = !solid || batch.blend == rct3::park::object::PartBlend::Blended ? scene.see_through_pipeline : (batch.blend == rct3::park::object::PartBlend::Cutout ? scene.cutout_pipeline : scene.object_pipeline);
             draw.vertices = *vertices;
             draw.indices = *indices;
             draw.index_type = render::IndexType::U32;
@@ -3001,8 +3001,8 @@ namespace rct3::scene
             return out;
         for (const save::TrackPiece& piece : scene.rides.rides[ride].track->pieces)
         {
-            const auto shape = park::track::shape_named(*c, piece.symbol);
-            if (piece.platform || (shape && (shape->record.flags & park::track::kPieceStation) != 0))
+            const auto shape = rct3::park::track::shape_named(*c, piece.symbol);
+            if (piece.platform || (shape && (shape->record.flags & rct3::park::track::kPieceStation) != 0))
                 out.push_back(piece);
         }
         return out;

@@ -66,15 +66,15 @@ namespace rct3::scene
             Exit,
             Scenery,
         };
-        std::optional<park::BuildItem> item; ///< Being placed; none while idle
+        std::optional<rct3::park::BuildItem> item; ///< Being placed; none while idle
         Step step = Step::Ride;
-        park::ModelTurn turn;
-        std::optional<park::ride::RideSite> site;     ///< Pointed at, then where the ride was placed
-        std::optional<park::ride::DoorSpot> door;     ///< The entrance or exit pointed at
-        std::optional<park::ride::DoorSpot> entrance; ///< Placed; of a tracked ride getting a door, its other door
-        std::int32_t quadrant = 0;                    ///< Of the tile, for scenery that takes a quarter of one
-        std::int32_t ground = 0;                      ///< Height of the ground under the site, of scenery or a ride
-        bool absolute = false;                        ///< Scenery on a raised path, at the deck's height
+        rct3::park::ModelTurn turn;
+        std::optional<rct3::park::ride::RideSite> site;     ///< Pointed at, then where the ride was placed
+        std::optional<rct3::park::ride::DoorSpot> door;     ///< The entrance or exit pointed at
+        std::optional<rct3::park::ride::DoorSpot> entrance; ///< Placed; of a tracked ride getting a door, its other door
+        std::int32_t quadrant = 0;                          ///< Of the tile, for scenery that takes a quarter of one
+        std::int32_t ground = 0;                            ///< Height of the ground under the site, of scenery or a ride
+        bool absolute = false;                              ///< Scenery on a raised path, at the deck's height
         /// While Shift is held: where the pointer met the park when it went down, and the height then.
         struct Lift
         {
@@ -82,25 +82,25 @@ namespace rct3::scene
             std::int32_t height = 0;
         };
         std::optional<Lift> lift;
-        park::ride::SiteProblem problem = park::ride::SiteProblem::None;
+        rct3::park::ride::SiteProblem problem = rct3::park::ride::SiteProblem::None;
         bool affordable = true;
-        park::ride::Flatten flatten = park::ride::Flatten::Off; ///< How a ride's ground is levelled, as the panel's tabs set it
-        park::ground::GroundCuts levelling;                     ///< The ground levelled under the ride pointed at, when it may be
-        std::int64_t levelling_cost = 0;                        ///< In hundredths
-        std::size_t ride = 0;                                   ///< Of the scene's rides, once placed
-        park::object::ObjectMesh ghost_mesh;
-        std::array<std::int32_t, 3> colours { }; ///< Of the scenery: its own when picked, then those the player paints
-        std::string panel_item;                  ///< The scenery the placing panel is set up for
-        park::object::ObjectMesh preview_mesh;   ///< The scenery alone, for the panel's round view
+        rct3::park::ride::Flatten flatten = rct3::park::ride::Flatten::Off; ///< How a ride's ground is levelled, as the panel's tabs set it
+        rct3::park::ground::GroundCuts levelling;                           ///< The ground levelled under the ride pointed at, when it may be
+        std::int64_t levelling_cost = 0;                                    ///< In hundredths
+        std::size_t ride = 0;                                               ///< Of the scene's rides, once placed
+        rct3::park::object::ObjectMesh ghost_mesh;
+        std::array<std::int32_t, 3> colours { };     ///< Of the scenery: its own when picked, then those the player paints
+        std::string panel_item;                      ///< The scenery the placing panel is set up for
+        rct3::park::object::ObjectMesh preview_mesh; ///< The scenery alone, for the panel's round view
         /// Of scenery with bones, the same a piece per bone, moved as it moves; preview_bones gives each piece's bone.
-        park::MovingMeshes preview_moving;
+        rct3::park::MovingMeshes preview_moving;
         std::vector<std::int32_t> preview_bones;
-        park::ParkCamera preview_camera;
+        rct3::park::ParkCamera preview_camera;
         render::TextureHandle preview_target;
         std::uint32_t preview_pixels = 0;
         std::map<std::string, TrackModels, std::less<>> models;
-        park::path::SolidTiles solids;
-        park::ground::GroundHolds holds;                                        ///< What keeps the ground still, worked out with the solids
+        rct3::park::path::SolidTiles solids;
+        rct3::park::ground::GroundHolds holds;                                  ///< What keeps the ground still, worked out with the solids
         std::size_t solids_of = static_cast<std::size_t>(-1);                   ///< The scene's object count when worked out
         std::vector<std::size_t> unjoined;                                      ///< Rides placed here that the simulation does not run yet
         std::vector<std::size_t> unjoined_stalls;                               ///< The same of the stalls placed here
@@ -110,7 +110,7 @@ namespace rct3::scene
         /// Of a tracked ride getting a door: its station pieces, which the door stands beside
         std::vector<save::TrackPiece> stations;
         /// Of those, a base standing on ground of its own (a tower's): the ground it covers, which the door goes round
-        std::optional<park::ride::RideSite> base;
+        std::optional<rct3::park::ride::RideSite> base;
     };
 
     /// The point of the ground under `at`, in a view of `size`, in tile units: column and row with fractions.
@@ -123,18 +123,18 @@ namespace rct3::scene
     /// The height of something raised or sunk with Shift, the pointer's ray now being `ray`: its `height` when
     /// Shift went down with the pointer meeting the park at `at`, moved as far as the ray has moved up or down an
     /// upright plane through `at`, square to the view. Nothing while the view looks straight down.
-    [[nodiscard]] std::optional<std::int32_t> lifted_height(const park::Ray& ray, glm::vec3 at, std::int32_t height);
+    [[nodiscard]] std::optional<std::int32_t> lifted_height(const rct3::park::Ray& ray, glm::vec3 at, std::int32_t height);
 
     /// Starts placing `item`, in place of anything being placed before. Items other than rides placed
     /// whole, stalls and scenery are left alone; false for those.
-    bool start_ride_placing(ParkScene& scene, const park::BuildItem& item);
+    bool start_ride_placing(ParkScene& scene, const rct3::park::BuildItem& item);
 
     /// Starts placing the entrance, or the `exit`, of the ride `ride` as `item` (the ride's) has it: of a tracked
     /// ride beside its `stations`, of a placed flat ride (no stations) round its ground; one placed before moves.
     /// False without stations on a tracked ride or a door in the item.
-    bool start_door_placing(ParkScene& scene, std::size_t ride, const park::BuildItem& item, std::vector<save::TrackPiece> stations, bool exit);
+    bool start_door_placing(ParkScene& scene, std::size_t ride, const rct3::park::BuildItem& item, std::vector<save::TrackPiece> stations, bool exit);
     /// Gives the new ride `ride` the fence of `item` (its theme's), in the fence's own colours.
-    void take_fence(ParkScene& scene, const ui::InterfaceAssets& assets, save::Ride& ride, const park::BuildItem& item);
+    void take_fence(ParkScene& scene, const ui::InterfaceAssets& assets, save::Ride& ride, const rct3::park::BuildItem& item);
     /// Adds `door`, whose model is loaded, as the entrance (or `exit`) of station `station` of the tracked ride
     /// `ride`, standing at `height`, in place of the one it had.
     void place_station_door(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t station, const save::PlacedObject& door, std::int32_t height, bool exit);
@@ -154,7 +154,7 @@ namespace rct3::scene
 
     /// The arrow a stall being placed shows on the side it serves from (see park/build_arrows.hpp); empty while
     /// no stall's ghost shows.
-    [[nodiscard]] park::TerrainMesh stall_arrow(const ParkScene& scene);
+    [[nodiscard]] rct3::park::TerrainMesh stall_arrow(const ParkScene& scene);
 
     void draw_ride_placing_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 

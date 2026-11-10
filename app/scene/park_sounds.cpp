@@ -151,7 +151,7 @@ namespace rct3::scene
     {
         const auto& r = scene.sim.registry;
         const bool quiet = scene.park.speed.paused || !scene.simulate;
-        const glm::vec3 eye = park::eye(scene.camera);
+        const glm::vec3 eye = rct3::park::eye(scene.camera);
         engine.set_listener(eye, glm::normalize(scene.camera.target - eye), glm::vec3(0.0f, 1.0f, 0.0f));
         engine.set_muffled(scene.water.eye_in.has_value());
 
@@ -229,7 +229,7 @@ namespace rct3::scene
                 voice = { };
                 continue;
             }
-            const glm::vec3 at = park::waterfall_point(falls[i], 1.0f);
+            const glm::vec3 at = rct3::park::waterfall_point(falls[i], 1.0f);
             if (!engine.is_playing(voice))
             {
                 const auto played = engine.play(sounds.waterfall[i % sounds.waterfall.size()], { .volume = kWaterfallLevel, .at = at, .near = kWaterfallNear, .far = kWaterfallFar, .loop = true });
@@ -351,7 +351,7 @@ namespace rct3::scene
             const glm::vec3 at { scene.car_places[i][3] };
             const glm::vec3 velocity = elapsed > 0 ? (at - sounds.car_were[i]) / elapsed : glm::vec3 { 0.0f };
             sounds.car_were[i] = at;
-            const park::ride::CarSpot spot = scene.car_spots[i];
+            const rct3::park::ride::CarSpot spot = scene.car_spots[i];
             const entt::entity ride = spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
             const auto* fleet = ride != entt::null ? r.try_get<simulation::Trains>(ride) : nullptr;
             if (fleet == nullptr || spot.train >= fleet->trains.size() || !trains.emplace(ride, spot.train).second)
@@ -434,7 +434,7 @@ namespace rct3::scene
             // few seconds.
             if (t.car < scene.car_waters.size())
             {
-                const park::CarWater& water = scene.car_waters[t.car];
+                const rct3::park::CarWater& water = scene.car_waters[t.car];
                 if (train.splashes && water.splashes != *train.splashes)
                 {
                     if (const auto& splash = sound(WaterSplash); splash && level > 0)

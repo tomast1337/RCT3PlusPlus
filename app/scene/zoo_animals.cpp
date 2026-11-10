@@ -23,7 +23,7 @@ namespace rct3::scene
         void upload_new_pictures(render::Device& device, ParkScene& scene)
         {
             DrawnAnimals& drawn = scene.drawn_animals;
-            park::ground::GroundImages fresh;
+            rct3::park::ground::GroundImages fresh;
             for (const auto& [key, picture] : drawn.library->pictures())
                 if (!drawn.textures.contains(key))
                     fresh.emplace(key, picture);
@@ -37,7 +37,7 @@ namespace rct3::scene
         }
 
         /// The motion of `body` that shows what `animal` is doing, standing at `pose`.
-        ovl::animal::AnimalMotion motion_of(const park::AnimalBody& body, const simulation::Animal& animal, const simulation::Pose& pose)
+        ovl::animal::AnimalMotion motion_of(const rct3::park::AnimalBody& body, const simulation::Animal& animal, const simulation::Pose& pose)
         {
             using simulation::AnimalJob;
             const bool moving = pose.position != pose.was;
@@ -48,9 +48,9 @@ namespace rct3::scene
                 motion = animal.hunger.value >= animal.thirst.value ? ovl::animal::AnimalMotion::EatLoop : ovl::animal::AnimalMotion::DrinkLoop;
             else if (animal.job == AnimalJob::Sleeping)
                 motion = ovl::animal::AnimalMotion::SleepLoop;
-            if (park::motion_seconds(body, motion) > 0)
+            if (rct3::park::motion_seconds(body, motion) > 0)
                 return motion;
-            return park::motion_seconds(body, ovl::animal::AnimalMotion::Stand) > 0 ? ovl::animal::AnimalMotion::Stand : ovl::animal::AnimalMotion::Idle1;
+            return rct3::park::motion_seconds(body, ovl::animal::AnimalMotion::Stand) > 0 ? ovl::animal::AnimalMotion::Stand : ovl::animal::AnimalMotion::Idle1;
         }
     } // namespace
 
@@ -77,8 +77,8 @@ namespace rct3::scene
     {
         DrawnAnimals& drawn = scene.drawn_animals;
         save::PlacedObject crate = animal_crate();
-        if (scene.models.contains(park::object::model_key(crate)))
-            add_textures(device, scene, park::moving_meshes(std::span(&crate, 1), scene.models, scene.grid).mesh.batches);
+        if (scene.models.contains(rct3::park::object::model_key(crate)))
+            add_textures(device, scene, rct3::park::moving_meshes(std::span(&crate, 1), scene.models, scene.grid).mesh.batches);
         if (drawn.library)
         {
             for (const auto [e, animal] : scene.sim.registry.view<const simulation::Animal>().each())
@@ -118,13 +118,13 @@ namespace rct3::scene
             std::vector<save::PlacedObject> shapes(crated.size(), crate);
             for (std::size_t i = 0; i < shapes.size(); ++i)
                 shapes[i].id = i + 1;
-            drawn.crates = scene.models.contains(park::object::model_key(crate)) ? park::moving_meshes(shapes, scene.models, scene.grid) : park::MovingMeshes { };
+            drawn.crates = scene.models.contains(rct3::park::object::model_key(crate)) ? rct3::park::moving_meshes(shapes, scene.models, scene.grid) : rct3::park::MovingMeshes { };
             drawn.crated = std::move(crated);
         }
-        park::move_meshes(drawn.crates, crate_places);
+        rct3::park::move_meshes(drawn.crates, crate_places);
         // shortcut: every animal is posed on the frame's thread at its finest level, every frame; fine for the
         // few dozen a zoo holds, move to a worker and pick levels by distance as people do once parks hold more.
-        drawn.mesh = park::animal_mesh(drawn.placed, drawn.runs);
+        drawn.mesh = rct3::park::animal_mesh(drawn.placed, drawn.runs);
     }
 
 } // namespace rct3::scene

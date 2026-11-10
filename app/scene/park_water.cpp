@@ -68,7 +68,7 @@ namespace rct3::scene
         void fog_under_water(render::Device& device, const ParkWater& water, const glm::mat4& transform, const render::SceneLight& light, render::WaterView view)
         {
             const glm::mat4 back = glm::inverse(transform);
-            std::array<park::GroundVertex, 6> quad;
+            std::array<rct3::park::GroundVertex, 6> quad;
             constexpr std::array<glm::vec2, 6> kCorners { glm::vec2 { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, -1 }, { 1, 1 }, { -1, 1 } };
             for (std::size_t i = 0; i < quad.size(); ++i)
             {
@@ -95,13 +95,13 @@ namespace rct3::scene
         }
 
         /// The ripples' rows, then the pools' waves'.
-        using WaterTexels = std::array<glm::vec4, std::tuple_size_v<park::water::RippleTexels> + std::tuple_size_v<park::pools::PoolWaveTexels>>;
+        using WaterTexels = std::array<glm::vec4, std::tuple_size_v<rct3::park::water::RippleTexels> + std::tuple_size_v<rct3::park::pools::PoolWaveTexels>>;
 
         WaterTexels water_texels(const ParkWater& water)
         {
             WaterTexels texels { };
-            std::ranges::copy(park::water::ripple_texels(water.ripples), texels.begin());
-            std::ranges::copy(park::pools::pool_wave_texels(water.pool_waves), texels.begin() + std::tuple_size_v<park::water::RippleTexels>);
+            std::ranges::copy(rct3::park::water::ripple_texels(water.ripples), texels.begin());
+            std::ranges::copy(rct3::park::pools::pool_wave_texels(water.pool_waves), texels.begin() + std::tuple_size_v<rct3::park::water::RippleTexels>);
             return texels;
         }
 
@@ -143,7 +143,7 @@ namespace rct3::scene
         };
     }
 
-    std::expected<void, std::string> create_park_water(render::Device& device, ParkWater& water, std::span<const park::WaterVertex> mesh, const render::VertexLayout& layout)
+    std::expected<void, std::string> create_park_water(render::Device& device, ParkWater& water, std::span<const rct3::park::WaterVertex> mesh, const render::VertexLayout& layout)
     {
         // Made even for a park without water, so water filled later can be drawn.
         if (auto made = replace_park_water(device, water, mesh); !made)
@@ -163,9 +163,9 @@ namespace rct3::scene
         if (!white)
             return std::unexpected(white.error());
         water.white = *white;
-        static_assert(park::pools::kMaxPoolWaves == park::water::kMaxRipples, "the pools' waves share the ripples' rows' width");
+        static_assert(rct3::park::pools::kMaxPoolWaves == rct3::park::water::kMaxRipples, "the pools' waves share the ripples' rows' width");
         const WaterTexels none = water_texels(water);
-        auto ripples = device.create_texture({ .width = park::water::kMaxRipples, .height = 6, .format = render::TextureFormat::Rgba32Float, .pixels = std::as_bytes(std::span(none)), .label = "water ripples" });
+        auto ripples = device.create_texture({ .width = rct3::park::water::kMaxRipples, .height = 6, .format = render::TextureFormat::Rgba32Float, .pixels = std::as_bytes(std::span(none)), .label = "water ripples" });
         if (!ripples)
             return std::unexpected(ripples.error());
         water.ripple_texture = *ripples;
@@ -175,9 +175,9 @@ namespace rct3::scene
         return { };
     }
 
-    std::expected<void, std::string> replace_park_water(render::Device& device, ParkWater& water, std::span<const park::WaterVertex> mesh)
+    std::expected<void, std::string> replace_park_water(render::Device& device, ParkWater& water, std::span<const rct3::park::WaterVertex> mesh)
     {
-        water.surface = park::water::water_surface(mesh);
+        water.surface = rct3::park::water::water_surface(mesh);
         if (water.vertices)
             device.destroy_buffer(water.vertices);
         water.vertices = { };
@@ -209,19 +209,19 @@ namespace rct3::scene
 
     void advance_park_water(ParkWater& water, float seconds)
     {
-        park::water::advance_ripples(water.ripples, seconds);
+        rct3::park::water::advance_ripples(water.ripples, seconds);
     }
 
-    bool ripple_park_water(ParkWater& water, const park::Ray& ray, const save::TerrainGrid& grid)
+    bool ripple_park_water(ParkWater& water, const rct3::park::Ray& ray, const save::TerrainGrid& grid)
     {
-        const auto hit = park::water::water_hit(ray, water.surface);
+        const auto hit = rct3::park::water::water_hit(ray, water.surface);
         if (!hit)
             return false;
         // Ground standing above the water, between it and the eye, hides it.
-        if (const auto ground = park::object::ground_hit(ray, grid, *hit); ground && *ground < *hit - 1e-3f)
+        if (const auto ground = rct3::park::object::ground_hit(ray, grid, *hit); ground && *ground < *hit - 1e-3f)
             return false;
         const glm::vec3 at = ray.origin + ray.direction * *hit;
-        park::water::start_ripple(water.ripples, { at.x, at.z });
+        rct3::park::water::start_ripple(water.ripples, { at.x, at.z });
         return true;
     }
 
@@ -232,7 +232,7 @@ namespace rct3::scene
         water.eye_in.reset();
         if (!water.vertices || !water.shaded)
             return;
-        water.eye_in = park::water::water_above(water.surface, eye);
+        water.eye_in = rct3::park::water::water_above(water.surface, eye);
         device.end_pass();
         const WaterTexels texels = water_texels(water);
         device.update_texture(water.ripple_texture, std::as_bytes(std::span(texels)));
@@ -243,7 +243,7 @@ namespace rct3::scene
         if (water.look.reflection)
         {
             const render::Extent half { std::max(screen.width / 2, 1u), std::max(screen.height / 2, 1u) };
-            for (const float level : park::water::reflection_levels(water.surface, view_projection, eye, kWaterReflections))
+            for (const float level : rct3::park::water::reflection_levels(water.surface, view_projection, eye, kWaterReflections))
             {
                 const std::size_t i = water.levels.size();
                 if (!fit_target(device, water.reflections[i], water.reflection_sizes[i], half, false, "water reflection"))
@@ -253,7 +253,7 @@ namespace rct3::scene
                 into.target = water.reflections[i];
                 into.clear_color = sky;
                 device.begin_pass(into);
-                mirrored(park::water::reflection_transform(view_projection, level));
+                mirrored(rct3::park::water::reflection_transform(view_projection, level));
                 device.end_pass();
             }
         }
@@ -279,19 +279,19 @@ namespace rct3::scene
             return render::WaterView {
                 .eye = eye,
                 .time = time,
-                .near = park::kNear,
-                .far = park::kFar,
+                .near = rct3::park::kNear,
+                .far = rct3::park::kFar,
                 .reflection = reflection,
                 .refraction = water.have_behind,
                 .waves = water.look.waves,
                 .foam = true,
-                .ripples = park::water::live_ripples(water.ripples) > 0 || !water.pool_waves.empty(),
+                .ripples = rct3::park::water::live_ripples(water.ripples) > 0 || !water.pool_waves.empty(),
                 .shafts = water.look.shafts,
             };
         };
         if (shaded && water.eye_in && water.have_behind)
             fog_under_water(device, water, transform, light, shaded_view(false));
-        for (const park::water::WaterBatch& batch : water.surface.batches)
+        for (const rct3::park::water::WaterBatch& batch : water.surface.batches)
         {
             render::DrawCommand draw;
             draw.pipeline = shaded ? water.shaded : water.simple;
@@ -305,7 +305,7 @@ namespace rct3::scene
             draw.light = light;
             if (shaded)
             {
-                const auto reflection = park::water::reflection_for(batch.level, water.levels);
+                const auto reflection = rct3::park::water::reflection_for(batch.level, water.levels);
                 draw.extra_textures = { reflection ? water.reflections[*reflection] : render::TextureHandle { }, water.have_behind ? water.behind : render::TextureHandle { }, water.have_behind ? device.depth_texture(water.behind) : render::TextureHandle { }, water.ripple_texture };
                 draw.water = shaded_view(reflection.has_value());
             }

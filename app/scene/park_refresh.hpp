@@ -30,7 +30,7 @@ namespace rct3::scene
     /// Shown person `i` posed as they are at `clock`, as the park draws them, at the finest level; with
     /// `simulate`, a simulated guest where and as the simulation has them. Nothing for those not drawn
     /// standing: gone home, or seated on a ride.
-    [[nodiscard]] std::optional<park::person::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate);
+    [[nodiscard]] std::optional<rct3::park::person::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate);
     /// The motion a person sliding down a slope plays, by name: on their front facing down it (`heading`, as
     /// simulation::Pose has it, against their `drift`), on their back facing up it, else sitting; staff, who
     /// have no sliding motions, flail.
@@ -44,7 +44,7 @@ namespace rct3::scene
 
     /// The eyes of car `car`'s camera of kind `eye`, in its own space, when it has one; the nose camera only
     /// on the first car of its train.
-    [[nodiscard]] std::optional<glm::mat4> ride_eye(const ParkScene& scene, std::size_t car, park::object::RideEye eye);
+    [[nodiscard]] std::optional<glm::mat4> ride_eye(const ParkScene& scene, std::size_t car, rct3::park::object::RideEye eye);
 
     /// Where rider seat `at` of flat ride `ride` (of the park's rides), or with `fixed` its fixed camera `at`, is
     /// in the park now, as it is drawn; nothing when the ride has no such seat or camera.
@@ -64,12 +64,12 @@ namespace rct3::scene
     /// supports unless `supports`. Reads only what is set when the park loads besides its arguments, so it
     /// may run beside the frame.
     /// The fades of the park's flowing water (park/water/flow.hpp), pool slides told by their kind's rules.
-    [[nodiscard]] park::object::FlowFades flow_fades(const ParkScene& scene);
+    [[nodiscard]] rct3::park::object::FlowFades flow_fades(const ParkScene& scene);
 
-    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::object::LevelPlan& shown, float band, const park::object::LevelScales& scales, bool supports, const park::object::Broken& broken = { }, const park::object::Chains& chains = { }, const park::object::FlowFades& fades = { });
+    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const rct3::park::object::LevelPlan& shown, float band, const rct3::park::object::LevelScales& scales, bool supports, const rct3::park::object::Broken& broken = { }, const rct3::park::object::Chains& chains = { }, const rct3::park::object::FlowFades& fades = { });
 
     /// `vertices` with the bands of `bands`, for the crossing shaders.
-    std::vector<CrossingVertex> crossing_vertices(std::span<const park::GroundVertex> vertices, std::span<const std::pair<glm::vec4, glm::vec2>> bands);
+    std::vector<CrossingVertex> crossing_vertices(std::span<const rct3::park::GroundVertex> vertices, std::span<const std::pair<glm::vec4, glm::vec2>> bands);
 
     /// Puts `built` in the object buffers.
     void show_objects(render::Device& device, ParkScene& scene, ObjectBuild&& built);

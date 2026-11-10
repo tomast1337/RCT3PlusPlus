@@ -40,7 +40,7 @@ namespace rct3::ui::screens
     struct FrontEndStyle
     {
         OptionsDialogStyle options;
-        QuestionBoxStyle question;
+        widgets::QuestionBoxStyle question;
         FileDialogStyle files;
         CareerDialogStyle careers;
         CareerBoardStyle map;
@@ -128,7 +128,7 @@ namespace rct3::ui::screens
         {
             return file_dialogs_opened_;
         }
-        [[nodiscard]] std::optional<QuestionBox&> question() const
+        [[nodiscard]] std::optional<widgets::QuestionBox&> question() const
         {
             return core::maybe(question_);
         }
@@ -164,7 +164,7 @@ namespace rct3::ui::screens
         FrontEndSetup setup_;
         OptionsSession options_;
         FrontScreen* screen_ = nullptr;
-        QuestionBox* question_ = nullptr; // Only closes when take_answer() closes it
+        widgets::QuestionBox* question_ = nullptr; // Only closes when take_answer() closes it
         config::UserFolder file_folder_ = config::UserFolder::Parks;
         FrontAction file_action_ = FrontAction::LoadSandbox;
         std::size_t file_dialogs_opened_ = 0;

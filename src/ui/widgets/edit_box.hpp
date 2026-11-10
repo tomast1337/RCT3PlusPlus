@@ -30,7 +30,7 @@
 #include <string>
 #include <string_view>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     class EditBox : public Widget
@@ -125,4 +125,4 @@ namespace rct3::ui
         Composition composition_; // Cleared when the focus goes
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

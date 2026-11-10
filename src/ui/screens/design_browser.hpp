@@ -31,9 +31,9 @@ namespace rct3::ui::screens
 
     struct DesignBrowserStyle
     {
-        WindowStyle window;
-        ColumnTableStyle table;
-        ScrollBarStyle scroll;
+        widgets::WindowStyle window;
+        widgets::ColumnTableStyle table;
+        widgets::ScrollBarStyle scroll;
         std::string button;   ///< Skin family of the text buttons
         Rect button_inset;    ///< Of their text; see Button::text_inset
         std::string previous; ///< Skins of the train's arrows
@@ -53,11 +53,11 @@ namespace rct3::ui::screens
         float arrow = 20;
     };
 
-    class DesignBrowser : public Window
+    class DesignBrowser : public widgets::Window
     {
     public:
         /// `title` on the frame, `icon` in its corner; `columns` over `rows`, sorted by the first column.
-        DesignBrowser(std::string name, const DesignBrowserStyle& style, std::u16string title, std::string icon, std::vector<TableColumn> columns, std::vector<TableRow> rows, std::u16string build_text, std::u16string cancel_text);
+        DesignBrowser(std::string name, const DesignBrowserStyle& style, std::u16string title, std::string icon, std::vector<widgets::TableColumn> columns, std::vector<widgets::TableRow> rows, std::u16string build_text, std::u16string cancel_text);
 
         /// The id of the row picked since the last call.
         [[nodiscard]] std::optional<std::size_t> take_picked()
@@ -85,7 +85,7 @@ namespace rct3::ui::screens
         /// Shows the train's name; the arrows only when there is more than one train to step through.
         void show_train(std::u16string name, bool steps);
 
-        [[nodiscard]] ColumnTable& table() const
+        [[nodiscard]] widgets::ColumnTable& table() const
         {
             return *table_;
         }
@@ -95,14 +95,14 @@ namespace rct3::ui::screens
 
     private:
         DesignBrowserStyle style_;
-        ColumnTable* table_ = nullptr;
+        widgets::ColumnTable* table_ = nullptr;
         Widget* details_ = nullptr; ///< The picture's place, then the lines, made again with each design
         Widget* lines_ = nullptr;
-        Label* train_ = nullptr;
-        Button* previous_ = nullptr;
-        Button* next_ = nullptr;
-        Button* build_button_ = nullptr;
-        Button* cancel_button_ = nullptr;
+        widgets::Label* train_ = nullptr;
+        widgets::Button* previous_ = nullptr;
+        widgets::Button* next_ = nullptr;
+        widgets::Button* build_button_ = nullptr;
+        widgets::Button* cancel_button_ = nullptr;
         TextureId picture_ = 0;
         std::optional<std::size_t> shown_; ///< Id of the row the details are of
         std::optional<std::size_t> picked_;

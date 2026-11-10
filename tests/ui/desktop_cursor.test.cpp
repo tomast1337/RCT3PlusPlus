@@ -9,6 +9,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
+using namespace rct3::ui::widgets;
 
 namespace
 {

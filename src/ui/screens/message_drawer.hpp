@@ -110,11 +110,11 @@ namespace rct3::ui::screens
         {
             return skipped_;
         }
-        [[nodiscard]] Button& older_button() const
+        [[nodiscard]] widgets::Button& older_button() const
         {
             return *older_;
         }
-        [[nodiscard]] Button& newer_button() const
+        [[nodiscard]] widgets::Button& newer_button() const
         {
             return *newer_;
         }
@@ -168,8 +168,8 @@ namespace rct3::ui::screens
         bool dragging_ = false;
         float drag_from_ = 0; ///< Pointer height minus drawer height at the press
         float since_press_ = 1e9f;
-        Button* older_ = nullptr;
-        Button* newer_ = nullptr;
+        widgets::Button* older_ = nullptr;
+        widgets::Button* newer_ = nullptr;
     };
 
 } // namespace rct3::ui::screens

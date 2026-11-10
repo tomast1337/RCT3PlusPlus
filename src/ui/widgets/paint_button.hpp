@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     /// Where a pot's blob of colour sits on the button's icon, in the icon's own units with y down.
@@ -67,4 +67,4 @@ namespace rct3::ui
         std::optional<std::size_t> clicked_on_; // And of the last click
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

@@ -10,7 +10,7 @@
 
 #include <string>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     struct ToolbarStyle
@@ -49,4 +49,4 @@ namespace rct3::ui
         int separators_ = 0;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

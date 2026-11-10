@@ -99,9 +99,9 @@ namespace rct3::ui::screens
             }
         }
 
-        Label& add_label(Widget& parent, std::string name, std::u16string text, Placement placement, Color colour, Align align = Align::Start)
+        widgets::Label& add_label(Widget& parent, std::string name, std::u16string text, Placement placement, Color colour, Align align = Align::Start)
         {
-            Label& l = parent.add<Label>(std::move(name), std::move(text), font::FontRole::Small);
+            widgets::Label& l = parent.add<widgets::Label>(std::move(name), std::move(text), font::FontRole::Small);
             l.placement = placement;
             l.style.colour = colour;
             l.style.horizontal = align;
@@ -109,9 +109,9 @@ namespace rct3::ui::screens
             return l;
         }
 
-        Button& add_icon(Widget& parent, std::string name, std::string skin, std::string icon, Placement placement, std::u16string help)
+        widgets::Button& add_icon(Widget& parent, std::string name, std::string skin, std::string icon, Placement placement, std::u16string help)
         {
-            Button& b = parent.add<Button>(std::move(name), std::move(skin), std::move(icon));
+            widgets::Button& b = parent.add<widgets::Button>(std::move(name), std::move(skin), std::move(icon));
             b.placement = placement;
             b.tooltip = std::move(help);
             return b;
@@ -146,24 +146,24 @@ namespace rct3::ui::screens
     }
 
     StaffRoster::StaffRoster(std::string name, const StaffRosterStyle& style, const StringTable& strings, float width, float height)
-        : Window(std::move(name), style.window, width, height)
+        : widgets::Window(std::move(name), style.window, width, height)
         , style_(style)
         , strings_(&strings)
     {
         Widget& body = content();
         add_label(body, "Sort", text(strings, "StaffWindow_SortBy"), top_left(style.sort_x, 0, 50, style.sort_height), style.text_colour);
-        sort_box_ = &body.add<Dropdown>("SortBy", style.dropdown);
+        sort_box_ = &body.add<widgets::Dropdown>("SortBy", style.dropdown);
         sort_box_->placement = { { 0, 0, 1, 0 }, { style.sort_x + 50, 0, 0, style.sort_height } };
         sort_box_->style.text_colour = style.accent_colour;
         for (const std::string_view key : kRosterSortNames)
             sort_box_->items.push_back(text(strings, key));
         sort_box_->select(0);
 
-        auto& back = body.add<Panel>("ListBack", style.list_back);
+        auto& back = body.add<widgets::Panel>("ListBack", style.list_back);
         back.colour = style.plain;
         const float bottom = 2 * style.bottom_line + 6;
         back.placement = { { 0, 0, 1, 1 }, { 0, style.sort_height + 4, 0, -bottom } };
-        list_ = &body.add<ScrollArea>("table", style.scroll);
+        list_ = &body.add<widgets::ScrollArea>("table", style.scroll);
         list_->placement = back.placement;
 
         // Hire: above Show:, as the game stacks them.
@@ -171,13 +171,13 @@ namespace rct3::ui::screens
         add_label(body, "Staff_HireLabel", text(strings, "Staff_HireLabel"), bottom_left(0, hire_y - style.bottom_line, style.label_width, style.bottom_line), style.text_colour);
         for (std::size_t i = 0; i < kHires; ++i)
         {
-            Button& b = add_icon(body, std::string(kHireButtons[i].icon), std::string(kHireFrame), std::string(kHireButtons[i].icon), bottom_left(style.label_width + static_cast<float>(i) * (style.hire_size + 2), hire_y - style.bottom_line, style.hire_size, style.bottom_line), text(strings, kHireButtons[i].help));
+            widgets::Button& b = add_icon(body, std::string(kHireButtons[i].icon), std::string(kHireFrame), std::string(kHireButtons[i].icon), bottom_left(style.label_width + static_cast<float>(i) * (style.hire_size + 2), hire_y - style.bottom_line, style.hire_size, style.bottom_line), text(strings, kHireButtons[i].help));
             hires_[i] = &b;
         }
         add_label(body, "Staff_Filter", text(strings, "Staff_Filter"), bottom_left(0, 0, style.label_width, style.bottom_line), style.text_colour);
         for (std::size_t i = 0; i < kRosterJobs.size(); ++i)
         {
-            Button& b = add_icon(body, std::string(kRosterJobs[i].skin), std::string(kRosterJobs[i].skin), { }, bottom_left(style.label_width + static_cast<float>(i) * style.job_size, 0, style.job_size, style.bottom_line), text(strings, kRosterJobs[i].help));
+            widgets::Button& b = add_icon(body, std::string(kRosterJobs[i].skin), std::string(kRosterJobs[i].skin), { }, bottom_left(style.label_width + static_cast<float>(i) * style.job_size, 0, style.job_size, style.bottom_line), text(strings, kRosterJobs[i].help));
             b.toggle = true;
             b.on = (jobs_ & (1u << i)) != 0;
             views_[i] = &b;
@@ -250,14 +250,14 @@ namespace rct3::ui::screens
         const auto kind = static_cast<std::size_t>(l.kind);
         const bool inspector = l.kind == save::model::StaffKind::ParkInspector;
         const bool vendor = l.kind == save::model::StaffKind::Vendor;
-        auto& band = p.add<Panel>("band", std::string { });
+        auto& band = p.add<widgets::Panel>("band", std::string { });
         band.colour = (&r - rows_.data()) % 2 == 0 ? style_.stripe : style_.plain;
         band.placement = fill();
 
         r.expand = &add_icon(p, "Expand", r.expanded ? "Box_Minus" : "Box_Plus", { }, top_left(1, 1, kBox, kBox), text(strings, "Staff_Panel_Expand"));
         r.portrait = &add_icon(p, "Portrait", { }, std::string(kind < kPortraits.size() ? kPortraits[kind] : kPortraits[0]), top_left(kBox, 2, kPortraitWidth, kPortraitHeight), text(strings, "StaffWindow_CentreViewHelp"));
         const float x = kBox + kPortraitWidth + 3;
-        r.name = &p.add<EditBox>("Name", l.name);
+        r.name = &p.add<widgets::EditBox>("Name", l.name);
         r.name->skin = style_.name_box;
         r.name->focused_skin = style_.name_box_focused;
         r.name->max_length = kLongestName;
@@ -274,14 +274,14 @@ namespace rct3::ui::screens
         if (!inspector)
         {
             const std::string_view mood_help = l.mood == Mood::Happy ? "StaffWindow_Happiness_Happy" : l.mood == Mood::Sad ? "StaffWindow_Happiness_Sad" : "StaffWindow_Happiness_OK";
-            auto& face = p.add<Panel>("Mood", mood_icon(l.mood));
+            auto& face = p.add<widgets::Panel>("Mood", mood_icon(l.mood));
             face.placement = top_right(2, 2, kIcon, kIcon);
             face.tooltip = text(strings, mood_help);
             const std::size_t pots = uniform_pots(l.kind);
             const float right = 2 + style_.swatch * static_cast<float>(pots);
             for (std::size_t pot = 0; pot < pots; ++pot)
             {
-                Button& s = add_icon(p, std::format("Colour{}", pot), { }, std::format("{}{}", style_.palette.swatch_prefix, l.colours[pot] % style_.uniform_colours), top_right(right - style_.swatch * static_cast<float>(pot + 1) + 2, 23, style_.swatch, style_.swatch), text(strings, l.kind == save::model::StaffKind::Entertainer ? "Staff_Costume_Colours" : pots == 1 ? "Staff_Uniform_Colour" : "Staff_Uniform_Colours"));
+                widgets::Button& s = add_icon(p, std::format("Colour{}", pot), { }, std::format("{}{}", style_.palette.swatch_prefix, l.colours[pot] % style_.uniform_colours), top_right(right - style_.swatch * static_cast<float>(pot + 1) + 2, 23, style_.swatch, style_.swatch), text(strings, l.kind == save::model::StaffKind::Entertainer ? "Staff_Costume_Colours" : pots == 1 ? "Staff_Uniform_Colour" : "Staff_Uniform_Colours"));
                 r.swatches.push_back(&s);
             }
             if (l.kind == save::model::StaffKind::Entertainer)
@@ -295,7 +295,7 @@ namespace rct3::ui::screens
         float tx = x;
         for (const RosterTask& t : roster_tasks(l.kind))
         {
-            Button& b = add_icon(p, std::string(t.skin), std::string(t.skin), { }, top_left(tx, y, kTaskSize, kTaskSize), text(strings, t.help));
+            widgets::Button& b = add_icon(p, std::string(t.skin), std::string(t.skin), { }, top_left(tx, y, kTaskSize, kTaskSize), text(strings, t.help));
             b.toggle = true;
             b.on = ((l.tasks & (1 << t.bit)) != 0) != t.inverted;
             r.tasks.emplace_back(t.bit, &b);
@@ -332,17 +332,17 @@ namespace rct3::ui::screens
     void StaffRoster::say(std::u16string message, bool ask)
     {
         const StringTable& strings = *strings_;
-        std::vector<QuestionAnswer> answers;
+        std::vector<widgets::QuestionAnswer> answers;
         if (ask)
             answers = { { text(strings, kYes), style_.question.confirm_icon }, { text(strings, kNo), style_.question.cancel_icon } };
         else
             answers = { { text(strings, kOk), style_.question.confirm_icon } };
-        question_ = &root_of(*this).add<QuestionBox>("StaffQuestion", style_.question, std::move(message), answers);
+        question_ = &root_of(*this).add<widgets::QuestionBox>("StaffQuestion", style_.question, std::move(message), answers);
     }
 
     void StaffRoster::update(const UpdateContext& context)
     {
-        Window::update(context);
+        widgets::Window::update(context);
         page_age_ += context.elapsed;
         since_portrait_ += context.elapsed;
         const StringTable& strings = *strings_;
@@ -440,7 +440,7 @@ namespace rct3::ui::screens
             {
                 if (r.choices[0] != nullptr)
                 {
-                    for (Button*& c : r.choices)
+                    for (widgets::Button*& c : r.choices)
                         (void)r.panel->remove(*std::exchange(c, nullptr));
                 }
                 else
@@ -466,18 +466,18 @@ namespace rct3::ui::screens
                 painting_.reset();
                 if (same)
                     continue;
-                const Point size = ColourPalette::size(style_.palette, style_.uniform_colours, style_.palette_columns);
-                palette_ = &add<ColourPalette>("palette", style_.palette, style_.uniform_colours, style_.palette_columns, r.line.colours[pot] % style_.uniform_colours);
+                const Point size = widgets::ColourPalette::size(style_.palette, style_.uniform_colours, style_.palette_columns);
+                palette_ = &add<widgets::ColourPalette>("palette", style_.palette, style_.uniform_colours, style_.palette_columns, r.line.colours[pot] % style_.uniform_colours);
                 const Rect s = r.swatches[pot]->rect();
                 palette_->placement = top_left(s.x1 - rect().x0 - size.x, s.y1 - rect().y0, size.x, size.y);
                 painting_ = { who, pot };
             }
             if (r.costume != nullptr && r.costume->take_click())
             {
-                std::vector<MenuItem> items;
+                std::vector<widgets::MenuItem> items;
                 for (std::size_t c = 0; c < kCostumes.size(); ++c)
                     items.push_back({ .text = text(strings, kCostumes[c]), .checked = c == r.line.costume });
-                costumes_ = &root_of(*this).add<Menu>("Costumes", style_.menu, std::move(items));
+                costumes_ = &root_of(*this).add<widgets::Menu>("Costumes", style_.menu, std::move(items));
                 costumes_->place_at({ r.costume->rect().x0, r.costume->rect().y1 });
                 dressing_ = who;
             }

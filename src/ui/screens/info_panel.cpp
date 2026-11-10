@@ -43,19 +43,19 @@ namespace rct3::ui::screens
         placement = fill();
         body_ = &add<Widget>("body");
         body_->clip_children = true;
-        bar_ = &add<ScrollBar>("scroll", style_.menu.bar, Orientation::Vertical);
+        bar_ = &add<widgets::ScrollBar>("scroll", style_.menu.bar, widgets::Orientation::Vertical);
         // Over the band along the strip's top, outside the body, which cuts its lines to itself.
-        title_ = &add<Label>("title", std::u16string { }, font::FontRole::Medium);
+        title_ = &add<widgets::Label>("title", std::u16string { }, font::FontRole::Medium);
         title_->style.colour = style_.text_colour;
         title_->style.vertical = Align::Centre;
         title_->copyable = true;
         title_->selection_colour = hex("#ffffff60"); // The band is blue, as the usual tint is
-        view_text_ = &add<Label>("view_text", std::u16string { }, font::FontRole::Medium);
+        view_text_ = &add<widgets::Label>("view_text", std::u16string { }, font::FontRole::Medium);
         view_text_->style.colour = style_.text_colour;
         view_text_->style.horizontal = Align::Centre;
         view_text_->style.vertical = Align::Centre;
-        close_ = &add<Button>("close", std::string { }, style_.close_icon);
-        hide_ = &add<Button>("hide", std::string { }, style_.left ? style_.hide_icon_left : style_.hide_icon);
+        close_ = &add<widgets::Button>("close", std::string { }, style_.close_icon);
+        hide_ = &add<widgets::Button>("hide", std::string { }, style_.left ? style_.hide_icon_left : style_.hide_icon);
         hide_->icon_scale = 0.5f; // The arrow's picture is twice the band's room
         const float close_bottom = info_panel::kCloseBottom + style_.raise;
         close_->placement = style_.left ? bottom_left(info_panel::kCloseRight, close_bottom, info_panel::kCloseSize, info_panel::kCloseSize) : bottom_right(info_panel::kCloseRight, close_bottom, info_panel::kCloseSize, info_panel::kCloseSize);
@@ -69,7 +69,7 @@ namespace rct3::ui::screens
         close_palette();
         paints_.clear();
         paint_colours_.clear();
-        for (Button* b : tabs_)
+        for (widgets::Button* b : tabs_)
             (void)remove(*b);
         tabs_.clear();
         slots_.clear();
@@ -77,16 +77,16 @@ namespace rct3::ui::screens
         actions_.clear();
         for (std::size_t i = 0; i < tabs.size(); ++i)
         {
-            PaintButton* paint = nullptr;
+            widgets::PaintButton* paint = nullptr;
             // Named by its icon, the key its maker gave it; a paint tab by what it is.
             const std::string tab_name = tabs[i].icon.empty() ? std::format("paint{}", i) : tabs[i].icon;
             if (!tabs[i].paints.empty())
             {
-                PaintButtonStyle look = style_.paint;
+                widgets::PaintButtonStyle look = style_.paint;
                 look.face = style_.tab_face;
-                paint = &add<PaintButton>(tab_name, std::move(look), std::move(tabs[i].paints));
+                paint = &add<widgets::PaintButton>(tab_name, std::move(look), std::move(tabs[i].paints));
             }
-            Button& b = paint != nullptr ? *paint : add<Button>(tab_name, style_.tab_face, std::move(tabs[i].icon));
+            widgets::Button& b = paint != nullptr ? *paint : add<widgets::Button>(tab_name, style_.tab_face, std::move(tabs[i].icon));
             paints_.push_back(paint);
             paint_colours_.push_back(tabs[i].colours);
             b.tooltip = std::move(tabs[i].help);
@@ -121,7 +121,7 @@ namespace rct3::ui::screens
         const std::vector<InfoChoice>& list = tab_choices_[tab];
         for (std::size_t i = 0; i < list.size(); ++i)
         {
-            Button& b = add<Button>(list[i].icon.empty() ? std::format("choice{}", i) : list[i].icon, std::string { }, list[i].icon);
+            widgets::Button& b = add<widgets::Button>(list[i].icon.empty() ? std::format("choice{}", i) : list[i].icon, std::string { }, list[i].icon);
             b.tooltip = list[i].help;
             b.enabled = list[i].enabled;
             b.icon_scale = info_panel::kChoiceIconScale;
@@ -133,7 +133,7 @@ namespace rct3::ui::screens
 
     void InfoPanel::close_choices()
     {
-        for (Button* b : choices_)
+        for (widgets::Button* b : choices_)
             (void)remove(*b);
         choices_.clear();
         choosing_.reset();
@@ -142,9 +142,9 @@ namespace rct3::ui::screens
     void InfoPanel::open_palette(std::size_t tab, std::size_t pot)
     {
         close_palette();
-        PaintButton& pots = *paints_[tab];
+        widgets::PaintButton& pots = *paints_[tab];
         const std::size_t count = paint_colours_.at(tab) > 0 ? paint_colours_.at(tab) : style_.palette_count;
-        palette_ = &add<ColourPalette>("palette", style_.palette, count, style_.palette_columns, pots.colours.at(pot));
+        palette_ = &add<widgets::ColourPalette>("palette", style_.palette, count, style_.palette_columns, pots.colours.at(pot));
         pots.held = pot;
         painting_ = tab;
         painting_pot_ = pot;
@@ -159,7 +159,7 @@ namespace rct3::ui::screens
         if (painting_ && *painting_ < paints_.size() && paints_[*painting_] != nullptr)
             paints_[*painting_]->held.reset();
         if (painting_page_ && *painting_page_ < controls_.size())
-            static_cast<PaintButton*>(controls_[*painting_page_].second)->held.reset();
+            static_cast<widgets::PaintButton*>(controls_[*painting_page_].second)->held.reset();
         painting_.reset();
         painting_page_.reset();
     }
@@ -168,8 +168,8 @@ namespace rct3::ui::screens
     {
         close_palette();
         close_choices();
-        auto& pots = *static_cast<PaintButton*>(controls_[control].second);
-        palette_ = &add<ColourPalette>("palette", style_.palette, style_.palette_count, style_.palette_columns, pots.colours.at(pot));
+        auto& pots = *static_cast<widgets::PaintButton*>(controls_[control].second);
+        palette_ = &add<widgets::ColourPalette>("palette", style_.palette, style_.palette_count, style_.palette_columns, pots.colours.at(pot));
         pots.held = pot;
         painting_page_ = control;
         painting_pot_ = pot;
@@ -204,8 +204,8 @@ namespace rct3::ui::screens
         striped_ = !page.lines.empty() || std::ranges::any_of(page.controls, [](const InfoControl& c) { return c.kind == InfoControlKind::Tick && !c.icon.empty(); });
         const Color ink = paper_ ? style_.paper_text_colour : style_.text_colour;
         float y = 0;
-        const auto line = [&](std::string name, const std::u16string& text, float x, float width, font::FontRole font) -> Label& {
-            Label& l = body_->add<Label>(std::move(name), text, font);
+        const auto line = [&](std::string name, const std::u16string& text, float x, float width, font::FontRole font) -> widgets::Label& {
+            widgets::Label& l = body_->add<widgets::Label>(std::move(name), text, font);
             l.placement = top_left(x, y, width, info_panel::kLineHeight);
             l.style.colour = ink;
             return l;
@@ -218,7 +218,7 @@ namespace rct3::ui::screens
         }
         if (page.sections.size() > 1 && page.section_list)
         {
-            Dropdown& d = body_->add<Dropdown>("sections", style_.dropdown);
+            widgets::Dropdown& d = body_->add<widgets::Dropdown>("sections", style_.dropdown);
             d.items = page.sections;
             d.select(page.section);
             d.placement = top_left(0, y, page.width > 0 ? page.width : info_panel::kPageWidth, info_panel::kControlHeight); // Across the page
@@ -236,7 +236,7 @@ namespace rct3::ui::screens
             {
                 const float width = std::floor(info_panel::kPageWidth * static_cast<float>(page.sections[i].size() + 1) / static_cast<float>(letters));
                 // Plain words: the shown one stands out by its colour.
-                Button& b = body_->add<Button>(std::format("section{}", i), std::string { });
+                widgets::Button& b = body_->add<widgets::Button>(std::format("section{}", i), std::string { });
                 b.text = page.sections[i];
                 b.font = font::FontRole::Tiny;
                 if (paper_)
@@ -277,13 +277,13 @@ namespace rct3::ui::screens
                 float label_left = 0;
                 if (!l.icon.empty())
                 {
-                    body_->add<Panel>(keyed_name(l.name, "icon", i), l.icon).placement = top_left(0, y + (info_panel::kLineHeight - info_panel::kLineIcon) / 2, info_panel::kLineIcon, info_panel::kLineIcon);
+                    body_->add<widgets::Panel>(keyed_name(l.name, "icon", i), l.icon).placement = top_left(0, y + (info_panel::kLineHeight - info_panel::kLineIcon) / 2, info_panel::kLineIcon, info_panel::kLineIcon);
                     label_left = info_panel::kLineIcon + info_panel::kLineIconGap;
                 }
-                Label& label = line(keyed_name(l.name, "label", i), l.label, label_left, label_width - label_left, font::FontRole::Small);
+                widgets::Label& label = line(keyed_name(l.name, "label", i), l.label, label_left, label_width - label_left, font::FontRole::Small);
                 // A bar goes under its value, so it is made first; place_page puts it where the value goes.
-                Panel* bar = l.bar ? &body_->add<Panel>(keyed_name(l.name, "bar", i), std::string { }) : nullptr;
-                Panel* filled = l.bar ? &body_->add<Panel>(keyed_name(l.name, "filled", i), std::string { }) : nullptr;
+                widgets::Panel* bar = l.bar ? &body_->add<widgets::Panel>(keyed_name(l.name, "bar", i), std::string { }) : nullptr;
+                widgets::Panel* filled = l.bar ? &body_->add<widgets::Panel>(keyed_name(l.name, "filled", i), std::string { }) : nullptr;
                 if (bar != nullptr)
                 {
                     bar->colour = style_.bar_back;
@@ -293,11 +293,11 @@ namespace rct3::ui::screens
                 }
                 if (!l.value_icon.empty())
                 {
-                    Panel& face = body_->add<Panel>(keyed_name(l.name, "value_icon", i), l.value_icon);
+                    widgets::Panel& face = body_->add<widgets::Panel>(keyed_name(l.name, "value_icon", i), l.value_icon);
                     face.placement = top_left(info_panel::kValueColumn, y + (info_panel::kLineHeight - info_panel::kLineIcon) / 2, info_panel::kLineIcon, info_panel::kLineIcon);
                     value_icons_.push_back(&face);
                 }
-                Label& value = line(keyed_name(l.name, "value", i), l.value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, font::FontRole::Small);
+                widgets::Label& value = line(keyed_name(l.name, "value", i), l.value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, font::FontRole::Small);
                 if (!l.value.empty())
                     value_rows_.push_back({ &label, &value, bar, filled, std::clamp(l.bar.value_or(0), 0.0f, 1.0f) });
                 y += info_panel::kLineHeight;
@@ -314,7 +314,7 @@ namespace rct3::ui::screens
         lines(0, split);
         if (!page.graph.empty())
         {
-            LinePlot& plot = body_->add<LinePlot>("graph");
+            widgets::LinePlot& plot = body_->add<widgets::LinePlot>("graph");
             const float left = page.graph_axis.empty() ? 0 : info_panel::kAxisWidth;
             const float plot_width = info_panel::kPageWidth - left - (page.graph_axis.empty() ? 0 : info_panel::kRingReach);
             const float plot_height = page.graph_axis.empty() ? info_panel::kPlotHeight : info_panel::kAxisPlotHeight;
@@ -325,7 +325,7 @@ namespace rct3::ui::screens
             {
                 // Each number centred on its height up the plot.
                 const float at = page.graph_axis.size() > 1 ? plot_height * static_cast<float>(i) / static_cast<float>(page.graph_axis.size() - 1) : 0;
-                Label& n = line(std::format("axis{}", i), page.graph_axis[i], 0, left - info_panel::kPairGap, font::FontRole::Tiny);
+                widgets::Label& n = line(std::format("axis{}", i), page.graph_axis[i], 0, left - info_panel::kPairGap, font::FontRole::Tiny);
                 n.placement = top_left(0, y + at - info_panel::kLineHeight / 2, left - info_panel::kPairGap, info_panel::kLineHeight);
                 n.style.horizontal = Align::End;
                 n.style.vertical = Align::Centre;
@@ -341,8 +341,8 @@ namespace rct3::ui::screens
                 if (t.label.empty())
                     continue;
                 // Kept inside the plot, clear of the numbers up its left.
-                const float x = left + std::clamp(plot_x(t.back, plot.span(), plot_width), 20.0f, plot_width - 20);
-                Label& word = line(std::format("mark{}", i), t.label, 0, 0, font::FontRole::Tiny);
+                const float x = left + std::clamp(widgets::plot_x(t.back, plot.span(), plot_width), 20.0f, plot_width - 20);
+                widgets::Label& word = line(std::format("mark{}", i), t.label, 0, 0, font::FontRole::Tiny);
                 word.placement = top_left(x - 20, y + plot_height - info_panel::kLineHeight, 40, info_panel::kLineHeight);
                 word.style.horizontal = Align::Centre;
                 word.style.vertical = Align::End;
@@ -356,7 +356,7 @@ namespace rct3::ui::screens
                     plot.series.push_back({ .values = page.graph[i].values, .colour = colour, .full = page.graph[i].full, .centred = page.graph[i].centred });
                 if (!page.graph_axis.empty())
                     continue;
-                Label& name = body_->add<Label>(keyed_name(page.graph[i].key, page.graph[i].key.empty() ? "series" : "", i), page.graph[i].name, font::FontRole::Small);
+                widgets::Label& name = body_->add<widgets::Label>(keyed_name(page.graph[i].key, page.graph[i].key.empty() ? "series" : "", i), page.graph[i].name, font::FontRole::Small);
                 name.placement = top_left(width * static_cast<float>(i), y, width, info_panel::kLineHeight);
                 name.style.colour = colour;
             }
@@ -379,7 +379,7 @@ namespace rct3::ui::screens
             const bool joins = c.beside && !control_rows_.empty() && control_rows_.back().column == column;
             const float top = joins ? control_rows_.back().y : bottom[column];
             bottom[column] = std::max(joins ? bottom[column] : top, top + height + (striped ? 0 : 1));
-            Label& label = line(keyed_name(c.name, "label", i), c.label, 0, 0, font::FontRole::Small);
+            widgets::Label& label = line(keyed_name(c.name, "label", i), c.label, 0, 0, font::FontRole::Small);
             label.style.vertical = Align::Centre;
             if (c.colour)
                 label.style.colour = *c.colour;
@@ -391,7 +391,7 @@ namespace rct3::ui::screens
             {
                 case InfoControlKind::Number:
                 {
-                    Spinner& n = body_->add<Spinner>(name, style_.spinner);
+                    widgets::Spinner& n = body_->add<widgets::Spinner>(name, style_.spinner);
                     n.minimum = c.minimum;
                     n.maximum = c.maximum;
                     n.step = c.step;
@@ -404,7 +404,7 @@ namespace rct3::ui::screens
                 }
                 case InfoControlKind::Choice:
                 {
-                    Dropdown& d = body_->add<Dropdown>(name, style_.dropdown);
+                    widgets::Dropdown& d = body_->add<widgets::Dropdown>(name, style_.dropdown);
                     d.items = c.items;
                     d.select(c.value >= 0 ? std::optional<std::size_t>(static_cast<std::size_t>(c.value)) : std::nullopt);
                     w = &d;
@@ -414,13 +414,13 @@ namespace rct3::ui::screens
                 {
                     if (toggle)
                     {
-                        Button& b = body_->add<Button>(name, c.icon);
+                        widgets::Button& b = body_->add<widgets::Button>(name, c.icon);
                         b.toggle = true;
                         b.on = c.value != 0;
                         w = &b;
                         break;
                     }
-                    Tickbox& t = body_->add<Tickbox>(name, style_.tick_box, style_.tick);
+                    widgets::Tickbox& t = body_->add<widgets::Tickbox>(name, style_.tick_box, style_.tick);
                     t.ticked = c.value != 0;
                     w = &t;
                     break;
@@ -428,7 +428,7 @@ namespace rct3::ui::screens
                 case InfoControlKind::Button:
                 {
                     // An icon sits on a bubble, as the tabs' do.
-                    Button& b = body_->add<Button>(name, c.icon.empty() ? style_.button : style_.tab_face, c.icon);
+                    widgets::Button& b = body_->add<widgets::Button>(name, c.icon.empty() ? style_.button : style_.tab_face, c.icon);
                     b.text = c.text;
                     b.font = font::FontRole::Small;
                     b.icon_scale = info_panel::kPaintSize / info_panel::kIconSize;
@@ -438,7 +438,7 @@ namespace rct3::ui::screens
                 }
                 case InfoControlKind::Text:
                 {
-                    EditBox& e = body_->add<EditBox>(name, c.text);
+                    widgets::EditBox& e = body_->add<widgets::EditBox>(name, c.text);
                     e.skin = style_.spinner.field;
                     e.focused_skin = style_.spinner.field_focused;
                     e.max_length = static_cast<std::size_t>(std::max(c.maximum, 0));
@@ -447,16 +447,16 @@ namespace rct3::ui::screens
                 }
                 case InfoControlKind::Paint:
                 {
-                    PaintButtonStyle look = style_.paint;
+                    widgets::PaintButtonStyle look = style_.paint;
                     look.face = style_.tab_face;
-                    w = &body_->add<PaintButton>(name, std::move(look), c.paints);
+                    w = &body_->add<widgets::PaintButton>(name, std::move(look), c.paints);
                     break;
                 }
                 case InfoControlKind::Words:
                     break;
                 case InfoControlKind::Bar:
                 {
-                    Slider& b = body_->add<Slider>(name, style_.bar);
+                    widgets::Slider& b = body_->add<widgets::Slider>(name, style_.bar);
                     b.minimum = static_cast<float>(c.minimum);
                     b.maximum = static_cast<float>(c.maximum);
                     b.step = static_cast<float>(c.step);
@@ -472,7 +472,7 @@ namespace rct3::ui::screens
             }
             if (!c.enabled)
                 label.style.colour.a /= 2;
-            Label* shown = nullptr;
+            widgets::Label* shown = nullptr;
             if (!c.shown.empty())
             {
                 shown = &line(keyed_name(c.name, "value", i), c.shown, 0, 0, font::FontRole::Small);
@@ -560,7 +560,7 @@ namespace rct3::ui::screens
             const auto [x0, x1] = spans[row.column];
             if (!c.beside || i == 0 || control_rows_[i - 1].column != row.column)
                 x = x0;
-            Label& label = *row.label;
+            widgets::Label& label = *row.label;
             if (c.kind == InfoControlKind::Words)
             {
                 label.placement = top_left(x, row.y, std::max(x1 - x, 0.0f), row.height);
@@ -650,38 +650,38 @@ namespace rct3::ui::screens
             switch (c.kind)
             {
                 case InfoControlKind::Number:
-                    if (auto* n = static_cast<Spinner*>(w); n->take_change())
+                    if (auto* n = static_cast<widgets::Spinner*>(w); n->take_change())
                         change_now_ = InfoChange { c.id, n->value(), 0, { } };
                     break;
                 case InfoControlKind::Choice:
-                    if (auto* d = static_cast<Dropdown*>(w); d->take_change() && d->selected())
+                    if (auto* d = static_cast<widgets::Dropdown*>(w); d->take_change() && d->selected())
                         change_now_ = InfoChange { c.id, static_cast<int>(*d->selected()), 0, { } };
                     break;
                 case InfoControlKind::Tick:
                     if (!c.icon.empty())
                     {
-                        if (auto* b = static_cast<Button*>(w); b->take_click())
+                        if (auto* b = static_cast<widgets::Button*>(w); b->take_click())
                             change_now_ = InfoChange { c.id, b->on ? 1 : 0, 0, { } };
                     }
-                    else if (auto* t = static_cast<Tickbox*>(w); t->take_change())
+                    else if (auto* t = static_cast<widgets::Tickbox*>(w); t->take_change())
                         change_now_ = InfoChange { c.id, t->ticked ? 1 : 0, 0, { } };
                     break;
                 case InfoControlKind::Button:
-                    if (static_cast<Button*>(w)->take_click())
+                    if (static_cast<widgets::Button*>(w)->take_click())
                         change_now_ = InfoChange { c.id, 0, 0, { } };
                     break;
                 case InfoControlKind::Text:
-                    if (auto* e = static_cast<EditBox*>(w); e->take_commit())
+                    if (auto* e = static_cast<widgets::EditBox*>(w); e->take_commit())
                         change_now_ = InfoChange { c.id, 0, 0, e->text };
                     break;
                 case InfoControlKind::Words:
                     break;
                 case InfoControlKind::Bar:
-                    if (auto* b = static_cast<Slider*>(w); b->take_change())
+                    if (auto* b = static_cast<widgets::Slider*>(w); b->take_change())
                         change_now_ = InfoChange { c.id, static_cast<int>(std::lround(b->value())), 0, { } };
                     break;
                 case InfoControlKind::Paint:
-                    if (const auto pot = static_cast<PaintButton*>(w)->take_pot())
+                    if (const auto pot = static_cast<widgets::PaintButton*>(w)->take_pot())
                     {
                         // Pressing the pot again puts the colours away.
                         if (painting_page_ == i)
@@ -757,7 +757,7 @@ namespace rct3::ui::screens
         if (painting_ && palette_ != nullptr)
         {
             // Above its tab, as near the tab's middle as the screen allows.
-            const Point size = ColourPalette::size(style_.palette, palette_->count(), style_.palette_columns);
+            const Point size = widgets::ColourPalette::size(style_.palette, palette_->count(), style_.palette_columns);
             const Point tab = tab_offset(slots_[*painting_]);
             const float m = info_panel::kScreenMargin;
             const float x = std::clamp(middle.x + tab.x - size.x / 2, m, std::max(m, r.width() - m - size.x));
@@ -767,7 +767,7 @@ namespace rct3::ui::screens
         if (painting_page_ && palette_ != nullptr)
         {
             // Above the strip, over its pots.
-            const Point size = ColourPalette::size(style_.palette, palette_->count(), style_.palette_columns);
+            const Point size = widgets::ColourPalette::size(style_.palette, palette_->count(), style_.palette_columns);
             const Rect pots = controls_[*painting_page_].second->rect();
             const float m = info_panel::kScreenMargin;
             const float x = std::clamp((pots.x0 + pots.x1) / 2 - r.x0 - size.x / 2, m, std::max(m, r.width() - m - size.x));
@@ -872,7 +872,7 @@ namespace rct3::ui::screens
         {
             if (const auto colour = palette_->take_pick())
             {
-                auto& pots = *static_cast<PaintButton*>(controls_[*painting_page_].second);
+                auto& pots = *static_cast<widgets::PaintButton*>(controls_[*painting_page_].second);
                 pots.colours.at(painting_pot_) = *colour;
                 change_now_ = InfoChange { controls_[*painting_page_].first.id, static_cast<int>(*colour), painting_pot_, { } };
                 close_palette();

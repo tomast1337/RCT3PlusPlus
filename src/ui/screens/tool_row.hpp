@@ -79,7 +79,7 @@ namespace rct3::ui::screens
         /// In a career the leave button goes back to the career screen instead of the main menu.
         void set_career(bool career);
 
-        [[nodiscard]] Button& button(ParkTool tool) const
+        [[nodiscard]] widgets::Button& button(ParkTool tool) const
         {
             return *buttons_.at(static_cast<std::size_t>(tool));
         }
@@ -100,7 +100,7 @@ namespace rct3::ui::screens
         /// Closes the open menu.
         void close_menu();
         /// The button of `item`.
-        [[nodiscard]] Button& item(ToolItem item) const;
+        [[nodiscard]] widgets::Button& item(ToolItem item) const;
         /// Whether `item` can be picked; one that cannot is shown faded.
         void set_available(ToolItem item, bool available);
         /// Whether what the switch `item` controls is shown. Picking a switch turns it over.
@@ -113,7 +113,7 @@ namespace rct3::ui::screens
         struct MenuItem
         {
             ToolItem item;
-            Button* button = nullptr;
+            widgets::Button* button = nullptr;
             ParkTool tool;
             bool on = false;                   ///< Switches only
             std::optional<ToolItem> under { }; ///< The item whose smaller menu it is in
@@ -130,7 +130,7 @@ namespace rct3::ui::screens
 
         ToolRowStyle style_;
         const StringTable& strings_;
-        std::array<Button*, kParkToolCount> buttons_ { };
+        std::array<widgets::Button*, kParkToolCount> buttons_ { };
         std::vector<MenuItem> items_;
         std::optional<ParkTool> open_;
         std::optional<ToolItem> sub_open_;

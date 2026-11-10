@@ -93,7 +93,7 @@ namespace rct3::scene::park
         const auto children = desktop.root().children();
         for (auto it = children.rbegin(); it != children.rend(); ++it)
         {
-            if (auto* window = dynamic_cast<ui::Window*>(it->get()); window != nullptr && !window->closing() && (dynamic_cast<ui::screens::ManagementWindow*>(window) != nullptr || dynamic_cast<ui::screens::StaffRoster*>(window) != nullptr))
+            if (auto* window = dynamic_cast<ui::widgets::Window*>(it->get()); window != nullptr && !window->closing() && (dynamic_cast<ui::screens::ManagementWindow*>(window) != nullptr || dynamic_cast<ui::screens::StaffRoster*>(window) != nullptr))
             {
                 window->close();
                 return true;
@@ -129,7 +129,7 @@ namespace rct3::scene::park
             if (choice && topic == ui::screens::ManagementTopic::Attractions && choice->first == ui::screens::kOpenCloseAllButton && choice->second < ui::screens::kOpenCloseAllStates.size())
             {
                 asks.state_all = ui::screens::kOpenCloseAllStates[choice->second];
-                for (const ui::TableRow& r : ui::screens::management_page(topic, window->tab(), facts, strings, units).rows)
+                for (const ui::widgets::TableRow& r : ui::screens::management_page(topic, window->tab(), facts, strings, units).rows)
                     asks.listed.push_back(ui::screens::management_row(r.id));
             }
             if (const auto row = window->take_row())

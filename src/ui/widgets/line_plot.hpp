@@ -16,7 +16,7 @@
 #include <span>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     struct PlotSeries
@@ -69,4 +69,4 @@ namespace rct3::ui
     /// sits; the newest at the right edge.
     [[nodiscard]] float plot_x(float back, std::size_t span, float width);
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

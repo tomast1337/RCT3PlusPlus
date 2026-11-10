@@ -55,8 +55,8 @@ namespace rct3::ui::screens
         void update(const UpdateContext& context) override;
 
     private:
-        Button* clear_ = nullptr;
-        Button* delete_ = nullptr;
+        widgets::Button* clear_ = nullptr;
+        widgets::Button* delete_ = nullptr;
         std::optional<DeleteAreaAction> asked_;
     };
 

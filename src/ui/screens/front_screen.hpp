@@ -103,10 +103,10 @@ namespace rct3::ui::screens
     };
 
     /// A round button: its background stays put, the picture on it grows while the pointer is over it.
-    class FrontButton : public Button
+    class FrontButton : public widgets::Button
     {
     public:
-        using Button::Button;
+        using widgets::Button::Button;
         /// Draw the picture at its own size times icon_scale, centred and growing with the face, instead
         /// of filling the face.
         bool icon_own_size = false;

@@ -29,9 +29,9 @@ namespace rct3::scene
         ui::InterfaceAssets assets;
         const ui::font::FontSet* current_fonts = nullptr; ///< The set for the width of the last update
         ui::Desktop desktop;
-        ui::MenuBar* menu_bar = nullptr; ///< In the desktop's tree, which lives as long as the demo
-        ui::Toolbar* toolbar = nullptr;
-        ui::QuestionBox* question = nullptr; ///< While it is shown
+        ui::widgets::MenuBar* menu_bar = nullptr; ///< In the desktop's tree, which lives as long as the demo
+        ui::widgets::Toolbar* toolbar = nullptr;
+        ui::widgets::QuestionBox* question = nullptr; ///< While it is shown
         ui::DrawList list;
         std::optional<float> scale; ///< Chosen interface scale; nothing picks one from the window height
     };

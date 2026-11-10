@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/panel.hpp"
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     Panel::Panel(std::string name, std::string skin)
@@ -18,4 +18,4 @@ namespace rct3::ui
             skin::draw_skin(context.list, context.skins.find(skin), rect(), tint);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

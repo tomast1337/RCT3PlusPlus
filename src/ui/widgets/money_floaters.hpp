@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     /// Seconds a float shows.
@@ -50,4 +50,4 @@ namespace rct3::ui
         void draw(DrawContext& context) const override;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

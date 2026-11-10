@@ -155,11 +155,11 @@ namespace rct3::ui::screens
         std::array<std::string, construction_panel::kSplitPictures> split;
         std::string heights; ///< Shows the track's heights: off, then on
         std::string heights_on;
-        ListBoxStyle list; ///< Of the named pieces without a picture
-        ScrollBarStyle list_bar;
+        widgets::ListBoxStyle list; ///< Of the named pieces without a picture
+        widgets::ScrollBarStyle list_bar;
         Color divider = hex("#c8c8c8");
         std::array<std::string, construction_panel::kParams> param_icons; ///< Before each setting's box
-        SpinnerStyle param;
+        widgets::SpinnerStyle param;
         std::string facing; ///< Base name; the facing's number after it, from 1
         font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
@@ -241,66 +241,66 @@ namespace rct3::ui::screens
         /// What the player did since the last call, oldest first, once.
         [[nodiscard]] std::optional<ConstructionEvent> take_event();
 
-        [[nodiscard]] Button& curve_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& curve_button(std::size_t i) const
         {
             return *curves_.at(i);
         }
-        [[nodiscard]] Button& slope_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& slope_button(std::size_t i) const
         {
             return *slopes_.at(i);
         }
-        [[nodiscard]] Button& bank_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& bank_button(std::size_t i) const
         {
             return *banks_.at(i);
         }
-        [[nodiscard]] Button& toggle_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& toggle_button(std::size_t i) const
         {
             return *toggles_.at(i);
         }
-        [[nodiscard]] Button& demolish_button() const
+        [[nodiscard]] widgets::Button& demolish_button() const
         {
             return *demolish_;
         }
-        [[nodiscard]] Button& complete_button() const
+        [[nodiscard]] widgets::Button& complete_button() const
         {
             return *complete_;
         }
-        [[nodiscard]] Button& new_segment_button() const
+        [[nodiscard]] widgets::Button& new_segment_button() const
         {
             return *new_segment_;
         }
-        [[nodiscard]] Button& split_button() const
+        [[nodiscard]] widgets::Button& split_button() const
         {
             return *split_;
         }
-        [[nodiscard]] Button& heights_button() const
+        [[nodiscard]] widgets::Button& heights_button() const
         {
             return *heights_;
         }
         std::u16string heights_help;        ///< The heights button's help
         std::u16string heights_locked_help; ///< Its help while the view menu shows every ride's heights
         /// The named pieces without a picture.
-        [[nodiscard]] ListBox& list() const
+        [[nodiscard]] widgets::ListBox& list() const
         {
             return *list_;
         }
-        [[nodiscard]] Label& piece_label() const
+        [[nodiscard]] widgets::Label& piece_label() const
         {
             return *piece_;
         }
-        [[nodiscard]] Label& cost_label() const
+        [[nodiscard]] widgets::Label& cost_label() const
         {
             return *cost_;
         }
-        [[nodiscard]] Button& special_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& special_button(std::size_t i) const
         {
             return *specials_.at(i);
         }
-        [[nodiscard]] Spinner& param_spinner(PieceParam param) const
+        [[nodiscard]] widgets::Spinner& param_spinner(PieceParam param) const
         {
             return *params_.at(std::to_underlying(param));
         }
-        [[nodiscard]] Button& facing_button() const
+        [[nodiscard]] widgets::Button& facing_button() const
         {
             return *facing_;
         }
@@ -318,25 +318,25 @@ namespace rct3::ui::screens
 
         ConstructionPanelStyle style_;
         ConstructionView view_;
-        std::array<Button*, construction_panel::kCurves> curves_ { };
-        std::array<Button*, construction_panel::kSlopes> slopes_ { };
-        std::array<Button*, construction_panel::kBanks> banks_ { };
-        ListBox* list_ = nullptr;
-        std::array<Button*, construction_panel::kToggles> toggles_ { };
+        std::array<widgets::Button*, construction_panel::kCurves> curves_ { };
+        std::array<widgets::Button*, construction_panel::kSlopes> slopes_ { };
+        std::array<widgets::Button*, construction_panel::kBanks> banks_ { };
+        widgets::ListBox* list_ = nullptr;
+        std::array<widgets::Button*, construction_panel::kToggles> toggles_ { };
         float list_left_ = construction_panel::kListLeft;
-        Button* demolish_ = nullptr;
-        Button* complete_ = nullptr;
-        Button* new_segment_ = nullptr;
-        Button* split_ = nullptr;
-        Button* heights_ = nullptr;
-        std::array<Button*, construction_panel::kSpecials> specials_ { };
-        std::array<Button*, construction_panel::kParams> param_icons_ { };
-        std::array<Spinner*, construction_panel::kParams> params_ { };
-        Button* facing_ = nullptr;
+        widgets::Button* demolish_ = nullptr;
+        widgets::Button* complete_ = nullptr;
+        widgets::Button* new_segment_ = nullptr;
+        widgets::Button* split_ = nullptr;
+        widgets::Button* heights_ = nullptr;
+        std::array<widgets::Button*, construction_panel::kSpecials> specials_ { };
+        std::array<widgets::Button*, construction_panel::kParams> param_icons_ { };
+        std::array<widgets::Spinner*, construction_panel::kParams> params_ { };
+        widgets::Button* facing_ = nullptr;
         std::vector<std::size_t> listed_;   ///< The named pieces in the list, by index in the view
         std::vector<std::size_t> pictured_; ///< Those with picture buttons, by index in the view
-        Label* piece_ = nullptr;
-        Label* cost_ = nullptr;
+        widgets::Label* piece_ = nullptr;
+        widgets::Label* cost_ = nullptr;
         std::vector<ConstructionEvent> events_;
     };
 

@@ -7,7 +7,7 @@
 #include <cmath>
 #include <format>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     namespace
@@ -167,4 +167,4 @@ namespace rct3::ui
         }
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

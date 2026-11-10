@@ -22,7 +22,7 @@
 #include <optional>
 #include <string>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     class ScrollArea : public Widget
@@ -67,4 +67,4 @@ namespace rct3::ui
         ScrollBar* horizontal_ = nullptr;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

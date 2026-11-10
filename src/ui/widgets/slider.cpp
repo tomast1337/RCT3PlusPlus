@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     namespace
@@ -154,4 +154,4 @@ namespace rct3::ui
             context.list.fill(thumb(), style.thumb_colour);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

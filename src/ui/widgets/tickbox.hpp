@@ -8,7 +8,7 @@
 
 #include <string>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     class Tickbox : public Widget
@@ -46,4 +46,4 @@ namespace rct3::ui
         int changes_ = 0;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

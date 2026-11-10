@@ -26,26 +26,26 @@ namespace rct3::ui::screens
         // Spans the screen so its parts can sit by its corner; it lets the pointer through elsewhere.
         placement = fill();
         body_ = &add<Widget>("body");
-        status_ = &add<Label>("status", std::u16string { }, font::FontRole::Small);
+        status_ = &add<widgets::Label>("status", std::u16string { }, font::FontRole::Small);
         status_->style.colour = style_.text_colour;
         status_->style.vertical = Align::Centre;
-        size_ = &add<Spinner>("Land_Brush_Radius", style_.size);
+        size_ = &add<widgets::Spinner>("Land_Brush_Radius", style_.size);
         size_->minimum = 1;
         size_->tooltip = std::u16string(strings_.get("Land_Brush_RadiusHelp"));
-        close_ = &add<Button>("close", std::string { }, style_.close_icon);
+        close_ = &add<widgets::Button>("close", std::string { }, style_.close_icon);
         close_->placement = bottom_left(land_panel::kCloseLeft, style_.bottom - info_panel::kDiscMargin + land_panel::kCloseBottom, info_panel::kCloseSize, info_panel::kCloseSize);
         visible = false;
     }
 
     void LandPanel::show(std::vector<LandTab> tabs, LandPick chosen, int size, int largest)
     {
-        for (Button* b : tabs_)
+        for (widgets::Button* b : tabs_)
             (void)remove(*b);
         tabs_.clear();
         data_ = std::move(tabs);
         for (const LandTab& t : data_)
         {
-            Button& b = add<Button>(t.icon, style_.tab_face, t.icon);
+            widgets::Button& b = add<widgets::Button>(t.icon, style_.tab_face, t.icon);
             b.tooltip = t.help;
             b.toggle = true;
             b.swell = (info_panel::kTabGrown - info_panel::kTabSize) / 2;
@@ -69,13 +69,13 @@ namespace rct3::ui::screens
     void LandPanel::open(std::optional<std::size_t> page)
     {
         page_ = page;
-        for (Button* b : tools_)
+        for (widgets::Button* b : tools_)
             (void)body_->remove(*b);
         tools_.clear();
         if (page_)
             for (const LandTool& t : data_[*page_].tools)
             {
-                Button& b = body_->add<Button>(t.icon, std::string { }, t.icon);
+                widgets::Button& b = body_->add<widgets::Button>(t.icon, std::string { }, t.icon);
                 b.tooltip = t.help;
                 b.enabled = t.usable;
                 b.icon_scale = (land_panel::kToolCell - 4) / land_panel::kToolIcon;

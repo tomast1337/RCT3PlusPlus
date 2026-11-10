@@ -92,7 +92,7 @@ namespace rct3::ui::screens
 
     struct BuildPickerStyle
     {
-        WindowStyle window;
+        widgets::WindowStyle window;
         std::string open_heading; ///< On an open heading
         std::string closed_heading;
         std::string search_box; ///< Behind the search box, and while it has the keyboard focus
@@ -106,7 +106,7 @@ namespace rct3::ui::screens
         float pack_icon_scale = 0.5f;  ///< The pictures are badges drawn larger elsewhere
         std::string pack_name;         ///< + the pack's number from 0: the string key of its name
         std::string style_help;        ///< String key of the theme filters' help, under the theme's name
-        ScrollBarStyle scroll_bar;
+        widgets::ScrollBarStyle scroll_bar;
         Color text_colour = hex("#000000");
         Color hint_colour = hex("#7f7f7f");
         Color hover_colour = hex("#2484be30");
@@ -117,7 +117,7 @@ namespace rct3::ui::screens
 
     class BuildPickerRow;
 
-    class BuildPicker : public Window
+    class BuildPicker : public widgets::Window
     {
     public:
         /// `icon`: the skin in the window's corner. `themes`: those to offer filters for.
@@ -144,13 +144,13 @@ namespace rct3::ui::screens
         {
             return rows_;
         }
-        [[nodiscard]] EditBox& search_box() const
+        [[nodiscard]] widgets::EditBox& search_box() const
         {
             return *search_;
         }
         /// The object filters, the theme filters, then the pack filters; named after the kind, the theme, and
         /// "pack" + the pack's number.
-        [[nodiscard]] std::span<Button* const> filters() const
+        [[nodiscard]] std::span<widgets::Button* const> filters() const
         {
             return filters_;
         }
@@ -184,10 +184,10 @@ namespace rct3::ui::screens
             std::string name; ///< Of the kind or the theme
             std::uint32_t pack = 0;
         };
-        std::vector<Button*> filters_;
+        std::vector<widgets::Button*> filters_;
         std::vector<FilterKey> keys_; ///< Of each filter
-        EditBox* search_ = nullptr;
-        ScrollArea* list_ = nullptr;
+        widgets::EditBox* search_ = nullptr;
+        widgets::ScrollArea* list_ = nullptr;
         std::u16string query_; ///< Folded, as the layout last filtered by
         bool dirty_ = true;
         float laid_width_ = 0;        ///< Of the grid when it was laid out

@@ -97,7 +97,7 @@ namespace rct3::ui::screens
         std::string unlocked;
         std::array<std::string, 3> hats; ///< Apprentice, entrepreneur, tycoon
         std::string no_picture;          ///< For a scenario without a large picture
-        QuestionBoxStyle question;
+        widgets::QuestionBoxStyle question;
         Color text_colour = hex("#000000");
         bool round = false; ///< The front screen's design at one scale (front_screen_layout.hpp)
     };
@@ -166,7 +166,7 @@ namespace rct3::ui::screens
         {
             return *quit_;
         }
-        [[nodiscard]] std::optional<QuestionBox&> question() const
+        [[nodiscard]] std::optional<widgets::QuestionBox&> question() const
         {
             return core::maybe(question_);
         }
@@ -211,7 +211,7 @@ namespace rct3::ui::screens
         FrontButton* load_ = nullptr;
         FrontButton* menu_ = nullptr;
         FrontButton* quit_ = nullptr;
-        QuestionBox* question_ = nullptr;
+        widgets::QuestionBox* question_ = nullptr;
         Asking asking_ = Asking::New;
         std::size_t picked_ = 0;
         float since_pick_ = 0;

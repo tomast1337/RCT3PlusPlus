@@ -1598,8 +1598,8 @@ namespace rct3::scene::park
         // ── 8. UI layout ──
         {
             // Under everything else, as part of the park.
-            scene.desktop->root().add<ui::WorldLabels>(std::string(kHeightsName)).stays_behind = true;
-            scene.desktop->root().add<ui::MoneyFloaters>(std::string(kMoneyName)).stays_behind = true;
+            scene.desktop->root().add<ui::widgets::WorldLabels>(std::string(kHeightsName)).stays_behind = true;
+            scene.desktop->root().add<ui::widgets::MoneyFloaters>(std::string(kMoneyName)).stays_behind = true;
             // Behind the bar, which it hangs from.
             // Under the bar, even while it is dragged.
             scene.desktop->root().add<ui::screens::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(palette), strings).stays_behind = true;

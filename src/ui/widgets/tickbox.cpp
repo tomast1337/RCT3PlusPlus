@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/tickbox.hpp"
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     Tickbox::Tickbox(std::string name, std::string box, std::string tick)
@@ -47,4 +47,4 @@ namespace rct3::ui
             skin::draw_skin(context.list, context.skins.find(tick), rect(), tint);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

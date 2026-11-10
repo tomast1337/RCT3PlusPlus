@@ -87,7 +87,7 @@ namespace rct3::ui::screens
     }
 
     TutorialGuide::TutorialGuide(std::string name, const TutorialGuideStyle& style, const StringTable& strings, save::model::TutorialScript script)
-        : Window(std::move(name), style.window, style.min_width, 0)
+        : widgets::Window(std::move(name), style.window, style.min_width, 0)
         , style_(style)
         , strings_(strings)
         , script_(std::move(script))
@@ -98,16 +98,16 @@ namespace rct3::ui::screens
         close_button().visible = false;
 
         const Rect& line = style.step_line;
-        step_line_ = &add<Label>("step", std::u16string { }, style.font);
+        step_line_ = &add<widgets::Label>("step", std::u16string { }, style.font);
         step_line_->placement = { { 0, 0, 1, 0 }, { line.x0, line.y0, -line.x1, line.y0 + line.y1 } };
         step_line_->style.colour = style.text_colour;
         step_line_->style.vertical = Align::Centre;
 
-        text_ = &content().add<Label>("text", std::u16string { }, style.font);
+        text_ = &content().add<widgets::Label>("text", std::u16string { }, style.font);
         text_->style.wrap = true;
         text_->style.colour = style.text_colour;
         const auto text_button = [&](std::string_view widget, std::string_view key) {
-            Button& b = content().add<Button>(std::string(widget), style.button);
+            widgets::Button& b = content().add<widgets::Button>(std::string(widget), style.button);
             b.font = style.font;
             b.text = strings.get(key);
             b.text_inset = style.button_inset;

@@ -220,10 +220,10 @@ namespace
         ui::screens::draw_drawer_frame(context, ui::game_skins::message_drawer_style({ }), { 8, 8, 8 + ui::screens::message_drawer::kWidth, 155 });
     }
 
-    void draw_window(ui::DrawContext& context, const ui::WindowStyle& style, ui::Rect view)
+    void draw_window(ui::DrawContext& context, const ui::widgets::WindowStyle& style, ui::Rect view)
     {
         ui::Desktop desktop;
-        auto& window = desktop.root().add<ui::Window>("window", style, view.width() - 16, view.height() - 16);
+        auto& window = desktop.root().add<ui::widgets::Window>("window", style, view.width() - 16, view.height() - 16);
         window.placement = ui::top_left(8, 8, view.width() - 16, view.height() - 16);
         desktop.layout(view);
         // The frame and backgrounds alone: the title button and content are pictures and text either way.
@@ -243,7 +243,7 @@ namespace
     // The window's body alone, without its frame, so its fine lines are not lost in the frame's score.
     void draw_window_background(ui::DrawContext& context, PanelLook, ui::Rect view)
     {
-        ui::WindowStyle style = ui::game_skins::window_style({ });
+        ui::widgets::WindowStyle style = ui::game_skins::window_style({ });
         style.frame.clear();
         style.frame_unfocused.clear();
         draw_window(context, style, view);

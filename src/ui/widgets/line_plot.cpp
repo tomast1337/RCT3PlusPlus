@@ -5,7 +5,7 @@
 #include <array>
 #include <cmath>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     LinePlot::LinePlot(std::string name)
@@ -114,4 +114,4 @@ namespace rct3::ui
         context.list.pop_clip();
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

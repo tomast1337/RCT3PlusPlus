@@ -8,7 +8,7 @@
 #include <optional>
 #include <string>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     class Panel : public Widget
@@ -23,4 +23,4 @@ namespace rct3::ui
         void draw(DrawContext& context) const override;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

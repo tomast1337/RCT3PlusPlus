@@ -148,8 +148,8 @@ namespace rct3::scene::park
         {
             if (scene.desktop->root().find(kQuestionName))
                 return;
-            const ui::QuestionBoxStyle style = skins::question_box_style(palette);
-            scene.desktop->root().add<ui::QuestionBox>(std::string(kQuestionName), style, std::u16string(strings.get(kLeaveText)), std::vector<ui::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
+            const ui::widgets::QuestionBoxStyle style = skins::question_box_style(palette);
+            scene.desktop->root().add<ui::widgets::QuestionBox>(std::string(kQuestionName), style, std::u16string(strings.get(kLeaveText)), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
         }
 
         /// Asks whether to pull `refs` down, naming them; the answer comes back in the park's update.
@@ -166,8 +166,8 @@ namespace rct3::scene::park
             std::u16string text(strings.get(kDemolishText));
             if (const auto at = text.find(u"%NAME%"); at != std::u16string::npos)
                 text.replace(at, 6, names);
-            const ui::QuestionBoxStyle style = skins::question_box_style(palette);
-            auto& box = scene.desktop->root().add<ui::QuestionBox>(std::string(kDemolishName), style, std::move(text), std::vector<ui::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
+            const ui::widgets::QuestionBoxStyle style = skins::question_box_style(palette);
+            auto& box = scene.desktop->root().add<ui::widgets::QuestionBox>(std::string(kDemolishName), style, std::move(text), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
             box.title = std::u16string(strings.get(kDemolishTitle));
             scene.demolish_asked = std::move(refs);
         }
@@ -184,8 +184,8 @@ namespace rct3::scene::park
             // It names the room asked from as well.
             if (const auto at = text.find(u"%NAME%"); at != std::u16string::npos)
                 text.replace(at, 6, ui::screens::scenery_name({ .symbol = scene.pools.rooms.at(room).symbol }, strings));
-            const ui::QuestionBoxStyle style = skins::question_box_style(palette);
-            auto& box = scene.desktop->root().add<ui::QuestionBox>(std::string(kSellPoolName), style, std::move(text), std::vector<ui::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
+            const ui::widgets::QuestionBoxStyle style = skins::question_box_style(palette);
+            auto& box = scene.desktop->root().add<ui::widgets::QuestionBox>(std::string(kSellPoolName), style, std::move(text), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
             box.title = std::u16string(strings.get(kSellPoolTitle));
             scene.pool_complex_asked = room;
         }
@@ -1436,7 +1436,7 @@ namespace rct3::scene::park
             save::model::Stall* stall = ref.kind == rct3::park::AttractionRef::Kind::Stall && ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index] : nullptr;
             const auto wait_on = [&](std::int32_t& wait, ui::screens::AttractionControl seconds) {
                 const auto field = panel.control(ui::screens::control_id(seconds));
-                wait = change.value != 0 ? (field ? static_cast<const ui::Spinner&>(*field).value() : 0) : -1;
+                wait = change.value != 0 ? (field ? static_cast<const ui::widgets::Spinner&>(*field).value() : 0) : -1;
                 if (field)
                     field->enabled = change.value != 0;
             };
@@ -2187,7 +2187,7 @@ namespace rct3::scene::park
     {
         // A label has the focus only while its text is selected for copying, and Control+C is a game key too.
         const ui::Widget* focus = scene.desktop ? core::as_pointer(scene.desktop->keyboard_focus()) : nullptr;
-        return dynamic_cast<const ui::EditBox*>(focus) != nullptr || dynamic_cast<const ui::Label*>(focus) != nullptr;
+        return dynamic_cast<const ui::widgets::EditBox*>(focus) != nullptr || dynamic_cast<const ui::widgets::Label*>(focus) != nullptr;
     }
 
     bool ripple_at(ParkScene& scene, ui::Point at, ui::Point size)
@@ -3823,7 +3823,7 @@ namespace rct3::scene::park
             }
         }
         update_view_lines(device, scene);
-        if (auto heights = desktop.root().find_as<ui::WorldLabels>(kHeightsName))
+        if (auto heights = desktop.root().find_as<ui::widgets::WorldLabels>(kHeightsName))
         {
             const ui::Rect view = desktop.root().rect();
             heights->labels = height_labels(scene, { view.width(), view.height() });
@@ -3845,7 +3845,7 @@ namespace rct3::scene::park
                 }
             }
         }
-        if (auto money = desktop.root().find_as<ui::MoneyFloaters>(kMoneyName))
+        if (auto money = desktop.root().find_as<ui::widgets::MoneyFloaters>(kMoneyName))
         {
             const ui::Rect view = desktop.root().rect();
             money->floats = money_floats(scene, { view.width(), view.height() }, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)), elapsed);
@@ -3965,12 +3965,12 @@ namespace rct3::scene::park
         follow_footpaths(scene, elapsed);
         if (auto guide = desktop.root().find_as<ui::screens::TutorialGuide>(kGuideName); guide && guide->take_quit())
             ask_leave(scene, *assets.strings, assets.palette);
-        if (auto question = desktop.root().find_as<ui::QuestionBox>(kQuestionName))
+        if (auto question = desktop.root().find_as<ui::widgets::QuestionBox>(kQuestionName))
         {
             if (const auto answer = question->take_answer())
                 scene.leave = scene.leave || *answer == 0;
         }
-        if (auto question = desktop.root().find_as<ui::QuestionBox>(kSellPoolName))
+        if (auto question = desktop.root().find_as<ui::widgets::QuestionBox>(kSellPoolName))
         {
             if (const auto answer = question->take_answer(); answer && *answer == 0)
                 if (const auto room = std::exchange(scene.pool_complex_asked, std::nullopt); room && *room < scene.pools.rooms.size())
@@ -3983,19 +3983,19 @@ namespace rct3::scene::park
                     }
                 }
         }
-        if (auto question = desktop.root().find_as<ui::QuestionBox>(kDemolishName))
+        if (auto question = desktop.root().find_as<ui::widgets::QuestionBox>(kDemolishName))
         {
             if (const auto answer = question->take_answer(); answer && *answer == 0)
                 for (const rct3::park::AttractionRef ref : std::exchange(scene.demolish_asked, { }))
                     demolish(scene, assets, ref);
         }
         // Prizes won are told in a box each, as the player closes the one before.
-        if (auto box = desktop.root().find_as<ui::QuestionBox>(kPrizeName))
+        if (auto box = desktop.root().find_as<ui::widgets::QuestionBox>(kPrizeName))
             (void)box->take_answer();
         else if (!scene.prizes.empty())
         {
-            const ui::QuestionBoxStyle style = skins::question_box_style(assets.palette);
-            desktop.root().add<ui::QuestionBox>(std::string(kPrizeName), style, std::u16string(assets.strings->get(scene.prizes.front())), std::vector<ui::QuestionAnswer> { { std::u16string(assets.strings->get(kOk)), style.confirm_icon } });
+            const ui::widgets::QuestionBoxStyle style = skins::question_box_style(assets.palette);
+            desktop.root().add<ui::widgets::QuestionBox>(std::string(kPrizeName), style, std::u16string(assets.strings->get(scene.prizes.front())), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(assets.strings->get(kOk)), style.confirm_icon } });
             scene.prizes.erase(scene.prizes.begin());
         }
     }

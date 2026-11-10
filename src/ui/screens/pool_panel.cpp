@@ -37,14 +37,14 @@ namespace rct3::ui::screens
         // Spans the screen so its parts can sit by its corner; it lets the pointer through elsewhere.
         placement = fill();
         body_ = &add<Widget>("body");
-        status_ = &add<Label>("status", std::u16string { }, font::FontRole::Small);
+        status_ = &add<widgets::Label>("status", std::u16string { }, font::FontRole::Small);
         status_->style.colour = style_.text_colour;
         status_->style.vertical = Align::Centre;
-        close_ = &add<Button>("close", std::string { }, style_.close_icon);
+        close_ = &add<widgets::Button>("close", std::string { }, style_.close_icon);
         close_->placement = bottom_left(pool_panel::kCloseLeft, style_.bottom - info_panel::kDiscMargin + pool_panel::kCloseBottom, info_panel::kCloseSize, info_panel::kCloseSize);
         for (std::size_t i = 0; i < tabs_.size(); ++i)
         {
-            Button& b = add<Button>(std::string(kTabIcons[i]), style_.tab_face, std::string(kTabIcons[i]));
+            widgets::Button& b = add<widgets::Button>(std::string(kTabIcons[i]), style_.tab_face, std::string(kTabIcons[i]));
             b.tooltip = std::u16string(strings_.get(kTabHelp[i]));
             b.toggle = true;
             b.enabled = kTabBuilt[i];
@@ -55,7 +55,7 @@ namespace rct3::ui::screens
         // The paths page's switches, with the path panel's pictures and help.
         for (auto [button, icon, help] : { std::tuple { &pin_, "RideCamGUI_Pin", "PathEditor_EditMode" }, { &follow_, "Guest_Camera", "PathEditor_CameraFollow" } })
         {
-            Button& b = add<Button>(button == &pin_ ? "pin" : "follow", style_.tab_face, icon);
+            widgets::Button& b = add<widgets::Button>(button == &pin_ ? "pin" : "follow", style_.tab_face, icon);
             b.tooltip = std::u16string(strings_.get(help));
             b.toggle = true;
             b.swell = (info_panel::kTabGrown - info_panel::kTabSize) / 2;
@@ -65,8 +65,8 @@ namespace rct3::ui::screens
         pin_->on = true;
 
         editor_page_ = &body_->add<Widget>("editor");
-        const auto button = [&](std::string_view icon, std::string_view help) -> Button& {
-            Button& b = editor_page_->add<Button>(std::string(icon), std::string { }, std::string(icon));
+        const auto button = [&](std::string_view icon, std::string_view help) -> widgets::Button& {
+            widgets::Button& b = editor_page_->add<widgets::Button>(std::string(icon), std::string { }, std::string(icon));
             b.tooltip = std::u16string(strings_.get(help));
             b.icon_scale = pool_panel::kButton / info_panel::kIconSize;
             return b;
@@ -82,14 +82,14 @@ namespace rct3::ui::screens
         }
         grid_ = &button("Land_Grid", "Pool_GridToggle");
         snap_ = &button("Pool_Height", "Pool_HeightToggle");
-        height_ = &editor_page_->add<Spinner>("height", style_.height);
+        height_ = &editor_page_->add<widgets::Spinner>("height", style_.height);
         height_->minimum = pool_panel::kHeightLowest;
         height_->maximum = pool_panel::kHeightHighest;
         height_->tooltip = std::u16string(strings_.get("Pool_Height"));
         paths_page_ = &body_->add<Widget>("paths");
         for (std::size_t i = 0; i < path_controls_.size(); ++i)
         {
-            Button& b = paths_page_->add<Button>(style_.path_help.at(i), std::string { });
+            widgets::Button& b = paths_page_->add<widgets::Button>(style_.path_help.at(i), std::string { });
             b.tooltip = std::u16string(strings_.get(style_.path_help.at(i)));
             if (i == kPathRemove)
                 b.icon_scale = footpath_panel::kControlRects.at(i).height() / footpath_panel::kLargeIcon;
@@ -119,7 +119,7 @@ namespace rct3::ui::screens
     void PoolPanel::open(std::optional<PoolPage> page)
     {
         page_ = page;
-        for (Button* b : choices_)
+        for (widgets::Button* b : choices_)
             (void)body_->remove(*b);
         choices_.clear();
         editor_page_->visible = page_ == PoolPage::Editor;
@@ -128,7 +128,7 @@ namespace rct3::ui::screens
         for (const PoolChoice& c : choices_of(page_))
         {
             // On the tabs' round face, as in the game.
-            Button& b = body_->add<Button>(c.icon, style_.tab_face, c.icon);
+            widgets::Button& b = body_->add<widgets::Button>(c.icon, style_.tab_face, c.icon);
             b.tooltip = c.help;
             b.icon_fit = (page_ == PoolPage::Paths ? pool_panel::kStairCell : pool_panel::kCell) - 8; // A changing room's picture is bigger than an extra's
             b.swell = 2;
@@ -194,7 +194,7 @@ namespace rct3::ui::screens
         using namespace pool_panel;
         editor_page_->placement = top_left(0, 0, kEditorWidth, body.y);
         float x = 0;
-        for (Button* b : depths_)
+        for (widgets::Button* b : depths_)
         {
             b->placement = top_left(x, 0, kButton, kButton);
             x += kButton;
@@ -290,7 +290,7 @@ namespace rct3::ui::screens
             }
         for (std::size_t i = 0; i < path_controls_.size(); ++i)
         {
-            Button& b = *path_controls_[i];
+            widgets::Button& b = *path_controls_[i];
             b.enabled = path_usable_[i];
             b.icon = path_usable_[i] ? style_.path_icons.at(i) : style_.path_unusable_icons.at(i);
             if (b.take_click())
@@ -376,7 +376,7 @@ namespace rct3::ui::screens
             s.bottom = colour;
             list.shape(s);
         };
-        const auto lit = [&](const Button* b) { plain(b->rect(), round_corners(4), style_.chosen); };
+        const auto lit = [&](const widgets::Button* b) { plain(b->rect(), round_corners(4), style_.chosen); };
 
         const Rect d = disc();
         const float half = d.width() / 2;

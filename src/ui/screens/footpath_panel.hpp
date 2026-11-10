@@ -52,7 +52,7 @@ namespace rct3::ui::screens
         std::string paths_icon;
         std::string queues_icon;
         std::string straight_icon;
-        SpinnerStyle size; ///< The brush's size at the disc's foot
+        widgets::SpinnerStyle size; ///< The brush's size at the disc's foot
         /// Strings keys of the tabs' help, in the order above.
         std::array<std::string, 7> tab_help; ///< Controls, follow, route, remove, paths, queues, straight
         /// Each control's picture when it can be used and when it cannot; the cut switch has its own two
@@ -217,24 +217,24 @@ namespace rct3::ui::screens
 
         [[nodiscard]] Rect disc() const;
         [[nodiscard]] Rect strip() const;
-        [[nodiscard]] Button& control(std::size_t i) const
+        [[nodiscard]] widgets::Button& control(std::size_t i) const
         {
             return *controls_.at(i);
         }
-        [[nodiscard]] Button& tab(FootpathPage page) const;
-        [[nodiscard]] Button& follow_tab() const
+        [[nodiscard]] widgets::Button& tab(FootpathPage page) const;
+        [[nodiscard]] widgets::Button& follow_tab() const
         {
             return *follow_;
         }
-        [[nodiscard]] Button& route_tab() const
+        [[nodiscard]] widgets::Button& route_tab() const
         {
             return *route_;
         }
-        [[nodiscard]] Button& straight_tab() const
+        [[nodiscard]] widgets::Button& straight_tab() const
         {
             return *straight_;
         }
-        [[nodiscard]] Button& remove_tab() const
+        [[nodiscard]] widgets::Button& remove_tab() const
         {
             return *remove_;
         }
@@ -242,15 +242,15 @@ namespace rct3::ui::screens
         {
             return styles_.size();
         }
-        [[nodiscard]] Button& style_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& style_button(std::size_t i) const
         {
             return *styles_.at(i);
         }
-        [[nodiscard]] const Label& text_line() const
+        [[nodiscard]] const widgets::Label& text_line() const
         {
             return *text_;
         }
-        [[nodiscard]] const Label& status_line() const
+        [[nodiscard]] const widgets::Label& status_line() const
         {
             return *status_line_;
         }
@@ -271,22 +271,22 @@ namespace rct3::ui::screens
 
         FootpathPanelStyle style_;
         const StringTable& strings_;
-        Button* close_ = nullptr;
-        Button* controls_tab_ = nullptr;
-        Button* follow_ = nullptr;
-        Button* route_ = nullptr;
-        Button* remove_ = nullptr;
-        Button* paths_tab_ = nullptr;
-        Button* queues_tab_ = nullptr;
-        Button* straight_ = nullptr;
-        Spinner* size_ = nullptr;
+        widgets::Button* close_ = nullptr;
+        widgets::Button* controls_tab_ = nullptr;
+        widgets::Button* follow_ = nullptr;
+        widgets::Button* route_ = nullptr;
+        widgets::Button* remove_ = nullptr;
+        widgets::Button* paths_tab_ = nullptr;
+        widgets::Button* queues_tab_ = nullptr;
+        widgets::Button* straight_ = nullptr;
+        widgets::Spinner* size_ = nullptr;
         Widget* body_ = nullptr;
-        std::array<Button*, kFootpathControls> controls_ { };
+        std::array<widgets::Button*, kFootpathControls> controls_ { };
         std::array<bool, kFootpathControls> usable_ { };
-        Label* text_ = nullptr;
-        Label* status_line_ = nullptr;
-        Label* style_name_ = nullptr;
-        std::vector<Button*> styles_;
+        widgets::Label* text_ = nullptr;
+        widgets::Label* status_line_ = nullptr;
+        widgets::Label* style_name_ = nullptr;
+        std::vector<widgets::Button*> styles_;
         std::vector<FootpathStyle> paths_;
         std::vector<FootpathStyle> queues_;
         std::u16string status_;

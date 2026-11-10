@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     bool TabButton::on_key(const KeyPress& key)
@@ -114,4 +114,4 @@ namespace rct3::ui
         }
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

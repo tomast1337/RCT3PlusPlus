@@ -87,15 +87,15 @@ namespace rct3::ui::screens
         {
             return pin_->on;
         }
-        [[nodiscard]] const Label& info() const
+        [[nodiscard]] const widgets::Label& info() const
         {
             return *info_;
         }
-        [[nodiscard]] Button& button(RideCameraAction action) const
+        [[nodiscard]] widgets::Button& button(RideCameraAction action) const
         {
             return *buttons_.at(static_cast<std::size_t>(action));
         }
-        [[nodiscard]] Button& pin() const
+        [[nodiscard]] widgets::Button& pin() const
         {
             return *pin_;
         }
@@ -109,9 +109,9 @@ namespace rct3::ui::screens
     private:
         RideCameraPanelStyle style_;
         const StringTable& strings_;
-        Label* info_ = nullptr;
-        Button* pin_ = nullptr;
-        std::array<Button*, 6> buttons_ { }; ///< By RideCameraAction
+        widgets::Label* info_ = nullptr;
+        widgets::Button* pin_ = nullptr;
+        std::array<widgets::Button*, 6> buttons_ { }; ///< By RideCameraAction
         std::optional<RideCameraAction> asked_;
         float shown_ = 1;
         float still_ = 0; ///< Seconds the pointer has been still

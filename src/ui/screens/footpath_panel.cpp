@@ -39,8 +39,8 @@ namespace rct3::ui::screens
         // Spans the screen so its parts can sit by its corner; it lets the pointer through elsewhere.
         placement = fill();
         body_ = &add<Widget>("body");
-        const auto tab = [&](std::string tab_name, const std::string& icon, std::size_t help) -> Button& {
-            Button& b = add<Button>(std::move(tab_name), style_.tab_face, icon);
+        const auto tab = [&](std::string tab_name, const std::string& icon, std::size_t help) -> widgets::Button& {
+            widgets::Button& b = add<widgets::Button>(std::move(tab_name), style_.tab_face, icon);
             b.tooltip = std::u16string(strings_.get(style_.tab_help.at(help)));
             b.toggle = true;
             b.swell = (info_panel::kTabGrown - info_panel::kTabSize) / 2;
@@ -55,28 +55,28 @@ namespace rct3::ui::screens
         paths_tab_ = &tab("paths", style_.paths_icon, 4);
         queues_tab_ = &tab("queues", style_.queues_icon, 5);
         straight_ = &tab("straight", style_.straight_icon, 6);
-        size_ = &add<Spinner>("Path_Brush_Size", style_.size);
+        size_ = &add<widgets::Spinner>("Path_Brush_Size", style_.size);
         size_->minimum = 1;
         size_->maximum = footpath_panel::kLargestBrush;
         size_->set_value(1);
         size_->tooltip = std::u16string(strings_.get("Land_Brush_RadiusHelp"));
         for (std::size_t i = 0; i < kFootpathControls; ++i)
         {
-            Button& b = body_->add<Button>(style_.control_help.at(i).empty() ? std::format("control{}", i) : style_.control_help.at(i), std::string { });
+            widgets::Button& b = body_->add<widgets::Button>(style_.control_help.at(i).empty() ? std::format("control{}", i) : style_.control_help.at(i), std::string { });
             if (i >= 8)
                 b.icon_scale = footpath_panel::kControlRects.at(i).height() / footpath_panel::kLargeIcon;
             controls_.at(i) = &b;
         }
         usable_.fill(true);
-        text_ = &body_->add<Label>("text", std::u16string { }, font::FontRole::Small);
+        text_ = &body_->add<widgets::Label>("text", std::u16string { }, font::FontRole::Small);
         text_->style.colour = style_.page_text_colour;
         text_->style.vertical = Align::Centre;
-        style_name_ = &body_->add<Label>("style_name", std::u16string { }, font::FontRole::Small);
+        style_name_ = &body_->add<widgets::Label>("style_name", std::u16string { }, font::FontRole::Small);
         style_name_->style.colour = style_.page_text_colour;
-        status_line_ = &add<Label>("status", std::u16string { }, font::FontRole::Small);
+        status_line_ = &add<widgets::Label>("status", std::u16string { }, font::FontRole::Small);
         status_line_->style.colour = style_.text_colour;
         status_line_->style.vertical = Align::Centre;
-        close_ = &add<Button>("close", std::string { }, style_.close_icon);
+        close_ = &add<widgets::Button>("close", std::string { }, style_.close_icon);
         close_->placement = bottom_left(footpath_panel::kCloseLeft, style_.bottom - info_panel::kDiscMargin + footpath_panel::kCloseBottom, info_panel::kCloseSize, info_panel::kCloseSize);
         visible = false;
         mark();
@@ -115,7 +115,7 @@ namespace rct3::ui::screens
         status_ = std::move(text);
     }
 
-    Button& FootpathPanel::tab(FootpathPage page) const
+    widgets::Button& FootpathPanel::tab(FootpathPage page) const
     {
         switch (page)
         {
@@ -138,7 +138,7 @@ namespace rct3::ui::screens
 
     void FootpathPanel::fill_styles()
     {
-        for (Button* b : styles_)
+        for (widgets::Button* b : styles_)
             (void)body_->remove(*b);
         styles_.clear();
         const bool queue = page_ == FootpathPage::Queues;
@@ -147,7 +147,7 @@ namespace rct3::ui::screens
         const std::vector<FootpathStyle>& list = queue ? queues_ : paths_;
         for (std::size_t i = 0; i < list.size(); ++i)
         {
-            Button& b = body_->add<Button>(list[i].icon, std::string { }, list[i].icon);
+            widgets::Button& b = body_->add<widgets::Button>(list[i].icon, std::string { }, list[i].icon);
             b.tooltip = list[i].name;
             b.icon_scale = (footpath_panel::kStyleCell - 4) / footpath_panel::kStyleIcon;
             b.swell = 2;
@@ -163,7 +163,7 @@ namespace rct3::ui::screens
         const bool controls = page_ == FootpathPage::Controls;
         for (std::size_t i = 0; i < kFootpathControls; ++i)
         {
-            Button& b = *controls_.at(i);
+            widgets::Button& b = *controls_.at(i);
             b.visible = controls;
             b.enabled = usable_.at(i);
             if (i == kCutControl)
@@ -207,7 +207,7 @@ namespace rct3::ui::screens
         const Rect r = rect();
         const Rect d = disc();
         const Point centre { (d.x0 + d.x1) / 2 - r.x0, (d.y0 + d.y1) / 2 - r.y0 };
-        const auto put_tab = [&](Button& b, int slot) {
+        const auto put_tab = [&](widgets::Button& b, int slot) {
             const Point at = footpath_tab_offset(slot);
             b.placement = top_left(centre.x + at.x - info_panel::kTabSize / 2, centre.y + at.y - info_panel::kTabSize / 2, info_panel::kTabSize, info_panel::kTabSize);
         };
@@ -271,7 +271,7 @@ namespace rct3::ui::screens
             remove_->on = false;
         if (remove_->take_click() && remove_->on)
             route_->on = false;
-        const std::array<std::pair<Button*, FootpathPage>, 3> pages { { { controls_tab_, FootpathPage::Controls }, { paths_tab_, FootpathPage::Paths }, { queues_tab_, FootpathPage::Queues } } };
+        const std::array<std::pair<widgets::Button*, FootpathPage>, 3> pages { { { controls_tab_, FootpathPage::Controls }, { paths_tab_, FootpathPage::Paths }, { queues_tab_, FootpathPage::Queues } } };
         for (const auto& [button, page] : pages)
         {
             if (button->take_click())
@@ -355,7 +355,7 @@ namespace rct3::ui::screens
                 plain({ paper.x0, y, rule, y + 1 }, { }, c.divider);
             }
             // Behind the picked slope and the chosen style.
-            const auto mark_behind = [&](const Button& b) {
+            const auto mark_behind = [&](const widgets::Button& b) {
                 const Rect r = b.rect();
                 plain(r, round_corners(4), style_.chosen);
             };

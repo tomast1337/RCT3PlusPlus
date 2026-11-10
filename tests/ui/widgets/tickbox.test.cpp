@@ -6,6 +6,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
+using namespace rct3::ui::widgets;
 
 TEST_CASE("a click flips the tick")
 {

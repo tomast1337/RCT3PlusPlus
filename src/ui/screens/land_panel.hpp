@@ -30,9 +30,9 @@ namespace rct3::ui::screens
     struct LandPanelStyle
     {
         CodedInfoPanel coded;
-        std::string tab_face;   ///< Behind each tab's icon
-        std::string close_icon; ///< On the close button
-        SpinnerStyle size;      ///< The brush's size at the disc's foot
+        std::string tab_face;       ///< Behind each tab's icon
+        std::string close_icon;     ///< On the close button
+        widgets::SpinnerStyle size; ///< The brush's size at the disc's foot
         /// From the screen's bottom edge to the disc's: the tool row and its open menu stay clear below.
         float bottom = info_panel::kDiscMargin;
         Color text_colour = hex("#ffffff");
@@ -121,11 +121,11 @@ namespace rct3::ui::screens
 
         [[nodiscard]] Rect disc() const;
         [[nodiscard]] Rect strip() const;
-        [[nodiscard]] Button& tab(std::size_t i) const
+        [[nodiscard]] widgets::Button& tab(std::size_t i) const
         {
             return *tabs_.at(i);
         }
-        [[nodiscard]] Button& tool(std::size_t i) const
+        [[nodiscard]] widgets::Button& tool(std::size_t i) const
         {
             return *tools_.at(i);
         }
@@ -150,12 +150,12 @@ namespace rct3::ui::screens
 
         LandPanelStyle style_;
         const StringTable& strings_;
-        Button* close_ = nullptr;
-        Spinner* size_ = nullptr;
+        widgets::Button* close_ = nullptr;
+        widgets::Spinner* size_ = nullptr;
         Widget* body_ = nullptr;
-        Label* status_ = nullptr;
-        std::vector<Button*> tabs_;
-        std::vector<Button*> tools_; ///< Of the tab out
+        widgets::Label* status_ = nullptr;
+        std::vector<widgets::Button*> tabs_;
+        std::vector<widgets::Button*> tools_; ///< Of the tab out
         std::vector<LandTab> data_;
         std::optional<std::size_t> page_;
         LandPick chosen_;

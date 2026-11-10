@@ -133,7 +133,7 @@ namespace rct3::ui::screens
     void FrontEnd::ask_quit()
     {
         if (question_ == nullptr)
-            question_ = &desktop_.root().add<QuestionBox>(std::string(kQuestionName), style_.question, std::u16string(strings_.get(kQuitText)), std::vector<QuestionAnswer> { { std::u16string(strings_.get(kYes)), style_.question.confirm_icon }, { std::u16string(strings_.get(kNo)), style_.question.cancel_icon } });
+            question_ = &desktop_.root().add<widgets::QuestionBox>(std::string(kQuestionName), style_.question, std::u16string(strings_.get(kQuitText)), std::vector<widgets::QuestionAnswer> { { std::u16string(strings_.get(kYes)), style_.question.confirm_icon }, { std::u16string(strings_.get(kNo)), style_.question.cancel_icon } });
     }
 
     void FrontEnd::update()

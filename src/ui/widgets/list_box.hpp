@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     struct ListBoxStyle
@@ -110,4 +110,4 @@ namespace rct3::ui
         int activations_ = 0;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

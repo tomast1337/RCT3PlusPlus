@@ -5,6 +5,7 @@
 #include <vector>
 
 using namespace rct3::ui;
+using namespace rct3::ui::widgets;
 
 TEST_CASE("a scale's full value is the round number just above the largest sample")
 {

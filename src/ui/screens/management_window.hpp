@@ -34,9 +34,9 @@ namespace rct3::ui::screens
 
     struct ManagementWindowStyle
     {
-        WindowStyle window;
-        ColumnTableStyle table;
-        ScrollBarStyle scroll;
+        widgets::WindowStyle window;
+        widgets::ColumnTableStyle table;
+        widgets::ScrollBarStyle scroll;
         float tab_size = 23;
         float tab_step = 20; ///< The tabs overlap a little, as the options window's do
         float tab_bar_height = 25;
@@ -88,16 +88,16 @@ namespace rct3::ui::screens
         std::vector<InfoLine> lines;
         std::vector<InfoSeries> graph;
         std::vector<InfoTick> graph_ticks;
-        std::size_t graph_slots = 0;      ///< Samples across the graph; see LinePlot::slots
-        std::vector<TableColumn> columns; ///< No table without any
-        std::vector<TableRow> rows;
+        std::size_t graph_slots = 0;               ///< Samples across the graph; see LinePlot::slots
+        std::vector<widgets::TableColumn> columns; ///< No table without any
+        std::vector<widgets::TableRow> rows;
         std::optional<std::size_t> sort; ///< The column the rows are sorted by until the player picks one
         bool sort_descending = false;
         std::vector<ManagementButton> buttons;
         std::u16string note; ///< Under everything, across the page
     };
 
-    class ManagementWindow : public Window
+    class ManagementWindow : public widgets::Window
     {
     public:
         /// `width` x `height` with the frame, centred on the desktop, `tabs` along the top; `picked` open.
@@ -111,7 +111,7 @@ namespace rct3::ui::screens
         {
             return tabs_.size();
         }
-        [[nodiscard]] Button& tab_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& tab_button(std::size_t i) const
         {
             return *tabs_.at(i);
         }
@@ -144,7 +144,7 @@ namespace rct3::ui::screens
         {
             return page_age_;
         }
-        [[nodiscard]] std::optional<ColumnTable&> table() const
+        [[nodiscard]] std::optional<widgets::ColumnTable&> table() const
         {
             return core::maybe(table_);
         }
@@ -165,21 +165,21 @@ namespace rct3::ui::screens
         void fill_graph();
 
         ManagementWindowStyle style_;
-        std::vector<Button*> tabs_;
+        std::vector<widgets::Button*> tabs_;
         std::vector<std::u16string> names_;
-        Label* caption_ = nullptr;
+        widgets::Label* caption_ = nullptr;
         Widget* page_ = nullptr;
         Widget* lines_ = nullptr; ///< The page's lines, graph, buttons and note, made again with each page
-        ColumnTable* table_ = nullptr;
-        LinePlot* plot_ = nullptr;
-        std::vector<InfoSeries> graph_;      ///< The page's graph's series, as plot_ draws them when ticked
-        std::vector<Tickbox*> series_ticks_; ///< By graph_
-        std::array<Label*, 5> axis_ { };     ///< Numbers up the graph's left, top first
-        std::vector<std::string> hidden_;    ///< Keys of the series the player unticked
-        std::string focus_;                  ///< Key of the series the player ticked last; the first when none
-        std::vector<Button*> buttons_;
+        widgets::ColumnTable* table_ = nullptr;
+        widgets::LinePlot* plot_ = nullptr;
+        std::vector<InfoSeries> graph_;               ///< The page's graph's series, as plot_ draws them when ticked
+        std::vector<widgets::Tickbox*> series_ticks_; ///< By graph_
+        std::array<widgets::Label*, 5> axis_ { };     ///< Numbers up the graph's left, top first
+        std::vector<std::string> hidden_;             ///< Keys of the series the player unticked
+        std::string focus_;                           ///< Key of the series the player ticked last; the first when none
+        std::vector<widgets::Button*> buttons_;
         std::vector<std::vector<InfoChoice>> button_choices_; ///< Of each of buttons_
-        std::vector<Button*> choices_;                        ///< Fanned out beside the button choosing_
+        std::vector<widgets::Button*> choices_;               ///< Fanned out beside the button choosing_
         std::optional<std::size_t> choosing_;
         /// Of each tab, the column the player sorted by and whether highest first; none until they pick one.
         std::vector<std::optional<std::pair<std::size_t, bool>>> sorts_;

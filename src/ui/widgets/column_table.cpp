@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     void sort_table_rows(std::vector<TableRow>& rows, std::size_t column, bool descending)
@@ -248,4 +248,4 @@ namespace rct3::ui
         context.list.pop_clip();
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

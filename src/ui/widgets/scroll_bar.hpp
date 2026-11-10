@@ -13,7 +13,7 @@
 #include <cstdint>
 #include <string>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     enum class Orientation : std::uint8_t
@@ -107,4 +107,4 @@ namespace rct3::ui
         float next_repeat_ = 0;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

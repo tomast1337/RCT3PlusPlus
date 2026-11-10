@@ -21,7 +21,7 @@ namespace rct3::ui::screens
 
     struct MapPanelStyle
     {
-        WindowStyle window;
+        widgets::WindowStyle window;
         MapCanvasStyle canvas;
         Point size { 640, 500 };     ///< At first: about square for the map
         Point min_size { 460, 420 }; ///< Room for the whole legend
@@ -53,7 +53,7 @@ namespace rct3::ui::screens
 
     class MapLegendRow;
 
-    class MapPanel : public Window
+    class MapPanel : public widgets::Window
     {
     public:
         MapPanel(std::string name, const MapPanelStyle& style, std::u16string title, std::vector<MapLegendEntry> entries);
@@ -77,7 +77,7 @@ namespace rct3::ui::screens
         MapPanelStyle style_;
         MapCanvas* canvas_ = nullptr;
         std::vector<MapLegendRow*> rows_;
-        std::vector<Label*> labels_;
+        std::vector<widgets::Label*> labels_;
     };
 
 } // namespace rct3::ui::screens

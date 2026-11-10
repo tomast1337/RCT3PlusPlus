@@ -19,7 +19,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     struct MenuBarStyle
@@ -105,4 +105,4 @@ namespace rct3::ui
         std::optional<MenuChoice> choice_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

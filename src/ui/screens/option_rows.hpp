@@ -32,9 +32,9 @@ namespace rct3::ui::screens
     {
         std::string tick_box; ///< Skins of the tick boxes
         std::string tick;
-        DropdownStyle dropdown;
-        SliderStyle slider;
-        SpinnerStyle spinner;
+        widgets::DropdownStyle dropdown;
+        widgets::SliderStyle slider;
+        widgets::SpinnerStyle spinner;
         std::string key_box; ///< Skins of the key boxes
         std::string key_box_focused;
         font::FontRole font = font::FontRole::Small;
@@ -67,23 +67,23 @@ namespace rct3::ui::screens
         /// outlive the rows. Rows of the `inert` options cannot be used.
         OptionRows(Widget& page, float width, OptionRowsStyle style, config::GameOptions& options, std::bitset<config::kGameOptionCount> inert = { });
 
-        Tickbox& tick(config::GameOption option, std::u16string name, std::u16string tip = { });
-        Dropdown& choice(config::GameOption option, std::u16string name, std::vector<std::u16string> items, std::u16string tip = { });
-        Slider& level(config::GameOption option, std::u16string name, std::u16string tip = { });
-        Spinner& number(config::GameOption option, std::u16string name, std::u16string tip = { });
+        widgets::Tickbox& tick(config::GameOption option, std::u16string name, std::u16string tip = { });
+        widgets::Dropdown& choice(config::GameOption option, std::u16string name, std::vector<std::u16string> items, std::u16string tip = { });
+        widgets::Slider& level(config::GameOption option, std::u16string name, std::u16string tip = { });
+        widgets::Spinner& number(config::GameOption option, std::u16string name, std::u16string tip = { });
         /// Two sliders side by side under column headings (see headings()).
         void pair(config::DetailPair options, std::u16string name, std::u16string tip = { });
         /// Headings over the two slider columns of pair rows.
         void headings(std::u16string first, std::u16string second);
         /// A drop-down the owner handles.
         /// `widget` names the list, and its label with "_label"; by their place when empty.
-        Dropdown& list(std::u16string name, std::vector<std::u16string> items, std::u16string tip = { }, std::string widget = { });
+        widgets::Dropdown& list(std::u16string name, std::vector<std::u16string> items, std::u16string tip = { }, std::string widget = { });
         /// A name and a second text in the control column.
-        Label& text(std::u16string name, std::u16string value, std::u16string tip = { });
+        widgets::Label& text(std::u16string name, std::u16string value, std::u16string tip = { });
         /// A line of text across the page, as tall as `lines` rows.
-        Label& note(std::u16string text, int lines = 1);
+        widgets::Label& note(std::u16string text, int lines = 1);
         /// Key combinations the owner handles; `prompt` shows while it waits for keys.
-        KeyBox& keys(std::u16string name, std::vector<KeyCombo> combos, std::u16string prompt, std::u16string tip = { });
+        widgets::KeyBox& keys(std::u16string name, std::vector<KeyCombo> combos, std::u16string prompt, std::u16string tip = { });
 
         /// Puts a wider gap before the next row.
         void section();
@@ -148,7 +148,7 @@ namespace rct3::ui::screens
 
         Row& add_row();
         /// `widget` is the name of the control it labels; the label is named after it with "_label".
-        Label& name_label(Row& row, std::u16string name, float x, float width, std::u16string tip, std::string_view widget = { });
+        widgets::Label& name_label(Row& row, std::u16string name, float x, float width, std::u16string tip, std::string_view widget = { });
         /// A control's name: `widget`, or by its place when empty.
         std::string control_name(std::string_view widget, std::string_view kind);
         void set_control(const Binding& b);

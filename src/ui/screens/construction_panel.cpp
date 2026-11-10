@@ -69,7 +69,7 @@ namespace rct3::ui::screens
         , style_(style)
     {
         placement = top_left(0, 0, cp::kWidth, cp::kHeight);
-        const auto picture = [&](std::string widget) { return &add<Button>(std::move(widget), std::string { }); };
+        const auto picture = [&](std::string widget) { return &add<widgets::Button>(std::move(widget), std::string { }); };
         for (std::size_t i = 0; i < cp::kCurves; ++i)
         {
             curves_.at(i) = picture(style.curves.at(i).empty() ? std::format("curve{}", i) : style.curves.at(i));
@@ -104,7 +104,7 @@ namespace rct3::ui::screens
         heights_->placement = top_left(cp::kHeightsAt.x, cp::kHeightsAt.y, cp::kHeightsSize.x, cp::kHeightsSize.y);
 
         const auto label = [&](std::string widget, float top) {
-            Label& l = add<Label>(std::move(widget), std::u16string { }, style.font);
+            widgets::Label& l = add<widgets::Label>(std::move(widget), std::u16string { }, style.font);
             l.style.colour = style.text_colour;
             l.style.vertical = Align::Centre;
             l.placement = top_left(cp::kLabelLeft, top, cp::kLabelWidth, cp::kLabelHeight);
@@ -113,10 +113,10 @@ namespace rct3::ui::screens
         piece_ = label("piece", cp::kNameTop);
         cost_ = label("cost", cp::kCostTop);
 
-        list_ = &add<ListBox>("list", style.list, style.list_bar);
+        list_ = &add<widgets::ListBox>("list", style.list, style.list_bar);
         for (std::size_t i = 0; i < cp::kSpecials; ++i)
         {
-            Button& b = *picture(std::format("special{}", i));
+            widgets::Button& b = *picture(std::format("special{}", i));
             b.toggle = true;
             specials_.at(i) = &b;
         }
@@ -126,7 +126,7 @@ namespace rct3::ui::screens
             param_icons_.at(i) = picture(std::format("{}_icon", kParamNames.at(i)));
             param_icons_.at(i)->icon = style.param_icons.at(i);
             param_icons_.at(i)->inert = true;
-            params_.at(i) = &add<Spinner>(std::string(kParamNames.at(i)), style.param);
+            params_.at(i) = &add<widgets::Spinner>(std::string(kParamNames.at(i)), style.param);
         }
         facing_ = picture("facing");
         show({ });
@@ -253,7 +253,7 @@ namespace rct3::ui::screens
             list_->select(picked);
         for (std::size_t i = 0; i < cp::kSpecials; ++i)
         {
-            Button& b = *specials_.at(i);
+            widgets::Button& b = *specials_.at(i);
             b.visible = i < pictured_.size();
             if (!b.visible)
                 continue;
@@ -268,7 +268,7 @@ namespace rct3::ui::screens
         for (std::size_t i = 0; i < cp::kParams; ++i)
         {
             const std::optional<ParamBox>& box = view_.params.at(i);
-            Spinner& s = *params_.at(i);
+            widgets::Spinner& s = *params_.at(i);
             param_icons_.at(i)->visible = s.visible = box.has_value();
             if (!box)
                 continue;

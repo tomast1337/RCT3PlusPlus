@@ -9,7 +9,7 @@
 
 #include <cstddef>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     struct RowBands
@@ -27,4 +27,4 @@ namespace rct3::ui
         list.fill(row, index % 2 == 0 ? bands.stripe : bands.plain);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

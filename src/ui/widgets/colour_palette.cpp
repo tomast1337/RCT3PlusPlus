@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <format>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     ColourPalette::ColourPalette(std::string name, ColourPaletteStyle style, std::size_t count, std::size_t columns, std::size_t current)
@@ -53,4 +53,4 @@ namespace rct3::ui
             skin::draw_skin(context.list, context.skins.find(style_.back), rect());
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

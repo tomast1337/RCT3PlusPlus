@@ -88,7 +88,7 @@ namespace rct3::ui::screens
     }
 
     MapPanel::MapPanel(std::string name, const MapPanelStyle& style, std::u16string window_title, std::vector<MapLegendEntry> entries)
-        : Window(std::move(name), style.window, style.size.x, style.size.y)
+        : widgets::Window(std::move(name), style.window, style.size.x, style.size.y)
         , style_(style)
     {
         title = std::move(window_title);
@@ -103,7 +103,7 @@ namespace rct3::ui::screens
         {
             MapLegendRow& row = content().add<MapLegendRow>(entries[i].name.empty() ? std::format("layer{}", i) : entries[i].name, style_, entries[i].colour, entries[i].shown, entries[i].round);
             row.placement = { { 1, 0, 1, 0 }, { -style.legend_width, tops[i], 0, tops[i] + style.row_height } };
-            Label& label = row.add<Label>("text", std::move(entries[i].text), style.font);
+            widgets::Label& label = row.add<widgets::Label>("text", std::move(entries[i].text), style.font);
             label.placement = { { 0, 0, 1, 1 }, { style.swatch + style.swatch_gap * 1.5f, 0, 0, 0 } };
             label.style.vertical = Align::Centre;
             rows_.push_back(&row);
@@ -129,7 +129,7 @@ namespace rct3::ui::screens
 
     void MapPanel::update(const UpdateContext& context)
     {
-        Window::update(context);
+        widgets::Window::update(context);
         for (std::size_t i = 0; i < rows_.size(); ++i)
             labels_[i]->style.colour = rows_[i]->shown ? style_.text : style_.text_off;
     }

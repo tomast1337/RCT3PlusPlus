@@ -31,18 +31,18 @@ namespace rct3::ui::screens
         , strings_(strings)
     {
         placement = bottom_right(0, 0, kWidth, kHeight);
-        add<Panel>("back", style_.back);
-        info_ = &add<Label>("info", std::u16string { });
+        add<widgets::Panel>("back", style_.back);
+        info_ = &add<widgets::Label>("info", std::u16string { });
         info_->style = { style_.text_colour, Align::Start, Align::Centre, false };
         info_->placement = top_left(kMargin, kMargin, kWidth - kMargin * 2, kLineHeight);
-        pin_ = &add<Button>("pin", style_.button, style_.pin);
+        pin_ = &add<widgets::Button>("pin", style_.button, style_.pin);
         pin_->toggle = true;
         pin_->tooltip = strings_.get("RidecamGUI_Stick");
         pin_->placement = top_left(kMargin, kButtonsTop + (kButton - kPin) / 2, kPin, kPin);
         const float x = kMargin + kPin + kGap;
         for (std::size_t i = 0; i < buttons_.size(); ++i)
         {
-            buttons_[i] = &add<Button>(std::string(kHelp[i]), style_.button, i == 0 ? style_.leave : i <= 4 ? style_.steps[i - 1] : style_.types[1]);
+            buttons_[i] = &add<widgets::Button>(std::string(kHelp[i]), style_.button, i == 0 ? style_.leave : i <= 4 ? style_.steps[i - 1] : style_.types[1]);
             buttons_[i]->tooltip = strings_.get(kHelp[i]);
             buttons_[i]->placement = top_left(x + static_cast<float>(kSlot[i]) * (kButton + kGap), kButtonsTop, kButton, kButton);
         }
@@ -59,7 +59,7 @@ namespace rct3::ui::screens
             return help;
         };
         info_->text = std::move(info);
-        Button& type = *buttons_[5];
+        widgets::Button& type = *buttons_[5];
         type.enabled = next_type && *next_type < style_.types.size();
         if (type.enabled)
         {
@@ -68,7 +68,7 @@ namespace rct3::ui::screens
         }
         for (std::size_t step = 0; step < style_.steps.size(); ++step)
         {
-            Button& b = *buttons_[step + 1];
+            widgets::Button& b = *buttons_[step + 1];
             b.enabled = step < 2 ? cameras : trains;
             b.icon = b.enabled ? style_.steps[step] : style_.no_steps[step];
             if (step < 2)

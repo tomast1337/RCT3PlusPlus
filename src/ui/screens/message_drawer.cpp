@@ -126,10 +126,10 @@ namespace rct3::ui::screens
         , style_(std::move(style))
     {
         tooltip = strings.get(kDragHelp);
-        newer_ = &add<Button>("newer", style_.newer);
+        newer_ = &add<widgets::Button>("newer", style_.newer);
         newer_->placement = bottom_left(kNewerLeft, kArrowBottom, kArrowSize, kArrowSize);
         newer_->tooltip = strings.get(kNewerHelp);
-        older_ = &add<Button>("older", style_.older);
+        older_ = &add<widgets::Button>("older", style_.older);
         older_->placement = bottom_left(kOlderLeft, kArrowBottom, kArrowSize, kArrowSize);
         older_->tooltip = strings.get(kOlderHelp);
         set_height(kClosed);

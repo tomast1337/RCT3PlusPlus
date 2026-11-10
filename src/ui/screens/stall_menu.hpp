@@ -26,12 +26,12 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
     class EditBox;
     class ScrollArea;
     class Tickbox;
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets
 
 namespace rct3::ui::screens
 {
@@ -101,10 +101,10 @@ namespace rct3::ui::screens
 
     struct StallMenuStyle
     {
-        RowBands rows;
-        ScrollBarStyle bar;
-        SpinnerStyle price;
-        PaintButtonStyle paint;
+        widgets::RowBands rows;
+        widgets::ScrollBarStyle bar;
+        widgets::SpinnerStyle price;
+        widgets::PaintButtonStyle paint;
         std::string tick_box;
         std::string tick;
         std::string bin;             ///< The bin's picture
@@ -146,7 +146,7 @@ namespace rct3::ui::screens
         /// What the player did since the last call, once.
         [[nodiscard]] std::optional<MenuEvent> take_event();
         /// The pots of the lines that can be painted, each with its line.
-        [[nodiscard]] std::vector<std::pair<std::size_t, PaintButton*>> pots() const;
+        [[nodiscard]] std::vector<std::pair<std::size_t, widgets::PaintButton*>> pots() const;
         /// The pane's scroll position, to keep when the menu is shown anew.
         [[nodiscard]] float scrolled() const;
         void scroll_to(float position);
@@ -191,10 +191,10 @@ namespace rct3::ui::screens
         };
         struct LineWidgets
         {
-            EditBox* name = nullptr;
-            Spinner* price = nullptr;
-            std::vector<Tickbox*> ticks; ///< By place in the line's extras; null where it has none
-            PaintButton* pot = nullptr;
+            widgets::EditBox* name = nullptr;
+            widgets::Spinner* price = nullptr;
+            std::vector<widgets::Tickbox*> ticks; ///< By place in the line's extras; null where it has none
+            widgets::PaintButton* pot = nullptr;
         };
 
         /// Which strip cell `p` is on: a good, or the bin when none.
@@ -209,9 +209,9 @@ namespace rct3::ui::screens
         StallMenuStyle style_;
         StallMenuView view_;
         std::vector<MenuRow> rows_;
-        ScrollArea* pane_ = nullptr;
+        widgets::ScrollArea* pane_ = nullptr;
         Widget* back_ = nullptr;
-        Tickbox* sync_ = nullptr;
+        widgets::Tickbox* sync_ = nullptr;
         Widget* over_ = nullptr; ///< Draws what is dragged over the rest
         std::vector<LineWidgets> lines_;
         std::optional<Drag> drag_;

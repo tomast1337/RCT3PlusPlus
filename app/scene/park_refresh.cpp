@@ -5,7 +5,7 @@
 #include "park/chain_lifts.hpp"
 #include "park/object/models.hpp"
 #include "park/object/pick.hpp"
-#include "park/person_motions.hpp"
+#include "park/person/motions.hpp"
 #include "park/ride/cars.hpp"
 #include "park/water/flow.hpp"
 #include "profiling/profiler.hpp"
@@ -144,9 +144,9 @@ namespace rct3::scene
 
         /// `shown` as they look now: in their swimwear inside a pool complex, riding its slides or held or
         /// falling out of it, their clothes elsewhere (simulation::in_swimwear).
-        park::PlacedPerson dressed(const ShownPerson& shown)
+        park::person::PlacedPerson dressed(const ShownPerson& shown)
         {
-            park::PlacedPerson pose = shown.pose;
+            park::person::PlacedPerson pose = shown.pose;
             if (shown.swimwear)
             {
                 pose.look.swimwear = true;
@@ -195,24 +195,24 @@ namespace rct3::scene
 
         /// How guests sit on a bench, as the game's motions name them: down onto it, sitting, turned to talk to
         /// someone on the seat to one side or the other, and up again.
-        const std::int32_t kSitDownMotion = park::motion_number("sitbenchin").value_or(park::motion::kIdle);
-        const std::int32_t kSitMotion = park::motion_number("sitbenchloop").value_or(park::motion::kIdle);
-        const std::array<std::int32_t, 2> kSitChatMotions { park::motion_number("sitbenchconvl").value_or(park::motion::kIdle), park::motion_number("sitbenchconvr").value_or(park::motion::kIdle) };
-        const std::int32_t kStandUpMotion = park::motion_number("sitbenchout").value_or(park::motion::kIdle);
-        const std::int32_t kSitEatMotion = park::motion_number("sitbencheatlhand").value_or(park::motion::kIdle);
-        const std::int32_t kSitDrinkMotion = park::motion_number("sitbenchdrinkl").value_or(park::motion::kIdle);
+        const std::int32_t kSitDownMotion = park::person::motion_number("sitbenchin").value_or(park::person::motion::kIdle);
+        const std::int32_t kSitMotion = park::person::motion_number("sitbenchloop").value_or(park::person::motion::kIdle);
+        const std::array<std::int32_t, 2> kSitChatMotions { park::person::motion_number("sitbenchconvl").value_or(park::person::motion::kIdle), park::person::motion_number("sitbenchconvr").value_or(park::person::motion::kIdle) };
+        const std::int32_t kStandUpMotion = park::person::motion_number("sitbenchout").value_or(park::person::motion::kIdle);
+        const std::int32_t kSitEatMotion = park::person::motion_number("sitbencheatlhand").value_or(park::person::motion::kIdle);
+        const std::int32_t kSitDrinkMotion = park::person::motion_number("sitbenchdrinkl").value_or(park::person::motion::kIdle);
         constexpr float kStepToSeat = 0.8f; ///< Chosen by eye: seconds from the path to the seat and back
         /// How guests fire a water cannon, as the game's motions name them: taking hold, firing, letting go.
-        const std::int32_t kCannonInMotion = park::motion_number("watercannonin").value_or(park::motion::kIdle);
-        const std::int32_t kCannonMotion = park::motion_number("watercannonloop").value_or(park::motion::kIdle);
-        const std::int32_t kCannonOutMotion = park::motion_number("watercannonout").value_or(park::motion::kIdle);
+        const std::int32_t kCannonInMotion = park::person::motion_number("watercannonin").value_or(park::person::motion::kIdle);
+        const std::int32_t kCannonMotion = park::person::motion_number("watercannonloop").value_or(park::person::motion::kIdle);
+        const std::int32_t kCannonOutMotion = park::person::motion_number("watercannonout").value_or(park::person::motion::kIdle);
         /// How a party poses at a view, as the game's motions name them: one filming the rest, teens slouching.
-        const std::int32_t kVideoInMotion = park::motion_number("videoin").value_or(park::motion::kIdle);
-        const std::int32_t kVideoMotion = park::motion_number("videoloop").value_or(park::motion::kIdle);
-        const std::int32_t kVideoOutMotion = park::motion_number("videoout").value_or(park::motion::kIdle);
-        const std::int32_t kSlouchInMotion = park::motion_number("slouchin").value_or(park::motion::kIdle);
-        const std::int32_t kSlouchMotion = park::motion_number("slouchloop").value_or(park::motion::kIdle);
-        const std::int32_t kSlouchOutMotion = park::motion_number("slouchout").value_or(park::motion::kIdle);
+        const std::int32_t kVideoInMotion = park::person::motion_number("videoin").value_or(park::person::motion::kIdle);
+        const std::int32_t kVideoMotion = park::person::motion_number("videoloop").value_or(park::person::motion::kIdle);
+        const std::int32_t kVideoOutMotion = park::person::motion_number("videoout").value_or(park::person::motion::kIdle);
+        const std::int32_t kSlouchInMotion = park::person::motion_number("slouchin").value_or(park::person::motion::kIdle);
+        const std::int32_t kSlouchMotion = park::person::motion_number("slouchloop").value_or(park::person::motion::kIdle);
+        const std::int32_t kSlouchOutMotion = park::person::motion_number("slouchout").value_or(park::person::motion::kIdle);
 
         /// What a guest holds of what they carry from a stall: it while there is some left, then its empty; nothing
         /// once only empties in their pockets are left, or when its look is not known.
@@ -226,51 +226,51 @@ namespace rct3::scene
         }
 
         /// How guests go on foot in each gait (simulation::Gait), as the game's motions name them.
-        const std::array<std::int32_t, kGaits> kGaitMotions { park::motion::kWalk, park::motion_number("run").value_or(park::motion::kWalk), park::motion_number("walktired").value_or(park::motion::kWalk), park::motion_number("walksick").value_or(park::motion::kWalk), park::motion_number("walktoilet").value_or(park::motion::kWalk) };
+        const std::array<std::int32_t, kGaits> kGaitMotions { park::person::motion::kWalk, park::person::motion_number("run").value_or(park::person::motion::kWalk), park::person::motion_number("walktired").value_or(park::person::motion::kWalk), park::person::motion_number("walksick").value_or(park::person::motion::kWalk), park::person::motion_number("walktoilet").value_or(park::person::motion::kWalk) };
         /// How guests walk holding an umbrella up, as the game's motions name it.
-        const std::int32_t kUmbrellaMotion = park::motion_number("walkumbrella").value_or(park::motion::kWalk);
+        const std::int32_t kUmbrellaMotion = park::person::motion_number("walkumbrella").value_or(park::person::motion::kWalk);
         /// How guests carry food or drink: walking with it held up, taking a bite or a sip on the way, and
         /// standing holding it, as the game's motions name them.
-        const std::int32_t kCarryMotion = park::motion_number("walkumbrella").value_or(park::motion::kWalk);
-        const std::int32_t kEatMotion = park::motion_number("walkeatlhand").value_or(park::motion::kWalk);
-        const std::int32_t kDrinkMotion = park::motion_number("walkdrinklhand").value_or(park::motion::kWalk);
-        const std::int32_t kHoldMotion = park::motion_number("holditem").value_or(park::motion::kIdle);
+        const std::int32_t kCarryMotion = park::person::motion_number("walkumbrella").value_or(park::person::motion::kWalk);
+        const std::int32_t kEatMotion = park::person::motion_number("walkeatlhand").value_or(park::person::motion::kWalk);
+        const std::int32_t kDrinkMotion = park::person::motion_number("walkdrinklhand").value_or(park::person::motion::kWalk);
+        const std::int32_t kHoldMotion = park::person::motion_number("holditem").value_or(park::person::motion::kIdle);
         constexpr float kBiteSeconds = 1.5f; ///< Chosen by eye: how long a bite or a sip shows
         /// How a guest hands over their ticket at a ride's entrance, as the game's motions name it.
-        const std::int32_t kTicketMotion = park::motion_number("handticket").value_or(park::motion::kIdle);
+        const std::int32_t kTicketMotion = park::person::motion_number("handticket").value_or(park::person::motion::kIdle);
         /// How a guest counts the cash a cash machine gave them, as the game's motions name it.
-        const std::int32_t kCountCashMotion = park::motion_number("checkchange").value_or(park::motion::kIdle);
+        const std::int32_t kCountCashMotion = park::person::motion_number("checkchange").value_or(park::person::motion::kIdle);
         /// How a person picked up hangs, enjoying it or cross, as the game's motions name it.
-        const std::int32_t kDangleHappyMotion = park::motion_number("danglehappy").value_or(park::motion::kIdle);
-        const std::int32_t kDangleCrossMotion = park::motion_number("dangleangry").value_or(park::motion::kIdle);
+        const std::int32_t kDangleHappyMotion = park::person::motion_number("danglehappy").value_or(park::person::motion::kIdle);
+        const std::int32_t kDangleCrossMotion = park::person::motion_number("dangleangry").value_or(park::person::motion::kIdle);
         /// How riders sit in a car, as the game's motions name it.
-        const std::int32_t kRideMotion = park::motion_number("ridecar").value_or(park::motion::kIdle);
+        const std::int32_t kRideMotion = park::person::motion_number("ridecar").value_or(park::person::motion::kIdle);
         /// Swimming along, and treading water while still.
-        const std::int32_t kSwimMotion = park::motion_number("swimloop").value_or(park::motion::kIdle);
-        const std::int32_t kTreadMotion = park::motion_number("swimtreadwaterloop").value_or(park::motion::kIdle);
+        const std::int32_t kSwimMotion = park::person::motion_number("swimloop").value_or(park::person::motion::kIdle);
+        const std::int32_t kTreadMotion = park::person::motion_number("swimtreadwaterloop").value_or(park::person::motion::kIdle);
         /// Sitting on their own float, still or paddling it along.
-        const std::int32_t kFloatSitMotion = park::motion_number("inflatablesitloop").value_or(park::motion::kIdle);
-        const std::int32_t kFloatPaddleMotion = park::motion_number("inflatablepaddleloop").value_or(park::motion::kIdle);
-        const std::int32_t kTreadInMotion = park::motion_number("swimtreadwaterin").value_or(park::motion::kIdle);
+        const std::int32_t kFloatSitMotion = park::person::motion_number("inflatablesitloop").value_or(park::person::motion::kIdle);
+        const std::int32_t kFloatPaddleMotion = park::person::motion_number("inflatablepaddleloop").value_or(park::person::motion::kIdle);
+        const std::int32_t kTreadInMotion = park::person::motion_number("swimtreadwaterin").value_or(park::person::motion::kIdle);
         /// Diving in off the pool's edge or a small board, and climbing out over its wall or by a ladder.
-        const std::int32_t kDiveMotion = park::motion_number("swimdive").value_or(park::motion::kIdle);
-        const std::int32_t kClimbOutMotion = park::motion_number("swimout").value_or(park::motion::kIdle);
-        const std::int32_t kOutByLadderMotion = park::motion_number("swimoutladder").value_or(park::motion::kIdle);
+        const std::int32_t kDiveMotion = park::person::motion_number("swimdive").value_or(park::person::motion::kIdle);
+        const std::int32_t kClimbOutMotion = park::person::motion_number("swimout").value_or(park::person::motion::kIdle);
+        const std::int32_t kOutByLadderMotion = park::person::motion_number("swimoutladder").value_or(park::person::motion::kIdle);
         /// Up a high diving board's ladder, and off its end: springing, falling and coming back up.
-        const std::int32_t kClimbLadderMotion = park::motion_number("swimclimbladderloop").value_or(park::motion::kIdle);
-        const std::int32_t kHighDiveInMotion = park::motion_number("swimdivehiin").value_or(park::motion::kIdle);
-        const std::int32_t kHighDiveMotion = park::motion_number("swimdivehiloop").value_or(park::motion::kIdle);
-        const std::int32_t kHighDiveOutMotion = park::motion_number("swimdivehiout").value_or(park::motion::kIdle);
+        const std::int32_t kClimbLadderMotion = park::person::motion_number("swimclimbladderloop").value_or(park::person::motion::kIdle);
+        const std::int32_t kHighDiveInMotion = park::person::motion_number("swimdivehiin").value_or(park::person::motion::kIdle);
+        const std::int32_t kHighDiveMotion = park::person::motion_number("swimdivehiloop").value_or(park::person::motion::kIdle);
+        const std::int32_t kHighDiveOutMotion = park::person::motion_number("swimdivehiout").value_or(park::person::motion::kIdle);
         /// Lying down on a sun lounger, lying there and getting up.
-        const std::int32_t kLieDownMotion = park::motion_number("sunloungerin").value_or(park::motion::kIdle);
-        const std::int32_t kLoungeMotion = park::motion_number("sunloungerloop").value_or(park::motion::kIdle);
-        const std::int32_t kGetUpMotion = park::motion_number("sunloungerout").value_or(park::motion::kIdle);
+        const std::int32_t kLieDownMotion = park::person::motion_number("sunloungerin").value_or(park::person::motion::kIdle);
+        const std::int32_t kLoungeMotion = park::person::motion_number("sunloungerloop").value_or(park::person::motion::kIdle);
+        const std::int32_t kGetUpMotion = park::person::motion_number("sunloungerout").value_or(park::person::motion::kIdle);
         /// What party members standing together in a ring do, in turns: chatting, laughing, nodding, pointing.
-        const std::array<std::int32_t, 4> kChatMotions { park::motion::kIdle, park::motion_number("laugh").value_or(park::motion::kIdle), park::motion_number("nodhead").value_or(park::motion::kIdle), park::motion_number("point").value_or(park::motion::kIdle) };
+        const std::array<std::int32_t, 4> kChatMotions { park::person::motion::kIdle, park::person::motion_number("laugh").value_or(park::person::motion::kIdle), park::person::motion_number("nodhead").value_or(park::person::motion::kIdle), park::person::motion_number("point").value_or(park::person::motion::kIdle) };
         constexpr float kChatTurnSeconds = 4; ///< How long one of them keeps at one thing
 
         /// What guests who have queued for ages do now and then: look at their watch, tap a foot.
-        const std::array<std::int32_t, 2> kImpatientMotions { park::motion_number("lookwatch").value_or(park::motion::kIdle), park::motion_number("tapfoot").value_or(park::motion::kIdle) };
+        const std::array<std::int32_t, 2> kImpatientMotions { park::person::motion_number("lookwatch").value_or(park::person::motion::kIdle), park::person::motion_number("tapfoot").value_or(park::person::motion::kIdle) };
         constexpr std::size_t kImpatientEvery = 3; ///< Of their turns, one is impatient; the others idle
 
         /// The motion of a simulated guest standing still: something from kChatMotions while their party
@@ -281,10 +281,10 @@ namespace rct3::scene
             // Each by turns, offset by who they are so they do not all move at once.
             const auto turn = static_cast<std::size_t>(scene.park_clock / kChatTurnSeconds) + entt::to_integral(shown.guest);
             if (const auto& errand = r.get<simulation::Errand>(shown.guest); errand.kind == simulation::ErrandKind::Queueing && errand.queued.value >= simulation::kLongQueue)
-                return turn % kImpatientEvery == 0 ? kImpatientMotions[turn / kImpatientEvery % kImpatientMotions.size()] : park::motion::kIdle;
+                return turn % kImpatientEvery == 0 ? kImpatientMotions[turn / kImpatientEvery % kImpatientMotions.size()] : park::person::motion::kIdle;
             const auto* member = r.try_get<simulation::Member>(shown.guest);
             if (member == nullptr || r.get<simulation::Party>(member->party).huddle == 0)
-                return park::motion::kIdle;
+                return park::person::motion::kIdle;
             return kChatMotions[turn % kChatMotions.size()];
         }
 
@@ -296,10 +296,10 @@ namespace rct3::scene
 
         /// What vendors do: serve a guest at their counter within kServeReach, then take their money; take the
         /// money from a rider handing over their ticket; else stand bored, now and then stacking the shelves.
-        const std::int32_t kServeMotion = park::motion_number("serve").value_or(park::motion::kIdle);
-        const std::int32_t kTakeMoneyMotion = park::motion_number("takemoney").value_or(park::motion::kIdle);
-        const std::int32_t kBoredMotion = park::motion_number("idlebored").value_or(park::motion::kIdle);
-        const std::int32_t kShelvesMotion = park::motion_number("idlestackshelfs").value_or(park::motion::kIdle);
+        const std::int32_t kServeMotion = park::person::motion_number("serve").value_or(park::person::motion::kIdle);
+        const std::int32_t kTakeMoneyMotion = park::person::motion_number("takemoney").value_or(park::person::motion::kIdle);
+        const std::int32_t kBoredMotion = park::person::motion_number("idlebored").value_or(park::person::motion::kIdle);
+        const std::int32_t kShelvesMotion = park::person::motion_number("idlestackshelfs").value_or(park::person::motion::kIdle);
         constexpr float kServeReach = 3;         ///< From a vendor to the ticket spot they serve
         constexpr float kVendorTurnSeconds = 5;  ///< How long a vendor keeps at one idle thing
         constexpr std::size_t kShelvesEvery = 6; ///< Of a vendor's idle turns, one stacks the shelves
@@ -323,14 +323,14 @@ namespace rct3::scene
         }
 
         /// Whether their swimwear shows a float of their own, an optional body piece whose picture names it.
-        bool own_float(const park::PersonLibrary& library, const park::PlacedPerson& person)
+        bool own_float(const park::person::PersonLibrary& library, const park::person::PlacedPerson& person)
         {
             if (!person.look.swimwear || person.look.body == nullptr)
                 return false;
-            const park::PartLevel& pieces = person.look.body->swim_levels[0];
+            const park::person::PartLevel& pieces = person.look.body->swim_levels[0];
             for (std::size_t k = 0; k < pieces.optional.size() && k < 32; ++k)
             {
-                if ((person.look.optionals[1] >> k & 1u) != 0 && pieces.optional[k] != park::kNoPiece && library.piece(pieces.optional[k]).texture.contains("inflatable"))
+                if ((person.look.optionals[1] >> k & 1u) != 0 && pieces.optional[k] != park::person::kNoPiece && library.piece(pieces.optional[k]).texture.contains("inflatable"))
                     return true;
             }
             return false;
@@ -340,15 +340,15 @@ namespace rct3::scene
         /// they are at `clock`, at `levels`. With `simulate`, the simulated guests count as moving and stand
         /// where the simulation has them. The still ones read only what is set when the park loads besides the
         /// arguments, so they may be placed beside the frame; the moving ones only on it.
-        std::vector<park::PlacedPerson> place_people(const ParkScene& scene, const park::object::ObjectLevels& levels, float clock, bool moving, const glm::mat4& view, bool simulate)
+        std::vector<park::person::PlacedPerson> place_people(const ParkScene& scene, const park::object::ObjectLevels& levels, float clock, bool moving, const glm::mat4& view, bool simulate)
         {
-            std::vector<park::PlacedPerson> placed;
+            std::vector<park::person::PlacedPerson> placed;
             for (std::size_t i = 0; i < scene.shown_people.size() && i < levels.size(); ++i)
             {
                 const ShownPerson& shown = scene.shown_people[i];
                 if (levels[i] == park::object::kNotDrawn || ((simulate && shown.guest != entt::null) || !shown.walking) != moving)
                     continue;
-                std::optional<park::PlacedPerson> pose = pose_person(scene, i, clock, simulate);
+                std::optional<park::person::PlacedPerson> pose = pose_person(scene, i, clock, simulate);
                 if (!pose || (moving && !maybe_in_view(view, glm::vec3(pose->world[3]))))
                     continue;
                 pose->level = static_cast<std::size_t>(levels[i]);
@@ -384,7 +384,7 @@ namespace rct3::scene
         /// space; place_cars moves them with their cars. Riders drawn at no level of detail are left out.
         std::future<RidersBuild> pose_riders(ParkScene& scene)
         {
-            std::map<std::size_t, std::vector<park::PlacedPerson>> by_car;
+            std::map<std::size_t, std::vector<park::person::PlacedPerson>> by_car;
             std::map<entt::entity, ParkScene::RiderTurn> turns;
             for (std::size_t i = 0; i < scene.shown_people.size() && i < scene.people_levels.size(); ++i)
             {
@@ -394,7 +394,7 @@ namespace rct3::scene
                 const auto seat = seat_of(scene, shown.guest);
                 if (!seat)
                     continue;
-                park::PlacedPerson pose = dressed(shown);
+                park::person::PlacedPerson pose = dressed(shown);
                 pose.level = static_cast<std::size_t>(scene.people_levels[i]);
                 pose.time = shown.saved_time + scene.park_clock * shown.speed;
                 pose.world = seat->second;
@@ -408,7 +408,7 @@ namespace rct3::scene
                 }
                 else if (const auto flat = scene.ride_seatings.find(scene.sim.registry.get<simulation::Errand>(shown.guest).target); flat != scene.ride_seatings.end())
                     seating = flat->second;
-                if (const auto motions = seating ? park::rider_motions(*seating) : std::nullopt)
+                if (const auto motions = seating ? park::person::rider_motions(*seating) : std::nullopt)
                 {
                     using simulation::RideReaction;
                     const auto* thrill = scene.sim.registry.try_get<simulation::Thrill>(shown.guest);
@@ -419,12 +419,12 @@ namespace rct3::scene
                     if (turn.now != now)
                         turn = { turn.now, now, scene.park_clock };
                     // Bringing down their hands or their arms from their eyes, then raising them, then the loop.
-                    std::inplace_vector<park::Clip, 3> clips;
+                    std::inplace_vector<park::person::Clip, 3> clips;
                     const auto add = [&](RideReaction reaction, const std::optional<std::int32_t>& hands, const std::optional<std::int32_t>& eyes) {
                         if (const auto& once = reaction == RideReaction::HandsUp ? hands : reaction == RideReaction::CoverEyes ? eyes : std::nullopt; once && turn.was != turn.now)
                         {
                             pose.motion = *once;
-                            clips.push_back({ *once, park::motion_seconds(*scene.person_models, pose) });
+                            clips.push_back({ *once, park::person::motion_seconds(*scene.person_models, pose) });
                         }
                     };
                     add(turn.was, motions->hands_up_out, motions->cover_eyes_out);
@@ -435,7 +435,7 @@ namespace rct3::scene
                     pose.motion = clips.back().motion;
                     if (clips.size() > 1)
                     {
-                        const park::Clip at = park::clip_at(clips, scene.park_clock - turn.since);
+                        const park::person::Clip at = park::person::clip_at(clips, scene.park_clock - turn.since);
                         pose.motion = at.motion;
                         pose.time = at.seconds;
                     }
@@ -444,14 +444,14 @@ namespace rct3::scene
             }
             scene.rider_turns = std::move(turns);
             return std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.rider_runs, &gathered = scene.rider_gathered, by_car = std::move(by_car)] {
-                std::vector<std::span<const park::PlacedPerson>> groups;
+                std::vector<std::span<const park::person::PlacedPerson>> groups;
                 RidersBuild built;
                 for (const auto& [car, riders] : by_car)
                 {
                     groups.emplace_back(riders);
                     built.cars.push_back(car);
                 }
-                built.riders = park::carried_people_meshes(library, groups, runs, gathered);
+                built.riders = park::person::carried_people_meshes(library, groups, runs, gathered);
                 return built;
             });
         }
@@ -745,11 +745,11 @@ namespace rct3::scene
         return ahead > kFacing ? "frontslide" : ahead < -kFacing ? "backslide" : "sitslide";
     }
 
-    std::optional<park::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate)
+    std::optional<park::person::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate)
     {
         const ShownPerson& shown = scene.shown_people[i];
         const bool simulated = simulate && shown.guest != entt::null;
-        park::PlacedPerson pose = dressed(shown);
+        park::person::PlacedPerson pose = dressed(shown);
         pose.time = shown.walking ? shown.saved_time : shown.saved_time + clock * shown.speed;
         if (simulated)
         {
@@ -764,7 +764,7 @@ namespace rct3::scene
                 const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
                 const bool walking = now.was != now.position;
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = park::motion_number(simulation::keeper_motion(job, walking)).value_or(walking ? park::motion::kWalk : park::motion::kIdle);
+                pose.motion = park::person::motion_number(simulation::keeper_motion(job, walking)).value_or(walking ? park::person::motion::kWalk : park::person::motion::kIdle);
                 pose.time = walking && shown.paces[0] > 0 ? at.walked.value / shown.paces[0] : shown.saved_time + clock * shown.speed;
                 return pose;
             }
@@ -776,7 +776,7 @@ namespace rct3::scene
                 const float turn = scene.park_clock / kLookSeconds + static_cast<float>(entt::to_integral(shown.guest));
                 const auto whole = static_cast<std::size_t>(turn);
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = park::motion_number(whole % kLookEvery == 0 ? "lifeguardidle01" : "lifeguardidlestandard").value_or(park::motion::kIdle);
+                pose.motion = park::person::motion_number(whole % kLookEvery == 0 ? "lifeguardidle01" : "lifeguardidlestandard").value_or(park::person::motion::kIdle);
                 pose.time = (turn - static_cast<float>(whole)) * kLookSeconds;
                 return pose;
             }
@@ -792,7 +792,7 @@ namespace rct3::scene
                 constexpr std::array<std::string_view, 9> kShowMotions { "wave", "idle1", "idle2", "dancelevel1", "dancelevel2", "dancelevel3", "falloverin", "falloverout", "dejection" };
                 const auto [move, into] = simulation::show_move_at(*show);
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = park::motion_number(kShowMotions[std::to_underlying(move)]).value_or(park::motion::kIdle);
+                pose.motion = park::person::motion_number(kShowMotions[std::to_underlying(move)]).value_or(park::person::motion::kIdle);
                 pose.time = into + scene.sim_time;
                 return pose;
             }
@@ -803,7 +803,7 @@ namespace rct3::scene
                     return;
                 // By the names the people's meshes give these motions, in GestureKind's order.
                 constexpr std::array<std::string_view, 13> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop", "handticket", "applause", "lookwatch", "disapproval", "cry", "horror" };
-                pose.motion = park::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(park::motion::kIdle);
+                pose.motion = park::person::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(park::person::motion::kIdle);
                 pose.time = simulation::kTuning.gestures.shown.value - gesture->left.value + scene.sim_time;
                 // Rubbish into a bin: a quick step over to it, facing it, and back.
                 if (const auto bin = gesture->kind == simulation::GestureKind::HandOver ? item_at(scene, gesture->at) : std::nullopt)
@@ -823,7 +823,7 @@ namespace rct3::scene
                 {
                     const float into = simulation::kTuning.shows.clap.value - gesture->left.value + scene.sim_time;
                     const float left = gesture->left.value - scene.sim_time;
-                    pose.motion = park::motion_number(into < kClapEnds ? "applausein" : left < kClapEnds ? "applauseout" : "applause").value_or(park::motion::kIdle);
+                    pose.motion = park::person::motion_number(into < kClapEnds ? "applausein" : left < kClapEnds ? "applauseout" : "applause").value_or(park::person::motion::kIdle);
                     pose.time = into < kClapEnds ? into : left < kClapEnds ? kClapEnds - left : into - kClapEnds;
                 }
                 // Knocked over, they go down, lie there, and get up for the last of it.
@@ -832,7 +832,7 @@ namespace rct3::scene
                 {
                     const float down = simulation::kTuning.crashes.knocked.value - gesture->left.value + scene.sim_time;
                     const bool up = gesture->left.value - scene.sim_time < kGettingUp;
-                    pose.motion = park::motion_number(down < kGettingUp ? "knockdownin" : up ? "knockdownout" : "knockdownloop").value_or(park::motion::kIdle);
+                    pose.motion = park::person::motion_number(down < kGettingUp ? "knockdownin" : up ? "knockdownout" : "knockdownloop").value_or(park::person::motion::kIdle);
                     pose.time = down < kGettingUp ? down : up ? kGettingUp - gesture->left.value + scene.sim_time : down - kGettingUp;
                 }
             };
@@ -844,20 +844,20 @@ namespace rct3::scene
                 if (const auto* drop = held == nullptr ? &r.get<simulation::Dropped>(shown.guest) : nullptr; drop != nullptr && drop->sliding)
                 {
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                    pose.motion = park::motion_number(slide_motion(at.heading.value, drop->drift, shown.staff)).value_or(park::motion::kIdle);
+                    pose.motion = park::person::motion_number(slide_motion(at.heading.value, drop->drift, shown.staff)).value_or(park::person::motion::kIdle);
                     return pose;
                 }
                 const bool falling = held == nullptr && now.position.y > r.get<simulation::Dropped>(shown.guest).ground;
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), held != nullptr ? now.position : at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = held != nullptr ? (held->happy ? kDangleHappyMotion : kDangleCrossMotion) : falling ? kDangleCrossMotion : park::motion::kWalk;
+                pose.motion = held != nullptr ? (held->happy ? kDangleHappyMotion : kDangleCrossMotion) : falling ? kDangleCrossMotion : park::person::motion::kWalk;
                 // Falling into a pool they tip over as they go, to land in the water.
                 // Off the end of a pool slide, they splash down as they rode it, on their back or in their ring.
                 if (const auto* drop = held == nullptr ? &r.get<simulation::Dropped>(shown.guest) : nullptr; falling && drop->pool != entt::null)
                 {
                     const auto cars = drop->slide != entt::null ? scene.ride_cars.find(drop->slide) : scene.ride_cars.end();
                     const auto model = cars != scene.ride_cars.end() && !cars->second.empty() ? scene.models.find(park::object::model_ref(scene.cars[cars->second.front()])) : scene.models.end();
-                    const bool body = (model != scene.models.end() && model->second.seating == park::kSlideBodySeating) || (r.valid(drop->slide) && r.all_of<simulation::ClimbSlide>(drop->slide));
-                    pose.motion = park::motion_number(drop->slide == entt::null ? "knockdownin" : body ? "slidebodybacksplashdownin" : "slideringsplashdownin").value_or(pose.motion);
+                    const bool body = (model != scene.models.end() && model->second.seating == park::person::kSlideBodySeating) || (r.valid(drop->slide) && r.all_of<simulation::ClimbSlide>(drop->slide));
+                    pose.motion = park::person::motion_number(drop->slide == entt::null ? "knockdownin" : body ? "slidebodybacksplashdownin" : "slideringsplashdownin").value_or(pose.motion);
                     pose.time = drop->fall.value / simulation::kTuning.holding.gravity;
                 }
                 if (held == nullptr && !falling && shown.paces[0] > 0)
@@ -893,7 +893,7 @@ namespace rct3::scene
                     const auto* slide = r.valid(climbing->slide) ? r.try_get<simulation::ClimbSlide>(climbing->slide) : nullptr;
                     const bool down = slide != nullptr && climbing->way < slide->ways.size() && climbing->along >= slide->ways[climbing->way].top;
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                    pose.motion = down ? park::motion_number("slidebodybackloop").value_or(park::motion::kWalk) : park::motion::kWalk;
+                    pose.motion = down ? park::person::motion_number("slidebodybackloop").value_or(park::person::motion::kWalk) : park::person::motion::kWalk;
                     pose.time = scene.sim_time;
                     return pose;
                 }
@@ -910,13 +910,13 @@ namespace rct3::scene
                 const bool moving = now.was != now.position;
                 const bool lounging = swimmer->place >= 0 && swimmer->use == simulation::PoolUse::Lounge;
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), swimmer->in_water && !swimmer->to_spa ? bobbed() : at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : moving ? park::motion::kWalk : park::motion::kIdle;
+                pose.motion = swimmer->in_water ? (moving ? kSwimMotion : kTreadMotion) : moving ? park::person::motion::kWalk : park::person::motion::kIdle;
                 if (!swimmer->in_water && moving && shown.paces[0] > 0)
                     pose.time = at.walked.value / shown.paces[0];
                 const auto length = [&](std::int32_t motion) {
-                    park::PlacedPerson probe = pose;
+                    park::person::PlacedPerson probe = pose;
                     probe.motion = motion;
-                    return park::motion_seconds(*scene.person_models, probe);
+                    return park::person::motion_seconds(*scene.person_models, probe);
                 };
                 // Off a diving board: up its ladder, out along it, off its end and through the air, up again after.
                 if (swimmer->dive != simulation::DiveStep::None && swimmer->dive != simulation::DiveStep::Walk)
@@ -971,8 +971,8 @@ namespace rct3::scene
                     const float into = (lounging ? stay - swimmer->idle.value : swimmer->stayed.value) + scene.sim_time;
                     const std::int32_t down = lounging ? kLieDownMotion : kSitDownMotion;
                     const std::int32_t up = lounging ? kGetUpMotion : kStandUpMotion;
-                    const std::array clips { park::Clip { down, length(down) }, park::Clip { lounging ? kLoungeMotion : kSitMotion, std::max(stay - length(down) - length(up), 0.0f) }, park::Clip { up, length(up) } };
-                    const park::Clip step = park::clip_at(clips, std::min(into, stay));
+                    const std::array clips { park::person::Clip { down, length(down) }, park::person::Clip { lounging ? kLoungeMotion : kSitMotion, std::max(stay - length(down) - length(up), 0.0f) }, park::person::Clip { up, length(up) } };
+                    const park::person::Clip step = park::person::clip_at(clips, std::min(into, stay));
                     pose.motion = step.motion;
                     pose.time = step.seconds;
                 }
@@ -1016,25 +1016,25 @@ namespace rct3::scene
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), glm::mix(at.position, glm::vec3(stand.x, at.position.y, stand.z), part)), at.heading.value + turn * part, glm::vec3(0.0f, 1.0f, 0.0f));
                     if (off < kStepToSeat)
                     {
-                        pose.motion = park::motion::kWalk;
+                        pose.motion = park::person::motion::kWalk;
                         if (shown.paces[0] > 0)
                             pose.time = off * glm::distance(at.position, stand) / kStepToSeat / shown.paces[0];
                         return pose;
                     }
                     const auto length = [&](std::int32_t motion) {
-                        park::PlacedPerson probe = pose;
+                        park::person::PlacedPerson probe = pose;
                         probe.motion = motion;
-                        return park::motion_seconds(*scene.person_models, probe);
+                        return park::person::motion_seconds(*scene.person_models, probe);
                     };
                     const auto* visitor = r.try_get<simulation::Visitor>(shown.guest);
                     const bool slouch = !linger->camera && visitor != nullptr && visitor->age == simulation::AgeGroup::Teen && entt::to_integral(shown.guest) % 2 == 0;
-                    const std::int32_t in = linger->camera ? kVideoInMotion : slouch ? kSlouchInMotion : park::motion::kIdle;
-                    const std::int32_t out = linger->camera ? kVideoOutMotion : slouch ? kSlouchOutMotion : park::motion::kIdle;
+                    const std::int32_t in = linger->camera ? kVideoInMotion : slouch ? kSlouchInMotion : park::person::motion::kIdle;
+                    const std::int32_t out = linger->camera ? kVideoOutMotion : slouch ? kSlouchOutMotion : park::person::motion::kIdle;
                     const float stay = watch - 2 * kStepToSeat;
-                    const float begin = in == park::motion::kIdle ? 0.0f : length(in);
-                    const float end = out == park::motion::kIdle ? 0.0f : length(out);
-                    const std::array clips { park::Clip { in, begin }, park::Clip { linger->camera ? kVideoMotion : slouch ? kSlouchMotion : park::motion::kIdle, std::max(stay - begin - end, 0.0f) }, park::Clip { out, end } };
-                    const park::Clip step = park::clip_at(clips, std::min(into - kStepToSeat, stay));
+                    const float begin = in == park::person::motion::kIdle ? 0.0f : length(in);
+                    const float end = out == park::person::motion::kIdle ? 0.0f : length(out);
+                    const std::array clips { park::person::Clip { in, begin }, park::person::Clip { linger->camera ? kVideoMotion : slouch ? kSlouchMotion : park::person::motion::kIdle, std::max(stay - begin - end, 0.0f) }, park::person::Clip { out, end } };
+                    const park::person::Clip step = park::person::clip_at(clips, std::min(into - kStepToSeat, stay));
                     pose.motion = step.motion;
                     pose.time = step.seconds;
                     if (!linger->camera)
@@ -1053,14 +1053,14 @@ namespace rct3::scene
                     const float facing = std::atan2((*seat)[2][0], (*seat)[2][2]);
                     const float turn = std::remainder(facing - at.heading.value, glm::two_pi<float>());
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), glm::mix(at.position, to, part)), at.heading.value + turn * part, glm::vec3(0.0f, 1.0f, 0.0f));
-                    pose.motion = park::motion::kWalk;
+                    pose.motion = park::person::motion::kWalk;
                     if (shown.paces[0] > 0)
                         pose.time = part * glm::distance(at.position, to) / shown.paces[0];
                 };
                 const auto length = [&](std::int32_t motion) {
-                    park::PlacedPerson probe = pose;
+                    park::person::PlacedPerson probe = pose;
                     probe.motion = motion;
-                    return park::motion_seconds(*scene.person_models, probe);
+                    return park::person::motion_seconds(*scene.person_models, probe);
                 };
                 pose.world = *seat;
                 // At a water cannon: a step over behind it, taking hold, firing a while, letting go and a step back.
@@ -1076,8 +1076,8 @@ namespace rct3::scene
                     }
                     const float hold = length(kCannonInMotion);
                     const float release = length(kCannonOutMotion);
-                    const std::array clips { park::Clip { kCannonInMotion, hold }, park::Clip { kCannonMotion, std::max(firing - 2 * kStepToSeat - hold - release, 0.0f) }, park::Clip { kCannonOutMotion, release } };
-                    const park::Clip step = park::clip_at(clips, into - kStepToSeat);
+                    const std::array clips { park::person::Clip { kCannonInMotion, hold }, park::person::Clip { kCannonMotion, std::max(firing - 2 * kStepToSeat - hold - release, 0.0f) }, park::person::Clip { kCannonOutMotion, release } };
+                    const park::person::Clip step = park::person::clip_at(clips, into - kStepToSeat);
                     pose.motion = step.motion;
                     pose.time = step.seconds;
                     return pose;
@@ -1170,7 +1170,7 @@ namespace rct3::scene
                     const glm::vec3 ahead { std::sin(at.heading.value), 0.0f, std::cos(at.heading.value) };
                     const float facing = at.heading.value + (left < into ? glm::pi<float>() : 0.0f);
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position + ahead * kIndoors * part), facing, glm::vec3(0.0f, 1.0f, 0.0f));
-                    pose.motion = park::motion::kWalk;
+                    pose.motion = park::person::motion::kWalk;
                     pose.time = shown.paces[0] > 0 ? kIndoors * part / shown.paces[0] : 0.0f;
                 }
                 else if (product == simulation::Product::CashMachine)
@@ -1191,33 +1191,33 @@ namespace rct3::scene
                 const auto* upkeep = r.valid(staff->ride) ? r.try_get<simulation::Upkeep>(staff->ride) : nullptr;
                 const simulation::WorkLook look = simulation::work_look(staff->job, upkeep != nullptr ? upkeep->kind : simulation::Breakdown::None);
                 // Played once, the start and the end as long as they last; the rest of the job repeats its loop.
-                const auto once = [&](std::string_view name) -> std::optional<park::Clip> {
-                    const auto number = name.empty() ? std::nullopt : park::motion_number(name);
+                const auto once = [&](std::string_view name) -> std::optional<park::person::Clip> {
+                    const auto number = name.empty() ? std::nullopt : park::person::motion_number(name);
                     if (!number)
                         return std::nullopt;
-                    park::PlacedPerson probe = pose;
+                    park::person::PlacedPerson probe = pose;
                     probe.motion = *number;
-                    return park::Clip { *number, park::motion_seconds(*scene.person_models, probe) };
+                    return park::person::Clip { *number, park::person::motion_seconds(*scene.person_models, probe) };
                 };
                 const auto start = once(look.start);
                 const auto finish = once(look.finish);
                 const float length = staff->job_length.value;
-                std::vector<park::Clip> clips;
+                std::vector<park::person::Clip> clips;
                 if (start)
                     clips.push_back(*start);
-                clips.push_back({ park::motion_number(look.loop).value_or(park::motion::kIdle), std::max(length - (start ? start->seconds : 0.0f) - (finish ? finish->seconds : 0.0f), 0.0f) });
+                clips.push_back({ park::person::motion_number(look.loop).value_or(park::person::motion::kIdle), std::max(length - (start ? start->seconds : 0.0f) - (finish ? finish->seconds : 0.0f), 0.0f) });
                 if (finish)
                     clips.push_back(*finish);
-                const park::Clip step = park::clip_at(clips, std::min(length - staff->busy.value + scene.sim_time, length));
+                const park::person::Clip step = park::person::clip_at(clips, std::min(length - staff->busy.value + scene.sim_time, length));
                 pose.motion = step.motion;
                 pose.time = step.seconds;
                 const auto tool = scene.staff_tools.find(look.tool);
                 pose.tool = tool != scene.staff_tools.end() ? &tool->second : nullptr;
             }
             // Guards have no plain standing motion; they tap a foot instead.
-            else if (staff != nullptr && staff->role == simulation::StaffRole::Guard && pose.motion == park::motion::kIdle)
-                pose.motion = park::motion_number("tapfoot").value_or(park::motion::kIdle);
-            const bool idle = pose.motion == park::motion::kIdle;
+            else if (staff != nullptr && staff->role == simulation::StaffRole::Guard && pose.motion == park::person::motion::kIdle)
+                pose.motion = park::person::motion_number("tapfoot").value_or(park::person::motion::kIdle);
+            const bool idle = pose.motion == park::person::motion::kIdle;
             gestured(r.try_get<simulation::Gesture>(shown.guest));
             // Food or drink from a stall in their left hand, or its empty once it is gone.
             if (const auto* carried = r.try_get<simulation::Carried>(shown.guest))
@@ -1670,13 +1670,13 @@ namespace rct3::scene
                 if (worn[4] != nullptr)
                     a.swim_legs = { worn[4]->id };
                 ShownPerson& shown = scene.shown_people.emplace_back(ShownPerson { .walking = true, .saved = scene.people.guests.size() - 1, .guest = e, .swim_body = worn[3] != nullptr ? worn[3]->set : nullptr, .swim_legs = worn[4] != nullptr ? worn[4]->set : nullptr });
-                park::PersonLook& look = shown.pose.look;
+                park::person::PersonLook& look = shown.pose.look;
                 look.head = worn[0]->set;
                 look.body = worn[1]->set;
                 look.legs = worn[2]->set;
                 for (std::size_t i = 0; i < look.colours.size(); ++i)
                     look.colours[i] = a.palettes[i] = static_cast<std::uint8_t>(random::below(scene.looks, kColourCells));
-                shown.pose.motion = park::motion::kWalk;
+                shown.pose.motion = park::person::motion::kWalk;
             }
             // Keepers hired with animal houses since, and lifeguards come with lifeguard chairs, in their jobs' clothes.
             for (const auto [e, staff, at] : r.view<const simulation::Staff, const simulation::Pose>(entt::exclude<simulation::Stride>).each())
@@ -1706,7 +1706,7 @@ namespace rct3::scene
                 shown.pose.look.head = worn[0]->set;
                 shown.pose.look.body = worn[1]->set;
                 shown.pose.look.legs = worn[2]->set;
-                shown.pose.motion = keeper ? park::motion::kWalk : park::motion::kIdle;
+                shown.pose.motion = keeper ? park::person::motion::kWalk : park::person::motion::kIdle;
                 shown.pose.world = glm::translate(glm::mat4(1.0f), at.position); // Where they stand while the park is still
             }
             // Sellers, as the game keeps them: one stands at each stall and ride entrance whose model has a place
@@ -1795,14 +1795,14 @@ namespace rct3::scene
             {
                 for (ShownPerson& shown : scene.shown_people)
                 {
-                    const park::PartSet* legs = shown.pose.look.legs;
+                    const park::person::PartSet* legs = shown.pose.look.legs;
                     if (shown.paces[0] > 0 || legs == nullptr)
                         continue;
                     auto [paces, fresh] = scene.walk_paces.try_emplace(legs);
                     if (fresh)
                         for (std::size_t gait = 0; gait < kGaits; ++gait)
                             for (const std::size_t piece : legs->levels[0].fixed)
-                                if (const auto measured = park::walk_pace(scene.person_models->piece(piece), kGaitMotions[gait]); measured && paces->second[gait] == 0)
+                                if (const auto measured = park::person::walk_pace(scene.person_models->piece(piece), kGaitMotions[gait]); measured && paces->second[gait] == 0)
                                     paces->second[gait] = *measured;
                     shown.paces = paces->second;
                 }
@@ -1830,8 +1830,8 @@ namespace rct3::scene
                 scene.people_build = std::async(std::launch::async, [&scene, levels = std::move(levels), view, simulate = scene.simulate] {
                     profiling::register_thread("PeopleWorker");
                     PeopleBuild built;
-                    park::PersonRuns runs;
-                    built.mesh = profiling::section("Still", [&] { return park::person_mesh(*scene.person_models, place_people(scene, levels, 0, false, view, simulate), runs); });
+                    park::person::PersonRuns runs;
+                    built.mesh = profiling::section("Still", [&] { return park::person::person_mesh(*scene.person_models, place_people(scene, levels, 0, false, view, simulate), runs); });
                     built.levels = levels;
                     built.simulate = simulate;
                     profiling::unregister_thread();
@@ -1892,7 +1892,7 @@ namespace rct3::scene
         if (!scene.moving_build.valid())
         {
             const profiling::Scope zone("Moving");
-            scene.moving_build = std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.moving_runs, placed = place_people(scene, scene.people_levels, scene.park_clock, true, view, scene.simulate)] { return park::person_mesh(library, placed, runs); });
+            scene.moving_build = std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.moving_runs, placed = place_people(scene, scene.people_levels, scene.park_clock, true, view, scene.simulate)] { return park::person::person_mesh(library, placed, runs); });
         }
         if (ready(scene.riders_build))
         {

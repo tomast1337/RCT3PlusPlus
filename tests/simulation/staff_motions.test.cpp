@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/staff_motions.hpp"
 
-#include "park/person_motions.hpp"
+#include "park/person/motions.hpp"
 
 #include <doctest/doctest.h>
 
@@ -17,12 +17,12 @@ TEST_CASE("every motion a worker plays at work is a known one")
         {
             const simulation::WorkLook look = simulation::work_look(static_cast<StaffJob>(job), static_cast<Breakdown>(kind));
             for (const std::string_view name : { look.start, look.loop, look.finish })
-                CHECK_MESSAGE((name.empty() || park::motion_number(name).has_value()), name);
+                CHECK_MESSAGE((name.empty() || park::person::motion_number(name).has_value()), name);
             CHECK((job == static_cast<int>(StaffJob::None)) == look.loop.empty());
         }
     for (const KeeperJob job : { KeeperJob::Idle, KeeperJob::Strolling, KeeperJob::Filling, KeeperJob::Clearing, KeeperJob::Catching })
         for (const bool walking : { false, true })
-            CHECK(park::motion_number(simulation::keeper_motion(job, walking)).has_value());
+            CHECK(park::person::motion_number(simulation::keeper_motion(job, walking)).has_value());
 }
 
 TEST_CASE("a handyman sweeps with a broom and waters with a can, and empties a bin with the bag they wear")
@@ -47,8 +47,8 @@ TEST_CASE("a mechanic works on a breakdown as it went wrong, and inspects with a
 TEST_CASE("a resting worker sits down, sits, and gets up; a guard on watch swings the truncheon, then radios in")
 {
     const simulation::WorkLook rest = simulation::work_look(StaffJob::Rest, Breakdown::None);
-    CHECK(park::motion_number(rest.start) == park::motion_number("sitin"));
-    CHECK(park::motion_number(rest.finish) == park::motion_number("sitout"));
+    CHECK(park::person::motion_number(rest.start) == park::person::motion_number("sitin"));
+    CHECK(park::person::motion_number(rest.finish) == park::person::motion_number("sitout"));
     CHECK(simulation::work_look(StaffJob::Watch, Breakdown::None) == simulation::WorkLook { .start = "swingtruncheon", .loop = "talkradio" });
 }
 

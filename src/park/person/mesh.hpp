@@ -15,7 +15,7 @@
 
 #include "park/moving_meshes.hpp"
 #include "park/object/mesh.hpp"
-#include "park/person_models.hpp"
+#include "park/person/models.hpp"
 
 #include <array>
 #include <cstdint>
@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::person
 {
 
     /// What one person looks like.
@@ -44,7 +44,7 @@ namespace rct3::park
     {
         PersonLook look { };
         std::size_t level = 0;                     ///< Of detail, 0 the finest
-        std::int32_t motion = 0;                   ///< By number (see person_motions.hpp)
+        std::int32_t motion = 0;                   ///< By number (see person/motions.hpp)
         float time = 0;                            ///< Seconds into the motion
         glm::mat4 world { 1.0f };                  ///< Model to park
         const object::ObjectModel* held = nullptr; ///< Held in the left hand, drawn at its finest level in its own picture;
@@ -95,4 +95,4 @@ namespace rct3::park
     /// memory is reused.
     [[nodiscard]] MovingMeshes carried_people_meshes(const PersonLibrary& library, std::span<const std::span<const PlacedPerson>> groups, PersonRuns& runs, PersonRuns& gathered);
 
-} // namespace rct3::park
+} // namespace rct3::park::person

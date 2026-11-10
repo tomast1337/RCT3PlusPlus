@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/person_motions.hpp"
+#include "park/person/motions.hpp"
 
 #include "strings/ascii.hpp"
 
@@ -8,7 +8,7 @@
 #include <format>
 #include <string>
 
-namespace rct3::park
+namespace rct3::park::person
 {
 
     namespace
@@ -510,4 +510,4 @@ namespace rct3::park
         return !std::ranges::binary_search(kOnce, number);
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::person

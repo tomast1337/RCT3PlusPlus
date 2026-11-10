@@ -15,7 +15,7 @@
 #include "park/object/models.hpp"
 #include "park/object/pick.hpp"
 #include "park/object/placement.hpp"
-#include "park/person_motions.hpp"
+#include "park/person/motions.hpp"
 #include "park/ride/placement.hpp"
 #include "park/sky/look.hpp"
 #include "park/tile_shaping.hpp"
@@ -1757,7 +1757,7 @@ namespace rct3::scene
             shown.pose.look.legs = worn[2]->set;
             for (std::size_t i = 0; i < shown.pose.look.colours.size(); ++i)
                 shown.pose.look.colours[i] = a.palettes[i] = static_cast<std::uint8_t>(random::below(scene.looks, kColourCells));
-            shown.pose.motion = park::motion::kWalk;
+            shown.pose.motion = park::person::motion::kWalk;
             shown.pose.world = glm::translate(glm::mat4(1.0f), at);
             return scene.shown_people.size() - 1;
         }
@@ -1883,7 +1883,7 @@ namespace rct3::scene
                 if (!std::ranges::contains(worn, nullptr))
                 {
                     change_people(scene);
-                    park::PersonLook& look = scene.shown_people[shown].pose.look;
+                    park::person::PersonLook& look = scene.shown_people[shown].pose.look;
                     std::tie(look.head, look.body, look.legs) = std::tuple(worn[0]->set, worn[1]->set, worn[2]->set);
                     std::tie(person->appearance.head, person->appearance.body, person->appearance.legs) = std::tuple(save::PeopleRef { worn[0]->id }, save::PeopleRef { worn[1]->id }, save::PeopleRef { worn[2]->id });
                 }
@@ -1899,7 +1899,7 @@ namespace rct3::scene
         /// Paints the clothes of pot `pot` of the person shown as `shown` in colour `colour`.
         void paint_person(ParkScene& scene, std::size_t shown, std::size_t pot, std::size_t colour)
         {
-            if (shown >= scene.shown_people.size() || ui::kUpperPalette + pot >= park::PersonLook { }.colours.size())
+            if (shown >= scene.shown_people.size() || ui::kUpperPalette + pot >= park::person::PersonLook { }.colours.size())
                 return;
             change_people(scene);
             ShownPerson& p = scene.shown_people[shown];

@@ -5,8 +5,8 @@
 #include "park/flexi_colours.hpp"
 #include "park/ground/textures.hpp"
 #include "park/object/models.hpp"
-#include "park/person_mesh.hpp"
-#include "park/person_motions.hpp"
+#include "park/person/mesh.hpp"
+#include "park/person/motions.hpp"
 #include "park/sun_view.hpp"
 #include "park/water/flow.hpp"
 #include "park/water/jet.hpp"
@@ -499,13 +499,13 @@ namespace rct3::scene
             constexpr float kGap = 0.7f;    ///< Between neighbours in the row
             constexpr float kHeight = 2.0f; ///< Of the box the view fits, a tall adult's and a little over
             const float first = -0.5f * kGap * static_cast<float>(shown.size() - 1);
-            std::vector<park::PlacedPerson> placed;
+            std::vector<park::person::PlacedPerson> placed;
             for (std::size_t k = 0; k < shown.size(); ++k)
             {
                 if (shown[k] >= scene.shown_people.size())
                     continue;
                 // Seated on a ride they stand idle instead.
-                park::PlacedPerson pose = pose_person(scene, shown[k], scene.park_clock, scene.simulate).value_or(park::PlacedPerson { .look = scene.shown_people[shown[k]].pose.look, .motion = park::motion::kIdle, .time = scene.clock });
+                park::person::PlacedPerson pose = pose_person(scene, shown[k], scene.park_clock, scene.simulate).value_or(park::person::PlacedPerson { .look = scene.shown_people[shown[k]].pose.look, .motion = park::person::motion::kIdle, .time = scene.clock });
                 pose.level = 0;
                 pose.world = glm::translate(glm::mat4(1.0f), glm::vec3(first + kGap * static_cast<float>(k), 0, 0));
                 placed.push_back(pose);
@@ -514,8 +514,8 @@ namespace rct3::scene
             const park::ParkCamera camera = park::framed(box, kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
             // shortcut: posed and built afresh each frame the panel shows, a few small allocations; keep the lists in
             // the scene if it ever shows in a profile.
-            park::PersonRuns runs;
-            const park::object::ObjectMesh mesh = park::person_mesh(*scene.person_models, placed, runs);
+            park::person::PersonRuns runs;
+            const park::object::ObjectMesh mesh = park::person::person_mesh(*scene.person_models, placed, runs);
             // Lit by the noon sun whatever the park's hour, so they look the same by night; no shadows, lamps or haze.
             constexpr float kNoon = 0.5f; ///< Of a day from midnight
             const park::Daylight noon = park::daylight(kNoon);

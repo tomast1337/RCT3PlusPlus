@@ -31,7 +31,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::person
 {
 
     /// Which two keys of a motion to blend at some time, and how far from the first to the second.
@@ -153,4 +153,4 @@ namespace rct3::park
         std::string read_picture(std::string_view name, std::string_view near);
     };
 
-} // namespace rct3::park
+} // namespace rct3::park::person

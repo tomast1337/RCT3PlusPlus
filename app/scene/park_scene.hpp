@@ -30,7 +30,7 @@
 #include "park/moving_meshes.hpp"
 #include "park/object/mesh.hpp"
 #include "park/object/pick.hpp"
-#include "park/person_mesh.hpp"
+#include "park/person/mesh.hpp"
 #include "park/pools/pools.hpp"
 #include "park/ride/cars.hpp"
 #include "park/sky/mesh.hpp"
@@ -352,18 +352,18 @@ namespace rct3::scene
     /// A person as the park shows it.
     struct ShownPerson
     {
-        park::PlacedPerson pose;
+        park::person::PlacedPerson pose;
         float saved_time = 0; ///< Into its motion, when the park was saved
         float speed = 1;      ///< How fast its motion plays
         /// Ground its legs cover in a second of each way of going on foot (by simulation::Gait); 0 unknown
         std::array<float, kGaits> paces { };
-        bool walking = false;                     ///< Walkers stand still in their stride until people move
-        bool staff = false;                       ///< A member of staff rather than a guest
-        std::size_t saved = 0;                    ///< Of the guests or of the staff in the saved people
-        entt::entity guest = entt::null;          ///< The simulated guest it shows, for guests the simulation walks
-        std::uint32_t thoughts_seen = 0;          ///< Of the simulated guest's thoughts, those already in the saved person
-        const park::PartSet* swim_body = nullptr; ///< Worn in place of the body and legs at a pool, if any
-        const park::PartSet* swim_legs = nullptr;
+        bool walking = false;                             ///< Walkers stand still in their stride until people move
+        bool staff = false;                               ///< A member of staff rather than a guest
+        std::size_t saved = 0;                            ///< Of the guests or of the staff in the saved people
+        entt::entity guest = entt::null;                  ///< The simulated guest it shows, for guests the simulation walks
+        std::uint32_t thoughts_seen = 0;                  ///< Of the simulated guest's thoughts, those already in the saved person
+        const park::person::PartSet* swim_body = nullptr; ///< Worn in place of the body and legs at a pool, if any
+        const park::person::PartSet* swim_legs = nullptr;
         bool swimwear = false;                                  ///< Shown in their swimwear: as saved, or as the simulation has them
         bool changing = false;                                  ///< Out of sight in a changing room when last looked at
         simulation::PoolEdge edge = simulation::PoolEdge::None; ///< A swimmer over the water's edge when last looked at
@@ -374,7 +374,7 @@ namespace rct3::scene
     struct Outfit
     {
         save::PeopleObjectId id = 0; ///< Of its part group in the park's people
-        const park::PartSet* set = nullptr;
+        const park::person::PartSet* set = nullptr;
         save::PersonType type = save::PersonType::Adult;
         save::Sex sex = save::Sex::Male;
         std::uint8_t section = 0; ///< As a part group's
@@ -680,8 +680,8 @@ namespace rct3::scene
         std::vector<BonedRide> boned_rides;
         /// Where each boned ride's seat bones carry their seats now, all rides' seats in turn.
         std::vector<glm::mat4> seat_carriers;
-        std::optional<park::PersonLibrary> person_models;                     ///< Of the park's people
-        std::map<const park::PartSet*, std::array<float, kGaits>> walk_paces; ///< Of each legs set measured so far, 0 for none
+        std::optional<park::person::PersonLibrary> person_models;                     ///< Of the park's people
+        std::map<const park::person::PartSet*, std::array<float, kGaits>> walk_paces; ///< Of each legs set measured so far, 0 for none
         /// Umbrellas guests hold up, for adults and teens, then for children; empty when missing.
         std::array<std::optional<park::object::ObjectModel>, 2> umbrellas;
         /// The tools handymen hold at work, by shape name (see simulation::WorkLook::tool); those missing are left out.
@@ -705,10 +705,10 @@ namespace rct3::scene
         std::future<PeopleBuild> people_build; ///< Like object_build, for the still people
         /// Kept for moving_build, the only one to touch it, so its memory is reused. Declared first, so it
         /// outlives a build still running when the scene goes.
-        park::PersonRuns moving_runs { };
+        park::person::PersonRuns moving_runs { };
         std::future<park::object::ObjectMesh> moving_build; ///< The people in motion, posed away from the frame
-        park::PersonRuns rider_runs { };                    ///< Kept for riders_build, like moving_runs
-        park::PersonRuns rider_gathered { };                ///< Kept for riders_build, like moving_runs
+        park::person::PersonRuns rider_runs { };            ///< Kept for riders_build, like moving_runs
+        park::person::PersonRuns rider_gathered { };        ///< Kept for riders_build, like moving_runs
         std::future<RidersBuild> riders_build;              ///< The riders, posed away from the frame
         /// Riders seated in the ride cars, each car's posed in the car's own space so they move with it.
         park::MovingMeshes riders;

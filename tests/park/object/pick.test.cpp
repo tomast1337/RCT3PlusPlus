@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/object_pick.hpp"
+#include "park/object/pick.hpp"
 
 #include <doctest/doctest.h>
 #include <optional>
@@ -7,6 +7,7 @@
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::object;
 
 namespace
 {
@@ -38,7 +39,7 @@ namespace
         return m;
     }
 
-    save::PlacedObject object(std::uint64_t id, int col)
+    save::PlacedObject placed_object(std::uint64_t id, int col)
     {
         save::PlacedObject o;
         o.id = id;
@@ -82,7 +83,7 @@ TEST_CASE("the nearest wanted object on the line is picked")
     const save::TerrainGrid g = flat(0);
     ObjectModels models;
     models.emplace("Things/Things|Cube", cube());
-    const std::vector<save::PlacedObject> objects { object(1, 0), object(2, 1) };
+    const std::vector<save::PlacedObject> objects { placed_object(1, 0), placed_object(2, 1) };
     // Tile 1's middle is at x 6.
     CHECK(index_of(pick_object(down_at(6, 2), objects, models, g, { }, any)) == 1u);
     CHECK(index_of(pick_object(down_at(2, 2), objects, models, g, { }, any)) == 0u);
@@ -98,7 +99,7 @@ TEST_CASE("ground in front hides an object, and a fitted object is found where i
     save::TerrainGrid g = flat(0);
     ObjectModels models;
     models.emplace("Things/Things|Cube", cube());
-    std::vector<save::PlacedObject> objects { object(1, 1) };
+    std::vector<save::PlacedObject> objects { placed_object(1, 1) };
     // A hill on tile 0 stands between the line and the object.
     g.cells[0].corners = { 10, 10, 10, 10 };
     const Ray along { { -10, 1, 2 }, { 1, 0, 0 } };
@@ -131,9 +132,9 @@ TEST_CASE("kept places and boxes are worked out again only for the objects that 
     save::TerrainGrid g = flat(0);
     ObjectModels models;
     models.emplace("Things/Things|Cube", cube());
-    save::PlacedObject rock = object(3, 2);
+    save::PlacedObject rock = placed_object(3, 2);
     rock.symbol = "Rock";
-    std::vector<save::PlacedObject> objects { object(1, 0), object(2, 1), rock };
+    std::vector<save::PlacedObject> objects { placed_object(1, 0), placed_object(2, 1), rock };
     ObjectPlaces places;
     std::vector<PickBox> boxes;
     const auto update = [&] {

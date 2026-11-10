@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/object_models.hpp"
+#include "park/object/models.hpp"
 
 #include "park/terrain_mesh.hpp"
 
@@ -8,6 +8,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::park;
+using namespace rct3::park::object;
 
 TEST_CASE("a model takes the colour slots of all its pictures, at every level")
 {

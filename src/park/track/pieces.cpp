@@ -76,7 +76,7 @@ namespace rct3::park::track
 
         glm::vec3 turned(const glm::vec3& v, ModelTurn turn)
         {
-            const glm::vec2 x = turned_x(turn);
+            const glm::vec2 x = object::turned_x(turn);
             const glm::vec2 z { -x.y, x.x };
             return { x.x * v.x + z.x * v.z, v.y, x.y * v.x + z.y * v.z };
         }
@@ -264,7 +264,7 @@ namespace rct3::park::track
             r.flags = section.flags[0];
             r.role = section.role;
             r.squares = { static_cast<std::int32_t>(item->second.x_squares), static_cast<std::int32_t>(item->second.z_squares) };
-            r.positioning = static_cast<Positioning>(item->second.positioning);
+            r.positioning = static_cast<object::Positioning>(item->second.positioning);
             r.cost = item->second.cost;
             for (std::size_t k = 0; k < r.colours.size(); ++k)
                 r.colours[k] = static_cast<std::uint8_t>(item->second.default_colours[k]);
@@ -448,7 +448,7 @@ namespace rct3::park::track
 
     TrackTip tip_of(const save::PlacedObject& object, const PieceShape& shape, bool reversed, const save::TerrainGrid& grid)
     {
-        const glm::mat4 m = object_transform(object, shape.record.positioning, grid, shape.record.squares);
+        const glm::mat4 m = object::object_transform(object, shape.record.positioning, grid, shape.record.squares);
         TrackTip tip;
         tip.position = glm::vec3(m * glm::vec4(reversed ? shape.line.start : shape.line.end, 1));
         tip.end = laid_exit(shape, reversed);
@@ -466,7 +466,7 @@ namespace rct3::park::track
     std::optional<PiecePlacement> place_after(const TrackTip& tip, const PieceShape& shape, bool reversed, const save::TerrainGrid& grid)
     {
         const PieceEnd entry = laid_entry(shape, reversed);
-        if (!fits_after(tip.end, entry) || shape.record.positioning != Positioning::Tile || grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
+        if (!fits_after(tip.end, entry) || shape.record.positioning != object::Positioning::Tile || grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
             return std::nullopt;
         // The turn that brings the piece's entry round to the tip: whole quarters, as both run along the grid or
         // both across it.
@@ -492,7 +492,7 @@ namespace rct3::park::track
         o.base_height = static_cast<std::int32_t>(std::lround(height));
         o.force_absolute_height = true;
         // Checked against the transform the park draws it with, so what is placed is what shows.
-        const glm::mat4 m = object_transform(o, shape.record.positioning, grid, shape.record.squares);
+        const glm::mat4 m = object::object_transform(o, shape.record.positioning, grid, shape.record.squares);
         const glm::vec3 meets = glm::vec3(m * glm::vec4(reversed ? shape.line.end : shape.line.start, 1));
         if (glm::length(meets - tip.position) > kMeet)
             return std::nullopt;

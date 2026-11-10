@@ -5,7 +5,7 @@
 #include "ovl/tracked_ride.hpp"
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 #include "park/path/decks.hpp"
 #include "park/path/furniture.hpp"
 #include "park/queue_fences.hpp"
@@ -239,7 +239,7 @@ namespace rct3::simulation
         /// The path behind the ride door `door`, on the tile away from the ride.
         NodeId behind_door(const PathNetwork& paths, const save::PlacementSpot& door, bool queues)
         {
-            return path_at(paths, door, park::turned_x(park::ModelTurn::from(door.direction).turned(2)), queues);
+            return path_at(paths, door, park::object::turned_x(park::ModelTurn::from(door.direction).turned(2)), queues);
         }
 
         /// The path a facility such as a toilet opens onto: it opens onto every side, so the first side with a path.
@@ -248,7 +248,7 @@ namespace rct3::simulation
         {
             NodeId entrance = kNoNode;
             for (std::int32_t side = 0; side < 4 && entrance == kNoNode; ++side)
-                entrance = path_at(paths, spot, park::turned_x(park::ModelTurn { side }), false);
+                entrance = path_at(paths, spot, park::object::turned_x(park::ModelTurn { side }), false);
             return entrance;
         }
 
@@ -256,7 +256,7 @@ namespace rct3::simulation
         /// +col.
         NodeId stall_front(const PathNetwork& paths, const save::PlacementSpot& spot, std::int32_t facing)
         {
-            return path_at(paths, spot, park::turned_x(park::ModelTurn::from(facing).turned(3)), false);
+            return path_at(paths, spot, park::object::turned_x(park::ModelTurn::from(facing).turned(3)), false);
         }
 
         /// Guests line up on the queue that reaches the entrance, or walk straight in from a path; none when
@@ -356,7 +356,7 @@ namespace rct3::simulation
         ride.loops = 1;
     }
 
-    std::vector<std::optional<RideTiming>> flat_ride_timings(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const std::function<const park::ObjectModel*(const save::PlacedObject&)>& model_of)
+    std::vector<std::optional<RideTiming>> flat_ride_timings(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const std::function<const park::object::ObjectModel*(const save::PlacedObject&)>& model_of)
     {
         std::vector<std::optional<RideTiming>> out(rides.rides.size());
         for (std::size_t i = 0; i < rides.rides.size(); ++i)
@@ -369,7 +369,7 @@ namespace rct3::simulation
             {
                 if (o.owner_ref != ride.base.placement)
                     continue;
-                if (const park::ObjectModel* model = model_of(o))
+                if (const park::object::ObjectModel* model = model_of(o))
                     if ((out[i] = flat_ride_timing(model->animation_seconds, model->seats, ride.loop_count)))
                         break;
             }
@@ -1205,7 +1205,7 @@ namespace rct3::simulation
                 continue;
             if (const auto at = path_by(world.paths, o))
             {
-                const glm::vec2 x = park::turned_x(park::ModelTurn::from(o.rotation));
+                const glm::vec2 x = park::object::turned_x(park::ModelTurn::from(o.rotation));
                 world.registry.emplace<PathItem>(world.registry.create(), PathItem { .node = *at, .kind = *kind, .object = o.id, .heading = std::atan2(x.x, x.y) });
                 ++added;
             }
@@ -1258,7 +1258,7 @@ namespace rct3::simulation
 
     park::Side no_entry_side(const save::PlacedObject& sign)
     {
-        return park::faced_side(park::ModelTurn::from(sign.rotation));
+        return park::object::faced_side(park::ModelTurn::from(sign.rotation));
     }
 
     void import_party_mix(SimWorld& world, const save::GroupMix& mix)
@@ -1647,7 +1647,7 @@ namespace rct3::simulation
             return entt::null;
         auto& r = world.registry;
         const entt::entity e = r.create();
-        const glm::vec2 x = park::turned_x(park::ModelTurn::from(o.rotation));
+        const glm::vec2 x = park::object::turned_x(park::ModelTurn::from(o.rotation));
         r.emplace<PathItem>(e, PathItem { .node = *at, .kind = kind, .object = o.id, .heading = std::atan2(x.x, x.y) });
         if (kind == PathItemKind::Bin)
             r.emplace<Bin>(e, Bin { kNewBinPieces, 0 });

@@ -35,10 +35,10 @@ namespace rct3::park
 
         /// The blending and sides a texture style asks for: masked styles cut out, other alpha styles blend,
         /// and those ending "DS" are drawn from both sides.
-        std::pair<PartBlend, bool> style_look(std::string_view style)
+        std::pair<object::PartBlend, bool> style_look(std::string_view style)
         {
             const std::string s = lower(style);
-            const PartBlend blend = s.starts_with("sialphamask") ? PartBlend::Cutout : s.starts_with("sialpha") ? PartBlend::Blended : PartBlend::Opaque;
+            const object::PartBlend blend = s.starts_with("sialphamask") ? object::PartBlend::Cutout : s.starts_with("sialpha") ? object::PartBlend::Blended : object::PartBlend::Opaque;
             return { blend, !s.ends_with("ds") };
         }
 

@@ -17,7 +17,7 @@ namespace rct3::park
         float farthest(const SkyShape& shape)
         {
             float out = 0;
-            for (const ModelVertex& v : shape.vertices)
+            for (const object::ModelVertex& v : shape.vertices)
                 out = std::max(out, glm::length(v.position));
             return out;
         }
@@ -28,14 +28,14 @@ namespace rct3::park
             return offset - std::floor(offset);
         }
 
-        void add(ObjectMesh& mesh, const SkyShape& shape, PartBlend blend, glm::vec3 eye, float scale, glm::vec4 colour, auto&& uv_of)
+        void add(object::ObjectMesh& mesh, const SkyShape& shape, object::PartBlend blend, glm::vec3 eye, float scale, glm::vec4 colour, auto&& uv_of)
         {
             if (shape.vertices.empty() || shape.indices.empty() || colour.a <= 0)
                 return;
             const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
-            for (const ModelVertex& v : shape.vertices)
+            for (const object::ModelVertex& v : shape.vertices)
                 mesh.vertices.push_back({ eye + v.position * scale, colour, uv_of(v.uv) });
-            ObjectBatch batch;
+            object::ObjectBatch batch;
             batch.texture = shape.texture;
             batch.picture = shape.texture;
             batch.blend = blend;
@@ -51,9 +51,9 @@ namespace rct3::park
 
     } // namespace
 
-    ObjectMesh sky_mesh(const SkyModels& sky, const SkyView& view)
+    object::ObjectMesh sky_mesh(const SkyModels& sky, const SkyView& view)
     {
-        ObjectMesh mesh;
+        object::ObjectMesh mesh;
         float reach = 0;
         for (const SkyShape* shape : { &sky.dome, &sky.stars, &sky.milky_way, &sky.clouds })
             reach = std::max(reach, farthest(*shape));
@@ -64,13 +64,13 @@ namespace rct3::park
         const float night = std::clamp(view.night, 0.0f, 1.0f);
 
         const float overcast = std::clamp(view.overcast, 0.0f, 1.0f);
-        add(mesh, sky.dome, PartBlend::Opaque, view.eye, scale, glm::vec4(view.tint, 1.0f), [&](glm::vec2 uv) { return glm::vec2(view.day, uv.y); });
+        add(mesh, sky.dome, object::PartBlend::Opaque, view.eye, scale, glm::vec4(view.tint, 1.0f), [&](glm::vec2 uv) { return glm::vec2(view.day, uv.y); });
         const glm::vec4 fading { view.tint, std::clamp(view.fade, 0.0f, 1.0f) };
-        add(mesh, sky.dome, PartBlend::Blended, view.eye, scale, fading, [&](glm::vec2 uv) { return glm::vec2(view.faded_day, uv.y); });
+        add(mesh, sky.dome, object::PartBlend::Blended, view.eye, scale, fading, [&](glm::vec2 uv) { return glm::vec2(view.faded_day, uv.y); });
         const glm::vec4 starlight { 1.0f, 1.0f, 1.0f, night * (1 - overcast) };
         const auto same = [](glm::vec2 uv) { return uv; };
-        add(mesh, sky.stars, PartBlend::Blended, view.eye, scale, starlight, same);
-        add(mesh, sky.milky_way, PartBlend::Blended, view.eye, scale, starlight, same);
+        add(mesh, sky.stars, object::PartBlend::Blended, view.eye, scale, starlight, same);
+        add(mesh, sky.milky_way, object::PartBlend::Blended, view.eye, scale, starlight, same);
 
         // Rain clouds are darker than fair ones, and thicker. Chosen by eye.
         constexpr float kRainCloudShade = 0.45f;
@@ -78,8 +78,8 @@ namespace rct3::park
         const glm::vec4 cloud { view.tint * shade, glm::mix(kCloudCover, 1.0f, overcast) };
         const float low = wrapped(view.time * kCloudDrift);
         const float high = wrapped(view.time * kHighCloudDrift);
-        add(mesh, sky.clouds, PartBlend::Blended, view.eye, scale, cloud, [&](glm::vec2 uv) { return uv + glm::vec2(low, 0.0f); });
-        add(mesh, sky.clouds, PartBlend::Blended, view.eye, scale, cloud, [&](glm::vec2 uv) { return uv * 2.0f + glm::vec2(high, high * 0.5f); });
+        add(mesh, sky.clouds, object::PartBlend::Blended, view.eye, scale, cloud, [&](glm::vec2 uv) { return uv + glm::vec2(low, 0.0f); });
+        add(mesh, sky.clouds, object::PartBlend::Blended, view.eye, scale, cloud, [&](glm::vec2 uv) { return uv * 2.0f + glm::vec2(high, high * 0.5f); });
         mesh.placed = mesh.batches.size();
         return mesh;
     }

@@ -25,7 +25,7 @@ TEST_CASE("pieces laid backwards take their ride's chain the other way round")
     rides.rides[0].track->pieces = { { .scenery = 7 }, { .scenery = 0 } };
     rides.rides[2].track = save::Track { };
     rides.rides[2].track->pieces = { { .scenery = 9, .reversed = true } };
-    const Chains runs = chain_runs(rides, { }, { });
+    const object::Chains runs = chain_runs(rides, { }, { });
     CHECK(runs.size() == 2);
     CHECK(runs.at(7) == 1);
     CHECK(runs.at(9) == -3);
@@ -44,8 +44,8 @@ TEST_CASE("a section that lays its piece from the far end takes the chain and th
     std::vector<save::PlacedObject> objects;
     for (std::uint64_t id = 1; id <= 4; ++id)
         objects.push_back({ .id = id, .symbol = "curve", .overlay = "tracks/flume" });
-    ObjectModels models;
-    models[model_key(objects[0])].runs_back = { "CurveRight" };
+    object::ObjectModels models;
+    models[object::model_key(objects[0])].runs_back = { "CurveRight" };
     save::RideModel rides;
     rides.rides.resize(1);
     rides.rides[0].track = save::Track { };
@@ -55,7 +55,7 @@ TEST_CASE("a section that lays its piece from the far end takes the chain and th
         { .symbol = "Curve:tks", .scenery = 3, .reversed = true },
         { .symbol = "curveright:tks", .scenery = 4, .reversed = true },
     };
-    const Chains runs = chain_runs(rides, objects, models);
+    const object::Chains runs = chain_runs(rides, objects, models);
     CHECK(runs.at(1) == 1);
     CHECK(runs.at(2) == -1);
     CHECK(runs.at(3) == -1);

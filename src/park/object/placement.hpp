@@ -23,7 +23,7 @@
 #include <cstdint>
 #include <optional>
 
-namespace rct3::park
+namespace rct3::park::object
 {
 
     /// How an item sits on its tile, as its scenery item stores it.
@@ -108,4 +108,4 @@ namespace rct3::park
     /// and Z. Land bought only to build over counts for things raised off the ground, not for those on it.
     [[nodiscard]] bool on_owned_land(const save::PlacedObject& object, std::array<std::int32_t, 2> squares, const save::TerrainGrid& grid);
 
-} // namespace rct3::park
+} // namespace rct3::park::object

@@ -12,7 +12,7 @@
 #include "park/attraction_objects.hpp"
 #include "park/camera.hpp"
 #include "park/ground/textures.hpp"
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "park/park_map.hpp"
 #include "render/device.hpp"
 #include "save/model/rides.hpp"
@@ -42,7 +42,7 @@ namespace rct3::scene
     /// What a park's map shows: its paths, water, scenery and attractions by kind, and the ground in the
     /// colours of its surfaces' pictures in `images`. The kinds of stalls and facilities are read from the
     /// overlays that hold them, under `install`.
-    [[nodiscard]] ParkMap park_map(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water, std::span<const save::PlacedObject> objects, const park::ObjectModels& models, const park::Fitted& fitted, const park::AttractionObjects& attractions, const save::RideModel& rides, const park::ground::GroundImages& images, const config::GameInstall& install);
+    [[nodiscard]] ParkMap park_map(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water, std::span<const save::PlacedObject> objects, const park::object::ObjectModels& models, const park::object::Fitted& fitted, const park::AttractionObjects& attractions, const save::RideModel& rides, const park::ground::GroundImages& images, const config::GameInstall& install);
 
     /// Opens the map window, or closes it when it is open.
     void toggle_park_map(ParkMap& map, ui::Desktop& desktop, const ui::StringTable& strings, const ui::Palette& palette);

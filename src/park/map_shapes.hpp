@@ -5,7 +5,7 @@
 // covers its tile.
 #pragma once
 
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "park/park_map.hpp"
 #include "save/model/world.hpp"
 
@@ -21,6 +21,6 @@ namespace rct3::park
     using MapLayerOf = std::function<std::optional<MapLayer>(const save::PlacedObject&)>;
 
     /// The shapes of the objects of `objects` that are not hidden and that `layer_of` puts on the map.
-    [[nodiscard]] std::vector<MapShape> map_shapes(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, const MapLayerOf& layer_of);
+    [[nodiscard]] std::vector<MapShape> map_shapes(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid, const object::Fitted& fitted, const MapLayerOf& layer_of);
 
 } // namespace rct3::park

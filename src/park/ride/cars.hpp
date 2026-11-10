@@ -5,7 +5,7 @@
 // its train's design names for its slot, in the ride's car colours.
 #pragma once
 
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "save/model/rides.hpp"
 
 #include <array>
@@ -39,7 +39,7 @@ namespace rct3::park::ride
         std::vector<save::PlacedObject> pieces; ///< Ids after `last_id`; overlay and symbol key the model
         std::vector<CarDesign> designs;         ///< By piece
         std::vector<CarSpot> spots;             ///< By piece
-        Fitted fitted;                          ///< Where each piece stands, by id
+        object::Fitted fitted;                  ///< Where each piece stands, by id
     };
 
     /// The design slot of each car, front to back, of a train of `cars` passenger cars whose design fills the

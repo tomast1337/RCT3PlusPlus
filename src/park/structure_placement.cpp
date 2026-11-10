@@ -2,7 +2,7 @@
 #include "park/structure_placement.hpp"
 
 #include "park/item_category.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 
 #include <algorithm>
 #include <array>
@@ -15,14 +15,14 @@ namespace rct3::park
     namespace
     {
 
-        const ObjectModel* model_of(const save::PlacedObject& o, const ObjectModels& models)
+        const object::ObjectModel* model_of(const save::PlacedObject& o, const object::ObjectModels& models)
         {
-            const auto it = models.find(model_key(o));
+            const auto it = models.find(object::model_key(o));
             return it == models.end() ? nullptr : &it->second;
         }
 
         /// The tiles an item covers along the park's columns and rows, as it is turned.
-        std::array<std::int32_t, 2> span_of(std::int32_t rotation, const ObjectModel* model)
+        std::array<std::int32_t, 2> span_of(std::int32_t rotation, const object::ObjectModel* model)
         {
             const std::array<std::int32_t, 2> squares = model ? model->squares : std::array<std::int32_t, 2> { 1, 1 };
             return (rotation & 1) != 0 ? std::array { squares[1], squares[0] } : squares;
@@ -73,7 +73,7 @@ namespace rct3::park
         return !std::ranges::contains(kLeft, category);
     }
 
-    save::Structure pick_structure(std::span<const save::Tile> marked, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
+    save::Structure pick_structure(std::span<const save::Tile> marked, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid)
     {
         save::Structure s;
         if (marked.empty())
@@ -89,7 +89,7 @@ namespace rct3::park
         {
             if (o.fixture || o.hidden || !o.free_standing() || o.symbol.empty())
                 continue;
-            const ObjectModel* model = model_of(o, models);
+            const object::ObjectModel* model = model_of(o, models);
             if (!model || !goes_in_structure(model->category))
                 continue;
             const auto span = span_of(o.rotation, model);
@@ -100,7 +100,7 @@ namespace rct3::park
             if (!on_mark)
                 continue;
             // The height it stands at, less the nudge its own model adds.
-            const float y = object_transform(o, static_cast<Positioning>(model->positioning), grid, model->squares)[3].y - o.height_adjust.value_or(0);
+            const float y = object::object_transform(o, static_cast<object::Positioning>(model->positioning), grid, model->squares)[3].y - o.height_adjust.value_or(0);
             s.pieces.push_back(
                 {
                     .symbol = o.symbol,
@@ -123,7 +123,7 @@ namespace rct3::park
         return { static_cast<int>(std::floor(p.x)), static_cast<int>(std::floor(p.y)) };
     }
 
-    std::vector<save::PlacedObject> structure_objects(const save::Structure& structure, save::Tile at, ModelTurn turn, std::int32_t height, const ObjectModels& models)
+    std::vector<save::PlacedObject> structure_objects(const save::Structure& structure, save::Tile at, ModelTurn turn, std::int32_t height, const object::ObjectModels& models)
     {
         std::vector<save::PlacedObject> out;
         out.reserve(structure.pieces.size());
@@ -152,7 +152,7 @@ namespace rct3::park
         return out;
     }
 
-    StructureProblem structure_problem(const save::Structure& structure, save::Tile at, ModelTurn turn, std::span<const save::PlacedObject> placed, const ObjectModels& models, const path::SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    StructureProblem structure_problem(const save::Structure& structure, save::Tile at, ModelTurn turn, std::span<const save::PlacedObject> placed, const object::ObjectModels& models, const path::SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
     {
         for (std::int32_t row = 0; row < structure.rows; ++row)
             for (std::int32_t col = 0; col < structure.cols; ++col)

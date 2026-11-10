@@ -17,7 +17,7 @@
 #pragma once
 
 #include "park/footpath_builder.hpp"
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "park/turns.hpp"
 #include "save/model/world.hpp"
 
@@ -79,7 +79,7 @@ namespace rct3::park::path
     [[nodiscard]] bool blocks_paths(std::uint32_t category) noexcept;
 
     /// The solid squares of `objects` that are shown and block paths, by the tile under each.
-    [[nodiscard]] SolidTiles solid_tiles(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
+    [[nodiscard]] SolidTiles solid_tiles(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid);
 
     /// Adds to `solids` the deck of each of `paths`, as thin as a sheet at its tile's lowest edge, for what passes
     /// under paths rather than along them, as boats do.
@@ -112,6 +112,6 @@ namespace rct3::park::path
     /// that may not: one in the room `solids` take or a path's way, or on a tile the park does not own. Land bought
     /// only to build over will do for what stands wholly above its ground. Nothing when every one may, so the group
     /// is placed whole or not at all.
-    [[nodiscard]] std::optional<Refused> first_refused(std::span<const save::PlacedObject> items, const ObjectModels& models, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    [[nodiscard]] std::optional<Refused> first_refused(std::span<const save::PlacedObject> items, const object::ObjectModels& models, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
 
 } // namespace rct3::park::path

@@ -11,7 +11,7 @@
 #pragma once
 
 #include "park/ground/queues.hpp"
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "save/model/world.hpp"
 
 #include <span>
@@ -32,7 +32,7 @@ namespace rct3::park
     struct QueueFences
     {
         std::vector<save::PlacedObject> pieces;
-        Leans leans; ///< Of the pieces that do not stand level
+        object::Leans leans; ///< Of the pieces that do not stand level
     };
 
     /// Placed fence pieces along the queues among `paths`. New objects take ids after `last_id`.

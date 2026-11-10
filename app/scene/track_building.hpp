@@ -25,8 +25,8 @@
 #include "park/build_catalogue.hpp"
 #include "park/design_placement.hpp"
 #include "park/moving_meshes.hpp"
-#include "park/object_mesh.hpp"
-#include "park/object_models.hpp"
+#include "park/object/mesh.hpp"
+#include "park/object/models.hpp"
 #include "park/path/clearance.hpp"
 #include "park/ride/cars.hpp"
 #include "park/track/choice.hpp"
@@ -71,7 +71,7 @@ namespace rct3::scene
     struct TrackModels
     {
         std::unique_ptr<park::AssetIndex> index;
-        std::unique_ptr<park::ModelLoader> loader;
+        std::unique_ptr<park::object::ModelLoader> loader;
         std::set<std::string, std::less<>> missing;      ///< Symbols looked for and not found, so not looked for again
         std::set<std::string, std::less<>> folders_read; ///< Folders every overlay below which was added
 
@@ -124,7 +124,7 @@ namespace rct3::scene
         bool selected_back = false;
         /// On a ride of two tracks side by side, which open end is built on and with which pieces.
         park::track::SplitState split = park::track::SplitState::None;
-        park::ObjectMesh ghost_mesh;
+        park::object::ObjectMesh ghost_mesh;
         bool off_water = false;      ///< The ghost's piece stands only on water, and some of it is on dry land
         bool clashes = false;        ///< The ghost's piece (or any of a design) takes room a solid item or a path takes, or is off owned land
         bool unowned = false;        ///< Of those, it stands off land the park owns
@@ -294,7 +294,7 @@ namespace rct3::scene
     void wait_for_build(ParkScene& scene);
 
     /// Paints and uploads the pictures of `ghost` the scene does not have yet.
-    void ghost_textures(render::Device& device, ParkScene& scene, const park::ObjectMesh& ghost);
+    void ghost_textures(render::Device& device, ParkScene& scene, const park::object::ObjectMesh& ghost);
 
     /// Ghosts' tints: bluish where the piece can be built, red where it cannot.
     inline constexpr glm::vec4 kGhostTint { 0.45f, 0.75f, 1.0f, 0.7f };
@@ -305,6 +305,6 @@ namespace rct3::scene
     [[nodiscard]] render::SceneLight ghost_light(render::SceneLight light, float clock);
     /// Draws `mesh` see-through with `transform` and `light`; `solid`, as a built object is drawn instead, for a
     /// picture of it alone.
-    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light, bool solid = false);
+    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::object::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light, bool solid = false);
 
 } // namespace rct3::scene

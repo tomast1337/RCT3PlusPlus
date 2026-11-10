@@ -5,7 +5,7 @@
 // the mesh again. Every object is drawn at its finest level.
 #pragma once
 
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 
 #include <array>
 #include <cstdint>
@@ -26,7 +26,7 @@ namespace rct3::park
 
     struct MovingMeshes
     {
-        ObjectMesh mesh;                 ///< All the objects where they were last put
+        object::ObjectMesh mesh;         ///< All the objects where they were last put
         std::vector<GroundVertex> own;   ///< The vertices of `mesh` in their objects' own spaces
         std::vector<std::uint32_t> ends; ///< By object: one past its last vertex in `mesh`
         std::vector<glm::mat4> places;   ///< By object, or by bone when skinned: where it was last put
@@ -37,14 +37,14 @@ namespace rct3::park
 
     /// The objects' shapes, each standing at the origin until moved. The joints of objects on arms (see
     /// ObjectModel::arm_joints) come after all the objects, each object's from the base out, to be moved apart.
-    [[nodiscard]] MovingMeshes moving_meshes(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid);
+    [[nodiscard]] MovingMeshes moving_meshes(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid);
 
     /// Shapes already built, each in its own space, as one mesh: batches drawn alike are gathered.
-    [[nodiscard]] MovingMeshes gathered_meshes(std::span<const ObjectMesh> alone);
+    [[nodiscard]] MovingMeshes gathered_meshes(std::span<const object::ObjectMesh> alone);
 
     /// The parts of `object` (whose model `model` has a rig) at its rig's level, in the model's own space, each
     /// vertex skinned to the bones that move it; with the rig's bones, one per place to be given.
-    [[nodiscard]] std::pair<MovingMeshes, std::vector<std::int32_t>> boned_meshes(const save::PlacedObject& object, const ObjectModel& model, const save::TerrainGrid& grid);
+    [[nodiscard]] std::pair<MovingMeshes, std::vector<std::int32_t>> boned_meshes(const save::PlacedObject& object, const object::ObjectModel& model, const save::TerrainGrid& grid);
 
     /// How each of an arm's joints, at rest at `joints` (model space, from the base out), moves what it carries
     /// once turned by `degrees`: model space, each joint carried by those before it. The first turns about its

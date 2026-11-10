@@ -9,8 +9,8 @@
 // the dome reads one column of it, the one for the time of day.
 #pragma once
 
-#include "park/object_mesh.hpp"
-#include "park/object_models.hpp"
+#include "park/object/mesh.hpp"
+#include "park/object/models.hpp"
 
 #include <string>
 #include <vector>
@@ -21,7 +21,7 @@ namespace rct3::park
     struct SkyShape
     {
         std::string texture; ///< Key of the picture it is drawn with
-        std::vector<ModelVertex> vertices;
+        std::vector<object::ModelVertex> vertices;
         std::vector<std::uint32_t> indices;
     };
 
@@ -57,6 +57,6 @@ namespace rct3::park
     /// The sky seen from `view`, in drawing order: the coloured dome (opaque), the dome again in the fading
     /// look while one fades out, then stars and milky way when it is night, then both cloud layers (blended).
     /// Shapes without vertices are left out.
-    [[nodiscard]] ObjectMesh sky_mesh(const SkyModels& sky, const SkyView& view);
+    [[nodiscard]] object::ObjectMesh sky_mesh(const SkyModels& sky, const SkyView& view);
 
 } // namespace rct3::park

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 
 #include <array>
 #include <cmath>
 
-namespace rct3::park
+namespace rct3::park::object
 {
 
     glm::vec2 turned_x(ModelTurn turn)
@@ -141,4 +141,4 @@ namespace rct3::park
         return m;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::object

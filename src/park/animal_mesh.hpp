@@ -5,7 +5,7 @@
 #pragma once
 
 #include "park/animal_models.hpp"
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 
 #include <cstddef>
 #include <map>
@@ -31,7 +31,7 @@ namespace rct3::park
     {
         std::vector<GroundVertex> vertices { };
         std::vector<std::uint32_t> indices { };
-        PartBlend blend = PartBlend::Opaque;
+        object::PartBlend blend = object::PartBlend::Opaque;
         bool one_sided = true;
     };
     /// Those of every picture, by picture. Kept by a caller that builds mesh after mesh, so the lists' memory
@@ -40,6 +40,6 @@ namespace rct3::park
 
     /// The mesh of `animals`, gathered in `runs`, which is emptied first. Batches come opaque first, then
     /// cut-out, then see-through.
-    [[nodiscard]] ObjectMesh animal_mesh(std::span<const PlacedAnimal> animals, AnimalRuns& runs);
+    [[nodiscard]] object::ObjectMesh animal_mesh(std::span<const PlacedAnimal> animals, AnimalRuns& runs);
 
 } // namespace rct3::park

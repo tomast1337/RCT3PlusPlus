@@ -38,22 +38,22 @@ namespace
     }
 
     /// Models for the invented items: a solid tree, a bench, and a wall two tiles long.
-    ObjectModels models()
+    object::ObjectModels models()
     {
-        ObjectModels m;
-        ObjectModel tree;
+        object::ObjectModels m;
+        object::ObjectModel tree;
         tree.category = std::to_underlying(ItemCategory::Tree);
         tree.ground_height = false;
         tree.solid = { std::array<std::int32_t, 2> { 0, 4 } };
         tree.levels = { { 100, { }, { } } };
-        m.emplace(model_key(item("tree", 0, 0, 0)), tree);
-        ObjectModel bench;
+        m.emplace(object::model_key(item("tree", 0, 0, 0)), tree);
+        object::ObjectModel bench;
         bench.category = std::to_underlying(ItemCategory::Bench);
-        m.emplace(model_key(item("bench", 0, 0, 0)), bench);
-        ObjectModel wall;
+        m.emplace(object::model_key(item("bench", 0, 0, 0)), bench);
+        object::ObjectModel wall;
         wall.category = std::to_underlying(ItemCategory::Wall);
         wall.squares = { 2, 1 };
-        m.emplace(model_key(item("wall", 0, 0, 0)), wall);
+        m.emplace(object::model_key(item("wall", 0, 0, 0)), wall);
         return m;
     }
 } // namespace
@@ -73,7 +73,7 @@ TEST_CASE("a structure turns about its middle tile, and four turns bring every t
 TEST_CASE("picking takes the scenery on the marked tiles, its box round them, its heights from the lowest")
 {
     const save::TerrainGrid g = owned_grid(8, 8);
-    const ObjectModels m = models();
+    const object::ObjectModels m = models();
     std::vector<save::PlacedObject> objects { item("tree", 2, 2, 5), item("bench", 2, 2, 5), item("tree", 3, 3, 7), item("tree", 6, 6, 0) };
     objects[0].rotation = 2;
     objects[0].quadrant = 3;
@@ -96,7 +96,7 @@ TEST_CASE("picking takes the scenery on the marked tiles, its box round them, it
 
 TEST_CASE("built turned, each item keeps its tiles, quarter and facing in the box, above the ground given")
 {
-    const ObjectModels m = models();
+    const object::ObjectModels m = models();
     const save::Structure s {
         .cols = 2,
         .rows = 1,
@@ -132,7 +132,7 @@ TEST_CASE("built turned, each item keeps its tiles, quarter and facing in the bo
 TEST_CASE("a structure fits on the park's own land, clear of solid items and paths")
 {
     save::TerrainGrid g = owned_grid(8, 8);
-    const ObjectModels m = models();
+    const object::ObjectModels m = models();
     const save::Structure s { .cols = 1, .rows = 1, .tiles = { 1 }, .pieces = { { .symbol = "tree", .overlay = "Scenery/Invented" } } };
     const auto at = [&](save::Tile t) { return structure_objects(s, t, ModelTurn { 0 }, 0, m); };
     CHECK(structure_problem(s, { 3, 3 }, { }, at({ 3, 3 }), m, { }, { }, g) == StructureProblem::None);

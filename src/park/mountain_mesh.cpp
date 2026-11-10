@@ -28,21 +28,21 @@ namespace rct3::park
         return { { (grid.world_x(0) + grid.world_x(grid.width)) / 2, -drop, (grid.world_z(0) + grid.world_z(grid.height)) / 2 }, kMountainScale };
     }
 
-    ObjectMesh mountain_mesh(const MountainShapes& shapes, const MountainPlace& place)
+    object::ObjectMesh mountain_mesh(const MountainShapes& shapes, const MountainPlace& place)
     {
-        ObjectMesh mesh;
+        object::ObjectMesh mesh;
         const float scale = place.scale;
         for (const SkyShape& shape : shapes)
         {
             if (shape.vertices.empty() || shape.indices.empty())
                 continue;
             const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
-            for (const ModelVertex& v : shape.vertices)
+            for (const object::ModelVertex& v : shape.vertices)
                 mesh.vertices.push_back({ place.centre + v.position * scale, glm::vec4(1.0f), v.uv });
-            ObjectBatch batch;
+            object::ObjectBatch batch;
             batch.texture = shape.texture;
             batch.picture = shape.texture;
-            batch.blend = PartBlend::Cutout;
+            batch.blend = object::PartBlend::Cutout;
             batch.first = static_cast<std::uint32_t>(mesh.indices.size());
             for (const std::uint32_t i : shape.indices)
             {

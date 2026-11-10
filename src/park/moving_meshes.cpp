@@ -14,27 +14,27 @@
 namespace rct3::park
 {
 
-    MovingMeshes moving_meshes(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
+    MovingMeshes moving_meshes(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid)
     {
         // Each object alone at the origin, and the joints of those on arms after them.
-        std::vector<ObjectMesh> alone;
-        std::vector<ObjectMesh> joints;
+        std::vector<object::ObjectMesh> alone;
+        std::vector<object::ObjectMesh> joints;
         alone.reserve(objects.size());
         for (const save::PlacedObject& o : objects)
         {
-            const auto model = models.find(model_ref(o));
+            const auto model = models.find(object::model_ref(o));
             if (model == models.end() || model->second.arm_joints.empty())
             {
-                alone.push_back(object_mesh(std::span(&o, 1), models, grid, { }, { }, { }, { { o.id, glm::mat4(1.0f) } }));
+                alone.push_back(object::object_mesh(std::span(&o, 1), models, grid, { }, { }, { }, { { o.id, glm::mat4(1.0f) } }));
                 continue;
             }
             for (std::int32_t joint = -1; joint < std::ssize(model->second.arm_joints); ++joint)
             {
-                ObjectModels one;
-                ObjectModel& piece = one[model->first] = model->second;
-                for (ModelLevel& level : piece.levels)
-                    std::erase_if(level.parts, [&](const ModelPart& part) { return part.bone != joint; });
-                (joint < 0 ? alone : joints).push_back(object_mesh(std::span(&o, 1), one, grid, { }, { }, { }, { { o.id, glm::mat4(1.0f) } }));
+                object::ObjectModels one;
+                object::ObjectModel& piece = one[model->first] = model->second;
+                for (object::ModelLevel& level : piece.levels)
+                    std::erase_if(level.parts, [&](const object::ModelPart& part) { return part.bone != joint; });
+                (joint < 0 ? alone : joints).push_back(object::object_mesh(std::span(&o, 1), one, grid, { }, { }, { }, { { o.id, glm::mat4(1.0f) } }));
             }
         }
         alone.insert(alone.end(), std::make_move_iterator(joints.begin()), std::make_move_iterator(joints.end()));
@@ -55,21 +55,21 @@ namespace rct3::park
         return moves;
     }
 
-    std::pair<MovingMeshes, std::vector<std::int32_t>> boned_meshes(const save::PlacedObject& object, const ObjectModel& model, const save::TerrainGrid& grid)
+    std::pair<MovingMeshes, std::vector<std::int32_t>> boned_meshes(const save::PlacedObject& object, const object::ObjectModel& model, const save::TerrainGrid& grid)
     {
-        std::vector<ObjectMesh> alone;
+        std::vector<object::ObjectMesh> alone;
         std::vector<VertexSkin> skins;
         if (model.rig && model.rig_level < model.levels.size())
-            for (const ModelPart& part : model.levels[model.rig_level].parts)
+            for (const object::ModelPart& part : model.levels[model.rig_level].parts)
             {
-                ObjectModels one;
-                ObjectModel& piece = one[model_key(object)];
+                object::ObjectModels one;
+                object::ObjectModel& piece = one[object::model_key(object)];
                 piece.positioning = model.positioning;
-                piece.levels = { ModelLevel { .distance = 0, .parts = { part }, .billboard = std::nullopt } };
-                alone.push_back(object_mesh(std::span(&object, 1), one, grid, { }, { }, { }, { { object.id, glm::mat4(1.0f) } }));
+                piece.levels = { object::ModelLevel { .distance = 0, .parts = { part }, .billboard = std::nullopt } };
+                alone.push_back(object::object_mesh(std::span(&object, 1), one, grid, { }, { }, { }, { { object.id, glm::mat4(1.0f) } }));
                 // One part makes one run, so the piece keeps the part's vertex order, unless it was left out.
                 const std::size_t before = skins.size();
-                for (const ModelVertex& v : part.vertices)
+                for (const object::ModelVertex& v : part.vertices)
                     skins.push_back({ v.bones, v.weights });
                 skins.resize(before + alone.back().vertices.size());
             }
@@ -81,22 +81,22 @@ namespace rct3::park
         return { std::move(out), std::move(bones) };
     }
 
-    MovingMeshes gathered_meshes(std::span<const ObjectMesh> alone)
+    MovingMeshes gathered_meshes(std::span<const object::ObjectMesh> alone)
     {
         MovingMeshes out;
-        for (const ObjectMesh& one : alone)
+        for (const object::ObjectMesh& one : alone)
         {
             out.own.insert(out.own.end(), one.vertices.begin(), one.vertices.end());
             out.ends.push_back(static_cast<std::uint32_t>(out.own.size()));
             out.mesh.placed += one.placed;
             out.mesh.missing += one.missing;
         }
-        std::map<std::tuple<std::string, PartBlend, bool>, std::size_t> batch_of;
+        std::map<std::tuple<std::string, object::PartBlend, bool>, std::size_t> batch_of;
         std::vector<std::vector<std::uint32_t>> indices;
         for (std::size_t i = 0; i < alone.size(); ++i)
         {
             const std::uint32_t base = i == 0 ? 0 : out.ends[i - 1];
-            for (const ObjectBatch& batch : alone[i].batches)
+            for (const object::ObjectBatch& batch : alone[i].batches)
             {
                 const auto [at, added] = batch_of.try_emplace({ batch.texture, batch.blend, batch.one_sided }, out.mesh.batches.size());
                 if (added)

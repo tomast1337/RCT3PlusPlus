@@ -15,8 +15,8 @@
 // the land, as other scenery does.
 #pragma once
 
-#include "park/object_mesh.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/mesh.hpp"
+#include "park/object/placement.hpp"
 #include "park/turns.hpp"
 #include "save/model/world.hpp"
 
@@ -29,9 +29,9 @@ namespace rct3::park::path
 {
 
     /// Whether an item positioned `positioning` stands on a path tile.
-    [[nodiscard]] constexpr bool on_paths(Positioning positioning) noexcept
+    [[nodiscard]] constexpr bool on_paths(object::Positioning positioning) noexcept
     {
-        using enum Positioning;
+        using enum object::Positioning;
         return positioning == PathSide || positioning == PathSideOuter || positioning == PathCentre || positioning == PathSideJoin;
     }
 
@@ -47,10 +47,10 @@ namespace rct3::park::path
     /// Where an item positioned `positioning` goes for the pointer at world point `hit`: on the path tile under it
     /// whose height is nearest, against the side chosen as above, or in the middle turned `turn`. Nothing off the
     /// paths. `rules` are the item's ObjectModel::path_rules.
-    [[nodiscard]] std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, Positioning positioning, ModelTurn turn, PathRules rules = { });
+    [[nodiscard]] std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, object::Positioning positioning, ModelTurn turn, object::PathRules rules = { });
 
     /// Whether another shown item of `objects` already stands where `item`, positioned `positioning`, would: in
     /// the middle of its tile, or against the same side, at about its height.
-    [[nodiscard]] bool furniture_taken(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::PlacedObject& item, Positioning positioning);
+    [[nodiscard]] bool furniture_taken(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::PlacedObject& item, object::Positioning positioning);
 
 } // namespace rct3::park::path

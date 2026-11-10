@@ -29,7 +29,7 @@ TEST_CASE("a piece's water spans its two edges and its picture repeats a whole n
     const auto part = flow_strip(straight({ 0, 1, -0.5f }, 9, 2), straight({ 0, 1, 0.5f }, 9, 2), straight({ 0, 0, 0 }, 9, 1), "flow");
     REQUIRE(part.has_value());
     CHECK(part->texture == "flow");
-    CHECK(part->blend == PartBlend::Blended);
+    CHECK(part->blend == object::PartBlend::Blended);
     REQUIRE(part->vertices.size() >= 4);
     CHECK(part->indices.size() == (part->vertices.size() - 2) * 3);
     CHECK(part->vertices.front().position.z == doctest::Approx(-0.5f));
@@ -38,7 +38,7 @@ TEST_CASE("a piece's water spans its two edges and its picture repeats a whole n
     // 9 units at about 4 a repeat: 2 whole repeats.
     CHECK(part->vertices.back().uv.y == doctest::Approx(2));
     CHECK(part->vertices.back().uv.x == 1);
-    for (const ModelVertex& v : part->vertices)
+    for (const object::ModelVertex& v : part->vertices)
         CHECK(v.normal.y == doctest::Approx(1));
     // How far along each vertex is, by the edges' nodes: 0 at the start, 1 at the end, the last of 2 parts a half.
     REQUIRE(part->flow.size() == part->vertices.size());
@@ -77,23 +77,23 @@ TEST_CASE("flowing water slides its picture on along v, and back along it on pie
 TEST_CASE("a piece's own water sheet flows as a strip does, its picture turned round when it runs from the far end")
 {
     // A sheet whose picture runs along v from x = -4 to 0, on rails running from 0 to -4.
-    ModelPart sheet;
+    object::ModelPart sheet;
     sheet.texture = "water";
-    sheet.blend = PartBlend::Cutout;
+    sheet.blend = object::PartBlend::Cutout;
     for (const float x : { -4.0f, 0.0f })
         for (const float z : { -1.0f, 1.0f })
             sheet.vertices.push_back({ .position = { x, 0.5f, z }, .uv = { z > 0 ? 1.0f : 0.0f, x == 0 ? 1.0f : 0.0f } });
-    ModelPart turned = sheet;
+    object::ModelPart turned = sheet;
     flowing_sheet(turned, straight({ 0, 0, 0 }, 4, 1), "flow");
     CHECK(turned.texture == "flow");
-    CHECK(turned.blend == PartBlend::Blended);
+    CHECK(turned.blend == object::PartBlend::Blended);
     CHECK(turned.chain);
     CHECK(turned.vertices[0].uv.y == doctest::Approx(1));
     CHECK(turned.vertices[2].uv.y == doctest::Approx(0));
     CHECK(turned.vertices[1].uv.x == 1);
 
     // Rails running the same way as the picture leave it as it is.
-    ModelPart kept = sheet;
+    object::ModelPart kept = sheet;
     flowing_sheet(kept, straight({ -4, 0, 0 }, -4, 1), "flow");
     CHECK(kept.vertices[0].uv.y == 0);
     CHECK(kept.vertices[2].uv.y == 1);

@@ -9,7 +9,7 @@
 #pragma once
 
 #include "math/texture_shift.hpp"
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "save/model/world.hpp"
 
 #include <array>
@@ -56,10 +56,10 @@ namespace rct3::park
 
     /// The spray of `falls`: kWaterfallSpray along the line where each one's water lands, one for every few units
     /// of its width, rising; `object` is the fall's index.
-    [[nodiscard]] std::vector<PlacedEffect> waterfall_spray(std::span<const save::Waterfall> falls);
+    [[nodiscard]] std::vector<object::PlacedEffect> waterfall_spray(std::span<const save::Waterfall> falls);
 
     /// Builds the water of `falls` into `mesh`, its pictures scrolled for `seconds`; one see-through batch per
     /// picture of kWaterfallPictures that some fall uses. Keeps `mesh`'s memory.
-    void waterfall_mesh(std::span<const save::Waterfall> falls, float seconds, ObjectMesh& mesh);
+    void waterfall_mesh(std::span<const save::Waterfall> falls, float seconds, object::ObjectMesh& mesh);
 
 } // namespace rct3::park

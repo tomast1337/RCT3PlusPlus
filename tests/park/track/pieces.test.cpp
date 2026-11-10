@@ -4,7 +4,7 @@
 #include "../../ovl/builder.hpp"
 #include "../../ovl/record_file.hpp"
 #include "ovl/spline.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -249,7 +249,7 @@ TEST_CASE("a saved layout moved and turned keeps each piece where the one before
     {
         CAPTURE(turns);
         const save::PlacedObject to = placed(5, 4, turns, 7);
-        const save::PlacedObject moved = moved_with(second->object, r.squares, first, { 1, 1 }, to);
+        const save::PlacedObject moved = object::moved_with(second->object, r.squares, first, { 1, 1 }, to);
         const auto laid = place_after(tip_of(to, s, false, g), longer, false, g);
         REQUIRE(laid);
         CHECK(moved.col == laid->object.col);
@@ -257,7 +257,7 @@ TEST_CASE("a saved layout moved and turned keeps each piece where the one before
         CHECK(moved.rotation == laid->object.rotation);
         CHECK(moved.base_height == laid->object.base_height);
         // The piece after it, measured from the moved one rather than the first.
-        const save::PlacedObject next = moved_with(third->object, { 1, 1 }, second->object, r.squares, moved);
+        const save::PlacedObject next = object::moved_with(third->object, { 1, 1 }, second->object, r.squares, moved);
         const auto after = place_after(laid->next, s, false, g);
         REQUIRE(after);
         CHECK(next.col == after->object.col);
@@ -361,7 +361,7 @@ TEST_CASE("a track set's pieces are also looked for in the files beside it whose
     write("Set_More.common.ovl", "tks");
     write("Bend_data.common.ovl", "shs");
     write("Set_More.unique.ovl", "tks");
-    std::ofstream(dir / "Broken.common.ovl") << "not an overlay";
+    std::ofstream(dir / "object::Broken.common.ovl") << "not an overlay";
     CHECK(piece_files_beside(dir / "Set.common.ovl") == std::vector { dir / "Set_More.common.ovl" });
     fs::remove_all(dir);
 }

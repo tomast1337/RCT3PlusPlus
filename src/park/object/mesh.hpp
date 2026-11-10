@@ -15,7 +15,7 @@
 #pragma once
 
 #include "park/lamp_grid.hpp"
-#include "park/object_models.hpp"
+#include "park/object/models.hpp"
 #include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
 
@@ -27,7 +27,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::object
 {
 
     /// A run of `count` indices from `first` painted with one picture in one set of colours, blended one way.
@@ -205,4 +205,4 @@ namespace rct3::park
     /// The painted pictures `batches` draw with, by their names. Batches whose picture is missing get none.
     [[nodiscard]] std::map<std::string, ovl::RgbaImage, std::less<>> paint_batches(std::span<const ObjectBatch> batches, const ModelPictures& pictures);
 
-} // namespace rct3::park
+} // namespace rct3::park::object

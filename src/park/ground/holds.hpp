@@ -13,7 +13,7 @@
 // the rest of the stroke still moves.
 #pragma once
 
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "park/path/clearance.hpp"
 #include "save/model/world.hpp"
 
@@ -41,7 +41,7 @@ namespace rct3::park::ground
         std::vector<std::size_t> followers;             ///< Items that stand on the ground and follow it, of the objects
     };
 
-    [[nodiscard]] GroundHolds ground_holds(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    [[nodiscard]] GroundHolds ground_holds(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
 
     /// Whether the ground of `tile` may not go from corners `was` to `now`.
     [[nodiscard]] bool refuses(const GroundHolds& holds, save::Tile tile, const std::array<float, 4>& was, const std::array<float, 4>& now);
@@ -75,6 +75,6 @@ namespace rct3::park::ground
     void make_cuts(save::TerrainGrid& grid, const GroundCuts& cuts);
 
     /// Seats the followers with a tile from `first` to `last` under them on the ground again; whether there were any.
-    bool seat_followers(std::span<save::PlacedObject> objects, const GroundHolds& holds, const ObjectModels& models, const save::TerrainGrid& grid, save::Tile first, save::Tile last);
+    bool seat_followers(std::span<save::PlacedObject> objects, const GroundHolds& holds, const object::ObjectModels& models, const save::TerrainGrid& grid, save::Tile first, save::Tile last);
 
 } // namespace rct3::park::ground

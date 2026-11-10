@@ -24,7 +24,7 @@ TEST_CASE("nobody to draw makes an empty mesh")
     const std::array<std::string_view, 1> folders { "Characters" };
     const park::PersonLibrary library("/nonexistent", folders);
     park::PersonRuns runs;
-    const park::ObjectMesh mesh = park::person_mesh(library, { }, runs);
+    const park::object::ObjectMesh mesh = park::person_mesh(library, { }, runs);
     CHECK(mesh.vertices.empty());
     CHECK(mesh.batches.empty());
 }

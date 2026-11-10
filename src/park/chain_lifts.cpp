@@ -10,18 +10,18 @@
 namespace rct3::park
 {
 
-    Chains chain_runs(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const ObjectModels& models)
+    object::Chains chain_runs(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const object::ObjectModels& models)
     {
-        std::map<std::uint64_t, const ObjectModel*> by_id;
+        std::map<std::uint64_t, const object::ObjectModel*> by_id;
         for (const save::Ride& ride : rides.rides)
             if (ride.track)
                 for (const save::TrackPiece& piece : ride.track->pieces)
                     by_id.emplace(piece.scenery, nullptr);
         for (const save::PlacedObject& o : objects)
             if (const auto at = by_id.find(o.id); at != by_id.end())
-                if (const auto model = models.find(model_ref(o)); model != models.end())
+                if (const auto model = models.find(object::model_ref(o)); model != models.end())
                     at->second = &model->second;
-        Chains runs;
+        object::Chains runs;
         for (std::size_t r = 0; r < rides.rides.size(); ++r)
         {
             if (!rides.rides[r].track)

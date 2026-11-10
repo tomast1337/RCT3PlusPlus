@@ -14,7 +14,7 @@
 #pragma once
 
 #include "park/moving_meshes.hpp"
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "park/person_models.hpp"
 
 #include <array>
@@ -43,14 +43,14 @@ namespace rct3::park
     struct PlacedPerson
     {
         PersonLook look { };
-        std::size_t level = 0;             ///< Of detail, 0 the finest
-        std::int32_t motion = 0;           ///< By number (see person_motions.hpp)
-        float time = 0;                    ///< Seconds into the motion
-        glm::mat4 world { 1.0f };          ///< Model to park
-        const ObjectModel* held = nullptr; ///< Held in the left hand, drawn at its finest level in its own picture;
-                                           ///< with no body, lying on its own at `world` (litter on a path)
-        const ObjectModel* tool = nullptr; ///< Held in the hand as its socket turns, drawn as `held` is
-        float head_turn = 0;               ///< Radians the head turns about the upright from its motion's pose, to the left
+        std::size_t level = 0;                     ///< Of detail, 0 the finest
+        std::int32_t motion = 0;                   ///< By number (see person_motions.hpp)
+        float time = 0;                            ///< Seconds into the motion
+        glm::mat4 world { 1.0f };                  ///< Model to park
+        const object::ObjectModel* held = nullptr; ///< Held in the left hand, drawn at its finest level in its own picture;
+                                                   ///< with no body, lying on its own at `world` (litter on a path)
+        const object::ObjectModel* tool = nullptr; ///< Held in the hand as its socket turns, drawn as `held` is
+        float head_turn = 0;                       ///< Radians the head turns about the upright from its motion's pose, to the left
     };
 
     /// How far a person's texture coordinates move to reach cell `colour`.
@@ -87,7 +87,7 @@ namespace rct3::park
     using PersonRuns = std::map<std::string, PersonRun, std::less<>>;
 
     /// The mesh of `people`, gathered in `runs`, which is emptied first.
-    [[nodiscard]] ObjectMesh person_mesh(const PersonLibrary& library, std::span<const PlacedPerson> people, PersonRuns& runs);
+    [[nodiscard]] object::ObjectMesh person_mesh(const PersonLibrary& library, std::span<const PlacedPerson> people, PersonRuns& runs);
 
     /// Groups of people that move together, such as the riders of each car: each group one piece of the
     /// result, in the group's own space, and triangles of the same picture drawn together whatever their

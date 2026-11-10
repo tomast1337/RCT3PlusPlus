@@ -184,16 +184,16 @@ namespace rct3::park
                 add_head(runs, library.head(*head), person, level);
         }
 
-        void add_held(Runs& runs, const ObjectModel& held, const glm::mat4& place)
+        void add_held(Runs& runs, const object::ObjectModel& held, const glm::mat4& place)
         {
             if (held.levels.empty())
                 return;
             const glm::mat3 turn { place };
-            for (const ModelPart& part : held.levels.front().parts)
+            for (const object::ModelPart& part : held.levels.front().parts)
             {
                 Run& run = runs[painted_name(part.texture, part.slots, { })];
                 const auto base = static_cast<std::uint32_t>(run.vertices.size());
-                for (const ModelVertex& v : part.vertices)
+                for (const object::ModelVertex& v : part.vertices)
                     run.vertices.push_back({ glm::vec3(place * glm::vec4(v.position, 1.0f)), glm::vec4(1.0f), v.uv, glm::normalize(turn * v.normal) });
                 for (const std::uint32_t i : part.indices)
                     run.indices.push_back(base + (i < part.vertices.size() ? i : 0));
@@ -341,16 +341,16 @@ namespace rct3::park
         }
     } // namespace
 
-    ObjectMesh person_mesh(const PersonLibrary& library, std::span<const PlacedPerson> people, PersonRuns& runs)
+    object::ObjectMesh person_mesh(const PersonLibrary& library, std::span<const PlacedPerson> people, PersonRuns& runs)
     {
         gather_people(runs, library, people);
-        ObjectMesh mesh { .placed = people.size() };
+        object::ObjectMesh mesh { .placed = people.size() };
         for (auto& [texture, run] : runs)
         {
             if (run.vertices.empty())
                 continue; // A picture only an earlier mesh had
             const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
-            mesh.batches.push_back({ texture, texture, { }, PartBlend::Opaque, static_cast<std::uint32_t>(mesh.indices.size()), static_cast<std::uint32_t>(run.indices.size()) });
+            mesh.batches.push_back({ texture, texture, { }, object::PartBlend::Opaque, static_cast<std::uint32_t>(mesh.indices.size()), static_cast<std::uint32_t>(run.indices.size()) });
             mesh.vertices.insert(mesh.vertices.end(), run.vertices.begin(), run.vertices.end());
             for (const std::uint32_t i : run.indices)
                 mesh.indices.push_back(base + i);
@@ -383,7 +383,7 @@ namespace rct3::park
         {
             if (run.indices.empty())
                 continue;
-            out.mesh.batches.push_back({ texture, texture, { }, PartBlend::Opaque, static_cast<std::uint32_t>(out.mesh.indices.size()), static_cast<std::uint32_t>(run.indices.size()) });
+            out.mesh.batches.push_back({ texture, texture, { }, object::PartBlend::Opaque, static_cast<std::uint32_t>(out.mesh.indices.size()), static_cast<std::uint32_t>(run.indices.size()) });
             out.mesh.indices.insert(out.mesh.indices.end(), run.indices.begin(), run.indices.end());
         }
         out.mesh.vertices = out.own;

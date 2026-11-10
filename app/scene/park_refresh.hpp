@@ -44,7 +44,7 @@ namespace rct3::scene
 
     /// The eyes of car `car`'s camera of kind `eye`, in its own space, when it has one; the nose camera only
     /// on the first car of its train.
-    [[nodiscard]] std::optional<glm::mat4> ride_eye(const ParkScene& scene, std::size_t car, park::RideEye eye);
+    [[nodiscard]] std::optional<glm::mat4> ride_eye(const ParkScene& scene, std::size_t car, park::object::RideEye eye);
 
     /// Where rider seat `at` of flat ride `ride` (of the park's rides), or with `fixed` its fixed camera `at`, is
     /// in the park now, as it is drawn; nothing when the ride has no such seat or camera.
@@ -64,9 +64,9 @@ namespace rct3::scene
     /// supports unless `supports`. Reads only what is set when the park loads besides its arguments, so it
     /// may run beside the frame.
     /// The fades of the park's flowing water (park/water/flow.hpp), pool slides told by their kind's rules.
-    [[nodiscard]] park::FlowFades flow_fades(const ParkScene& scene);
+    [[nodiscard]] park::object::FlowFades flow_fades(const ParkScene& scene);
 
-    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band, const park::LevelScales& scales, bool supports, const park::Broken& broken = { }, const park::Chains& chains = { }, const park::FlowFades& fades = { });
+    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::object::LevelPlan& shown, float band, const park::object::LevelScales& scales, bool supports, const park::object::Broken& broken = { }, const park::object::Chains& chains = { }, const park::object::FlowFades& fades = { });
 
     /// `vertices` with the bands of `bands`, for the crossing shaders.
     std::vector<CrossingVertex> crossing_vertices(std::span<const park::GroundVertex> vertices, std::span<const std::pair<glm::vec4, glm::vec2>> bands);

@@ -64,14 +64,14 @@ namespace rct3::park
             return s.lip + s.flow * (s.reach * along) - kUp * (s.drop * along * along);
         }
 
-        void quad(ObjectMesh& mesh, std::uint32_t a)
+        void quad(object::ObjectMesh& mesh, std::uint32_t a)
         {
             mesh.indices.insert(mesh.indices.end(), { a, a + 1, a + 2, a + 1, a + 3, a + 2 });
         }
 
         /// The sheet, or the streaks at its sides `gap` outside it, as rows from just behind the edge to where
         /// it lands.
-        void sheet(ObjectMesh& mesh, const Shape& s, float seconds, float gap, float across_repeats)
+        void sheet(object::ObjectMesh& mesh, const Shape& s, float seconds, float gap, float across_repeats)
         {
             const glm::vec3 half = s.across / 2.0f;
             float run = 0;
@@ -100,7 +100,7 @@ namespace rct3::park
 
         /// A flat patch from `corner` spanning `a` and `b`, cut in three along `a` (and along `b` when `fade_b`)
         /// so it fades out to nothing at those edges; `uv_of` gives each point's picture coordinates.
-        void grid(ObjectMesh& mesh, glm::vec3 corner, glm::vec3 a, glm::vec3 b, bool fade_b, glm::vec3 normal, auto&& uv_of)
+        void grid(object::ObjectMesh& mesh, glm::vec3 corner, glm::vec3 a, glm::vec3 b, bool fade_b, glm::vec3 normal, auto&& uv_of)
         {
             constexpr std::array<float, 4> kCuts { 0.0f, kFade, 1.0f - kFade, 1.0f };
             constexpr std::array<float, 2> kEnds { 0.0f, 1.0f };
@@ -134,9 +134,9 @@ namespace rct3::park
         return point(shape_of(fall), along);
     }
 
-    std::vector<PlacedEffect> waterfall_spray(std::span<const save::Waterfall> falls)
+    std::vector<object::PlacedEffect> waterfall_spray(std::span<const save::Waterfall> falls)
     {
-        std::vector<PlacedEffect> sprays;
+        std::vector<object::PlacedEffect> sprays;
         for (std::size_t i = 0; i < falls.size(); ++i)
         {
             const Shape s = shape_of(falls[i]);
@@ -148,7 +148,7 @@ namespace rct3::park
         return sprays;
     }
 
-    void waterfall_mesh(std::span<const save::Waterfall> falls, float seconds, ObjectMesh& mesh)
+    void waterfall_mesh(std::span<const save::Waterfall> falls, float seconds, object::ObjectMesh& mesh)
     {
         mesh.vertices.clear();
         mesh.indices.clear();
@@ -203,10 +203,10 @@ namespace rct3::park
                 continue;
             if (batches == mesh.batches.size())
                 mesh.batches.emplace_back();
-            ObjectBatch& batch = mesh.batches[batches++];
+            object::ObjectBatch& batch = mesh.batches[batches++];
             batch.texture = kWaterfallPictures[picture].key;
             batch.picture = kWaterfallPictures[picture].key;
-            batch.blend = PartBlend::Blended;
+            batch.blend = object::PartBlend::Blended;
             batch.first = first;
             batch.count = count;
         }

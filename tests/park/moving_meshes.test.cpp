@@ -8,9 +8,9 @@ using namespace rct3::park;
 
 namespace
 {
-    ModelPart triangle(std::string texture)
+    object::ModelPart triangle(std::string texture)
     {
-        ModelPart p;
+        object::ModelPart p;
         p.texture = std::move(texture);
         p.vertices = { { { 0, 0, 0 }, { 0, 1, 0 }, { 0, 0 } }, { { 1, 0, 0 }, { 0, 1, 0 }, { 1, 0 } }, { { 0, 0, 1 }, { 0, 1, 0 }, { 0, 1 } } };
         p.indices = { 0, 1, 2 };
@@ -30,8 +30,8 @@ namespace
 
 TEST_CASE("moving shapes are built once, drawn alike in one batch, and then only moved")
 {
-    ObjectModels models;
-    ObjectModel model;
+    object::ObjectModels models;
+    object::ObjectModel model;
     model.levels = { { 100, { triangle("paint") }, { } } };
     models.emplace("Rides/Rides|Car", model);
     const std::vector objects { car(1), car(2) };
@@ -54,10 +54,10 @@ TEST_CASE("moving shapes are built once, drawn alike in one batch, and then only
 
 TEST_CASE("a car on an arm has its joints' parts apart, after every car, and each joint turns what it carries")
 {
-    ObjectModels models;
-    ObjectModel model;
-    ModelPart body = triangle("paint");
-    ModelPart seat = triangle("paint");
+    object::ObjectModels models;
+    object::ObjectModel model;
+    object::ModelPart body = triangle("paint");
+    object::ModelPart seat = triangle("paint");
     seat.bone = 1;
     model.levels = { { 100, { body, seat }, { } } };
     model.arm_joints = { glm::mat4(1.0f), glm::translate(glm::mat4(1.0f), { 0, 2, 0 }) };
@@ -81,8 +81,8 @@ TEST_CASE("a car on an arm has its joints' parts apart, after every car, and eac
 
 TEST_CASE("a model moved by bones keeps its triangles whole, each corner following its own bones by weight")
 {
-    ObjectModel model;
-    ModelPart part = triangle("paint");
+    object::ObjectModel model;
+    object::ModelPart part = triangle("paint");
     part.vertices[0].bones = { 0, 1, 0, 0 }; // The second slot has no weight, so its bone means nothing
     part.vertices[0].weights = { 255, 0, 0, 0 };
     part.vertices[1].bones = { 1, 0, 0, 0 };

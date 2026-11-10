@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ride/fences.hpp"
 
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 
 #include <array>
 #include <optional>
@@ -67,7 +67,7 @@ namespace rct3::park::ride
 
         /// The panels round a flat ride's or a ride's base's footprint. Squares count along the model's own X and Z; `gaps` are the
         /// tiles a panel must not shut off.
-        void fence_footprint(Builder& out, const save::PlacementSpot& spot, const ObjectModel& item, std::array<std::optional<Tile>, 2> gaps)
+        void fence_footprint(Builder& out, const save::PlacementSpot& spot, const object::ObjectModel& item, std::array<std::optional<Tile>, 2> gaps)
         {
             const auto [xs, zs] = item.squares;
             const bool outline = !item.fence_outline.empty();
@@ -87,7 +87,7 @@ namespace rct3::park::ride
                 {
                     if (!inside(x, z))
                         continue;
-                    const Tile tile = square_tile(placed, item.squares, x, z);
+                    const Tile tile = object::square_tile(placed, item.squares, x, z);
 
                     // Each side of the square, as the step to the neighbouring square and the quarter turns from
                     // the model's turn to the edge's. A rectangle is fenced on its rim only (both sides of one a
@@ -103,7 +103,7 @@ namespace rct3::park::ride
                         if (inside(x + side.dx, z + side.dz))
                             continue;
                         const ModelTurn turn = ModelTurn::from(spot.direction).turned(side.turns);
-                        const Tile beyond = faced_side(turn).beyond(tile);
+                        const Tile beyond = object::faced_side(turn).beyond(tile);
                         if (beyond == gaps[0] || beyond == gaps[1])
                             continue;
                         out.add(tile, turn, spot.height);
@@ -146,14 +146,14 @@ namespace rct3::park::ride
         }
         if (ride.kind == save::RideKind::Flat && ride.base.spot)
         {
-            if (const ObjectModel* item = model_of(ride.base.spot->object); item && !item->water_only)
+            if (const object::ObjectModel* item = model_of(ride.base.spot->object); item && !item->water_only)
                 fence_footprint(out, *ride.base.spot, *item, gaps);
         }
         if (ride.track)
         {
             for (const save::TrackPiece& piece : ride.track->pieces)
             {
-                if (const ObjectModel* item = piece.scenery != 0 ? model_of(piece.scenery) : nullptr; item && item->fenced_round)
+                if (const object::ObjectModel* item = piece.scenery != 0 ? model_of(piece.scenery) : nullptr; item && item->fenced_round)
                     fence_footprint(out, { piece.scenery, piece.tile_x, piece.tile_z, piece.height, piece.direction }, *item, gaps);
             }
         }

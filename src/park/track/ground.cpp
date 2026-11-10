@@ -16,7 +16,7 @@
 namespace rct3::park::track
 {
 
-    ground::GroundCuts ground_cuts(std::span<const save::PlacedObject> items, const ObjectModels& models, const save::TerrainGrid& grid, bool smooth)
+    ground::GroundCuts ground_cuts(std::span<const save::PlacedObject> items, const object::ObjectModels& models, const save::TerrainGrid& grid, bool smooth)
     {
         constexpr float kSlack = 0.05f; // Standing on the ground is not in it
         ground::GroundCuts out;
@@ -79,12 +79,12 @@ namespace rct3::park::track
         return out;
     }
 
-    std::vector<GroundOpening> buried_hollows(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
+    std::vector<GroundOpening> buried_hollows(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid)
     {
         constexpr std::array kHollowing { ItemCategory::TrackPiece, ItemCategory::Ride, ItemCategory::RideEntrance, ItemCategory::RideExit, ItemCategory::Stall, ItemCategory::ParkEntrance };
         std::vector<save::PlacedObject> buried;
         std::ranges::copy_if(objects, std::back_inserter(buried), [&](const save::PlacedObject& o) {
-            const auto model = models.find(model_ref(o));
+            const auto model = models.find(object::model_ref(o));
             return model != models.end() && std::ranges::contains(kHollowing, model->second.category, [](ItemCategory c) { return std::to_underlying(c); });
         });
         std::vector<GroundOpening> hollows;
@@ -103,7 +103,7 @@ namespace rct3::park::track
         return hollows;
     }
 
-    bool lies_buried(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
+    bool lies_buried(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid)
     {
         const path::SolidTiles solids = path::solid_tiles(objects, models, grid);
         return !solids.tiles.empty() && std::ranges::all_of(solids.tiles, [&](const auto& tile) {

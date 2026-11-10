@@ -40,10 +40,10 @@ TEST_CASE("the ring is scaled round its centre, each mesh with its picture")
     shapes[1].texture = "b";
     shapes[1].vertices = { { { 0, 0, -2 }, { }, { 0, 0 } } };
     shapes[1].indices = { 0, 0, 0, 5, 5, 5 }; // Out of range indices are left out
-    const ObjectMesh m = mountain_mesh(shapes, { { 10, 1, 10 }, 50 });
+    const object::ObjectMesh m = mountain_mesh(shapes, { { 10, 1, 10 }, 50 });
     REQUIRE(m.batches.size() == 2);
     CHECK(m.batches[0].texture == "a");
-    CHECK(m.batches[0].blend == PartBlend::Cutout);
+    CHECK(m.batches[0].blend == object::PartBlend::Cutout);
     CHECK(m.batches[1].count == 3);
     CHECK(m.vertices[0].position == glm::vec3(110, 1, 10));
     CHECK(m.vertices[1].position == glm::vec3(10, 51, 110));

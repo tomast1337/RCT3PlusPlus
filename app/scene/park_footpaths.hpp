@@ -38,7 +38,7 @@
 #include "park/footpath_builder.hpp"
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "park/path/clearance.hpp"
 #include "park/path/drag.hpp"
 #include "park/path/route.hpp"
@@ -94,7 +94,7 @@ namespace rct3::scene
         std::vector<std::string> pictured;
         std::vector<park::ground::QueuePainting> queues_pictured; ///< The same for the ground queues' pictures
         park::TerrainMesh ghost;                                  ///< The next piece, drawn over the ground
-        park::ObjectMesh raised_ghost;                            ///< The next piece when it is raised
+        park::object::ObjectMesh raised_ghost;                    ///< The next piece when it is raised
         std::map<std::string, TrackModels, std::less<>> models;   ///< Of the raised pieces and supports laid
         std::optional<park::support::SupportSets> support_sets;   ///< Read when the first raised piece is laid
         /// Of the queue tiles laid here, the railings along them.

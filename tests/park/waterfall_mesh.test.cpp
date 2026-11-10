@@ -51,13 +51,13 @@ TEST_CASE("waterfall_point: a fall whose direction is missing runs toward where 
 TEST_CASE("waterfall_mesh: one see-through batch per picture, the sheet as wide as the edge")
 {
     const std::vector<save::Waterfall> falls { fall(), fall() };
-    ObjectMesh mesh;
+    object::ObjectMesh mesh;
     waterfall_mesh(falls, 0.0f, mesh);
     REQUIRE(mesh.batches.size() == kWaterfallPictures.size());
     for (std::size_t i = 0; i < mesh.batches.size(); ++i)
     {
         CHECK(mesh.batches[i].texture == kWaterfallPictures[i].key);
-        CHECK(mesh.batches[i].blend == PartBlend::Blended);
+        CHECK(mesh.batches[i].blend == object::PartBlend::Blended);
         CHECK(mesh.batches[i].count % 6 == 0);
     }
     CHECK(mesh.batches[0].count == mesh.batches[1].count);
@@ -75,8 +75,8 @@ TEST_CASE("waterfall_mesh: one see-through batch per picture, the sheet as wide 
 TEST_CASE("waterfall_mesh: the sheet's picture runs down it as time passes")
 {
     const std::vector<save::Waterfall> falls { fall() };
-    ObjectMesh before;
-    ObjectMesh after;
+    object::ObjectMesh before;
+    object::ObjectMesh after;
     waterfall_mesh(falls, 0.0f, before);
     waterfall_mesh(falls, 1.0f, after);
     REQUIRE(before.vertices.size() == after.vertices.size());
@@ -88,7 +88,7 @@ TEST_CASE("waterfall_mesh: the sheet's picture runs down it as time passes")
 TEST_CASE("waterfall_mesh: nothing for no falls, and the mesh is emptied")
 {
     const std::vector<save::Waterfall> falls { fall() };
-    ObjectMesh mesh;
+    object::ObjectMesh mesh;
     waterfall_mesh(falls, 0.0f, mesh);
     waterfall_mesh({ }, 0.0f, mesh);
     CHECK(mesh.vertices.empty());
@@ -99,9 +99,9 @@ TEST_CASE("waterfall_mesh: nothing for no falls, and the mesh is emptied")
 TEST_CASE("waterfall_mesh: foam fades out at its edges and is whole in its middle")
 {
     const std::vector<save::Waterfall> falls { fall() };
-    ObjectMesh mesh;
+    object::ObjectMesh mesh;
     waterfall_mesh(falls, 0.0f, mesh);
-    const ObjectBatch& foam = mesh.batches[2];
+    const object::ObjectBatch& foam = mesh.batches[2];
     int clear = 0;
     int whole = 0;
     for (std::uint32_t i = foam.first; i < foam.first + foam.count; ++i)
@@ -132,9 +132,9 @@ TEST_CASE("waterfall_layer_scroll: the first picture runs on past its second, an
 TEST_CASE("waterfall_spray: sprays spread along where the water lands, more for a wider fall")
 {
     const std::vector<save::Waterfall> one { fall() };
-    const std::vector<PlacedEffect> narrow = waterfall_spray(one);
+    const std::vector<object::PlacedEffect> narrow = waterfall_spray(one);
     REQUIRE(!narrow.empty());
-    for (const PlacedEffect& spray : narrow)
+    for (const object::PlacedEffect& spray : narrow)
     {
         CHECK(spray.effect == kWaterfallSpray);
         CHECK(spray.object == 0);
@@ -146,7 +146,7 @@ TEST_CASE("waterfall_spray: sprays spread along where the water lands, more for 
     wide.lip_left.z = -20.0f;
     wide.lip_right.z = 20.0f;
     const std::vector<save::Waterfall> two { fall(), wide };
-    const std::vector<PlacedEffect> both = waterfall_spray(two);
+    const std::vector<object::PlacedEffect> both = waterfall_spray(two);
     CHECK(both.size() > 2 * narrow.size());
     CHECK(both.back().object == 1);
     CHECK(waterfall_spray({ }).empty());

@@ -126,7 +126,7 @@ namespace rct3::park::water
         return Throw { .velocity = { way.x * level_speed, level_speed * std::tan(angle), way.y * level_speed }, .seconds = across / level_speed };
     }
 
-    void jet_mesh(std::span<const WaterJet* const> jets, glm::vec3 eye, float seconds, ObjectMesh& mesh)
+    void jet_mesh(std::span<const WaterJet* const> jets, glm::vec3 eye, float seconds, object::ObjectMesh& mesh)
     {
         // Water breaking up shows through a second, frothy tube, as the clear water in the first thins.
         for (const std::string_view picture : { kJetPicture, kJetSpray })
@@ -184,7 +184,7 @@ namespace rct3::park::water
             }
             const auto count = static_cast<std::uint32_t>(mesh.indices.size()) - first;
             if (count != 0)
-                mesh.batches.push_back({ .texture = std::string(picture), .picture = std::string(picture), .blend = PartBlend::Blended, .first = first, .count = count });
+                mesh.batches.push_back({ .texture = std::string(picture), .picture = std::string(picture), .blend = object::PartBlend::Blended, .first = first, .count = count });
         }
     }
 

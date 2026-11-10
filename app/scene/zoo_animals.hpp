@@ -26,7 +26,7 @@ namespace rct3::scene
         std::optional<park::AnimalLibrary> library;
         std::vector<park::PlacedAnimal> placed; ///< Those drawn with their models, as last posed; bodies point into `library`
         park::AnimalRuns runs { };
-        park::ObjectMesh mesh; ///< As last posed
+        park::object::ObjectMesh mesh; ///< As last posed
         ui::UiTextures textures;
         park::MovingMeshes crates;            ///< The animals still in their crates
         std::vector<entt::entity> crated { }; ///< By crate, its animal

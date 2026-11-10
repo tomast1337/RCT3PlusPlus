@@ -2,7 +2,7 @@
 #include "park/path/clearance.hpp"
 
 #include "park/item_category.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 #include "park/path/decks.hpp"
 #include "park/path/furniture.hpp"
 #include "park/support/columns.hpp"
@@ -40,32 +40,32 @@ namespace rct3::park::path
         }
     }
 
-    SolidTiles solid_tiles(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
+    SolidTiles solid_tiles(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid)
     {
         SolidTiles out;
         for (const save::PlacedObject& o : objects)
         {
             if (o.hidden)
                 continue;
-            const auto model = models.find(model_ref(o));
-            if (model == models.end() || model->second.solid.empty() || !blocks_paths(model->second.category) || on_paths(static_cast<Positioning>(model->second.positioning)))
+            const auto model = models.find(object::model_ref(o));
+            if (model == models.end() || model->second.solid.empty() || !blocks_paths(model->second.category) || on_paths(static_cast<object::Positioning>(model->second.positioning)))
                 continue;
-            const ObjectModel& m = model->second;
-            const float base = object_transform(o, static_cast<Positioning>(m.positioning), grid, m.squares, m.ground_height)[3].y;
+            const object::ObjectModel& m = model->second;
+            const float base = object::object_transform(o, static_cast<object::Positioning>(m.positioning), grid, m.squares, m.ground_height)[3].y;
             support::SupportFootprint shape;
             shape.x_squares = m.squares[0];
             shape.z_squares = m.squares[1];
             const auto under = support::footprint_tiles(o, shape);
             std::uint8_t room = kWholeTile;
-            switch (static_cast<Positioning>(m.positioning))
+            switch (static_cast<object::Positioning>(m.positioning))
             {
-                case Positioning::Quarter:
+                case object::Positioning::Quarter:
                     room = quarter_room(o.quadrant);
                     break;
-                case Positioning::Half:
+                case object::Positioning::Half:
                     room = half_room(ModelTurn::from(o.rotation));
                     break;
-                case Positioning::Edge:
+                case object::Positioning::Edge:
                     room = edge_room(ModelTurn::from(o.rotation));
                     break;
                 default:
@@ -141,7 +141,7 @@ namespace rct3::park::path
         return Clash::None;
     }
 
-    std::optional<Refused> first_refused(std::span<const save::PlacedObject> items, const ObjectModels& models, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    std::optional<Refused> first_refused(std::span<const save::PlacedObject> items, const object::ObjectModels& models, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
     {
         constexpr float kGroundSlack = 0.05f; // Standing on the ground is not above it
         for (std::size_t i = 0; i < items.size(); ++i)

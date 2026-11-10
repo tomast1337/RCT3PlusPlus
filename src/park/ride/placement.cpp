@@ -323,7 +323,7 @@ namespace rct3::park::ride
         const Side side = std::ranges::max_element(past, { }, &std::pair<std::int32_t, Side>::first)->second;
         const save::Tile rim = side == Side::kColBefore ? save::Tile { site.col, r } : side == Side::kNextRow ? save::Tile { c, last_row } : side == Side::kNextCol ? save::Tile { last_col, r } : save::Tile { c, site.row };
         const save::Tile at = side.beyond(rim);
-        return { at.col, at.row, turn_facing(side.opposite()) };
+        return { at.col, at.row, object::turn_facing(side.opposite()) };
     }
 
     namespace
@@ -339,7 +339,7 @@ namespace rct3::park::ride
             {
                 const Side side = along_x ? std::array { Side::kRowBefore, Side::kNextRow }[i] : std::array { Side::kColBefore, Side::kNextCol }[i];
                 const save::Tile at = side.beyond({ p.tile_x, p.tile_z });
-                spots[i] = { at.col, at.row, turn_facing(side.opposite()), p.height };
+                spots[i] = { at.col, at.row, object::turn_facing(side.opposite()), p.height };
             }
             return spots;
         }

@@ -3,7 +3,7 @@
 
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
-#include "park/object_pick.hpp"
+#include "park/object/pick.hpp"
 #include "park/path/decks.hpp"
 #include "park/queue_fences.hpp"
 
@@ -77,7 +77,7 @@ namespace rct3::park::path
 
     std::optional<PathEdge> path_under(const Ray& ray, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, bool through_ground)
     {
-        const auto ground = ground_hit(ray, grid);
+        const auto ground = object::ground_hit(ray, grid);
         std::optional<PathEdge> best;
         float nearest = ground && !through_ground ? *ground + 0.01f : kFar;
         glm::vec3 best_hit { 0.0f };
@@ -136,7 +136,7 @@ namespace rct3::park::path
     {
         if (std::abs(ray.direction.y) < 1e-6f)
             return std::nullopt;
-        const auto ground = through_ground ? std::nullopt : ground_hit(ray, grid);
+        const auto ground = through_ground ? std::nullopt : object::ground_hit(ray, grid);
         float nearest = ground ? *ground + 0.01f : kFar;
         std::optional<DoorEdge> best;
         for (std::size_t i = 0; i < doors.size(); ++i)

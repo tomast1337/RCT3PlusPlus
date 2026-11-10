@@ -8,7 +8,7 @@
 
 #include "park/carried_goods.hpp"
 #include "park/edge_walls.hpp"
-#include "park/object_models.hpp"
+#include "park/object/models.hpp"
 #include "park/overhead.hpp"
 #include "park/pools/pools.hpp"
 #include "park/track/course.hpp"
@@ -94,7 +94,7 @@ namespace rct3::simulation
 
     /// The timing of each flat ride of `rides` by its place in `rides.rides`, from the model of the object it
     /// stands as among `objects`, found by `model_of`; nothing for other rides and those without a usable model.
-    [[nodiscard]] std::vector<std::optional<RideTiming>> flat_ride_timings(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const std::function<const park::ObjectModel*(const save::PlacedObject&)>& model_of);
+    [[nodiscard]] std::vector<std::optional<RideTiming>> flat_ride_timings(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const std::function<const park::object::ObjectModel*(const save::PlacedObject&)>& model_of);
 
     /// The coaster model's view of `ride` on `course`: heights along it, its chains and stations, and the
     /// ride's speeds and first train's length as its park keeps them. Nothing unless the course goes round and

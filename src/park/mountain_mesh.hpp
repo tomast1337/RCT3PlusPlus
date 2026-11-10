@@ -6,7 +6,7 @@
 // theme. Unlike the sky, the ring stays put round the middle of the map, so the camera moves against it.
 #pragma once
 
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "park/sky_mesh.hpp"
 
 #include <array>
@@ -49,6 +49,6 @@ namespace rct3::park
     [[nodiscard]] MountainPlace mountain_place(const save::TerrainGrid& grid, std::string_view theme);
 
     /// The ring placed at `place`, both meshes as cut-out batches. Empty when the shapes are.
-    [[nodiscard]] ObjectMesh mountain_mesh(const MountainShapes& shapes, const MountainPlace& place);
+    [[nodiscard]] object::ObjectMesh mountain_mesh(const MountainShapes& shapes, const MountainPlace& place);
 
 } // namespace rct3::park

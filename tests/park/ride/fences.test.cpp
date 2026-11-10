@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ride/fences.hpp"
 
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -37,15 +37,15 @@ namespace
         return r;
     }
 
-    ObjectModel footprint(int x_squares, int z_squares)
+    object::ObjectModel footprint(int x_squares, int z_squares)
     {
-        ObjectModel m;
+        object::ObjectModel m;
         m.squares = { x_squares, z_squares };
         return m;
     }
 
     /// Every object's model is `model`.
-    ModelOf only(const ObjectModel* model)
+    ModelOf only(const object::ObjectModel* model)
     {
         return [model](std::uint64_t) { return model; };
     }
@@ -62,7 +62,7 @@ namespace
 
     std::array<int, 2> beyond(const Edge& e)
     {
-        const glm::vec2 x = turned_x(ModelTurn::from(std::get<2>(e)));
+        const glm::vec2 x = object::turned_x(ModelTurn::from(std::get<2>(e)));
         return { std::get<0>(e) + static_cast<int>(std::lround(x.x)), std::get<1>(e) + static_cast<int>(std::lround(x.y)) };
     }
 
@@ -71,7 +71,7 @@ namespace
 TEST_CASE("a ride without a fence has none, and a stand-in fence replaces its own")
 {
     save::Ride r = flat_ride(spot(10, 20, 0, 0));
-    const ObjectModel item = footprint(2, 2);
+    const object::ObjectModel item = footprint(2, 2);
     r.fence_symbol.clear();
     CHECK(ride_fences(r, only(&item), 0).empty());
 
@@ -96,7 +96,7 @@ TEST_CASE("an entrance and an exit are walled on the two sides beside the way th
     s.entrance_spot = spot(3, 4, 7, 0);
     s.exit_spot = spot(5, 6, 2, 3);
     r.stations = { s };
-    const ObjectModel item = footprint(2, 2); // A tracked ride is not fenced round
+    const object::ObjectModel item = footprint(2, 2); // A tracked ride is not fenced round
     const auto pieces = ride_fences(r, only(&item), 50);
     CHECK(edges(pieces) == std::set<Edge> { { 3, 4, 3 }, { 3, 4, 1 }, { 5, 6, 2 }, { 5, 6, 0 } });
     for (const save::PlacedObject& p : pieces)
@@ -113,7 +113,7 @@ TEST_CASE("an entrance and an exit are walled on the two sides beside the way th
 TEST_CASE("a flat ride is fenced round the rim of its footprint, at its height")
 {
     const save::Ride r = flat_ride(spot(10, 20, 4, 0));
-    const ObjectModel item = footprint(3, 2);
+    const object::ObjectModel item = footprint(3, 2);
     const auto pieces = ride_fences(r, only(&item), 0);
     CHECK(pieces.size() == 10);
     const std::set<Edge> fenced = edges(pieces);
@@ -140,7 +140,7 @@ TEST_CASE("a turned flat ride's footprint lies across, and its doors leave gaps"
     save::Station second;
     second.entrance_spot = spot(9, 20, 0, 2); // Only the first station opens a gap
     r.stations = { s, second };
-    const ObjectModel item = footprint(3, 2);
+    const object::ObjectModel item = footprint(3, 2);
     const std::set<Edge> fenced = edges(ride_fences(r, only(&item), 0));
 
     std::set<Edge> ring;
@@ -171,9 +171,9 @@ TEST_CASE("a tracked ride's base is fenced round as a flat ride is, and its othe
     save::Station s;
     s.entrance_spot = spot(12, 20, 3, 0); // Beside the base's +x side
     r.stations = { s };
-    ObjectModel base = footprint(2, 2);
+    object::ObjectModel base = footprint(2, 2);
     base.fenced_round = true;
-    const ObjectModel section = footprint(2, 2);
+    const object::ObjectModel section = footprint(2, 2);
     const auto pieces = ride_fences(r, [&](std::uint64_t object) { return object == 20 ? &base : &section; }, 0);
     const std::set<Edge> fenced = edges(pieces);
     CHECK(fenced.size() == 9); // Eight round the rim, less the door, and two beside the door
@@ -185,12 +185,12 @@ TEST_CASE("a tracked ride's base is fenced round as a flat ride is, and its othe
 TEST_CASE("a ride on water is not fenced round, and one a square across is closed on both sides")
 {
     save::Ride r = flat_ride(spot(0, 0, 0, 0));
-    ObjectModel pool = footprint(2, 2);
+    object::ObjectModel pool = footprint(2, 2);
     pool.water_only = true;
     CHECK(ride_fences(r, only(&pool), 0).empty());
     CHECK(ride_fences(r, only(nullptr), 0).empty());
 
-    const ObjectModel strip = footprint(1, 3);
+    const object::ObjectModel strip = footprint(1, 3);
     CHECK(ride_fences(r, only(&strip), 0).size() == 8);
 }
 
@@ -198,7 +198,7 @@ TEST_CASE("a ride fenced round an outline leaves out the squares outside it")
 {
     // An L of three squares in a two by two footprint: the square at x 1, z 1 is not inside.
     const save::Ride r = flat_ride(spot(0, 0, 0, 0));
-    ObjectModel item = footprint(2, 2);
+    object::ObjectModel item = footprint(2, 2);
     item.fence_outline = { true, true, true, false };
     const std::set<Edge> fenced = edges(ride_fences(r, only(&item), 0));
     CHECK(fenced.size() == 8);

@@ -27,9 +27,9 @@ namespace
     }
 
     /// A piece of track on tile (2, 1) at height 0, its one square solid from level 0 to 4.
-    std::pair<std::vector<save::PlacedObject>, ObjectModels> one_piece()
+    std::pair<std::vector<save::PlacedObject>, object::ObjectModels> one_piece()
     {
-        ObjectModel model;
+        object::ObjectModel model;
         model.category = std::to_underlying(ItemCategory::TrackPiece);
         model.ground_height = false;
         model.solid = { std::array<std::int32_t, 2> { 0, 4 } };
@@ -40,8 +40,8 @@ namespace
         o.col = 2;
         o.row = 1;
         o.base_height = 0;
-        ObjectModels models;
-        models.emplace(model_key(o), model);
+        object::ObjectModels models;
+        models.emplace(object::model_key(o), model);
         return { { o }, models };
     }
 } // namespace

@@ -61,7 +61,7 @@ TEST_CASE("a jet's tube is rings round its drops, more see-through face on")
     jet.aim({ 0, 1, 0 }, { 0, 0, 5 });
     jet.advance(0.2f);
     const std::array<const WaterJet*, 1> jets { &jet };
-    ObjectMesh mesh;
+    object::ObjectMesh mesh;
     jet_mesh(jets, { 10, 1, 0 }, 0, mesh);
     REQUIRE(mesh.batches.size() == 1);
     CHECK(mesh.batches[0].texture == kJetPicture);
@@ -104,7 +104,7 @@ TEST_CASE("a jet that breaks up is wider, whiter and clearer toward its end, and
     REQUIRE(drops.size() > 30);
     CHECK(jet.radius(drops[drops.size() / 2]) > 0.1f + 0.1f * drops[drops.size() / 2].age);
     const std::array<const WaterJet*, 1> jets { &jet };
-    ObjectMesh mesh;
+    object::ObjectMesh mesh;
     jet_mesh(jets, { 10, 50, 0 }, 0, mesh);
     REQUIRE(mesh.batches.size() == 2);
     CHECK(mesh.batches[1].texture == kJetSpray);
@@ -127,10 +127,10 @@ TEST_CASE("a thin jet seen from afar is drawn wider and fainter")
     jet.aim({ 0, 1, 0 }, { 0, 0, 5 });
     jet.advance(0.5f);
     const std::array<const WaterJet*, 1> jets { &jet };
-    ObjectMesh close, far;
+    object::ObjectMesh close, far;
     jet_mesh(jets, { 2, 1, 0 }, 0, close);
     jet_mesh(jets, { 200, 1, 0 }, 0, far);
-    const auto width = [](const ObjectMesh& m) { return glm::distance(m.vertices[0].position, m.vertices[4].position); };
+    const auto width = [](const object::ObjectMesh& m) { return glm::distance(m.vertices[0].position, m.vertices[4].position); };
     CHECK(width(far) > 2 * width(close));
     CHECK(far.vertices[0].colour.a < close.vertices[0].colour.a);
 }

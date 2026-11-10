@@ -30,7 +30,7 @@
 #include "park/build_catalogue.hpp"
 #include "park/camera.hpp"
 #include "park/moving_meshes.hpp"
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "park/path/clearance.hpp"
 #include "park/ride/placement.hpp"
 #include "render/device.hpp"
@@ -88,10 +88,10 @@ namespace rct3::scene
         park::ground::GroundCuts levelling;                     ///< The ground levelled under the ride pointed at, when it may be
         std::int64_t levelling_cost = 0;                        ///< In hundredths
         std::size_t ride = 0;                                   ///< Of the scene's rides, once placed
-        park::ObjectMesh ghost_mesh;
+        park::object::ObjectMesh ghost_mesh;
         std::array<std::int32_t, 3> colours { }; ///< Of the scenery: its own when picked, then those the player paints
         std::string panel_item;                  ///< The scenery the placing panel is set up for
-        park::ObjectMesh preview_mesh;           ///< The scenery alone, for the panel's round view
+        park::object::ObjectMesh preview_mesh;   ///< The scenery alone, for the panel's round view
         /// Of scenery with bones, the same a piece per bone, moved as it moves; preview_bones gives each piece's bone.
         park::MovingMeshes preview_moving;
         std::vector<std::int32_t> preview_bones;

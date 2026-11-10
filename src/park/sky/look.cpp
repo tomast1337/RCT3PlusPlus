@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/sky_look.hpp"
+#include "park/sky/look.hpp"
 
-#include "park/sky_mesh.hpp"
+#include "park/sky/mesh.hpp"
 #include "park/sun.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 
-namespace rct3::park
+namespace rct3::park::sky
 {
 
     namespace
@@ -76,4 +76,4 @@ namespace rct3::park
         return band[at];
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::sky

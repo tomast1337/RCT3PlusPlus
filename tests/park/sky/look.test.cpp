@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/sky_look.hpp"
+#include "park/sky/look.hpp"
 
-#include "park/sky_mesh.hpp"
+#include "park/sky/mesh.hpp"
 #include "simulation/day_clock.hpp"
 
 #include <array>
@@ -9,6 +9,7 @@
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::sky;
 
 namespace
 {

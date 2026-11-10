@@ -33,7 +33,7 @@
 #include "park/person_mesh.hpp"
 #include "park/pools/pools.hpp"
 #include "park/ride/cars.hpp"
-#include "park/sky_mesh.hpp"
+#include "park/sky/mesh.hpp"
 #include "park/terrain_mesh.hpp"
 #include "park/track/course.hpp"
 #include "park/track/rules.hpp"
@@ -546,7 +546,7 @@ namespace rct3::scene
         std::vector<std::pair<float, glm::vec3>> splashdowns; ///< Pool slide riders in the air: park_clock when they reach the water, and where
         render::PipelineHandle waterfall_added_pipeline;      ///< Its pictures with a second added
         render::PipelineHandle waterfall_multiplied_pipeline; ///< And with a second multiplying them
-        park::SkyModels sky;
+        park::sky::SkyModels sky;
         park::object::ObjectMesh sky_mesh; ///< Built again each frame round the eye
         ui::UiTextures sky_textures;
         render::PipelineHandle sky_pipeline; ///< Drawn first, behind everything, without depth

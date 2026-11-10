@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/sky_models.hpp"
+#include "park/sky/models.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::sky;
 
 TEST_CASE("a glowing picture is see-through where it is dark")
 {

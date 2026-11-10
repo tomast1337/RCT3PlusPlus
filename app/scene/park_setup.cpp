@@ -31,7 +31,7 @@
 #include "park/ride/cars.hpp"
 #include "park/ride/fences.hpp"
 #include "park/ride/walks.hpp"
-#include "park/sky_models.hpp"
+#include "park/sky/models.hpp"
 #include "park/support/columns.hpp"
 #include "park/surrounding_land.hpp"
 #include "park/track/ground.hpp"
@@ -504,13 +504,13 @@ namespace rct3::scene
         {
             const profiling::Scope zone("Sky");
             const auto log = logging::logger("park");
-            const auto found = install.find(park::kSkyFile);
+            const auto found = install.find(park::sky::kSkyFile);
             if (!found)
             {
-                log.warning("no sky: {} is missing", park::kSkyFile);
+                log.warning("no sky: {} is missing", park::sky::kSkyFile);
                 return { };
             }
-            auto sky = park::load_sky(*found, theme);
+            auto sky = park::sky::load_sky(*found, theme);
             if (!sky)
             {
                 log.warning("sky: {}", sky.error());
@@ -520,7 +520,7 @@ namespace rct3::scene
             if (!textures)
                 return std::unexpected(textures.error());
             scene.sky_textures = std::move(*textures);
-            scene.horizon_band = park::horizon_band(*sky);
+            scene.horizon_band = park::sky::horizon_band(*sky);
             scene.sky = std::move(sky->models);
             // Without the sky, the clear colour stands in for it; without clouds, the sky is clear.
             if (!options.flag(config::GameOption::Sky))

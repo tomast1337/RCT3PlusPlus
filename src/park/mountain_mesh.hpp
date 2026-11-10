@@ -7,7 +7,7 @@
 #pragma once
 
 #include "park/object/mesh.hpp"
-#include "park/sky_mesh.hpp"
+#include "park/sky/mesh.hpp"
 
 #include <array>
 #include <cstdint>
@@ -18,7 +18,7 @@ namespace rct3::park
 {
 
     /// The ring's two meshes, each with its own picture.
-    using MountainShapes = std::array<SkyShape, 2>;
+    using MountainShapes = std::array<sky::SkyShape, 2>;
 
     /// The landscape themes, in the order of the number a park file stores for its background.
     inline constexpr std::array<std::string_view, 8> kBackgroundThemes { "Mountain", "Desert", "Snow", "Hill", "Island", "Spooky", "Space", "City" };

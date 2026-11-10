@@ -17,7 +17,7 @@
 #include "park/object/placement.hpp"
 #include "park/person_motions.hpp"
 #include "park/ride/placement.hpp"
-#include "park/sky_look.hpp"
+#include "park/sky/look.hpp"
 #include "park/tile_shaping.hpp"
 #include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
@@ -394,14 +394,14 @@ namespace rct3::scene
             const simulation::DayClock& day = scene.day;
             const park::Daylight light = park::mixed(park::daylight(day.shown), park::daylight(day.faded), day.fade);
             scene.light = { .sun_direction = light.sun_direction, .sun = light.sun, .sky = light.sky, .ground = light.ground };
-            const float column = park::sky_column(day.shown);
-            const float faded = park::sky_column(day.faded);
-            const float night = glm::mix(park::sky_darkness(day.shown), park::sky_darkness(day.faded), day.fade);
+            const float column = park::sky::sky_column(day.shown);
+            const float faded = park::sky::sky_column(day.faded);
+            const float night = glm::mix(park::sky::sky_darkness(day.shown), park::sky::sky_darkness(day.faded), day.fade);
             scene.darkness = night;
-            scene.sky_mesh = park::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .day = column, .faded_day = faded, .fade = day.fade, .night = night, .time = scene.park_clock, .tint = park::weathered(glm::vec3(1.0f), scene.weather_look, 0.6f), .overcast = scene.weather_look.gloom });
+            scene.sky_mesh = park::sky::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .day = column, .faded_day = faded, .fade = day.fade, .night = night, .time = scene.park_clock, .tint = park::weathered(glm::vec3(1.0f), scene.weather_look, 0.6f), .overcast = scene.weather_look.gloom });
             if (!scene.horizon_band.empty())
             {
-                const glm::vec4 c = glm::mix(park::band_colour(scene.horizon_band, column), park::band_colour(scene.horizon_band, faded), day.fade);
+                const glm::vec4 c = glm::mix(park::sky::band_colour(scene.horizon_band, column), park::sky::band_colour(scene.horizon_band, faded), day.fade);
                 scene.horizon = { c.r, c.g, c.b, c.a };
             }
             // Clouds hide the sun most and grey the sky; a stroke lights everything up.

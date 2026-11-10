@@ -32,7 +32,7 @@ namespace rct3::park
     {
         object::ObjectMesh mesh;
         const float scale = place.scale;
-        for (const SkyShape& shape : shapes)
+        for (const sky::SkyShape& shape : shapes)
         {
             if (shape.vertices.empty() || shape.indices.empty())
                 continue;

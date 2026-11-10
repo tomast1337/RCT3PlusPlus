@@ -7,7 +7,7 @@
 
 #include "ovl/texture_image.hpp"
 #include "park/mountain_mesh.hpp"
-#include "park/sky_mesh.hpp"
+#include "park/sky/mesh.hpp"
 
 #include <expected>
 #include <filesystem>
@@ -16,7 +16,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::sky
 {
 
     /// The sky overlay, relative to the install.
@@ -42,4 +42,4 @@ namespace rct3::park
     /// whatever shows below it. Empty when the dome or its picture is missing.
     [[nodiscard]] std::vector<glm::vec4> horizon_band(const LoadedSky& sky);
 
-} // namespace rct3::park
+} // namespace rct3::park::sky

@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::sky
 {
 
     struct SkyShape
@@ -59,4 +59,4 @@ namespace rct3::park
     /// Shapes without vertices are left out.
     [[nodiscard]] object::ObjectMesh sky_mesh(const SkyModels& sky, const SkyView& view);
 
-} // namespace rct3::park
+} // namespace rct3::park::sky

@@ -15,7 +15,7 @@
 
 #include <span>
 
-namespace rct3::park
+namespace rct3::park::sky
 {
 
     /// Columns of the dome's picture, across it, as measured.
@@ -41,4 +41,4 @@ namespace rct3::park
     /// one, reading the band round. Transparent black for an empty band.
     [[nodiscard]] glm::vec4 band_colour(std::span<const glm::vec4> band, float column);
 
-} // namespace rct3::park
+} // namespace rct3::park::sky

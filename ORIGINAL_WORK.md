@@ -37,8 +37,8 @@ one says which.
 - Descriptions of file layouts in our own words: field offsets, sizes, meanings and version differences,
   with example values only where they are needed to be unambiguous.
 - Original code that reads and writes those layouts.
-- Test data built in code from invented values shaped like the format (see `tests/ovl_header_test.cpp`).
-- Type tags and other names that are part of a file format and that a parser must recognise.
+- Test data built in code from invented values shaped like the format (see `tests/ovl/header.test.cpp`).
+- Type tags and other names that are part of a file format and that a parser must recognize.
 
 If you could only produce something character for character by looking at a game file, it is a copy.
 

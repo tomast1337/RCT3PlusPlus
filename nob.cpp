@@ -242,11 +242,13 @@ namespace
 
         Cmd cmd;
         cmd << cfg.cxx;
-        cmd.append(cfg.link_flags);
         cmd << "-o" << output.string();
         for (const auto& o : objects)
             cmd << o.string();
         cmd << "-lstdc++exp"; // std::stacktrace; a static library, so after the objects
+        // The flags hold libraries too (-lglfw3 and the like). Import and static libraries only supply symbols the
+        // objects before them ask for, so they come after the objects.
+        cmd.append(cfg.link_flags);
         if (!run(cmd))
             return false;
 
@@ -393,6 +395,92 @@ namespace
         return c;
     }
 
+    // Files the project does not track: too big for the repository, or under their own licence.
+    // Each is pinned to a release and checked against its SHA-256 after download.
+    struct Download
+    {
+        std::string_view url;
+        std::string_view sha256;
+        std::string_view file; ///< Under kDownloadDir
+    };
+
+    const fs::path kDownloadDir = "downloads";
+
+    // Downloads `d` into kDownloadDir unless it is there (needs curl and sha256sum). A file that fails the check is
+    // removed.
+    bool fetch_one(const Download& d)
+    {
+        if (!mkdir_p(kDownloadDir))
+            return false;
+        const fs::path target = kDownloadDir / d.file;
+        if (fs::exists(target))
+        {
+            log(Level::Info, "{} is already there", target.string());
+            return true;
+        }
+        const fs::path partial = std::format("{}.part", target.string());
+        Cmd get;
+        get << "curl" << "-fL" << "--retry" << "2" << "-o" << partial.string() << std::string(d.url);
+        if (!run(get))
+            return false;
+        const fs::path sums = kDownloadDir / "sha256.txt";
+        {
+            // Binary, so Windows does not end the line with a carriage return that sha256sum reads as part of the name.
+            std::ofstream out(sums, std::ios::binary);
+            out << d.sha256 << "  " << partial.generic_string() << "\n";
+        }
+        Cmd check;
+        check << "sha256sum" << "--check" << "--quiet" << sums.string();
+        const bool ok = run(check);
+        std::error_code ec;
+        fs::remove(sums, ec);
+        if (!ok)
+        {
+            log(Level::Error, "{} does not match its checksum", d.url);
+            fs::remove(partial, ec);
+            return false;
+        }
+        fs::rename(partial, target, ec);
+        return !ec;
+    }
+
+#ifdef _WIN32
+    // The FFmpeg cut's config.h is configure output from Linux. On Windows the C library differs, so the build runs
+    // FFmpeg's own configure over the pinned source, once, and compiles the cut against the config.h it writes.
+    const Download kFfmpegSource { "https://github.com/FFmpeg/FFmpeg/archive/db69d06eeeab4f46da15030a80d539efb4503ca8.tar.gz", "173ba614d8636491106cba08d79db469b5dee4b479388bc4fbcead8ca1fb79b1", "ffmpeg-db69d06.tar.gz" };
+
+    // The flags of third_party/ffmpeg/README, plus --disable-w32threads: the cut has no threading code.
+    constexpr std::string_view kFfmpegConfigureFlags = "--disable-everything --disable-programs --disable-doc --disable-network --disable-autodetect "
+                                                       "--disable-asm --disable-x86asm --disable-inline-asm --disable-pthreads --disable-w32threads "
+                                                       "--disable-avdevice --disable-avformat --disable-swscale --disable-swresample --disable-avfilter "
+                                                       "--disable-iconv --enable-decoder=wmv3,wmav1,wmav2 --disable-hwaccels --disable-debug --enable-small";
+
+    // Runs FFmpeg's configure into build/ffmpeg unless config.h is there, and returns that folder in `dir`.
+    bool ffmpeg_windows_config(fs::path& dir)
+    {
+        dir = kBuildDir / "ffmpeg";
+        if (fs::exists(dir / "config.h"))
+            return true;
+        if (!fetch_one(kFfmpegSource))
+            return false;
+        const fs::path source = kDownloadDir / "ffmpeg-db69d06";
+        if (!fs::exists(source / "configure"))
+        {
+            if (!mkdir_p(source))
+                return false;
+            Cmd unpack;
+            unpack << "tar" << "-xzf" << (kDownloadDir / kFfmpegSource.file).generic_string() << "--strip-components=1" << "-C" << source.generic_string();
+            if (!run(unpack))
+                return false;
+        }
+        if (!mkdir_p(dir))
+            return false;
+        Cmd configure;
+        configure << "sh" << "-c" << std::format("cd '{}' && '{}/configure' {}", dir.generic_string(), fs::absolute(source).generic_string(), kFfmpegConfigureFlags);
+        return run(configure);
+    }
+#endif
+
     bool compile_audio(const Config& cfg, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
     {
         std::vector<fs::path> sources;
@@ -422,7 +510,15 @@ namespace
             log(Level::Error, "third_party/ffmpeg/sources.txt is missing or empty");
             return false;
         }
-        return compile(c_config(cfg, { "-Ithird_party/ffmpeg", "-DHAVE_AV_CONFIG_H", "-D_ISOC11_SOURCE", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-D_POSIX_C_SOURCE=200112", "-D_XOPEN_SOURCE=600" }), ffmpeg, objects, database);
+        std::vector<std::string> flags;
+#ifdef _WIN32
+        fs::path generated;
+        if (!ffmpeg_windows_config(generated))
+            return false;
+        flags.push_back("-I" + generated.generic_string()); // its config.h comes before the Linux one in third_party/ffmpeg
+#endif
+        flags.insert(flags.end(), { "-Ithird_party/ffmpeg", "-DHAVE_AV_CONFIG_H", "-D_ISOC11_SOURCE", "-D_FILE_OFFSET_BITS=64", "-D_LARGEFILE_SOURCE", "-D_POSIX_C_SOURCE=200112", "-D_XOPEN_SOURCE=600" });
+        return compile(c_config(cfg, flags), ffmpeg, objects, database);
     }
 
     // Vendored code every target links: the stb_truetype and stb_image implementation units and the QuickJS-NG
@@ -438,7 +534,12 @@ namespace
 
     Config with_audio_link(Config cfg)
     {
+#ifdef _WIN32
+        // No libdl on Windows; miniaudio loads its backends with LoadLibrary there.
+        cfg.link_flags.insert(cfg.link_flags.end(), { "-lpthread", "-lm" });
+#else
         cfg.link_flags.insert(cfg.link_flags.end(), { "-ldl", "-lpthread", "-lm" });
+#endif
         return cfg;
     }
 
@@ -565,7 +666,12 @@ namespace
 
         binary = cfg.out_dir() / "rct3pp";
         Config linker = with_audio_link(cfg);
+#ifdef _WIN32
+        // MSYS2 names the import libraries libglfw3.dll.a and libvulkan-1.dll.a.
+        linker.link_flags.insert(linker.link_flags.end(), { "-lglfw3", "-lvulkan-1" });
+#else
         linker.link_flags.insert(linker.link_flags.end(), { "-lglfw", "-lvulkan" });
+#endif
         return link(linker, binary, objects);
     }
 
@@ -669,17 +775,6 @@ namespace
         return ok;
     }
 
-    // Optional assets the project does not track: too big for the repository, or under their own licence.
-    // Each is pinned to a release and checked against its SHA-256 after download.
-    struct Download
-    {
-        std::string_view url;
-        std::string_view sha256;
-        std::string_view file; ///< Under kDownloadDir
-    };
-
-    const fs::path kDownloadDir = "downloads";
-
     constexpr std::array kDownloads = {
         // GNU Unifont, the fallback for characters the game fonts lack. SIL OFL 1.1, or GPL-2.0-or-later with
         // the font embedding exception.
@@ -689,39 +784,9 @@ namespace
     // Downloads what is missing (needs curl and sha256sum). A file that fails the check is removed.
     bool run_fetch()
     {
-        if (!mkdir_p(kDownloadDir))
-            return false;
         for (const Download& d : kDownloads)
         {
-            const fs::path target = kDownloadDir / d.file;
-            if (fs::exists(target))
-            {
-                log(Level::Info, "{} is already there", target.string());
-                continue;
-            }
-            const fs::path partial = std::format("{}.part", target.string());
-            Cmd get;
-            get << "curl" << "-fL" << "--retry" << "2" << "-o" << partial.string() << std::string(d.url);
-            if (!run(get))
-                return false;
-            const fs::path sums = kDownloadDir / "sha256.txt";
-            {
-                std::ofstream out(sums);
-                out << d.sha256 << "  " << partial.string() << "\n";
-            }
-            Cmd check;
-            check << "sha256sum" << "--check" << "--quiet" << sums.string();
-            const bool ok = run(check);
-            std::error_code ec;
-            fs::remove(sums, ec);
-            if (!ok)
-            {
-                log(Level::Error, "{} does not match its checksum", d.url);
-                fs::remove(partial, ec);
-                return false;
-            }
-            fs::rename(partial, target, ec);
-            if (ec)
+            if (!fetch_one(d))
                 return false;
         }
         return true;
@@ -903,7 +968,11 @@ int main(int argc, char** argv)
                     fs::create_directories(data / "new_scenarios");
                     fs::copy_file(start_park, data / "new_scenarios" / start_park.filename());
                 }
+#ifdef _WIN32
+                _putenv_s("RCT3PP_DATA", fs::absolute(data).string().c_str());
+#else
                 setenv("RCT3PP_DATA", fs::absolute(data).c_str(), 1);
+#endif
                 Cmd one;
                 // Headless: no window pops up, the frames still draw for the screenshots, and no vsync stops them
                 // while the screen sleeps. Uncapped, so the script runs as fast as the machine draws.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // nob.hpp: a tiny build helper, C++ flavoured take on the "no build" idea (build scripts written in the
-// project's own language, bootstrapped with a single compiler invocation). POSIX only for now.
+// project's own language, bootstrapped with a single compiler invocation). POSIX, and Windows with MSYS2 UCRT64.
 #pragma once
 
 #include <algorithm>
@@ -13,14 +13,24 @@
 #include <format>
 #include <optional>
 #include <span>
-#include <spawn.h>
 #include <string>
 #include <string_view>
-#include <sys/wait.h>
-#include <unistd.h>
+#include <system_error>
 #include <vector>
 
+#ifdef _WIN32
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #define WIN32_LEAN_AND_MEAN
+    #include <windows.h>
+#else
+    #include <spawn.h>
+    #include <sys/wait.h>
+    #include <unistd.h>
+
 extern char** environ;
+#endif
 
 namespace nob
 {
@@ -69,7 +79,38 @@ namespace nob
         }
     };
 
+#ifdef _WIN32
+    using Proc = HANDLE;
+
+    /// One argument of a Windows command line, quoted so the C runtime of the child splits it back unchanged.
+    /// See https://learn.microsoft.com/en-us/cpp/c-language/parsing-c-command-line-arguments
+    [[nodiscard]] inline std::string quote_arg(std::string_view arg)
+    {
+        if (!arg.empty() && arg.find_first_of(" \t\n\v\"") == std::string_view::npos)
+            return std::string(arg);
+        std::string out = "\"";
+        for (std::size_t i = 0;; ++i)
+        {
+            std::size_t backslashes = 0;
+            for (; i < arg.size() && arg[i] == '\\'; ++i)
+                ++backslashes;
+            if (i == arg.size())
+            {
+                out.append(backslashes * 2, '\\'); // before the closing quote
+                break;
+            }
+            if (arg[i] == '"')
+                out.append(backslashes * 2 + 1, '\\');
+            else
+                out.append(backslashes, '\\');
+            out += arg[i];
+        }
+        out += '"';
+        return out;
+    }
+#else
     using Proc = pid_t;
+#endif
 
     [[nodiscard]] inline std::optional<Proc> start(const Cmd& cmd)
     {
@@ -77,6 +118,27 @@ namespace nob
             return std::nullopt;
         log(Level::Info, "CMD: {}", cmd.render());
 
+#ifdef _WIN32
+        std::string line;
+        for (const auto& a : cmd.args)
+        {
+            if (!line.empty())
+                line += ' ';
+            line += quote_arg(a);
+        }
+        // CreateProcess searches PATH for the first word and adds ".exe", as posix_spawnp does for a bare name. It may
+        // edit the command line in place, so it gets a writable string.
+        STARTUPINFOA startup { };
+        startup.cb = sizeof(startup); // the struct's own size, which Win32 asks every caller to set
+        PROCESS_INFORMATION info { };
+        if (!CreateProcessA(nullptr, line.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &startup, &info))
+        {
+            log(Level::Error, "cannot start {}: {}", cmd.args[0], std::system_category().message(static_cast<int>(GetLastError())));
+            return std::nullopt;
+        }
+        CloseHandle(info.hThread);
+        return info.hProcess;
+#else
         std::vector<char*> argv;
         argv.reserve(cmd.args.size() + 1);
         for (const auto& a : cmd.args)
@@ -90,10 +152,25 @@ namespace nob
             return std::nullopt;
         }
         return pid;
+#endif
     }
 
     [[nodiscard]] inline bool wait(Proc pid)
     {
+#ifdef _WIN32
+        DWORD code = 0;
+        const bool waited = WaitForSingleObject(pid, INFINITE) == WAIT_OBJECT_0 && GetExitCodeProcess(pid, &code);
+        CloseHandle(pid);
+        if (!waited)
+        {
+            log(Level::Error, "cannot wait for a process: error {}", GetLastError());
+            return false;
+        }
+        if (code == 0)
+            return true;
+        log(Level::Error, "process exited with code {}", code);
+        return false;
+#else
         int status = 0;
         while (waitpid(pid, &status, 0) < 0)
         {
@@ -110,6 +187,7 @@ namespace nob
         else
             log(Level::Error, "process terminated by signal");
         return false;
+#endif
     }
 
     [[nodiscard]] inline bool run(const Cmd& cmd)
@@ -238,9 +316,18 @@ namespace nob
         }
         fs::remove(old, ec);
 
-        execv(self.c_str(), argv);
+#ifdef _WIN32
+        // Windows has no exec: the new binary runs as a child and its result is passed on.
+        Cmd again;
+        again << self.string();
+        for (char** arg = argv + 1; *arg; ++arg)
+            again << *arg;
+        std::exit(run(again) ? 0 : 1);
+#else
+        execv(self.string().c_str(), argv);
         log(Level::Error, "cannot re-run {}: {}", self.string(), std::strerror(errno));
         std::exit(1);
+#endif
     }
 
 } // namespace nob

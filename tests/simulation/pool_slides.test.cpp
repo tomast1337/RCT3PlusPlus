@@ -22,8 +22,8 @@ namespace
     entt::entity slide_by_pool(Sandbox& park)
     {
         park.path({ 0, 0 }, { 5, 0 });
-        park::pools::PoolMap pools;
-        pools.squares.push_back({ .col = 5, .row = 2, .kind = park::pools::PoolKind::Tile });
+        rct3::park::pools::PoolMap pools;
+        pools.squares.push_back({ .col = 5, .row = 2, .kind = rct3::park::pools::PoolKind::Tile });
         for (std::int32_t row = 3; row < 5; ++row)
             for (std::int32_t col = 4; col < 7; ++col)
                 pools.squares.push_back({ .col = col, .row = row });

@@ -62,14 +62,14 @@ namespace rct3::simulation
     /// an attraction at the path tile before its door, at its complex's ticket price, open as it is. A room
     /// that still stands keeps its swimmers; those of a room gone come out at its door. `scenery` are extras the park
     /// placed as scenery, used as those of `pools` are. Call after import_paths.
-    void import_pools(SimWorld& world, const park::pools::PoolMap& pools, std::span<const park::pools::PoolExtra> scenery = { });
+    void import_pools(SimWorld& world, const rct3::park::pools::PoolMap& pools, std::span<const rct3::park::pools::PoolExtra> scenery = { });
     /// Adds a shop for every stall of `rides` that sells a drink or food and has a path on the tile in front of
     /// it, near its height; a path beside it does not count. Returns how many were added. Its wares take the extras `kinds` says their items can, where the stall puts them on.
     /// Call after import_paths.
-    std::size_t import_stalls(SimWorld& world, const save::model::RideModel& rides, const park::CarriedKinds& kinds = { });
+    std::size_t import_stalls(SimWorld& world, const save::model::RideModel& rides, const rct3::park::CarriedKinds& kinds = { });
     /// Has the shop of `stall`, when it runs, sell what its menu now sells first, at that item's price, with
     /// its extras as import_stalls puts them on.
-    void restock(SimWorld& world, const save::model::Stall& stall, const park::CarriedKinds& kinds = { });
+    void restock(SimWorld& world, const save::model::Stall& stall, const rct3::park::CarriedKinds& kinds = { });
 
     /// How many a ride carries at once and how long one ride lasts: starting, `loops` of running, and stopping,
     /// in seconds. A ride timed by a whole lap runs one loop of it.
@@ -94,27 +94,27 @@ namespace rct3::simulation
 
     /// The timing of each flat ride of `rides` by its place in `rides.rides`, from the model of the object it
     /// stands as among `objects`, found by `model_of`; nothing for other rides and those without a usable model.
-    [[nodiscard]] std::vector<std::optional<RideTiming>> flat_ride_timings(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, const std::function<const park::object::ObjectModel*(const save::model::PlacedObject&)>& model_of);
+    [[nodiscard]] std::vector<std::optional<RideTiming>> flat_ride_timings(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, const std::function<const rct3::park::object::ObjectModel*(const save::model::PlacedObject&)>& model_of);
 
     /// The coaster model's view of `ride` on `course`: heights along it, its chains and stations, and the
     /// ride's speeds and first train's length as its park keeps them. Nothing unless the course goes round and
     /// has a station; shuttles, slides and open water are left to their timing.
-    [[nodiscard]] std::optional<Coaster> coaster_of(const park::track::TrackCourse& course, const save::model::Ride& ride);
+    [[nodiscard]] std::optional<Coaster> coaster_of(const rct3::park::track::TrackCourse& course, const save::model::Ride& ride);
 
     /// Boats for the boat-hire and water-transport rides of `added` (the entities import_rides gave `rides`),
     /// one for each train, leaving the dock where its course in `courses` ends and coming back where it starts
     /// (transport boats calling at the course's other stations on the way), and the park's water for them to
     /// float on, closed where `solids` stand in it. Rides without a course keep their timing alone; those whose track goes round follow it as trains.
     /// A ride that has boats already gets them afresh, all back at its dock; the water is taken again as it is now.
-    void import_boats(SimWorld& world, const save::model::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::model::TerrainGrid& grid, std::span<const save::model::WaterBody> water, const park::path::SolidTiles& solids = { });
+    void import_boats(SimWorld& world, const save::model::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<rct3::park::track::TrackCourse>> courses, const save::model::TerrainGrid& grid, std::span<const save::model::WaterBody> water, const rct3::park::path::SolidTiles& solids = { });
 
     /// Takes again the water the park's boats float on, `water` closed where `solids` stand in it but open at each
     /// boat ride's dock, as after the park's paths or water change. Nothing while no ride has boats.
-    void boat_water(SimWorld& world, const save::model::TerrainGrid& grid, std::span<const save::model::WaterBody> water, const park::path::SolidTiles& solids = { });
+    void boat_water(SimWorld& world, const save::model::TerrainGrid& grid, std::span<const save::model::WaterBody> water, const rct3::park::path::SolidTiles& solids = { });
 
     /// Links the rides of `added` whose stations, as their courses in `courses` run through them, stand on tiles
     /// side by side on the same level, so trains told to may leave them together.
-    void link_stations(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::model::TerrainGrid& grid);
+    void link_stations(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<rct3::park::track::TrackCourse>> courses, const save::model::TerrainGrid& grid);
 
     /// The saved litter lying on the paths, each piece on the path tile under it, aged from when it was dropped
     /// to `now` (calendar units, as the park keeps them). Returns how many pieces came over. Call after
@@ -127,7 +127,7 @@ namespace rct3::simulation
     /// items are told apart by their models.
     std::size_t import_path_items(SimWorld& world, std::span<const save::model::PlacedObject> objects, std::span<const save::model::BinState> bins, std::span<const std::uint64_t> benches, std::span<const save::model::SignState> signs);
     /// Stands `wall` between the path tiles either side of it, or takes it away again when not `standing`.
-    void set_wall(SimWorld& world, const park::EdgeWall& wall, bool standing);
+    void set_wall(SimWorld& world, const rct3::park::EdgeWall& wall, bool standing);
 
     /// A path item of `kind` standing as `object` does, on the path tile under its tile's middle at the level
     /// nearest its base: a bin comes empty, holding kNewBinPieces. entt::null off the paths or for a hidden object.
@@ -167,10 +167,10 @@ namespace rct3::simulation
     std::size_t import_facilities(SimWorld& world, const save::model::RideModel& rides, const std::function<std::optional<std::uint32_t>(const save::model::Ride&)>& kind_of);
     /// The kind of path item guests react to that an item of `category` and `feature` stands as: effects and
     /// animatronics, or a path feature guests know. Nothing for the rest, bins, benches and signs among them.
-    [[nodiscard]] std::optional<PathItemKind> sight_of(std::uint32_t category, park::PathFeature feature);
+    [[nodiscard]] std::optional<PathItemKind> sight_of(std::uint32_t category, rct3::park::PathFeature feature);
     /// What an item of `category` and `feature` adds to the scenery round the path tiles near it: plants least,
     /// fountains, effects and animatronics most; nothing for what is not scenery.
-    [[nodiscard]] float scenery_weight(std::uint32_t category, park::PathFeature feature);
+    [[nodiscard]] float scenery_weight(std::uint32_t category, rct3::park::PathFeature feature);
     /// Sets SceneryNear from `objects`, each adding what `weight_of` gives it to the path tiles within reach of
     /// its tile. Call after import_paths.
     void import_scenery(SimWorld& world, std::span<const save::model::PlacedObject> objects, const std::function<float(const save::model::PlacedObject&)>& weight_of);
@@ -188,14 +188,14 @@ namespace rct3::simulation
     /// them onto the others. Call after import_gate, and again when the park's land changes.
     void keep_staff_in(SimWorld& world, const save::model::TerrainGrid& grid);
     /// The side of its path tile that a no-entry sign standing as `sign` bars: the side its front faces.
-    [[nodiscard]] park::Side no_entry_side(const save::model::PlacedObject& sign);
+    [[nodiscard]] rct3::park::Side no_entry_side(const save::model::PlacedObject& sign);
 
     /// Sets the park's own mix of parties (PartyMix) from the scenario's, when the save carries one.
     void import_party_mix(SimWorld& world, const save::model::GroupMix& mix);
 
     /// Marks the path tiles with a roof or shade over them, as `overhead` finds over the middle of each (see
     /// park/overhead.hpp). Returns how many are under a roof. Call after import_paths.
-    std::size_t import_cover(SimWorld& world, const std::function<std::vector<park::Overhead>(std::span<const glm::vec3>)>& overhead);
+    std::size_t import_cover(SimWorld& world, const std::function<std::vector<rct3::park::Overhead>(std::span<const glm::vec3>)>& overhead);
 
     /// A saved ride's reliability, whether it stands broken down, and its inspections.
     [[nodiscard]] Upkeep upkeep_of(const save::model::Ride& ride);
@@ -229,7 +229,7 @@ namespace rct3::simulation
     /// open and working. Call after import_paths.
     /// The park's run of `ride`, a pool slide with no cars that swimmers climb on foot (TrackCourse::climbs of
     /// `course`); none for another ride.
-    entt::entity import_climb_slide(SimWorld& world, const save::model::Ride& ride, const park::track::TrackCourse& course);
+    entt::entity import_climb_slide(SimWorld& world, const save::model::Ride& ride, const rct3::park::track::TrackCourse& course);
 
     std::vector<entt::entity> import_rides(SimWorld& world, const save::model::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters = { }, std::span<const std::optional<std::uint32_t>> guests = { });
 

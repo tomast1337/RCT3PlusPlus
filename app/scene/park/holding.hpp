@@ -6,14 +6,26 @@
 // the park does not own will not take them; a right click or Escape puts them back where they were picked up.
 #pragma once
 
+#include "simulation/entt.hpp"
 #include "ui/widget.hpp"
 
 #include <cstddef>
+#include <glm/glm.hpp>
+#include <optional>
 
 namespace rct3::scene::park
 {
 
     struct ParkScene;
+
+    /// A person the player holds under the pointer.
+    struct HeldPerson
+    {
+        entt::entity who = entt::null;
+        glm::vec3 from { 0.0f };       ///< Where they go if given back: where picked up, or a hire to the entrance
+        std::optional<glm::vec3> spot; ///< The ground or path under the pointer
+        bool allowed = false;          ///< They may be let go there
+    };
 
     /// Picks up the shown person `shown` (of ParkScene::shown_people). False when they cannot be picked up now:
     /// not walking in the park, or on a ride.

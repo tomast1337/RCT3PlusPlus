@@ -80,7 +80,7 @@ namespace rct3::scene
             const auto keep_at = [&](float x, float z) { keep(static_cast<std::int32_t>(std::floor((x - g.origin_x) / g.tile_size_x)), static_cast<std::int32_t>(std::floor((z - g.origin_z) / g.tile_size_z))); };
             for (const save::PlacedObject& o : scene.objects)
             {
-                const auto model = scene.models.find(park::model_key(o));
+                const auto model = scene.models.find(park::object::model_key(o));
                 if (o.hidden || o.fixture || model == scene.models.end() || !keeps_out(model->second.category))
                     continue;
                 park::support::SupportFootprint shape;
@@ -285,7 +285,7 @@ namespace rct3::scene
             hut.owner_ref = hut.id;
             if (load_object_model(scene, scene.placing.models, assets, hut))
             {
-                hut.colours = scene.models.at(park::model_key(hut)).default_colours;
+                hut.colours = scene.models.at(park::object::model_key(hut)).default_colours;
                 home.hut = hut.id;
                 scene.placed.insert(hut.id);
                 scene.objects.push_back(std::move(hut));
@@ -307,7 +307,7 @@ namespace rct3::scene
         {
             if (!load_object_model(scene, scene.placing.models, assets, panel))
                 continue;
-            panel.colours = scene.models.at(park::model_key(panel)).default_colours;
+            panel.colours = scene.models.at(park::object::model_key(panel)).default_colours;
             scene.enclosure_panels.push_back(panel.id);
             scene.objects.push_back(std::move(panel));
         }

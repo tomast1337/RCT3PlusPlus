@@ -12,7 +12,7 @@
 // park can pay what they cost together, and the tool stays out for another. A right click or Escape puts it away.
 #pragma once
 
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "park/path/clearance.hpp"
 #include "park/structure_placement.hpp"
 #include "save/model/structure.hpp"
@@ -61,7 +61,7 @@ namespace rct3::scene
         park::StructureProblem problem = park::StructureProblem::None;
         std::int64_t cost = 0; ///< Of all the items
         bool affordable = true;
-        park::ObjectMesh ghost_mesh;
+        park::object::ObjectMesh ghost_mesh;
         std::map<std::string, TrackModels, std::less<>> models;
         park::path::SolidTiles solids;
         std::size_t solids_of = static_cast<std::size_t>(-1);

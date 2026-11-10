@@ -3,7 +3,7 @@
 
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
-#include "park/object_pick.hpp"
+#include "park/object/pick.hpp"
 #include "park/path/drag.hpp"
 #include "park/water/surface.hpp"
 #include "scene/park_scene.hpp"
@@ -52,7 +52,7 @@ namespace rct3::scene
         {
             const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
             const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, ndc);
-            const auto ground = park::ground_hit(ray, scene.grid);
+            const auto ground = park::object::ground_hit(ray, scene.grid);
             std::optional<glm::vec3> spot;
             bool allowed = false;
             // A path under the pointer, at the height the simulation walks it there.

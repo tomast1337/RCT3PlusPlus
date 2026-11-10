@@ -4,14 +4,14 @@
 namespace rct3::park
 {
 
-    ObjectMesh animal_mesh(std::span<const PlacedAnimal> animals, AnimalRuns& runs)
+    object::ObjectMesh animal_mesh(std::span<const PlacedAnimal> animals, AnimalRuns& runs)
     {
         for (auto& [picture, run] : runs)
         {
             run.vertices.clear();
             run.indices.clear();
         }
-        ObjectMesh mesh;
+        object::ObjectMesh mesh;
         for (const PlacedAnimal& animal : animals)
         {
             if (animal.body == nullptr || animal.body->levels.empty())
@@ -52,7 +52,7 @@ namespace rct3::park
             }
             ++mesh.placed;
         }
-        for (const PartBlend blend : { PartBlend::Opaque, PartBlend::Cutout, PartBlend::Blended })
+        for (const object::PartBlend blend : { object::PartBlend::Opaque, object::PartBlend::Cutout, object::PartBlend::Blended })
         {
             for (const auto& [picture, run] : runs)
             {

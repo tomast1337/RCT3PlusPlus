@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/queue_fences.hpp"
 
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 #include "park/path/furniture.hpp"
 
 #include <doctest/doctest.h>
@@ -48,11 +48,11 @@ TEST_CASE("an edge piece is turned to face out of its side")
 {
     for (const Side side : ground::kSidesFromRowBefore)
     {
-        const glm::vec2 x = turned_x(edge_turns(side));
+        const glm::vec2 x = object::turned_x(edge_turns(side));
         const auto [dc, dr] = side.step();
         CHECK(x.x == doctest::Approx(static_cast<float>(dc)));
         CHECK(x.y == doctest::Approx(static_cast<float>(dr)));
-        CHECK(edge_turns(side) == turn_facing(side)); // An edge piece counts its turns as path furniture does
+        CHECK(edge_turns(side) == object::turn_facing(side)); // An edge piece counts its turns as path furniture does
     }
 }
 

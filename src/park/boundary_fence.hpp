@@ -7,7 +7,7 @@
 // middle of its edge and leans with the edge, as the railings of queues on the ground do.
 #pragma once
 
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "save/model/world.hpp"
 
 #include <cstdint>
@@ -21,7 +21,7 @@ namespace rct3::park
     struct BoundaryFence
     {
         std::vector<save::PlacedObject> pieces;
-        Leans leans; ///< Of the pieces that do not stand level
+        object::Leans leans; ///< Of the pieces that do not stand level
     };
 
     /// Whether the park owns `cell` outright.

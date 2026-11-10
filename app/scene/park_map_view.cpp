@@ -238,7 +238,7 @@ namespace rct3::scene
 
     } // namespace
 
-    ParkMap park_map(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water, std::span<const save::PlacedObject> objects, const park::ObjectModels& models, const park::Fitted& fitted, const park::AttractionObjects& attractions, const save::RideModel& rides, const park::ground::GroundImages& images, const config::GameInstall& install)
+    ParkMap park_map(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water, std::span<const save::PlacedObject> objects, const park::object::ObjectModels& models, const park::object::Fitted& fitted, const park::AttractionObjects& attractions, const save::RideModel& rides, const park::ground::GroundImages& images, const config::GameInstall& install)
     {
         const profiling::Scope zone("Map");
         ParkMap map;

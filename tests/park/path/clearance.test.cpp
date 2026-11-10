@@ -2,7 +2,7 @@
 #include "park/path/clearance.hpp"
 
 #include "park/item_category.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 #include "park/path/drag.hpp"
 #include "park/path/route.hpp"
 
@@ -30,9 +30,9 @@ namespace
     }
 
     /// One item of `category` standing on tile (2, 1), filling levels 0 to 3 of its one square, so up to 4.
-    std::pair<std::vector<save::PlacedObject>, ObjectModels> one_item(ItemCategory category)
+    std::pair<std::vector<save::PlacedObject>, object::ObjectModels> one_item(ItemCategory category)
     {
-        ObjectModel model;
+        object::ObjectModel model;
         model.category = std::to_underlying(category);
         model.ground_height = false;
         model.solid = { std::array<std::int32_t, 2> { 0, 4 } };
@@ -43,8 +43,8 @@ namespace
         o.col = 2;
         o.row = 1;
         o.base_height = 0;
-        ObjectModels models;
-        models.emplace(model_key(o), model);
+        object::ObjectModels models;
+        models.emplace(object::model_key(o), model);
         return { { o }, models };
     }
 } // namespace
@@ -69,7 +69,7 @@ TEST_CASE("a stall blocks paths through it but not over it; a bench never does")
     CHECK(solid_tiles(bench, bench_models, g).tiles.empty());
     // Nor does a lamp, of the lights' category, for standing against a path's side.
     auto [lamp, lamp_models] = one_item(ItemCategory::Stall);
-    lamp_models.begin()->second.positioning = std::to_underlying(Positioning::PathSide);
+    lamp_models.begin()->second.positioning = std::to_underlying(object::Positioning::PathSide);
     CHECK(solid_tiles(lamp, lamp_models, g).tiles.empty());
 }
 
@@ -116,7 +116,7 @@ TEST_CASE("items in different quarters or along different edges of a tile take d
 {
     const save::TerrainGrid g = owned_grid(5, 3);
     auto [objects, models] = one_item(ItemCategory::Stall);
-    models.begin()->second.positioning = std::to_underlying(Positioning::Quarter);
+    models.begin()->second.positioning = std::to_underlying(object::Positioning::Quarter);
     objects.push_back(objects[0]);
     objects[1].quadrant = 3;
     const SolidTiles solids = solid_tiles(objects, models, g);

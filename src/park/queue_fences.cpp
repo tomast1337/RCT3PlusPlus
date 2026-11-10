@@ -2,7 +2,7 @@
 #include "park/queue_fences.hpp"
 
 #include "park/ground/paths.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 #include "park/path/decks.hpp"
 
 #include <algorithm>
@@ -12,7 +12,7 @@ namespace rct3::park
 
     ModelTurn edge_turns(Side side) noexcept
     {
-        return turn_facing(side);
+        return object::turn_facing(side);
     }
 
     bool slope_falls(std::uint8_t slope) noexcept

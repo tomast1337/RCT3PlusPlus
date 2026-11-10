@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/object_pick.hpp"
+#include "park/object/pick.hpp"
 
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -9,7 +9,7 @@
 #include <string>
 #include <utility>
 
-namespace rct3::park
+namespace rct3::park::object
 {
 
     namespace
@@ -215,4 +215,4 @@ namespace rct3::park
         return best;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::object

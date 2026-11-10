@@ -5,7 +5,7 @@
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
 #include "park/item_category.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 #include "park/path/furniture.hpp"
 #include "park/queue_fences.hpp"
 #include "park/support/columns.hpp"
@@ -26,7 +26,7 @@ namespace rct3::park::ground
             return static_cast<std::uint32_t>(row) << 16 | static_cast<std::uint16_t>(col);
         }
 
-        std::vector<std::pair<int, int>> under(const save::PlacedObject& o, const ObjectModel& m)
+        std::vector<std::pair<int, int>> under(const save::PlacedObject& o, const object::ObjectModel& m)
         {
             support::SupportFootprint shape;
             shape.x_squares = m.squares[0];
@@ -35,7 +35,7 @@ namespace rct3::park::ground
         }
     } // namespace
 
-    GroundHolds ground_holds(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    GroundHolds ground_holds(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
     {
         GroundHolds out;
         std::vector<save::PlacedObject> raised;
@@ -44,16 +44,16 @@ namespace rct3::park::ground
             const save::PlacedObject& o = objects[i];
             if (o.hidden || o.fixture)
                 continue;
-            const auto model = models.find(model_ref(o));
+            const auto model = models.find(object::model_ref(o));
             if (model == models.end())
                 continue;
-            const ObjectModel& m = model->second;
+            const object::ObjectModel& m = model->second;
             if (m.holds_ground)
             {
                 for (const auto [c, r] : under(o, m))
                     out.held.insert(key_of(c, r));
             }
-            else if (on_ground(o) && is_prop(m.category) && !path::on_paths(static_cast<Positioning>(m.positioning)))
+            else if (object::on_ground(o) && is_prop(m.category) && !path::on_paths(static_cast<object::Positioning>(m.positioning)))
                 out.followers.push_back(i);
             else if (!m.solid.empty())
                 raised.push_back(o);
@@ -139,21 +139,21 @@ namespace rct3::park::ground
                 grid.at(cut.tile.col, cut.tile.row).corners = cut.corners;
     }
 
-    bool seat_followers(std::span<save::PlacedObject> objects, const GroundHolds& holds, const ObjectModels& models, const save::TerrainGrid& grid, save::Tile first, save::Tile last)
+    bool seat_followers(std::span<save::PlacedObject> objects, const GroundHolds& holds, const object::ObjectModels& models, const save::TerrainGrid& grid, save::Tile first, save::Tile last)
     {
         bool moved = false;
         for (const std::size_t i : holds.followers)
         {
             save::PlacedObject& o = objects[i];
-            const auto model = models.find(model_ref(o));
+            const auto model = models.find(object::model_ref(o));
             if (model == models.end())
                 continue;
-            const ObjectModel& m = model->second;
+            const object::ObjectModel& m = model->second;
             const auto tiles = under(o, m);
             if (std::ranges::none_of(tiles, [&](const auto& t) { return t.first >= first.col && t.first <= last.col && t.second >= first.row && t.second <= last.row; }))
                 continue;
             // Whole units, rounded up so it stands on the ground, not in it.
-            const float ground = object_transform(o, static_cast<Positioning>(m.positioning), grid, m.squares, true)[3].y - o.height_adjust.value_or(0);
+            const float ground = object::object_transform(o, static_cast<object::Positioning>(m.positioning), grid, m.squares, true)[3].y - o.height_adjust.value_or(0);
             o.base_height = static_cast<std::int32_t>(std::ceil(ground - kSame));
             moved = true;
         }

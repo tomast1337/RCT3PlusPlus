@@ -2,7 +2,7 @@
 #include "park/overhead.hpp"
 
 #include "park/item_category.hpp"
-#include "park/object_pick.hpp"
+#include "park/object/pick.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -48,9 +48,9 @@ namespace rct3::park
             return along >= 0 ? std::optional { along } : std::nullopt;
         }
 
-        bool meets_shape(const Ray& ray, const ObjectModel& model, float reach)
+        bool meets_shape(const Ray& ray, const object::ObjectModel& model, float reach)
         {
-            for (const ModelPart& part : model.levels.front().parts)
+            for (const object::ModelPart& part : model.levels.front().parts)
                 for (std::size_t i = 0; i + 2 < part.indices.size(); i += 3)
                 {
                     const auto at = [&](std::size_t k) { return part.vertices[part.indices[i + k]].position; };
@@ -73,16 +73,16 @@ namespace rct3::park
         return false;
     }
 
-    std::vector<Overhead> overheads(std::span<const glm::vec3> points, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
+    std::vector<Overhead> overheads(std::span<const glm::vec3> points, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid, const object::Fitted& fitted)
     {
         std::vector<Overhead> out(points.size());
-        const std::vector<PickBox> boxes = pick_boxes(objects, models, grid, fitted);
-        std::vector<const ObjectModel*> shapes(boxes.size(), nullptr);
+        const std::vector<object::PickBox> boxes = object::pick_boxes(objects, models, grid, fitted);
+        std::vector<const object::ObjectModel*> shapes(boxes.size(), nullptr);
         std::unordered_map<std::uint64_t, std::vector<std::size_t>> by_cell;
         for (std::size_t b = 0; b < boxes.size(); ++b)
         {
             const save::PlacedObject& o = objects[boxes[b].index];
-            const ObjectModel& model = models.find(model_ref(o))->second;
+            const object::ObjectModel& model = models.find(object::model_ref(o))->second;
             const bool tree = model.category == static_cast<std::uint32_t>(ItemCategory::Tree);
             if (o.hidden || (!tree && !is_roof(model.category)))
                 continue;
@@ -100,14 +100,14 @@ namespace rct3::park
                 continue;
             for (const std::size_t b : cell->second)
             {
-                const PickBox& box = boxes[b];
+                const object::PickBox& box = boxes[b];
                 if (from.x < box.park_low.x || from.x > box.park_high.x || from.z < box.park_low.z || from.z > box.park_high.z || box.park_high.y < from.y || box.park_low.y > from.y + length)
                     continue;
                 // Into the object's own space, the direction kept unscaled so distances along it match.
                 const Ray own { glm::vec3(box.back * glm::vec4(from, 1.0f)), glm::vec3(box.back * glm::vec4(0.0f, length, 0.0f, 0.0f)) };
                 if (shapes[b]->category == static_cast<std::uint32_t>(ItemCategory::Tree))
                 {
-                    if (const auto hit = box_hit(own, box.low, box.high); hit && *hit <= 1)
+                    if (const auto hit = object::box_hit(own, box.low, box.high); hit && *hit <= 1)
                         out[p].shade = true;
                 }
                 else if (meets_shape(own, *shapes[b], 1))

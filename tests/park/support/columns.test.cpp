@@ -43,11 +43,11 @@ namespace
     }
 
     /// A support piece's model: a box from `low` to `high`.
-    ObjectModel box(glm::vec3 low, glm::vec3 high)
+    object::ObjectModel box(glm::vec3 low, glm::vec3 high)
     {
-        ObjectModel m;
+        object::ObjectModel m;
         m.support_group = std::string(kGroup);
-        ModelPart part;
+        object::ModelPart part;
         part.vertices = { { low }, { high } };
         m.levels.emplace_back().parts.push_back(std::move(part));
         return m;
@@ -55,7 +55,7 @@ namespace
 
     struct Park
     {
-        ObjectModels models;
+        object::ObjectModels models;
         std::vector<save::PlacedObject> objects;
 
         Park()
@@ -69,7 +69,7 @@ namespace
 
         save::PlacedObject& add(std::string symbol, SupportFootprint footprint, int col, int row, std::int32_t base, std::int32_t rotation = 0)
         {
-            ObjectModel m;
+            object::ObjectModel m;
             m.support_group = std::string(kGroup);
             m.supports = std::move(footprint);
             models.emplace(std::format("Track|{}", symbol), std::move(m));
@@ -141,9 +141,9 @@ TEST_CASE("a column under track on the ground: deep foot, middles lined up on th
     CHECK(built.pieces.front().id == 101);
     CHECK(built.pieces.front().force_absolute_height);
     // Models handed in by index stand for those looked up; none handed in means none.
-    const std::vector<const ObjectModel*> found { &park.models.at(model_key(park.objects[0])) };
+    const std::vector<const object::ObjectModel*> found { &park.models.at(object::model_key(park.objects[0])) };
     CHECK(stack(support_columns(park.objects, park.models, { }, flat_grid(8, 2), girders(), 100, { }, std::nullopt, found).pieces, 3, 3) == stack(built.pieces, 3, 3));
-    CHECK(support_columns(park.objects, park.models, { }, flat_grid(8, 2), girders(), 100, { }, std::nullopt, std::vector<const ObjectModel*> { nullptr }).pieces.empty());
+    CHECK(support_columns(park.objects, park.models, { }, flat_grid(8, 2), girders(), 100, { }, std::nullopt, std::vector<const object::ObjectModel*> { nullptr }).pieces.empty());
 }
 
 TEST_CASE("a column needs room above the ground and no ground path under it")

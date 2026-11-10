@@ -25,9 +25,9 @@ namespace
     }
 
     /// One item of `category` on tile (1, 1) at height `base`, its one square solid from level 0 to 2.
-    std::pair<std::vector<save::PlacedObject>, ObjectModels> one_item(ItemCategory category, std::int32_t base)
+    std::pair<std::vector<save::PlacedObject>, object::ObjectModels> one_item(ItemCategory category, std::int32_t base)
     {
-        ObjectModel model;
+        object::ObjectModel model;
         model.category = std::to_underlying(category);
         model.solid = { std::array<std::int32_t, 2> { 0, 2 } };
         model.levels = { { 100, { }, { } } };
@@ -38,8 +38,8 @@ namespace
         o.col = 1;
         o.row = 1;
         o.base_height = base;
-        ObjectModels models;
-        models.emplace(model_key(o), model);
+        object::ObjectModels models;
+        models.emplace(object::model_key(o), model);
         return { { o }, models };
     }
 

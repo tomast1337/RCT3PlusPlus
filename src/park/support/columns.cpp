@@ -3,7 +3,7 @@
 
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 #include "park/queue_fences.hpp"
 
 #include <algorithm>
@@ -92,16 +92,16 @@ namespace rct3::park::support
         }
 
         /// The lowest and highest corner of the finest shape of `symbol` among the support pieces.
-        std::optional<std::pair<glm::vec3, glm::vec3>> extent(const ObjectModels& models, std::string_view symbol)
+        std::optional<std::pair<glm::vec3, glm::vec3>> extent(const object::ObjectModels& models, std::string_view symbol)
         {
             const auto model = models.find(std::format("{}|{}", kSupportOverlay, symbol));
             if (model == models.end() || model->second.levels.empty())
                 return std::nullopt;
             glm::vec3 low { std::numeric_limits<float>::max() };
             glm::vec3 high { std::numeric_limits<float>::lowest() };
-            for (const ModelPart& part : model->second.levels.front().parts)
+            for (const object::ModelPart& part : model->second.levels.front().parts)
             {
-                for (const ModelVertex& v : part.vertices)
+                for (const object::ModelVertex& v : part.vertices)
                 {
                     low = glm::min(low, v.position);
                     high = glm::max(high, v.position);
@@ -178,7 +178,7 @@ namespace rct3::park::support
             void stand(const save::PlacedObject& held, const SupportPiece& piece, glm::vec2 tiles, float level, ModelTurn turn, float stretch)
             {
                 save::PlacedObject& o = add(held, piece, tile_of(tiles), static_cast<std::int32_t>(std::floor(level)), turn);
-                const glm::vec2 x = turned_x(turn);
+                const glm::vec2 x = object::turned_x(turn);
                 glm::mat4 m { 1.0f };
                 m[0] = glm::vec4(x.x, 0, x.y, 0);
                 m[1] = glm::vec4(0, stretch, 0, 0);
@@ -213,7 +213,7 @@ namespace rct3::park::support
 
     glm::vec2 spot_in_tiles(const save::PlacedObject& object, const SupportFootprint& footprint, const SupportSpot& spot, bool middle_of_third)
     {
-        const glm::vec2 x = turned_x(ModelTurn::from(object.rotation));
+        const glm::vec2 x = object::turned_x(ModelTurn::from(object.rotation));
         const glm::vec2 z { -x.y, x.x };
         const auto along = [&](int i) {
             const float within = middle_of_third ? 0.5f : spot.within[static_cast<std::size_t>(i)];
@@ -221,7 +221,7 @@ namespace rct3::park::support
         };
         const float u = along(0) - static_cast<float>(footprint.x_squares) / 2;
         const float v = along(1) - static_cast<float>(footprint.z_squares) / 2;
-        return footprint_middle(object, { footprint.x_squares, footprint.z_squares }) - u * x - v * z;
+        return object::footprint_middle(object, { footprint.x_squares, footprint.z_squares }) - u * x - v * z;
     }
 
     std::vector<Tile> footprint_tiles(const save::PlacedObject& object, const SupportFootprint& footprint)
@@ -235,9 +235,9 @@ namespace rct3::park::support
         return out;
     }
 
-    std::vector<SupportTile> support_tiles(const save::PlacedObject& object, const ObjectModels& models)
+    std::vector<SupportTile> support_tiles(const save::PlacedObject& object, const object::ObjectModels& models)
     {
-        const auto model = models.find(model_ref(object));
+        const auto model = models.find(object::model_ref(object));
         if (model == models.end() || !model->second.supports)
             return { };
         const SupportFootprint& f = *model->second.supports;
@@ -262,7 +262,7 @@ namespace rct3::park::support
         return low <= cell.max_height() && low + rise >= cell.min_height();
     }
 
-    BuiltSupports support_columns(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, const SupportSets& sets, std::uint64_t last_id, const std::unordered_set<std::uint64_t>& passed, std::optional<const std::set<SupportTile>&> tiles, std::span<const ObjectModel* const> found)
+    BuiltSupports support_columns(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, const SupportSets& sets, std::uint64_t last_id, const std::unordered_set<std::uint64_t>& passed, std::optional<const std::set<SupportTile>&> tiles, std::span<const object::ObjectModel* const> found)
     {
         std::set<Tile> ground_paths;
         for (const save::PathTile& p : paths)
@@ -274,21 +274,21 @@ namespace rct3::park::support
 
         // Items with support points whose columns stand on those tiles; which point of a group gets one depends
         // on what is under each, so the tiles under all their points are looked at.
-        std::vector<std::pair<const save::PlacedObject*, const ObjectModel*>> by_points;
+        std::vector<std::pair<const save::PlacedObject*, const object::ObjectModel*>> by_points;
         std::set<Tile> needed;
-        const auto model_of = [&](std::size_t i) -> const ObjectModel* {
+        const auto model_of = [&](std::size_t i) -> const object::ObjectModel* {
             const save::PlacedObject& o = objects[i];
             if (o.hidden || passed.contains(o.id) || o.overlay == kSupportOverlay)
                 return nullptr;
             if (i < found.size())
                 return found[i] != nullptr && found[i]->supports ? found[i] : nullptr;
-            const auto model = models.find(model_ref(o));
+            const auto model = models.find(object::model_ref(o));
             return model != models.end() && model->second.supports ? &model->second : nullptr;
         };
         for (std::size_t i = 0; i < objects.size(); ++i)
         {
             const save::PlacedObject& o = objects[i];
-            const ObjectModel* m = model_of(i);
+            const object::ObjectModel* m = model_of(i);
             if (m == nullptr || !m->supports->by_points || !m->supports->wants_supports)
                 continue;
             const SupportFootprint& f = *m->supports;
@@ -306,7 +306,7 @@ namespace rct3::park::support
         for (std::size_t n = 0; n < objects.size(); ++n)
         {
             const save::PlacedObject& o = objects[n];
-            const ObjectModel* m = model_of(n);
+            const object::ObjectModel* m = model_of(n);
             if (m == nullptr)
                 continue;
             const SupportFootprint& f = *m->supports;
@@ -318,7 +318,7 @@ namespace rct3::park::support
                 if (!wanted(under[i]) && !needed.contains(under[i]))
                     continue;
                 if (!base)
-                    base = static_cast<std::int32_t>(std::lround(object_transform(o, static_cast<Positioning>(m->positioning), grid, m->squares, m->ground_height)[3].y));
+                    base = static_cast<std::int32_t>(std::lround(object::object_transform(o, static_cast<object::Positioning>(m->positioning), grid, m->squares, m->ground_height)[3].y));
                 covering[under[i]].push_back({ &o, &f, &f.squares[i], *base + f.squares[i].low, *base + f.squares[i].high });
             }
         }
@@ -339,7 +339,7 @@ namespace rct3::park::support
                 const SupportFootprint& f = *c.footprint;
                 if (!f.wants_supports || f.by_points || !c.square->wants_column || c.square->kind == kNoSupport || (f.alternate_tiles && !odd_tile) || !c.object->base_height)
                     continue;
-                const std::string& group = c.object->support_set.empty() ? models.at(model_key(*c.object)).support_group : c.object->support_set;
+                const std::string& group = c.object->support_set.empty() ? models.at(object::model_key(*c.object)).support_group : c.object->support_set;
                 const FoundSet found = find_support_set(sets, group, turned(c.square->kind, ModelTurn::from(c.object->rotation)));
                 if (found.set == nullptr)
                     continue;

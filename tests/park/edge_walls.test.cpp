@@ -3,7 +3,7 @@
 
 #include "park/ground/paths.hpp"
 #include "park/item_category.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 #include "park/path/decks.hpp"
 
 #include <doctest/doctest.h>
@@ -37,9 +37,9 @@ namespace
     }
 
     /// A fence on tile (2, 1) whose +X faces after `turns` quarter turns, and its model, of `category`.
-    std::pair<save::PlacedObject, ObjectModels> fence(std::int32_t turns, ItemCategory category = ItemCategory::Fence, Positioning positioning = Positioning::Edge)
+    std::pair<save::PlacedObject, object::ObjectModels> fence(std::int32_t turns, ItemCategory category = ItemCategory::Fence, object::Positioning positioning = object::Positioning::Edge)
     {
-        ObjectModel model;
+        object::ObjectModel model;
         model.category = std::to_underlying(category);
         model.positioning = std::to_underlying(positioning);
         model.levels = { { 100, { }, { } } };
@@ -49,8 +49,8 @@ namespace
         o.row = 1;
         o.rotation = turns;
         o.base_height = 0;
-        ObjectModels models;
-        models.emplace(model_key(o), model);
+        object::ObjectModels models;
+        models.emplace(object::model_key(o), model);
         return { o, models };
     }
 } // namespace
@@ -68,7 +68,7 @@ TEST_CASE("a fence stands along the side its +X faces, listed on both tiles it p
     CHECK_FALSE(walled(walls, { 2, 1 }, Side { 0 }, 0));
     CHECK_FALSE(walled(walls, { 2, 1 }, Side { 1 }, 6)); // A deck high over it
     // Neither a fence item set elsewhere than an edge, nor a stall, nor a hidden fence is a wall.
-    const auto [lamp, lamp_models] = fence(2, ItemCategory::Fence, Positioning::PathSide);
+    const auto [lamp, lamp_models] = fence(2, ItemCategory::Fence, object::Positioning::PathSide);
     CHECK_FALSE(edge_wall(lamp, lamp_models, grid));
     const auto [stall, stall_models] = fence(2, ItemCategory::Stall);
     CHECK_FALSE(edge_wall(stall, stall_models, grid));

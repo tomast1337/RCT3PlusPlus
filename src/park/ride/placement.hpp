@@ -13,7 +13,7 @@
 
 #include "park/carried_goods.hpp"
 #include "park/ground/holds.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 #include "park/path/clearance.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -127,7 +127,7 @@ namespace rct3::park::ride
     /// faces.
     [[nodiscard]] constexpr Side served_side(ModelTurn turn) noexcept
     {
-        return faced_side(turn).left();
+        return object::faced_side(turn).left();
     }
 
     /// A ride's entrance or exit: its tile and the turn that faces it to the ride, its +X towards the side of its

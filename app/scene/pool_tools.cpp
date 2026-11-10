@@ -3,8 +3,8 @@
 
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
-#include "park/object_pick.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/pick.hpp"
+#include "park/object/placement.hpp"
 #include "park/pools/pools.hpp"
 #include "park/tile_shaping.hpp"
 #include "profiling/profiler.hpp"
@@ -204,7 +204,7 @@ namespace rct3::scene
             if (size.x <= 0 || size.y <= 0)
                 return std::nullopt;
             const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
-            std::optional<float> nearest = park::ground_hit(ray, scene.grid);
+            std::optional<float> nearest = park::object::ground_hit(ray, scene.grid);
             const save::TerrainGrid& g = scene.grid;
             const auto top = [&](std::int32_t col, std::int32_t row, std::int32_t height) {
                 const float along = (static_cast<float>(height) - ray.origin.y) / ray.direction.y;
@@ -266,11 +266,11 @@ namespace rct3::scene
             if (t.preview_of != symbol && load_object_model(scene, scene.placing.models, assets, alone))
             {
                 t.preview_of = symbol;
-                t.preview = park::object_mesh(std::span(&alone, 1), scene.models, scene.grid);
+                t.preview = park::object::object_mesh(std::span(&alone, 1), scene.models, scene.grid);
                 ghost_textures(device, scene, t.preview);
             }
             if (t.preview_of == symbol)
-                t.preview_camera = park::framed(park::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
+                t.preview_camera = park::framed(park::object::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
         }
 
         /// Draws `ghost` see-through, tinted as refused unless `ok`; none takes the ghost away.
@@ -282,7 +282,7 @@ namespace rct3::scene
                 return;
             t.ghost_of = ghost;
             t.ghost_ok = ok;
-            t.ghost = ghost ? park::object_mesh(std::span(&*ghost, 1), scene.models, scene.grid) : park::ObjectMesh { };
+            t.ghost = ghost ? park::object::object_mesh(std::span(&*ghost, 1), scene.models, scene.grid) : park::object::ObjectMesh { };
             for (park::GroundVertex& v : t.ghost.vertices)
                 v.colour *= ok ? kGhostTint : kRefusedTint;
             ghost_textures(device, scene, t.ghost);
@@ -300,7 +300,7 @@ namespace rct3::scene
             const auto fits_at = [&](park::Side side) { return tile && (room ? park::pools::pool_room_fits(scene.pools, tile->col, tile->row, side) : park::pools::pool_extra_fits(scene.pools, tile->col, tile->row, fit, side)); };
             // It takes the side nearest the pointer that it fits against, as a bench on a path does; the turn keys
             // turn it only where it fits every way or none.
-            const auto nearest = tile ? park::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, fits_at) : std::nullopt;
+            const auto nearest = tile ? park::object::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, fits_at) : std::nullopt;
             const park::Side side = nearest && !std::ranges::all_of(park::kSides, fits_at) ? *nearest : t.side;
             const bool fits = fits_at(side) && (!room || park::owned_outright(scene.grid.at(tile->col, tile->row)));
             const bool ok = fits && (!scene.park.cash || *scene.park.cash >= item.price);
@@ -328,7 +328,7 @@ namespace rct3::scene
                             .col = tile->col,
                             .row = tile->row,
                             .side = side,
-                            .refund = loaded ? scene.models.at(park::model_key(model)).removal_cost : 0,
+                            .refund = loaded ? scene.models.at(park::object::model_key(model)).removal_cost : 0,
                             .fit = fit,
                         });
                     ++scene.built;
@@ -569,7 +569,7 @@ namespace rct3::scene
             const save::Tile on { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
             const auto deck = scene.pools.at(on.col, on.row) ? decks.end() : std::ranges::find_if(decks, [&](const park::pools::SlidePlatform& d) { return d.col == on.col && d.row == on.row; });
             if (deck != decks.end())
-                if (const auto side = park::nearest_side(*spot - glm::vec2 { on.col, on.row }, [&](park::Side side) { return park::pools::slide_path_start(scene.pools, *deck, side).has_value(); }))
+                if (const auto side = park::object::nearest_side(*spot - glm::vec2 { on.col, on.row }, [&](park::Side side) { return park::pools::slide_path_start(scene.pools, *deck, side).has_value(); }))
                 {
                     const auto [dc, dr] = side->step();
                     deck_start = { save::Tile { on.col + dc, on.row + dr }, *park::pools::slide_path_start(scene.pools, *deck, *side) };
@@ -631,7 +631,7 @@ namespace rct3::scene
             const auto square = tile ? scene.pools.at(tile->col, tile->row) : std::nullopt;
             const auto deck = tile && !square ? std::ranges::find_if(decks, [&](const park::pools::SlidePlatform& d) { return d.col == tile->col && d.row == tile->row; }) : decks.end();
             const auto start_height = [&](park::Side side) { return square ? park::pools::pool_path_start(scene.pools, *square, side) : deck != decks.end() ? park::pools::slide_path_start(scene.pools, *deck, side) : std::nullopt; };
-            const auto side = tile ? park::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, [&](park::Side side) { return start_height(side).has_value(); }) : std::nullopt;
+            const auto side = tile ? park::object::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, [&](park::Side side) { return start_height(side).has_value(); }) : std::nullopt;
             // The trail as it would be, started where the pointer is, else the one laid.
             park::FootpathBuilder hovered = t.trail;
             if (side)
@@ -696,7 +696,7 @@ namespace rct3::scene
             };
             const bool backed = std::ranges::any_of(park::kSides, [&](park::Side side) { return water(side) && !water(side.opposite()); });
             const auto faces = [&](park::Side side) { return water(side) && (!backed || !water(side.opposite())); };
-            if (const auto side = park::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, faces); side && !std::ranges::all_of(park::kSides, faces))
+            if (const auto side = park::object::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, faces); side && !std::ranges::all_of(park::kSides, faces))
                 t.side = *side;
         }
         if (std::exchange(t.redraw, false))
@@ -854,7 +854,7 @@ namespace rct3::scene
         {
             if (!load_object_model(scene, scene.placing.models, assets, piece))
                 continue;
-            piece.colours = scene.models.at(park::model_key(piece)).default_colours;
+            piece.colours = scene.models.at(park::object::model_key(piece)).default_colours;
             pieces.push_back(std::move(piece));
         }
         replace_fixtures(scene, scene.pool_pieces, std::move(pieces));

@@ -28,8 +28,8 @@
 #include "park/camera.hpp"
 #include "park/car_splashes.hpp"
 #include "park/moving_meshes.hpp"
-#include "park/object_mesh.hpp"
-#include "park/object_pick.hpp"
+#include "park/object/mesh.hpp"
+#include "park/object/pick.hpp"
 #include "park/person_mesh.hpp"
 #include "park/pools/pools.hpp"
 #include "park/ride/cars.hpp"
@@ -143,8 +143,8 @@ namespace rct3::scene
     /// either missing when its shape is.
     struct CarriedLook
     {
-        std::optional<park::ObjectModel> full;
-        std::optional<park::ObjectModel> empty;
+        std::optional<park::object::ObjectModel> full;
+        std::optional<park::object::ObjectModel> empty;
     };
 
     struct BrokenRide
@@ -174,15 +174,15 @@ namespace rct3::scene
     /// Objects' shapes and billboards at some levels.
     struct ObjectShapes
     {
-        park::ObjectMesh mesh;
-        park::Billboards billboards;
+        park::object::ObjectMesh mesh;
+        park::object::Billboards billboards;
     };
 
     /// The objects' meshes for new levels, built away from the frame: those drawn at one level apart from those
     /// crossing between two, at each.
     struct ObjectBuild
     {
-        park::LevelPlan plan;
+        park::object::LevelPlan plan;
         ObjectShapes steady;
         ObjectShapes finer;
         ObjectShapes coarser;
@@ -291,11 +291,11 @@ namespace rct3::scene
         /// The extra, changing room or next pool path piece where it would go, drawn see-through, and whether it may go there.
         std::optional<save::PlacedObject> ghost_of;
         bool ghost_ok = false;
-        park::ObjectMesh ghost;
+        park::object::ObjectMesh ghost;
         park::TerrainMesh arrow; ///< Over the paths page's next piece, the way its trail goes on
         /// The extra or changing room alone, for the pool panel's disc, and the view of it there.
         std::string preview_of;
-        park::ObjectMesh preview;
+        park::object::ObjectMesh preview;
         park::ParkCamera preview_camera;
         render::TextureHandle preview_target;
         std::uint32_t preview_pixels = 0;
@@ -315,18 +315,18 @@ namespace rct3::scene
     /// objects, the buffers hold CrossingVertex, and `bands` each billboard corner's band and side.
     struct ShownObjects
     {
-        std::vector<park::ObjectBatch> batches;
+        std::vector<park::object::ObjectBatch> batches;
         render::BufferHandle vertices;
         render::BufferHandle indices;
-        park::Billboards billboards;
+        park::object::Billboards billboards;
         std::vector<std::pair<glm::vec4, glm::vec2>> bands;
     };
 
     /// The still people's mesh for new levels, built away from the frame.
     struct PeopleBuild
     {
-        park::ObjectLevels levels;
-        park::ObjectMesh mesh;
+        park::object::ObjectLevels levels;
+        park::object::ObjectMesh mesh;
         bool simulate = false; ///< Whether it left out the simulated guests
     };
 
@@ -444,11 +444,11 @@ namespace rct3::scene
         render::TextureHandle blank;     ///< For ground without a picture
         render::TextureHandle variation; ///< Noise the ground's shade wanders by (park/ground/variation.hpp)
         std::vector<save::PlacedObject> objects;
-        park::ObjectModels models;
-        park::ModelPictures pictures;            ///< For painting the batches new levels bring
-        park::Leans leans;                       ///< Of the built pieces that follow a slope
-        park::Fitted fitted;                     ///< Of the built pieces placed off the tile grid
-        park::Broken broken_objects;             ///< Path items vandals have broken, drawn so
+        park::object::ObjectModels models;
+        park::object::ModelPictures pictures;    ///< For painting the batches new levels bring
+        park::object::Leans leans;               ///< Of the built pieces that follow a slope
+        park::object::Fitted fitted;             ///< Of the built pieces placed off the tile grid
+        park::object::Broken broken_objects;     ///< Path items vandals have broken, drawn so
         std::vector<std::uint64_t> fence_panels; ///< The objects of the fence round the park's land, as last built
         /// By ride id, the objects of the fence the park built round the ride and beside its doors, as last built.
         std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> ride_fence_pieces;
@@ -474,15 +474,15 @@ namespace rct3::scene
         float lamp_strength = -1;           ///< The strength it was packed with
         /// Where the objects stand, and the boxes they are clicked in, brought up to date (place_objects) after a
         /// change or when objects are added.
-        mutable park::ObjectPlaces places;
-        mutable std::vector<park::PickBox> pick_boxes;
+        mutable park::object::ObjectPlaces places;
+        mutable std::vector<park::object::PickBox> pick_boxes;
         mutable std::size_t pick_boxes_of = 0; ///< How many objects they were brought up to date for
-        park::LevelPlan levels;                ///< Those the object buffers hold
+        park::object::LevelPlan levels;        ///< Those the object buffers hold
         /// Of a level's distance, how far before its edge objects start blending into the next; 0 jumps. Set
         /// from the options each frame, and handed to each build.
         float blend_band = 0;
-        park::LevelScales level_scales { }; ///< Each kind's detail and draw distance; set as blend_band is
-        float since_rebuild = 0;            ///< Seconds since the levels were last looked at
+        park::object::LevelScales level_scales { }; ///< Each kind's detail and draw distance; set as blend_band is
+        float since_rebuild = 0;                    ///< Seconds since the levels were last looked at
         /// Meshes for levels that differ from those shown, while being built. Building only reads what is
         /// set when the park loads, so it may run beside the frame; it must be waited for before the scene
         /// goes.
@@ -493,7 +493,7 @@ namespace rct3::scene
         std::size_t objects_shown = 0; ///< How many objects those were built from
         /// Objects added since the shown ones were built, drawn on their own until a build takes them in, so a
         /// piece laid shows at once.
-        park::ObjectMesh fresh_objects;
+        park::object::ObjectMesh fresh_objects;
         std::array<std::size_t, 2> fresh_for { };             ///< objects_shown and the objects' count it was built for
         std::optional<glm::vec3> billboards_eye;              ///< The eye they face, none when not turned yet
         render::PipelineHandle object_pipeline;               ///< Opaque parts
@@ -509,8 +509,8 @@ namespace rct3::scene
         /// By the id of each object pipeline above, the same pipeline drawing only the front of one-sided parts.
         std::map<std::uint32_t, render::PipelineHandle> front_only;
         ui::UiTextures object_textures;
-        std::uint32_t ripple_frame = 0;  ///< Of the still water of objects, the picture shown (park::water_picture)
-        park::ObjectMesh waterfall_mesh; ///< The waterfalls' water, built again each frame as it runs
+        std::uint32_t ripple_frame = 0;          ///< Of the still water of objects, the picture shown (park::water_picture)
+        park::object::ObjectMesh waterfall_mesh; ///< The waterfalls' water, built again each frame as it runs
         /// The water running off a pool slide's open end: it sprays off the lip and falls, and where it comes down
         /// rings spread on a pool's water or it splashes.
         struct SlidePour
@@ -547,12 +547,12 @@ namespace rct3::scene
         render::PipelineHandle waterfall_added_pipeline;      ///< Its pictures with a second added
         render::PipelineHandle waterfall_multiplied_pipeline; ///< And with a second multiplying them
         park::SkyModels sky;
-        park::ObjectMesh sky_mesh; ///< Built again each frame round the eye
+        park::object::ObjectMesh sky_mesh; ///< Built again each frame round the eye
         ui::UiTextures sky_textures;
         render::PipelineHandle sky_pipeline; ///< Drawn first, behind everything, without depth
         render::Color horizon = kParkSky;    ///< What shows below the sky
         std::vector<glm::vec4> horizon_band; ///< Of the sky's picture, for the horizon at each time of day
-        park::ObjectMesh mountains;          ///< Round the map; empty when not shown
+        park::object::ObjectMesh mountains;  ///< Round the map; empty when not shown
         float clock = 0;                     ///< Seconds the park has been shown
         /// Park seconds the park has been shown: at the speed picked, stopped while paused. Everything in the
         /// park moves by it, so a pause freezes it all; the interface and its previews go by `clock`.
@@ -571,7 +571,7 @@ namespace rct3::scene
         /// Ride cars, drawn apart from the objects so the simulation can move them round their rides' courses.
         std::vector<save::PlacedObject> cars;
         std::vector<park::ride::CarSpot> car_spots; ///< By car, as the park kept them
-        park::Fitted saved_cars;                    ///< Where the park kept each car, by id
+        park::object::Fitted saved_cars;            ///< Where the park kept each car, by id
         std::vector<glm::mat4> car_places;          ///< Where each car stands now, by car
         std::vector<park::CarWater> car_waters;     ///< Of each car, the water it runs through
         std::optional<std::size_t> riding;          ///< The car the view rides along in, of `cars`
@@ -586,17 +586,17 @@ namespace rct3::scene
         float ride_pull = 0;        ///< How far the wheel has pulled the view back off its mount, in notches
         /// Of a person in `shown_people`, a new name asked by a script, given as the name box gives one.
         std::optional<std::pair<std::size_t, std::u16string>> rename_requested;
-        std::optional<std::size_t> person_requested;         ///< Of a person in `shown_people`, their window asked by a script
-        park::Seat seat;                                     ///< Its rider's eyes, while riding
-        float seat_across = park::kRideWideView;             ///< How far across the screen the rider's view takes in
-        park::RideEye riding_eye = park::RideEye::Front;     ///< The kind of camera ridden
-        glm::vec2 ride_turn { };                             ///< How far the rider looks round from ahead, yaw and pitch
-        bool ride_dragging = false;                          ///< A drag over the view is turning the rider's head
-        park::RideView ride_view;                            ///< How the rider's view moved, while riding
-        random::RandomState ride_dice = random::seeded({ }); ///< For the shake of the rider's view
-        std::vector<std::string> hidden_for_ride;            ///< The windows put away while riding, to show again after
-        bool paused_for_ride = false;                        ///< The park was paused, so riding set it going
-        park::MovingMeshes car_meshes;                       ///< At car_mesh_places
+        std::optional<std::size_t> person_requested;                     ///< Of a person in `shown_people`, their window asked by a script
+        park::Seat seat;                                                 ///< Its rider's eyes, while riding
+        float seat_across = park::kRideWideView;                         ///< How far across the screen the rider's view takes in
+        park::object::RideEye riding_eye = park::object::RideEye::Front; ///< The kind of camera ridden
+        glm::vec2 ride_turn { };                                         ///< How far the rider looks round from ahead, yaw and pitch
+        bool ride_dragging = false;                                      ///< A drag over the view is turning the rider's head
+        park::RideView ride_view;                                        ///< How the rider's view moved, while riding
+        random::RandomState ride_dice = random::seeded({ });             ///< For the shake of the rider's view
+        std::vector<std::string> hidden_for_ride;                        ///< The windows put away while riding, to show again after
+        bool paused_for_ride = false;                                    ///< The park was paused, so riding set it going
+        park::MovingMeshes car_meshes;                                   ///< At car_mesh_places
         /// A car whose riders sit on an arm: its place in `cars`, its arm's joints at rest, and how the last
         /// joint, the riders' seat, is moved now in the car's own space.
         struct ArmCar
@@ -635,7 +635,7 @@ namespace rct3::scene
         std::map<entt::entity, std::vector<std::size_t>> ride_cars; ///< In the simulation, by ride; null when not there
         /// Of tracked rides whose trains were made here (fit_trains), by ride (of rides): how each car of a train
         /// sits on the track, by car.
-        std::map<std::size_t, std::vector<park::CarFit>> car_fits;
+        std::map<std::size_t, std::vector<park::object::CarFit>> car_fits;
         /// Tracked rides put to test or opened since the last update, whose trains are made ready to run then.
         std::vector<std::size_t> readying;
         /// Of tracked rides whose window has shown or built them, by ride: how many cars their trains may have.
@@ -683,13 +683,13 @@ namespace rct3::scene
         std::optional<park::PersonLibrary> person_models;                     ///< Of the park's people
         std::map<const park::PartSet*, std::array<float, kGaits>> walk_paces; ///< Of each legs set measured so far, 0 for none
         /// Umbrellas guests hold up, for adults and teens, then for children; empty when missing.
-        std::array<std::optional<park::ObjectModel>, 2> umbrellas;
+        std::array<std::optional<park::object::ObjectModel>, 2> umbrellas;
         /// The tools handymen hold at work, by shape name (see simulation::WorkLook::tool); those missing are left out.
-        std::map<std::string, park::ObjectModel, std::less<>> staff_tools;
+        std::map<std::string, park::object::ObjectModel, std::less<>> staff_tools;
         /// How litter and sick look lying on the paths; either missing when its shape is.
-        std::array<std::optional<park::ObjectModel>, 2> litter_looks;
+        std::array<std::optional<park::object::ObjectModel>, 2> litter_looks;
         /// The ring lazy river riders float in, about its middle; missing when its car is.
-        std::optional<park::ObjectModel> swim_ring;
+        std::optional<park::object::ObjectModel> swim_ring;
         /// What guests carry from stalls, by its carried item's symbol (as `Burger:cid`).
         std::map<std::string, CarriedLook, std::less<>> carried_looks;
         std::vector<ShownPerson> shown_people;
@@ -698,18 +698,18 @@ namespace rct3::scene
         std::unordered_set<entt::entity> known_guests; ///< The simulated guests the shown people were made for
         std::size_t costumes_given = 0;                ///< To entertainers hired, each the next costume in turn
         random::RandomState looks;                     ///< For the colours of people's clothes left to pick
-        park::ObjectLevels people_levels;              ///< Of each shown person, as the still people's mesh holds them
-        park::ObjectMesh still_people;
-        park::ObjectMesh moving_people; ///< The people in motion in view, as last posed
+        park::object::ObjectLevels people_levels;      ///< Of each shown person, as the still people's mesh holds them
+        park::object::ObjectMesh still_people;
+        park::object::ObjectMesh moving_people; ///< The people in motion in view, as last posed
         float since_people_levels = kObjectRebuildInterval;
         std::future<PeopleBuild> people_build; ///< Like object_build, for the still people
         /// Kept for moving_build, the only one to touch it, so its memory is reused. Declared first, so it
         /// outlives a build still running when the scene goes.
         park::PersonRuns moving_runs { };
-        std::future<park::ObjectMesh> moving_build; ///< The people in motion, posed away from the frame
-        park::PersonRuns rider_runs { };            ///< Kept for riders_build, like moving_runs
-        park::PersonRuns rider_gathered { };        ///< Kept for riders_build, like moving_runs
-        std::future<RidersBuild> riders_build;      ///< The riders, posed away from the frame
+        std::future<park::object::ObjectMesh> moving_build; ///< The people in motion, posed away from the frame
+        park::PersonRuns rider_runs { };                    ///< Kept for riders_build, like moving_runs
+        park::PersonRuns rider_gathered { };                ///< Kept for riders_build, like moving_runs
+        std::future<RidersBuild> riders_build;              ///< The riders, posed away from the frame
         /// Riders seated in the ride cars, each car's posed in the car's own space so they move with it.
         park::MovingMeshes riders;
         /// By piece of `riders`: what carries them, a car in `cars` or past those a seat in `seat_carriers`, or kNoCar
@@ -904,7 +904,7 @@ namespace rct3::scene
     bool ripple_at(ParkScene& scene, ui::Point at, ui::Point size);
 
     /// Each kind's detail and draw distance, from the graphics options.
-    [[nodiscard]] park::LevelScales level_scales(const config::GameOptions& options);
+    [[nodiscard]] park::object::LevelScales level_scales(const config::GameOptions& options);
 
     /// The colour to clear to before drawing the park.
     [[nodiscard]] render::Color park_background(const ParkScene& scene);
@@ -964,7 +964,7 @@ namespace rct3::scene
 
     /// Has `train`, of cars of `model`, swing in a pool slide's trough as the car does (not at all for a car that
     /// does not) and, on a pool slide, be held back as its train's file has it.
-    void fit_car(simulation::Coaster& train, const park::ObjectModel& model, bool pool_slide);
+    void fit_car(simulation::Coaster& train, const park::object::ObjectModel& model, bool pool_slide);
 
     /// Loads the models of `cars` the scene does not have yet, and their pictures.
     void load_car_models(ParkScene& scene, const config::GameInstall& install, const park::ride::RideCars& cars);

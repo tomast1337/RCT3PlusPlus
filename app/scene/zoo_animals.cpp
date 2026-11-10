@@ -77,7 +77,7 @@ namespace rct3::scene
     {
         DrawnAnimals& drawn = scene.drawn_animals;
         save::PlacedObject crate = animal_crate();
-        if (scene.models.contains(park::model_key(crate)))
+        if (scene.models.contains(park::object::model_key(crate)))
             add_textures(device, scene, park::moving_meshes(std::span(&crate, 1), scene.models, scene.grid).mesh.batches);
         if (drawn.library)
         {
@@ -118,7 +118,7 @@ namespace rct3::scene
             std::vector<save::PlacedObject> shapes(crated.size(), crate);
             for (std::size_t i = 0; i < shapes.size(); ++i)
                 shapes[i].id = i + 1;
-            drawn.crates = scene.models.contains(park::model_key(crate)) ? park::moving_meshes(shapes, scene.models, scene.grid) : park::MovingMeshes { };
+            drawn.crates = scene.models.contains(park::object::model_key(crate)) ? park::moving_meshes(shapes, scene.models, scene.grid) : park::MovingMeshes { };
             drawn.crated = std::move(crated);
         }
         park::move_meshes(drawn.crates, crate_places);

@@ -29,7 +29,7 @@
 // come with their whole transforms.
 #pragma once
 
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "park/support/sets.hpp"
 #include "save/model/world.hpp"
 
@@ -67,12 +67,12 @@ namespace rct3::park::support
     {
         std::vector<save::PlacedObject> pieces;
         std::vector<SupportOf> of; ///< Of each piece
-        Fitted fitted;             ///< Of the pieces that stand off the middle of a tile, are stretched, or are beams
+        object::Fitted fitted;     ///< Of the pieces that stand off the middle of a tile, are stretched, or are beams
     };
 
     /// The tiles whose columns `object` may change: under its footprint, and where its support points stand
     /// beside it. None when its model is not among `models` or columns pass by it.
-    [[nodiscard]] std::vector<SupportTile> support_tiles(const save::PlacedObject& object, const ObjectModels& models);
+    [[nodiscard]] std::vector<SupportTile> support_tiles(const save::PlacedObject& object, const object::ObjectModels& models);
 
     /// Whether `path` lies at the ground of its tile, which keeps a column off the ground there: a path or queue
     /// laid on the ground, or a raised piece whose heights reach into those of the tile's ground.
@@ -82,6 +82,6 @@ namespace rct3::park::support
     /// given. Items in `passed` are left out, as if not there. New objects take ids after `last_id`. `models`
     /// must hold the support sets' tops, caps and beams, whose shapes give their sizes. Each object has the model
     /// `found` gives by index when given (ObjectPlaces::models), else the one `models` has.
-    [[nodiscard]] BuiltSupports support_columns(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, const SupportSets& sets, std::uint64_t last_id, const std::unordered_set<std::uint64_t>& passed = { }, std::optional<const std::set<SupportTile>&> tiles = std::nullopt, std::span<const ObjectModel* const> found = { });
+    [[nodiscard]] BuiltSupports support_columns(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, const SupportSets& sets, std::uint64_t last_id, const std::unordered_set<std::uint64_t>& passed = { }, std::optional<const std::set<SupportTile>&> tiles = std::nullopt, std::span<const object::ObjectModel* const> found = { });
 
 } // namespace rct3::park::support

@@ -20,7 +20,7 @@ namespace
         return g;
     }
 
-    save::PlacedObject object(std::uint64_t id, int col, int row)
+    save::PlacedObject placed_object(std::uint64_t id, int col, int row)
     {
         save::PlacedObject o;
         o.id = id;
@@ -36,7 +36,7 @@ namespace
 TEST_CASE("objects without a model cover their tile, in the layer they are given")
 {
     const save::TerrainGrid g = flat();
-    std::vector<save::PlacedObject> objects { object(1, 2, 3), object(2, 0, 0), object(3, 1, 1), object(4, 9, 9) };
+    std::vector<save::PlacedObject> objects { placed_object(1, 2, 3), placed_object(2, 0, 0), placed_object(3, 1, 1), placed_object(4, 9, 9) };
     objects[1].hidden = true;
     const auto layer_of = [](const save::PlacedObject& o) -> std::optional<MapLayer> {
         if (o.id == 3)

@@ -9,8 +9,8 @@
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
 #include "park/ground/textures.hpp"
-#include "park/object_pick.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/pick.hpp"
+#include "park/object/placement.hpp"
 #include "park/path/decks.hpp"
 #include "park/path/tunnels.hpp"
 #include "park/queue_fences.hpp"
@@ -306,10 +306,10 @@ namespace rct3::scene
             const auto o = placed.find(spot.object);
             if (o == placed.end())
                 return tiles;
-            const auto model = scene.models.find(park::model_ref(*o->second));
+            const auto model = scene.models.find(park::object::model_ref(*o->second));
             if (model == scene.models.end() || (piece && !model->second.paved_under))
                 return tiles;
-            const park::ObjectModel& item = model->second;
+            const park::object::ObjectModel& item = model->second;
             save::PlacedObject at;
             at.col = spot.col;
             at.row = spot.row;
@@ -321,7 +321,7 @@ namespace rct3::scene
                 {
                     // An irregular footprint paves only the squares it really stands on.
                     if (item.fence_outline.empty() || item.fence_outline[static_cast<std::size_t>(z) * static_cast<std::size_t>(xs) + static_cast<std::size_t>(x)])
-                        tiles.push_back(park::square_tile(at, item.squares, x, z));
+                        tiles.push_back(park::object::square_tile(at, item.squares, x, z));
                 }
             }
             return tiles;
@@ -743,7 +743,7 @@ namespace rct3::scene
                     decks.push_back(*deck);
             }
             f.ghost = ground_ghost(device, scene, assets, ground, spots, kRefusedTint);
-            f.raised_ghost = park::object_mesh(decks, scene.models, scene.grid);
+            f.raised_ghost = park::object::object_mesh(decks, scene.models, scene.grid);
             for (park::GroundVertex& v : f.raised_ghost.vertices)
                 v.colour *= kRefusedTint;
             ghost_textures(device, scene, f.raised_ghost);
@@ -791,7 +791,7 @@ namespace rct3::scene
                         shown.push_back(std::move(o));
                 }
             }
-            f.raised_ghost = park::object_mesh(shown, scene.models, scene.grid);
+            f.raised_ghost = park::object::object_mesh(shown, scene.models, scene.grid);
             for (park::GroundVertex& v : f.raised_ghost.vertices)
                 v.colour *= tint;
             ghost_textures(device, scene, f.raised_ghost);
@@ -884,7 +884,7 @@ namespace rct3::scene
                         shown.push_back(std::move(o));
                 }
             }
-            f.raised_ghost = park::object_mesh(shown, scene.models, scene.grid);
+            f.raised_ghost = park::object::object_mesh(shown, scene.models, scene.grid);
             for (park::GroundVertex& v : f.raised_ghost.vertices)
                 v.colour *= tint;
             ghost_textures(device, scene, f.raised_ghost);
@@ -1487,7 +1487,7 @@ namespace rct3::scene
             if (!ray_at)
                 return std::nullopt;
             const park::Ray& ray = *ray_at;
-            const auto distance = park::ground_hit(ray, scene.grid);
+            const auto distance = park::object::ground_hit(ray, scene.grid);
             if (!distance)
                 return std::nullopt;
             const glm::vec3 hit = ray.origin + ray.direction * *distance;
@@ -1592,7 +1592,7 @@ namespace rct3::scene
             if (!f.lift && ray)
             {
                 const auto tile = controls_tile(scene, at, size);
-                const auto distance = park::ground_hit(*ray, scene.grid);
+                const auto distance = park::object::ground_hit(*ray, scene.grid);
                 if (tile && distance)
                 {
                     // The trail's next piece pointed at is picked up where it is; elsewhere a trail begins.

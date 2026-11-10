@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/off_map_trees.hpp"
 
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 
 #include <doctest/doctest.h>
 
@@ -23,14 +23,14 @@ namespace
         return g;
     }
 
-    ObjectModel plant()
+    object::ObjectModel plant()
     {
-        ModelPart part;
+        object::ModelPart part;
         part.vertices = { { { 0, 0, 0 }, { 0, 1, 0 }, { 0, 0 } }, { { 0, 1, 0 }, { 0, 1, 0 }, { 0, 1 } }, { { 1, 0, 0 }, { 0, 1, 0 }, { 1, 0 } } };
         part.indices = { 0, 1, 2 };
-        Billboard board;
+        object::Billboard board;
         board.texture = "leaves";
-        ObjectModel m;
+        object::ObjectModel m;
         m.sway = 0.1f;
         m.levels = { { 50, { part }, { } }, { 300, { }, board } };
         return m;
@@ -50,9 +50,9 @@ namespace
 TEST_CASE("trees beyond the edge copy the park's plants near it, on the land round it")
 {
     const save::TerrainGrid g = flat(20, 3); // 80 units across: trees reach 40 from their park tree
-    ObjectModels models;
+    object::ObjectModels models;
     models.emplace("Things/Things|Pine", plant());
-    ObjectModel bench = plant();
+    object::ObjectModel bench = plant();
     bench.sway = 0; // Still in the wind: not a plant
     models.emplace("Things/Things|Bench", bench);
     std::vector<save::PlacedObject> objects;
@@ -80,7 +80,7 @@ TEST_CASE("trees beyond the edge copy the park's plants near it, on the land rou
         CHECK(t.id == ++id);
         CHECK(t.free_standing());
         CHECK(t.rotation == 0);
-        const glm::vec3 foot = object_transform(t, Positioning { }, g)[3];
+        const glm::vec3 foot = object::object_transform(t, object::Positioning { }, g)[3];
         CHECK_FALSE(g.height_at(foot.x, foot.z)); // Off the map
         CHECK(foot.y == doctest::Approx(3 - kTreeSink));
         CHECK(foot.x < g.world_x(0) + 4 + 40 + 4); // By the west edge, where the pines are
@@ -100,7 +100,7 @@ TEST_CASE("trees beyond the edge copy the park's plants near it, on the land rou
 TEST_CASE("a plant far from the edge seeds no trees beyond it")
 {
     const save::TerrainGrid g = flat(40, 3); // 160 across: trees reach 80, the middle is 80 from every edge
-    ObjectModels models;
+    object::ObjectModels models;
     models.emplace("Things/Things|Pine", plant());
     std::vector<save::PlacedObject> objects { placed(1, "Pine") };
     objects[0].col = 20;
@@ -119,7 +119,7 @@ TEST_CASE("a park without plants has no trees beyond it")
 TEST_CASE("planting a tree seeds trees beyond the edge round it alone")
 {
     const save::TerrainGrid g = flat(20, 3);
-    ObjectModels models;
+    object::ObjectModels models;
     models.emplace("Things/Things|Pine", plant());
     models.emplace("Things/Things|Palm", plant());
     std::vector<save::PlacedObject> objects;
@@ -143,9 +143,9 @@ TEST_CASE("planting a tree seeds trees beyond the edge round it alone")
 TEST_CASE("a park's own list of trees beyond the edge copies the plants it names, where it names")
 {
     const save::TerrainGrid g = flat(20, 3);
-    ObjectModels models;
+    object::ObjectModels models;
     models.emplace("Things/Things|Pine", plant());
-    ObjectModel bench = plant();
+    object::ObjectModel bench = plant();
     bench.sway = 0;
     models.emplace("Things/Things|Bench", bench);
     std::vector<save::PlacedObject> objects { placed(1, "Pine"), placed(2, "Bench") };
@@ -168,10 +168,10 @@ TEST_CASE("a park's own list of trees beyond the edge copies the plants it names
         CHECK(t.rotation == 0);
         CHECK(t.free_standing());
     }
-    const glm::vec3 first = object_transform(trees[0], Positioning { }, g)[3];
+    const glm::vec3 first = object::object_transform(trees[0], object::Positioning { }, g)[3];
     CHECK(std::abs(first.x - -10) <= 2);
     CHECK(std::abs(first.z - 20) <= 2);
     CHECK(first.y == doctest::Approx(3 - kTreeSink)); // On the land, whatever height the list gives
-    const glm::vec3 second = object_transform(trees[1], Positioning { }, g)[3];
+    const glm::vec3 second = object::object_transform(trees[1], object::Positioning { }, g)[3];
     CHECK(std::abs(second.x - 100) <= 2);
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 
 #include <algorithm>
 #include <array>
@@ -7,6 +7,7 @@
 
 using namespace rct3;
 using namespace rct3::park;
+using namespace rct3::park::object;
 
 namespace
 {

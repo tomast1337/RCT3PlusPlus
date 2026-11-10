@@ -7,7 +7,7 @@
 #include "config/game_install.hpp"
 #include "park/asset_index.hpp"
 #include "park/ground/textures.hpp"
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "render/device.hpp"
 #include "ui/ui_textures.hpp"
 
@@ -48,7 +48,7 @@ namespace rct3::scene
     void fit_texture_detail(const ParkScene& scene, park::ground::GroundImages& images);
 
     /// Paints and uploads the pictures of `batches` the scene does not have yet.
-    void add_textures(render::Device& device, ParkScene& scene, std::span<const park::ObjectBatch> batches);
+    void add_textures(render::Device& device, ParkScene& scene, std::span<const park::object::ObjectBatch> batches);
 
     /// Adds to `index` the install's overlays its overlays take assets from, and those they take from in turn.
     void add_referenced(park::AssetIndex& index, const config::GameInstall& install);

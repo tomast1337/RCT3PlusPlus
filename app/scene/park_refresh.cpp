@@ -3,8 +3,8 @@
 
 #include "logging/log.hpp"
 #include "park/chain_lifts.hpp"
-#include "park/object_models.hpp"
-#include "park/object_pick.hpp"
+#include "park/object/models.hpp"
+#include "park/object/pick.hpp"
 #include "park/person_motions.hpp"
 #include "park/ride/cars.hpp"
 #include "park/water/flow.hpp"
@@ -118,13 +118,13 @@ namespace rct3::scene
             if (const auto object = scene.ride_seats.find(errand.target); object != scene.ride_seats.end())
             {
                 const save::PlacedObject& o = scene.objects[object->second];
-                const auto model = scene.models.find(park::model_ref(o));
+                const auto model = scene.models.find(park::object::model_ref(o));
                 if (model == scene.models.end() || seat >= model->second.seat_places.size())
                     return std::nullopt;
                 // On a ride its bones move, the seat's bone carries the seat.
                 if (const auto boned = std::ranges::find(scene.boned_rides, object->second, &ParkScene::BonedRide::object); boned != scene.boned_rides.end() && seat < boned->seats)
                     return std::pair { scene.cars.size() + boned->first_seat + seat, model->second.seat_places[seat] };
-                return std::pair { kNoCar, park::placed_transform(o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[seat] };
+                return std::pair { kNoCar, park::object::placed_transform(o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[seat] };
             }
             const auto cars = scene.ride_cars.find(errand.target);
             if (cars == scene.ride_cars.end())
@@ -133,7 +133,7 @@ namespace rct3::scene
             {
                 if (fleet != nullptr && scene.car_spots[car].train != train)
                     continue;
-                const auto model = scene.models.find(park::model_ref(scene.cars[car]));
+                const auto model = scene.models.find(park::object::model_ref(scene.cars[car]));
                 const std::size_t seats = model != scene.models.end() ? model->second.seat_places.size() : 0;
                 if (seat < seats)
                     return std::pair { car, model->second.seat_places[seat] };
@@ -175,10 +175,10 @@ namespace rct3::scene
             if (item == nullptr || linger->at == simulation::PathItemKind::Sight || linger->at == simulation::PathItemKind::PhotoSpot)
                 return std::nullopt;
             const auto o = std::ranges::find(scene.objects, item->object, &save::PlacedObject::id);
-            const auto model = o != scene.objects.end() && !o->hidden ? scene.models.find(park::model_ref(*o)) : scene.models.end();
+            const auto model = o != scene.objects.end() && !o->hidden ? scene.models.find(park::object::model_ref(*o)) : scene.models.end();
             if (model == scene.models.end() || linger->seat >= model->second.seat_places.size())
                 return std::nullopt;
-            return park::placed_transform(*o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[linger->seat];
+            return park::object::placed_transform(*o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[linger->seat];
         }
 
         /// Where path item `item` stands in the park, as its placed object; nothing once it is gone.
@@ -189,8 +189,8 @@ namespace rct3::scene
             const auto o = path_item != nullptr ? std::ranges::find(scene.objects, path_item->object, &save::PlacedObject::id) : scene.objects.end();
             if (o == scene.objects.end() || o->hidden)
                 return std::nullopt;
-            const auto model = scene.models.find(park::model_ref(*o));
-            return glm::vec3(park::placed_transform(*o, model != scene.models.end() ? &model->second : nullptr, scene.grid, scene.fitted)[3]);
+            const auto model = scene.models.find(park::object::model_ref(*o));
+            return glm::vec3(park::object::placed_transform(*o, model != scene.models.end() ? &model->second : nullptr, scene.grid, scene.fitted)[3]);
         }
 
         /// How guests sit on a bench, as the game's motions name them: down onto it, sitting, turned to talk to
@@ -216,7 +216,7 @@ namespace rct3::scene
 
         /// What a guest holds of what they carry from a stall: it while there is some left, then its empty; nothing
         /// once only empties in their pockets are left, or when its look is not known.
-        const park::ObjectModel* held_model(const ParkScene& scene, const simulation::Carried& carried)
+        const park::object::ObjectModel* held_model(const ParkScene& scene, const simulation::Carried& carried)
         {
             const auto& r = scene.sim.registry;
             const auto* shop = r.valid(carried.stall) ? r.try_get<simulation::Shop>(carried.stall) : nullptr;
@@ -340,13 +340,13 @@ namespace rct3::scene
         /// they are at `clock`, at `levels`. With `simulate`, the simulated guests count as moving and stand
         /// where the simulation has them. The still ones read only what is set when the park loads besides the
         /// arguments, so they may be placed beside the frame; the moving ones only on it.
-        std::vector<park::PlacedPerson> place_people(const ParkScene& scene, const park::ObjectLevels& levels, float clock, bool moving, const glm::mat4& view, bool simulate)
+        std::vector<park::PlacedPerson> place_people(const ParkScene& scene, const park::object::ObjectLevels& levels, float clock, bool moving, const glm::mat4& view, bool simulate)
         {
             std::vector<park::PlacedPerson> placed;
             for (std::size_t i = 0; i < scene.shown_people.size() && i < levels.size(); ++i)
             {
                 const ShownPerson& shown = scene.shown_people[i];
-                if (levels[i] == park::kNotDrawn || ((simulate && shown.guest != entt::null) || !shown.walking) != moving)
+                if (levels[i] == park::object::kNotDrawn || ((simulate && shown.guest != entt::null) || !shown.walking) != moving)
                     continue;
                 std::optional<park::PlacedPerson> pose = pose_person(scene, i, clock, simulate);
                 if (!pose || (moving && !maybe_in_view(view, glm::vec3(pose->world[3]))))
@@ -389,7 +389,7 @@ namespace rct3::scene
             for (std::size_t i = 0; i < scene.shown_people.size() && i < scene.people_levels.size(); ++i)
             {
                 const ShownPerson& shown = scene.shown_people[i];
-                if (shown.guest == entt::null || scene.people_levels[i] == park::kNotDrawn)
+                if (shown.guest == entt::null || scene.people_levels[i] == park::object::kNotDrawn)
                     continue;
                 const auto seat = seat_of(scene, shown.guest);
                 if (!seat)
@@ -403,7 +403,7 @@ namespace rct3::scene
                 std::optional<std::uint8_t> seating;
                 if (seat->first < scene.cars.size())
                 {
-                    if (const auto model = scene.models.find(park::model_ref(scene.cars[seat->first])); model != scene.models.end())
+                    if (const auto model = scene.models.find(park::object::model_ref(scene.cars[seat->first])); model != scene.models.end())
                         seating = model->second.seating;
                 }
                 else if (const auto flat = scene.ride_seatings.find(scene.sim.registry.get<simulation::Errand>(shown.guest).target); flat != scene.ride_seatings.end())
@@ -468,7 +468,7 @@ namespace rct3::scene
                 const glm::vec3 at(boned.placed[3]);
                 if ((boned.ride == entt::null || boned.gate) && (glm::distance(eye, at) > kPropMoveDistance || !maybe_in_view(view, at, boned.reach)))
                     continue;
-                const auto model = scene.models.find(park::model_ref(scene.objects[boned.object]));
+                const auto model = scene.models.find(park::object::model_ref(scene.objects[boned.object]));
                 if (model == scene.models.end() || !model->second.rig)
                     continue;
                 const auto& seconds = model->second.animation_seconds;
@@ -630,12 +630,12 @@ namespace rct3::scene
                     return simulation::kNoNode;
                 };
                 const auto jump = [&](std::size_t from, std::size_t to) {
-                    const auto a = scene.models.find(park::model_ref(scene.objects[from]));
-                    const auto b = scene.models.find(park::model_ref(scene.objects[to]));
+                    const auto a = scene.models.find(park::object::model_ref(scene.objects[from]));
+                    const auto b = scene.models.find(park::object::model_ref(scene.objects[to]));
                     if (a == scene.models.end() || b == scene.models.end() || b->second.nozzles.empty())
                         return;
-                    const glm::mat4 at = park::placed_transform(scene.objects[from], &a->second, scene.grid, scene.fitted);
-                    const glm::mat4 into = park::placed_transform(scene.objects[to], &b->second, scene.grid, scene.fitted);
+                    const glm::mat4 at = park::object::placed_transform(scene.objects[from], &a->second, scene.grid, scene.fitted);
+                    const glm::mat4 into = park::object::placed_transform(scene.objects[to], &b->second, scene.grid, scene.fitted);
                     const glm::vec3 step = glm::vec3(into[3]) - glm::vec3(at[3]);
                     for (const glm::vec3& nozzle : a->second.nozzles)
                     {
@@ -691,7 +691,7 @@ namespace rct3::scene
         }
 
         /// The band and side of each of `owners`' vertices: `side` 0 for objects drawn whole.
-        std::vector<std::pair<glm::vec4, glm::vec2>> crossing_bands(const ParkScene& scene, const park::LevelPlan& plan, std::span<const std::uint32_t> owners, float side)
+        std::vector<std::pair<glm::vec4, glm::vec2>> crossing_bands(const ParkScene& scene, const park::object::LevelPlan& plan, std::span<const std::uint32_t> owners, float side)
         {
             std::vector<std::pair<glm::vec4, glm::vec2>> out;
             out.reserve(owners.size());
@@ -701,7 +701,7 @@ namespace rct3::scene
         }
 
         /// Puts `shapes` in `shown`'s buffers, dropping what they held.
-        void show_shapes(render::Device& device, ParkScene& scene, ShownObjects& shown, ObjectShapes&& shapes, const park::LevelPlan& plan, float side = 0)
+        void show_shapes(render::Device& device, ParkScene& scene, ShownObjects& shown, ObjectShapes&& shapes, const park::object::LevelPlan& plan, float side = 0)
         {
             for (const render::BufferHandle b : { shown.vertices, shown.indices })
             {
@@ -855,7 +855,7 @@ namespace rct3::scene
                 if (const auto* drop = held == nullptr ? &r.get<simulation::Dropped>(shown.guest) : nullptr; falling && drop->pool != entt::null)
                 {
                     const auto cars = drop->slide != entt::null ? scene.ride_cars.find(drop->slide) : scene.ride_cars.end();
-                    const auto model = cars != scene.ride_cars.end() && !cars->second.empty() ? scene.models.find(park::model_ref(scene.cars[cars->second.front()])) : scene.models.end();
+                    const auto model = cars != scene.ride_cars.end() && !cars->second.empty() ? scene.models.find(park::object::model_ref(scene.cars[cars->second.front()])) : scene.models.end();
                     const bool body = (model != scene.models.end() && model->second.seating == park::kSlideBodySeating) || (r.valid(drop->slide) && r.all_of<simulation::ClimbSlide>(drop->slide));
                     pose.motion = park::motion_number(drop->slide == entt::null ? "knockdownin" : body ? "slidebodybacksplashdownin" : "slideringsplashdownin").value_or(pose.motion);
                     pose.time = drop->fall.value / simulation::kTuning.holding.gravity;
@@ -989,8 +989,8 @@ namespace rct3::scene
                     constexpr float kRowGap = 0.6f;  ///< Chosen by eye: between two in the row
                     constexpr float kRowBack = 0.8f; ///< Chosen by eye: from the view to the row
                     constexpr float kFilming = 1.2f; ///< Chosen by eye: from the row's end to the one filming it
-                    const auto model = scene.models.find(park::model_ref(*o));
-                    const glm::mat4 placed = park::placed_transform(*o, model != scene.models.end() ? &model->second : nullptr, scene.grid, scene.fitted);
+                    const auto model = scene.models.find(park::object::model_ref(*o));
+                    const glm::mat4 placed = park::object::placed_transform(*o, model != scene.models.end() ? &model->second : nullptr, scene.grid, scene.fitted);
                     // It looks out from the path, from the middle of the path's tile across the item.
                     const glm::vec3 outward = glm::vec3(placed[3]) - scene.sim.paths.centre(item->node);
                     const glm::vec3 ahead = glm::length(glm::vec2(outward.x, outward.z)) > 0.01f ? glm::normalize(glm::vec3(outward.x, 0.0f, outward.z)) : glm::normalize(glm::vec3(placed[2].x, 0.0f, placed[2].z));
@@ -1292,13 +1292,13 @@ namespace rct3::scene
 
     /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
     /// while it does not run.
-    std::optional<glm::mat4> ride_eye(const ParkScene& scene, std::size_t car, park::RideEye eye)
+    std::optional<glm::mat4> ride_eye(const ParkScene& scene, std::size_t car, park::object::RideEye eye)
     {
-        const auto model = car < scene.cars.size() ? scene.models.find(park::model_ref(scene.cars[car])) : scene.models.end();
+        const auto model = car < scene.cars.size() ? scene.models.find(park::object::model_ref(scene.cars[car])) : scene.models.end();
         if (model == scene.models.end() || car >= scene.car_spots.size())
             return std::nullopt;
         const park::ride::CarSpot spot = scene.car_spots[car];
-        if (eye == park::RideEye::Nose && std::ranges::any_of(std::span(scene.car_spots).first(car), [&](const park::ride::CarSpot& s) { return s.ride == spot.ride && s.train == spot.train; }))
+        if (eye == park::object::RideEye::Nose && std::ranges::any_of(std::span(scene.car_spots).first(car), [&](const park::ride::CarSpot& s) { return s.ride == spot.ride && s.train == spot.train; }))
             return std::nullopt;
         return model->second.ride_eyes[std::to_underlying(eye)];
     }
@@ -1309,7 +1309,7 @@ namespace rct3::scene
         if (object == scene.ride_seats.end())
             return std::nullopt;
         const save::PlacedObject& o = scene.objects[object->second];
-        const auto model = scene.models.find(park::model_ref(o));
+        const auto model = scene.models.find(park::object::model_ref(o));
         const std::vector<glm::mat4>* places = model == scene.models.end() ? nullptr : fixed ? &model->second.view_places : &model->second.seat_places;
         if (places == nullptr || at >= places->size())
             return std::nullopt;
@@ -1318,7 +1318,7 @@ namespace rct3::scene
             return boned->placed * boned->views[at] * (*places)[at];
         if (boned != scene.boned_rides.end() && !fixed && at < boned->seats)
             return scene.seat_carriers[boned->first_seat + at] * (*places)[at];
-        return park::placed_transform(o, &model->second, scene.grid, scene.fitted) * (*places)[at];
+        return park::object::placed_transform(o, &model->second, scene.grid, scene.fitted) * (*places)[at];
     }
 
     void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed)
@@ -1454,7 +1454,7 @@ namespace rct3::scene
                         place = glm::translate(glm::mat4(1.0f), left + wreck->at - wreck->from) * glm::mat4_cast(wreck->turned) * glm::translate(glm::mat4(1.0f), -left) * place;
                     }
                 }
-                else if (const auto model = scene.models.find(park::model_ref(scene.cars[i])); model != scene.models.end())
+                else if (const auto model = scene.models.find(park::object::model_ref(scene.cars[i])); model != scene.models.end())
                 {
                     // Through the water: sprays from its splash points as it splashes, a wake behind it now and then.
                     const glm::vec3 velocity = elapsed > 0 ? (glm::vec3(place[3]) - glm::vec3(scene.car_places[i][3])) / elapsed : glm::vec3(0.0f);
@@ -1468,7 +1468,7 @@ namespace rct3::scene
                     const bool dry_splasher = cycle != nullptr && cycle->splash && std::ranges::none_of(course.wet, std::identity { });
                     const bool in_water = dry_splasher || (looks && park::water::water_above(scene.water.surface, glm::vec3(place[3])).has_value());
                     const park::CarSplash splash = park::car_splash(scene.car_waters[i], course, spot.front + moved[i], in_water, velocity, elapsed);
-                    for (const park::SplashPoint& point : model->second.splash_points)
+                    for (const park::object::SplashPoint& point : model->second.splash_points)
                         if (point.wake ? splash.wake : splash.splash)
                             fire_park_particles(scene.particles, point.wake ? kWakeEffect : kSplashEffects[std::min<std::size_t>(point.strength, 2)], glm::vec3(place * glm::vec4(point.position, 1.0f)), glm::vec3(place[1]));
                 }
@@ -1487,7 +1487,7 @@ namespace rct3::scene
         {
             const std::size_t i = *scene.riding;
             const park::ride::CarSpot spot = scene.car_spots[i];
-            ovl::RideCameraTuning tuning = scene.models.at(park::model_ref(scene.cars[i])).ride_look;
+            ovl::RideCameraTuning tuning = scene.models.at(park::object::model_ref(scene.cars[i])).ride_look;
             // On a lift chain the view shakes as the train sets for the chain, from when this car is on it.
             const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
             const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
@@ -1501,10 +1501,10 @@ namespace rct3::scene
             // The nose and front seat look at the track ahead rather than straight out, so a curve stays in view;
             // the nose does not sway. Running backwards, the view looks the way the car faces.
             std::optional<glm::vec3> ahead;
-            if (const auto& course = scene.courses[spot.ride]; course && tuning.look_ahead > 0 && scene.riding_eye != park::RideEye::Rear && !(train && train->speed < 0))
+            if (const auto& course = scene.courses[spot.ride]; course && tuning.look_ahead > 0 && scene.riding_eye != park::object::RideEye::Rear && !(train && train->speed < 0))
                 ahead = glm::vec3(park::track::moved_along(*course, scene.saved_cars.at(scene.cars[i].id), { spot.front, spot.rear }, moved[i] + tuning.look_ahead) * (*seat)[3]);
             const glm::vec2 dice { static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1, static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1 };
-            scene.seat = park::looked_round(park::ride_look(scene.ride_view, scene.car_places[i] * *seat, ahead, scene.riding_eye != park::RideEye::Nose, tuning, elapsed, dice), scene.ride_turn);
+            scene.seat = park::looked_round(park::ride_look(scene.ride_view, scene.car_places[i] * *seat, ahead, scene.riding_eye != park::object::RideEye::Nose, tuning, elapsed, dice), scene.ride_turn);
         }
         // On a flat ride, from one of its fixed cameras, or from a rider's eyes over their seat, as they move. A
         // seat faces +Z with +Y up, as the people sat on it are modelled.
@@ -1538,7 +1538,7 @@ namespace rct3::scene
             const glm::vec3 mount((*scene.seat)[3]);
             scene.seat = glm::translate(*scene.seat, glm::vec3(0, 0, -back));
             glm::vec3 eye((*scene.seat)[3]);
-            const auto down = [&](glm::vec3 from) { return park::ground_hit(park::Ray { from, glm::vec3(0, -1, 0) }, scene.grid, kGroundLook); };
+            const auto down = [&](glm::vec3 from) { return park::object::ground_hit(park::Ray { from, glm::vec3(0, -1, 0) }, scene.grid, kGroundLook); };
             if (const auto under = down(glm::vec3(eye.x, eye.y + kGroundLook / 2, eye.z)); under && down(mount))
                 (*scene.seat)[3].y = std::max(eye.y, eye.y + kGroundLook / 2 - *under + kOverGround);
         }
@@ -1551,14 +1551,14 @@ namespace rct3::scene
         // A car that is itself a stand-in rider, a test's dummy, gives way to a real rider from boarding till it
         // stands empty again, off a slide's end and back with them.
         for (std::size_t i = 0; i < scene.car_places.size() && i < scene.car_waters.size(); ++i)
-            if (const auto model = scene.car_waters[i].ridden ? scene.models.find(park::model_ref(scene.cars[i])) : scene.models.end(); model != scene.models.end() && model->second.stand_in)
+            if (const auto model = scene.car_waters[i].ridden ? scene.models.find(park::object::model_ref(scene.cars[i])) : scene.models.end(); model != scene.models.end() && model->second.stand_in)
                 scene.car_mesh_places[i] = glm::mat4(0.0f);
         // Cars their bones move are drawn apart. A boat out on the water rows, with the oars its turn calls for; one
         // on a course rows with both while its train moves.
         for (ParkScene::BonedCar& boned : scene.boned_cars)
         {
             scene.car_mesh_places[boned.car] = glm::mat4(0.0f);
-            const park::ObjectModel& model = scene.models.at(park::model_ref(scene.cars[boned.car]));
+            const park::object::ObjectModel& model = scene.models.at(park::object::model_ref(scene.cars[boned.car]));
             const park::ride::CarSpot spot = scene.car_spots[boned.car];
             const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
             const auto* boats = ride != entt::null ? scene.sim.registry.try_get<simulation::Boats>(ride) : nullptr;
@@ -1752,7 +1752,7 @@ namespace rct3::scene
                 for (const std::uint64_t post : posts)
                 {
                     const auto object = found.find(post);
-                    const auto model = object != found.end() && !object->second->hidden ? scene.models.find(park::model_key(*object->second)) : scene.models.end();
+                    const auto model = object != found.end() && !object->second->hidden ? scene.models.find(park::object::model_key(*object->second)) : scene.models.end();
                     if (served.contains(post) || model == scene.models.end() || !model->second.vendor_place)
                         continue;
                     const save::Sex sex = random::below(scene.looks, 2) == 0 ? save::Sex::Male : save::Sex::Female;
@@ -1762,7 +1762,7 @@ namespace rct3::scene
                             worn[o.section] = &o;
                     if (std::ranges::contains(worn, nullptr))
                         continue;
-                    const glm::mat4 place = park::placed_transform(*object->second, &model->second, scene.grid, scene.fitted) * *model->second.vendor_place;
+                    const glm::mat4 place = park::object::placed_transform(*object->second, &model->second, scene.grid, scene.fitted) * *model->second.vendor_place;
                     const entt::entity e = simulation::add_vendor(scene.sim, glm::vec3(place[3]));
                     scene.known_guests.insert(e);
                     save::Staff& kept = scene.people.staff.emplace_back();
@@ -1807,14 +1807,14 @@ namespace rct3::scene
                     shown.paces = paces->second;
                 }
             }
-            park::ObjectLevels levels(scene.shown_people.size(), park::kNotDrawn);
+            park::object::ObjectLevels levels(scene.shown_people.size(), park::object::kNotDrawn);
             for (std::size_t i = 0; i < levels.size(); ++i)
             {
                 if (const ShownPerson& p = scene.shown_people[i]; scene.simulate && p.guest != entt::null && scene.sim.registry.all_of<simulation::Left>(p.guest))
                     continue; // Gone home
                 const float distance = glm::distance(eye, standing_at(scene, scene.shown_people[i]));
                 // Scaled as objects' levels are: detail for the finer ones, draw distance for the last.
-                const park::LevelScale scale = scene.level_scales[static_cast<std::size_t>(park::DetailKind::People)];
+                const park::object::LevelScale scale = scene.level_scales[static_cast<std::size_t>(park::DetailKind::People)];
                 const float last = kPersonDistances.back() * scale.distance;
                 for (std::size_t k = 0; k < kPersonDistances.size(); ++k)
                 {
@@ -1854,7 +1854,7 @@ namespace rct3::scene
                 const auto* swimmer = r.try_get<simulation::Swimmer>(shown.guest);
                 const bool changing = swimmer != nullptr && swimmer->changing.value > 0;
                 const bool swimwear = simulation::in_swimwear(r, shown.guest);
-                if (swimwear != shown.swimwear && !changing && !shown.changing && i < scene.people_levels.size() && scene.people_levels[i] != park::kNotDrawn)
+                if (swimwear != shown.swimwear && !changing && !shown.changing && i < scene.people_levels.size() && scene.people_levels[i] != park::object::kNotDrawn)
                     fire_park_particles(scene.particles, kChangePuff, r.get<simulation::Pose>(shown.guest).position + glm::vec3 { 0, kPuffHeight, 0 }, glm::vec3 { 0, 1, 0 });
                 shown.swimwear = swimwear;
                 shown.changing = changing;
@@ -1911,19 +1911,19 @@ namespace rct3::scene
     /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`; without the
     /// supports unless `supports`. Reads only what is set when the park loads besides its arguments, so it
     /// may run beside the frame.
-    park::FlowFades flow_fades(const ParkScene& scene)
+    park::object::FlowFades flow_fades(const ParkScene& scene)
     {
         return park::water::flow_fades(scene.rides, scene.objects, scene.models, [&](std::size_t ride) { return ride < scene.track_rules.size() && scene.track_rules[ride].pool_ride; });
     }
 
-    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::LevelPlan& shown, float band, const park::LevelScales& scales, bool supports, const park::Broken& broken, const park::Chains& chains, const park::FlowFades& fades)
+    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const park::object::LevelPlan& shown, float band, const park::object::LevelScales& scales, bool supports, const park::object::Broken& broken, const park::object::Chains& chains, const park::object::FlowFades& fades)
     {
         ObjectBuild built;
-        built.plan = profiling::section("Levels", [&] { return park::plan_levels(scene.objects, scene.models, scene.anchors, eye, band, scales); });
+        built.plan = profiling::section("Levels", [&] { return park::object::plan_levels(scene.objects, scene.models, scene.anchors, eye, band, scales); });
         const auto leave_out = [&](std::size_t i) {
-            built.plan.steady[i] = park::kNotDrawn;
-            built.plan.finer[i] = park::kNotDrawn;
-            built.plan.coarser[i] = park::kNotDrawn;
+            built.plan.steady[i] = park::object::kNotDrawn;
+            built.plan.finer[i] = park::object::kNotDrawn;
+            built.plan.coarser[i] = park::object::kNotDrawn;
         };
         std::vector<std::size_t> moving;
         for (const ParkScene::BonedRide& boned : scene.boned_rides)
@@ -1941,8 +1941,8 @@ namespace rct3::scene
             return std::nullopt;
         for (auto [shapes, levels] : { std::pair { &built.steady, &built.plan.steady }, std::pair { &built.finer, &built.plan.finer }, std::pair { &built.coarser, &built.plan.coarser } })
         {
-            shapes->mesh = profiling::section("Mesh", [&] { return park::object_mesh(scene.objects, scene.models, scene.grid, *levels, { }, scene.leans, scene.fitted, broken, chains, fades); });
-            shapes->billboards = profiling::section("Gather", [&] { return park::gather_billboards(scene.objects, scene.models, scene.anchors, *levels); });
+            shapes->mesh = profiling::section("Mesh", [&] { return park::object::object_mesh(scene.objects, scene.models, scene.grid, *levels, { }, scene.leans, scene.fitted, broken, chains, fades); });
+            shapes->billboards = profiling::section("Gather", [&] { return park::object::gather_billboards(scene.objects, scene.models, scene.anchors, *levels); });
         }
         return built;
     }
@@ -1992,9 +1992,9 @@ namespace rct3::scene
             for (std::size_t i = from; i < now[1]; ++i)
             {
                 if (std::ranges::contains(moving, i) || (!scene.show_supports && scene.objects[i].overlay == park::support::kSupportOverlay))
-                    levels[i - from] = park::kNotDrawn;
+                    levels[i - from] = park::object::kNotDrawn;
             }
-            scene.fresh_objects = park::object_mesh(std::span(scene.objects).subspan(from), scene.models, scene.grid, levels, { }, scene.leans, scene.fitted, scene.broken_objects);
+            scene.fresh_objects = park::object::object_mesh(std::span(scene.objects).subspan(from), scene.models, scene.grid, levels, { }, scene.leans, scene.fitted, scene.broken_objects);
             add_textures(device, scene, scene.fresh_objects.batches);
             scene.fresh_for = now;
         }

@@ -20,7 +20,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 #include "save/model/world.hpp"
 
 #include <array>
@@ -165,7 +165,7 @@ namespace rct3::park::track
         std::uint32_t flags = 0;
         std::uint32_t role = 0; ///< As ovl::TrackSection::role
         std::array<std::int32_t, 2> squares { 1, 1 };
-        Positioning positioning = Positioning::Tile;
+        object::Positioning positioning = object::Positioning::Tile;
         std::int32_t cost = 0;                   ///< As the scenery item stores it
         std::array<std::uint8_t, 3> colours { }; ///< The scenery item's default colours
         std::array<PieceJoin, 2> joins;          ///< Of its start and its end, laid as drawn

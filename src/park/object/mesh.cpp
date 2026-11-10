@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 
 #include "park/ground/textures.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 #include "park/water/flow.hpp"
 
 #include <algorithm>
@@ -12,7 +12,7 @@
 #include <tuple>
 #include <utility>
 
-namespace rct3::park
+namespace rct3::park::object
 {
 
     namespace
@@ -426,4 +426,4 @@ namespace rct3::park
         return out;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::object

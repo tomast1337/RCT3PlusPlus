@@ -13,8 +13,8 @@
 #include "park/demolish_refund.hpp"
 #include "park/design_placement.hpp"
 #include "park/flexi_colours.hpp"
-#include "park/object_models.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/models.hpp"
+#include "park/object/placement.hpp"
 #include "park/pools/pools.hpp"
 #include "park/relief_maps.hpp"
 #include "park/ride/placement.hpp"
@@ -435,7 +435,7 @@ namespace rct3::scene
             if (!first || !shape)
                 return std::nullopt;
             const auto saved = [](const save::TrackPiece& p) { return save::PlacedObject { .col = p.tile_x, .row = p.tile_z, .base_height = p.height, .rotation = p.direction, .force_absolute_height = true }; };
-            park::track::PiecePlacement placed { .object = park::moved_with(saved(design[i]), shape->record.squares, saved(design.front()), first->record.squares, to) };
+            park::track::PiecePlacement placed { .object = park::object::moved_with(saved(design[i]), shape->record.squares, saved(design.front()), first->record.squares, to) };
             placed.object.symbol = shape->record.item;
             placed.object.overlay = to.overlay;
             placed.next = park::track::tip_of(placed.object, *shape, design[i].reversed, grid);
@@ -493,7 +493,7 @@ namespace rct3::scene
             o.overlay = b.overlay;
             if (!load_object_model(scene, b.models, assets, o))
                 return false;
-            const auto model = scene.models.find(park::model_ref(o));
+            const auto model = scene.models.find(park::object::model_ref(o));
             if (model == scene.models.end() || !model->second.water_only)
                 return false;
             const park::support::SupportFootprint shape { .x_squares = model->second.squares[0], .z_squares = model->second.squares[1] };
@@ -642,7 +642,7 @@ namespace rct3::scene
                 on.overlay = b.overlay;
                 // A piece that goes only on water floats on it, not on the lake's floor.
                 const auto surface = park::water::water_surface(scene.footpaths.water.bodies, *b.aim);
-                if (const auto model = load_object_model(scene, b.models, assets, on) ? scene.models.find(park::model_ref(on)) : scene.models.end(); surface && model != scene.models.end() && model->second.water_only)
+                if (const auto model = load_object_model(scene, b.models, assets, on) ? scene.models.find(park::object::model_ref(on)) : scene.models.end(); surface && model != scene.models.end() && model->second.water_only)
                 {
                     on.base_height = *surface;
                     on.force_absolute_height = true;
@@ -771,7 +771,7 @@ namespace rct3::scene
                         shown.push_back(std::move(piece));
                 }
             }
-            b.ghost_mesh = park::object_mesh(shown, scene.models, scene.grid);
+            b.ghost_mesh = park::object::object_mesh(shown, scene.models, scene.grid);
             for (park::GroundVertex& v : b.ghost_mesh.vertices)
                 v.colour *= b.off_water || b.clashes ? kRefusedTint : kGhostTint;
         }
@@ -1190,7 +1190,7 @@ namespace rct3::scene
                 if (load_object_model(scene, b.models, assets, o))
                     shown.push_back(std::move(o));
             }
-            b.ghost_mesh = park::object_mesh(shown, scene.models, scene.grid);
+            b.ghost_mesh = park::object::object_mesh(shown, scene.models, scene.grid);
             for (park::GroundVertex& v : b.ghost_mesh.vertices)
                 v.colour *= kGhostTint;
         }
@@ -1316,7 +1316,7 @@ namespace rct3::scene
 
     bool load_object_model(ParkScene& scene, std::map<std::string, TrackModels, std::less<>>& cache, const ui::InterfaceAssets& assets, const save::PlacedObject& object)
     {
-        const std::string key = park::model_key(object);
+        const std::string key = park::object::model_key(object);
         if (scene.models.contains(key))
             return true;
         if (!assets.install)
@@ -1348,7 +1348,7 @@ namespace rct3::scene
             m.index = std::make_unique<park::AssetIndex>(park::AssetIndex::scan(assets.install->root(), { }));
             if (const auto file = assets.install->find(std::format("{}.common.ovl", slashes(object.overlay))))
                 (void)add_with_references(*file);
-            m.loader = std::make_unique<park::ModelLoader>(*m.index);
+            m.loader = std::make_unique<park::object::ModelLoader>(*m.index);
         }
         if (m.missing.contains(object.symbol))
             return false;
@@ -1374,7 +1374,7 @@ namespace rct3::scene
             }
             if (file && add_with_references(*file))
             {
-                m.loader = std::make_unique<park::ModelLoader>(*m.index);
+                m.loader = std::make_unique<park::object::ModelLoader>(*m.index);
                 model = m.loader->load(object.symbol, object.overlay, scene.modelled_plants);
             }
             // A theme keeps its rides and entrances in overlays of their own, named apart from the items they
@@ -1395,7 +1395,7 @@ namespace rct3::scene
                 }
                 if (added)
                 {
-                    m.loader = std::make_unique<park::ModelLoader>(*m.index);
+                    m.loader = std::make_unique<park::object::ModelLoader>(*m.index);
                     model = m.loader->load(object.symbol, object.overlay, scene.modelled_plants);
                 }
             }
@@ -1417,12 +1417,12 @@ namespace rct3::scene
         scene.supports.stale = true;
         wait_for_build(scene); // The build beside the frame reads the anchors written here
         profiling::section("Places", [&] { place_objects(scene); });
-        const park::ObjectPlaces& places = scene.places;
+        const park::object::ObjectPlaces& places = scene.places;
         scene.anchors.resize(places.transforms.size());
         std::ranges::transform(places.transforms, scene.anchors.begin(), [](const glm::mat4& m) { return glm::vec3(m[3]); });
-        scene.lamps = profiling::section("Lamps", [&] { return park::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted, places.transforms, places.models); });
+        scene.lamps = profiling::section("Lamps", [&] { return park::object::object_lamps(scene.objects, scene.models, scene.grid, scene.fitted, places.transforms, places.models); });
         scene.lamps_due = true;
-        profiling::section("Effects", [&] { show_park_particles(scene.particles, park::object_effects(scene.objects, scene.models, scene.grid, scene.fitted, places.transforms, places.models)); });
+        profiling::section("Effects", [&] { show_park_particles(scene.particles, park::object::object_effects(scene.objects, scene.models, scene.grid, scene.fitted, places.transforms, places.models)); });
         scene.levels = { };
         scene.since_rebuild = kObjectRebuildInterval;
         scene.chairs_changed = true;
@@ -1480,8 +1480,8 @@ namespace rct3::scene
 
     void place_objects(const ParkScene& scene)
     {
-        const std::vector<std::size_t> changed = park::update_places(scene.places, scene.objects, scene.models, scene.grid, scene.fitted);
-        park::update_pick_boxes(scene.pick_boxes, scene.places, changed);
+        const std::vector<std::size_t> changed = park::object::update_places(scene.places, scene.objects, scene.models, scene.grid, scene.fitted);
+        park::object::update_pick_boxes(scene.pick_boxes, scene.places, changed);
         scene.pick_boxes_of = scene.objects.size();
     }
 
@@ -1496,27 +1496,27 @@ namespace rct3::scene
         /// The texture a ghost draws `batch` with. Ghosts are drawn see-through, which takes a picture's alpha
         /// as coverage; opaque parts may keep other things in their alpha (a path's surface does), so they get
         /// a copy of their own with it filled.
-        std::string ghost_texture(const park::ObjectBatch& batch)
+        std::string ghost_texture(const park::object::ObjectBatch& batch)
         {
-            return batch.blend == park::PartBlend::Opaque ? std::format("ghost:{}", batch.texture) : batch.texture;
+            return batch.blend == park::object::PartBlend::Opaque ? std::format("ghost:{}", batch.texture) : batch.texture;
         }
     } // namespace
 
-    void ghost_textures(render::Device& device, ParkScene& scene, const park::ObjectMesh& ghost)
+    void ghost_textures(render::Device& device, ParkScene& scene, const park::object::ObjectMesh& ghost)
     {
-        std::vector<park::ObjectBatch> missing;
-        for (const park::ObjectBatch& batch : ghost.batches)
+        std::vector<park::object::ObjectBatch> missing;
+        for (const park::object::ObjectBatch& batch : ghost.batches)
         {
             if (!scene.object_textures.contains(ghost_texture(batch)))
                 missing.push_back(batch);
         }
         if (missing.empty())
             return;
-        auto pictures = park::paint_batches(missing, scene.pictures);
-        for (const park::ObjectBatch& batch : missing)
+        auto pictures = park::object::paint_batches(missing, scene.pictures);
+        for (const park::object::ObjectBatch& batch : missing)
         {
             const auto painted = pictures.find(batch.texture);
-            if (batch.blend != park::PartBlend::Opaque || painted == pictures.end())
+            if (batch.blend != park::object::PartBlend::Opaque || painted == pictures.end())
                 continue;
             ovl::RgbaImage filled = painted->second;
             for (std::size_t i = 3; i < filled.pixels.size(); i += 4)
@@ -1610,17 +1610,17 @@ namespace rct3::scene
         if (const auto file = install.find(std::format("{}.common.ovl", path)))
             (void)found.add_file(*file);
         add_referenced(found, install); // Links between cars are often in files of their own
-        park::ModelLoader loader(found);
+        park::object::ModelLoader loader(found);
         // The train's designs by slot (park::ride::car_slots), each that it fills.
-        std::array<std::optional<park::ObjectModel>, 6> designs;
+        std::array<std::optional<park::object::ObjectModel>, 6> designs;
         std::array<bool, 6> filled { };
         for (std::size_t slot = 0; slot < designs.size(); ++slot)
             filled[slot] = (designs[slot] = loader.load_car(name, path, slot)).has_value();
         // How each car of a train filling `slots` sits, by car; one without a model of its own takes no room.
         const auto fits_of = [&](const std::vector<std::size_t>& slots) {
-            std::vector<park::CarFit> fits;
+            std::vector<park::object::CarFit> fits;
             for (const std::size_t slot : slots)
-                fits.push_back(designs[slot] && designs[slot]->car_fit ? *designs[slot]->car_fit : park::CarFit { });
+                fits.push_back(designs[slot] && designs[slot]->car_fit ? *designs[slot]->car_fit : park::object::CarFit { });
             return fits;
         };
         // On a course with a station, as many cars as its shortest station takes, as in the game; where even the
@@ -1640,7 +1640,7 @@ namespace rct3::scene
         while (cars < 2 && std::ranges::none_of(park::ride::car_slots(cars, filled), [&](std::size_t slot) { return designs[slot] && designs[slot]->seats > 0; }))
             ++cars;
         const std::vector<std::size_t> slots = park::ride::car_slots(cars, filled);
-        std::vector<park::CarFit>& fits = scene.car_fits[index] = fits_of(slots);
+        std::vector<park::object::CarFit>& fits = scene.car_fits[index] = fits_of(slots);
         if (std::ranges::none_of(slots, [&](std::size_t slot) { return designs[slot] && designs[slot]->car_fit; }))
             fits.clear(); // Nothing to stand them by
         // As many trains as the course takes; a shuttle runs one.
@@ -1773,7 +1773,7 @@ namespace rct3::scene
         simulation::import_boats(scene.sim, one, std::span(&e, 1), std::span(&scene.courses[index], 1), scene.grid, scene.footpaths.water.bodies, boat_obstacles(scene));
         auto* boats = scene.sim.registry.try_get<simulation::Boats>(e);
         for (std::size_t k = 0; boats && k < scene.cars.size(); ++k)
-            if (const auto model = scene.car_spots[k].ride == index ? scene.models.find(park::model_ref(scene.cars[k])) : scene.models.end(); model != scene.models.end() && model->second.boat_handling.turn_most > 0)
+            if (const auto model = scene.car_spots[k].ride == index ? scene.models.find(park::object::model_ref(scene.cars[k])) : scene.models.end(); model != scene.models.end() && model->second.boat_handling.turn_most > 0)
                 boats->handling = model->second.boat_handling;
     }
 
@@ -1931,7 +1931,7 @@ namespace rct3::scene
                     if (const park::Side side = park::Side::from(q); park::pools::slide_platform_joined(scene.pools, { .col = p.tile_x, .row = p.tile_z, .height = p.height, .turn = park::ModelTurn::from(p.direction) }, side))
                     {
                         const auto [dc, dr] = side.step();
-                        doors.push_back({ .col = p.tile_x + dc, .row = p.tile_z + dr, .turn = park::turn_facing(side.opposite()), .height = p.height });
+                        doors.push_back({ .col = p.tile_x + dc, .row = p.tile_z + dr, .turn = park::object::turn_facing(side.opposite()), .height = p.height });
                     }
         const auto station = [&](std::size_t i) {
             const auto shape = park::track::shape_named(*c, pieces[i].symbol);
@@ -2010,7 +2010,7 @@ namespace rct3::scene
             std::unordered_set<std::uint64_t> pieces;
             for (const save::TrackPiece& p : ride.track->pieces)
                 pieces.insert(p.scenery);
-            const auto hit = park::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return !scene.objects[i].hidden && pieces.contains(scene.objects[i].id); });
+            const auto hit = park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return !scene.objects[i].hidden && pieces.contains(scene.objects[i].id); });
             const auto piece = hit ? std::ranges::find(ride.track->pieces, scene.objects[hit->index].id, &save::TrackPiece::scenery) : ride.track->pieces.end();
             if (piece == ride.track->pieces.end())
                 return false;
@@ -2542,7 +2542,7 @@ namespace rct3::scene
             }
             else if (shift && b.ghost && ray)
             {
-                if (const auto distance = park::ground_hit(*ray, scene.grid))
+                if (const auto distance = park::object::ground_hit(*ray, scene.grid))
                     b.lift = TrackBuilding::Lift { ray->origin + ray->direction * *distance, b.ghost->object.base_height.value_or(0) };
             }
             else if (const auto pointed = ray ? ground_tile(scene, at, size) : std::nullopt; pointed && pointed != b.aim)
@@ -2688,14 +2688,14 @@ namespace rct3::scene
                 park::track::stand_train(*course, ghost.trains.front(), scene.car_fits.at(*b.ride), train->start);
                 const park::ride::RideCars cars = park::ride::ride_cars(std::span(&ghost, 1), 0);
                 load_car_models(scene, *assets.install, cars);
-                if (const auto model = cars.pieces.empty() ? scene.models.end() : scene.models.find(park::model_ref(cars.pieces.front())); model != scene.models.end())
+                if (const auto model = cars.pieces.empty() ? scene.models.end() : scene.models.find(park::object::model_ref(cars.pieces.front())); model != scene.models.end())
                     fit_car(*train, model->second, *b.ride < scene.track_rules.size() && scene.track_rules[*b.ride].pool_ride);
                 TrackBuilding::GhostTrain& t = b.test.emplace(TrackBuilding::GhostTrain { .train = *train, .spots = cars.spots, .stood_at = ghost.trains.front().distance });
                 for (const save::PlacedObject& car : cars.pieces)
                     t.stood.push_back(cars.fitted.at(car.id));
                 t.meshes = park::moving_meshes(cars.pieces, scene.models, scene.grid);
                 for (std::size_t i = 0; i < cars.pieces.size(); ++i)
-                    if (const auto model = scene.models.find(park::model_ref(cars.pieces[i])); model != scene.models.end())
+                    if (const auto model = scene.models.find(park::object::model_ref(cars.pieces[i])); model != scene.models.end())
                         t.joints.insert(t.joints.end(), model->second.arm_joints.size(), i);
                 for (auto* vertices : { &t.meshes.mesh.vertices, &t.meshes.own })
                     for (park::GroundVertex& v : *vertices)
@@ -2780,12 +2780,12 @@ namespace rct3::scene
             if (b.preview_item != alone.symbol)
             {
                 const std::array<save::PlacedObject, 1> one { alone };
-                scene.placing.preview_mesh = park::object_mesh(one, scene.models, scene.grid);
+                scene.placing.preview_mesh = park::object::object_mesh(one, scene.models, scene.grid);
                 ghost_textures(device, scene, scene.placing.preview_mesh);
                 scene.placing.preview_bones.clear();
                 b.preview_item = alone.symbol;
             }
-            scene.placing.preview_camera = park::framed(park::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
+            scene.placing.preview_camera = park::framed(park::object::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
             price = ui::money_text(ui::currency(*assets.strings, currency), c->pieces[b.picked->index].record.cost);
         }
         else
@@ -2963,7 +2963,7 @@ namespace rct3::scene
         return light;
     }
 
-    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light, bool solid)
+    void draw_ghost_mesh(render::Device& device, const ParkScene& scene, const park::object::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light, bool solid)
     {
         if (mesh.indices.empty() || !scene.see_through_pipeline)
             return;
@@ -2971,13 +2971,13 @@ namespace rct3::scene
         const auto indices = device.allocate_transient(std::as_bytes(std::span(mesh.indices)));
         if (!vertices || !indices)
             return;
-        for (const park::ObjectBatch& batch : mesh.batches)
+        for (const park::object::ObjectBatch& batch : mesh.batches)
         {
-            if (batch.blend == park::PartBlend::DepthOnly) // It would hide the ghost's own insides
+            if (batch.blend == park::object::PartBlend::DepthOnly) // It would hide the ghost's own insides
                 continue;
             const auto texture = scene.object_textures.find(ghost_texture(batch));
             render::DrawCommand draw;
-            draw.pipeline = !solid || batch.blend == park::PartBlend::Blended ? scene.see_through_pipeline : (batch.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.object_pipeline);
+            draw.pipeline = !solid || batch.blend == park::object::PartBlend::Blended ? scene.see_through_pipeline : (batch.blend == park::object::PartBlend::Cutout ? scene.cutout_pipeline : scene.object_pipeline);
             draw.vertices = *vertices;
             draw.indices = *indices;
             draw.index_type = render::IndexType::U32;

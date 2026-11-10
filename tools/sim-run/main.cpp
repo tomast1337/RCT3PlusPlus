@@ -15,8 +15,8 @@
 #include "park/asset_index.hpp"
 #include "park/build_catalogue.hpp"
 #include "park/item_category.hpp"
-#include "park/object_mesh.hpp"
-#include "park/object_models.hpp"
+#include "park/object/mesh.hpp"
+#include "park/object/models.hpp"
 #include "park/overhead.hpp"
 #include "park/pools/pools.hpp"
 #include "park/track/course.hpp"
@@ -199,7 +199,7 @@ int main(int argc, char** argv)
             if (!added)
                 break;
         }
-        park::ModelLoader loader(assets);
+        park::object::ModelLoader loader(assets);
         for (const save::PlacedObject& o : world_model->objects)
         {
             const auto model = loader.load(o.symbol, o.overlay);
@@ -215,20 +215,20 @@ int main(int argc, char** argv)
                 if (const auto file = install->find(std::format("{}.common.ovl", ride.base.overlay_path)))
                     if (const auto kind = park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))))
                         facility_kinds[ride.base.id] = *kind;
-        std::map<std::string, std::optional<park::ObjectModel>, std::less<>> models;
+        std::map<std::string, std::optional<park::object::ObjectModel>, std::less<>> models;
         guests_room = simulation::ride_guests(*rides, [&](std::string_view path) { return install->find(path); });
-        timings = simulation::flat_ride_timings(*rides, world_model->objects, [&](const save::PlacedObject& o) -> const park::ObjectModel* {
+        timings = simulation::flat_ride_timings(*rides, world_model->objects, [&](const save::PlacedObject& o) -> const park::object::ObjectModel* {
             auto [at, added] = models.try_emplace(o.symbol);
             if (added)
                 at->second = loader.load(o.symbol, o.overlay);
             return at->second ? &*at->second : nullptr;
         });
         // Each coaster's course, checked against where the save has its cars.
-        park::ObjectModels piece_models;
+        park::object::ObjectModels piece_models;
         for (const save::PlacedObject& o : world_model->objects)
-            if (!piece_models.contains(park::model_key(o)))
+            if (!piece_models.contains(park::object::model_key(o)))
                 if (auto model = loader.load(o.symbol, o.overlay))
-                    piece_models.emplace(park::model_key(o), std::move(*model));
+                    piece_models.emplace(park::object::model_key(o), std::move(*model));
         const std::size_t roofed = simulation::import_cover(world, [&](std::span<const glm::vec3> points) { return park::overheads(points, world_model->objects, piece_models, world_model->terrain, { }); });
         out.info("paths under a roof {:d}, in the shade {:d} of {:d}", roofed, static_cast<std::size_t>(std::ranges::count_if(world.paths.nodes(), &simulation::PathNode::shaded)), world.paths.nodes().size());
         std::map<std::string, std::optional<park::track::PieceCatalogue>, std::less<>> catalogues;

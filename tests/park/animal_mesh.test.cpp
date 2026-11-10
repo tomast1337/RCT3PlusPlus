@@ -77,7 +77,7 @@ TEST_CASE("motion lengths come from the clips")
 TEST_CASE("an animal's mesh is skinned, placed and batched by picture")
 {
     const AnimalBody body = two_bones();
-    AnimalPiece glass { .picture = "glass", .blend = PartBlend::Blended };
+    AnimalPiece glass { .picture = "glass", .blend = object::PartBlend::Blended };
     glass.vertices = { { .position = { 0, 0, 0 } }, { .position = { 1, 0, 0 } }, { .position = { 0, 1, 0 } } };
     glass.indices = { 0, 1, 2 };
     AnimalBody with_glass = body;
@@ -85,12 +85,12 @@ TEST_CASE("an animal's mesh is skinned, placed and batched by picture")
 
     const PlacedAnimal animal { .body = &with_glass, .level = 5, .motion = AnimalMotion::Walk, .time = 0.5f / kAnimalFramesPerSecond, .world = glm::translate(glm::mat4(1.0f), glm::vec3(10, 0, 0)) };
     AnimalRuns runs;
-    const ObjectMesh mesh = animal_mesh({ &animal, 1 }, runs);
+    const object::ObjectMesh mesh = animal_mesh({ &animal, 1 }, runs);
     CHECK(mesh.placed == 1);
     REQUIRE(mesh.batches.size() == 2);
     // Solid first, then see-through, whatever order the pieces came in; the empty coarse level falls back.
     CHECK(mesh.batches[0].picture == "skin");
-    CHECK(mesh.batches[1].blend == PartBlend::Blended);
+    CHECK(mesh.batches[1].blend == object::PartBlend::Blended);
     REQUIRE(mesh.vertices.size() == 6);
     // Halfway through the walk the child has risen one unit, and the animal stands ten units along x.
     check_near(mesh.vertices[0].position, { 10, 3, 0 });

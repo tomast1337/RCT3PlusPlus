@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park_water.hpp"
 
-#include "park/object_pick.hpp"
+#include "park/object/pick.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -218,7 +218,7 @@ namespace rct3::scene
         if (!hit)
             return false;
         // Ground standing above the water, between it and the eye, hides it.
-        if (const auto ground = park::ground_hit(ray, grid, *hit); ground && *ground < *hit - 1e-3f)
+        if (const auto ground = park::object::ground_hit(ray, grid, *hit); ground && *ground < *hit - 1e-3f)
             return false;
         const glm::vec3 at = ray.origin + ray.direction * *hit;
         park::water::start_ripple(water.ripples, { at.x, at.z });

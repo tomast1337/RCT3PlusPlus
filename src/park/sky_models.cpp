@@ -148,7 +148,7 @@ namespace rct3::park
         if (dome.vertices.empty() || image == sky.images.end() || image->second.width == 0 || image->second.height == 0)
             return { };
         const ovl::RgbaImage& picture = image->second;
-        const auto lowest = std::ranges::min_element(dome.vertices, { }, [](const ModelVertex& v) { return v.position.y; });
+        const auto lowest = std::ranges::min_element(dome.vertices, { }, [](const object::ModelVertex& v) { return v.position.y; });
         const float down = lowest->uv.y - std::floor(lowest->uv.y);
         const auto row = std::min(static_cast<std::size_t>(down * static_cast<float>(picture.height)), static_cast<std::size_t>(picture.height) - 1);
         const std::size_t start = row * picture.width * 4;

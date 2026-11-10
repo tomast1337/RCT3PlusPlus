@@ -15,7 +15,7 @@
 #pragma once
 
 #include "park/led_signs.hpp"
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "render/device.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -42,7 +42,7 @@ namespace rct3::scene
         std::optional<std::size_t> ride;   ///< Of the scene's rides, for a queue sign
         std::optional<std::size_t> placed; ///< Of the scene's signs, for a sign placed as scenery
         save::PlacedObject object;
-        park::ObjectMesh mesh;                      ///< Its board's batch painted with `board`
+        park::object::ObjectMesh mesh;              ///< Its board's batch painted with `board`
         std::string board;                          ///< Key of the board's picture in LedSigns::textures
         std::uint32_t width = 0;                    ///< Of the board's picture, whole lamps
         park::LampColour colour = park::kSignWhite; ///< Of its lamps

@@ -2,7 +2,7 @@
 #include "scene/park_patrol.hpp"
 
 #include "park/camera.hpp"
-#include "park/object_pick.hpp"
+#include "park/object/pick.hpp"
 #include "park/terrain_mesh.hpp"
 #include "scene/park_scene.hpp"
 #include "simulation/components.hpp"
@@ -47,7 +47,7 @@ namespace rct3::scene
                 return std::nullopt;
             const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
             const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, ndc);
-            const auto distance = park::ground_hit(ray, scene.grid);
+            const auto distance = park::object::ground_hit(ray, scene.grid);
             if (!distance)
                 return std::nullopt;
             const glm::vec3 hit = ray.origin + ray.direction * *distance;

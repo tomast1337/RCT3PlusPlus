@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/design_placement.hpp"
 
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 
 #include <algorithm>
 
@@ -38,7 +38,7 @@ namespace rct3::park
         std::vector<pools::PoolOpening> out;
         for (const track::PieceOpening& o : record.pool_sides)
         {
-            const save::Tile tile = square_tile(object, record.squares, o.x, o.z);
+            const save::Tile tile = object::square_tile(object, record.squares, o.x, o.z);
             out.push_back({ .col = tile.col, .row = tile.row, .height = object.base_height.value_or(0) + o.height, .side = o.side.turned(object.rotation) });
         }
         return out;

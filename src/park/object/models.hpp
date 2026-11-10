@@ -39,7 +39,7 @@ namespace rct3::ovl
     struct StaticShape;
 } // namespace rct3::ovl
 
-namespace rct3::park
+namespace rct3::park::object
 {
 
     /// How a part is blended with what is behind it.
@@ -179,7 +179,7 @@ namespace rct3::park
 
     struct ObjectModel
     {
-        std::uint16_t positioning = 0; ///< How the item sits on its tile (see object_placement.hpp)
+        std::uint16_t positioning = 0; ///< How the item sits on its tile (see object/placement.hpp)
         /// Of a ride car, how its riders sit (ovl::RideCar::kind's low byte); nothing when the ride says.
         std::optional<std::uint8_t> seating;
         std::uint32_t category = 0;                   ///< What kind of item it is (see item_category.hpp)
@@ -324,7 +324,7 @@ namespace rct3::park
 
     /// Keys given to parts painted like the ground they stand on, such as the terrain blocks: they name no
     /// picture of their own but these two, one for the land's surface and one for its cliffs. The object mesh
-    /// gives them the pictures of the tile under the object (see object_mesh.hpp).
+    /// gives them the pictures of the tile under the object (see object/mesh.hpp).
     inline constexpr std::string_view kGroundSurfaceTexture = "useterraintexture";
     inline constexpr std::string_view kGroundCliffTexture = "useclifftexture";
     inline constexpr std::string_view kGroundSurfacePicture = "rct3pp:ground surface";
@@ -388,4 +388,4 @@ namespace rct3::park
         void add_flow(ObjectModel& model, std::string_view symbol, std::string_view path);
     };
 
-} // namespace rct3::park
+} // namespace rct3::park::object

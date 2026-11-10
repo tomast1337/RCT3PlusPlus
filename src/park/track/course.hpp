@@ -6,7 +6,7 @@
 // its trains and cars finds a point on the line.
 #pragma once
 
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "park/pools/pools.hpp"
 #include "park/track/pieces.hpp"
 #include "save/model/rides.hpp"
@@ -69,7 +69,7 @@ namespace rct3::park::track
     /// the first stretch with a station, or the first stretch when none has one, knowing where the other stretches
     /// with a station are. Nothing when the ride has no
     /// track, or a piece's object or shape is missing.
-    [[nodiscard]] std::optional<TrackCourse> track_course(const save::Ride& ride, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, const PieceShapeOf& shape_of);
+    [[nodiscard]] std::optional<TrackCourse> track_course(const save::Ride& ride, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid, const object::Fitted& fitted, const PieceShapeOf& shape_of);
 
     /// The point `distance` along `course`, going round again past the end of a closed course and held at the
     /// ends of an open one. The course must have a point.
@@ -103,13 +103,13 @@ namespace rct3::park::track
 
     /// How long a train of cars fitted as `fits` (by car) is, front to rear: its cars' lengths, a link's being the
     /// track from the rear of the car ahead of it to the front of the car behind, as stand_train stands them.
-    [[nodiscard]] float train_length(std::span<const CarFit> fits);
+    [[nodiscard]] float train_length(std::span<const object::CarFit> fits);
 
     /// How many trains of cars fitted as `fits` (by car) `course` takes: as many as fill half of it queued
     /// kTrainGap apart, so they have room to run (our own rule), no more than `cap` where the ride's kind sets
     /// one, and when kept a block apart (`blocks`) one fewer than it has blocks, each ending at a station, lift
     /// or block brake; at least one.
-    [[nodiscard]] int trains_fitting(const TrackCourse& course, std::span<const CarFit> fits, bool blocks, std::optional<std::uint32_t> cap);
+    [[nodiscard]] int trains_fitting(const TrackCourse& course, std::span<const object::CarFit> fits, bool blocks, std::optional<std::uint32_t> cap);
 
     /// Where the fronts of `count` trains `length` long stand on closed `course`, the first at `start` (a station's
     /// end): one at each station's end in turn on round the track, then more queued kTrainGap behind those, a station
@@ -129,7 +129,7 @@ namespace rct3::park::track
     /// rear wheels to its front ones. A link between two cars reaches its length back along the track from where
     /// the car ahead couples on, at the height they couple at, and the car behind couples on where it ends. Sets each car's distance (its front), length, wheels and place and turn
     /// as the park keeps them, and the train's distance (its front) and length. Nothing without fits.
-    void stand_train(const TrackCourse& course, save::Train& train, std::span<const CarFit> fits, float front);
+    void stand_train(const TrackCourse& course, save::Train& train, std::span<const object::CarFit> fits, float front);
 
     using ArmAngles = std::array<float, 4>; ///< An arm's joint angles, degrees, from its base out
 

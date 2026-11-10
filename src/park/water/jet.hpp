@@ -8,7 +8,7 @@
 #pragma once
 
 #include "math/glm.hpp"
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -96,6 +96,6 @@ namespace rct3::park::water
     /// Adds the tubes of `jets` to `mesh` as one batch of kJetPicture, and one of kJetSpray where they break up, seen from `eye` (the rims, seen edge on,
     /// are less see-through; water breaking up is whiter, ragged and clearer), the picture running along each jet
     /// for `seconds`. A jet too thin to see from afar is drawn wider and fainter.
-    void jet_mesh(std::span<const WaterJet* const> jets, glm::vec3 eye, float seconds, ObjectMesh& mesh);
+    void jet_mesh(std::span<const WaterJet* const> jets, glm::vec3 eye, float seconds, object::ObjectMesh& mesh);
 
 } // namespace rct3::park::water

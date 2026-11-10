@@ -25,18 +25,18 @@ namespace
     }
 
     /// A flat square two across at `height` above its origin, of `category`.
-    ObjectModel slab(float height, ItemCategory category)
+    object::ObjectModel slab(float height, ItemCategory category)
     {
-        ModelPart p;
+        object::ModelPart p;
         p.vertices = { { { -1, height, -1 }, { 0, 1, 0 }, { 0, 0 } }, { { 1, height, -1 }, { 0, 1, 0 }, { 1, 0 } }, { { 1, height, 1 }, { 0, 1, 0 }, { 1, 1 } }, { { -1, height, 1 }, { 0, 1, 0 }, { 0, 1 } } };
         p.indices = { 0, 1, 2, 0, 2, 3 };
-        ObjectModel m;
+        object::ObjectModel m;
         m.category = std::to_underlying(category);
         m.levels = { { 100, { p }, { } } };
         return m;
     }
 
-    save::PlacedObject object(std::uint64_t id, std::string symbol)
+    save::PlacedObject placed_object(std::uint64_t id, std::string symbol)
     {
         save::PlacedObject o;
         o.id = id;
@@ -49,16 +49,16 @@ namespace
 
 TEST_CASE("a roof overhead keeps the rain off, trees only shade, and track and low things do neither")
 {
-    ObjectModels models;
+    object::ObjectModels models;
     models.emplace("Things/Things|Roof", slab(4, ItemCategory::Roof));
     models.emplace("Things/Things|Low", slab(1, ItemCategory::Roof));
     models.emplace("Things/Things|Track", slab(4, ItemCategory::TrackPiece));
-    ObjectModel tree = slab(6, ItemCategory::Tree);
+    object::ObjectModel tree = slab(6, ItemCategory::Tree);
     tree.levels.front().parts.front().vertices.front().position.y = 0; // A box from the ground up
     models.emplace("Things/Things|Tree", std::move(tree));
-    const std::vector<save::PlacedObject> objects { object(1, "Roof"), object(2, "Tree"), object(3, "Track"), object(4, "Low") };
+    const std::vector<save::PlacedObject> objects { placed_object(1, "Roof"), placed_object(2, "Tree"), placed_object(3, "Track"), placed_object(4, "Low") };
     const auto at = [](float x, float z) { return glm::translate(glm::mat4(1.0f), glm::vec3(x, 0, z)); };
-    const Fitted fitted { { 1, at(2, 2) }, { 2, at(10, 10) }, { 3, at(18, 18) }, { 4, at(26, 26) } };
+    const object::Fitted fitted { { 1, at(2, 2) }, { 2, at(10, 10) }, { 3, at(18, 18) }, { 4, at(26, 26) } };
     const std::vector<glm::vec3> points { { 2, 0, 2 }, { 10, 0, 10 }, { 18, 0, 18 }, { 26, 0, 26 }, { 6, 0, 2 } };
     const std::vector<Overhead> over = overheads(points, objects, models, flat(), fitted);
     REQUIRE(over.size() == points.size());
@@ -75,10 +75,10 @@ TEST_CASE("a roof overhead keeps the rain off, trees only shade, and track and l
 
 TEST_CASE("the park's gate is no roof, so guests do not crowd it out of the rain")
 {
-    ObjectModels models;
+    object::ObjectModels models;
     models.emplace("Things/Things|Gate", slab(4, ItemCategory::ParkEntrance));
-    const std::vector<save::PlacedObject> objects { object(1, "Gate") };
-    const Fitted fitted { { 1, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 2)) } };
+    const std::vector<save::PlacedObject> objects { placed_object(1, "Gate") };
+    const object::Fitted fitted { { 1, glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 2)) } };
     const std::vector<glm::vec3> points { { 2, 0, 2 } };
     const std::vector<Overhead> over = overheads(points, objects, models, flat(), fitted);
     REQUIRE(over.size() == 1);

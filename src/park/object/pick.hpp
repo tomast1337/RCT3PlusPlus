@@ -7,7 +7,7 @@
 #pragma once
 
 #include "park/camera.hpp"
-#include "park/object_mesh.hpp"
+#include "park/object/mesh.hpp"
 #include "save/model/world.hpp"
 
 #include <cstddef>
@@ -16,7 +16,7 @@
 #include <span>
 #include <vector>
 
-namespace rct3::park
+namespace rct3::park::object
 {
 
     /// How far along `ray` it first meets the ground, if it does within `reach`.
@@ -70,4 +70,4 @@ namespace rct3::park
     /// passes through before it reaches the ground.
     [[nodiscard]] std::optional<PickHit> pick_person(const Ray& ray, std::span<const glm::mat4> placements, const save::TerrainGrid& grid);
 
-} // namespace rct3::park
+} // namespace rct3::park::object

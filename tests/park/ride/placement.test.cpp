@@ -450,6 +450,6 @@ TEST_CASE("a stall serves from the side a quarter turn back from its model's +X"
     for (const ModelTurn turn : { ModelTurn { 0 }, ModelTurn { 1 }, ModelTurn { 2 }, ModelTurn { 3 } })
     {
         const auto [dc, dr] = served_side(turn).step();
-        CHECK(turned_x(turn.turned(3)) == glm::vec2(dc, dr)); // As paths and guests find a stall's front
+        CHECK(object::turned_x(turn.turned(3)) == glm::vec2(dc, dr)); // As paths and guests find a stall's front
     }
 }

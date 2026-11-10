@@ -2,7 +2,7 @@
 #include "park/edge_walls.hpp"
 
 #include "park/item_category.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/placement.hpp"
 #include "park/path/furniture.hpp"
 
 #include <algorithm>
@@ -24,24 +24,24 @@ namespace rct3::park
         }
     } // namespace
 
-    std::optional<EdgeWall> edge_wall(const save::PlacedObject& o, const ObjectModels& models, const save::TerrainGrid& grid)
+    std::optional<EdgeWall> edge_wall(const save::PlacedObject& o, const object::ObjectModels& models, const save::TerrainGrid& grid)
     {
         if (o.hidden)
             return std::nullopt;
-        const auto model = models.find(model_ref(o));
+        const auto model = models.find(object::model_ref(o));
         if (model == models.end())
             return std::nullopt;
-        const ObjectModel& m = model->second;
-        if (static_cast<Positioning>(m.positioning) != Positioning::Edge || (m.category != std::to_underlying(ItemCategory::Fence) && m.category != std::to_underlying(ItemCategory::Wall)))
+        const object::ObjectModel& m = model->second;
+        if (static_cast<object::Positioning>(m.positioning) != object::Positioning::Edge || (m.category != std::to_underlying(ItemCategory::Fence) && m.category != std::to_underlying(ItemCategory::Wall)))
             return std::nullopt;
-        const float base = object_transform(o, Positioning::Edge, grid, m.squares, m.ground_height)[3].y;
+        const float base = object::object_transform(o, object::Positioning::Edge, grid, m.squares, m.ground_height)[3].y;
         std::int32_t top = 0;
         for (const auto& levels : m.solid)
             top = std::max(top, levels ? (*levels)[1] + 1 : 0);
-        return EdgeWall { .tile = { o.col, o.row }, .side = faced_side(ModelTurn::from(o.rotation)), .low = base - kBelow, .high = base + (top > 0 ? static_cast<float>(top) : kFenceHeight) };
+        return EdgeWall { .tile = { o.col, o.row }, .side = object::faced_side(ModelTurn::from(o.rotation)), .low = base - kBelow, .high = base + (top > 0 ? static_cast<float>(top) : kFenceHeight) };
     }
 
-    EdgeWalls edge_walls(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid)
+    EdgeWalls edge_walls(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid)
     {
         EdgeWalls walls;
         for (const save::PlacedObject& o : objects)

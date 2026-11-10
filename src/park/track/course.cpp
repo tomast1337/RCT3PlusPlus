@@ -54,7 +54,7 @@ namespace rct3::park::track
         }
     } // namespace
 
-    std::optional<TrackCourse> track_course(const save::Ride& ride, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, const PieceShapeOf& shape_of)
+    std::optional<TrackCourse> track_course(const save::Ride& ride, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid, const object::Fitted& fitted, const PieceShapeOf& shape_of)
     {
         if (!ride.track || ride.track->pieces.empty())
             return std::nullopt;
@@ -91,8 +91,8 @@ namespace rct3::park::track
                     whole_stretch = false;
                     break;
                 }
-                const auto model = models.find(model_ref(object));
-                const glm::mat4 to_world = placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted);
+                const auto model = models.find(object::model_ref(object));
+                const glm::mat4 to_world = object::placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted);
                 CourseKind kind = shape->use == PieceUse::Station ? CourseKind::Station : (shape->toggles & toggle_bit(PieceToggle::Chain)) != 0 ? CourseKind::Chain : CourseKind::Plain;
                 const std::uint32_t role = shape->record.role;
                 if (kind == CourseKind::Chain && role >= kRoleTowerFirst && role <= kRoleTowerLast)
@@ -269,7 +269,7 @@ namespace rct3::park::track
         /// Track from the rear of the car ahead of `link` to the front of the car behind it: from where the one couples
         /// on, the link's reach on, less how far back from its front the other couples on. Below zero where the cars'
         /// ends overlap.
-        float link_gap(const CarFit& ahead, const CarFit& link, const CarFit& behind)
+        float link_gap(const object::CarFit& ahead, const object::CarFit& link, const object::CarFit& behind)
         {
             return ahead.link_rear - ahead.length + link.length - behind.link_front;
         }
@@ -285,7 +285,7 @@ namespace rct3::park::track
         return to * back * saved;
     }
 
-    float train_length(std::span<const CarFit> fits)
+    float train_length(std::span<const object::CarFit> fits)
     {
         float length = 0;
         for (std::size_t k = 0; k < fits.size(); ++k)
@@ -293,7 +293,7 @@ namespace rct3::park::track
         return length;
     }
 
-    int trains_fitting(const TrackCourse& course, std::span<const CarFit> fits, bool blocks, std::optional<std::uint32_t> cap)
+    int trains_fitting(const TrackCourse& course, std::span<const object::CarFit> fits, bool blocks, std::optional<std::uint32_t> cap)
     {
         int most = static_cast<int>(course.length() / 2 / (train_length(fits) + kTrainGap));
         if (cap)
@@ -358,25 +358,25 @@ namespace rct3::park::track
         return fit;
     }
 
-    void stand_train(const TrackCourse& course, save::Train& train, std::span<const CarFit> fits, float front)
+    void stand_train(const TrackCourse& course, save::Train& train, std::span<const object::CarFit> fits, float front)
     {
         if (fits.empty())
             return;
         train.distance = front;
         train.length = 0;
         float at = front;
-        const auto fit_of = [&](std::size_t k) -> const CarFit& { return fits[std::min(k, fits.size() - 1)]; };
+        const auto fit_of = [&](std::size_t k) -> const object::CarFit& { return fits[std::min(k, fits.size() - 1)]; };
         for (std::size_t k = 0; k < train.cars.size(); ++k)
         {
             save::Car& car = train.cars[k];
-            const CarFit& fit = fit_of(k);
+            const object::CarFit& fit = fit_of(k);
             car.distance = at;
             glm::mat4 frame;
             if (fit.link && k > 0 && k + 1 < train.cars.size())
             {
                 // From where the car ahead couples on back along the track, lifted to the height the cars couple at.
-                const CarFit& ahead = fit_of(k - 1);
-                const CarFit& behind = fit_of(k + 1);
+                const object::CarFit& ahead = fit_of(k - 1);
+                const object::CarFit& behind = fit_of(k + 1);
                 car.length = link_gap(ahead, fit, behind);
                 car.front_wheel_distance = train.cars[k - 1].distance - ahead.link_rear;
                 car.rear_wheel_distance = car.front_wheel_distance - fit.length;

@@ -70,19 +70,19 @@ namespace rct3::scene
 
         /// Paints the board parts of `model` with kBoardPicture, their texture running once along the board, and
         /// returns the board's width over its height; 0 for a model without a board.
-        float prepare_board(park::ObjectModel& model)
+        float prepare_board(park::object::ObjectModel& model)
         {
             float aspect = 0;
-            for (park::ModelLevel& level : model.levels)
+            for (park::object::ModelLevel& level : model.levels)
             {
-                for (park::ModelPart& part : level.parts)
+                for (park::object::ModelPart& part : level.parts)
                 {
                     if (!part.board || part.vertices.empty())
                         continue;
                     glm::vec3 low(std::numeric_limits<float>::max());
                     glm::vec3 high(std::numeric_limits<float>::lowest());
                     float across = 0;
-                    for (const park::ModelVertex& v : part.vertices)
+                    for (const park::object::ModelVertex& v : part.vertices)
                     {
                         low = glm::min(low, v.position);
                         high = glm::max(high, v.position);
@@ -90,7 +90,7 @@ namespace rct3::scene
                     }
                     if (across > 0)
                     {
-                        for (park::ModelVertex& v : part.vertices)
+                        for (park::object::ModelVertex& v : part.vertices)
                             v.uv.x /= across;
                     }
                     part.texture = std::string(kBoardPicture);
@@ -104,17 +104,17 @@ namespace rct3::scene
         }
 
         /// Uploads the pictures of `mesh`'s batches other than its board's that the scene lacks.
-        void frame_textures(render::Device& device, ParkScene& scene, const park::ObjectMesh& mesh)
+        void frame_textures(render::Device& device, ParkScene& scene, const park::object::ObjectMesh& mesh)
         {
-            std::vector<park::ObjectBatch> missing;
-            for (const park::ObjectBatch& batch : mesh.batches)
+            std::vector<park::object::ObjectBatch> missing;
+            for (const park::object::ObjectBatch& batch : mesh.batches)
             {
                 if (batch.picture != kBoardPicture && !scene.object_textures.contains(batch.texture))
                     missing.push_back(batch);
             }
             if (missing.empty())
                 return;
-            auto uploaded = ui::upload_textures(device, park::paint_batches(missing, scene.pictures));
+            auto uploaded = ui::upload_textures(device, park::object::paint_batches(missing, scene.pictures));
             if (uploaded)
                 scene.object_textures.merge(*uploaded);
         }
@@ -137,14 +137,14 @@ namespace rct3::scene
                 }
             }
             // Writes `sign`'s board into its mesh and gives it a blank picture; false when `model` has no board.
-            const auto hang = [&](LedSign& sign, park::ObjectModels& model) {
+            const auto hang = [&](LedSign& sign, park::object::ObjectModels& model) {
                 const float aspect = prepare_board(model.begin()->second);
                 if (aspect <= 0)
                     return false;
                 sign.width = std::max<std::uint32_t>(static_cast<std::uint32_t>(std::lround(aspect * park::kSignTextHeight / park::kSignLamp)), 1) * park::kSignLamp;
                 sign.board = std::format("LED sign {}", q.signs.size());
-                sign.mesh = park::object_mesh(std::span(&sign.object, 1), model, scene.grid);
-                for (park::ObjectBatch& batch : sign.mesh.batches)
+                sign.mesh = park::object::object_mesh(std::span(&sign.object, 1), model, scene.grid);
+                for (park::object::ObjectBatch& batch : sign.mesh.batches)
                 {
                     if (batch.picture == kBoardPicture)
                         batch.texture = sign.board;
@@ -165,7 +165,7 @@ namespace rct3::scene
                 placed.emplace(scene.signs[s].object_ref, s);
             for (const save::PlacedObject& o : scene.objects)
             {
-                const auto found = scene.models.find(park::model_ref(o));
+                const auto found = scene.models.find(park::object::model_ref(o));
                 const auto written = placed.find(o.id);
                 if (found == scene.models.end() || (written == placed.end() && found->second.category != std::to_underlying(park::ItemCategory::ParkEntrance)))
                     continue;
@@ -173,11 +173,11 @@ namespace rct3::scene
                 if (written != placed.end())
                     sign.placed = written->second;
                 sign.object = o;
-                park::ObjectModels model { *found };
+                park::object::ObjectModels model { *found };
                 if (!hang(sign, model))
                     continue;
                 // The entrance or sign itself is drawn with the objects.
-                std::erase_if(sign.mesh.batches, [&](const park::ObjectBatch& batch) { return batch.texture != sign.board; });
+                std::erase_if(sign.mesh.batches, [&](const park::object::ObjectBatch& batch) { return batch.texture != sign.board; });
                 q.signs.push_back(std::move(sign));
             }
             for (const park::QueueSignSpot& spot : park::queue_sign_spots(scene.footpaths.paths, scene.grid))
@@ -205,7 +205,7 @@ namespace rct3::scene
                 if (!load_object_model(scene, q.models, assets, o))
                     continue;
                 // A copy: the same item placed as scenery keeps its own board.
-                park::ObjectModels model { { park::model_key(o), scene.models.at(park::model_key(o)) } };
+                park::object::ObjectModels model { { park::object::model_key(o), scene.models.at(park::object::model_key(o)) } };
                 if (!hang(sign, model))
                     continue;
                 frame_textures(device, scene, sign.mesh);
@@ -246,7 +246,7 @@ namespace rct3::scene
             // Objects only added, as a piece or a ride laid, put up no board unless one is an entrance or a sign.
             const bool added = !q.stale && q.counted[0] == counts[0] && q.counted[1] == counts[1] && counts[2] > q.counted[2];
             const auto boarded = [&](const save::PlacedObject& o) {
-                const auto found = scene.models.find(park::model_ref(o));
+                const auto found = scene.models.find(park::object::model_ref(o));
                 return std::ranges::contains(scene.signs, o.id, &save::SignState::object_ref) || (found != scene.models.end() && found->second.category == std::to_underlying(park::ItemCategory::ParkEntrance));
             };
             if (!added || std::ranges::any_of(std::span(scene.objects).subspan(q.counted[2]), boarded))
@@ -270,7 +270,7 @@ namespace rct3::scene
             {
                 const save::SignState& placed = scene.signs[*sign.placed];
                 // A sign that cannot forbid entry shows its words whatever its kind says.
-                const auto model = scene.models.find(park::model_ref(sign.object));
+                const auto model = scene.models.find(park::object::model_ref(sign.object));
                 const bool no_entry = placed.kind == 1 && model != scene.models.end() && model->second.no_entry;
                 words = no_entry ? std::u16string(assets.strings->get("Sign_NoEntry")) : placed.kind == 0 || placed.kind == 1 ? strings::to_utf16(placed.text) : std::u16string { };
             }
@@ -321,21 +321,21 @@ namespace rct3::scene
         unlit.ground = glm::vec3(1.0f);
         for (const LedSign& sign : scene.led_signs.signs)
         {
-            const park::ObjectMesh& mesh = sign.mesh;
+            const park::object::ObjectMesh& mesh = sign.mesh;
             if (mesh.indices.empty())
                 continue;
             const auto vertices = device.allocate_transient(std::as_bytes(std::span(mesh.vertices)));
             const auto indices = device.allocate_transient(std::as_bytes(std::span(mesh.indices)));
             if (!vertices || !indices)
                 return;
-            for (const park::ObjectBatch& batch : mesh.batches)
+            for (const park::object::ObjectBatch& batch : mesh.batches)
             {
-                if (batch.blend == park::PartBlend::DepthOnly)
+                if (batch.blend == park::object::PartBlend::DepthOnly)
                     continue;
                 const bool board = batch.texture == sign.board;
                 const ui::UiTextures& textures = board ? scene.led_signs.textures : scene.object_textures;
                 const auto texture = textures.find(batch.texture);
-                render::PipelineHandle pipeline = batch.blend == park::PartBlend::Opaque ? scene.object_pipeline : batch.blend == park::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline;
+                render::PipelineHandle pipeline = batch.blend == park::object::PartBlend::Opaque ? scene.object_pipeline : batch.blend == park::object::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline;
                 if (const auto front = scene.front_only.find(pipeline.id); batch.one_sided && front != scene.front_only.end())
                     pipeline = front->second;
                 render::DrawCommand draw;

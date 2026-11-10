@@ -17,7 +17,7 @@ namespace rct3::park::path
         constexpr std::int32_t kSameLevel = 2; ///< Units between two items' bases that still clash
     } // namespace
 
-    std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, Positioning positioning, ModelTurn turn, PathRules rules)
+    std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, object::Positioning positioning, ModelTurn turn, object::PathRules rules)
     {
         if (grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
             return std::nullopt;
@@ -63,7 +63,7 @@ namespace rct3::park::path
         const bool sloped = slope != 0 && slope != save::kSlopeOnGround;
         const bool queue = path->kind == save::PathKind::Queue;
         const bool forbidden = queue ? rules.off_queues : rules.queues_only;
-        if (positioning == Positioning::PathCentre)
+        if (positioning == object::Positioning::PathCentre)
         {
             spot.refused = sloped || forbidden;
             return spot;
@@ -100,28 +100,28 @@ namespace rct3::park::path
         };
         const float in_x = fx - static_cast<float>(tile.col);
         const float in_z = fz - static_cast<float>(tile.row);
-        const bool wants_joined = positioning == Positioning::PathSideJoin;
-        const std::optional<Side> best = park::nearest_side({ in_x, in_z }, [&](Side side) { return joined(side) == wants_joined && (!ends_only || at_end(side)); });
-        const std::optional<Side> any = park::nearest_side({ in_x, in_z }, [](Side) { return true; });
+        const bool wants_joined = positioning == object::Positioning::PathSideJoin;
+        const std::optional<Side> best = park::object::nearest_side({ in_x, in_z }, [&](Side side) { return joined(side) == wants_joined && (!ends_only || at_end(side)); });
+        const std::optional<Side> any = park::object::nearest_side({ in_x, in_z }, [](Side) { return true; });
         spot.refused = !best || forbidden;
         const Side side = best.value_or(*any);
-        spot.turn = turn_facing(side);
+        spot.turn = object::turn_facing(side);
         if (const auto& edge = edges[static_cast<std::size_t>(side.value)])
             spot.height = static_cast<std::int32_t>(std::lround(*edge));
         return spot;
     }
 
-    bool furniture_taken(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::PlacedObject& item, Positioning positioning)
+    bool furniture_taken(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::PlacedObject& item, object::Positioning positioning)
     {
-        const bool middle = positioning == Positioning::PathCentre;
+        const bool middle = positioning == object::Positioning::PathCentre;
         return std::ranges::any_of(objects, [&](const save::PlacedObject& o) {
             if (o.hidden || o.col != item.col || o.row != item.row || std::abs(o.base_height.value_or(0) - item.base_height.value_or(0)) > kSameLevel)
                 return false;
-            const auto model = models.find(model_ref(o));
+            const auto model = models.find(object::model_ref(o));
             if (model == models.end())
                 return false;
-            const auto theirs = static_cast<Positioning>(model->second.positioning);
-            if (!on_paths(theirs) || (theirs == Positioning::PathCentre) != middle)
+            const auto theirs = static_cast<object::Positioning>(model->second.positioning);
+            if (!on_paths(theirs) || (theirs == object::Positioning::PathCentre) != middle)
                 return false;
             return middle || (o.rotation & 3) == (item.rotation & 3);
         });

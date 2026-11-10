@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/object_models.hpp"
+#include "park/object/models.hpp"
 
 #include "ovl/bone_anim.hpp"
 #include "ovl/bone_shape.hpp"
@@ -31,7 +31,7 @@
 #include <span>
 #include <utility>
 
-namespace rct3::park
+namespace rct3::park::object
 {
 
     namespace
@@ -1122,4 +1122,4 @@ namespace rct3::park
         return model;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::object

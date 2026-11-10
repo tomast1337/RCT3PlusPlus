@@ -6,7 +6,7 @@
 #include "park/camera.hpp"
 #include "park/footpath_builder.hpp"
 #include "park/ground/brush.hpp"
-#include "park/object_pick.hpp"
+#include "park/object/pick.hpp"
 #include "park/ride/placement.hpp"
 #include "park/water/fill.hpp"
 #include "park/waterfall_making.hpp"
@@ -453,7 +453,7 @@ namespace rct3::scene
                 return; // Once a press
             const save::TerrainGrid& g = scene.grid;
             const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
-            const auto distance = park::ground_hit(ray, g);
+            const auto distance = park::object::ground_hit(ray, g);
             if (!distance)
                 return;
             // The water starts on the tile the pointer was over just before meeting the ground: the one in front of
@@ -546,7 +546,7 @@ namespace rct3::scene
             park::BoundaryFence fence = park::boundary_fence(park.fence_symbol, park.fence_overlay, scene.grid, scene.footpaths.paths, last_id(scene));
             if (!fence.pieces.empty() && load_object_model(scene, scene.placing.models, assets, fence.pieces.front()))
             {
-                const auto& colours = scene.models.at(park::model_key(fence.pieces.front())).default_colours;
+                const auto& colours = scene.models.at(park::object::model_key(fence.pieces.front())).default_colours;
                 for (save::PlacedObject& panel : fence.pieces)
                 {
                     panel.colours = colours;

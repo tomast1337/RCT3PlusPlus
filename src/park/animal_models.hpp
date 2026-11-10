@@ -14,7 +14,7 @@
 #include "math/glm.hpp"
 #include "ovl/animal_motions.hpp"
 #include "ovl/texture_image.hpp"
-#include "park/object_models.hpp"
+#include "park/object/models.hpp"
 
 #include <array>
 #include <cstdint>
@@ -56,7 +56,7 @@ namespace rct3::park
     struct AnimalPiece
     {
         std::string picture { }; ///< Key of its picture, empty for none
-        PartBlend blend = PartBlend::Opaque;
+        object::PartBlend blend = object::PartBlend::Opaque;
         bool one_sided = true;
         std::vector<AnimalVertex> vertices { };
         std::vector<std::uint16_t> indices { };

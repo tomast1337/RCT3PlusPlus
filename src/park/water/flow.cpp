@@ -25,7 +25,7 @@ namespace rct3::park::water
 
     } // namespace
 
-    std::optional<ModelPart> flow_strip(const ovl::Spline& left, const ovl::Spline& right, const ovl::Spline& track, std::string texture)
+    std::optional<object::ModelPart> flow_strip(const ovl::Spline& left, const ovl::Spline& right, const ovl::Spline& track, std::string texture)
     {
         if (left.nodes.size() < 2 || left.nodes.size() != right.nodes.size())
             return std::nullopt;
@@ -49,9 +49,9 @@ namespace rct3::park::water
         const float repeats = std::max(1.0f, std::round(along.back() / kFlowRepeat));
         // Files list the water of some pieces from the track's far end (all right-hand curves, among others).
         const bool backwards = !track.nodes.empty() && glm::distance(lefts.back(), vec(track.nodes.front().position)) < glm::distance(lefts.front(), vec(track.nodes.front().position));
-        ModelPart part;
+        object::ModelPart part;
         part.texture = std::move(texture);
-        part.blend = PartBlend::Blended;
+        part.blend = object::PartBlend::Blended;
         part.chain = true;
         for (std::size_t i = 0; i < lefts.size(); ++i)
         {
@@ -78,23 +78,23 @@ namespace rct3::park::water
         return part;
     }
 
-    void flowing_sheet(ModelPart& sheet, const ovl::Spline& track, std::string texture)
+    void flowing_sheet(object::ModelPart& sheet, const ovl::Spline& track, std::string texture)
     {
         sheet.texture = std::move(texture);
-        sheet.blend = PartBlend::Blended;
+        sheet.blend = object::PartBlend::Blended;
         sheet.chain = true;
         if (sheet.vertices.empty() || track.nodes.empty())
             return;
-        const auto [low, high] = std::ranges::minmax_element(sheet.vertices, { }, [](const ModelVertex& v) { return v.uv.y; });
+        const auto [low, high] = std::ranges::minmax_element(sheet.vertices, { }, [](const object::ModelVertex& v) { return v.uv.y; });
         const glm::vec3 start = vec(track.nodes.front().position);
         if (glm::distance(high->position, start) >= glm::distance(low->position, start))
             return;
         const float ends = low->uv.y + high->uv.y;
-        for (ModelVertex& v : sheet.vertices)
+        for (object::ModelVertex& v : sheet.vertices)
             v.uv.y = ends - v.uv.y;
     }
 
-    FlowFades flow_fades(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const ObjectModels& models, const std::function<bool(std::size_t)>& pool_slides)
+    object::FlowFades flow_fades(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const std::function<bool(std::size_t)>& pool_slides)
     {
         std::map<std::uint64_t, bool> wet;
         for (const save::Ride& ride : rides.rides)
@@ -103,9 +103,9 @@ namespace rct3::park::water
                     wet.emplace(piece.scenery, false);
         for (const save::PlacedObject& o : objects)
             if (const auto at = wet.find(o.id); at != wet.end())
-                if (const auto model = models.find(model_ref(o)); model != models.end())
+                if (const auto model = models.find(object::model_ref(o)); model != models.end())
                     at->second = model->second.flows;
-        FlowFades fades;
+        object::FlowFades fades;
         for (std::size_t r = 0; r < rides.rides.size(); ++r)
         {
             if (!rides.rides[r].track)
@@ -119,7 +119,7 @@ namespace rct3::park::water
                     continue;
                 const bool before = i > 0 ? wet_at(i - 1) : track.circuit && wet_at(count - 1);
                 const bool after = i + 1 < count ? wet_at(i + 1) : track.circuit && wet_at(0);
-                FlowFade fade { .in = !before, .out = !after };
+                object::FlowFade fade { .in = !before, .out = !after };
                 // A pool slide's open end runs full to its last stretch and stops there.
                 if (i + 1 == count && !track.circuit && pool_slides(r))
                     fade = { .in = fade.in, .out = false, .end = true };
@@ -132,7 +132,7 @@ namespace rct3::park::water
         return fades;
     }
 
-    float flow_alpha(const FlowFade& fade, float along, float last)
+    float flow_alpha(const object::FlowFade& fade, float along, float last)
     {
         float alpha = 1;
         if (fade.in && fade.out)

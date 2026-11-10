@@ -4,7 +4,7 @@
 #include "logging/log.hpp"
 #include "park/camera.hpp"
 #include "park/edge_walls.hpp"
-#include "park/object_pick.hpp"
+#include "park/object/pick.hpp"
 #include "park/ride/placement.hpp"
 #include "park/tile_shaping.hpp"
 #include "parkfile/saved_park.hpp"
@@ -233,7 +233,7 @@ namespace rct3::scene
         }
         else if (ray)
         {
-            const auto distance = park::ground_hit(*ray, scene.grid);
+            const auto distance = park::object::ground_hit(*ray, scene.grid);
             const auto tile = ground_tile(scene, at, size);
             t.at = tile;
             t.lift_at.reset();
@@ -272,7 +272,7 @@ namespace rct3::scene
             return;
         t.problem = problem;
         t.affordable = affordable;
-        t.ghost_mesh = park::object_mesh(t.placed, scene.models, scene.grid);
+        t.ghost_mesh = park::object::object_mesh(t.placed, scene.models, scene.grid);
         const glm::vec4 tint = problem == park::StructureProblem::None && affordable ? kGhostTint : kRefusedTint;
         for (park::GroundVertex& v : t.ghost_mesh.vertices)
             v.colour *= tint;

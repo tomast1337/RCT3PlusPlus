@@ -12,9 +12,9 @@
 #include "park/edge_walls.hpp"
 #include "park/enclosures.hpp"
 #include "park/item_category.hpp"
-#include "park/object_models.hpp"
-#include "park/object_pick.hpp"
-#include "park/object_placement.hpp"
+#include "park/object/models.hpp"
+#include "park/object/pick.hpp"
+#include "park/object/placement.hpp"
 #include "park/person_motions.hpp"
 #include "park/ride/placement.hpp"
 #include "park/sky_look.hpp"
@@ -221,12 +221,12 @@ namespace rct3::scene
                 const glm::vec2 size = glm::vec2 { screen.width(), screen.height() } * scale;
                 const glm::vec2 at = options.flag(config::GameOption::CameraFocusOnMiddle) ? size / 2.0f : glm::vec2 { p.x, p.y };
                 const park::Ray ray = park::view_ray(c, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
-                std::optional<float> hit = park::ground_hit(ray, scene.grid);
+                std::optional<float> hit = park::object::ground_hit(ray, scene.grid);
                 if (!options.flag(config::GameOption::CameraIgnoresScenery) && scene.show_scenery)
                 {
                     if (scene.pick_boxes_of != scene.objects.size())
                         place_objects(scene);
-                    if (const auto object = park::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return !scene.objects[i].hidden; }))
+                    if (const auto object = park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return !scene.objects[i].hidden; }))
                         hit = object->distance;
                 }
                 scene.pivot = hit ? std::optional(ray.origin + ray.direction * *hit) : std::nullopt;
@@ -426,10 +426,10 @@ namespace rct3::scene
                 const auto owner = scene.attractions.find(scene.objects[i].id);
                 if (owner == scene.attractions.end() || owner->second != ref)
                     continue;
-                const auto model = scene.models.find(park::model_ref(scene.objects[i]));
+                const auto model = scene.models.find(park::object::model_ref(scene.objects[i]));
                 ui::SceneryFacts f;
                 f.colours = scene.objects[i].colours;
-                f.colour_slots = model == scene.models.end() ? 0 : park::colour_slots(model->second);
+                f.colour_slots = model == scene.models.end() ? 0 : park::object::colour_slots(model->second);
                 if (std::vector<std::size_t> slots = ui::scenery_paint_slots(f); !slots.empty())
                     return std::pair { i, std::move(slots) };
             }
@@ -496,14 +496,14 @@ namespace rct3::scene
                         f.other_cars = choices != scene.train_choices.end() && choices->second.size() > 1;
                         f.trains = limits->second;
                         // A ride from a saved park measured by its cars' kept lengths until its trains are made here.
-                        std::vector<park::CarFit> kept;
+                        std::vector<park::object::CarFit> kept;
                         for (const save::Car& car : f.ride->trains.empty() ? std::vector<save::Car> { } : f.ride->trains.front().cars)
                             kept.push_back({ .length = car.length });
                         const auto fits = scene.car_fits.find(ref.index);
                         const park::track::TrackRules rules = ref.index < scene.track_rules.size() ? scene.track_rules[ref.index] : park::track::TrackRules { };
                         // A shuttle runs one (fit_trains).
                         const auto coaster = course ? simulation::coaster_of(*course, *f.ride) : std::nullopt;
-                        f.trains->most_trains = course && !(coaster && coaster->shuttle != simulation::Shuttle::None) ? park::track::trains_fitting(*course, fits != scene.car_fits.end() ? std::span<const park::CarFit>(fits->second) : kept, f.ride->options.block_sectioned, rules.most_trains) : 1;
+                        f.trains->most_trains = course && !(coaster && coaster->shuttle != simulation::Shuttle::None) ? park::track::trains_fitting(*course, fits != scene.car_fits.end() ? std::span<const park::object::CarFit>(fits->second) : kept, f.ride->options.block_sectioned, rules.most_trains) : 1;
                     }
                 }
             }
@@ -640,8 +640,8 @@ namespace rct3::scene
             f.symbol = o.symbol;
             f.colours = o.colours;
             f.zero_time = scene.park.zero_time;
-            if (const auto model = scene.models.find(park::model_ref(o)); model != scene.models.end())
-                f.colour_slots = park::colour_slots(model->second);
+            if (const auto model = scene.models.find(park::object::model_ref(o)); model != scene.models.end())
+                f.colour_slots = park::object::colour_slots(model->second);
             if (const auto bin = std::ranges::find(scene.bins, o.id, &save::BinState::object_ref); bin != scene.bins.end())
                 f.bin = &*bin;
             if (const auto sign = std::ranges::find(scene.signs, o.id, &save::SignState::object_ref); sign != scene.signs.end())
@@ -925,7 +925,7 @@ namespace rct3::scene
                 scene.prop_tabs.push_back(t.tab);
             }
             if (scene.shown_prop != index)
-                scene.view_camera = park::framed(park::object_corners(scene.objects[index], scene.models, scene.grid, scene.fitted), scene.camera.yaw, kViewPitch, kPropViewClosest);
+                scene.view_camera = park::framed(park::object::object_corners(scene.objects[index], scene.models, scene.grid, scene.fitted), scene.camera.yaw, kViewPitch, kPropViewClosest);
             scene.shown.reset();
             scene.shown_person.reset();
             scene.shown_party.clear();
@@ -1005,7 +1005,7 @@ namespace rct3::scene
             bool entrance = false;
             for (const std::size_t i : indices)
             {
-                const auto model = scene.models.find(park::model_ref(scene.objects.at(i)));
+                const auto model = scene.models.find(park::object::model_ref(scene.objects.at(i)));
                 if (model != scene.models.end() && model->second.category == std::to_underlying(park::ItemCategory::ParkEntrance))
                     entrance = true;
                 else
@@ -1048,7 +1048,7 @@ namespace rct3::scene
                 const save::PlacedObject& o = scene.objects[i];
                 if (o.hidden || !std::ranges::binary_search(tiles, std::pair { o.col, o.row }))
                     continue;
-                const auto model = scene.models.find(park::model_ref(o));
+                const auto model = scene.models.find(park::object::model_ref(o));
                 if (model != scene.models.end() && model->second.category >= std::to_underlying(park::ItemCategory::LitterBin) && model->second.category <= std::to_underlying(park::ItemCategory::PathFeature))
                     extras.push_back(i);
             }
@@ -1071,7 +1071,7 @@ namespace rct3::scene
         // shortcut: a flat ride or a stall gives back its item's price by the tracked rides' rule; use what its
         // kind's data says it is worth once that is read.
         const auto main = base->spot ? std::ranges::find(scene.objects, base->spot->object, &save::PlacedObject::id) : scene.objects.end();
-        const auto model = main != scene.objects.end() ? scene.models.find(park::model_ref(*main)) : scene.models.end();
+        const auto model = main != scene.objects.end() ? scene.models.find(park::object::model_ref(*main)) : scene.models.end();
         const bool tracked = ride && scene.rides.rides[ref.index].kind == save::RideKind::Tracked;
         const std::int64_t value = tracked ? track_cost(scene, ref.index, assets) : (model != scene.models.end() ? model->second.price : 0);
         const std::int64_t back = park::demolish_refund(value, (base->flags & save::AttractionCommon::kNeverOpened) == 0);
@@ -1146,7 +1146,7 @@ namespace rct3::scene
         }
 
         /// Of the cars of ride `ride`, those with a camera of kind `eye`, in the order the park keeps them.
-        std::vector<std::size_t> ride_seats(const ParkScene& scene, std::size_t ride, park::RideEye eye)
+        std::vector<std::size_t> ride_seats(const ParkScene& scene, std::size_t ride, park::object::RideEye eye)
         {
             std::vector<std::size_t> seats;
             for (std::size_t i = 0; i < scene.cars.size() && i < scene.car_spots.size() && !scene.rides.rides.at(ride).base.demolished; ++i)
@@ -1156,11 +1156,11 @@ namespace rct3::scene
         }
 
         /// The kinds of camera after `eye`, round from the rear to the nose, that the train car `car` is on has.
-        std::optional<park::RideEye> next_eye(const ParkScene& scene, std::size_t car, park::RideEye eye)
+        std::optional<park::object::RideEye> next_eye(const ParkScene& scene, std::size_t car, park::object::RideEye eye)
         {
             for (std::uint8_t step = 1; step < 3; ++step)
             {
-                const auto other = static_cast<park::RideEye>((std::to_underlying(eye) + step) % 3);
+                const auto other = static_cast<park::object::RideEye>((std::to_underlying(eye) + step) % 3);
                 if (std::ranges::any_of(ride_seats(scene, scene.car_spots[car].ride, other), [&](std::size_t c) { return scene.car_spots[c].train == scene.car_spots[car].train; }))
                     return other;
             }
@@ -1170,11 +1170,11 @@ namespace rct3::scene
         /// Every train of the park a view can ride along in, ride by ride in the park's order: the first car of
         /// each with a camera of kind `eye`, or on a ride with none of that kind, of the first kind it has of the
         /// front seat, rear seat and nose.
-        std::vector<std::pair<std::size_t, park::RideEye>> train_stops(const ParkScene& scene, park::RideEye eye)
+        std::vector<std::pair<std::size_t, park::object::RideEye>> train_stops(const ParkScene& scene, park::object::RideEye eye)
         {
-            std::vector<std::pair<std::size_t, park::RideEye>> stops;
+            std::vector<std::pair<std::size_t, park::object::RideEye>> stops;
             for (std::size_t ride = 0; ride < scene.rides.rides.size(); ++ride)
-                for (const park::RideEye kind : { eye, park::RideEye::Front, park::RideEye::Rear, park::RideEye::Nose })
+                for (const park::object::RideEye kind : { eye, park::object::RideEye::Front, park::object::RideEye::Rear, park::object::RideEye::Nose })
                     if (const std::vector<std::size_t> seats = ride_seats(scene, ride, kind); !seats.empty())
                     {
                         std::vector<std::size_t> trains;
@@ -1278,7 +1278,7 @@ namespace rct3::scene
         }
 
         /// Rides along in `car`, from its camera of kind `eye`.
-        void ride_along(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t car, park::RideEye eye)
+        void ride_along(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t car, park::object::RideEye eye)
         {
             ui::Widget& root = scene.desktop->root();
             start_riding(scene, assets);
@@ -1304,9 +1304,9 @@ namespace rct3::scene
             constexpr std::array<std::string_view, 3> kEyeNames { "RidecamGUI_TypeNose", "RidecamGUI_TypeFront", "RidecamGUI_TypeRear" };
             info += u"  " + std::u16string(strings.get(kEyeNames[std::to_underlying(eye)]));
             const auto cameras = std::ranges::count_if(ride_seats(scene, spot.ride, eye), [&](std::size_t seat) { return scene.car_spots[seat].train == spot.train; });
-            const std::optional<park::RideEye> next = next_eye(scene, car, eye);
+            const std::optional<park::object::RideEye> next = next_eye(scene, car, eye);
             if (auto panel = root.find_as<ui::RideCameraPanel>(kRideCameraName))
-                panel->show(std::move(info), cameras > 1, train_stops(scene, eye).size() > 1, strings.get("RidecamGUI_Train"), next.transform([](park::RideEye e) { return std::size_t { std::to_underlying(e) }; }), next ? strings.get(kEyeNames[std::to_underlying(*next)]) : std::u16string_view { });
+                panel->show(std::move(info), cameras > 1, train_stops(scene, eye).size() > 1, strings.get("RidecamGUI_Train"), next.transform([](park::object::RideEye e) { return std::size_t { std::to_underlying(e) }; }), next ? strings.get(kEyeNames[std::to_underlying(*next)]) : std::u16string_view { });
         }
 
         void stop_riding(ParkScene& scene);
@@ -1326,7 +1326,7 @@ namespace rct3::scene
             }
             const entt::entity e = ride < scene.ride_entities.size() ? scene.ride_entities[ride] : entt::null;
             const auto* fleet = e != entt::null ? scene.sim.registry.try_get<simulation::Trains>(e) : nullptr;
-            for (const park::RideEye eye : { park::RideEye::Front, park::RideEye::Rear, park::RideEye::Nose })
+            for (const park::object::RideEye eye : { park::object::RideEye::Front, park::object::RideEye::Rear, park::object::RideEye::Nose })
                 if (const std::vector<std::size_t> seats = ride_seats(scene, ride, eye); !seats.empty())
                 {
                     const auto running = std::ranges::find_if(seats, [&](std::size_t car) { return fleet != nullptr && scene.car_spots[car].train < fleet->trains.size() && fleet->trains[scene.car_spots[car].train].running; });
@@ -1398,7 +1398,7 @@ namespace rct3::scene
                     ride_along(scene, assets, stops[step(static_cast<std::size_t>(at - stops.begin()), stops.size())], scene.riding_eye);
                 return;
             }
-            const std::vector<std::pair<std::size_t, park::RideEye>> stops = train_stops(scene, scene.riding_eye);
+            const std::vector<std::pair<std::size_t, park::object::RideEye>> stops = train_stops(scene, scene.riding_eye);
             const auto at = std::ranges::find_if(stops, [&](const auto& stop) { return scene.car_spots[stop.first].ride == spot.ride && scene.car_spots[stop.first].train == spot.train; });
             if (at != stops.end())
             {
@@ -1469,8 +1469,8 @@ namespace rct3::scene
                     const auto owner = scene.attractions.find(o.id);
                     if (owner == scene.attractions.end() || owner->second != ref)
                         continue;
-                    const auto model = scene.models.find(park::model_ref(o));
-                    sum += glm::vec3(park::placed_transform(o, model == scene.models.end() ? nullptr : &model->second, scene.grid, scene.fitted)[3]);
+                    const auto model = scene.models.find(park::object::model_ref(o));
+                    sum += glm::vec3(park::object::placed_transform(o, model == scene.models.end() ? nullptr : &model->second, scene.grid, scene.fitted)[3]);
                     ++count;
                 }
                 if (count > 0)
@@ -1914,8 +1914,8 @@ namespace rct3::scene
         {
             if (scene.attractions.contains(o.id) || o.fixture)
                 return false;
-            const auto model = scene.models.find(park::model_ref(o));
-            return model != scene.models.end() && park::is_prop(model->second.category) && park::on_owned_land(o, model->second.squares, scene.grid);
+            const auto model = scene.models.find(park::object::model_ref(o));
+            return model != scene.models.end() && park::is_prop(model->second.category) && park::object::on_owned_land(o, model->second.squares, scene.grid);
         }
 
         /// Deletes what stands on the tiles from `a` to `b`: props and paths at once, and asks once about every
@@ -1950,7 +1950,7 @@ namespace rct3::scene
         /// Whether the object is one of the park's entrances, which a click opens the park's window on.
         bool park_entrance(const ParkScene& scene, const save::PlacedObject& o)
         {
-            const auto model = scene.models.find(park::model_ref(o));
+            const auto model = scene.models.find(park::object::model_ref(o));
             return !o.hidden && model != scene.models.end() && model->second.category == std::to_underlying(park::ItemCategory::ParkEntrance);
         }
 
@@ -1958,7 +1958,7 @@ namespace rct3::scene
         std::int64_t replace_price(const ParkScene& scene, std::uint64_t object)
         {
             const auto o = std::ranges::find(scene.objects, object, &save::PlacedObject::id);
-            const auto model = o != scene.objects.end() ? scene.models.find(park::model_ref(*o)) : scene.models.end();
+            const auto model = o != scene.objects.end() ? scene.models.find(park::object::model_ref(*o)) : scene.models.end();
             return model != scene.models.end() ? model->second.price : 0;
         }
 
@@ -2026,7 +2026,7 @@ namespace rct3::scene
             // What is hidden cannot be clicked.
             if (scene.pick_boxes_of != scene.objects.size())
                 place_objects(scene);
-            const auto object = park::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) {
+            const auto object = park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) {
                 const save::PlacedObject& o = scene.objects[i];
                 return scene.show_scenery && !o.hidden && (scene.attractions.contains(o.id) || o.fixture || clickable_prop(scene, o) || park_entrance(scene, o));
             });
@@ -2037,7 +2037,7 @@ namespace rct3::scene
                 for (const ShownPerson& p : scene.shown_people)
                     placements.push_back(scene.simulate && p.guest != entt::null ? glm::translate(glm::mat4(1.0f), standing_at(scene, p)) : p.pose.world);
             }
-            const auto person = park::pick_person(ray, placements, scene.grid);
+            const auto person = park::object::pick_person(ray, placements, scene.grid);
             if (person && (!object || person->distance < object->distance))
                 return { .attraction = std::nullopt, .person = person->index, .prop = std::nullopt };
             // A fence the park built takes the click and does nothing with it, as in the game; a changing room
@@ -2592,8 +2592,8 @@ namespace rct3::scene
                 }
                 else if (change->id == ui::kPoolLocateControl)
                 {
-                    const auto model = scene.models.find(park::model_ref(o));
-                    scene.camera.target = glm::vec3(park::placed_transform(o, model == scene.models.end() ? nullptr : &model->second, scene.grid, scene.fitted)[3]);
+                    const auto model = scene.models.find(park::object::model_ref(o));
+                    scene.camera.target = glm::vec3(park::object::placed_transform(o, model == scene.models.end() ? nullptr : &model->second, scene.grid, scene.fitted)[3]);
                 }
                 else
                 {
@@ -2768,7 +2768,7 @@ namespace rct3::scene
         {
             const profiling::Scope zone("Billboards");
             for (ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })
-                park::face_billboards(shown->billboards, viewer);
+                park::object::face_billboards(shown->billboards, viewer);
             scene.billboards_eye = viewer;
         }
         scene.clock += elapsed;
@@ -3085,7 +3085,7 @@ namespace rct3::scene
                             [&scene](glm::vec3 p) {
                                 if (scene.pick_boxes_of != scene.objects.size())
                                     place_objects(scene);
-                                return std::ranges::any_of(scene.pick_boxes, [&](const park::PickBox& box) {
+                                return std::ranges::any_of(scene.pick_boxes, [&](const park::object::PickBox& box) {
                                     if (glm::any(glm::lessThan(p, box.park_low)) || glm::any(glm::greaterThan(p, box.park_high)))
                                         return false;
                                     const save::PlacedObject& o = scene.objects[box.index];
@@ -3314,7 +3314,7 @@ namespace rct3::scene
                     }
                 }
                 // What is broken looks it, and looks whole again once mended.
-                park::Broken broken;
+                park::object::Broken broken;
                 for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())
                     if (item.broken && item.object != 0)
                         broken.insert(item.object);
@@ -3944,7 +3944,7 @@ namespace rct3::scene
             if (!entrances.empty())
             {
                 const save::PlacedObject& o = scene.objects[entrances[scene.entrance_centred++ % entrances.size()]];
-                const glm::vec2 middle = park::footprint_middle(o, scene.models.at(park::model_ref(o)).squares);
+                const glm::vec2 middle = park::object::footprint_middle(o, scene.models.at(park::object::model_ref(o)).squares);
                 scene.camera.target = { scene.grid.origin_x + middle.x * scene.grid.tile_size_x, scene.camera.target.y, scene.grid.origin_z + middle.y * scene.grid.tile_size_z };
                 scene.camera = park::on_ground(scene.camera, scene.grid);
             }
@@ -4008,10 +4008,10 @@ namespace rct3::scene
         return std::exchange(scene.message_alert, false);
     }
 
-    park::LevelScales level_scales(const config::GameOptions& options)
+    park::object::LevelScales level_scales(const config::GameOptions& options)
     {
         static_assert(config::kDetailPairs.size() == park::kDetailKinds); // In the same order
-        park::LevelScales scales;
+        park::object::LevelScales scales;
         for (std::size_t i = 0; i < scales.size(); ++i)
             scales[i] = { .detail = options.get(config::kDetailPairs[i].detail), .distance = options.get(config::kDetailPairs[i].distance) };
         return scales;

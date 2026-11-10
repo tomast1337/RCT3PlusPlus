@@ -56,7 +56,7 @@ TEST_CASE("a train stands nose to tail back from its front, its wheels on the tr
     save::Train train;
     train.cars.resize(3);
     // A car 2 long, its wheels 0.5 and 1.5 behind its front and 1 below its middle; the last fits as the second.
-    const std::array fits { park::CarFit { .length = 2, .front_wheels = 0.5f, .rear_wheels = 1.5f, .on_track = { 0, -1, 0 } }, park::CarFit { .length = 3, .front_wheels = 1, .rear_wheels = 2, .on_track = { 0, 0, -0.5f } } };
+    const std::array fits { park::object::CarFit { .length = 2, .front_wheels = 0.5f, .rear_wheels = 1.5f, .on_track = { 0, -1, 0 } }, park::object::CarFit { .length = 3, .front_wheels = 1, .rear_wheels = 2, .on_track = { 0, 0, -0.5f } } };
     park::track::stand_train(c, train, fits, 8);
     CHECK(train.distance == 8);
     CHECK(train.length == 8);
@@ -84,8 +84,8 @@ TEST_CASE("a link couples a train's cars, reaching along the track from where on
     train.cars.resize(3);
     // Cars 2 long, coupling on 0.25 behind their front and 0.25 ahead of their rear, 0.5 over their wheels; a link
     // reaching 1 between them.
-    const park::CarFit car { .length = 2, .front_wheels = 0.5f, .rear_wheels = 1.5f, .on_track = { 0, 0, 1 }, .link_front = 0.25f, .link_rear = 1.75f, .link_height = 0.5f, .link = false };
-    const park::CarFit link { .length = 1, .front_wheels = 0, .rear_wheels = 1, .on_track = { 0, 0, 0 }, .link_front = 0, .link_rear = 1, .link_height = 0, .link = true };
+    const park::object::CarFit car { .length = 2, .front_wheels = 0.5f, .rear_wheels = 1.5f, .on_track = { 0, 0, 1 }, .link_front = 0.25f, .link_rear = 1.75f, .link_height = 0.5f, .link = false };
+    const park::object::CarFit link { .length = 1, .front_wheels = 0, .rear_wheels = 1, .on_track = { 0, 0, 0 }, .link_front = 0, .link_rear = 1, .link_height = 0, .link = true };
     const std::array fits { car, link, car };
     park::track::stand_train(c, train, fits, 8);
     // The link from 6.25 to 5.25 along, so the car behind's front is 0.25 further on, at 5.5.
@@ -167,7 +167,7 @@ TEST_CASE("as many trains run as fill half the course with gaps between them, wi
     c.distance.push_back(100);
     c.kinds.push_back(park::track::CourseKind::Plain);
     // Trains of two cars 3 and 5 long take 8, and 10 with the gap after them: five fill the 50 of half the course.
-    const std::array fits { park::CarFit { .length = 3 }, park::CarFit { .length = 5 } };
+    const std::array fits { park::object::CarFit { .length = 3 }, park::object::CarFit { .length = 5 } };
     CHECK(park::track::trains_fitting(c, fits, false, std::nullopt) == 5);
     CHECK(park::track::trains_fitting(corner(), fits, false, std::nullopt) == 1);
     // Its kind may set fewer.

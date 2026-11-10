@@ -30,7 +30,7 @@ namespace rct3::scene
     /// Shown person `i` posed as they are at `clock`, as the park draws them, at the finest level; with
     /// `simulate`, a simulated guest where and as the simulation has them. Nothing for those not drawn
     /// standing: gone home, or seated on a ride.
-    [[nodiscard]] std::optional<park::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate);
+    [[nodiscard]] std::optional<park::person::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate);
     /// The motion a person sliding down a slope plays, by name: on their front facing down it (`heading`, as
     /// simulation::Pose has it, against their `drift`), on their back facing up it, else sitting; staff, who
     /// have no sliding motions, flail.

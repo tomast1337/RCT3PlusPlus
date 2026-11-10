@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/person_mesh.hpp"
+#include "park/person/mesh.hpp"
 
-#include "park/person_motions.hpp"
+#include "park/person/motions.hpp"
 
 #include <array>
 #include <cstddef>
@@ -13,18 +13,18 @@ using namespace rct3;
 
 TEST_CASE("a person's colour picks a cell along the bottom row first, then up")
 {
-    CHECK(park::colour_cell(0) == glm::vec2(0.0f, 0.0f));
-    CHECK(park::colour_cell(3) == glm::vec2(0.75f, 0.0f));
-    CHECK(park::colour_cell(4) == glm::vec2(0.0f, -0.25f));
-    CHECK(park::colour_cell(15) == glm::vec2(0.75f, -0.75f));
+    CHECK(park::person::colour_cell(0) == glm::vec2(0.0f, 0.0f));
+    CHECK(park::person::colour_cell(3) == glm::vec2(0.75f, 0.0f));
+    CHECK(park::person::colour_cell(4) == glm::vec2(0.0f, -0.25f));
+    CHECK(park::person::colour_cell(15) == glm::vec2(0.75f, -0.75f));
 }
 
 TEST_CASE("nobody to draw makes an empty mesh")
 {
     const std::array<std::string_view, 1> folders { "Characters" };
-    const park::PersonLibrary library("/nonexistent", folders);
-    park::PersonRuns runs;
-    const park::object::ObjectMesh mesh = park::person_mesh(library, { }, runs);
+    const park::person::PersonLibrary library("/nonexistent", folders);
+    park::person::PersonRuns runs;
+    const park::object::ObjectMesh mesh = park::person::person_mesh(library, { }, runs);
     CHECK(mesh.vertices.empty());
     CHECK(mesh.batches.empty());
 }
@@ -32,11 +32,11 @@ TEST_CASE("nobody to draw makes an empty mesh")
 TEST_CASE("groups of people carried together are each one piece, standing where their carrier puts them")
 {
     const std::array<std::string_view, 1> folders { "Characters" };
-    const park::PersonLibrary library("/nonexistent", folders);
-    const std::array<park::PlacedPerson, 3> riders { };
-    const std::array<std::span<const park::PlacedPerson>, 2> cars { std::span(riders).first(1), std::span(riders).subspan(1) };
-    park::PersonRuns runs, gathered;
-    const park::MovingMeshes meshes = park::carried_people_meshes(library, cars, runs, gathered);
+    const park::person::PersonLibrary library("/nonexistent", folders);
+    const std::array<park::person::PlacedPerson, 3> riders { };
+    const std::array<std::span<const park::person::PlacedPerson>, 2> cars { std::span(riders).first(1), std::span(riders).subspan(1) };
+    park::person::PersonRuns runs, gathered;
+    const park::MovingMeshes meshes = park::person::carried_people_meshes(library, cars, runs, gathered);
     CHECK(meshes.ends.size() == 2);
     CHECK(meshes.places.size() == 2);
     CHECK(meshes.mesh.placed == 3);
@@ -46,7 +46,7 @@ TEST_CASE("groups of people carried together are each one piece, standing where 
 TEST_CASE("a hand's socket is at the middle of its triangle as the motion poses it")
 {
     // One key: three points a step of 0.01 apart, packed eleven bits across, ten up, eleven along.
-    park::PieceModel socket;
+    park::person::PieceModel socket;
     socket.left_hand = true;
     socket.mesh.points = 3;
     socket.mesh.normals = 1;
@@ -66,7 +66,7 @@ TEST_CASE("a hand's socket is at the middle of its triangle as the motion poses 
     }
     motion.keys.resize(socket.mesh.key_size(), std::byte { 127 });
     socket.mesh.animations.push_back(motion);
-    const auto hand = park::socket_point(socket, park::PlacedPerson { .world = glm::translate(glm::mat4(1.0f), glm::vec3(50.0f)) });
+    const auto hand = park::person::socket_point(socket, park::person::PlacedPerson { .world = glm::translate(glm::mat4(1.0f), glm::vec3(50.0f)) });
     REQUIRE(hand.has_value());
     // In the person's own space, wherever they stand.
     CHECK(hand->x == doctest::Approx(0.11f));
@@ -77,7 +77,7 @@ TEST_CASE("a hand's socket is at the middle of its triangle as the motion poses 
 TEST_CASE("a walk's pace is how fast the foot on the ground slides back beneath the walker")
 {
     // Two points: a foot on the ground sliding back 0.1 a key, and a knee above it swinging ahead.
-    park::PieceModel legs;
+    park::person::PieceModel legs;
     legs.mesh.points = 2;
     legs.mesh.normals = 1;
     ovl::FrameAnimation walk;
@@ -96,10 +96,10 @@ TEST_CASE("a walk's pace is how fast the foot on the ground slides back beneath 
     }
     legs.mesh.animations.push_back(walk);
     // Three of the four steps slide the foot back 0.1 in 0.25 s; the last brings it forward again.
-    const auto pace = park::walk_pace(legs, park::motion::kWalk);
+    const auto pace = park::person::walk_pace(legs, park::person::motion::kWalk);
     REQUIRE(pace.has_value());
     CHECK(*pace == doctest::Approx(0.4f));
 
     legs.mesh.animations.clear();
-    CHECK_FALSE(park::walk_pace(legs, park::motion::kWalk).has_value());
+    CHECK_FALSE(park::person::walk_pace(legs, park::person::motion::kWalk).has_value());
 }

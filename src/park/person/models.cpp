@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/person_models.hpp"
+#include "park/person/models.hpp"
 
 #include "core/maybe.hpp"
 #include "ovl/overlay.hpp"
@@ -7,7 +7,7 @@
 #include "ovl/skeleton.hpp"
 #include "ovl/texture.hpp"
 #include "ovl/texture_pixels.hpp"
-#include "park/person_motions.hpp"
+#include "park/person/motions.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
@@ -15,7 +15,7 @@
 #include <cmath>
 #include <format>
 
-namespace rct3::park
+namespace rct3::park::person
 {
 
     namespace
@@ -336,4 +336,4 @@ namespace rct3::park
         return key;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::person

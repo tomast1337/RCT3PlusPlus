@@ -25,7 +25,7 @@
 #include "park/overhead.hpp"
 #include "park/path/decks.hpp"
 #include "park/path/tunnels.hpp"
-#include "park/person_motions.hpp"
+#include "park/person/motions.hpp"
 #include "park/queue_fences.hpp"
 #include "park/relief_maps.hpp"
 #include "park/ride/cars.hpp"
@@ -325,11 +325,11 @@ namespace rct3::scene
             const std::string characters = folder->filename().string();
             const std::string uniforms = install.find(kUniformFolder).value_or(std::filesystem::path(kUniformFolder)).filename().string();
             const std::array<std::string_view, 2> folders { characters, uniforms };
-            park::PersonLibrary library(install.root(), folders);
+            park::person::PersonLibrary library(install.root(), folders);
             std::map<save::PeopleObjectId, std::string_view> groups;
             for (const save::PartGroup& g : scene.people.part_groups)
                 groups.emplace(g.id, g.symbol);
-            const auto set = [&](const save::PeopleRef& ref) -> const park::PartSet* {
+            const auto set = [&](const save::PeopleRef& ref) -> const park::person::PartSet* {
                 const auto it = groups.find(ref.id);
                 return it != groups.end() ? as_pointer(library.part_set(it->second)) : nullptr;
             };
@@ -341,7 +341,7 @@ namespace rct3::scene
                 if (!a.visible)
                     return;
                 ShownPerson shown;
-                park::PersonLook& look = shown.pose.look;
+                park::person::PersonLook& look = shown.pose.look;
                 look.head = set(a.head);
                 look.body = set(a.body);
                 look.legs = set(a.legs);
@@ -364,7 +364,7 @@ namespace rct3::scene
                     for (glm::length_t r = 0; r < 4; ++r)
                         shown.pose.world[c][r] = person.world[static_cast<std::size_t>(c * 4 + r)];
                 }
-                shown.pose.motion = person.animation.anim_type >= 0 ? person.animation.anim_type : park::motion::kIdle;
+                shown.pose.motion = person.animation.anim_type >= 0 ? person.animation.anim_type : park::person::motion::kIdle;
                 shown.saved_time = person.animation.time;
                 shown.speed = person.animation.speed > 0 ? person.animation.speed : 1.0f;
                 shown.walking = person.animation.anim_type == person.animation.walk || person.animation.anim_type == person.animation.alternate_walk;
@@ -454,7 +454,7 @@ namespace rct3::scene
                     });
                     const bool swim = swim_section != kSwimSections.end();
                     const auto number = static_cast<std::uint8_t>(swim ? swim_section - kSwimSections.begin() + 1 : section - kSections.begin());
-                    const park::PartSet* part = section != kSections.end() || swim ? as_pointer(library.part_set(symbol)) : nullptr;
+                    const park::person::PartSet* part = section != kSections.end() || swim ? as_pointer(library.part_set(symbol)) : nullptr;
                     if (part == nullptr)
                         continue;
                     scene.wardrobe.push_back({ group(symbol, number, worn_by, type), part, static_cast<save::PersonType>(type), vip != 0 ? save::Sex::Male : static_cast<save::Sex>(worn_by), number, vip, swim });
@@ -479,7 +479,7 @@ namespace rct3::scene
                         if (!c.costume || c.costume->sections.size() < 3 || std::from_chars(std::to_address(digits), c.name.data() + c.name.size(), number).ec != std::errc { } || number > 255)
                             continue;
                         for (std::uint8_t k = 0; k < 3; ++k)
-                            if (const park::PartSet* set = as_pointer(library.part_set(c.costume->sections[k])))
+                            if (const park::person::PartSet* set = as_pointer(library.part_set(c.costume->sections[k])))
                                 scene.wardrobe.push_back({ .id = group(c.costume->sections[k], k, 0, std::to_underlying(save::PersonType::Entertainer)), .set = set, .type = save::PersonType::Entertainer, .section = k, .costume = static_cast<std::uint8_t>(number) });
                     }
             }

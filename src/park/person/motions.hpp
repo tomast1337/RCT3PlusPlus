@@ -14,7 +14,7 @@
 #include <span>
 #include <string_view>
 
-namespace rct3::park
+namespace rct3::park::person
 {
 
     /// Numbers of a few motions the game picks on its own.
@@ -66,4 +66,4 @@ namespace rct3::park
     /// Whether motion `number` starts again from the beginning once it ends.
     [[nodiscard]] bool motion_repeats(std::int32_t number);
 
-} // namespace rct3::park
+} // namespace rct3::park::person

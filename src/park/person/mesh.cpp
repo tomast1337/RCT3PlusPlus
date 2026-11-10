@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/person_mesh.hpp"
+#include "park/person/mesh.hpp"
 
 #include "park/flexi_colours.hpp"
-#include "park/person_motions.hpp"
+#include "park/person/motions.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -10,7 +10,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <map>
 
-namespace rct3::park
+namespace rct3::park::person
 {
 
     namespace
@@ -391,4 +391,4 @@ namespace rct3::park
         return out;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::person

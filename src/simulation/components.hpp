@@ -4,7 +4,8 @@
 // write them in parallel and the park file can store them field by field.
 //
 // A guest is an entity with a Visitor, a Pose, Needs, a Mood and a Wallet; one the simulation moves also has
-// an Errand, a Stride and Dice. Guests who go round together are Members of a Party, an entity of its own.
+// an Errand, a Stride and Dice. Guests who go round together are Members of a Party, an entity of its own
+// (simulation/parties.hpp).
 // An attraction is an entity with an Attraction and either a Shop or a
 // CycleRide: a ride that loads its riders, runs for a while and lets them off, flat ride or coaster.
 //
@@ -99,14 +100,6 @@ namespace rct3::simulation
         Share heat { };           ///< From cool (0) to sweltering (1), out in the hot sun
     };
 
-    /// Parties at the rides so far, in the registry's context: those held back from a load to ride together
-    /// on the next, and those too many for one load, split over two.
-    struct PartyBoarding
-    {
-        std::uint32_t held = 0;
-        std::uint32_t split = 0;
-    };
-
     /// The time of day the guests feel, in the registry's context; midday when none is there.
     struct Daylight
     {
@@ -149,31 +142,6 @@ namespace rct3::simulation
     /// A guest who has gone home. Kept, without what made them move, for whoever still shows them.
     struct Left
     {
-    };
-
-    /// The kinds of party that come in at the gate. Children only ever come with an adult.
-    // shortcut: no party of the player's own made guests (custom peeps), as players cannot make guests yet;
-    // add a kind here when they can.
-    enum class PartyKind : std::uint8_t
-    {
-        LoneTeen,
-        LoneAdult,
-        TeenCouple,  ///< A boy and a girl
-        AdultCouple, ///< A man and a woman
-        TeenGang,    ///< Teens, two or more
-        AdultParty,  ///< Adults, two or more
-        Family,      ///< One or two parents with their children
-        DayTrip,     ///< One adult taking children out
-    };
-    inline constexpr std::size_t kPartyKinds = 8;
-
-    /// The park's own mix of parties, in the registry's context, as a scenario sets it: how often each
-    /// PartyKind comes against the others, and the share of families with one parent. The tuning's mix when
-    /// none is there.
-    struct PartyMix
-    {
-        std::array<float, kPartyKinds> weights { };
-        Chance single_parent { };
     };
 
     /// Guests in and out of the gate so far, in the registry's context, by AgeGroup.
@@ -348,23 +316,6 @@ namespace rct3::simulation
     {
         std::vector<Thought> recent;
         std::uint32_t had = 0; ///< Thoughts had so far, for the park to tell new ones apart
-    };
-
-    /// Guests going round the park together, such as a family. The leader chooses where to go for all of
-    /// them, by the most pressing needs among them; the others walk beside. At a ride some may stay out and
-    /// wait by its exit for the rest. Now and then they stop and stand in a ring for a while.
-    struct Party
-    {
-        entt::entity leader = entt::null;
-        std::vector<entt::entity> members { }; ///< The leader among them
-        std::uint32_t huddle = 0;              ///< Ticks left standing together in a ring, chatting (once all are back, too)
-        NodeId gather = kNoNode;               ///< The tile it waits on for those still busy, none of another party's
-        std::vector<entt::entity> away { };    ///< Members out of it for now (held up, falling, thrown, sliding), back on landing
-    };
-
-    struct Member
-    {
-        entt::entity party = entt::null;
     };
 
     /// Where a guest is on the paths: on the way from node `from` to node `to`, `progress` of the way along.

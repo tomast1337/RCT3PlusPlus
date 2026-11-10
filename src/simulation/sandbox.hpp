@@ -13,6 +13,7 @@
 
 #include "simulation/components.hpp"
 #include "simulation/sim_world.hpp"
+#include "simulation/stalls.hpp"
 #include "simulation/workers.hpp"
 
 #include <cstdint>

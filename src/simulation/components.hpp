@@ -6,7 +6,7 @@
 // A guest is an entity with a Visitor, a Pose, Needs, a Mood and a Wallet; one the simulation moves also has
 // an Errand, a Stride and Dice. Guests who go round together are Members of a Party, an entity of its own
 // (simulation/parties.hpp).
-// An attraction is an entity with an Attraction and either a Shop or a
+// An attraction is an entity with an Attraction and either a Shop (simulation/stalls.hpp) or a
 // CycleRide: a ride that loads its riders, runs for a while and lets them off, flat ride or coaster.
 //
 // Levels are fractions: needs run from 0 (satisfied) to 1 (desperate); mood values from 0 to 1. Times are
@@ -372,51 +372,6 @@ namespace rct3::simulation
         Money income { };       ///< Taken so far
         std::uint32_t customers = 0;
         std::uint64_t saved = 0; ///< The saved park's own id of it; 0 when not from a save
-    };
-
-    /// What a shop sells, or what a facility does for its guests.
-    enum class Product : std::uint8_t
-    {
-        Drink,
-        Food,
-        Toilet,      ///< Relieves the bladder
-        CashMachine, ///< Gives the guest more cash
-        FirstAid,    ///< Settles a sick guest's stomach
-        Umbrella,    ///< Keeps the rain off
-    };
-
-    /// Whether a shop's food or drink is cold (ice cream, a slush), hot (coffee, soup) or neither.
-    enum class Serve : std::uint8_t
-    {
-        Any,
-        Cold, ///< Cools a guest down; wanted most on hot days
-        Hot,  ///< Wanted most on cold days
-    };
-
-    /// One thing a stall sells.
-    struct Ware
-    {
-        Product product = Product::Drink;
-        Serve serve = Serve::Any;
-        Money price { };
-        std::string symbol { };  ///< Of the item a guest carries away, as `Burger:cid`; empty when not known
-        std::uint8_t extras = 0; ///< How many extras (toppings, sauces, ice) its item can take
-        std::uint8_t topped = 0; ///< How many of those go on it
-        /// What those add to how much it feeds, quenches and sickens, each by how much of it goes on.
-        std::array<float, 3> topping { };
-        Money cost { }; ///< Of its stock, with the extras going on, to the park for each one sold
-        /// Most a guest pays for it, with those extras, in mild weather, the cold and the heat; none when not known.
-        std::array<Money, 3> worth { };
-    };
-
-    struct Shop
-    {
-        Product product = Product::Drink; ///< What it is visited for: its first ware's
-        Serve serve = Serve::Any;
-        /// From the middle of its entrance tile towards the stall, along x and z, one long; buyers stand at
-        /// its counter that way. Zero when not known: they stand in the tile's middle.
-        glm::vec2 counter { 0.0f };
-        std::vector<Ware> menu { }; ///< Its food, drink and umbrellas; empty: one ware of `product` at its attraction's price
     };
 
     /// Where a ride without trains is in its cycle. It loads standing still, starts, runs its loops, stops, and

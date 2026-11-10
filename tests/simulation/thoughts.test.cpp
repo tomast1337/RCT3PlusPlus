@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/components.hpp"
 #include "simulation/sandbox.hpp"
+#include "simulation/stalls.hpp"
 #include "simulation/systems.hpp"
 #include "ui/thought_text.hpp"
 

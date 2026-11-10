@@ -35,6 +35,7 @@
 #include "simulation/park/state.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/ratings.hpp"
+#include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/workers.hpp"

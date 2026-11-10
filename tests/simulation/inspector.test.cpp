@@ -3,6 +3,7 @@
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
+#include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"

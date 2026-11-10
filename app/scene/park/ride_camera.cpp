@@ -288,4 +288,5 @@ namespace rct3::scene::park
         scene.riding_person.reset();
         scene.seat.reset();
     }
+
 } // namespace rct3::scene::park

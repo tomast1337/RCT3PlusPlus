@@ -32,6 +32,7 @@
 #include "scene/park/management.hpp"
 #include "scene/park/map_view.hpp"
 #include "scene/park/patrol.hpp"
+#include "scene/park/questions.hpp"
 #include "scene/park/refresh.hpp"
 #include "scene/park/ride_camera.hpp"
 #include "scene/park/setup.hpp"
@@ -109,23 +110,11 @@ namespace rct3::scene::park
         constexpr float kPhotoPersonTall = 1.8f; ///< Framed from the feet up to this high
         /// Of the pointer between pressing and letting go, in interface units, beyond which it is no click.
         constexpr float kClickSlack = 4;
-        constexpr int kFahrenheit = 1; ///< The temperature units option's choice for Fahrenheit
-        constexpr std::string_view kQuestionName = "leave_tutorial";
-        constexpr std::string_view kLeaveText = "TutorialWindow_ConfirmQuit";
+        constexpr int kFahrenheit = 1;                            ///< The temperature units option's choice for Fahrenheit
         constexpr std::string_view kTapeFence = "KeepClearFence"; ///< Closes a broken ride off until it is fixed
         constexpr std::string_view kTapeFenceOverlay = "Style\\Vanilla\\style";
-        constexpr std::string_view kYes = "SMB_Label_Yes";
-        constexpr std::string_view kNo = "SMB_Label_No";
         constexpr std::string_view kOk = "SMB_Label_OK";
         constexpr std::string_view kPrizeName = "prize_won"; ///< The box telling a prize won, one at a time
-        constexpr std::string_view kDemolishName = "demolish_question";
-        constexpr std::string_view kDemolishTitle = "SingleItemDeleteEditor_AI_Title";
-        constexpr std::string_view kDemolishText = "SingleItemDeleteEditor_AI_Message";
-        constexpr std::string_view kSellPoolName = "sell_pool_question";
-        constexpr std::string_view kSellPoolTitle = "ConfirmSellPoolComplex_Title";
-        constexpr std::string_view kSellPoolText = "ConfirmSellPoolComplex_Text";
-        constexpr std::u16string_view kSellPoolMark = u"%POOLCOMPLEXNAME%";
-        constexpr std::string_view kPoolDefaultName = "PoolComplexDefaultName";
         constexpr std::string_view kEntranceStays = "YouMayNotSellParkEntrance";
         constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
         constexpr std::string_view kDeleteAreaName = "delete_area";
@@ -149,52 +138,6 @@ namespace rct3::scene::park
         constexpr float kFlyAboveGround = 1.5f; ///< Free look's eye stays this high over the ground
 
         constexpr float kHoverPickInterval = 0.1f; ///< Seconds between looks at what is under the pointer, for its look
-
-        void ask_leave(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette)
-        {
-            if (scene.desktop->root().find(kQuestionName))
-                return;
-            const ui::widgets::QuestionBoxStyle style = skins::question_box_style(palette);
-            scene.desktop->root().add<ui::widgets::QuestionBox>(std::string(kQuestionName), style, std::u16string(strings.get(kLeaveText)), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
-        }
-
-        /// Asks whether to pull `refs` down, naming them; the answer comes back in the park's update.
-        void ask_demolish(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, std::vector<rct3::park::AttractionRef> refs)
-        {
-            if (refs.empty() || scene.desktop->root().find(kDemolishName))
-                return;
-            std::u16string names;
-            for (const rct3::park::AttractionRef ref : refs)
-            {
-                const save::model::AttractionCommon& a = ref.kind == rct3::park::AttractionRef::Kind::Stall ? scene.rides.stalls.at(ref.index).base : scene.rides.rides.at(ref.index).base;
-                names += (names.empty() ? u"" : u", ") + ui::screens::attraction_name(a, strings);
-            }
-            std::u16string text(strings.get(kDemolishText));
-            if (const auto at = text.find(u"%NAME%"); at != std::u16string::npos)
-                text.replace(at, 6, names);
-            const ui::widgets::QuestionBoxStyle style = skins::question_box_style(palette);
-            auto& box = scene.desktop->root().add<ui::widgets::QuestionBox>(std::string(kDemolishName), style, std::move(text), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
-            box.title = std::u16string(strings.get(kDemolishTitle));
-            scene.demolish_asked = std::move(refs);
-        }
-
-        /// Asks whether to sell the pool complex the changing room `room` opens on.
-        void ask_sell_pool_complex(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, std::size_t room)
-        {
-            if (scene.desktop->root().find(kSellPoolName))
-                return;
-            const std::string& named = scene.pools.rooms.at(room).complex_name;
-            std::u16string text(strings.get(kSellPoolText));
-            if (const auto at = text.find(kSellPoolMark); at != std::u16string::npos)
-                text.replace(at, kSellPoolMark.size(), named.empty() ? std::u16string(strings.get(kPoolDefaultName)) : strings::to_utf16(named));
-            // It names the room asked from as well.
-            if (const auto at = text.find(u"%NAME%"); at != std::u16string::npos)
-                text.replace(at, 6, ui::screens::scenery_name({ .symbol = scene.pools.rooms.at(room).symbol }, strings));
-            const ui::widgets::QuestionBoxStyle style = skins::question_box_style(palette);
-            auto& box = scene.desktop->root().add<ui::widgets::QuestionBox>(std::string(kSellPoolName), style, std::move(text), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
-            box.title = std::u16string(strings.get(kSellPoolTitle));
-            scene.pool_complex_asked = room;
-        }
 
         void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, const config::GameOptions& options, float elapsed)
         {

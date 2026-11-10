@@ -65,13 +65,13 @@ namespace rct3::park::ground
         }
     }
 
-    GroundPathMap ground_path_map(std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    GroundPathMap ground_path_map(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid)
     {
         GroundPathMap map;
         map.width = grid.width;
         map.height = grid.height;
         map.tiles.assign(static_cast<std::size_t>(std::max(grid.width, 0)) * static_cast<std::size_t>(std::max(grid.height, 0)), kNoPath);
-        for (const save::PathTile& p : paths)
+        for (const save::model::PathTile& p : paths)
         {
             if (!grid.contains(p.col, p.row))
                 continue;
@@ -96,7 +96,7 @@ namespace rct3::park::ground
                     ends.push_back(h);
                 continue;
             }
-            if (p.kind != save::PathKind::Ground || p.surface_name.empty())
+            if (p.kind != save::model::PathKind::Ground || p.surface_name.empty())
                 continue;
             auto style = std::ranges::find(map.styles, p.surface_name);
             if (style == map.styles.end())
@@ -111,35 +111,35 @@ namespace rct3::park::ground
         return map;
     }
 
-    std::vector<Paving> ride_pavings(const save::RideModel& rides, const FootprintOf& footprint_of, const FootprintOf& floor_of)
+    std::vector<Paving> ride_pavings(const save::model::RideModel& rides, const FootprintOf& footprint_of, const FootprintOf& floor_of)
     {
-        const auto step = [](save::Tile tile, glm::vec2 way) { return save::Tile { tile.col + static_cast<int>(std::lround(way.x)), tile.row + static_cast<int>(std::lround(way.y)) }; };
+        const auto step = [](save::model::Tile tile, glm::vec2 way) { return save::model::Tile { tile.col + static_cast<int>(std::lround(way.x)), tile.row + static_cast<int>(std::lround(way.y)) }; };
         std::vector<Paving> out;
-        for (const save::Ride& ride : rides.rides)
+        for (const save::model::Ride& ride : rides.rides)
         {
             if (ride.base.demolished)
                 continue;
             // A door faces the ride: it opens onto the tile in front and the path behind, and takes that path's look.
-            for (const save::Station& station : ride.stations)
+            for (const save::model::Station& station : ride.stations)
             {
                 for (const auto& [door, entrance] : { std::pair { station.entrance_spot, true }, { station.exit_spot, false } })
                 {
                     if (!door)
                         continue;
-                    const save::Tile at { door->col, door->row };
-                    const save::Tile behind = step(at, object::turned_x(ModelTurn::from(door->direction).turned(2)));
+                    const save::model::Tile at { door->col, door->row };
+                    const save::model::Tile behind = step(at, object::turned_x(ModelTurn::from(door->direction).turned(2)));
                     out.push_back({ .tiles = { at }, .height = door->height, .source = behind, .entrance = entrance, .links = { step(at, object::turned_x(ModelTurn::from(door->direction))), behind }, .owner = door->object });
                 }
             }
-            if (ride.kind == save::RideKind::Special && ride.stations.empty() && ride.base.spot)
+            if (ride.kind == save::model::RideKind::Special && ride.stations.empty() && ride.base.spot)
             {
                 // A facility without doors (toilets and the like) opens onto every side, in the plain style.
                 Paving under { .tiles = footprint_of(*ride.base.spot), .height = ride.base.spot->height, .owner = ride.base.spot->object };
-                for (const save::Tile tile : under.tiles)
+                for (const save::model::Tile tile : under.tiles)
                 {
                     for (std::int32_t side = 0; side < 4; ++side)
                     {
-                        const save::Tile there = step(tile, object::turned_x(ModelTurn { side }));
+                        const save::model::Tile there = step(tile, object::turned_x(ModelTurn { side }));
                         if (!std::ranges::contains(under.tiles, there) && !std::ranges::contains(under.links, there))
                             under.links.push_back(there);
                     }
@@ -150,13 +150,13 @@ namespace rct3::park::ground
             }
             // A flat ride's floor, or a tracked ride's base's, opens onto its first station's doors and looks like
             // the path its exit lets out onto.
-            const auto pave = [&](std::vector<save::Tile> tiles, std::int32_t height, std::uint64_t owner) {
+            const auto pave = [&](std::vector<save::model::Tile> tiles, std::int32_t height, std::uint64_t owner) {
                 Paving floor { .tiles = std::move(tiles), .height = height, .owner = owner };
                 if (floor.tiles.empty())
                     return;
                 if (!ride.stations.empty())
                 {
-                    const save::Station& first = ride.stations.front();
+                    const save::model::Station& first = ride.stations.front();
                     for (const auto& door : { first.exit_spot, first.entrance_spot })
                     {
                         if (!door)
@@ -168,27 +168,27 @@ namespace rct3::park::ground
                 }
                 out.push_back(std::move(floor));
             };
-            if (ride.kind == save::RideKind::Flat && ride.base.spot)
+            if (ride.kind == save::model::RideKind::Flat && ride.base.spot)
                 pave(footprint_of(*ride.base.spot), ride.base.spot->height, ride.base.spot->object);
             if (ride.track)
             {
-                for (const save::TrackPiece& piece : ride.track->pieces)
+                for (const save::model::TrackPiece& piece : ride.track->pieces)
                 {
                     if (piece.scenery != 0)
                         pave(floor_of({ piece.scenery, piece.tile_x, piece.tile_z, piece.height, piece.direction }), piece.height, piece.scenery);
                 }
             }
         }
-        for (const save::Stall& stall : rides.stalls)
+        for (const save::model::Stall& stall : rides.stalls)
         {
             if (stall.base.demolished || !stall.base.spot)
                 continue;
             Paving under { .tiles = footprint_of(*stall.base.spot), .height = stall.base.spot->height, .owner = stall.base.spot->object };
             // A stall serves the side it faces, opening onto the tiles there. Facings point at -row, -col, +row, +col.
             const glm::vec2 front = object::turned_x(ModelTurn::from(stall.base.facing).turned(3));
-            for (const save::Tile tile : under.tiles)
+            for (const save::model::Tile tile : under.tiles)
             {
-                const save::Tile there = step(tile, front);
+                const save::model::Tile there = step(tile, front);
                 if (!std::ranges::contains(under.tiles, there) && !std::ranges::contains(under.links, there))
                     under.links.push_back(there);
             }
@@ -204,7 +204,7 @@ namespace rct3::park::ground
     {
 
         /// Whether `p` lies at `height` on its tile, near enough to set a paving's style.
-        bool lies_at(const save::PathTile& p, std::int32_t height, const save::TerrainGrid& grid)
+        bool lies_at(const save::model::PathTile& p, std::int32_t height, const save::model::TerrainGrid& grid)
         {
             const auto near = [&](float h) { return std::abs(h - static_cast<float>(height)) <= kPavingReach; };
             if (!p.elevation)
@@ -216,31 +216,31 @@ namespace rct3::park::ground
 
     } // namespace
 
-    std::vector<PavedTile> lay_pavings(std::span<const save::PathTile> paths, std::span<const Paving> pavings, const save::TerrainGrid& grid)
+    std::vector<PavedTile> lay_pavings(std::span<const save::model::PathTile> paths, std::span<const Paving> pavings, const save::model::TerrainGrid& grid)
     {
         std::vector<PavedTile> out;
         for (std::size_t k = 0; k < pavings.size(); ++k)
         {
             const Paving& paving = pavings[k];
             // The path at the source sets the look: a path of the park as it is, a queue only through an entrance.
-            save::PathTile look { .kind = save::PathKind::Ground, .surface_name = std::string(kPavingStyle) };
+            save::model::PathTile look { .kind = save::model::PathKind::Ground, .surface_name = std::string(kPavingStyle) };
             if (paving.source)
             {
-                const auto at_source = [&](const save::PathTile& p) { return p.col == paving.source->col && p.row == paving.source->row && lies_at(p, paving.height, grid); };
-                const auto path = std::ranges::find_if(paths, [&](const save::PathTile& p) { return at_source(p) && !p.queue && !p.surface_name.empty(); });
-                const auto queue = std::ranges::find_if(paths, [&](const save::PathTile& p) { return at_source(p) && p.queue && !p.surface_name.empty(); });
+                const auto at_source = [&](const save::model::PathTile& p) { return p.col == paving.source->col && p.row == paving.source->row && lies_at(p, paving.height, grid); };
+                const auto path = std::ranges::find_if(paths, [&](const save::model::PathTile& p) { return at_source(p) && !p.queue && !p.surface_name.empty(); });
+                const auto queue = std::ranges::find_if(paths, [&](const save::model::PathTile& p) { return at_source(p) && p.queue && !p.surface_name.empty(); });
                 if (path != paths.end())
                     look = *path;
                 else if (paving.entrance && queue != paths.end())
                     look = *queue;
             }
             look.id = 0;
-            look.direction = save::kNoDirection;
-            for (const save::Tile tile : paving.tiles)
+            look.direction = save::model::kNoDirection;
+            for (const save::model::Tile tile : paving.tiles)
             {
-                if (!grid.contains(tile.col, tile.row) || std::ranges::any_of(paths, [&](const save::PathTile& p) { return p.col == tile.col && p.row == tile.row; }))
+                if (!grid.contains(tile.col, tile.row) || std::ranges::any_of(paths, [&](const save::model::PathTile& p) { return p.col == tile.col && p.row == tile.row; }))
                     continue;
-                save::PathTile laid = look;
+                save::model::PathTile laid = look;
                 laid.col = static_cast<std::uint8_t>(tile.col);
                 laid.row = static_cast<std::uint8_t>(tile.row);
                 const bool level = std::ranges::all_of(grid.at(tile.col, tile.row).corners, [&](float h) { return h == static_cast<float>(paving.height); });
@@ -248,7 +248,7 @@ namespace rct3::park::ground
                 {
                     // Straight on from the source; stored headings run towards lower columns, higher columns,
                     // lower rows, higher rows.
-                    const save::Tile from = *paving.source;
+                    const save::model::Tile from = *paving.source;
                     const std::uint8_t in = from.col > tile.col ? 0 : from.col < tile.col ? 1 : from.row > tile.row ? 2 : 3;
                     laid.queue->start_direction = in;
                     laid.queue->end_direction = in;
@@ -256,7 +256,7 @@ namespace rct3::park::ground
                 if (level && !laid.queue)
                     laid.elevation.reset();
                 else
-                    laid.elevation = save::PathElevation { .slope = level ? save::kSlopeOnGround : std::uint8_t { 0 }, .quantised_height = paving.height };
+                    laid.elevation = save::model::PathElevation { .slope = level ? save::model::kSlopeOnGround : std::uint8_t { 0 }, .quantised_height = paving.height };
                 out.push_back({ .path = std::move(laid), .paving = k });
             }
         }
@@ -265,7 +265,7 @@ namespace rct3::park::ground
 
     void seal_pavings(GroundPathMap& map, std::span<const PavedTile> laid, std::span<const Paving> pavings)
     {
-        const auto index = [&](save::Tile t) -> std::optional<std::size_t> {
+        const auto index = [&](save::model::Tile t) -> std::optional<std::size_t> {
             if (t.col < 0 || t.row < 0 || t.col >= map.width || t.row >= map.height)
                 return std::nullopt;
             return static_cast<std::size_t>(t.row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(t.col);
@@ -279,7 +279,7 @@ namespace rct3::park::ground
             if (!at || t.paving >= pavings.size())
                 continue;
             map.pavings[*at] = static_cast<std::uint16_t>(std::min<std::size_t>(t.paving + 1, std::numeric_limits<std::uint16_t>::max()));
-            for (const save::Tile link : pavings[t.paving].links)
+            for (const save::model::Tile link : pavings[t.paving].links)
             {
                 if (const auto other = index(link); other && std::abs(link.col - t.path.col) + std::abs(link.row - t.path.row) == 1)
                 {
@@ -290,11 +290,11 @@ namespace rct3::park::ground
         }
     }
 
-    bool may_join(const GroundPathMap& map, save::Tile tile, save::Tile other) noexcept
+    bool may_join(const GroundPathMap& map, save::model::Tile tile, save::model::Tile other) noexcept
     {
         if (map.pavings.empty())
             return true;
-        const auto index = [&](save::Tile t) -> std::optional<std::size_t> {
+        const auto index = [&](save::model::Tile t) -> std::optional<std::size_t> {
             if (t.col < 0 || t.row < 0 || t.col >= map.width || t.row >= map.height)
                 return std::nullopt;
             return static_cast<std::size_t>(t.row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(t.col);
@@ -308,7 +308,7 @@ namespace rct3::park::ground
         return a && b && map.links.contains({ *a, *b });
     }
 
-    bool has_ground_path(const GroundPathMap& map, save::Tile tile) noexcept
+    bool has_ground_path(const GroundPathMap& map, save::model::Tile tile) noexcept
     {
         const auto [col, row] = tile;
         if (col < 0 || row < 0 || col >= map.width || row >= map.height)
@@ -316,7 +316,7 @@ namespace rct3::park::ground
         return map.tiles[static_cast<std::size_t>(row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(col)] != kNoPath;
     }
 
-    bool path_continues(const GroundPathMap& map, const save::TerrainGrid& grid, save::Tile tile, int dc, int dr)
+    bool path_continues(const GroundPathMap& map, const save::model::TerrainGrid& grid, save::model::Tile tile, int dc, int dr)
     {
         const auto [col, row] = tile;
         if (!grid.contains(col, row) || !grid.contains(col + dc, row + dr))
@@ -395,7 +395,7 @@ namespace rct3::park::ground
 
     } // namespace
 
-    TerrainMesh ground_path_mesh(const GroundPathMap& map, const save::TerrainGrid& grid, std::optional<TileRect> area)
+    TerrainMesh ground_path_mesh(const GroundPathMap& map, const save::model::TerrainGrid& grid, std::optional<TileRect> area)
     {
         TerrainMesh mesh;
         if (map.width != grid.width || map.height != grid.height || map.tiles.size() != grid.cells.size())
@@ -419,7 +419,7 @@ namespace rct3::park::ground
                     looks[static_cast<std::size_t>(k)] = quarter_look(path_continues(map, grid, { col, row }, dc, 0), path_continues(map, grid, { col, row }, 0, dr), has_ground_path(map, { col + dc, row + dr }) && may_join(map, { col, row }, { col + dc, row + dr }) && may_join(map, { col + dc, row }, { col + dc, row + dr }) && may_join(map, { col, row + dr }, { col + dc, row + dr }));
                 }
 
-                const save::TerrainCell& cell = grid.at(col, row);
+                const save::model::TerrainCell& cell = grid.at(col, row);
                 std::array<glm::vec3, 4> corners;
                 std::array<glm::vec3, 4> normals;
                 for (int c = 0; c < 4; ++c)

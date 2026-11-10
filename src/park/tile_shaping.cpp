@@ -43,7 +43,7 @@ namespace rct3::park
             return best;
         }
 
-        glm::vec3 corner_at(const save::TerrainGrid& grid, int col, int row, std::size_t k)
+        glm::vec3 corner_at(const save::model::TerrainGrid& grid, int col, int row, std::size_t k)
         {
             const glm::ivec2 p = point_of(col, row, k);
             return { grid.world_x(p.x), grid.at(col, row).corners[k], grid.world_z(p.y) };
@@ -93,7 +93,7 @@ namespace rct3::park
         return x < 0 ? TilePart::FarLeft : TilePart::FarRight;
     }
 
-    TileStroke begin_tile_stroke(const save::TerrainGrid& grid, int col0, int row0, int col1, int row1, TilePart part)
+    TileStroke begin_tile_stroke(const save::model::TerrainGrid& grid, int col0, int row0, int col1, int row1, TilePart part)
     {
         TileStroke s { std::max(col0, 0), std::max(row0, 0), std::min(col1, grid.width - 1), std::min(row1, grid.height - 1), part, { }, 0, 0 };
         s.low = std::numeric_limits<float>::infinity();
@@ -118,7 +118,7 @@ namespace rct3::park
         return s;
     }
 
-    float shape_tiles(save::TerrainGrid& grid, const TileStroke& stroke, TileShaping shaping, float amount, const std::function<bool(save::Tile)>& free)
+    float shape_tiles(save::model::TerrainGrid& grid, const TileStroke& stroke, TileShaping shaping, float amount, const std::function<bool(save::model::Tile)>& free)
     {
         const auto picked = part_corners(stroke.part);
         const bool up = amount >= 0;
@@ -169,7 +169,7 @@ namespace rct3::park
         return moved;
     }
 
-    void tile_marks(TerrainMesh& mesh, const save::TerrainGrid& grid, int col0, int row0, int col1, int row1, TilePart part, glm::vec4 colour)
+    void tile_marks(TerrainMesh& mesh, const save::model::TerrainGrid& grid, int col0, int row0, int col1, int row1, TilePart part, glm::vec4 colour)
     {
         col0 = std::max(col0, 0);
         row0 = std::max(row0, 0);

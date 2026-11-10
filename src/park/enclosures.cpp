@@ -25,16 +25,16 @@ namespace rct3::park
         }
 
         /// The tile across `side` of (`col`, `row`).
-        save::Tile across(std::int32_t col, std::int32_t row, Side side) noexcept
+        save::model::Tile across(std::int32_t col, std::int32_t row, Side side) noexcept
         {
             return side.beyond({ col, row });
         }
 
         /// The fence along `side` of (`col`, `row`) in `map`, if one stands there.
-        std::optional<std::string_view> fenced(const save::EnclosureMap& map, std::int32_t col, std::int32_t row, Side side)
+        std::optional<std::string_view> fenced(const save::model::EnclosureMap& map, std::int32_t col, std::int32_t row, Side side)
         {
             const std::int32_t own = map.at(col, row);
-            const save::Tile other = across(col, row, side);
+            const save::model::Tile other = across(col, row, side);
             if (own < 0 || static_cast<std::size_t>(own) >= map.fences.size() || map.at(other.col, other.row) == own)
                 return std::nullopt;
             return map.fences[static_cast<std::size_t>(own)];
@@ -42,7 +42,7 @@ namespace rct3::park
 
         /// Makes each connected area of tiles with the same fence one enclosure. Each area keeps the place of
         /// the enclosure most of its tiles were in, the larger areas choosing first; the others take free places.
-        void regroup(save::EnclosureMap& map)
+        void regroup(save::model::EnclosureMap& map)
         {
             struct Area
             {
@@ -69,7 +69,7 @@ namespace rct3::park
                     ++area.was[static_cast<std::size_t>(map.tiles[static_cast<std::size_t>(k)])];
                     for (const Side side : ground::kSidesFromRowBefore)
                     {
-                        const save::Tile t = across(k % map.cols, k / map.cols, side);
+                        const save::model::Tile t = across(k % map.cols, k / map.cols, side);
                         const std::int32_t other = map.at(t.col, t.row);
                         const std::int32_t j = t.row * map.cols + t.col;
                         if (other >= 0 && area_of[static_cast<std::size_t>(j)] < 0 && map.fences[static_cast<std::size_t>(other)] == area.fence)
@@ -119,7 +119,7 @@ namespace rct3::park
         }
 
         /// The least and greatest column and row from `a` to `b`, within `map`.
-        std::array<std::int32_t, 4> clamped(const save::EnclosureMap& map, save::Tile a, save::Tile b)
+        std::array<std::int32_t, 4> clamped(const save::model::EnclosureMap& map, save::model::Tile a, save::model::Tile b)
         {
             return { std::max(0, std::min(a.col, b.col)), std::max(0, std::min(a.row, b.row)), std::min(map.cols - 1, std::max(a.col, b.col)), std::min(map.rows - 1, std::max(a.row, b.row)) };
         }
@@ -130,7 +130,7 @@ namespace rct3::park
         return std::format("Enclosures/Fences/{0}/{0}_Stub", fence);
     }
 
-    BoundaryFence enclosure_fences(const save::EnclosureMap& map, const save::TerrainGrid& grid, std::uint64_t last_id)
+    BoundaryFence enclosure_fences(const save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, std::uint64_t last_id)
     {
         BoundaryFence out;
         for (std::int32_t row = 0; row < map.rows; ++row)
@@ -142,7 +142,7 @@ namespace rct3::park
                     continue;
                 const std::string& fence = map.fences[static_cast<std::size_t>(own)];
                 const auto add = [&](std::string_view piece, std::int32_t turns) {
-                    save::PlacedObject& o = out.pieces.emplace_back();
+                    save::model::PlacedObject& o = out.pieces.emplace_back();
                     o.id = ++last_id;
                     o.owner_ref = o.id;
                     o.fixture = true;
@@ -189,8 +189,8 @@ namespace rct3::park
                 {
                     if ((out_sides & (1u << t)) != 0 || (out_sides & (1u << ((t + 1) % 4))) != 0)
                         continue;
-                    const save::Tile side = across(col, row, side_of(t));
-                    const save::Tile corner = across(side.col, side.row, side_of(t + 1));
+                    const save::model::Tile side = across(col, row, side_of(t));
+                    const save::model::Tile corner = across(side.col, side.row, side_of(t + 1));
                     if (map.at(corner.col, corner.row) != own)
                         add("CornerI", t);
                 }
@@ -199,7 +199,7 @@ namespace rct3::park
         return out;
     }
 
-    glm::vec2 fence_piece_lean(const save::TerrainGrid& grid, const save::PlacedObject& piece)
+    glm::vec2 fence_piece_lean(const save::model::TerrainGrid& grid, const save::model::PlacedObject& piece)
     {
         if (piece.symbol.ends_with("Edge"))
             return panel_lean(grid, piece);
@@ -207,7 +207,7 @@ namespace rct3::park
         return edge_lean(grid, { piece.col, piece.row }, side_of(piece.rotation)) + edge_lean(grid, { piece.col, piece.row }, side_of(piece.rotation + 1));
     }
 
-    std::int32_t enclose(save::EnclosureMap& map, const save::TerrainGrid& grid, save::Tile a, save::Tile b, const std::string& fence, std::function_ref<bool(save::Tile)> takeable)
+    std::int32_t enclose(save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, save::model::Tile a, save::model::Tile b, const std::string& fence, std::function_ref<bool(save::model::Tile)> takeable)
     {
         if (map.tiles.empty())
             map = { .cols = grid.width, .rows = grid.height, .tiles = std::vector<std::int32_t>(static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height), -1), .fences = map.fences };
@@ -231,7 +231,7 @@ namespace rct3::park
         return first ? map.tiles[*first] : -1;
     }
 
-    void unenclose(save::EnclosureMap& map, save::Tile a, save::Tile b, std::function_ref<bool(save::Tile)> removable)
+    void unenclose(save::model::EnclosureMap& map, save::model::Tile a, save::model::Tile b, std::function_ref<bool(save::model::Tile)> removable)
     {
         const auto [c0, r0, c1, r1] = clamped(map, a, b);
         for (std::int32_t row = r0; row <= r1; ++row)
@@ -241,7 +241,7 @@ namespace rct3::park
         regroup(map);
     }
 
-    std::int64_t fence_cost(const save::EnclosureMap& before, const save::EnclosureMap& after, std::function_ref<FencePrice(std::string_view fence)> price)
+    std::int64_t fence_cost(const save::model::EnclosureMap& before, const save::model::EnclosureMap& after, std::function_ref<FencePrice(std::string_view fence)> price)
     {
         std::int64_t cost = 0;
         for (std::int32_t row = 0; row < std::max(before.rows, after.rows); ++row)
@@ -264,12 +264,12 @@ namespace rct3::park
         return cost;
     }
 
-    std::int32_t enclosure_size(const save::EnclosureMap& map, std::int32_t region) noexcept
+    std::int32_t enclosure_size(const save::model::EnclosureMap& map, std::int32_t region) noexcept
     {
         return static_cast<std::int32_t>(std::ranges::count(map.tiles, region));
     }
 
-    std::int32_t enclosure_under(const save::EnclosureMap& map, save::Tile corner, std::array<std::int32_t, 2> span) noexcept
+    std::int32_t enclosure_under(const save::model::EnclosureMap& map, save::model::Tile corner, std::array<std::int32_t, 2> span) noexcept
     {
         const std::int32_t first = map.at(corner.col, corner.row);
         for (std::int32_t row = corner.row; row < corner.row + span[1]; ++row)

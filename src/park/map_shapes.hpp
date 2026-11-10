@@ -18,9 +18,9 @@ namespace rct3::park
 {
 
     /// The layer an object is drawn in, or nothing to leave it off the map.
-    using MapLayerOf = std::function<std::optional<MapLayer>(const save::PlacedObject&)>;
+    using MapLayerOf = std::function<std::optional<MapLayer>(const save::model::PlacedObject&)>;
 
     /// The shapes of the objects of `objects` that are not hidden and that `layer_of` puts on the map.
-    [[nodiscard]] std::vector<MapShape> map_shapes(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid, const object::Fitted& fitted, const MapLayerOf& layer_of);
+    [[nodiscard]] std::vector<MapShape> map_shapes(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid, const object::Fitted& fitted, const MapLayerOf& layer_of);
 
 } // namespace rct3::park

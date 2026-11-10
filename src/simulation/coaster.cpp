@@ -126,7 +126,7 @@ namespace rct3::simulation
         lap.height_sum += here.y * seconds;
         lap.vertical_sum += forces.vertical * kGravity * seconds;
         lap.lateral_sum += forces.lateral * kGravity * seconds;
-        constexpr float kSample = 1.0f / static_cast<float>(save::kGraphSamplesPerSecond);
+        constexpr float kSample = 1.0f / static_cast<float>(save::model::kGraphSamplesPerSecond);
         if (lap.seconds < kSample)
             return;
         lap.speed.push_back(lap.speed_sum / lap.seconds);
@@ -137,13 +137,13 @@ namespace rct3::simulation
         lap.speed_sum = lap.height_sum = lap.vertical_sum = lap.lateral_sum = 0;
     }
 
-    save::RideGraphs end_lap(LapRecorder& lap)
+    save::model::RideGraphs end_lap(LapRecorder& lap)
     {
         const auto newest_first = [](const std::vector<float>& v) {
             const std::size_t kept = std::min(v.size(), kLapSamples);
             return std::vector<float>(v.rbegin(), v.rbegin() + static_cast<std::ptrdiff_t>(kept));
         };
-        save::RideGraphs out { .speed = newest_first(lap.speed), .altitude = newest_first(lap.altitude), .vertical_g = newest_first(lap.vertical), .lateral_g = newest_first(lap.lateral) };
+        save::model::RideGraphs out { .speed = newest_first(lap.speed), .altitude = newest_first(lap.altitude), .vertical_g = newest_first(lap.vertical), .lateral_g = newest_first(lap.lateral) };
         lap = { };
         return out;
     }

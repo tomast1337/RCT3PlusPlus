@@ -20,8 +20,8 @@ namespace rct3::park
     void ground_strip(TerrainMesh& mesh, glm::vec3 a, glm::vec3 b, glm::vec4 colour, float width);
 
     /// A strip along every edge of every tile.
-    [[nodiscard]] TerrainMesh grid_lines(const save::TerrainGrid& grid, glm::vec4 colour);
+    [[nodiscard]] TerrainMesh grid_lines(const save::model::TerrainGrid& grid, glm::vec4 colour);
     /// A strip wherever the ground crosses a whole multiple of `step`, through each triangle of each tile.
-    [[nodiscard]] TerrainMesh contour_lines(const save::TerrainGrid& grid, float step, glm::vec4 colour);
+    [[nodiscard]] TerrainMesh contour_lines(const save::model::TerrainGrid& grid, float step, glm::vec4 colour);
 
 } // namespace rct3::park

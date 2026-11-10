@@ -5,7 +5,7 @@
 // chunk, a layout hash then the value field by field (see binary.hpp), so it is a ".park" file in the structures
 // folder, listed by the same save window as parks:
 //
-//   "STRC" v1  save::Structure, heights above its lowest item
+//   "STRC" v1  save::model::Structure, heights above its lowest item
 //
 // shortcut: no picture for the list of structures, which shows names only; add one when the list draws them.
 #pragma once
@@ -21,9 +21,9 @@
 namespace rct3::parkfile
 {
 
-    [[nodiscard]] std::vector<std::byte> write_structure_file(const save::Structure& structure);
+    [[nodiscard]] std::vector<std::byte> write_structure_file(const save::model::Structure& structure);
 
     /// The structure `bytes` hold, or why they do not hold one.
-    [[nodiscard]] std::expected<save::Structure, std::string> read_structure_file(std::span<const std::byte> bytes);
+    [[nodiscard]] std::expected<save::model::Structure, std::string> read_structure_file(std::span<const std::byte> bytes);
 
 } // namespace rct3::parkfile

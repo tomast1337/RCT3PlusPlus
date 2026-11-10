@@ -34,16 +34,16 @@ namespace rct3::scene
         constexpr glm::vec4 kMarkColour { 1.0f, 0.85f, 0.25f, 0.9f };
 
         /// Whether tile `t` is marked, counting the drag going on.
-        bool marked(const StructureTools& t, const save::TerrainGrid& grid, save::Tile tile)
+        bool marked(const StructureTools& t, const save::model::TerrainGrid& grid, save::model::Tile tile)
         {
             if (t.corner && t.other && tile.col >= std::min(t.corner->col, t.other->col) && tile.col <= std::max(t.corner->col, t.other->col) && tile.row >= std::min(t.corner->row, t.other->row) && tile.row <= std::max(t.corner->row, t.other->row))
                 return !t.unmarking;
             return t.marks[static_cast<std::size_t>(tile.row) * static_cast<std::size_t>(grid.width) + static_cast<std::size_t>(tile.col)] != 0;
         }
 
-        std::vector<save::Tile> marked_tiles(const StructureTools& t, const save::TerrainGrid& grid)
+        std::vector<save::model::Tile> marked_tiles(const StructureTools& t, const save::model::TerrainGrid& grid)
         {
-            std::vector<save::Tile> out;
+            std::vector<save::model::Tile> out;
             if (t.marks.empty())
                 return out;
             for (int row = 0; row < grid.height; ++row)
@@ -124,7 +124,7 @@ namespace rct3::scene
         const auto bytes = read_bytes(file);
         if (!bytes)
             return false;
-        std::optional<save::Structure> read;
+        std::optional<save::model::Structure> read;
         if (parkfile::is_park_file(*bytes))
         {
             if (auto ours = parkfile::read_structure_file(*bytes))
@@ -132,10 +132,10 @@ namespace rct3::scene
             else
                 logging::logger("park").warning("structures: {}: {}", file.filename().string(), ours.error());
         }
-        else if (auto original = save::read_structure(*bytes))
+        else if (auto original = save::model::read_structure(*bytes))
             read = std::move(*original);
         else
-            logging::logger("park").warning("structures: {}: {}", file.filename().string(), save::to_string(original.error()));
+            logging::logger("park").warning("structures: {}: {}", file.filename().string(), save::model::to_string(original.error()));
         if (!read)
             return false;
         stop_structure_tools(scene);
@@ -171,7 +171,7 @@ namespace rct3::scene
             }
             else if (t.corner && t.other)
             {
-                for (const save::Tile m : marked_tiles(t, scene.grid))
+                for (const save::model::Tile m : marked_tiles(t, scene.grid))
                     t.marks[static_cast<std::size_t>(m.row) * static_cast<std::size_t>(scene.grid.width) + static_cast<std::size_t>(m.col)] = 2; // Kept through the reset below
                 for (std::uint8_t& m : t.marks)
                     m = m == 2 ? 1 : 0;
@@ -189,7 +189,7 @@ namespace rct3::scene
                 }
                 else if (asked == ui::screens::DeleteAreaAction::Delete && any)
                 {
-                    save::Structure s = rct3::park::pick_structure(marked_tiles(t, scene.grid), scene.objects, scene.models, scene.grid);
+                    save::model::Structure s = rct3::park::pick_structure(marked_tiles(t, scene.grid), scene.objects, scene.models, scene.grid);
                     logging::logger("park").info("structures: {} items on {} tiles picked out", s.pieces.size(), std::ranges::count(s.tiles, 1));
                     if (!s.pieces.empty())
                     {
@@ -202,7 +202,7 @@ namespace rct3::scene
         if (t.marks_changed)
         {
             rct3::park::TerrainMesh mesh;
-            for (const save::Tile m : marked_tiles(t, scene.grid))
+            for (const save::model::Tile m : marked_tiles(t, scene.grid))
                 rct3::park::tile_marks(mesh, scene.grid, m.col, m.row, m.col, m.row, rct3::park::TilePart::Whole, kMarkColour);
             park::set_view_lines(device, scene.delete_marks, mesh);
             t.marks_changed = false;
@@ -259,13 +259,13 @@ namespace rct3::scene
             t.solids = rct3::park::path::solid_tiles(scene.objects, scene.models, scene.grid);
             t.solids_of = scene.objects.size();
         }
-        std::vector<save::PlacedObject> placed = rct3::park::structure_objects(*t.structure, *t.at, t.turn, t.height, scene.models);
-        std::erase_if(placed, [&](const save::PlacedObject& o) { return !load_object_model(scene, t.models, assets, o); });
-        const bool moved = placed.size() != t.placed.size() || !std::ranges::equal(placed, t.placed, [](const save::PlacedObject& a, const save::PlacedObject& b) { return a.col == b.col && a.row == b.row && a.base_height == b.base_height && a.rotation == b.rotation; });
+        std::vector<save::model::PlacedObject> placed = rct3::park::structure_objects(*t.structure, *t.at, t.turn, t.height, scene.models);
+        std::erase_if(placed, [&](const save::model::PlacedObject& o) { return !load_object_model(scene, t.models, assets, o); });
+        const bool moved = placed.size() != t.placed.size() || !std::ranges::equal(placed, t.placed, [](const save::model::PlacedObject& a, const save::model::PlacedObject& b) { return a.col == b.col && a.row == b.row && a.base_height == b.base_height && a.rotation == b.rotation; });
         t.placed = std::move(placed);
         const rct3::park::StructureProblem problem = rct3::park::structure_problem(*t.structure, *t.at, t.turn, t.placed, scene.models, t.solids, scene.footpaths.paths, scene.grid);
         t.cost = 0;
-        for (const save::PlacedObject& o : t.placed)
+        for (const save::model::PlacedObject& o : t.placed)
             t.cost += price_of(scene, o.symbol);
         const bool affordable = !scene.park.cash || *scene.park.cash >= t.cost;
         if (!moved && problem == t.problem && affordable == t.affordable && !t.ghost_mesh.vertices.empty())
@@ -293,7 +293,7 @@ namespace rct3::scene
         // The tool stays out for another, as in the game.
         const std::size_t first = scene.objects.size();
         std::uint64_t id = last_id(scene);
-        for (save::PlacedObject o : t.placed)
+        for (save::model::PlacedObject o : t.placed)
         {
             o.id = ++id;
             o.owner_ref = o.id;
@@ -309,7 +309,7 @@ namespace rct3::scene
         }
         if (scene.park.cash)
             *scene.park.cash -= t.cost;
-        const save::TerrainGrid& g = scene.grid;
+        const save::model::TerrainGrid& g = scene.grid;
         park::float_money(scene, { g.world_x(t.at->col) + g.tile_size_x / 2, static_cast<float>(t.height), g.world_z(t.at->row) + g.tile_size_z / 2 }, -t.cost);
         logging::logger("park").info("structures: built {} ({} items) at {},{} height {} turned {}", t.structure->name, t.placed.size(), t.at->col, t.at->row, t.height, t.turn.value);
         t.ghost_mesh = { };

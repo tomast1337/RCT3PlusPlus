@@ -16,27 +16,27 @@ namespace rct3::park::pools
 
         constexpr std::array<glm::vec2, 4> kSide { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } }; // By turn: towards the next row, next column, ...
 
-        std::optional<save::Tile> tile_at(const save::TerrainGrid& grid, glm::vec2 at)
+        std::optional<save::model::Tile> tile_at(const save::model::TerrainGrid& grid, glm::vec2 at)
         {
             if (grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
                 return std::nullopt;
-            return save::Tile { static_cast<int>(std::floor((at.x - grid.origin_x) / grid.tile_size_x)), static_cast<int>(std::floor((at.y - grid.origin_z) / grid.tile_size_z)) };
+            return save::model::Tile { static_cast<int>(std::floor((at.x - grid.origin_x) / grid.tile_size_x)), static_cast<int>(std::floor((at.y - grid.origin_z) / grid.tile_size_z)) };
         }
 
         /// The box round the water squares joined side to side, at one surface, to the water square at `start`.
-        glm::vec4 body_bounds(const PoolMap& map, const save::TerrainGrid& grid, const PoolSquare& start)
+        glm::vec4 body_bounds(const PoolMap& map, const save::model::TerrainGrid& grid, const PoolSquare& start)
         {
-            std::vector<save::Tile> body { { start.col, start.row } };
+            std::vector<save::model::Tile> body { { start.col, start.row } };
             for (std::size_t i = 0; i < body.size(); ++i)
                 for (const glm::vec2 side : kSide)
                 {
-                    const save::Tile next { body[i].col + static_cast<int>(side.x), body[i].row + static_cast<int>(side.y) };
+                    const save::model::Tile next { body[i].col + static_cast<int>(side.x), body[i].row + static_cast<int>(side.y) };
                     if (const auto square = map.at(next.col, next.row, start.surface); square && square->kind == PoolKind::Water && square->surface == start.surface && !std::ranges::contains(body, next))
                         body.push_back(next);
                 }
             glm::ivec2 low { start.col, start.row };
             glm::ivec2 high = low;
-            for (const save::Tile& t : body)
+            for (const save::model::Tile& t : body)
             {
                 low = glm::min(low, glm::ivec2 { t.col, t.row });
                 high = glm::max(high, glm::ivec2 { t.col, t.row });
@@ -51,17 +51,17 @@ namespace rct3::park::pools
 
     } // namespace
 
-    bool on_pool_water(const PoolMap& map, const save::TerrainGrid& grid, glm::vec2 at)
+    bool on_pool_water(const PoolMap& map, const save::model::TerrainGrid& grid, glm::vec2 at)
     {
         const auto tile = tile_at(grid, at);
         const auto square = tile ? map.at(tile->col, tile->row) : std::nullopt;
         return square && square->kind == PoolKind::Water;
     }
 
-    std::vector<PoolWave> machine_waves(const PoolMap& map, std::span<const PoolExtra> scenery, const save::TerrainGrid& grid)
+    std::vector<PoolWave> machine_waves(const PoolMap& map, std::span<const PoolExtra> scenery, const save::model::TerrainGrid& grid)
     {
         std::vector<PoolWave> out;
-        std::vector<std::vector<save::Tile>> complexes; // By room, found once a machine needs them
+        std::vector<std::vector<save::model::Tile>> complexes; // By room, found once a machine needs them
         const auto add = [&](const PoolExtra& e) {
             const auto square = map.at(e.col, e.row);
             if (!e.fit.wave_machine || !square || square->kind != PoolKind::Water)
@@ -78,7 +78,7 @@ namespace rct3::park::pools
             w.radius = glm::length(glm::vec2 { side.y, side.x } * half); // Half the square, along the wall
             w.bounds = body_bounds(map, grid, *square);
             for (std::size_t i = 0; i < complexes.size(); ++i)
-                if (std::ranges::contains(complexes[i], save::Tile { e.col, e.row }))
+                if (std::ranges::contains(complexes[i], save::model::Tile { e.col, e.row }))
                 {
                     w.settings = map.rooms[i].waves;
                     break;
@@ -89,7 +89,7 @@ namespace rct3::park::pools
         return out;
     }
 
-    std::optional<PoolWave> drawn_wave(const PoolMap& map, const save::TerrainGrid& grid, std::span<const glm::vec3> points, float clock, const PoolWaveLook& look)
+    std::optional<PoolWave> drawn_wave(const PoolMap& map, const save::model::TerrainGrid& grid, std::span<const glm::vec3> points, float clock, const PoolWaveLook& look)
     {
         if (points.size() < 3)
             return std::nullopt;
@@ -145,7 +145,7 @@ namespace rct3::park::pools
         return w;
     }
 
-    std::optional<PoolWave> entry_rings(const PoolMap& map, const save::TerrainGrid& grid, glm::vec3 at, float strength, float clock)
+    std::optional<PoolWave> entry_rings(const PoolMap& map, const save::model::TerrainGrid& grid, glm::vec3 at, float strength, float clock)
     {
         const auto tile = tile_at(grid, { at.x, at.z });
         const auto square = tile ? map.at(tile->col, tile->row, static_cast<std::int32_t>(std::lround(at.y))) : std::nullopt;

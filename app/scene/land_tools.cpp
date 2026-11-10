@@ -62,7 +62,7 @@ namespace rct3::scene
         }
 
         /// Pays `cost` for work on `tile`, floating it up from there.
-        void pay(park::ParkScene& scene, std::int32_t cost, save::Tile tile)
+        void pay(park::ParkScene& scene, std::int32_t cost, save::model::Tile tile)
         {
             if (scene.park.cash)
                 *scene.park.cash -= cost;
@@ -96,13 +96,13 @@ namespace rct3::scene
         /// The brushes' tab, in its order: those that raise when dragged up, then those that lower when dragged down.
         constexpr std::array kShapeBrushes { rct3::park::ground::GroundShape::Ridge, rct3::park::ground::GroundShape::Mountain, rct3::park::ground::GroundShape::Mesa, rct3::park::ground::GroundShape::Hill, rct3::park::ground::GroundShape::Canyon, rct3::park::ground::GroundShape::Trough, rct3::park::ground::GroundShape::Crater };
 
-        std::uint32_t tile_key(save::Tile t)
+        std::uint32_t tile_key(save::model::Tile t)
         {
             return static_cast<std::uint32_t>(t.row) << 16 | static_cast<std::uint16_t>(t.col);
         }
 
         /// Whether a tool may move the ground of `tile` at all this stroke: owned outright and not refused yet.
-        bool shapeable(const park::ParkScene& scene, save::Tile tile)
+        bool shapeable(const park::ParkScene& scene, save::model::Tile tile)
         {
             return rct3::park::owned_outright(scene.grid.at(tile)) && !scene.land.refused.contains(tile_key(tile));
         }
@@ -137,12 +137,12 @@ namespace rct3::scene
         /// Shapes a copy of the ground `from` with `shape` (which returns what it moved) again until what stands on it lets
         /// every tile it moved go, holding those it refuses for the rest of the stroke. Nothing when a tile refused
         /// still moved.
-        template<typename Shape> std::optional<std::pair<save::TerrainGrid, float>> try_shape(park::ParkScene& scene, const save::TerrainGrid& from, Shape&& shape)
+        template<typename Shape> std::optional<std::pair<save::model::TerrainGrid, float>> try_shape(park::ParkScene& scene, const save::model::TerrainGrid& from, Shape&& shape)
         {
             LandTools& l = scene.land;
             for (;;)
             {
-                save::TerrainGrid trial = from;
+                save::model::TerrainGrid trial = from;
                 const float moved = shape(trial);
                 bool again = false;
                 for (int r = 0; r < trial.height; ++r)
@@ -171,7 +171,7 @@ namespace rct3::scene
         }
 
         /// Takes on the shaped ground `trial`, the scenery on it following.
-        void take_ground(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, save::TerrainGrid trial, bool drain = true)
+        void take_ground(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::TerrainGrid trial, bool drain = true)
         {
             LandTools& l = scene.land;
             // The meshes built beside the frame read the ground.
@@ -182,15 +182,15 @@ namespace rct3::scene
             }
             if (scene.people_build.valid())
                 scene.people_build.wait();
-            const save::TerrainGrid was = std::exchange(scene.grid, std::move(trial));
-            std::optional<std::array<save::Tile, 2>> step;
+            const save::model::TerrainGrid was = std::exchange(scene.grid, std::move(trial));
+            std::optional<std::array<save::model::Tile, 2>> step;
             for (int r = 0; r < was.height; ++r)
                 for (int c = 0; c < was.width; ++c)
                 {
                     if (scene.grid.at(c, r).corners == was.at(c, r).corners)
                         continue;
                     if (!step)
-                        step = std::array { save::Tile { c, r }, save::Tile { c, r } };
+                        step = std::array { save::model::Tile { c, r }, save::model::Tile { c, r } };
                     (*step)[0] = { std::min((*step)[0].col, c), std::min((*step)[0].row, r) };
                     (*step)[1] = { std::max((*step)[1].col, c), std::max((*step)[1].row, r) };
                 }
@@ -215,7 +215,7 @@ namespace rct3::scene
             // Items standing at the ground's height are drawn there once built again; the stroke's end seats them all.
             constexpr int kWidest = 4; // Tiles an item reaches from the one it stands on
             const auto near = [&](std::size_t i) {
-                const save::PlacedObject& o = scene.objects[i];
+                const save::model::PlacedObject& o = scene.objects[i];
                 return o.col + kWidest >= (*step)[0].col && o.col - kWidest <= (*step)[1].col && o.row + kWidest >= (*step)[0].row && o.row - kWidest <= (*step)[1].row;
             };
             if (std::ranges::any_of(l.holds.followers, near))
@@ -228,15 +228,15 @@ namespace rct3::scene
         /// The tiles a tile tool works on with the pointer at `spot`, from the first to the last, and the part.
         struct TileTarget
         {
-            save::Tile first;
-            save::Tile last;
+            save::model::Tile first;
+            save::model::Tile last;
             rct3::park::TilePart part = rct3::park::TilePart::Whole;
         };
         std::optional<TileTarget> tile_target(const park::ParkScene& scene, std::optional<glm::vec2> spot)
         {
             if (!spot)
                 return std::nullopt;
-            const save::Tile tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+            const save::model::Tile tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
             if (!scene.grid.contains(tile.col, tile.row))
                 return std::nullopt;
             // The first of each pair works on one tile, the second on the brush's square.
@@ -244,7 +244,7 @@ namespace rct3::scene
                 return TileTarget { tile, tile, rct3::park::part_at({ spot->x - static_cast<float>(tile.col), spot->y - static_cast<float>(tile.row) }) };
             const auto tiles = rct3::park::ground::brush_tiles(tile, scene.land.brush, false, scene.grid.width, scene.grid.height);
             TileTarget t { tile, tile };
-            for (const save::Tile s : tiles)
+            for (const save::model::Tile s : tiles)
             {
                 t.first = { std::min(t.first.col, s.col), std::min(t.first.row, s.row) };
                 t.last = { std::max(t.last.col, s.col), std::max(t.last.row, s.row) };
@@ -270,7 +270,7 @@ namespace rct3::scene
             const float amount = std::round((l.press_y - at.y) / rct3::park::kSlopeDragStep * 4) / 4; // In quarter units
             if (amount == l.amount)
                 return;
-            auto trial = try_shape(scene, scene.grid, [&](save::TerrainGrid& g) { return rct3::park::shape_tiles(g, l.stroke, kTileShapings[l.tile_tool / 2], amount, [&](save::Tile t) { return shapeable(scene, t); }); });
+            auto trial = try_shape(scene, scene.grid, [&](save::model::TerrainGrid& g) { return rct3::park::shape_tiles(g, l.stroke, kTileShapings[l.tile_tool / 2], amount, [&](save::model::Tile t) { return shapeable(scene, t); }); });
             if (!trial)
                 return;
             const float moved = trial->second;
@@ -289,7 +289,7 @@ namespace rct3::scene
             LandTools& l = scene.land;
             rct3::park::TerrainMesh mesh;
             const auto spot = over ? std::nullopt : ground_spot(scene, at, size);
-            const auto whole = [&](save::Tile t) { rct3::park::tile_marks(mesh, scene.grid, t.col, t.row, t.col, t.row, rct3::park::TilePart::Whole, kMarkColour); };
+            const auto whole = [&](save::model::Tile t) { rct3::park::tile_marks(mesh, scene.grid, t.col, t.row, t.col, t.row, rct3::park::TilePart::Whole, kMarkColour); };
             const bool tiles = l.tool == LandTools::Tool::Shape && !l.smoothing && !l.shape;
             if (tiles && l.tile)
                 rct3::park::tile_marks(mesh, scene.grid, l.stroke.col0, l.stroke.row0, l.stroke.col1, l.stroke.row1, l.stroke.part, kMarkColour);
@@ -301,18 +301,18 @@ namespace rct3::scene
             else if (l.tool != LandTools::Tool::None)
             {
                 // A raising or lowering stroke stays where it began; the other tools follow the pointer.
-                std::optional<save::Tile> middle = l.tool == LandTools::Tool::Shape && l.shape ? l.tile : std::nullopt;
+                std::optional<save::model::Tile> middle = l.tool == LandTools::Tool::Shape && l.shape ? l.tile : std::nullopt;
                 if (!middle && l.tool == LandTools::Tool::Water && l.tile)
                     middle = l.tile;
                 if (!middle && l.tool == LandTools::Tool::Waterfall && l.upper_lake && !spot)
                     middle = l.upper_tile;
                 if (!middle && spot)
-                    middle = save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+                    middle = save::model::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
                 if (middle && (l.tool == LandTools::Tool::Water || l.tool == LandTools::Tool::Waterfall) && scene.grid.contains(middle->col, middle->row))
                     whole(*middle);
                 else if (middle)
                 {
-                    for (const save::Tile t : rct3::park::ground::brush_tiles(*middle, l.brush, l.tool != LandTools::Tool::Buy, scene.grid.width, scene.grid.height))
+                    for (const save::model::Tile t : rct3::park::ground::brush_tiles(*middle, l.brush, l.tool != LandTools::Tool::Buy, scene.grid.width, scene.grid.height))
                         whole(t);
                 }
             }
@@ -333,7 +333,7 @@ namespace rct3::scene
                 const auto spot = over ? std::nullopt : ground_spot(scene, at, size);
                 if (!spot || !scene.grid.contains(static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y))))
                     return;
-                l.tile = save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+                l.tile = save::model::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
                 l.middle = *spot;
                 l.press_y = at.y;
                 l.amount = 0;
@@ -341,7 +341,7 @@ namespace rct3::scene
                 // Across the view: the camera looks along (sin yaw, cos yaw) over the ground.
                 l.along = { std::cos(scene.camera.yaw), -std::sin(scene.camera.yaw) };
                 start_stroke(scene);
-                l.before = rct3::park::ground::corner_heights(scene.grid, [&](save::Tile t) { return shapeable(scene, t); });
+                l.before = rct3::park::ground::corner_heights(scene.grid, [&](save::model::Tile t) { return shapeable(scene, t); });
             }
             const float steps = (l.press_y - at.y) / rct3::park::kSlopeDragStep;
             // A lowering brush digs as the pointer goes down; the other way, each brush makes its shape upside down.
@@ -349,7 +349,7 @@ namespace rct3::scene
             const float amount = std::round((lowers ? -steps : steps) * 4) / 4; // In quarter units
             if (amount == l.amount)
                 return;
-            auto trial = try_shape(scene, scene.grid, [&](save::TerrainGrid& g) { return rct3::park::ground::shape_ground(g, l.before, *l.shape, l.middle, static_cast<float>(l.brush) / 2, l.along, amount); });
+            auto trial = try_shape(scene, scene.grid, [&](save::model::TerrainGrid& g) { return rct3::park::ground::shape_ground(g, l.before, *l.shape, l.middle, static_cast<float>(l.brush) / 2, l.along, amount); });
             if (!trial)
                 return;
             const float moved = trial->second;
@@ -372,7 +372,7 @@ namespace rct3::scene
             {
                 if (!spot || !scene.grid.contains(static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y))))
                     return;
-                l.tile = save::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+                l.tile = save::model::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
                 start_stroke(scene);
                 l.held = kSmoothPass; // A click smooths once
                 l.target = rct3::park::ground::mean_height(scene.grid, *spot, std::max(reach, 1.0f));
@@ -382,11 +382,11 @@ namespace rct3::scene
             if (tool.level == Level::Pointer)
                 l.target = rct3::park::ground::mean_height(scene.grid, *spot, 1);
             l.held += elapsed;
-            std::optional<save::TerrainGrid> shaped; // By this frame's passes
+            std::optional<save::model::TerrainGrid> shaped; // By this frame's passes
             for (; l.held >= kSmoothPass; l.held -= kSmoothPass)
             {
                 const std::uint64_t seed = ++l.passes;
-                auto trial = try_shape(scene, shaped ? *shaped : scene.grid, [&](save::TerrainGrid& g) { return rct3::park::ground::smooth_ground(g, tool.tool, *spot, reach, kSmoothRate * kSmoothPass, l.target, seed, [&](save::Tile t) { return shapeable(scene, t); }); });
+                auto trial = try_shape(scene, shaped ? *shaped : scene.grid, [&](save::model::TerrainGrid& g) { return rct3::park::ground::smooth_ground(g, tool.tool, *spot, reach, kSmoothRate * kSmoothPass, l.target, seed, [&](save::model::Tile t) { return shapeable(scene, t); }); });
                 if (!trial)
                     continue;
                 const auto cost = static_cast<std::int32_t>(std::lround(trial->second * rct3::park::ground::kShapeCost));
@@ -408,9 +408,9 @@ namespace rct3::scene
             l.tile = tile;
             const std::uint8_t surface = l.cliff ? l.cliffs[*l.cliff].index : l.surfaces[l.surface].index;
             std::optional<rct3::park::TileRect> painted;
-            for (const save::Tile t : rct3::park::ground::brush_tiles(*tile, l.brush, true, scene.grid.width, scene.grid.height))
+            for (const save::model::Tile t : rct3::park::ground::brush_tiles(*tile, l.brush, true, scene.grid.width, scene.grid.height))
             {
-                save::TerrainCell& cell = scene.grid.at(t.col, t.row);
+                save::model::TerrainCell& cell = scene.grid.at(t.col, t.row);
                 std::uint8_t& face = l.cliff ? cell.cliff : cell.surface;
                 if (face == surface || !rct3::park::owned_outright(cell) || !affordable(scene, kPaintCost))
                     continue;
@@ -430,15 +430,15 @@ namespace rct3::scene
 
         /// Fills the lake holding the tile under `top` again at its level, on the ground as it now is, over the tiles
         /// it held and those of `more`; never beyond, so it cannot run out through a gap the ground left.
-        void refit_lake(park::ParkScene& scene, const save::WorldPoint3& top, std::span<const save::CarvedTile> more)
+        void refit_lake(park::ParkScene& scene, const save::model::WorldPoint3& top, std::span<const save::model::CarvedTile> more)
         {
-            const save::TerrainGrid& g = scene.grid;
-            const save::Tile tile { static_cast<int>(std::floor((top.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((top.z - g.origin_z) / g.tile_size_z)) };
-            for (save::WaterBody& b : scene.footpaths.water.bodies)
+            const save::model::TerrainGrid& g = scene.grid;
+            const save::model::Tile tile { static_cast<int>(std::floor((top.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((top.z - g.origin_z) / g.tile_size_z)) };
+            for (save::model::WaterBody& b : scene.footpaths.water.bodies)
             {
                 if (!rct3::park::water::holds(b, tile))
                     continue;
-                const auto within = [&](save::Tile t) { return rct3::park::water::holds(b, t) || std::ranges::any_of(more, [&](const save::CarvedTile& c) { return c.tile.col == t.col && c.tile.row == t.row; }); };
+                const auto within = [&](save::model::Tile t) { return rct3::park::water::holds(b, t) || std::ranges::any_of(more, [&](const save::model::CarvedTile& c) { return c.tile.col == t.col && c.tile.row == t.row; }); };
                 if (auto refilled = rct3::park::water::fill_water(g, tile, b.level, within))
                     b = std::move(*refilled);
                 return;
@@ -451,7 +451,7 @@ namespace rct3::scene
             LandTools& l = scene.land;
             if (l.tile || over || size.x <= 0 || size.y <= 0)
                 return; // Once a press
-            const save::TerrainGrid& g = scene.grid;
+            const save::model::TerrainGrid& g = scene.grid;
             const rct3::park::Ray ray = rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
             const auto distance = rct3::park::object::ground_hit(ray, g);
             if (!distance)
@@ -459,22 +459,22 @@ namespace rct3::scene
             // The water starts on the tile the pointer was over just before meeting the ground: the one in front of
             // a cliff wall clicked, else the one clicked.
             const glm::vec3 front = ray.origin + ray.direction * (*distance - kInFront);
-            const save::Tile tile { static_cast<int>(std::floor((front.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((front.z - g.origin_z) / g.tile_size_z)) };
+            const save::model::Tile tile { static_cast<int>(std::floor((front.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((front.z - g.origin_z) / g.tile_size_z)) };
             if (!g.contains(tile.col, tile.row))
                 return;
             l.tile = tile;
             const float height = ray.origin.y + ray.direction.y * *distance;
             const auto& paths = scene.footpaths.paths;
-            const auto allowed = [&](save::Tile t) { return rct3::park::owned_outright(g.at(t)) && std::ranges::none_of(paths, [&](const save::PathTile& p) { return p.col == t.col && p.row == t.row && !p.elevation; }); };
+            const auto allowed = [&](save::model::Tile t) { return rct3::park::owned_outright(g.at(t)) && std::ranges::none_of(paths, [&](const save::model::PathTile& p) { return p.col == t.col && p.row == t.row && !p.elevation; }); };
             const auto& bodies = scene.footpaths.water.bodies;
-            const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return rct3::park::water::holds(b, *l.tile); });
+            const auto lake = std::ranges::find_if(bodies, [&](const save::model::WaterBody& b) { return rct3::park::water::holds(b, *l.tile); });
             if (lake != bodies.end() && height < lake->level)
             {
                 // The ground clicked is under the lake: the click was on its surface.
                 if (!allowed(*l.tile))
                     return say(scene, kWaterRefused);
                 // Its waterfalls go with it, putting back the ground they cut.
-                save::TerrainGrid ground = g;
+                save::model::TerrainGrid ground = g;
                 rct3::park::water::remove_lake(scene.footpaths.water, scene.footpaths.waterfalls, ground, *l.tile);
                 park::show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &park::ParkParticles::sprays);
                 start_stroke(scene);
@@ -499,10 +499,10 @@ namespace rct3::scene
             const auto spot = over ? std::nullopt : ground_spot(scene, at, size);
             if (!spot)
                 return;
-            const save::Tile tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+            const save::model::Tile tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
             l.tile = tile;
             const auto& bodies = scene.footpaths.water.bodies;
-            const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return rct3::park::water::holds(b, tile); });
+            const auto lake = std::ranges::find_if(bodies, [&](const save::model::WaterBody& b) { return rct3::park::water::holds(b, tile); });
             if (lake == bodies.end())
                 return;
             const auto index = static_cast<std::size_t>(lake - bodies.begin());
@@ -516,10 +516,10 @@ namespace rct3::scene
             if (!fall)
                 return say(scene, fall.error());
             // The spillway is cut where nothing holds the ground; the higher lake spreads into it.
-            save::TerrainGrid ground = scene.grid;
+            save::model::TerrainGrid ground = scene.grid;
             rct3::park::cut_spillway(ground, *fall);
             start_stroke(scene);
-            for (const save::CarvedTile& c : fall->carved)
+            for (const save::model::CarvedTile& c : fall->carved)
             {
                 if (rct3::park::ground::refuses(l.holds, c.tile, c.corners, ground.at(c.tile.col, c.tile.row).corners))
                     return say(scene, rct3::park::kWaterfallLandUnsuitable);
@@ -538,16 +538,16 @@ namespace rct3::scene
         {
             simulation::keep_staff_in(scene.sim, scene.grid);
             wait_for_build(scene);
-            for (save::PlacedObject& o : scene.objects)
+            for (save::model::PlacedObject& o : scene.objects)
                 if (std::ranges::contains(scene.fence_panels, o.id))
                     o.hidden = true;
             scene.fence_panels.clear();
-            const save::Park& park = scene.park_model.park;
+            const save::model::Park& park = scene.park_model.park;
             rct3::park::BoundaryFence fence = rct3::park::boundary_fence(park.fence_symbol, park.fence_overlay, scene.grid, scene.footpaths.paths, last_id(scene));
             if (!fence.pieces.empty() && load_object_model(scene, scene.placing.models, assets, fence.pieces.front()))
             {
                 const auto& colours = scene.models.at(rct3::park::object::model_key(fence.pieces.front())).default_colours;
-                for (save::PlacedObject& panel : fence.pieces)
+                for (save::model::PlacedObject& panel : fence.pieces)
                 {
                     panel.colours = colours;
                     scene.fence_panels.push_back(panel.id);
@@ -565,11 +565,11 @@ namespace rct3::scene
             const auto spot = over ? std::nullopt : ground_spot(scene, at, size);
             if (!spot)
                 return;
-            const save::Tile tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+            const save::model::Tile tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
             if (l.tile == tile || !scene.grid.contains(tile.col, tile.row))
                 return;
             l.tile = tile;
-            const save::Finance& prices = scene.park_model.finance;
+            const save::model::Finance& prices = scene.park_model.finance;
             const std::int32_t price = l.buying == rct3::park::LandBuy::Land ? prices.land_buy_cost : prices.rights_buy_cost;
             const rct3::park::LandBought bought = rct3::park::buy_land(scene.grid, rct3::park::ground::brush_tiles(tile, l.brush, false, scene.grid.width, scene.grid.height), l.buying, price, scene.park.cash);
             if (bought.short_of_cash)
@@ -703,24 +703,24 @@ namespace rct3::scene
         const auto spot = ground_spot(scene, at, size);
         if (!spot)
             return false;
-        const save::TerrainGrid& g = scene.grid;
+        const save::model::TerrainGrid& g = scene.grid;
         auto& falls = scene.footpaths.waterfalls;
         const auto fall = rct3::park::waterfall_at(falls, g.origin_x + spot->x * g.tile_size_x, g.origin_z + spot->y * g.tile_size_z);
         if (!fall)
             return false;
-        const save::Waterfall& f = falls[*fall];
+        const save::model::Waterfall& f = falls[*fall];
         const auto col = static_cast<int>(std::floor(((f.lip_left.x + f.lip_right.x) / 2 - g.origin_x) / g.tile_size_x - f.flow.x / 2));
         const auto row = static_cast<int>(std::floor(((f.lip_left.z + f.lip_right.z) / 2 - g.origin_z) / g.tile_size_z - f.flow.z / 2));
         // The ground its spillway was cut from goes back, so must be the park's.
-        const auto owned = [&](save::Tile t) { return !g.contains(t.col, t.row) || rct3::park::owned_outright(g.at(t.col, t.row)); };
-        if (!owned({ col, row }) || !std::ranges::all_of(f.carved, [&](const save::CarvedTile& c) { return owned(c.tile); }))
+        const auto owned = [&](save::model::Tile t) { return !g.contains(t.col, t.row) || rct3::park::owned_outright(g.at(t.col, t.row)); };
+        if (!owned({ col, row }) || !std::ranges::all_of(f.carved, [&](const save::model::CarvedTile& c) { return owned(c.tile); }))
         {
             say(scene, rct3::park::kWaterfallDeleteNotOwned);
             return true;
         }
-        save::TerrainGrid ground = g;
+        save::model::TerrainGrid ground = g;
         rct3::park::restore_spillway(ground, f);
-        const save::WorldPoint3 top = f.top;
+        const save::model::WorldPoint3 top = f.top;
         falls.erase(falls.begin() + static_cast<std::ptrdiff_t>(*fall));
         park::show_park_particles(scene.particles, rct3::park::waterfall_spray(falls), &park::ParkParticles::sprays);
         start_stroke(scene);

@@ -21,7 +21,7 @@ namespace rct3::park
             int z = 0;
         };
 
-        std::vector<EdgePoint> edge_points(const save::TerrainGrid& g)
+        std::vector<EdgePoint> edge_points(const save::model::TerrainGrid& g)
         {
             std::vector<EdgePoint> out;
             out.reserve(static_cast<std::size_t>(2 * (g.width + g.height)));
@@ -45,14 +45,14 @@ namespace rct3::park
             int corner = 0;
         };
 
-        EdgeCorner edge_corner(const save::TerrainGrid& g, EdgePoint p)
+        EdgeCorner edge_corner(const save::model::TerrainGrid& g, EdgePoint p)
         {
             const int col = std::clamp(p.x, 0, g.width - 1);
             const int row = std::clamp(p.z, 0, g.height - 1);
             return { col, row, (p.x - col) + 2 * (p.z - row) };
         }
 
-        float edge_height(const save::TerrainGrid& g, EdgePoint p)
+        float edge_height(const save::model::TerrainGrid& g, EdgePoint p)
         {
             const EdgeCorner c = edge_corner(g, p);
             return g.at(c.col, c.row).corners.at(static_cast<std::size_t>(c.corner));
@@ -90,18 +90,18 @@ namespace rct3::park
             return out;
         }
 
-        bool whole(const save::TerrainGrid& g)
+        bool whole(const save::model::TerrainGrid& g)
         {
             return !g.empty() && g.cells.size() == static_cast<std::size_t>(g.width) * static_cast<std::size_t>(g.height);
         }
 
         /// For each point of `edge`, the level of the water on its tile when that stands over the point's ground;
         /// NaN elsewhere.
-        std::vector<float> sea_levels(const save::TerrainGrid& g, const std::vector<EdgePoint>& edge, const save::WaterLayer& water)
+        std::vector<float> sea_levels(const save::model::TerrainGrid& g, const std::vector<EdgePoint>& edge, const save::model::WaterLayer& water)
         {
             std::map<std::pair<int, int>, float> on_edge; // Highest water on each edge tile
-            for (const save::WaterBody& body : water.bodies)
-                for (const save::WaterTri& t : body.tris)
+            for (const save::model::WaterBody& body : water.bodies)
+                for (const save::model::WaterTri& t : body.tris)
                     if (g.contains(t.col, t.row) && (t.col == 0 || t.row == 0 || t.col == g.width - 1 || t.row == g.height - 1))
                     {
                         auto [it, _] = on_edge.try_emplace({ t.col, t.row }, body.level);
@@ -119,7 +119,7 @@ namespace rct3::park
 
     } // namespace
 
-    float edge_level(const save::TerrainGrid& grid)
+    float edge_level(const save::model::TerrainGrid& grid)
     {
         if (!whole(grid))
             return 0;
@@ -130,7 +130,7 @@ namespace rct3::park
         return sum / static_cast<float>(edge.size());
     }
 
-    LandRings land_rings(const save::TerrainGrid& grid, const save::WaterLayer& water)
+    LandRings land_rings(const save::model::TerrainGrid& grid, const save::model::WaterLayer& water)
     {
         LandRings out;
         if (!whole(grid))
@@ -175,7 +175,7 @@ namespace rct3::park
         return out;
     }
 
-    std::optional<float> land_height(const LandRings& rings, const save::TerrainGrid& grid, float x, float z)
+    std::optional<float> land_height(const LandRings& rings, const save::model::TerrainGrid& grid, float x, float z)
     {
         if (rings.points == 0 || rings.distances.size() < 2 || !whole(grid))
             return std::nullopt;
@@ -220,7 +220,7 @@ namespace rct3::park
         return ground;
     }
 
-    TerrainMesh surrounding_land(const save::TerrainGrid& grid, const save::WaterLayer& water)
+    TerrainMesh surrounding_land(const save::model::TerrainGrid& grid, const save::model::WaterLayer& water)
     {
         TerrainMesh mesh;
         if (!whole(grid))

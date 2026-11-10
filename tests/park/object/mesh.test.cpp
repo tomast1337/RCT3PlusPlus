@@ -12,9 +12,9 @@ using namespace rct3::park::object;
 
 namespace
 {
-    save::TerrainGrid flat()
+    save::model::TerrainGrid flat()
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = 2;
         g.height = 1;
         g.tile_size_x = 4;
@@ -33,9 +33,9 @@ namespace
         return p;
     }
 
-    save::PlacedObject placed_object(std::string symbol, int col)
+    save::model::PlacedObject placed_object(std::string symbol, int col)
     {
-        save::PlacedObject o;
+        save::model::PlacedObject o;
         o.id = 1;
         o.owner_ref = 1;
         o.symbol = std::move(symbol);
@@ -56,9 +56,9 @@ TEST_CASE("objects are placed and batched by blending, then picture")
     models.emplace("Things/Things|Tree", tree);
     models.emplace("Things/Things|Glass", glass);
 
-    save::PlacedObject hidden = placed_object("Tree", 0);
+    save::model::PlacedObject hidden = placed_object("Tree", 0);
     hidden.hidden = true;
-    const std::vector<save::PlacedObject> objects { placed_object("Tree", 0), placed_object("Glass", 1), placed_object("Rock", 1), hidden };
+    const std::vector<save::model::PlacedObject> objects { placed_object("Tree", 0), placed_object("Glass", 1), placed_object("Rock", 1), hidden };
     const ObjectMesh m = object_mesh(objects, models, flat());
     CHECK(m.placed == 2);
     CHECK(m.missing == 1);
@@ -104,16 +104,16 @@ TEST_CASE("objects in other colours get their own batches and paintings")
     model.levels = { { 100, { wall }, { } } };
     models.emplace("Things/Things|Wall", model);
 
-    save::PlacedObject grey = placed_object("Wall", 0);
+    save::model::PlacedObject grey = placed_object("Wall", 0);
     grey.colours = { 1, 27, 4 };
-    save::PlacedObject same = placed_object("Wall", 1);
+    save::model::PlacedObject same = placed_object("Wall", 1);
     same.colours = { 1, 5, 9 }; // Only slot 0 is used, so this paints alike
-    save::PlacedObject red = placed_object("Wall", 1);
+    save::model::PlacedObject red = placed_object("Wall", 1);
     red.colours = { 27, 27, 1 };
     red.id = 2;
-    save::PlacedObject custom = placed_object("Wall", 1);
+    save::model::PlacedObject custom = placed_object("Wall", 1);
     custom.id = 3;
-    const std::vector<save::PlacedObject> objects { grey, same, red, custom };
+    const std::vector<save::model::PlacedObject> objects { grey, same, red, custom };
     const ColourOverrides overrides { { 3, { Rgb { 0x12, 0x34, 0x56 }, Rgb { 1, 1, 1 }, Rgb { } } } };
     const ObjectMesh m = object_mesh(objects, models, flat(), { }, overrides);
     // Grey is colour 1, red colour 27; batches come in name order.
@@ -194,10 +194,10 @@ TEST_CASE("objects are drawn at the level their distance calls for")
 {
     ObjectModels models;
     models.emplace("Things/Things|Tree", three_levels());
-    save::PlacedObject near = placed_object("Tree", 0);
-    save::PlacedObject hidden = placed_object("Tree", 0);
+    save::model::PlacedObject near = placed_object("Tree", 0);
+    save::model::PlacedObject hidden = placed_object("Tree", 0);
     hidden.hidden = true;
-    const std::vector<save::PlacedObject> objects { near, placed_object("Rock", 0), hidden };
+    const std::vector<save::model::PlacedObject> objects { near, placed_object("Rock", 0), hidden };
     const std::vector<glm::vec3> anchors = object_anchors(objects, models, flat());
     REQUIRE(anchors.size() == 3);
     CHECK(anchors[0] == glm::vec3(2, 0, 2));
@@ -218,7 +218,7 @@ TEST_CASE("billboards stand on their anchor facing the viewer")
 {
     ObjectModels models;
     models.emplace("Things/Things|Tree", three_levels());
-    const std::vector<save::PlacedObject> objects { placed_object("Tree", 0) };
+    const std::vector<save::model::PlacedObject> objects { placed_object("Tree", 0) };
     const std::vector<glm::vec3> anchors { { 2, 1, 2 } };
     const ObjectMesh m = billboard_mesh(objects, models, anchors, ObjectLevels { 2 }, { 2, 1, 100 });
     REQUIRE(m.batches.size() == 1);
@@ -246,7 +246,7 @@ TEST_CASE("gathered billboards turn again to each new viewer")
 {
     ObjectModels models;
     models.emplace("Things/Things|Tree", three_levels());
-    const std::vector<save::PlacedObject> objects { placed_object("Tree", 0), placed_object("Tree", 1) };
+    const std::vector<save::model::PlacedObject> objects { placed_object("Tree", 0), placed_object("Tree", 1) };
     const std::vector<glm::vec3> anchors { { 2, 1, 2 }, { 8, 0, 2 } };
     Billboards boards = gather_billboards(objects, models, anchors, ObjectLevels { 2, 2 });
     REQUIRE(boards.stands.size() == 2);
@@ -272,7 +272,7 @@ TEST_CASE("a leaning object's points rise with their distance from its anchor")
     ObjectModel panel;
     panel.levels = { { 100, { triangle("rail", PartBlend::Opaque) }, { } } };
     models.emplace("Things/Things|Rail", panel);
-    const std::vector<save::PlacedObject> objects { placed_object("Rail", 0) };
+    const std::vector<save::model::PlacedObject> objects { placed_object("Rail", 0) };
     const Leans leans { { 1, glm::vec2(0.25f, 0.5f) } };
     const ObjectMesh m = object_mesh(objects, models, flat(), { }, { }, leans);
     REQUIRE(m.vertices.size() == 3);
@@ -291,7 +291,7 @@ TEST_CASE("objects near the edge of a level are drawn at both levels, crossing o
 {
     ObjectModels models;
     models.emplace("Things/Things|Tree", three_levels()); // Levels reach 10, 50 and 200
-    const std::vector<save::PlacedObject> objects { placed_object("Tree", 0) };
+    const std::vector<save::model::PlacedObject> objects { placed_object("Tree", 0) };
     const std::vector<glm::vec3> anchors = object_anchors(objects, models, flat());
     const auto plan = [&](float distance) { return plan_levels(objects, models, anchors, anchors[0] + glm::vec3(0, 0, distance), 0.2f); };
 
@@ -327,7 +327,7 @@ TEST_CASE("each vertex of a mesh knows the object it belongs to")
 {
     ObjectModels models;
     models.emplace("Things/Things|Tree", three_levels());
-    const std::vector<save::PlacedObject> objects { placed_object("Rock", 0), placed_object("Tree", 0), placed_object("Tree", 1) };
+    const std::vector<save::model::PlacedObject> objects { placed_object("Rock", 0), placed_object("Tree", 0), placed_object("Tree", 1) };
     const ObjectMesh mesh = object_mesh(objects, models, flat());
     CHECK(mesh.owners == std::vector<std::uint32_t> { 1, 1, 1, 2, 2, 2 });
     const std::vector<glm::vec3> anchors = object_anchors(objects, models, flat());
@@ -342,7 +342,7 @@ TEST_CASE("one-sided parts get batches of their own, apart from two-sided ones i
     shell.one_sided = true;
     slide.levels = { { 100, { shell, triangle("slide", PartBlend::Opaque) }, { } } };
     models.emplace("Things/Things|Slide", slide);
-    const std::vector<save::PlacedObject> objects { placed_object("Slide", 0) };
+    const std::vector<save::model::PlacedObject> objects { placed_object("Slide", 0) };
     const ObjectMesh m = object_mesh(objects, models, flat());
     REQUIRE(m.batches.size() == 2);
     CHECK(m.batches[0].texture == m.batches[1].texture);
@@ -361,11 +361,11 @@ TEST_CASE("parts painted like the ground take the pictures of the tile they stan
     block.levels = { { 100, { top, side }, { } } };
     models.emplace("Things/Things|Block", block);
 
-    save::TerrainGrid grid = flat();
+    save::model::TerrainGrid grid = flat();
     grid.at(0, 0).surface = 3;
     grid.at(1, 0).surface = 5;
     grid.at(1, 0).cliff = 2;
-    const std::vector<save::PlacedObject> objects { placed_object("Block", 0), placed_object("Block", 1) };
+    const std::vector<save::model::PlacedObject> objects { placed_object("Block", 0), placed_object("Block", 1) };
     const ObjectMesh m = object_mesh(objects, models, grid);
 
     std::vector<std::string> textures;

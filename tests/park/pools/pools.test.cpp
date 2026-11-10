@@ -302,7 +302,7 @@ TEST_CASE("pools: a high diving board's boards are named by the first of the thr
 {
     // Water at the next column: the boards lie along the columns, the tower's square in their middle.
     const PoolMap map { { { .col = 5, .row = 7, .kind = PoolKind::HighDive, .surface = 0, .depth = 2, .board = 6, .side = Side { 1 } } } };
-    for (const save::PlacedObject& o : pool_objects(map, "Pools/Own", 0))
+    for (const save::model::PlacedObject& o : pool_objects(map, "Pools/Own", 0))
     {
         const bool board = o.symbol == "DBMidBoard" || o.symbol == "DBTopBoard";
         CHECK(o.col == (board ? 4 : 5));
@@ -328,7 +328,7 @@ TEST_CASE("pools: a high diving board laid on a water square paves it, walls the
 
 TEST_CASE("pools: a saved high diving board faces the side it keeps, down past water at its own level")
 {
-    save::WorldModel world;
+    save::model::WorldModel world;
     // A raised pool a row back at the tower's level, a low pool in front of it.
     world.pool_segments = {
         { .id = 1, .col = 5, .row = 4, .type = 0, .surface = 16, .depth = 2 },
@@ -344,7 +344,7 @@ TEST_CASE("pools: a saved high diving board faces the side it keeps, down past w
 
 TEST_CASE("pools: saved pool path steps climbing on from steps below have their foot toward them, as the first has toward the path")
 {
-    save::WorldModel world;
+    save::model::WorldModel world;
     // A pool path at row 2, then three flights of steps climbing on along the column, two levels each.
     world.pool_segments = { { .id = 1, .col = 5, .row = 2, .type = 5, .surface = 0 } };
     for (std::int32_t k = 0; k < 3; ++k)
@@ -616,9 +616,9 @@ TEST_CASE("pools: stacked squares are walled and railed by their own level")
 
 TEST_CASE("pools: the ground is dug down to a square's floor and kept, and left under a raised square")
 {
-    save::TerrainGrid grid { .width = 2, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
+    save::model::TerrainGrid grid { .width = 2, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
     grid.cells.resize(2);
-    for (save::TerrainCell& c : grid.cells)
+    for (save::model::TerrainCell& c : grid.cells)
         c.corners = { 5, 5, 6, 5 };
     PoolMap map;
     map.squares = { { .col = 0, .row = 0, .kind = PoolKind::Water, .surface = 5, .depth = 2 }, { .col = 1, .row = 0, .kind = PoolKind::Water, .surface = 16, .depth = 2 } };
@@ -639,7 +639,7 @@ TEST_CASE("pools: the ground is dug down to a square's floor and kept, and left 
 
 TEST_CASE("pools: a park from the game keeps squares stacked on a tile, and the ground those sunk into it dug")
 {
-    save::WorldModel world;
+    save::model::WorldModel world;
     world.pool_segments = {
         { .id = 1, .col = 5, .row = 5, .type = 1, .surface = 3, .depth = 2, .ground = std::array { 0.0f, 0.0f, 0.0f, 0.0f } },
         { .id = 2, .col = 5, .row = 5, .type = 1, .surface = 16, .depth = 2, .ground = std::array { 0.0f, 0.0f, 0.0f, 0.0f } },
@@ -820,13 +820,13 @@ TEST_CASE("pools: a complex is the squares that meet side to side, and the chang
 
 TEST_CASE("pools: a park from the game gives its squares, boards and changing rooms to the pool tool")
 {
-    save::WorldModel world;
+    save::model::WorldModel world;
     world.pool_segments = {
         { .id = 1, .col = 5, .row = 5, .type = 0, .surface = 4, .depth = 2 }, { .id = 2, .col = 5, .row = 6, .type = 3, .surface = 4, .special = 8 }, { .id = 3, .col = 6, .row = 5, .type = 1, .surface = 4, .complex = 2 }, { .id = 4, .col = 4, .row = 5, .type = 4, .surface = 4 }, { .id = 5, .col = 5, .row = 4, .type = 6, .surface = 4 }, { .id = 6, .col = 5, .row = 3, .type = 5, .surface = 4 },
     };
     world.pool_complexes = { { .index = 2, .ticket = 250, .name = "Lido", .wave_height = 5, .wave_frequency = 4, .wave_on = 45, .wave_every = 120 } };
     world.changing_rooms = { { .object_ref = 90, .segment = 3, .open = true, .fluid = 2 } };
-    const std::vector<save::PlacedObject> objects { { .id = 90, .symbol = "Room", .col = 7, .row = 5 } };
+    const std::vector<save::model::PlacedObject> objects { { .id = 90, .symbol = "Room", .col = 7, .row = 5 } };
     const park::pools::PoolMap map = park::pools::saved_pools(world, objects);
     REQUIRE(map.squares.size() == 6);
     CHECK(map.at(5, 5)->kind == park::pools::PoolKind::Water);
@@ -855,12 +855,12 @@ TEST_CASE("pools: a park from the game's own pieces for its squares go, so the s
     // As a park from the game names its pool type: back slashes, any case.
     constexpr std::string_view kSaved = "pool\\type\\Stub";
     // Pieces of the squares, an extra (4) and a piece of another type (5).
-    std::vector<save::PlacedObject> objects {
+    std::vector<save::model::PlacedObject> objects {
         { .id = 1, .symbol = "Base", .overlay = std::string(kSaved), .col = 1, .row = 1 }, { .id = 2, .symbol = "SolidTop", .overlay = std::string(kSaved), .col = 0, .row = 0 }, { .id = 3, .symbol = "Railing", .overlay = std::string(kSaved), .col = 2, .row = 2 }, { .id = 4, .symbol = "Lamp", .overlay = std::string(kSaved), .col = 0, .row = 1 }, { .id = 5, .symbol = "Base", .overlay = "Other/Stub", .col = 1, .row = 1 },
     };
     drop_saved_pool_pieces(map, "Pool/Type/Stub", objects);
     std::vector<std::uint64_t> kept;
-    for (const save::PlacedObject& o : objects)
+    for (const save::model::PlacedObject& o : objects)
         kept.push_back(o.id);
     CHECK(kept == std::vector<std::uint64_t> { 4, 5 });
 }

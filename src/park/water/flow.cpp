@@ -94,14 +94,14 @@ namespace rct3::park::water
             v.uv.y = ends - v.uv.y;
     }
 
-    object::FlowFades flow_fades(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const std::function<bool(std::size_t)>& pool_slides)
+    object::FlowFades flow_fades(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const std::function<bool(std::size_t)>& pool_slides)
     {
         std::map<std::uint64_t, bool> wet;
-        for (const save::Ride& ride : rides.rides)
+        for (const save::model::Ride& ride : rides.rides)
             if (ride.track)
-                for (const save::TrackPiece& piece : ride.track->pieces)
+                for (const save::model::TrackPiece& piece : ride.track->pieces)
                     wet.emplace(piece.scenery, false);
-        for (const save::PlacedObject& o : objects)
+        for (const save::model::PlacedObject& o : objects)
             if (const auto at = wet.find(o.id); at != wet.end())
                 if (const auto model = models.find(object::model_ref(o)); model != models.end())
                     at->second = model->second.flows;
@@ -110,7 +110,7 @@ namespace rct3::park::water
         {
             if (!rides.rides[r].track)
                 continue;
-            const save::Track& track = *rides.rides[r].track;
+            const save::model::Track& track = *rides.rides[r].track;
             const std::size_t count = track.pieces.size();
             const auto wet_at = [&](std::size_t i) { return track.pieces[i].scenery != 0 && wet[track.pieces[i].scenery]; };
             for (std::size_t i = 0; i < count; ++i)

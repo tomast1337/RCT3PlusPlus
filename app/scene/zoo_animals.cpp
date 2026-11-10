@@ -65,9 +65,9 @@ namespace rct3::scene
         scene.drawn_animals.library.emplace(install.root(), folders);
     }
 
-    save::PlacedObject animal_crate()
+    save::model::PlacedObject animal_crate()
     {
-        save::PlacedObject crate;
+        save::model::PlacedObject crate;
         crate.symbol = "Crate01";
         crate.overlay = "WildAnimals/Crates/Crates";
         return crate;
@@ -76,7 +76,7 @@ namespace rct3::scene
     void animals_changed(render::Device& device, park::ParkScene& scene)
     {
         DrawnAnimals& drawn = scene.drawn_animals;
-        save::PlacedObject crate = animal_crate();
+        save::model::PlacedObject crate = animal_crate();
         if (scene.models.contains(rct3::park::object::model_key(crate)))
             park::add_textures(device, scene, rct3::park::moving_meshes(std::span(&crate, 1), scene.models, scene.grid).mesh.batches);
         if (drawn.library)
@@ -114,8 +114,8 @@ namespace rct3::scene
         }
         if (crated != drawn.crated)
         {
-            const save::PlacedObject crate = animal_crate();
-            std::vector<save::PlacedObject> shapes(crated.size(), crate);
+            const save::model::PlacedObject crate = animal_crate();
+            std::vector<save::model::PlacedObject> shapes(crated.size(), crate);
             for (std::size_t i = 0; i < shapes.size(); ++i)
                 shapes[i].id = i + 1;
             drawn.crates = scene.models.contains(rct3::park::object::model_key(crate)) ? rct3::park::moving_meshes(shapes, scene.models, scene.grid) : rct3::park::MovingMeshes { };

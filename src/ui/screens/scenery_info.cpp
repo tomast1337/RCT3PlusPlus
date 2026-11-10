@@ -124,13 +124,13 @@ namespace rct3::ui::screens
         page.title = scenery_name(facts, strings);
         if (tab == SceneryTab::Bin && facts.bin != nullptr)
         {
-            const save::BinState& bin = *facts.bin;
+            const save::model::BinState& bin = *facts.bin;
             const float full = bin.capacity > 0 ? std::clamp(bin.contents / bin.capacity, 0.0f, 1.0f) : 0.0f;
             page.lines.push_back({ std::u16string(strings.get(kAmountFull)), ascii(std::format("{}%", std::lround(full * kPercent))), false, std::string(kAmountFull) });
             std::u16string emptied(strings.get(kNeverEmptied));
             if (bin.last_emptied)
             {
-                const save::CalendarDate date = save::GameClock::date_at(*bin.last_emptied, facts.zero_time);
+                const save::model::CalendarDate date = save::model::GameClock::date_at(*bin.last_emptied, facts.zero_time);
                 emptied = std::u16string(strings.get(std::format("{}{}", kMonth, date.month)));
                 emptied += u", ";
                 emptied += strings.get(kYear);

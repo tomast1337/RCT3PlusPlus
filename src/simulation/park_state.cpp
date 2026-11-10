@@ -10,7 +10,7 @@
 namespace rct3::simulation
 {
 
-    ParkState park_state(const save::ParkModel* park, const save::WorldModel& world)
+    ParkState park_state(const save::model::ParkModel* park, const save::model::WorldModel& world)
     {
         ParkState s;
         if (park != nullptr)
@@ -32,8 +32,8 @@ namespace rct3::simulation
                 if (const auto guests = park->park.guests_in_park.latest())
                     s.guests = static_cast<std::int32_t>(std::lround(*guests));
                 if (const auto rating = park->park.rating())
-                    s.rating = *rating / save::kMaxParkRating;
-                s.harder_rating = park->park.flags.has(save::ParkFlag::HarderRating);
+                    s.rating = *rating / save::model::kMaxParkRating;
+                s.harder_rating = park->park.flags.has(save::model::ParkFlag::HarderRating);
             }
             s.messages = park_messages(park->messages);
         }
@@ -55,7 +55,7 @@ namespace rct3::simulation
     {
         std::int64_t week_of(float time, float zero_time) noexcept
         {
-            return static_cast<std::int64_t>(std::floor((time - zero_time) / save::GameClock::kUnitsPerWeek));
+            return static_cast<std::int64_t>(std::floor((time - zero_time) / save::model::GameClock::kUnitsPerWeek));
         }
     } // namespace
 
@@ -65,11 +65,11 @@ namespace rct3::simulation
             return 0;
         const std::int64_t before = week_of(state.time, state.zero_time);
         state.time += seconds / kSecondsPerHour * kCalendarUnitsPerHour;
-        state.date = save::GameClock::date_at(state.time, state.zero_time);
+        state.date = save::model::GameClock::date_at(state.time, state.zero_time);
         return static_cast<std::int32_t>(std::max<std::int64_t>(0, week_of(state.time, state.zero_time) - before));
     }
 
-    void rate_week(ParkState& state, const save::PeopleModel& people, const save::RideModel& rides, std::optional<std::int32_t> old_litter)
+    void rate_week(ParkState& state, const save::model::PeopleModel& people, const save::model::RideModel& rides, std::optional<std::int32_t> old_litter)
     {
         RatingInput in = rating_input(people, rides, state.time);
         if (old_litter)
@@ -84,7 +84,7 @@ namespace rct3::simulation
 
     Weather guest_weather(const ParkState& state)
     {
-        using enum save::WeatherType;
+        using enum save::model::WeatherType;
         // A snowstorm keeps guests in as a thunderstorm does.
         const bool storm = state.weather == Thunderstorm || state.weather == Snowstorm;
         return { .rain = storm || state.weather == LightRain || state.weather == HeavyRain, .storm = storm, .sunny = state.weather == Sunny || state.weather == SunnyCloudy, .temperature = { state.temperature.value_or(Weather { }.temperature.value) } };

@@ -22,21 +22,21 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     // The blob decoders take any bytes: run them on the raw input, and on the same input shifted by one.
     for (const auto view : { bytes, bytes.empty() ? bytes : bytes.subspan(1) })
     {
-        if (const auto g = rct3::save::decode_terrain(view))
+        if (const auto g = rct3::save::model::decode_terrain(view))
         {
             if (g->cells.size() != static_cast<std::size_t>(g->width) * static_cast<std::size_t>(g->height))
                 __builtin_trap();
-            if (g->cells.size() > rct3::save::kMaxTerrainCells)
+            if (g->cells.size() > rct3::save::model::kMaxTerrainCells)
                 __builtin_trap();
             (void)g->height_at(0.0f, 0.0f);
             (void)g->height_bilinear_at(g->origin_x + 1.0f, g->origin_z + 1.0f);
         }
-        if (const auto w = rct3::save::decode_water(view))
+        if (const auto w = rct3::save::model::decode_water(view))
         {
             if (w->triangle_count() * 4 + w->bodies.size() * 8 + 6 != view.size())
                 __builtin_trap();
         }
-        if (const auto t = rct3::save::decode_skirt_trees(view))
+        if (const auto t = rct3::save::model::decode_skirt_trees(view))
         {
             if (t->size() * 20 + 4 != view.size())
                 __builtin_trap();
@@ -97,7 +97,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     }
     // BEGIN park: the park loader accepts everything that decodes and yields a self-consistent model.
     {
-        const auto model = rct3::save::load_park(*file, index);
+        const auto model = rct3::save::model::load_park(*file, index);
         if (!model)
             __builtin_trap();
         if (model->messages.ordered.size() > model->messages.ring_size)
@@ -111,23 +111,23 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
             if (e.overlay_stem.empty())
                 __builtin_trap();
         }
-        (void)rct3::save::validate(*model);
+        (void)rct3::save::model::validate(*model);
     }
     // END park
 
     // --- people model loader (begin) ---
     // Must accept anything the decoder accepted, and its validation must terminate without trapping.
     {
-        const auto people = rct3::save::load_people(*file, index);
+        const auto people = rct3::save::model::load_people(*file, index);
         if (!people)
             __builtin_trap();
-        (void)rct3::save::validate(*people);
+        (void)rct3::save::model::validate(*people);
     }
     // --- people model loader (end) ---
 
     // ---- world model fuzz block begin ----
     // The loader never fails on a file whose objects all decode; its parts must stay consistent.
-    const auto world = rct3::save::load_world(*file, index);
+    const auto world = rct3::save::model::load_world(*file, index);
     if (!world)
         __builtin_trap();
     if (world->terrain.cells.size() != static_cast<std::size_t>(world->terrain.width) * static_cast<std::size_t>(world->terrain.height))
@@ -136,12 +136,12 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         __builtin_trap();
     // ---- world model fuzz block end ----
     // The tutorial loader takes whatever decodes.
-    if (!rct3::save::load_tutorial(*file))
+    if (!rct3::save::model::load_tutorial(*file))
         __builtin_trap();
     // --- rides: begin ---
     // The ride loader must accept anything that decodes, with every walk bounded by the input.
     {
-        const auto model = rct3::save::load_rides(*file, index);
+        const auto model = rct3::save::model::load_rides(*file, index);
         if (!model)
             __builtin_trap();
         std::size_t pieces = 0;

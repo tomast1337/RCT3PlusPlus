@@ -49,7 +49,7 @@ namespace rct3::ui::screens
         std::array<std::string, 4> picked_speed_icons;
         std::string thumb_down;
         std::string thumb_up;
-        /// One for each kind of weather, in the order of save::WeatherType.
+        /// One for each kind of weather, in the order of save::model::WeatherType.
         std::array<std::string, 7> weather_icons;
         std::string forecast_arrow;
         /// The day's modes, in the order of simulation::DayMode.
@@ -71,9 +71,9 @@ namespace rct3::ui::screens
         std::optional<float> rating; ///< 0 to 1; no bar without one
         std::u16string rating_help;  ///< The rating's tooltip: its number, and its parts once a week has been rated
         std::u16string temperature;
-        save::WeatherType weather = save::WeatherType::Unknown;
+        save::model::WeatherType weather = save::model::WeatherType::Unknown;
         /// The weather on its way, shown after an arrow; nothing when it stays the same.
-        std::optional<save::WeatherType> forecast;
+        std::optional<save::model::WeatherType> forecast;
         std::u16string date;
         /// The day's mode, when the player may change it; nothing hides the day mode button.
         std::optional<simulation::DayMode> day_mode;

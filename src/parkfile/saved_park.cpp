@@ -35,20 +35,20 @@ namespace rct3::parkfile
         constexpr std::uint32_t kChunks = 10;
     } // namespace
 
-    std::vector<save::PlacedObject> kept_objects(std::span<const save::PlacedObject> objects, std::size_t own, const std::unordered_set<std::uint64_t>& placed, std::span<const save::PathTile> paths, const save::RideModel& rides)
+    std::vector<save::model::PlacedObject> kept_objects(std::span<const save::model::PlacedObject> objects, std::size_t own, const std::unordered_set<std::uint64_t>& placed, std::span<const save::model::PathTile> paths, const save::model::RideModel& rides)
     {
         std::unordered_set<std::uint64_t> built = placed;
         // A station piece's platform model is owned by its platform record, which the ride keeps.
         std::unordered_set<std::uint64_t> platforms;
-        for (const save::PathTile& p : paths)
+        for (const save::model::PathTile& p : paths)
         {
             if (p.elevation)
                 built.insert(p.elevation->scenery_ref);
         }
-        for (const save::Ride& ride : rides.rides)
+        for (const save::model::Ride& ride : rides.rides)
         {
             if (ride.track)
-                for (const save::TrackPiece& piece : ride.track->pieces)
+                for (const save::model::TrackPiece& piece : ride.track->pieces)
                 {
                     built.insert(piece.scenery);
                     if (piece.platform)
@@ -56,17 +56,17 @@ namespace rct3::parkfile
                 }
             if (ride.base.spot)
                 built.insert(ride.base.spot->object);
-            for (const save::Station& station : ride.stations)
+            for (const save::model::Station& station : ride.stations)
                 for (const auto& spot : { station.entrance_spot, station.exit_spot })
                     if (spot)
                         built.insert(spot->object);
         }
-        for (const save::Stall& stall : rides.stalls)
+        for (const save::model::Stall& stall : rides.stalls)
         {
             if (stall.base.spot)
                 built.insert(stall.base.spot->object);
         }
-        std::vector<save::PlacedObject> kept;
+        std::vector<save::model::PlacedObject> kept;
         for (std::size_t i = 0; i < objects.size(); ++i)
         {
             if (i < own || built.contains(objects[i].id) || platforms.contains(objects[i].owner_ref))
@@ -75,13 +75,13 @@ namespace rct3::parkfile
         return kept;
     }
 
-    save::Cash kept_cash(const simulation::Wallet& wallet)
+    save::model::Cash kept_cash(const simulation::Wallet& wallet)
     {
         const auto i32 = [](simulation::Money m) { return static_cast<std::int32_t>(std::clamp<std::int64_t>(m.value, std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max())); };
         return { .bank = i32(wallet.bank), .current = i32(wallet.cash), .withdrawn = i32(wallet.withdrawn), .spent_drink = i32(wallet.spent_drink), .spent_food = i32(wallet.spent_food), .spent_park_entry = i32(wallet.spent_entry), .spent_rides = i32(wallet.spent_rides), .spent_souvenirs = i32(wallet.spent_souvenirs), .total_spent = i32(wallet.spent) };
     }
 
-    SavedPeople keep_people(const simulation::SimWorld& world, save::PeopleModel model, const std::unordered_map<entt::entity, std::int32_t>& looks)
+    SavedPeople keep_people(const simulation::SimWorld& world, save::model::PeopleModel model, const std::unordered_map<entt::entity, std::int32_t>& looks)
     {
         using namespace simulation;
         const entt::registry& r = world.registry;
@@ -152,7 +152,7 @@ namespace rct3::parkfile
             Wallet& wallet = r.emplace<Wallet>(e, g.cash);
             if (g.look >= 0 && static_cast<std::size_t>(g.look) < people.model.guests.size())
             {
-                const save::Cash& c = people.model.guests[static_cast<std::size_t>(g.look)].cash;
+                const save::model::Cash& c = people.model.guests[static_cast<std::size_t>(g.look)].cash;
                 wallet = { .cash = { g.cash }, .bank = { c.bank }, .withdrawn = { c.withdrawn }, .spent = { c.total_spent }, .spent_entry = { c.spent_park_entry }, .spent_rides = { c.spent_rides }, .spent_food = { c.spent_food }, .spent_drink = { c.spent_drink }, .spent_souvenirs = { c.spent_souvenirs } };
             }
             if (g.taste)
@@ -255,7 +255,7 @@ namespace rct3::parkfile
         return out;
     }
 
-    SavedAnimals keep_animals(const simulation::SimWorld& world, save::EnclosureMap enclosures)
+    SavedAnimals keep_animals(const simulation::SimWorld& world, save::model::EnclosureMap enclosures)
     {
         using namespace simulation;
         const entt::registry& r = world.registry;
@@ -394,7 +394,7 @@ namespace rct3::parkfile
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 auto read = get_chunk(tag, body, park.shows.emplace());
                 // A place naming no trick is dropped, so the show's places can be looked up unchecked.
-                for (save::RideShow& show : *park.shows)
+                for (save::model::RideShow& show : *park.shows)
                     std::erase_if(show.order, [&](std::uint32_t t) { return t >= show.tricks.size(); });
                 return read;
             }

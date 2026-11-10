@@ -23,7 +23,7 @@ namespace rct3::park
 
     /// The stall's arrow: on tile (`col`, `row`) of `grid` at `height`, across its `side`. Its picture's bottom
     /// edge is the arrow's head. One batch.
-    [[nodiscard]] TerrainMesh facing_arrow(std::int32_t col, std::int32_t row, float height, Side side, const save::TerrainGrid& grid);
+    [[nodiscard]] TerrainMesh facing_arrow(std::int32_t col, std::int32_t row, float height, Side side, const save::model::TerrainGrid& grid);
 
     /// The track's arrows: the open one at `start`, the triangle at `end`, green when `forward` else red. Thin
     /// flat strips in their vertex colours, drawn with no picture. One batch.

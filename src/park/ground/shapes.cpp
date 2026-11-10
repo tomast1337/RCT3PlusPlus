@@ -64,7 +64,7 @@ namespace rct3::park::ground
         return 0;
     }
 
-    CornerHeights corner_heights(const save::TerrainGrid& grid, const std::function<bool(save::Tile)>& free)
+    CornerHeights corner_heights(const save::model::TerrainGrid& grid, const std::function<bool(save::model::Tile)>& free)
     {
         CornerHeights out;
         out.columns = grid.width + 1;
@@ -97,7 +97,7 @@ namespace rct3::park::ground
         return out;
     }
 
-    void set_corner_point(save::TerrainGrid& grid, int col, int row, float height)
+    void set_corner_point(save::model::TerrainGrid& grid, int col, int row, float height)
     {
         for (int dr = 0; dr < 2; ++dr)
             for (int dc = 0; dc < 2; ++dc)
@@ -110,7 +110,7 @@ namespace rct3::park::ground
             }
     }
 
-    float shape_ground(save::TerrainGrid& grid, const CornerHeights& before, GroundShape shape, glm::vec2 middle, float reach, glm::vec2 along, float amount)
+    float shape_ground(save::model::TerrainGrid& grid, const CornerHeights& before, GroundShape shape, glm::vec2 middle, float reach, glm::vec2 along, float amount)
     {
         if (reach <= 0 || before.columns != grid.width + 1)
             return 0;

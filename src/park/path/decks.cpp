@@ -64,18 +64,18 @@ namespace rct3::park::path
         class TilePaths
         {
         public:
-            explicit TilePaths(std::span<const save::PathTile> paths)
+            explicit TilePaths(std::span<const save::model::PathTile> paths)
             {
-                for (const save::PathTile& p : paths)
+                for (const save::model::PathTile& p : paths)
                     by_tile_[key(p.col, p.row)].push_back(&p);
             }
 
-            std::span<const save::PathTile* const> at(int col, int row) const
+            std::span<const save::model::PathTile* const> at(int col, int row) const
             {
                 if (col < 0 || row < 0)
                     return { };
                 const auto found = by_tile_.find(key(col, row));
-                return found == by_tile_.end() ? std::span<const save::PathTile* const> { } : std::span(found->second);
+                return found == by_tile_.end() ? std::span<const save::model::PathTile* const> { } : std::span(found->second);
             }
 
         private:
@@ -84,30 +84,30 @@ namespace rct3::park::path
                 return static_cast<std::uint32_t>(col) << 16 | static_cast<std::uint32_t>(row);
             }
 
-            std::unordered_map<std::uint32_t, std::vector<const save::PathTile*>> by_tile_;
+            std::unordered_map<std::uint32_t, std::vector<const save::model::PathTile*>> by_tile_;
         };
 
         /// Whether `path` is flat path (not queue) at `height`.
-        bool flat_at(const save::PathTile& path, const save::TerrainGrid& grid, float height)
+        bool flat_at(const save::model::PathTile& path, const save::model::TerrainGrid& grid, float height)
         {
-            if (path.kind == save::PathKind::Queue)
+            if (path.kind == save::model::PathKind::Queue)
                 return false;
             if (path.elevation)
                 return path.elevation->slope == 0 && meets(static_cast<float>(path.elevation->quantised_height), height);
-            if (path.kind != save::PathKind::Ground || !grid.contains(path.col, path.row))
+            if (path.kind != save::model::PathKind::Ground || !grid.contains(path.col, path.row))
                 return false;
-            const save::TerrainCell& cell = grid.at(path.col, path.row);
+            const save::model::TerrainCell& cell = grid.at(path.col, path.row);
             return cell.max_height() - cell.min_height() <= kFlat && meets(cell.min_height(), height);
         }
 
-        bool any_flat_at(const TilePaths& tiles, const save::TerrainGrid& grid, save::Tile tile, float height)
+        bool any_flat_at(const TilePaths& tiles, const save::model::TerrainGrid& grid, save::model::Tile tile, float height)
         {
-            return std::ranges::any_of(tiles.at(tile.col, tile.row), [&](const save::PathTile* p) { return flat_at(*p, grid, height); });
+            return std::ranges::any_of(tiles.at(tile.col, tile.row), [&](const save::model::PathTile* p) { return flat_at(*p, grid, height); });
         }
 
-        Deck choose(const save::PathTile& path, const TilePaths& tiles, const save::TerrainGrid& grid, std::optional<const EdgeWalls&> walls)
+        Deck choose(const save::model::PathTile& path, const TilePaths& tiles, const save::model::TerrainGrid& grid, std::optional<const EdgeWalls&> walls)
         {
-            const save::PathElevation& e = *path.elevation;
+            const save::model::PathElevation& e = *path.elevation;
             const auto height = static_cast<float>(e.quantised_height);
             if (e.slope != 0)
             {
@@ -115,19 +115,19 @@ namespace rct3::park::path
                 // A gentle slope beside: the same slope, the same way, from the same height.
                 const auto beside = [&](Side side) {
                     const auto [col, row] = side.beyond({ path.col, path.row });
-                    return std::ranges::any_of(tiles.at(col, row), [&](const save::PathTile* p) { return p->kind != save::PathKind::Queue && p->elevation && p->elevation->slope == e.slope && p->direction == path.direction && p->elevation->quantised_height == e.quantised_height; });
+                    return std::ranges::any_of(tiles.at(col, row), [&](const save::model::PathTile* p) { return p->kind != save::model::PathKind::Queue && p->elevation && p->elevation->slope == e.slope && p->direction == path.direction && p->elevation->quantised_height == e.quantised_height; });
                 };
                 return slope_deck(e.slope, heading, beside(heading.left()), beside(heading.right()));
             }
-            const save::Tile tile { path.col, path.row };
+            const save::model::Tile tile { path.col, path.row };
             std::uint8_t sides = 0;
             for (const Side side : kSides)
             {
                 const auto [col, row] = side.beyond(tile);
                 const Side facing = side.opposite();
-                const bool joined = std::ranges::any_of(tiles.at(col, row), [&](const save::PathTile* p) {
+                const bool joined = std::ranges::any_of(tiles.at(col, row), [&](const save::model::PathTile* p) {
                     const auto edge = edge_height(*p, grid, facing);
-                    return edge && meets(*edge, height) && (p->kind == save::PathKind::Queue || !walls || !walled(*walls, tile, side, height));
+                    return edge && meets(*edge, height) && (p->kind == save::model::PathKind::Queue || !walls || !walled(*walls, tile, side, height));
                 });
                 if (joined)
                     sides = static_cast<std::uint8_t>(sides | side.bit());
@@ -139,8 +139,8 @@ namespace rct3::park::path
                 const Side other = corner.right();
                 if ((sides & corner.bit()) == 0 || (sides & other.bit()) == 0)
                     continue;
-                const save::Tile a = corner.beyond(tile);
-                const save::Tile b = other.beyond(tile);
+                const save::model::Tile a = corner.beyond(tile);
+                const save::model::Tile b = other.beyond(tile);
                 if (any_flat_at(tiles, grid, a, height) && any_flat_at(tiles, grid, b, height) && any_flat_at(tiles, grid, other.beyond(a), height))
                     corners = static_cast<std::uint8_t>(corners | corner.bit());
             }
@@ -205,7 +205,7 @@ namespace rct3::park::path
         return kEdgeCorners[static_cast<std::size_t>(side.value & 3)];
     }
 
-    std::optional<float> edge_height(const save::PathTile& path, const save::TerrainGrid& grid, Side side)
+    std::optional<float> edge_height(const save::model::PathTile& path, const save::model::TerrainGrid& grid, Side side)
     {
         if (!grid.contains(path.col, path.row))
             return std::nullopt;
@@ -217,11 +217,11 @@ namespace rct3::park::path
         if (ground::is_ground_queue(path))
             return queue_side ? std::optional(ground) : std::nullopt;
         if (!path.elevation)
-            return path.kind == save::PathKind::Ground ? std::optional(ground) : std::nullopt;
-        const save::PathElevation& e = *path.elevation;
+            return path.kind == save::model::PathKind::Ground ? std::optional(ground) : std::nullopt;
+        const save::model::PathElevation& e = *path.elevation;
         const auto height = static_cast<float>(e.quantised_height);
         if (e.slope == 0)
-            return path.kind != save::PathKind::Queue || queue_side ? std::optional(height) : std::nullopt;
+            return path.kind != save::model::PathKind::Queue || queue_side ? std::optional(height) : std::nullopt;
         // Without a stored heading only the end behind its bare count is met, as it always has been.
         if (stored_heading(path.direction) == side)
             return height + (slope_falls(e.slope) ? -ground::path_rise(e.slope) : ground::path_rise(e.slope));
@@ -236,7 +236,7 @@ namespace rct3::park::path
         return at < style.pieces.size() ? style.pieces[at] : std::string();
     }
 
-    std::pair<QueuePiece, ModelTurn> queue_deck(const save::PathTile& queue)
+    std::pair<QueuePiece, ModelTurn> queue_deck(const save::model::PathTile& queue)
     {
         if (!queue.elevation || !queue.queue)
             return { };
@@ -253,9 +253,9 @@ namespace rct3::park::path
         return { piece, ModelTurn::toward(start.right()) };
     }
 
-    std::pair<std::string, ModelTurn> deck_for(const PathStyle& style, const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    std::pair<std::string, ModelTurn> deck_for(const PathStyle& style, const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid)
     {
-        if (path.kind == save::PathKind::Queue)
+        if (path.kind == save::model::PathKind::Queue)
         {
             const auto [piece, turn] = queue_deck(path);
             const auto at = static_cast<std::size_t>(piece);
@@ -265,28 +265,28 @@ namespace rct3::park::path
         return { deck_symbol(style, deck.piece), deck.turn };
     }
 
-    Deck choose_deck(const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::optional<const EdgeWalls&> walls)
+    Deck choose_deck(const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::optional<const EdgeWalls&> walls)
     {
         if (!path.elevation)
             return { };
         return choose(path, TilePaths(paths), grid, walls);
     }
 
-    std::size_t refresh_decks(std::span<const save::PathTile> paths, std::vector<save::PlacedObject>& objects, const save::TerrainGrid& grid, std::span<const PathStyle> styles, int low_col, int low_row, int high_col, int high_row, std::optional<const EdgeWalls&> walls)
+    std::size_t refresh_decks(std::span<const save::model::PathTile> paths, std::vector<save::model::PlacedObject>& objects, const save::model::TerrainGrid& grid, std::span<const PathStyle> styles, int low_col, int low_row, int high_col, int high_row, std::optional<const EdgeWalls&> walls)
     {
         const TilePaths tiles(paths);
-        std::unordered_map<std::uint64_t, save::PlacedObject*> by_id;
-        for (save::PlacedObject& o : objects)
+        std::unordered_map<std::uint64_t, save::model::PlacedObject*> by_id;
+        for (save::model::PlacedObject& o : objects)
             by_id.emplace(o.id, &o);
         std::size_t changed = 0;
         for (int col = low_col; col <= high_col; ++col)
         {
             for (int row = low_row; row <= high_row; ++row)
             {
-                for (const save::PathTile* p : tiles.at(col, row))
+                for (const save::model::PathTile* p : tiles.at(col, row))
                 {
-                    const bool queue = p->kind == save::PathKind::Queue;
-                    if ((p->kind != save::PathKind::Flying && !queue) || !p->elevation || ground::is_ground_queue(*p))
+                    const bool queue = p->kind == save::model::PathKind::Queue;
+                    if ((p->kind != save::model::PathKind::Flying && !queue) || !p->elevation || ground::is_ground_queue(*p))
                         continue;
                     const auto object = by_id.find(p->elevation->scenery_ref);
                     const auto style = std::ranges::find_if(styles, [&](const PathStyle& s) { return s.queue == queue && strings::equals_ignoring_case(s.name, p->surface_name); });

@@ -685,12 +685,12 @@ namespace rct3::park
         return items;
     }
 
-    BuildOffer::BuildOffer(const save::RequiredContent& content)
+    BuildOffer::BuildOffer(const save::model::RequiredContent& content)
         : known_(!content.entries.empty())
     {
-        for (const save::AssetRequirement& e : content.entries)
+        for (const save::model::AssetRequirement& e : content.entries)
         {
-            const bool species = e.kind == save::AssetKind::AnimalSpecies;
+            const bool species = e.kind == save::model::AssetKind::AnimalSpecies;
             species_known_ = species_known_ || species;
             listed_.insert(key(e.overlay_stem, e.symbol));
             if (species ? e.unlocked : e.available && e.invented && !e.hidden)

@@ -11,7 +11,7 @@ namespace
 {
 
     // A fall 8 wide pouring along +X off an edge at height 20, landing 10 out on a lake at height 5.
-    save::Waterfall fall()
+    save::model::Waterfall fall()
     {
         return {
             .lip_left = { 0.0f, 20.0f, -4.0f },
@@ -26,7 +26,7 @@ namespace
 
 TEST_CASE("waterfall_point: leaves the edge level and lands where the park says")
 {
-    const save::Waterfall f = fall();
+    const save::model::Waterfall f = fall();
     const glm::vec3 start = waterfall_point(f, 0.0f);
     CHECK(start.x == doctest::Approx(0.0f));
     CHECK(start.y == doctest::Approx(20.0f));
@@ -40,7 +40,7 @@ TEST_CASE("waterfall_point: leaves the edge level and lands where the park says"
 
 TEST_CASE("waterfall_point: a fall whose direction is missing runs toward where it lands")
 {
-    save::Waterfall f = fall();
+    save::model::Waterfall f = fall();
     f.flow = { };
     f.bottom = { 0.0f, 5.0f, -10.0f };
     f.lip_left = { -4.0f, 20.0f, 0.0f };
@@ -50,7 +50,7 @@ TEST_CASE("waterfall_point: a fall whose direction is missing runs toward where 
 
 TEST_CASE("waterfall_mesh: one see-through batch per picture, the sheet as wide as the edge")
 {
-    const std::vector<save::Waterfall> falls { fall(), fall() };
+    const std::vector<save::model::Waterfall> falls { fall(), fall() };
     object::ObjectMesh mesh;
     waterfall_mesh(falls, 0.0f, mesh);
     REQUIRE(mesh.batches.size() == kWaterfallPictures.size());
@@ -74,7 +74,7 @@ TEST_CASE("waterfall_mesh: one see-through batch per picture, the sheet as wide 
 
 TEST_CASE("waterfall_mesh: the sheet's picture runs down it as time passes")
 {
-    const std::vector<save::Waterfall> falls { fall() };
+    const std::vector<save::model::Waterfall> falls { fall() };
     object::ObjectMesh before;
     object::ObjectMesh after;
     waterfall_mesh(falls, 0.0f, before);
@@ -87,7 +87,7 @@ TEST_CASE("waterfall_mesh: the sheet's picture runs down it as time passes")
 
 TEST_CASE("waterfall_mesh: nothing for no falls, and the mesh is emptied")
 {
-    const std::vector<save::Waterfall> falls { fall() };
+    const std::vector<save::model::Waterfall> falls { fall() };
     object::ObjectMesh mesh;
     waterfall_mesh(falls, 0.0f, mesh);
     waterfall_mesh({ }, 0.0f, mesh);
@@ -98,7 +98,7 @@ TEST_CASE("waterfall_mesh: nothing for no falls, and the mesh is emptied")
 
 TEST_CASE("waterfall_mesh: foam fades out at its edges and is whole in its middle")
 {
-    const std::vector<save::Waterfall> falls { fall() };
+    const std::vector<save::model::Waterfall> falls { fall() };
     object::ObjectMesh mesh;
     waterfall_mesh(falls, 0.0f, mesh);
     const object::ObjectBatch& foam = mesh.batches[2];
@@ -131,7 +131,7 @@ TEST_CASE("waterfall_layer_scroll: the first picture runs on past its second, an
 
 TEST_CASE("waterfall_spray: sprays spread along where the water lands, more for a wider fall")
 {
-    const std::vector<save::Waterfall> one { fall() };
+    const std::vector<save::model::Waterfall> one { fall() };
     const std::vector<object::PlacedEffect> narrow = waterfall_spray(one);
     REQUIRE(!narrow.empty());
     for (const object::PlacedEffect& spray : narrow)
@@ -142,10 +142,10 @@ TEST_CASE("waterfall_spray: sprays spread along where the water lands, more for 
         CHECK(spray.position.y >= 5.0f);
         CHECK(std::abs(spray.position.z) < 4.0f);
     }
-    save::Waterfall wide = fall();
+    save::model::Waterfall wide = fall();
     wide.lip_left.z = -20.0f;
     wide.lip_right.z = 20.0f;
-    const std::vector<save::Waterfall> two { fall(), wide };
+    const std::vector<save::model::Waterfall> two { fall(), wide };
     const std::vector<object::PlacedEffect> both = waterfall_spray(two);
     CHECK(both.size() > 2 * narrow.size());
     CHECK(both.back().object == 1);

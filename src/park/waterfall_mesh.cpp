@@ -30,7 +30,7 @@ namespace rct3::park
         constexpr float kSpraySize = 2.0f;     ///< Times the effect's own particle sizes, made for small splashes.
         constexpr glm::vec3 kUp { 0.0f, 1.0f, 0.0f };
 
-        glm::vec3 vec(const save::WorldPoint3& p)
+        glm::vec3 vec(const save::model::WorldPoint3& p)
         {
             return { p.x, p.y, p.z };
         }
@@ -45,7 +45,7 @@ namespace rct3::park
             float drop = 0;
         };
 
-        Shape shape_of(const save::Waterfall& fall)
+        Shape shape_of(const save::model::Waterfall& fall)
         {
             Shape s { .lip = (vec(fall.lip_left) + vec(fall.lip_right)) / 2.0f, .across = vec(fall.lip_right) - vec(fall.lip_left) };
             s.across.y = 0;
@@ -129,12 +129,12 @@ namespace rct3::park
         return TextureShift::by(-seconds * picture.layer_lag); // v falls as the water runs
     }
 
-    glm::vec3 waterfall_point(const save::Waterfall& fall, float along)
+    glm::vec3 waterfall_point(const save::model::Waterfall& fall, float along)
     {
         return point(shape_of(fall), along);
     }
 
-    std::vector<object::PlacedEffect> waterfall_spray(std::span<const save::Waterfall> falls)
+    std::vector<object::PlacedEffect> waterfall_spray(std::span<const save::model::Waterfall> falls)
     {
         std::vector<object::PlacedEffect> sprays;
         for (std::size_t i = 0; i < falls.size(); ++i)
@@ -148,7 +148,7 @@ namespace rct3::park
         return sprays;
     }
 
-    void waterfall_mesh(std::span<const save::Waterfall> falls, float seconds, object::ObjectMesh& mesh)
+    void waterfall_mesh(std::span<const save::model::Waterfall> falls, float seconds, object::ObjectMesh& mesh)
     {
         mesh.vertices.clear();
         mesh.indices.clear();
@@ -157,7 +157,7 @@ namespace rct3::park
         for (std::size_t picture = 0; picture < kWaterfallPictures.size(); ++picture)
         {
             const auto first = static_cast<std::uint32_t>(mesh.indices.size());
-            for (const save::Waterfall& fall : falls)
+            for (const save::model::Waterfall& fall : falls)
             {
                 const Shape s = shape_of(fall);
                 const float width = glm::length(s.across);

@@ -8,10 +8,10 @@
 namespace rct3::park
 {
 
-    std::vector<MapShape> map_shapes(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid, const object::Fitted& fitted, const MapLayerOf& layer_of)
+    std::vector<MapShape> map_shapes(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid, const object::Fitted& fitted, const MapLayerOf& layer_of)
     {
         std::vector<MapShape> shapes;
-        for (const save::PlacedObject& o : objects)
+        for (const save::model::PlacedObject& o : objects)
         {
             if (o.hidden)
                 continue;

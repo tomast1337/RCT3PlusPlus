@@ -15,9 +15,9 @@ using namespace rct3::park;
 
 namespace
 {
-    save::TerrainGrid flat_grid(int width, int height)
+    save::model::TerrainGrid flat_grid(int width, int height)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
@@ -26,10 +26,10 @@ namespace
         return g;
     }
 
-    save::PathTile ground_tile(int col, int row)
+    save::model::PathTile ground_tile(int col, int row)
     {
-        save::PathTile p;
-        p.kind = save::PathKind::Ground;
+        save::model::PathTile p;
+        p.kind = save::model::PathKind::Ground;
         p.surface_name = "Gravel";
         p.col = static_cast<std::uint8_t>(col);
         p.row = static_cast<std::uint8_t>(row);
@@ -37,13 +37,13 @@ namespace
     }
 
     /// A fence on tile (2, 1) whose +X faces after `turns` quarter turns, and its model, of `category`.
-    std::pair<save::PlacedObject, object::ObjectModels> fence(std::int32_t turns, ItemCategory category = ItemCategory::Fence, object::Positioning positioning = object::Positioning::Edge)
+    std::pair<save::model::PlacedObject, object::ObjectModels> fence(std::int32_t turns, ItemCategory category = ItemCategory::Fence, object::Positioning positioning = object::Positioning::Edge)
     {
         object::ObjectModel model;
         model.category = std::to_underlying(category);
         model.positioning = std::to_underlying(positioning);
         model.levels = { { 100, { }, { } } };
-        save::PlacedObject o;
+        save::model::PlacedObject o;
         o.symbol = "Fence";
         o.col = 2;
         o.row = 1;
@@ -57,7 +57,7 @@ namespace
 
 TEST_CASE("a fence stands along the side its +X faces, listed on both tiles it parts")
 {
-    const save::TerrainGrid grid = flat_grid(5, 5);
+    const save::model::TerrainGrid grid = flat_grid(5, 5);
     const auto [o, models] = fence(2); // +X
     const auto wall = edge_wall(o, models, grid);
     REQUIRE(wall);
@@ -72,17 +72,17 @@ TEST_CASE("a fence stands along the side its +X faces, listed on both tiles it p
     CHECK_FALSE(edge_wall(lamp, lamp_models, grid));
     const auto [stall, stall_models] = fence(2, ItemCategory::Stall);
     CHECK_FALSE(edge_wall(stall, stall_models, grid));
-    save::PlacedObject gone = o;
+    save::model::PlacedObject gone = o;
     gone.hidden = true;
     CHECK_FALSE(edge_wall(gone, models, grid));
 }
 
 TEST_CASE("paths on the ground and on decks do not join across a wall")
 {
-    const save::TerrainGrid grid = flat_grid(5, 5);
+    const save::model::TerrainGrid grid = flat_grid(5, 5);
     const auto [o, models] = fence(2);
     const EdgeWalls walls = edge_walls(std::vector { o }, models, grid);
-    const std::vector<save::PathTile> line { ground_tile(1, 1), ground_tile(2, 1), ground_tile(3, 1) };
+    const std::vector<save::model::PathTile> line { ground_tile(1, 1), ground_tile(2, 1), ground_tile(3, 1) };
     ground::GroundPathMap map = ground::ground_path_map(line, grid);
     CHECK(ground::path_continues(map, grid, { 2, 1 }, 1, 0));
     map.walls = walls;
@@ -90,12 +90,12 @@ TEST_CASE("paths on the ground and on decks do not join across a wall")
     CHECK_FALSE(ground::path_continues(map, grid, { 3, 1 }, -1, 0));
     CHECK(ground::path_continues(map, grid, { 2, 1 }, -1, 0));
 
-    std::vector<save::PathTile> decks;
+    std::vector<save::model::PathTile> decks;
     for (int col = 1; col <= 3; ++col)
     {
-        save::PathTile p = ground_tile(col, 1);
-        p.kind = save::PathKind::Flying;
-        p.elevation = save::PathElevation { };
+        save::model::PathTile p = ground_tile(col, 1);
+        p.kind = save::model::PathKind::Flying;
+        p.elevation = save::model::PathElevation { };
         decks.push_back(p);
     }
     // Joined both ways, a straight; parted on +X, an end.

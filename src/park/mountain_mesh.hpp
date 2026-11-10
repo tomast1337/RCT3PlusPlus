@@ -46,7 +46,7 @@ namespace rct3::park
 
     /// Where the ring of `theme` stands round `grid`: on the middle of the map, at kMountainScale, its height 0
     /// the theme's kMountainDrop below the park's.
-    [[nodiscard]] MountainPlace mountain_place(const save::TerrainGrid& grid, std::string_view theme);
+    [[nodiscard]] MountainPlace mountain_place(const save::model::TerrainGrid& grid, std::string_view theme);
 
     /// The ring placed at `place`, both meshes as cut-out batches. Empty when the shapes are.
     [[nodiscard]] object::ObjectMesh mountain_mesh(const MountainShapes& shapes, const MountainPlace& place);

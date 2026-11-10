@@ -14,10 +14,10 @@
 namespace rct3::park::path
 {
 
-    std::vector<save::Tile> brush_line(save::Tile from, save::Tile to)
+    std::vector<save::model::Tile> brush_line(save::model::Tile from, save::model::Tile to)
     {
-        std::vector<save::Tile> line { from };
-        save::Tile at = from;
+        std::vector<save::model::Tile> line { from };
+        save::model::Tile at = from;
         const int cols = std::abs(to.col - from.col);
         const int rows = std::abs(to.row - from.row);
         // Steps along whichever way is further behind the straight line, one side at a time.
@@ -35,9 +35,9 @@ namespace rct3::park::path
         return line;
     }
 
-    std::vector<save::Tile> brush_square(save::Tile centre, int size)
+    std::vector<save::model::Tile> brush_square(save::model::Tile centre, int size)
     {
-        std::vector<save::Tile> square;
+        std::vector<save::model::Tile> square;
         const int low = -(size - 1) / 2;
         for (int row = low; row < low + size; ++row)
         {
@@ -47,10 +47,10 @@ namespace rct3::park::path
         return square;
     }
 
-    DragPlan plan_drag(std::span<const save::Tile> area, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const SolidTiles&> solids)
+    DragPlan plan_drag(std::span<const save::model::Tile> area, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::optional<const SolidTiles&> solids)
     {
         DragPlan plan;
-        for (const save::Tile spot : area)
+        for (const save::model::Tile spot : area)
         {
             if (ground_path_at(paths, spot))
             {
@@ -75,7 +75,7 @@ namespace rct3::park::path
         return Side::from(static_cast<std::int32_t>(std::ranges::min_element(to_edge) - to_edge.begin()));
     }
 
-    std::optional<PathEdge> path_under(const Ray& ray, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, bool through_ground)
+    std::optional<PathEdge> path_under(const Ray& ray, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, bool through_ground)
     {
         const auto ground = object::ground_hit(ray, grid);
         std::optional<PathEdge> best;
@@ -83,7 +83,7 @@ namespace rct3::park::path
         glm::vec3 best_hit { 0.0f };
         for (std::size_t i = 0; i < paths.size(); ++i)
         {
-            const save::PathTile& p = paths[i];
+            const save::model::PathTile& p = paths[i];
             if (!grid.contains(p.col, p.row))
                 continue;
             float t = 0;
@@ -95,7 +95,7 @@ namespace rct3::park::path
             }
             else
             {
-                const save::PathElevation& e = *p.elevation;
+                const save::model::PathElevation& e = *p.elevation;
                 const float rise = ground::path_rise(e.slope);
                 const float middle = static_cast<float>(e.quantised_height) + (slope_falls(e.slope) ? -rise : rise) / 2;
                 if (std::abs(ray.direction.y) < 1e-6f)
@@ -113,26 +113,26 @@ namespace rct3::park::path
         }
         if (!best)
             return std::nullopt;
-        const save::PathTile& p = paths[best->path];
+        const save::model::PathTile& p = paths[best->path];
         const Side side = nearest_side((best_hit.x - grid.world_x(p.col)) / grid.tile_size_x, (best_hit.z - grid.world_z(p.row)) / grid.tile_size_z);
         if (edge_height(p, grid, side))
             best->side = side;
         return best;
     }
 
-    bool start_from_edge(FootpathBuilder& builder, const save::PathTile& path, const save::TerrainGrid& grid, Side side)
+    bool start_from_edge(FootpathBuilder& builder, const save::model::PathTile& path, const save::model::TerrainGrid& grid, Side side)
     {
         const auto height = edge_height(path, grid, side);
         if (!height)
             return false;
-        const save::Tile spot { path.col, path.row };
+        const save::model::Tile spot { path.col, path.row };
         start_at(builder, spot);
         builder.heading = side;
         builder.trail.push_back({ spot, 0, static_cast<std::int32_t>(std::lround(*height)) });
         return true;
     }
 
-    std::optional<DoorEdge> door_under(const Ray& ray, std::span<const save::PlacementSpot> doors, const save::TerrainGrid& grid, bool through_ground)
+    std::optional<DoorEdge> door_under(const Ray& ray, std::span<const save::model::PlacementSpot> doors, const save::model::TerrainGrid& grid, bool through_ground)
     {
         if (std::abs(ray.direction.y) < 1e-6f)
             return std::nullopt;
@@ -141,7 +141,7 @@ namespace rct3::park::path
         std::optional<DoorEdge> best;
         for (std::size_t i = 0; i < doors.size(); ++i)
         {
-            const save::PlacementSpot& d = doors[i];
+            const save::model::PlacementSpot& d = doors[i];
             const float t = (static_cast<float>(d.height) - ray.origin.y) / ray.direction.y;
             if (t <= 0 || t > nearest)
                 continue;
@@ -156,9 +156,9 @@ namespace rct3::park::path
         return best;
     }
 
-    void start_from_door(FootpathBuilder& builder, const save::PlacementSpot& door, Side side)
+    void start_from_door(FootpathBuilder& builder, const save::model::PlacementSpot& door, Side side)
     {
-        const save::Tile spot { door.col, door.row };
+        const save::model::Tile spot { door.col, door.row };
         start_at(builder, spot);
         builder.heading = side;
         builder.trail.push_back({ spot, 0, door.height });

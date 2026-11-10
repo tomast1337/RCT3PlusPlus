@@ -49,17 +49,17 @@ namespace rct3::park
     [[nodiscard]] TextureShift waterfall_layer_scroll(const WaterfallPicture& picture, float seconds);
 
     /// Where the water of `fall` is after running `along` (0 at the edge, 1 where it lands), halfway across.
-    [[nodiscard]] glm::vec3 waterfall_point(const save::Waterfall& fall, float along);
+    [[nodiscard]] glm::vec3 waterfall_point(const save::model::Waterfall& fall, float along);
 
     /// The particle effect that sprays where the water lands: a file of the game's particle effects.
     inline constexpr std::string_view kWaterfallSpray = "WhiteWaterRapidsVapour";
 
     /// The spray of `falls`: kWaterfallSpray along the line where each one's water lands, one for every few units
     /// of its width, rising; `object` is the fall's index.
-    [[nodiscard]] std::vector<object::PlacedEffect> waterfall_spray(std::span<const save::Waterfall> falls);
+    [[nodiscard]] std::vector<object::PlacedEffect> waterfall_spray(std::span<const save::model::Waterfall> falls);
 
     /// Builds the water of `falls` into `mesh`, its pictures scrolled for `seconds`; one see-through batch per
     /// picture of kWaterfallPictures that some fall uses. Keeps `mesh`'s memory.
-    void waterfall_mesh(std::span<const save::Waterfall> falls, float seconds, object::ObjectMesh& mesh);
+    void waterfall_mesh(std::span<const save::model::Waterfall> falls, float seconds, object::ObjectMesh& mesh);
 
 } // namespace rct3::park

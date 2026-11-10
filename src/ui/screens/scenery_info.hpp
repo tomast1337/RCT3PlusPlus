@@ -75,13 +75,13 @@ namespace rct3::ui::screens
         park::pools::PoolWaves waves { };
         bool machines = false; ///< It has wave machines; without, their times cannot be set
         Currency currency { };
-        std::int64_t customers = 0;                   ///< The room's, so far
-        std::int64_t income = 0;                      ///< Its takings so far, hundredths
-        std::int64_t refill = 0;                      ///< A full tank of its fluid, which a mechanic's inspection tops up, hundredths
-        float reliability = 1;                        ///< 0 to 1
-        float since_inspection = 0;                   ///< Seconds
-        int inspection = kPoolInspection;             ///< As kPoolInspectionControl's value
-        std::vector<save::ThoughtEntry> thoughts { }; ///< Guests' thoughts about the room
+        std::int64_t customers = 0;                          ///< The room's, so far
+        std::int64_t income = 0;                             ///< Its takings so far, hundredths
+        std::int64_t refill = 0;                             ///< A full tank of its fluid, which a mechanic's inspection tops up, hundredths
+        float reliability = 1;                               ///< 0 to 1
+        float since_inspection = 0;                          ///< Seconds
+        int inspection = kPoolInspection;                    ///< As kPoolInspectionControl's value
+        std::vector<save::model::ThoughtEntry> thoughts { }; ///< Guests' thoughts about the room
     };
 
     struct SceneryTabInfo
@@ -98,8 +98,8 @@ namespace rct3::ui::screens
     struct SceneryFacts
     {
         std::string_view symbol { };
-        const save::BinState* bin = nullptr;
-        const save::SignState* sign = nullptr;
+        const save::model::BinState* bin = nullptr;
+        const save::model::SignState* sign = nullptr;
         std::optional<PoolComplexFacts> pool { }; ///< When it is a changing room
         std::uint32_t colour_slots = 0;           ///< The colour slots its pictures take (bit k: slot k)
         std::array<std::int32_t, 3> colours { };  ///< The colour picked for each slot, of the 32

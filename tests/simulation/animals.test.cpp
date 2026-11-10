@@ -371,7 +371,7 @@ TEST_CASE("animals: a park's saved zoo animals come in where they stood, those i
 {
     SimWorld world;
     const AnimalGround ground = two_pens();
-    save::ZooAnimal out;
+    save::model::ZooAnimal out;
     out.species = "zebu";
     out.first_names = "Zia";
     out.is_adult = true;
@@ -381,7 +381,7 @@ TEST_CASE("animals: a park's saved zoo animals come in where they stood, those i
     out.social = 1;
     out.tiredness = 0.25f;
     out.world = { 0, 0, -1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 2, 0, 3, 1 }; // Facing along x, at (2, 0, 3)
-    save::ZooAnimal crated = out;
+    save::model::ZooAnimal crated = out;
     crated.in_crate = true;
     crated.world[12] = 11;
     const std::array saved { out, crated };

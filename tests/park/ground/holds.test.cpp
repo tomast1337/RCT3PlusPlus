@@ -13,9 +13,9 @@ using namespace rct3::park::ground;
 
 namespace
 {
-    save::TerrainGrid flat_grid(int width, int height)
+    save::model::TerrainGrid flat_grid(int width, int height)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
@@ -25,13 +25,13 @@ namespace
     }
 
     /// One item of `category` on tile (1, 1) at height `base`, its one square solid from level 0 to 2.
-    std::pair<std::vector<save::PlacedObject>, object::ObjectModels> one_item(ItemCategory category, std::int32_t base)
+    std::pair<std::vector<save::model::PlacedObject>, object::ObjectModels> one_item(ItemCategory category, std::int32_t base)
     {
         object::ObjectModel model;
         model.category = std::to_underlying(category);
         model.solid = { std::array<std::int32_t, 2> { 0, 2 } };
         model.levels = { { 100, { }, { } } };
-        save::PlacedObject o;
+        save::model::PlacedObject o;
         o.id = 1;
         o.owner_ref = 1;
         o.symbol = "Thing";
@@ -50,7 +50,7 @@ namespace
 
 TEST_CASE("a tree lets the ground move and is seated on it after")
 {
-    save::TerrainGrid g = flat_grid(3, 3);
+    save::model::TerrainGrid g = flat_grid(3, 3);
     auto [objects, models] = one_item(ItemCategory::Tree, 0);
     const GroundHolds holds = ground_holds(objects, models, { }, g);
     CHECK_FALSE(refuses(holds, { 1, 1 }, kLevel, kUp));
@@ -62,7 +62,7 @@ TEST_CASE("a tree lets the ground move and is seated on it after")
 
 TEST_CASE("an item that holds the ground keeps its tile still")
 {
-    const save::TerrainGrid g = flat_grid(3, 3);
+    const save::model::TerrainGrid g = flat_grid(3, 3);
     auto [objects, models] = one_item(ItemCategory::Stall, 0);
     models.begin()->second.holds_ground = true;
     const GroundHolds holds = ground_holds(objects, models, { }, g);
@@ -73,7 +73,7 @@ TEST_CASE("an item that holds the ground keeps its tile still")
 
 TEST_CASE("an item at a height of its own lets the ground rise only up to its base")
 {
-    const save::TerrainGrid g = flat_grid(3, 3);
+    const save::model::TerrainGrid g = flat_grid(3, 3);
     auto [objects, models] = one_item(ItemCategory::SmallScenery, 4);
     objects[0].force_absolute_height = true;
     const GroundHolds holds = ground_holds(objects, models, { }, g);
@@ -84,8 +84,8 @@ TEST_CASE("an item at a height of its own lets the ground rise only up to its ba
 
 TEST_CASE("a raised path lets the ground sink under it but not rise into it")
 {
-    const save::TerrainGrid g = flat_grid(3, 3);
-    save::PathTile bridge { .col = 1, .row = 1, .elevation = save::PathElevation { .quantised_height = 4 } };
+    const save::model::TerrainGrid g = flat_grid(3, 3);
+    save::model::PathTile bridge { .col = 1, .row = 1, .elevation = save::model::PathElevation { .quantised_height = 4 } };
     GroundHolds holds = ground_holds({ }, { }, std::vector { bridge }, g);
     CHECK_FALSE(refuses(holds, { 1, 1 }, kLevel, kDown));
     CHECK_FALSE(refuses(holds, { 1, 1 }, kLevel, kUp));
@@ -98,8 +98,8 @@ TEST_CASE("a raised path lets the ground sink under it but not rise into it")
 
 TEST_CASE("a path on the ground follows it while its tile stays near flat")
 {
-    const save::TerrainGrid g = flat_grid(3, 3);
-    const save::PathTile path { .kind = save::PathKind::Ground, .col = 1, .row = 1 };
+    const save::model::TerrainGrid g = flat_grid(3, 3);
+    const save::model::PathTile path { .kind = save::model::PathKind::Ground, .col = 1, .row = 1 };
     const GroundHolds holds = ground_holds({ }, { }, std::vector { path }, g);
     CHECK_FALSE(refuses(holds, { 1, 1 }, kLevel, kUp));
     CHECK_FALSE(refuses(holds, { 1, 1 }, kLevel, { 1, 0, 0, 0 }));

@@ -23,9 +23,9 @@ namespace
     constexpr float kTile = 4;
 
     /// Ten by ten flat tiles from (0, 0).
-    save::TerrainGrid flat()
+    save::model::TerrainGrid flat()
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = 10;
         g.height = 10;
         g.tile_size_x = kTile;
@@ -63,9 +63,9 @@ namespace
         return s;
     }
 
-    save::PlacedObject placed(int col, int row, int turns, int height)
+    save::model::PlacedObject placed(int col, int row, int turns, int height)
     {
-        save::PlacedObject o;
+        save::model::PlacedObject o;
         o.col = col;
         o.row = row;
         o.rotation = turns;
@@ -190,7 +190,7 @@ TEST_CASE("pieces that fit either way come twice, the others once or not at all"
 
 TEST_CASE("the tip of a placed piece is its line's end in the park, turned with it")
 {
-    const save::TerrainGrid g = flat();
+    const save::model::TerrainGrid g = flat();
     const PieceShape s = shape_piece(record("Straight"), straight_line());
     const TrackTip tip = tip_of(placed(5, 5, 0, 3), s, false, g);
     // Unturned, the model's -X points along the park's +X.
@@ -209,7 +209,7 @@ TEST_CASE("the tip of a placed piece is its line's end in the park, turned with 
 
 TEST_CASE("the next piece goes on the tile its start meets, turned to the tip")
 {
-    const save::TerrainGrid g = flat();
+    const save::model::TerrainGrid g = flat();
     const PieceShape s = shape_piece(record("Straight"), straight_line());
     const TrackTip tip = tip_of(placed(5, 5, 0, 3), s, false, g);
 
@@ -232,7 +232,7 @@ TEST_CASE("the next piece goes on the tile its start meets, turned to the tip")
 
 TEST_CASE("a saved layout moved and turned keeps each piece where the one before it ends")
 {
-    const save::TerrainGrid g = flat();
+    const save::model::TerrainGrid g = flat();
     const PieceShape s = shape_piece(record("Straight"), straight_line());
     PieceRecord r = record("Long");
     r.squares = { 2, 1 };
@@ -240,7 +240,7 @@ TEST_CASE("a saved layout moved and turned keeps each piece where the one before
     l.start = { kTile, 0, 0 };
     l.end = { -kTile, 0, 0 };
     const PieceShape longer = shape_piece(r, l);
-    const save::PlacedObject first = placed(1, 1, 0, 3);
+    const save::model::PlacedObject first = placed(1, 1, 0, 3);
     const auto second = place_after(tip_of(first, s, false, g), longer, false, g);
     REQUIRE(second);
     const auto third = place_after(second->next, s, false, g);
@@ -248,8 +248,8 @@ TEST_CASE("a saved layout moved and turned keeps each piece where the one before
     for (int turns = 0; turns < 4; ++turns)
     {
         CAPTURE(turns);
-        const save::PlacedObject to = placed(5, 4, turns, 7);
-        const save::PlacedObject moved = object::moved_with(second->object, r.squares, first, { 1, 1 }, to);
+        const save::model::PlacedObject to = placed(5, 4, turns, 7);
+        const save::model::PlacedObject moved = object::moved_with(second->object, r.squares, first, { 1, 1 }, to);
         const auto laid = place_after(tip_of(to, s, false, g), longer, false, g);
         REQUIRE(laid);
         CHECK(moved.col == laid->object.col);
@@ -257,7 +257,7 @@ TEST_CASE("a saved layout moved and turned keeps each piece where the one before
         CHECK(moved.rotation == laid->object.rotation);
         CHECK(moved.base_height == laid->object.base_height);
         // The piece after it, measured from the moved one rather than the first.
-        const save::PlacedObject next = object::moved_with(third->object, { 1, 1 }, second->object, r.squares, moved);
+        const save::model::PlacedObject next = object::moved_with(third->object, { 1, 1 }, second->object, r.squares, moved);
         const auto after = place_after(laid->next, s, false, g);
         REQUIRE(after);
         CHECK(next.col == after->object.col);
@@ -267,7 +267,7 @@ TEST_CASE("a saved layout moved and turned keeps each piece where the one before
 
 TEST_CASE("a piece whose start cannot meet the tip at a whole tile and height is not placed")
 {
-    const save::TerrainGrid g = flat();
+    const save::model::TerrainGrid g = flat();
     const PieceShape s = shape_piece(record("Straight"), straight_line());
     TrackTip tip = tip_of(placed(5, 5, 0, 3), s, false, g);
     tip.position.y += 0.5f;

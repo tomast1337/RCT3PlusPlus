@@ -30,14 +30,14 @@ namespace rct3::park
 
     /// The structure of the scenery in `objects` on the `marked` tiles, its heights above its lowest item. Empty
     /// (no tiles) when nothing is marked.
-    [[nodiscard]] save::Structure pick_structure(std::span<const save::Tile> marked, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid);
+    [[nodiscard]] save::model::Structure pick_structure(std::span<const save::model::Tile> marked, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
 
     /// Where `structure`'s tile (col, row) lands when it is centred on `at` and turned `turn`.
-    [[nodiscard]] save::Tile structure_tile(const save::Structure& structure, save::Tile at, ModelTurn turn, std::int32_t col, std::int32_t row);
+    [[nodiscard]] save::model::Tile structure_tile(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, std::int32_t col, std::int32_t row);
 
     /// `structure`'s items as objects to add, centred on `at`, turned `turn`, its lowest item at
     /// `height`. They have no ids yet.
-    [[nodiscard]] std::vector<save::PlacedObject> structure_objects(const save::Structure& structure, save::Tile at, ModelTurn turn, std::int32_t height, const object::ObjectModels& models);
+    [[nodiscard]] std::vector<save::model::PlacedObject> structure_objects(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, std::int32_t height, const object::ObjectModels& models);
 
     enum class StructureProblem : std::uint8_t
     {
@@ -48,6 +48,6 @@ namespace rct3::park
     };
 
     /// Whether `placed` (from structure_objects) may be built.
-    [[nodiscard]] StructureProblem structure_problem(const save::Structure& structure, save::Tile at, ModelTurn turn, std::span<const save::PlacedObject> placed, const object::ObjectModels& models, const path::SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    [[nodiscard]] StructureProblem structure_problem(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, std::span<const save::model::PlacedObject> placed, const object::ObjectModels& models, const path::SolidTiles& solids, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);
 
 } // namespace rct3::park

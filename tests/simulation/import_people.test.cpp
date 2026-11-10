@@ -9,10 +9,10 @@ using namespace rct3;
 
 TEST_CASE("guests in the park come over with their needs turned the other way up")
 {
-    save::PeopleModel people;
-    save::Guest g;
-    g.person.type = save::PersonType::Child;
-    g.person.sub_type = std::to_underlying(save::Sex::Female);
+    save::model::PeopleModel people;
+    save::model::Guest g;
+    g.person.type = save::model::PersonType::Child;
+    g.person.sub_type = std::to_underlying(save::model::Sex::Female);
     g.person.name = "Test Guest";
     g.person.position = { 10, 2, 30 };
     g.person.heading = 1.25f;
@@ -24,7 +24,7 @@ TEST_CASE("guests in the park come over with their needs turned the other way up
     g.cash.bank = 9000;
     g.cash.spent_rides = 400;
     people.guests.push_back(g);
-    save::Guest outside = g;
+    save::model::Guest outside = g;
     outside.in_park = false;
     people.guests.push_back(outside);
 

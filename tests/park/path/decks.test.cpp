@@ -10,9 +10,9 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::TerrainGrid flat_grid(int width, int height)
+    save::model::TerrainGrid flat_grid(int width, int height)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
@@ -22,16 +22,16 @@ namespace
     }
 
     /// A raised path at `height` drawn by object `id + 100`.
-    save::PathTile raised(int col, int row, std::int32_t height, std::uint64_t id, std::uint8_t slope = 0, Side heading = Side::kNextRow)
+    save::model::PathTile raised(int col, int row, std::int32_t height, std::uint64_t id, std::uint8_t slope = 0, Side heading = Side::kNextRow)
     {
-        save::PathTile p;
+        save::model::PathTile p;
         p.id = id;
-        p.kind = save::PathKind::Flying;
+        p.kind = save::model::PathKind::Flying;
         p.col = static_cast<std::uint8_t>(col);
         p.row = static_cast<std::uint8_t>(row);
         p.direction = stored_direction(heading);
         p.surface_name = "Gravel";
-        p.elevation = save::PathElevation { };
+        p.elevation = save::model::PathElevation { };
         p.elevation->slope = slope;
         p.elevation->quantised_height = height;
         p.elevation->scenery_ref = id + 100;
@@ -87,34 +87,34 @@ TEST_CASE("headings and stored directions swap both ways")
     for (const Side h : kSides)
         CHECK(stored_heading(stored_direction(h)) == h);
     CHECK(stored_direction(Side::kNextRow) == 3);
-    CHECK_FALSE(stored_heading(save::kNoDirection));
+    CHECK_FALSE(stored_heading(save::model::kNoDirection));
     // A bare count past 3 is taken as itself, as before headings were checked.
-    CHECK(stored_heading_or_bare(save::kNoDirection) == Side::kColBefore);
+    CHECK(stored_heading_or_bare(save::model::kNoDirection) == Side::kColBefore);
     CHECK(stored_heading_or_bare(2) == Side::kRowBefore);
 }
 
 TEST_CASE("a path meets the edges of its tile at its own height")
 {
-    save::TerrainGrid g = flat_grid(3, 3);
+    save::model::TerrainGrid g = flat_grid(3, 3);
     g.cells[1 * 3 + 1].corners = { 1, 1, 3, 3 }; // Higher towards higher rows
-    save::PathTile ground;
-    ground.kind = save::PathKind::Ground;
+    save::model::PathTile ground;
+    ground.kind = save::model::PathKind::Ground;
     ground.col = 1;
     ground.row = 1;
     CHECK(edge_height(ground, g, Side { 0 }) == doctest::Approx(3));
     CHECK(edge_height(ground, g, Side { 1 }) == doctest::Approx(2));
 
     // A gentle slope climbing towards higher columns reaches only its two ends.
-    const save::PathTile slope = raised(1, 1, 4, 1, 4, Side::kNextCol);
+    const save::model::PathTile slope = raised(1, 1, 4, 1, 4, Side::kNextCol);
     CHECK(edge_height(slope, g, Side { 3 }) == doctest::Approx(4));
     CHECK(edge_height(slope, g, Side { 1 }) == doctest::Approx(5));
     CHECK_FALSE(edge_height(slope, g, Side { 0 }));
-    const save::PathTile down = raised(1, 1, 4, 1, 2, Side::kNextCol);
+    const save::model::PathTile down = raised(1, 1, 4, 1, 2, Side::kNextCol);
     CHECK(edge_height(down, g, Side { 1 }) == doctest::Approx(2));
 
-    save::PathTile queue = raised(1, 1, 4, 1);
-    queue.kind = save::PathKind::Queue;
-    queue.queue = save::PathQueueInfo { };
+    save::model::PathTile queue = raised(1, 1, 4, 1);
+    queue.kind = save::model::PathKind::Queue;
+    queue.queue = save::model::PathQueueInfo { };
     queue.queue->start_direction = 0; // Towards lower columns
     queue.queue->end_direction = 1;
     CHECK(edge_height(queue, g, Side { 3 }) == doctest::Approx(4));
@@ -123,13 +123,13 @@ TEST_CASE("a path meets the edges of its tile at its own height")
 
 TEST_CASE("raised paths take the pieces their neighbours call for")
 {
-    const save::TerrainGrid g = flat_grid(5, 5);
+    const save::model::TerrainGrid g = flat_grid(5, 5);
     // A row of three at height 2.
-    std::vector<save::PathTile> paths { raised(1, 2, 2, 1), raised(2, 2, 2, 2), raised(3, 2, 2, 3) };
-    std::vector<save::PlacedObject> objects;
-    for (const save::PathTile& p : paths)
+    std::vector<save::model::PathTile> paths { raised(1, 2, 2, 1), raised(2, 2, 2, 2), raised(3, 2, 2, 3) };
+    std::vector<save::model::PlacedObject> objects;
+    for (const save::model::PathTile& p : paths)
     {
-        save::PlacedObject& o = objects.emplace_back();
+        save::model::PlacedObject& o = objects.emplace_back();
         o.id = p.elevation->scenery_ref;
         o.symbol = "old";
     }
@@ -147,7 +147,7 @@ TEST_CASE("raised paths take the pieces their neighbours call for")
         paths.push_back(raised(col, 3, 2, static_cast<std::uint64_t>(10 + col)));
     for (std::size_t i = 3; i < paths.size(); ++i)
     {
-        save::PlacedObject& o = objects.emplace_back();
+        save::model::PlacedObject& o = objects.emplace_back();
         o.id = paths[i].elevation->scenery_ref;
     }
     (void)refresh_decks(paths, objects, g, styles, 0, 0, 4, 4);
@@ -162,8 +162,8 @@ TEST_CASE("raised paths take the pieces their neighbours call for")
 
 TEST_CASE("a gentle slope beside another takes the wide pieces")
 {
-    const save::TerrainGrid g = flat_grid(5, 5);
-    const std::vector<save::PathTile> paths { raised(1, 2, 0, 1, 4), raised(2, 2, 0, 2, 4), raised(3, 2, 0, 3, 4) };
+    const save::model::TerrainGrid g = flat_grid(5, 5);
+    const std::vector<save::model::PathTile> paths { raised(1, 2, 0, 1, 4), raised(2, 2, 0, 2, 4), raised(3, 2, 0, 3, 4) };
     CHECK(choose_deck(paths[0], paths, g).piece == DeckPiece::SlopeStraightLeft);
     CHECK(choose_deck(paths[1], paths, g).piece == DeckPiece::SlopeMid);
     CHECK(choose_deck(paths[2], paths, g).piece == DeckPiece::SlopeStraightRight);
@@ -171,9 +171,9 @@ TEST_CASE("a gentle slope beside another takes the wide pieces")
 
 TEST_CASE("a raised queue's piece follows its line")
 {
-    save::PathTile q = raised(1, 1, 2, 1);
-    q.kind = save::PathKind::Queue;
-    q.queue = save::PathQueueInfo { };
+    save::model::PathTile q = raised(1, 1, 2, 1);
+    q.kind = save::model::PathKind::Queue;
+    q.queue = save::model::PathQueueInfo { };
     const auto line = [&](Side start, Side end) {
         q.queue->start_direction = stored_direction(start);
         q.queue->end_direction = stored_direction(end);

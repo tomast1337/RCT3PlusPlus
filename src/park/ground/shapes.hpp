@@ -48,13 +48,13 @@ namespace rct3::park::ground
     };
 
     /// The grid's corner points as they are, held where `free` refuses a tile touching them or at a cliff.
-    [[nodiscard]] CornerHeights corner_heights(const save::TerrainGrid& grid, const std::function<bool(save::Tile)>& free);
+    [[nodiscard]] CornerHeights corner_heights(const save::model::TerrainGrid& grid, const std::function<bool(save::model::Tile)>& free);
 
     /// Sets corner point (`col`, `row`) to `height` in each tile that has it.
-    void set_corner_point(save::TerrainGrid& grid, int col, int row, float height);
+    void set_corner_point(save::model::TerrainGrid& grid, int col, int row, float height);
 
     /// A stroke `amount` units high (down when negative) of `shape`, centred on `middle` with `reach` tiles,
     /// over the heights `before`. Returns the sum of how far every corner point moved from where it stood.
-    float shape_ground(save::TerrainGrid& grid, const CornerHeights& before, GroundShape shape, glm::vec2 middle, float reach, glm::vec2 along, float amount);
+    float shape_ground(save::model::TerrainGrid& grid, const CornerHeights& before, GroundShape shape, glm::vec2 middle, float reach, glm::vec2 along, float amount);
 
 } // namespace rct3::park::ground

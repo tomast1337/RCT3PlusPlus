@@ -217,8 +217,8 @@ namespace rct3::scene::park
             Area,
         };
         Tool tool = Tool::None;
-        std::optional<save::Tile> corner; ///< Of the area marked, where the drag began
-        std::optional<save::Tile> other;  ///< And the opposite corner, where it is now or ended
+        std::optional<save::model::Tile> corner; ///< Of the area marked, where the drag began
+        std::optional<save::model::Tile> other;  ///< And the opposite corner, where it is now or ended
         bool dragging = false;
         std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
         std::vector<bool> kept { };                       ///< Tiles the drag may not take in or out, row by row; filled as it begins
@@ -227,7 +227,7 @@ namespace rct3::scene::park
         struct Marked
         {
             std::array<std::int32_t, 4> area { };
-            save::EnclosureMap enclosures { };
+            save::model::EnclosureMap enclosures { };
             std::int64_t cost = 0;
         };
         std::optional<Marked> marked { };
@@ -238,8 +238,8 @@ namespace rct3::scene::park
     struct EnclosureTool
     {
         std::optional<rct3::park::BuildItem> item;        ///< The fence, delete tool or animal picked; none while put away
-        std::optional<save::Tile> corner;                 ///< Of the area marked, where the drag began
-        std::optional<save::Tile> other;                  ///< And the opposite corner, where it is now
+        std::optional<save::model::Tile> corner;          ///< Of the area marked, where the drag began
+        std::optional<save::model::Tile> other;           ///< And the opposite corner, where it is now
         std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
         std::vector<bool> kept { };                       ///< Tiles the drag may not take in or out, row by row; filled as it begins
         /// What letting go would do: the enclosures it would leave, and what that costs (below 0 when the fence
@@ -247,7 +247,7 @@ namespace rct3::scene::park
         struct Marked
         {
             std::array<std::int32_t, 4> area { };
-            save::EnclosureMap enclosures { };
+            save::model::EnclosureMap enclosures { };
             std::int64_t cost = 0;
         };
         std::optional<Marked> marked { };
@@ -258,20 +258,20 @@ namespace rct3::scene::park
     struct PoolTool
     {
         std::optional<rct3::park::BuildItem> item;                                ///< The tool picked; none while put away
-        std::optional<save::Tile> corner;                                         ///< Of the area marked, where the drag began
-        std::optional<save::Tile> other;                                          ///< And the opposite corner, where it is now
+        std::optional<save::model::Tile> corner;                                  ///< Of the area marked, where the drag began
+        std::optional<save::model::Tile> other;                                   ///< And the opposite corner, where it is now
         std::optional<std::array<std::int32_t, 4>> drawn;                         ///< Columns and rows the marks show now
         std::int32_t drawn_look = -1;                                             ///< And how: the part of the tile marked, and the colour
         std::optional<std::int32_t> height;                                       ///< Of the surface, when the pool panel does not snap it to the ground
         bool grid = false;                                                        ///< The pool panel's grid switch, as last seen
         rct3::park::pools::PoolEdge edge = rct3::park::pools::PoolEdge::Straight; ///< The pool panel's edge setting, for the squares laid
         /// The squares worked on now, from where the drag began to where it is, or the square under the pointer.
-        std::optional<std::pair<save::Tile, save::Tile>> working;
+        std::optional<std::pair<save::model::Tile, save::model::Tile>> working;
         std::int64_t cost = 0; ///< Of the work, below zero for money back
         bool ok = false;       ///< Whether the work may be done
         /// The pools before the work was laid into them to be seen, and the ground it dug, to put back.
         std::optional<rct3::park::pools::PoolMap> before;
-        std::vector<std::pair<save::Tile, std::array<float, 4>>> dug;
+        std::vector<std::pair<save::model::Tile, std::array<float, 4>>> dug;
         bool redraw = false;                                 ///< The pools were put back away from the frame and are drawn on the next
         rct3::park::Side side { };                           ///< Of an extra, changing room or high diving board, as the turn keys turn it
         std::optional<float> press_y;                        ///< Where on the screen the drag began
@@ -289,7 +289,7 @@ namespace rct3::scene::park
         std::optional<std::int32_t> worked_lifted; ///< And the one of the work shown
         bool faces = true;                         ///< The work shown is no high diving board facing away from the water
         /// The extra, changing room or next pool path piece where it would go, drawn see-through, and whether it may go there.
-        std::optional<save::PlacedObject> ghost_of;
+        std::optional<save::model::PlacedObject> ghost_of;
         bool ghost_ok = false;
         rct3::park::object::ObjectMesh ghost;
         rct3::park::TerrainMesh arrow; ///< Over the paths page's next piece, the way its trail goes on
@@ -373,10 +373,10 @@ namespace rct3::scene::park
     /// A head, body or legs that a guest coming in at the gate may wear.
     struct Outfit
     {
-        save::PeopleObjectId id = 0; ///< Of its part group in the park's people
+        save::model::PeopleObjectId id = 0; ///< Of its part group in the park's people
         const rct3::park::person::PartSet* set = nullptr;
-        save::PersonType type = save::PersonType::Adult;
-        save::Sex sex = save::Sex::Male;
+        save::model::PersonType type = save::model::PersonType::Adult;
+        save::model::Sex sex = save::model::Sex::Male;
         std::uint8_t section = 0; ///< As a part group's
         std::uint8_t vip = 0;     ///< The celebrity it dresses, by the number VIP goals give them; 0 for guests'
         bool swim = false;        ///< Swimwear, worn at a pool in place of the clothes of its section
@@ -407,7 +407,7 @@ namespace rct3::scene::park
 
     struct ParkScene
     {
-        save::TerrainGrid grid;
+        save::model::TerrainGrid grid;
         random::Seed seed;
         random::RandomState gameplay; ///< For the simulation; to be kept with a saved park
         rct3::park::ParkCamera camera;
@@ -443,7 +443,7 @@ namespace rct3::scene::park
         ui::UiTextures ground_textures;
         render::TextureHandle blank;     ///< For ground without a picture
         render::TextureHandle variation; ///< Noise the ground's shade wanders by (park/ground/variation.hpp)
-        std::vector<save::PlacedObject> objects;
+        std::vector<save::model::PlacedObject> objects;
         rct3::park::object::ObjectModels models;
         rct3::park::object::ModelPictures pictures; ///< For painting the batches new levels bring
         rct3::park::object::Leans leans;            ///< Of the built pieces that follow a slope
@@ -452,7 +452,7 @@ namespace rct3::scene::park
         std::vector<std::uint64_t> fence_panels;    ///< The objects of the fence round the park's land, as last built
         /// By ride id, the objects of the fence the park built round the ride and beside its doors, as last built.
         std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> ride_fence_pieces;
-        save::EnclosureMap enclosures;                                 ///< The animal enclosures' tiles and fences
+        save::model::EnclosureMap enclosures;                          ///< The animal enclosures' tiles and fences
         std::vector<std::uint64_t> enclosure_panels;                   ///< The objects of their fences, as last built
         rct3::park::pools::PoolMap pools;                              ///< The swimming pools the player laid
         std::size_t pools_seen = 0;                                    ///< A fingerprint of `pools` as the simulation last took them in
@@ -557,19 +557,19 @@ namespace rct3::scene::park
         /// Park seconds the park has been shown: at the speed picked, stopped while paused. Everything in the
         /// park moves by it, so a pause freezes it all; the interface and its previews go by `clock`.
         float park_clock = 0;
-        std::vector<float> chain_shifts; ///< By ride, how far its lift chain has moved (park/chain_lifts.hpp)
-        simulation::ParkState park;      ///< Money, guests, rating, weather, date and speed as they are now
-        BuildMenus build;                ///< The lists of rides, shops and scenery to build
-        save::ParkModel park_model;      ///< As saved: finances, objectives, research; read by the management windows
-        simulation::DayClock day;        ///< The park's time of day
-        save::RideModel rides;
-        std::vector<save::RideShow> shows; ///< What the show rides put on, by ride id
-        save::PeopleModel people;          ///< Guests, staff and litter as saved; read for the weekly rating
-        simulation::SimWorld sim;          ///< The paths, shops and guests the simulation runs
-        bool simulate = true;              ///< Run the simulation and show its guests; off only to see the park as saved
-        float sim_time = 0;                ///< Park seconds the simulation has still to step
+        std::vector<float> chain_shifts;   ///< By ride, how far its lift chain has moved (park/chain_lifts.hpp)
+        simulation::ParkState park;        ///< Money, guests, rating, weather, date and speed as they are now
+        BuildMenus build;                  ///< The lists of rides, shops and scenery to build
+        save::model::ParkModel park_model; ///< As saved: finances, objectives, research; read by the management windows
+        simulation::DayClock day;          ///< The park's time of day
+        save::model::RideModel rides;
+        std::vector<save::model::RideShow> shows; ///< What the show rides put on, by ride id
+        save::model::PeopleModel people;          ///< Guests, staff and litter as saved; read for the weekly rating
+        simulation::SimWorld sim;                 ///< The paths, shops and guests the simulation runs
+        bool simulate = true;                     ///< Run the simulation and show its guests; off only to see the park as saved
+        float sim_time = 0;                       ///< Park seconds the simulation has still to step
         /// Ride cars, drawn apart from the objects so the simulation can move them round their rides' courses.
-        std::vector<save::PlacedObject> cars;
+        std::vector<save::model::PlacedObject> cars;
         std::vector<rct3::park::ride::CarSpot> car_spots; ///< By car, as the park kept them
         rct3::park::object::Fitted saved_cars;            ///< Where the park kept each car, by id
         std::vector<glm::mat4> car_places;                ///< Where each car stands now, by car
@@ -776,8 +776,8 @@ namespace rct3::scene::park
         int patrol_brush = 0;                                                ///< Of ui::screens::kPatrolBrushes
         std::optional<bool> patrol_stroke;                                   ///< While a stroke goes on: whether it adds tiles, or takes them away
         std::optional<HeldPerson> holding;                                   ///< The person the player has picked up
-        std::vector<save::BinState> bins;                                    ///< Of the litter bins among the objects
-        std::vector<save::SignState> signs;                                  ///< Of the signs among the objects
+        std::vector<save::model::BinState> bins;                             ///< Of the litter bins among the objects
+        std::vector<save::model::SignState> signs;                           ///< Of the signs among the objects
         std::optional<std::size_t> shown_prop;                               ///< Of objects, the prop the info panel tells about instead
         std::vector<ui::screens::SceneryTab> prop_tabs;                      ///< Its tabs in the panel's order
         std::optional<ui::screens::SceneryTab> prop_tab;                     ///< Its open tab; none while only its name shows
@@ -928,11 +928,11 @@ namespace rct3::scene::park
     void fire(ParkScene& scene, std::size_t shown);
 
     /// Puts an attraction in `state`, the running park with it: open lets guests on, testing runs it empty.
-    void set_attraction_state(ParkScene& scene, save::AttractionCommon& attraction, save::AttractionState state);
+    void set_attraction_state(ParkScene& scene, save::model::AttractionCommon& attraction, save::model::AttractionState state);
 
     /// Why attraction `ref` cannot be put in `state`, as a string key: a ride by its track and doors, a stall when
     /// its menu is empty; nothing when it can.
-    [[nodiscard]] std::optional<std::string> state_refusal(const ParkScene& scene, rct3::park::AttractionRef ref, save::AttractionState state);
+    [[nodiscard]] std::optional<std::string> state_refusal(const ParkScene& scene, rct3::park::AttractionRef ref, save::model::AttractionState state);
     /// The states the open-or-close tab of `ref` offers, in the order its choices fan out.
     [[nodiscard]] std::vector<ui::screens::StateChoice> state_choices(const ParkScene& scene, rct3::park::AttractionRef ref);
     /// Those choices as the tab fans them: each greyed, with why as its help, when `state_refusal` refuses it.
@@ -940,12 +940,12 @@ namespace rct3::scene::park
 
     /// Puts ride `ride` in `state` when its track and doors let it; otherwise leaves it and gives the string
     /// key of why not.
-    [[nodiscard]] std::optional<std::string> change_ride_state(ParkScene& scene, std::size_t ride, save::AttractionState state);
+    [[nodiscard]] std::optional<std::string> change_ride_state(ParkScene& scene, std::size_t ride, save::model::AttractionState state);
     /// The same for stall `stall`, which cannot open with nothing on its menu.
-    [[nodiscard]] std::optional<std::string> change_stall_state(ParkScene& scene, std::size_t stall, save::AttractionState state);
+    [[nodiscard]] std::optional<std::string> change_stall_state(ParkScene& scene, std::size_t stall, save::model::AttractionState state);
 
     /// Has the running show ride that `show` is for put it on from its next go.
-    void stage_show(ParkScene& scene, const save::RideShow& show);
+    void stage_show(ParkScene& scene, const save::model::RideShow& show);
 
     /// Has the simulated flat ride `ride_index` (of scene.rides) seat its riders on the object that has the
     /// seats, as flat_ride_timings finds it. Nothing for other rides, or one the simulation does not run.

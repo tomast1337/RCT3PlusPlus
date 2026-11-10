@@ -33,7 +33,7 @@ namespace rct3::park::object
         }
     }
 
-    glm::vec2 footprint_middle(const save::PlacedObject& object, std::array<std::int32_t, 2> squares)
+    glm::vec2 footprint_middle(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares)
     {
         // A quarter turn either way lays the model's X along the park's Z.
         const bool across = (object.rotation & 1) != 0;
@@ -42,7 +42,7 @@ namespace rct3::park::object
         return { static_cast<float>(object.col) + span_x / 2, static_cast<float>(object.row) + span_z / 2 };
     }
 
-    save::PlacedObject moved_with(save::PlacedObject object, std::array<std::int32_t, 2> squares, const save::PlacedObject& from, std::array<std::int32_t, 2> from_squares, const save::PlacedObject& to)
+    save::model::PlacedObject moved_with(save::model::PlacedObject object, std::array<std::int32_t, 2> squares, const save::model::PlacedObject& from, std::array<std::int32_t, 2> from_squares, const save::model::PlacedObject& to)
     {
         const ModelTurn turn = ModelTurn::from(to.rotation - from.rotation);
         // The offset from `from`'s middle, along the park's X and Z, turned as a model's X and Z are.
@@ -59,7 +59,7 @@ namespace rct3::park::object
         return object;
     }
 
-    save::Tile square_tile(const save::PlacedObject& object, std::array<std::int32_t, 2> squares, int x, int z)
+    save::model::Tile square_tile(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares, int x, int z)
     {
         const glm::vec2 middle = footprint_middle(object, squares);
         const ModelTurn turn = ModelTurn::from(object.rotation);
@@ -70,7 +70,7 @@ namespace rct3::park::object
         return { static_cast<int>(std::floor(centre.x)), static_cast<int>(std::floor(centre.y)) };
     }
 
-    bool on_owned_land(const save::PlacedObject& object, std::array<std::int32_t, 2> squares, const save::TerrainGrid& grid)
+    bool on_owned_land(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares, const save::model::TerrainGrid& grid)
     {
         const bool across = (object.rotation & 1) != 0;
         const std::int32_t span_x = squares[across ? 1 : 0];
@@ -81,20 +81,20 @@ namespace rct3::park::object
             {
                 if (!grid.contains(col, row))
                     return false;
-                const save::Ownership own = grid.at(col, row).ownership();
-                if (own != save::Ownership::Owned && (own != save::Ownership::OwnedRights || object.height_offset == 0))
+                const save::model::Ownership own = grid.at(col, row).ownership();
+                if (own != save::model::Ownership::Owned && (own != save::model::Ownership::OwnedRights || object.height_offset == 0))
                     return false;
             }
         }
         return true;
     }
 
-    bool on_ground(const save::PlacedObject& object)
+    bool on_ground(const save::model::PlacedObject& object)
     {
         return !object.base_height || (object.height_offset == 0 && !object.force_absolute_height);
     }
 
-    glm::mat4 object_transform(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid, std::array<std::int32_t, 2> squares, bool ground_height)
+    glm::mat4 object_transform(const save::model::PlacedObject& object, Positioning positioning, const save::model::TerrainGrid& grid, std::array<std::int32_t, 2> squares, bool ground_height)
     {
         const glm::vec2 x = turned_x(ModelTurn::from(object.rotation));
         const glm::vec2 z { -x.y, x.x }; // The model's +Z, a quarter turn on from its +X

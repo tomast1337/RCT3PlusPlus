@@ -16,6 +16,7 @@
 #include <vector>
 
 using namespace rct3::save;
+using namespace rct3::save::model;
 
 namespace
 {

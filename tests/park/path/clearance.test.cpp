@@ -16,28 +16,28 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::TerrainGrid owned_grid(int width, int height)
+    save::model::TerrainGrid owned_grid(int width, int height)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(static_cast<std::size_t>(width * height));
-        for (save::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::TileFlag::Owned);
+        for (save::model::TerrainCell& c : g.cells)
+            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
         return g;
     }
 
     /// One item of `category` standing on tile (2, 1), filling levels 0 to 3 of its one square, so up to 4.
-    std::pair<std::vector<save::PlacedObject>, object::ObjectModels> one_item(ItemCategory category)
+    std::pair<std::vector<save::model::PlacedObject>, object::ObjectModels> one_item(ItemCategory category)
     {
         object::ObjectModel model;
         model.category = std::to_underlying(category);
         model.ground_height = false;
         model.solid = { std::array<std::int32_t, 2> { 0, 4 } };
         model.levels = { { 100, { }, { } } };
-        save::PlacedObject o;
+        save::model::PlacedObject o;
         o.id = 1;
         o.symbol = "Thing";
         o.col = 2;
@@ -51,7 +51,7 @@ namespace
 
 TEST_CASE("a stall blocks paths through it but not over it; a bench never does")
 {
-    const save::TerrainGrid g = owned_grid(5, 3);
+    const save::model::TerrainGrid g = owned_grid(5, 3);
     const auto [objects, models] = one_item(ItemCategory::Stall);
     const SolidTiles solids = solid_tiles(objects, models, g);
     CHECK(blocked(solids, { 2, 1 }, 0, 0));
@@ -63,7 +63,7 @@ TEST_CASE("a stall blocks paths through it but not over it; a bench never does")
     start_at(b, { 2, 1 });
     CHECK(lay_problem(b, g, { }, solids) == LayProblem::Blocked);
     CHECK(lay_problem(b, g, { }) == LayProblem::None);
-    CHECK(plan_drag(std::vector<save::Tile> { { 1, 1 }, { 2, 1 }, { 3, 1 } }, g, { }, solids).refused == 1);
+    CHECK(plan_drag(std::vector<save::model::Tile> { { 1, 1 }, { 2, 1 }, { 3, 1 } }, g, { }, solids).refused == 1);
 
     const auto [bench, bench_models] = one_item(ItemCategory::Bench);
     CHECK(solid_tiles(bench, bench_models, g).tiles.empty());
@@ -75,7 +75,7 @@ TEST_CASE("a stall blocks paths through it but not over it; a bench never does")
 
 TEST_CASE("track keeps paths and scenery out of its riders' room, over it or under it for hanging cars, but not other track")
 {
-    const save::TerrainGrid g = owned_grid(5, 3);
+    const save::model::TerrainGrid g = owned_grid(5, 3);
     auto [objects, models] = one_item(ItemCategory::TrackPiece);
     SolidTiles solids = solid_tiles(objects, models, g);
     CHECK(blocked(solids, { 2, 1 }, 4 + kRiderRoom - 0.25f, 4 + kRiderRoom - 0.25f)); // Over the old limit, under the new
@@ -100,7 +100,7 @@ TEST_CASE("track keeps paths and scenery out of its riders' room, over it or und
 
 TEST_CASE("a route goes round a stall in its way")
 {
-    const save::TerrainGrid g = owned_grid(5, 3);
+    const save::model::TerrainGrid g = owned_grid(5, 3);
     const auto [objects, models] = one_item(ItemCategory::Stall);
     const SolidTiles solids = solid_tiles(objects, models, g);
     FootpathBuilder b;
@@ -108,13 +108,13 @@ TEST_CASE("a route goes round a stall in its way")
     b.heading = Side::kNextCol;
     const auto route = find_route(b, { 4, 1 }, g, { }, 1000, std::nullopt, solids);
     REQUIRE(route);
-    CHECK(route->back().piece.spot == save::Tile { 4, 1 });
-    CHECK(std::ranges::none_of(*route, [](const RouteStep& s) { return s.piece.spot == save::Tile { 2, 1 } && s.piece.end < 4; }));
+    CHECK(route->back().piece.spot == save::model::Tile { 4, 1 });
+    CHECK(std::ranges::none_of(*route, [](const RouteStep& s) { return s.piece.spot == save::model::Tile { 2, 1 } && s.piece.end < 4; }));
 }
 
 TEST_CASE("items in different quarters or along different edges of a tile take different room of it")
 {
-    const save::TerrainGrid g = owned_grid(5, 3);
+    const save::model::TerrainGrid g = owned_grid(5, 3);
     auto [objects, models] = one_item(ItemCategory::Stall);
     models.begin()->second.positioning = std::to_underlying(object::Positioning::Quarter);
     objects.push_back(objects[0]);
@@ -135,7 +135,7 @@ TEST_CASE("items in different quarters or along different edges of a tile take d
 
 TEST_CASE("an item clashes with one in the same room of a tile, not with one beside or on top of it")
 {
-    const save::TerrainGrid g = owned_grid(5, 3);
+    const save::model::TerrainGrid g = owned_grid(5, 3);
     const auto [objects, models] = one_item(ItemCategory::TrackPiece);
     const SolidTiles standing = solid_tiles(objects, models, g);
     CHECK(clash(standing, standing, { }, g) == Clash::Solid);
@@ -151,7 +151,7 @@ TEST_CASE("an item clashes with one in the same room of a tile, not with one bes
 
 TEST_CASE("pieces of track filling other thirds of a tile pass each other, turned as they stand")
 {
-    const save::TerrainGrid g = owned_grid(5, 3);
+    const save::model::TerrainGrid g = owned_grid(5, 3);
     const auto piece = [&](std::uint32_t cells, std::int32_t rotation) {
         auto [objects, models] = one_item(ItemCategory::TrackPiece);
         support::SupportFootprint f;
@@ -171,10 +171,10 @@ TEST_CASE("pieces of track filling other thirds of a tile pass each other, turne
 
 TEST_CASE("a group of items is refused whole by its first item in the way, and placed whole when none is")
 {
-    const save::TerrainGrid g = owned_grid(6, 3);
+    const save::model::TerrainGrid g = owned_grid(6, 3);
     const auto [standing, models] = one_item(ItemCategory::Stall); // On tile (2, 1)
     const SolidTiles solids = solid_tiles(standing, models, g);
-    std::vector<save::PlacedObject> group(3, standing.front());
+    std::vector<save::model::PlacedObject> group(3, standing.front());
     for (std::size_t i = 0; i < group.size(); ++i)
         group[i].col = static_cast<std::int32_t>(i);
     const auto refused = first_refused(group, models, solids, { }, g);
@@ -190,9 +190,9 @@ TEST_CASE("a group of items is refused whole by its first item in the way, and p
 
 TEST_CASE("a group of items is refused whole by one off land the park owns; bought rights do for one above the ground")
 {
-    save::TerrainGrid g = owned_grid(6, 3);
+    save::model::TerrainGrid g = owned_grid(6, 3);
     const auto [one, models] = one_item(ItemCategory::Stall);
-    std::vector<save::PlacedObject> group(2, one.front());
+    std::vector<save::model::PlacedObject> group(2, one.front());
     group[0].col = 0;
     group[1].col = 4;
     g.at(4, 1).flags = 0;
@@ -203,7 +203,7 @@ TEST_CASE("a group of items is refused whole by one off land the park owns; boug
     group[1].col = 9; // Off the map
     CHECK(first_refused(group, models, { }, { }, g)->unowned);
     group[1].col = 4;
-    g.at(4, 1).flags = static_cast<std::uint8_t>(save::TileFlag::Owned) | static_cast<std::uint8_t>(save::TileFlag::RightsOnly);
+    g.at(4, 1).flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned) | static_cast<std::uint8_t>(save::model::TileFlag::RightsOnly);
     CHECK(first_refused(group, models, { }, { }, g).has_value()); // On the ground
     group[1].base_height = 2;
     group[1].force_absolute_height = true;

@@ -77,10 +77,10 @@ namespace rct3::park::track
         return rules.pieces.empty() || std::ranges::any_of(rules.pieces, [&](const std::string& p) { return strings::equals_ignoring_case(p, piece); });
     }
 
-    save::RideColours starting_colours(const TrackRules& rules, std::span<const PieceShape> pieces)
+    save::model::RideColours starting_colours(const TrackRules& rules, std::span<const PieceShape> pieces)
     {
         const auto first = std::ranges::find_if(pieces, [&](const PieceShape& p) { return rules.pieces.empty() || strings::equals_ignoring_case(p.record.name, rules.pieces.front()); });
-        return first != pieces.end() ? first->record.colours : save::RideColours { };
+        return first != pieces.end() ? first->record.colours : save::model::RideColours { };
     }
 
     TrackRules load_track_rules(const std::filesystem::path& file, std::string_view symbol)
@@ -103,18 +103,18 @@ namespace rct3::park::track
         return { };
     }
 
-    std::optional<std::string> open_refusal(const save::Ride& ride, const TrackRules& rules, save::AttractionState state, bool editing, std::optional<const TrackCourse&> course, std::size_t pool_joined)
+    std::optional<std::string> open_refusal(const save::model::Ride& ride, const TrackRules& rules, save::model::AttractionState state, bool editing, std::optional<const TrackCourse&> course, std::size_t pool_joined)
     {
-        if (state == save::AttractionState::Closed || ride.kind == save::RideKind::Special)
+        if (state == save::model::AttractionState::Closed || ride.kind == save::model::RideKind::Special)
             return std::nullopt;
-        const bool test = state == save::AttractionState::Testing;
+        const bool test = state == save::model::AttractionState::Testing;
         const bool circuit = (ride.track && ride.track->circuit) || (course && course->closed);
         // A slide climbed on foot has neither station nor doors: swimmers get on from the pool at its steps' foot.
         const bool climbed = course && !course->climbs.empty();
-        if (ride.kind == save::RideKind::Tracked)
+        if (ride.kind == save::model::RideKind::Tracked)
         {
             const std::size_t pieces = ride.track ? ride.track->pieces.size() : 0;
-            if (ride.track && ride.track->segments.size() > 1 && !rules.may_be_split && ride.mode != save::OperatingMode::WaterTransport)
+            if (ride.track && ride.track->segments.size() > 1 && !rules.may_be_split && ride.mode != save::model::OperatingMode::WaterTransport)
                 return "TrackedRideIsDisjoint";
             // A track being built has its station pieces before the park keeps its stations.
             if (!climbed && (course ? !std::ranges::contains(course->kinds, CourseKind::Station) : ride.stations.empty()))
@@ -131,7 +131,7 @@ namespace rct3::park::track
             // short as their kind allows (cars_fitting).
             // shortcut: the hill may stand anywhere on the track, not only on a straight downhill run back from a
             // station; upgrade when building offers the hill piece away from one.
-            if (course && ride.mode == save::OperatingMode::ReverseCableLiftHill && !course->reverse_lift)
+            if (course && ride.mode == save::model::OperatingMode::ReverseCableLiftHill && !course->reverse_lift)
                 return "CannotOpenOrTestNoReverseCableLiftHill";
         }
         // A test run carries no riders, so only opening wants the doors.
@@ -146,8 +146,8 @@ namespace rct3::park::track
                 return std::nullopt;
             return std::format("CantOpen{}{}{}", rules.pool_ride ? "PoolRide" : "Ride", rule == 0 ? "Missing" : "No", which);
         };
-        const auto has_entrance = [](const save::Station& s) { return s.entrance != 0; };
-        const auto has_exit = [](const save::Station& s) { return s.exit != 0; };
+        const auto has_entrance = [](const save::model::Station& s) { return s.entrance != 0; };
+        const auto has_exit = [](const save::model::Station& s) { return s.exit != 0; };
         if (auto refused = door(rules.entrances, has_entrance, "Entrance"))
             return refused;
         if (auto refused = door(rules.exits, has_exit, "Exit"))

@@ -12,7 +12,7 @@
 namespace rct3::park
 {
 
-    float surface_share(const save::TerrainGrid& g, int x, int z, std::uint8_t surface)
+    float surface_share(const save::model::TerrainGrid& g, int x, int z, std::uint8_t surface)
     {
         int touching = 0;
         int with = 0;
@@ -73,7 +73,7 @@ namespace rct3::park
         /// A tile's ground, once per surface at its corners, lowest index first. Each layer goes over the
         /// ones before it with an opacity that leaves every corner showing its surfaces in proportion: the
         /// first is opaque, and a later one covers its share of all the layers so far.
-        void ground_layers(Builder& b, const save::TerrainGrid& g, int col, int row, const std::array<glm::vec3, 4>& c, const std::array<glm::vec3, 4>& n)
+        void ground_layers(Builder& b, const save::model::TerrainGrid& g, int col, int row, const std::array<glm::vec3, 4>& c, const std::array<glm::vec3, 4>& n)
         {
             std::array<std::uint8_t, 16> surfaces { };
             std::size_t count = 0;
@@ -109,7 +109,7 @@ namespace rct3::park
             }
         }
 
-        glm::vec3 corner(const save::TerrainGrid& g, int col, int row, int c)
+        glm::vec3 corner(const save::model::TerrainGrid& g, int col, int row, int c)
         {
             const int dc = c % 2;
             const int dr = c / 2;
@@ -153,7 +153,7 @@ namespace rct3::park
 
     } // namespace
 
-    glm::vec3 ground_normal(const save::TerrainGrid& g, save::Tile tile, int c)
+    glm::vec3 ground_normal(const save::model::TerrainGrid& g, save::model::Tile tile, int c)
     {
         const auto [col, row] = tile;
         const int x = col + c % 2;
@@ -180,7 +180,7 @@ namespace rct3::park
         return sum;
     }
 
-    TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water, std::span<const GroundOpening> openings, std::optional<TileRect> area)
+    TerrainMesh terrain_mesh(const save::model::TerrainGrid& grid, const save::model::WaterLayer& water, std::span<const GroundOpening> openings, std::optional<TileRect> area)
     {
         TerrainMesh mesh;
         if (grid.empty() || grid.cells.size() != static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height))
@@ -209,7 +209,7 @@ namespace rct3::park
         {
             for (int col = first_col; col < std::min(tiles.end_col, grid.width); ++col)
             {
-                const save::TerrainCell& cell = grid.at(col, row);
+                const save::model::TerrainCell& cell = grid.at(col, row);
                 low = std::min(low, cell.min_height());
                 high = std::max(high, cell.max_height());
                 const std::array<glm::vec3, 4> c { corner(grid, col, row, 0), corner(grid, col, row, 1), corner(grid, col, row, 2), corner(grid, col, row, 3) };
@@ -233,9 +233,9 @@ namespace rct3::park
             mesh.batches.push_back(batch);
         }
 
-        for (const save::WaterBody& body : water.bodies)
+        for (const save::model::WaterBody& body : water.bodies)
         {
-            for (const save::WaterTri& t : body.tris)
+            for (const save::model::WaterTri& t : body.tris)
             {
                 if (!grid.contains(t.col, t.row) || !tiles.contains(t.col, t.row) || t.triangle > 1)
                     continue;
@@ -256,7 +256,7 @@ namespace rct3::park
         return mesh;
     }
 
-    TerrainMesh only_tiles(const TerrainMesh& mesh, const save::TerrainGrid& grid, const std::vector<bool>& keep)
+    TerrainMesh only_tiles(const TerrainMesh& mesh, const save::model::TerrainGrid& grid, const std::vector<bool>& keep)
     {
         TerrainMesh out;
         const auto kept = [&](std::size_t first) {
@@ -307,15 +307,15 @@ namespace rct3::park
         mesh.high = had ? glm::max(mesh.high, more.high) : more.high;
     }
 
-    std::vector<WaterVertex> pool_water(const save::TerrainGrid& grid, std::span<const save::PoolWater> pools)
+    std::vector<WaterVertex> pool_water(const save::model::TerrainGrid& grid, std::span<const save::model::PoolWater> pools)
     {
         std::vector<WaterVertex> out;
-        for (const save::PoolWater& pool : pools)
+        for (const save::model::PoolWater& pool : pools)
         {
             if (!grid.contains(pool.col, pool.row))
                 continue;
             // In small squares, so the waves in it can move the surface, each knowing how far its wall is.
-            const auto water = [&](int dc, int dr) { return std::ranges::any_of(pools, [&](const save::PoolWater& o) { return o.col == pool.col + dc && o.row == pool.row + dr && o.surface == pool.surface; }); };
+            const auto water = [&](int dc, int dr) { return std::ranges::any_of(pools, [&](const save::model::PoolWater& o) { return o.col == pool.col + dc && o.row == pool.row + dr && o.surface == pool.surface; }); };
             const float level = static_cast<float>(pool.surface) + kPoolBrim;
             const glm::vec3 low = corner(grid, pool.col, pool.row, 0);
             const glm::vec3 high = corner(grid, pool.col, pool.row, 3);
@@ -331,7 +331,7 @@ namespace rct3::park
         return out;
     }
 
-    float pool_wall_room(const save::TerrainGrid& grid, glm::vec2 within, std::function_ref<bool(int dc, int dr)> water)
+    float pool_wall_room(const save::model::TerrainGrid& grid, glm::vec2 within, std::function_ref<bool(int dc, int dr)> water)
     {
         const glm::vec2 size { grid.tile_size_x, grid.tile_size_z };
         float room = std::max(size.x, size.y);

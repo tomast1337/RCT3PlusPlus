@@ -15,31 +15,31 @@ using namespace rct3::park;
 
 namespace
 {
-    save::TerrainGrid owned_grid(int width, int height)
+    save::model::TerrainGrid owned_grid(int width, int height)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(static_cast<std::size_t>(width * height));
-        for (save::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::TileFlag::Owned);
+        for (save::model::TerrainCell& c : g.cells)
+            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
         return g;
     }
 
     /// `count` ground queue tiles of line `line` laid from `from` heading `heading`: the line flows back
     /// towards the first, as a queue does until it reaches an entrance.
-    std::vector<save::PathTile> lay_line(const save::TerrainGrid& g, save::Tile from, std::uint8_t heading, int count, std::uint64_t line)
+    std::vector<save::model::PathTile> lay_line(const save::model::TerrainGrid& g, save::model::Tile from, std::uint8_t heading, int count, std::uint64_t line)
     {
         FootpathBuilder b;
         b.queue = true;
         b.heading = Side::from(heading);
         start_at(b, from);
-        std::vector<save::PathTile> paths;
+        std::vector<save::model::PathTile> paths;
         for (int i = 0; i < count; ++i)
             (void)lay_path(b, paths, *next_piece(b, g), "QueueSet", line * 100 + static_cast<std::uint64_t>(i), 0);
-        for (save::PathTile& p : paths)
+        for (save::model::PathTile& p : paths)
             p.queue->queue_line_ref = line;
         return paths;
     }
@@ -47,9 +47,9 @@ namespace
 
 TEST_CASE("a line's sign stands on the tile no other leads into, facing the way guests come in")
 {
-    const save::TerrainGrid g = owned_grid(8, 8);
-    std::vector<save::PathTile> paths = lay_line(g, { 2, 1 }, 0, 3, 7);
-    const save::PathTile last = paths.back();
+    const save::model::TerrainGrid g = owned_grid(8, 8);
+    std::vector<save::model::PathTile> paths = lay_line(g, { 2, 1 }, 0, 3, 7);
+    const save::model::PathTile last = paths.back();
     const auto spots = queue_sign_spots(paths, g);
     REQUIRE(spots.size() == 1);
     CHECK(spots[0].line == 7);
@@ -61,7 +61,7 @@ TEST_CASE("a line's sign stands on the tile no other leads into, facing the way 
     paths.back().queue->queue_line_ref = 0;
     paths.front().queue->queue_line_ref = 0;
     CHECK(queue_sign_spots(paths, g).size() == 1);
-    std::vector<save::PathTile> ring(2, paths[1]);
+    std::vector<save::model::PathTile> ring(2, paths[1]);
     ring[1].row = static_cast<std::uint8_t>(ring[0].row + 1);
     ring[0].queue->end_direction = 3;
     ring[1].queue->end_direction = 2;

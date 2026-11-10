@@ -177,10 +177,10 @@ TEST_CASE("guests think the scenery round them great, or else the paths tidy")
     {
         Sandbox park;
         park.path({ 0, 0 }, { 3, 0 });
-        std::vector<rct3::save::PlacedObject> trees;
+        std::vector<rct3::save::model::PlacedObject> trees;
         for (int i = 0; i < 30; ++i)
             trees.push_back({ .id = static_cast<std::uint64_t>(i + 1), .col = i % 4, .row = 1 });
-        import_scenery(park.world(), trees, [&](const rct3::save::PlacedObject&) { return planted ? 1.0f : 0.0f; });
+        import_scenery(park.world(), trees, [&](const rct3::save::model::PlacedObject&) { return planted ? 1.0f : 0.0f; });
         const auto g = park.guest({ 0, 0 });
         auto& r = park.world().registry;
         const auto thought = [&](ThoughtKind kind) {
@@ -361,10 +361,10 @@ TEST_CASE("a party stops together at a view and likes it with scenery round it, 
         Sandbox park;
         park.path({ 0, 0 }, { 1, 0 });
         park.item(PathItemKind::PhotoSpot, { 0, 0 });
-        std::vector<rct3::save::PlacedObject> trees;
+        std::vector<rct3::save::model::PlacedObject> trees;
         for (int i = 0; i < 30; ++i)
             trees.push_back({ .id = static_cast<std::uint64_t>(i + 1), .col = i % 2, .row = 1 });
-        import_scenery(park.world(), trees, [&](const rct3::save::PlacedObject&) { return planted ? 1.0f : 0.0f; });
+        import_scenery(park.world(), trees, [&](const rct3::save::model::PlacedObject&) { return planted ? 1.0f : 0.0f; });
         const auto leader = park.guest({ 1, 0 });
         const auto friend_ = park.guest({ 1, 0 });
         park.party({ leader, friend_ });

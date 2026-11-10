@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::save
+namespace rct3::save::model
 {
 
     /// An object id from the save. 0 is none.
@@ -577,4 +577,4 @@ namespace rct3::save
     /// if an object cannot be decoded, which cannot happen for objects read_save returned.
     [[nodiscard]] std::expected<RideModel, Error> load_rides(const SaveFile& file, const ObjectIndex& index);
 
-} // namespace rct3::save
+} // namespace rct3::save::model

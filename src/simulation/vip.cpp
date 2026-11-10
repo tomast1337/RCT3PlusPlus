@@ -14,8 +14,8 @@ namespace rct3::simulation
 {
     namespace
     {
-        constexpr float kMonth = save::GameClock::kUnitsPerMonth;
-        constexpr float kWeek = save::GameClock::kUnitsPerWeek;
+        constexpr float kMonth = save::model::GameClock::kUnitsPerMonth;
+        constexpr float kWeek = save::model::GameClock::kUnitsPerWeek;
 
         /// Whether `ride` is broken down, or has a train lying wrecked.
         bool out_of_order(const entt::registry& r, entt::entity ride)
@@ -34,9 +34,9 @@ namespace rct3::simulation
         return who < kNames.size() ? kNames[who] : std::string_view { };
     }
 
-    float vip_opinion(const Vip& vip, const save::VipTarget& target, float happiness)
+    float vip_opinion(const Vip& vip, const save::model::VipTarget& target, float happiness)
     {
-        using T = save::VipTarget;
+        using T = save::model::VipTarget;
         std::int32_t wanted = 0;
         std::int32_t seen = 0;
         const auto tick = [&](std::uint32_t wish, std::int32_t needed, std::int32_t done) {
@@ -55,9 +55,9 @@ namespace rct3::simulation
         return wanted > 0 ? static_cast<float>(seen) / static_cast<float>(wanted) : happiness;
     }
 
-    void advance_vips(SimWorld& world, save::ObjectiveSet& set, float time, float game_seconds, ParkMessages& messages, const VipSurroundings& around)
+    void advance_vips(SimWorld& world, save::model::ObjectiveSet& set, float time, float game_seconds, ParkMessages& messages, const VipSurroundings& around)
     {
-        using T = save::VipTarget;
+        using T = save::model::VipTarget;
         entt::registry& r = world.registry;
         const tuning::Vips& tune = kTuning.vips;
         const std::int32_t level = level_playing(set);
@@ -65,7 +65,7 @@ namespace rct3::simulation
         const auto tell = [&](std::string_view key, std::uint8_t who) { post(messages, { .text_key = std::string(key), .subject_name = name_of(who) }); };
         // shortcut: VIP messages name the VIP but have no camera on them, as guests who came in since the park
         // was loaded have no id a message can keep; point them at the VIP once such guests are given one.
-        for (save::Condition& c : set.conditions)
+        for (save::model::Condition& c : set.conditions)
         {
             if (!c.vip || c.objective_id != 0)
                 continue;

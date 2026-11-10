@@ -28,7 +28,7 @@
 #include <variant>
 #include <vector>
 
-namespace rct3::save
+namespace rct3::save::model
 {
 
     using PeopleObjectId = std::uint64_t;
@@ -649,4 +649,4 @@ namespace rct3::save
     /// Checks the invariants that hold for every consistent save. The model is never modified.
     [[nodiscard]] std::vector<Issue> validate(const PeopleModel& model);
 
-} // namespace rct3::save
+} // namespace rct3::save::model

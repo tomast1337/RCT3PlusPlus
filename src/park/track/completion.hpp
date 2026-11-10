@@ -27,7 +27,7 @@ namespace rct3::park::track
     struct LaidPlacement
     {
         LaidPiece piece;
-        save::PlacedObject object; ///< As place_after sets it
+        save::model::PlacedObject object; ///< As place_after sets it
     };
 
     enum class CompletionFailure : std::uint8_t
@@ -44,8 +44,8 @@ namespace rct3::park::track
         std::span<const PieceShape> pieces;
         TrackTip goal;
         LaidPiece first;
-        const save::TerrainGrid* grid = nullptr;
-        std::function<bool(const save::PlacedObject&)> allowed;
+        const save::model::TerrainGrid* grid = nullptr;
+        std::function<bool(const save::model::PlacedObject&)> allowed;
 
         struct Step
         {
@@ -61,7 +61,7 @@ namespace rct3::park::track
         std::size_t nearest = 0; ///< The step tried that came nearest the goal
     };
 
-    [[nodiscard]] CompletionSearch start_completion(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::TerrainGrid& grid, std::function<bool(const save::PlacedObject&)> allowed);
+    [[nodiscard]] CompletionSearch start_completion(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::model::TerrainGrid& grid, std::function<bool(const save::model::PlacedObject&)> allowed);
 
     /// Carries `search` on for up to `tries` more ends: the way once it is found, NoWay once every way was
     /// tried, nothing while it goes on.
@@ -71,6 +71,6 @@ namespace rct3::park::track
     [[nodiscard]] std::vector<LaidPlacement> nearest_way(const CompletionSearch& search);
 
     /// The whole search at once, giving up with OutOfTries after `tries` ends.
-    [[nodiscard]] std::expected<std::vector<LaidPlacement>, CompletionFailure> complete_track(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::TerrainGrid& grid, const std::function<bool(const save::PlacedObject&)>& allowed, std::size_t tries);
+    [[nodiscard]] std::expected<std::vector<LaidPlacement>, CompletionFailure> complete_track(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::model::TerrainGrid& grid, const std::function<bool(const save::model::PlacedObject&)>& allowed, std::size_t tries);
 
 } // namespace rct3::park::track

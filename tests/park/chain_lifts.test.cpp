@@ -19,11 +19,11 @@ TEST_CASE("a chain moves its picture with its lift's speed, wrapping round, and 
 
 TEST_CASE("pieces laid backwards take their ride's chain the other way round")
 {
-    save::RideModel rides;
+    save::model::RideModel rides;
     rides.rides.resize(3);
-    rides.rides[0].track = save::Track { };
+    rides.rides[0].track = save::model::Track { };
     rides.rides[0].track->pieces = { { .scenery = 7 }, { .scenery = 0 } };
-    rides.rides[2].track = save::Track { };
+    rides.rides[2].track = save::model::Track { };
     rides.rides[2].track->pieces = { { .scenery = 9, .reversed = true } };
     const object::Chains runs = chain_runs(rides, { }, { });
     CHECK(runs.size() == 2);
@@ -41,14 +41,14 @@ TEST_CASE("a section that lays its piece from the far end takes the chain and th
 {
     // One curve piece, laid by its own section turning left and by a right-hand curve that runs it from its far
     // end; each laid forwards and backwards, as built on from a station and built back from it.
-    std::vector<save::PlacedObject> objects;
+    std::vector<save::model::PlacedObject> objects;
     for (std::uint64_t id = 1; id <= 4; ++id)
         objects.push_back({ .id = id, .symbol = "curve", .overlay = "tracks/flume" });
     object::ObjectModels models;
     models[object::model_key(objects[0])].runs_back = { "CurveRight" };
-    save::RideModel rides;
+    save::model::RideModel rides;
     rides.rides.resize(1);
-    rides.rides[0].track = save::Track { };
+    rides.rides[0].track = save::model::Track { };
     rides.rides[0].track->pieces = {
         { .symbol = "Curve:tks", .scenery = 1 },
         { .symbol = "CurveRight:tks", .scenery = 2 },

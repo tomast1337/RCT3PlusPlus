@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Animal enclosures on the park's tiles (save::EnclosureMap): marking areas into them or out, and the fence
+// Animal enclosures on the park's tiles (save::model::EnclosureMap): marking areas into them or out, and the fence
 // round each. An enclosure is one connected area of tiles (joined by their sides) with one kind of fence:
 // after every change, areas with the same fence that touch become one enclosure, and an enclosure cut in two
 // becomes two. Areas with different fences stay apart, each fenced on its own side.
@@ -33,18 +33,18 @@ namespace rct3::park
     /// run through enclosures.
     /// shortcut: always the plain look; the pieces also have a taller look for a step in the ground at the
     /// fence and worn looks for fences that wear out, add them with fence wear.
-    [[nodiscard]] BoundaryFence enclosure_fences(const save::EnclosureMap& map, const save::TerrainGrid& grid, std::uint64_t last_id);
+    [[nodiscard]] BoundaryFence enclosure_fences(const save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, std::uint64_t last_id);
 
     /// How enclosure fence piece `piece` leans with the ground under it as it is now.
-    [[nodiscard]] glm::vec2 fence_piece_lean(const save::TerrainGrid& grid, const save::PlacedObject& piece);
+    [[nodiscard]] glm::vec2 fence_piece_lean(const save::model::TerrainGrid& grid, const save::model::PlacedObject& piece);
 
     /// Makes the tiles from `a` to `b` an enclosure fenced with `fence`: those `takeable` allows and in no
     /// enclosure yet; the rest are left as they are. A map with no grid yet takes `grid`'s size. Returns the
     /// place in the map of the enclosure the new tiles ended up in, -1 when none were taken.
-    std::int32_t enclose(save::EnclosureMap& map, const save::TerrainGrid& grid, save::Tile a, save::Tile b, const std::string& fence, std::function_ref<bool(save::Tile)> takeable);
+    std::int32_t enclose(save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, save::model::Tile a, save::model::Tile b, const std::string& fence, std::function_ref<bool(save::model::Tile)> takeable);
 
     /// Takes the tiles from `a` to `b` that `removable` allows out of their enclosures.
-    void unenclose(save::EnclosureMap& map, save::Tile a, save::Tile b, std::function_ref<bool(save::Tile)> removable);
+    void unenclose(save::model::EnclosureMap& map, save::model::Tile a, save::model::Tile b, std::function_ref<bool(save::model::Tile)> removable);
 
     /// What a kind of fence costs, a length at a time, in hundredths of the money unit.
     struct FencePrice
@@ -55,12 +55,12 @@ namespace rct3::park
 
     /// What going from enclosures `before` to `after` costs: the price of every length of fence put up, and
     /// the refund of every length taken down.
-    [[nodiscard]] std::int64_t fence_cost(const save::EnclosureMap& before, const save::EnclosureMap& after, std::function_ref<FencePrice(std::string_view fence)> price);
+    [[nodiscard]] std::int64_t fence_cost(const save::model::EnclosureMap& before, const save::model::EnclosureMap& after, std::function_ref<FencePrice(std::string_view fence)> price);
 
     /// The enclosure all `span` tiles from `corner` are in; -1 when they are not all in the same one.
-    [[nodiscard]] std::int32_t enclosure_under(const save::EnclosureMap& map, save::Tile corner, std::array<std::int32_t, 2> span) noexcept;
+    [[nodiscard]] std::int32_t enclosure_under(const save::model::EnclosureMap& map, save::model::Tile corner, std::array<std::int32_t, 2> span) noexcept;
 
     /// How many tiles enclosure `region` has.
-    [[nodiscard]] std::int32_t enclosure_size(const save::EnclosureMap& map, std::int32_t region) noexcept;
+    [[nodiscard]] std::int32_t enclosure_size(const save::model::EnclosureMap& map, std::int32_t region) noexcept;
 
 } // namespace rct3::park

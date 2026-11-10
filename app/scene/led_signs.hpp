@@ -44,7 +44,7 @@ namespace rct3::scene
     {
         std::optional<std::size_t> ride;   ///< Of the scene's rides, for a queue sign
         std::optional<std::size_t> placed; ///< Of the scene's signs, for a sign placed as scenery
-        save::PlacedObject object;
+        save::model::PlacedObject object;
         rct3::park::object::ObjectMesh mesh;                    ///< Its board's batch painted with `board`
         std::string board;                                      ///< Key of the board's picture in LedSigns::textures
         std::uint32_t width = 0;                                ///< Of the board's picture, whole lamps
@@ -57,7 +57,7 @@ namespace rct3::scene
     struct LedSigns
     {
         std::vector<LedSign> signs;
-        std::set<save::ObjectId> hidden; ///< Rides whose queues have no signs, by id
+        std::set<save::model::ObjectId> hidden; ///< Rides whose queues have no signs, by id
         std::map<std::string, TrackModels, std::less<>> models;
         std::map<std::string, std::string, std::less<>> sign_of; ///< A theme's queue sign, by its overlay
         std::optional<ui::font::Font> font;

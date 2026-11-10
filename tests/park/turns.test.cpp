@@ -20,10 +20,10 @@ TEST_CASE("sides count clockwise from the next row, and wrap round")
 
 TEST_CASE("a side steps to the square across it, and a step names its side")
 {
-    CHECK(Side::kNextRow.beyond({ 4, 7 }) == save::Tile { 4, 8 });
-    CHECK(Side::kNextCol.beyond({ 4, 7 }) == save::Tile { 5, 7 });
-    CHECK(Side::kRowBefore.beyond({ 4, 7 }) == save::Tile { 4, 6 });
-    CHECK(Side::kColBefore.beyond({ 4, 7 }) == save::Tile { 3, 7 });
+    CHECK(Side::kNextRow.beyond({ 4, 7 }) == save::model::Tile { 4, 8 });
+    CHECK(Side::kNextCol.beyond({ 4, 7 }) == save::model::Tile { 5, 7 });
+    CHECK(Side::kRowBefore.beyond({ 4, 7 }) == save::model::Tile { 4, 6 });
+    CHECK(Side::kColBefore.beyond({ 4, 7 }) == save::model::Tile { 3, 7 });
     for (const Side s : kSides)
         CHECK(Side::towards(s.step()[0], s.step()[1]) == s);
     CHECK_FALSE(Side::towards(1, 1).has_value());

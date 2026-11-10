@@ -9,7 +9,7 @@
 #include <set>
 #include <system_error>
 
-namespace rct3::save
+namespace rct3::save::model
 {
 
     namespace
@@ -1236,4 +1236,4 @@ namespace rct3::save
         return out;
     }
 
-} // namespace rct3::save
+} // namespace rct3::save::model

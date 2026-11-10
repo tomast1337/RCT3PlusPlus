@@ -125,7 +125,7 @@ namespace rct3::ui::screens
         }
 
         /// The weeks gone of a park's series, oldest first: its newest sample is the week still running.
-        std::vector<float> weeks_gone(const save::Series& series)
+        std::vector<float> weeks_gone(const save::model::Series& series)
         {
             if (series.samples.size() < 2)
                 return { };
@@ -145,14 +145,14 @@ namespace rct3::ui::screens
             return { std::string(icon), std::move(label), std::move(help), false };
         }
 
-        PersonFacts guest_facts(const ManagementFacts& f, const save::Guest& g)
+        PersonFacts guest_facts(const ManagementFacts& f, const save::model::Guest& g)
         {
             return { .guest = &g, .people = f.people, .rides = f.rides };
         }
 
         /// Adds a weekly series to a page's graph, on a scale up to `full` (its own when 0), its numbers counts or
         /// amounts of money. The graph spans the weeks the longest series keeps.
-        void add_series(ManagementPage& page, const StringTable& strings, const InfoUnits& units, std::string_view key, const save::Series& series, bool money_values, float full = 0)
+        void add_series(ManagementPage& page, const StringTable& strings, const InfoUnits& units, std::string_view key, const save::model::Series& series, bool money_values, float full = 0)
         {
             if (series.empty())
                 return;
@@ -180,10 +180,10 @@ namespace rct3::ui::screens
             for (std::size_t back = 0; back < page.graph_slots; ++back)
             {
                 // Nothing before the calendar began.
-                const float time = state->time - static_cast<float>(back + 1) * save::GameClock::kUnitsPerWeek;
+                const float time = state->time - static_cast<float>(back + 1) * save::model::GameClock::kUnitsPerWeek;
                 if (time < state->zero_time)
                     break;
-                const save::CalendarDate date = save::GameClock::date_at(time, state->zero_time);
+                const save::model::CalendarDate date = save::model::GameClock::date_at(time, state->zero_time);
                 if (date.week == 0)
                     page.graph_ticks.push_back({ static_cast<float>(back), short_month(strings, date.month) });
             }
@@ -193,11 +193,11 @@ namespace rct3::ui::screens
 
         void park_view(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
-            const save::ParkModel* m = f.park != nullptr && f.park->has_park ? f.park : nullptr;
+            const save::model::ParkModel* m = f.park != nullptr && f.park->has_park ? f.park : nullptr;
             page.lines.push_back({ text(strings, "Park_Name"), m != nullptr ? park_name(m->park, strings) : std::u16string(kDash), false, "Park_Name" });
             std::u16string status(kDash);
             if (m != nullptr)
-                status = text(strings, m->park.flags.has(save::ParkFlag::Open) ? "AttractionStatusOpen" : "AttractionStatusClosed");
+                status = text(strings, m->park.flags.has(save::model::ParkFlag::Open) ? "AttractionStatusOpen" : "AttractionStatusClosed");
             page.lines.push_back({ text(strings, "AttractionListDialogParameterStatus"), status, false, "AttractionListDialogParameterStatus" });
             const bool finance = f.park != nullptr && f.park->has_finance;
             page.lines.push_back({ text(strings, "FinancialSummary_EntranceFee"), finance ? money(units, f.park->finance.entrance_fee) : std::u16string(kDash), false, "FinancialSummary_EntranceFee" });
@@ -206,13 +206,13 @@ namespace rct3::ui::screens
             page.lines.push_back({ text(strings, "ObjectiveCondition_ParkGuests"), f.state != nullptr ? whole(f.state->guests) : std::u16string(kDash), false, "ObjectiveCondition_ParkGuests" });
             std::u16string rating(kDash);
             if (f.state != nullptr && f.state->rating)
-                rating = whole(std::lround(*f.state->rating * save::kMaxParkRating));
+                rating = whole(std::lround(*f.state->rating * save::model::kMaxParkRating));
             page.lines.push_back({ text(strings, "Graph_ParkRating"), rating, false, "Graph_ParkRating" });
             if (finance && f.park->finance.entrance_fee_fixed())
                 page.note = text(strings, "FinancialSummary_EntranceFee_CannotBeChanged_TT");
 
-            const bool open = m != nullptr && m->park.flags.has(save::ParkFlag::Open);
-            const bool for_sale = m != nullptr && !m->park.flags.has(save::ParkFlag::LandPurchaseLocked);
+            const bool open = m != nullptr && m->park.flags.has(save::model::ParkFlag::Open);
+            const bool for_sale = m != nullptr && !m->park.flags.has(save::model::ParkFlag::LandPurchaseLocked);
             page.buttons.push_back({ open ? "Attraction_General_Open" : "Attraction_General_Closed", { }, text(strings, "Park_OpenCloseHelp"), m != nullptr, { { "Attraction_Button_Open", text(strings, "TT_AttractionDialogIconOpenButton") }, { "Attraction_Button_Closed", text(strings, "TT_AttractionDialogIconClosedButton") } } });
             page.buttons.push_back({ "ParkInfoIcon_PointCameraAtEntrance", { }, text(strings, "Park_CentreViewHelp"), true });
             page.buttons.push_back({ "ParkInfoIcon_BuyLand", { }, text(strings, "Park_BuyLandHelp"), for_sale });
@@ -231,7 +231,7 @@ namespace rct3::ui::screens
             if (f.park != nullptr)
             {
                 add_series(page, strings, units, "Graph_ParkValue", f.park->finance.park_value, true);
-                const save::Park& p = f.park->park;
+                const save::model::Park& p = f.park->park;
                 // The guests by age share the scale of all of them, so they read against it.
                 const float guests = full_scale(weeks_gone(p.guests_in_park));
                 add_series(page, strings, units, "Graph_AdultsInPark", p.adults_in_park, false, guests);
@@ -280,38 +280,38 @@ namespace rct3::ui::screens
         struct LedgerRow
         {
             std::string_view key;
-            std::optional<std::int32_t> save::LedgerPeriod::* optional = nullptr;
-            std::int32_t save::LedgerPeriod::* value = nullptr;
+            std::optional<std::int32_t> save::model::LedgerPeriod::* optional = nullptr;
+            std::int32_t save::model::LedgerPeriod::* value = nullptr;
         };
 
         constexpr std::array<LedgerRow, 22> kLedger = { {
-            { "Money_RideConstruction", nullptr, &save::LedgerPeriod::ride_construction },
-            { "Money_RideRunningCosts", nullptr, &save::LedgerPeriod::ride_running_costs },
-            { "Money_LandPurchase", nullptr, &save::LedgerPeriod::land_purchase },
-            { "Money_Landscaping", nullptr, &save::LedgerPeriod::landscaping },
-            { "Money_ParkEntranceTickets", nullptr, &save::LedgerPeriod::park_entrance_tickets },
-            { "Money_RideTickets", nullptr, &save::LedgerPeriod::ride_tickets },
-            { "Money_PoolTickets", &save::LedgerPeriod::pool_tickets, nullptr },
-            { "Money_ViewingGalleryTickets", &save::LedgerPeriod::viewing_gallery_tickets, nullptr },
-            { "Money_ShopSales", nullptr, &save::LedgerPeriod::shop_sales },
-            { "Money_ShopStock", nullptr, &save::LedgerPeriod::shop_stock },
-            { "Money_FoodDrinkSales", nullptr, &save::LedgerPeriod::food_drink_sales },
-            { "Money_FoodDrinkStock", nullptr, &save::LedgerPeriod::food_drink_stock },
-            { "Money_StaffWages", nullptr, &save::LedgerPeriod::staff_wages },
-            { "Money_StaffTraining", nullptr, &save::LedgerPeriod::staff_training },
-            { "Money_Marketing", nullptr, &save::LedgerPeriod::marketing },
-            { "Money_Research", nullptr, &save::LedgerPeriod::research },
-            { "Money_LoanInterest", nullptr, &save::LedgerPeriod::loan_interest },
-            { "Money_Prizes", nullptr, &save::LedgerPeriod::prize_money },
-            { "Money_AnimalCosts", &save::LedgerPeriod::other_animal_spending, nullptr },
-            { "Money_Billboards", &save::LedgerPeriod::billboards, nullptr },
-            { "Money_Other", nullptr, &save::LedgerPeriod::other },
+            { "Money_RideConstruction", nullptr, &save::model::LedgerPeriod::ride_construction },
+            { "Money_RideRunningCosts", nullptr, &save::model::LedgerPeriod::ride_running_costs },
+            { "Money_LandPurchase", nullptr, &save::model::LedgerPeriod::land_purchase },
+            { "Money_Landscaping", nullptr, &save::model::LedgerPeriod::landscaping },
+            { "Money_ParkEntranceTickets", nullptr, &save::model::LedgerPeriod::park_entrance_tickets },
+            { "Money_RideTickets", nullptr, &save::model::LedgerPeriod::ride_tickets },
+            { "Money_PoolTickets", &save::model::LedgerPeriod::pool_tickets, nullptr },
+            { "Money_ViewingGalleryTickets", &save::model::LedgerPeriod::viewing_gallery_tickets, nullptr },
+            { "Money_ShopSales", nullptr, &save::model::LedgerPeriod::shop_sales },
+            { "Money_ShopStock", nullptr, &save::model::LedgerPeriod::shop_stock },
+            { "Money_FoodDrinkSales", nullptr, &save::model::LedgerPeriod::food_drink_sales },
+            { "Money_FoodDrinkStock", nullptr, &save::model::LedgerPeriod::food_drink_stock },
+            { "Money_StaffWages", nullptr, &save::model::LedgerPeriod::staff_wages },
+            { "Money_StaffTraining", nullptr, &save::model::LedgerPeriod::staff_training },
+            { "Money_Marketing", nullptr, &save::model::LedgerPeriod::marketing },
+            { "Money_Research", nullptr, &save::model::LedgerPeriod::research },
+            { "Money_LoanInterest", nullptr, &save::model::LedgerPeriod::loan_interest },
+            { "Money_Prizes", nullptr, &save::model::LedgerPeriod::prize_money },
+            { "Money_AnimalCosts", &save::model::LedgerPeriod::other_animal_spending, nullptr },
+            { "Money_Billboards", &save::model::LedgerPeriod::billboards, nullptr },
+            { "Money_Other", nullptr, &save::model::LedgerPeriod::other },
             { "Money_Total", nullptr, nullptr },
         } };
 
         void finance_summary(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
-            const save::Finance* m = f.park != nullptr && f.park->has_finance ? &f.park->finance : nullptr;
+            const save::model::Finance* m = f.park != nullptr && f.park->has_finance ? &f.park->finance : nullptr;
             const auto line = [&](std::string_view key, std::u16string value) { page.lines.push_back({ text(strings, key), std::move(value), true, std::string(key) }); };
             std::u16string cash(kDash);
             if (f.state != nullptr)
@@ -335,7 +335,7 @@ namespace rct3::ui::screens
             }
 
             // One column a month, this month first, going back.
-            const std::size_t periods = std::min(m->ledger_periods_loaded, save::kLedgerPeriods);
+            const std::size_t periods = std::min(m->ledger_periods_loaded, save::model::kLedgerPeriods);
             page.columns.push_back({ std::u16string { }, 0, Align::Start, false });
             const std::int32_t month = f.state != nullptr ? f.state->date.month : f.park->clock.date().month;
             for (std::size_t p = 0; p < periods; ++p)
@@ -350,7 +350,7 @@ namespace rct3::ui::screens
                 bool any = row.optional == nullptr;
                 for (std::size_t p = 0; p < periods; ++p)
                 {
-                    const save::LedgerPeriod& period = m->ledger.at(p);
+                    const save::model::LedgerPeriod& period = m->ledger.at(p);
                     std::optional<std::int64_t> value;
                     if (row.value != nullptr)
                         value = period.*row.value;
@@ -376,7 +376,7 @@ namespace rct3::ui::screens
                 page.note = text(strings, kNotRead);
                 return;
             }
-            const save::Finance& m = f.park->finance;
+            const save::model::Finance& m = f.park->finance;
             add_series(page, strings, units, "Graph_CashLessLoan", m.cash_less_loan, true);
             add_series(page, strings, units, "Graph_ParkValue", m.park_value, true);
             add_series(page, strings, units, "Graph_WeeklyProfit", m.weekly_profit, true);
@@ -414,7 +414,7 @@ namespace rct3::ui::screens
             page.sort = 0;
             for (const std::size_t i : guests_in_park(f))
             {
-                const save::Guest& g = f.people->guests[i];
+                const save::model::Guest& g = f.people->guests[i];
                 const PersonFacts facts = guest_facts(f, g);
                 page.rows.push_back({ { person_name(facts, strings), person_doing(facts, strings), share(g.mood_now.happiness), money(units, g.cash.current) }, { std::nullopt, std::nullopt, g.mood_now.happiness, static_cast<double>(g.cash.current) }, management_row_id({ ManagementRow::Kind::Guest, i }), mood_icon(happiness_mood(g.mood_now.happiness)) });
             }
@@ -464,16 +464,16 @@ namespace rct3::ui::screens
                 }
                 line(key, n > 0 ? share(sum / static_cast<float>(n)) : std::u16string(kDash));
             };
-            average("GuestStats_AverageHappiness", [](const save::Guest& g) { return std::optional(g.mood_now.happiness); });
-            average("GuestStats_AverageEnergy", [](const save::Guest& g) { return std::optional(g.mood_now.energy); });
-            average("GuestStats_AverageHunger", [](const save::Guest& g) { return std::optional(g.needs.food); });
-            average("GuestStats_AverageThirst", [](const save::Guest& g) { return std::optional(g.needs.drink); });
-            average("GuestStats_AverageToilet", [](const save::Guest& g) { return std::optional(g.needs.toilet); });
-            average("GuestStats_AverageNausea", [](const save::Guest& g) { return std::optional(g.mood_now.nausea); });
-            average("GuestStats_AverageSunburn", [](const save::Guest& g) { return g.mood_now.sunburn; });
+            average("GuestStats_AverageHappiness", [](const save::model::Guest& g) { return std::optional(g.mood_now.happiness); });
+            average("GuestStats_AverageEnergy", [](const save::model::Guest& g) { return std::optional(g.mood_now.energy); });
+            average("GuestStats_AverageHunger", [](const save::model::Guest& g) { return std::optional(g.needs.food); });
+            average("GuestStats_AverageThirst", [](const save::model::Guest& g) { return std::optional(g.needs.drink); });
+            average("GuestStats_AverageToilet", [](const save::model::Guest& g) { return std::optional(g.needs.toilet); });
+            average("GuestStats_AverageNausea", [](const save::model::Guest& g) { return std::optional(g.mood_now.nausea); });
+            average("GuestStats_AverageSunburn", [](const save::model::Guest& g) { return g.mood_now.sunburn; });
             page.lines.push_back({ text(strings, "GuestStats_GroupsOfType"), { }, false, "GuestStats_GroupsOfType" });
             std::array<std::int64_t, kGroupTypes.size()> types { };
-            for (const save::GuestGroup& g : f.people->groups)
+            for (const save::model::GuestGroup& g : f.people->groups)
             {
                 if (g.group_type >= 0 && static_cast<std::size_t>(g.group_type) < types.size())
                     ++types.at(static_cast<std::size_t>(g.group_type));
@@ -496,21 +496,21 @@ namespace rct3::ui::screens
             };
             if (f.people == nullptr)
                 return;
-            std::unordered_map<save::PeopleObjectId, std::size_t> by_id;
+            std::unordered_map<save::model::PeopleObjectId, std::size_t> by_id;
             for (std::size_t i = 0; i < f.people->guests.size(); ++i)
                 by_id.emplace(f.people->guests[i].person.id, i);
-            const auto name_of = [&](save::PeopleRef ref) -> std::optional<std::size_t> {
+            const auto name_of = [&](save::model::PeopleRef ref) -> std::optional<std::size_t> {
                 const auto it = by_id.find(ref.id);
                 return ref && it != by_id.end() ? std::optional(it->second) : std::nullopt;
             };
-            for (const save::GuestGroup& g : f.people->groups)
+            for (const save::model::GuestGroup& g : f.people->groups)
             {
                 if (g.group_type != kFamilyGroup && !g.avatar)
                     continue;
                 const std::optional<std::size_t> leader = name_of(g.leader);
                 std::u16string members;
                 std::size_t count = 0;
-                for (const save::PeopleRef m : g.members)
+                for (const save::model::PeopleRef m : g.members)
                 {
                     const std::optional<std::size_t> member = name_of(m);
                     if (!member)
@@ -558,11 +558,11 @@ namespace rct3::ui::screens
             page.buttons = { { "Attraction_General_OpenClose", { }, text(strings, "TT_AttractionListDialogIconOpenCloseAll"), true, { { "Attraction_Button_Open", text(strings, "TT_AttractionDialogIconOpenButton") }, { "Attraction_Button_Closed", text(strings, "TT_AttractionDialogIconClosedButton") } } } };
             if (f.rides == nullptr)
                 return;
-            const auto common_row = [&](const save::AttractionCommon& a, ManagementRow ref) {
+            const auto common_row = [&](const save::model::AttractionCommon& a, ManagementRow ref) {
                 TableRow row { { attraction_name(a, strings), attraction_status(a, strings), whole_percent(a.popularity), whole_percent(a.satisfaction) }, { std::nullopt, std::nullopt, a.popularity, a.satisfaction }, management_row_id(ref) };
                 return row;
             };
-            const auto others = [&](TableRow& row, const save::AttractionCommon& a) {
+            const auto others = [&](TableRow& row, const save::model::AttractionCommon& a) {
                 row.cells.push_back(whole(a.total_guests));
                 row.keys.emplace_back(static_cast<double>(a.total_guests));
                 row.cells.push_back(money(units, a.total_profit));
@@ -570,8 +570,8 @@ namespace rct3::ui::screens
             };
             for (std::size_t i = 0; i < f.rides->rides.size(); ++i)
             {
-                const save::Ride& r = f.rides->rides[i];
-                const bool facility = r.kind == save::RideKind::Special;
+                const save::model::Ride& r = f.rides->rides[i];
+                const bool facility = r.kind == save::model::RideKind::Special;
                 if ((tab == AttractionListTab::Rides && facility) || (tab == AttractionListTab::Facilities && !facility) || tab == AttractionListTab::Stalls || r.base.demolished)
                     continue;
                 TableRow row = common_row(r.base, { ManagementRow::Kind::Ride, i });
@@ -579,7 +579,7 @@ namespace rct3::ui::screens
                 {
                     std::int64_t queue = 0;
                     float wait = 0;
-                    for (const save::Station& s : r.stations)
+                    for (const save::model::Station& s : r.stations)
                     {
                         queue += s.queue_size;
                         wait += s.queue_time;
@@ -613,41 +613,41 @@ namespace rct3::ui::screens
         // ----- objectives -----
 
         /// Figure `v` of a goal like `c`, in the units its target is kept in.
-        std::u16string goal_figure(const save::Condition& c, std::int64_t v, const InfoUnits& units)
+        std::u16string goal_figure(const save::model::Condition& c, std::int64_t v, const InfoUnits& units)
         {
             switch (c.kind)
             {
-                case save::ConditionKind::RepayLoan:
-                case save::ConditionKind::ParkValue:
-                case save::ConditionKind::RideIncome:
-                case save::ConditionKind::ShopProfit:
-                case save::ConditionKind::PoolIncome:
-                case save::ConditionKind::AnimalSalesProfit:
-                case save::ConditionKind::GalleryIncome:
+                case save::model::ConditionKind::RepayLoan:
+                case save::model::ConditionKind::ParkValue:
+                case save::model::ConditionKind::RideIncome:
+                case save::model::ConditionKind::ShopProfit:
+                case save::model::ConditionKind::PoolIncome:
+                case save::model::ConditionKind::AnimalSalesProfit:
+                case save::model::ConditionKind::GalleryIncome:
                     return money(units, v);
-                case save::ConditionKind::Coaster:
-                case save::ConditionKind::ParkGuests:
-                case save::ConditionKind::ParkRating:
-                case save::ConditionKind::ItemsBought:
-                case save::ConditionKind::PoolGuests:
-                case save::ConditionKind::AnimalsOfSpecies:
-                case save::ConditionKind::GalleryVisitors:
-                case save::ConditionKind::AnimalsReleased:
-                case save::ConditionKind::AnimalHealth:
-                case save::ConditionKind::Dung:
-                case save::ConditionKind::ViewingGalleries:
+                case save::model::ConditionKind::Coaster:
+                case save::model::ConditionKind::ParkGuests:
+                case save::model::ConditionKind::ParkRating:
+                case save::model::ConditionKind::ItemsBought:
+                case save::model::ConditionKind::PoolGuests:
+                case save::model::ConditionKind::AnimalsOfSpecies:
+                case save::model::ConditionKind::GalleryVisitors:
+                case save::model::ConditionKind::AnimalsReleased:
+                case save::model::ConditionKind::AnimalHealth:
+                case save::model::ConditionKind::Dung:
+                case save::model::ConditionKind::ViewingGalleries:
                     return whole(v);
                 default:
                     return std::u16string(kDash);
             }
         }
 
-        std::u16string condition_target(const save::Condition& c, const InfoUnits& units)
+        std::u16string condition_target(const save::model::Condition& c, const InfoUnits& units)
         {
-            return c.value && c.kind != save::ConditionKind::RepayLoan ? goal_figure(c, *c.value, units) : std::u16string(kDash);
+            return c.value && c.kind != save::model::ConditionKind::RepayLoan ? goal_figure(c, *c.value, units) : std::u16string(kDash);
         }
 
-        std::u16string held_for(const save::Condition& c, const StringTable& strings)
+        std::u16string held_for(const save::model::Condition& c, const StringTable& strings)
         {
             switch (c.months_to_hold)
             {
@@ -671,19 +671,19 @@ namespace rct3::ui::screens
                 page.note = text(strings, kNotRead);
                 return;
             }
-            const save::ObjectiveSet& set = f.park->objectives;
+            const save::model::ObjectiveSet& set = f.park->objectives;
             const auto level = static_cast<std::int32_t>(difficulty);
-            const auto objective = std::ranges::find_if(set.objectives, [&](const save::Objective& o) { return o.difficulty == level && o.objective_id == 0; });
+            const auto objective = std::ranges::find_if(set.objectives, [&](const save::model::Objective& o) { return o.difficulty == level && o.objective_id == 0; });
             std::u16string state(kDash);
             if (objective != set.objectives.end() && objective->success)
                 state = text(strings, "Objectives_Completed");
             page.lines.push_back({ text(strings, "AttractionListDialogParameterStatus"), state, false, "AttractionListDialogParameterStatus" });
             const bool prize = objective != set.objectives.end() && objective->prize_id > 0 && objective->prize_id < simulation::kApprenticePrize;
             page.lines.push_back({ text(strings, "Objectives_Prize"), prize ? text(strings, simulation::prize_name(objective->prize_id)) : std::u16string(kDash), false, "Objectives_Prize" });
-            const std::vector<const save::Condition*> conditions = set.conditions_for(level, 0);
+            const std::vector<const save::model::Condition*> conditions = set.conditions_for(level, 0);
             if (conditions.empty())
                 page.note = text(strings, kNotRead);
-            for (const save::Condition* c : conditions)
+            for (const save::model::Condition* c : conditions)
             {
                 // The condition and its target, then how long it must hold and whether it has been met.
                 const std::string_view key = simulation::condition_name(c->kind);
@@ -715,7 +715,7 @@ namespace rct3::ui::screens
 
         void research(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
-            const save::ResearchState* r = f.park != nullptr && f.park->research.has_simple_research ? &f.park->research : nullptr;
+            const save::model::ResearchState* r = f.park != nullptr && f.park->research.has_simple_research ? &f.park->research : nullptr;
             page.lines.push_back({ text(strings, "Research_Label_Budget"), r != nullptr ? money(units, r->monthly_budget) : std::u16string(kDash), false, "Research_Label_Budget" });
             page.columns = {
                 { text(strings, "Research_Label_TechTree"), 0, Align::Start, false },
@@ -739,7 +739,7 @@ namespace rct3::ui::screens
                 page.note = text(strings, kNotRead);
                 return;
             }
-            const std::vector<save::Challenge>& list = f.park->objectives.challenges;
+            const std::vector<save::model::Challenge>& list = f.park->objectives.challenges;
             if (list.empty())
             {
                 page.note = text(strings, "ChallengeWindow_NoChallenge");
@@ -753,7 +753,7 @@ namespace rct3::ui::screens
             };
             for (std::size_t i = 0; i < list.size(); ++i)
             {
-                const save::Challenge& c = list[i];
+                const save::model::Challenge& c = list[i];
                 std::u16string name = text(strings, c.name_key);
                 if (name.empty())
                     name = strings::to_utf16(c.name_key);
@@ -763,7 +763,7 @@ namespace rct3::ui::screens
         }
     } // namespace
 
-    std::u16string park_name(const save::Park& park, const StringTable& strings)
+    std::u16string park_name(const save::model::Park& park, const StringTable& strings)
     {
         if (const auto found = strings.get(park.name); !park.name.empty() && !found.empty())
             return std::u16string(found);

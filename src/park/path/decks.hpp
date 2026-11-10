@@ -118,25 +118,25 @@ namespace rct3::park::path
 
     /// The height at which `path` on its tile of `grid` meets the tile's edge on `side`; nothing when it does not
     /// reach that edge.
-    [[nodiscard]] std::optional<float> edge_height(const save::PathTile& path, const save::TerrainGrid& grid, Side side);
+    [[nodiscard]] std::optional<float> edge_height(const save::model::PathTile& path, const save::model::TerrainGrid& grid, Side side);
 
     /// The deck piece of a raised path of `style` on a tile.
     [[nodiscard]] std::string deck_symbol(const PathStyle& style, DeckPiece piece);
 
     /// The piece of a raised queue tile and its turn.
-    [[nodiscard]] std::pair<QueuePiece, ModelTurn> queue_deck(const save::PathTile& queue);
+    [[nodiscard]] std::pair<QueuePiece, ModelTurn> queue_deck(const save::model::PathTile& queue);
 
     /// The symbol and turn of the object drawing raised path or queue `path` of `style` among `paths`; an empty
     /// symbol when the style lacks the piece.
-    [[nodiscard]] std::pair<std::string, ModelTurn> deck_for(const PathStyle& style, const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    [[nodiscard]] std::pair<std::string, ModelTurn> deck_for(const PathStyle& style, const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);
 
     /// Gives each raised path and queue on the tiles from `low` to `high` (inclusive) the piece and turn
     /// its neighbours call for, changing the symbol and rotation of the object that draws it. The pieces come
     /// from the path's style among `styles`. A path does not join one across a wall of `walls`. Returns how many
     /// objects changed.
-    std::size_t refresh_decks(std::span<const save::PathTile> paths, std::vector<save::PlacedObject>& objects, const save::TerrainGrid& grid, std::span<const PathStyle> styles, int low_col, int low_row, int high_col, int high_row, std::optional<const EdgeWalls&> walls = std::nullopt);
+    std::size_t refresh_decks(std::span<const save::model::PathTile> paths, std::vector<save::model::PlacedObject>& objects, const save::model::TerrainGrid& grid, std::span<const PathStyle> styles, int low_col, int low_row, int high_col, int high_row, std::optional<const EdgeWalls&> walls = std::nullopt);
 
     /// The piece a raised path should have now, given the other paths and the walls between them.
-    [[nodiscard]] Deck choose_deck(const save::PathTile& path, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::optional<const EdgeWalls&> walls = std::nullopt);
+    [[nodiscard]] Deck choose_deck(const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::optional<const EdgeWalls&> walls = std::nullopt);
 
 } // namespace rct3::park::path

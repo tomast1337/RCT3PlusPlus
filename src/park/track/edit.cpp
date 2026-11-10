@@ -15,22 +15,22 @@ namespace rct3::park::track
         /// A stretch with its own pieces.
         struct Stretch
         {
-            save::TrackSegment segment;
-            std::vector<save::TrackPiece> pieces;
+            save::model::TrackSegment segment;
+            std::vector<save::model::TrackPiece> pieces;
         };
 
         /// The track's segments, one over all its pieces when it names none.
-        std::vector<save::TrackSegment> segments_of(const save::Track& track)
+        std::vector<save::model::TrackSegment> segments_of(const save::model::Track& track)
         {
             if (!track.segments.empty())
                 return track.segments;
             return { { .first_piece = 0, .piece_count = track.pieces.size(), .closed = track.circuit } };
         }
 
-        std::vector<Stretch> stretches(const save::Track& track)
+        std::vector<Stretch> stretches(const save::model::Track& track)
         {
             std::vector<Stretch> out;
-            for (const save::TrackSegment& s : segments_of(track))
+            for (const save::model::TrackSegment& s : segments_of(track))
             {
                 const std::size_t from = std::min(s.first_piece, track.pieces.size());
                 const std::size_t to = std::min(from + s.piece_count, track.pieces.size());
@@ -40,7 +40,7 @@ namespace rct3::park::track
         }
 
         /// Lays `track`'s pieces out again as `parts` hold them, in their order.
-        void lay_out(save::Track& track, std::vector<Stretch> parts)
+        void lay_out(save::model::Track& track, std::vector<Stretch> parts)
         {
             track.pieces.clear();
             track.segments.clear();
@@ -48,18 +48,18 @@ namespace rct3::park::track
             {
                 part.segment.first_piece = track.pieces.size();
                 part.segment.piece_count = part.pieces.size();
-                for (save::TrackPiece& p : part.pieces)
+                for (save::model::TrackPiece& p : part.pieces)
                 {
                     p.segment = static_cast<std::uint32_t>(track.segments.size());
                     track.pieces.push_back(std::move(p));
                 }
                 track.segments.push_back(part.segment);
             }
-            track.circuit = !track.segments.empty() && std::ranges::all_of(track.segments, &save::TrackSegment::closed);
+            track.circuit = !track.segments.empty() && std::ranges::all_of(track.segments, &save::model::TrackSegment::closed);
         }
 
         /// The stretch holding the piece `piece`, and its place in it.
-        std::optional<std::pair<std::size_t, std::size_t>> find_piece(const std::vector<save::TrackSegment>& segments, std::size_t piece)
+        std::optional<std::pair<std::size_t, std::size_t>> find_piece(const std::vector<save::model::TrackSegment>& segments, std::size_t piece)
         {
             for (std::size_t s = 0; s < segments.size(); ++s)
                 if (piece >= segments[s].first_piece && piece < segments[s].first_piece + segments[s].piece_count)
@@ -68,13 +68,13 @@ namespace rct3::park::track
         }
     } // namespace
 
-    std::optional<PieceNeighbours> piece_neighbours(const save::Track& track, std::size_t piece)
+    std::optional<PieceNeighbours> piece_neighbours(const save::model::Track& track, std::size_t piece)
     {
-        const std::vector<save::TrackSegment> segments = segments_of(track);
+        const std::vector<save::model::TrackSegment> segments = segments_of(track);
         const auto at = piece < track.pieces.size() ? find_piece(segments, piece) : std::nullopt;
         if (!at)
             return std::nullopt;
-        const save::TrackSegment& s = segments[at->first];
+        const save::model::TrackSegment& s = segments[at->first];
         const std::size_t count = std::min(s.piece_count, track.pieces.size() - s.first_piece);
         const bool first = at->second == 0;
         const bool last = at->second + 1 == count;
@@ -84,7 +84,7 @@ namespace rct3::park::track
         return PieceNeighbours { s.first_piece + (first ? count - 1 : at->second - 1), s.first_piece + (last ? 0 : at->second + 1) };
     }
 
-    std::vector<LaidPiece> pieces_between(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece next, const save::TerrainGrid& grid)
+    std::vector<LaidPiece> pieces_between(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece next, const save::model::TerrainGrid& grid)
     {
         std::vector<LaidPiece> out;
         if (next.index >= pieces.size())
@@ -100,14 +100,14 @@ namespace rct3::park::track
         return out;
     }
 
-    save::TrackPiece take_out_piece(save::Track& track, std::size_t piece)
+    save::model::TrackPiece take_out_piece(save::model::Track& track, std::size_t piece)
     {
         std::vector<Stretch> parts = stretches(track);
         const auto at = find_piece(segments_of(track), piece);
         Stretch part = std::move(parts.at(at.value().first));
         parts.erase(parts.begin() + static_cast<std::ptrdiff_t>(at->first));
         const auto cut = part.pieces.begin() + static_cast<std::ptrdiff_t>(at->second);
-        save::TrackPiece out = *cut;
+        save::model::TrackPiece out = *cut;
         if (part.segment.closed)
         {
             // Round from the piece after it to the piece before it.
@@ -130,7 +130,7 @@ namespace rct3::park::track
         return out;
     }
 
-    void join_stretch(save::Track& track, std::size_t stretch)
+    void join_stretch(save::model::Track& track, std::size_t stretch)
     {
         std::vector<Stretch> parts = stretches(track);
         if (stretch + 1 >= parts.size())
@@ -142,7 +142,7 @@ namespace rct3::park::track
         lay_out(track, std::move(parts));
     }
 
-    void make_last(save::Track& track, std::size_t stretch)
+    void make_last(save::model::Track& track, std::size_t stretch)
     {
         std::vector<Stretch> parts = stretches(track);
         if (stretch + 1 >= parts.size())
@@ -151,7 +151,7 @@ namespace rct3::park::track
         lay_out(track, std::move(parts));
     }
 
-    std::size_t add_piece(save::Track& track, std::optional<std::size_t> stretch, save::TrackPiece piece)
+    std::size_t add_piece(save::model::Track& track, std::optional<std::size_t> stretch, save::model::TrackPiece piece)
     {
         std::vector<Stretch> parts = stretches(track);
         if (!stretch || *stretch >= parts.size())

@@ -94,7 +94,7 @@ namespace rct3::park
     /// A tile of the trail: the path this trail laid on it, or 0 when it walked over one already there.
     struct TrailStep
     {
-        save::Tile spot;
+        save::model::Tile spot;
         std::uint64_t laid = 0;
         std::int32_t height = 0; ///< Where the piece ends, in whole world units
         friend bool operator==(const TrailStep&, const TrailStep&) = default;
@@ -107,7 +107,7 @@ namespace rct3::park
         bool cut_into_ground = false;
         bool queue = false;                           ///< Lays queue tiles rather than paths
         bool on_slope = false;                        ///< The last piece laid slopes, so the heading cannot change
-        std::optional<save::Tile> start { };          ///< Where the trail began
+        std::optional<save::model::Tile> start { };   ///< Where the trail began
         std::optional<std::int32_t> start_height { }; ///< Of the trail's first piece when set; otherwise on the ground
         std::vector<TrailStep> trail { };             ///< The tiles laid or walked over since, oldest first
     };
@@ -140,7 +140,7 @@ namespace rct3::park
     /// The next piece as it would be laid.
     struct NextPiece
     {
-        save::Tile spot;
+        save::model::Tile spot;
         std::int32_t start = 0; ///< Height it is entered at, in whole world units
         std::int32_t end = 0;   ///< Height it is left at
         bool ground = false;    ///< Lies on the ground; otherwise raised
@@ -153,49 +153,49 @@ namespace rct3::park
     [[nodiscard]] PathStep press(FootpathBuilder& builder, PathControl control);
 
     /// The tile one step from `from` in `heading`.
-    [[nodiscard]] save::Tile step(save::Tile from, Side heading) noexcept;
+    [[nodiscard]] save::model::Tile step(save::model::Tile from, Side heading) noexcept;
 
     /// Begins a new trail at `spot`, its first piece on the ground; what was laid stays.
-    void start_at(FootpathBuilder& builder, save::Tile spot);
+    void start_at(FootpathBuilder& builder, save::model::Tile spot);
 
     /// Where the next piece goes; none before a tile is picked.
-    [[nodiscard]] std::optional<save::Tile> next_spot(const FootpathBuilder& builder);
+    [[nodiscard]] std::optional<save::model::Tile> next_spot(const FootpathBuilder& builder);
 
     /// The next piece on `grid`; none before a tile is picked or beyond the grid.
-    [[nodiscard]] std::optional<NextPiece> next_piece(const FootpathBuilder& builder, const save::TerrainGrid& grid);
+    [[nodiscard]] std::optional<NextPiece> next_piece(const FootpathBuilder& builder, const save::model::TerrainGrid& grid);
 
     /// Why the next piece cannot be laid on `grid` among `paths` and, when given, what else fills the tiles
     /// (path/clearance.hpp).
-    [[nodiscard]] LayProblem lay_problem(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const path::SolidTiles&> solids = std::nullopt);
+    [[nodiscard]] LayProblem lay_problem(const FootpathBuilder& builder, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::optional<const path::SolidTiles&> solids = std::nullopt);
 
     /// Lowers the corners of `piece`'s tile that stand above it, laid heading `heading`, down to it.
-    void cut_down(save::TerrainGrid& grid, const NextPiece& piece, Side heading);
+    void cut_down(save::model::TerrainGrid& grid, const NextPiece& piece, Side heading);
 
     /// How far the middle of `piece` is above the ground of its tile, in world units.
-    [[nodiscard]] float height_above_ground(const NextPiece& piece, const save::TerrainGrid& grid);
+    [[nodiscard]] float height_above_ground(const NextPiece& piece, const save::model::TerrainGrid& grid);
 
     /// Of `paths`, the path on the ground at `spot`.
-    [[nodiscard]] std::optional<std::size_t> ground_path_at(std::span<const save::PathTile> paths, save::Tile spot);
+    [[nodiscard]] std::optional<std::size_t> ground_path_at(std::span<const save::model::PathTile> paths, save::model::Tile spot);
 
     /// A path on the ground of `style` at `spot`, as a park keeps it.
-    [[nodiscard]] save::PathTile ground_path(save::Tile spot, std::string_view style, std::uint64_t id);
+    [[nodiscard]] save::model::PathTile ground_path(save::model::Tile spot, std::string_view style, std::uint64_t id);
 
     /// Of `paths`, one that is already `piece` as `builder` would lay it.
-    [[nodiscard]] std::optional<std::size_t> same_piece_at(std::span<const save::PathTile> paths, const NextPiece& piece, const FootpathBuilder& builder);
+    [[nodiscard]] std::optional<std::size_t> same_piece_at(std::span<const save::model::PathTile> paths, const NextPiece& piece, const FootpathBuilder& builder);
 
     /// Lays `piece` (from next_piece; the caller checks lay_problem and cuts the ground first) as a path of
     /// `style` with id `id`, drawn by object `deck` when raised, or walks over the same piece already there,
     /// and moves on. Returns whether a path was added to `paths`.
-    bool lay_path(FootpathBuilder& builder, std::vector<save::PathTile>& paths, const NextPiece& piece, std::string_view style, std::uint64_t id, std::uint64_t deck);
+    bool lay_path(FootpathBuilder& builder, std::vector<save::model::PathTile>& paths, const NextPiece& piece, std::string_view style, std::uint64_t id, std::uint64_t deck);
 
     /// Steps back along the trail, taking its last piece away from `paths` when the trail laid it. Returns the
     /// path removed.
-    std::optional<save::PathTile> remove_last(FootpathBuilder& builder, std::vector<save::PathTile>& paths);
+    std::optional<save::model::PathTile> remove_last(FootpathBuilder& builder, std::vector<save::model::PathTile>& paths);
 
     /// Takes the paths `ids` away from `paths`, returning them in the order taken. Those at the trail's end go
     /// first, newest first, stepping the trail back over them, so the arrow backs up; a piece further back on
     /// the trail lets go of it, since the trail no longer leads on from its last piece.
-    std::vector<save::PathTile> remove_paths(FootpathBuilder& builder, std::vector<save::PathTile>& paths, std::span<const std::uint64_t> ids);
+    std::vector<save::model::PathTile> remove_paths(FootpathBuilder& builder, std::vector<save::model::PathTile>& paths, std::span<const std::uint64_t> ids);
 
     /// Whether the turn controls can be used now.
     [[nodiscard]] bool can_turn(const FootpathBuilder& builder) noexcept;
@@ -203,7 +203,7 @@ namespace rct3::park
     /// Which controls lead to a piece that can be laid from where the trail stands: a turn when some slope fits
     /// that way, a slope when it fits the way the trail heads, Straight when the piece as chosen fits. The cut
     /// switch can always be used, since cutting can make a piece fit; Remove is left to the caller.
-    [[nodiscard]] std::array<bool, kPathControlCount> fitting_controls(const FootpathBuilder& builder, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::optional<const path::SolidTiles&> solids = std::nullopt);
+    [[nodiscard]] std::array<bool, kPathControlCount> fitting_controls(const FootpathBuilder& builder, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::optional<const path::SolidTiles&> solids = std::nullopt);
 
     /// The slope control that picks `slope`, and the slope a control picks (Flat for those that pick none).
     [[nodiscard]] PathControl slope_control(PathSlope slope) noexcept;
@@ -219,7 +219,7 @@ namespace rct3::park
 
     /// A square over `piece`'s tile, at the piece's height, whose pictures' bottom edge (v = 1) lies on the edge
     /// the piece leaves by in `heading`: the arrow showing where the trail goes. One batch.
-    [[nodiscard]] TerrainMesh heading_arrow(const NextPiece& piece, Side heading, const save::TerrainGrid& grid);
+    [[nodiscard]] TerrainMesh heading_arrow(const NextPiece& piece, Side heading, const save::model::TerrainGrid& grid);
 
     /// The slope as a park stores it on a raised path piece.
     [[nodiscard]] std::uint8_t stored_slope(PathSlope slope) noexcept;
@@ -239,9 +239,9 @@ namespace rct3::park
     inline constexpr std::int64_t kTunnelPieceCost = 1000;
 
     /// The price of `piece` on `grid` of a style that costs `ground_cost` on the ground.
-    [[nodiscard]] std::int64_t piece_price(const NextPiece& piece, const save::TerrainGrid& grid, std::int32_t ground_cost);
+    [[nodiscard]] std::int64_t piece_price(const NextPiece& piece, const save::model::TerrainGrid& grid, std::int32_t ground_cost);
 
     /// What laying `path` cost, worked out again from where it lies, for paying it back when it is taken away.
-    [[nodiscard]] std::int64_t laid_price(const save::PathTile& path, const save::TerrainGrid& grid, std::int32_t ground_cost);
+    [[nodiscard]] std::int64_t laid_price(const save::model::PathTile& path, const save::model::TerrainGrid& grid, std::int32_t ground_cost);
 
 } // namespace rct3::park

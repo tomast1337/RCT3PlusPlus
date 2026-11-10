@@ -10,32 +10,32 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::TerrainGrid owned_grid(int width, int height)
+    save::model::TerrainGrid owned_grid(int width, int height)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(static_cast<std::size_t>(width * height));
-        for (save::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::TileFlag::Owned);
+        for (save::model::TerrainCell& c : g.cells)
+            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
         return g;
     }
 
-    save::TerrainCell& cell(save::TerrainGrid& g, int col, int row)
+    save::model::TerrainCell& cell(save::model::TerrainGrid& g, int col, int row)
     {
         return g.cells[static_cast<std::size_t>(row * g.width + col)];
     }
 
     /// A ridge across every row at column `col`, `height` high on its flat top.
-    void ridge(save::TerrainGrid& g, int col, float height)
+    void ridge(save::model::TerrainGrid& g, int col, float height)
     {
         for (int row = 0; row < g.height; ++row)
             cell(g, col, row).corners = { height, height, height, height };
     }
 
-    FootpathBuilder started_at(save::Tile spot, bool cut = false)
+    FootpathBuilder started_at(save::model::Tile spot, bool cut = false)
     {
         FootpathBuilder b;
         start_at(b, spot);
@@ -47,8 +47,8 @@ namespace
     {
         for (std::size_t i = 1; i < route.size(); ++i)
         {
-            const save::Tile a = route[i - 1].piece.spot;
-            const save::Tile b = route[i].piece.spot;
+            const save::model::Tile a = route[i - 1].piece.spot;
+            const save::model::Tile b = route[i].piece.spot;
             if (std::abs(a.col - b.col) + std::abs(a.row - b.row) != 1 || route[i - 1].piece.end != route[i].piece.start)
                 return false;
         }
@@ -74,12 +74,12 @@ namespace
 
 TEST_CASE("a route over flat ground lies on the ground, short and with one turn")
 {
-    const save::TerrainGrid g = owned_grid(10, 10);
+    const save::model::TerrainGrid g = owned_grid(10, 10);
     const auto route = find_route(started_at({ 1, 1 }), { 6, 4 }, g, { }, 1000);
     REQUIRE(route);
     CHECK(route->size() == 9); // The start tile and eight more
-    CHECK(route->front().piece.spot == save::Tile { 1, 1 });
-    CHECK(route->back().piece.spot == save::Tile { 6, 4 });
+    CHECK(route->front().piece.spot == save::model::Tile { 1, 1 });
+    CHECK(route->back().piece.spot == save::model::Tile { 6, 4 });
     CHECK(joined(*route));
     CHECK(std::ranges::all_of(*route, [](const RouteStep& s) { return s.piece.ground; }));
     std::size_t turns = 0;
@@ -91,18 +91,18 @@ TEST_CASE("a route over flat ground lies on the ground, short and with one turn"
 
 TEST_CASE("a route goes round land the park does not own")
 {
-    save::TerrainGrid g = owned_grid(8, 6);
+    save::model::TerrainGrid g = owned_grid(8, 6);
     for (int row = 0; row < 5; ++row)
         cell(g, 4, row).flags = 0;
     const auto route = find_route(started_at({ 1, 0 }), { 7, 0 }, g, { }, 1000);
     REQUIRE(route);
     CHECK(joined(*route));
-    CHECK(std::ranges::any_of(*route, [](const RouteStep& s) { return s.piece.spot == save::Tile { 4, 5 }; }));
+    CHECK(std::ranges::any_of(*route, [](const RouteStep& s) { return s.piece.spot == save::model::Tile { 4, 5 }; }));
 }
 
 TEST_CASE("across a ridge a route climbs over it, or cuts through when cutting is on")
 {
-    save::TerrainGrid g = owned_grid(12, 3);
+    save::model::TerrainGrid g = owned_grid(12, 3);
     ridge(g, 5, 2);
     ridge(g, 6, 2);
 
@@ -123,7 +123,7 @@ TEST_CASE("across a ridge a route climbs over it, or cuts through when cutting i
 
 TEST_CASE("under a mountain a route tunnels rather than climb over or cut a trench")
 {
-    save::TerrainGrid g = owned_grid(14, 3);
+    save::model::TerrainGrid g = owned_grid(14, 3);
     for (int col = 4; col <= 9; ++col)
         ridge(g, col, 12);
     for (const bool cut : { false, true })
@@ -138,16 +138,16 @@ TEST_CASE("under a mountain a route tunnels rather than climb over or cut a tren
 
 TEST_CASE("a route to a raised path ends on it, not on the ground under it")
 {
-    const save::TerrainGrid g = owned_grid(10, 3);
-    save::PathTile raised = ground_path({ 7, 1 }, "Old", 9);
-    raised.kind = save::PathKind::Flying;
-    raised.elevation = save::PathElevation { };
+    const save::model::TerrainGrid g = owned_grid(10, 3);
+    save::model::PathTile raised = ground_path({ 7, 1 }, "Old", 9);
+    raised.kind = save::model::PathKind::Flying;
+    raised.elevation = save::model::PathElevation { };
     raised.elevation->quantised_height = 4;
-    const std::vector<save::PathTile> paths { raised };
+    const std::vector<save::model::PathTile> paths { raised };
     const auto route = find_route(started_at({ 1, 1 }), { 7, 1 }, g, paths, 1000, 4);
     REQUIRE(route);
     CHECK(joined(*route));
-    CHECK(route->back().piece.spot == save::Tile { 7, 1 });
+    CHECK(route->back().piece.spot == save::model::Tile { 7, 1 });
     CHECK(route->back().piece.end == 4);
     CHECK_FALSE(route->back().piece.ground);
     CHECK(std::ranges::any_of(*route, [](const RouteStep& s) { return s.slope != PathSlope::Flat; }));
@@ -159,15 +159,15 @@ TEST_CASE("a route to a raised path ends on it, not on the ground under it")
 
 TEST_CASE("a route goes on from the trail's end and walks over paths already there")
 {
-    const save::TerrainGrid g = owned_grid(8, 3);
+    const save::model::TerrainGrid g = owned_grid(8, 3);
     FootpathBuilder b = started_at({ 0, 1 });
     b.heading = Side::kNextCol;
     b.trail.push_back({ { 0, 1 }, 7, 0 });
-    const std::vector<save::PathTile> paths { ground_path({ 0, 1 }, "Old", 7), ground_path({ 3, 1 }, "Old", 8) };
+    const std::vector<save::model::PathTile> paths { ground_path({ 0, 1 }, "Old", 7), ground_path({ 3, 1 }, "Old", 8) };
     const auto route = find_route(b, { 5, 1 }, g, paths, 1000);
     REQUIRE(route);
     CHECK(route->size() == 5);
-    CHECK(route->front().piece.spot == save::Tile { 1, 1 });
+    CHECK(route->front().piece.spot == save::model::Tile { 1, 1 });
     CHECK(route_price(*route, b, g, paths, 1000) == 4000); // The path at column 3 is walked over
     CHECK(find_route(b, { 0, 1 }, g, paths, 1000)->empty());
     CHECK_FALSE(find_route(FootpathBuilder { }, { 5, 1 }, g, paths, 1000));
@@ -176,14 +176,14 @@ TEST_CASE("a route goes on from the trail's end and walks over paths already the
 
 TEST_CASE("a route climbing round to a path over its own start keeps room over its own pieces")
 {
-    const save::TerrainGrid g = owned_grid(5, 3);
+    const save::model::TerrainGrid g = owned_grid(5, 3);
     for (const std::int32_t height : { 1, 2, 3, 4 })
     {
-        save::PathTile raised = ground_path({ 2, 1 }, "Old", 9);
-        raised.kind = save::PathKind::Flying;
-        raised.elevation = save::PathElevation { };
+        save::model::PathTile raised = ground_path({ 2, 1 }, "Old", 9);
+        raised.kind = save::model::PathKind::Flying;
+        raised.elevation = save::model::PathElevation { };
         raised.elevation->quantised_height = height;
-        const std::vector<save::PathTile> paths { raised };
+        const std::vector<save::model::PathTile> paths { raised };
         const auto route = find_route(started_at({ 1, 1 }), { 2, 1 }, g, paths, 1000, height);
         if (!route)
             continue;
@@ -194,8 +194,8 @@ TEST_CASE("a route climbing round to a path over its own start keeps room over i
 
 TEST_CASE("a queue route bridging a path leaves room to walk under it")
 {
-    const save::TerrainGrid g = owned_grid(11, 3);
-    std::vector<save::PathTile> paths;
+    const save::model::TerrainGrid g = owned_grid(11, 3);
+    std::vector<save::model::PathTile> paths;
     for (int row = 0; row < 3; ++row)
         paths.push_back(ground_path({ 5, row }, "Old", static_cast<std::uint64_t>(row + 1)));
     FootpathBuilder queue = started_at({ 1, 1 });
@@ -210,13 +210,13 @@ TEST_CASE("a queue route bridging a path leaves room to walk under it")
 
 TEST_CASE("a straight route steps along the line to its goal, where the default turns once")
 {
-    const save::TerrainGrid g = owned_grid(10, 10);
+    const save::model::TerrainGrid g = owned_grid(10, 10);
     const auto off_diagonal = [](const RouteStep& s) { return std::abs(s.piece.spot.col - s.piece.spot.row); };
     const auto straight = find_route(started_at({ 1, 1 }), { 7, 7 }, g, { }, 1000, std::nullopt, std::nullopt, true);
     REQUIRE(straight);
     CHECK(joined(*straight));
     CHECK(straight->size() == 13);
-    CHECK(straight->back().piece.spot == save::Tile { 7, 7 });
+    CHECK(straight->back().piece.spot == save::model::Tile { 7, 7 });
     CHECK(std::ranges::all_of(*straight, [&](const RouteStep& s) { return off_diagonal(s) <= 1; }));
     const auto corner = find_route(started_at({ 1, 1 }), { 7, 7 }, g, { }, 1000);
     REQUIRE(corner);
@@ -226,7 +226,7 @@ TEST_CASE("a straight route steps along the line to its goal, where the default 
 
 TEST_CASE("across a dip a route bridges it level rather than ramp down into it")
 {
-    save::TerrainGrid g = owned_grid(12, 3);
+    save::model::TerrainGrid g = owned_grid(12, 3);
     for (int col = 4; col <= 7; ++col)
         ridge(g, col, -3);
     const auto route = find_route(started_at({ 1, 1 }), { 10, 1 }, g, { }, 1000);

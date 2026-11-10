@@ -47,18 +47,18 @@ namespace rct3::ui::screens
     /// order of the jobs when sorted by job.
     struct RosterJob
     {
-        save::StaffKind kind = save::StaffKind::Handyman;
+        save::model::StaffKind kind = save::model::StaffKind::Handyman;
         std::string_view skin;
         std::string_view help;
     };
     inline constexpr std::array<RosterJob, 7> kRosterJobs = { {
-        { save::StaffKind::Handyman, "Staff_ViewMaintenance", "StaffWindow_ViewMaintenanceHelp" },
-        { save::StaffKind::Mechanic, "Staff_ViewMechanic", "StaffWindow_ViewMechanicHelp" },
-        { save::StaffKind::SecurityGuard, "Staff_ViewSecurity", "StaffWindow_ViewSecurityHelp" },
-        { save::StaffKind::Entertainer, "Staff_ViewEntertainer", "StaffWindow_ViewEntertainerHelp" },
-        { save::StaffKind::Vendor, "Staff_ViewVendor", "StaffWindow_ViewVendorHelp" },
-        { save::StaffKind::ParkInspector, "Staff_ViewParkInspector", "StaffWindow_ViewParkInspectorHelp" },
-        { save::StaffKind::AnimalKeeper, "Staff_ViewAnimalKeeper", "StaffWindow_ViewAnimalKeeperHelp" },
+        { save::model::StaffKind::Handyman, "Staff_ViewMaintenance", "StaffWindow_ViewMaintenanceHelp" },
+        { save::model::StaffKind::Mechanic, "Staff_ViewMechanic", "StaffWindow_ViewMechanicHelp" },
+        { save::model::StaffKind::SecurityGuard, "Staff_ViewSecurity", "StaffWindow_ViewSecurityHelp" },
+        { save::model::StaffKind::Entertainer, "Staff_ViewEntertainer", "StaffWindow_ViewEntertainerHelp" },
+        { save::model::StaffKind::Vendor, "Staff_ViewVendor", "StaffWindow_ViewVendorHelp" },
+        { save::model::StaffKind::ParkInspector, "Staff_ViewParkInspector", "StaffWindow_ViewParkInspectorHelp" },
+        { save::model::StaffKind::AnimalKeeper, "Staff_ViewAnimalKeeper", "StaffWindow_ViewAnimalKeeperHelp" },
     } };
 
     /// The jobs shown, one bit per kRosterJobs entry: everyone but the vendors, who stand at their stalls.
@@ -67,13 +67,13 @@ namespace rct3::ui::screens
     inline constexpr RosterJobs kStartRosterJobs = kAllRosterJobs & ~(1u << 4);
 
     /// Whether `jobs` shows workers of `kind`. Jobs without a switch show always, but lifeguards never.
-    [[nodiscard]] bool shows_job(RosterJobs jobs, save::StaffKind kind);
+    [[nodiscard]] bool shows_job(RosterJobs jobs, save::model::StaffKind kind);
 
     /// A worker's row: who they are, what they do and what the player can change.
     struct RosterLine
     {
         std::size_t index = 0; ///< In the park's staff
-        save::StaffKind kind = save::StaffKind::Handyman;
+        save::model::StaffKind kind = save::model::StaffKind::Handyman;
         std::u16string name;
         std::u16string doing;
         Mood mood = Mood::Neutral;

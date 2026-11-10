@@ -30,7 +30,7 @@ namespace rct3::park::object
 
         using Key = std::tuple<PartBlend, std::string, bool, std::int32_t>; // Blend, painted picture, one-sided, chain run
 
-        FlexiColours colours_of(const save::PlacedObject& object, const ColourOverrides& overrides)
+        FlexiColours colours_of(const save::model::PlacedObject& object, const ColourOverrides& overrides)
         {
             const auto custom = overrides.find(object.id);
             return custom != overrides.end() ? custom->second : flexi_colours(object.colours);
@@ -46,13 +46,13 @@ namespace rct3::park::object
             return std::nullopt;
         }
 
-        std::string ground_texture(GroundPaint paint, const save::TerrainGrid& grid, glm::vec2 anchor)
+        std::string ground_texture(GroundPaint paint, const save::model::TerrainGrid& grid, glm::vec2 anchor)
         {
             const int col = grid.tile_size_x != 0 ? static_cast<int>(std::floor((anchor.x - grid.origin_x) / grid.tile_size_x)) : -1;
             const int row = grid.tile_size_z != 0 ? static_cast<int>(std::floor((anchor.y - grid.origin_z) / grid.tile_size_z)) : -1;
             if (!grid.contains(col, row))
                 return ground::ground_key(paint, 0);
-            const save::TerrainCell& cell = grid.at(col, row);
+            const save::model::TerrainCell& cell = grid.at(col, row);
             return ground::ground_key(paint, paint == GroundPaint::Cliff ? cell.cliff : cell.surface);
         }
 
@@ -81,12 +81,12 @@ namespace rct3::park::object
 
     } // namespace
 
-    std::string model_key(const save::PlacedObject& object)
+    std::string model_key(const save::model::PlacedObject& object)
     {
         return std::format("{}|{}", object.overlay, object.symbol);
     }
 
-    ModelRef model_ref(const save::PlacedObject& object)
+    ModelRef model_ref(const save::model::PlacedObject& object)
     {
         return { object.overlay, object.symbol };
     }
@@ -116,7 +116,7 @@ namespace rct3::park::object
         return compare(b, a) > 0;
     }
 
-    glm::mat4 placed_transform(const save::PlacedObject& object, const ObjectModel* model, const save::TerrainGrid& grid, const Fitted& fitted)
+    glm::mat4 placed_transform(const save::model::PlacedObject& object, const ObjectModel* model, const save::model::TerrainGrid& grid, const Fitted& fitted)
     {
         const auto found = fitted.find(object.id);
         if (found != fitted.end())
@@ -126,7 +126,7 @@ namespace rct3::park::object
         return object_transform(object, static_cast<Positioning>(model->positioning), grid, model->squares, model->ground_height);
     }
 
-    std::vector<std::size_t> update_places(ObjectPlaces& places, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
+    std::vector<std::size_t> update_places(ObjectPlaces& places, std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted)
     {
         const std::size_t had = places.models.size();
         const bool more_models = models.size() != places.model_count;
@@ -137,7 +137,7 @@ namespace rct3::park::object
         std::vector<std::size_t> changed;
         for (std::size_t i = 0; i < objects.size(); ++i)
         {
-            const save::PlacedObject& o = objects[i];
+            const save::model::PlacedObject& o = objects[i];
             std::string& key = places.keys[i];
             // The key as model_key would build it, compared without building it.
             const bool renamed = i >= had || key.size() != o.overlay.size() + 1 + o.symbol.size() || !key.starts_with(o.overlay) || key[o.overlay.size()] != '|' || !key.ends_with(o.symbol);
@@ -159,11 +159,11 @@ namespace rct3::park::object
         return changed;
     }
 
-    std::vector<glm::vec3> object_anchors(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
+    std::vector<glm::vec3> object_anchors(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted)
     {
         std::vector<glm::vec3> anchors;
         anchors.reserve(objects.size());
-        for (const save::PlacedObject& object : objects)
+        for (const save::model::PlacedObject& object : objects)
         {
             const auto model = models.find(model_ref(object));
             anchors.emplace_back(placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted)[3]);
@@ -171,12 +171,12 @@ namespace rct3::park::object
         return anchors;
     }
 
-    std::vector<Lamp> object_lamps(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, std::span<const glm::mat4> places, std::span<const ObjectModel* const> found)
+    std::vector<Lamp> object_lamps(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted, std::span<const glm::mat4> places, std::span<const ObjectModel* const> found)
     {
         std::vector<Lamp> lamps;
         for (std::size_t i = 0; i < objects.size(); ++i)
         {
-            const save::PlacedObject& object = objects[i];
+            const save::model::PlacedObject& object = objects[i];
             if (object.hidden)
                 continue;
             const ObjectModel* model = i < found.size() ? found[i] : nullptr;
@@ -202,7 +202,7 @@ namespace rct3::park::object
         return lamps;
     }
 
-    std::vector<PlacedEffect> object_effects(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, std::span<const glm::mat4> places, std::span<const ObjectModel* const> found)
+    std::vector<PlacedEffect> object_effects(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted, std::span<const glm::mat4> places, std::span<const ObjectModel* const> found)
     {
         std::vector<PlacedEffect> effects;
         for (std::size_t i = 0; i < objects.size(); ++i)
@@ -228,7 +228,7 @@ namespace rct3::park::object
         return effects;
     }
 
-    LevelPlan plan_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, const LevelScales& scales)
+    LevelPlan plan_levels(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, const LevelScales& scales)
     {
         LevelPlan plan { .steady = ObjectLevels(objects.size(), kNotDrawn), .finer = ObjectLevels(objects.size(), kNotDrawn), .coarser = ObjectLevels(objects.size(), kNotDrawn), .bands = std::vector<glm::vec2>(objects.size()) };
         for (std::size_t i = 0; i < objects.size() && i < anchors.size(); ++i)
@@ -266,7 +266,7 @@ namespace rct3::park::object
         return plan;
     }
 
-    ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, const LevelScales& scales)
+    ObjectLevels object_levels(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, const LevelScales& scales)
     {
         ObjectLevels levels(objects.size(), kNotDrawn);
         for (std::size_t i = 0; i < objects.size() && i < anchors.size(); ++i)
@@ -282,14 +282,14 @@ namespace rct3::park::object
         return levels;
     }
 
-    ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels, const ColourOverrides& overrides, const Leans& leans, const Fitted& fitted, const Broken& broken, const Chains& chains, const FlowFades& fades)
+    ObjectMesh object_mesh(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, std::span<const std::int8_t> levels, const ColourOverrides& overrides, const Leans& leans, const Fitted& fitted, const Broken& broken, const Chains& chains, const FlowFades& fades)
     {
         const bool finest = levels.size() != objects.size();
         ObjectMesh mesh;
         std::map<Key, Run> runs;
         for (std::size_t index = 0; index < objects.size(); ++index)
         {
-            const save::PlacedObject& object = objects[index];
+            const save::model::PlacedObject& object = objects[index];
             if (object.hidden)
                 continue;
             const auto model = models.find(model_ref(object));
@@ -349,7 +349,7 @@ namespace rct3::park::object
         return mesh;
     }
 
-    Billboards gather_billboards(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const ColourOverrides& overrides)
+    Billboards gather_billboards(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const ColourOverrides& overrides)
     {
         Billboards boards;
         std::map<Key, Run> runs;
@@ -405,7 +405,7 @@ namespace rct3::park::object
         }
     }
 
-    ObjectMesh billboard_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const glm::vec3& eye, const ColourOverrides& overrides)
+    ObjectMesh billboard_mesh(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const glm::vec3& eye, const ColourOverrides& overrides)
     {
         Billboards boards = gather_billboards(objects, models, anchors, levels, overrides);
         face_billboards(boards, eye);

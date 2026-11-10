@@ -657,7 +657,7 @@ TEST_CASE("a lap's graphs take a sample each tenth of a second, newest first whe
     // Level and straight: one g up, nothing across.
     CHECK(lap.vertical[0] == doctest::Approx(9.81f));
     CHECK(lap.lateral[0] == doctest::Approx(0));
-    const rct3::save::RideGraphs graphs = end_lap(lap);
+    const rct3::save::model::RideGraphs graphs = end_lap(lap);
     CHECK(graphs.speed == std::vector<float> { 12, 11, 10 });
     CHECK(lap.speed.empty());
 }
@@ -667,7 +667,7 @@ TEST_CASE("a long lap's graphs keep its last samples")
     LapRecorder lap;
     lap.speed.assign(kLapSamples + 50, 1);
     lap.speed.back() = 7;
-    const rct3::save::RideGraphs graphs = end_lap(lap);
+    const rct3::save::model::RideGraphs graphs = end_lap(lap);
     REQUIRE(graphs.speed.size() == kLapSamples);
     CHECK(graphs.speed.front() == 7);
 }

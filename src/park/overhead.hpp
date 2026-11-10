@@ -30,6 +30,6 @@ namespace rct3::park
     /// What is over each of `points`, on a line up from kHeadroom above it to kRoofReach above it.
     /// shortcut: trees drawn only as flat pictures have no box and give no shade; upgrade by sizing them from
     /// their pictures if parks loaded that way miss their shade.
-    [[nodiscard]] std::vector<Overhead> overheads(std::span<const glm::vec3> points, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid, const object::Fitted& fitted);
+    [[nodiscard]] std::vector<Overhead> overheads(std::span<const glm::vec3> points, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid, const object::Fitted& fitted);
 
 } // namespace rct3::park

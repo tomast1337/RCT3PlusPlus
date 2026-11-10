@@ -54,12 +54,12 @@ namespace rct3::park::track
         }
     } // namespace
 
-    std::optional<TrackCourse> track_course(const save::Ride& ride, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid, const object::Fitted& fitted, const PieceShapeOf& shape_of)
+    std::optional<TrackCourse> track_course(const save::model::Ride& ride, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid, const object::Fitted& fitted, const PieceShapeOf& shape_of)
     {
         if (!ride.track || ride.track->pieces.empty())
             return std::nullopt;
-        std::unordered_map<std::uint64_t, const save::PlacedObject*> by_id;
-        for (const save::PlacedObject& o : objects)
+        std::unordered_map<std::uint64_t, const save::model::PlacedObject*> by_id;
+        for (const save::model::PlacedObject& o : objects)
             by_id.emplace(o.id, &o);
         const auto& segments = ride.track->segments;
         // A track in one stretch runs along all its pieces; one in several, along each stretch on its own.
@@ -76,7 +76,7 @@ namespace rct3::park::track
             TrackCourse course;
             course.first_piece = from;
             bool whole_stretch = true;
-            for (const save::TrackPiece& piece : std::span(ride.track->pieces).subspan(from, to - from))
+            for (const save::model::TrackPiece& piece : std::span(ride.track->pieces).subspan(from, to - from))
             {
                 const auto found = by_id.find(piece.scenery);
                 if (found == by_id.end())
@@ -84,7 +84,7 @@ namespace rct3::park::track
                     whole_stretch = false;
                     break;
                 }
-                const save::PlacedObject& object = *found->second;
+                const save::model::PlacedObject& object = *found->second;
                 const auto shape = shape_of(piece, object);
                 if (!shape || shape->line.path.size() < 2)
                 {
@@ -358,7 +358,7 @@ namespace rct3::park::track
         return fit;
     }
 
-    void stand_train(const TrackCourse& course, save::Train& train, std::span<const object::CarFit> fits, float front)
+    void stand_train(const TrackCourse& course, save::model::Train& train, std::span<const object::CarFit> fits, float front)
     {
         if (fits.empty())
             return;
@@ -368,7 +368,7 @@ namespace rct3::park::track
         const auto fit_of = [&](std::size_t k) -> const object::CarFit& { return fits[std::min(k, fits.size() - 1)]; };
         for (std::size_t k = 0; k < train.cars.size(); ++k)
         {
-            save::Car& car = train.cars[k];
+            save::model::Car& car = train.cars[k];
             const object::CarFit& fit = fit_of(k);
             car.distance = at;
             glm::mat4 frame;

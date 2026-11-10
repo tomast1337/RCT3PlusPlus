@@ -82,9 +82,9 @@ namespace rct3::ui::screens
             "Entertainer_SubType_Panda", "Entertainer_SubType_Elephant", "Entertainer_SubType_PumpkinHead", "Entertainer_SubType_Alien", "Entertainer_SubType_Cowgirl", "Entertainer_SubType_Shark", "Entertainer_SubType_Tiger",
         };
 
-        std::span<const Task> tasks(save::StaffKind kind)
+        std::span<const Task> tasks(save::model::StaffKind kind)
         {
-            using enum save::StaffKind;
+            using enum save::model::StaffKind;
             switch (kind)
             {
                 case Handyman:
@@ -101,9 +101,9 @@ namespace rct3::ui::screens
         }
 
         /// How many clothes the uniform of `kind` has colours for; 0 for none.
-        std::size_t uniform_pots(save::StaffKind kind)
+        std::size_t uniform_pots(save::model::StaffKind kind)
         {
-            using enum save::StaffKind;
+            using enum save::model::StaffKind;
             switch (kind)
             {
                 case Handyman:
@@ -118,14 +118,14 @@ namespace rct3::ui::screens
             }
         }
 
-        std::string_view uniform_help(save::StaffKind kind)
+        std::string_view uniform_help(save::model::StaffKind kind)
         {
-            if (kind == save::StaffKind::Entertainer)
+            if (kind == save::model::StaffKind::Entertainer)
                 return "Staff_Costume_Colours";
             return uniform_pots(kind) == 1 ? "Staff_Uniform_Colour" : "Staff_Uniform_Colours";
         }
 
-        /// The string of each kind of staff's job, in the order of save::StaffKind.
+        /// The string of each kind of staff's job, in the order of save::model::StaffKind.
         constexpr std::array<std::string_view, 8> kJobNames = {
             "HandymanName", "MechanicName", "SecurityGuardName", "EntertainerName", "VendorName", "AnimalKeeperName", "LifeguardName", "ParkInspectorName",
         };
@@ -172,16 +172,16 @@ namespace rct3::ui::screens
         }
 
         /// The attraction with the id `id`, if the park has it.
-        const save::AttractionCommon* attraction(const PersonFacts& f, save::PeopleObjectId id)
+        const save::model::AttractionCommon* attraction(const PersonFacts& f, save::model::PeopleObjectId id)
         {
             if (f.rides == nullptr || id == 0)
                 return nullptr;
-            for (const save::Ride& r : f.rides->rides)
+            for (const save::model::Ride& r : f.rides->rides)
             {
                 if (r.base.id == id)
                     return &r.base;
             }
-            for (const save::Stall& s : f.rides->stalls)
+            for (const save::model::Stall& s : f.rides->stalls)
             {
                 if (s.base.id == id)
                     return &s.base;
@@ -189,24 +189,24 @@ namespace rct3::ui::screens
             return nullptr;
         }
 
-        std::u16string attraction_called(const PersonFacts& f, save::PeopleObjectId id, const StringTable& strings)
+        std::u16string attraction_called(const PersonFacts& f, save::model::PeopleObjectId id, const StringTable& strings)
         {
-            if (const save::AttractionCommon* a = attraction(f, id))
+            if (const save::model::AttractionCommon* a = attraction(f, id))
                 return attraction_name(*a, strings);
             // A thought about a path item, such as a loudspeaker, names it as its own window does.
-            const auto object = id == 0 ? f.objects.end() : std::ranges::find(f.objects, id, &save::PlacedObject::id);
+            const auto object = id == 0 ? f.objects.end() : std::ranges::find(f.objects, id, &save::model::PlacedObject::id);
             return object != f.objects.end() ? scenery_name({ .symbol = object->symbol }, strings) : std::u16string { };
         }
 
-        std::u16string job(const save::Staff& s, const StringTable& strings)
+        std::u16string job(const save::model::Staff& s, const StringTable& strings)
         {
             const auto kind = static_cast<std::size_t>(s.kind);
             return kind < kJobNames.size() ? text(strings, kJobNames[kind]) : std::u16string { };
         }
 
-        std::string_view state_key(const save::Person& p, bool guest)
+        std::string_view state_key(const save::model::Person& p, bool guest)
         {
-            using enum save::PersonState;
+            using enum save::model::PersonState;
             switch (p.state)
             {
                 case Decision:
@@ -251,7 +251,7 @@ namespace rct3::ui::screens
             const auto own = p.guest_state();
             if (!own)
                 return { };
-            using enum save::GuestState;
+            using enum save::model::GuestState;
             switch (*own)
             {
                 case HeadingForBench:
@@ -284,14 +284,14 @@ namespace rct3::ui::screens
 
         void thoughts(InfoPage& page, const PersonFacts& f, const StringTable& strings)
         {
-            std::vector<const save::Thought*> latest;
-            for (const save::Thought& t : f.person()->thoughts)
+            std::vector<const save::model::Thought*> latest;
+            for (const save::model::Thought& t : f.person()->thoughts)
             {
                 if (!t.empty())
                     latest.push_back(&t);
             }
-            std::ranges::stable_sort(latest, std::ranges::greater { }, &save::Thought::time);
-            for (const save::Thought* t : latest)
+            std::ranges::stable_sort(latest, std::ranges::greater { }, &save::model::Thought::time);
+            for (const save::model::Thought* t : latest)
             {
                 if (page.lines.size() == kListLines)
                     break;
@@ -300,13 +300,13 @@ namespace rct3::ui::screens
             }
         }
 
-        void rides(InfoPage& page, const save::Guest& g, const PersonFacts& f, const StringTable& strings)
+        void rides(InfoPage& page, const save::model::Guest& g, const PersonFacts& f, const StringTable& strings)
         {
             std::u16string favourite = attraction_called(f, g.favourite_ride.id, strings);
             add(page, strings, "Guest_FavouriteRide", favourite.empty() ? text(strings, "Guest_NoFavouriteRide") : std::move(favourite));
             add(page, strings, "Guest_RidesBeenOn", count(g.counters.rides));
             // The latest first, each once.
-            std::vector<save::PeopleObjectId> listed;
+            std::vector<save::model::PeopleObjectId> listed;
             for (auto it = g.person.attractions_visited.rbegin(); it != g.person.attractions_visited.rend() && page.lines.size() < kListLines; ++it)
             {
                 if (std::ranges::contains(listed, it->id))
@@ -317,11 +317,11 @@ namespace rct3::ui::screens
             }
         }
 
-        std::u16string item_called(const PersonFacts& f, const save::PeopleRef& ref, const StringTable& strings)
+        std::u16string item_called(const PersonFacts& f, const save::model::PeopleRef& ref, const StringTable& strings)
         {
             if (f.people == nullptr || ref.is_none())
                 return { };
-            const auto item = std::ranges::find(f.people->carried_items, ref.id, &save::CarriedItem::id);
+            const auto item = std::ranges::find(f.people->carried_items, ref.id, &save::model::CarriedItem::id);
             if (item == f.people->carried_items.end())
                 return { };
             if (const auto found = strings.get(item->name); !found.empty())
@@ -329,21 +329,21 @@ namespace rct3::ui::screens
             return strings::to_utf16(item->name);
         }
 
-        void carrying(InfoPage& page, const save::Guest& g, const PersonFacts& f, const StringTable& strings)
+        void carrying(InfoPage& page, const save::model::Guest& g, const PersonFacts& f, const StringTable& strings)
         {
-            const save::ItemHolder* holder = nullptr;
+            const save::model::ItemHolder* holder = nullptr;
             if (f.people != nullptr && !g.person.holder.is_none())
             {
-                const auto it = std::ranges::find(f.people->holders, g.person.holder.id, &save::ItemHolder::id);
+                const auto it = std::ranges::find(f.people->holders, g.person.holder.id, &save::model::ItemHolder::id);
                 if (it != f.people->holders.end())
                     holder = &*it;
             }
-            const std::array<std::pair<std::string_view, save::PeopleRef>, 5> slots { {
-                { "Guest_HolderHead", holder ? holder->head : save::PeopleRef { } },
-                { "Guest_HolderLHand", holder ? holder->left_hand : save::PeopleRef { } },
-                { "Guest_HolderRHand", holder ? holder->right_hand : save::PeopleRef { } },
-                { "Guest_HolderLPocket", holder ? holder->left_pocket : save::PeopleRef { } },
-                { "Guest_HolderRPocket", holder ? holder->right_pocket : save::PeopleRef { } },
+            const std::array<std::pair<std::string_view, save::model::PeopleRef>, 5> slots { {
+                { "Guest_HolderHead", holder ? holder->head : save::model::PeopleRef { } },
+                { "Guest_HolderLHand", holder ? holder->left_hand : save::model::PeopleRef { } },
+                { "Guest_HolderRHand", holder ? holder->right_hand : save::model::PeopleRef { } },
+                { "Guest_HolderLPocket", holder ? holder->left_pocket : save::model::PeopleRef { } },
+                { "Guest_HolderRPocket", holder ? holder->right_pocket : save::model::PeopleRef { } },
             } };
             for (const auto& [label, ref] : slots)
             {
@@ -352,7 +352,7 @@ namespace rct3::ui::screens
             }
         }
 
-        void guest_stats(InfoPage& page, const save::Guest& g, const StringTable& strings)
+        void guest_stats(InfoPage& page, const save::model::Guest& g, const StringTable& strings)
         {
             add_half(page, strings, "Guest_Happiness", percent(g.mood_now.happiness));
             add_half(page, strings, "Guest_Energy", percent(g.mood_now.energy));
@@ -364,7 +364,7 @@ namespace rct3::ui::screens
                 add_half(page, strings, "Guest_SunBurn", percent(*g.mood_now.sunburn));
         }
 
-        void guest_general(InfoPage& page, const save::Guest& g, const StringTable& strings)
+        void guest_general(InfoPage& page, const save::model::Guest& g, const StringTable& strings)
         {
             const auto liking = static_cast<std::size_t>(g.ride_preference.intensity);
             if (liking < kIntensityWords.size())
@@ -375,10 +375,10 @@ namespace rct3::ui::screens
 
         void staff_stats(InfoPage& page, const PersonFacts& f, const StringTable& strings, const InfoUnits& units)
         {
-            const save::Staff& s = *f.staff;
+            const save::model::Staff& s = *f.staff;
             const std::optional<std::uint32_t> items_mended = f.items_mended;
             // Staff a scenario starts with were hired before its calendar began: they show its first day.
-            const save::CalendarDate hired = save::GameClock::date_at(s.person.start_time, f.zero_time);
+            const save::model::CalendarDate hired = save::model::GameClock::date_at(s.person.start_time, f.zero_time);
             add(page, strings, "Employee_DateHired", date_text(strings, hired.day, hired.month, static_cast<std::int32_t>(hired.year + 1)));
             // The wage as money, stepped a level at a time by the arrows after it.
             InfoControl wage;
@@ -398,7 +398,7 @@ namespace rct3::ui::screens
             const auto mood = std::to_underlying(happiness_mood(s.happiness));
             page.lines.push_back({ .label = text(strings, "Guest_Happiness"), .value = { }, .name = "Guest_Happiness", .value_icon = std::string(kFaces[mood]) });
             add(page, strings, "StaffWindow_SortBy_Warnings", count(s.warnings));
-            if (const auto* w = std::get_if<save::HandymanWork>(&s.work))
+            if (const auto* w = std::get_if<save::model::HandymanWork>(&s.work))
             {
                 add(page, strings, "Handyman_PathsSwept", count(w->paths_swept));
                 add(page, strings, "Handyman_GardensWatered", count(w->gardens_watered));
@@ -407,12 +407,12 @@ namespace rct3::ui::screens
                 if (items_mended)
                     add(page, strings, "Rct3pp_ItemsMended", count(static_cast<std::int32_t>(*items_mended)));
             }
-            else if (const auto* m = std::get_if<save::MechanicWork>(&s.work))
+            else if (const auto* m = std::get_if<save::model::MechanicWork>(&s.work))
             {
                 add(page, strings, "Mechanic_RidesInspected", count(m->objects_inspected));
                 add(page, strings, "Mechanic_RidesFixed", count(m->objects_fixed));
             }
-            else if (const auto* k = std::get_if<save::KeeperWork>(&s.work))
+            else if (const auto* k = std::get_if<save::model::KeeperWork>(&s.work))
             {
                 add(page, strings, "AnimalKeeper_DungCleared", count(k->dung_cleared));
                 add(page, strings, "AnimalKeeper_TroughsFilled", count(k->troughs_filled));
@@ -441,7 +441,7 @@ namespace rct3::ui::screens
         /// to the messages and the highlight over them, the last two showing on or off.
         void person_buttons(InfoPage& page, const PersonFacts& f, const StringTable& strings, std::string_view pincer_help, std::string_view console_help)
         {
-            const save::Person& p = *f.person();
+            const save::model::Person& p = *f.person();
             InfoControl& doing = page.controls.emplace_back();
             doing.kind = InfoControlKind::Words;
             doing.label = person_doing(f, strings);
@@ -500,7 +500,7 @@ namespace rct3::ui::screens
 
         void staff_general(InfoPage& page, const PersonFacts& f, const StringTable& strings, const InfoUnits& units)
         {
-            const save::Staff& s = *f.staff;
+            const save::model::Staff& s = *f.staff;
             page.bare = true;
             page.controls.push_back(name_control(f, strings));
             // One row of round buttons under the name and what they are doing.
@@ -511,7 +511,7 @@ namespace rct3::ui::screens
                 button(PersonControl::PatrolEdit, "Staff_PatrolAreaLarge", f.painting_patrol ? "StaffWindow_FinishEditingPatrolAreaHelp" : "StaffWindow_EditPatrolAreaHelp").value = f.painting_patrol ? 1 : 0;
             if (f.patrol_tiles && f.painting_patrol)
                 button(PersonControl::PatrolClear, "PathEditor_Freeform", "StaffWindow_ClearPatrolAreaHelp");
-            if (s.kind != save::StaffKind::ParkInspector)
+            if (s.kind != save::model::StaffKind::ParkInspector)
             {
                 button(PersonControl::Warn, "Staff_WarnIconLarge", "StaffWindow_DisciplineHelp", s.warnings < kMostWarnings);
                 button(PersonControl::Sack, "Staff_SackIconLarge", "StaffWindow_SackHelp");
@@ -531,7 +531,7 @@ namespace rct3::ui::screens
                 patrol(page, f, strings);
         }
 
-        void staff_tasks(InfoPage& page, const save::Staff& s, const StringTable& strings)
+        void staff_tasks(InfoPage& page, const save::model::Staff& s, const StringTable& strings)
         {
             for (const Task& t : tasks(s.kind))
             {
@@ -547,7 +547,7 @@ namespace rct3::ui::screens
             }
         }
 
-        void costume(InfoPage& page, const save::Staff& s, const StringTable& strings)
+        void costume(InfoPage& page, const save::model::Staff& s, const StringTable& strings)
         {
             InfoControl c;
             c.id = person_control(PersonControl::Costume);
@@ -573,11 +573,11 @@ namespace rct3::ui::screens
         if (facts.staff == nullptr)
             return { kGuestTabs.begin(), kGuestTabs.end() };
         std::vector<PersonTabInfo> tabs { kStaffTabs.begin(), kStaffTabs.end() };
-        const save::StaffKind kind = facts.staff->kind;
+        const save::model::StaffKind kind = facts.staff->kind;
         int slot = 3;
         if (!tasks(kind).empty())
             tabs.push_back({ PersonTab::Tasks, slot++, "Staff_Tools", "Staff_Tasks" });
-        if (kind == save::StaffKind::Entertainer)
+        if (kind == save::model::StaffKind::Entertainer)
             tabs.push_back({ PersonTab::Costume, slot++, "Staff_InfoIcon", "Entertainer_Costume_Menu" });
         if (const std::size_t pots = uniform_pots(kind); pots > 0)
             tabs.push_back({ PersonTab::Uniform, slot++, kPaintIcon, uniform_help(kind), pots });
@@ -607,7 +607,7 @@ namespace rct3::ui::screens
         if (key.empty())
             return { };
         std::u16string doing = text(strings, key);
-        if (p->state == save::PersonState::HeadingFor)
+        if (p->state == save::model::PersonState::HeadingFor)
         {
             if (std::u16string where = attraction_called(facts, p->state_target.id, strings); !where.empty())
                 doing += u" " + where;
@@ -617,21 +617,21 @@ namespace rct3::ui::screens
 
     void cash_lines(InfoPage& page, std::span<const PersonFacts> who, const StringTable& strings, const InfoUnits& units)
     {
-        const auto money = [&](std::int32_t save::Cash::* field) {
+        const auto money = [&](std::int32_t save::model::Cash::* field) {
             std::int64_t sum = 0;
             for (const PersonFacts& f : who)
                 sum += f.guest->cash.*field;
             return money_text(units.currency, sum);
         };
-        add(page, strings, "Guest_CashInPocket", money(&save::Cash::current));
-        add(page, strings, "Guest_CashSpent", money(&save::Cash::total_spent));
+        add(page, strings, "Guest_CashInPocket", money(&save::model::Cash::current));
+        add(page, strings, "Guest_CashSpent", money(&save::model::Cash::total_spent));
         // What the money went on, two to a row.
-        add_half(page, strings, "Guest_SpentOnRides", money(&save::Cash::spent_rides));
-        add_half(page, strings, "Guest_SpentOnFood", money(&save::Cash::spent_food));
-        add_half(page, strings, "Guest_SpentOnDrink", money(&save::Cash::spent_drink));
-        add_half(page, strings, "Guest_SpentOnSouvenirs", money(&save::Cash::spent_souvenirs));
-        add(page, strings, "Guest_PaidToEnterPark", money(&save::Cash::spent_park_entry));
-        add(page, strings, "Guest_CashWithdrawn", money(&save::Cash::withdrawn));
+        add_half(page, strings, "Guest_SpentOnRides", money(&save::model::Cash::spent_rides));
+        add_half(page, strings, "Guest_SpentOnFood", money(&save::model::Cash::spent_food));
+        add_half(page, strings, "Guest_SpentOnDrink", money(&save::model::Cash::spent_drink));
+        add_half(page, strings, "Guest_SpentOnSouvenirs", money(&save::model::Cash::spent_souvenirs));
+        add(page, strings, "Guest_PaidToEnterPark", money(&save::model::Cash::spent_park_entry));
+        add(page, strings, "Guest_CashWithdrawn", money(&save::model::Cash::withdrawn));
     }
 
     InfoPage person_page(PersonTab tab, const PersonFacts& facts, const StringTable& strings, const InfoUnits& units)

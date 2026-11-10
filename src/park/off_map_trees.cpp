@@ -17,7 +17,7 @@ namespace rct3::park
     {
 
         /// The tile and quarter of world point `p`, as a placed item stores where it stands.
-        void place_at(save::PlacedObject& tree, const save::TerrainGrid& g, glm::vec2 p)
+        void place_at(save::model::PlacedObject& tree, const save::model::TerrainGrid& g, glm::vec2 p)
         {
             const float col = (p.x - g.origin_x) / g.tile_size_x;
             const float row = (p.y - g.origin_z) / g.tile_size_z;
@@ -29,7 +29,7 @@ namespace rct3::park
         }
 
         /// A tree or plant standing in the park, not one beyond its edge.
-        bool park_tree(const save::PlacedObject& o, const object::ObjectModels& models, const save::TerrainGrid& grid)
+        bool park_tree(const save::model::PlacedObject& o, const object::ObjectModels& models, const save::model::TerrainGrid& grid)
         {
             return !o.hidden && o.free_standing() && grid.contains(o.col, o.row) && is_plant(o, models);
         }
@@ -37,7 +37,7 @@ namespace rct3::park
         /// Stands `tree`, already placed round the edge, on `land` unturned, as a free-standing item numbered
         /// after `last_id`: where its foot is, or nothing where there is no land under it (on the map, past the
         /// land, or under the sea).
-        std::optional<glm::vec3> stand(save::PlacedObject& tree, object::Positioning positioning, const save::TerrainGrid& grid, const LandRings& land, std::uint64_t last_id)
+        std::optional<glm::vec3> stand(save::model::PlacedObject& tree, object::Positioning positioning, const save::model::TerrainGrid& grid, const LandRings& land, std::uint64_t last_id)
         {
             tree.rotation = 0;
             tree.base_height = 0;
@@ -58,7 +58,7 @@ namespace rct3::park
 
     } // namespace
 
-    bool is_plant(const save::PlacedObject& object, const object::ObjectModels& models)
+    bool is_plant(const save::model::PlacedObject& object, const object::ObjectModels& models)
     {
         const auto model = models.find(object::model_ref(object));
         if (model == models.end())
@@ -66,13 +66,13 @@ namespace rct3::park
         return model->second.sway > 0;
     }
 
-    std::vector<save::PlacedObject> off_map_trees(std::span<const save::PlacedObject> objects, std::size_t from, const object::ObjectModels& models, const save::TerrainGrid& grid, const LandRings& land, random::RandomState& scenery)
+    std::vector<save::model::PlacedObject> off_map_trees(std::span<const save::model::PlacedObject> objects, std::size_t from, const object::ObjectModels& models, const save::model::TerrainGrid& grid, const LandRings& land, random::RandomState& scenery)
     {
-        std::vector<save::PlacedObject> out;
+        std::vector<save::model::PlacedObject> out;
         if (grid.empty())
             return out;
         std::uint64_t last_id = 0;
-        for (const save::PlacedObject& o : objects)
+        for (const save::model::PlacedObject& o : objects)
             last_id = std::max(last_id, o.id);
         const float reach = kOffMapReachShare * (grid.world_x(grid.width) - grid.world_x(0) + grid.world_z(grid.height) - grid.world_z(0));
         // The land's upward share at (x, z), from its heights a step either way; a step onto the map counts as level.
@@ -83,7 +83,7 @@ namespace rct3::park
             const float down = (at(0, kStep) - at(0, -kStep)) / (2 * kStep);
             return 1 / std::sqrt(1 + across * across + down * down);
         };
-        for (const save::PlacedObject& kind : objects.subspan(std::min(from, objects.size())))
+        for (const save::model::PlacedObject& kind : objects.subspan(std::min(from, objects.size())))
         {
             if (!park_tree(kind, models, grid))
                 continue;
@@ -94,7 +94,7 @@ namespace rct3::park
                 // Squaring a uniform draw keeps more of them near their park tree.
                 const auto u = static_cast<float>(random::unit(scenery));
                 const auto angle = static_cast<float>(random::between(scenery, 0.0, 2 * std::numbers::pi));
-                save::PlacedObject tree = kind;
+                save::model::PlacedObject tree = kind;
                 place_at(tree, grid, glm::vec2(source.x, source.z) + reach * u * u * glm::vec2(std::cos(angle), std::sin(angle)));
                 const auto foot = stand(tree, positioning, grid, land, last_id);
                 if (foot && flatness(foot->x, foot->z, foot->y) >= kOffMapFlatness)
@@ -107,23 +107,23 @@ namespace rct3::park
         return out;
     }
 
-    std::vector<save::PlacedObject> listed_off_map_trees(std::span<const save::SkirtTree> listed, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid, const LandRings& land)
+    std::vector<save::model::PlacedObject> listed_off_map_trees(std::span<const save::model::SkirtTree> listed, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid, const LandRings& land)
     {
-        std::vector<save::PlacedObject> out;
-        std::unordered_map<std::uint64_t, const save::PlacedObject*> by_id;
+        std::vector<save::model::PlacedObject> out;
+        std::unordered_map<std::uint64_t, const save::model::PlacedObject*> by_id;
         std::uint64_t last_id = 0;
-        for (const save::PlacedObject& o : objects)
+        for (const save::model::PlacedObject& o : objects)
         {
             last_id = std::max(last_id, o.id);
             by_id.emplace(o.id, &o);
         }
         out.reserve(listed.size());
-        for (const save::SkirtTree& t : listed)
+        for (const save::model::SkirtTree& t : listed)
         {
             const auto source = by_id.find(t.scenery_ref);
             if (source == by_id.end() || !park_tree(*source->second, models, grid))
                 continue;
-            save::PlacedObject tree = *source->second;
+            save::model::PlacedObject tree = *source->second;
             place_at(tree, grid, { t.position.x, t.position.z });
             if (stand(tree, static_cast<object::Positioning>(models.find(object::model_ref(tree))->second.positioning), grid, land, last_id))
             {

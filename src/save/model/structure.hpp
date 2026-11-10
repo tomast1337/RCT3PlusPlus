@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::save
+namespace rct3::save::model
 {
 
     /// One scenery item of a structure.
@@ -62,4 +62,4 @@ namespace rct3::save
     /// Brings the heights down so the lowest item stands at 0.
     void rebase_heights(Structure& structure);
 
-} // namespace rct3::save
+} // namespace rct3::save::model

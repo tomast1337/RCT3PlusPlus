@@ -35,9 +35,9 @@ namespace
         return s;
     }
 
-    save::Ride ride(std::uint64_t id, std::string name)
+    save::model::Ride ride(std::uint64_t id, std::string name)
     {
-        save::Ride r;
+        save::model::Ride r;
         r.base.id = id;
         r.base.name = std::move(name);
         return r;
@@ -45,17 +45,17 @@ namespace
 
     struct Park
     {
-        save::PeopleModel people;
-        save::RideModel rides;
+        save::model::PeopleModel people;
+        save::model::RideModel rides;
     };
 
     Park sample_park()
     {
         Park p;
         p.rides.rides = { ride(7, "Twister"), ride(8, "#RideNameZoom#") };
-        save::Guest& g = p.people.guests.emplace_back();
+        save::model::Guest& g = p.people.guests.emplace_back();
         g.person.name = "Ada";
-        g.person.state = save::PersonState::HeadingFor;
+        g.person.state = save::model::PersonState::HeadingFor;
         g.person.state_target = { 8 };
         g.person.holder = { 40 };
         g.person.attractions_visited = { { 7 }, { 8 }, { 7 } };
@@ -64,16 +64,16 @@ namespace
         g.mood_now.happiness = 0.25f;
         g.needs.food = 0.9f;
         g.cash.current = 1250;
-        save::ItemHolder& h = p.people.holders.emplace_back();
+        save::model::ItemHolder& h = p.people.holders.emplace_back();
         h.id = 40;
         h.left_hand = { 41 };
-        save::CarriedItem& item = p.people.carried_items.emplace_back();
+        save::model::CarriedItem& item = p.people.carried_items.emplace_back();
         item.id = 41;
         item.name = "Balloon";
-        save::Staff& s = p.people.staff.emplace_back();
+        save::model::Staff& s = p.people.staff.emplace_back();
         s.person.name = "%ME% 2";
-        s.kind = save::StaffKind::Mechanic;
-        s.work = save::MechanicWork { .info = { }, .objects_fixed = 5, .objects_inspected = 0, .state_timer = 0 };
+        s.kind = save::model::StaffKind::Mechanic;
+        s.work = save::model::MechanicWork { .info = { }, .objects_fixed = 5, .objects_inspected = 0, .state_timer = 0 };
         return p;
     }
 
@@ -124,9 +124,9 @@ TEST_CASE("what a person is doing names where they are heading")
     const StringTable s = table();
     Park p = sample_park();
     CHECK(person_doing(guest(p), s) == u"Off to Zoom!");
-    p.people.guests[0].person.state = save::PersonState::Wandering;
+    p.people.guests[0].person.state = save::model::PersonState::Wandering;
     CHECK(person_doing(guest(p), s) == u"Strolling");
-    p.people.staff[0].person.state = save::PersonState::Wandering;
+    p.people.staff[0].person.state = save::model::PersonState::Wandering;
     CHECK(person_doing(staff(p), s) == u"On rounds");
 }
 
@@ -183,8 +183,8 @@ TEST_CASE("a worker's statistics show when they were hired, their mood, warnings
     s.add("Year", u"Year");
     const InfoUnits units { };
     Park p = sample_park();
-    save::Staff& mechanic = p.people.staff[0];
-    mechanic.person.start_time = 1000 + 2 * save::GameClock::kUnitsPerYear + save::GameClock::kUnitsPerMonth;
+    save::model::Staff& mechanic = p.people.staff[0];
+    mechanic.person.start_time = 1000 + 2 * save::model::GameClock::kUnitsPerYear + save::model::GameClock::kUnitsPerMonth;
     mechanic.happiness = 0.1f;
     mechanic.warnings = 2;
     mechanic.training = 0;
@@ -215,7 +215,7 @@ TEST_CASE("each job has its own tabs, and its controls are written from the save
     s.add("Entertainer_SubType_Alien", u"Martian");
     const InfoUnits units { };
     Park p = sample_park();
-    save::Staff& mechanic = p.people.staff[0];
+    save::model::Staff& mechanic = p.people.staff[0];
     mechanic.task_flags = 2;
     mechanic.wage_level = 2;
     mechanic.warnings = 1;
@@ -257,7 +257,7 @@ TEST_CASE("each job has its own tabs, and its controls are written from the save
     REQUIRE(stats.controls.size() == 1);
     CHECK(stats.controls[0].value == 2);
 
-    mechanic.kind = save::StaffKind::Entertainer;
+    mechanic.kind = save::model::StaffKind::Entertainer;
     mechanic.person.sub_type = 3;
     const auto shows = person_tabs(staff(p));
     CHECK(std::ranges::contains(shows, PersonTab::Costume, &PersonTabInfo::tab));
@@ -268,7 +268,7 @@ TEST_CASE("each job has its own tabs, and its controls are written from the save
     CHECK(costume.controls[0].items[3] == u"Martian");
     CHECK(costume.controls[0].value == 3);
 
-    mechanic.kind = save::StaffKind::LifeGuard;
+    mechanic.kind = save::model::StaffKind::LifeGuard;
     CHECK(person_tabs(staff(p)).size() == 3);
 }
 

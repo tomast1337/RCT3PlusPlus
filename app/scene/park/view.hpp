@@ -41,7 +41,7 @@ namespace rct3::scene::park
     [[nodiscard]] std::vector<ui::WorldLabel> height_labels(const ParkScene& scene, ui::Point size);
 
     /// The ground in the middle of `tile`.
-    [[nodiscard]] glm::vec3 tile_point(const save::TerrainGrid& grid, save::Tile tile);
+    [[nodiscard]] glm::vec3 tile_point(const save::model::TerrainGrid& grid, save::model::Tile tile);
 
     /// Floats `amount` (hundredths, above 0 for money in) up from `at`. One begun near there a moment ago takes
     /// it instead, so a drag or a held brush shows a few sums rather than a crowd. Nothing floats for a zero

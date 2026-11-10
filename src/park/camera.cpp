@@ -128,7 +128,7 @@ namespace rct3::park
         return glm::perspective(seat ? 2 * std::atan(std::tan(across / 2) / aspect) : kFieldOfView, aspect, seat ? kRideNear : kNear, kFar);
     }
 
-    ParkCamera overview(const save::TerrainGrid& grid)
+    ParkCamera overview(const save::model::TerrainGrid& grid)
     {
         ParkCamera c;
         c.yaw = kOverviewYaw;
@@ -203,7 +203,7 @@ namespace rct3::park
         return pending * (1 - std::exp(std::log(0.05f) * elapsed / seconds));
     }
 
-    ParkCamera on_ground(ParkCamera camera, const save::TerrainGrid& grid, bool lifted)
+    ParkCamera on_ground(ParkCamera camera, const save::model::TerrainGrid& grid, bool lifted)
     {
         if (grid.empty())
             return camera;

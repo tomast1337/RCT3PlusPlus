@@ -19,9 +19,9 @@ namespace rct3::park
         }
 
         /// The tile's corners in world space, in the grid's corner order.
-        std::array<glm::vec3, 4> corners(const save::TerrainGrid& grid, int col, int row)
+        std::array<glm::vec3, 4> corners(const save::model::TerrainGrid& grid, int col, int row)
         {
-            const save::TerrainCell& c = grid.at(col, row);
+            const save::model::TerrainCell& c = grid.at(col, row);
             const float x0 = grid.world_x(col), x1 = grid.world_x(col + 1), z0 = grid.world_z(row), z1 = grid.world_z(row + 1);
             return { glm::vec3 { x0, c.corners[0], z0 }, glm::vec3 { x1, c.corners[1], z0 }, glm::vec3 { x0, c.corners[2], z1 }, glm::vec3 { x1, c.corners[3], z1 } };
         }
@@ -42,7 +42,7 @@ namespace rct3::park
             mesh.indices.push_back(first + i);
     }
 
-    TerrainMesh grid_lines(const save::TerrainGrid& grid, glm::vec4 colour)
+    TerrainMesh grid_lines(const save::model::TerrainGrid& grid, glm::vec4 colour)
     {
         TerrainMesh mesh;
         for (int row = 0; row < grid.height; ++row)
@@ -62,7 +62,7 @@ namespace rct3::park
         return mesh;
     }
 
-    TerrainMesh contour_lines(const save::TerrainGrid& grid, float step, glm::vec4 colour)
+    TerrainMesh contour_lines(const save::model::TerrainGrid& grid, float step, glm::vec4 colour)
     {
         TerrainMesh mesh;
         if (step <= 0)

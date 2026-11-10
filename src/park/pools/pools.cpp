@@ -634,13 +634,13 @@ namespace rct3::park::pools
         return out;
     }
 
-    std::vector<save::PlacedObject> pool_objects(const PoolMap& map, std::string_view overlay, std::uint64_t last_id, std::span<const PoolOpening> openings)
+    std::vector<save::model::PlacedObject> pool_objects(const PoolMap& map, std::string_view overlay, std::uint64_t last_id, std::span<const PoolOpening> openings)
     {
-        std::vector<save::PlacedObject> out;
+        std::vector<save::model::PlacedObject> out;
         for (const PoolSquare& square : map.squares)
             for (const PoolPiece& piece : pool_pieces(map, square, openings))
             {
-                save::PlacedObject& o = out.emplace_back();
+                save::model::PlacedObject& o = out.emplace_back();
                 o.id = ++last_id;
                 o.owner_ref = o.id;
                 o.fixture = true;
@@ -659,7 +659,7 @@ namespace rct3::park::pools
         for (const PoolExtra& e : map.extras)
         {
             const auto square = map.at(e.col, e.row);
-            save::PlacedObject& o = out.emplace_back();
+            save::model::PlacedObject& o = out.emplace_back();
             o.id = ++last_id;
             o.owner_ref = o.id;
             o.fixture = true;
@@ -674,7 +674,7 @@ namespace rct3::park::pools
         for (const PoolRoom& r : map.rooms)
         {
             const auto square = beside(map, r.col, r.row, r.side);
-            save::PlacedObject& o = out.emplace_back();
+            save::model::PlacedObject& o = out.emplace_back();
             o.id = ++last_id;
             o.owner_ref = o.id;
             o.fixture = true;
@@ -690,25 +690,25 @@ namespace rct3::park::pools
         return out;
     }
 
-    std::vector<save::PoolWater> pool_water(const PoolMap& map)
+    std::vector<save::model::PoolWater> pool_water(const PoolMap& map)
     {
-        std::vector<save::PoolWater> out;
+        std::vector<save::model::PoolWater> out;
         for (const PoolSquare& s : map.squares)
             if (s.kind == PoolKind::Water)
                 out.push_back({ s.col, s.row, s.surface, s.depth });
         return out;
     }
 
-    void drop_saved_pool_pieces(const PoolMap& map, std::string_view overlay, std::vector<save::PlacedObject>& objects)
+    void drop_saved_pool_pieces(const PoolMap& map, std::string_view overlay, std::vector<save::model::PlacedObject>& objects)
     {
         std::set<std::string, std::less<>> laid;
-        for (const save::PlacedObject& o : pool_objects(map, overlay, 0))
+        for (const save::model::PlacedObject& o : pool_objects(map, overlay, 0))
             laid.insert(o.symbol);
         const auto same_overlay = [&](std::string_view o) { return std::ranges::equal(o, overlay, [](char a, char b) { return strings::ascii_lower(a == '\\' ? '/' : a) == strings::ascii_lower(b == '\\' ? '/' : b); }); };
-        std::erase_if(objects, [&](const save::PlacedObject& o) { return same_overlay(o.overlay) && laid.contains(o.symbol); });
+        std::erase_if(objects, [&](const save::model::PlacedObject& o) { return same_overlay(o.overlay) && laid.contains(o.symbol); });
     }
 
-    void dig_under_pools(PoolMap& map, save::TerrainGrid& grid)
+    void dig_under_pools(PoolMap& map, save::model::TerrainGrid& grid)
     {
         for (PoolSquare& s : map.squares)
             if (grid.contains(s.col, s.row))
@@ -743,26 +743,26 @@ namespace rct3::park::pools
         return !map.at(col, row) && square && square->kind == PoolKind::Tile && !taken;
     }
 
-    std::vector<save::Tile> pool_complex(const PoolMap& map, std::size_t room)
+    std::vector<save::model::Tile> pool_complex(const PoolMap& map, std::size_t room)
     {
-        std::vector<save::Tile> complex;
+        std::vector<save::model::Tile> complex;
         if (room >= map.rooms.size())
             return { };
         if (const auto first = beside(map, map.rooms[room].col, map.rooms[room].row, map.rooms[room].side))
             complex.push_back({ first->col, first->row });
         for (std::size_t i = 0; i < complex.size(); ++i)
             for (const Side side : kSides)
-                if (const auto next = beside(map, complex[i].col, complex[i].row, side); next && !std::ranges::contains(complex, save::Tile { next->col, next->row }))
+                if (const auto next = beside(map, complex[i].col, complex[i].row, side); next && !std::ranges::contains(complex, save::model::Tile { next->col, next->row }))
                     complex.push_back({ next->col, next->row });
         return complex;
     }
 
     std::vector<std::size_t> pool_complex_rooms(const PoolMap& map, std::size_t room)
     {
-        const std::vector<save::Tile> complex = pool_complex(map, room);
+        const std::vector<save::model::Tile> complex = pool_complex(map, room);
         std::vector<std::size_t> out;
         for (std::size_t i = 0; i < map.rooms.size(); ++i)
-            if (const auto square = beside(map, map.rooms[i].col, map.rooms[i].row, map.rooms[i].side); square && std::ranges::contains(complex, save::Tile { square->col, square->row }))
+            if (const auto square = beside(map, map.rooms[i].col, map.rooms[i].row, map.rooms[i].side); square && std::ranges::contains(complex, save::model::Tile { square->col, square->row }))
                 out.push_back(i);
         return out;
     }
@@ -802,7 +802,7 @@ namespace rct3::park::pools
         return cost;
     }
 
-    std::int64_t take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::Tile a, save::Tile b, std::optional<std::int32_t> level)
+    std::int64_t take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::model::Tile a, save::model::Tile b, std::optional<std::int32_t> level)
     {
         const auto [c0, c1] = std::minmax(a.col, b.col);
         const auto [r0, r1] = std::minmax(a.row, b.row);
@@ -830,11 +830,11 @@ namespace rct3::park::pools
         return cost;
     }
 
-    PoolMap saved_pools(const save::WorldModel& world, std::span<const save::PlacedObject> objects)
+    PoolMap saved_pools(const save::model::WorldModel& world, std::span<const save::model::PlacedObject> objects)
     {
         constexpr std::int32_t kWater = 0, kStairs = 2, kHighDive = 3, kSpa = 4, kPath = 5, kPathSlope = 6, kPathStairs = 7; // Of the stored types
         PoolMap map;
-        for (const save::PoolSegmentState& s : world.pool_segments)
+        for (const save::model::PoolSegmentState& s : world.pool_segments)
         {
             PoolSquare& square = map.squares.emplace_back(PoolSquare { .col = s.col, .row = s.row, .surface = s.surface, .depth = s.depth });
             if (s.ground && std::ranges::any_of(*s.ground, [&](float h) { return h > static_cast<float>(s.surface - s.depth); }))
@@ -865,16 +865,16 @@ namespace rct3::park::pools
                     break;
                 }
         }
-        for (const save::ChangingRoomState& room : world.changing_rooms)
+        for (const save::model::ChangingRoomState& room : world.changing_rooms)
         {
-            const auto object = std::ranges::find(objects, room.object_ref, &save::PlacedObject::id);
-            const auto segment = std::ranges::find(world.pool_segments, room.segment, &save::PoolSegmentState::id);
+            const auto object = std::ranges::find(objects, room.object_ref, &save::model::PlacedObject::id);
+            const auto segment = std::ranges::find(world.pool_segments, room.segment, &save::model::PoolSegmentState::id);
             if (object == objects.end() || segment == world.pool_segments.end())
                 continue;
             const auto side = Side::towards(segment->col - object->col, segment->row - object->row);
             if (!side)
                 continue;
-            const auto complex = std::ranges::find(world.pool_complexes, segment->complex, &save::PoolComplexState::index);
+            const auto complex = std::ranges::find(world.pool_complexes, segment->complex, &save::model::PoolComplexState::index);
             const bool named = complex != world.pool_complexes.end() && !complex->name.starts_with("%ME%");
             map.rooms.push_back({ .symbol = object->symbol, .overlay = object->overlay, .col = object->col, .row = object->row, .side = *side, .ticket = complex != world.pool_complexes.end() ? complex->ticket : kPoolTicket, .open = room.open, .complex_name = named ? complex->name : std::string(), .fluid = static_cast<std::uint8_t>(std::clamp(room.fluid, 0, 2)) });
             if (complex != world.pool_complexes.end())

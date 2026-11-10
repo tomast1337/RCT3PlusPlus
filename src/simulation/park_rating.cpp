@@ -60,20 +60,20 @@ namespace rct3::simulation
         return p;
     }
 
-    RatingInput rating_input(const save::PeopleModel& people, const save::RideModel& rides, float now)
+    RatingInput rating_input(const save::model::PeopleModel& people, const save::model::RideModel& rides, float now)
     {
         RatingInput in;
-        for (const save::Guest& guest : people.guests)
+        for (const save::model::Guest& guest : people.guests)
         {
             if (!guest.in_park)
                 continue;
             ++in.guests_inside;
             in.happiness += std::clamp(guest.mood_now.happiness, 0.0f, 1.0f);
         }
-        for (const save::Ride& ride : rides.rides)
+        for (const save::model::Ride& ride : rides.rides)
         {
             // Only rides guests ride; facilities and exhibits never count.
-            if (ride.kind == save::RideKind::Special || ride.base.demolished)
+            if (ride.kind == save::model::RideKind::Special || ride.base.demolished)
                 continue;
             RideRatingInput r;
             r.downtime_percent = ride.breakdown.downtime_percent();
@@ -85,7 +85,7 @@ namespace rct3::simulation
             in.rides.push_back(r);
         }
         const float before = now - kLitterCountsAfter;
-        in.old_litter = static_cast<std::int32_t>(std::ranges::count_if(people.litter, [before](const save::Litter& l) { return l.create_time < before; }));
+        in.old_litter = static_cast<std::int32_t>(std::ranges::count_if(people.litter, [before](const save::model::Litter& l) { return l.create_time < before; }));
         return in;
     }
 

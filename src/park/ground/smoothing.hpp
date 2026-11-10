@@ -36,10 +36,10 @@ namespace rct3::park::ground
     };
 
     /// The mean height of the corner points within `reach` tiles of `middle`; 0 when there are none.
-    [[nodiscard]] float mean_height(const save::TerrainGrid& grid, glm::vec2 middle, float reach);
+    [[nodiscard]] float mean_height(const save::model::TerrainGrid& grid, glm::vec2 middle, float reach);
 
     /// One pass of `tool` over the ground within `reach` tiles of `middle`, on tiles `free` lets change. `seed`
     /// picks Random's ups and downs. Returns the sum of how far the corners moved.
-    float smooth_ground(save::TerrainGrid& grid, GroundSmoothing tool, glm::vec2 middle, float reach, float strength, float target, std::uint64_t seed, const std::function<bool(save::Tile)>& free);
+    float smooth_ground(save::model::TerrainGrid& grid, GroundSmoothing tool, glm::vec2 middle, float reach, float strength, float target, std::uint64_t seed, const std::function<bool(save::model::Tile)>& free);
 
 } // namespace rct3::park::ground

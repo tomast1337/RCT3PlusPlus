@@ -14,23 +14,23 @@ namespace
 
     // Three by three; the park owns the middle tile and the one right of it, and only the rights to the one
     // below the middle.
-    save::TerrainGrid small_park()
+    save::model::TerrainGrid small_park()
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = 3;
         g.height = 3;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(9);
-        g.cells[1 * 3 + 1].flags = std::to_underlying(save::TileFlag::Owned);
-        g.cells[1 * 3 + 2].flags = std::to_underlying(save::TileFlag::Owned);
-        g.cells[2 * 3 + 1].flags = std::to_underlying(save::TileFlag::Owned) | std::to_underlying(save::TileFlag::RightsOnly);
+        g.cells[1 * 3 + 1].flags = std::to_underlying(save::model::TileFlag::Owned);
+        g.cells[1 * 3 + 2].flags = std::to_underlying(save::model::TileFlag::Owned);
+        g.cells[2 * 3 + 1].flags = std::to_underlying(save::model::TileFlag::Owned) | std::to_underlying(save::model::TileFlag::RightsOnly);
         return g;
     }
 
-    save::PathTile path_at(int col, int row)
+    save::model::PathTile path_at(int col, int row)
     {
-        save::PathTile p;
+        save::model::PathTile p;
         p.col = col;
         p.row = row;
         return p;
@@ -43,7 +43,7 @@ TEST_CASE("the park fence runs round the land the park owns outright, the map's 
     const BoundaryFence fence = boundary_fence("Chain", "Fences/Chain", small_park(), { }, 0);
     // Two tiles side by side: six edges, one of them on the map's edge.
     REQUIRE(fence.pieces.size() == 6);
-    for (const save::PlacedObject& o : fence.pieces)
+    for (const save::model::PlacedObject& o : fence.pieces)
     {
         CHECK(o.symbol == "Chain");
         CHECK(o.fixture);
@@ -58,15 +58,15 @@ TEST_CASE("the park fence runs round the land the park owns outright, the map's 
 TEST_CASE("a path across the park's edge leaves it open; one only on the inside does not")
 {
     // Path on the middle tile and on the one above it, across its edge.
-    const std::vector<save::PathTile> across { path_at(1, 1), path_at(1, 0) };
+    const std::vector<save::model::PathTile> across { path_at(1, 1), path_at(1, 0) };
     CHECK(boundary_fence("Chain", "", small_park(), across, 0).pieces.size() == 5);
-    const std::vector<save::PathTile> inside { path_at(1, 1) };
+    const std::vector<save::model::PathTile> inside { path_at(1, 1) };
     CHECK(boundary_fence("Chain", "", small_park(), inside, 0).pieces.size() == 6);
 }
 
 TEST_CASE("a park fence panel on a slope leans with its edge")
 {
-    save::TerrainGrid g = small_park();
+    save::model::TerrainGrid g = small_park();
     g.cells[1 * 3 + 1].corners = { 0, 1, 0, 1 }; // Rising along x
     const BoundaryFence fence = boundary_fence("Chain", "", g, { }, 10);
     CHECK(fence.pieces.front().id == 11);
@@ -75,15 +75,15 @@ TEST_CASE("a park fence panel on a slope leans with its edge")
 
 TEST_CASE("a park fence panel's lean follows the ground under its edge as it is now")
 {
-    save::TerrainGrid g = small_park();
+    save::model::TerrainGrid g = small_park();
     const BoundaryFence fence = boundary_fence("Chain", "", g, { }, 0);
     const auto on = [&](Side side) {
-        const auto found = std::ranges::find_if(fence.pieces, [&](const save::PlacedObject& o) { return o.col == 1 && o.row == 1 && o.rotation == edge_turns(side).value; });
+        const auto found = std::ranges::find_if(fence.pieces, [&](const save::model::PlacedObject& o) { return o.col == 1 && o.row == 1 && o.rotation == edge_turns(side).value; });
         REQUIRE(found != fence.pieces.end());
         return *found;
     };
-    const save::PlacedObject back = on(Side::kRowBefore);
-    const save::PlacedObject left = on(Side::kColBefore);
+    const save::model::PlacedObject back = on(Side::kRowBefore);
+    const save::model::PlacedObject left = on(Side::kColBefore);
     CHECK(panel_lean(g, back) == glm::vec2(0.0f));
     g.cells[1 * 3 + 1].corners = { 0, 2, 1, 3 }; // Reshaped: up 2 along x, 1 along z, over a tile of 4
     CHECK(panel_lean(g, back) == glm::vec2(0.5f, 0.0f));

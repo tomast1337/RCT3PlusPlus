@@ -10,9 +10,9 @@ using namespace rct3;
 
 namespace
 {
-    constexpr float kMonth = save::GameClock::kUnitsPerMonth;
+    constexpr float kMonth = save::model::GameClock::kUnitsPerMonth;
 
-    save::Condition goal(std::int32_t level, save::ConditionKind kind, std::int64_t value, std::int32_t months = 0)
+    save::model::Condition goal(std::int32_t level, save::model::ConditionKind kind, std::int64_t value, std::int32_t months = 0)
     {
         return { .kind = kind, .difficulty = level, .months_to_hold = months, .value = value };
     }
@@ -20,9 +20,9 @@ namespace
 
 TEST_CASE("a level is won once all its goals are met, and only then is the next one looked at")
 {
-    save::ObjectiveSet set;
+    save::model::ObjectiveSet set;
     set.objectives = { { .difficulty = 0, .prize_id = 2 }, { .difficulty = 1, .prize_id = 6 } };
-    set.conditions = { goal(0, save::ConditionKind::ParkGuests, 300), goal(0, save::ConditionKind::ParkRating, 600, 2), goal(1, save::ConditionKind::ParkGuests, 100) };
+    set.conditions = { goal(0, save::model::ConditionKind::ParkGuests, 300), goal(0, save::model::ConditionKind::ParkRating, 600, 2), goal(1, save::model::ConditionKind::ParkGuests, 100) };
 
     simulation::ParkFigures f { .guests = 500, .rating = 700 };
     CHECK(simulation::level_playing(set) == 0);
@@ -50,12 +50,12 @@ TEST_CASE("a level is won once all its goals are met, and only then is the next 
 
 TEST_CASE("a goal the simulation cannot judge is never met, so its level is not won")
 {
-    save::ObjectiveSet set;
+    save::model::ObjectiveSet set;
     set.objectives = { { .difficulty = 0 } };
-    set.conditions = { goal(0, save::ConditionKind::ParkGuests, 0), goal(0, save::ConditionKind::PoolGuests, 0) };
-    CHECK(simulation::judged(save::ConditionKind::ParkGuests));
-    CHECK_FALSE(simulation::judged(save::ConditionKind::PoolGuests));
-    CHECK(simulation::judged(save::ConditionKind::Vip));
+    set.conditions = { goal(0, save::model::ConditionKind::ParkGuests, 0), goal(0, save::model::ConditionKind::PoolGuests, 0) };
+    CHECK(simulation::judged(save::model::ConditionKind::ParkGuests));
+    CHECK_FALSE(simulation::judged(save::model::ConditionKind::PoolGuests));
+    CHECK(simulation::judged(save::model::ConditionKind::Vip));
     CHECK_FALSE(simulation::check_goals(set, { .guests = 10 }, 0));
     CHECK(set.conditions[0].completed);
     CHECK_FALSE(set.conditions[1].completed);
@@ -63,24 +63,24 @@ TEST_CASE("a goal the simulation cannot judge is never met, so its level is not 
 
 TEST_CASE("a coaster goal counts the tested coasters reaching its figure")
 {
-    save::Ride fast, slow, untested, wheel;
-    fast.stats.last_lap = save::TestResults { .max_speed = 30, .valid = true };
-    slow.stats.last_lap = save::TestResults { .max_speed = 15, .valid = true };
-    wheel.stats.last_lap = save::TestResults { .max_speed = 40, .valid = true };
+    save::model::Ride fast, slow, untested, wheel;
+    fast.stats.last_lap = save::model::TestResults { .max_speed = 30, .valid = true };
+    slow.stats.last_lap = save::model::TestResults { .max_speed = 15, .valid = true };
+    wheel.stats.last_lap = save::model::TestResults { .max_speed = 40, .valid = true };
     const std::array rides { simulation::GoalRide { simulation::RideGroup::Coaster, &fast }, simulation::GoalRide { simulation::RideGroup::Coaster, &slow }, simulation::GoalRide { simulation::RideGroup::Coaster, &untested }, simulation::GoalRide { simulation::RideGroup::Other, &wheel } };
     const simulation::ParkFigures f { .rides = rides };
-    const auto met = [&](save::CoasterTarget target) {
-        save::ObjectiveSet set;
+    const auto met = [&](save::model::CoasterTarget target) {
+        save::model::ObjectiveSet set;
         set.objectives = { { .difficulty = 0 } };
-        save::Condition c { .kind = save::ConditionKind::Coaster };
+        save::model::Condition c { .kind = save::model::ConditionKind::Coaster };
         c.coaster = target;
         set.conditions = { c };
         return simulation::check_goals(set, f, 0).has_value();
     };
     CHECK(met({ .value = 20, .flags = 7, .rides = 1 }));
     CHECK_FALSE(met({ .value = 20, .flags = 7, .rides = 2 })); // The wheel is no coaster
-    CHECK(met({ .value = 20, .flags = 7 | save::CoasterTarget::kAtMost, .rides = 1 }));
-    CHECK_FALSE(met({ .value = 20, .flags = 7 | save::CoasterTarget::kEveryRide, .rides = 1 }));
+    CHECK(met({ .value = 20, .flags = 7 | save::model::CoasterTarget::kAtMost, .rides = 1 }));
+    CHECK_FALSE(met({ .value = 20, .flags = 7 | save::model::CoasterTarget::kEveryRide, .rides = 1 }));
 }
 
 TEST_CASE("takings count the last whole month, and prizes pay out")
@@ -97,8 +97,8 @@ TEST_CASE("takings count the last whole month, and prizes pay out")
     simulation::ParkState park;
     park.cash = 0;
     park.rating = 0.99f;
-    save::Finance finance { .max_loan = 1000, .interest_rate_percent = 8 };
-    save::TerrainGrid land { .width = 2, .height = 1, .cells = { { .flags = std::to_underlying(save::TileFlag::NeverPurchasable) }, { } } };
+    save::model::Finance finance { .max_loan = 1000, .interest_rate_percent = 8 };
+    save::model::TerrainGrid land { .width = 2, .height = 1, .cells = { { .flags = std::to_underlying(save::model::TileFlag::NeverPurchasable) }, { } } };
     simulation::give_prize(park, finance, land, 1);
     simulation::give_prize(park, finance, land, 2);
     CHECK(park.cash > 0);
@@ -109,21 +109,21 @@ TEST_CASE("takings count the last whole month, and prizes pay out")
     CHECK(finance.interest_rate_percent == 4);
     CHECK(finance.max_loan == 2000);
     simulation::give_prize(park, finance, land, 7);
-    CHECK(land.cells[0].has(save::TileFlag::ForSale));
-    CHECK_FALSE(land.cells[1].has(save::TileFlag::ForSale));
+    CHECK(land.cells[0].has(save::model::TileFlag::ForSale));
+    CHECK_FALSE(land.cells[1].has(save::model::TileFlag::ForSale));
     CHECK(simulation::prize_message(12) == "Prize_TycoonAward");
     CHECK(simulation::prize_name(0) == "Prize_Invalid");
 }
 
 TEST_CASE("a dated goal warns a month and a week before, is judged on its date, and a miss moves it a year on")
 {
-    constexpr float kWeek = save::GameClock::kUnitsPerWeek;
-    constexpr float kYear = save::GameClock::kUnitsPerYear;
-    save::ObjectiveSet set;
+    constexpr float kWeek = save::model::GameClock::kUnitsPerWeek;
+    constexpr float kYear = save::model::GameClock::kUnitsPerYear;
+    save::model::ObjectiveSet set;
     set.objectives = { { .difficulty = 0 } };
-    save::Condition dated = goal(0, save::ConditionKind::ParkGuests, 300);
+    save::model::Condition dated = goal(0, save::model::ConditionKind::ParkGuests, 300);
     dated.next_check_time = 6 * kMonth;
-    dated.consistency_flags = std::to_underlying(save::ConditionFlag::HasDeadline);
+    dated.consistency_flags = std::to_underlying(save::model::ConditionFlag::HasDeadline);
     set.conditions = { dated };
     simulation::ParkMessages messages;
     const auto keys = [&] {
@@ -157,9 +157,9 @@ TEST_CASE("a dated goal warns a month and a week before, is judged on its date, 
 
 TEST_CASE("a goal on last month's takings holds for one month less, as that month already counts")
 {
-    save::ObjectiveSet set;
+    save::model::ObjectiveSet set;
     set.objectives = { { .difficulty = 0 } };
-    set.conditions = { goal(0, save::ConditionKind::RideIncome, 1000, 2) };
+    set.conditions = { goal(0, save::model::ConditionKind::RideIncome, 1000, 2) };
     const simulation::ParkFigures f { .ride_income = 1500 };
     CHECK_FALSE(simulation::check_goals(set, f, 0));
     CHECK(simulation::months_held(set.conditions[0], 0.5f * kMonth) == doctest::Approx(0.5f));
@@ -170,29 +170,29 @@ TEST_CASE("a goal on last month's takings holds for one month less, as that mont
 TEST_CASE("a goal reads where the park stands on it and whether that meets it")
 {
     const simulation::ParkFigures f { .guests = 250, .loan = 500, .animal_health = 49, .dung = 12 };
-    const simulation::GoalReading guests = simulation::read_goal(goal(0, save::ConditionKind::ParkGuests, 200), f);
+    const simulation::GoalReading guests = simulation::read_goal(goal(0, save::model::ConditionKind::ParkGuests, 200), f);
     CHECK(guests.now == 250);
     CHECK(guests.met);
-    CHECK_FALSE(simulation::read_goal(goal(0, save::ConditionKind::AnimalHealth, 50), f).met);
-    save::Condition dung = goal(0, save::ConditionKind::Dung, 30);
+    CHECK_FALSE(simulation::read_goal(goal(0, save::model::ConditionKind::AnimalHealth, 50), f).met);
+    save::model::Condition dung = goal(0, save::model::ConditionKind::Dung, 30);
     dung.greater_than = false; // At most
     CHECK(simulation::read_goal(dung, f).met);
-    const simulation::GoalReading loan = simulation::read_goal({ .kind = save::ConditionKind::RepayLoan }, f);
+    const simulation::GoalReading loan = simulation::read_goal({ .kind = save::model::ConditionKind::RepayLoan }, f);
     CHECK(loan.now == 500);
     CHECK_FALSE(loan.met);
-    const simulation::GoalReading pool = simulation::read_goal(goal(0, save::ConditionKind::PoolGuests, 0), f);
+    const simulation::GoalReading pool = simulation::read_goal(goal(0, save::model::ConditionKind::PoolGuests, 0), f);
     CHECK_FALSE(pool.now);
     CHECK_FALSE(pool.met);
-    CHECK(simulation::judged(save::ConditionKind::AnimalHealth));
-    CHECK_FALSE(simulation::judged(save::ConditionKind::AnimalsOfSpecies));
+    CHECK(simulation::judged(save::model::ConditionKind::AnimalHealth));
+    CHECK_FALSE(simulation::judged(save::model::ConditionKind::AnimalsOfSpecies));
 }
 
 TEST_CASE("the rating prize lifts the rating at once and each week's score while it fades")
 {
     simulation::ParkState park;
     park.rating = 0.5f;
-    save::Finance finance;
-    save::TerrainGrid land;
+    save::model::Finance finance;
+    save::model::TerrainGrid land;
     simulation::give_prize(park, finance, land, 4);
     CHECK(park.rating > 0.5f);
     const float bonus = park.rating_bonus;

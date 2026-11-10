@@ -52,9 +52,9 @@ namespace
         return s;
     }
 
-    save::Guest guest(std::string name, float happiness, bool in_park = true)
+    save::model::Guest guest(std::string name, float happiness, bool in_park = true)
     {
-        save::Guest g;
+        save::model::Guest g;
         g.person.name = std::move(name);
         g.mood_now.happiness = happiness;
         g.in_park = in_park;
@@ -93,7 +93,7 @@ TEST_CASE("without the park every value is a dash")
 TEST_CASE("the finances show the running cash and the ledger a month a column, this month first, money in above nought")
 {
     const StringTable s = test_strings();
-    save::ParkModel park;
+    save::model::ParkModel park;
     park.has_finance = true;
     park.finance.cash = 50000;
     park.finance.loan = 20000;
@@ -119,12 +119,12 @@ TEST_CASE("the finances show the running cash and the ledger a month a column, t
 TEST_CASE("a weekly graph leaves out the week still running, oldest first, with a mark where each month began")
 {
     const StringTable s = test_strings();
-    save::ParkModel park;
+    save::model::ParkModel park;
     park.has_park = true;
     park.park.guests_in_park = { .samples = { 50, 40, 20 }, .capacity = 64 };
     park.park.adults_in_park = { .samples = { 30, 10, 5 }, .capacity = 64 };
     simulation::ParkState state;
-    state.time = 5 * save::GameClock::kUnitsPerWeek; // The second week of the second month
+    state.time = 5 * save::model::GameClock::kUnitsPerWeek; // The second week of the second month
     const ManagementPage page = management_page(ManagementTopic::ParkOperations, 1, { .park = &park, .state = &state }, s, kUnits);
     REQUIRE(page.graph.size() == 2);
     const auto guests = std::ranges::find(page.graph, std::string("Graph_Guests"), &InfoSeries::key);
@@ -146,7 +146,7 @@ TEST_CASE("a weekly graph leaves out the week still running, oldest first, with 
 TEST_CASE("a weekly graph of money that went below nought has nought across its middle")
 {
     const StringTable s = test_strings();
-    save::ParkModel park;
+    save::model::ParkModel park;
     park.has_finance = true;
     park.finance.weekly_profit = { .samples = { 0, -300, 100 }, .capacity = 64 };
     const ManagementPage page = management_page(ManagementTopic::Finances, 1, { .park = &park }, s, kUnits);
@@ -164,10 +164,10 @@ TEST_CASE("a weekly graph of money that went below nought has nought across its 
 TEST_CASE("a weekly graph has no month marks from before the calendar began")
 {
     const StringTable s = test_strings();
-    save::ParkModel park;
+    save::model::ParkModel park;
     park.park.guests_in_park = { .samples = { 5, 5, 5 }, .capacity = 64 };
     simulation::ParkState state;
-    state.time = 2 * save::GameClock::kUnitsPerWeek;
+    state.time = 2 * save::model::GameClock::kUnitsPerWeek;
     const ManagementPage page = management_page(ManagementTopic::ParkOperations, 1, { .park = &park, .state = &state }, s, kUnits);
     REQUIRE(page.graph_ticks.size() == 1);
     CHECK(page.graph_ticks[0].back == 1);
@@ -176,7 +176,7 @@ TEST_CASE("a weekly graph has no month marks from before the calendar began")
 TEST_CASE("the guest statistics average over the guests in the park")
 {
     const StringTable s = test_strings();
-    save::PeopleModel people;
+    save::model::PeopleModel people;
     people.guests = { guest("Ann", 0.2f), guest("Bob", 0.6f), guest("Cy", 1.0f, false) };
     const ManagementPage page = management_page(ManagementTopic::Guests, 2, { .people = &people }, s, kUnits);
     CHECK(value_of(page, u"Number of guests:") == u"2");
@@ -186,7 +186,7 @@ TEST_CASE("the guest statistics average over the guests in the park")
 TEST_CASE("each guest's row has the face of how happy they are")
 {
     const StringTable s = test_strings();
-    save::PeopleModel people;
+    save::model::PeopleModel people;
     people.guests = { guest("Ann", 0.1f), guest("Bob", 0.5f), guest("Cy", 0.9f) };
     const ManagementPage page = management_page(ManagementTopic::Guests, 0, { .people = &people }, s, kUnits);
     REQUIRE(page.rows.size() == 3);
@@ -198,15 +198,15 @@ TEST_CASE("each guest's row has the face of how happy they are")
 TEST_CASE("the families tab lists the player's groups with their leader and members")
 {
     const StringTable s = test_strings();
-    save::PeopleModel people;
+    save::model::PeopleModel people;
     people.guests = { guest("Ann", 0.5f), guest("Bob", 0.5f), guest("Cy", 0.5f) };
     for (std::size_t i = 0; i < people.guests.size(); ++i)
         people.guests[i].person.id = 100 + i;
-    save::GuestGroup family;
+    save::model::GuestGroup family;
     family.group_type = 10;
     family.leader = { 101 };
     family.members = { { 100 }, { 101 }, { } };
-    save::GuestGroup outing; // Not the player's
+    save::model::GuestGroup outing; // Not the player's
     outing.group_type = 6;
     outing.members = { { 102 } };
     people.groups = { family, outing };
@@ -222,9 +222,9 @@ TEST_CASE("the families tab lists the player's groups with their leader and memb
 TEST_CASE("the attraction tabs split rides, stalls and facilities")
 {
     const StringTable s = test_strings();
-    save::RideModel rides;
+    save::model::RideModel rides;
     rides.rides.resize(3);
-    rides.rides[2].kind = save::RideKind::Special;
+    rides.rides[2].kind = save::model::RideKind::Special;
     rides.stalls.resize(2);
     const ManagementFacts facts { .rides = &rides };
     CHECK(management_page(ManagementTopic::Attractions, 0, facts, s, kUnits).rows.size() == 2);
@@ -236,9 +236,9 @@ TEST_CASE("the attraction tabs split rides, stalls and facilities")
 TEST_CASE("an objective's condition says how long it must hold")
 {
     const StringTable s = test_strings();
-    save::ParkModel park;
-    save::Condition c;
-    c.kind = save::ConditionKind::ParkGuests;
+    save::model::ParkModel park;
+    save::model::Condition c;
+    c.kind = save::model::ConditionKind::ParkGuests;
     c.difficulty = 1;
     c.months_to_hold = 5;
     c.value = 800;
@@ -252,16 +252,16 @@ TEST_CASE("an objective's condition says how long it must hold")
 TEST_CASE("an objective's condition shows where the park stands on it and how long it has held")
 {
     const StringTable s = test_strings();
-    save::ParkModel park;
-    save::Condition c;
-    c.kind = save::ConditionKind::ParkGuests;
+    save::model::ParkModel park;
+    save::model::Condition c;
+    c.kind = save::model::ConditionKind::ParkGuests;
     c.months_to_hold = 5;
     c.value = 800;
     c.start_time = 0;
-    c.consistency_flags = std::to_underlying(save::ConditionFlag::TimerRunning);
+    c.consistency_flags = std::to_underlying(save::model::ConditionFlag::TimerRunning);
     park.objectives.conditions = { c };
     simulation::ParkState state;
-    state.time = 1.5f * save::GameClock::kUnitsPerMonth;
+    state.time = 1.5f * save::model::GameClock::kUnitsPerMonth;
     const std::array goals { simulation::GoalReading { .now = 900, .met = true } };
     const ManagementPage page = management_page(ManagementTopic::Objectives, 0, { .park = &park, .state = &state, .goals = goals }, s, kUnits);
     CHECK(value_of(page, u"Held for 5 months.") == u"Met now");
@@ -272,8 +272,8 @@ TEST_CASE("an objective's condition shows where the park stands on it and how lo
 TEST_CASE("an objective's condition the simulation cannot judge says so")
 {
     const StringTable s = test_strings();
-    save::ParkModel park;
-    park.objectives.conditions = { { .kind = save::ConditionKind::PoolGuests } };
+    save::model::ParkModel park;
+    park.objectives.conditions = { { .kind = save::model::ConditionKind::PoolGuests } };
     const ManagementPage page = management_page(ManagementTopic::Objectives, 0, { .park = &park }, s, kUnits);
     CHECK(value_of(page, u"At any time.") == u"Not simulated yet");
 }
@@ -281,7 +281,7 @@ TEST_CASE("an objective's condition the simulation cannot judge says so")
 TEST_CASE("the research priorities show one row an area")
 {
     const StringTable s = test_strings();
-    save::ParkModel park;
+    save::model::ParkModel park;
     park.research.has_simple_research = true;
     park.research.priorities = { 0.5f, 0.25f, 1.0f };
     const ManagementPage page = management_page(ManagementTopic::Research, 0, { .park = &park }, s, kUnits);
@@ -292,7 +292,7 @@ TEST_CASE("the research priorities show one row an area")
 TEST_CASE("without challenges the window says there are none")
 {
     const StringTable s = test_strings();
-    const save::ParkModel park;
+    const save::model::ParkModel park;
     const ManagementPage page = management_page(ManagementTopic::Challenges, 0, { .park = &park }, s, kUnits);
     CHECK(page.note == u"None now.");
     CHECK(page.rows.empty());
@@ -303,7 +303,7 @@ TEST_CASE("a park's name fills in the scenario's for its placeholder")
     StringTable strings;
     strings.add("SandboxScenario_Name", u"Sandbox");
     strings.add("Valley_Name", u"Valley");
-    save::Park park;
+    save::model::Park park;
     park.name = "#ME#";
     park.scenario_name = "#SANDBOX#";
     CHECK(park_name(park, strings) == u"Sandbox");

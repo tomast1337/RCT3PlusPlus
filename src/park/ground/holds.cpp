@@ -26,7 +26,7 @@ namespace rct3::park::ground
             return static_cast<std::uint32_t>(row) << 16 | static_cast<std::uint16_t>(col);
         }
 
-        std::vector<std::pair<int, int>> under(const save::PlacedObject& o, const object::ObjectModel& m)
+        std::vector<std::pair<int, int>> under(const save::model::PlacedObject& o, const object::ObjectModel& m)
         {
             support::SupportFootprint shape;
             shape.x_squares = m.squares[0];
@@ -35,13 +35,13 @@ namespace rct3::park::ground
         }
     } // namespace
 
-    GroundHolds ground_holds(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    GroundHolds ground_holds(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid)
     {
         GroundHolds out;
-        std::vector<save::PlacedObject> raised;
+        std::vector<save::model::PlacedObject> raised;
         for (std::size_t i = 0; i < objects.size(); ++i)
         {
-            const save::PlacedObject& o = objects[i];
+            const save::model::PlacedObject& o = objects[i];
             if (o.hidden || o.fixture)
                 continue;
             const auto model = models.find(object::model_ref(o));
@@ -59,7 +59,7 @@ namespace rct3::park::ground
                 raised.push_back(o);
         }
         out.raised = path::solid_tiles(raised, models, grid);
-        for (const save::PathTile& p : paths)
+        for (const save::model::PathTile& p : paths)
         {
             if (p.elevation && p.elevation->underground)
                 continue;
@@ -69,7 +69,7 @@ namespace rct3::park::ground
                 out.paved.insert(key);
                 continue;
             }
-            const save::PathElevation& e = *p.elevation;
+            const save::model::PathElevation& e = *p.elevation;
             const float low = static_cast<float>(e.quantised_height) - (slope_falls(e.slope) ? path_rise(e.slope) : 0);
             const auto [at, fresh] = out.decks.try_emplace(key, low);
             if (!fresh)
@@ -78,7 +78,7 @@ namespace rct3::park::ground
         return out;
     }
 
-    bool refuses(const GroundHolds& holds, save::Tile tile, const std::array<float, 4>& was, const std::array<float, 4>& now)
+    bool refuses(const GroundHolds& holds, save::model::Tile tile, const std::array<float, 4>& was, const std::array<float, 4>& now)
     {
         const std::uint32_t key = key_of(tile.col, tile.row);
         if (holds.held.contains(key))
@@ -101,7 +101,7 @@ namespace rct3::park::ground
         return false;
     }
 
-    bool cuts_refused(std::span<const GroundCut> cuts, const save::TerrainGrid& grid, const GroundHolds& holds, std::span<const save::WaterBody> bodies)
+    bool cuts_refused(std::span<const GroundCut> cuts, const save::model::TerrainGrid& grid, const GroundHolds& holds, std::span<const save::model::WaterBody> bodies)
     {
         return std::ranges::any_of(cuts, [&](const GroundCut& cut) {
             const auto [col, row] = cut.tile;
@@ -110,7 +110,7 @@ namespace rct3::park::ground
         });
     }
 
-    bool allow_cuts(GroundCuts& cuts, const save::TerrainGrid& grid, const GroundHolds& holds, std::span<const save::WaterBody> bodies)
+    bool allow_cuts(GroundCuts& cuts, const save::model::TerrainGrid& grid, const GroundHolds& holds, std::span<const save::model::WaterBody> bodies)
     {
         const auto refused = [&](const GroundCut& cut) { return cuts_refused(std::span(&cut, 1), grid, holds, bodies); };
         if (std::ranges::any_of(cuts.footprint, refused))
@@ -122,7 +122,7 @@ namespace rct3::park::ground
         return true;
     }
 
-    std::int64_t cuts_cost(const GroundCuts& cuts, const save::TerrainGrid& grid)
+    std::int64_t cuts_cost(const GroundCuts& cuts, const save::model::TerrainGrid& grid)
     {
         float moved = 0;
         for (const std::vector<GroundCut>* part : { &cuts.footprint, &cuts.rim })
@@ -132,19 +132,19 @@ namespace rct3::park::ground
         return std::lround(moved * kShapeCost);
     }
 
-    void make_cuts(save::TerrainGrid& grid, const GroundCuts& cuts)
+    void make_cuts(save::model::TerrainGrid& grid, const GroundCuts& cuts)
     {
         for (const std::vector<GroundCut>* part : { &cuts.footprint, &cuts.rim })
             for (const GroundCut& cut : *part)
                 grid.at(cut.tile.col, cut.tile.row).corners = cut.corners;
     }
 
-    bool seat_followers(std::span<save::PlacedObject> objects, const GroundHolds& holds, const object::ObjectModels& models, const save::TerrainGrid& grid, save::Tile first, save::Tile last)
+    bool seat_followers(std::span<save::model::PlacedObject> objects, const GroundHolds& holds, const object::ObjectModels& models, const save::model::TerrainGrid& grid, save::model::Tile first, save::model::Tile last)
     {
         bool moved = false;
         for (const std::size_t i : holds.followers)
         {
-            save::PlacedObject& o = objects[i];
+            save::model::PlacedObject& o = objects[i];
             const auto model = models.find(object::model_ref(o));
             if (model == models.end())
                 continue;

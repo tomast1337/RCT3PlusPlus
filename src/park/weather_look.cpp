@@ -31,9 +31,9 @@ namespace rct3::park
         }
     } // namespace
 
-    WeatherAim weather_aim(save::WeatherType type)
+    WeatherAim weather_aim(save::model::WeatherType type)
     {
-        using enum save::WeatherType;
+        using enum save::model::WeatherType;
         switch (type)
         {
             case SunnyCloudy:
@@ -53,7 +53,7 @@ namespace rct3::park
         }
     }
 
-    bool advance_weather_look(WeatherLook& look, save::WeatherType type, float seconds, random::RandomState& dice)
+    bool advance_weather_look(WeatherLook& look, save::model::WeatherType type, float seconds, random::RandomState& dice)
     {
         if (!(seconds > 0))
             return false;

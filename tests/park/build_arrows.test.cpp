@@ -10,9 +10,9 @@ using namespace rct3::park;
 
 namespace
 {
-    save::TerrainGrid grid_of_fours()
+    save::model::TerrainGrid grid_of_fours()
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = 8;
         g.height = 8;
         g.tile_size_x = 4;
@@ -23,7 +23,7 @@ namespace
 
 TEST_CASE("a stall's arrow lies across the edge it faces, its head on the outer half")
 {
-    const save::TerrainGrid g = grid_of_fours();
+    const save::model::TerrainGrid g = grid_of_fours();
     // Facing higher columns from tile (2, 3): the quad spans x 10..14, over the edge at x 12.
     const TerrainMesh m = facing_arrow(2, 3, 5.0f, Side::kNextCol, g);
     REQUIRE(m.vertices.size() == 4);

@@ -13,9 +13,9 @@ namespace rct3::simulation
 
     static_assert(kTuning.staff.training_cost.size() == kMostTraining);
 
-    StaffRole staff_role(save::StaffKind kind)
+    StaffRole staff_role(save::model::StaffKind kind)
     {
-        using enum save::StaffKind;
+        using enum save::model::StaffKind;
         return kind == Handyman ? StaffRole::Handyman : kind == Mechanic ? StaffRole::Mechanic : kind == SecurityGuard ? StaffRole::Guard : kind == Vendor ? StaffRole::Vendor : kind == AnimalKeeper ? StaffRole::Keeper : kind == ParkInspector ? StaffRole::Inspector : kind == Entertainer ? StaffRole::Entertainer : StaffRole::Other;
     }
 
@@ -84,20 +84,20 @@ namespace rct3::simulation
         staff.laziness.value = std::clamp(staff.laziness.value, 0.0f, 1.0f);
     }
 
-    void take_saved_work(Staff& staff, const save::Staff& saved)
+    void take_saved_work(Staff& staff, const save::model::Staff& saved)
     {
-        if (const auto* w = std::get_if<save::HandymanWork>(&saved.work))
+        if (const auto* w = std::get_if<save::model::HandymanWork>(&saved.work))
         {
             staff.swept = w->paths_swept;
             staff.emptied = w->bins_emptied;
             staff.watered = w->gardens_watered;
         }
-        else if (const auto* m = std::get_if<save::MechanicWork>(&saved.work))
+        else if (const auto* m = std::get_if<save::model::MechanicWork>(&saved.work))
         {
             staff.fixed = m->objects_fixed;
             staff.inspected = m->objects_inspected;
         }
-        else if (const auto* k = std::get_if<save::KeeperWork>(&saved.work))
+        else if (const auto* k = std::get_if<save::model::KeeperWork>(&saved.work))
         {
             staff.cleared = k->dung_cleared;
             staff.filled = k->troughs_filled;

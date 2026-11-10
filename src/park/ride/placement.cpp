@@ -21,12 +21,12 @@ namespace rct3::park::ride
 
     namespace
     {
-        bool has_path(std::span<const save::PathTile> paths, std::int32_t col, std::int32_t row)
+        bool has_path(std::span<const save::model::PathTile> paths, std::int32_t col, std::int32_t row)
         {
-            return std::ranges::any_of(paths, [&](const save::PathTile& p) { return p.col == col && p.row == row; });
+            return std::ranges::any_of(paths, [&](const save::model::PathTile& p) { return p.col == col && p.row == row; });
         }
 
-        SiteProblem tile_problem(std::int32_t col, std::int32_t row, std::int32_t height, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const path::SolidTiles& solids)
+        SiteProblem tile_problem(std::int32_t col, std::int32_t row, std::int32_t height, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const path::SolidTiles& solids)
         {
             if (!grid.contains(col, row) || !owned_outright(grid.at(col, row)))
                 return SiteProblem::NotOwned;
@@ -56,57 +56,57 @@ namespace rct3::park::ride
         }
     } // namespace
 
-    std::string numbered_name(std::span<const save::Ride> rides, std::string_view symbol)
+    std::string numbered_name(std::span<const save::model::Ride> rides, std::string_view symbol)
     {
         return lowest_free_name(rides, symbol);
     }
 
-    std::string numbered_name(std::span<const save::Stall> stalls, std::string_view symbol)
+    std::string numbered_name(std::span<const save::model::Stall> stalls, std::string_view symbol)
     {
         return lowest_free_name(stalls, symbol);
     }
 
-    void copy_menu(std::span<save::Stall> stalls, std::size_t from)
+    void copy_menu(std::span<save::model::Stall> stalls, std::size_t from)
     {
         if (from >= stalls.size())
             return;
-        const save::Stall& source = stalls[from];
+        const save::model::Stall& source = stalls[from];
         for (std::size_t i = 0; i < stalls.size(); ++i)
         {
-            save::Stall& to = stalls[i];
+            save::model::Stall& to = stalls[i];
             if (i == from || to.base.symbol != source.base.symbol || to.base.overlay_path != source.base.overlay_path)
                 continue;
-            std::vector<save::StallItem> items;
-            for (const save::StallItem& item : source.items)
+            std::vector<save::model::StallItem> items;
+            for (const save::model::StallItem& item : source.items)
             {
-                const auto kept = std::ranges::find(to.items, item.kind_symbol, &save::StallItem::kind_symbol);
-                save::StallItem& copy = items.emplace_back(kept != to.items.end() ? *kept : save::StallItem { .item_asset = item.item_asset, .kind_symbol = item.kind_symbol });
+                const auto kept = std::ranges::find(to.items, item.kind_symbol, &save::model::StallItem::kind_symbol);
+                save::model::StallItem& copy = items.emplace_back(kept != to.items.end() ? *kept : save::model::StallItem { .item_asset = item.item_asset, .kind_symbol = item.kind_symbol });
                 copy.price = item.price;
                 copy.name = item.name;
                 copy.colours = item.colours;
                 copy.extras = item.extras;
             }
             to.items = std::move(items);
-            for (save::StallExtra& extra : to.extras)
-                if (const auto same = std::ranges::find(source.extras, extra.kind_symbol, &save::StallExtra::kind_symbol); same != source.extras.end())
+            for (save::model::StallExtra& extra : to.extras)
+                if (const auto same = std::ranges::find(source.extras, extra.kind_symbol, &save::model::StallExtra::kind_symbol); same != source.extras.end())
                     extra.level = same->level;
         }
     }
 
-    void offer_extras(save::Stall& stall, std::span<const CarriedKind> items)
+    void offer_extras(save::model::Stall& stall, std::span<const CarriedKind> items)
     {
-        for (const save::StallItem& item : stall.items)
+        for (const save::model::StallItem& item : stall.items)
         {
             const auto kind = std::ranges::find_if(items, [&](const CarriedKind& k) { return strings::equals_ignoring_case(k.symbol, item.kind_symbol); });
             if (kind == items.end())
                 continue;
             for (const std::string& extra : kind->extras)
-                if (std::ranges::none_of(stall.extras, [&](const save::StallExtra& e) { return strings::equals_ignoring_case(e.kind_symbol, extra); }))
-                    stall.extras.push_back({ .kind_symbol = extra, .level = save::StallExtra::kSome });
+                if (std::ranges::none_of(stall.extras, [&](const save::model::StallExtra& e) { return strings::equals_ignoring_case(e.kind_symbol, extra); }))
+                    stall.extras.push_back({ .kind_symbol = extra, .level = save::model::StallExtra::kSome });
         }
     }
 
-    void move_item(save::Stall& stall, std::size_t from, std::size_t to)
+    void move_item(save::model::Stall& stall, std::size_t from, std::size_t to)
     {
         if (from >= stall.items.size())
             return;
@@ -118,7 +118,7 @@ namespace rct3::park::ride
             std::rotate(at + static_cast<std::ptrdiff_t>(to), at + static_cast<std::ptrdiff_t>(from), at + static_cast<std::ptrdiff_t>(from) + 1);
     }
 
-    std::vector<save::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds)
+    std::vector<save::model::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds)
     {
         // Lower case, without "anim" and the zeros that lead a number.
         const auto plain = [](std::string_view text) {
@@ -146,7 +146,7 @@ namespace rct3::park::ride
                 known.push_back(name);
         std::ranges::sort(known);
         std::stable_partition(known.begin(), known.end(), [&](const std::string& n) { return plain(n).contains("idle"); });
-        std::vector<save::ShowTrick> tricks;
+        std::vector<save::model::ShowTrick> tricks;
         for (const std::string& name : known)
         {
             const std::string_view tail = std::string_view(name).substr(name.find("Show") + 4);
@@ -158,7 +158,7 @@ namespace rct3::park::ride
         return tricks;
     }
 
-    RideSite ride_site(save::Tile tile, std::array<std::int32_t, 2> squares, ModelTurn turn, const save::TerrainGrid& grid)
+    RideSite ride_site(save::model::Tile tile, std::array<std::int32_t, 2> squares, ModelTurn turn, const save::model::TerrainGrid& grid)
     {
         const auto [col, row] = tile;
         RideSite site;
@@ -184,7 +184,7 @@ namespace rct3::park::ride
         return site;
     }
 
-    SiteProblem site_problem(const RideSite& site, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const path::SolidTiles& solids)
+    SiteProblem site_problem(const RideSite& site, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const path::SolidTiles& solids)
     {
         for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
         {
@@ -197,13 +197,13 @@ namespace rct3::park::ride
         return SiteProblem::None;
     }
 
-    SiteProblem water_problem(const RideSite& site, bool water_only, std::span<const save::WaterBody> bodies)
+    SiteProblem water_problem(const RideSite& site, bool water_only, std::span<const save::model::WaterBody> bodies)
     {
         for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
         {
             for (std::int32_t c = site.col; c < site.col + site.span[0]; ++c)
             {
-                const auto lake = std::ranges::find_if(bodies, [&](const save::WaterBody& b) { return water::holds(b, { c, r }); });
+                const auto lake = std::ranges::find_if(bodies, [&](const save::model::WaterBody& b) { return water::holds(b, { c, r }); });
                 if (water_only && lake == bodies.end())
                     return SiteProblem::OffWater;
                 if (!water_only && lake != bodies.end() && lake->level > static_cast<float>(site.height))
@@ -213,7 +213,7 @@ namespace rct3::park::ride
         return SiteProblem::None;
     }
 
-    SiteProblem ground_problem(const RideSite& site, const save::TerrainGrid& grid)
+    SiteProblem ground_problem(const RideSite& site, const save::model::TerrainGrid& grid)
     {
         constexpr float kSlack = 0.05f; // Ground at the base is under it
         for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
@@ -227,7 +227,7 @@ namespace rct3::park::ride
         return SiteProblem::None;
     }
 
-    std::int32_t clear_height(const RideSite& site, const save::TerrainGrid& grid)
+    std::int32_t clear_height(const RideSite& site, const save::model::TerrainGrid& grid)
     {
         constexpr float kSlack = 0.01f; // Heights read back as floats sit a hair off whole units
         float top = static_cast<float>(site.height);
@@ -238,7 +238,7 @@ namespace rct3::park::ride
         return static_cast<std::int32_t>(std::ceil(top - kSlack));
     }
 
-    ground::GroundCuts levelled_ground(const RideSite& site, Flatten flatten, const save::TerrainGrid& grid)
+    ground::GroundCuts levelled_ground(const RideSite& site, Flatten flatten, const save::model::TerrainGrid& grid)
     {
         ground::GroundCuts out;
         if (flatten == Flatten::Off)
@@ -269,7 +269,7 @@ namespace rct3::park::ride
         return out;
     }
 
-    void level_ground(save::TerrainGrid& grid, const RideSite& site)
+    void level_ground(save::model::TerrainGrid& grid, const RideSite& site)
     {
         const auto height = static_cast<float>(site.height);
         // Every corner point of the footprint, in each of the up to four tiles that share it.
@@ -293,7 +293,7 @@ namespace rct3::park::ride
         }
     }
 
-    std::int32_t shaped_height(const save::TerrainCell& cell, bool up)
+    std::int32_t shaped_height(const save::model::TerrainCell& cell, bool up)
     {
         constexpr float kSlack = 0.01f; // Heights read back as floats sit a hair off whole units
         if (up)
@@ -305,7 +305,7 @@ namespace rct3::park::ride
         return cell.max_height() <= static_cast<float>(bottom) + kSlack ? bottom - 1 : bottom;
     }
 
-    DoorSpot door_spot(const RideSite& site, save::Tile tile)
+    DoorSpot door_spot(const RideSite& site, save::model::Tile tile)
     {
         const auto [col, row] = tile;
         const std::int32_t last_col = site.col + site.span[0] - 1;
@@ -321,8 +321,8 @@ namespace rct3::park::ride
             { site.row - row, Side::kRowBefore },
         } };
         const Side side = std::ranges::max_element(past, { }, &std::pair<std::int32_t, Side>::first)->second;
-        const save::Tile rim = side == Side::kColBefore ? save::Tile { site.col, r } : side == Side::kNextRow ? save::Tile { c, last_row } : side == Side::kNextCol ? save::Tile { last_col, r } : save::Tile { c, site.row };
-        const save::Tile at = side.beyond(rim);
+        const save::model::Tile rim = side == Side::kColBefore ? save::model::Tile { site.col, r } : side == Side::kNextRow ? save::model::Tile { c, last_row } : side == Side::kNextCol ? save::model::Tile { last_col, r } : save::model::Tile { c, site.row };
+        const save::model::Tile at = side.beyond(rim);
         return { at.col, at.row, object::turn_facing(side.opposite()) };
     }
 
@@ -330,7 +330,7 @@ namespace rct3::park::ride
     {
         /// The two door spots beside station piece `p`, across the sides its track does not run through, each
         /// facing the piece: the one towards lower rows or columns first.
-        std::array<DoorSpot, 2> beside_station(const save::TrackPiece& p)
+        std::array<DoorSpot, 2> beside_station(const save::model::TrackPiece& p)
         {
             // A track turned 0 or 2 runs along x, so its sides are across z; turned 1 or 3 the other way.
             const bool along_x = p.direction % 2 == 0;
@@ -338,18 +338,18 @@ namespace rct3::park::ride
             for (std::size_t i = 0; i < 2; ++i)
             {
                 const Side side = along_x ? std::array { Side::kRowBefore, Side::kNextRow }[i] : std::array { Side::kColBefore, Side::kNextCol }[i];
-                const save::Tile at = side.beyond({ p.tile_x, p.tile_z });
+                const save::model::Tile at = side.beyond({ p.tile_x, p.tile_z });
                 spots[i] = { at.col, at.row, object::turn_facing(side.opposite()), p.height };
             }
             return spots;
         }
     } // namespace
 
-    std::optional<DoorSpot> station_door_spot(std::span<const save::TrackPiece> stations, save::Tile tile)
+    std::optional<DoorSpot> station_door_spot(std::span<const save::model::TrackPiece> stations, save::model::Tile tile)
     {
         std::optional<DoorSpot> best;
         std::int64_t nearest = 0;
-        for (const save::TrackPiece& p : stations)
+        for (const save::model::TrackPiece& p : stations)
         {
             for (const DoorSpot& spot : beside_station(p))
             {
@@ -364,10 +364,10 @@ namespace rct3::park::ride
         return best;
     }
 
-    std::size_t door_station(std::span<const save::TrackPiece> stations, std::span<const save::Station> saved, const DoorSpot& door)
+    std::size_t door_station(std::span<const save::model::TrackPiece> stations, std::span<const save::model::Station> saved, const DoorSpot& door)
     {
         // A piece goes on from the one before when it stands on the next tile along that one's track.
-        const auto follows = [](const save::TrackPiece& a, const save::TrackPiece& b) {
+        const auto follows = [](const save::model::TrackPiece& a, const save::model::TrackPiece& b) {
             const bool along_x = a.direction % 2 == 0;
             return a.height == b.height && std::abs(b.tile_x - a.tile_x) == (along_x ? 1 : 0) && std::abs(b.tile_z - a.tile_z) == (along_x ? 0 : 1);
         };
@@ -387,14 +387,14 @@ namespace rct3::park::ride
             return found;
         };
         const auto run = run_of(door.col, door.row, door.turn);
-        const auto at_run = [&](const std::optional<save::PlacementSpot>& spot) { return spot && run_of(spot->col, spot->row, spot_turn(*spot)) == run; };
+        const auto at_run = [&](const std::optional<save::model::PlacementSpot>& spot) { return spot && run_of(spot->col, spot->row, spot_turn(*spot)) == run; };
         for (std::size_t k = 0; k < saved.size(); ++k)
             if (at_run(saved[k].entrance_spot) || at_run(saved[k].exit_spot))
                 return k;
-        return static_cast<std::size_t>(std::ranges::find_if(saved, [](const save::Station& s) { return !s.entrance_spot && !s.exit_spot; }) - saved.begin());
+        return static_cast<std::size_t>(std::ranges::find_if(saved, [](const save::model::Station& s) { return !s.entrance_spot && !s.exit_spot; }) - saved.begin());
     }
 
-    std::optional<std::string_view> platform_symbol(std::string_view type, const save::TrackPiece& piece, const PlatformPlace& place, std::span<const DoorSpot> doors, std::span<const std::string> names)
+    std::optional<std::string_view> platform_symbol(std::string_view type, const save::model::TrackPiece& piece, const PlatformPlace& place, std::span<const DoorSpot> doors, std::span<const std::string> names)
     {
         bool left = false, right = false;
         for (const DoorSpot& d : doors)
@@ -421,7 +421,7 @@ namespace rct3::park::ride
         return std::nullopt;
     }
 
-    SiteProblem door_problem(const RideSite& site, const DoorSpot& door, std::optional<DoorSpot> taken, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const path::SolidTiles& solids)
+    SiteProblem door_problem(const RideSite& site, const DoorSpot& door, std::optional<DoorSpot> taken, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const path::SolidTiles& solids)
     {
         if (taken && taken->col == door.col && taken->row == door.row)
             return SiteProblem::Blocked;

@@ -11,9 +11,9 @@ using namespace rct3::park::ground;
 namespace
 {
 
-    save::TerrainGrid flat_grid(int width, int height, float level = 0)
+    save::model::TerrainGrid flat_grid(int width, int height, float level = 0)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.origin_x = -6;
@@ -21,15 +21,15 @@ namespace
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(static_cast<std::size_t>(width * height));
-        for (save::TerrainCell& c : g.cells)
+        for (save::model::TerrainCell& c : g.cells)
             c.corners = { level, level, level, level };
         return g;
     }
 
-    save::PathTile ground_tile(int col, int row, std::string style = "Gravel")
+    save::model::PathTile ground_tile(int col, int row, std::string style = "Gravel")
     {
-        save::PathTile p;
-        p.kind = save::PathKind::Ground;
+        save::model::PathTile p;
+        p.kind = save::model::PathKind::Ground;
         p.col = static_cast<std::uint8_t>(col);
         p.row = static_cast<std::uint8_t>(row);
         p.surface_name = std::move(style);
@@ -73,11 +73,11 @@ TEST_CASE("every look has a cell of its own")
 
 TEST_CASE("the map keeps ground paths and the ends of raised ones, and their styles in the order met")
 {
-    const save::TerrainGrid g = flat_grid(4, 3);
-    std::vector<save::PathTile> paths { ground_tile(0, 0), ground_tile(1, 0, "Brick"), ground_tile(2, 2), ground_tile(9, 9), ground_tile(3, 0, "") };
-    save::PathTile raised = ground_tile(1, 1);
-    raised.kind = save::PathKind::Flying;
-    raised.elevation = save::PathElevation { };
+    const save::model::TerrainGrid g = flat_grid(4, 3);
+    std::vector<save::model::PathTile> paths { ground_tile(0, 0), ground_tile(1, 0, "Brick"), ground_tile(2, 2), ground_tile(9, 9), ground_tile(3, 0, "") };
+    save::model::PathTile raised = ground_tile(1, 1);
+    raised.kind = save::model::PathKind::Flying;
+    raised.elevation = save::model::PathElevation { };
     paths.push_back(raised);
 
     const GroundPathMap map = ground_path_map(paths, g);
@@ -95,8 +95,8 @@ TEST_CASE("the map keeps ground paths and the ends of raised ones, and their sty
 
 TEST_CASE("a lone path tile is drawn whole, closed all round")
 {
-    const save::TerrainGrid g = flat_grid(3, 3, 2);
-    const std::vector<save::PathTile> paths { ground_tile(1, 1) };
+    const save::model::TerrainGrid g = flat_grid(3, 3, 2);
+    const std::vector<save::model::PathTile> paths { ground_tile(1, 1) };
     const TerrainMesh m = ground_path_mesh(ground_path_map(paths, g), g);
     REQUIRE(m.batches.size() == 1);
     CHECK(m.batches[0].paint == (path_cell(PathLook::Closed).sheet == 0 ? GroundPaint::PathA : GroundPaint::PathB));
@@ -107,8 +107,8 @@ TEST_CASE("a lone path tile is drawn whole, closed all round")
 
 TEST_CASE("a straight run along x shows edges along z, and its ends split into quarters")
 {
-    const save::TerrainGrid g = flat_grid(5, 3);
-    const std::vector<save::PathTile> paths { ground_tile(1, 1), ground_tile(2, 1), ground_tile(3, 1) };
+    const save::model::TerrainGrid g = flat_grid(5, 3);
+    const std::vector<save::model::PathTile> paths { ground_tile(1, 1), ground_tile(2, 1), ground_tile(3, 1) };
     const TerrainMesh m = ground_path_mesh(ground_path_map(paths, g), g);
     // The middle tile is one quad; each end has two quarters closed and two edged.
     CHECK(m.vertices.size() == 6 + 2 * 4 * 6);
@@ -117,10 +117,10 @@ TEST_CASE("a straight run along x shows edges along z, and its ends split into q
 
 TEST_CASE("the path follows the ground's slope")
 {
-    save::TerrainGrid g = flat_grid(2, 1);
+    save::model::TerrainGrid g = flat_grid(2, 1);
     g.cells[0].corners = { 0, 4, 0, 4 }; // Rising along x
     g.cells[1].corners = { 4, 4, 4, 4 };
-    const std::vector<save::PathTile> paths { ground_tile(0, 0), ground_tile(1, 0) };
+    const std::vector<save::model::PathTile> paths { ground_tile(0, 0), ground_tile(1, 0) };
     const TerrainMesh m = ground_path_mesh(ground_path_map(paths, g), g);
     for (const GroundVertex& v : m.vertices)
     {
@@ -131,25 +131,25 @@ TEST_CASE("the path follows the ground's slope")
 
 TEST_CASE("a map for another grid draws nothing")
 {
-    const save::TerrainGrid g = flat_grid(3, 3);
-    const std::vector<save::PathTile> paths { ground_tile(1, 1) };
+    const save::model::TerrainGrid g = flat_grid(3, 3);
+    const std::vector<save::model::PathTile> paths { ground_tile(1, 1) };
     const GroundPathMap map = ground_path_map(paths, g);
     CHECK(ground_path_mesh(map, flat_grid(4, 4)).vertices.empty());
 }
 
 TEST_CASE("a ground path runs on into the foot of a raised path that meets the ground")
 {
-    save::TerrainGrid g = flat_grid(4, 1, 3);
-    save::PathTile slope = ground_tile(1, 0);
-    slope.kind = save::PathKind::Flying;
-    slope.elevation = save::PathElevation { };
+    save::model::TerrainGrid g = flat_grid(4, 1, 3);
+    save::model::PathTile slope = ground_tile(1, 0);
+    slope.kind = save::model::PathKind::Flying;
+    slope.elevation = save::model::PathElevation { };
     slope.elevation->slope = 4; // Gentle, low end on the ground
     slope.elevation->quantised_height = 3;
-    save::PathTile bridge = ground_tile(3, 0);
-    bridge.kind = save::PathKind::Flying;
-    bridge.elevation = save::PathElevation { };
+    save::model::PathTile bridge = ground_tile(3, 0);
+    bridge.kind = save::model::PathKind::Flying;
+    bridge.elevation = save::model::PathElevation { };
     bridge.elevation->quantised_height = 9; // Flat, high above
-    const std::vector<save::PathTile> paths { ground_tile(0, 0), slope, ground_tile(2, 0), bridge };
+    const std::vector<save::model::PathTile> paths { ground_tile(0, 0), slope, ground_tile(2, 0), bridge };
     const GroundPathMap map = ground_path_map(paths, g);
     CHECK(path_continues(map, g, { 0, 0 }, 1, 0));
     CHECK(path_continues(map, g, { 2, 0 }, -1, 0));
@@ -162,8 +162,8 @@ TEST_CASE("a ground path runs on into the foot of a raised path that meets the g
 
 TEST_CASE("a mesh cut down to some tiles keeps their triangles in their batches")
 {
-    const save::TerrainGrid g = flat_grid(5, 3);
-    const std::vector<save::PathTile> paths { ground_tile(1, 1), ground_tile(2, 1), ground_tile(3, 1) };
+    const save::model::TerrainGrid g = flat_grid(5, 3);
+    const std::vector<save::model::PathTile> paths { ground_tile(1, 1), ground_tile(2, 1), ground_tile(3, 1) };
     const TerrainMesh m = ground_path_mesh(ground_path_map(paths, g), g);
     std::vector<bool> keep(15, false);
     keep[1 * 5 + 2] = true; // The middle tile only
@@ -178,21 +178,21 @@ TEST_CASE("a mesh cut down to some tiles keeps their triangles in their batches"
 
 namespace
 {
-    save::Ride flat_ride(int col, int row, std::uint8_t turns, std::int32_t height = 0)
+    save::model::Ride flat_ride(int col, int row, std::uint8_t turns, std::int32_t height = 0)
     {
-        save::Ride ride;
-        ride.kind = save::RideKind::Flat;
-        ride.base.spot = save::PlacementSpot { 7, col, row, height, turns };
+        save::model::Ride ride;
+        ride.kind = save::model::RideKind::Flat;
+        ride.base.spot = save::model::PlacementSpot { 7, col, row, height, turns };
         return ride;
     }
 
     /// Two tiles along x from the spot.
-    std::vector<save::Tile> two_wide(const save::PlacementSpot& spot)
+    std::vector<save::model::Tile> two_wide(const save::model::PlacementSpot& spot)
     {
         return { { spot.col, spot.row }, { spot.col + 1, spot.row } };
     }
 
-    std::vector<save::Tile> nothing(const save::PlacementSpot&)
+    std::vector<save::model::Tile> nothing(const save::model::PlacementSpot&)
     {
         return { };
     }
@@ -200,21 +200,21 @@ namespace
 
 TEST_CASE("a door paves its tile, opening onto the ride in front and the path behind")
 {
-    save::RideModel rides;
-    save::Ride& coaster = rides.rides.emplace_back();
-    coaster.kind = save::RideKind::Tracked;
-    save::Station& station = coaster.stations.emplace_back();
-    station.entrance_spot = save::PlacementSpot { 8, 3, 3, 2, 0 }; // Facing -X
-    station.exit_spot = save::PlacementSpot { 9, 5, 5, 0, 1 };     // Facing +Z
+    save::model::RideModel rides;
+    save::model::Ride& coaster = rides.rides.emplace_back();
+    coaster.kind = save::model::RideKind::Tracked;
+    save::model::Station& station = coaster.stations.emplace_back();
+    station.entrance_spot = save::model::PlacementSpot { 8, 3, 3, 2, 0 }; // Facing -X
+    station.exit_spot = save::model::PlacementSpot { 9, 5, 5, 0, 1 };     // Facing +Z
     const std::vector<Paving> pavings = ride_pavings(rides, two_wide, nothing);
     REQUIRE(pavings.size() == 2);
-    CHECK(pavings[0].tiles == std::vector { save::Tile { 3, 3 } });
+    CHECK(pavings[0].tiles == std::vector { save::model::Tile { 3, 3 } });
     CHECK(pavings[0].height == 2);
     CHECK(pavings[0].entrance);
-    CHECK(pavings[0].source == save::Tile { 4, 3 });
-    CHECK(pavings[0].links == std::vector { save::Tile { 2, 3 }, save::Tile { 4, 3 } });
+    CHECK(pavings[0].source == save::model::Tile { 4, 3 });
+    CHECK(pavings[0].links == std::vector { save::model::Tile { 2, 3 }, save::model::Tile { 4, 3 } });
     CHECK_FALSE(pavings[1].entrance);
-    CHECK(pavings[1].source == save::Tile { 5, 4 });
+    CHECK(pavings[1].source == save::model::Tile { 5, 4 });
     // Each door's columns take the style of its paving.
     CHECK(pavings[0].owner == 8);
     CHECK(pavings[1].owner == 9);
@@ -225,17 +225,17 @@ TEST_CASE("a door paves its tile, opening onto the ride in front and the path be
 
 TEST_CASE("a flat ride paves its footprint, opening onto its doors and looking like the path past its exit")
 {
-    save::RideModel rides;
-    save::Ride& ride = rides.rides.emplace_back(flat_ride(2, 2, 0));
-    save::Station& station = ride.stations.emplace_back();
-    station.entrance_spot = save::PlacementSpot { 8, 1, 2, 0, 2 }; // Facing +X, into the ride
-    station.exit_spot = save::PlacementSpot { 9, 2, 3, 0, 3 };     // Facing -Z
+    save::model::RideModel rides;
+    save::model::Ride& ride = rides.rides.emplace_back(flat_ride(2, 2, 0));
+    save::model::Station& station = ride.stations.emplace_back();
+    station.entrance_spot = save::model::PlacementSpot { 8, 1, 2, 0, 2 }; // Facing +X, into the ride
+    station.exit_spot = save::model::PlacementSpot { 9, 2, 3, 0, 3 };     // Facing -Z
     const std::vector<Paving> pavings = ride_pavings(rides, two_wide, nothing);
     REQUIRE(pavings.size() == 3);
     const Paving& floor = pavings[2];
-    CHECK(floor.tiles == std::vector { save::Tile { 2, 2 }, save::Tile { 3, 2 } });
-    CHECK(floor.source == save::Tile { 2, 4 });
-    CHECK(floor.links == std::vector { save::Tile { 2, 3 }, save::Tile { 1, 2 } });
+    CHECK(floor.tiles == std::vector { save::model::Tile { 2, 2 }, save::model::Tile { 3, 2 } });
+    CHECK(floor.source == save::model::Tile { 2, 4 });
+    CHECK(floor.links == std::vector { save::model::Tile { 2, 3 }, save::model::Tile { 1, 2 } });
     CHECK(floor.owner == 7);
 
     // Nothing when the footprint is unknown.
@@ -244,32 +244,32 @@ TEST_CASE("a flat ride paves its footprint, opening onto its doors and looking l
 
 TEST_CASE("a tracked ride's base paves its floor, opening onto its doors, and its other pieces pave nothing")
 {
-    save::RideModel rides;
-    save::Ride& tower = rides.rides.emplace_back();
-    tower.kind = save::RideKind::Tracked;
-    save::Track& track = tower.track.emplace();
+    save::model::RideModel rides;
+    save::model::Ride& tower = rides.rides.emplace_back();
+    tower.kind = save::model::RideKind::Tracked;
+    save::model::Track& track = tower.track.emplace();
     track.pieces.push_back({ .scenery = 20, .tile_x = 2, .tile_z = 2, .height = 1 });  // The base
     track.pieces.push_back({ .scenery = 21, .tile_x = 2, .tile_z = 2, .height = 10 }); // A section above it
     track.pieces.push_back({ .tile_x = 2, .tile_z = 2, .height = 20 });                // No object of its own
-    save::Station& station = tower.stations.emplace_back();
-    station.entrance_spot = save::PlacementSpot { 8, 1, 2, 1, 2 }; // Facing +X, into the base
-    station.exit_spot = save::PlacementSpot { 9, 2, 3, 1, 3 };     // Facing -Z
-    const auto base_only = [](const save::PlacementSpot& spot) { return spot.object == 20 ? two_wide(spot) : std::vector<save::Tile> { }; };
+    save::model::Station& station = tower.stations.emplace_back();
+    station.entrance_spot = save::model::PlacementSpot { 8, 1, 2, 1, 2 }; // Facing +X, into the base
+    station.exit_spot = save::model::PlacementSpot { 9, 2, 3, 1, 3 };     // Facing -Z
+    const auto base_only = [](const save::model::PlacementSpot& spot) { return spot.object == 20 ? two_wide(spot) : std::vector<save::model::Tile> { }; };
     const std::vector<Paving> pavings = ride_pavings(rides, nothing, base_only);
     REQUIRE(pavings.size() == 3);
     const Paving& floor = pavings[2];
-    CHECK(floor.tiles == std::vector { save::Tile { 2, 2 }, save::Tile { 3, 2 } });
+    CHECK(floor.tiles == std::vector { save::model::Tile { 2, 2 }, save::model::Tile { 3, 2 } });
     CHECK(floor.height == 1);
-    CHECK(floor.source == save::Tile { 2, 4 });
-    CHECK(floor.links == std::vector { save::Tile { 2, 3 }, save::Tile { 1, 2 } });
+    CHECK(floor.source == save::model::Tile { 2, 4 });
+    CHECK(floor.links == std::vector { save::model::Tile { 2, 3 }, save::model::Tile { 1, 2 } });
 }
 
 TEST_CASE("a stall paves its footprint and opens onto the side it faces")
 {
-    save::RideModel rides;
-    save::Stall& stall = rides.stalls.emplace_back();
-    stall.base.spot = save::PlacementSpot { 7, 4, 4, 0, 0 };
-    for (const auto& [facing, front] : { std::pair { 0, std::vector { save::Tile { 4, 3 }, save::Tile { 5, 3 } } }, { 1, { save::Tile { 3, 4 } } }, { 2, { save::Tile { 4, 5 }, save::Tile { 5, 5 } } }, { 3, { save::Tile { 6, 4 } } } })
+    save::model::RideModel rides;
+    save::model::Stall& stall = rides.stalls.emplace_back();
+    stall.base.spot = save::model::PlacementSpot { 7, 4, 4, 0, 0 };
+    for (const auto& [facing, front] : { std::pair { 0, std::vector { save::model::Tile { 4, 3 }, save::model::Tile { 5, 3 } } }, { 1, { save::model::Tile { 3, 4 } } }, { 2, { save::model::Tile { 4, 5 }, save::model::Tile { 5, 5 } } }, { 3, { save::model::Tile { 6, 4 } } } })
     {
         stall.base.facing = static_cast<std::uint8_t>(facing);
         const std::vector<Paving> pavings = ride_pavings(rides, two_wide, nothing);
@@ -282,10 +282,10 @@ TEST_CASE("a stall paves its footprint and opens onto the side it faces")
 
 TEST_CASE("a facility without doors paves its footprint, open on every side, in the plain style")
 {
-    save::RideModel rides;
-    save::Ride& toilet = rides.rides.emplace_back();
-    toilet.kind = save::RideKind::Special;
-    toilet.base.spot = save::PlacementSpot { 7, 4, 4, 0, 0 };
+    save::model::RideModel rides;
+    save::model::Ride& toilet = rides.rides.emplace_back();
+    toilet.kind = save::model::RideKind::Special;
+    toilet.base.spot = save::model::PlacementSpot { 7, 4, 4, 0, 0 };
     const std::vector<Paving> pavings = ride_pavings(rides, two_wide, nothing);
     REQUIRE(pavings.size() == 1);
     CHECK_FALSE(pavings[0].source);
@@ -294,8 +294,8 @@ TEST_CASE("a facility without doors paves its footprint, open on every side, in 
 
 TEST_CASE("paving looks like the path at its source; only an entrance takes a queue, straight in; else the plain style")
 {
-    const save::TerrainGrid g = flat_grid(6, 6);
-    Paving door { .tiles = { { 2, 2 } }, .height = 0, .source = save::Tile { 3, 2 }, .links = { { 1, 2 }, { 3, 2 } } };
+    const save::model::TerrainGrid g = flat_grid(6, 6);
+    Paving door { .tiles = { { 2, 2 } }, .height = 0, .source = save::model::Tile { 3, 2 }, .links = { { 1, 2 }, { 3, 2 } } };
 
     std::vector<PavedTile> laid = lay_pavings({ }, std::span(&door, 1), g);
     REQUIRE(laid.size() == 1);
@@ -307,10 +307,10 @@ TEST_CASE("paving looks like the path at its source; only an entrance takes a qu
     CHECK(laid[0].path.surface_name == "Marble");
     CHECK(laid[0].path.col == 2);
 
-    save::PathTile queue = ground_tile(3, 2, "QueueRed");
-    queue.kind = save::PathKind::Queue;
-    queue.queue = save::PathQueueInfo { .start_direction = 2, .end_direction = 3 };
-    queue.elevation = save::PathElevation { .slope = save::kSlopeOnGround };
+    save::model::PathTile queue = ground_tile(3, 2, "QueueRed");
+    queue.kind = save::model::PathKind::Queue;
+    queue.queue = save::model::PathQueueInfo { .start_direction = 2, .end_direction = 3 };
+    queue.elevation = save::model::PathElevation { .slope = save::model::kSlopeOnGround };
     const std::array queues { queue };
     laid = lay_pavings(queues, std::span(&door, 1), g);
     CHECK(laid[0].path.surface_name == kPavingStyle);
@@ -329,7 +329,7 @@ TEST_CASE("paving looks like the path at its source; only an entrance takes a qu
 
 TEST_CASE("paving off level ground is raised at its height, and tiles holding a path keep it")
 {
-    save::TerrainGrid g = flat_grid(6, 6);
+    save::model::TerrainGrid g = flat_grid(6, 6);
     g.cells[static_cast<std::size_t>(2 * 6 + 3)].corners = { 0, 1, 0, 1 };
     const Paving stall { .tiles = { { 2, 2 }, { 3, 2 }, { 4, 2 }, { 9, 9 } }, .height = 0 };
     const std::array paths { ground_tile(4, 2) };
@@ -343,10 +343,10 @@ TEST_CASE("paving off level ground is raised at its height, and tiles holding a 
 
 TEST_CASE("paving joins only itself and its links, never a path beside it, fence or not")
 {
-    const save::TerrainGrid g = flat_grid(6, 6);
+    const save::model::TerrainGrid g = flat_grid(6, 6);
     // A two-tile floor at row 2 with its door at (1, 2); a park path runs past along row 3 and on to the door.
-    const std::array pavings { Paving { .tiles = { { 2, 2 }, { 3, 2 } }, .links = { { 1, 2 } } }, Paving { .tiles = { { 1, 2 } }, .source = save::Tile { 0, 2 }, .links = { { 2, 2 }, { 0, 2 } } } };
-    std::vector<save::PathTile> paths { ground_tile(0, 2), ground_tile(1, 3), ground_tile(2, 3), ground_tile(3, 3) };
+    const std::array pavings { Paving { .tiles = { { 2, 2 }, { 3, 2 } }, .links = { { 1, 2 } } }, Paving { .tiles = { { 1, 2 } }, .source = save::model::Tile { 0, 2 }, .links = { { 2, 2 }, { 0, 2 } } } };
+    std::vector<save::model::PathTile> paths { ground_tile(0, 2), ground_tile(1, 3), ground_tile(2, 3), ground_tile(3, 3) };
     const std::vector<PavedTile> laid = lay_pavings(paths, pavings, g);
     REQUIRE(laid.size() == 3);
     for (const PavedTile& t : laid)

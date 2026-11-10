@@ -9,16 +9,16 @@ using namespace rct3::park;
 
 namespace
 {
-    save::TerrainGrid flat(int width, int height, float level = 0)
+    save::model::TerrainGrid flat(int width, int height, float level = 0)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.origin_x = -8;
         g.origin_z = 4;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        save::TerrainCell cell;
+        save::model::TerrainCell cell;
         cell.corners = { level, level, level, level };
         g.cells.assign(static_cast<std::size_t>(width * height), cell);
         return g;
@@ -37,7 +37,7 @@ namespace
 
 TEST_CASE("each tile is two triangles, batched by its surface")
 {
-    const save::TerrainGrid g = flat(3, 2);
+    const save::model::TerrainGrid g = flat(3, 2);
     const TerrainMesh m = terrain_mesh(g, { });
     CHECK(count(m, GroundPaint::Surface, 0) == 6 * 6);
     CHECK(m.indices.size() == 6 * 6);
@@ -54,7 +54,7 @@ TEST_CASE("each tile is two triangles, batched by its surface")
 TEST_CASE("surfaces fade into each other across the tiles next to them")
 {
     // Two tiles side by side: surface 0, then surface 7.
-    save::TerrainGrid g = flat(2, 1);
+    save::model::TerrainGrid g = flat(2, 1);
     g.cells[1].surface = 7;
     const TerrainMesh m = terrain_mesh(g, { });
     // Both tiles touch both surfaces, so each is drawn twice.
@@ -82,8 +82,8 @@ TEST_CASE("surfaces fade into each other across the tiles next to them")
 
 TEST_CASE("a tile raised above its neighbours gets walls painted with its cliff face")
 {
-    save::TerrainGrid g = flat(3, 3);
-    save::TerrainCell& middle = g.cells[4];
+    save::model::TerrainGrid g = flat(3, 3);
+    save::model::TerrainCell& middle = g.cells[4];
     middle.corners = { 2, 2, 2, 2 };
     middle.cliff = 3;
     const TerrainMesh m = terrain_mesh(g, { });
@@ -94,8 +94,8 @@ TEST_CASE("a tile raised above its neighbours gets walls painted with its cliff 
 
 TEST_CASE("water covers the triangles of its bodies at their level")
 {
-    const save::TerrainGrid g = flat(2, 2, -1);
-    save::WaterLayer water;
+    const save::model::TerrainGrid g = flat(2, 2, -1);
+    save::model::WaterLayer water;
     water.bodies.push_back({ 0.5f, { { 1, 0, 0, 7 }, { 1, 0, 1, 7 }, { 9, 9, 0, 7 } } });
     const TerrainMesh m = terrain_mesh(g, water);
     REQUIRE(m.water.size() == 6); // The tile off the map is left out
@@ -109,11 +109,11 @@ TEST_CASE("water covers the triangles of its bodies at their level")
 
 TEST_CASE("an area builds only its own tiles, and areas side by side add up to the whole")
 {
-    save::TerrainGrid g = flat(4, 3);
+    save::model::TerrainGrid g = flat(4, 3);
     g.cells[5].corners = { 2, 2, 2, 2 };
     g.cells[5].cliff = 3;
     g.cells[6].surface = 7;
-    save::WaterLayer water;
+    save::model::WaterLayer water;
     water.bodies.push_back({ 0.5f, { { 0, 0, 0, 7 }, { 3, 2, 1, 7 } } });
     const TerrainMesh whole = terrain_mesh(g, water);
     const TerrainMesh left = terrain_mesh(g, water, { }, TileRect { 0, 0, 2, 3 });
@@ -129,7 +129,7 @@ TEST_CASE("an area builds only its own tiles, and areas side by side add up to t
 
 TEST_CASE("a grid whose cells do not match its size makes nothing")
 {
-    save::TerrainGrid g = flat(2, 2);
+    save::model::TerrainGrid g = flat(2, 2);
     g.cells.pop_back();
     CHECK(terrain_mesh(g, { }).vertices.empty());
 }
@@ -140,7 +140,7 @@ TEST_CASE("ground shades smoothly where tiles meet, and sharply at cliffs")
     // How far up the ground vertices face at grid point x = 0 (where the slope meets the top), z = 4, height
     // y: 1 for flat ground, less on a slope.
     const auto shades_at = [](float top, float x, float y) {
-        save::TerrainGrid g = flat(3, 1);
+        save::model::TerrainGrid g = flat(3, 1);
         g.cells[1].corners = { 0, 4, 0, 4 };
         g.cells[2].corners = { top, top, top, top };
         const TerrainMesh m = terrain_mesh(g, { });
@@ -178,8 +178,8 @@ TEST_CASE("ground shades smoothly where tiles meet, and sharply at cliffs")
 
 TEST_CASE("pool water fills each of its squares just under the rim, down to the floor")
 {
-    const save::TerrainGrid g = flat(2, 2, -4);
-    const std::vector<save::PoolWater> pools { { 1, 0, -5, 2 }, { 7, 7, -5, 2 } };
+    const save::model::TerrainGrid g = flat(2, 2, -4);
+    const std::vector<save::model::PoolWater> pools { { 1, 0, -5, 2 }, { 7, 7, -5, 2 } };
     const auto water = pool_water(g, pools);
     REQUIRE(water.size() == 6 * kPoolWaterSteps * kPoolWaterSteps); // The square off the map is left out
     for (const WaterVertex& v : water)

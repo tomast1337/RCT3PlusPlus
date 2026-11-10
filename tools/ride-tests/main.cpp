@@ -47,7 +47,7 @@ int main(int argc, char** argv)
             continue;
         }
         const save::ObjectIndex index(*file);
-        const auto rides = save::load_rides(*file, index);
+        const auto rides = save::model::load_rides(*file, index);
         if (!rides)
         {
             out.error("{}: cannot load rides", argv[i]);
@@ -56,10 +56,10 @@ int main(int argc, char** argv)
         }
         std::string name = argv[i];
         name = name.substr(name.find_last_of('/') + 1);
-        for (const save::Ride& ride : rides->rides)
+        for (const save::model::Ride& ride : rides->rides)
         {
             const auto& t = ride.stats.last_lap;
-            if (ride.kind != save::RideKind::Tracked || !ride.assessment.valid || !t || t->max_speed <= 0)
+            if (ride.kind != save::model::RideKind::Tracked || !ride.assessment.valid || !t || t->max_speed <= 0)
                 continue;
             out.info(
                 "\"{}\",\"{}\",{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:d},{:g},{:d},{:d}", name.c_str(), ride.base.symbol.c_str(), static_cast<double>(ride.assessment.excitement), static_cast<double>(ride.assessment.intensity), static_cast<double>(ride.assessment.nausea), static_cast<double>(t->max_speed), static_cast<double>(t->average_speed), static_cast<double>(t->ride_time), static_cast<double>(t->ride_length), static_cast<double>(t->max_positive_vertical),

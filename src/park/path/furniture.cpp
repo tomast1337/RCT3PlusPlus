@@ -17,21 +17,21 @@ namespace rct3::park::path
         constexpr std::int32_t kSameLevel = 2; ///< Units between two items' bases that still clash
     } // namespace
 
-    std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, object::Positioning positioning, ModelTurn turn, object::PathRules rules)
+    std::optional<FurnitureSpot> furniture_spot(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, glm::vec3 hit, object::Positioning positioning, ModelTurn turn, object::PathRules rules)
     {
         if (grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
             return std::nullopt;
         const float fx = (hit.x - grid.origin_x) / grid.tile_size_x;
         const float fz = (hit.z - grid.origin_z) / grid.tile_size_z;
-        const save::Tile tile { static_cast<int>(std::floor(fx)), static_cast<int>(std::floor(fz)) };
+        const save::model::Tile tile { static_cast<int>(std::floor(fx)), static_cast<int>(std::floor(fz)) };
         if (!grid.contains(tile))
             return std::nullopt;
         // Of the paths on the tile, the one whose middle is nearest the pointer's height.
-        const save::PathTile* path = nullptr;
+        const save::model::PathTile* path = nullptr;
         std::array<std::optional<float>, 4> edges;
         float middle = 0;
         float nearest = std::numeric_limits<float>::max();
-        for (const save::PathTile& p : paths)
+        for (const save::model::PathTile& p : paths)
         {
             if (p.col != tile.col || p.row != tile.row)
                 continue;
@@ -60,8 +60,8 @@ namespace rct3::park::path
         FurnitureSpot spot { .tile = tile, .turn = ModelTurn::from(turn.value), .height = static_cast<std::int32_t>(std::lround(middle)), .raised = path->elevation.has_value() };
         // A queue on the ground stores a slope of its own, but lies on the land as a ground path does.
         const std::uint8_t slope = path->elevation ? path->elevation->slope : 0;
-        const bool sloped = slope != 0 && slope != save::kSlopeOnGround;
-        const bool queue = path->kind == save::PathKind::Queue;
+        const bool sloped = slope != 0 && slope != save::model::kSlopeOnGround;
+        const bool queue = path->kind == save::model::PathKind::Queue;
         const bool forbidden = queue ? rules.off_queues : rules.queues_only;
         if (positioning == object::Positioning::PathCentre)
         {
@@ -74,7 +74,7 @@ namespace rct3::park::path
         const auto at_end = [&](Side side) { return side.on_columns() == (path->direction < 2); };
 
         // A path's height at `side`: its edge there, or its middle where it has none, as along a queue's fences.
-        const auto level = [&](const save::PathTile& p, Side side) -> std::optional<float> {
+        const auto level = [&](const save::model::PathTile& p, Side side) -> std::optional<float> {
             if (const auto edge = edge_height(p, grid, side))
                 return edge;
             float sum = 0;
@@ -90,8 +90,8 @@ namespace rct3::park::path
         // Whether a path across `side` meets this one there, at about its height: joined, or the next lane of a queue.
         const auto joined = [&](Side side) {
             const auto here = level(*path, side);
-            const save::Tile across = side.beyond(tile);
-            return here && std::ranges::any_of(paths, [&](const save::PathTile& p) {
+            const save::model::Tile across = side.beyond(tile);
+            return here && std::ranges::any_of(paths, [&](const save::model::PathTile& p) {
                        if (p.col != across.col || p.row != across.row)
                            return false;
                        const auto there = level(p, side.opposite());
@@ -111,10 +111,10 @@ namespace rct3::park::path
         return spot;
     }
 
-    bool furniture_taken(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::PlacedObject& item, object::Positioning positioning)
+    bool furniture_taken(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::PlacedObject& item, object::Positioning positioning)
     {
         const bool middle = positioning == object::Positioning::PathCentre;
-        return std::ranges::any_of(objects, [&](const save::PlacedObject& o) {
+        return std::ranges::any_of(objects, [&](const save::model::PlacedObject& o) {
             if (o.hidden || o.col != item.col || o.row != item.row || std::abs(o.base_height.value_or(0) - item.base_height.value_or(0)) > kSameLevel)
                 return false;
             const auto model = models.find(object::model_ref(o));

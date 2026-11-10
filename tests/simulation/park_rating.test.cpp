@@ -72,7 +72,7 @@ TEST_CASE("the harder rating takes a share off, and the total stays in range")
 
 TEST_CASE("the inputs are gathered from the park's guests, rides and litter")
 {
-    save::PeopleModel people;
+    save::model::PeopleModel people;
     people.guests.resize(3);
     people.guests[0].in_park = false;
     people.guests[0].mood_now.happiness = 0.9f;
@@ -82,14 +82,14 @@ TEST_CASE("the inputs are gathered from the park's guests, rides and litter")
     people.litter[0].create_time = 10;
     people.litter[1].create_time = 300; // Too new to count
 
-    save::RideModel rides;
+    save::model::RideModel rides;
     rides.rides.resize(3);
-    rides.rides[2].kind = save::RideKind::Special; // Facilities are not rated
+    rides.rides[2].kind = save::model::RideKind::Special; // Facilities are not rated
     rides.rides[0].breakdown.downtime_windows = { 16, 0, 0, 0, 0, 0, 0, 0 };
     rides.rides[0].assessment.valid = true;
     rides.rides[0].assessment.excitement = 3.5f;
     rides.rides[0].assessment.intensity = 4.5f;
-    rides.rides[1].kind = save::RideKind::Flat;
+    rides.rides[1].kind = save::model::RideKind::Flat;
     rides.rides[1].breakdown.saved_downtime_percent = 65.625f; // Wins over the windows
 
     const RatingInput in = simulation::rating_input(people, rides, 300);

@@ -10,23 +10,23 @@ using namespace rct3::park::ground;
 namespace
 {
     /// Flat at height 2, `size` tiles each way.
-    save::TerrainGrid flat(int size)
+    save::model::TerrainGrid flat(int size)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = size;
         g.height = size;
         g.cells.resize(static_cast<std::size_t>(size * size));
-        for (save::TerrainCell& c : g.cells)
+        for (save::model::TerrainCell& c : g.cells)
             c.corners = { 2, 2, 2, 2 };
         return g;
     }
 
-    float point(const save::TerrainGrid& g, int c, int r)
+    float point(const save::model::TerrainGrid& g, int c, int r)
     {
         return g.at(c, r).corners[0]; // The tile's own first corner is the point (c, r)
     }
 
-    const auto anywhere = [](save::Tile) { return true; };
+    const auto anywhere = [](save::model::Tile) { return true; };
 } // namespace
 
 TEST_CASE("each shape rises or sinks most where it should and not past its reach")
@@ -50,7 +50,7 @@ TEST_CASE("each shape rises or sinks most where it should and not past its reach
 
 TEST_CASE("a hill raises the corner points round its middle, shared by the tiles, from the stroke's start")
 {
-    save::TerrainGrid g = flat(10);
+    save::model::TerrainGrid g = flat(10);
     const CornerHeights before = corner_heights(g, anywhere);
     const float moved = shape_ground(g, before, GroundShape::Hill, { 5, 5 }, 3, { 1, 0 }, 4);
     CHECK(moved > 0);
@@ -67,7 +67,7 @@ TEST_CASE("a hill raises the corner points round its middle, shared by the tiles
 
 TEST_CASE("a negative amount turns the shape over: a mountain digs a pit, a crater builds a mound")
 {
-    save::TerrainGrid g = flat(10);
+    save::model::TerrainGrid g = flat(10);
     const CornerHeights before = corner_heights(g, anywhere);
     const float dug = shape_ground(g, before, GroundShape::Mountain, { 5, 5 }, 3, { 1, 0 }, -2);
     CHECK(point(g, 5, 5) == doctest::Approx(0));
@@ -79,9 +79,9 @@ TEST_CASE("a negative amount turns the shape over: a mountain digs a pit, a crat
 
 TEST_CASE("held corner points stay: land refused, and the edge of a cliff")
 {
-    save::TerrainGrid g = flat(10);
+    save::model::TerrainGrid g = flat(10);
     g.at(5, 5).corners = { 4, 4, 4, 4 }; // A raised tile, with cliffs all round
-    const CornerHeights before = corner_heights(g, [](save::Tile t) { return t.col < 3 || t.col > 4; });
+    const CornerHeights before = corner_heights(g, [](save::model::Tile t) { return t.col < 3 || t.col > 4; });
     shape_ground(g, before, GroundShape::Canyon, { 5, 5 }, 4, { 1, 0 }, 3);
     CHECK(g.at(5, 5).corners[0] == doctest::Approx(4)); // The cliff's top stays
     CHECK(point(g, 4, 5) == doctest::Approx(2));        // Touches a refused tile

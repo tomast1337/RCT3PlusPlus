@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::save
+namespace rct3::save::model
 {
 
     struct DesignSummary
@@ -55,4 +55,4 @@ namespace rct3::save
     /// packed; RGBA as DesignSummary::picture. Empty when neither fits the size.
     [[nodiscard]] std::vector<std::uint8_t> design_picture(std::uint32_t width, std::uint32_t height, std::span<const std::uint8_t> packed, std::span<const std::uint8_t> unpacked);
 
-} // namespace rct3::save
+} // namespace rct3::save::model

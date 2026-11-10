@@ -20,7 +20,7 @@ namespace rct3::park::object
 {
 
     /// How far along `ray` it first meets the ground, if it does within `reach`.
-    [[nodiscard]] std::optional<float> ground_hit(const Ray& ray, const save::TerrainGrid& grid, float reach = kFar);
+    [[nodiscard]] std::optional<float> ground_hit(const Ray& ray, const save::model::TerrainGrid& grid, float reach = kFar);
 
     /// How far along `ray` it first enters the box from `low` to `high`, if it does.
     [[nodiscard]] std::optional<float> box_hit(const Ray& ray, glm::vec3 low, glm::vec3 high);
@@ -49,7 +49,7 @@ namespace rct3::park::object
     };
 
     /// The boxes of those of `objects` that have a model with a shape, by rising object index.
-    [[nodiscard]] std::vector<PickBox> pick_boxes(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted);
+    [[nodiscard]] std::vector<PickBox> pick_boxes(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted);
 
     /// Brings `boxes`, by rising object index, up to date with `places`: the objects in `changed` (by index,
     /// rising) get theirs worked out again, if their model has a shape, and the others keep the ones they had.
@@ -57,17 +57,17 @@ namespace rct3::park::object
 
     /// The nearest of `boxes` for whose object `wanted` holds (by index) that `ray` passes through before it
     /// reaches the ground.
-    [[nodiscard]] std::optional<PickHit> pick_object(const Ray& ray, std::span<const PickBox> boxes, const save::TerrainGrid& grid, const std::function<bool(std::size_t)>& wanted);
+    [[nodiscard]] std::optional<PickHit> pick_object(const Ray& ray, std::span<const PickBox> boxes, const save::model::TerrainGrid& grid, const std::function<bool(std::size_t)>& wanted);
 
     /// The nearest object among `objects` for which `wanted` holds that `ray` passes through before it reaches
     /// the ground.
-    [[nodiscard]] std::optional<PickHit> pick_object(const Ray& ray, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, const std::function<bool(const save::PlacedObject&)>& wanted);
+    [[nodiscard]] std::optional<PickHit> pick_object(const Ray& ray, std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted, const std::function<bool(const save::model::PlacedObject&)>& wanted);
 
     /// The corners of the box `object` is hit in, in the park; none when it has no model.
-    [[nodiscard]] std::vector<glm::vec3> object_corners(const save::PlacedObject& object, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted);
+    [[nodiscard]] std::vector<glm::vec3> object_corners(const save::model::PlacedObject& object, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted);
 
     /// The nearest of the people placed in the park by `placements` (each from their own space) that `ray`
     /// passes through before it reaches the ground.
-    [[nodiscard]] std::optional<PickHit> pick_person(const Ray& ray, std::span<const glm::mat4> placements, const save::TerrainGrid& grid);
+    [[nodiscard]] std::optional<PickHit> pick_person(const Ray& ray, std::span<const glm::mat4> placements, const save::model::TerrainGrid& grid);
 
 } // namespace rct3::park::object

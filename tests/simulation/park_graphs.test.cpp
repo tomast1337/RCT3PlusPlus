@@ -9,7 +9,7 @@ using namespace rct3::simulation;
 
 TEST_CASE("a week's end puts its figures in the week's slot and starts the next")
 {
-    save::ParkModel park;
+    save::model::ParkModel park;
     park.has_park = true;
     park.has_finance = true;
     park.park.guests_in_park = { .samples = { 90, 80, 70 }, .capacity = 3 };
@@ -30,7 +30,7 @@ TEST_CASE("a week's end puts its figures in the week's slot and starts the next"
 
 TEST_CASE("a park without its records starts its graphs as a week ends")
 {
-    save::ParkModel park;
+    save::model::ParkModel park;
     close_week(park, { .guests = 100, .income = 50 });
     CHECK(park.park.guests_in_park.samples == std::vector<float> { 100, 100 });
     CHECK(park.park.guests_in_park.capacity == kGraphWeeks);
@@ -41,7 +41,7 @@ TEST_CASE("a park without its records starts its graphs as a week ends")
 
 TEST_CASE("the ledger books into this month's period and starts a new one as each month begins")
 {
-    save::Finance money;
+    save::model::Finance money;
     money.ledger[0].staff_wages = 700; // This month so far, as the park file left it
     money.ledger[0].pool_tickets = -50;
     money.ledger[1].staff_wages = 900;
@@ -62,14 +62,14 @@ TEST_CASE("the ledger books into this month's period and starts a new one as eac
     // Across the year's end, and months passed in one go keep only as many as the ledger holds.
     ledger_month(money, kept, { .year = 2, .month = 0 }).staff_wages += 1;
     CHECK(money.ledger[4].staff_training == 5000);
-    CHECK(money.ledger_periods_loaded == save::kLedgerPeriods);
+    CHECK(money.ledger_periods_loaded == save::model::kLedgerPeriods);
     ledger_month(money, kept, { .year = 9, .month = 0 });
-    CHECK(std::ranges::all_of(money.ledger, [](const save::LedgerPeriod& p) { return p.staff_wages == 0; }));
+    CHECK(std::ranges::all_of(money.ledger, [](const save::model::LedgerPeriod& p) { return p.staff_wages == 0; }));
 }
 
 TEST_CASE("a park whose file kept no ledger starts one at its first booking")
 {
-    save::Finance money;
+    save::model::Finance money;
     std::optional<std::int64_t> kept;
     ledger_month(money, kept, { }).staff_wages += 875;
     CHECK(money.ledger_periods_loaded == 1);

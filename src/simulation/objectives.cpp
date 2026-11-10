@@ -19,20 +19,20 @@ namespace rct3::simulation
             "", "Prize_LargeCash", "Prize_SmallCash", "Prize_Lollipop", "Prize_ParkRatingBonus", "Prize_InterestRateDrop", "Prize_LoanIncrease", "Prize_ConstructionRights", "Prize_CSCoaster", "Prize_ResearchCatagory", "Prize_Apprentice", "Prize_Entrepreneur", "Prize_Tycoon",
         };
 
-        std::optional<save::Objective&> objective_of(save::ObjectiveSet& set, std::int32_t level)
+        std::optional<save::model::Objective&> objective_of(save::model::ObjectiveSet& set, std::int32_t level)
         {
-            const auto found = std::ranges::find_if(set.objectives, [&](const save::Objective& o) { return o.difficulty == level && o.objective_id == 0; });
-            return found != set.objectives.end() ? std::optional<save::Objective&>(*found) : std::nullopt;
+            const auto found = std::ranges::find_if(set.objectives, [&](const save::model::Objective& o) { return o.difficulty == level && o.objective_id == 0; });
+            return found != set.objectives.end() ? std::optional<save::model::Objective&>(*found) : std::nullopt;
         }
 
         /// The figure of a tested ride a coaster goal names, in the units the goal's value is kept in.
-        std::optional<float> ride_figure(const save::Ride& ride, std::uint32_t figure)
+        std::optional<float> ride_figure(const save::model::Ride& ride, std::uint32_t figure)
         {
             constexpr float kGravity = 9.81f;
             if (!ride.stats.last_lap || !ride.stats.last_lap->valid)
                 return std::nullopt;
-            const save::TestResults& t = *ride.stats.last_lap;
-            const save::Assessment& a = ride.assessment;
+            const save::model::TestResults& t = *ride.stats.last_lap;
+            const save::model::Assessment& a = ride.assessment;
             if (figure <= 2 && !a.valid)
                 return std::nullopt;
             switch (figure)
@@ -70,36 +70,36 @@ namespace rct3::simulation
         }
 
         /// How many rides of the group a coaster goal names reach its figure; none when one that must does not.
-        std::optional<std::int32_t> coasters_passing(const save::CoasterTarget& target, std::span<const GoalRide> rides)
+        std::optional<std::int32_t> coasters_passing(const save::model::CoasterTarget& target, std::span<const GoalRide> rides)
         {
-            const RideGroup group = (target.flags & save::CoasterTarget::kPoolSlides) != 0 ? RideGroup::PoolSlide : RideGroup::Coaster;
+            const RideGroup group = (target.flags & save::model::CoasterTarget::kPoolSlides) != 0 ? RideGroup::PoolSlide : RideGroup::Coaster;
             std::int32_t passing = 0;
             for (const GoalRide& r : rides)
             {
                 if (r.group != group || r.ride == nullptr)
                     continue;
-                const std::optional<float> v = ride_figure(*r.ride, target.flags & save::CoasterTarget::kFigure);
+                const std::optional<float> v = ride_figure(*r.ride, target.flags & save::model::CoasterTarget::kFigure);
                 if (!v)
                     continue;
-                const bool passes = (target.flags & save::CoasterTarget::kAtMost) != 0 ? *v <= target.value : *v >= target.value;
+                const bool passes = (target.flags & save::model::CoasterTarget::kAtMost) != 0 ? *v <= target.value : *v >= target.value;
                 if (passes)
                     ++passing;
-                else if ((target.flags & save::CoasterTarget::kEveryRide) != 0)
+                else if ((target.flags & save::model::CoasterTarget::kEveryRide) != 0)
                     return std::nullopt;
             }
             return passing;
         }
 
         /// Goals on last month's takings already cover a month, so they hold for one month less.
-        bool counts_last_month(save::ConditionKind kind) noexcept
+        bool counts_last_month(save::model::ConditionKind kind) noexcept
         {
-            return kind == save::ConditionKind::RideIncome || kind == save::ConditionKind::ShopProfit || kind == save::ConditionKind::PoolIncome;
+            return kind == save::model::ConditionKind::RideIncome || kind == save::model::ConditionKind::ShopProfit || kind == save::model::ConditionKind::PoolIncome;
         }
     } // namespace
 
-    bool judged(save::ConditionKind kind) noexcept
+    bool judged(save::model::ConditionKind kind) noexcept
     {
-        using enum save::ConditionKind;
+        using enum save::model::ConditionKind;
         switch (kind)
         {
             case ParkValue:
@@ -121,44 +121,44 @@ namespace rct3::simulation
         }
     }
 
-    GoalReading read_goal(const save::Condition& c, const ParkFigures& f)
+    GoalReading read_goal(const save::model::Condition& c, const ParkFigures& f)
     {
         const auto compare = [&](std::int64_t now) { return GoalReading { now, c.value && (c.greater_than.value_or(true) ? now >= *c.value : now <= *c.value) }; };
         switch (c.kind)
         {
-            case save::ConditionKind::ParkValue:
+            case save::model::ConditionKind::ParkValue:
                 return compare(f.park_value);
-            case save::ConditionKind::ParkGuests:
+            case save::model::ConditionKind::ParkGuests:
                 return compare(f.guests);
-            case save::ConditionKind::ParkRating:
+            case save::model::ConditionKind::ParkRating:
                 return compare(f.rating);
-            case save::ConditionKind::RideIncome:
+            case save::model::ConditionKind::RideIncome:
                 return compare(f.ride_income);
-            case save::ConditionKind::ShopProfit:
+            case save::model::ConditionKind::ShopProfit:
                 return compare(f.shop_profit);
-            case save::ConditionKind::AnimalHealth:
+            case save::model::ConditionKind::AnimalHealth:
                 return compare(f.animal_health);
-            case save::ConditionKind::Dung:
+            case save::model::ConditionKind::Dung:
                 return compare(f.dung);
-            case save::ConditionKind::RepayLoan:
+            case save::model::ConditionKind::RepayLoan:
                 return { f.loan, f.loan == 0 };
-            case save::ConditionKind::Coaster:
+            case save::model::ConditionKind::Coaster:
             {
                 if (!c.coaster)
                     return { };
                 const std::optional<std::int32_t> passing = coasters_passing(*c.coaster, f.rides);
                 return { passing.value_or(0), passing >= c.coaster->rides };
             }
-            case save::ConditionKind::Vip:
+            case save::model::ConditionKind::Vip:
                 return { std::nullopt, c.vip && c.vip->met }; // Judged as the VIP leaves (vip.hpp)
             default:
                 return { };
         }
     }
 
-    float months_held(const save::Condition& c, float time) noexcept
+    float months_held(const save::model::Condition& c, float time) noexcept
     {
-        return c.has(save::ConditionFlag::TimerRunning) ? std::max(0.0f, time - c.start_time) / save::GameClock::kUnitsPerMonth : 0.0f;
+        return c.has(save::model::ConditionFlag::TimerRunning) ? std::max(0.0f, time - c.start_time) / save::model::GameClock::kUnitsPerMonth : 0.0f;
     }
 
     RideGroup ride_group(std::uint32_t kind) noexcept
@@ -181,7 +181,7 @@ namespace rct3::simulation
 
     void count_takings(Takings& takings, float time, std::int64_t rides_so_far, std::int64_t shops_so_far)
     {
-        const auto month = static_cast<std::int64_t>(std::floor(time / save::GameClock::kUnitsPerMonth));
+        const auto month = static_cast<std::int64_t>(std::floor(time / save::model::GameClock::kUnitsPerMonth));
         if (month == takings.month)
             return;
         // shortcut: the month counting begins in is only partly counted, so the first month's figures come out low;
@@ -196,31 +196,31 @@ namespace rct3::simulation
         takings.shops_before = shops_so_far;
     }
 
-    std::int32_t level_playing(const save::ObjectiveSet& set)
+    std::int32_t level_playing(const save::model::ObjectiveSet& set)
     {
         for (std::int32_t level = 0; level < kLevels - 1; ++level)
         {
-            const bool won = std::ranges::any_of(set.objectives, [&](const save::Objective& o) { return o.difficulty == level && o.objective_id == 0 && o.success; });
+            const bool won = std::ranges::any_of(set.objectives, [&](const save::model::Objective& o) { return o.difficulty == level && o.objective_id == 0 && o.success; });
             if (!won)
                 return level;
         }
         return kLevels - 1;
     }
 
-    std::optional<std::array<std::int32_t, 2>> check_goals(save::ObjectiveSet& set, const ParkFigures& figures, float time, std::optional<ParkMessages&> messages)
+    std::optional<std::array<std::int32_t, 2>> check_goals(save::model::ObjectiveSet& set, const ParkFigures& figures, float time, std::optional<ParkMessages&> messages)
     {
-        using enum save::ConditionFlag;
-        const auto tell = [&](const save::Condition& c, std::string_view key) {
+        using enum save::model::ConditionFlag;
+        const auto tell = [&](const save::model::Condition& c, std::string_view key) {
             if (messages)
                 post(*messages, { .text_key = std::string(key), .field_key = std::string(condition_name(c.kind)) });
         };
         const std::int32_t level = level_playing(set);
-        std::optional<save::Objective&> objective = objective_of(set, level);
+        std::optional<save::model::Objective&> objective = objective_of(set, level);
         if (!objective || objective->success)
             return std::nullopt;
         bool any = false;
         bool all = true;
-        for (save::Condition& c : set.conditions)
+        for (save::model::Condition& c : set.conditions)
         {
             if (c.difficulty != level || c.objective_id != 0)
                 continue;
@@ -236,16 +236,16 @@ namespace rct3::simulation
                 c.start_time = time;
             }
             const std::int32_t months = c.months_to_hold - (counts_last_month(c.kind) ? 1 : 0);
-            const bool held = met && time - c.start_time >= static_cast<float>(std::max(months, 0)) * save::GameClock::kUnitsPerMonth;
+            const bool held = met && time - c.start_time >= static_cast<float>(std::max(months, 0)) * save::model::GameClock::kUnitsPerMonth;
             if (c.has(HasDeadline) && judged(c.kind))
             {
                 const float deadline = c.next_check_time;
-                if (!c.has(WarnedOnce) && time >= deadline - save::GameClock::kUnitsPerMonth && time < deadline)
+                if (!c.has(WarnedOnce) && time >= deadline - save::model::GameClock::kUnitsPerMonth && time < deadline)
                 {
                     c.consistency_flags |= std::to_underlying(WarnedOnce);
                     tell(c, "ObjectiveMessage_MonthWarning");
                 }
-                if (!c.has(WarnedTwice) && time >= deadline - save::GameClock::kUnitsPerWeek && time < deadline)
+                if (!c.has(WarnedTwice) && time >= deadline - save::model::GameClock::kUnitsPerWeek && time < deadline)
                 {
                     c.consistency_flags |= std::to_underlying(WarnedTwice);
                     tell(c, "ObjectiveMessage_WeekWarning");
@@ -257,7 +257,7 @@ namespace rct3::simulation
                 }
                 if (!held)
                 {
-                    c.next_check_time += save::GameClock::kUnitsPerYear;
+                    c.next_check_time += save::model::GameClock::kUnitsPerYear;
                     c.consistency_flags &= ~std::to_underlying(WarnedOnce) & ~std::to_underlying(WarnedTwice);
                     tell(c, "ObjectiveMessage_TryAgainNextYear");
                     all = false;
@@ -280,9 +280,9 @@ namespace rct3::simulation
         return std::array { prize, kApprenticePrize + level };
     }
 
-    std::string_view condition_name(save::ConditionKind kind) noexcept
+    std::string_view condition_name(save::model::ConditionKind kind) noexcept
     {
-        using enum save::ConditionKind;
+        using enum save::model::ConditionKind;
         switch (kind)
         {
             case ParkValue:
@@ -329,7 +329,7 @@ namespace rct3::simulation
         return { };
     }
 
-    void give_prize(ParkState& park, save::Finance& finance, save::TerrainGrid& land, std::int32_t id)
+    void give_prize(ParkState& park, save::model::Finance& finance, save::model::TerrainGrid& land, std::int32_t id)
     {
         const tuning::Prizes& p = kTuning.prizes;
         switch (id)
@@ -352,10 +352,10 @@ namespace rct3::simulation
                 break;
             case 7:
                 // shortcut: the land is only marked for sale, as there is no buying land yet; it shows once there is.
-                for (save::TerrainCell& cell : land.cells)
+                for (save::model::TerrainCell& cell : land.cells)
                 {
-                    if (cell.has(save::TileFlag::NeverPurchasable))
-                        cell.flags |= std::to_underlying(save::TileFlag::ForSale);
+                    if (cell.has(save::model::TileFlag::NeverPurchasable))
+                        cell.flags |= std::to_underlying(save::model::TileFlag::ForSale);
                 }
                 break;
             default:

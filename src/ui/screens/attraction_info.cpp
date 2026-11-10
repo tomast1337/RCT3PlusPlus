@@ -64,9 +64,9 @@ namespace rct3::ui::screens
         constexpr std::size_t kThoughtLines = 6;
 
         constexpr std::array<StateChoice, 3> kStateChoices { {
-            { save::AttractionState::Open, "Attraction_Button_Open", "Attraction_Button_Open_Disabled", "TT_AttractionDialogIconOpenButton" },
-            { save::AttractionState::Testing, "Attraction_Button_Testing", "Attraction_Button_Testing_Disabled", "TT_AttractionDialogIconTestingButton" },
-            { save::AttractionState::Closed, "Attraction_Button_Closed", "Attraction_Button_Closed_Disabled", "TT_AttractionDialogIconClosedButton" },
+            { save::model::AttractionState::Open, "Attraction_Button_Open", "Attraction_Button_Open_Disabled", "TT_AttractionDialogIconOpenButton" },
+            { save::model::AttractionState::Testing, "Attraction_Button_Testing", "Attraction_Button_Testing_Disabled", "TT_AttractionDialogIconTestingButton" },
+            { save::model::AttractionState::Closed, "Attraction_Button_Closed", "Attraction_Button_Closed_Disabled", "TT_AttractionDialogIconClosedButton" },
         } };
 
         constexpr std::array<std::string_view, 4> kTestSections = { "RideTest_Basic", "RideTest_Speed", "RideTest_Force", "RideTest_Drop" };
@@ -177,23 +177,23 @@ namespace rct3::ui::screens
             return ascii(std::format("{} %", std::lround(value)));
         }
 
-        std::u16string status(const save::AttractionCommon& a, const StringTable& strings)
+        std::u16string status(const save::model::AttractionCommon& a, const StringTable& strings)
         {
-            if (a.repair_status != save::RepairStatus::Fine && a.repair_status != save::RepairStatus::AwaitingBreakdown)
+            if (a.repair_status != save::model::RepairStatus::Fine && a.repair_status != save::model::RepairStatus::AwaitingBreakdown)
                 return text(strings, "AttractionStatusBrokenDown");
             switch (a.state)
             {
-                case save::AttractionState::Open:
+                case save::model::AttractionState::Open:
                     return text(strings, "AttractionStatusOpen");
-                case save::AttractionState::Testing:
+                case save::model::AttractionState::Testing:
                     return text(strings, "AttractionStatusTesting");
-                case save::AttractionState::Closed:
+                case save::model::AttractionState::Closed:
                     break;
             }
             return text(strings, "AttractionStatusClosed");
         }
 
-        std::u16string breakdown(save::BreakdownKind kind, const StringTable& strings)
+        std::u16string breakdown(save::model::BreakdownKind kind, const StringTable& strings)
         {
             const std::string_view key = breakdown_key(kind);
             return key.empty() ? std::u16string { } : text(strings, key);
@@ -267,7 +267,7 @@ namespace rct3::ui::screens
             add(page, strings, "AttractionFinancesDialogLabel_TotalProfit", money_text(units.currency, f.common->total_profit));
             if (f.ride == nullptr)
                 return;
-            const bool ride = f.ride->kind != save::RideKind::Special;
+            const bool ride = f.ride->kind != save::model::RideKind::Special;
             page.controls.push_back(price(control_id(AttractionControl::Price), "AttractionFinancesDialogLabel_AdmissionPrice", text(strings, "AttractionFinancesDialogLabel_AdmissionPrice"), f.ride->ticket_price, ride ? kMostRidePrice : kMostPrice));
             // The price over the sums, as the player sets it first.
             page.controls_after = 0;
@@ -281,7 +281,7 @@ namespace rct3::ui::screens
         }
 
         /// An item's name: as the player named it, else after what it is.
-        std::u16string item_name(const save::StallItem& item, const save::Stall& stall, const StringTable& strings, std::span<const park::CarriedKind> kinds)
+        std::u16string item_name(const save::model::StallItem& item, const save::model::Stall& stall, const StringTable& strings, std::span<const park::CarriedKind> kinds)
         {
             if (!item.name.starts_with(kNumbered) && !item.name.empty())
                 return strings::to_utf16(item.name);
@@ -293,7 +293,7 @@ namespace rct3::ui::screens
 
         void customers(InfoPage& page, const AttractionFacts& f, const StringTable& strings)
         {
-            const save::AttractionCommon& a = *f.common;
+            const save::model::AttractionCommon& a = *f.common;
             // Customers an hour and the age are reckoned by the game from its clock; neither is saved. A running
             // park measures the first.
             const bool measured = f.flow && f.flow->per_hour > 0;
@@ -305,7 +305,7 @@ namespace rct3::ui::screens
             if (f.ride && !f.ride->stations.empty())
             {
                 float longest = 0;
-                for (const save::Station& s : f.ride->stations)
+                for (const save::model::Station& s : f.ride->stations)
                     longest = std::max(longest, s.queue_time);
                 // Running, the wait the queue now has at the rate the ride takes riders; unknown until measured.
                 const bool unknown = f.flow && !measured && f.flow->queued > 0;
@@ -317,7 +317,7 @@ namespace rct3::ui::screens
             if (f.stall == nullptr)
                 return;
             const std::u16string sold = text(strings, "AttractionCustomersDialogLabel_Sold");
-            for (const save::StallItem& item : f.stall->items)
+            for (const save::model::StallItem& item : f.stall->items)
             {
                 std::u16string label = sold;
                 if (const auto at = label.find(ascii(kSoldName)); at != std::u16string::npos)
@@ -328,13 +328,13 @@ namespace rct3::ui::screens
 
         /// Whether a ride's results go past the basic ones: only rides that run along a track and are measured
         /// over a lap.
-        bool measured(const save::Ride& ride)
+        bool measured(const save::model::Ride& ride)
         {
-            using enum save::OperatingMode;
-            return ride.kind == save::RideKind::Tracked && ride.mode != Boat && ride.mode != Race && ride.mode != MiniGolf && ride.mode != Aquarium;
+            using enum save::model::OperatingMode;
+            return ride.kind == save::model::RideKind::Tracked && ride.mode != Boat && ride.mode != Race && ride.mode != MiniGolf && ride.mode != Aquarium;
         }
 
-        void tests(InfoPage& page, const save::Ride& ride, std::span<const save::Guest> guests, std::size_t section, const StringTable& strings, const InfoUnits& units)
+        void tests(InfoPage& page, const save::model::Ride& ride, std::span<const save::model::Guest> guests, std::size_t section, const StringTable& strings, const InfoUnits& units)
         {
             if (measured(ride))
             {
@@ -391,7 +391,7 @@ namespace rct3::ui::screens
 
         void vehicles(InfoPage& page, const AttractionFacts& f, const StringTable& strings)
         {
-            const save::Ride& ride = *f.ride;
+            const save::model::Ride& ride = *f.ride;
             // The kind of car it runs, else the kind of ride it is.
             if (!ride.trains.empty())
             {
@@ -403,12 +403,12 @@ namespace rct3::ui::screens
             // A tracked ride's seats in a car, from its first car's; a flat ride's how many it takes each go.
             const auto per_car = std::ranges::count_if(ride.seats, [](const auto& s) { return s.train == 0 && s.car == 0; });
             std::u16string capacity = missing();
-            if (ride.kind == save::RideKind::Tracked && per_car > 0)
+            if (ride.kind == save::model::RideKind::Tracked && per_car > 0)
                 capacity = with_number(text(strings, "AttractionVehicleDialogLabelPassengersPerCar"), per_car);
             else if (f.flow)
                 capacity = with_number(text(strings, "AttractionVehicleDialogLabelPassengersPerRide"), static_cast<std::int64_t>(f.flow->seats));
             add(page, strings, "AttractionVehicleDialogLabelCapacity", capacity);
-            if (ride.kind == save::RideKind::Tracked && !ride.trains.empty())
+            if (ride.kind == save::model::RideKind::Tracked && !ride.trains.empty())
             {
                 // Number boxes, greyed while the ride is open: then its trains stay as they are.
                 const auto number = [&](AttractionControl id, std::string_view key, int value, int fewest, int most) {
@@ -479,7 +479,7 @@ namespace rct3::ui::screens
         }
 
         /// A show ride's show, one section for each place in it and one more to add a trick at the end.
-        void show(InfoPage& page, const save::RideShow& show, std::size_t section, const StringTable& strings)
+        void show(InfoPage& page, const save::model::RideShow& show, std::size_t section, const StringTable& strings)
         {
             float seconds = 0;
             for (const std::uint32_t t : show.order)
@@ -512,15 +512,15 @@ namespace rct3::ui::screens
             page.controls.push_back(std::move(del));
         }
 
-        void mode(InfoPage& page, const save::Ride& ride, bool low_friction, const StringTable& strings, const InfoUnits& units)
+        void mode(InfoPage& page, const save::model::Ride& ride, bool low_friction, const StringTable& strings, const InfoUnits& units)
         {
             const auto m = static_cast<std::size_t>(ride.mode);
-            if (ride.kind != save::RideKind::Tracked)
+            if (ride.kind != save::model::RideKind::Tracked)
             {
                 if (m < kModeNames.size())
                     page.heading = text(strings, kModeNames[m]);
                 // A flat ride is set by how many times round it runs each go; the waits are for trains.
-                if (ride.kind == save::RideKind::Flat)
+                if (ride.kind == save::model::RideKind::Flat)
                 {
                     InfoControl c;
                     c.id = control_id(AttractionControl::Circuits);
@@ -534,7 +534,7 @@ namespace rct3::ui::screens
                 return;
             }
             // Two columns, as the game lays them out: how it runs on the left, when its trains leave on the right.
-            const save::OperatingOptions& o = ride.options;
+            const save::model::OperatingOptions& o = ride.options;
             page.width = kModePageWidth;
             InfoControl list;
             list.id = control_id(AttractionControl::Mode);
@@ -552,7 +552,7 @@ namespace rct3::ui::screens
                 page.controls.push_back(std::move(c));
             };
             left_tick(AttractionControl::BlockSection, "RideOpModeDialog_BlockSection", o.block_sectioned);
-            using enum save::OperatingMode;
+            using enum save::model::OperatingMode;
             const bool launched = ride.mode == PoweredLaunch || ride.mode == ReverseInclinedLaunch || ride.mode == UpwardsLaunch || ride.mode == MultiplePoweredLaunch;
             if (launched || o.lift_speed > 0)
             {
@@ -604,9 +604,9 @@ namespace rct3::ui::screens
             }
         }
 
-        void graphs(InfoPage& page, const save::Ride& ride, std::uint8_t shown, const StringTable& strings, const InfoUnits& units)
+        void graphs(InfoPage& page, const save::model::Ride& ride, std::uint8_t shown, const StringTable& strings, const InfoUnits& units)
         {
-            const save::RideGraphs& g = ride.graphs;
+            const save::model::RideGraphs& g = ride.graphs;
             if (g.speed.empty() && g.altitude.empty() && g.vertical_g.empty() && g.lateral_g.empty())
             {
                 page.note = text(strings, "AttractionResultsDialogLabel_NoTestResults");
@@ -650,14 +650,14 @@ namespace rct3::ui::screens
             // shortcut: a saved graph that kept only the end of a long lap is timed from where it starts; time it
             // from the lap's start once the save's count of the lap's samples is read.
             const std::size_t samples = std::ranges::max({ g.speed.size(), g.altitude.size(), g.vertical_g.size(), g.lateral_g.size() });
-            for (std::size_t at = 0; at < samples; at += save::kGraphSamplesPerSecond)
+            for (std::size_t at = 0; at < samples; at += save::model::kGraphSamplesPerSecond)
             {
-                const std::size_t second = at / save::kGraphSamplesPerSecond;
+                const std::size_t second = at / save::model::kGraphSamplesPerSecond;
                 page.graph_ticks.push_back({ static_cast<float>(samples - 1 - at), second % 5 == 0 ? ascii(std::format("{}:{:02}", second / 60, second % 60)) : std::u16string { } });
             }
         }
 
-        void maintenance(InfoPage& page, const save::Ride& ride, const StringTable& strings)
+        void maintenance(InfoPage& page, const save::model::Ride& ride, const StringTable& strings)
         {
             // Reliability on a green bar, down time on a red one.
             add(page, strings, "RideMaintenanceDialogLabel_Reliability", percent(ride.breakdown.reliability));
@@ -708,7 +708,7 @@ namespace rct3::ui::screens
 
         void items(InfoPage& page, const AttractionFacts& f, const StringTable& strings, const InfoUnits& units)
         {
-            const save::Stall& stall = *f.stall;
+            const save::model::Stall& stall = *f.stall;
             const auto name_of = [&](std::span<const park::CarriedKind> kinds, std::string_view symbol) {
                 const park::CarriedKind* k = carried(kinds, symbol);
                 return k != nullptr && strings.contains(k->name_text) ? text(strings, k->name_text) : symbol_name(symbol);
@@ -733,7 +733,7 @@ namespace rct3::ui::screens
                 m.goods.push_back({ name, icon_of(f.carried, f.offers[i]), filled(text(strings, "StallItemsWindow_DragOn"), u"%ITEM%", name) });
             }
             // Each extra's picture over its ticks says how much of it goes on, as its own page sets.
-            for (const save::StallExtra& e : stall.extras)
+            for (const save::model::StallExtra& e : stall.extras)
             {
                 const std::u16string level = e.level >= 0 && std::cmp_less(e.level, kExtraLevels.size()) ? text(strings, kExtraLevels[static_cast<std::size_t>(e.level)]) : missing();
                 const std::u16string name = name_of(f.carried_extras, e.kind_symbol);
@@ -741,7 +741,7 @@ namespace rct3::ui::screens
             }
             for (std::size_t i = 0; i < stall.items.size() && i < kMostListed; ++i)
             {
-                const save::StallItem& item = stall.items[i];
+                const save::model::StallItem& item = stall.items[i];
                 const park::CarriedKind* k = carried(f.carried, item.kind_symbol);
                 MenuLine l;
                 l.name = item_name(item, stall, strings, f.carried);
@@ -756,9 +756,9 @@ namespace rct3::ui::screens
                     for (std::size_t x = 0; x < k->extras.size(); ++x)
                     {
                         const std::string& extra = k->extras[x];
-                        const auto offered = std::ranges::find_if(stall.extras, [&](const save::StallExtra& e) { return strings::equals_ignoring_case(e.kind_symbol, extra); });
+                        const auto offered = std::ranges::find_if(stall.extras, [&](const save::model::StallExtra& e) { return strings::equals_ignoring_case(e.kind_symbol, extra); });
                         const park::CarriedKind* added = carried(f.carried_extras, extra);
-                        if (offered != stall.extras.end() && added != nullptr && offered->level > save::StallExtra::kNone && std::cmp_less(offered->level, simulation::kTuning.eating.extra_amounts.size()) && (offered->level == save::StallExtra::kGuestChoice || (x < 32 && (item.extras >> x & 1) != 0)))
+                        if (offered != stall.extras.end() && added != nullptr && offered->level > save::model::StallExtra::kNone && std::cmp_less(offered->level, simulation::kTuning.eating.extra_amounts.size()) && (offered->level == save::model::StallExtra::kGuestChoice || (x < 32 && (item.extras >> x & 1) != 0)))
                             *cost += std::llround(static_cast<double>(added->cost) * simulation::kTuning.eating.extra_amounts[static_cast<std::size_t>(offered->level)]);
                         l.extras.push_back(offered == stall.extras.end() ? std::nullopt : std::optional(static_cast<std::size_t>(offered - stall.extras.begin())));
                         l.tick_help.push_back(filled(filled(text(strings, "StallItemLine_Check"), u"%EXTRA%", name_of(f.carried_extras, extra)), u"%ITEM%", l.name));
@@ -778,14 +778,14 @@ namespace rct3::ui::screens
 
     } // namespace
 
-    void add_thoughts(InfoPage& page, std::span<const save::ThoughtEntry> all, const StringTable& strings)
+    void add_thoughts(InfoPage& page, std::span<const save::model::ThoughtEntry> all, const StringTable& strings)
     {
-        std::vector<const save::ThoughtEntry*> latest;
-        for (const save::ThoughtEntry& t : all)
+        std::vector<const save::model::ThoughtEntry*> latest;
+        for (const save::model::ThoughtEntry& t : all)
             if (t.thought > 0)
                 latest.push_back(&t);
-        std::ranges::stable_sort(latest, std::ranges::greater { }, &save::ThoughtEntry::time);
-        for (const save::ThoughtEntry* t : latest)
+        std::ranges::stable_sort(latest, std::ranges::greater { }, &save::model::ThoughtEntry::time);
+        for (const save::model::ThoughtEntry* t : latest)
         {
             if (page.lines.size() == kThoughtLines)
                 break;
@@ -794,7 +794,7 @@ namespace rct3::ui::screens
         }
     }
 
-    std::string_view breakdown_key(save::BreakdownKind kind)
+    std::string_view breakdown_key(save::model::BreakdownKind kind)
     {
         constexpr std::array<std::string_view, 9> kKeys = {
             "RideBreakdownTypeNone", "RideBreakdownTypeEmergencyStop", "RideBreakdownTypeCarRestraintsFailToOpen", "RideBreakdownTypeCarRestraintsFailToClose", "RideBreakdownTypeCarDoorsFailToOpen", "RideBreakdownTypeCarDoorsFailToClose", "RideBreakdownTypeTrainStuckLeavingStation", "RideBreakdownTypeStationBrakesFail", "RideBreakdownTypeControlFailure",
@@ -803,13 +803,13 @@ namespace rct3::ui::screens
         return i < kKeys.size() ? kKeys[i] : std::string_view { };
     }
 
-    std::vector<AttractionTabInfo> attraction_tabs(AttractionKind kind, save::AttractionState state)
+    std::vector<AttractionTabInfo> attraction_tabs(AttractionKind kind, save::model::AttractionState state)
     {
         std::vector<AttractionTabInfo> tabs(kCommonTabs.begin(), kCommonTabs.end());
         for (AttractionTabInfo& t : tabs)
         {
             if (t.tab == AttractionTab::State)
-                t.icon = state == save::AttractionState::Open ? kStateOpenIcon : state == save::AttractionState::Testing ? kStateTestingIcon : kStateClosedIcon;
+                t.icon = state == save::model::AttractionState::Open ? kStateOpenIcon : state == save::model::AttractionState::Testing ? kStateTestingIcon : kStateClosedIcon;
         }
         if (kind == AttractionKind::Tracked || kind == AttractionKind::Flat)
             tabs.insert(tabs.end(), kRideTabs.begin(), kRideTabs.end());
@@ -826,27 +826,27 @@ namespace rct3::ui::screens
         std::vector<StateChoice> out;
         for (const StateChoice& c : kStateChoices)
         {
-            if (c.state != save::AttractionState::Testing || (tested && (kind == AttractionKind::Tracked || kind == AttractionKind::Flat)))
+            if (c.state != save::model::AttractionState::Testing || (tested && (kind == AttractionKind::Tracked || kind == AttractionKind::Flat)))
                 out.push_back(c);
         }
         return out;
     }
 
-    AttractionKind attraction_kind(const save::Ride& ride)
+    AttractionKind attraction_kind(const save::model::Ride& ride)
     {
         switch (ride.kind)
         {
-            case save::RideKind::Tracked:
+            case save::model::RideKind::Tracked:
                 return AttractionKind::Tracked;
-            case save::RideKind::Special:
+            case save::model::RideKind::Special:
                 return AttractionKind::Facility;
-            case save::RideKind::Flat:
+            case save::model::RideKind::Flat:
                 break;
         }
         return AttractionKind::Flat;
     }
 
-    std::u16string attraction_status(const save::AttractionCommon& attraction, const StringTable& strings)
+    std::u16string attraction_status(const save::model::AttractionCommon& attraction, const StringTable& strings)
     {
         return status(attraction, strings);
     }
@@ -861,7 +861,7 @@ namespace rct3::ui::screens
         return units == DistanceUnits::Imperial ? u"mph" : units == DistanceUnits::SI ? u"m/s" : u"km/h";
     }
 
-    std::u16string attraction_name(const save::AttractionCommon& attraction, const StringTable& strings)
+    std::u16string attraction_name(const save::model::AttractionCommon& attraction, const StringTable& strings)
     {
         const std::string_view name = attraction.name;
         if (name.size() > 2 && name.front() == kKeyMark && name.back() == kKeyMark)
@@ -886,7 +886,7 @@ namespace rct3::ui::screens
         return strings::to_utf16(name);
     }
 
-    std::vector<InfoLine> design_lines(const save::DesignSummary& design, const StringTable& strings, const InfoUnits& units)
+    std::vector<InfoLine> design_lines(const save::model::DesignSummary& design, const StringTable& strings, const InfoUnits& units)
     {
         InfoPage page;
         add(page, strings, "AttractionResultsDialogLabel_SpaceRequired", ascii(std::format("{} x {}", design.width, design.length)));
@@ -920,10 +920,10 @@ namespace rct3::ui::screens
         return text(strings, std::format("{}{}", kRatingWord, step - kRatingSteps.begin()));
     }
 
-    GuestsSuited guests_suited(float intensity, std::span<const save::Guest> guests)
+    GuestsSuited guests_suited(float intensity, std::span<const save::model::Guest> guests)
     {
         GuestsSuited s;
-        for (const save::Guest& g : guests)
+        for (const save::model::Guest& g : guests)
         {
             if (!g.in_park)
                 continue;
@@ -933,7 +933,7 @@ namespace rct3::ui::screens
         return s;
     }
 
-    std::vector<std::uint32_t> show_offers(const save::RideShow& show)
+    std::vector<std::uint32_t> show_offers(const save::model::RideShow& show)
     {
         std::vector<std::uint32_t> offers;
         for (std::uint32_t t = 1; t < show.tricks.size(); ++t)
@@ -1006,7 +1006,7 @@ namespace rct3::ui::screens
                 button(AttractionControl::Demolish, "Attraction_General_Delete", "TT_AttractionDialogIconDestroyButton");
                 // shortcut: keeping a design with its scenery, picking a fence and riding along are not built yet, so
                 // their buttons are greyed; enable each as it lands.
-                if (f.ride && f.ride->kind == save::RideKind::Tracked)
+                if (f.ride && f.ride->kind == save::model::RideKind::Tracked)
                 {
                     button(AttractionControl::SceneryPick, "ParkInfoIcon_PlaceOwned", "SavedSelection_Coaster_Button_TT", false);
                     button(AttractionControl::SceneryClear, "SavedSelectionGrabber_ClearIcon", "SavedSelection_Coaster_Clear_TT", false);
@@ -1035,7 +1035,7 @@ namespace rct3::ui::screens
                     button(AttractionControl::RideCam, cars ? "RideCamGUI_Enabled" : "RideCamGUI_Disabled", cars ? "RideCamButton_Enabled" : "RideCamButton_Disabled", cars);
                 }
                 // A ride is painted from its vehicles page, as in the game.
-                if (f.ride == nullptr || f.ride->kind == save::RideKind::Special)
+                if (f.ride == nullptr || f.ride->kind == save::model::RideKind::Special)
                     paints(page, f, strings);
                 break;
             }

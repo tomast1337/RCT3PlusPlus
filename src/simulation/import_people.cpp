@@ -12,13 +12,13 @@ namespace rct3::simulation
 
     namespace
     {
-        AgeGroup age_group(save::PersonType type)
+        AgeGroup age_group(save::model::PersonType type)
         {
             switch (type)
             {
-                case save::PersonType::Child:
+                case save::model::PersonType::Child:
                     return AgeGroup::Child;
-                case save::PersonType::Teen:
+                case save::model::PersonType::Teen:
                     return AgeGroup::Teen;
                 default:
                     return AgeGroup::Adult;
@@ -32,24 +32,24 @@ namespace rct3::simulation
         }
     } // namespace
 
-    std::vector<entt::entity> import_guests(SimWorld& world, const save::PeopleModel& people)
+    std::vector<entt::entity> import_guests(SimWorld& world, const save::model::PeopleModel& people)
     {
         entt::registry& r = world.registry;
         std::vector<entt::entity> out(people.guests.size(), entt::null);
         for (std::size_t i = 0; i < people.guests.size(); ++i)
         {
-            const save::Guest& g = people.guests[i];
+            const save::model::Guest& g = people.guests[i];
             if (!g.in_park)
                 continue;
-            const save::Person& p = g.person;
+            const save::model::Person& p = g.person;
             const entt::entity e = r.create();
             out[i] = e;
-            r.emplace<Visitor>(e, age_group(p.type), p.sub_type == std::to_underlying(save::Sex::Female), p.name, std::uint64_t { 0 }, g.is_avatar);
+            r.emplace<Visitor>(e, age_group(p.type), p.sub_type == std::to_underlying(save::model::Sex::Female), p.name, std::uint64_t { 0 }, g.is_avatar);
             const glm::vec3 at { p.position.x, p.position.y, p.position.z };
             r.emplace<Pose>(e, at, -p.heading, at, -p.heading); // The original turns the other way
             r.emplace<Needs>(e, need(g.needs.food), need(g.needs.drink), std::clamp(g.needs.toilet, 0.0f, 1.0f));
             r.emplace<Mood>(e, g.mood_now.happiness, g.mood_now.energy, g.mood_now.nausea, kTuning.sickness.tolerance_per_saved_level.value * static_cast<float>(std::to_underlying(g.nausea_tolerance) + 1));
-            const save::Cash& c = g.cash;
+            const save::model::Cash& c = g.cash;
             r.emplace<Wallet>(e, Wallet { .cash = { c.current }, .bank = { c.bank }, .withdrawn = { c.withdrawn }, .spent = { c.total_spent }, .spent_entry = { c.spent_park_entry }, .spent_rides = { c.spent_rides }, .spent_food = { c.spent_food }, .spent_drink = { c.spent_drink }, .spent_souvenirs = { c.spent_souvenirs }, .needs_cash = g.needs_cash });
             if (g.ride_preference.max > g.ride_preference.min || g.pool_preference)
             {
@@ -64,18 +64,18 @@ namespace rct3::simulation
         return out;
     }
 
-    std::size_t import_parties(SimWorld& world, const save::PeopleModel& people, std::span<const entt::entity> guests)
+    std::size_t import_parties(SimWorld& world, const save::model::PeopleModel& people, std::span<const entt::entity> guests)
     {
         entt::registry& r = world.registry;
-        std::unordered_map<save::PeopleObjectId, entt::entity> by_id;
+        std::unordered_map<save::model::PeopleObjectId, entt::entity> by_id;
         for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
             if (guests[i] != entt::null)
                 by_id.emplace(people.guests[i].person.id, guests[i]);
         std::size_t made = 0;
-        for (const save::GuestGroup& group : people.groups)
+        for (const save::model::GuestGroup& group : people.groups)
         {
             Party party;
-            for (const save::PeopleRef ref : group.members)
+            for (const save::model::PeopleRef ref : group.members)
             {
                 const auto found = by_id.find(ref.id);
                 if (ref && found != by_id.end() && r.all_of<Errand>(found->second) && !r.all_of<Member>(found->second) && !std::ranges::contains(party.members, found->second))

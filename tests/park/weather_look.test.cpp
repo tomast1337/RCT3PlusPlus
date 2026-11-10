@@ -5,7 +5,7 @@
 
 using namespace rct3;
 using namespace rct3::park;
-using save::WeatherType;
+using save::model::WeatherType;
 
 TEST_CASE("rain and gloom ease in over a few seconds rather than jump")
 {

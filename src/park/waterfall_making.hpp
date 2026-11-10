@@ -38,15 +38,15 @@ namespace rct3::park
     /// The waterfall joining lakes `first` and `second` of `bodies` (in either order), `near` the tile the
     /// player picked the higher one on, with the ground of its spillway as it is; or the text key of why there can
     /// be none. The ground is left as it is: cut_spillway cuts it.
-    [[nodiscard]] std::expected<save::Waterfall, std::string_view> make_waterfall(const save::TerrainGrid& grid, std::span<const save::WaterBody> bodies, std::size_t first, std::size_t second, save::Tile near);
+    [[nodiscard]] std::expected<save::model::Waterfall, std::string_view> make_waterfall(const save::model::TerrainGrid& grid, std::span<const save::model::WaterBody> bodies, std::size_t first, std::size_t second, save::model::Tile near);
 
     /// The ground of `grid` with the spillway of `fall` (as make_waterfall gave it) cut into it.
-    void cut_spillway(save::TerrainGrid& grid, const save::Waterfall& fall);
+    void cut_spillway(save::model::TerrainGrid& grid, const save::model::Waterfall& fall);
 
     /// Puts the ground `fall`'s spillway was cut from back as it was.
-    void restore_spillway(save::TerrainGrid& grid, const save::Waterfall& fall);
+    void restore_spillway(save::model::TerrainGrid& grid, const save::model::Waterfall& fall);
 
     /// Of `falls`, the one whose water passes over the ground at `x`, `z` (world units), seen from above.
-    [[nodiscard]] std::optional<std::size_t> waterfall_at(std::span<const save::Waterfall> falls, float x, float z);
+    [[nodiscard]] std::optional<std::size_t> waterfall_at(std::span<const save::model::Waterfall> falls, float x, float z);
 
 } // namespace rct3::park

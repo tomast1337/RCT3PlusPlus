@@ -29,15 +29,15 @@ namespace
         return sets;
     }
 
-    save::TerrainGrid flat_grid(int size, float level)
+    save::model::TerrainGrid flat_grid(int size, float level)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = size;
         g.height = size;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(static_cast<std::size_t>(size * size));
-        for (save::TerrainCell& c : g.cells)
+        for (save::model::TerrainCell& c : g.cells)
             c.corners = { level, level, level, level };
         return g;
     }
@@ -56,7 +56,7 @@ namespace
     struct Park
     {
         object::ObjectModels models;
-        std::vector<save::PlacedObject> objects;
+        std::vector<save::model::PlacedObject> objects;
 
         Park()
         {
@@ -67,13 +67,13 @@ namespace
             piece("LongBeam", { -1.5f, -0.1f, -0.2f }, { 1.5f, 0.1f, 0.2f });
         }
 
-        save::PlacedObject& add(std::string symbol, SupportFootprint footprint, int col, int row, std::int32_t base, std::int32_t rotation = 0)
+        save::model::PlacedObject& add(std::string symbol, SupportFootprint footprint, int col, int row, std::int32_t base, std::int32_t rotation = 0)
         {
             object::ObjectModel m;
             m.support_group = std::string(kGroup);
             m.supports = std::move(footprint);
             models.emplace(std::format("Track|{}", symbol), std::move(m));
-            save::PlacedObject& o = objects.emplace_back();
+            save::model::PlacedObject& o = objects.emplace_back();
             o.id = objects.size();
             o.symbol = std::move(symbol);
             o.overlay = "Track";
@@ -97,10 +97,10 @@ namespace
         return f;
     }
 
-    std::vector<std::pair<std::string, std::int32_t>> stack(const std::vector<save::PlacedObject>& pieces, int col, int row)
+    std::vector<std::pair<std::string, std::int32_t>> stack(const std::vector<save::model::PlacedObject>& pieces, int col, int row)
     {
         std::vector<std::pair<std::string, std::int32_t>> out;
-        for (const save::PlacedObject& o : pieces)
+        for (const save::model::PlacedObject& o : pieces)
         {
             if (o.col == col && o.row == row)
                 out.emplace_back(o.symbol, *o.base_height);
@@ -109,9 +109,9 @@ namespace
         return out;
     }
 
-    const save::PlacedObject* find(const BuiltSupports& built, std::string_view symbol)
+    const save::model::PlacedObject* find(const BuiltSupports& built, std::string_view symbol)
     {
-        const auto found = std::ranges::find(built.pieces, symbol, &save::PlacedObject::symbol);
+        const auto found = std::ranges::find(built.pieces, symbol, &save::model::PlacedObject::symbol);
         return found != built.pieces.end() ? &*found : nullptr;
     }
 
@@ -122,7 +122,7 @@ TEST_CASE("a footprint's squares start at the object's tile and turn with it")
     SupportFootprint f = track_square();
     f.x_squares = 3;
     f.squares.resize(3);
-    save::PlacedObject o;
+    save::model::PlacedObject o;
     o.col = 5;
     o.row = 5;
     CHECK(footprint_tiles(o, f) == std::vector<std::pair<int, int>> { { 5, 5 }, { 6, 5 }, { 7, 5 } });
@@ -151,10 +151,10 @@ TEST_CASE("a column needs room above the ground and no ground path under it")
     Park park;
     park.add("Low", track_square(), 1, 1, 2);
     park.add("OverPath", track_square(), 2, 2, 10);
-    save::PathTile path;
+    save::model::PathTile path;
     path.col = 2;
     path.row = 2;
-    const std::vector<save::PathTile> paths { path };
+    const std::vector<save::model::PathTile> paths { path };
     CHECK(support_columns(park.objects, park.models, paths, flat_grid(4, 2), girders(), 0).pieces.empty());
 }
 
@@ -162,14 +162,14 @@ TEST_CASE("a raised path or queue piece reaching the ground keeps the column off
 {
     Park park;
     park.add("OverPath", track_square(), 2, 2, 10);
-    save::PathTile low;
-    low.kind = save::PathKind::Queue;
+    save::model::PathTile low;
+    low.kind = save::model::PathKind::Queue;
     low.col = 2;
     low.row = 2;
-    low.elevation = save::PathElevation { .slope = 1, .quantised_height = 0 };
+    low.elevation = save::model::PathElevation { .slope = 1, .quantised_height = 0 };
     CHECK(support_columns(park.objects, park.models, std::vector { low }, flat_grid(4, 2), girders(), 0).pieces.empty());
-    save::PathTile high = low;
-    high.elevation = save::PathElevation { .slope = 0, .quantised_height = 5 };
+    save::model::PathTile high = low;
+    high.elevation = save::model::PathElevation { .slope = 0, .quantised_height = 5 };
     CHECK_FALSE(support_columns(park.objects, park.models, std::vector { high }, flat_grid(4, 2), girders(), 0).pieces.empty());
 }
 
@@ -180,7 +180,7 @@ TEST_CASE("a column stands on track below only when that track or the set allows
     park.add("Lower", track_square(), 3, 3, 10);
     const auto upper_foot = [&](const SupportSets& sets) {
         std::vector<std::int32_t> feet;
-        for (const save::PlacedObject& o : support_columns(park.objects, park.models, { }, flat_grid(8, 0), sets, 0).pieces)
+        for (const save::model::PlacedObject& o : support_columns(park.objects, park.models, { }, flat_grid(8, 0), sets, 0).pieces)
         {
             if (o.symbol == "Foot")
                 feet.push_back(*o.base_height);
@@ -223,7 +223,7 @@ TEST_CASE("a point near the middle of its third gets a column right under it, ca
     park.add("Dip", f, 5, 5, 10);
     const BuiltSupports built = support_columns(park.objects, park.models, { }, flat_grid(8, 0), girders(), 0);
 
-    const save::PlacedObject* lid = find(built, "Lid");
+    const save::model::PlacedObject* lid = find(built, "Lid");
     REQUIRE(lid != nullptr);
     // Thirds run along the model's -X, which unturned is the park's +x: the column stands a third of a tile
     // past the tile's middle.
@@ -231,11 +231,11 @@ TEST_CASE("a point near the middle of its third gets a column right under it, ca
     CHECK(at.x == doctest::Approx(5 * 4 + 2 + 4.0f / 3));
     CHECK(at.z == doctest::Approx(22));
     CHECK(at.y == doctest::Approx(15.5f));
-    const save::PlacedObject* head = find(built, "Head");
+    const save::model::PlacedObject* head = find(built, "Head");
     REQUIRE(head != nullptr);
     CHECK(built.fitted.at(head->id)[1].y == doctest::Approx(0.5f)); // From 15 to 15.5
     CHECK(built.fitted.size() == built.pieces.size());
-    CHECK(std::ranges::count(built.pieces, std::string("DeepFoot"), &save::PlacedObject::symbol) == 1);
+    CHECK(std::ranges::count(built.pieces, std::string("DeepFoot"), &save::model::PlacedObject::symbol) == 1);
     CHECK(find(built, "ShortBeam") == nullptr);
 }
 
@@ -253,7 +253,7 @@ TEST_CASE("a point away from its column is joined to it by the shortest beam tha
     park.add("Swerve", f, 5, 5, 10);
     const BuiltSupports built = support_columns(park.objects, park.models, { }, flat_grid(8, 0), girders(), 0);
 
-    const save::PlacedObject* beam = find(built, "LongBeam");
+    const save::model::PlacedObject* beam = find(built, "LongBeam");
     REQUIRE(beam != nullptr);
     CHECK(find(built, "ShortBeam") == nullptr); // 1 long, short of the third of a tile between the two
     const glm::mat4& m = built.fitted.at(beam->id);
@@ -299,7 +299,7 @@ TEST_CASE("a column passes by items it is told to, and stands on the ground over
     park.add("Platform", platform, 3, 3, 10);
     park.add("High", track_square(), 5, 5, 20);
     park.add("Tunnel", track_square(), 5, 5, -6);
-    const save::TerrainGrid grid = flat_grid(8, 0);
+    const save::model::TerrainGrid grid = flat_grid(8, 0);
     CHECK(stack(support_columns(park.objects, park.models, { }, grid, girders(), 0).pieces, 3, 3).empty());
     const BuiltSupports passed = support_columns(park.objects, park.models, { }, grid, girders(), 0, { 2 });
     REQUIRE_FALSE(stack(passed.pieces, 3, 3).empty());
@@ -335,7 +335,7 @@ TEST_CASE("an item's support tiles are under its footprint and where its points'
     SupportPoint p;
     p.column = { { 1, 0 }, { 1, 1 } }; // Beside it
     f.points = { p };
-    const save::PlacedObject& o = park.add("Beside", f, 5, 5, 10);
+    const save::model::PlacedObject& o = park.add("Beside", f, 5, 5, 10);
     CHECK(support_tiles(o, park.models) == std::vector<SupportTile> { { 5, 5 }, { 6, 5 } });
 }
 

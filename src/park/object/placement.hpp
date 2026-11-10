@@ -86,26 +86,26 @@ namespace rct3::park::object
     /// `squares` tiles along its own X and Z. The object names the footprint's tile of lowest column and row
     /// whichever way it turns, and its model is built round the footprint's middle: the middle of a tile
     /// when both sides are odd, a tile's corner when both are even.
-    [[nodiscard]] glm::vec2 footprint_middle(const save::PlacedObject& object, std::array<std::int32_t, 2> squares);
+    [[nodiscard]] glm::vec2 footprint_middle(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares);
 
     /// `object`, covering `squares`, moved and turned with a layout it was saved in, so that the layout's object
     /// `from`, covering `from_squares`, stands as `to`: round the middle of `from`'s footprint, its height kept
     /// as far above `from`'s.
-    [[nodiscard]] save::PlacedObject moved_with(save::PlacedObject object, std::array<std::int32_t, 2> squares, const save::PlacedObject& from, std::array<std::int32_t, 2> from_squares, const save::PlacedObject& to);
+    [[nodiscard]] save::model::PlacedObject moved_with(save::model::PlacedObject object, std::array<std::int32_t, 2> squares, const save::model::PlacedObject& from, std::array<std::int32_t, 2> from_squares, const save::model::PlacedObject& to);
 
     /// The tile under square (x, z) of a footprint of `squares`, counted along the object's own X and Z.
-    [[nodiscard]] save::Tile square_tile(const save::PlacedObject& object, std::array<std::int32_t, 2> squares, int x, int z);
+    [[nodiscard]] save::model::Tile square_tile(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares, int x, int z);
 
     /// Whether `object` stands on the ground rather than at a height of its own.
-    [[nodiscard]] bool on_ground(const save::PlacedObject& object);
+    [[nodiscard]] bool on_ground(const save::model::PlacedObject& object);
 
     /// The model-to-park transform of `object`, whose item positions itself as `positioning` and covers
     /// `squares` tiles along its own X and Z. On the ground it stands at the ground's height under its
     /// anchor when `ground_height`, otherwise at its stored height.
-    [[nodiscard]] glm::mat4 object_transform(const save::PlacedObject& object, Positioning positioning, const save::TerrainGrid& grid, std::array<std::int32_t, 2> squares = { 1, 1 }, bool ground_height = true);
+    [[nodiscard]] glm::mat4 object_transform(const save::model::PlacedObject& object, Positioning positioning, const save::model::TerrainGrid& grid, std::array<std::int32_t, 2> squares = { 1, 1 }, bool ground_height = true);
 
     /// Whether the park owns every tile `object` covers, for an item covering `squares` tiles along its own X
     /// and Z. Land bought only to build over counts for things raised off the ground, not for those on it.
-    [[nodiscard]] bool on_owned_land(const save::PlacedObject& object, std::array<std::int32_t, 2> squares, const save::TerrainGrid& grid);
+    [[nodiscard]] bool on_owned_land(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares, const save::model::TerrainGrid& grid);
 
 } // namespace rct3::park::object

@@ -440,11 +440,11 @@ TEST_CASE("guests a park saved swimming go on swimming in their pool for the tim
     const entt::entity room = room_of(r);
     const glm::vec3 water = r.get<SwimPool>(r.get<PoolDoor>(room).pool).water.front();
     const std::array guests { park.guest({ 0, 0 }, { }), park.guest({ 0, 0 }, { }) };
-    save::PeopleModel people;
+    save::model::PeopleModel people;
     people.guests.resize(2);
-    people.guests[0].person = { .position = { water.x, water.y, water.z }, .state = save::PersonState::Swimming };
+    people.guests[0].person = { .position = { water.x, water.y, water.z }, .state = save::model::PersonState::Swimming };
     people.guests[0].time_in_pool = 30;
-    people.guests[1].person = { .position = { water.x, water.y, water.z }, .state = save::PersonState::Wandering };
+    people.guests[1].person = { .position = { water.x, water.y, water.z }, .state = save::model::PersonState::Wandering };
     CHECK(resume_saved_swimmers(park.world(), people, guests) == 1);
     CHECK_FALSE(r.all_of<Swimmer>(guests[1]));
     REQUIRE(r.all_of<Swimmer>(guests[0]));

@@ -116,7 +116,7 @@ namespace rct3::scene::park
             open_structure_files(park, front, *mode);
         const ParkGame structures { .folder = config::UserFolder::Structures };
         if (const auto picked = update_save_browser(device, park.structures.browser, structure_dialog(park), park.structures.windows_opened, structures, [&park](const std::filesystem::path& path) {
-                save::Structure s = park.structures.structure.value_or(save::Structure { });
+                save::model::Structure s = park.structures.structure.value_or(save::model::Structure { });
                 s.name = path.stem().string();
                 return parkfile::write_structure_file(s);
             }))

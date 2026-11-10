@@ -115,7 +115,7 @@ namespace rct3::park
     };
 
     /// The ground of the tiles of `area`, or of all of them, with the walls on their right and far edges.
-    [[nodiscard]] TerrainMesh terrain_mesh(const save::TerrainGrid& grid, const save::WaterLayer& water, std::span<const GroundOpening> openings = { }, std::optional<TileRect> area = std::nullopt);
+    [[nodiscard]] TerrainMesh terrain_mesh(const save::model::TerrainGrid& grid, const save::model::WaterLayer& water, std::span<const GroundOpening> openings = { }, std::optional<TileRect> area = std::nullopt);
 
     /// How far above the pool's surface height its water stands: just under the top of the rim piece there,
     /// which rises a fifth of a unit.
@@ -129,26 +129,26 @@ namespace rct3::park
     /// lakes', deep down to the pool's floor. Squares off the grid are left out.
     /// shortcut: every square is whole, so water shows past the rim of rounded corner pieces; upgrade by
     /// cutting it to the piece's shape when that shows.
-    [[nodiscard]] std::vector<WaterVertex> pool_water(const save::TerrainGrid& grid, std::span<const save::PoolWater> pools);
+    [[nodiscard]] std::vector<WaterVertex> pool_water(const save::model::TerrainGrid& grid, std::span<const save::model::PoolWater> pools);
 
     /// World units from `within` (from a pool water square's least corner, in world units) to the nearest square
     /// round it that `water` (by column and row step to it) says holds no water, at most a square across.
-    [[nodiscard]] float pool_wall_room(const save::TerrainGrid& grid, glm::vec2 within, std::function_ref<bool(int dc, int dr)> water);
+    [[nodiscard]] float pool_wall_room(const save::model::TerrainGrid& grid, glm::vec2 within, std::function_ref<bool(int dc, int dr)> water);
 
     /// How much of the ground round grid point (x, z) has `surface`: the share of the tiles touching it,
     /// which is how much of that surface shows there.
-    [[nodiscard]] float surface_share(const save::TerrainGrid& grid, int x, int z, std::uint8_t surface);
+    [[nodiscard]] float surface_share(const save::model::TerrainGrid& grid, int x, int z, std::uint8_t surface);
 
     /// The normal (any length, pointing up) a tile's ground is lit by at its corner `corner`: the area-weighted sum of the
     /// faces of every tile meeting at that grid point at the same height, so the ground shades smoothly
     /// across tiles and stays sharp where a cliff splits it.
-    [[nodiscard]] glm::vec3 ground_normal(const save::TerrainGrid& grid, save::Tile tile, int corner);
+    [[nodiscard]] glm::vec3 ground_normal(const save::model::TerrainGrid& grid, save::model::Tile tile, int corner);
 
     /// Adds `more`'s ground (not its water) after `mesh`'s, its batches after `mesh`'s, and grows the box.
     void add_ground(TerrainMesh& mesh, const TerrainMesh& more);
 
     /// The triangles of `mesh` whose middle lies over a tile of `grid` set in `keep` (row by row), in the same
     /// batches.
-    [[nodiscard]] TerrainMesh only_tiles(const TerrainMesh& mesh, const save::TerrainGrid& grid, const std::vector<bool>& keep);
+    [[nodiscard]] TerrainMesh only_tiles(const TerrainMesh& mesh, const save::model::TerrainGrid& grid, const std::vector<bool>& keep);
 
 } // namespace rct3::park

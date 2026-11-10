@@ -53,14 +53,14 @@ TEST_CASE("a car moved along a course keeps its place off the track and turns wi
 TEST_CASE("a train stands nose to tail back from its front, its wheels on the track")
 {
     const park::track::TrackCourse c = corner();
-    save::Train train;
+    save::model::Train train;
     train.cars.resize(3);
     // A car 2 long, its wheels 0.5 and 1.5 behind its front and 1 below its middle; the last fits as the second.
     const std::array fits { park::object::CarFit { .length = 2, .front_wheels = 0.5f, .rear_wheels = 1.5f, .on_track = { 0, -1, 0 } }, park::object::CarFit { .length = 3, .front_wheels = 1, .rear_wheels = 2, .on_track = { 0, 0, -0.5f } } };
     park::track::stand_train(c, train, fits, 8);
     CHECK(train.distance == 8);
     CHECK(train.length == 8);
-    const save::Car& first = train.cars[0];
+    const save::model::Car& first = train.cars[0];
     CHECK(first.distance == 8);
     CHECK(first.length == 2);
     CHECK(first.front_wheel_distance == doctest::Approx(7.5f));
@@ -80,7 +80,7 @@ TEST_CASE("a train stands nose to tail back from its front, its wheels on the tr
 TEST_CASE("a link couples a train's cars, reaching along the track from where one couples on to where the next does")
 {
     const park::track::TrackCourse c = corner();
-    save::Train train;
+    save::model::Train train;
     train.cars.resize(3);
     // Cars 2 long, coupling on 0.25 behind their front and 0.25 ahead of their rear, 0.5 over their wheels; a link
     // reaching 1 between them.
@@ -221,7 +221,7 @@ TEST_CASE("a train has as many cars as fit along its shortest station, within wh
 
 TEST_CASE("a track in several stretches runs along the first one with a station")
 {
-    save::TerrainGrid grid;
+    save::model::TerrainGrid grid;
     grid.width = 8;
     grid.height = 8;
     grid.tile_size_x = 4;
@@ -231,22 +231,22 @@ TEST_CASE("a track in several stretches runs along the first one with a station"
     plain.line.path = { { 2, 0, 0 }, { -2, 0, 0 } };
     park::track::PieceShape station = plain;
     station.use = park::track::PieceUse::Station;
-    save::Ride ride;
+    save::model::Ride ride;
     auto& track = ride.track.emplace();
-    std::vector<save::PlacedObject> objects;
+    std::vector<save::model::PlacedObject> objects;
     // Two plain pieces, then a stretch of a station and a plain piece that closes on itself.
     for (std::uint64_t i = 0; i < 4; ++i)
     {
-        save::PlacedObject& o = objects.emplace_back();
+        save::model::PlacedObject& o = objects.emplace_back();
         o.id = 100 + i;
         o.col = static_cast<int>(i);
         o.force_absolute_height = true;
-        save::TrackPiece& piece = track.pieces.emplace_back();
+        save::model::TrackPiece& piece = track.pieces.emplace_back();
         piece.symbol = i == 2 ? "Station" : "Plain";
         piece.scenery = o.id;
     }
     track.segments = { { .first_piece = 0, .piece_count = 2 }, { .first_piece = 2, .piece_count = 2, .closed = true } };
-    const auto shape_of = [&](const save::TrackPiece& p, const save::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return p.symbol == "Station" ? station : plain; };
+    const auto shape_of = [&](const save::model::TrackPiece& p, const save::model::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return p.symbol == "Station" ? station : plain; };
     const auto course = park::track::track_course(ride, objects, { }, grid, { }, shape_of);
     REQUIRE(course);
     CHECK(course->first_piece == 2);
@@ -263,7 +263,7 @@ TEST_CASE("a track in several stretches runs along the first one with a station"
 
 TEST_CASE("holding pieces and lift tops end blocks, and a tower's chain-marked pieces are no lift")
 {
-    save::TerrainGrid grid;
+    save::model::TerrainGrid grid;
     grid.width = 8;
     grid.height = 8;
     grid.tile_size_x = 4;
@@ -278,22 +278,22 @@ TEST_CASE("holding pieces and lift tops end blocks, and a tower's chain-marked p
     park::track::PieceShape tower = plain;
     tower.toggles = park::track::toggle_bit(park::track::PieceToggle::Chain);
     tower.record.role = park::track::kRoleTowerFirst;
-    save::Ride ride;
+    save::model::Ride ride;
     auto& track = ride.track.emplace();
-    std::vector<save::PlacedObject> objects;
+    std::vector<save::model::PlacedObject> objects;
     const std::array<std::string, 4> symbols { "Holds", "Top", "Tower", "Plain" };
     for (std::uint64_t i = 0; i < symbols.size(); ++i)
     {
-        save::PlacedObject& o = objects.emplace_back();
+        save::model::PlacedObject& o = objects.emplace_back();
         o.id = 100 + i;
         o.col = static_cast<int>(i);
         o.force_absolute_height = true;
-        save::TrackPiece& piece = track.pieces.emplace_back();
+        save::model::TrackPiece& piece = track.pieces.emplace_back();
         piece.symbol = symbols[i];
         piece.scenery = o.id;
     }
     track.segments = { { .first_piece = 0, .piece_count = 4 } };
-    const auto shape_of = [&](const save::TrackPiece& p, const save::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return p.symbol == "Holds" ? holds : p.symbol == "Top" ? top : p.symbol == "Tower" ? tower : plain; };
+    const auto shape_of = [&](const save::model::TrackPiece& p, const save::model::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return p.symbol == "Holds" ? holds : p.symbol == "Top" ? top : p.symbol == "Tower" ? tower : plain; };
     const auto course = park::track::track_course(ride, objects, { }, grid, { }, shape_of);
     REQUIRE(course);
     REQUIRE(course->piece_starts.size() == 4);
@@ -308,7 +308,7 @@ TEST_CASE("holding pieces and lift tops end blocks, and a tower's chain-marked p
 
 TEST_CASE("brakes and block brakes keep their own speed, 0 when they have none, and other pieces none at all")
 {
-    save::TerrainGrid grid;
+    save::model::TerrainGrid grid;
     grid.width = 8;
     grid.height = 8;
     grid.tile_size_x = 4;
@@ -322,24 +322,24 @@ TEST_CASE("brakes and block brakes keep their own speed, 0 when they have none, 
     block.record.role = park::track::kRoleBlockBrake;
     park::track::PieceShape holds = plain;
     holds.record.flags = park::track::kPieceHolds;
-    save::Ride ride;
+    save::model::Ride ride;
     auto& track = ride.track.emplace();
-    std::vector<save::PlacedObject> objects;
+    std::vector<save::model::PlacedObject> objects;
     const std::array<std::string, 4> symbols { "Brakes", "Block", "Holds", "Plain" };
     const std::array<std::int32_t, 4> speeds { 6, -1, -1, 9 };
     for (std::uint64_t i = 0; i < symbols.size(); ++i)
     {
-        save::PlacedObject& o = objects.emplace_back();
+        save::model::PlacedObject& o = objects.emplace_back();
         o.id = 100 + i;
         o.col = static_cast<int>(i);
         o.force_absolute_height = true;
-        save::TrackPiece& piece = track.pieces.emplace_back();
+        save::model::TrackPiece& piece = track.pieces.emplace_back();
         piece.symbol = symbols[i];
         piece.scenery = o.id;
         piece.brake_speed = speeds[i];
     }
     track.segments = { { .first_piece = 0, .piece_count = 4 } };
-    const auto shape_of = [&](const save::TrackPiece& p, const save::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return p.symbol == "Brakes" ? brakes : p.symbol == "Block" ? block : p.symbol == "Holds" ? holds : plain; };
+    const auto shape_of = [&](const save::model::TrackPiece& p, const save::model::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return p.symbol == "Brakes" ? brakes : p.symbol == "Block" ? block : p.symbol == "Holds" ? holds : plain; };
     const auto course = park::track::track_course(ride, objects, { }, grid, { }, shape_of);
     REQUIRE(course);
     REQUIRE(course->piece_starts.size() == 4);
@@ -355,7 +355,7 @@ TEST_CASE("brakes and block brakes keep their own speed, 0 when they have none, 
 
 TEST_CASE("a pool slide's track ends open at a bowl, a funnel or an end piece, and any other last piece is no slide end")
 {
-    save::TerrainGrid grid;
+    save::model::TerrainGrid grid;
     grid.width = 8;
     grid.height = 8;
     grid.tile_size_x = 4;
@@ -366,21 +366,21 @@ TEST_CASE("a pool slide's track ends open at a bowl, a funnel or an end piece, a
     const auto ends_open = [&](std::uint32_t role) {
         park::track::PieceShape last = plain;
         last.record.role = role;
-        save::Ride ride;
+        save::model::Ride ride;
         auto& track = ride.track.emplace();
-        std::vector<save::PlacedObject> objects;
+        std::vector<save::model::PlacedObject> objects;
         for (std::uint64_t i = 0; i < 2; ++i)
         {
-            save::PlacedObject& o = objects.emplace_back();
+            save::model::PlacedObject& o = objects.emplace_back();
             o.id = 100 + i;
             o.col = static_cast<int>(i);
             o.force_absolute_height = true;
-            save::TrackPiece& piece = track.pieces.emplace_back();
+            save::model::TrackPiece& piece = track.pieces.emplace_back();
             piece.symbol = i == 0 ? "Plain" : "Last";
             piece.scenery = o.id;
         }
         track.segments = { { .first_piece = 0, .piece_count = 2 } };
-        const auto shape_of = [&](const save::TrackPiece& p, const save::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return p.symbol == "Last" ? last : plain; };
+        const auto shape_of = [&](const save::model::TrackPiece& p, const save::model::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return p.symbol == "Last" ? last : plain; };
         const auto course = park::track::track_course(ride, objects, { }, grid, { }, shape_of);
         REQUIRE(course);
         return course->splash_end;

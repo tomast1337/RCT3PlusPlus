@@ -71,10 +71,10 @@ TEST_CASE("rows are the items of one list the park offers, in name order, sets u
     items[4].group_text = items[5].group_text = "SetName";
     items[0].addon = 2;
 
-    rct3::save::RequiredContent content;
+    rct3::save::model::RequiredContent content;
     for (const char* symbol : { "Zed", "Apple", "Tree", "Wall1", "Wall2", "Peach" })
     {
-        rct3::save::AssetRequirement r;
+        rct3::save::model::AssetRequirement r;
         r.overlay_stem = "Style/Made/style";
         r.symbol = symbol;
         r.available = r.invented = std::string_view(symbol) != "Peach";

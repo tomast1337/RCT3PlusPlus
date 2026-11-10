@@ -39,7 +39,7 @@ namespace rct3::scene
     void load_zoo_animals(park::ParkScene& scene, const config::GameInstall& install);
 
     /// The crate animals come in, as an object to load the model of.
-    [[nodiscard]] save::PlacedObject animal_crate();
+    [[nodiscard]] save::model::PlacedObject animal_crate();
 
     /// Reads the models of animals that came since and uploads their pictures, and the crate's; the crate's
     /// model must be loaded.

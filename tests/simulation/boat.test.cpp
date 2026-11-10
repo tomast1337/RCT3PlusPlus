@@ -26,8 +26,8 @@ namespace
 
 TEST_CASE("only tiles wholly under water float a boat")
 {
-    save::TerrainGrid grid { .width = 3, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
-    const save::WaterBody body { .level = 5, .tris = { { 0, 0, 0, 0b111 }, { 0, 0, 1, 0b111 }, { 1, 0, 0, 0b111 }, { 1, 0, 1, 0b011 } } };
+    save::model::TerrainGrid grid { .width = 3, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
+    const save::model::WaterBody body { .level = 5, .tris = { { 0, 0, 0, 0b111 }, { 0, 0, 1, 0b111 }, { 1, 0, 0, 0b111 }, { 1, 0, 1, 0b011 } } };
     const auto water = simulation::water_tiles(grid, std::span { &body, 1 });
     CHECK(water.at(0, 0) == 5.0f);
     CHECK_FALSE(water.at(1, 0)); // One corner out of the water
@@ -36,8 +36,8 @@ TEST_CASE("only tiles wholly under water float a boat")
 
 TEST_CASE("a rock in the water or a low bridge over it closes its tile to boats, a high one or a fence does not")
 {
-    save::TerrainGrid grid { .width = 5, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
-    save::WaterBody body { .level = 5 };
+    save::model::TerrainGrid grid { .width = 5, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
+    save::model::WaterBody body { .level = 5 };
     for (std::uint8_t col = 0; col < 5; ++col)
         body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
     park::path::SolidTiles solids;
@@ -55,12 +55,12 @@ TEST_CASE("a rock in the water or a low bridge over it closes its tile to boats,
 
 TEST_CASE("a path bridge low over the water closes its tiles to boats, a high one leaves them open")
 {
-    save::TerrainGrid grid { .width = 3, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
+    save::model::TerrainGrid grid { .width = 3, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
     grid.cells.resize(3);
-    save::WaterBody body { .level = 2 };
+    save::model::WaterBody body { .level = 2 };
     for (std::uint8_t col = 0; col < 3; ++col)
         body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
-    const auto bridge = [](std::uint8_t col, std::int32_t height) { return save::PathTile { .kind = save::PathKind::Flying, .col = col, .row = 0, .elevation = save::PathElevation { .quantised_height = height } }; };
+    const auto bridge = [](std::uint8_t col, std::int32_t height) { return save::model::PathTile { .kind = save::model::PathKind::Flying, .col = col, .row = 0, .elevation = save::model::PathElevation { .quantised_height = height } }; };
     const std::array paths { bridge(0, 2), bridge(1, 6) };
     park::path::SolidTiles solids;
     park::path::add_path_decks(solids, paths, grid);
@@ -255,12 +255,12 @@ TEST_CASE("a boat ride given boats again has them all back at its dock, as many 
     simulation::SimWorld world;
     auto& r = world.registry;
     const entt::entity ride = r.create();
-    save::RideModel rides;
-    rides.rides.push_back({ .mode = save::OperatingMode::Boat, .trains = { save::Train { }, save::Train { } } });
+    save::model::RideModel rides;
+    rides.rides.push_back({ .mode = save::model::OperatingMode::Boat, .trains = { save::model::Train { }, save::model::Train { } } });
     // A dock of one 4 m station piece on the second tile of a lake three tiles long.
     const park::track::TrackCourse course { .points = { { 4, 5, 2 }, { 8, 5, 2 } }, .distance = { 0, 4 }, .kinds = { park::track::CourseKind::Station, park::track::CourseKind::Station } };
-    const save::TerrainGrid grid { .width = 3, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
-    save::WaterBody body { .level = 5 };
+    const save::model::TerrainGrid grid { .width = 3, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
+    save::model::WaterBody body { .level = 5 };
     for (std::uint8_t col = 0; col < 2; ++col)
         body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
     const std::optional<park::track::TrackCourse> courses[] { course };

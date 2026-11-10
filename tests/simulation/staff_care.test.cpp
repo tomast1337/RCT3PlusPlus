@@ -51,7 +51,7 @@ TEST_CASE("each job has its own monthly wage at each level; inspectors and lifeg
     CHECK(wage_at(StaffRole::Keeper, 1) < wage_at(StaffRole::Guard, 1));
     CHECK(wage_at(StaffRole::Inspector, 2) == 0);
     CHECK(wage_at(StaffRole::Other, 2) == 0);
-    CHECK(staff_role(rct3::save::StaffKind::LifeGuard) == StaffRole::Other);
+    CHECK(staff_role(rct3::save::model::StaffKind::LifeGuard) == StaffRole::Other);
     // Training leaves the wage alone.
     Staff s { .role = StaffRole::Mechanic, .training = 0 };
     set_wage_level(s, 1);
@@ -197,11 +197,11 @@ TEST_CASE("a park inspector keeps their mood, thinks nothing of it and never qui
 TEST_CASE("staff take up the work their save counts")
 {
     Staff handyman;
-    take_saved_work(handyman, { .work = rct3::save::HandymanWork { .bins_emptied = 4, .paths_swept = 6 } });
+    take_saved_work(handyman, { .work = rct3::save::model::HandymanWork { .bins_emptied = 4, .paths_swept = 6 } });
     CHECK(handyman.swept == 6);
     CHECK(handyman.emptied == 4);
     Staff mechanic;
-    take_saved_work(mechanic, { .work = rct3::save::MechanicWork { .objects_fixed = 2, .objects_inspected = 1 } });
+    take_saved_work(mechanic, { .work = rct3::save::model::MechanicWork { .objects_fixed = 2, .objects_inspected = 1 } });
     CHECK(mechanic.fixed == 2);
     CHECK(mechanic.inspected == 1);
 }

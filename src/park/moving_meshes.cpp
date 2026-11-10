@@ -14,13 +14,13 @@
 namespace rct3::park
 {
 
-    MovingMeshes moving_meshes(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid)
+    MovingMeshes moving_meshes(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid)
     {
         // Each object alone at the origin, and the joints of those on arms after them.
         std::vector<object::ObjectMesh> alone;
         std::vector<object::ObjectMesh> joints;
         alone.reserve(objects.size());
-        for (const save::PlacedObject& o : objects)
+        for (const save::model::PlacedObject& o : objects)
         {
             const auto model = models.find(object::model_ref(o));
             if (model == models.end() || model->second.arm_joints.empty())
@@ -55,7 +55,7 @@ namespace rct3::park
         return moves;
     }
 
-    std::pair<MovingMeshes, std::vector<std::int32_t>> boned_meshes(const save::PlacedObject& object, const object::ObjectModel& model, const save::TerrainGrid& grid)
+    std::pair<MovingMeshes, std::vector<std::int32_t>> boned_meshes(const save::model::PlacedObject& object, const object::ObjectModel& model, const save::model::TerrainGrid& grid)
     {
         std::vector<object::ObjectMesh> alone;
         std::vector<VertexSkin> skins;

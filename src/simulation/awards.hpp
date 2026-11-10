@@ -69,17 +69,17 @@ namespace rct3::simulation
     /// Of the park's rides and stalls, how many carry each theme: those with enough scenery of the theme round
     /// them, their own theme counting for some. `catalogue` tells each overlay's theme and each item's size. By
     /// theme name, as AwardFigures::themed.
-    [[nodiscard]] std::map<std::string, std::int32_t, std::less<>> themed_attractions(const save::RideModel& rides, std::span<const save::PlacedObject> objects, std::span<const park::BuildItem> catalogue);
+    [[nodiscard]] std::map<std::string, std::int32_t, std::less<>> themed_attractions(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const park::BuildItem> catalogue);
 
     /// The saved ids of the rides and stalls whose scenery round them carries a theme other than their own (or
     /// any, for one of none), counted as themed_attractions counts it.
-    [[nodiscard]] std::vector<std::uint64_t> off_theme_attractions(const save::RideModel& rides, std::span<const save::PlacedObject> objects, std::span<const park::BuildItem> catalogue);
+    [[nodiscard]] std::vector<std::uint64_t> off_theme_attractions(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const park::BuildItem> catalogue);
 
     /// Whether the park earns award `kind` this month. `dice` draws the luck some awards leave to chance.
     [[nodiscard]] bool award_earned(std::int32_t kind, const AwardFigures& figures, std::uint32_t lately, random::RandomState& dice);
 
     /// Starts a new month of awards: those the park earns join this month's, which shifts the oldest of the last
     /// six out. Returns the awards given, in order of kind; the caller pays them and tells the player.
-    std::vector<std::int32_t> award_month(save::Awards& awards, const AwardFigures& figures, random::RandomState& dice);
+    std::vector<std::int32_t> award_month(save::model::Awards& awards, const AwardFigures& figures, random::RandomState& dice);
 
 } // namespace rct3::simulation

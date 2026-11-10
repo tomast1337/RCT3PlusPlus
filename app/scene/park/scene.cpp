@@ -159,7 +159,7 @@ namespace rct3::scene::park
             std::u16string names;
             for (const rct3::park::AttractionRef ref : refs)
             {
-                const save::AttractionCommon& a = ref.kind == rct3::park::AttractionRef::Kind::Stall ? scene.rides.stalls.at(ref.index).base : scene.rides.rides.at(ref.index).base;
+                const save::model::AttractionCommon& a = ref.kind == rct3::park::AttractionRef::Kind::Stall ? scene.rides.stalls.at(ref.index).base : scene.rides.rides.at(ref.index).base;
                 names += (names.empty() ? u"" : u", ") + ui::screens::attraction_name(a, strings);
             }
             std::u16string text(strings.get(kDemolishText));
@@ -381,7 +381,7 @@ namespace rct3::scene::park
             scene.camera = free ? c : rct3::park::on_ground(c, scene.grid, mode == ControlMode::Advanced);
             // Over a pool it settles on the surface, not on the ground dug out under it, so the view keeps still
             // while the pool tool shows its work there.
-            const save::TerrainGrid& g = scene.grid;
+            const save::model::TerrainGrid& g = scene.grid;
             const auto pool = free || g.empty() ? std::nullopt : scene.pools.at(static_cast<int>(std::floor((scene.camera.target.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((scene.camera.target.z - g.origin_z) / g.tile_size_z)));
             if (pool)
                 scene.camera.target.y = std::max(scene.camera.target.y, static_cast<float>(pool->surface));
@@ -437,7 +437,7 @@ namespace rct3::scene::park
         }
 
         /// The kind `stall` is of in the build lists, once they are read.
-        const rct3::park::BuildItem* stall_kind(const ParkScene& scene, const save::Stall& stall)
+        const rct3::park::BuildItem* stall_kind(const ParkScene& scene, const save::model::Stall& stall)
         {
             const auto& items = scene.build.items;
             if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
@@ -474,12 +474,12 @@ namespace rct3::scene::park
                 f.low_friction = scene.low_friction.contains(f.ride->base.id);
                 if (const auto series = scene.graph_series.find(f.ride->base.id); series != scene.graph_series.end())
                     f.graph_series = series->second;
-                const auto show = std::ranges::find(scene.shows, f.ride->base.id, &save::RideShow::ride);
+                const auto show = std::ranges::find(scene.shows, f.ride->base.id, &save::model::RideShow::ride);
                 f.show = show == scene.shows.end() ? nullptr : &*show;
                 // A flat ride's doors go round the ground it stands on.
-                if (f.ride->kind == save::RideKind::Flat)
+                if (f.ride->kind == save::model::RideKind::Flat)
                     f.station = f.ride->base.spot.has_value();
-                if (f.ride->kind == save::RideKind::Tracked)
+                if (f.ride->kind == save::model::RideKind::Tracked)
                 {
                     const auto& course = ref.index < scene.courses.size() ? scene.courses[ref.index] : std::nullopt;
                     f.station = !f.ride->stations.empty() || (course && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station));
@@ -490,14 +490,14 @@ namespace rct3::scene::park
                     const auto* fleet = e != entt::null ? scene.sim.registry.try_get<simulation::Trains>(e) : nullptr;
                     const bool aboard = fleet && std::ranges::any_of(fleet->riders, [](const auto& riders) { return !riders.empty(); });
                     const auto limits = scene.train_limits.find(ref.index);
-                    if (limits != scene.train_limits.end() && f.ride->base.state != save::AttractionState::Open && !aboard)
+                    if (limits != scene.train_limits.end() && f.ride->base.state != save::model::AttractionState::Open && !aboard)
                     {
                         const auto choices = scene.train_choices.find(ref.index);
                         f.other_cars = choices != scene.train_choices.end() && choices->second.size() > 1;
                         f.trains = limits->second;
                         // A ride from a saved park measured by its cars' kept lengths until its trains are made here.
                         std::vector<rct3::park::object::CarFit> kept;
-                        for (const save::Car& car : f.ride->trains.empty() ? std::vector<save::Car> { } : f.ride->trains.front().cars)
+                        for (const save::model::Car& car : f.ride->trains.empty() ? std::vector<save::model::Car> { } : f.ride->trains.front().cars)
                             kept.push_back({ .length = car.length });
                         const auto fits = scene.car_fits.find(ref.index);
                         const rct3::park::track::TrackRules rules = ref.index < scene.track_rules.size() ? scene.track_rules[ref.index] : rct3::park::track::TrackRules { };
@@ -527,7 +527,7 @@ namespace rct3::scene::park
             return f;
         }
 
-        save::AttractionCommon* attraction_common(ParkScene& scene, rct3::park::AttractionRef ref)
+        save::model::AttractionCommon* attraction_common(ParkScene& scene, rct3::park::AttractionRef ref)
         {
             if (ref.kind == rct3::park::AttractionRef::Kind::Stall)
                 return ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index].base : nullptr;
@@ -535,25 +535,25 @@ namespace rct3::scene::park
         }
 
         /// What the saved worker's window shows of `staff`'s pay, training, mood and work done.
-        void copy_mood(const simulation::Staff& staff, save::Staff& saved)
+        void copy_mood(const simulation::Staff& staff, save::model::Staff& saved)
         {
             saved.wage_level = staff.wage_level;
             saved.training = staff.training;
             saved.warnings = staff.warnings;
             saved.happiness = staff.happiness.value;
             saved.laziness = staff.laziness.value;
-            if (auto* w = std::get_if<save::HandymanWork>(&saved.work))
+            if (auto* w = std::get_if<save::model::HandymanWork>(&saved.work))
             {
                 w->paths_swept = staff.swept;
                 w->bins_emptied = staff.emptied;
                 w->gardens_watered = staff.watered;
             }
-            else if (auto* m = std::get_if<save::MechanicWork>(&saved.work))
+            else if (auto* m = std::get_if<save::model::MechanicWork>(&saved.work))
             {
                 m->objects_fixed = staff.fixed;
                 m->objects_inspected = staff.inspected;
             }
-            else if (auto* k = std::get_if<save::KeeperWork>(&saved.work))
+            else if (auto* k = std::get_if<save::model::KeeperWork>(&saved.work))
             {
                 k->dung_cleared = staff.cleared;
                 k->troughs_filled = staff.filled;
@@ -597,7 +597,7 @@ namespace rct3::scene::park
             {
                 const auto& vip = r.get<simulation::Vip>(p.guest);
                 const auto& goals = scene.park_model.objectives.conditions;
-                const auto goal = std::ranges::find(goals, vip.goal, &save::Condition::id);
+                const auto goal = std::ranges::find(goals, vip.goal, &save::model::Condition::id);
                 const float happiness = r.all_of<simulation::Mood>(p.guest) ? r.get<simulation::Mood>(p.guest).happiness.value : 0.0f;
                 if (goal != goals.end() && goal->vip)
                     f.vip = { vip.patience.value, simulation::vip_opinion(vip, *goal->vip, happiness) };
@@ -614,7 +614,7 @@ namespace rct3::scene::park
         }
 
         /// The changing room (of the pools') the object `o` draws, if it draws one.
-        std::optional<std::size_t> pool_room(const ParkScene& scene, const save::PlacedObject& o)
+        std::optional<std::size_t> pool_room(const ParkScene& scene, const save::model::PlacedObject& o)
         {
             if (!o.fixture || !std::ranges::contains(scene.pool_pieces, o.id))
                 return std::nullopt;
@@ -636,15 +636,15 @@ namespace rct3::scene::park
             ui::screens::SceneryFacts f;
             if (index >= scene.objects.size())
                 return f;
-            const save::PlacedObject& o = scene.objects[index];
+            const save::model::PlacedObject& o = scene.objects[index];
             f.symbol = o.symbol;
             f.colours = o.colours;
             f.zero_time = scene.park.zero_time;
             if (const auto model = scene.models.find(rct3::park::object::model_ref(o)); model != scene.models.end())
                 f.colour_slots = rct3::park::object::colour_slots(model->second);
-            if (const auto bin = std::ranges::find(scene.bins, o.id, &save::BinState::object_ref); bin != scene.bins.end())
+            if (const auto bin = std::ranges::find(scene.bins, o.id, &save::model::BinState::object_ref); bin != scene.bins.end())
                 f.bin = &*bin;
-            if (const auto sign = std::ranges::find(scene.signs, o.id, &save::SignState::object_ref); sign != scene.signs.end())
+            if (const auto sign = std::ranges::find(scene.signs, o.id, &save::model::SignState::object_ref); sign != scene.signs.end())
                 f.sign = &*sign;
             if (const auto room = pool_room(scene, o))
             {
@@ -677,8 +677,8 @@ namespace rct3::scene::park
                     for (const simulation::Thought& t : thoughts.recent)
                         if (e != entt::null && t.about == e)
                             f.pool->thoughts.push_back({ .thought = static_cast<std::int32_t>(std::to_underlying(t.kind)), .time = t.time.value, .variant = t.variant });
-                const std::vector<save::Tile> complex = rct3::park::pools::pool_complex(scene.pools, *room);
-                const auto machine = [&](const rct3::park::pools::PoolExtra& x) { return x.fit.wave_machine && std::ranges::contains(complex, save::Tile { x.col, x.row }); };
+                const std::vector<save::model::Tile> complex = rct3::park::pools::pool_complex(scene.pools, *room);
+                const auto machine = [&](const rct3::park::pools::PoolExtra& x) { return x.fit.wave_machine && std::ranges::contains(complex, save::model::Tile { x.col, x.row }); };
                 f.pool->machines = std::ranges::any_of(scene.pools.extras, machine) || std::ranges::any_of(scene.scenery_pool_extras, machine);
             }
             return f;
@@ -700,13 +700,13 @@ namespace rct3::scene::park
         }
 
         /// The saved group of shown person `shown`, when the save has them in one.
-        std::optional<const save::GuestGroup&> saved_group(const ParkScene& scene, std::size_t shown)
+        std::optional<const save::model::GuestGroup&> saved_group(const ParkScene& scene, std::size_t shown)
         {
             const ShownPerson& p = scene.shown_people[shown];
             if (p.staff || p.saved >= scene.people.guests.size() || !scene.people.guests[p.saved].group)
                 return std::nullopt;
-            const auto group = std::ranges::find(scene.people.groups, scene.people.guests[p.saved].group.id, &save::GuestGroup::id);
-            return group != scene.people.groups.end() ? std::optional<const save::GuestGroup&>(*group) : std::nullopt;
+            const auto group = std::ranges::find(scene.people.groups, scene.people.guests[p.saved].group.id, &save::model::GuestGroup::id);
+            return group != scene.people.groups.end() ? std::optional<const save::model::GuestGroup&>(*group) : std::nullopt;
         }
 
         /// The party shown person `shown` goes round with, as shown people, its leader first: the simulation's
@@ -731,10 +731,10 @@ namespace rct3::scene::park
             }
             else if (const auto group = saved_group(scene, shown))
             {
-                const auto saved_as = [&](save::PeopleRef ref) { return [&scene, ref](const ShownPerson& p) { return !p.staff && p.saved < scene.people.guests.size() && scene.people.guests[p.saved].person.id == ref.id; }; };
+                const auto saved_as = [&](save::model::PeopleRef ref) { return [&scene, ref](const ShownPerson& p) { return !p.staff && p.saved < scene.people.guests.size() && scene.people.guests[p.saved].person.id == ref.id; }; };
                 if (group->leader)
                     add(saved_as(group->leader));
-                for (const save::PeopleRef ref : group->members)
+                for (const save::model::PeopleRef ref : group->members)
                     if (ref)
                         add(saved_as(ref));
             }
@@ -854,7 +854,7 @@ namespace rct3::scene::park
             if (f.common == nullptr)
                 return;
             const ui::screens::AttractionKind kind = f.stall ? ui::screens::AttractionKind::Stall : ui::screens::attraction_kind(*f.ride);
-            if (const bool tracked = f.ride != nullptr && f.ride->kind == save::RideKind::Tracked; tracked != scene.info_tracked)
+            if (const bool tracked = f.ride != nullptr && f.ride->kind == save::model::RideKind::Tracked; tracked != scene.info_tracked)
             {
                 std::swap(scene.info_tab, scene.other_info_tab);
                 scene.info_tracked = tracked;
@@ -963,12 +963,12 @@ namespace rct3::scene::park
             if (index >= scene.objects.size())
                 return;
             const auto wall = rct3::park::edge_wall(scene.objects[index], scene.models, scene.grid);
-            change_object(device, scene, index, [](save::PlacedObject& o) { o.hidden = true; });
+            change_object(device, scene, index, [](save::model::PlacedObject& o) { o.hidden = true; });
             // Guests stop using what stood on the path, and the park keeps no bin or sign for it.
             const std::uint64_t id = scene.objects[index].id;
             auto& r = scene.sim.registry;
             std::vector<entt::entity> gone;
-            const auto sign = std::ranges::find(scene.signs, id, &save::SignState::object_ref);
+            const auto sign = std::ranges::find(scene.signs, id, &save::model::SignState::object_ref);
             for (const auto [e, item] : r.view<const simulation::PathItem>().each())
                 if (item.object == id)
                 {
@@ -980,8 +980,8 @@ namespace rct3::scene::park
                 if (bed.object == id)
                     gone.push_back(e);
             r.destroy(gone.begin(), gone.end());
-            std::erase_if(scene.bins, [&](const save::BinState& b) { return b.object_ref == id; });
-            std::erase_if(scene.signs, [&](const save::SignState& s) { return s.object_ref == id; });
+            std::erase_if(scene.bins, [&](const save::model::BinState& b) { return b.object_ref == id; });
+            std::erase_if(scene.signs, [&](const save::model::SignState& s) { return s.object_ref == id; });
             if (wall)
                 wall_changed(device, scene, assets, *wall, false);
         }
@@ -1023,7 +1023,7 @@ namespace rct3::scene::park
                 scene.prizes.emplace_back(kNoMoney);
                 return std::nullopt;
             }
-            const save::PlacedObject& first = scene.objects[going.front()];
+            const save::model::PlacedObject& first = scene.objects[going.front()];
             if (scene.park.cash)
                 *scene.park.cash -= cost;
             if (floated)
@@ -1038,14 +1038,14 @@ namespace rct3::scene::park
         void delete_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids)
         {
             std::vector<std::pair<std::int32_t, std::int32_t>> tiles;
-            for (const save::PathTile& p : scene.footpaths.paths)
+            for (const save::model::PathTile& p : scene.footpaths.paths)
                 if (std::ranges::contains(ids, p.id))
                     tiles.emplace_back(p.col, p.row);
             std::ranges::sort(tiles);
             std::vector<std::size_t> extras;
             for (std::size_t i = 0; i < scene.objects.size(); ++i)
             {
-                const save::PlacedObject& o = scene.objects[i];
+                const save::model::PlacedObject& o = scene.objects[i];
                 if (o.hidden || !std::ranges::binary_search(tiles, std::pair { o.col, o.row }))
                     continue;
                 const auto model = scene.models.find(rct3::park::object::model_ref(o));
@@ -1060,7 +1060,7 @@ namespace rct3::scene::park
 
     void demolish(ParkScene& scene, const ui::InterfaceAssets& assets, rct3::park::AttractionRef ref)
     {
-        save::AttractionCommon* base = attraction_common(scene, ref);
+        save::model::AttractionCommon* base = attraction_common(scene, ref);
         if (base == nullptr || base->demolished)
             return;
         const bool ride = ref.kind == rct3::park::AttractionRef::Kind::Ride;
@@ -1070,11 +1070,11 @@ namespace rct3::scene::park
         wait_for_build(scene);
         // shortcut: a flat ride or a stall gives back its item's price by the tracked rides' rule; use what its
         // kind's data says it is worth once that is read.
-        const auto main = base->spot ? std::ranges::find(scene.objects, base->spot->object, &save::PlacedObject::id) : scene.objects.end();
+        const auto main = base->spot ? std::ranges::find(scene.objects, base->spot->object, &save::model::PlacedObject::id) : scene.objects.end();
         const auto model = main != scene.objects.end() ? scene.models.find(rct3::park::object::model_ref(*main)) : scene.models.end();
-        const bool tracked = ride && scene.rides.rides[ref.index].kind == save::RideKind::Tracked;
+        const bool tracked = ride && scene.rides.rides[ref.index].kind == save::model::RideKind::Tracked;
         const std::int64_t value = tracked ? track_cost(scene, ref.index, assets) : (model != scene.models.end() ? model->second.price : 0);
-        const std::int64_t back = rct3::park::demolish_refund(value, (base->flags & save::AttractionCommon::kNeverOpened) == 0);
+        const std::int64_t back = rct3::park::demolish_refund(value, (base->flags & save::model::AttractionCommon::kNeverOpened) == 0);
         std::set<std::uint64_t> parts;
         // Its fence, which the park built round it, goes with it.
         if (const auto fence = scene.ride_fence_pieces.find(base->id); ride && fence != scene.ride_fence_pieces.end())
@@ -1086,13 +1086,13 @@ namespace rct3::scene::park
             if (owner == ref)
                 parts.insert(id);
         if (ride && scene.rides.rides[ref.index].track)
-            for (const save::TrackPiece& piece : scene.rides.rides[ref.index].track->pieces)
+            for (const save::model::TrackPiece& piece : scene.rides.rides[ref.index].track->pieces)
                 if (piece.platform)
                     parts.insert(piece.platform->id);
         std::optional<glm::vec3> at;
         for (std::size_t i = 0; i < scene.objects.size(); ++i)
         {
-            save::PlacedObject& o = scene.objects[i];
+            save::model::PlacedObject& o = scene.objects[i];
             if (o.hidden || !(parts.contains(o.id) || parts.contains(o.owner_ref)))
                 continue;
             o.hidden = true;
@@ -1114,7 +1114,7 @@ namespace rct3::scene::park
             drop_ride_cars(scene, ref.index);
         if (ride && ref.index < scene.ride_entities.size())
             scene.ride_entities[ref.index] = entt::null;
-        base->state = save::AttractionState::Closed;
+        base->state = save::model::AttractionState::Closed;
         base->demolished = true;
         if (scene.park.cash)
             *scene.park.cash += back;
@@ -1142,7 +1142,7 @@ namespace rct3::scene::park
         void paint_prop(render::Device& device, ParkScene& scene, std::size_t index, std::size_t slot, std::int32_t colour)
         {
             if (slot < rct3::park::kFlexiSlotCount)
-                change_object(device, scene, index, [&](save::PlacedObject& o) { o.colours.at(slot) = colour; });
+                change_object(device, scene, index, [&](save::model::PlacedObject& o) { o.colours.at(slot) = colour; });
         }
 
         /// Of the cars of ride `ride`, those with a camera of kind `eye`, in the order the park keeps them.
@@ -1270,7 +1270,7 @@ namespace rct3::scene::park
             scene.riding_person = person;
             scene.person_behind = behind;
             const ShownPerson& p = scene.shown_people[person];
-            const save::Person* saved = p.staff ? (p.saved < scene.people.staff.size() ? &scene.people.staff[p.saved].person : nullptr) : (p.saved < scene.people.guests.size() ? &scene.people.guests[p.saved].person : nullptr);
+            const save::model::Person* saved = p.staff ? (p.saved < scene.people.staff.size() ? &scene.people.staff[p.saved].person : nullptr) : (p.saved < scene.people.guests.size() ? &scene.people.guests[p.saved].person : nullptr);
             const ui::StringTable& strings = *assets.strings;
             constexpr std::array<std::string_view, 2> kNames { "RidecamGUI_TypePeep", "RidecamGUI_TypeStatic" };
             if (auto panel = scene.desktop->root().find_as<ui::screens::RideCameraPanel>(kRideCameraName))
@@ -1431,8 +1431,8 @@ namespace rct3::scene::park
         void change_attraction(render::Device& device, ParkScene& scene, ui::screens::InfoPanel& panel, rct3::park::AttractionRef ref, const ui::screens::InfoChange& change, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
             using enum ui::screens::AttractionControl;
-            save::Ride* ride = ref.kind == rct3::park::AttractionRef::Kind::Ride && ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index] : nullptr;
-            save::Stall* stall = ref.kind == rct3::park::AttractionRef::Kind::Stall && ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index] : nullptr;
+            save::model::Ride* ride = ref.kind == rct3::park::AttractionRef::Kind::Ride && ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index] : nullptr;
+            save::model::Stall* stall = ref.kind == rct3::park::AttractionRef::Kind::Stall && ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index] : nullptr;
             const auto wait_on = [&](std::int32_t& wait, ui::screens::AttractionControl seconds) {
                 const auto field = panel.control(ui::screens::control_id(seconds));
                 wait = change.value != 0 ? (field ? static_cast<const ui::Spinner&>(*field).value() : 0) : -1;
@@ -1456,7 +1456,7 @@ namespace rct3::scene::park
             else if (change.id == ui::screens::control_id(Name))
             {
                 // A blank name keeps the old one, as in the game.
-                if (save::AttractionCommon* common = ride != nullptr ? &ride->base : stall != nullptr ? &stall->base : nullptr; common != nullptr && change.text.find_first_not_of(u' ') != std::u16string::npos)
+                if (save::model::AttractionCommon* common = ride != nullptr ? &ride->base : stall != nullptr ? &stall->base : nullptr; common != nullptr && change.text.find_first_not_of(u' ') != std::u16string::npos)
                     common->name = strings::to_utf8(change.text);
             }
             else if (change.id == ui::screens::control_id(Locate))
@@ -1464,7 +1464,7 @@ namespace rct3::scene::park
                 // The view turns round to the middle of the attraction's objects.
                 glm::vec3 sum { };
                 std::size_t count = 0;
-                for (const save::PlacedObject& o : scene.objects)
+                for (const save::model::PlacedObject& o : scene.objects)
                 {
                     const auto owner = scene.attractions.find(o.id);
                     if (owner == scene.attractions.end() || owner->second != ref)
@@ -1503,7 +1503,7 @@ namespace rct3::scene::park
                     stall->items[*ticked].extras = static_cast<std::uint32_t>(change.value);
                 else if (const auto named = ui::screens::listed(change.id, ItemName); named && *named < stall->items.size())
                     stall->items[*named].name = strings::to_utf8(change.text);
-                else if (const auto painted = ui::screens::listed(change.id, ItemColour); painted && *painted < stall->items.size() && change.pot < save::RideColours { }.size())
+                else if (const auto painted = ui::screens::listed(change.id, ItemColour); painted && *painted < stall->items.size() && change.pot < save::model::RideColours { }.size())
                     stall->items[*painted].colours[change.pot] = static_cast<std::uint8_t>(change.value);
                 else if (const auto extra = ui::screens::listed(change.id, ExtraLevel); extra && *extra < stall->extras.size())
                     stall->extras[*extra].level = change.value;
@@ -1513,13 +1513,13 @@ namespace rct3::scene::park
                     rct3::park::ride::copy_menu(scene.rides.stalls, index);
                 for (std::size_t i = 0; i < scene.rides.stalls.size(); ++i)
                 {
-                    save::Stall& s = scene.rides.stalls[i];
+                    save::model::Stall& s = scene.rides.stalls[i];
                     if (i != index && !(stall->sync && s.base.symbol == stall->base.symbol && s.base.overlay_path == stall->base.overlay_path))
                         continue;
                     // shortcut: a stall left with nothing to sell closes; the game's way with it is not known,
                     // upgrade once it is.
-                    if (s.items.empty() && s.base.state == save::AttractionState::Open)
-                        set_attraction_state(scene, s.base, save::AttractionState::Closed);
+                    if (s.items.empty() && s.base.state == save::model::AttractionState::Open)
+                        set_attraction_state(scene, s.base, save::model::AttractionState::Closed);
                     // An item put on brings the extras it takes.
                     rct3::park::ride::offer_extras(s, scene.carried.items);
                     simulation::restock(scene.sim, s, scene.carried);
@@ -1557,12 +1557,12 @@ namespace rct3::scene::park
                 ride->options.max_wait = change.value;
             else if (change.id == ui::screens::control_id(WaitFor))
                 ride->options.wait_for_load = change.value;
-            else if ((change.id == ui::screens::control_id(Trains) || change.id == ui::screens::control_id(Cars)) && scene.train_limits.contains(ref.index) && ride->base.state != save::AttractionState::Open && assets.install)
+            else if ((change.id == ui::screens::control_id(Trains) || change.id == ui::screens::control_id(Cars)) && scene.train_limits.contains(ref.index) && ride->base.state != save::model::AttractionState::Open && assets.install)
             {
                 const bool trains = change.id == ui::screens::control_id(Trains);
                 (void)set_trains(device, scene, *assets.install, ref.index, trains ? change.value : ride->train_count, trains ? ride->cars_per_train : change.value);
             }
-            else if (change.id == ui::screens::control_id(CarKind) && scene.train_limits.contains(ref.index) && ride->base.state != save::AttractionState::Open && assets.install && !ride->trains.empty())
+            else if (change.id == ui::screens::control_id(CarKind) && scene.train_limits.contains(ref.index) && ride->base.state != save::model::AttractionState::Open && assets.install && !ride->trains.empty())
             {
                 // The next kind of train its kind runs, round to the first after the last.
                 const std::vector<std::string>& choices = scene.train_choices[ref.index];
@@ -1586,7 +1586,7 @@ namespace rct3::scene::park
                     if (auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(e))
                         cycle->loops = static_cast<std::uint32_t>(std::max(change.value, 1));
             }
-            else if (const auto show = std::ranges::find(scene.shows, ride->base.id, &save::RideShow::ride); show != scene.shows.end() && (change.id == ui::screens::control_id(ShowTrick) || change.id == ui::screens::control_id(ShowDelete)))
+            else if (const auto show = std::ranges::find(scene.shows, ride->base.id, &save::model::RideShow::ride); show != scene.shows.end() && (change.id == ui::screens::control_id(ShowTrick) || change.id == ui::screens::control_id(ShowDelete)))
             {
                 // The ride puts the changed show on from its next go.
                 const std::size_t place = std::min(scene.info_section, show->order.size());
@@ -1684,9 +1684,9 @@ namespace rct3::scene::park
         /// Hires a worker for job `kind` from the staff window and returns their place in shown_people, to be
         /// handed to the pointer as the game hands them; nothing where none can be hired. A keeper goes to an
         /// animal house picked at random instead, which dresses them with the other keepers.
-        std::optional<std::size_t> hire(ParkScene& scene, save::StaffKind kind)
+        std::optional<std::size_t> hire(ParkScene& scene, save::model::StaffKind kind)
         {
-            using enum save::StaffKind;
+            using enum save::model::StaffKind;
             if (!scene.simulate || kind == Vendor || kind == LifeGuard || kind == ParkInspector)
                 return std::nullopt;
             auto& r = scene.sim.registry;
@@ -1701,7 +1701,7 @@ namespace rct3::scene::park
                 }
                 return std::nullopt;
             }
-            const auto type = kind == Handyman ? save::PersonType::Handyman : kind == Mechanic ? save::PersonType::Mechanic : kind == SecurityGuard ? save::PersonType::SecurityGuard : save::PersonType::Entertainer;
+            const auto type = kind == Handyman ? save::model::PersonType::Handyman : kind == Mechanic ? save::model::PersonType::Mechanic : kind == SecurityGuard ? save::model::PersonType::SecurityGuard : save::model::PersonType::Entertainer;
             const auto role = simulation::staff_role(kind);
             // Each entertainer the next costume in turn, as the game gives them out.
             std::vector<std::uint8_t> costumes;
@@ -1726,12 +1726,12 @@ namespace rct3::scene::park
             scene.known_guests.insert(e);
             change_people(scene);
             std::int32_t number = 0;
-            for (const save::Staff& s : scene.people.staff)
+            for (const save::model::Staff& s : scene.people.staff)
                 if (s.kind == kind)
                     number = std::max(number, s.type_id);
             const simulation::Staff& worker = r.get<const simulation::Staff>(e);
             const glm::vec3 at = r.get<const simulation::Pose>(e).position;
-            save::Staff& kept = scene.people.staff.emplace_back();
+            save::model::Staff& kept = scene.people.staff.emplace_back();
             kept.kind = kind;
             kept.type_id = number + 1;
             kept.wage_level = worker.wage_level;
@@ -1742,12 +1742,12 @@ namespace rct3::scene::park
             kept.person.sub_type = costume;
             kept.person.name = std::format("%ME% {}", kept.type_id); // As the game names them, after their job
             kept.person.start_time = scene.park.time;                // Hired today, and their work counted from nothing
-            if (kind == save::StaffKind::Handyman)
-                kept.work = save::HandymanWork { };
-            else if (kind == save::StaffKind::Mechanic)
-                kept.work = save::MechanicWork { };
+            if (kind == save::model::StaffKind::Handyman)
+                kept.work = save::model::HandymanWork { };
+            else if (kind == save::model::StaffKind::Mechanic)
+                kept.work = save::model::MechanicWork { };
             kept.person.position = { at.x, at.y, at.z };
-            save::Appearance& a = kept.person.appearance;
+            save::model::Appearance& a = kept.person.appearance;
             a.head = { worn[0]->id };
             a.body = { worn[1]->id };
             a.legs = { worn[2]->id };
@@ -1778,9 +1778,9 @@ namespace rct3::scene::park
             if (shown >= scene.shown_people.size())
                 return false;
             const ShownPerson& p = scene.shown_people[shown];
-            save::Staff* staff = p.staff && p.saved < scene.people.staff.size() ? &scene.people.staff[p.saved] : nullptr;
-            save::Guest* guest = !p.staff && p.saved < scene.people.guests.size() ? &scene.people.guests[p.saved] : nullptr;
-            save::Person* person = staff != nullptr ? &staff->person : guest != nullptr ? &guest->person : nullptr;
+            save::model::Staff* staff = p.staff && p.saved < scene.people.staff.size() ? &scene.people.staff[p.saved] : nullptr;
+            save::model::Guest* guest = !p.staff && p.saved < scene.people.guests.size() ? &scene.people.guests[p.saved] : nullptr;
+            save::model::Person* person = staff != nullptr ? &staff->person : guest != nullptr ? &guest->person : nullptr;
             if (person == nullptr)
                 return false;
             if (change.id == ui::screens::person_control(Name))
@@ -1878,14 +1878,14 @@ namespace rct3::scene::park
                 // They change into it, where the install has it.
                 std::array<const Outfit*, 3> worn { };
                 for (const Outfit& o : scene.wardrobe)
-                    if (o.type == save::PersonType::Entertainer && o.costume == person->sub_type && o.section < worn.size())
+                    if (o.type == save::model::PersonType::Entertainer && o.costume == person->sub_type && o.section < worn.size())
                         worn[o.section] = &o;
                 if (!std::ranges::contains(worn, nullptr))
                 {
                     change_people(scene);
                     rct3::park::person::PersonLook& look = scene.shown_people[shown].pose.look;
                     std::tie(look.head, look.body, look.legs) = std::tuple(worn[0]->set, worn[1]->set, worn[2]->set);
-                    std::tie(person->appearance.head, person->appearance.body, person->appearance.legs) = std::tuple(save::PeopleRef { worn[0]->id }, save::PeopleRef { worn[1]->id }, save::PeopleRef { worn[2]->id });
+                    std::tie(person->appearance.head, person->appearance.body, person->appearance.legs) = std::tuple(save::model::PeopleRef { worn[0]->id }, save::model::PeopleRef { worn[1]->id }, save::model::PeopleRef { worn[2]->id });
                 }
             }
             else if (change.id >= ui::screens::person_control(Task))
@@ -1905,12 +1905,12 @@ namespace rct3::scene::park
             ShownPerson& p = scene.shown_people[shown];
             const auto c = static_cast<std::uint8_t>(colour);
             p.pose.look.colours.at(ui::screens::kUpperPalette + pot) = c;
-            save::Person* person = p.staff ? &scene.people.staff.at(p.saved).person : &scene.people.guests.at(p.saved).person;
+            save::model::Person* person = p.staff ? &scene.people.staff.at(p.saved).person : &scene.people.guests.at(p.saved).person;
             person->appearance.palettes.at(ui::screens::kUpperPalette + pot) = c;
         }
 
         /// Whether the object is a prop the panel can tell about: one of the park's own.
-        bool clickable_prop(const ParkScene& scene, const save::PlacedObject& o)
+        bool clickable_prop(const ParkScene& scene, const save::model::PlacedObject& o)
         {
             if (scene.attractions.contains(o.id) || o.fixture)
                 return false;
@@ -1920,14 +1920,14 @@ namespace rct3::scene::park
 
         /// Deletes what stands on the tiles from `a` to `b`: props and paths at once, and asks once about every
         /// ride and stall with a part there.
-        void delete_area(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, save::Tile a, save::Tile b)
+        void delete_area(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Tile a, save::model::Tile b)
         {
             const auto inside = [&](std::int32_t col, std::int32_t row) { return col >= std::min(a.col, b.col) && col <= std::max(a.col, b.col) && row >= std::min(a.row, b.row) && row <= std::max(a.row, b.row); };
             std::vector<std::size_t> props;
             std::vector<rct3::park::AttractionRef> attractions;
             for (std::size_t i = 0; i < scene.objects.size(); ++i)
             {
-                const save::PlacedObject& o = scene.objects[i];
+                const save::model::PlacedObject& o = scene.objects[i];
                 if (o.hidden || !inside(o.col, o.row))
                     continue;
                 if (const auto owner = scene.attractions.find(o.id); owner != scene.attractions.end())
@@ -1939,7 +1939,7 @@ namespace rct3::scene::park
                     props.push_back(i);
             }
             std::vector<std::uint64_t> paths;
-            for (const save::PathTile& p : scene.footpaths.paths)
+            for (const save::model::PathTile& p : scene.footpaths.paths)
                 if (inside(p.col, p.row))
                     paths.push_back(p.id);
             delete_props(device, scene, assets, props);
@@ -1948,7 +1948,7 @@ namespace rct3::scene::park
         }
 
         /// Whether the object is one of the park's entrances, which a click opens the park's window on.
-        bool park_entrance(const ParkScene& scene, const save::PlacedObject& o)
+        bool park_entrance(const ParkScene& scene, const save::model::PlacedObject& o)
         {
             const auto model = scene.models.find(rct3::park::object::model_ref(o));
             return !o.hidden && model != scene.models.end() && model->second.category == std::to_underlying(rct3::park::ItemCategory::ParkEntrance);
@@ -1957,7 +1957,7 @@ namespace rct3::scene::park
         /// What putting a broken path item back new costs: the price of the object it stands as.
         std::int64_t replace_price(const ParkScene& scene, std::uint64_t object)
         {
-            const auto o = std::ranges::find(scene.objects, object, &save::PlacedObject::id);
+            const auto o = std::ranges::find(scene.objects, object, &save::model::PlacedObject::id);
             const auto model = o != scene.objects.end() ? scene.models.find(rct3::park::object::model_ref(*o)) : scene.models.end();
             return model != scene.models.end() ? model->second.price : 0;
         }
@@ -1983,9 +1983,9 @@ namespace rct3::scene::park
         std::optional<rct3::park::AttractionRef> attraction_with(const ParkScene& scene, std::uint64_t id)
         {
             using Kind = rct3::park::AttractionRef::Kind;
-            if (const auto ride = std::ranges::find(scene.rides.rides, id, [](const save::Ride& r) { return r.base.id; }); ride != scene.rides.rides.end())
+            if (const auto ride = std::ranges::find(scene.rides.rides, id, [](const save::model::Ride& r) { return r.base.id; }); ride != scene.rides.rides.end())
                 return rct3::park::AttractionRef { Kind::Ride, static_cast<std::size_t>(ride - scene.rides.rides.begin()) };
-            if (const auto stall = std::ranges::find(scene.rides.stalls, id, [](const save::Stall& s) { return s.base.id; }); stall != scene.rides.stalls.end())
+            if (const auto stall = std::ranges::find(scene.rides.stalls, id, [](const save::model::Stall& s) { return s.base.id; }); stall != scene.rides.stalls.end())
                 return rct3::park::AttractionRef { Kind::Stall, static_cast<std::size_t>(stall - scene.rides.stalls.begin()) };
             return std::nullopt;
         }
@@ -2027,7 +2027,7 @@ namespace rct3::scene::park
             if (scene.pick_boxes_of != scene.objects.size())
                 place_objects(scene);
             const auto object = rct3::park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) {
-                const save::PlacedObject& o = scene.objects[i];
+                const save::model::PlacedObject& o = scene.objects[i];
                 return scene.show_scenery && !o.hidden && (scene.attractions.contains(o.id) || o.fixture || clickable_prop(scene, o) || park_entrance(scene, o));
             });
             std::vector<glm::mat4> placements;
@@ -2086,26 +2086,26 @@ namespace rct3::scene::park
         }
     }
 
-    void set_attraction_state(ParkScene& scene, save::AttractionCommon& attraction, save::AttractionState state)
+    void set_attraction_state(ParkScene& scene, save::model::AttractionCommon& attraction, save::model::AttractionState state)
     {
         attraction.state = state;
-        if (state == save::AttractionState::Open)
-            attraction.flags &= ~save::AttractionCommon::kNeverOpened;
+        if (state == save::model::AttractionState::Open)
+            attraction.flags &= ~save::model::AttractionCommon::kNeverOpened;
         for (auto [e, a] : scene.sim.registry.view<simulation::Attraction>().each())
             if (a.saved == attraction.id)
             {
                 // A broken one stays shut until mended, opening once it is.
                 const auto* upkeep = scene.sim.registry.try_get<simulation::Upkeep>(e);
-                a.open = state == save::AttractionState::Open && (upkeep == nullptr || !upkeep->broken);
-                a.testing = state == save::AttractionState::Testing;
+                a.open = state == save::model::AttractionState::Open && (upkeep == nullptr || !upkeep->broken);
+                a.testing = state == save::model::AttractionState::Testing;
             }
     }
 
-    std::optional<std::string> state_refusal(const ParkScene& scene, rct3::park::AttractionRef ref, save::AttractionState state)
+    std::optional<std::string> state_refusal(const ParkScene& scene, rct3::park::AttractionRef ref, save::model::AttractionState state)
     {
         if (ref.kind == rct3::park::AttractionRef::Kind::Stall)
         {
-            if (state == save::AttractionState::Open && scene.rides.stalls.at(ref.index).items.empty())
+            if (state == save::model::AttractionState::Open && scene.rides.stalls.at(ref.index).items.empty())
                 return "CantOpenStallNoItems";
             return std::nullopt;
         }
@@ -2118,10 +2118,10 @@ namespace rct3::scene::park
         // station.
         // shortcut: a river's only along the course's own stretch, not a split track's other stretches with
         // stations; upgrade when a pool ride may be split.
-        const save::Ride& r = scene.rides.rides.at(ride);
+        const save::model::Ride& r = scene.rides.rides.at(ride);
         std::vector<std::optional<rct3::park::pools::SlidePlatform>> platforms;
         if (rules.pool_ride && r.track)
-            for (const save::TrackPiece& p : r.track->pieces)
+            for (const save::model::TrackPiece& p : r.track->pieces)
                 platforms.push_back(p.platform ? std::optional(rct3::park::pools::SlidePlatform { .col = p.platform->tile_x, .row = p.platform->tile_z, .height = p.platform->height, .turn = rct3::park::ModelTurn::from(p.platform->direction) }) : std::nullopt);
         std::size_t joined = rct3::park::pools::joined_stations(scene.pools, platforms);
         if (rules.pool_ride && course && course->points.size() == course->kinds.size() && std::ranges::none_of(platforms, [](const auto& p) { return p.has_value(); }))
@@ -2157,17 +2157,17 @@ namespace rct3::scene::park
         return fan;
     }
 
-    std::optional<std::string> change_ride_state(ParkScene& scene, std::size_t ride, save::AttractionState state)
+    std::optional<std::string> change_ride_state(ParkScene& scene, std::size_t ride, save::model::AttractionState state)
     {
         auto refused = state_refusal(scene, { .kind = rct3::park::AttractionRef::Kind::Ride, .index = ride }, state);
         if (!refused)
             set_attraction_state(scene, scene.rides.rides.at(ride).base, state);
-        if (!refused && state != save::AttractionState::Closed && scene.rides.rides[ride].kind == save::RideKind::Tracked && !std::ranges::contains(scene.readying, ride))
+        if (!refused && state != save::model::AttractionState::Closed && scene.rides.rides[ride].kind == save::model::RideKind::Tracked && !std::ranges::contains(scene.readying, ride))
             scene.readying.push_back(ride);
         return refused;
     }
 
-    std::optional<std::string> change_stall_state(ParkScene& scene, std::size_t stall, save::AttractionState state)
+    std::optional<std::string> change_stall_state(ParkScene& scene, std::size_t stall, save::model::AttractionState state)
     {
         auto refused = state_refusal(scene, { .kind = rct3::park::AttractionRef::Kind::Stall, .index = stall }, state);
         if (!refused)
@@ -2175,7 +2175,7 @@ namespace rct3::scene::park
         return refused;
     }
 
-    void stage_show(ParkScene& scene, const save::RideShow& show)
+    void stage_show(ParkScene& scene, const save::model::RideShow& show)
     {
         for (auto [_, a, ride] : scene.sim.registry.view<simulation::Attraction, simulation::CycleRide>().each())
             if (a.saved == show.ride)
@@ -2251,15 +2251,15 @@ namespace rct3::scene::park
         for (const std::size_t ride : std::exchange(scene.readying, { }))
         {
             const auto& course = ride < scene.courses.size() ? scene.courses[ride] : std::nullopt;
-            const save::Ride& r = scene.rides.rides[ride];
+            const save::model::Ride& r = scene.rides.rides[ride];
             const auto coaster = course ? simulation::coaster_of(*course, r) : std::nullopt;
             // Boats sail off a dock that is only station, which no train could run round.
-            const bool boats = (r.mode == save::OperatingMode::Boat || r.mode == save::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station);
-            if (!assets.install || r.base.demolished || r.base.state == save::AttractionState::Closed || r.mode == save::OperatingMode::MiniGolf || (!coaster && !boats && !(course && !course->climbs.empty())))
+            const bool boats = (r.mode == save::model::OperatingMode::Boat || r.mode == save::model::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station);
+            if (!assets.install || r.base.demolished || r.base.state == save::model::AttractionState::Closed || r.mode == save::model::OperatingMode::MiniGolf || (!coaster && !boats && !(course && !course->climbs.empty())))
                 continue;
             const bool ghosted = coaster && !coaster->closed && coaster->shuttle == simulation::Shuttle::None && scene.building.ride == ride;
             // A lazy river has no trains: swimmers float round it; nor has a slide climbed on foot.
-            if ((r.mode == save::OperatingMode::LazyRiver || (!coaster && !boats) || set_trains(device, scene, *assets.install, ride, r.train_count, r.cars_per_train)) && !ghosted && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
+            if ((r.mode == save::model::OperatingMode::LazyRiver || (!coaster && !boats) || set_trains(device, scene, *assets.install, ride, r.train_count, r.cars_per_train)) && !ghosted && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
                 scene.placing.unjoined.push_back(ride);
             if (auto info = desktop.root().find_as<ui::screens::InfoPanel>(kInfoName); info && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && scene.shown->index == ride)
                 show_info_page(scene, *info, assets, options);
@@ -2444,7 +2444,7 @@ namespace rct3::scene::park
                     else if (picked.prop)
                     {
                         // An entrance opens the park's window, and its own panel too on the park's land.
-                        const save::PlacedObject& o = scene.objects[*picked.prop];
+                        const save::model::PlacedObject& o = scene.objects[*picked.prop];
                         if (park_entrance(scene, o))
                             open_management_window(desktop, ui::screens::ManagementTopic::ParkOperations, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
                         // A changing room's window opens on the tab last open in one.
@@ -2535,7 +2535,7 @@ namespace rct3::scene::park
                 if (kind == items.end())
                     kind = std::ranges::find_if(items, in_overlay);
                 const auto any = std::ranges::find_if(items, [](const rct3::park::BuildItem& i) { return !i.entrance.empty(); });
-                const auto item = kind != items.end() || scene.rides.rides[ride].kind == save::RideKind::Flat ? kind : any;
+                const auto item = kind != items.end() || scene.rides.rides[ride].kind == save::model::RideKind::Flat ? kind : any;
                 return item != items.end() && start_door_placing(scene, ride, *item, station_pieces(scene, ride, assets), exit);
             };
             // A closed circuit goes on to its doors, the entrance first, while its window shows, as in the game.
@@ -2570,7 +2570,7 @@ namespace rct3::scene::park
             }
             else if (const auto room = change && scene.shown_prop ? pool_room(scene, scene.objects[*scene.shown_prop]) : std::nullopt)
             {
-                const save::PlacedObject& o = scene.objects[*scene.shown_prop];
+                const save::model::PlacedObject& o = scene.objects[*scene.shown_prop];
                 if (change->id == ui::screens::kPoolDeleteRoomControl)
                 {
                     scene.pools.rooms.erase(scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room));
@@ -2700,7 +2700,7 @@ namespace rct3::scene::park
                 const std::vector<ui::screens::StateChoice> states = ui::screens::state_choices(ui::screens::AttractionKind::Stall);
                 if (choice->second < states.size())
                     for (const std::size_t r : rct3::park::pools::pool_complex_rooms(scene.pools, *room))
-                        scene.pools.rooms[r].open = states[choice->second].state == save::AttractionState::Open;
+                        scene.pools.rooms[r].open = states[choice->second].state == save::model::AttractionState::Open;
                 open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
             }
             if (choice && scene.shown)
@@ -2708,9 +2708,9 @@ namespace rct3::scene::park
                 // Put in the state picked, then shown again for the state tab's new look.
                 const ui::screens::AttractionFacts f = facts(scene, *scene.shown);
                 const std::vector<ui::screens::StateChoice> states = state_choices(scene, *scene.shown);
-                if (save::AttractionCommon* common = attraction_common(scene, *scene.shown); common != nullptr && choice->second < states.size())
+                if (save::model::AttractionCommon* common = attraction_common(scene, *scene.shown); common != nullptr && choice->second < states.size())
                 {
-                    const save::AttractionState state = states[choice->second].state;
+                    const save::model::AttractionState state = states[choice->second].state;
                     scene.refusal.clear();
                     if (f.ride != nullptr)
                         scene.refusal = change_ride_state(scene, scene.shown->index, state).value_or("");
@@ -2737,7 +2737,7 @@ namespace rct3::scene::park
         if (const auto asked = std::exchange(scene.construct_requested, std::nullopt); asked && asked->kind == rct3::park::AttractionRef::Kind::Ride)
         {
             // An open ride's track stays as it is; testing or closed, it may be changed.
-            if (asked->index < scene.rides.rides.size() && scene.rides.rides[asked->index].base.state == save::AttractionState::Open)
+            if (asked->index < scene.rides.rides.size() && scene.rides.rides[asked->index].base.state == save::model::AttractionState::Open)
             {
                 scene.refusal = "CannotEditTrackedRideWhileOpen";
                 if (info && scene.shown)
@@ -2795,7 +2795,7 @@ namespace rct3::scene::park
         scene.water.pool_waves.insert(scene.water.pool_waves.end(), scene.drawn_waves.begin(), scene.drawn_waves.end());
         scene.water.pool_waves.insert(scene.water.pool_waves.end(), scene.rings.begin(), scene.rings.end());
         profiling::section("LensWater", [&] {
-            using save::WeatherType;
+            using save::model::WeatherType;
             const WeatherType w = scene.park.weather;
             std::optional<std::pair<std::size_t, std::uint32_t>> splashes;
             if (scene.riding && *scene.riding < scene.car_waters.size())
@@ -2909,7 +2909,7 @@ namespace rct3::scene::park
                 if (new_month && scene.simulate && scene.park_model.has_awards)
                 {
                     const entt::registry& r = scene.sim.registry;
-                    const save::Finance& money = scene.park_model.finance;
+                    const save::model::Finance& money = scene.park_model.finance;
                     simulation::AwardFigures f {
                         .guests = scene.park.guests,
                         .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::kMaxRating)),
@@ -2937,7 +2937,7 @@ namespace rct3::scene::park
                             continue;
                         ++f.food_stalls;
                         // Kinds of food by the kind of stall selling it.
-                        const auto stall = std::ranges::find(scene.rides.stalls, attraction.saved, [](const save::Stall& s) { return s.base.id; });
+                        const auto stall = std::ranges::find(scene.rides.stalls, attraction.saved, [](const save::model::Stall& s) { return s.base.id; });
                         if (stall != scene.rides.stalls.end() && !std::ranges::contains(foods, std::string_view(stall->base.symbol)))
                             foods.push_back(stall->base.symbol);
                     }
@@ -2946,7 +2946,7 @@ namespace rct3::scene::park
                     {
                         if (scene.rides.rides[i].base.demolished)
                             continue;
-                        const save::Assessment& a = scene.rides.rides[i].assessment;
+                        const save::model::Assessment& a = scene.rides.rides[i].assessment;
                         f.thrilling += a.valid && a.excitement > 5 && a.intensity > 5 ? 1 : 0;
                         const simulation::RideGroup group = i < scene.ride_groups.size() ? scene.ride_groups[i] : simulation::RideGroup::Other;
                         f.coasters += group == simulation::RideGroup::Coaster ? 1 : 0;
@@ -2961,7 +2961,7 @@ namespace rct3::scene::park
                     }
                     // shortcut: rides do not crash here, so only crashes the save remembers count; count new ones once
                     // trains can crash.
-                    f.crashed = static_cast<std::int32_t>(std::ranges::count_if(scene.rides.rides, [](const save::Ride& ride) { return ride.base.time_since_crash >= 0; }));
+                    f.crashed = static_cast<std::int32_t>(std::ranges::count_if(scene.rides.rides, [](const save::model::Ride& ride) { return ride.base.time_since_crash >= 0; }));
                     f.coaster_dangers = scene.park_model.awards.dangerous_coaster_events.value_or(0);
                     f.pool_dangers = scene.park_model.awards.dangerous_pool_events.value_or(0);
                     if (scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
@@ -2989,7 +2989,7 @@ namespace rct3::scene::park
                 }
             }
             // The scenario's goals, checked as each day begins.
-            if (const auto day = static_cast<std::int64_t>(std::floor(scene.park.time / (save::GameClock::kUnitsPerWeek / 7))); day != scene.goals_day)
+            if (const auto day = static_cast<std::int64_t>(std::floor(scene.park.time / (save::model::GameClock::kUnitsPerWeek / 7))); day != scene.goals_day)
             {
                 scene.goals_day = day;
                 std::vector<simulation::GoalRide> goal_rides;
@@ -3016,7 +3016,7 @@ namespace rct3::scene::park
                     .rides = goal_rides,
                 };
                 scene.goal_readings.clear();
-                for (const save::Condition& c : scene.park_model.objectives.conditions)
+                for (const save::model::Condition& c : scene.park_model.objectives.conditions)
                     scene.goal_readings.push_back(simulation::read_goal(c, figures));
                 if (const auto won = simulation::check_goals(scene.park_model.objectives, figures, scene.park.time, scene.park.messages))
                 {
@@ -3089,7 +3089,7 @@ namespace rct3::scene::park
                                 return std::ranges::any_of(scene.pick_boxes, [&](const rct3::park::object::PickBox& box) {
                                     if (glm::any(glm::lessThan(p, box.park_low)) || glm::any(glm::greaterThan(p, box.park_high)))
                                         return false;
-                                    const save::PlacedObject& o = scene.objects[box.index];
+                                    const save::model::PlacedObject& o = scene.objects[box.index];
                                     const auto owner = scene.attractions.find(o.id);
                                     const bool tracked = owner != scene.attractions.end() && owner->second.kind == rct3::park::AttractionRef::Kind::Ride && owner->second.index < scene.rides.rides.size() && scene.rides.rides[owner->second.index].track;
                                     const glm::vec3 local(box.back * glm::vec4(p, 1));
@@ -3098,7 +3098,7 @@ namespace rct3::scene::park
                             },
                     });
                 // The animals and their keepers walk the enclosures' tiles.
-                const save::TerrainGrid& g = scene.grid;
+                const save::model::TerrainGrid& g = scene.grid;
                 const auto tile_of = [&g](glm::vec2 p) { return glm::ivec2 { static_cast<int>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((p.y - g.origin_z) / g.tile_size_z)) }; };
                 const simulation::AnimalGround animal_ground {
                     .height = [&g](glm::vec2 p) { return g.height_at(p.x, p.y).value_or(0.0f); },
@@ -3142,13 +3142,13 @@ namespace rct3::scene::park
                         for (const rct3::park::BuildItem& item : scene.build.items.get())
                             if (item.style_index >= 0)
                                 theme_of.try_emplace(item.symbol, item.style_index);
-                    const save::TerrainGrid& g = scene.grid;
+                    const save::model::TerrainGrid& g = scene.grid;
                     if (g.tile_size_x <= 0 || g.tile_size_z <= 0)
                         return 0;
                     const glm::ivec2 tile { static_cast<int>(std::floor((at.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((at.z - g.origin_z) / g.tile_size_z)) };
                     // shortcut: the theme numbers of a VIP goal are taken to be the build catalogue's; check them
                     // against a level whose VIP wants a theme if themed areas are never found.
-                    return static_cast<std::int32_t>(std::ranges::count_if(scene.objects, [&](const save::PlacedObject& o) {
+                    return static_cast<std::int32_t>(std::ranges::count_if(scene.objects, [&](const save::model::PlacedObject& o) {
                         const auto found = theme_of.find(o.symbol);
                         return found != theme_of.end() && found->second == theme && std::abs(o.col - tile.x) <= reach && std::abs(o.row - tile.y) <= reach;
                     }));
@@ -3232,7 +3232,7 @@ namespace rct3::scene::park
                             message.subject_name = animal->name;
                         else if (const auto* house = r.valid(at) ? r.try_get<simulation::AnimalHouse>(at) : nullptr)
                         {
-                            const auto placed = std::ranges::find(scene.objects, house->object, &save::PlacedObject::id);
+                            const auto placed = std::ranges::find(scene.objects, house->object, &save::model::PlacedObject::id);
                             if (placed != scene.objects.end() && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
                                 if (const auto item = std::ranges::find(scene.build.items.get(), placed->symbol, &rct3::park::BuildItem::symbol); item != scene.build.items.get().end())
                                     message.subject_name = strings::to_utf8(assets.strings->get(item->name_text));
@@ -3270,10 +3270,10 @@ namespace rct3::scene::park
                         }
                     // The extras a park from the game placed stand as scenery, not in `pools`; its swimmers use them too.
                     scene.scenery_pool_extras.clear();
-                    for (const save::PlacedObject& o : scene.objects)
+                    for (const save::model::PlacedObject& o : scene.objects)
                         if (const auto fit = extra_fits.find(o.symbol); fit != extra_fits.end() && !o.hidden && !std::ranges::contains(scene.pool_pieces, o.id))
                             scene.scenery_pool_extras.push_back({ .symbol = o.symbol, .overlay = o.overlay, .col = o.col, .row = o.row, .side = rct3::park::ModelTurn::from(o.rotation).facing(), .fit = fit->second });
-                    const save::TerrainGrid& g = scene.grid;
+                    const save::model::TerrainGrid& g = scene.grid;
                     const auto tile_of = [&g](glm::vec3 p) { return glm::ivec2 { static_cast<int>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((p.z - g.origin_z) / g.tile_size_z)) }; };
                     std::vector<std::size_t> chairs;
                     for (std::size_t i = 0; i < scene.objects.size(); ++i)
@@ -3354,7 +3354,7 @@ namespace rct3::scene::park
                 {
                     if (p.staff || p.saved >= scene.people.guests.size() || !scene.sim.registry.valid(p.guest))
                         continue;
-                    save::Guest& kept = scene.people.guests[p.saved];
+                    save::model::Guest& kept = scene.people.guests[p.saved];
                     if (const auto* wallet = scene.sim.registry.try_get<simulation::Wallet>(p.guest))
                         kept.cash = parkfile::kept_cash(*wallet);
                     if (const auto* mood = scene.sim.registry.try_get<simulation::Mood>(p.guest))
@@ -3370,12 +3370,12 @@ namespace rct3::scene::park
                     const auto* thoughts = p.guest == entt::null || !scene.sim.registry.valid(p.guest) || p.saved >= (p.staff ? scene.people.staff.size() : scene.people.guests.size()) ? nullptr : scene.sim.registry.try_get<simulation::Thoughts>(p.guest);
                     if (thoughts == nullptr || thoughts->had == p.thoughts_seen)
                         continue;
-                    save::Person& person = p.staff ? scene.people.staff[p.saved].person : scene.people.guests[p.saved].person;
+                    save::model::Person& person = p.staff ? scene.people.staff[p.saved].person : scene.people.guests[p.saved].person;
                     auto& slots = person.thoughts;
                     for (std::size_t k = std::min<std::size_t>(thoughts->had - p.thoughts_seen, thoughts->recent.size()); k-- > 0;)
                     {
                         const simulation::Thought& t = thoughts->recent[k];
-                        const float newest = std::ranges::max(slots, { }, &save::Thought::time).time;
+                        const float newest = std::ranges::max(slots, { }, &save::model::Thought::time).time;
                         const auto* about = scene.sim.registry.valid(t.about) ? scene.sim.registry.try_get<simulation::Attraction>(t.about) : nullptr;
                         std::shift_right(slots.begin(), slots.end(), 1);
                         // A thought about a path item is about the placed object it stands as.
@@ -3422,17 +3422,17 @@ namespace rct3::scene::park
                     const auto* upkeep = scene.ride_entities[i] != entt::null ? scene.sim.registry.try_get<simulation::Upkeep>(scene.ride_entities[i]) : nullptr;
                     if (upkeep == nullptr)
                         continue;
-                    save::Ride& ride = scene.rides.rides[i];
+                    save::model::Ride& ride = scene.rides.rides[i];
                     ride.breakdown.reliability = upkeep->reliability.value * 100;
-                    ride.breakdown.current = static_cast<save::BreakdownKind>(std::to_underlying(upkeep->kind));
-                    ride.breakdown.last = static_cast<save::BreakdownKind>(std::to_underlying(upkeep->last));
+                    ride.breakdown.current = static_cast<save::model::BreakdownKind>(std::to_underlying(upkeep->kind));
+                    ride.breakdown.last = static_cast<save::model::BreakdownKind>(std::to_underlying(upkeep->last));
                     ride.base.time_since_inspection = upkeep->since_inspection.value;
                     ride.breakdown.downtime_windows = upkeep->downtime;
                     ride.breakdown.saved_downtime_percent.reset();
-                    using enum save::RepairStatus;
+                    using enum save::model::RepairStatus;
                     ride.base.repair_status = !upkeep->broken ? Fine : upkeep->mechanic == entt::null ? MechanicCalled : MechanicOnTheWay;
                     ride.base.mechanic_asked = upkeep->called;
-                    ride.base.flags = upkeep->broken ? ride.base.flags | save::AttractionCommon::kBrokenDown : ride.base.flags & ~save::AttractionCommon::kBrokenDown;
+                    ride.base.flags = upkeep->broken ? ride.base.flags | save::model::AttractionCommon::kBrokenDown : ride.base.flags & ~save::model::AttractionCommon::kBrokenDown;
                 }
                 // A crash closes its ride, counts as dangerous for the awards, and is remembered a while.
                 for (std::size_t i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
@@ -3440,7 +3440,7 @@ namespace rct3::scene::park
                     const auto* wrecks = scene.ride_entities[i] != entt::null ? scene.sim.registry.try_get<simulation::Wrecks>(scene.ride_entities[i]) : nullptr;
                     if (wrecks == nullptr)
                         continue;
-                    save::Ride& ride = scene.rides.rides[i];
+                    save::model::Ride& ride = scene.rides.rides[i];
                     ride.base.time_since_crash = wrecks->since.value;
                     // Each wreck goes up in flames and smoke as it blows up.
                     for (std::size_t t = 0; t < wrecks->trains.size(); ++t)
@@ -3460,7 +3460,7 @@ namespace rct3::scene::park
                     crashes = wrecks->crashes;
                     const std::uint32_t hurt = wrecks->injured - std::exchange(injured, wrecks->injured);
                     simulation::post(scene.park.messages, { .text_key = hurt > 0 ? "Thought_PI_Ride_Crashed_Injuries1" : "Thought_PI_Ride_Crashed1", .subject = ride.base.id, .number = hurt });
-                    ride.base.state = save::AttractionState::Closed;
+                    ride.base.state = save::model::AttractionState::Closed;
                     scene.shown_closed = scene.shown_closed || (scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && scene.shown->index == i);
                     auto& events = scene.park_model.awards.dangerous_coaster_events;
                     events = events.value_or(0) + static_cast<std::int32_t>(wrecks->dangers - dangers);
@@ -3477,7 +3477,7 @@ namespace rct3::scene::park
                         if (stall)
                             simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = attraction.saved != 0 ? std::optional(attraction.saved) : std::nullopt, .panel = ui::screens::message_panel(ui::screens::AttractionTab::View) }); // Named once shown, as the window names it
                         else
-                            simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = ui::screens::message_panel(ui::screens::AttractionTab::Maintenance), .field_key = std::string(ui::screens::breakdown_key(static_cast<save::BreakdownKind>(std::to_underlying(upkeep.kind)))) });
+                            simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = ui::screens::message_panel(ui::screens::AttractionTab::Maintenance), .field_key = std::string(ui::screens::breakdown_key(static_cast<save::model::BreakdownKind>(std::to_underlying(upkeep.kind)))) });
                     };
                     const auto* shop = scene.sim.registry.try_get<simulation::Shop>(e);
                     const bool cash = shop != nullptr && shop->product == simulation::Product::CashMachine;
@@ -3501,14 +3501,14 @@ namespace rct3::scene::park
                     // A broken stall's or cash machine's state into the saved one, for its window to show.
                     if (stall && (upkeep.broken || told != scene.broken_rides.end()))
                     {
-                        const auto mine = [&](const save::AttractionCommon& base) { return base.id == attraction.saved; };
-                        const auto s = std::ranges::find_if(scene.rides.stalls, mine, &save::Stall::base);
-                        const auto c = std::ranges::find_if(scene.rides.rides, mine, &save::Ride::base);
-                        if (save::AttractionCommon* base = s != scene.rides.stalls.end() ? &s->base : c != scene.rides.rides.end() ? &c->base : nullptr)
+                        const auto mine = [&](const save::model::AttractionCommon& base) { return base.id == attraction.saved; };
+                        const auto s = std::ranges::find_if(scene.rides.stalls, mine, &save::model::Stall::base);
+                        const auto c = std::ranges::find_if(scene.rides.rides, mine, &save::model::Ride::base);
+                        if (save::model::AttractionCommon* base = s != scene.rides.stalls.end() ? &s->base : c != scene.rides.rides.end() ? &c->base : nullptr)
                         {
-                            using enum save::RepairStatus;
+                            using enum save::model::RepairStatus;
                             base->repair_status = !upkeep.broken ? Fine : upkeep.mechanic == entt::null ? MechanicCalled : MechanicOnTheWay;
-                            base->flags = upkeep.broken ? base->flags | save::AttractionCommon::kBrokenDown : base->flags & ~save::AttractionCommon::kBrokenDown;
+                            base->flags = upkeep.broken ? base->flags | save::model::AttractionCommon::kBrokenDown : base->flags & ~save::model::AttractionCommon::kBrokenDown;
                         }
                     }
                     if (upkeep.broken == (told != scene.broken_rides.end()))
@@ -3533,17 +3533,17 @@ namespace rct3::scene::park
                     // the fence's do, so each panel only changes its model.
                     if (index >= scene.rides.rides.size())
                         continue;
-                    save::Ride& ride = scene.rides.rides[index];
+                    save::model::Ride& ride = scene.rides.rides[index];
                     ride.override_fence_symbol = upkeep.broken ? kTapeFence : "";
                     ride.override_fence_overlay = upkeep.broken ? kTapeFenceOverlay : "";
-                    const save::PlacedObject look { .symbol = ride.override_fence_symbol.empty() ? ride.fence_symbol : ride.override_fence_symbol, .overlay = ride.override_fence_symbol.empty() ? ride.fence_overlay : ride.override_fence_overlay };
+                    const save::model::PlacedObject look { .symbol = ride.override_fence_symbol.empty() ? ride.fence_symbol : ride.override_fence_symbol, .overlay = ride.override_fence_symbol.empty() ? ride.fence_overlay : ride.override_fence_overlay };
                     // shortcut: a ride with no fence of its own stays unfenced while broken; add panels for it if
                     // such rides turn up outside old saves.
                     const auto fence = scene.ride_fence_pieces.find(ride.base.id);
                     if (fence == scene.ride_fence_pieces.end() || fence->second.empty() || (!look.symbol.empty() && !load_object_model(scene, scene.placing.models, assets, look)))
                         continue;
                     wait_for_build(scene);
-                    for (save::PlacedObject& panel : scene.objects)
+                    for (save::model::PlacedObject& panel : scene.objects)
                     {
                         if (!std::ranges::contains(fence->second, panel.id))
                             continue;
@@ -3931,7 +3931,7 @@ namespace rct3::scene::park
         if (asks.park_open)
         {
             auto& flags = scene.park_model.park.flags.raw;
-            flags = *asks.park_open ? flags | std::to_underlying(save::ParkFlag::Open) : flags & ~std::to_underlying(save::ParkFlag::Open);
+            flags = *asks.park_open ? flags | std::to_underlying(save::model::ParkFlag::Open) : flags & ~std::to_underlying(save::model::ParkFlag::Open);
             for (auto [e, gate] : scene.sim.registry.view<simulation::ParkGate>().each())
                 gate.closed = !*asks.park_open;
         }
@@ -3944,7 +3944,7 @@ namespace rct3::scene::park
                     entrances.push_back(i);
             if (!entrances.empty())
             {
-                const save::PlacedObject& o = scene.objects[entrances[scene.entrance_centred++ % entrances.size()]];
+                const save::model::PlacedObject& o = scene.objects[entrances[scene.entrance_centred++ % entrances.size()]];
                 const glm::vec2 middle = rct3::park::object::footprint_middle(o, scene.models.at(rct3::park::object::model_ref(o)).squares);
                 scene.camera.target = { scene.grid.origin_x + middle.x * scene.grid.tile_size_x, scene.camera.target.y, scene.grid.origin_z + middle.y * scene.grid.tile_size_z };
                 scene.camera = rct3::park::on_ground(scene.camera, scene.grid);
@@ -4043,8 +4043,8 @@ namespace rct3::scene::park
         saved.base = scene.base;
         saved.rides = scene.rides;
         // What was pulled down only keeps its place while the park is shown.
-        std::erase_if(saved.rides.rides, [](const save::Ride& r) { return r.base.demolished; });
-        std::erase_if(saved.rides.stalls, [](const save::Stall& s) { return s.base.demolished; });
+        std::erase_if(saved.rides.rides, [](const save::model::Ride& r) { return r.base.demolished; });
+        std::erase_if(saved.rides.stalls, [](const save::model::Stall& s) { return s.base.demolished; });
         saved.objects = parkfile::kept_objects(scene.objects, scene.own_objects, scene.placed, scene.footpaths.paths, saved.rides);
         if (auto summary = save::read_summary(scene.base))
             saved.summary = std::move(*summary);
@@ -4078,7 +4078,7 @@ namespace rct3::scene::park
                            .weather_hold = park.weather_hold,
                            .wind = park.wind,
                            .wind_change = park.wind_change,
-                           .ledger = { scene.park_model.finance.ledger.begin(), scene.park_model.finance.ledger.begin() + static_cast<std::ptrdiff_t>(std::min(scene.park_model.finance.ledger_periods_loaded, save::kLedgerPeriods)) } };
+                           .ledger = { scene.park_model.finance.ledger.begin(), scene.park_model.finance.ledger.begin() + static_cast<std::ptrdiff_t>(std::min(scene.park_model.finance.ledger_periods_loaded, save::model::kLedgerPeriods)) } };
         saved.camera = scene.camera;
         std::unordered_map<entt::entity, std::int32_t> looks;
         for (const ShownPerson& p : scene.shown_people)
@@ -4090,7 +4090,7 @@ namespace rct3::scene::park
         saved.no_queue_signs.assign(scene.led_signs.hidden.begin(), scene.led_signs.hidden.end());
         saved.shows = scene.shows;
         if (saved.shows)
-            std::erase_if(*saved.shows, [&](const save::RideShow& show) { return !std::ranges::contains(saved.rides.rides, show.ride, [](const save::Ride& r) { return r.base.id; }); });
+            std::erase_if(*saved.shows, [&](const save::model::RideShow& show) { return !std::ranges::contains(saved.rides.rides, show.ride, [](const save::model::Ride& r) { return r.base.id; }); });
         saved.waterfalls = scene.footpaths.waterfalls;
         saved.day_mode = scene.day.mode;
         saved.animals = parkfile::keep_animals(scene.sim, scene.enclosures);

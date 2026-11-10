@@ -33,11 +33,11 @@ namespace rct3::park
     /// The attraction of each object that belongs to one, by object id.
     using AttractionObjects = std::unordered_map<std::uint64_t, AttractionRef>;
 
-    [[nodiscard]] AttractionObjects attraction_objects(const save::RideModel& rides, std::span<const save::PlacedObject> objects);
+    [[nodiscard]] AttractionObjects attraction_objects(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects);
 
     /// The objects that stand for the same thing as one of the objects at `of` (places in `objects`): of the same
     /// asset at the same place and turn, one hanging from the other. Saves may keep a ride's building, entrance and
     /// exit twice so; what draws one moving must leave out its twin.
-    [[nodiscard]] std::vector<std::size_t> twins(std::span<const save::PlacedObject> objects, std::span<const std::size_t> of);
+    [[nodiscard]] std::vector<std::size_t> twins(std::span<const save::model::PlacedObject> objects, std::span<const std::size_t> of);
 
 } // namespace rct3::park

@@ -8,7 +8,7 @@
 #include <string_view>
 #include <unordered_map>
 
-namespace rct3::save
+namespace rct3::save::model
 {
 
     namespace
@@ -1231,4 +1231,4 @@ namespace rct3::save
         return m;
     }
 
-} // namespace rct3::save
+} // namespace rct3::save::model

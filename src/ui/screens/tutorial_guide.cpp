@@ -31,16 +31,16 @@ namespace rct3::ui::screens
         }
     } // namespace
 
-    TutorialStepText tutorial_step_text(const StringTable& strings, const save::TutorialScript& script, std::size_t index)
+    TutorialStepText tutorial_step_text(const StringTable& strings, const save::model::TutorialScript& script, std::size_t index)
     {
         if (index >= script.steps.size())
             return { };
-        const save::TutorialStep& step = script.steps[index];
+        const save::model::TutorialStep& step = script.steps[index];
         const std::string key = std::string(kKeyStart) + script.name + std::string(kStep) + std::to_string(index + 1);
         return { in_language(strings, key + std::string(kTitleEnd), step.title), in_language(strings, key + std::string(kTextEnd), step.text) };
     }
 
-    std::u16string tutorial_title(const StringTable& strings, const save::TutorialScript& script)
+    std::u16string tutorial_title(const StringTable& strings, const save::model::TutorialScript& script)
     {
         return in_language(strings, std::string(kKeyStart) + script.name + std::string(kTutorialTitleEnd), script.title);
     }
@@ -86,7 +86,7 @@ namespace rct3::ui::screens
         return centred(size.x, size.y);
     }
 
-    TutorialGuide::TutorialGuide(std::string name, const TutorialGuideStyle& style, const StringTable& strings, save::TutorialScript script)
+    TutorialGuide::TutorialGuide(std::string name, const TutorialGuideStyle& style, const StringTable& strings, save::model::TutorialScript script)
         : Window(std::move(name), style.window, style.min_width, 0)
         , style_(style)
         , strings_(strings)

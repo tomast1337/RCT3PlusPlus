@@ -33,15 +33,15 @@ namespace rct3::park
     inline constexpr float kTreeSink = 0.3f;
 
     /// True for a placed item drawn as a tree or plant: one that sways in the wind.
-    [[nodiscard]] bool is_plant(const save::PlacedObject& object, const object::ObjectModels& models);
+    [[nodiscard]] bool is_plant(const save::model::PlacedObject& object, const object::ObjectModels& models);
 
     /// Trees for the land round `grid`, grown round the plants on it among `objects` from index `from` on,
     /// numbered after the highest id among all `objects`. None when those include no plants.
-    [[nodiscard]] std::vector<save::PlacedObject> off_map_trees(std::span<const save::PlacedObject> objects, std::size_t from, const object::ObjectModels& models, const save::TerrainGrid& grid, const LandRings& land, random::RandomState& scenery);
+    [[nodiscard]] std::vector<save::model::PlacedObject> off_map_trees(std::span<const save::model::PlacedObject> objects, std::size_t from, const object::ObjectModels& models, const save::model::TerrainGrid& grid, const LandRings& land, random::RandomState& scenery);
 
     /// The trees a park file lists beyond the edge, each a copy of the park plant it names, numbered after
     /// the highest id among `objects`. Those naming no plant on the map, or standing where the land round it
     /// is not, are left out.
-    [[nodiscard]] std::vector<save::PlacedObject> listed_off_map_trees(std::span<const save::SkirtTree> listed, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid, const LandRings& land);
+    [[nodiscard]] std::vector<save::model::PlacedObject> listed_off_map_trees(std::span<const save::model::SkirtTree> listed, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid, const LandRings& land);
 
 } // namespace rct3::park

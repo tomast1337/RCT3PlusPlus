@@ -248,14 +248,14 @@ namespace rct3::park
         }
 
         /// The pixel point of the park point (x, z) on a picture `scale` pixels per tile.
-        glm::vec2 to_pixels(const save::TerrainGrid& grid, std::int32_t scale, glm::vec2 park)
+        glm::vec2 to_pixels(const save::model::TerrainGrid& grid, std::int32_t scale, glm::vec2 park)
         {
             const glm::vec2 m = to_map(map_frame(grid), park);
             return { m.x * static_cast<float>(grid.width * scale), m.y * static_cast<float>(grid.height * scale) };
         }
 
         /// The middle of tile (col, row) in pixels.
-        glm::vec2 tile_middle(const save::TerrainGrid& grid, std::int32_t scale, std::int32_t col, std::int32_t row)
+        glm::vec2 tile_middle(const save::model::TerrainGrid& grid, std::int32_t scale, std::int32_t col, std::int32_t row)
         {
             const float s = static_cast<float>(scale);
             return { (static_cast<float>(col) + 0.5f) * s, (static_cast<float>(grid.height - 1 - row) + 0.5f) * s };
@@ -290,24 +290,24 @@ namespace rct3::park
             return { static_cast<float>(c.r) / 255.0f, static_cast<float>(c.g) / 255.0f, static_cast<float>(c.b) / 255.0f };
         }
 
-        bool owned(save::Ownership o)
+        bool owned(save::model::Ownership o)
         {
-            return o == save::Ownership::Owned || o == save::Ownership::OwnedRights;
+            return o == save::model::Ownership::Owned || o == save::model::Ownership::OwnedRights;
         }
 
-        bool for_sale(save::Ownership o)
+        bool for_sale(save::model::Ownership o)
         {
-            return o == save::Ownership::ForSale || o == save::Ownership::ForSaleRights;
+            return o == save::model::Ownership::ForSale || o == save::model::Ownership::ForSaleRights;
         }
 
-        void draw_park_land(MapPicture& p, const save::TerrainGrid& grid, std::int32_t scale)
+        void draw_park_land(MapPicture& p, const save::model::TerrainGrid& grid, std::int32_t scale)
         {
             const MapRgba outside = map_layer_colour(MapLayer::ParkLand);
             for (std::int32_t row = 0; row < grid.height; ++row)
             {
                 for (std::int32_t col = 0; col < grid.width; ++col)
                 {
-                    const save::Ownership o = grid.at(col, row).ownership();
+                    const save::model::Ownership o = grid.at(col, row).ownership();
                     if (owned(o))
                         continue;
                     const std::int32_t x0 = col * scale;
@@ -352,7 +352,7 @@ namespace rct3::park
             }
         }
 
-        void draw_paths(MapPicture& p, const save::TerrainGrid& grid, std::int32_t scale, std::span<const MapPathTile> paths)
+        void draw_paths(MapPicture& p, const save::model::TerrainGrid& grid, std::int32_t scale, std::span<const MapPathTile> paths)
         {
             std::set<std::pair<std::int32_t, std::int32_t>> at;
             for (const MapPathTile& t : paths)
@@ -414,7 +414,7 @@ namespace rct3::park
         }
     }
 
-    MapFrame map_frame(const save::TerrainGrid& grid)
+    MapFrame map_frame(const save::model::TerrainGrid& grid)
     {
         MapFrame f;
         f.x0 = grid.origin_x;
@@ -434,20 +434,20 @@ namespace rct3::park
         return { frame.x0 + map.x * frame.width, frame.z0 + (1.0f - map.y) * frame.depth };
     }
 
-    MapFeatures map_features(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water)
+    MapFeatures map_features(const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const save::model::WaterLayer& water)
     {
         MapFeatures f;
         std::set<std::pair<std::int32_t, std::int32_t>> seen;
-        for (const save::PathTile& t : paths)
+        for (const save::model::PathTile& t : paths)
         {
             if (!grid.contains(t.col, t.row) || !seen.emplace(t.col, t.row).second)
                 continue;
-            f.paths.push_back({ t.col, t.row, t.kind == save::PathKind::Queue });
+            f.paths.push_back({ t.col, t.row, t.kind == save::model::PathKind::Queue });
         }
         f.water.assign(grid.cells.size(), std::nullopt);
-        for (const save::WaterBody& body : water.bodies)
+        for (const save::model::WaterBody& body : water.bodies)
         {
-            for (const save::WaterTri& t : body.tris)
+            for (const save::model::WaterTri& t : body.tris)
             {
                 if (!grid.contains(t.col, t.row))
                     continue;
@@ -465,7 +465,7 @@ namespace rct3::park
         return { xz(0), xz(1), xz(5), xz(4) };
     }
 
-    std::array<glm::vec2, 4> tile_corners(const save::TerrainGrid& grid, save::Tile tile)
+    std::array<glm::vec2, 4> tile_corners(const save::model::TerrainGrid& grid, save::model::Tile tile)
     {
         const auto [col, row] = tile;
         const float x0 = grid.world_x(col);
@@ -483,13 +483,13 @@ namespace rct3::park
         return { rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3] };
     }
 
-    std::int32_t map_scale(const save::TerrainGrid& grid)
+    std::int32_t map_scale(const save::model::TerrainGrid& grid)
     {
         const std::int32_t across = std::max({ grid.width, grid.height, 1 });
         return std::clamp(kMapPixelsAcross / across, kMinMapScale, kMaxMapScale);
     }
 
-    MapGround map_ground(const save::TerrainGrid& grid, const MapFeatures& features, std::int32_t scale)
+    MapGround map_ground(const save::model::TerrainGrid& grid, const MapFeatures& features, std::int32_t scale)
     {
         MapGround g;
         g.scale = scale;
@@ -615,7 +615,7 @@ namespace rct3::park
         return g;
     }
 
-    MapPicture compose_map(const MapGround& ground, const save::TerrainGrid& grid, const MapFeatures& features, const MapLayers& layers)
+    MapPicture compose_map(const MapGround& ground, const save::model::TerrainGrid& grid, const MapFeatures& features, const MapLayers& layers)
     {
         MapPicture p = shows(layers, MapLayer::Relief) ? ground.relief : ground.flat;
         if (p.rgba.empty())
@@ -661,7 +661,7 @@ namespace rct3::park
         return p;
     }
 
-    MapPicture people_picture(const save::TerrainGrid& grid, std::int32_t scale, std::span<const MapPerson> people, const MapLayers& layers, std::span<const glm::ivec2> patrol_tiles)
+    MapPicture people_picture(const save::model::TerrainGrid& grid, std::int32_t scale, std::span<const MapPerson> people, const MapLayers& layers, std::span<const glm::ivec2> patrol_tiles)
     {
         MapPicture p = blank(grid.width * scale, grid.height * scale);
         if (shows(layers, MapLayer::Patrols))

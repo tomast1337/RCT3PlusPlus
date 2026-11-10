@@ -13,10 +13,10 @@
 namespace rct3::park::path
 {
 
-    std::vector<GroundOpening> tunnel_hollows(std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    std::vector<GroundOpening> tunnel_hollows(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid)
     {
         std::vector<GroundOpening> hollows;
-        for (const save::PathTile& p : paths)
+        for (const save::model::PathTile& p : paths)
         {
             if (!p.elevation || !p.elevation->underground || !grid.contains(p.col, p.row))
                 continue;
@@ -29,7 +29,7 @@ namespace rct3::park::path
         return hollows;
     }
 
-    TerrainMesh tunnel_lining(std::span<const GroundOpening> hollows, const save::TerrainGrid& grid)
+    TerrainMesh tunnel_lining(std::span<const GroundOpening> hollows, const save::model::TerrainGrid& grid)
     {
         TerrainMesh mesh;
         std::multimap<std::pair<int, int>, const GroundOpening*> by_tile;

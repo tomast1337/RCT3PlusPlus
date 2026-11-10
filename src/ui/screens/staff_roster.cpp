@@ -21,16 +21,16 @@ namespace rct3::ui::screens
         /// The hire buttons: the job each hires, its picture and help.
         struct Hire
         {
-            save::StaffKind kind = save::StaffKind::Handyman;
+            save::model::StaffKind kind = save::model::StaffKind::Handyman;
             std::string_view icon;
             std::string_view help;
         };
         constexpr std::array<Hire, kHires> kHireButtons = { {
-            { save::StaffKind::Handyman, "Staff_HireMaintenanceIcon", "Staff_Hire_Maintenance" },
-            { save::StaffKind::Mechanic, "Staff_HireMechanicIcon", "Staff_Hire_Mechanic" },
-            { save::StaffKind::SecurityGuard, "Staff_HireSecurityIcon", "Staff_Hire_Security" },
-            { save::StaffKind::Entertainer, "Staff_HireEntertainerIcon", "Staff_Hire_Entertainer" },
-            { save::StaffKind::AnimalKeeper, "Staff_HireAnimalKeeperIcon", "Staff_Hire_AnimalKeeper" },
+            { save::model::StaffKind::Handyman, "Staff_HireMaintenanceIcon", "Staff_Hire_Maintenance" },
+            { save::model::StaffKind::Mechanic, "Staff_HireMechanicIcon", "Staff_Hire_Mechanic" },
+            { save::model::StaffKind::SecurityGuard, "Staff_HireSecurityIcon", "Staff_Hire_Security" },
+            { save::model::StaffKind::Entertainer, "Staff_HireEntertainerIcon", "Staff_Hire_Entertainer" },
+            { save::model::StaffKind::AnimalKeeper, "Staff_HireAnimalKeeperIcon", "Staff_Hire_AnimalKeeper" },
         } };
         constexpr std::string_view kHireFrame = "Staff_HireStaff";
 
@@ -62,7 +62,7 @@ namespace rct3::ui::screens
         constexpr std::array<std::string_view, 7> kCostumes = {
             "Entertainer_SubType_Panda", "Entertainer_SubType_Elephant", "Entertainer_SubType_PumpkinHead", "Entertainer_SubType_Alien", "Entertainer_SubType_Cowgirl", "Entertainer_SubType_Shark", "Entertainer_SubType_Tiger",
         };
-        /// The picture of each job, in the order of save::StaffKind.
+        /// The picture of each job, in the order of save::model::StaffKind.
         constexpr std::array<std::string_view, 8> kPortraits = {
             "Staff_JobIsMaintenanceIcon", "Staff_JobIsMechanicIcon", "Staff_JobIsSecurityIcon", "Staff_JobIsEntertainerIcon", "Staff_JobIsVendorIcon", "Staff_JobIsAnimalKeeperIcon", "Staff_JobIsMaintenanceIcon", "Staff_JobIsParkInspectorIcon",
         };
@@ -82,9 +82,9 @@ namespace rct3::ui::screens
         }
 
         /// How many clothes the uniform of `kind` has colours for; 0 for none.
-        std::size_t uniform_pots(save::StaffKind kind)
+        std::size_t uniform_pots(save::model::StaffKind kind)
         {
-            using enum save::StaffKind;
+            using enum save::model::StaffKind;
             switch (kind)
             {
                 case Handyman:
@@ -127,9 +127,9 @@ namespace rct3::ui::screens
         }
     } // namespace
 
-    std::span<const RosterTask> roster_tasks(save::StaffKind kind)
+    std::span<const RosterTask> roster_tasks(save::model::StaffKind kind)
     {
-        using enum save::StaffKind;
+        using enum save::model::StaffKind;
         switch (kind)
         {
             case Handyman:
@@ -248,8 +248,8 @@ namespace rct3::ui::screens
         r.patrol = r.costume = r.discipline = r.train = r.wage_up = r.wage_down = nullptr;
         const RosterLine& l = r.line;
         const auto kind = static_cast<std::size_t>(l.kind);
-        const bool inspector = l.kind == save::StaffKind::ParkInspector;
-        const bool vendor = l.kind == save::StaffKind::Vendor;
+        const bool inspector = l.kind == save::model::StaffKind::ParkInspector;
+        const bool vendor = l.kind == save::model::StaffKind::Vendor;
         auto& band = p.add<Panel>("band", std::string { });
         band.colour = (&r - rows_.data()) % 2 == 0 ? style_.stripe : style_.plain;
         band.placement = fill();
@@ -281,10 +281,10 @@ namespace rct3::ui::screens
             const float right = 2 + style_.swatch * static_cast<float>(pots);
             for (std::size_t pot = 0; pot < pots; ++pot)
             {
-                Button& s = add_icon(p, std::format("Colour{}", pot), { }, std::format("{}{}", style_.palette.swatch_prefix, l.colours[pot] % style_.uniform_colours), top_right(right - style_.swatch * static_cast<float>(pot + 1) + 2, 23, style_.swatch, style_.swatch), text(strings, l.kind == save::StaffKind::Entertainer ? "Staff_Costume_Colours" : pots == 1 ? "Staff_Uniform_Colour" : "Staff_Uniform_Colours"));
+                Button& s = add_icon(p, std::format("Colour{}", pot), { }, std::format("{}{}", style_.palette.swatch_prefix, l.colours[pot] % style_.uniform_colours), top_right(right - style_.swatch * static_cast<float>(pot + 1) + 2, 23, style_.swatch, style_.swatch), text(strings, l.kind == save::model::StaffKind::Entertainer ? "Staff_Costume_Colours" : pots == 1 ? "Staff_Uniform_Colour" : "Staff_Uniform_Colours"));
                 r.swatches.push_back(&s);
             }
-            if (l.kind == save::StaffKind::Entertainer)
+            if (l.kind == save::model::StaffKind::Entertainer)
                 r.costume = &add_icon(p, "Costume", { }, "Staff_CostumeColumnIcon", top_right(right + 2, 23, style_.swatch, style_.swatch), text(strings, "StaffWindow_CostumeColumnHelp"));
         }
         if (!r.expanded)
@@ -321,7 +321,7 @@ namespace rct3::ui::screens
         for (std::size_t i = 0; i < rows_.size(); ++i)
         {
             Row& r = rows_[i];
-            const bool inspector = r.line.kind == save::StaffKind::ParkInspector || r.line.kind == save::StaffKind::Vendor;
+            const bool inspector = r.line.kind == save::model::StaffKind::ParkInspector || r.line.kind == save::model::StaffKind::Vendor;
             const float lines = !r.expanded ? 0 : inspector ? (roster_tasks(r.line.kind).empty() ? 0 : 1) : 2;
             const float height = style_.row_height + lines * style_.line_height + (lines > 0 ? 2 : 0);
             r.panel->placement = { { 0, 0, 1, 0 }, { 0, y, 0, y + height } };
@@ -365,7 +365,7 @@ namespace rct3::ui::screens
             if (!hires_[i]->take_click())
                 continue;
             // A keeper looks after an enclosure's animals.
-            if (kHireButtons[i].kind == save::StaffKind::AnimalKeeper && !animal_houses_)
+            if (kHireButtons[i].kind == save::model::StaffKind::AnimalKeeper && !animal_houses_)
                 say(text(strings, "EnclosureNeeded_Message"), false);
             else
                 asks_.hire = kHireButtons[i].kind;

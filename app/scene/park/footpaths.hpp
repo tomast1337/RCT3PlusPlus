@@ -82,10 +82,10 @@ namespace rct3::scene::park
         bool loaded = false;
         std::optional<std::size_t> style; ///< Of styles, the one chosen
         rct3::park::FootpathBuilder builder;
-        std::vector<save::PathTile> paths;               ///< The park's paths as they are now
-        save::WaterLayer water;                          ///< To build the ground again with
-        std::vector<save::PoolWater> pools;              ///< The same
-        std::vector<save::Waterfall> waterfalls;         ///< The park's waterfalls as they are now
+        std::vector<save::model::PathTile> paths;        ///< The park's paths as they are now
+        save::model::WaterLayer water;                   ///< To build the ground again with
+        std::vector<save::model::PoolWater> pools;       ///< The same
+        std::vector<save::model::Waterfall> waterfalls;  ///< The park's waterfalls as they are now
         std::vector<rct3::park::ground::Paving> pavings; ///< What the rides and stalls pave: doors, stalls, flat rides' floors
         bool pavings_stale = false;                      ///< The ground was built without the pavings as they are now
         rct3::park::EdgeWalls walls;                     ///< The fences and walls paths do not join across
@@ -105,11 +105,11 @@ namespace rct3::scene::park
         bool lay_next = false;                                            ///< Letting go on the arrow lays the next piece
         bool under_ground = false;                                        ///< The ghost goes into a tunnel, so the ground is drawn faded
         bool took_click = false;                                          ///< That press was not a click picking a start
-        std::vector<save::Tile> brush;                                    ///< While a stroke goes on: the tiles it passed over, in order
+        std::vector<save::model::Tile> brush;                             ///< While a stroke goes on: the tiles it passed over, in order
         /// The path edge the pointer is at, as the builder going on from it, and which path and side that is.
         std::optional<rct3::park::FootpathBuilder> hover;
         std::optional<std::pair<std::size_t, rct3::park::Side>> hover_edge;
-        std::optional<save::Tile> hover_tile;                  ///< Bare ground pointed at, shown as the path a click would lay
+        std::optional<save::model::Tile> hover_tile;           ///< Bare ground pointed at, shown as the path a click would lay
         std::optional<std::array<std::int32_t, 4>> hover_door; ///< The door edge pointed at: column, row, height, side
         /// While Shift is held: where the pointer met the ground when it went down, and the first piece's height then.
         struct Lift
@@ -125,7 +125,7 @@ namespace rct3::scene::park
         bool routing = false;                                          ///< The panel's route tab was on last frame
         bool straight = false;                                         ///< The panel's straight tab was on last frame
         int brush_size = 1;                                            ///< The panel's brush size last frame
-        std::optional<save::Tile> route_goal;                          ///< With routing on: the tile pointed at
+        std::optional<save::model::Tile> route_goal;                   ///< With routing on: the tile pointed at
         std::optional<std::int32_t> route_goal_height;                 ///< And the height of the raised path pointed at there
         std::optional<std::vector<rct3::park::path::RouteStep>> route; ///< The route there, worked out when it changes
         bool route_blocked = false;                                    ///< Only through what is in the way, so it is shown refused
@@ -140,7 +140,7 @@ namespace rct3::scene::park
         std::vector<std::uint64_t> remove_marked;                      ///< And the paths a press went over, until let go
         bool remove_now = false;                                       ///< Let go, so the marked paths are taken away
         std::optional<bool> follow_changed;                            ///< The follow tab was switched, for the options to keep
-        std::optional<save::Tile> followed;                            ///< With camera follow on: the next piece's tile the camera went to
+        std::optional<save::model::Tile> followed;                     ///< With camera follow on: the next piece's tile the camera went to
         std::optional<glm::vec3> camera_goal;                          ///< Where the camera glides to, until it is there or moved
         bool dirty = false;                                            ///< The next piece changed, so the ghost is built again
         std::u16string notice;                                         ///< Why the last piece was not laid, until the next control
@@ -173,7 +173,7 @@ namespace rct3::scene::park
     /// The support pieces that would hold up `ghosts`, were they added to the scene's objects.
     /// shortcut: the columns of what is there already stay as they are under a ghost; show them changed too if
     /// the difference shows.
-    [[nodiscard]] std::vector<save::PlacedObject> supports_under(const ParkScene& scene, std::span<const save::PlacedObject> ghosts, const rct3::park::support::SupportSets& sets);
+    [[nodiscard]] std::vector<save::model::PlacedObject> supports_under(const ParkScene& scene, std::span<const save::model::PlacedObject> ghosts, const rct3::park::support::SupportSets& sets);
 
     /// Acts on what the player did in the panel since the last frame, and shows the result.
     void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options);

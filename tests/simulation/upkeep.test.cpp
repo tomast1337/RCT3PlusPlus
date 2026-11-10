@@ -95,7 +95,7 @@ TEST_CASE("staff are paid a quarter of their monthly wage as each week ends, ven
         const entt::entity e = r.create();
         r.emplace<Staff>(e, s);
     }
-    const float week = kSecondsPerHour * rct3::save::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
+    const float week = kSecondsPerHour * rct3::save::model::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
     park.run_seconds(week * 0.9f);
     CHECK(r.ctx().get<Payroll>().paid.value == 0);
     park.run_seconds(week * 0.2f);
@@ -150,7 +150,7 @@ TEST_CASE("an idle keeper grows unhappy and, unhappy enough, quits")
 
 TEST_CASE("a saved ride brings its reliability, breakdown and inspections")
 {
-    rct3::save::Ride ride;
+    rct3::save::model::Ride ride;
     ride.breakdown.reliability = 80;
     ride.breakdown.inspection_interval = 4; // Every hour
     ride.base.time_since_inspection = 90;
@@ -159,9 +159,9 @@ TEST_CASE("a saved ride brings its reliability, breakdown and inspections")
     CHECK_FALSE(upkeep.broken);
     CHECK(upkeep.inspect_every.value == 3600);
     CHECK(upkeep.since_inspection.value == 90);
-    ride.base.repair_status = rct3::save::RepairStatus::MechanicCalled; // Kept on some fixed rides too
+    ride.base.repair_status = rct3::save::model::RepairStatus::MechanicCalled; // Kept on some fixed rides too
     CHECK_FALSE(upkeep_of(ride).broken);
-    ride.base.flags |= rct3::save::AttractionCommon::kBrokenDown;
+    ride.base.flags |= rct3::save::model::AttractionCommon::kBrokenDown;
     ride.breakdown.inspection_interval = 6; // Never
     upkeep = upkeep_of(ride);
     CHECK(upkeep.broken);
@@ -229,9 +229,9 @@ TEST_CASE("a ride breaking down breaks in one of the ways its sort can, and a sa
     CHECK(park.run_until([&] { return r.get<Upkeep>(ride).broken; }, 3000));
     CHECK(r.get<Upkeep>(ride).kind != Breakdown::None);
     CHECK(r.get<Upkeep>(ride).kind != Breakdown::EmergencyStop); // A coaster's, not a flat ride's
-    rct3::save::Ride saved;
-    saved.breakdown.current = rct3::save::BreakdownKind::DoorsFailToOpen;
-    saved.base.flags = rct3::save::AttractionCommon::kBrokenDown;
+    rct3::save::model::Ride saved;
+    saved.breakdown.current = rct3::save::model::BreakdownKind::DoorsFailToOpen;
+    saved.base.flags = rct3::save::model::AttractionCommon::kBrokenDown;
     CHECK(upkeep_of(saved).kind == Breakdown::DoorsFailToOpen);
     saved.base.flags = 0; // A kind kept on a ride running fine
     CHECK_FALSE(upkeep_of(saved).broken);
@@ -252,7 +252,7 @@ TEST_CASE("a ride's downtime counts the samples it was down in, window by window
     upkeep.broken = false;
     park.run_seconds(8 * kSecondsPerHour);
     CHECK(upkeep.downtime_share() == 0);
-    rct3::save::Ride saved;
+    rct3::save::model::Ride saved;
     saved.breakdown.downtime_windows = { 1, 2, 3, 4, 5, 6, 7, 8 };
     CHECK(upkeep_of(saved).downtime_share() == doctest::Approx(36.0 / 160));
 }

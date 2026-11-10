@@ -10,9 +10,9 @@ using namespace rct3::park;
 namespace
 {
     /// A park `width` by `height` tiles of 4 units, all owned, every corner at `height_at(col, row)`.
-    template<class Height> save::TerrainGrid grid(int width, int height, Height height_at)
+    template<class Height> save::model::TerrainGrid grid(int width, int height, Height height_at)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.origin_x = -10;
@@ -24,15 +24,15 @@ namespace
         {
             for (int col = 0; col < width; ++col)
             {
-                save::TerrainCell& c = g.cells[static_cast<std::size_t>(row * width + col)];
+                save::model::TerrainCell& c = g.cells[static_cast<std::size_t>(row * width + col)];
                 c.corners = { height_at(col, row), height_at(col + 1, row), height_at(col, row + 1), height_at(col + 1, row + 1) };
-                c.flags = static_cast<std::uint8_t>(save::TileFlag::Owned);
+                c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
             }
         }
         return g;
     }
 
-    save::TerrainGrid flat(int width, int height)
+    save::model::TerrainGrid flat(int width, int height)
     {
         return grid(width, height, [](int, int) { return 0.0f; });
     }
@@ -46,7 +46,7 @@ namespace
     }
 
     /// The pixel in the middle of tile (col, row).
-    MapRgba middle_of(const MapPicture& p, const save::TerrainGrid& g, std::int32_t scale, int col, int row)
+    MapRgba middle_of(const MapPicture& p, const save::model::TerrainGrid& g, std::int32_t scale, int col, int row)
     {
         return p.at(col * scale + scale / 2, (g.height - 1 - row) * scale + scale / 2);
     }
@@ -59,7 +59,7 @@ namespace
 
 TEST_CASE("the map has north up and east to the right")
 {
-    const save::TerrainGrid g = flat(10, 5);
+    const save::model::TerrainGrid g = flat(10, 5);
     const MapFrame f = map_frame(g);
     CHECK(f.width == 40);
     CHECK(f.depth == 20);
@@ -91,7 +91,7 @@ TEST_CASE("the map is about a thousand pixels across within its limits")
 {
     CHECK(map_scale(flat(10, 10)) == kMaxMapScale);
     CHECK(map_scale(flat(200, 100)) == 5);
-    save::TerrainGrid huge;
+    save::model::TerrainGrid huge;
     huge.width = 1000;
     huge.height = 10;
     CHECK(map_scale(huge) == kMinMapScale);
@@ -99,16 +99,16 @@ TEST_CASE("the map is about a thousand pixels across within its limits")
 
 TEST_CASE("map features keep each path tile once and the highest water on a tile")
 {
-    const save::TerrainGrid g = flat(4, 4);
-    std::vector<save::PathTile> paths(3);
+    const save::model::TerrainGrid g = flat(4, 4);
+    std::vector<save::model::PathTile> paths(3);
     paths[0].col = 1;
     paths[0].row = 2;
     paths[1].col = 1;
     paths[1].row = 2; // A path above another one
     paths[2].col = 3;
     paths[2].row = 3;
-    paths[2].kind = save::PathKind::Queue;
-    save::WaterLayer water;
+    paths[2].kind = save::model::PathKind::Queue;
+    save::model::WaterLayer water;
     water.bodies = { { 1.0f, { { 2, 1, 0, 7 } } }, { 2.5f, { { 2, 1, 1, 7 } } } };
     const MapFeatures f = map_features(g, paths, water);
     REQUIRE(f.paths.size() == 2);
@@ -133,7 +133,7 @@ TEST_CASE("a box's ground goes round it")
 
 TEST_CASE("paths, attractions and water show only with their layers")
 {
-    const save::TerrainGrid g = flat(6, 6);
+    const save::model::TerrainGrid g = flat(6, 6);
     MapFeatures f;
     f.paths = { { 1, 1, false } };
     f.shapes = { { MapLayer::Food, tile_corners(g, { 4, 4 }) }, { MapLayer::Rides, tile_corners(g, { 4, 1 }) } };
@@ -163,7 +163,7 @@ TEST_CASE("paths, attractions and water show only with their layers")
 
 TEST_CASE("land outside the park is shaded and its edge drawn")
 {
-    save::TerrainGrid g = flat(6, 6);
+    save::model::TerrainGrid g = flat(6, 6);
     for (int col = 3; col < 6; ++col)
     {
         for (int row = 0; row < 6; ++row)
@@ -182,7 +182,7 @@ TEST_CASE("land outside the park is shaded and its edge drawn")
 
 TEST_CASE("contour lines cross slopes and leave flat ground alone")
 {
-    const save::TerrainGrid slope = grid(8, 8, [](int col, int) { return static_cast<float>(col) * 2.0f; });
+    const save::model::TerrainGrid slope = grid(8, 8, [](int col, int) { return static_cast<float>(col) * 2.0f; });
     const MapFeatures f;
     const MapGround on_slope = map_ground(slope, f, 8);
     int lines = 0;
@@ -197,15 +197,15 @@ TEST_CASE("contour lines cross slopes and leave flat ground alone")
 
 TEST_CASE("surfaces colour the ground and relief lights slopes that face the north-west")
 {
-    save::TerrainGrid g = flat(4, 4);
+    save::model::TerrainGrid g = flat(4, 4);
     MapFeatures f;
     f.surfaces = { MapRgba { 200, 50, 50, 255 } };
     const MapGround ground = map_ground(g, f, 4);
     CHECK(near(ground.flat.at(8, 8), { 200, 50, 50, 255 }));
 
     // Ground rising to the east faces west, towards the light; ground falling to the east faces away.
-    const save::TerrainGrid rising = grid(6, 6, [](int col, int) { return static_cast<float>(col) * 3.0f; });
-    const save::TerrainGrid falling = grid(6, 6, [](int col, int) { return static_cast<float>(6 - col) * 3.0f; });
+    const save::model::TerrainGrid rising = grid(6, 6, [](int col, int) { return static_cast<float>(col) * 3.0f; });
+    const save::model::TerrainGrid falling = grid(6, 6, [](int col, int) { return static_cast<float>(6 - col) * 3.0f; });
     const MapRgba facing = map_ground(rising, { }, 4).relief.at(12, 12);
     const MapRgba away = map_ground(falling, { }, 4).relief.at(12, 12);
     CHECK(facing.r + facing.g + facing.b > away.r + away.g + away.b);
@@ -213,7 +213,7 @@ TEST_CASE("surfaces colour the ground and relief lights slopes that face the nor
 
 TEST_CASE("people are dots on a clear picture, guests and staff by their layers")
 {
-    const save::TerrainGrid g = flat(4, 4);
+    const save::model::TerrainGrid g = flat(4, 4);
     const MapFrame f = map_frame(g);
     const std::vector<MapPerson> people { { to_park(f, { 0.125f, 0.125f }), false }, { to_park(f, { 0.875f, 0.875f }), true } };
     const MapPicture both = people_picture(g, 8, people, all_map_layers());
@@ -228,7 +228,7 @@ TEST_CASE("people are dots on a clear picture, guests and staff by their layers"
 
 TEST_CASE("the staff's patrol areas are tinted under the people, deeper where they overlap")
 {
-    const save::TerrainGrid g = flat(4, 4);
+    const save::model::TerrainGrid g = flat(4, 4);
     const std::vector<glm::ivec2> tiles { { 0, 0 }, { 0, 0 }, { 3, 3 } };
     const MapPicture p = people_picture(g, 8, { }, all_map_layers(), tiles);
     // Row 0 is at the bottom of the picture.

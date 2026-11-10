@@ -40,7 +40,7 @@ namespace rct3::simulation
 
     /// The tiles of `grid` that `bodies` cover wholly, both triangles under the surface, but for those where
     /// something of `solids` stands in the water or low over it.
-    [[nodiscard]] WaterTiles water_tiles(const save::TerrainGrid& grid, std::span<const save::WaterBody> bodies, const park::path::SolidTiles& solids = { });
+    [[nodiscard]] WaterTiles water_tiles(const save::model::TerrainGrid& grid, std::span<const save::model::WaterBody> bodies, const park::path::SolidTiles& solids = { });
 
     /// The tiles from `from` to `to` over water, each beside the last (corners only where both sides are water
     /// too), `to` last and `from` left out. None when no way joins them.

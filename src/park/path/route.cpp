@@ -14,7 +14,7 @@ namespace rct3::park::path
     {
         struct Node
         {
-            save::Tile spot;         ///< Where the last piece is
+            save::model::Tile spot;  ///< Where the last piece is
             std::int32_t height = 0; ///< Where it ends
             Side heading { };
             bool on_slope = false;
@@ -48,7 +48,7 @@ namespace rct3::park::path
             return b;
         }
 
-        std::int64_t price_of(const NextPiece& piece, const FootpathBuilder& b, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost)
+        std::int64_t price_of(const NextPiece& piece, const FootpathBuilder& b, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::int32_t ground_cost)
         {
             if (same_piece_at(paths, piece, b))
                 return 0;
@@ -56,7 +56,7 @@ namespace rct3::park::path
         }
 
         /// kRouteCutCost for each started unit the ground of `piece`'s tile is cut down by.
-        std::int64_t cut_cost(const NextPiece& piece, const save::TerrainGrid& grid)
+        std::int64_t cut_cost(const NextPiece& piece, const save::model::TerrainGrid& grid)
         {
             if (!piece.cut)
                 return 0;
@@ -65,9 +65,9 @@ namespace rct3::park::path
         }
     } // namespace
 
-    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, save::Tile goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height, std::optional<const SolidTiles&> solids, bool straight)
+    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, save::model::Tile goal, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height, std::optional<const SolidTiles&> solids, bool straight)
     {
-        if (!from.start || !grid.contains(goal.col, goal.row) || grid.at(goal.col, goal.row).ownership() != save::Ownership::Owned)
+        if (!from.start || !grid.contains(goal.col, goal.row) || grid.at(goal.col, goal.row).ownership() != save::model::Ownership::Owned)
             return std::nullopt;
         std::vector<Node> nodes;
         Node first;
@@ -86,13 +86,13 @@ namespace rct3::park::path
         nodes.push_back(first);
 
         // Each piece is checked only against the paths on its own tile.
-        std::unordered_map<std::uint32_t, std::vector<save::PathTile>> by_tile;
-        for (const save::PathTile& p : paths)
+        std::unordered_map<std::uint32_t, std::vector<save::model::PathTile>> by_tile;
+        for (const save::model::PathTile& p : paths)
             by_tile[static_cast<std::uint32_t>(p.row) << 16 | p.col].push_back(p);
-        const std::vector<save::PathTile> none;
-        const auto paths_at = [&](save::Tile spot) -> std::span<const save::PathTile> {
+        const std::vector<save::model::PathTile> none;
+        const auto paths_at = [&](save::model::Tile spot) -> std::span<const save::model::PathTile> {
             const auto found = by_tile.find(static_cast<std::uint32_t>(spot.row) << 16 | static_cast<std::uint16_t>(spot.col));
-            return found == by_tile.end() ? std::span<const save::PathTile>(none) : std::span<const save::PathTile>(found->second);
+            return found == by_tile.end() ? std::span<const save::model::PathTile>(none) : std::span<const save::model::PathTile>(found->second);
         };
 
         // A piece keeps the same room from the route's own earlier pieces on its tile as from other paths.
@@ -111,7 +111,7 @@ namespace rct3::park::path
         const auto line_dx = static_cast<float>(goal.col - first.spot.col);
         const auto line_dy = static_cast<float>(goal.row - first.spot.row);
         const float line_length = std::hypot(line_dx, line_dy);
-        const auto off_line = [&](save::Tile at) {
+        const auto off_line = [&](save::model::Tile at) {
             if (line_length == 0)
                 return 0.0F;
             return std::abs(static_cast<float>(at.col - first.spot.col) * line_dy - static_cast<float>(at.row - first.spot.row) * line_dx) / line_length;
@@ -124,7 +124,7 @@ namespace rct3::park::path
         const std::int32_t floor = std::min(first_height, goal_height.value_or(next_piece(at_goal, grid)->start));
         const auto dip_cost = [&](const NextPiece& piece) { return kRouteDipCost * std::max(0, floor - std::min(piece.start, piece.end)); };
         const std::int64_t least_step = std::max<std::int64_t>(ground_cost, 0) + kRouteStepCost;
-        const auto estimate = [&](save::Tile at) { return (std::abs(at.col - goal.col) + std::abs(at.row - goal.row)) * least_step; };
+        const auto estimate = [&](save::model::Tile at) { return (std::abs(at.col - goal.col) + std::abs(at.row - goal.row)) * least_step; };
         using Open = std::pair<std::int64_t, std::size_t>;
         std::priority_queue<Open, std::vector<Open>, std::greater<>> open;
         std::unordered_map<std::uint64_t, std::int64_t> best;
@@ -190,7 +190,7 @@ namespace rct3::park::path
         return std::nullopt;
     }
 
-    std::int64_t route_price(std::span<const RouteStep> route, const FootpathBuilder& from, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost)
+    std::int64_t route_price(std::span<const RouteStep> route, const FootpathBuilder& from, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::int32_t ground_cost)
     {
         FootpathBuilder b = from;
         std::int64_t total = 0;

@@ -76,13 +76,13 @@ TEST_CASE("guests get thirsty faster on a hot day")
 TEST_CASE("the park's weather tells the guests whether it rains")
 {
     ParkState state;
-    state.weather = rct3::save::WeatherType::Thunderstorm;
+    state.weather = rct3::save::model::WeatherType::Thunderstorm;
     state.temperature = 12;
     const Weather w = guest_weather(state);
     CHECK(w.rain);
     CHECK(w.storm);
     CHECK(w.temperature.value == 12);
-    state.weather = rct3::save::WeatherType::Cloudy;
+    state.weather = rct3::save::model::WeatherType::Cloudy;
     CHECK_FALSE(guest_weather(state).rain);
 }
 
@@ -213,10 +213,10 @@ TEST_CASE("a splashing ride leaves its riders soaked and cool")
 TEST_CASE("a snowstorm keeps guests in as a thunderstorm does; sun is told apart from cloud")
 {
     ParkState state;
-    state.weather = rct3::save::WeatherType::Snowstorm;
+    state.weather = rct3::save::model::WeatherType::Snowstorm;
     CHECK(guest_weather(state).storm);
-    state.weather = rct3::save::WeatherType::Sunny;
+    state.weather = rct3::save::model::WeatherType::Sunny;
     CHECK(guest_weather(state).sunny);
-    state.weather = rct3::save::WeatherType::Cloudy;
+    state.weather = rct3::save::model::WeatherType::Cloudy;
     CHECK_FALSE(guest_weather(state).sunny);
 }

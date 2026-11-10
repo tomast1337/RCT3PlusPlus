@@ -29,7 +29,7 @@ namespace
 TEST_CASE("a ride's ratings are its family's weights over its test run, each feature capped")
 {
     const RatingModel m = model();
-    rct3::save::TestResults t;
+    rct3::save::model::TestResults t;
     t.max_speed = 20;
     t.max_lateral = 2 * 9.81f;
     const Ratings r = rate(m, "zoom:TRR", t);
@@ -48,7 +48,7 @@ TEST_CASE("a ride's ratings are its family's weights over its test run, each fea
 TEST_CASE("very intense rides lose excitement at each bound passed")
 {
     const RatingModel m = model();
-    rct3::save::TestResults t;
+    rct3::save::model::TestResults t;
     t.max_speed = 20;
     t.max_lateral = 2.5f * 9.81f; // Intensity 5: one bound
     CHECK(rate(m, "Zoom:trr", t).excitement == doctest::Approx(2.5));

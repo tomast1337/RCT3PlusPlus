@@ -37,7 +37,7 @@ namespace rct3::scene
 
     } // namespace
 
-    BuildMenus start_build_menus(const config::GameInstall& install, const save::RequiredContent* content)
+    BuildMenus start_build_menus(const config::GameInstall& install, const save::model::RequiredContent* content)
     {
         BuildMenus menus;
         menus.items = std::async(std::launch::async, [root = install.root()] { return rct3::park::read_build_catalogue(root); }).share();
@@ -60,10 +60,10 @@ namespace rct3::scene
                                         continue;
                                     std::ifstream in(it->path(), std::ios::binary);
                                     const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-                                    auto summary = save::read_design_summary(std::as_bytes(std::span(raw)));
+                                    auto summary = save::model::read_design_summary(std::as_bytes(std::span(raw)));
                                     if (!summary)
                                     {
-                                        logging::logger("park").info("design {}: {}", it->path().filename().string(), save::to_string(summary.error()));
+                                        logging::logger("park").info("design {}: {}", it->path().filename().string(), save::model::to_string(summary.error()));
                                         continue;
                                     }
                                     summary->picture = { }; // Read again for the one shown, rather than kept for every design

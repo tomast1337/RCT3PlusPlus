@@ -31,7 +31,7 @@ namespace rct3::park::ground
         constexpr glm::vec2 kCornerAt[4] { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
     } // namespace
 
-    float mean_height(const save::TerrainGrid& grid, glm::vec2 middle, float reach)
+    float mean_height(const save::model::TerrainGrid& grid, glm::vec2 middle, float reach)
     {
         float sum = 0;
         int count = 0;
@@ -46,7 +46,7 @@ namespace rct3::park::ground
         return count > 0 ? sum / static_cast<float>(count) : 0;
     }
 
-    float smooth_ground(save::TerrainGrid& grid, GroundSmoothing tool, glm::vec2 middle, float reach, float strength, float target, std::uint64_t seed, const std::function<bool(save::Tile)>& free)
+    float smooth_ground(save::model::TerrainGrid& grid, GroundSmoothing tool, glm::vec2 middle, float reach, float strength, float target, std::uint64_t seed, const std::function<bool(save::model::Tile)>& free)
     {
         strength = std::clamp(strength, 0.0f, 1.0f);
         const int c0 = std::max(static_cast<int>(std::floor(middle.x - reach)), 0);

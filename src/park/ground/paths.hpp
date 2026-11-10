@@ -101,19 +101,19 @@ namespace rct3::park::ground
 
     /// The ground paths among `paths` on a grid of the terrain's size, and the ends of the raised ones. Paths
     /// off the grid and ground paths without a style are left out.
-    [[nodiscard]] GroundPathMap ground_path_map(std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    [[nodiscard]] GroundPathMap ground_path_map(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);
 
     /// Ground a ride or stall paves as if path lay there: a door's tile, a stall's footprint, a flat ride's floor.
     /// It is paved like the path at `source`, or in kPavingStyle while there is none, and joins only itself and
     /// the tiles in `links`, so it never runs into paths beside it.
     struct Paving
     {
-        std::vector<save::Tile> tiles { };
-        std::int32_t height = 0;              ///< Whole units, as placement spots store it
-        std::optional<save::Tile> source { }; ///< The tile whose path sets the style
-        bool entrance = false;                ///< A queue at `source` runs on through it, straight
-        std::vector<save::Tile> links { };    ///< The tiles beside it that it joins
-        std::uint64_t owner = 0;              ///< The placed object that paves it, whose columns take its style's supports
+        std::vector<save::model::Tile> tiles { };
+        std::int32_t height = 0;                     ///< Whole units, as placement spots store it
+        std::optional<save::model::Tile> source { }; ///< The tile whose path sets the style
+        bool entrance = false;                       ///< A queue at `source` runs on through it, straight
+        std::vector<save::model::Tile> links { };    ///< The tiles beside it that it joins
+        std::uint64_t owner = 0;                     ///< The placed object that paves it, whose columns take its style's supports
     };
 
     /// The path style paving takes while its source holds no path: the first of the game's path styles.
@@ -123,40 +123,40 @@ namespace rct3::park::ground
     inline constexpr float kPavingReach = 1;
 
     /// The tiles a placed footprint stands on.
-    using FootprintOf = std::function<std::vector<save::Tile>(const save::PlacementSpot& spot)>;
+    using FootprintOf = std::function<std::vector<save::model::Tile>(const save::model::PlacementSpot& spot)>;
 
     /// What the attractions of `rides` pave: every door, every stall's and facility's footprint, every flat ride's
     /// floor and the floor of every tracked ride's base (a tower's or a house's).
     /// `footprint_of` gives the tiles a ride or stall stands on, only the squares it really fills; nothing when
     /// unknown. `floor_of` gives the tiles a track piece paves under it: a base's footprint, nothing for the rest.
-    [[nodiscard]] std::vector<Paving> ride_pavings(const save::RideModel& rides, const FootprintOf& footprint_of, const FootprintOf& floor_of);
+    [[nodiscard]] std::vector<Paving> ride_pavings(const save::model::RideModel& rides, const FootprintOf& footprint_of, const FootprintOf& floor_of);
 
     /// One tile of paving laid as a path, and the paving it belongs to.
     struct PavedTile
     {
-        save::PathTile path { };
+        save::model::PathTile path { };
         std::size_t paving = 0;
     };
 
     /// The paths `pavings` lay: one per tile that holds no path of `paths` yet. A tile whose ground lies level at
     /// the paving's height gets a ground path (or a ground queue running straight in); any other a flat raised one.
-    [[nodiscard]] std::vector<PavedTile> lay_pavings(std::span<const save::PathTile> paths, std::span<const Paving> pavings, const save::TerrainGrid& grid);
+    [[nodiscard]] std::vector<PavedTile> lay_pavings(std::span<const save::model::PathTile> paths, std::span<const Paving> pavings, const save::model::TerrainGrid& grid);
 
     /// Marks the tiles laid in `map`, so each joins only its own paving and its links.
     void seal_pavings(GroundPathMap& map, std::span<const PavedTile> laid, std::span<const Paving> pavings);
 
     /// Whether the path on `tile` may join the one on `other` beside it: both are paths of the park, both are
     /// paving of the same ride or stall, or one is paving that links to the other.
-    [[nodiscard]] bool may_join(const GroundPathMap& map, save::Tile tile, save::Tile other) noexcept;
+    [[nodiscard]] bool may_join(const GroundPathMap& map, save::model::Tile tile, save::model::Tile other) noexcept;
 
     /// True when there is a ground path at (col, row); false off the map.
-    [[nodiscard]] bool has_ground_path(const GroundPathMap& map, save::Tile tile) noexcept;
+    [[nodiscard]] bool has_ground_path(const GroundPathMap& map, save::model::Tile tile) noexcept;
 
     /// True when the path on tile (col, row) carries on onto the tile (dc, dr) beside it (one step along x
     /// or z): a ground path is there, a ground queue there is open towards this tile, or a raised path there
     /// ends level with this tile's ground at their shared edge; the two may join (may_join); and no wall of `map`
     /// stands between them, unless both are paving of one ride or stall.
-    [[nodiscard]] bool path_continues(const GroundPathMap& map, const save::TerrainGrid& grid, save::Tile tile, int dc, int dr);
+    [[nodiscard]] bool path_continues(const GroundPathMap& map, const save::model::TerrainGrid& grid, save::model::Tile tile, int dc, int dr);
 
     /// How far the path is lifted off the ground, in world units, so it never sinks into it.
     inline constexpr float kPathLift = 0.02f;
@@ -164,6 +164,6 @@ namespace rct3::park::ground
     /// The ground paths as triangles over the terrain. Batches use GroundPaint::PathA or PathB with the style
     /// index; they go over the ground with the same blending, after it.
     /// Only those on the tiles of `area` when given.
-    [[nodiscard]] TerrainMesh ground_path_mesh(const GroundPathMap& map, const save::TerrainGrid& grid, std::optional<TileRect> area = std::nullopt);
+    [[nodiscard]] TerrainMesh ground_path_mesh(const GroundPathMap& map, const save::model::TerrainGrid& grid, std::optional<TileRect> area = std::nullopt);
 
 } // namespace rct3::park::ground

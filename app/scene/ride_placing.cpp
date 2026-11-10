@@ -20,6 +20,7 @@
 #include "park/track/ground.hpp"
 #include "park/water/fill.hpp"
 #include "scene/enclosure_tools.hpp"
+#include "scene/park/attraction_state.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"

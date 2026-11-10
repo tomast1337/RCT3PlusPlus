@@ -36,6 +36,7 @@
 #include "scene/ride_placing.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
+#include "simulation/rides.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 #include "ui/career_scenarios.hpp"

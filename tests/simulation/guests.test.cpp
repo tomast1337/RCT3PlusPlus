@@ -3,6 +3,7 @@
 
 #include "simulation/coaster.hpp"
 #include "simulation/parties.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"

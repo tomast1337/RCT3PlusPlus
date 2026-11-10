@@ -86,29 +86,6 @@ namespace rct3::simulation
     /// them or the ride suits them. Drawn with `dice`.
     [[nodiscard]] RideReaction react_flat(RideReaction now, bool running, Share happiness, float over, const Leanings& leanings, random::RandomState& dice, float dt);
 
-    /// Keeps a train this far behind the back of the one in front, metres; our own figure.
-    inline constexpr float kBlockGap = 4.0f;
-
-    /// The clear track ahead of train `t` of `trains`, up to kBlockGap short of the back of the nearest
-    /// train in front; endless for a lone train.
-    [[nodiscard]] float room_ahead(std::span<const Coaster> trains, std::size_t t);
-
-    struct Departure;
-    /// Whether a train (or a ride's next go) with `riders` of `capacity` seats aboard leaves after `waited`
-    /// seconds of loading, as `departure` says: never before its least wait; then once it has its load, or
-    /// whatever its load (even none) once its longest wait is up.
-    [[nodiscard]] bool departs(const Departure& departure, std::size_t riders, std::size_t capacity, float waited);
-
-    struct CycleRide;
-    /// How long a whole cycle of `ride` lasts: starting, its loops of running, and stopping.
-    [[nodiscard]] float cycle_seconds(const CycleRide& ride);
-    /// How far into its cycle `ride` is; nothing while it loads.
-    [[nodiscard]] std::optional<float> seconds_into_cycle(const CycleRide& ride);
-    /// Moves a ride that has left on by `dt` seconds through starting, running and stopping. True when it has
-    /// just stopped, back to loading, and its riders get off; a `held` ride (its restraints or doors stuck shut)
-    /// stays stopped with its riders aboard till it is not.
-    bool advance_cycle(CycleRide& ride, float dt, bool held);
-
     /// Pieces of litter lying long enough to count against the park's rating (tuning::Litter::old).
     [[nodiscard]] std::int32_t old_litter(const SimWorld& world);
 
@@ -190,6 +167,10 @@ namespace rct3::simulation
     /// A rider off `ride` and on the paths at the exit of the station they get off at: on to what they do
     /// next, showing how the ride left them, and sick there if it turned their stomach.
     void let_out(entt::registry& r, const PathNetwork& paths, entt::entity guest, entt::entity ride, std::optional<GestureKind> gesture);
+
+    /// Throws `person`, on foot or just let out of a crashed ride, from `at` at `velocity`: they fly, land
+    /// knocked over, lie there a while, then walk to `node` and go on from there.
+    void throw_person(entt::registry& r, entt::entity person, glm::vec3 at, glm::vec3 velocity, NodeId node);
 
     /// Stops `stride` at `node`, its route dropped, and stands `pose` there.
     void stop_at(const PathNetwork& paths, NodeId node, Stride& stride, Pose& pose);

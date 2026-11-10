@@ -5,6 +5,7 @@
 #include "simulation/day_clock.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/park/state.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/staff_care.hpp"
 #include "simulation/systems.hpp"

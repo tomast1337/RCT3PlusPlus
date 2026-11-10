@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ovl/texture_pixels.hpp"
+#include "ovl/texture/pixels.hpp"
 
 #include <algorithm>
 #include <cstring>
 
-namespace rct3::ovl
+namespace rct3::ovl::texture
 {
 
     TexturePixels TexturePixels::index(const Overlay& overlay)
@@ -86,4 +86,4 @@ namespace rct3::ovl
         return image;
     }
 
-} // namespace rct3::ovl
+} // namespace rct3::ovl::texture

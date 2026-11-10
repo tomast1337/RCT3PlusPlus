@@ -41,8 +41,8 @@
 #include "ovl/stall.hpp"
 #include "ovl/static_shape.hpp"
 #include "ovl/text.hpp"
-#include "ovl/texture.hpp"
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
+#include "ovl/texture/texture.hpp"
 #include "ovl/track_section.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "park/build_catalogue.hpp"
@@ -66,7 +66,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
             continue;
         for (const auto& frame : item.texture->frames)
         {
-            if (const auto image = rct3::ovl::decode_flexi_frame(frame))
+            if (const auto image = rct3::ovl::texture::decode_flexi_frame(frame))
                 sink += image->pixels.size();
         }
     }
@@ -76,7 +76,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
             continue;
         for (const auto& bitmap : item.table->bitmaps)
         {
-            for (const auto& level : rct3::ovl::decode_bitmap(bitmap))
+            for (const auto& level : rct3::ovl::texture::decode_bitmap(bitmap))
                 sink += level.pixels.size();
         }
     }
@@ -84,7 +84,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     {
         if (!item.flic)
             continue;
-        for (const auto& level : rct3::ovl::decode_flic_image(*item.flic))
+        for (const auto& level : rct3::ovl::texture::decode_flic_image(*item.flic))
             sink += level.pixels.size();
     }
     // --- end texture decoding ---
@@ -202,7 +202,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         if (item.skin)
             sink += item.skin->coordinates.size();
     }
-    for (const auto& item : rct3::ovl::read_textures(*overlay, part))
+    for (const auto& item : rct3::ovl::texture::read_textures(*overlay, part))
     {
         if (item.texture)
             sink += item.texture->count + (item.texture->node ? item.texture->node->second : 0);

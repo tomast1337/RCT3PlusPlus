@@ -44,7 +44,7 @@ namespace rct3::scene
     /// The relief map uploaded beside picture `name` (park/relief_maps.hpp), or none.
     render::TextureHandle relief_of(const ui::UiTextures& textures, std::string_view name);
 
-    /// Shrinks the park's pictures to the texture detail it loaded with (ovl::texture_halvings), before upload.
+    /// Shrinks the park's pictures to the texture detail it loaded with (ovl::texture::texture_halvings), before upload.
     void fit_texture_detail(const ParkScene& scene, park::ground::GroundImages& images);
 
     /// Paints and uploads the pictures of `batches` the scene does not have yet.

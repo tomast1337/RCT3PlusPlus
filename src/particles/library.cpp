@@ -4,8 +4,8 @@
 #include "core/maybe.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/particle_skin.hpp"
-#include "ovl/texture.hpp"
-#include "ovl/texture_pixels.hpp"
+#include "ovl/texture/pixels.hpp"
+#include "ovl/texture/texture.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -51,12 +51,12 @@ namespace rct3::particles
                 library.sprites_.insert_or_assign(std::string(item.name), Sprite { .atlas = std::string(item.skin->texture), .frames = item.skin->frames, .blended = item.skin->blended, .animated = item.skin->animated, .loop_time = item.skin->loop_time });
             }
         }
-        const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
+        const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
         for (const auto part : { maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
-            for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+            for (const ovl::texture::TextureItem& item : ovl::texture::read_textures(*overlay, *part))
                 if (item.texture && wanted.contains(item.name) && !library.atlases_.contains(std::string(item.name)))
                     if (auto image = pixels.first_frame(*item.texture))
                         library.atlases_.emplace(std::string(item.name), std::move(*image));

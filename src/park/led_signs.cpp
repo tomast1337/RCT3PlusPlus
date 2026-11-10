@@ -72,9 +72,9 @@ namespace rct3::park
         return { };
     }
 
-    ovl::RgbaImage sign_window(const ovl::RgbaImage& loop, std::uint32_t shift, std::uint32_t width, LampColour colour)
+    ovl::texture::RgbaImage sign_window(const ovl::texture::RgbaImage& loop, std::uint32_t shift, std::uint32_t width, LampColour colour)
     {
-        ovl::RgbaImage out;
+        ovl::texture::RgbaImage out;
         out.width = width;
         out.height = loop.height;
         out.pixels.resize(static_cast<std::size_t>(width) * loop.height * kChannels);

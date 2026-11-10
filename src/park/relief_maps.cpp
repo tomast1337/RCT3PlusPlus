@@ -57,12 +57,12 @@ namespace rct3::park
         }
     } // namespace
 
-    ovl::RgbaImage relief_map(const ovl::RgbaImage& picture, float strength)
+    ovl::texture::RgbaImage relief_map(const ovl::texture::RgbaImage& picture, float strength)
     {
         const int w = static_cast<int>(picture.width);
         const int h = static_cast<int>(picture.height);
         const auto count = static_cast<std::size_t>(w) * static_cast<std::size_t>(h);
-        ovl::RgbaImage map { picture.width, picture.height, std::vector<std::uint8_t>(count * 4) };
+        ovl::texture::RgbaImage map { picture.width, picture.height, std::vector<std::uint8_t>(count * 4) };
         if (count == 0 || picture.pixels.size() < count * 4)
             return map;
 
@@ -112,16 +112,16 @@ namespace rct3::park
         return map;
     }
 
-    void add_relief_maps(std::map<std::string, ovl::RgbaImage, std::less<>>& pictures, float strength)
+    void add_relief_maps(std::map<std::string, ovl::texture::RgbaImage, std::less<>>& pictures, float strength)
     {
-        std::vector<std::pair<std::string, const ovl::RgbaImage*>> wanted;
+        std::vector<std::pair<std::string, const ovl::texture::RgbaImage*>> wanted;
         for (const auto& [name, picture] : pictures)
         {
             if (!name.ends_with(kReliefSuffix) && !pictures.contains(name + std::string(kReliefSuffix)))
                 wanted.emplace_back(name + std::string(kReliefSuffix), &picture);
         }
         // Each map on its own; a park loads a few hundred pictures, so they are shared out over the cores.
-        std::vector<ovl::RgbaImage> made(wanted.size());
+        std::vector<ovl::texture::RgbaImage> made(wanted.size());
         std::atomic<std::size_t> next = 0;
         {
             std::vector<std::jthread> workers;

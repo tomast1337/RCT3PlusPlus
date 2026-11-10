@@ -9,7 +9,7 @@
 namespace rct3::ui
 {
 
-    std::expected<UiTextures, std::string> upload_textures(render::Device& device, const std::map<std::string, ovl::RgbaImage, std::less<>>& images)
+    std::expected<UiTextures, std::string> upload_textures(render::Device& device, const std::map<std::string, ovl::texture::RgbaImage, std::less<>>& images)
     {
         UiTextures textures;
         for (const auto& [name, image] : images)

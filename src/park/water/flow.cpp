@@ -2,8 +2,8 @@
 #include "park/water/flow.hpp"
 
 #include "ovl/overlay.hpp"
-#include "ovl/texture.hpp"
-#include "ovl/texture_pixels.hpp"
+#include "ovl/texture/pixels.hpp"
+#include "ovl/texture/texture.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
@@ -152,17 +152,17 @@ namespace rct3::park::water
         return TextureShift::by(seconds * kFlowSpeed / kFlowRepeat * (run < 0 ? 1.0f : -1.0f));
     }
 
-    std::expected<ovl::RgbaImage, std::string> load_flow_picture(const std::filesystem::path& file, std::string_view name)
+    std::expected<ovl::texture::RgbaImage, std::string> load_flow_picture(const std::filesystem::path& file, std::string_view name)
     {
         auto overlay = ovl::Overlay::load(file);
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
-        const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
+        const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
         for (const auto part : { maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
-            for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+            for (const ovl::texture::TextureItem& item : ovl::texture::read_textures(*overlay, *part))
             {
                 if (item.texture && strings::equals_ignoring_case(item.name, name))
                 {

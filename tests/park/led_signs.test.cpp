@@ -84,18 +84,18 @@ TEST_CASE("a theme's queue sign is the sign whose setting says so")
 
 TEST_CASE("the board's text loops and scrolls round in lamps")
 {
-    ovl::RgbaImage page;
+    ovl::texture::RgbaImage page;
     page.width = page.height = 4;
     page.pixels.assign(4 * 4 * 4, 255);
-    const std::vector<ovl::RgbaImage> pages { page };
+    const std::vector<ovl::texture::RgbaImage> pages { page };
     const std::array glyphs { ui::CodedGlyph { u'A', { { 0, -4, 4, 0 }, { 0, 1, 1, 0 }, 0, 5 } } };
     const ui::Font font = ui::Font::from_glyphs(glyphs, 8, 0);
-    const ovl::RgbaImage loop = ui::sign_text_loop(font, pages, u"AA?", 8);
+    const ovl::texture::RgbaImage loop = ui::sign_text_loop(font, pages, u"AA?", 8);
     // Two glyphs of 5 and a missing one, then the gap, out to whole lamps.
     REQUIRE(kSignLamp == 3); // The places below count on it
     CHECK(loop.width == 27);
     CHECK(loop.height == 8);
-    const auto at = [&](const ovl::RgbaImage& image, std::uint32_t x, std::uint32_t y, std::size_t k = 0) { return image.pixels[(y * image.width + x) * 4 + k]; };
+    const auto at = [&](const ovl::texture::RgbaImage& image, std::uint32_t x, std::uint32_t y, std::size_t k = 0) { return image.pixels[(y * image.width + x) * 4 + k]; };
     // The glyph stands on the baseline, the line's middle on the board's.
     CHECK(at(loop, 0, 5) == 255);
     CHECK(at(loop, 4, 5) == 0);
@@ -103,14 +103,14 @@ TEST_CASE("the board's text loops and scrolls round in lamps")
 
     // Lamps are 3 by 3, lit where the letters cover their middles (1, 4, 7, ...).
     const LampColour red { 255, 0, 0 };
-    const ovl::RgbaImage board = sign_window(loop, 0, 9, red);
+    const ovl::texture::RgbaImage board = sign_window(loop, 0, 9, red);
     CHECK(board.width == 9);
     CHECK(at(board, 1, 4) == 255); // A lit lamp's middle
     CHECK(at(board, 1, 4, 1) == kSignDark);
     CHECK(at(board, 4, 4) == static_cast<std::uint8_t>(255 * kSignLampOff)); // Between the glyphs: unlit
     CHECK(at(board, 1, 1) == static_cast<std::uint8_t>(255 * kSignLampOff)); // Above them
     CHECK(at(board, 0, 3) == static_cast<std::uint8_t>(255 * kSignGlow));    // Round a lit dot
-    const ovl::RgbaImage moved = sign_window(loop, loop.width - kSignLamp, 9, red);
+    const ovl::texture::RgbaImage moved = sign_window(loop, loop.width - kSignLamp, 9, red);
     CHECK(at(moved, 4, 4) == 255); // The first lamp's letters, one lamp on
     CHECK(at(moved, 1, 4) < 255);
 

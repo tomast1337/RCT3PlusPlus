@@ -5,7 +5,7 @@
 // Every glyph keeps a one-pixel gap to its neighbours so filtering never reads the next glyph.
 #pragma once
 
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 
 #include <cstdint>
 #include <span>
@@ -45,6 +45,6 @@ namespace rct3::ui
 
     /// White pages with coverage as alpha, so the text colour tints them. Bitmaps whose slot has no page are
     /// left out.
-    [[nodiscard]] std::vector<ovl::RgbaImage> atlas_pages(std::span<const CoverageBitmap> bitmaps, std::span<const AtlasSlot> slots, std::uint32_t page_side);
+    [[nodiscard]] std::vector<ovl::texture::RgbaImage> atlas_pages(std::span<const CoverageBitmap> bitmaps, std::span<const AtlasSlot> slots, std::uint32_t page_side);
 
 } // namespace rct3::ui

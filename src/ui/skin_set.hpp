@@ -5,7 +5,7 @@
 // rows go top to bottom, as the renderer expects.
 #pragma once
 
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 #include "ui/skin.hpp"
 
 #include <expected>
@@ -28,7 +28,7 @@ namespace rct3::ui
     {
         std::map<std::string, NamedSkin, std::less<>> skins;
         /// Only images some skin uses.
-        std::map<std::string, ovl::RgbaImage, std::less<>> images;
+        std::map<std::string, ovl::texture::RgbaImage, std::less<>> images;
         std::size_t skipped = 0; ///< Skins whose layout or image could not be read
     };
 

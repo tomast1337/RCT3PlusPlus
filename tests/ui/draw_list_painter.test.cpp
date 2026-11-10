@@ -12,7 +12,7 @@ namespace
 {
     constexpr Color kBlack { 0, 0, 0, 255 };
 
-    Color at(const ovl::RgbaImage& image, std::uint32_t x, std::uint32_t y)
+    Color at(const ovl::texture::RgbaImage& image, std::uint32_t x, std::uint32_t y)
     {
         const std::uint8_t* p = &image.pixels[(std::size_t { y } * image.width + x) * 4];
         return { p[0], p[1], p[2], p[3] };
@@ -46,7 +46,7 @@ TEST_CASE("a textured quad samples its texture, tinted")
 {
     // Two texels, red then blue, shown each over half of a quad four pixels wide.
     PainterTextures textures;
-    textures.emplace(3, ovl::RgbaImage { 2, 1, { 255, 0, 0, 255, 0, 0, 255, 255 } });
+    textures.emplace(3, ovl::texture::RgbaImage { 2, 1, { 255, 0, 0, 255, 0, 0, 255, 255 } });
     DrawList list;
     list.image({ 0, 0, 4, 1 }, 3, { 0, 0, 1, 1 }, { 255, 255, 255, 255 });
     list.image({ 0, 1, 4, 2 }, 3, { 0, 0, 1, 1 }, { 255, 255, 255, 128 });

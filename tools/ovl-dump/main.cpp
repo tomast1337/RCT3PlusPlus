@@ -57,8 +57,8 @@
 #include "ovl/stall.hpp"
 #include "ovl/static_shape.hpp"
 #include "ovl/text.hpp"
-#include "ovl/texture.hpp"
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
+#include "ovl/texture/texture.hpp"
 #include "ovl/track_section.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "strings/unicode.hpp"
@@ -746,7 +746,7 @@ namespace
         }
         if (opt.tex)
         {
-            const auto textures = rct3::ovl::read_textures(overlay, part);
+            const auto textures = rct3::ovl::texture::read_textures(overlay, part);
             std::size_t bad = 0;
             for (const auto& item : textures)
             {
@@ -1240,11 +1240,11 @@ namespace
         std::size_t frames = 0, frames_bad = 0, bitmaps = 0, bitmaps_bad = 0, flics = 0, flics_bad = 0, images = 0;
         std::size_t by_format[32] = { };
 
-        auto save = [&](const ovl::RgbaImage& image, const std::string& name) {
+        auto save = [&](const ovl::texture::RgbaImage& image, const std::string& name) {
             ++images;
             if (!write)
                 return;
-            const auto tga = ovl::encode_tga(image);
+            const auto tga = ovl::texture::encode_tga(image);
             std::string safe = name;
             for (char& c : safe)
             {
@@ -1258,7 +1258,7 @@ namespace
                 std::fclose(f);
             }
         };
-        auto save_levels = [&](const std::vector<ovl::RgbaImage>& levels, const std::string& name) {
+        auto save_levels = [&](const std::vector<ovl::texture::RgbaImage>& levels, const std::string& name) {
             for (std::size_t m = 0; m < levels.size(); ++m)
                 save(levels[m], std::format("{}_m{}", name, m));
         };
@@ -1270,7 +1270,7 @@ namespace
             for (std::size_t i = 0; i < item.texture->frames.size(); ++i)
             {
                 ++frames;
-                const auto image = ovl::decode_flexi_frame(item.texture->frames[i]);
+                const auto image = ovl::texture::decode_flexi_frame(item.texture->frames[i]);
                 if (!image)
                 {
                     ++frames_bad;
@@ -1287,7 +1287,7 @@ namespace
             {
                 const auto& b = item.table->bitmaps[i];
                 ++bitmaps;
-                auto levels = ovl::decode_bitmap(b);
+                auto levels = ovl::texture::decode_bitmap(b);
                 if (levels.empty())
                 {
                     ++bitmaps_bad;
@@ -1303,7 +1303,7 @@ namespace
             if (!item.flic || item.flic->revision != 2)
                 continue;
             ++flics;
-            auto levels = ovl::decode_flic_image(*item.flic);
+            auto levels = ovl::texture::decode_flic_image(*item.flic);
             if (levels.empty())
             {
                 ++flics_bad;

@@ -14,7 +14,7 @@
 
 #include "math/texture_shift.hpp"
 #include "ovl/spline.hpp"
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 #include "park/object/mesh.hpp"
 #include "park/object/models.hpp"
 #include "save/model/rides.hpp"
@@ -67,6 +67,6 @@ namespace rct3::park::water
 
     /// The picture of the texture `name` (the flowing water's by default) from the overlay whose common file is
     /// `file`.
-    [[nodiscard]] std::expected<ovl::RgbaImage, std::string> load_flow_picture(const std::filesystem::path& file, std::string_view name = kFlowTexture);
+    [[nodiscard]] std::expected<ovl::texture::RgbaImage, std::string> load_flow_picture(const std::filesystem::path& file, std::string_view name = kFlowTexture);
 
 } // namespace rct3::park::water

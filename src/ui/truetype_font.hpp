@@ -8,7 +8,7 @@
 // or user content.
 #pragma once
 
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 #include "ui/font.hpp"
 
 #include <cstdint>
@@ -54,7 +54,7 @@ namespace rct3::ui
         float line_height = 0;
         float descent = 0;
         std::vector<BakedGlyph> glyphs;
-        std::vector<ovl::RgbaImage> pages; ///< White, coverage in alpha, rows from the top
+        std::vector<ovl::texture::RgbaImage> pages; ///< White, coverage in alpha, rows from the top
     };
 
     struct BakeOptions

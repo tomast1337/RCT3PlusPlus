@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 #include "park/chain_lifts.hpp"
 #include "park/daylight.hpp"
 #include "park/flexi_colours.hpp"
@@ -572,7 +572,7 @@ namespace rct3::scene
                 scene.ripple_frame = frame;
                 const park::PaletteImage picture = park::object::water_picture(static_cast<float>(frame) / kRate);
                 // Halved as it was when first uploaded, to fit the texture.
-                const ovl::RgbaImage rippled = ovl::halved(park::paint(picture, { }), ovl::texture_halvings(scene.texture_detail, picture.width, picture.height));
+                const ovl::texture::RgbaImage rippled = ovl::texture::halved(park::paint(picture, { }), ovl::texture::texture_halvings(scene.texture_detail, picture.width, picture.height));
                 device.end_pass();
                 device.update_texture(texture->second.handle, std::as_bytes(std::span(rippled.pixels)));
                 render::PassDesc back;

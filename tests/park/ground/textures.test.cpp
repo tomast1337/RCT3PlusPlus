@@ -37,7 +37,7 @@ TEST_CASE("a queue style's ground is its picture that is not a mask, the one nam
 
 TEST_CASE("a queue's mask leaves its dark parts to the ground below")
 {
-    rct3::ovl::RgbaImage picture { 3, 1, { 9, 9, 9, 255, 9, 9, 9, 255, 9, 9, 9, 255 } };
+    rct3::ovl::texture::RgbaImage picture { 3, 1, { 9, 9, 9, 255, 9, 9, 9, 255, 9, 9, 9, 255 } };
     PaletteImage mask { .width = 3, .height = 1 };
     mask.palette[1] = { 255, 255, 255 };
     mask.palette[2] = { 102, 102, 102 };
@@ -50,7 +50,7 @@ TEST_CASE("a queue's mask leaves its dark parts to the ground below")
 
     SUBCASE("a mask of another size is left unused")
     {
-        rct3::ovl::RgbaImage other { 1, 1, { 9, 9, 9, 255 } };
+        rct3::ovl::texture::RgbaImage other { 1, 1, { 9, 9, 9, 255 } };
         apply_queue_mask(other, mask);
         CHECK(other.pixels[3] == 255);
     }
@@ -58,7 +58,7 @@ TEST_CASE("a queue's mask leaves its dark parts to the ground below")
 
 TEST_CASE("each cliff face gets the tunnel pictures nearest it in colour")
 {
-    const auto plain = [](std::uint8_t r, std::uint8_t g, std::uint8_t b) { return rct3::ovl::RgbaImage { 1, 1, { r, g, b, 255 } }; };
+    const auto plain = [](std::uint8_t r, std::uint8_t g, std::uint8_t b) { return rct3::ovl::texture::RgbaImage { 1, 1, { r, g, b, 255 } }; };
     GroundImages images;
     images.emplace(ground_key(GroundPaint::Cliff, 0), plain(200, 40, 30));
     images.emplace(ground_key(GroundPaint::Cliff, 4), plain(20, 30, 220));

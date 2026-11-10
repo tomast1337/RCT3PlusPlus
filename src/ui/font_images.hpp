@@ -5,7 +5,7 @@
 #pragma once
 
 #include "ovl/font.hpp"
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 
 #include <expected>
 #include <filesystem>
@@ -22,7 +22,7 @@ namespace rct3::ui
         /// is gone; `face` keeps the face's name.
         ovl::Font font;
         std::string face { };
-        std::vector<ovl::RgbaImage> pages; ///< By page index; an unreadable page is an empty image
+        std::vector<ovl::texture::RgbaImage> pages; ///< By page index; an unreadable page is an empty image
     };
 
     /// Reads every font of the overlay at `path` (either file of the pair, or the stem) whose texture has

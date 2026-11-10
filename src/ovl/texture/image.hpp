@@ -14,7 +14,7 @@
 #include <span>
 #include <vector>
 
-namespace rct3::ovl
+namespace rct3::ovl::texture
 {
 
     /// Largest image side the decoders accept. Shipped bitmaps are at most 2048 wide.
@@ -62,4 +62,4 @@ namespace rct3::ovl
     /// edges. The image itself for 0.
     [[nodiscard]] RgbaImage halved(RgbaImage image, int times);
 
-} // namespace rct3::ovl
+} // namespace rct3::ovl::texture

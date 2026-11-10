@@ -28,7 +28,7 @@ namespace rct3::image
 
     } // namespace
 
-    std::expected<ovl::RgbaImage, std::string> decode_picture(std::span<const std::byte> data)
+    std::expected<ovl::texture::RgbaImage, std::string> decode_picture(std::span<const std::byte> data)
     {
         if (data.empty() || data.size() > static_cast<std::size_t>(INT_MAX))
             return std::unexpected("not a picture");
@@ -40,12 +40,12 @@ namespace rct3::image
         // Checked before decoding, so a huge size in a header costs nothing.
         if (stbi_info_from_memory(bytes, length, &width, &height, &channels) == 0)
             return std::unexpected(std::string("not a picture: ") + stbi_failure_reason());
-        if (width <= 0 || height <= 0 || static_cast<std::uint32_t>(width) > ovl::kMaxImageSide || static_cast<std::uint32_t>(height) > ovl::kMaxImageSide)
+        if (width <= 0 || height <= 0 || static_cast<std::uint32_t>(width) > ovl::texture::kMaxImageSide || static_cast<std::uint32_t>(height) > ovl::texture::kMaxImageSide)
             return std::unexpected(std::format("picture of {}x{} is too large", width, height));
         const std::unique_ptr<stbi_uc, FreeImage> pixels(stbi_load_from_memory(bytes, length, &width, &height, &channels, 4));
         if (!pixels)
             return std::unexpected(std::string("cannot decode the picture: ") + stbi_failure_reason());
-        ovl::RgbaImage image;
+        ovl::texture::RgbaImage image;
         image.width = static_cast<std::uint32_t>(width);
         image.height = static_cast<std::uint32_t>(height);
         image.pixels.resize(static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4);
@@ -53,7 +53,7 @@ namespace rct3::image
         return image;
     }
 
-    std::expected<ovl::RgbaImage, std::string> load_picture(const std::filesystem::path& path)
+    std::expected<ovl::texture::RgbaImage, std::string> load_picture(const std::filesystem::path& path)
     {
         std::ifstream in(path, std::ios::binary);
         if (!in)

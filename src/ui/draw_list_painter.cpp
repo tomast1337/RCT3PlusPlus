@@ -53,7 +53,7 @@ namespace rct3::ui
 
         // Calls `shade(weights, x, y)` for each pixel of `target` whose centre lies in the triangle, with
         // the centre's weights for the corners a, b and c.
-        template<class Shade> void fill_triangle(ovl::RgbaImage& target, std::array<Point2, 3> corners, Shade&& shade)
+        template<class Shade> void fill_triangle(ovl::texture::RgbaImage& target, std::array<Point2, 3> corners, Shade&& shade)
         {
             std::array<int, 3> order { 0, 1, 2 };
             if (edge(corners[0], corners[1], corners[2]) < 0)
@@ -89,7 +89,7 @@ namespace rct3::ui
             }
         }
 
-        void blend(ovl::RgbaImage& target, int x, int y, const Colour4& c)
+        void blend(ovl::texture::RgbaImage& target, int x, int y, const Colour4& c)
         {
             std::uint8_t* px = target.pixels.data() + (static_cast<std::size_t>(y) * target.width + static_cast<std::size_t>(x)) * 4;
             const float a = std::clamp(c.a, 0.0f, 1.0f);
@@ -100,7 +100,7 @@ namespace rct3::ui
             px[3] = static_cast<std::uint8_t>(std::lround(std::clamp(a + static_cast<float>(px[3]) / 255 * (1 - a), 0.0f, 1.0f) * 255));
         }
 
-        Colour4 texel(const ovl::RgbaImage& image, int x, int y)
+        Colour4 texel(const ovl::texture::RgbaImage& image, int x, int y)
         {
             x = std::clamp(x, 0, static_cast<int>(image.width) - 1);
             y = std::clamp(y, 0, static_cast<int>(image.height) - 1);
@@ -109,7 +109,7 @@ namespace rct3::ui
         }
 
         // Linear filtering between the four nearest texel centres, clamped at the edges.
-        Colour4 sample(const ovl::RgbaImage* image, float u, float v)
+        Colour4 sample(const ovl::texture::RgbaImage* image, float u, float v)
         {
             if (image == nullptr || image->width == 0 || image->height == 0 || image->pixels.size() < std::size_t { image->width } * image->height * 4)
                 return { 1, 1, 1, 1 };
@@ -123,10 +123,10 @@ namespace rct3::ui
             return lerp(lerp(texel(*image, ix, iy), texel(*image, ix + 1, iy), tx), lerp(texel(*image, ix, iy + 1), texel(*image, ix + 1, iy + 1), tx), ty);
         }
 
-        void paint_quads(const DrawList& list, const Batch& batch, const PainterTextures& textures, ovl::RgbaImage& target)
+        void paint_quads(const DrawList& list, const Batch& batch, const PainterTextures& textures, ovl::texture::RgbaImage& target)
         {
             const auto found = textures.find(batch.texture);
-            const ovl::RgbaImage* image = batch.texture == 0 || found == textures.end() ? nullptr : &found->second;
+            const ovl::texture::RgbaImage* image = batch.texture == 0 || found == textures.end() ? nullptr : &found->second;
             const auto vertices = list.vertices();
             const auto indices = list.indices().subspan(batch.first_index, batch.index_count);
             for (std::size_t i = 0; i + 2 < indices.size(); i += 3)
@@ -149,7 +149,7 @@ namespace rct3::ui
             }
         }
 
-        void paint_shapes(const DrawList& list, const Batch& batch, ovl::RgbaImage& target)
+        void paint_shapes(const DrawList& list, const Batch& batch, ovl::texture::RgbaImage& target)
         {
             const auto vertices = list.shape_vertices();
             const auto indices = list.indices().subspan(batch.first_index, batch.index_count);
@@ -176,16 +176,16 @@ namespace rct3::ui
 
     } // namespace
 
-    ovl::RgbaImage blank_picture(std::uint32_t width, std::uint32_t height, Color background)
+    ovl::texture::RgbaImage blank_picture(std::uint32_t width, std::uint32_t height, Color background)
     {
-        ovl::RgbaImage image { width, height, { } };
+        ovl::texture::RgbaImage image { width, height, { } };
         image.pixels.reserve(std::size_t { width } * height * 4);
         for (std::size_t i = 0; i < std::size_t { width } * height; ++i)
             image.pixels.insert(image.pixels.end(), { background.r, background.g, background.b, background.a });
         return image;
     }
 
-    void paint_draw_list(const DrawList& list, const PainterTextures& textures, ovl::RgbaImage& target)
+    void paint_draw_list(const DrawList& list, const PainterTextures& textures, ovl::texture::RgbaImage& target)
     {
         if (target.pixels.size() < std::size_t { target.width } * target.height * 4)
             return;

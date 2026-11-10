@@ -4,7 +4,7 @@
 // bottom row first). For overlays whose images are used whole, such as logos, rather than cut into skins.
 #pragma once
 
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 
 #include <expected>
 #include <filesystem>
@@ -14,7 +14,7 @@
 namespace rct3::ui
 {
 
-    using ImageSet = std::map<std::string, ovl::RgbaImage, std::less<>>;
+    using ImageSet = std::map<std::string, ovl::texture::RgbaImage, std::less<>>;
 
     /// Reads the overlay at `path` (either file of the pair, or the stem).
     [[nodiscard]] std::expected<ImageSet, std::string> load_image_set(const std::filesystem::path& path);

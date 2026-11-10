@@ -15,7 +15,7 @@
 #pragma once
 
 #include "ovl/scenery_item.hpp"
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 #include "park/turns.hpp"
 #include "save/model/world.hpp"
 
@@ -54,7 +54,7 @@ namespace rct3::park
 
     /// The board showing the `width` columns of `loop` from column `shift` on, wrapping round, in lamps of
     /// `colour`.
-    [[nodiscard]] ovl::RgbaImage sign_window(const ovl::RgbaImage& loop, std::uint32_t shift, std::uint32_t width, LampColour colour);
+    [[nodiscard]] ovl::texture::RgbaImage sign_window(const ovl::texture::RgbaImage& loop, std::uint32_t shift, std::uint32_t width, LampColour colour);
 
     /// How far the text has moved after `seconds`, in pixels of a loop `length` wide: whole lamps.
     [[nodiscard]] std::uint32_t sign_shift(float seconds, std::uint32_t length);

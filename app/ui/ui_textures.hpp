@@ -4,7 +4,7 @@
 // coordinates.
 #pragma once
 
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 #include "render/device.hpp"
 #include "ui/skin_library.hpp"
 #include "ui/skin_set.hpp"
@@ -26,7 +26,7 @@ namespace rct3::ui
     using UiTextures = std::map<std::string, UiTexture, std::less<>>;
 
     /// Uploads every image; on failure, destroys what it uploaded and names the image that failed.
-    [[nodiscard]] std::expected<UiTextures, std::string> upload_textures(render::Device& device, const std::map<std::string, ovl::RgbaImage, std::less<>>& images);
+    [[nodiscard]] std::expected<UiTextures, std::string> upload_textures(render::Device& device, const std::map<std::string, ovl::texture::RgbaImage, std::less<>>& images);
 
     void destroy_textures(render::Device& device, UiTextures& textures);
 

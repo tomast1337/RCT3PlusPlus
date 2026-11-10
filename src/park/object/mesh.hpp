@@ -203,6 +203,6 @@ namespace rct3::park::object
     [[nodiscard]] ObjectMesh billboard_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const glm::vec3& eye, const ColourOverrides& overrides = { });
 
     /// The painted pictures `batches` draw with, by their names. Batches whose picture is missing get none.
-    [[nodiscard]] std::map<std::string, ovl::RgbaImage, std::less<>> paint_batches(std::span<const ObjectBatch> batches, const ModelPictures& pictures);
+    [[nodiscard]] std::map<std::string, ovl::texture::RgbaImage, std::less<>> paint_batches(std::span<const ObjectBatch> batches, const ModelPictures& pictures);
 
 } // namespace rct3::park::object

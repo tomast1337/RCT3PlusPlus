@@ -1518,7 +1518,7 @@ namespace rct3::scene
             const auto painted = pictures.find(batch.texture);
             if (batch.blend != park::object::PartBlend::Opaque || painted == pictures.end())
                 continue;
-            ovl::RgbaImage filled = painted->second;
+            ovl::texture::RgbaImage filled = painted->second;
             for (std::size_t i = 3; i < filled.pixels.size(); i += 4)
                 filled.pixels[i] = 255;
             pictures.insert_or_assign(ghost_texture(batch), std::move(filled));

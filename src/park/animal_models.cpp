@@ -6,8 +6,8 @@
 #include "ovl/animal/species.hpp"
 #include "ovl/model_anim.hpp"
 #include "ovl/overlay.hpp"
-#include "ovl/texture.hpp"
-#include "ovl/texture_pixels.hpp"
+#include "ovl/texture/pixels.hpp"
+#include "ovl/texture/texture.hpp"
 #include "park/asset_index.hpp"
 #include "strings/ascii.hpp"
 
@@ -124,7 +124,7 @@ namespace rct3::park
             {
             }
             ovl::Overlay overlay;
-            std::optional<ovl::TexturePixels> pixels;
+            std::optional<ovl::texture::TexturePixels> pixels;
         };
 
         AssetIndex index;
@@ -240,7 +240,7 @@ namespace rct3::park
                 {
                     // A material names a texture, often kept in another file of the species.
                     std::string texture_file;
-                    const auto [texture_open, texture] = f.find<ovl::Texture>(mesh.texture, "tex", model_file, &ovl::read_textures, &ovl::TextureItem::texture, &texture_file);
+                    const auto [texture_open, texture] = f.find<ovl::texture::Texture>(mesh.texture, "tex", model_file, &ovl::texture::read_textures, &ovl::texture::TextureItem::texture, &texture_file);
                     if (texture)
                     {
                         std::tie(piece.blend, piece.one_sided) = style_look(texture->style);
@@ -248,7 +248,7 @@ namespace rct3::park
                         if (!pictures_.contains(key))
                         {
                             if (!texture_open->pixels)
-                                texture_open->pixels = ovl::TexturePixels::index(texture_open->overlay);
+                                texture_open->pixels = ovl::texture::TexturePixels::index(texture_open->overlay);
                             if (auto image = texture_open->pixels->first_frame(*texture))
                                 pictures_.emplace(key, std::move(*image));
                         }

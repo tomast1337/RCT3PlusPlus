@@ -6,8 +6,8 @@
 #include "ovl/carried_item.hpp"
 #include "ovl/costume.hpp"
 #include "ovl/overlay.hpp"
-#include "ovl/texture.hpp"
-#include "ovl/texture_pixels.hpp"
+#include "ovl/texture/pixels.hpp"
+#include "ovl/texture/texture.hpp"
 #include "park/asset_index.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/build_catalogue.hpp"
@@ -621,7 +621,7 @@ namespace rct3::scene
     void fit_texture_detail(const ParkScene& scene, park::ground::GroundImages& images)
     {
         for (auto& [name, image] : images)
-            image = ovl::halved(std::move(image), ovl::texture_halvings(scene.texture_detail, image.width, image.height));
+            image = ovl::texture::halved(std::move(image), ovl::texture::texture_halvings(scene.texture_detail, image.width, image.height));
     }
 
     /// Paints and uploads the pictures of `batches` the scene does not have yet.
@@ -1325,7 +1325,7 @@ namespace rct3::scene
             if (const auto falls_file = install.find(park::kWaterfallFile))
             {
                 // The waterfalls' pictures; without them the falls are drawn as plain see-through water.
-                std::map<std::string, ovl::RgbaImage, std::less<>> pictures;
+                std::map<std::string, ovl::texture::RgbaImage, std::less<>> pictures;
                 for (const park::WaterfallPicture& picture : park::kWaterfallPictures)
                     for (const auto& [texture, key] : { std::pair { picture.texture, picture.key }, std::pair { picture.layer_texture, picture.layer_key } })
                     {
@@ -1534,13 +1534,13 @@ namespace rct3::scene
             {
                 if (auto overlay = ovl::Overlay::load(*main))
                 {
-                    const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
-                    std::map<std::string, ovl::RgbaImage, std::less<>> chrome;
+                    const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
+                    std::map<std::string, ovl::texture::RgbaImage, std::less<>> chrome;
                     for (const auto part : { maybe(&overlay->common()), overlay->unique() })
                     {
                         if (!part)
                             continue;
-                        for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+                        for (const ovl::texture::TextureItem& item : ovl::texture::read_textures(*overlay, *part))
                             if (auto image = item.texture && item.name == "EnvMapChrome" ? pixels.first_frame(*item.texture) : std::nullopt)
                                 chrome.insert_or_assign(std::string(park::object::kChromePicture), std::move(*image));
                     }

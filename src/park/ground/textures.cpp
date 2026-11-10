@@ -4,8 +4,8 @@
 #include "ovl/flexi_texture.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/terrain_type.hpp"
-#include "ovl/texture.hpp"
-#include "ovl/texture_pixels.hpp"
+#include "ovl/texture/pixels.hpp"
+#include "ovl/texture/texture.hpp"
 #include "park/flexi_colours.hpp"
 #include "strings/ascii.hpp"
 
@@ -62,13 +62,13 @@ namespace rct3::park::ground
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
-        const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
+        const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
         std::size_t missing = 2;
         for (const auto part : { maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
-            for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+            for (const ovl::texture::TextureItem& item : ovl::texture::read_textures(*overlay, *part))
             {
                 for (const GroundPaint paint : { GroundPaint::PathA, GroundPaint::PathB })
                 {
@@ -90,12 +90,12 @@ namespace rct3::park::ground
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
-        const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
+        const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
         for (const auto part : { maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
-            for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+            for (const ovl::texture::TextureItem& item : ovl::texture::read_textures(*overlay, *part))
             {
                 if (!item.texture || item.name != name)
                     continue;
@@ -131,7 +131,7 @@ namespace rct3::park::ground
         return chosen;
     }
 
-    void apply_queue_mask(ovl::RgbaImage& picture, const PaletteImage& mask)
+    void apply_queue_mask(ovl::texture::RgbaImage& picture, const PaletteImage& mask)
     {
         if (mask.width != picture.width || mask.height != picture.height || mask.indices.size() * 4 != picture.pixels.size())
             return;
@@ -165,7 +165,7 @@ namespace rct3::park::ground
         const auto picture = palette_image(chosen->frames.front(), chosen->flags);
         if (!picture)
             return false;
-        ovl::RgbaImage painted = paint(*picture, flexi_colours(painting.colours));
+        ovl::texture::RgbaImage painted = paint(*picture, flexi_colours(painting.colours));
         const std::string mask_name = std::string(names[*at]) + std::string(kMaskEnding);
         const auto mask = std::ranges::find_if(names, [&](std::string_view n) { return strings::equals_ignoring_case(n, mask_name); });
         if (mask != names.end())
@@ -185,12 +185,12 @@ namespace rct3::park::ground
 
     namespace
     {
-        ovl::RgbaImage cut_out(const ovl::RgbaImage& from, const PictureRegion& region)
+        ovl::texture::RgbaImage cut_out(const ovl::texture::RgbaImage& from, const PictureRegion& region)
         {
             const auto at = [&](float share, std::uint32_t side) { return std::min(side, static_cast<std::uint32_t>(share * static_cast<float>(side))); };
             const std::uint32_t left = at(region.left, from.width);
             const std::uint32_t top = at(region.top, from.height);
-            ovl::RgbaImage out;
+            ovl::texture::RgbaImage out;
             out.width = std::max(at(region.right, from.width), left + 1) - left;
             out.height = std::max(at(region.bottom, from.height), top + 1) - top;
             out.pixels.reserve(std::size_t { out.width } * out.height * 4);
@@ -202,7 +202,7 @@ namespace rct3::park::ground
             return out;
         }
 
-        std::array<float, 3> mean_colour(const ovl::RgbaImage& image)
+        std::array<float, 3> mean_colour(const ovl::texture::RgbaImage& image)
         {
             std::array<double, 3> sum { };
             for (std::size_t i = 0; i + 3 < image.pixels.size(); i += 4)
@@ -226,7 +226,7 @@ namespace rct3::park::ground
             {
                 if (!item.texture || item.texture->frames.empty())
                     continue;
-                const auto picture = ovl::decode_flexi_frame(item.texture->frames.front());
+                const auto picture = ovl::texture::decode_flexi_frame(item.texture->frames.front());
                 if (!picture)
                     continue;
                 return TunnelPictures { cut_out(*picture, style.wall), cut_out(*picture, style.ceiling) };
@@ -265,14 +265,14 @@ namespace rct3::park::ground
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
-        const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
+        const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
 
-        std::map<std::string, ovl::Texture, std::less<>> textures;
+        std::map<std::string, ovl::texture::Texture, std::less<>> textures;
         for (const auto part : { maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
-            for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+            for (const ovl::texture::TextureItem& item : ovl::texture::read_textures(*overlay, *part))
             {
                 if (item.texture)
                     textures.emplace(item.name, *item.texture);

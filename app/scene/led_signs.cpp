@@ -149,7 +149,7 @@ namespace rct3::scene
                     if (batch.picture == kBoardPicture)
                         batch.texture = sign.board;
                 }
-                ovl::RgbaImage blank;
+                ovl::texture::RgbaImage blank;
                 blank.width = sign.width;
                 blank.height = park::kSignTextHeight;
                 blank.pixels.assign(static_cast<std::size_t>(blank.width) * blank.height * 4, park::kSignDark);
@@ -301,7 +301,7 @@ namespace rct3::scene
             sign.shift = shift;
             if (std::exchange(in_pass, false))
                 device.end_pass();
-            const ovl::RgbaImage window = park::sign_window(sign.loop, shift, sign.width, sign.colour);
+            const ovl::texture::RgbaImage window = park::sign_window(sign.loop, shift, sign.width, sign.colour);
             device.update_texture(texture->second.handle, std::as_bytes(std::span(window.pixels)));
         }
         if (!in_pass)

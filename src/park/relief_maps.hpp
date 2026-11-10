@@ -6,7 +6,7 @@
 // shaders bump the surface by it and, at the highest level, shift the picture by its depth.
 #pragma once
 
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 
 #include <map>
 #include <string>
@@ -23,9 +23,9 @@ namespace rct3::park
     /// lower in hollows such as the mortar between bricks). It wraps at the edges, as tiling pictures do. A
     /// picture with no detail gives a flat, open map. `strength` scales the height round its middle, so 0.5
     /// gives half as deep a relief.
-    [[nodiscard]] ovl::RgbaImage relief_map(const ovl::RgbaImage& picture, float strength = 1.0f);
+    [[nodiscard]] ovl::texture::RgbaImage relief_map(const ovl::texture::RgbaImage& picture, float strength = 1.0f);
 
     /// Adds the relief map of every picture in `pictures` under its name and kReliefSuffix.
-    void add_relief_maps(std::map<std::string, ovl::RgbaImage, std::less<>>& pictures, float strength = 1.0f);
+    void add_relief_maps(std::map<std::string, ovl::texture::RgbaImage, std::less<>>& pictures, float strength = 1.0f);
 
 } // namespace rct3::park

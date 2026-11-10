@@ -3,8 +3,8 @@
 
 #include "ovl/overlay.hpp"
 #include "ovl/static_shape.hpp"
-#include "ovl/texture.hpp"
-#include "ovl/texture_pixels.hpp"
+#include "ovl/texture/pixels.hpp"
+#include "ovl/texture/texture.hpp"
 
 #include <algorithm>
 #include <array>
@@ -79,7 +79,7 @@ namespace rct3::park::sky
 
     } // namespace
 
-    void glowing(ovl::RgbaImage& image)
+    void glowing(ovl::texture::RgbaImage& image)
     {
         for (std::size_t i = 0; i + 3 < image.pixels.size(); i += 4)
         {
@@ -102,7 +102,7 @@ namespace rct3::park::sky
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
-        const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
+        const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
 
         LoadedSky sky;
         for (const auto part : { maybe(&overlay->common()), overlay->unique() })
@@ -122,7 +122,7 @@ namespace rct3::park::sky
                         sky.mountains[m] = mesh_of(item.shape->meshes[m], key(panels[m]));
                 }
             }
-            for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+            for (const ovl::texture::TextureItem& item : ovl::texture::read_textures(*overlay, *part))
             {
                 if (!item.texture)
                     continue;
@@ -147,7 +147,7 @@ namespace rct3::park::sky
         const auto image = sky.images.find(dome.texture);
         if (dome.vertices.empty() || image == sky.images.end() || image->second.width == 0 || image->second.height == 0)
             return { };
-        const ovl::RgbaImage& picture = image->second;
+        const ovl::texture::RgbaImage& picture = image->second;
         const auto lowest = std::ranges::min_element(dome.vertices, { }, [](const object::ModelVertex& v) { return v.position.y; });
         const float down = lowest->uv.y - std::floor(lowest->uv.y);
         const auto row = std::min(static_cast<std::size_t>(down * static_cast<float>(picture.height)), static_cast<std::size_t>(picture.height) - 1);

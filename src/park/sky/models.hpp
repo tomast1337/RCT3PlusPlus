@@ -5,7 +5,7 @@
 // shape itself names. The mountains' two meshes take the two pictures of the park's landscape theme.
 #pragma once
 
-#include "ovl/texture_image.hpp"
+#include "ovl/texture/image.hpp"
 #include "park/mountain_mesh.hpp"
 #include "park/sky/mesh.hpp"
 
@@ -25,14 +25,14 @@ namespace rct3::park::sky
     struct LoadedSky
     {
         SkyModels models;
-        MountainShapes mountains;                                  ///< In the pictures of the theme asked for
-        std::map<std::string, ovl::RgbaImage, std::less<>> images; ///< By the shapes' texture keys
+        MountainShapes mountains;                                           ///< In the pictures of the theme asked for
+        std::map<std::string, ovl::texture::RgbaImage, std::less<>> images; ///< By the shapes' texture keys
     };
 
     /// Makes a picture of light on black see-through by its darkness, so drawn over something it adds its
     /// light rather than covering it in black: each pixel keeps its hue at full brightness and becomes as
     /// opaque as it was bright.
-    void glowing(ovl::RgbaImage& image);
+    void glowing(ovl::texture::RgbaImage& image);
 
     /// The sky in the overlay at `path`, with the background mountains of `theme` (see kBackgroundThemes). A
     /// shape or picture that is missing leaves that part of the sky out.

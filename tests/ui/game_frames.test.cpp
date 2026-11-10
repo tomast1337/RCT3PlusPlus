@@ -62,7 +62,7 @@ TEST_CASE("the window frame leaves its middle empty for the window's background"
 
 namespace
 {
-    Color pixel(const rct3::ovl::RgbaImage& image, std::uint32_t x, std::uint32_t y)
+    Color pixel(const rct3::ovl::texture::RgbaImage& image, std::uint32_t x, std::uint32_t y)
     {
         const std::uint8_t* p = &image.pixels[(std::size_t { y } * image.width + x) * 4];
         return { p[0], p[1], p[2], p[3] };

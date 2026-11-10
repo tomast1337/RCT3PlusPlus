@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/image_set.hpp"
 
-#include "ovl/texture.hpp"
-#include "ovl/texture_pixels.hpp"
+#include "ovl/texture/pixels.hpp"
+#include "ovl/texture/texture.hpp"
 
 namespace rct3::ui
 {
@@ -12,19 +12,19 @@ namespace rct3::ui
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
-        const ovl::TexturePixels pixels = ovl::TexturePixels::index(*overlay);
+        const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
 
         ImageSet images;
         for (const auto part : { maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
-            for (const ovl::TextureItem& item : ovl::read_textures(*overlay, *part))
+            for (const ovl::texture::TextureItem& item : ovl::texture::read_textures(*overlay, *part))
             {
                 if (!item.texture)
                     continue;
                 if (auto image = pixels.first_frame(*item.texture))
-                    images.emplace(std::string(item.name), ovl::flipped_vertically(std::move(*image)));
+                    images.emplace(std::string(item.name), ovl::texture::flipped_vertically(std::move(*image)));
             }
         }
         return images;

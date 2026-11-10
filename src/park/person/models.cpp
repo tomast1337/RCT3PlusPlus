@@ -5,8 +5,8 @@
 #include "ovl/overlay.hpp"
 #include "ovl/person_parts.hpp"
 #include "ovl/skeleton.hpp"
-#include "ovl/texture.hpp"
-#include "ovl/texture_pixels.hpp"
+#include "ovl/texture/pixels.hpp"
+#include "ovl/texture/texture.hpp"
 #include "park/person/motions.hpp"
 #include "strings/ascii.hpp"
 
@@ -102,8 +102,8 @@ namespace rct3::park::person
             std::optional<ByName<ovl::Skeleton>> skeletons;
             std::optional<ByName<ovl::SimpleAnim>> motions;
             std::optional<ByName<ovl::SimpleSkin>> skins;
-            std::optional<ByName<ovl::Texture>> textures;
-            std::optional<ovl::TexturePixels> pixels;
+            std::optional<ByName<ovl::texture::Texture>> textures;
+            std::optional<ovl::texture::TexturePixels> pixels;
         };
 
         AssetIndex parts;
@@ -323,12 +323,12 @@ namespace rct3::park::person
         Files::Open* file = f.file(*path);
         if (!file)
             return { };
-        const auto& textures = f.items(*file, file->textures, &ovl::read_textures, &ovl::TextureItem::texture);
+        const auto& textures = f.items(*file, file->textures, &ovl::texture::read_textures, &ovl::texture::TextureItem::texture);
         const auto texture = textures.find(lower(name));
         if (texture == textures.end())
             return { };
         if (!file->pixels)
-            file->pixels = ovl::TexturePixels::index(file->overlay);
+            file->pixels = ovl::texture::TexturePixels::index(file->overlay);
         auto image = file->pixels->first_frame(texture->second);
         if (!image)
             return { };

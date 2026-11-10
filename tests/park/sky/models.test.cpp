@@ -9,7 +9,7 @@ using namespace rct3::park::sky;
 
 TEST_CASE("a glowing picture is see-through where it is dark")
 {
-    ovl::RgbaImage image { 3, 1, { 0, 0, 0, 255, 255, 255, 255, 255, 64, 32, 0, 255 } };
+    ovl::texture::RgbaImage image { 3, 1, { 0, 0, 0, 255, 255, 255, 255, 255, 64, 32, 0, 255 } };
     glowing(image);
     CHECK(image.pixels[3] == 0);   // Black: clear
     CHECK(image.pixels[7] == 255); // White: solid white
@@ -23,7 +23,7 @@ TEST_CASE("a glowing picture is see-through where it is dark")
 
 TEST_CASE("a glowing picture keeps the see-through parts it had")
 {
-    ovl::RgbaImage image { 1, 1, { 200, 200, 200, 128 } };
+    ovl::texture::RgbaImage image { 1, 1, { 200, 200, 200, 128 } };
     glowing(image);
     CHECK(image.pixels[3] == 100);
 }

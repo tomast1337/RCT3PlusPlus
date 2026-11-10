@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 
 #include "core/maybe.hpp"
 
 #include <span>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::skin
 {
 
     std::array<float, 2> SkinRef::size() const
@@ -125,4 +125,4 @@ namespace rct3::ui
         draw_skin(list, face, rect, tint);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::skin

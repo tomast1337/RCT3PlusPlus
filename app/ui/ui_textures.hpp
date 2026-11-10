@@ -6,8 +6,8 @@
 
 #include "ovl/texture/image.hpp"
 #include "render/device.hpp"
-#include "ui/skin_library.hpp"
-#include "ui/skin_set.hpp"
+#include "ui/skin/library.hpp"
+#include "ui/skin/set.hpp"
 
 #include <expected>
 #include <map>
@@ -31,6 +31,6 @@ namespace rct3::ui
     void destroy_textures(render::Device& device, UiTextures& textures);
 
     /// The skins whose texture is among `textures`, ready for widgets.
-    [[nodiscard]] SkinLibrary skin_library(const std::map<std::string, NamedSkin, std::less<>>& skins, const UiTextures& textures);
+    [[nodiscard]] skin::SkinLibrary skin_library(const std::map<std::string, skin::NamedSkin, std::less<>>& skins, const UiTextures& textures);
 
 } // namespace rct3::ui

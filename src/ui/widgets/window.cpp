@@ -193,7 +193,7 @@ namespace rct3::ui
                     for (int column = 0; column < columns; ++column)
                     {
                         const float x = back.x0 + static_cast<float>(column) * w;
-                        draw_skin(context.list, background, { x, y, x + across, y + h });
+                        skin::draw_skin(context.list, background, { x, y, x + across, y + h });
                     }
                 }
             }
@@ -201,17 +201,17 @@ namespace rct3::ui
                 context.list.pop_clip();
         }
         else
-            draw_skin(context.list, background, back);
+            skin::draw_skin(context.list, background, back);
         if (!style_.content_background.empty())
-            draw_skin(context.list, context.skins.find(style_.content_background), content_->rect());
-        draw_skin(context.list, context.skins.find(focused() ? style_.frame : style_.frame_unfocused), r);
+            skin::draw_skin(context.list, context.skins.find(style_.content_background), content_->rect());
+        skin::draw_skin(context.list, context.skins.find(focused() ? style_.frame : style_.frame_unfocused), r);
         if (const auto skin = icon.empty() ? std::nullopt : context.skins.find(icon))
         {
             const auto [w, h] = skin->size();
             const Rect& b = style_.icon_box;
             const float x = std::round(r.x0 + (b.x0 + b.x1 - w) / 2);
             const float y = std::round(r.y0 + (b.y0 + b.y1 - h) / 2);
-            draw_skin(context.list, skin, { x, y, x + w, y + h });
+            skin::draw_skin(context.list, skin, { x, y, x + w, y + h });
         }
 
         // Three steps of small squares along the diagonal of the bottom-right corner.

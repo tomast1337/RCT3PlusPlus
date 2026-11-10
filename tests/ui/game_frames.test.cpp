@@ -7,6 +7,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
+using namespace rct3::ui::skin;
 
 TEST_CASE("each coded skin draws shapes alone, within the rectangle its picture would cover")
 {

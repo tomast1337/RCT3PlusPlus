@@ -2,7 +2,7 @@
 #include "ui/screens/file_dialog.hpp"
 
 #include "ui/save_text.hpp"
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 #include "ui/widgets/panel.hpp"
 
 #include <algorithm>
@@ -179,7 +179,7 @@ namespace rct3::ui
                 context.list.fill(r, style_.selected_colour);
             const Rect& p = style_.picture;
             const Rect frame { r.x0 + p.x0, r.y0 + p.y0, r.x0 + p.x1, r.y0 + p.y1 };
-            draw_skin(context.list, context.skins.find(style_.border), frame);
+            skin::draw_skin(context.list, context.skins.find(style_.border), frame);
             if (picture != 0)
             {
                 const float i = style_.picture_inset;

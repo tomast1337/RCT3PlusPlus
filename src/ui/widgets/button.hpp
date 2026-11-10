@@ -49,7 +49,7 @@ namespace rct3::ui
         void click();
 
         /// The family member this button draws with now.
-        [[nodiscard]] SkinState state() const;
+        [[nodiscard]] skin::SkinState state() const;
         /// Where the face is drawn: the button's rectangle, grown while it swells.
         [[nodiscard]] Rect face() const;
 

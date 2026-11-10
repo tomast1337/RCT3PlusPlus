@@ -385,7 +385,7 @@ namespace rct3::ui
             {
                 const Point m = middle_of(d);
                 const float h = footpath_panel::kDiscIcon / 2;
-                draw_skin(list, context.skins.find(styles[chosen_->index].icon), { m.x - h, m.y - h, m.x + h, m.y + h });
+                skin::draw_skin(list, context.skins.find(styles[chosen_->index].icon), { m.x - h, m.y - h, m.x + h, m.y + h });
             }
         }
     }

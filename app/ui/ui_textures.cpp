@@ -26,9 +26,9 @@ namespace rct3::ui
         return textures;
     }
 
-    SkinLibrary skin_library(const std::map<std::string, NamedSkin, std::less<>>& skins, const UiTextures& textures)
+    skin::SkinLibrary skin_library(const std::map<std::string, skin::NamedSkin, std::less<>>& skins, const UiTextures& textures)
     {
-        SkinLibrary library;
+        skin::SkinLibrary library;
         for (const auto& [name, skin] : skins)
         {
             const auto texture = textures.find(skin.texture);

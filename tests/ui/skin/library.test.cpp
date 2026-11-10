@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
+using namespace rct3::ui::skin;
 
 namespace
 {
-    SkinRef skin(TextureId texture, float w = 10, float h = 10)
+    SkinRef skin_ref(TextureId texture, float w = 10, float h = 10)
     {
         SkinRef s;
         s.layout.xs = { 0, w };
@@ -24,7 +25,7 @@ namespace
 TEST_CASE("skins are found by name")
 {
     SkinLibrary skins;
-    skins.add("Frame", skin(1, 30, 20));
+    skins.add("Frame", skin_ref(1, 30, 20));
     REQUIRE(skins.find("Frame"));
     CHECK(skins.find("Frame")->texture == 1);
     CHECK(skins.find("Frame")->size() == std::array<float, 2> { 30, 20 });
@@ -35,7 +36,7 @@ TEST_CASE("skins are found by name")
 TEST_CASE("skins are found whatever the case of their name")
 {
     SkinLibrary skins;
-    skins.add("Obj_Rides_RollerCoasters", skin(2, 40, 40));
+    skins.add("Obj_Rides_RollerCoasters", skin_ref(2, 40, 40));
     REQUIRE(skins.find("Obj_Rides_Rollercoasters"));
     CHECK(skins.find("obj_rides_rollercoasters")->texture == 2);
     CHECK_FALSE(skins.find("Obj_Rides_Roller"));
@@ -44,9 +45,9 @@ TEST_CASE("skins are found whatever the case of their name")
 TEST_CASE("state lookups fall back to the nearest member of the family")
 {
     SkinLibrary skins;
-    skins.add("ButtonUp", skin(1));
-    skins.add("ButtonUpOver", skin(2));
-    skins.add("ButtonDown", skin(3));
+    skins.add("ButtonUp", skin_ref(1));
+    skins.add("ButtonUpOver", skin_ref(2));
+    skins.add("ButtonDown", skin_ref(3));
 
     CHECK(skins.find("Button", SkinState::Up)->texture == 1);
     CHECK(skins.find("Button", SkinState::UpOver)->texture == 2);
@@ -56,7 +57,7 @@ TEST_CASE("state lookups fall back to the nearest member of the family")
 
     SUBCASE("a skin without a family is used for every state")
     {
-        skins.add("Plain", skin(9));
+        skins.add("Plain", skin_ref(9));
         CHECK(skins.find("Plain", SkinState::Pressed)->texture == 9);
         CHECK(skins.find("Plain", SkinState::UpOver)->texture == 9);
     }
@@ -71,7 +72,7 @@ TEST_CASE("drawing a missing skin draws nothing")
     DrawList list;
     draw_skin(list, std::nullopt, { 0, 0, 10, 10 });
     CHECK(list.vertices().empty());
-    const SkinRef s = skin(4);
+    const SkinRef s = skin_ref(4);
     draw_skin(list, s, { 0, 0, 10, 10 });
     REQUIRE(list.batches().size() == 1);
     CHECK(list.batches()[0].texture == 4);
@@ -80,7 +81,7 @@ TEST_CASE("drawing a missing skin draws nothing")
 TEST_CASE("a skin with a coded frame draws the frame instead of its picture")
 {
     SkinLibrary skins;
-    skins.add("Frame", skin(1, 30, 20));
+    skins.add("Frame", skin_ref(1, 30, 20));
     CodedFrame frame;
     frame.layers.push_back({ inset_box(0, 0, 0, 0), Shape { }, { } });
     skins.set_coded("frame", frame); // Whatever the case

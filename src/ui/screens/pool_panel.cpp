@@ -3,7 +3,7 @@
 
 #include "ui/screens/footpath_panel.hpp"
 #include "ui/shape.hpp"
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 
 #include <algorithm>
 #include <tuple>
@@ -427,7 +427,7 @@ namespace rct3::ui
         {
             const Point m = middle_of(d);
             const float h = pool_panel::kDiscIcon / 2;
-            draw_skin(list, context.skins.find(icon), { m.x - h, m.y - h, m.x + h, m.y + h });
+            skin::draw_skin(list, context.skins.find(icon), { m.x - h, m.y - h, m.x + h, m.y + h });
         }
     }
 

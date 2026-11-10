@@ -97,7 +97,7 @@ namespace rct3::ui
         {
             const Rect s = spot(i);
             if (s.width() > 0)
-                draw_skin(context.list, context.skins.find(std::format("{}{}", style_.paint_prefix, colours[i])), s);
+                skin::draw_skin(context.list, context.skins.find(std::format("{}{}", style_.paint_prefix, colours[i])), s);
         }
     }
 

@@ -17,7 +17,7 @@
 #include "ui/keyboard.hpp"
 #include "ui/palette.hpp"
 #include "ui/placement.hpp"
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 
 #include <memory>
 #include <optional>
@@ -52,7 +52,7 @@ namespace rct3::ui
     struct DrawContext
     {
         DrawList& list;
-        const SkinLibrary& skins;
+        const skin::SkinLibrary& skins;
         const font::FontSet& fonts;
         const Palette& palette = kGamePalette; ///< For what is drawn in code each frame
     };

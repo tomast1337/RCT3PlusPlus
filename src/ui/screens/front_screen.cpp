@@ -3,7 +3,7 @@
 
 #include "core/maybe.hpp"
 #include "ui/game_frames.hpp"
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
@@ -110,7 +110,7 @@ namespace rct3::ui
             }
             void draw(DrawContext& context) const override
             {
-                draw_skin(context.list, context.skins.find(skin_), rect());
+                skin::draw_skin(context.list, context.skins.find(skin_), rect());
             }
 
         private:
@@ -124,7 +124,7 @@ namespace rct3::ui
             if (!skin)
                 return;
             const auto [w, h] = skin->size();
-            draw_skin(context.list, skin, frame.stretched({ corner.x, corner.y, corner.x + w, corner.y + h }));
+            skin::draw_skin(context.list, skin, frame.stretched({ corner.x, corner.y, corner.x + w, corner.y + h }));
         }
 
         Color faded(Color c, float alpha)
@@ -152,8 +152,8 @@ namespace rct3::ui
 
     void FrontButton::draw(DrawContext& context) const
     {
-        const SkinState s = state();
-        const Color tint = s == SkinState::Disabled ? faded(kWhite, kDisabledAlpha) : kWhite;
+        const skin::SkinState s = state();
+        const Color tint = s == skin::SkinState::Disabled ? faded(kWhite, kDisabledAlpha) : kWhite;
         // The round picture at one scale, fitted to the button's width, so it stays round when the
         // picture is not quite square.
         const auto picture = context.skins.find(skin);
@@ -164,7 +164,7 @@ namespace rct3::ui
             if (w > 0 && h > 0)
                 r.y1 = r.y0 + r.width() * h / w;
         }
-        draw_skin(context.list, picture, r, s == SkinState::Pressed ? kPressedTint : tint);
+        skin::draw_skin(context.list, picture, r, s == skin::SkinState::Pressed ? skin::kPressedTint : tint);
         draw_icon(context, tint);
     }
 
@@ -176,14 +176,14 @@ namespace rct3::ui
         const Rect r = face();
         if (!icon_own_size)
         {
-            draw_skin(context.list, picture, r, tint);
+            skin::draw_skin(context.list, picture, r, tint);
             return;
         }
         const auto [w, h] = picture->size();
         const float k = icon_scale * (rect().width() > 0 ? r.width() / rect().width() : 1);
         const float cx = (r.x0 + r.x1) / 2;
         const float cy = (r.y0 + r.y1) / 2;
-        draw_skin(context.list, picture, { cx - w * k / 2, cy - h * k / 2, cx + w * k / 2, cy + h * k / 2 }, tint);
+        skin::draw_skin(context.list, picture, { cx - w * k / 2, cy - h * k / 2, cx + w * k / 2, cy + h * k / 2 }, tint);
     }
 
     void draw_front_bands(DrawContext& context, const fs::Frame& frame)
@@ -194,9 +194,9 @@ namespace rct3::ui
             draw_frame(context.list, game_frames::front_backdrop(context.palette, frame.design_screen()), frame.stretched({ 0, 0, fs::kDesignWidth, fs::kDesignHeight }));
             return;
         }
-        draw_skin(context.list, context.skins.find(kBandTopSkin), frame.stretched(fs::kBandTop));
-        draw_skin(context.list, context.skins.find(kBandBottomSkin), frame.stretched(fs::kBandBottom));
-        draw_skin(context.list, context.skins.find(kStripRightSkin), frame.stretched(fs::kStripRight));
+        skin::draw_skin(context.list, context.skins.find(kBandTopSkin), frame.stretched(fs::kBandTop));
+        skin::draw_skin(context.list, context.skins.find(kBandBottomSkin), frame.stretched(fs::kBandBottom));
+        skin::draw_skin(context.list, context.skins.find(kStripRightSkin), frame.stretched(fs::kStripRight));
     }
 
     void draw_front_arc(DrawContext& context, const fs::Frame& frame, std::string_view logo)
@@ -445,8 +445,8 @@ namespace rct3::ui
             const float alpha = current[i].button->enabled ? label_alpha_[i] : label_alpha_[i] * kDisabledBoxAlpha;
             const fs::LabelBox box = fs::label_box(frame, i);
             context.list.fill(box.band, faded(kBandColour, alpha));
-            draw_skin(context.list, context.skins.find(kBandEndSkin), box.end, faded(kWhite, alpha));
-            draw_skin(context.list, context.skins.find(kPatchSkin), box.patch, faded(kWhite, alpha));
+            skin::draw_skin(context.list, context.skins.find(kBandEndSkin), box.end, faded(kWhite, alpha));
+            skin::draw_skin(context.list, context.skins.find(kPatchSkin), box.patch, faded(kWhite, alpha));
             if (label_font)
                 draw_text(context.list, *label_font, labels_[i], box.text, { faded(kLabelColour, alpha), Align::Centre, Align::Centre, true });
         }
@@ -457,7 +457,7 @@ namespace rct3::ui
             {
                 if (const auto skin = context.skins.find(name))
                 {
-                    draw_skin(context.list, skin, frame.stretched(fs::kChildren));
+                    skin::draw_skin(context.list, skin, frame.stretched(fs::kChildren));
                     break;
                 }
             }

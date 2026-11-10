@@ -133,7 +133,7 @@ namespace rct3::ui
         if (style.bar)
         {
             const float share = maximum > minimum ? std::clamp((value_ - minimum) / (maximum - minimum), 0.0f, 1.0f) : 0.0f;
-            const Color fade = enabled ? kWhite : kDisabledTint;
+            const Color fade = enabled ? kWhite : skin::kDisabledTint;
             const auto tinted = [&](Color c) { return Color { static_cast<std::uint8_t>(c.r * fade.r / 255), static_cast<std::uint8_t>(c.g * fade.g / 255), static_cast<std::uint8_t>(c.b * fade.b / 255), static_cast<std::uint8_t>(c.a * fade.a / 255) }; };
             context.list.fill(r, tinted(style.bar_back_colour));
             context.list.fill({ r.x0, r.y0, r.x0 + r.width() * share, r.y1 }, tinted(style.bar_colour));
@@ -143,13 +143,13 @@ namespace rct3::ui
         const float y = std::round(r.y0 + (r.height() - style.rail_thickness) / 2);
         const Rect rail { r.x0 + half, y, r.x1 - half, y + style.rail_thickness };
         if (const auto skin = style.rail.empty() ? std::nullopt : context.skins.find(style.rail))
-            draw_skin(context.list, skin, rail, enabled ? kWhite : kDisabledTint);
+            skin::draw_skin(context.list, skin, rail, enabled ? kWhite : skin::kDisabledTint);
         else
             context.list.fill(rail, style.rail_colour);
 
-        const SkinState state = !enabled ? SkinState::Disabled : pressed() ? SkinState::Pressed : hovered() ? SkinState::UpOver : SkinState::Up;
+        const skin::SkinState state = !enabled ? skin::SkinState::Disabled : pressed() ? skin::SkinState::Pressed : hovered() ? skin::SkinState::UpOver : skin::SkinState::Up;
         if (!style.thumb.empty() && context.skins.find(style.thumb, state))
-            draw_skin_state(context.list, context.skins, style.thumb, state, thumb());
+            skin::draw_skin_state(context.list, context.skins, style.thumb, state, thumb());
         else
             context.list.fill(thumb(), style.thumb_colour);
     }

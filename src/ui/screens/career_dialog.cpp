@@ -2,7 +2,7 @@
 #include "ui/screens/career_dialog.hpp"
 
 #include "strings/unicode.hpp"
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 #include "ui/widgets/panel.hpp"
 
 #include <cstdio>
@@ -112,15 +112,15 @@ namespace rct3::ui
             for (std::size_t i = 0; i < style_.hats.size(); ++i)
             {
                 const float y = r.y0 + c * static_cast<float>(i);
-                draw_skin(context.list, context.skins.find(style_.hats[i]), { r.x0, y, r.x0 + c, y + c });
+                skin::draw_skin(context.list, context.skins.find(style_.hats[i]), { r.x0, y, r.x0 + c, y + c });
             }
             const Rect& p = style_.picture;
             const Rect at { r.x0 + p.x0, r.y0 + p.y0, r.x0 + p.x1, r.y0 + p.y1 };
             if (picture != 0)
                 context.list.image(at, picture, { 0, 0, 1, 1 });
             else
-                draw_skin(context.list, context.skins.find(style_.no_picture), at);
-            draw_skin(context.list, context.skins.find(selected ? style_.row_frame_selected : style_.row_frame), r);
+                skin::draw_skin(context.list, context.skins.find(style_.no_picture), at);
+            skin::draw_skin(context.list, context.skins.find(selected ? style_.row_frame_selected : style_.row_frame), r);
         }
 
     private:

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/skin.hpp"
+#include "ui/skin/skin.hpp"
 
 #include <algorithm>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::skin
 {
 
     namespace
@@ -147,4 +147,4 @@ namespace rct3::ui
             list.image(piece.target, texture, piece.uv, tint);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::skin

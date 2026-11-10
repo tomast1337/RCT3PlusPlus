@@ -1037,16 +1037,16 @@ namespace rct3::ui
     {
         const auto skin = [&](const std::string& name) { return name.empty() ? std::nullopt : context.skins.find(name); };
         if (strip_shown())
-            draw_skin(context.list, skin(style_.strip), strip());
+            skin::draw_skin(context.list, skin(style_.strip), strip());
         const Rect d = disc();
         const Rect shade { d.x0 + info_panel::kShadowOffset, d.y0 + info_panel::kShadowOffset, d.x1 + info_panel::kShadowOffset, d.y1 + info_panel::kShadowOffset };
-        draw_skin(context.list, skin(style_.shadow), shade);
-        draw_skin(context.list, skin(style_.rim_shadow), shade);
-        draw_skin(context.list, skin(style_.disc), d);
+        skin::draw_skin(context.list, skin(style_.shadow), shade);
+        skin::draw_skin(context.list, skin(style_.rim_shadow), shade);
+        skin::draw_skin(context.list, skin(style_.disc), d);
         if (view_ != 0)
             context.list.disc_image(view(), view_, { 0, 0, 1, 1 });
-        draw_skin(context.list, skin(style_.glass), d, { 255, 255, 255, static_cast<std::uint8_t>(std::lround(style_.glass_alpha * 255)) });
-        draw_skin(context.list, skin(style_.rim), d);
+        skin::draw_skin(context.list, skin(style_.glass), d, { 255, 255, 255, static_cast<std::uint8_t>(std::lround(style_.glass_alpha * 255)) });
+        skin::draw_skin(context.list, skin(style_.rim), d);
     }
 
 } // namespace rct3::ui

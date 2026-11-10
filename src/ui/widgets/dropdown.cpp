@@ -148,15 +148,15 @@ namespace rct3::ui
             context.list.fill(r, style.fill);
         const std::string& back = has_keyboard_focus() && !style.focused.empty() ? style.focused : style.field;
         if (!back.empty())
-            draw_skin(context.list, context.skins.find(back), r);
+            skin::draw_skin(context.list, context.skins.find(back), r);
 
         const float size = std::min(style.opener_width, r.height());
         const float y = std::round(r.y0 + (r.height() - size) / 2);
         const float inset = style.opener_in_corner ? 0 : std::round((r.height() - size) / 2);
         const float top = style.opener_in_corner ? r.y0 : y;
         const Rect arrow { r.x1 - size - inset, top, r.x1 - inset, top + size };
-        const SkinState state = !enabled ? SkinState::Disabled : menu_ != nullptr || pressed() ? SkinState::Pressed : hovered() ? SkinState::UpOver : SkinState::Up;
-        draw_skin_state(context.list, context.skins, style.opener, state, arrow);
+        const skin::SkinState state = !enabled ? skin::SkinState::Disabled : menu_ != nullptr || pressed() ? skin::SkinState::Pressed : hovered() ? skin::SkinState::UpOver : skin::SkinState::Up;
+        skin::draw_skin_state(context.list, context.skins, style.opener, state, arrow);
 
         const auto f = context.fonts.get(style.font);
         if (!f || !selected_ || *selected_ >= items.size())

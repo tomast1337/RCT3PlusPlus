@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/tutorial_picker.hpp"
 
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
@@ -132,7 +132,7 @@ namespace rct3::ui
             const auto [w, h] = skin->size();
             const float x = q % 2 == 0 ? disc.centre.x - w * disc.scale : disc.centre.x;
             const float y = q < 2 ? disc.centre.y - h * disc.scale : disc.centre.y;
-            draw_skin(context.list, skin, { x, y, x + w * disc.scale, y + h * disc.scale });
+            skin::draw_skin(context.list, skin, { x, y, x + w * disc.scale, y + h * disc.scale });
         }
 
         const auto name_font = context.fonts.get(font::FontRole::ScaledMedium);

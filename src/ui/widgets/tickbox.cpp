@@ -42,9 +42,9 @@ namespace rct3::ui
     void Tickbox::draw(DrawContext& context) const
     {
         const Color tint = !enabled ? hex("#808080a0") : pressed() ? hex("#bebebe") : kWhite;
-        draw_skin(context.list, context.skins.find(box), rect(), tint);
+        skin::draw_skin(context.list, context.skins.find(box), rect(), tint);
         if (ticked)
-            draw_skin(context.list, context.skins.find(tick), rect(), tint);
+            skin::draw_skin(context.list, context.skins.find(tick), rect(), tint);
     }
 
 } // namespace rct3::ui

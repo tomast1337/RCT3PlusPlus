@@ -6,7 +6,7 @@
 #pragma once
 
 #include "ovl/texture/image.hpp"
-#include "ui/skin.hpp"
+#include "ui/skin/skin.hpp"
 
 #include <expected>
 #include <filesystem>
@@ -15,7 +15,7 @@
 #include <string>
 #include <string_view>
 
-namespace rct3::ui
+namespace rct3::ui::skin
 {
 
     struct NamedSkin
@@ -38,4 +38,4 @@ namespace rct3::ui
     /// already has that name.
     [[nodiscard]] std::expected<SkinSet, std::string> load_skin_set(const std::filesystem::path& path, std::span<const std::string_view> whole_textures = { });
 
-} // namespace rct3::ui
+} // namespace rct3::ui::skin

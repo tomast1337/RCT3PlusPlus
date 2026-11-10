@@ -59,14 +59,14 @@ namespace rct3::ui::screens
             // Covers the row and lets the pointer through, as the row does.
             Widget& group = add<Widget>(std::string(kToolNames[i]));
             group.placement = fill();
-            Button& b = group.add<Button>(style_.icons[i], std::string { }, style_.icons[i]);
+            widgets::Button& b = group.add<widgets::Button>(style_.icons[i], std::string { }, style_.icons[i]);
             b.swell = style_.swell;
             b.tooltip = help(strings_, style_.icons[i]);
             buttons_[i] = &b;
             const auto tool = static_cast<ParkTool>(i);
             for (const ToolMenuItem& entry : tool_menu(tool))
             {
-                Button& item = group.add<Button>(std::string(entry.icon), style_.item_face, std::string(entry.icon));
+                widgets::Button& item = group.add<widgets::Button>(std::string(entry.icon), style_.item_face, std::string(entry.icon));
                 item.swell = style_.item_swell;
                 item.icon_scale = tool_row::kItemIconScale;
                 item.tooltip = help(strings_, entry);
@@ -75,7 +75,7 @@ namespace rct3::ui::screens
                 show_switch(items_.back());
                 for (const ToolMenuItem& sub : tool_submenu(entry.item))
                 {
-                    Button& below = group.add<Button>(std::string(sub.icon), style_.item_face, std::string(sub.icon));
+                    widgets::Button& below = group.add<widgets::Button>(std::string(sub.icon), style_.item_face, std::string(sub.icon));
                     below.swell = style_.item_swell;
                     below.icon_scale = tool_row::kItemIconScale;
                     below.tooltip = help(strings_, sub);
@@ -97,7 +97,7 @@ namespace rct3::ui::screens
         return *std::ranges::find(items_, item, &MenuItem::item);
     }
 
-    Button& ToolRow::item(ToolItem item) const
+    widgets::Button& ToolRow::item(ToolItem item) const
     {
         return *find(item).button;
     }
@@ -140,7 +140,7 @@ namespace rct3::ui::screens
 
     void ToolRow::place_menu(ParkTool tool)
     {
-        const Button& under = button(tool);
+        const widgets::Button& under = button(tool);
         const float step = under.placement.offsets.x1 - under.placement.offsets.x0;
         const float middle = (under.placement.offsets.x0 + under.placement.offsets.x1) / 2;
         const float first = tool_row::kMargin + step + tool_row::kItemGap;
@@ -188,7 +188,7 @@ namespace rct3::ui::screens
 
     void ToolRow::set_career(bool career)
     {
-        Button& leave = button(ParkTool::Leave);
+        widgets::Button& leave = button(ParkTool::Leave);
         leave.icon = career ? style_.career_leave_icon : style_.icons[static_cast<std::size_t>(ParkTool::Leave)];
         leave.tooltip = strings_.get(career ? kCareerHelp : kQuitHelp);
     }

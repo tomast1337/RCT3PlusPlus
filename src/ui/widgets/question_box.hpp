@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     struct QuestionBoxStyle
@@ -86,4 +86,4 @@ namespace rct3::ui
         bool answered_ = false;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

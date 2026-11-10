@@ -5,7 +5,7 @@
 #include <format>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     PaintButton::PaintButton(std::string name, PaintButtonStyle style, std::vector<std::size_t> colours)
@@ -101,4 +101,4 @@ namespace rct3::ui
         }
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

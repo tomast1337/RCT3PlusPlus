@@ -16,7 +16,7 @@
 
 #include <string>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     class Button : public Widget
@@ -80,4 +80,4 @@ namespace rct3::ui
         float grown_ = 0; // 0 to 1, how far into its swell
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

@@ -21,7 +21,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     struct MenuItem
@@ -116,4 +116,4 @@ namespace rct3::ui
         int sideways_ = 0;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

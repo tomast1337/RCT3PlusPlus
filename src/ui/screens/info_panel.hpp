@@ -65,23 +65,23 @@ namespace rct3::ui::screens
     {
         PanelLook look = PanelLook::Texture; ///< Whether the frame comes from the skins below or from `coded`
         CodedInfoPanel coded;
-        std::string disc;           ///< Behind the view, fully opaque
-        std::string glass;          ///< Over the view, faint
-        std::string rim;            ///< Round the right of the disc
-        std::string shadow;         ///< Under the disc
-        std::string rim_shadow;     ///< Under the rim
-        std::string strip;          ///< Behind a tab's content, stretched in nine parts
-        std::string close_icon;     ///< On the close button
-        std::string tab_face;       ///< Behind each tab's icon
-        PaintButtonStyle paint;     ///< Of a paint tab; its face is tab_face
-        ColourPaletteStyle palette; ///< Of the colours a paint tab opens
+        std::string disc;                    ///< Behind the view, fully opaque
+        std::string glass;                   ///< Over the view, faint
+        std::string rim;                     ///< Round the right of the disc
+        std::string shadow;                  ///< Under the disc
+        std::string rim_shadow;              ///< Under the rim
+        std::string strip;                   ///< Behind a tab's content, stretched in nine parts
+        std::string close_icon;              ///< On the close button
+        std::string tab_face;                ///< Behind each tab's icon
+        widgets::PaintButtonStyle paint;     ///< Of a paint tab; its face is tab_face
+        widgets::ColourPaletteStyle palette; ///< Of the colours a paint tab opens
         std::size_t palette_count = 32;
         std::size_t palette_columns = 8;
-        SpinnerStyle spinner;                                                                                            ///< Of a page's number controls
-        SliderStyle bar { .rail = { }, .thumb = { }, .thumb_width = 0, .bar = true, .bar_back_colour = hex("#ece8f0") }; ///< Of its bars set by pressing along them; colours chosen by eye
-        StallMenuStyle menu;                                                                                             ///< Of a stall's menu
-        DropdownStyle dropdown;                                                                                          ///< Of its lists
-        std::string tick_box;                                                                                            ///< Of its ticks
+        widgets::SpinnerStyle spinner;                                                                                            ///< Of a page's number controls
+        widgets::SliderStyle bar { .rail = { }, .thumb = { }, .thumb_width = 0, .bar = true, .bar_back_colour = hex("#ece8f0") }; ///< Of its bars set by pressing along them; colours chosen by eye
+        StallMenuStyle menu;                                                                                                      ///< Of a stall's menu
+        widgets::DropdownStyle dropdown;                                                                                          ///< Of its lists
+        std::string tick_box;                                                                                                     ///< Of its ticks
         std::string tick;
         std::string button;                           ///< Behind its buttons' text
         Color section_colour = hex("#b8d8f0");        ///< Of a section button's text
@@ -371,7 +371,7 @@ namespace rct3::ui::screens
         {
             return painting_;
         }
-        [[nodiscard]] std::optional<ColourPalette&> palette() const
+        [[nodiscard]] std::optional<widgets::ColourPalette&> palette() const
         {
             return core::maybe(palette_);
         }
@@ -383,7 +383,7 @@ namespace rct3::ui::screens
         {
             return choosing_;
         }
-        [[nodiscard]] Button& choice(std::size_t i) const
+        [[nodiscard]] widgets::Button& choice(std::size_t i) const
         {
             return *choices_.at(i);
         }
@@ -432,7 +432,7 @@ namespace rct3::ui::screens
         {
             return body_width_ > 0 && !tucked_;
         }
-        [[nodiscard]] Button& tab(std::size_t i) const
+        [[nodiscard]] widgets::Button& tab(std::size_t i) const
         {
             return *tabs_.at(i);
         }
@@ -473,14 +473,14 @@ namespace rct3::ui::screens
         void scroll_by(float by);
 
         InfoPanelStyle style_;
-        std::vector<Button*> tabs_;
+        std::vector<widgets::Button*> tabs_;
         std::vector<int> slots_;
         std::vector<std::vector<InfoChoice>> tab_choices_;
-        std::vector<Button*> choices_;
+        std::vector<widgets::Button*> choices_;
         std::optional<std::size_t> choosing_;
-        std::vector<PaintButton*> paints_;       ///< Of each tab, its pots when it is a paint tab
-        std::vector<std::size_t> paint_colours_; ///< Of each tab, InfoTab::colours
-        ColourPalette* palette_ = nullptr;
+        std::vector<widgets::PaintButton*> paints_; ///< Of each tab, its pots when it is a paint tab
+        std::vector<std::size_t> paint_colours_;    ///< Of each tab, InfoTab::colours
+        widgets::ColourPalette* palette_ = nullptr;
         std::optional<std::size_t> painting_;
         std::size_t painting_pot_ = 0;
         std::optional<InfoPaint> paint_now_;
@@ -493,13 +493,13 @@ namespace rct3::ui::screens
         float since_view_press_ = info_panel::kDoubleClickSeconds; ///< Since the round view was last pressed
         bool view_double_ = false;
         std::optional<std::pair<std::size_t, std::size_t>> choice_now_;
-        std::vector<Button*> sections_;
-        Dropdown* section_list_ = nullptr; ///< When the page picks its sections from a list
+        std::vector<widgets::Button*> sections_;
+        widgets::Dropdown* section_list_ = nullptr; ///< When the page picks its sections from a list
         /// A line of the page with a value, whose value lines up with the others clear of the widest label.
         struct ValueRow
         {
-            Label* label = nullptr;
-            Label* value = nullptr;
+            widgets::Label* label = nullptr;
+            widgets::Label* value = nullptr;
             Widget* bar = nullptr; ///< Under the value when it has one, with its filled part
             Widget* filled = nullptr;
             float fill = 0;
@@ -508,28 +508,28 @@ namespace rct3::ui::screens
         /// Where each of controls_ sits down the page, set as the page is filled; across is set by place_page.
         struct ControlRow
         {
-            Label* label = nullptr;
+            widgets::Label* label = nullptr;
             std::size_t column = 0;
             float y = 0;
             float height = 0;
-            Label* shown = nullptr; ///< InfoControl::shown, when it has one
+            widgets::Label* shown = nullptr; ///< InfoControl::shown, when it has one
         };
         std::vector<Widget*> value_icons_; ///< InfoLine::value_icon's, put in the value column by place_page
         std::vector<ControlRow> control_rows_;
         float page_width_ = 0;
         bool measured_ = false; ///< Whether place_page has run with the fonts since the page was shown
         std::optional<std::size_t> section_now_;
-        Button* close_ = nullptr;
-        Button* hide_ = nullptr;
+        widgets::Button* close_ = nullptr;
+        widgets::Button* hide_ = nullptr;
         bool tucked_ = false; ///< The strip put away by the player
         bool paper_ = false;  ///< The page sits on paper
         bool plain_paper_ = false;
-        bool striped_ = false;     ///< Its lines are striped; a note alone sits in a plain box down the paper
-        float scroll_ = 0;         ///< How far the page's widgets are moved up; the bar's position, once followed
-        ScrollBar* bar_ = nullptr; ///< Beside a page taller than the strip
+        bool striped_ = false;              ///< Its lines are striped; a note alone sits in a plain box down the paper
+        float scroll_ = 0;                  ///< How far the page's widgets are moved up; the bar's position, once followed
+        widgets::ScrollBar* bar_ = nullptr; ///< Beside a page taller than the strip
         Widget* body_ = nullptr;
-        Label* title_ = nullptr; ///< The page's, in the band
-        Label* view_text_ = nullptr;
+        widgets::Label* title_ = nullptr; ///< The page's, in the band
+        widgets::Label* view_text_ = nullptr;
 
         std::size_t picked_ = 0;
         std::optional<std::size_t> picked_now_;

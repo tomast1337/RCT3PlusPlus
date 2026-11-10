@@ -131,7 +131,7 @@ namespace rct3::ui::screens
     } // namespace
 
     OptionsDialog::OptionsDialog(std::string name, const OptionsDialogStyle& style, const StringTable& strings, config::GameOptions& options, OptionsChoices choices)
-        : Window(std::move(name), style.window, style.page_width + style.window.content_inset.x0 + style.window.content_inset.x1, style.tab_bar_height + style.page_height + style.window.content_inset.y0 + style.window.content_inset.y1)
+        : widgets::Window(std::move(name), style.window, style.page_width + style.window.content_inset.x0 + style.window.content_inset.x1, style.tab_bar_height + style.page_height + style.window.content_inset.y0 + style.window.content_inset.y1)
         , style_(style)
         , options_(options)
         , choices_(std::move(choices))
@@ -141,13 +141,13 @@ namespace rct3::ui::screens
         icon = style.icon;
         Widget& body = content();
 
-        caption_ = &body.add<Label>("caption", std::u16string { }, style.caption_font);
+        caption_ = &body.add<widgets::Label>("caption", std::u16string { }, style.caption_font);
         caption_->style.vertical = Align::Centre;
         caption_->style.colour = style.caption_colour;
         caption_->placement = top_left(style.caption_x, 0, style.caption_width, style.caption_height);
         for (std::size_t i = 0; i < kOptionsPageCount; ++i)
         {
-            auto& tab = body.add<Button>(std::string(kTabs[i].icon), std::string(kTabs[i].icon));
+            auto& tab = body.add<widgets::Button>(std::string(kTabs[i].icon), std::string(kTabs[i].icon));
             tab.toggle = true;
             tab.tooltip = str(strings, kTabs[i].caption_key);
             tab.placement = top_left(style.tabs_x + style.tab_step * static_cast<float>(i), 0, style.tab_size, style.tab_size);
@@ -270,10 +270,10 @@ namespace rct3::ui::screens
     {
         const KeyListStyle& k = style_.keys;
         const float width = style_.page_width;
-        auto& back = page.add<Panel>("key_back", std::string { });
+        auto& back = page.add<widgets::Panel>("key_back", std::string { });
         back.colour = k.background;
         back.placement = top_left(0, 0, width, k.height);
-        auto& area = page.add<ScrollArea>("key_list", style_.scroll);
+        auto& area = page.add<widgets::ScrollArea>("key_list", style_.scroll);
         area.placement = top_left(0, 0, width, k.height);
         Widget& list = area.content();
 
@@ -281,10 +281,10 @@ namespace rct3::ui::screens
         float y = k.top;
         const auto bar = [&](std::string_view key) {
             y += k.group_gap;
-            auto& fill = list.add<Panel>(std::format("{}_bar", key), std::string { });
+            auto& fill = list.add<widgets::Panel>(std::format("{}_bar", key), std::string { });
             fill.colour = k.bar_colour;
             fill.placement = top_left(0, y, width, k.bar_height);
-            auto& name = list.add<Label>(std::string(key), str(strings, key), style_.rows.font);
+            auto& name = list.add<widgets::Label>(std::string(key), str(strings, key), style_.rows.font);
             name.style.colour = k.bar_text_colour;
             name.style.vertical = Align::Centre;
             name.placement = top_left(k.bar_text_inset, y, width - 2 * k.bar_text_inset, k.bar_height);
@@ -292,23 +292,23 @@ namespace rct3::ui::screens
         };
         const auto row = [&](std::u16string text, Widget& keys) {
             y += k.row_gap;
-            auto& name = list.add<Label>(std::format("{}_label", keys.name()), std::move(text), style_.rows.font);
+            auto& name = list.add<widgets::Label>(std::format("{}_label", keys.name()), std::move(text), style_.rows.font);
             name.style.colour = style_.rows.text_colour;
             name.style.vertical = Align::Centre;
             name.placement = top_left(k.name_x, y, k.name_width, k.row_height);
             keys.placement = top_left(k.keys_x, y, width - k.keys_right - k.keys_x, k.row_height);
             y += k.row_height;
         };
-        const auto box = [&](std::string_view key, std::vector<KeyCombo> combos) -> KeyBox& {
-            auto& b = list.add<KeyBox>(std::string(key), std::move(combos));
+        const auto box = [&](std::string_view key, std::vector<KeyCombo> combos) -> widgets::KeyBox& {
+            auto& b = list.add<widgets::KeyBox>(std::string(key), std::move(combos));
             b.focused_skin = k.focused;
             b.font = style_.rows.font;
             b.text_colour = style_.rows.text_colour;
             b.padding = { 3, 0, 3, 0 };
             return b;
         };
-        const auto fixed = [&](std::string_view key, std::u16string keys) -> Label& {
-            auto& l = list.add<Label>(std::string(key), std::move(keys), style_.rows.font);
+        const auto fixed = [&](std::string_view key, std::u16string keys) -> widgets::Label& {
+            auto& l = list.add<widgets::Label>(std::string(key), std::move(keys), style_.rows.font);
             l.style.colour = style_.rows.text_colour;
             l.style.vertical = Align::Centre;
             l.tooltip = str(strings, kNoKeyChange);
@@ -328,14 +328,14 @@ namespace rct3::ui::screens
                     name = ascii(info.label_key.substr(kKeySettingPrefix.size()));
                 if (!info.fixed.empty())
                 {
-                    Label& keys = fixed(info.label_key, std::u16string(info.fixed));
+                    widgets::Label& keys = fixed(info.label_key, std::u16string(info.fixed));
                     keys.style.horizontal = Align::Start;
                     row(std::move(name), keys);
                     keys.placement.offsets.x0 += 3;
                     continue;
                 }
                 const auto& combo = keys_.play_key(info.command);
-                KeyBox& b = box(info.label_key, combo ? std::vector { *combo } : std::vector<KeyCombo> { });
+                widgets::KeyBox& b = box(info.label_key, combo ? std::vector { *combo } : std::vector<KeyCombo> { });
                 b.game_key = true;
                 b.tooltip = str(strings, kKeyChange);
                 play_boxes_.at(static_cast<std::size_t>(info.command)) = &b;
@@ -347,7 +347,7 @@ namespace rct3::ui::screens
         bar(kInterfaceKeys);
         for (const CommandInfo& info : commands_table())
         {
-            KeyBox& b = box(info.label_key, keys_.keys(info.command));
+            widgets::KeyBox& b = box(info.label_key, keys_.keys(info.command));
             b.prompt = str(strings, kPressKeys);
             b.none = str(strings, kNoKeys);
             b.tooltip = str(strings, kKeysTip);
@@ -358,7 +358,7 @@ namespace rct3::ui::screens
         auto& end = list.add<Widget>("end");
         end.placement = top_left(0, y, 1, k.bottom);
 
-        usual_keys_ = &page.add<Button>("usual_keys", style_.button);
+        usual_keys_ = &page.add<widgets::Button>("usual_keys", style_.button);
         usual_keys_->text = str(strings, kUsualKeys);
         usual_keys_->font = style_.rows.font;
         usual_keys_->text_inset = style_.button_inset;
@@ -385,17 +385,17 @@ namespace rct3::ui::screens
 
         // The game picks a quality level for the computer here; we cannot tell yet, so it shows unusable.
         const float icon_x = style_.page_width - style_.auto_detect_right - style_.auto_detect_size;
-        auto_detect_ = &page.add<Button>("auto_detect", std::string { }, style_.auto_detect_icon);
+        auto_detect_ = &page.add<widgets::Button>("auto_detect", std::string { }, style_.auto_detect_icon);
         auto_detect_->tooltip = str(strings, kAutoDetectTip);
         auto_detect_->placement = top_left(icon_x, 0, style_.auto_detect_size, style_.auto_detect_size);
         auto_detect_->enabled = false;
-        auto& detect = page.add<Label>("auto_detect_name", str(strings, kAutoDetect), style_.rows.font);
+        auto& detect = page.add<widgets::Label>("auto_detect_name", str(strings, kAutoDetect), style_.rows.font);
         detect.style.colour = style_.rows.disabled_colour;
         detect.style.horizontal = Align::Centre;
         detect.placement = top_left(icon_x - style_.auto_detect_size / 2, style_.auto_detect_size, 2 * style_.auto_detect_size, style_.rows.row_height);
 
         // The custom settings scroll below, usable only at the custom quality level.
-        custom_ = &page.add<ScrollArea>("custom", style_.scroll);
+        custom_ = &page.add<widgets::ScrollArea>("custom", style_.scroll);
         auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(custom_->content(), style_.page_width - style_.scroll.thickness, style_.rows, options_, choices_.inert));
         custom_rows_ = &rows;
         std::vector<std::u16string> samples = { str(strings, "GameOptionsDialog_AntiAliasNone") };
@@ -554,7 +554,7 @@ namespace rct3::ui::screens
 
     bool OptionsDialog::waiting_for_keys() const
     {
-        const auto waiting = [](const KeyBox* box) { return box != nullptr && box->waiting(); };
+        const auto waiting = [](const widgets::KeyBox* box) { return box != nullptr && box->waiting(); };
         return std::ranges::any_of(key_boxes_, waiting) || std::ranges::any_of(play_boxes_, waiting);
     }
 
@@ -572,7 +572,7 @@ namespace rct3::ui::screens
         }
         for (std::size_t i = 0; i < kPlayCommandCount; ++i)
         {
-            KeyBox* box = play_boxes_[i];
+            widgets::KeyBox* box = play_boxes_[i];
             if (box != nullptr && box->take_change())
             {
                 // Takes the key from any other game command too.
@@ -591,7 +591,7 @@ namespace rct3::ui::screens
             key_boxes_[i]->combos = keys_.keys(static_cast<Command>(i));
         for (std::size_t i = 0; i < kPlayCommandCount; ++i)
         {
-            if (KeyBox* box = play_boxes_[i])
+            if (widgets::KeyBox* box = play_boxes_[i])
             {
                 const auto& combo = keys_.play_key(static_cast<PlayCommand>(i));
                 box->combos = combo ? std::vector { *combo } : std::vector<KeyCombo> { };
@@ -602,7 +602,7 @@ namespace rct3::ui::screens
 
     void OptionsDialog::update(const UpdateContext& context)
     {
-        Window::update(context);
+        widgets::Window::update(context);
         for (std::size_t i = 0; i < kOptionsPageCount; ++i)
         {
             if (tabs_[i]->take_click())

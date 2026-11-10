@@ -133,10 +133,10 @@ namespace rct3::ui::screens
         , view_(std::move(view))
         , rows_(menu_rows(view_))
     {
-        sync_ = &add<Tickbox>("Stall_Synchronize", style_.tick_box, style_.tick);
+        sync_ = &add<widgets::Tickbox>("Stall_Synchronize", style_.tick_box, style_.tick);
         sync_->ticked = view_.sync;
         sync_->tooltip = view_.sync_help;
-        pane_ = &add<ScrollArea>("menu", style_.bar);
+        pane_ = &add<widgets::ScrollArea>("menu", style_.bar);
         back_ = &pane_->content().add<MenuRowsBack>(*this);
         const float bar = style_.bar.thickness;
         // Laid from the right of the rows, which stop short of the bar by the rest of the gutter.
@@ -153,7 +153,7 @@ namespace rct3::ui::screens
             LineWidgets w;
             const float extras_right = right + style_.price_width;
             const float extras_left = extras_right + style_.extras_width;
-            EditBox& name_box = pane_->content().add<EditBox>(std::format("ItemName{}", i), line.name);
+            widgets::EditBox& name_box = pane_->content().add<widgets::EditBox>(std::format("ItemName{}", i), line.name);
             name_box.skin = style_.price.field;
             name_box.focused_skin = style_.price.field_focused;
             name_box.max_length = view_.longest_name;
@@ -161,7 +161,7 @@ namespace rct3::ui::screens
             name_box.placement = { { 0, 0, 1, 0 }, { style_.strip_cell, y, -extras_left, y + h } };
             name_box.tooltip = line.help;
             w.name = &name_box;
-            Spinner& price = pane_->content().add<Spinner>(std::format("ItemPrice{}", i), style_.price);
+            widgets::Spinner& price = pane_->content().add<widgets::Spinner>(std::format("ItemPrice{}", i), style_.price);
             price.maximum = view_.most_price;
             price.step = view_.price_step;
             price.decimals = 2;
@@ -171,7 +171,7 @@ namespace rct3::ui::screens
             w.price = &price;
             if (!line.paints.empty())
             {
-                PaintButton& pot = pane_->content().add<PaintButton>(std::format("ItemColour{}", i), style_.paint, line.paints);
+                widgets::PaintButton& pot = pane_->content().add<widgets::PaintButton>(std::format("ItemColour{}", i), style_.paint, line.paints);
                 const float x = -extras_left + (style_.pot_width - h) / 2;
                 pot.placement = { { 1, 0, 1, 0 }, { x, y, x + h, y + h } };
                 w.pot = &pot;
@@ -184,7 +184,7 @@ namespace rct3::ui::screens
                 if (!line.extras[k])
                     continue;
                 const auto column = static_cast<float>(std::ranges::find(columns, *line.extras[k]) - columns.begin());
-                Tickbox& tick = pane_->content().add<Tickbox>(std::format("ItemExtra{}_{}", i, k), style_.tick_box, style_.tick);
+                widgets::Tickbox& tick = pane_->content().add<widgets::Tickbox>(std::format("ItemExtra{}_{}", i, k), style_.tick_box, style_.tick);
                 tick.ticked = (line.ticked >> k & 1U) != 0;
                 tick.tooltip = k < line.tick_help.size() ? line.tick_help[k] : std::u16string { };
                 const float x = -extras_left + column * h;
@@ -279,9 +279,9 @@ namespace rct3::ui::screens
         return std::exchange(event_, std::nullopt);
     }
 
-    std::vector<std::pair<std::size_t, PaintButton*>> StallMenu::pots() const
+    std::vector<std::pair<std::size_t, widgets::PaintButton*>> StallMenu::pots() const
     {
-        std::vector<std::pair<std::size_t, PaintButton*>> out;
+        std::vector<std::pair<std::size_t, widgets::PaintButton*>> out;
         for (std::size_t i = 0; i < lines_.size(); ++i)
         {
             if (lines_[i].pot != nullptr)
@@ -465,7 +465,7 @@ namespace rct3::ui::screens
             if (picked_ == i)
                 context.list.fill(row, style_.picked);
             else
-                fill_row(context.list, style_.rows, row, i);
+                widgets::fill_row(context.list, style_.rows, row, i);
             skin::draw_skin(context.list, context.skins.find(view_.lines[i].icon), { row.x0, row.y0, row.x0 + h, row.y1 }, drag_ && drag_->moving && drag_->line == i ? Color { 255, 255, 255, 96 } : kWhite);
         }
     }

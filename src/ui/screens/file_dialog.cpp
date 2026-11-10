@@ -119,7 +119,7 @@ namespace rct3::ui::screens
             : Widget(std::move(name))
             , style_(style)
         {
-            box = &add<EditBox>("name", std::move(shown));
+            box = &add<widgets::EditBox>("name", std::move(shown));
             box->skin = { };
             box->focused_skin = style.name_box_focused;
             box->font = style.font;
@@ -130,7 +130,7 @@ namespace rct3::ui::screens
             box->placement = top_left(style.name_box_rect.x0, style.name_box_rect.y0, style.name_box_rect.width(), style.name_box_rect.height());
             for (std::size_t i = 0; i < lines.size(); ++i)
             {
-                Label& l = add<Label>(std::format("line{}", i), std::u16string { }, style.font);
+                widgets::Label& l = add<widgets::Label>(std::format("line{}", i), std::u16string { }, style.font);
                 l.style.colour = style.line_colour;
                 l.style.vertical = Align::Centre;
                 l.placement = top_left(style.lines_x, style.lines_top + static_cast<float>(i) * (style.line_height - 4), style.lines_width, style.line_height - 4);
@@ -139,8 +139,8 @@ namespace rct3::ui::screens
             set_lines({ std::u16string(kUnread), { }, { } });
         }
 
-        EditBox* box = nullptr;
-        std::array<Label*, 3> labels { };
+        widgets::EditBox* box = nullptr;
+        std::array<widgets::Label*, 3> labels { };
         std::array<std::u16string, 3> lines;
         TextureId picture = 0;
         bool selected = false;
@@ -193,7 +193,7 @@ namespace rct3::ui::screens
     };
 
     FileDialog::FileDialog(std::string name, const FileDialogStyle& style, const StringTable& strings, FileDialogMode mode, bool twelve_hour)
-        : Window(std::move(name), style.window, style.width + style.window.content_inset.x0 + style.window.content_inset.x1, style.height + style.window.content_inset.y0 + style.window.content_inset.y1)
+        : widgets::Window(std::move(name), style.window, style.width + style.window.content_inset.x0 + style.window.content_inset.x1, style.height + style.window.content_inset.y0 + style.window.content_inset.y1)
         , style_(style)
         , strings_(strings)
         , mode_(mode)
@@ -206,8 +206,8 @@ namespace rct3::ui::screens
         icon = saving ? style.save_icon : style.load_icon;
 
         const float buttons_y = style.height - style.bottom - style.button_size;
-        const auto button = [&](std::string id, const std::string& icon_skin, std::size_t slot, std::string_view tip) -> Button& {
-            Button& b = content().add<Button>(std::move(id), style.button, icon_skin);
+        const auto button = [&](std::string id, const std::string& icon_skin, std::size_t slot, std::string_view tip) -> widgets::Button& {
+            widgets::Button& b = content().add<widgets::Button>(std::move(id), style.button, icon_skin);
             b.placement = top_left(style.button_x.at(slot), buttons_y, style.button_size, style.button_size);
             b.tooltip = text(tip);
             return b;
@@ -218,13 +218,13 @@ namespace rct3::ui::screens
         default_button = open_;
         cancel_button = cancel_;
 
-        hover_ = &content().add<Label>("hover", std::u16string { }, style.font);
+        hover_ = &content().add<widgets::Label>("hover", std::u16string { }, style.font);
         hover_->style.colour = style.line_colour;
         hover_->style.vertical = Align::Centre;
         hover_->placement = top_left(style.line_x, buttons_y + (style.button_size - style.line_height) / 2, style.button_x[0] - style.line_x, style.line_height);
 
         const float status_y = buttons_y - style.gap - style.line_height;
-        status_ = &content().add<Label>("status", std::u16string { }, style.font);
+        status_ = &content().add<widgets::Label>("status", std::u16string { }, style.font);
         status_->style.colour = style.text_colour;
         status_->style.vertical = Align::Centre;
         status_->placement = top_left(style.line_x, status_y, style.list_right - style.line_x, style.line_height);
@@ -233,7 +233,7 @@ namespace rct3::ui::screens
         if (saving)
         {
             const float box_y = status_y - style.gap - style.line_height;
-            name_box_ = &content().add<EditBox>("file_name");
+            name_box_ = &content().add<widgets::EditBox>("file_name");
             name_box_->skin = style.name_box;
             name_box_->focused_skin = style.name_box_focused;
             name_box_->font = style.font;
@@ -244,9 +244,9 @@ namespace rct3::ui::screens
             list_bottom = box_y - style.gap;
         }
 
-        auto& border = content().add<Panel>("list_border", style.border);
+        auto& border = content().add<widgets::Panel>("list_border", style.border);
         border.placement = top_left(style.list_x, style.list_top, style.list_right - style.list_x, list_bottom - style.list_top);
-        list_ = &content().add<ScrollArea>("list", style.scroll);
+        list_ = &content().add<widgets::ScrollArea>("list", style.scroll);
         list_->placement = top_left(style.list_x + 1, style.list_top + 1, style.list_right - style.list_x - 2, list_bottom - style.list_top - 2);
     }
 
@@ -344,7 +344,7 @@ namespace rct3::ui::screens
             name_box_->text = shown_file_name(files_[index]);
     }
 
-    EditBox& FileDialog::row_name_box(std::size_t index) const
+    widgets::EditBox& FileDialog::row_name_box(std::size_t index) const
     {
         return *rows_.at(index)->box;
     }
@@ -390,12 +390,12 @@ namespace rct3::ui::screens
     {
         if (question_ || !parent())
             return;
-        std::vector<QuestionAnswer> answers;
+        std::vector<widgets::QuestionAnswer> answers;
         if (only_ok)
             answers.push_back({ text(kOk), style_.question.confirm_icon });
         else
             answers = { { text(kYes), style_.question.confirm_icon }, { text(kNo), style_.question.cancel_icon } };
-        question_ = &parent()->add<QuestionBox>(std::string(kQuestionName), style_.question, std::move(message), answers);
+        question_ = &parent()->add<widgets::QuestionBox>(std::string(kQuestionName), style_.question, std::move(message), answers);
         asking_ = asking;
     }
 
@@ -459,7 +459,7 @@ namespace rct3::ui::screens
 
     void FileDialog::update(const UpdateContext& context)
     {
-        Window::update(context);
+        widgets::Window::update(context);
         since_click_ += context.elapsed;
         if (since_complete_ >= 0 && since_complete_ < style_.complete_time)
         {
@@ -490,7 +490,7 @@ namespace rct3::ui::screens
         }
         for (std::size_t i = 0; i < rows_.size(); ++i)
         {
-            EditBox& box = *rows_[i]->box;
+            widgets::EditBox& box = *rows_[i]->box;
             if (!box.take_commit() || kept(i))
                 continue;
             const std::u16string old_name = shown_file_name(files_[i]);

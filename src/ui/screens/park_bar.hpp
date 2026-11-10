@@ -130,29 +130,29 @@ namespace rct3::ui::screens
             return std::exchange(asked_finances_, false);
         }
 
-        [[nodiscard]] Button& objective_button() const
+        [[nodiscard]] widgets::Button& objective_button() const
         {
             return *objective_;
         }
         /// Pause, play, fast and fastest.
-        [[nodiscard]] Button& speed_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& speed_button(std::size_t i) const
         {
             return *speeds_.at(i);
         }
-        [[nodiscard]] Button& day_mode_button() const
+        [[nodiscard]] widgets::Button& day_mode_button() const
         {
             return *day_mode_;
         }
         /// Of the arc below the day mode button, in the order of simulation::DayMode.
-        [[nodiscard]] Button& day_mode_choice(std::size_t i) const
+        [[nodiscard]] widgets::Button& day_mode_choice(std::size_t i) const
         {
             return *day_choices_.at(i);
         }
-        [[nodiscard]] Button& money() const
+        [[nodiscard]] widgets::Button& money() const
         {
             return *money_;
         }
-        [[nodiscard]] Button& highlight_button() const
+        [[nodiscard]] widgets::Button& highlight_button() const
         {
             return *highlight_;
         }
@@ -161,15 +161,15 @@ namespace rct3::ui::screens
         {
             return highlight_->on;
         }
-        [[nodiscard]] const Label& date() const
+        [[nodiscard]] const widgets::Label& date() const
         {
             return *date_;
         }
-        [[nodiscard]] const Panel& weather() const
+        [[nodiscard]] const widgets::Panel& weather() const
         {
             return *weather_;
         }
-        [[nodiscard]] const Panel& forecast() const
+        [[nodiscard]] const widgets::Panel& forecast() const
         {
             return *forecast_;
         }
@@ -197,21 +197,21 @@ namespace rct3::ui::screens
         bool asked_finances_ = false;
         float since_money_click_ = 1000; ///< Seconds since the money was last clicked; long ago at first
         std::optional<float> rating_;
-        Button* objective_ = nullptr;
-        Button* day_mode_ = nullptr;
-        std::array<Button*, 3> day_choices_ { };
-        std::array<Button*, 4> speeds_ { };
-        Button* money_ = nullptr;
-        Label* guests_ = nullptr;
-        Panel* thumb_down_ = nullptr;
-        Panel* rating_area_ = nullptr;
-        Panel* thumb_up_ = nullptr;
-        Label* temperature_ = nullptr;
-        Panel* weather_ = nullptr;
-        Panel* arrow_ = nullptr;
-        Panel* forecast_ = nullptr;
-        Label* date_ = nullptr;
-        Button* highlight_ = nullptr;
+        widgets::Button* objective_ = nullptr;
+        widgets::Button* day_mode_ = nullptr;
+        std::array<widgets::Button*, 3> day_choices_ { };
+        std::array<widgets::Button*, 4> speeds_ { };
+        widgets::Button* money_ = nullptr;
+        widgets::Label* guests_ = nullptr;
+        widgets::Panel* thumb_down_ = nullptr;
+        widgets::Panel* rating_area_ = nullptr;
+        widgets::Panel* thumb_up_ = nullptr;
+        widgets::Label* temperature_ = nullptr;
+        widgets::Panel* weather_ = nullptr;
+        widgets::Panel* arrow_ = nullptr;
+        widgets::Panel* forecast_ = nullptr;
+        widgets::Label* date_ = nullptr;
+        widgets::Button* highlight_ = nullptr;
     };
 
 } // namespace rct3::ui::screens

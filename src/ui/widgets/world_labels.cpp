@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <ranges>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     namespace
@@ -48,4 +48,4 @@ namespace rct3::ui
         }
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <format>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     QuestionBox::QuestionBox(std::string name, const QuestionBoxStyle& style, std::u16string text, const std::vector<QuestionAnswer>& answers)
@@ -113,4 +113,4 @@ namespace rct3::ui
         }
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

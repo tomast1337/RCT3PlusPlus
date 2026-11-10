@@ -2226,7 +2226,7 @@ namespace rct3::scene
         {
             namespace skins = ui::game_skins;
             auto& pieces = scene.rides.rides.at(*b.ride).track->pieces;
-            auto strip = scene.desktop->root().find_as<ui::Panel>(kArmName);
+            auto strip = scene.desktop->root().find_as<ui::widgets::Panel>(kArmName);
             if (!b.arm || pieces.empty())
             {
                 if (strip)
@@ -2237,17 +2237,17 @@ namespace rct3::scene
             constexpr float kSpinner = 64;
             if (!strip)
             {
-                strip = scene.desktop->root().add<ui::Panel>(std::string(kArmName), std::string(skins::kCurvedStrip));
+                strip = scene.desktop->root().add<ui::widgets::Panel>(std::string(kArmName), std::string(skins::kCurvedStrip));
                 strip->placement = ui::bottom_left(ui::screens::construction_panel::kStripLeft, kPanelTop, 540, kRow + 8);
-                auto& enable = strip->add<ui::Tickbox>("enable", std::string(skins::kTickbox), std::string(skins::kTick));
+                auto& enable = strip->add<ui::widgets::Tickbox>("enable", std::string(skins::kTickbox), std::string(skins::kTick));
                 enable.tooltip = assets.strings->get(kArmEnableHelp);
                 enable.placement = ui::top_left(8, 6, 20, 20);
-                auto& label = strip->add<ui::Label>("enable_label", std::u16string(assets.strings->get(kArmEnable)));
+                auto& label = strip->add<ui::widgets::Label>("enable_label", std::u16string(assets.strings->get(kArmEnable)));
                 label.placement = ui::top_left(30, 6, 60, 20);
                 float left = 92;
                 for (const auto& [name, text, help] : { std::tuple { "zero", u"0", kArmZeroHelp }, { "copy_prev", u"<", kArmPrevHelp }, { "copy_next", u">", kArmNextHelp } })
                 {
-                    auto& button = strip->add<ui::Button>(name, std::string(skins::kTextButton));
+                    auto& button = strip->add<ui::widgets::Button>(name, std::string(skins::kTextButton));
                     button.text = text;
                     button.tooltip = assets.strings->get(help);
                     button.placement = ui::top_left(left, 5, 22, 22);
@@ -2255,7 +2255,7 @@ namespace rct3::scene
                 }
                 for (const std::string_view joint : kArmJoints)
                 {
-                    auto& spinner = strip->add<ui::Spinner>(std::string(joint), skins::spinner_style(assets.palette));
+                    auto& spinner = strip->add<ui::widgets::Spinner>(std::string(joint), skins::spinner_style(assets.palette));
                     spinner.minimum = -kArmTurns;
                     spinner.maximum = kArmTurns;
                     spinner.step = kArmStep;
@@ -2265,26 +2265,26 @@ namespace rct3::scene
                 }
                 for (const auto& [name, text, help] : { std::tuple { "piece_back", u"<<", kPieceBackHelp }, { "piece_forward", u">>", kPieceForwardHelp } })
                 {
-                    auto& button = strip->add<ui::Button>(name, std::string(skins::kTextButton));
+                    auto& button = strip->add<ui::widgets::Button>(name, std::string(skins::kTextButton));
                     button.text = text;
                     button.tooltip = assets.strings->get(help);
                     button.placement = ui::top_left(left + 4, 5, 26, 22);
                     left += 30;
                 }
-                auto& at = strip->add<ui::Label>("piece_label", std::u16string { });
+                auto& at = strip->add<ui::widgets::Label>("piece_label", std::u16string { });
                 at.placement = ui::top_left(left + 6, 6, 60, 20);
                 b.arm_piece = 0;
             }
             // Counted back from the last piece, so a piece laid while the last is shown is shown next.
-            if (strip->find_as<ui::Button>("piece_back")->take_click())
+            if (strip->find_as<ui::widgets::Button>("piece_back")->take_click())
                 ++b.arm_back;
-            if (strip->find_as<ui::Button>("piece_forward")->take_click() && b.arm_back > 0)
+            if (strip->find_as<ui::widgets::Button>("piece_forward")->take_click() && b.arm_back > 0)
                 --b.arm_back;
             b.arm_back = std::min(b.arm_back, pieces.size() - 1);
             const std::size_t index = pieces.size() - 1 - b.arm_back;
             save::model::TrackPiece& piece = pieces[index];
-            strip->find_as<ui::Label>("piece_label")->text = strings::to_utf16(std::format("{}/{}", index + 1, pieces.size()));
-            auto& enable = *strip->find_as<ui::Tickbox>("enable");
+            strip->find_as<ui::widgets::Label>("piece_label")->text = strings::to_utf16(std::format("{}/{}", index + 1, pieces.size()));
+            auto& enable = *strip->find_as<ui::widgets::Tickbox>("enable");
             // The nearest piece before or after this one (round a circuit) with angles of its own.
             const auto nearest = [&](bool before) -> std::optional<rct3::park::track::ArmAngles> {
                 for (std::size_t k = 1; k < pieces.size(); ++k)
@@ -2299,20 +2299,20 @@ namespace rct3::scene
                 shown = false;
             }
             for (const auto& [name, before] : { std::pair { "copy_prev", true }, { "copy_next", false } })
-                if (strip->find_as<ui::Button>(name)->take_click())
+                if (strip->find_as<ui::widgets::Button>(name)->take_click())
                     if (const auto copied = nearest(before))
                     {
                         piece.arm_angles = copied;
                         shown = false;
                     }
-            if (strip->find_as<ui::Button>("zero")->take_click())
+            if (strip->find_as<ui::widgets::Button>("zero")->take_click())
             {
                 piece.arm_angles = rct3::park::track::ArmAngles { };
                 shown = false;
             }
             for (std::size_t j = 0; j < kArmJoints.size(); ++j)
             {
-                auto& spinner = *strip->find_as<ui::Spinner>(kArmJoints[j]);
+                auto& spinner = *strip->find_as<ui::widgets::Spinner>(kArmJoints[j]);
                 if (spinner.take_change() && piece.arm_angles)
                     (*piece.arm_angles)[j] = static_cast<float>(spinner.value());
                 spinner.enabled = piece.arm_angles.has_value();
@@ -2476,7 +2476,7 @@ namespace rct3::scene
             }
             if (const auto picked = design->take_picked(); picked && *picked == Page)
                 design->show_page(page());
-            if (auto status = design->find_as<ui::Label>("body/status_label"))
+            if (auto status = design->find_as<ui::widgets::Label>("body/status_label"))
                 status->text = assets.strings->get(rct3::park::refusal_key(b.refusal));
             std::int64_t price = 0;
             for (const save::model::TrackPiece& p : b.design)
@@ -2812,8 +2812,8 @@ namespace rct3::scene
                     h.pop_back();
                 return h;
             };
-            std::vector<ui::TableColumn> columns { { .heading = heading("Staff_ColumnHeader_Name") }, { .heading = heading("AttractionResultsDialogLabel_Excitement"), .width = 120, .align = ui::Align::End }, { .heading = heading("AttractionResultsDialogLabel_Intensity"), .width = 120, .align = ui::Align::End } };
-            std::vector<ui::TableRow> rows { { .cells = { std::u16string(strings.get(kCustomTrack)), { }, { } }, .keys = { }, .id = 0 } };
+            std::vector<ui::widgets::TableColumn> columns { { .heading = heading("Staff_ColumnHeader_Name") }, { .heading = heading("AttractionResultsDialogLabel_Excitement"), .width = 120, .align = ui::Align::End }, { .heading = heading("AttractionResultsDialogLabel_Intensity"), .width = 120, .align = ui::Align::End } };
+            std::vector<ui::widgets::TableRow> rows { { .cells = { std::u16string(strings.get(kCustomTrack)), { }, { } }, .keys = { }, .id = 0 } };
             b.designs_locked.clear();
             for (std::size_t i = 0; i < b.designs.size(); ++i)
             {

@@ -20,13 +20,13 @@ namespace rct3::ui::screens
     {
         const float buttons = style.remove.empty() ? 1 : 2;
         placement = bottom_left(0, style.bottom, kMargin * 2 + kButton * buttons + kGap * (buttons - 1), kHeight);
-        add<Panel>("back", style.back);
-        clear_ = &add<Button>(style.clear, style.button, style.clear);
+        add<widgets::Panel>("back", style.back);
+        clear_ = &add<widgets::Button>(style.clear, style.button, style.clear);
         clear_->tooltip = strings.get(style.clear_help);
         clear_->placement = top_left(kMargin, kMargin, kButton, kButton);
         if (!style.remove.empty())
         {
-            delete_ = &add<Button>(style.remove, style.button, style.remove);
+            delete_ = &add<widgets::Button>(style.remove, style.button, style.remove);
             delete_->tooltip = strings.get(style.remove_help);
             delete_->placement = top_left(kMargin + kButton + kGap, kMargin, kButton, kButton);
         }

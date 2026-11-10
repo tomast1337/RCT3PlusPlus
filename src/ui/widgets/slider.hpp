@@ -16,7 +16,7 @@
 
 #include <string>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     struct SliderStyle
@@ -86,4 +86,4 @@ namespace rct3::ui
         int changes_ = 0;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

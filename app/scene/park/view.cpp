@@ -133,7 +133,7 @@ namespace rct3::scene::park
             scene.money.push_back({ at, amount, 0 });
     }
 
-    std::vector<ui::MoneyFloat> money_floats(ParkScene& scene, ui::Point size, const ui::Currency& currency, float elapsed)
+    std::vector<ui::widgets::MoneyFloat> money_floats(ParkScene& scene, ui::Point size, const ui::Currency& currency, float elapsed)
     {
         // Every attraction's takings are followed, shown or not, so switching them on shows only what comes after.
         for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
@@ -148,11 +148,11 @@ namespace rct3::scene::park
         }
         for (FloatingMoney& m : scene.money)
             m.age += elapsed;
-        std::erase_if(scene.money, [](const FloatingMoney& m) { return m.age >= ui::kMoneyFloatLife; });
+        std::erase_if(scene.money, [](const FloatingMoney& m) { return m.age >= ui::widgets::kMoneyFloatLife; });
         if (size.x <= 0 || size.y <= 0)
             return { };
         const glm::mat4 view = rct3::park::view_projection(scene.camera, size.x / size.y);
-        std::vector<ui::MoneyFloat> shown;
+        std::vector<ui::widgets::MoneyFloat> shown;
         const auto show = [&](const FloatingMoney& m) {
             // Off the screen it waits unseen, as a label would.
             const glm::vec4 clip = view * glm::vec4(m.at.x, m.at.y + kLabelLift, m.at.z, 1.0f);
@@ -175,7 +175,7 @@ namespace rct3::scene::park
         return shown;
     }
 
-    std::vector<ui::WorldLabel> height_labels(const ParkScene& scene, ui::Point size)
+    std::vector<ui::widgets::WorldLabel> height_labels(const ParkScene& scene, ui::Point size)
     {
         // The construction panel shows the heights of the ride it builds, the view menu every ride's.
         const std::optional<std::size_t> built = scene.building.heights ? scene.building.ride : std::nullopt;
@@ -183,7 +183,7 @@ namespace rct3::scene::park
             return { };
         const glm::mat4 view = rct3::park::view_projection(scene.camera, size.x / size.y);
         const glm::vec3 middle = scene.camera.target;
-        std::vector<std::pair<float, ui::WorldLabel>> found;
+        std::vector<std::pair<float, ui::widgets::WorldLabel>> found;
         const auto add = [&](glm::vec3 at, float height) {
             if (glm::distance(glm::vec2(at.x, at.z), glm::vec2(middle.x, middle.z)) > kLabelReach)
                 return;
@@ -218,8 +218,8 @@ namespace rct3::scene::park
                 }
             }
         }
-        std::ranges::sort(found, std::greater { }, &std::pair<float, ui::WorldLabel>::first);
-        std::vector<ui::WorldLabel> labels;
+        std::ranges::sort(found, std::greater { }, &std::pair<float, ui::widgets::WorldLabel>::first);
+        std::vector<ui::widgets::WorldLabel> labels;
         labels.reserve(found.size());
         for (auto& [_, label] : found)
             labels.push_back(std::move(label));

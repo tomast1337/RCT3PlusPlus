@@ -243,9 +243,9 @@ namespace rct3::ui::game_skins
         }
     }
 
-    [[nodiscard]] inline WindowStyle window_style(const Palette& p)
+    [[nodiscard]] inline widgets::WindowStyle window_style(const Palette& p)
     {
-        WindowStyle s;
+        widgets::WindowStyle s;
         s.title_colour = p.text;
         s.frame = kWindowFrame;
         s.frame_unfocused = kWindowFrameUnfocused;
@@ -266,10 +266,10 @@ namespace rct3::ui::game_skins
 
     /// The game's scroll bars: 15 units thick with square arrows, 20 units per arrow press. The wheel step
     /// and the arrow repeat timing are ours.
-    [[nodiscard]] inline ScrollBarStyle scroll_bar_style(const Palette&, Orientation orientation)
+    [[nodiscard]] inline widgets::ScrollBarStyle scroll_bar_style(const Palette&, widgets::Orientation orientation)
     {
-        const bool vertical = orientation == Orientation::Vertical;
-        ScrollBarStyle s;
+        const bool vertical = orientation == widgets::Orientation::Vertical;
+        widgets::ScrollBarStyle s;
         s.back_arrow = vertical ? kScrollUp : kScrollLeft;
         s.forward_arrow = vertical ? kScrollDown : kScrollRight;
         s.rail = vertical ? kVerticalRail : kHorizontalRail;
@@ -281,9 +281,9 @@ namespace rct3::ui::game_skins
 
     /// A list in the edit box frame, which turns blue with the keyboard focus, the selected row on the
     /// rounded blue patch. The row height is ours, to fit the small font.
-    [[nodiscard]] inline ListBoxStyle list_box_style(const Palette& p)
+    [[nodiscard]] inline widgets::ListBoxStyle list_box_style(const Palette& p)
     {
-        ListBoxStyle s;
+        widgets::ListBoxStyle s;
         s.selection_colour = p.selection;
         s.text_colour = p.text;
         s.disabled_text_colour = p.text_disabled;
@@ -296,9 +296,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The rows of the lists of things, the special pieces and a stall's menu: striped, with the light band.
-    [[nodiscard]] inline RowBands row_bands(const Palette& p)
+    [[nodiscard]] inline widgets::RowBands row_bands(const Palette& p)
     {
-        RowBands b;
+        widgets::RowBands b;
         b.stripe = p.stripe;
         b.band = p.icon;
         return b;
@@ -306,9 +306,9 @@ namespace rct3::ui::game_skins
 
     /// Tabs as text lozenges, the current one drawn down. The game's tab strips are rows of text buttons;
     /// the sizes are ours.
-    [[nodiscard]] inline TabsStyle tabs_style(const Palette&)
+    [[nodiscard]] inline widgets::TabsStyle tabs_style(const Palette&)
     {
-        TabsStyle s;
+        widgets::TabsStyle s;
         s.tab = kTextButton;
         s.text_inset = kLozengeInset;
         s.font = font::FontRole::Small;
@@ -317,9 +317,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The green double arrow at the size the skin has, on a line in the frames' blue (ours).
-    [[nodiscard]] inline SliderStyle slider_style(const Palette&)
+    [[nodiscard]] inline widgets::SliderStyle slider_style(const Palette&)
     {
-        SliderStyle s;
+        widgets::SliderStyle s;
         s.thumb = kSliderThumb;
         s.rail_colour = hex("#1464a0");
         s.rail_thickness = 4;
@@ -329,9 +329,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The game's level bar: light blue as far as the value, grey after, no thumb.
-    [[nodiscard]] inline SliderStyle level_bar_style(const Palette& p)
+    [[nodiscard]] inline widgets::SliderStyle level_bar_style(const Palette& p)
     {
-        SliderStyle s;
+        widgets::SliderStyle s;
         s.bar_colour = p.icon;
         s.bar_back_colour = p.text_disabled;
         s.bar = true;
@@ -341,9 +341,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The number in the edit box frame, the two arrows stacked at their size.
-    [[nodiscard]] inline SpinnerStyle spinner_style(const Palette&)
+    [[nodiscard]] inline widgets::SpinnerStyle spinner_style(const Palette&)
     {
-        SpinnerStyle s;
+        widgets::SpinnerStyle s;
         s.field = kListBox;
         s.field_focused = kListBoxFocused;
         s.up = kSpinnerUp;
@@ -353,9 +353,9 @@ namespace rct3::ui::game_skins
     }
 
     /// Menus on the white rounded surround, the highlighted row on the blue patch, ticks as in tick boxes.
-    [[nodiscard]] inline MenuStyle menu_style(const Palette& p)
+    [[nodiscard]] inline widgets::MenuStyle menu_style(const Palette& p)
     {
-        MenuStyle s;
+        widgets::MenuStyle s;
         s.highlight_colour = p.selection;
         s.text_colour = p.text;
         s.disabled_text_colour = p.text_disabled;
@@ -369,9 +369,9 @@ namespace rct3::ui::game_skins
     }
 
     /// A drop-down as the game draws it closed: plain white, the opener arrow in its top-right corner.
-    [[nodiscard]] inline DropdownStyle dropdown_style(const Palette& p)
+    [[nodiscard]] inline widgets::DropdownStyle dropdown_style(const Palette& p)
     {
-        DropdownStyle s;
+        widgets::DropdownStyle s;
         s.text_colour = p.text;
         s.disabled_text_colour = p.text_disabled;
         s.fill = p.paper;
@@ -384,9 +384,9 @@ namespace rct3::ui::game_skins
     }
 
     /// A menu bar on the window background, the open title on the blue patch.
-    [[nodiscard]] inline MenuBarStyle menu_bar_style(const Palette& p)
+    [[nodiscard]] inline widgets::MenuBarStyle menu_bar_style(const Palette& p)
     {
-        MenuBarStyle s;
+        widgets::MenuBarStyle s;
         s.highlight_colour = p.selection;
         s.text_colour = p.text;
         s.background = kMiniBackground;
@@ -396,9 +396,9 @@ namespace rct3::ui::game_skins
     }
 
     /// Square buttons on the window background, swelling under the pointer (our measure).
-    [[nodiscard]] inline ToolbarStyle toolbar_style(const Palette&)
+    [[nodiscard]] inline widgets::ToolbarStyle toolbar_style(const Palette&)
     {
-        ToolbarStyle s;
+        widgets::ToolbarStyle s;
         s.background = kMiniBackground;
         s.button = kButton;
         s.button_size = 30;
@@ -408,9 +408,9 @@ namespace rct3::ui::game_skins
 
     /// The small window of messages and questions: a plain blue band on top with the close button, no icon
     /// and no title, the content on a white panel.
-    [[nodiscard]] inline WindowStyle mini_window_style(const Palette& p)
+    [[nodiscard]] inline widgets::WindowStyle mini_window_style(const Palette& p)
     {
-        WindowStyle s;
+        widgets::WindowStyle s;
         s.title_colour = p.text;
         s.frame = kMiniFrame;
         s.frame_unfocused = kMiniFrame;
@@ -427,9 +427,9 @@ namespace rct3::ui::game_skins
     }
 
     /// A question in the small window, its answers as round buttons with a tick or a cross.
-    [[nodiscard]] inline QuestionBoxStyle question_box_style(const Palette& p)
+    [[nodiscard]] inline widgets::QuestionBoxStyle question_box_style(const Palette& p)
     {
-        QuestionBoxStyle s;
+        widgets::QuestionBoxStyle s;
         s.text_colour = p.text;
         s.hover_colour = p.accent;
         s.window = mini_window_style(p);
@@ -465,7 +465,7 @@ namespace rct3::ui::game_skins
         s.rows.key_box = kListBox;
         s.rows.key_box_focused = kListBoxFocused;
         s.keys.focused = kListBoxFocused; // A blue outline
-        s.scroll = scroll_bar_style(p, Orientation::Vertical);
+        s.scroll = scroll_bar_style(p, widgets::Orientation::Vertical);
         s.button = kTextButton;
         s.button_inset = kLozengeInset;
         s.auto_detect_icon = kAutoDetectIcon;
@@ -495,7 +495,7 @@ namespace rct3::ui::game_skins
         s.text_colour = p.text;
         s.heading_colour = p.accent;
         s.window = window_style(p);
-        s.scroll = scroll_bar_style(p, Orientation::Vertical);
+        s.scroll = scroll_bar_style(p, widgets::Orientation::Vertical);
         s.table.background = kListBox;
         s.table.selection_skin = kSelectedRow;
         s.button = kTextButton;
@@ -511,7 +511,7 @@ namespace rct3::ui::game_skins
         screens::DesignBrowserStyle s;
         s.text_colour = p.text;
         s.window = window_style(p);
-        s.scroll = scroll_bar_style(p, Orientation::Vertical);
+        s.scroll = scroll_bar_style(p, widgets::Orientation::Vertical);
         s.table.background = kListBox;
         s.table.selection_skin = kSelectedRow;
         s.button = kTextButton;
@@ -532,7 +532,7 @@ namespace rct3::ui::game_skins
         s.faded_colour = p.paper;
         s.window = window_style(p);
         s.question = question_box_style(p);
-        s.scroll = scroll_bar_style(p, Orientation::Vertical);
+        s.scroll = scroll_bar_style(p, widgets::Orientation::Vertical);
         s.load_icon = kLoadIcon;
         s.save_icon = kSaveIcon;
         s.cancel_icon = kFileCancelIcon;
@@ -553,7 +553,7 @@ namespace rct3::ui::game_skins
         s.row_colours = { p.stripe, p.paper };
         s.window = window_style(p);
         s.question = question_box_style(p);
-        s.scroll = scroll_bar_style(p, Orientation::Vertical);
+        s.scroll = scroll_bar_style(p, widgets::Orientation::Vertical);
         s.icon = kCareerIcon;
         s.button = kButton;
         s.new_icon = kNewCareerIcon;
@@ -732,7 +732,7 @@ namespace rct3::ui::game_skins
         s.button = kTextButton;
         // A stall's menu: the lists' rows, the page's boxes and pots, and the game's bin for what goes off it.
         s.menu.rows = row_bands(p);
-        s.menu.bar = scroll_bar_style(p, Orientation::Vertical);
+        s.menu.bar = scroll_bar_style(p, widgets::Orientation::Vertical);
         s.menu.price = s.spinner;
         s.menu.paint = s.paint;
         s.menu.paint.face.clear();
@@ -764,7 +764,7 @@ namespace rct3::ui::game_skins
         s.pack_filter = kPackBadge;
         s.pack_name = kPackName;
         s.style_help = kStyleFilterHelp;
-        s.scroll_bar = scroll_bar_style(p, Orientation::Vertical);
+        s.scroll_bar = scroll_bar_style(p, widgets::Orientation::Vertical);
         return s;
     }
 
@@ -917,7 +917,7 @@ namespace rct3::ui::game_skins
         s.list = list_box_style(p);
         s.list.background.clear();
         s.list.focused.clear();
-        const RowBands rows = row_bands(p);
+        const widgets::RowBands rows = row_bands(p);
         s.list.stripe = rows.stripe;
         s.list.row_height = rows.height;
         s.list.padding = { };
@@ -926,7 +926,7 @@ namespace rct3::ui::game_skins
         s.list.selection_colour = rows.band;
         s.list.text_indent = 0;
         s.list.icon_gap = 0;
-        s.list_bar = scroll_bar_style(p, Orientation::Vertical);
+        s.list_bar = scroll_bar_style(p, widgets::Orientation::Vertical);
         s.divider = p.panel_edge;
         s.param_icons = { "TrackPieceParam_Angle", "TrackPieceParam_Time", "TrackPieceParam_Speed" };
         s.param = spinner_style(p);

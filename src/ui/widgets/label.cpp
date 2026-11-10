@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     Label::Label(std::string name, std::u16string text, font::FontRole font)
@@ -70,4 +70,4 @@ namespace rct3::ui
         draw_text(context.list, *f, text, rect(), style);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

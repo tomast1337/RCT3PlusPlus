@@ -629,11 +629,11 @@ namespace rct3::ui::screens
                 InfoSeries series { .name = text(strings, key), .values = { values->rbegin(), values->rend() }, .key = std::string(key), .shown = (shown >> i & 1) != 0 };
                 for (float& v : series.values)
                     v *= scale;
-                series.full = full_scale(series.values);
+                series.full = widgets::full_scale(series.values);
                 series.centred = std::ranges::any_of(series.values, [](float v) { return v < 0; });
                 // The numbers up the left follow the first series shown; whole numbers on a scale of ten or more.
                 if (series.shown && page.graph_axis.empty() && !series.values.empty())
-                    for (const float v : axis_values(series.full, series.centred))
+                    for (const float v : widgets::axis_values(series.full, series.centred))
                         page.graph_axis.push_back(ascii(series.full >= 10 ? std::format("{:.0f} ", v) : std::format("{:.1f} ", v)) + unit);
                 ticks[i] = tick(id, key, series.name, series.shown);
                 ticks[i].series = i;
@@ -645,7 +645,7 @@ namespace rct3::ui::screens
                 page.controls.push_back(std::move(ticks[i]));
             // With none ticked, the left holds no numbers but the names still go to the ticks.
             if (page.graph_axis.empty())
-                page.graph_axis.assign(axis_values(1, false).size(), std::u16string { });
+                page.graph_axis.assign(widgets::axis_values(1, false).size(), std::u16string { });
             // A mark each second of the lap, and every five the time from the graph's start.
             // shortcut: a saved graph that kept only the end of a long lap is timed from where it starts; time it
             // from the lap's start once the save's count of the lap's samples is read.

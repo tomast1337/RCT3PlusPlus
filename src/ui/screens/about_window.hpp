@@ -65,7 +65,7 @@ namespace rct3::ui::screens
 
     struct AboutWindowStyle
     {
-        WindowStyle window;
+        widgets::WindowStyle window;
         std::string icon;         ///< In the window's corner and on the info tab
         std::string credits_icon; ///< On the credits tab
         float page_width = 530;
@@ -138,7 +138,7 @@ namespace rct3::ui::screens
         float length_ = 0;
     };
 
-    class GameInfoBox : public Window
+    class GameInfoBox : public widgets::Window
     {
     public:
         GameInfoBox(std::string name, const AboutWindowStyle& style, const StringTable& strings, const AddOnPacks& packs, random::Seed seed);
@@ -149,15 +149,15 @@ namespace rct3::ui::screens
         }
         void show_page(AboutPage page);
 
-        [[nodiscard]] Button& tab(AboutPage page) const
+        [[nodiscard]] widgets::Button& tab(AboutPage page) const
         {
             return *tabs_.at(static_cast<std::size_t>(page));
         }
-        [[nodiscard]] const Label& caption() const
+        [[nodiscard]] const widgets::Label& caption() const
         {
             return *caption_;
         }
-        [[nodiscard]] const std::vector<Label*>& info_lines() const
+        [[nodiscard]] const std::vector<widgets::Label*>& info_lines() const
         {
             return info_;
         }
@@ -175,10 +175,10 @@ namespace rct3::ui::screens
 
         AboutWindowStyle style_;
         std::array<Widget*, kAboutPageCount> pages_ { };
-        std::array<Button*, kAboutPageCount> tabs_ { };
+        std::array<widgets::Button*, kAboutPageCount> tabs_ { };
         std::array<std::u16string, kAboutPageCount> captions_;
-        Label* caption_ = nullptr;
-        std::vector<Label*> info_;
+        widgets::Label* caption_ = nullptr;
+        std::vector<widgets::Label*> info_;
         CreditsScroller* credits_ = nullptr;
         float info_height_ = 0; // Of the info page's lines, as of the last update
         AboutPage page_ = AboutPage::Info;

@@ -163,14 +163,14 @@ namespace rct3::ui::screens
     }
 
     GameInfoBox::GameInfoBox(std::string name, const AboutWindowStyle& style, const StringTable& strings, const AddOnPacks& packs, random::Seed seed)
-        : Window(std::move(name), style.window, style.page_width + style.window.content_inset.x0 + style.window.content_inset.x1, style.tab_bar_height + style.page_height + style.window.content_inset.y0 + style.window.content_inset.y1)
+        : widgets::Window(std::move(name), style.window, style.page_width + style.window.content_inset.x0 + style.window.content_inset.x1, style.tab_bar_height + style.page_height + style.window.content_inset.y0 + style.window.content_inset.y1)
         , style_(style)
     {
         title = strings.get(kTitle);
         icon = style.icon;
         Widget& body = content();
 
-        caption_ = &body.add<Label>("caption", std::u16string { }, style.caption_font);
+        caption_ = &body.add<widgets::Label>("caption", std::u16string { }, style.caption_font);
         caption_->style.vertical = Align::Centre;
         caption_->style.colour = style.caption_colour;
         caption_->placement = top_left(style.caption_x, 0, style.caption_width, style.tab_size);
@@ -179,7 +179,7 @@ namespace rct3::ui::screens
         for (std::size_t i = 0; i < kAboutPageCount; ++i)
         {
             // The picture is the button, drawn at the tab's size.
-            auto& tab = body.add<Button>(tabs.at(i).first, tabs.at(i).first);
+            auto& tab = body.add<widgets::Button>(tabs.at(i).first, tabs.at(i).first);
             tab.toggle = true;
             tab.tooltip = strings.get(tabs.at(i).second);
             const float right = style.tab_size * static_cast<float>(kAboutPageCount - i);
@@ -196,7 +196,7 @@ namespace rct3::ui::screens
         const std::vector<std::u16string> lines = about_info_lines(strings);
         for (std::size_t i = 0; i < lines.size(); ++i)
         {
-            auto& label = info.add<Label>(std::format("line{}", i), lines[i], i == 0 ? style.title_font : style.font);
+            auto& label = info.add<widgets::Label>(std::format("line{}", i), lines[i], i == 0 ? style.title_font : style.font);
             label.style.colour = style.text_colour;
             label.style.wrap = true;
             info_.push_back(&label);
@@ -213,7 +213,7 @@ namespace rct3::ui::screens
     {
         // Each line under the one before, as tall as it wraps to.
         float y = 0;
-        for (Label* label : info_)
+        for (widgets::Label* label : info_)
         {
             const float height = std::max(1.0f, label->extent().height());
             label->placement = top_left(0, y, style_.page_width, height);
@@ -247,7 +247,7 @@ namespace rct3::ui::screens
 
     void GameInfoBox::update(const UpdateContext& context)
     {
-        Window::update(context);
+        widgets::Window::update(context);
         for (std::size_t i = 0; i < kAboutPageCount; ++i)
         {
             if (tabs_.at(i)->take_click())

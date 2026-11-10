@@ -4,6 +4,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
+using namespace rct3::ui::widgets;
 
 TEST_CASE("a money float rises steadily and fades out by the end of its life")
 {

@@ -151,16 +151,16 @@ namespace rct3::ui::screens
     {
         placement = { { 0.5f, 0, 0.5f, 0 }, { -park_bar::kWidth / 2, 0, park_bar::kWidth / 2, park_bar::kHeight } };
 
-        const auto label = [&](std::string label_name, Align align) -> Label& {
-            Label& l = add<Label>(std::move(label_name), std::u16string { });
+        const auto label = [&](std::string label_name, Align align) -> widgets::Label& {
+            widgets::Label& l = add<widgets::Label>(std::move(label_name), std::u16string { });
             l.style = { style_.text_colour, align, Align::Centre, false };
             return l;
         };
 
-        objective_ = &add<Button>("objective", std::string { }, style_.objective_icon);
+        objective_ = &add<widgets::Button>("objective", std::string { }, style_.objective_icon);
         objective_->icon_scale = 0.4f;
         objective_->tooltip = strings_.get(kObjectiveHelp);
-        day_mode_ = &add<Button>("day_mode", std::string { });
+        day_mode_ = &add<widgets::Button>("day_mode", std::string { });
         day_mode_->tooltip = strings_.get(kDayModeHelp);
         day_mode_->visible = false;
         // The modes open in an arc below the button, from Day on the left round to Night on the right.
@@ -168,7 +168,7 @@ namespace rct3::ui::screens
         constexpr std::array<float, 3> kChoiceAngles = { 0, -kArcSpread, kArcSpread };
         for (std::size_t i = 0; i < day_choices_.size(); ++i)
         {
-            day_choices_[i] = &day_mode_->add<Button>(std::string(kChoiceNames[i]), std::string { }, style_.day_mode_icons[i]);
+            day_choices_[i] = &day_mode_->add<widgets::Button>(std::string(kChoiceNames[i]), std::string { }, style_.day_mode_icons[i]);
             day_choices_[i]->visible = false;
             const float middle = kSmallIcon / 2;
             const float x = std::round(middle + kArcRadius * std::sin(kChoiceAngles[i]));
@@ -177,32 +177,32 @@ namespace rct3::ui::screens
         }
         for (std::size_t i = 0; i < speeds_.size(); ++i)
         {
-            speeds_[i] = &add<Button>(style_.speed_icons[i], std::string { }, style_.speed_icons[i]);
+            speeds_[i] = &add<widgets::Button>(style_.speed_icons[i], std::string { }, style_.speed_icons[i]);
             speeds_[i]->tooltip = strings_.get(kSpeedHelp[i]);
         }
-        money_ = &add<Button>("money", std::string { });
+        money_ = &add<widgets::Button>("money", std::string { });
         money_->text_colour = style_.text_colour;
         guests_ = &label("guests", Align::Centre);
         guests_->tooltip = strings_.get(kGuestsHelp);
-        thumb_down_ = &add<Panel>("thumb_down", style_.thumb_down);
-        rating_area_ = &add<Panel>("rating", std::string { });
-        thumb_up_ = &add<Panel>("thumb_up", style_.thumb_up);
+        thumb_down_ = &add<widgets::Panel>("thumb_down", style_.thumb_down);
+        rating_area_ = &add<widgets::Panel>("rating", std::string { });
+        thumb_up_ = &add<widgets::Panel>("thumb_up", style_.thumb_up);
         place_left();
 
         float x = kRightStart;
         temperature_ = &label("temperature", Align::Centre);
         x = put(*temperature_, x, kTemperatureWidth, park_bar::kHeight - park_bar::kLowerEdge);
-        weather_ = &add<Panel>("weather", std::string { });
+        weather_ = &add<widgets::Panel>("weather", std::string { });
         x = put(*weather_, x, kWeatherSize, kWeatherSize);
-        arrow_ = &add<Panel>("forecast_arrow", style_.forecast_arrow);
+        arrow_ = &add<widgets::Panel>("forecast_arrow", style_.forecast_arrow);
         x = put(*arrow_, x, kArrowWidth, kWeatherSize);
-        forecast_ = &add<Panel>("forecast", std::string { });
+        forecast_ = &add<widgets::Panel>("forecast", std::string { });
         x = put(*forecast_, x, kWeatherSize, kWeatherSize);
         date_ = &label("date", Align::Centre);
         put(*date_, x, kDateWidth, park_bar::kHeight - park_bar::kLowerEdge);
         // shortcut: no fireworks or escaped animals buttons before the highlights button, as the park has neither
         // yet; add them when it does.
-        highlight_ = &add<Button>("highlight", std::string { }, style_.highlight_icons[0]);
+        highlight_ = &add<widgets::Button>("highlight", std::string { }, style_.highlight_icons[0]);
         highlight_->toggle = true;
         highlight_->tooltip = strings_.get(kHighlightHelp);
         put(*highlight_, park_bar::kWidth - kEndGap - kSmallIcon, kSmallIcon, kSmallIcon);
@@ -232,7 +232,7 @@ namespace rct3::ui::screens
         if (day != day_mode_->visible)
         {
             day_mode_->visible = day;
-            for (Button* b : day_choices_)
+            for (widgets::Button* b : day_choices_)
                 b->visible = false;
             place_left();
         }
@@ -287,7 +287,7 @@ namespace rct3::ui::screens
         if (day_mode_->take_click())
         {
             const bool open = !day_choices_[0]->visible;
-            for (Button* b : day_choices_)
+            for (widgets::Button* b : day_choices_)
                 b->visible = open;
         }
         for (std::size_t i = 0; i < day_choices_.size(); ++i)
@@ -295,7 +295,7 @@ namespace rct3::ui::screens
             if (!day_choices_[i]->take_click())
                 continue;
             asked_day_ = static_cast<simulation::DayMode>(i);
-            for (Button* b : day_choices_)
+            for (widgets::Button* b : day_choices_)
                 b->visible = false;
         }
         since_money_click_ += context.elapsed;

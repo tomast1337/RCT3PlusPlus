@@ -3,7 +3,7 @@
 
 #include <algorithm>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     namespace
@@ -190,4 +190,4 @@ namespace rct3::ui
         skin::draw_skin(context.list, context.skins.find(style_.rider, state), p.rider);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

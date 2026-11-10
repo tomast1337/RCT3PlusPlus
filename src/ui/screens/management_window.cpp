@@ -24,18 +24,18 @@ namespace rct3::ui::screens
     } // namespace
 
     ManagementWindow::ManagementWindow(std::string name, const ManagementWindowStyle& style, float width, float height, std::vector<ManagementTab> tabs, std::size_t picked)
-        : Window(std::move(name), style.window, width, height)
+        : widgets::Window(std::move(name), style.window, width, height)
         , style_(style)
     {
         Widget& body = content();
-        caption_ = &body.add<Label>("caption", std::u16string { }, style.caption_font);
+        caption_ = &body.add<widgets::Label>("caption", std::u16string { }, style.caption_font);
         caption_->style.vertical = Align::Centre;
         caption_->style.colour = style.caption_colour;
         const float tabs_width = tabs.empty() ? 0 : style.tab_step * static_cast<float>(tabs.size() - 1) + style.tab_size;
         caption_->placement = { { 0, 0, 1, 0 }, { style.caption_x, 0, -tabs_width - style.gap, style.caption_height } };
         for (std::size_t i = 0; i < tabs.size(); ++i)
         {
-            auto& tab = body.add<Button>(tabs[i].icon, tabs[i].icon);
+            auto& tab = body.add<widgets::Button>(tabs[i].icon, tabs[i].icon);
             tab.toggle = true;
             tab.tooltip = tabs[i].name;
             const float right = tabs_width - style.tab_step * static_cast<float>(i) - style.tab_size;
@@ -51,7 +51,7 @@ namespace rct3::ui::screens
         page_ = &body.add<Widget>("page");
         page_->placement = { { 0, 0, 1, 1 }, { 0, tabs_.empty() ? 0 : style.tab_bar_height, 0, 0 } };
         lines_ = &page_->add<Widget>("lines");
-        table_ = &page_->add<ColumnTable>("table", style.table, style.scroll);
+        table_ = &page_->add<widgets::ColumnTable>("table", style.table, style.scroll);
         table_->visible = false;
         open_tab(std::min(picked, tabs_.empty() ? 0 : tabs_.size() - 1));
     }
@@ -82,7 +82,7 @@ namespace rct3::ui::screens
 
         float y = 0;
         const auto label = [&](std::string name, const std::u16string& text, Placement placement, Color colour, Align align = Align::Start) {
-            Label& l = lines_->add<Label>(std::move(name), text, font::FontRole::Small);
+            widgets::Label& l = lines_->add<widgets::Label>(std::move(name), text, font::FontRole::Small);
             l.placement = placement;
             l.style.colour = colour;
             l.style.horizontal = align;
@@ -149,7 +149,7 @@ namespace rct3::ui::screens
             const float plot_bottom = fill ? -bottom - names - 1 : top + style_.plot_height;
             // A share of the way down the plot, as an anchor and an offset.
             const auto down = [&](float share) { return std::pair(share * bottom_anchor, top + share * (plot_bottom - top)); };
-            LinePlot& plot = lines_->add<LinePlot>("graph");
+            widgets::LinePlot& plot = lines_->add<widgets::LinePlot>("graph");
             plot.placement = { { 0, 0, 1, bottom_anchor }, { style_.axis_width, top, 0, plot_bottom } };
             plot.background = style_.plot_background;
             plot.rule_colour = style_.plot_rule;
@@ -160,7 +160,7 @@ namespace rct3::ui::screens
             for (std::size_t k = 0; k < axis_.size(); ++k)
             {
                 const auto [anchor, offset] = down(static_cast<float>(k) / 4);
-                Label& number = lines_->add<Label>(std::format("axis{}", k), std::u16string { }, font::FontRole::Tiny);
+                widgets::Label& number = lines_->add<widgets::Label>(std::format("axis{}", k), std::u16string { }, font::FontRole::Tiny);
                 number.placement = { { 0, anchor, 0, anchor }, { 0, offset - style_.line_height / 2, style_.axis_width - style_.gap / 2, offset + style_.line_height / 2 } };
                 number.style.colour = style_.text_colour;
                 number.style.horizontal = Align::End;
@@ -175,9 +175,9 @@ namespace rct3::ui::screens
                 if (t.label.empty())
                     continue;
                 // Across the plot, which starts axis_width in from the page's left.
-                const float across = plot_x(t.back, plot.span(), 1);
+                const float across = widgets::plot_x(t.back, plot.span(), 1);
                 const float x = style_.axis_width * (1 - across);
-                Label& word = lines_->add<Label>(std::format("mark{}", k), t.label, font::FontRole::Tiny);
+                widgets::Label& word = lines_->add<widgets::Label>(std::format("mark{}", k), t.label, font::FontRole::Tiny);
                 word.placement = { { across, under_anchor, across, under_anchor }, { x - 30, under + 1, x + 30, under + 1 + style_.line_height } };
                 word.style.colour = style_.text_colour;
                 word.style.horizontal = Align::Centre;
@@ -191,11 +191,11 @@ namespace rct3::ui::screens
                 const float across = static_cast<float>(per_row);
                 const float row_top = names_top + row * style_.line_height;
                 const std::string key = keyed_name(shown.graph[i].key, shown.graph[i].key.empty() ? "series" : "", i);
-                Tickbox& tick = lines_->add<Tickbox>(std::format("{}_tick", key), style_.tick_box, style_.tick);
+                widgets::Tickbox& tick = lines_->add<widgets::Tickbox>(std::format("{}_tick", key), style_.tick_box, style_.tick);
                 tick.placement = { { column / across, under_anchor, column / across, under_anchor }, { 0, row_top + (style_.line_height - style_.tick_size) / 2, style_.tick_size, row_top + (style_.line_height + style_.tick_size) / 2 } };
                 tick.ticked = !std::ranges::contains(hidden_, shown.graph[i].key);
                 series_ticks_.push_back(&tick);
-                Label& name = lines_->add<Label>(key, shown.graph[i].name, font::FontRole::Small);
+                widgets::Label& name = lines_->add<widgets::Label>(key, shown.graph[i].name, font::FontRole::Small);
                 name.placement = { { column / across, under_anchor, (column + 1) / across, under_anchor }, { style_.tick_size + 4, row_top, 0, row_top + style_.line_height } };
                 name.style.colour = colour;
             }
@@ -207,7 +207,7 @@ namespace rct3::ui::screens
         {
             if (y > 0)
                 y += style_.gap / 2;
-            Label& note = lines_->add<Label>("note", shown.note, font::FontRole::Small);
+            widgets::Label& note = lines_->add<widgets::Label>("note", shown.note, font::FontRole::Small);
             note.placement = band(0, 1, y, style_.line_height);
             note.style.colour = style_.text_colour;
             note.style.wrap = true;
@@ -220,7 +220,7 @@ namespace rct3::ui::screens
             for (std::size_t i = 0; i < shown.buttons.size(); ++i)
             {
                 const ManagementButton& b = shown.buttons[i];
-                Button& button = lines_->add<Button>(b.icon.empty() ? std::format("button{}", i) : b.icon, style_.button, b.icon);
+                widgets::Button& button = lines_->add<widgets::Button>(b.icon.empty() ? std::format("button{}", i) : b.icon, style_.button, b.icon);
                 button.text = b.text;
                 button.text_inset = style_.button_inset;
                 button.tooltip = b.help;
@@ -255,7 +255,7 @@ namespace rct3::ui::screens
         table_->select(std::nullopt);
         if (selected)
         {
-            const auto found = std::ranges::find(table_->rows, *selected, &TableRow::id);
+            const auto found = std::ranges::find(table_->rows, *selected, &widgets::TableRow::id);
             if (found != table_->rows.end())
                 table_->select(static_cast<std::size_t>(found - table_->rows.begin()));
         }
@@ -271,7 +271,7 @@ namespace rct3::ui::screens
         for (std::size_t j = 0; j < button_choices_[i].size(); ++j)
         {
             const InfoChoice& c = button_choices_[i][j];
-            Button& b = lines_->add<Button>(c.icon.empty() ? std::format("choice{}", j) : c.icon, std::string { }, c.icon);
+            widgets::Button& b = lines_->add<widgets::Button>(c.icon.empty() ? std::format("choice{}", j) : c.icon, std::string { }, c.icon);
             b.tooltip = c.help;
             b.enabled = c.enabled;
             b.icon_scale = info_panel::kChoiceIconScale;
@@ -305,7 +305,7 @@ namespace rct3::ui::screens
 
     void ManagementWindow::close_choices()
     {
-        for (Button* b : choices_)
+        for (widgets::Button* b : choices_)
             (void)lines_->remove(*b);
         choices_.clear();
         choosing_.reset();
@@ -319,14 +319,14 @@ namespace rct3::ui::screens
             table_->sorted_by.reset();
             return;
         }
-        sort_table_rows(table_->rows, sort->first, sort->second);
+        widgets::sort_table_rows(table_->rows, sort->first, sort->second);
         table_->sorted_by = sort->first;
         table_->descending = sort->second;
     }
 
     void ManagementWindow::update(const UpdateContext& context)
     {
-        Window::update(context);
+        widgets::Window::update(context);
         page_age_ += context.elapsed;
         for (std::size_t i = 0; i < tabs_.size(); ++i)
         {
@@ -384,7 +384,7 @@ namespace rct3::ui::screens
             sort_rows();
             if (selected)
             {
-                const auto found = std::ranges::find(table_->rows, *selected, &TableRow::id);
+                const auto found = std::ranges::find(table_->rows, *selected, &widgets::TableRow::id);
                 table_->select(found != table_->rows.end() ? std::optional(static_cast<std::size_t>(found - table_->rows.begin())) : std::nullopt);
             }
         }

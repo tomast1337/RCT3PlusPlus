@@ -9,7 +9,7 @@
 #include <format>
 #include <limits>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     namespace
@@ -210,4 +210,4 @@ namespace rct3::ui
         arrow(style_.down, down_arrow(), -1);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

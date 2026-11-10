@@ -40,12 +40,12 @@ namespace rct3::ui::screens
 
     struct StaffRosterStyle
     {
-        WindowStyle window;
-        DropdownStyle dropdown;
-        ScrollBarStyle scroll;
-        ColourPaletteStyle palette;
-        QuestionBoxStyle question;
-        MenuStyle menu;
+        widgets::WindowStyle window;
+        widgets::DropdownStyle dropdown;
+        widgets::ScrollBarStyle scroll;
+        widgets::ColourPaletteStyle palette;
+        widgets::QuestionBoxStyle question;
+        widgets::MenuStyle menu;
         std::string name_box; ///< Behind a name, and while it is typed into
         std::string name_box_focused;
         std::string list_back; ///< Behind the list
@@ -97,7 +97,7 @@ namespace rct3::ui::screens
     /// The switches of the tasks of `kind`, in the order they stand.
     [[nodiscard]] std::span<const RosterTask> roster_tasks(save::model::StaffKind kind);
 
-    class StaffRoster : public Window
+    class StaffRoster : public widgets::Window
     {
     public:
         StaffRoster(std::string name, const StaffRosterStyle& style, const StringTable& strings, float width, float height);
@@ -132,18 +132,18 @@ namespace rct3::ui::screens
             RosterLine line;
             bool expanded = false;
             Widget* panel = nullptr;
-            Button* expand = nullptr;
-            Button* portrait = nullptr;
-            EditBox* name = nullptr;
-            Button* patrol = nullptr;
-            Button* costume = nullptr;
-            Button* discipline = nullptr;
-            Button* train = nullptr;
-            Button* wage_up = nullptr;
-            Button* wage_down = nullptr;
-            std::vector<std::pair<int, Button*>> tasks; ///< With their bit
-            std::vector<Button*> swatches;              ///< By pot
-            std::array<Button*, 2> choices { };         ///< Warn and sack, beside the discipline button while open
+            widgets::Button* expand = nullptr;
+            widgets::Button* portrait = nullptr;
+            widgets::EditBox* name = nullptr;
+            widgets::Button* patrol = nullptr;
+            widgets::Button* costume = nullptr;
+            widgets::Button* discipline = nullptr;
+            widgets::Button* train = nullptr;
+            widgets::Button* wage_up = nullptr;
+            widgets::Button* wage_down = nullptr;
+            std::vector<std::pair<int, widgets::Button*>> tasks; ///< With their bit
+            std::vector<widgets::Button*> swatches;              ///< By pot
+            std::array<widgets::Button*, 2> choices { };         ///< Warn and sack, beside the discipline button while open
         };
 
         /// Makes row `r`'s widgets again from its line.
@@ -156,12 +156,12 @@ namespace rct3::ui::screens
         StaffRosterStyle style_;
         const StringTable* strings_ = nullptr;
         InfoUnits units_;
-        Dropdown* sort_box_ = nullptr;
-        ScrollArea* list_ = nullptr;
-        std::array<Button*, 5> hires_ { };
-        std::array<Button*, kRosterJobs.size()> views_ { };
-        Button* expand_all_ = nullptr;
-        Button* contract_all_ = nullptr;
+        widgets::Dropdown* sort_box_ = nullptr;
+        widgets::ScrollArea* list_ = nullptr;
+        std::array<widgets::Button*, 5> hires_ { };
+        std::array<widgets::Button*, kRosterJobs.size()> views_ { };
+        widgets::Button* expand_all_ = nullptr;
+        widgets::Button* contract_all_ = nullptr;
         std::vector<Row> rows_;
         std::vector<std::size_t> unfolded_; ///< By place in the park's staff
         RosterSort sort_ = RosterSort::Job;
@@ -170,11 +170,11 @@ namespace rct3::ui::screens
         float page_age_ = 0;
         float since_portrait_ = 0;                                    ///< Seconds since the last click on a picture
         std::optional<std::size_t> last_portrait_;                    ///< Whose picture it was
-        ColourPalette* palette_ = nullptr;                            ///< Open for the swatch `painting_`
+        widgets::ColourPalette* palette_ = nullptr;                   ///< Open for the swatch `painting_`
         std::optional<std::pair<std::size_t, std::size_t>> painting_; ///< Worker and pot
-        Menu* costumes_ = nullptr;                                    ///< Open for the worker `dressing_`
+        widgets::Menu* costumes_ = nullptr;                           ///< Open for the worker `dressing_`
         std::optional<std::size_t> dressing_;
-        QuestionBox* question_ = nullptr;
+        widgets::QuestionBox* question_ = nullptr;
         std::optional<std::size_t> training_; ///< The worker the open question is about
         RosterAsks asks_;
     };
@@ -190,7 +190,7 @@ namespace rct3::ui::game_skins
         screens::StaffRosterStyle s;
         s.window = window_style(p);
         s.dropdown = dropdown_style(p);
-        s.scroll = scroll_bar_style(p, Orientation::Vertical);
+        s.scroll = scroll_bar_style(p, widgets::Orientation::Vertical);
         s.palette = info_panel_style(p).palette;
         s.question = question_box_style(p);
         s.menu = menu_style(p);

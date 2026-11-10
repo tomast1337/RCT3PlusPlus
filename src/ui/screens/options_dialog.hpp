@@ -94,10 +94,10 @@ namespace rct3::ui::screens
 
     struct OptionsDialogStyle
     {
-        WindowStyle window;
+        widgets::WindowStyle window;
         OptionRowsStyle rows;
         KeyListStyle keys;
-        ScrollBarStyle scroll;
+        widgets::ScrollBarStyle scroll;
         float page_width = 460;
         float page_height = 330;
         float tab_size = 23;
@@ -131,7 +131,7 @@ namespace rct3::ui::screens
     };
     inline constexpr std::size_t kOptionsPageCount = static_cast<std::size_t>(OptionsPage::Count_);
 
-    class OptionsDialog : public Window
+    class OptionsDialog : public widgets::Window
     {
     public:
         /// The window writes to `options`, which must outlive it.
@@ -154,37 +154,37 @@ namespace rct3::ui::screens
         /// True while a key box waits for keys, which should then do nothing else.
         [[nodiscard]] bool waiting_for_keys() const;
 
-        [[nodiscard]] Button& tab(OptionsPage page) const
+        [[nodiscard]] widgets::Button& tab(OptionsPage page) const
         {
             return *tabs_.at(static_cast<std::size_t>(page));
         }
-        [[nodiscard]] ScrollArea& custom_graphics() const
+        [[nodiscard]] widgets::ScrollArea& custom_graphics() const
         {
             return *custom_;
         }
-        [[nodiscard]] std::optional<Dropdown&> language_list() const
+        [[nodiscard]] std::optional<widgets::Dropdown&> language_list() const
         {
             return core::maybe(language_);
         }
-        [[nodiscard]] KeyBox& key_box(Command command) const
+        [[nodiscard]] widgets::KeyBox& key_box(Command command) const
         {
             return *key_boxes_.at(static_cast<std::size_t>(command));
         }
         /// Nothing for a game command whose keys cannot be changed.
-        [[nodiscard]] std::optional<KeyBox&> play_key_box(PlayCommand command) const
+        [[nodiscard]] std::optional<widgets::KeyBox&> play_key_box(PlayCommand command) const
         {
             return core::maybe(play_boxes_.at(static_cast<std::size_t>(command)));
         }
-        [[nodiscard]] std::optional<Dropdown&> background_music_list() const
+        [[nodiscard]] std::optional<widgets::Dropdown&> background_music_list() const
         {
             return core::maybe(music_);
         }
         /// The lines saying what each mouse button does in the chosen camera mode.
-        [[nodiscard]] const Label& camera_help(std::size_t line) const
+        [[nodiscard]] const widgets::Label& camera_help(std::size_t line) const
         {
             return *camera_help_.at(line);
         }
-        [[nodiscard]] Button& auto_detect() const
+        [[nodiscard]] widgets::Button& auto_detect() const
         {
             return *auto_detect_;
         }
@@ -210,21 +210,21 @@ namespace rct3::ui::screens
         OptionsChoices choices_;
         KeyMap keys_;
         std::array<Widget*, kOptionsPageCount> pages_ { };
-        std::array<Button*, kOptionsPageCount> tabs_ { };
+        std::array<widgets::Button*, kOptionsPageCount> tabs_ { };
         std::array<std::u16string, kOptionsPageCount> captions_;
-        Label* caption_ = nullptr;
+        widgets::Label* caption_ = nullptr;
         std::vector<std::unique_ptr<OptionRows>> rows_;
         OptionRows* graphics_top_ = nullptr;
-        ScrollArea* custom_ = nullptr;
+        widgets::ScrollArea* custom_ = nullptr;
         OptionRows* custom_rows_ = nullptr;
-        Dropdown* language_ = nullptr;
-        Dropdown* resolution_ = nullptr;
-        Dropdown* music_ = nullptr; // The park's: the files, then shuffle, then none
-        std::array<KeyBox*, kCommandCount> key_boxes_ { };
-        std::array<KeyBox*, kPlayCommandCount> play_boxes_ { };
-        Button* usual_keys_ = nullptr;
-        Button* auto_detect_ = nullptr;
-        std::array<Label*, 5> camera_help_ { };
+        widgets::Dropdown* language_ = nullptr;
+        widgets::Dropdown* resolution_ = nullptr;
+        widgets::Dropdown* music_ = nullptr; // The park's: the files, then shuffle, then none
+        std::array<widgets::KeyBox*, kCommandCount> key_boxes_ { };
+        std::array<widgets::KeyBox*, kPlayCommandCount> play_boxes_ { };
+        widgets::Button* usual_keys_ = nullptr;
+        widgets::Button* auto_detect_ = nullptr;
+        std::array<widgets::Label*, 5> camera_help_ { };
         std::array<std::u16string, 5> camera_buttons_; // The help lines' starts
         std::vector<std::u16string> camera_actions_;   // Each CameraAction's words
         OptionsPage page_ = OptionsPage::General;

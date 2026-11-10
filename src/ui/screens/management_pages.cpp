@@ -159,12 +159,12 @@ namespace rct3::ui::screens
             std::vector<float> values = weeks_gone(series);
             const bool centred = std::ranges::any_of(values, [](float v) { return v < 0; });
             if (full <= 0)
-                full = full_scale(values);
+                full = widgets::full_scale(values);
             // Money reads in whole units at least, so a series of nought or a few cents is not on a scale of one.
             if (money_values)
                 full = std::max(full, 100.0f);
             std::vector<std::u16string> axis;
-            for (const float v : axis_values(full, centred))
+            for (const float v : widgets::axis_values(full, centred))
                 axis.push_back(money_values ? money(units, std::llround(v)) : whole(std::lround(v)));
             page.graph.push_back({ .name = text(strings, key), .values = std::move(values), .key = std::string(key), .full = full, .centred = centred, .axis = std::move(axis) });
             if (series.capacity > 1)
@@ -233,7 +233,7 @@ namespace rct3::ui::screens
                 add_series(page, strings, units, "Graph_ParkValue", f.park->finance.park_value, true);
                 const save::model::Park& p = f.park->park;
                 // The guests by age share the scale of all of them, so they read against it.
-                const float guests = full_scale(weeks_gone(p.guests_in_park));
+                const float guests = widgets::full_scale(weeks_gone(p.guests_in_park));
                 add_series(page, strings, units, "Graph_AdultsInPark", p.adults_in_park, false, guests);
                 add_series(page, strings, units, "Graph_TeenagersInPark", p.teenagers_in_park, false, guests);
                 add_series(page, strings, units, "Graph_ChildrenInPark", p.children_in_park, false, guests);
@@ -346,7 +346,7 @@ namespace rct3::ui::screens
             for (std::size_t r = 0; r < kLedger.size(); ++r)
             {
                 const LedgerRow& row = kLedger[r];
-                TableRow out { { text(strings, row.key) }, { std::nullopt }, r };
+                widgets::TableRow out { { text(strings, row.key) }, { std::nullopt }, r };
                 bool any = row.optional == nullptr;
                 for (std::size_t p = 0; p < periods; ++p)
                 {
@@ -559,10 +559,10 @@ namespace rct3::ui::screens
             if (f.rides == nullptr)
                 return;
             const auto common_row = [&](const save::model::AttractionCommon& a, ManagementRow ref) {
-                TableRow row { { attraction_name(a, strings), attraction_status(a, strings), whole_percent(a.popularity), whole_percent(a.satisfaction) }, { std::nullopt, std::nullopt, a.popularity, a.satisfaction }, management_row_id(ref) };
+                widgets::TableRow row { { attraction_name(a, strings), attraction_status(a, strings), whole_percent(a.popularity), whole_percent(a.satisfaction) }, { std::nullopt, std::nullopt, a.popularity, a.satisfaction }, management_row_id(ref) };
                 return row;
             };
-            const auto others = [&](TableRow& row, const save::model::AttractionCommon& a) {
+            const auto others = [&](widgets::TableRow& row, const save::model::AttractionCommon& a) {
                 row.cells.push_back(whole(a.total_guests));
                 row.keys.emplace_back(static_cast<double>(a.total_guests));
                 row.cells.push_back(money(units, a.total_profit));
@@ -574,7 +574,7 @@ namespace rct3::ui::screens
                 const bool facility = r.kind == save::model::RideKind::Special;
                 if ((tab == AttractionListTab::Rides && facility) || (tab == AttractionListTab::Facilities && !facility) || tab == AttractionListTab::Stalls || r.base.demolished)
                     continue;
-                TableRow row = common_row(r.base, { ManagementRow::Kind::Ride, i });
+                widgets::TableRow row = common_row(r.base, { ManagementRow::Kind::Ride, i });
                 if (rides)
                 {
                     std::int64_t queue = 0;
@@ -604,7 +604,7 @@ namespace rct3::ui::screens
             {
                 if (f.rides->stalls[i].base.demolished)
                     continue;
-                TableRow row = common_row(f.rides->stalls[i].base, { ManagementRow::Kind::Stall, i });
+                widgets::TableRow row = common_row(f.rides->stalls[i].base, { ManagementRow::Kind::Stall, i });
                 others(row, f.rides->stalls[i].base);
                 page.rows.push_back(std::move(row));
             }

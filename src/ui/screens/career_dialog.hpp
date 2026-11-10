@@ -37,9 +37,9 @@ namespace rct3::ui::screens
     /// Sizes in units, the content's top-left the origin.
     struct CareerDialogStyle
     {
-        WindowStyle window;
-        QuestionBoxStyle question;
-        ScrollBarStyle scroll;
+        widgets::WindowStyle window;
+        widgets::QuestionBoxStyle question;
+        widgets::ScrollBarStyle scroll;
         std::string icon; ///< Of the window
         std::string button;
         std::string new_icon;
@@ -81,7 +81,7 @@ namespace rct3::ui::screens
         TextureId picture = 0; ///< 0 for none; stays the owner's
     };
 
-    class CareerDialog : public Window
+    class CareerDialog : public widgets::Window
     {
     public:
         CareerDialog(std::string name, const CareerDialogStyle& style, const StringTable& strings);
@@ -108,26 +108,26 @@ namespace rct3::ui::screens
         [[nodiscard]] std::optional<std::pair<std::size_t, std::u16string>> take_rename();
 
         // For tests and owners that drive the window.
-        [[nodiscard]] Button& new_button() const
+        [[nodiscard]] widgets::Button& new_button() const
         {
             return *new_;
         }
-        [[nodiscard]] Button& load_button() const
+        [[nodiscard]] widgets::Button& load_button() const
         {
             return *load_;
         }
-        [[nodiscard]] Button& delete_button() const
+        [[nodiscard]] widgets::Button& delete_button() const
         {
             return *delete_;
         }
-        [[nodiscard]] EditBox& name_box(std::size_t index) const;
+        [[nodiscard]] widgets::EditBox& name_box(std::size_t index) const;
         /// The counts beside the tycoon, entrepreneur and apprentice hats, and the progress.
         [[nodiscard]] std::array<std::u16string, 4> row_text(std::size_t index) const;
-        [[nodiscard]] const Label& hover() const
+        [[nodiscard]] const widgets::Label& hover() const
         {
             return *hover_;
         }
-        [[nodiscard]] std::optional<QuestionBox&> question() const
+        [[nodiscard]] std::optional<widgets::QuestionBox&> question() const
         {
             return core::maybe(question_);
         }
@@ -148,13 +148,13 @@ namespace rct3::ui::screens
         const StringTable& strings_;
         std::vector<Row*> rows_;
         std::optional<std::size_t> selected_;
-        ScrollArea* list_ = nullptr;
-        Label* hover_ = nullptr;
-        Button* new_ = nullptr;
-        Button* load_ = nullptr;
-        Button* cancel_ = nullptr;
-        Button* delete_ = nullptr;
-        QuestionBox* question_ = nullptr;
+        widgets::ScrollArea* list_ = nullptr;
+        widgets::Label* hover_ = nullptr;
+        widgets::Button* new_ = nullptr;
+        widgets::Button* load_ = nullptr;
+        widgets::Button* cancel_ = nullptr;
+        widgets::Button* delete_ = nullptr;
+        widgets::QuestionBox* question_ = nullptr;
         std::optional<std::size_t> deleting_;
         std::optional<std::size_t> load_out_;
         bool new_out_ = false;

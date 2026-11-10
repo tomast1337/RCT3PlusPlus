@@ -35,7 +35,7 @@ namespace rct3::ui::screens
     } // namespace
 
     BuildPicker::BuildPicker(std::string name, BuildPickerStyle style, const StringTable& strings, std::u16string title_text, std::string icon_skin, std::vector<PickerRow> rows, std::vector<PickerTheme> themes)
-        : Window(std::move(name), style.window, kWidth, kHeight)
+        : widgets::Window(std::move(name), style.window, kWidth, kHeight)
         , style_(std::move(style))
         , strings_(strings)
         , data_(std::move(rows))
@@ -46,13 +46,13 @@ namespace rct3::ui::screens
         min_size = { kCaptionX + 3 * kTile, kHeight / 2 };
         Widget& body = content();
 
-        search_ = &body.add<EditBox>("search");
+        search_ = &body.add<widgets::EditBox>("search");
         search_->placement = { { 0, 0, 1, 0 }, { kCaptionX, 0, 0, kBarHeight } };
         search_->skin = style_.search_box;
         search_->focused_skin = style_.search_box_focused;
 
         add_filters(themes);
-        list_ = &body.add<ScrollArea>("list", style_.scroll_bar);
+        list_ = &body.add<widgets::ScrollArea>("list", style_.scroll_bar);
         const Rect& inset = style_.window.content_inset;
         wrap_filters(kWidth - inset.x0 - inset.x1);
 
@@ -64,8 +64,8 @@ namespace rct3::ui::screens
         std::set<std::string, std::less<>> kinds;
         std::set<std::uint32_t> packs;
         collect(data_, kinds, packs);
-        const auto add = [&](FilterKey key, std::u16string help) -> Button& {
-            auto& b = content().add<Button>(key.group == FilterKey::Group::Pack ? std::string(kPackPrefix) + std::to_string(key.pack - 1) : key.name, std::string { });
+        const auto add = [&](FilterKey key, std::u16string help) -> widgets::Button& {
+            auto& b = content().add<widgets::Button>(key.group == FilterKey::Group::Pack ? std::string(kPackPrefix) + std::to_string(key.pack - 1) : key.name, std::string { });
             b.toggle = true;
             b.tooltip = std::move(help);
             filters_.push_back(&b);
@@ -87,7 +87,7 @@ namespace rct3::ui::screens
         for (const std::uint32_t pack : packs)
         {
             const std::string number = std::to_string(pack - 1);
-            Button& b = add({ FilterKey::Group::Pack, { }, pack }, std::u16string(strings_.get(style_.pack_name + number)));
+            widgets::Button& b = add({ FilterKey::Group::Pack, { }, pack }, std::u16string(strings_.get(style_.pack_name + number)));
             b.icon = style_.pack_filter + number;
             b.icon_scale = style_.pack_icon_scale;
         }
@@ -135,7 +135,7 @@ namespace rct3::ui::screens
             search_->text.clear();
             return true;
         }
-        return Window::on_key(key);
+        return widgets::Window::on_key(key);
     }
 
     bool BuildPicker::shows(const PickerRow& row) const
@@ -180,7 +180,7 @@ namespace rct3::ui::screens
 
     void BuildPicker::update(const UpdateContext& context)
     {
-        Window::update(context);
+        widgets::Window::update(context);
         if (const float width = content().rect().width(); width > 0 && width != laid_filter_width_)
             wrap_filters(width);
         if (list_->content().rect().width() != laid_width_ || note.empty() == laid_note_)
@@ -192,7 +192,7 @@ namespace rct3::ui::screens
         }
         for (std::size_t i = 0; i < filters_.size(); ++i)
         {
-            Button& b = *filters_[i];
+            widgets::Button& b = *filters_[i];
             const FilterKey& key = keys_[i];
             if (key.group == FilterKey::Group::Pack)
             {
@@ -239,7 +239,7 @@ namespace rct3::ui::screens
 
     void BuildPicker::draw(DrawContext& context) const
     {
-        Window::draw(context);
+        widgets::Window::draw(context);
         for (std::size_t i = 0; i < filters_.size(); ++i)
         {
             if (keys_[i].group == FilterKey::Group::Pack && filters_[i]->on)

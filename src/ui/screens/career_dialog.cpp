@@ -50,14 +50,14 @@ namespace rct3::ui::screens
             const float c = style.cell;
             for (std::size_t i = 0; i < counts.size(); ++i)
             {
-                Label& l = add<Label>(std::format("count{}", i), std::u16string { }, style.font);
+                widgets::Label& l = add<widgets::Label>(std::format("count{}", i), std::u16string { }, style.font);
                 l.style.colour = style.text_colour;
                 l.style.vertical = Align::Centre;
                 l.placement = top_left(c, c * static_cast<float>(i), c, c);
                 counts[i] = &l;
             }
             const float text_width = style.row_width - style.text_x;
-            box = &add<EditBox>("name");
+            box = &add<widgets::EditBox>("name");
             box->skin = { };
             box->focused_skin = style.name_box_focused;
             box->font = style.font;
@@ -65,15 +65,15 @@ namespace rct3::ui::screens
             box->padding.y0 = 0;
             box->padding.y1 = 0;
             box->placement = top_left(style.text_x, 0, text_width, c);
-            progress = &add<Label>("progress", std::u16string { }, style.font);
+            progress = &add<widgets::Label>("progress", std::u16string { }, style.font);
             progress->style.colour = style.text_colour;
             progress->style.vertical = Align::Centre;
             progress->placement = top_left(style.text_x + box->padding.x0, 2 * c, text_width, c);
         }
 
-        std::array<Label*, 3> counts { };
-        EditBox* box = nullptr;
-        Label* progress = nullptr;
+        std::array<widgets::Label*, 3> counts { };
+        widgets::EditBox* box = nullptr;
+        widgets::Label* progress = nullptr;
         std::u16string known_name; // As the owner last gave it
         TextureId picture = 0;
         std::size_t position = 0;
@@ -129,30 +129,30 @@ namespace rct3::ui::screens
     };
 
     CareerDialog::CareerDialog(std::string name, const CareerDialogStyle& style, const StringTable& strings)
-        : Window(std::move(name), style.window, style.width + style.window.content_inset.x0 + style.window.content_inset.x1, style.subtitle_height + style.list_height + style.bar_height + style.window.content_inset.y0 + style.window.content_inset.y1)
+        : widgets::Window(std::move(name), style.window, style.width + style.window.content_inset.x0 + style.window.content_inset.x1, style.subtitle_height + style.list_height + style.bar_height + style.window.content_inset.y0 + style.window.content_inset.y1)
         , style_(style)
         , strings_(strings)
     {
         title = text(kTitle);
         icon = style.icon;
 
-        auto& subtitle = content().add<Label>("subtitle", text(kSubtitle), style.font);
+        auto& subtitle = content().add<widgets::Label>("subtitle", text(kSubtitle), style.font);
         subtitle.style.colour = style.text_colour;
         subtitle.style.vertical = Align::Centre;
         subtitle.placement = top_left(style.subtitle_x, 0, style.width - style.subtitle_x, style.subtitle_height);
 
-        list_ = &content().add<ScrollArea>("list", style.scroll);
+        list_ = &content().add<widgets::ScrollArea>("list", style.scroll);
         list_->placement = top_left(0, style.subtitle_height, style.width, style.list_height);
 
         const float bar_y = style.subtitle_height + style.list_height;
         const float buttons_x = style.width - 4 * style.button_size - 3 * style.button_gap;
-        hover_ = &content().add<Label>("hover", std::u16string { }, style.font);
+        hover_ = &content().add<widgets::Label>("hover", std::u16string { }, style.font);
         hover_->style.colour = style.hover_colour;
         hover_->style.vertical = Align::Centre;
         hover_->placement = top_left(0, bar_y, buttons_x, style.bar_height);
 
-        const auto button = [&](std::string id, const std::string& icon_skin, std::size_t slot) -> Button& {
-            Button& b = content().add<Button>(std::move(id), style.button, icon_skin);
+        const auto button = [&](std::string id, const std::string& icon_skin, std::size_t slot) -> widgets::Button& {
+            widgets::Button& b = content().add<widgets::Button>(std::move(id), style.button, icon_skin);
             b.placement = top_left(buttons_x + static_cast<float>(slot) * (style.button_size + style.button_gap), bar_y + (style.bar_height - style.button_size) / 2, style.button_size, style.button_size);
             return b;
         };
@@ -221,7 +221,7 @@ namespace rct3::ui::screens
             rows_[i]->selected = index == i;
     }
 
-    EditBox& CareerDialog::name_box(std::size_t index) const
+    widgets::EditBox& CareerDialog::name_box(std::size_t index) const
     {
         return *rows_.at(index)->box;
     }
@@ -282,7 +282,7 @@ namespace rct3::ui::screens
 
     void CareerDialog::update(const UpdateContext& context)
     {
-        Window::update(context);
+        widgets::Window::update(context);
         since_click_ += context.elapsed;
 
         if (question_ != nullptr)
@@ -328,8 +328,8 @@ namespace rct3::ui::screens
         if (delete_->take_click() && selected_ && parent())
         {
             deleting_ = selected_;
-            const std::vector<QuestionAnswer> answers { { text(kYes), style_.question.confirm_icon }, { text(kNo), style_.question.cancel_icon } };
-            question_ = &parent()->add<QuestionBox>(std::string(kQuestionName), style_.question, text(kConfirmDelete), answers);
+            const std::vector<widgets::QuestionAnswer> answers { { text(kYes), style_.question.confirm_icon }, { text(kNo), style_.question.cancel_icon } };
+            question_ = &parent()->add<widgets::QuestionBox>(std::string(kQuestionName), style_.question, text(kConfirmDelete), answers);
         }
 
         hover_->text.clear();

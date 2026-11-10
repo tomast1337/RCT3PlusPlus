@@ -5,7 +5,7 @@
 
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     KeyBox::KeyBox(std::string name, std::vector<KeyCombo> combos)
@@ -82,4 +82,4 @@ namespace rct3::ui
         context.list.pop_clip(); // Pushed even when nothing shows
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

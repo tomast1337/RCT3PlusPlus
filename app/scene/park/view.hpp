@@ -38,7 +38,7 @@ namespace rct3::scene::park
     void drop_view_lines(render::Device& device, ParkScene& scene);
 
     /// The height labels the view menu shows, on a view `size` across (interface units), farthest first.
-    [[nodiscard]] std::vector<ui::WorldLabel> height_labels(const ParkScene& scene, ui::Point size);
+    [[nodiscard]] std::vector<ui::widgets::WorldLabel> height_labels(const ParkScene& scene, ui::Point size);
 
     /// The ground in the middle of `tile`.
     [[nodiscard]] glm::vec3 tile_point(const save::model::TerrainGrid& grid, save::model::Tile tile);
@@ -50,6 +50,6 @@ namespace rct3::scene::park
 
     /// Floats up what guests paid since the last call, when shown; ages the floats and drops those that ended.
     /// Returns them pinned on a view `size` across (interface units).
-    [[nodiscard]] std::vector<ui::MoneyFloat> money_floats(ParkScene& scene, ui::Point size, const ui::Currency& currency, float elapsed);
+    [[nodiscard]] std::vector<ui::widgets::MoneyFloat> money_floats(ParkScene& scene, ui::Point size, const ui::Currency& currency, float elapsed);
 
 } // namespace rct3::scene::park

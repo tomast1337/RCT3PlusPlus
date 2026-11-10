@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     Button::Button(std::string name, std::string skin, std::string icon)
@@ -108,4 +108,4 @@ namespace rct3::ui
         context.list.pop_clip();
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

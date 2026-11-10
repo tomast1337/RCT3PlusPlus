@@ -37,9 +37,9 @@ namespace rct3::ui::screens
         return widget.empty() ? std::string(kind) + std::to_string(count_++) : std::string(widget);
     }
 
-    Label& OptionRows::name_label(Row& row, std::u16string name, float x, float width, std::u16string tip, std::string_view widget)
+    widgets::Label& OptionRows::name_label(Row& row, std::u16string name, float x, float width, std::u16string tip, std::string_view widget)
     {
-        auto& label = page_.add<Label>(widget.empty() ? control_name({ }, "name") : std::format("{}_label", widget), std::move(name), style_.font);
+        auto& label = page_.add<widgets::Label>(widget.empty() ? control_name({ }, "name") : std::format("{}_label", widget), std::move(name), style_.font);
         label.style.colour = style_.text_colour;
         label.style.vertical = Align::Centre;
         label.tooltip = std::move(tip);
@@ -47,11 +47,11 @@ namespace rct3::ui::screens
         return label;
     }
 
-    Tickbox& OptionRows::tick(config::GameOption option, std::u16string name, std::u16string tip)
+    widgets::Tickbox& OptionRows::tick(config::GameOption option, std::u16string name, std::u16string tip)
     {
         Row& row = add_row();
         const std::string_view widget = config::game_option_info(option).name;
-        auto& box = page_.add<Tickbox>(control_name(widget, "tick"), style_.tick_box, style_.tick);
+        auto& box = page_.add<widgets::Tickbox>(control_name(widget, "tick"), style_.tick_box, style_.tick);
         box.tooltip = tip;
         row.parts.push_back({ &box, style_.left, style_.tick_size, style_.tick_size });
         const float text_x = style_.left + style_.tick_size + style_.tick_gap;
@@ -60,19 +60,19 @@ namespace rct3::ui::screens
         return box;
     }
 
-    Dropdown& OptionRows::choice(config::GameOption option, std::u16string name, std::vector<std::u16string> items, std::u16string tip)
+    widgets::Dropdown& OptionRows::choice(config::GameOption option, std::u16string name, std::vector<std::u16string> items, std::u16string tip)
     {
-        Dropdown& d = list(std::move(name), std::move(items), std::move(tip), std::string(config::game_option_info(option).name));
+        widgets::Dropdown& d = list(std::move(name), std::move(items), std::move(tip), std::string(config::game_option_info(option).name));
         Row& row = rows_.back();
         bind(row, { option, Kind::Choice, &d });
         return d;
     }
 
-    Dropdown& OptionRows::list(std::u16string name, std::vector<std::u16string> items, std::u16string tip, std::string widget)
+    widgets::Dropdown& OptionRows::list(std::u16string name, std::vector<std::u16string> items, std::u16string tip, std::string widget)
     {
         Row& row = add_row();
         name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip, widget);
-        auto& d = page_.add<Dropdown>(control_name(widget, "list"), style_.dropdown);
+        auto& d = page_.add<widgets::Dropdown>(control_name(widget, "list"), style_.dropdown);
         d.items = std::move(items);
         d.tooltip = std::move(tip);
         row.parts.push_back({ &d, style_.control_x, style_.control_width, 0 });
@@ -91,12 +91,12 @@ namespace rct3::ui::screens
         return style_.slider_inset > 0 ? style_.row_height - 2 * style_.slider_inset : 0;
     }
 
-    Slider& OptionRows::level(config::GameOption option, std::u16string name, std::u16string tip)
+    widgets::Slider& OptionRows::level(config::GameOption option, std::u16string name, std::u16string tip)
     {
         Row& row = add_row();
         const config::GameOptionInfo& info = config::game_option_info(option);
         name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip, info.name);
-        auto& s = page_.add<Slider>(control_name(info.name, "level"), style_.slider);
+        auto& s = page_.add<widgets::Slider>(control_name(info.name, "level"), style_.slider);
         s.minimum = info.minimum;
         s.maximum = info.maximum;
         s.step = info.step;
@@ -106,12 +106,12 @@ namespace rct3::ui::screens
         return s;
     }
 
-    Spinner& OptionRows::number(config::GameOption option, std::u16string name, std::u16string tip)
+    widgets::Spinner& OptionRows::number(config::GameOption option, std::u16string name, std::u16string tip)
     {
         Row& row = add_row();
         const config::GameOptionInfo& info = config::game_option_info(option);
         name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip, info.name);
-        auto& s = page_.add<Spinner>(control_name(info.name, "number"), style_.spinner);
+        auto& s = page_.add<widgets::Spinner>(control_name(info.name, "number"), style_.spinner);
         s.minimum = static_cast<int>(info.minimum);
         s.maximum = static_cast<int>(info.maximum);
         s.step = std::max(1, static_cast<int>(info.step));
@@ -128,7 +128,7 @@ namespace rct3::ui::screens
         for (const auto& [option, x] : { std::pair { options.detail, kFirstColumn }, std::pair { options.distance, kSecondColumn } })
         {
             const config::GameOptionInfo& info = config::game_option_info(option);
-            auto& s = page_.add<Slider>(control_name(info.name, "level"), style_.slider);
+            auto& s = page_.add<widgets::Slider>(control_name(info.name, "level"), style_.slider);
             s.minimum = info.minimum;
             s.maximum = info.maximum;
             s.step = info.step;
@@ -144,28 +144,28 @@ namespace rct3::ui::screens
         name_label(row, std::move(second), kSecondColumn, width_ - kSecondColumn, { });
     }
 
-    Label& OptionRows::text(std::u16string name, std::u16string value, std::u16string tip)
+    widgets::Label& OptionRows::text(std::u16string name, std::u16string value, std::u16string tip)
     {
         Row& row = add_row();
         name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip);
         return name_label(row, std::move(value), style_.control_x, width_ - style_.control_x, std::move(tip));
     }
 
-    Label& OptionRows::note(std::u16string text, int lines)
+    widgets::Label& OptionRows::note(std::u16string text, int lines)
     {
         Row& row = add_row();
         row.height = static_cast<float>(std::max(1, lines)) * style_.row_height;
-        Label& label = name_label(row, std::move(text), style_.left, width_ - style_.left, { });
+        widgets::Label& label = name_label(row, std::move(text), style_.left, width_ - style_.left, { });
         label.style.wrap = true;
         label.style.vertical = Align::Start;
         return label;
     }
 
-    KeyBox& OptionRows::keys(std::u16string name, std::vector<KeyCombo> combos, std::u16string prompt, std::u16string tip)
+    widgets::KeyBox& OptionRows::keys(std::u16string name, std::vector<KeyCombo> combos, std::u16string prompt, std::u16string tip)
     {
         Row& row = add_row();
         name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip);
-        auto& box = page_.add<KeyBox>(control_name({ }, "keys"), std::move(combos));
+        auto& box = page_.add<widgets::KeyBox>(control_name({ }, "keys"), std::move(combos));
         box.skin = style_.key_box;
         box.focused_skin = style_.key_box_focused;
         box.font = style_.font;
@@ -226,16 +226,16 @@ namespace rct3::ui::screens
         switch (b.kind)
         {
             case Kind::Tick:
-                static_cast<Tickbox*>(b.control)->ticked = value != 0;
+                static_cast<widgets::Tickbox*>(b.control)->ticked = value != 0;
                 break;
             case Kind::Choice:
-                static_cast<Dropdown*>(b.control)->select(static_cast<std::size_t>(std::max(0.0f, value)));
+                static_cast<widgets::Dropdown*>(b.control)->select(static_cast<std::size_t>(std::max(0.0f, value)));
                 break;
             case Kind::Level:
-                static_cast<Slider*>(b.control)->set_value(value);
+                static_cast<widgets::Slider*>(b.control)->set_value(value);
                 break;
             case Kind::Number:
-                static_cast<Spinner*>(b.control)->set_value(static_cast<int>(std::lround(value)));
+                static_cast<widgets::Spinner*>(b.control)->set_value(static_cast<int>(std::lround(value)));
                 break;
         }
     }
@@ -259,28 +259,28 @@ namespace rct3::ui::screens
                 switch (b.kind)
                 {
                     case Kind::Tick:
-                        if (auto* t = static_cast<Tickbox*>(b.control); t->take_change())
+                        if (auto* t = static_cast<widgets::Tickbox*>(b.control); t->take_change())
                         {
                             options_.set(b.option, t->ticked ? 1.0f : 0.0f);
                             changed = true;
                         }
                         break;
                     case Kind::Choice:
-                        if (auto* d = static_cast<Dropdown*>(b.control); d->take_change() && d->selected())
+                        if (auto* d = static_cast<widgets::Dropdown*>(b.control); d->take_change() && d->selected())
                         {
                             options_.set(b.option, static_cast<float>(*d->selected()));
                             changed = true;
                         }
                         break;
                     case Kind::Level:
-                        if (auto* s = static_cast<Slider*>(b.control); s->take_change())
+                        if (auto* s = static_cast<widgets::Slider*>(b.control); s->take_change())
                         {
                             options_.set(b.option, s->value());
                             changed = true;
                         }
                         break;
                     case Kind::Number:
-                        if (auto* s = static_cast<Spinner*>(b.control); s->take_change())
+                        if (auto* s = static_cast<widgets::Spinner*>(b.control); s->take_change())
                         {
                             options_.set(b.option, static_cast<float>(s->value()));
                             changed = true;
@@ -301,7 +301,7 @@ namespace rct3::ui::screens
             {
                 p.widget->visible = shown;
                 p.widget->enabled = usable;
-                if (auto* label = dynamic_cast<Label*>(p.widget))
+                if (auto* label = dynamic_cast<widgets::Label*>(p.widget))
                     label->style.colour = usable ? style_.text_colour : style_.disabled_colour;
             }
             if (!shown)

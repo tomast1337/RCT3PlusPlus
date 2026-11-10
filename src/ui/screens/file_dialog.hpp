@@ -53,9 +53,9 @@ namespace rct3::ui::screens
     /// Sizes in units, the content's top-left the origin.
     struct FileDialogStyle
     {
-        WindowStyle window;
-        QuestionBoxStyle question;
-        ScrollBarStyle scroll;
+        widgets::WindowStyle window;
+        widgets::QuestionBoxStyle question;
+        widgets::ScrollBarStyle scroll;
         std::string load_icon; ///< On the window and its open button
         std::string save_icon;
         std::string cancel_icon;
@@ -95,7 +95,7 @@ namespace rct3::ui::screens
         float complete_time = 3;        ///< Seconds the end of the reading shows, the last one fading
     };
 
-    class FileDialog : public Window
+    class FileDialog : public widgets::Window
     {
     public:
         FileDialog(std::string name, const FileDialogStyle& style, const StringTable& strings, FileDialogMode mode, bool twelve_hour);
@@ -141,35 +141,35 @@ namespace rct3::ui::screens
         void rename_failed();
 
         // For tests and owners that drive the window.
-        [[nodiscard]] Button& open_button() const
+        [[nodiscard]] widgets::Button& open_button() const
         {
             return *open_;
         }
-        [[nodiscard]] Button& cancel_button_widget() const
+        [[nodiscard]] widgets::Button& cancel_button_widget() const
         {
             return *cancel_;
         }
-        [[nodiscard]] Button& delete_button() const
+        [[nodiscard]] widgets::Button& delete_button() const
         {
             return *delete_;
         }
         /// Only when saving.
-        [[nodiscard]] std::optional<EditBox&> name_box() const
+        [[nodiscard]] std::optional<widgets::EditBox&> name_box() const
         {
             return core::maybe(name_box_);
         }
-        [[nodiscard]] EditBox& row_name_box(std::size_t index) const;
+        [[nodiscard]] widgets::EditBox& row_name_box(std::size_t index) const;
         [[nodiscard]] const std::array<std::u16string, 3>& row_lines(std::size_t index) const;
-        [[nodiscard]] const Label& status() const
+        [[nodiscard]] const widgets::Label& status() const
         {
             return *status_;
         }
-        [[nodiscard]] const Label& hover() const
+        [[nodiscard]] const widgets::Label& hover() const
         {
             return *hover_;
         }
         /// The question or message showing, if any.
-        [[nodiscard]] std::optional<QuestionBox&> question() const
+        [[nodiscard]] std::optional<widgets::QuestionBox&> question() const
         {
             return core::maybe(question_);
         }
@@ -205,14 +205,14 @@ namespace rct3::ui::screens
         std::vector<bool> kept_;
         bool can_save_ = true;
         std::optional<std::size_t> selected_;
-        ScrollArea* list_ = nullptr;
-        Label* status_ = nullptr;
-        Label* hover_ = nullptr;
-        Button* open_ = nullptr;
-        Button* cancel_ = nullptr;
-        Button* delete_ = nullptr;
-        EditBox* name_box_ = nullptr;
-        QuestionBox* question_ = nullptr;
+        widgets::ScrollArea* list_ = nullptr;
+        widgets::Label* status_ = nullptr;
+        widgets::Label* hover_ = nullptr;
+        widgets::Button* open_ = nullptr;
+        widgets::Button* cancel_ = nullptr;
+        widgets::Button* delete_ = nullptr;
+        widgets::EditBox* name_box_ = nullptr;
+        widgets::QuestionBox* question_ = nullptr;
         Asking asking_ = Asking::Nothing;
         std::u16string pending_;              // The file a question is about
         std::u16string pending_new_;          // A rename's new name

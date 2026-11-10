@@ -41,7 +41,7 @@ namespace rct3::ui::screens
     /// The skins and measurements of the guide window. Lengths in logical units.
     struct TutorialGuideStyle
     {
-        WindowStyle window; ///< Its content inset leaves room for the step line; the content is the page
+        widgets::WindowStyle window; ///< Its content inset leaves room for the step line; the content is the page
         std::string portrait;
         std::string button; ///< Skin family of Quit and Continue
         Rect button_inset;  ///< See Button::text_inset
@@ -84,7 +84,7 @@ namespace rct3::ui::screens
     /// A window of `size` at `place` on the desktop.
     [[nodiscard]] Placement tutorial_guide_placement(const TutorialGuideStyle& style, TutorialGuidePlace place, Point size);
 
-    class TutorialGuide : public Window
+    class TutorialGuide : public widgets::Window
     {
     public:
         /// Shows step one of `script`.
@@ -102,19 +102,19 @@ namespace rct3::ui::screens
         {
             return script_;
         }
-        [[nodiscard]] Label& step_line() const
+        [[nodiscard]] widgets::Label& step_line() const
         {
             return *step_line_;
         }
-        [[nodiscard]] Label& text() const
+        [[nodiscard]] widgets::Label& text() const
         {
             return *text_;
         }
-        [[nodiscard]] Button& continue_button() const
+        [[nodiscard]] widgets::Button& continue_button() const
         {
             return *continue_;
         }
-        [[nodiscard]] Button& quit_button() const
+        [[nodiscard]] widgets::Button& quit_button() const
         {
             return *quit_;
         }
@@ -131,10 +131,10 @@ namespace rct3::ui::screens
         TutorialGuideStyle style_;
         const StringTable& strings_;
         save::model::TutorialScript script_;
-        Label* step_line_ = nullptr;
-        Label* text_ = nullptr;
-        Button* continue_ = nullptr;
-        Button* quit_ = nullptr;
+        widgets::Label* step_line_ = nullptr;
+        widgets::Label* text_ = nullptr;
+        widgets::Button* continue_ = nullptr;
+        widgets::Button* quit_ = nullptr;
         std::size_t step_ = 0;
         Point size_;            // Of the window as last fitted
         bool to_place_ = false; // A new step goes to its place once its text has been measured

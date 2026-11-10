@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     class KeyBox : public Widget
@@ -64,4 +64,4 @@ namespace rct3::ui
         int changes_ = 0;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

@@ -51,9 +51,9 @@ namespace rct3::ui::screens
         std::array<std::string, kPoolPathControls> path_unusable_icons;
         std::array<std::string, kPoolPathControls> path_help;
         CodedInfoPanel coded;
-        std::string tab_face;   ///< Behind each tab's icon
-        std::string close_icon; ///< On the close button
-        SpinnerStyle height;    ///< The surface height
+        std::string tab_face;         ///< Behind each tab's icon
+        std::string close_icon;       ///< On the close button
+        widgets::SpinnerStyle height; ///< The surface height
         /// From the screen's bottom edge to the disc's: the tool row and its open menu stay clear below.
         float bottom = info_panel::kDiscMargin;
         Color text_colour = hex("#ffffff");
@@ -216,28 +216,28 @@ namespace rct3::ui::screens
 
         PoolPanelStyle style_;
         const StringTable& strings_;
-        Button* close_ = nullptr;
+        widgets::Button* close_ = nullptr;
         Widget* body_ = nullptr;
-        Label* status_ = nullptr;
-        std::array<Button*, 5> tabs_ { };
-        Button* pin_ = nullptr;
-        Button* follow_ = nullptr;
+        widgets::Label* status_ = nullptr;
+        std::array<widgets::Button*, 5> tabs_ { };
+        widgets::Button* pin_ = nullptr;
+        widgets::Button* follow_ = nullptr;
         // The editor's page.
         Widget* editor_page_ = nullptr;
-        std::array<Button*, 3> modes_ { };  ///< Water, tiles, delete
-        std::array<Button*, 3> depths_ { }; ///< Shallow, normal, deep
-        std::array<Button*, 4> edges_ { };  ///< Straight, diagonal, tight, loose
+        std::array<widgets::Button*, 3> modes_ { };  ///< Water, tiles, delete
+        std::array<widgets::Button*, 3> depths_ { }; ///< Shallow, normal, deep
+        std::array<widgets::Button*, 4> edges_ { };  ///< Straight, diagonal, tight, loose
         // The paths' page.
         Widget* paths_page_ = nullptr;
-        std::array<Button*, kPoolPathControls> path_controls_ { };
+        std::array<widgets::Button*, kPoolPathControls> path_controls_ { };
         std::array<bool, kPoolPathControls> path_usable_ { };
         std::size_t path_slope_ = 5; ///< The control of the slope chosen
         std::optional<std::size_t> path_control_now_;
-        Button* grid_ = nullptr;
-        Button* snap_ = nullptr;
-        Spinner* height_ = nullptr;
+        widgets::Button* grid_ = nullptr;
+        widgets::Button* snap_ = nullptr;
+        widgets::Spinner* height_ = nullptr;
         // The extras', changing rooms' and paths' pictures to pick.
-        std::vector<Button*> choices_;
+        std::vector<widgets::Button*> choices_;
         std::vector<PoolChoice> extras_;
         std::vector<PoolChoice> rooms_;
         std::vector<PoolChoice> stairs_;

@@ -3,7 +3,7 @@
 
 #include <algorithm>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     namespace
@@ -147,4 +147,4 @@ namespace rct3::ui
         p.offsets.y1 = y;
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

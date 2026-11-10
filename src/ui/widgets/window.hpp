@@ -24,7 +24,7 @@
 #include <cstdint>
 #include <string>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     /// The skins and measurements a window is drawn with. Lengths in logical units.
@@ -127,4 +127,4 @@ namespace rct3::ui
         Rect start_rect_; // Of a resize, so limits do not make the edge drift from the pointer
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

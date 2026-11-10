@@ -202,8 +202,8 @@ namespace rct3::ui::screens
             return;
         asking_ = what;
         const Confirm& c = kConfirms.at(static_cast<std::size_t>(what));
-        const std::vector<QuestionAnswer> answers { { text(kYes), style_.question.confirm_icon }, { text(kNo), style_.question.cancel_icon } };
-        question_ = &parent()->add<QuestionBox>(std::string(kQuestionName), style_.question, text(c.text), answers);
+        const std::vector<widgets::QuestionAnswer> answers { { text(kYes), style_.question.confirm_icon }, { text(kNo), style_.question.cancel_icon } };
+        question_ = &parent()->add<widgets::QuestionBox>(std::string(kQuestionName), style_.question, text(c.text), answers);
         question_->title = text(c.title);
     }
 

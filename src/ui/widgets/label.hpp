@@ -12,7 +12,7 @@
 #include <optional>
 #include <string>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     class Label : public Widget
@@ -49,4 +49,4 @@ namespace rct3::ui
         std::optional<std::u16string> copied_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

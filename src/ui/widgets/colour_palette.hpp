@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     struct ColourPaletteStyle
@@ -68,4 +68,4 @@ namespace rct3::ui
         std::size_t current_ = 0;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace rct3::ui
+namespace rct3::ui::widgets
 {
 
     Menu::Menu(std::string name, MenuStyle style, std::vector<MenuItem> items)
@@ -204,4 +204,4 @@ namespace rct3::ui
         }
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::widgets

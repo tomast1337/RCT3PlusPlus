@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <string_view>
 
-namespace rct3
+namespace rct3::math
 {
 
     /// Eight bits per channel, alpha 255 when the text gives none.
@@ -64,4 +64,4 @@ namespace rct3
         return { c.r / 255.0f, c.g / 255.0f, c.b / 255.0f, c.a / 255.0f };
     }
 
-} // namespace rct3
+} // namespace rct3::math

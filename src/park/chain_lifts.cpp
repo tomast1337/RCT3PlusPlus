@@ -46,12 +46,12 @@ namespace rct3::park
         return moved - std::floor(moved);
     }
 
-    TextureShift chain_scroll(std::span<const float> shifts, std::int32_t run)
+    math::TextureShift chain_scroll(std::span<const float> shifts, std::int32_t run)
     {
         const auto ride = static_cast<std::size_t>(std::abs(run)) - 1;
         if (run == 0 || ride >= shifts.size())
             return { };
-        return TextureShift::by(run > 0 ? shifts[ride] : -shifts[ride]);
+        return math::TextureShift::by(run > 0 ? shifts[ride] : -shifts[ride]);
     }
 
 } // namespace rct3::park

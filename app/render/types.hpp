@@ -41,7 +41,7 @@ namespace rct3::render
     /// The colour `text` ("#rrggbb" or "#rrggbbaa") names, as floats; see math/hex_colour.hpp.
     consteval Color hex(std::string_view text)
     {
-        const glm::vec4 c = unit(rct3::hex(text));
+        const glm::vec4 c = math::unit(math::hex(text));
         return { c.x, c.y, c.z, c.w };
     }
 
@@ -412,8 +412,8 @@ namespace rct3::render
         TextureHandle texture;          ///< For shaders that sample one
         Filter filter = Filter::Nearest;
         AddressMode address = AddressMode::Clamp;
-        SceneLight light;     ///< For the Lit shaders
-        TextureShift v_shift; ///< For the Lit shaders and flowing Water: added to the texture's v
+        SceneLight light;           ///< For the Lit shaders
+        math::TextureShift v_shift; ///< For the Lit shaders and flowing Water: added to the texture's v
         /// For shaders that read more than one picture, bound after `texture` with the same sampler. A missing one
         /// reads as `texture`.
         std::array<TextureHandle, kExtraTextures> extra_textures { };

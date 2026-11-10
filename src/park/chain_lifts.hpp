@@ -29,6 +29,6 @@ namespace rct3::park
 
     /// How far along its picture a chain part of run `run` is moved, with each ride's shift in `shifts` by its
     /// place in the ride list; none for parts of no chain.
-    [[nodiscard]] TextureShift chain_scroll(std::span<const float> shifts, std::int32_t run);
+    [[nodiscard]] math::TextureShift chain_scroll(std::span<const float> shifts, std::int32_t run);
 
 } // namespace rct3::park

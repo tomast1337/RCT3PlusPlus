@@ -15,39 +15,39 @@ namespace rct3::park
     {
 
         // Picks, one per index, named for what the index shows in the game.
-        constexpr std::array<HexColour, kFlexiColourCount> kColours { {
-            hex("#324040"), // 0 charcoal
-            hex("#829191"), // 1 grey
-            hex("#cdd4d4"), // 2 pale grey
-            hex("#50508c"), // 3 indigo
-            hex("#8787be"), // 4 lavender
-            hex("#9664c3"), // 5 purple
-            hex("#1e50c8"), // 6 royal blue
-            hex("#5aa0e1"), // 7 sky blue
-            hex("#aae1f5"), // 8 pale blue
-            hex("#46a5a0"), // 9 teal
-            hex("#a5e1e1"), // 10 aqua
-            hex("#288c0a"), // 11 green
-            hex("#5f9673"), // 12 sage
-            hex("#739641"), // 13 olive
-            hex("#5abe3c"), // 14 bright green
-            hex("#9bb46e"), // 15 pale olive
-            hex("#969650"), // 16 khaki
-            hex("#f0e137"), // 17 yellow
-            hex("#f0c81e"), // 18 gold
-            hex("#a56e0a"), // 19 ochre
-            hex("#e66e14"), // 20 orange
-            hex("#af4b0f"), // 21 rust
-            hex("#b99655"), // 22 tan
-            hex("#8c5f28"), // 23 brown
-            hex("#8c7d69"), // 24 taupe
-            hex("#d29673"), // 25 peach
-            hex("#be5050"), // 26 rose
-            hex("#a50505"), // 27 deep red
-            hex("#e10a05"), // 28 bright red
-            hex("#9b1455"), // 29 crimson
-            hex("#eb5aaa"), // 30 pink
-            hex("#eb7869"), // 31 coral
+        constexpr std::array<math::HexColour, kFlexiColourCount> kColours { {
+            math::hex("#324040"), // 0 charcoal
+            math::hex("#829191"), // 1 grey
+            math::hex("#cdd4d4"), // 2 pale grey
+            math::hex("#50508c"), // 3 indigo
+            math::hex("#8787be"), // 4 lavender
+            math::hex("#9664c3"), // 5 purple
+            math::hex("#1e50c8"), // 6 royal blue
+            math::hex("#5aa0e1"), // 7 sky blue
+            math::hex("#aae1f5"), // 8 pale blue
+            math::hex("#46a5a0"), // 9 teal
+            math::hex("#a5e1e1"), // 10 aqua
+            math::hex("#288c0a"), // 11 green
+            math::hex("#5f9673"), // 12 sage
+            math::hex("#739641"), // 13 olive
+            math::hex("#5abe3c"), // 14 bright green
+            math::hex("#9bb46e"), // 15 pale olive
+            math::hex("#969650"), // 16 khaki
+            math::hex("#f0e137"), // 17 yellow
+            math::hex("#f0c81e"), // 18 gold
+            math::hex("#a56e0a"), // 19 ochre
+            math::hex("#e66e14"), // 20 orange
+            math::hex("#af4b0f"), // 21 rust
+            math::hex("#b99655"), // 22 tan
+            math::hex("#8c5f28"), // 23 brown
+            math::hex("#8c7d69"), // 24 taupe
+            math::hex("#d29673"), // 25 peach
+            math::hex("#be5050"), // 26 rose
+            math::hex("#a50505"), // 27 deep red
+            math::hex("#e10a05"), // 28 bright red
+            math::hex("#9b1455"), // 29 crimson
+            math::hex("#eb5aaa"), // 30 pink
+            math::hex("#eb7869"), // 31 coral
         } };
 
         /// How pale the lightest shade is: the share of white mixed into the colour there.
@@ -64,7 +64,7 @@ namespace rct3::park
 
     Rgb flexi_colour(std::size_t index)
     {
-        const HexColour c = kColours[index % kFlexiColourCount];
+        const math::HexColour c = kColours[index % kFlexiColourCount];
         return { c.r, c.g, c.b };
     }
 

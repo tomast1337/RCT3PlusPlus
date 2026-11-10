@@ -37,7 +37,7 @@ namespace rct3::ui
     /// The colour `text` ("#rrggbb" or "#rrggbbaa") names; see math/hex_colour.hpp.
     consteval Color hex(std::string_view text)
     {
-        const HexColour c = rct3::hex(text);
+        const math::HexColour c = rct3::math::hex(text);
         return { c.r, c.g, c.b, c.a };
     }
 

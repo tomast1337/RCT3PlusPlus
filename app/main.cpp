@@ -263,7 +263,7 @@ namespace
     /// An ImGui colour from hex text; see math/hex_colour.hpp.
     consteval ImVec4 im_hex(std::string_view text)
     {
-        const glm::vec4 c = rct3::unit(rct3::hex(text));
+        const glm::vec4 c = rct3::math::unit(rct3::math::hex(text));
         return { c.x, c.y, c.z, c.w };
     }
 

@@ -146,10 +146,10 @@ namespace rct3::park::water
         return alpha;
     }
 
-    TextureShift flow_scroll(float seconds, std::int32_t run)
+    math::TextureShift flow_scroll(float seconds, std::int32_t run)
     {
         // The picture's v goes down by the distance flowed, so it is read further back and moves on along v.
-        return TextureShift::by(seconds * kFlowSpeed / kFlowRepeat * (run < 0 ? 1.0f : -1.0f));
+        return math::TextureShift::by(seconds * kFlowSpeed / kFlowRepeat * (run < 0 ? 1.0f : -1.0f));
     }
 
     std::expected<ovl::texture::RgbaImage, std::string> load_flow_picture(const std::filesystem::path& file, std::string_view name)

@@ -63,7 +63,7 @@ namespace rct3::park::water
 
     /// How far along its picture the water of a piece of run `run` (see Chains) is moved after flowing for
     /// `seconds`, added to the picture's v: against the strip's v when the run is negative.
-    [[nodiscard]] TextureShift flow_scroll(float seconds, std::int32_t run);
+    [[nodiscard]] math::TextureShift flow_scroll(float seconds, std::int32_t run);
 
     /// The picture of the texture `name` (the flowing water's by default) from the overlay whose common file is
     /// `file`.

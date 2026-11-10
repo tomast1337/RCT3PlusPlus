@@ -103,7 +103,7 @@ namespace rct3::park
     inline constexpr float kTextureSpan = 16;
     /// Height differences smaller than this make no wall.
     inline constexpr float kFlat = 0.001f;
-    inline constexpr glm::vec4 kWaterColour = unit(hex("#2c64a0a6"));
+    inline constexpr glm::vec4 kWaterColour = math::unit(math::hex("#2c64a0a6"));
 
     /// A band of height on a tile that the walls along its edges leave open.
     struct GroundOpening
@@ -123,7 +123,7 @@ namespace rct3::park
     inline constexpr int kPoolWaterSteps = 6; ///< Chosen by eye: a pool square's water is cut this many times each way, for the waves
     /// Pool water is clearer and lighter than the lakes': its low alpha also has it mirror the sky less looking
     /// down, so swimmers show whole under the surface.
-    inline constexpr glm::vec4 kPoolColour = unit(hex("#3c9ccc4c"));
+    inline constexpr glm::vec4 kPoolColour = math::unit(math::hex("#3c9ccc4c"));
 
     /// The water of pools: a level square on each pool square that holds water, as two triangles like the
     /// lakes', deep down to the pool's floor. Squares off the grid are left out.

@@ -3,7 +3,7 @@
 
 #include <doctest/doctest.h>
 
-using namespace rct3;
+using namespace rct3::math;
 
 static_assert(hex("#000000") == HexColour { 0, 0, 0, 255 });
 static_assert(hex("#ff8001") == HexColour { 255, 128, 1, 255 });

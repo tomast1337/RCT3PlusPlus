@@ -46,7 +46,7 @@ namespace rct3::park
 
     /// How far the first picture of `picture` is moved along v past its second after `seconds`:
     /// the mesh's coordinates are where the second is read, and the draw moves the first on by this.
-    [[nodiscard]] TextureShift waterfall_layer_scroll(const WaterfallPicture& picture, float seconds);
+    [[nodiscard]] math::TextureShift waterfall_layer_scroll(const WaterfallPicture& picture, float seconds);
 
     /// Where the water of `fall` is after running `along` (0 at the edge, 1 where it lands), halfway across.
     [[nodiscard]] glm::vec3 waterfall_point(const save::model::Waterfall& fall, float along);

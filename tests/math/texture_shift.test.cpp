@@ -3,7 +3,7 @@
 
 #include <doctest/doctest.h>
 
-using namespace rct3;
+using namespace rct3::math;
 
 TEST_CASE("a texture shift keeps only the fraction, either way")
 {

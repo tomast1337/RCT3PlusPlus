@@ -6,7 +6,7 @@
 
 #include <cmath>
 
-namespace rct3
+namespace rct3::math
 {
 
     /// A slide along a texture's v, in texture lengths, always from 0 up to (not including) 1.
@@ -23,4 +23,4 @@ namespace rct3
         friend constexpr bool operator==(const TextureShift&, const TextureShift&) = default;
     };
 
-} // namespace rct3
+} // namespace rct3::math

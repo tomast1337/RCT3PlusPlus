@@ -19,6 +19,7 @@
 #include "simulation/crowds.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/park/messages.hpp"
+#include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "strings/unicode.hpp"
 #include "ui/key_combo.hpp"

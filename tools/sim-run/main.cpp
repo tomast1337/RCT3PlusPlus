@@ -34,6 +34,7 @@
 #include "simulation/import_people.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/ratings.hpp"
+#include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/workers.hpp"
 

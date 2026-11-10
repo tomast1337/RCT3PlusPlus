@@ -52,6 +52,7 @@
 #include "simulation/day_clock.hpp"
 #include "simulation/park/rating.hpp"
 #include "simulation/sim_world.hpp"
+#include "simulation/swimming.hpp"
 
 #include <cstddef>
 #include <cstdint>

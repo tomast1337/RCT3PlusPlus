@@ -5,6 +5,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
+using namespace rct3::ui::font;
 using namespace rct3::ui::loading_screen;
 
 namespace

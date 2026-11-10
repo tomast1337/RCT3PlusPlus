@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/font_images.hpp"
+#include "ui/font/images.hpp"
 
 #include "ovl/texture/pixels.hpp"
 #include "ovl/texture/texture.hpp"
 
 #include <map>
 
-namespace rct3::ui
+namespace rct3::ui::font
 {
 
     std::expected<std::vector<FontImages>, std::string> load_font_images(const std::filesystem::path& path)
@@ -55,4 +55,4 @@ namespace rct3::ui
         return out;
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::font

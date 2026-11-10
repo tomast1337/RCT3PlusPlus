@@ -64,7 +64,7 @@ namespace rct3::ui
         std::string border; ///< Around the list and each picture
         std::string name_box;
         std::string name_box_focused;
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
         Color line_colour = hex("#2484be"); ///< Of a row's lines and the hovered button's name
         Color selected_colour = hex("#efe8ef");

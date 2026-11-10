@@ -135,8 +135,8 @@ namespace rct3::ui
             draw_skin(context.list, skin, { x, y, x + w * disc.scale, y + h * disc.scale });
         }
 
-        const auto name_font = context.fonts.get(FontRole::ScaledMedium);
-        const auto picked_font = context.fonts.get(FontRole::ScaledLarge);
+        const auto name_font = context.fonts.get(font::FontRole::ScaledMedium);
+        const auto picked_font = context.fonts.get(font::FontRole::ScaledLarge);
         for (std::size_t i = 0; i < tutorials_.size(); ++i)
         {
             const auto f = i == picked_ ? picked_font : name_font;
@@ -149,7 +149,7 @@ namespace rct3::ui
         }
         if (picked_ < tutorials_.size())
         {
-            if (const auto f = context.fonts.get(FontRole::ScaledSmall))
+            if (const auto f = context.fonts.get(font::FontRole::ScaledSmall))
                 draw_text(context.list, *f, tutorials_[picked_].description, disc.rect(tm::kDescription), { style_.text_colour, Align::Start, Align::Centre, true });
         }
     }

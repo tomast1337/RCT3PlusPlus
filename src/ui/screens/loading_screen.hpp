@@ -13,7 +13,7 @@
 #pragma once
 
 #include "ui/draw_list.hpp"
-#include "ui/font.hpp"
+#include "ui/font/font.hpp"
 
 #include <cstddef>
 #include <optional>
@@ -78,9 +78,9 @@ namespace rct3::ui::loading_screen
     struct Look
     {
         std::optional<Picture> logo;
-        const Font* heading_font = nullptr; ///< Without a font, its text is left out
-        const Font* stage_font = nullptr;
-        const Font* detail_font = nullptr;
+        const font::Font* heading_font = nullptr; ///< Without a font, its text is left out
+        const font::Font* stage_font = nullptr;
+        const font::Font* detail_font = nullptr;
     };
 
     struct Content

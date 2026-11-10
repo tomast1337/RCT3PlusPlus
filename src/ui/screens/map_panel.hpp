@@ -31,7 +31,7 @@ namespace rct3::ui
         float group_gap = 8; ///< Above a row that starts a group
         float swatch = 12;
         float swatch_gap = 8;
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         Color text = hex("#1b1b1b");
         Color text_off = hex("#1b1b1b70");
         Color hover = hex("#3c78d830");

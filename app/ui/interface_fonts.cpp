@@ -3,8 +3,8 @@
 
 #include "logging/log.hpp"
 #include "ui/fallback_font.hpp"
-#include "ui/font_images.hpp"
-#include "ui/font_sets.hpp"
+#include "ui/font/images.hpp"
+#include "ui/font/sets.hpp"
 #include "ui/ui_renderer.hpp"
 
 #include <format>
@@ -17,7 +17,7 @@ namespace rct3::ui
     {
 
         // Uploads `images` under their names and returns the page references in order, keeping the textures.
-        std::expected<std::vector<Font::Page>, std::string> upload_pages(render::Device& device, InterfaceFonts& fonts, const std::string& prefix, std::vector<ovl::texture::RgbaImage> images)
+        std::expected<std::vector<font::Font::Page>, std::string> upload_pages(render::Device& device, InterfaceFonts& fonts, const std::string& prefix, std::vector<ovl::texture::RgbaImage> images)
         {
             std::map<std::string, ovl::texture::RgbaImage, std::less<>> named;
             for (std::size_t i = 0; i < images.size(); ++i)
@@ -25,7 +25,7 @@ namespace rct3::ui
             auto uploaded = upload_textures(device, named);
             if (!uploaded)
                 return std::unexpected(uploaded.error());
-            std::vector<Font::Page> refs;
+            std::vector<font::Font::Page> refs;
             for (std::size_t i = 0; i < named.size(); ++i)
             {
                 const UiTexture& t = uploaded->at(prefix + std::to_string(i));
@@ -36,7 +36,7 @@ namespace rct3::ui
         }
 
         // The fallback rendered at the size that matches `font`, merged in.
-        std::expected<Font, std::string> with_fallback(render::Device& device, InterfaceFonts& fonts, const Font& font, const std::string& prefix)
+        std::expected<font::Font, std::string> with_fallback(render::Device& device, InterfaceFonts& fonts, const font::Font& font, const std::string& prefix)
         {
             const float em = fallback_em_pixels(cap_height(font), fonts.fallback->cap_per_em, kUnifontGrid);
             auto baked = bake_truetype(*fonts.fallback, em, kFallbackRanges, { .hard_edges = true });
@@ -50,28 +50,28 @@ namespace rct3::ui
 
     } // namespace
 
-    std::expected<FontSet, std::string> load_font_set(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, int width)
+    std::expected<font::FontSet, std::string> load_font_set(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, int width)
     {
-        const std::string relative = font_overlay(fonts.language, width);
+        const std::string relative = font::font_overlay(fonts.language, width);
         const auto path = install.find(relative);
         if (!path)
             return std::unexpected(std::format("{} not found", relative));
-        auto loaded = load_font_images(*path);
+        auto loaded = font::load_font_images(*path);
         if (!loaded)
             return std::unexpected(std::format("{}: {}", relative, loaded.error()));
 
         const auto log = logging::logger("ui");
-        FontSet set;
-        for (FontImages& f : *loaded)
+        font::FontSet set;
+        for (font::FontImages& f : *loaded)
         {
-            const auto role = set_font_role(f.name);
+            const auto role = font::set_font_role(f.name);
             if (!role)
                 continue;
             const std::string prefix = std::format("{}/{}", width, f.name);
             auto refs = upload_pages(device, fonts, std::format("{}#", prefix), std::move(f.pages));
             if (!refs)
                 return std::unexpected(refs.error());
-            Font font = Font::from(f.font, *refs, f.face);
+            font::Font font = font::Font::from(f.font, *refs, f.face);
             if (fonts.fallback)
             {
                 if (auto merged = with_fallback(device, fonts, font, prefix))
@@ -87,7 +87,7 @@ namespace rct3::ui
     namespace
     {
 
-        const FontSet& loaded_set(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, int width)
+        const font::FontSet& loaded_set(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, int width)
         {
             if (const auto it = fonts.sets.find(width); it != fonts.sets.end())
                 return it->second;
@@ -102,17 +102,17 @@ namespace rct3::ui
 
     } // namespace
 
-    const FontSet& fonts_for(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, float view_width)
+    const font::FontSet& fonts_for(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, float view_width)
     {
-        const int width = font_set_width(view_width);
+        const int width = font::font_set_width(view_width);
         if (const auto it = fonts.mixed.find(width); it != fonts.mixed.end())
             return it->second;
-        FontSet mixed = loaded_set(device, install, fonts, kFixedFontSetWidth);
-        const FontSet& scaled = loaded_set(device, install, fonts, width);
-        for (std::size_t i = 0; i < kFontRoleCount; ++i)
+        font::FontSet mixed = loaded_set(device, install, fonts, font::kFixedFontSetWidth);
+        const font::FontSet& scaled = loaded_set(device, install, fonts, width);
+        for (std::size_t i = 0; i < font::kFontRoleCount; ++i)
         {
-            const auto role = scaled_role(static_cast<FontRole>(i));
-            auto font = role ? scaled.get(static_cast<FontRole>(i)) : std::nullopt;
+            const auto role = font::scaled_role(static_cast<font::FontRole>(i));
+            auto font = role ? scaled.get(static_cast<font::FontRole>(i)) : std::nullopt;
             if (font)
                 mixed.set(*role, *font);
         }

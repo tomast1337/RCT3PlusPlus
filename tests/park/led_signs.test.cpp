@@ -88,8 +88,8 @@ TEST_CASE("the board's text loops and scrolls round in lamps")
     page.width = page.height = 4;
     page.pixels.assign(4 * 4 * 4, 255);
     const std::vector<ovl::texture::RgbaImage> pages { page };
-    const std::array glyphs { ui::CodedGlyph { u'A', { { 0, -4, 4, 0 }, { 0, 1, 1, 0 }, 0, 5 } } };
-    const ui::Font font = ui::Font::from_glyphs(glyphs, 8, 0);
+    const std::array glyphs { ui::font::CodedGlyph { u'A', { { 0, -4, 4, 0 }, { 0, 1, 1, 0 }, 0, 5 } } };
+    const ui::font::Font font = ui::font::Font::from_glyphs(glyphs, 8, 0);
     const ovl::texture::RgbaImage loop = ui::sign_text_loop(font, pages, u"AA?", 8);
     // Two glyphs of 5 and a missing one, then the gap, out to whole lamps.
     REQUIRE(kSignLamp == 3); // The places below count on it

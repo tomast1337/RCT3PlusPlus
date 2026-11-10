@@ -74,10 +74,10 @@ namespace rct3::ui
         float tab_bar_height = 22;
         float caption_x = 59; ///< Right of the window's icon, under the title
         float caption_width = 280;
-        FontRole caption_font = FontRole::Small;
+        font::FontRole caption_font = font::FontRole::Small;
         Color caption_colour = hex("#2484be");
-        FontRole title_font = FontRole::Medium; ///< Of the game's name on the info page
-        FontRole font = FontRole::Small;
+        font::FontRole title_font = font::FontRole::Medium; ///< Of the game's name on the info page
+        font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
         Color role_colour = hex("#2484be");
         float line_gap = 5;       ///< Between the info page's lines

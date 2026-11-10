@@ -208,9 +208,9 @@ namespace rct3::ui
 
     void draw_front_help(DrawContext& context, const fs::Frame& frame, std::u16string_view title, std::u16string_view text)
     {
-        if (const auto f = context.fonts.get(FontRole::ScaledLarge))
+        if (const auto f = context.fonts.get(font::FontRole::ScaledLarge))
             draw_text(context.list, *f, title, frame.strip(fs::kHelpTitle), { kHelpColour, Align::Centre, Align::Centre, false });
-        if (const auto f = context.fonts.get(FontRole::ScaledSmall))
+        if (const auto f = context.fonts.get(font::FontRole::ScaledSmall))
             draw_text(context.list, *f, text, frame.strip(fs::kHelpText), { kHelpColour, Align::Centre, Align::Centre, false });
     }
 
@@ -437,7 +437,7 @@ namespace rct3::ui
         // The boxes beside the buttons that have arrived: a light band from a white ring behind the button,
         // under its name and on under the arc, then the name. The arc comes after and covers the band's end.
         const auto& current = buttons_[index(current_)];
-        const auto label_font = context.fonts.get(FontRole::ScaledLarge);
+        const auto label_font = context.fonts.get(font::FontRole::ScaledLarge);
         for (std::size_t i = 0; i < current.size() && i < labels_.size(); ++i)
         {
             if (label_alpha_[i] <= 0)

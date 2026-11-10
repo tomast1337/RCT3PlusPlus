@@ -820,7 +820,7 @@ namespace rct3::scene
         bool blend_shadows = true;          ///< The BlendShadows option: without it, shadows step from one drawing to the next
         // On the heap: windows keep a reference to the desktop, and the scene moves.
         std::unique_ptr<ui::Desktop> desktop = std::make_unique<ui::Desktop>();
-        const ui::FontSet* current_fonts = nullptr;
+        const ui::font::FontSet* current_fonts = nullptr;
         ui::DrawList list;
         std::optional<float> scale;
         ui::Point last_pointer;

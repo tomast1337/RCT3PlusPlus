@@ -28,7 +28,7 @@ namespace rct3::ui
         WindowStyle window;
         std::string button; ///< Skin family of the answer buttons
         Rect button_inset;  ///< Of the text of answers without an icon; see Button::text_inset
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
         Color hover_colour = hex("#2484be"); ///< Of the hovered answer's name
         float min_width = 282;               ///< Of the window

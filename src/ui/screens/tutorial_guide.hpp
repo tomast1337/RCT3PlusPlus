@@ -45,7 +45,7 @@ namespace rct3::ui
         std::string portrait;
         std::string button; ///< Skin family of Quit and Continue
         Rect button_inset;  ///< See Button::text_inset
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
         Rect step_line { 67, 46, 13, 21 }; ///< Left inset, top from the window's top, right inset, height
         float min_width = 282;             ///< Of the window

@@ -7,7 +7,7 @@
 namespace rct3::ui
 {
 
-    Label::Label(std::string name, std::u16string text, FontRole font)
+    Label::Label(std::string name, std::u16string text, font::FontRole font)
         : Widget(std::move(name))
         , text(std::move(text))
         , font(font)

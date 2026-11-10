@@ -6,7 +6,7 @@
 
 #include "config/game_install.hpp"
 #include "render/device.hpp"
-#include "ui/font_set.hpp"
+#include "ui/font/set.hpp"
 #include "ui/interface_fonts.hpp"
 #include "ui/palette.hpp"
 #include "ui/skin_library.hpp"
@@ -46,7 +46,7 @@ namespace rct3::ui
     [[nodiscard]] std::expected<InterfaceAssets, std::string> load_interface_assets(render::Device& device, const config::GameInstall& install, const std::string& language, const std::filesystem::path& fallback_font, std::span<const std::string_view> more_skins = { });
 
     /// The fonts for an interface `view_width` units wide.
-    [[nodiscard]] const FontSet& fonts_for(render::Device& device, InterfaceAssets& assets, float view_width);
+    [[nodiscard]] const font::FontSet& fonts_for(render::Device& device, InterfaceAssets& assets, float view_width);
 
     void destroy_interface_assets(render::Device& device, InterfaceAssets& assets);
 

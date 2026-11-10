@@ -25,7 +25,7 @@ namespace rct3::ui
     {
         std::string tab; ///< Family base name for the tab buttons (see SkinLibrary)
         Rect text_inset; ///< Taken off each tab before centring its label
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         float bar_height = 24;
         float gap = 4;        ///< Between tabs
         float text_room = 20; ///< Added to the label's width

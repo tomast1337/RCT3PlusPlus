@@ -245,7 +245,7 @@ namespace rct3::ui
             if (keys_[i].group == FilterKey::Group::Pack && filters_[i]->on)
                 context.list.fill(filters_[i]->rect(), style_.pack_on_colour);
         }
-        const auto small = context.fonts.get(FontRole::Small);
+        const auto small = context.fonts.get(font::FontRole::Small);
         if (!small)
             return;
         const Rect& s = search_->rect();

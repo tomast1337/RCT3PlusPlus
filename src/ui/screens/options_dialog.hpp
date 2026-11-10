@@ -108,7 +108,7 @@ namespace rct3::ui
         float caption_width = 160;
         float caption_height = 20;
         float scroll_height = 230; ///< Of the custom graphics settings
-        FontRole caption_font = FontRole::Small;
+        font::FontRole caption_font = font::FontRole::Small;
         Color caption_colour = hex("#2484be");
         std::string icon;   ///< In the window's corner
         std::string button; ///< Skin family of the text buttons

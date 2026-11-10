@@ -5,7 +5,7 @@
 // the box's width, so a scroll area can tell how far wrapped text runs below the box.
 #pragma once
 
-#include "ui/font_set.hpp"
+#include "ui/font/set.hpp"
 #include "ui/text_layout.hpp"
 #include "ui/widget.hpp"
 
@@ -18,10 +18,10 @@ namespace rct3::ui
     class Label : public Widget
     {
     public:
-        Label(std::string name, std::u16string text, FontRole font = FontRole::Small);
+        Label(std::string name, std::u16string text, font::FontRole font = font::FontRole::Small);
 
         std::u16string text;
-        FontRole font;
+        font::FontRole font;
         TextStyle style;
         bool copyable = false;
         Color selection_colour = hex("#007fff50"); ///< Behind the text while selected, as in an edit box

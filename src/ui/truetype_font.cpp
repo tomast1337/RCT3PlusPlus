@@ -136,13 +136,13 @@ namespace rct3::ui
         return out;
     }
 
-    Font font_from_baked(const BakedFont& baked, std::span<const Font::Page> pages)
+    font::Font font_from_baked(const BakedFont& baked, std::span<const font::Font::Page> pages)
     {
-        std::vector<CodedGlyph> glyphs;
+        std::vector<font::CodedGlyph> glyphs;
         glyphs.reserve(baked.glyphs.size());
         for (const BakedGlyph& b : baked.glyphs)
         {
-            CodedGlyph g { b.code, { } };
+            font::CodedGlyph g { b.code, { } };
             g.glyph.advance = b.advance;
             if (b.page < pages.size() && !b.box.empty())
             {
@@ -152,7 +152,7 @@ namespace rct3::ui
             }
             glyphs.push_back(g);
         }
-        return Font::from_glyphs(glyphs, baked.line_height, baked.descent);
+        return font::Font::from_glyphs(glyphs, baked.line_height, baked.descent);
     }
 
 } // namespace rct3::ui

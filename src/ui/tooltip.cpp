@@ -51,7 +51,7 @@ namespace rct3::ui
         }
     }
 
-    Rect Tooltip::box(const TooltipStyle& style, const FontSet& fonts, const Rect& view) const
+    Rect Tooltip::box(const TooltipStyle& style, const font::FontSet& fonts, const Rect& view) const
     {
         const auto font = fonts.get(style.font);
         if (!font)

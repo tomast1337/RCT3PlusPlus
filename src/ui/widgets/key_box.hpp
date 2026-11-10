@@ -29,7 +29,7 @@ namespace rct3::ui
         std::string focused_skin; ///< Instead of `skin` while the box has the keyboard focus
         std::u16string prompt;    ///< Shown while waiting for keys
         std::u16string none;      ///< Shown when there are no combinations
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
         Color disabled_text_colour = hex("#7f7f7f");
         Rect padding { 3, 2, 3, 2 }; ///< Between the edges and the text

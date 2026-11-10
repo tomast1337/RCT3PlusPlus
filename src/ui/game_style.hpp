@@ -5,7 +5,7 @@
 // show on screen. Every style, and every frame drawn in code, takes its colours from a palette (palette.hpp).
 #pragma once
 
-#include "ui/font_set.hpp"
+#include "ui/font/set.hpp"
 #include "ui/game_frames.hpp"
 #include "ui/palette.hpp"
 #include "ui/panel_look.hpp"
@@ -259,7 +259,7 @@ namespace rct3::ui::game_skins
         s.content_inset = { 8, 49, 13, 13 };
         s.icon_box = { 6, 17, 52, 63 };
         s.title_button_margin = { 8, 2 }; // On the frame's top band, as the game places it
-        s.title_font = FontRole::Large;
+        s.title_font = font::FontRole::Large;
         s.title_box = { 67, 18, 13, 42 }; // Right of the icon, above the title rule
         return s;
     }
@@ -290,7 +290,7 @@ namespace rct3::ui::game_skins
         s.background = kListBox;
         s.focused = kListBoxFocused;
         s.selection_skin = kSelectedRow;
-        s.font = FontRole::Small;
+        s.font = font::FontRole::Small;
         s.row_height = 18;
         return s;
     }
@@ -311,7 +311,7 @@ namespace rct3::ui::game_skins
         TabsStyle s;
         s.tab = kTextButton;
         s.text_inset = kLozengeInset;
-        s.font = FontRole::Small;
+        s.font = font::FontRole::Small;
         s.bar_height = 24;
         return s;
     }
@@ -362,7 +362,7 @@ namespace rct3::ui::game_skins
         s.background = kMenuBackground;
         s.highlight_skin = kSelectedRow;
         s.tick = kTick;
-        s.font = FontRole::Small;
+        s.font = font::FontRole::Small;
         s.padding = { 6, 6, 9, 9 }; // The surround's shadow takes the right and bottom
         s.tick_room = 20;
         return s;
@@ -622,7 +622,7 @@ namespace rct3::ui::game_skins
         TooltipStyle s;
         s.colour = p.text;
         s.skin = kTooltip;
-        s.font = FontRole::Small;
+        s.font = font::FontRole::Small;
         s.delay = 0.5f;
         s.padding = { kLozengeInset.x0 + 4, kLozengeInset.y0 + 4, kLozengeInset.x1 + 4, kLozengeInset.y1 + 4 };
         return s;

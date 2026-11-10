@@ -42,7 +42,7 @@ namespace rct3::ui
         Color text_colour = hex("#000000");
         Color disabled_text_colour = hex("#7f7f7f");
         Color separator_colour = hex("#0000003c");
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         Rect padding { 6, 6, 6, 6 }; ///< Between the edges and the rows
         float row_height = 18;
         float separator_height = 7;

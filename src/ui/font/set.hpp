@@ -8,14 +8,14 @@
 #pragma once
 
 #include "core/maybe.hpp"
-#include "ui/font.hpp"
+#include "ui/font/font.hpp"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 
-namespace rct3::ui
+namespace rct3::ui::font
 {
 
     enum class FontRole : std::uint8_t
@@ -50,4 +50,4 @@ namespace rct3::ui
         std::array<std::optional<Font>, kFontRoleCount> fonts_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::font

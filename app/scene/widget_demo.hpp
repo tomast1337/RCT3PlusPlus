@@ -10,7 +10,7 @@
 #include "render/device.hpp"
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
-#include "ui/font_set.hpp"
+#include "ui/font/set.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/widgets/menu_bar.hpp"
 #include "ui/widgets/question_box.hpp"
@@ -27,7 +27,7 @@ namespace rct3::scene
     struct WidgetDemo
     {
         ui::InterfaceAssets assets;
-        const ui::FontSet* current_fonts = nullptr; ///< The set for the width of the last update
+        const ui::font::FontSet* current_fonts = nullptr; ///< The set for the width of the last update
         ui::Desktop desktop;
         ui::MenuBar* menu_bar = nullptr; ///< In the desktop's tree, which lives as long as the demo
         ui::Toolbar* toolbar = nullptr;

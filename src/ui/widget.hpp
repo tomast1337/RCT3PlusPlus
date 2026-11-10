@@ -13,7 +13,7 @@
 #include "core/maybe.hpp"
 #include "ui/cursor.hpp"
 #include "ui/draw_list.hpp"
-#include "ui/font_set.hpp"
+#include "ui/font/set.hpp"
 #include "ui/keyboard.hpp"
 #include "ui/palette.hpp"
 #include "ui/placement.hpp"
@@ -44,8 +44,8 @@ namespace rct3::ui
     /// What widgets update with.
     struct UpdateContext
     {
-        float elapsed = 0;              ///< Seconds since the last update
-        const FontSet* fonts = nullptr; ///< For widgets that measure text; null when there are none
+        float elapsed = 0;                    ///< Seconds since the last update
+        const font::FontSet* fonts = nullptr; ///< For widgets that measure text; null when there are none
     };
 
     /// What widgets draw with.
@@ -53,7 +53,7 @@ namespace rct3::ui
     {
         DrawList& list;
         const SkinLibrary& skins;
-        const FontSet& fonts;
+        const font::FontSet& fonts;
         const Palette& palette = kGamePalette; ///< For what is drawn in code each frame
     };
 

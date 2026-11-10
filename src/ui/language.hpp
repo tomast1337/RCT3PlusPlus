@@ -4,7 +4,7 @@
 // in the install's gui folder, holding every interface string under the same keys as the others. The game
 // recognises a fixed set of names; a pair with another name is not a language.
 //
-// Chinese, Japanese and Korean bring their own fonts, one set for each screen width (see font_sets.hpp),
+// Chinese, Japanese and Korean bring their own fonts, one set for each screen width (see ui/font/sets.hpp),
 // and break lines between characters rather than at spaces (see text_layout.hpp).
 //
 // Which one is shown: the one the user set, else the one the system's locale names, else English, else

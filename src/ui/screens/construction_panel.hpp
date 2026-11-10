@@ -25,7 +25,7 @@
 // owner hears that as a Build event. The round panel closes them.
 #pragma once
 
-#include "ui/font_set.hpp"
+#include "ui/font/set.hpp"
 #include "ui/widget.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/label.hpp"
@@ -161,7 +161,7 @@ namespace rct3::ui
         std::array<std::string, construction_panel::kParams> param_icons; ///< Before each setting's box
         SpinnerStyle param;
         std::string facing; ///< Base name; the facing's number after it, from 1
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
     };
 

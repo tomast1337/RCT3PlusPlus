@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/font_sets.hpp"
+#include "ui/font/sets.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
+using namespace rct3::ui::font;
 
 TEST_CASE("the font set follows the interface's width")
 {

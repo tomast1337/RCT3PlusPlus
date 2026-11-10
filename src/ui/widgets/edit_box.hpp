@@ -41,7 +41,7 @@ namespace rct3::ui
         std::u16string text;
         std::string skin;         ///< Stretched behind the text; none when empty
         std::string focused_skin; ///< Instead of `skin` while the box has the keyboard focus
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
         Color disabled_text_colour = hex("#7f7f7f");
         Color caret_colour = hex("#000000");

@@ -13,7 +13,7 @@
 // place of the shared one.
 #pragma once
 
-#include "ui/font_set.hpp"
+#include "ui/font/set.hpp"
 
 #include <array>
 #include <optional>
@@ -21,7 +21,7 @@
 #include <string_view>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::font
 {
 
     /// The widths there are sets for, smallest first.
@@ -72,4 +72,4 @@ namespace rct3::ui
         }
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::font

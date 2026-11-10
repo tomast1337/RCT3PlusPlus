@@ -30,7 +30,7 @@ namespace rct3::ui
         float icon_fit = 0;                 ///< Above 0: units the icon's longer side is drawn at, whatever its own size
         Color icon_colour = hex("#ffffff"); ///< Multiplies the icon while enabled
         std::u16string text;
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
         Color disabled_text_colour = hex("#7f7f7f");
         Rect text_inset; ///< Taken off each side before centring the text, e.g. to leave out a skin's shadow

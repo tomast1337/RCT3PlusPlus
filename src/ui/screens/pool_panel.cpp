@@ -37,7 +37,7 @@ namespace rct3::ui
         // Spans the screen so its parts can sit by its corner; it lets the pointer through elsewhere.
         placement = fill();
         body_ = &add<Widget>("body");
-        status_ = &add<Label>("status", std::u16string { }, FontRole::Small);
+        status_ = &add<Label>("status", std::u16string { }, font::FontRole::Small);
         status_->style.colour = style_.text_colour;
         status_->style.vertical = Align::Centre;
         close_ = &add<Button>("close", std::string { }, style_.close_icon);

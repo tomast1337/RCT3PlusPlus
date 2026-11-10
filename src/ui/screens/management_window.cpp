@@ -82,7 +82,7 @@ namespace rct3::ui
 
         float y = 0;
         const auto label = [&](std::string name, const std::u16string& text, Placement placement, Color colour, Align align = Align::Start) {
-            Label& l = lines_->add<Label>(std::move(name), text, FontRole::Small);
+            Label& l = lines_->add<Label>(std::move(name), text, font::FontRole::Small);
             l.placement = placement;
             l.style.colour = colour;
             l.style.horizontal = align;
@@ -160,7 +160,7 @@ namespace rct3::ui
             for (std::size_t k = 0; k < axis_.size(); ++k)
             {
                 const auto [anchor, offset] = down(static_cast<float>(k) / 4);
-                Label& number = lines_->add<Label>(std::format("axis{}", k), std::u16string { }, FontRole::Tiny);
+                Label& number = lines_->add<Label>(std::format("axis{}", k), std::u16string { }, font::FontRole::Tiny);
                 number.placement = { { 0, anchor, 0, anchor }, { 0, offset - style_.line_height / 2, style_.axis_width - style_.gap / 2, offset + style_.line_height / 2 } };
                 number.style.colour = style_.text_colour;
                 number.style.horizontal = Align::End;
@@ -177,7 +177,7 @@ namespace rct3::ui
                 // Across the plot, which starts axis_width in from the page's left.
                 const float across = plot_x(t.back, plot.span(), 1);
                 const float x = style_.axis_width * (1 - across);
-                Label& word = lines_->add<Label>(std::format("mark{}", k), t.label, FontRole::Tiny);
+                Label& word = lines_->add<Label>(std::format("mark{}", k), t.label, font::FontRole::Tiny);
                 word.placement = { { across, under_anchor, across, under_anchor }, { x - 30, under + 1, x + 30, under + 1 + style_.line_height } };
                 word.style.colour = style_.text_colour;
                 word.style.horizontal = Align::Centre;
@@ -195,7 +195,7 @@ namespace rct3::ui
                 tick.placement = { { column / across, under_anchor, column / across, under_anchor }, { 0, row_top + (style_.line_height - style_.tick_size) / 2, style_.tick_size, row_top + (style_.line_height + style_.tick_size) / 2 } };
                 tick.ticked = !std::ranges::contains(hidden_, shown.graph[i].key);
                 series_ticks_.push_back(&tick);
-                Label& name = lines_->add<Label>(key, shown.graph[i].name, FontRole::Small);
+                Label& name = lines_->add<Label>(key, shown.graph[i].name, font::FontRole::Small);
                 name.placement = { { column / across, under_anchor, (column + 1) / across, under_anchor }, { style_.tick_size + 4, row_top, 0, row_top + style_.line_height } };
                 name.style.colour = colour;
             }
@@ -207,7 +207,7 @@ namespace rct3::ui
         {
             if (y > 0)
                 y += style_.gap / 2;
-            Label& note = lines_->add<Label>("note", shown.note, FontRole::Small);
+            Label& note = lines_->add<Label>("note", shown.note, font::FontRole::Small);
             note.placement = band(0, 1, y, style_.line_height);
             note.style.colour = style_.text_colour;
             note.style.wrap = true;

@@ -37,7 +37,7 @@ namespace rct3::ui
         SpinnerStyle spinner;
         std::string key_box; ///< Skins of the key boxes
         std::string key_box_focused;
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
         Color disabled_colour = hex("#7f7f7f"); ///< Of the names of rows that cannot be used
         float left = 5;                         ///< Where names start

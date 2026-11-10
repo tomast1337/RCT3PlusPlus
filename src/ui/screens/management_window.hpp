@@ -42,7 +42,7 @@ namespace rct3::ui
         float tab_bar_height = 25;
         float caption_x = 59; ///< Right of the window's icon, under the title
         float caption_height = 20;
-        FontRole caption_font = FontRole::Small;
+        font::FontRole caption_font = font::FontRole::Small;
         Color caption_colour = hex("#2484be");
         Color text_colour = hex("#000000");
         Color heading_colour = hex("#2484be"); ///< Of a line that has no value: a heading over the lines below it

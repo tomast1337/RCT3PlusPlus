@@ -125,7 +125,7 @@ namespace rct3::scene
                     text += u"\n\n" + std::u16string(strings.get(key));
                 auto& scroll = list.add<ui::ScrollArea>("scroll", skins::scroll_bar_style(palette_, ui::Orientation::Vertical));
                 scroll.placement = ui::fill(2);
-                auto& help = scroll.content().add<ui::Label>("help", std::move(text), ui::FontRole::Small);
+                auto& help = scroll.content().add<ui::Label>("help", std::move(text), ui::font::FontRole::Small);
                 help.placement = ui::fill(4);
                 help.style.wrap = true;
                 list.clip_children = true;
@@ -154,7 +154,7 @@ namespace rct3::scene
                     tick.placement = ui::top_left(0, y + 3, 12, 12);
                     tick.ticked = i == 0;
                     tick.tooltip = strings.get(kOptionTips[i]);
-                    auto& label = page.add<ui::Label>(std::format("{}_label", kOptionKeys[i]), std::u16string(strings.get(kOptionKeys[i])), ui::FontRole::Small);
+                    auto& label = page.add<ui::Label>(std::format("{}_label", kOptionKeys[i]), std::u16string(strings.get(kOptionKeys[i])), ui::font::FontRole::Small);
                     label.placement = { { 0, 0, 1, 0 }, { 18, y, -30, y + kRowHeight } };
                     label.style.vertical = ui::Align::Centre;
                 }
@@ -168,7 +168,7 @@ namespace rct3::scene
                 volume_->maximum = 100;
                 volume_->set_value(70);
                 volume_->placement = { { 0, 0, 1, 0 }, { 0, y, -50, y + kRowHeight } };
-                volume_label_ = &page.add<ui::Label>("volume_value", u"", ui::FontRole::Small);
+                volume_label_ = &page.add<ui::Label>("volume_value", u"", ui::font::FontRole::Small);
                 volume_label_->placement = { { 1, 0, 1, 0 }, { -44, y, 0, y + kRowHeight } };
                 volume_label_->style.vertical = ui::Align::Centre;
 
@@ -177,7 +177,7 @@ namespace rct3::scene
                 guests_->step = 50;
                 guests_->set_value(500);
                 guests_->placement = ui::top_left(0, y + kRowHeight + 8, 90, 16);
-                guests_label_ = &page.add<ui::Label>("guests_label", u"guests", ui::FontRole::Small);
+                guests_label_ = &page.add<ui::Label>("guests_label", u"guests", ui::font::FontRole::Small);
                 guests_label_->placement = ui::top_left(96, y + kRowHeight + 8, 120, 16);
                 guests_label_->style.vertical = ui::Align::Centre;
 
@@ -347,7 +347,7 @@ namespace rct3::scene
     {
         demo.list.clear();
         demo.list.set_scale(scale_for(device, demo));
-        static const ui::FontSet kNoFonts;
+        static const ui::font::FontSet kNoFonts;
         ui::DrawContext context { demo.list, demo.assets.skins, demo.current_fonts != nullptr ? *demo.current_fonts : kNoFonts, demo.assets.palette };
         demo.desktop.draw(context);
         ui::render_draw_list(device, demo.assets.renderer, demo.list);

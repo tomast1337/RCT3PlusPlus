@@ -48,8 +48,8 @@ namespace rct3::ui
         Color heading_text_colour = hex("#ffffff");
         Color text_colour = hex("#000000");
         Color stripe_colour = hex("#00000010"); ///< Over every other row
-        FontRole font = FontRole::Small;
-        FontRole heading_font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
+        font::FontRole heading_font = font::FontRole::Small;
         float heading_height = 18;
         float row_height = 16;
         Rect padding { 3, 3, 3, 3 }; ///< Between the edges and the headings, rows and bar

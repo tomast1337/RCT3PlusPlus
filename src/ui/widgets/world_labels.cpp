@@ -21,7 +21,7 @@ namespace rct3::ui
 
     void WorldLabels::draw(DrawContext& context) const
     {
-        const auto font = context.fonts.get(FontRole::Small);
+        const auto font = context.fonts.get(font::FontRole::Small);
         if (!font)
             return;
         const TextStyle style { .colour = text, .horizontal = Align::Centre, .vertical = Align::Centre };

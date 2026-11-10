@@ -61,7 +61,7 @@ namespace rct3::scene
             std::optional<ui::FrontEnd> front;
         };
         std::unique_ptr<Live> live = std::make_unique<Live>();
-        const ui::FontSet* current_fonts = nullptr; ///< The set for the width of the last update
+        const ui::font::FontSet* current_fonts = nullptr; ///< The set for the width of the last update
         ui::DrawList list;
         std::optional<float> scale;                        ///< Chosen interface scale; nothing picks one from the window height
         bool fullscreen = false;                           ///< As last applied

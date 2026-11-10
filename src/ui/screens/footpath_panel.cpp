@@ -68,12 +68,12 @@ namespace rct3::ui
             controls_.at(i) = &b;
         }
         usable_.fill(true);
-        text_ = &body_->add<Label>("text", std::u16string { }, FontRole::Small);
+        text_ = &body_->add<Label>("text", std::u16string { }, font::FontRole::Small);
         text_->style.colour = style_.page_text_colour;
         text_->style.vertical = Align::Centre;
-        style_name_ = &body_->add<Label>("style_name", std::u16string { }, FontRole::Small);
+        style_name_ = &body_->add<Label>("style_name", std::u16string { }, font::FontRole::Small);
         style_name_->style.colour = style_.page_text_colour;
-        status_line_ = &add<Label>("status", std::u16string { }, FontRole::Small);
+        status_line_ = &add<Label>("status", std::u16string { }, font::FontRole::Small);
         status_line_->style.colour = style_.text_colour;
         status_line_->style.vertical = Align::Centre;
         close_ = &add<Button>("close", std::string { }, style_.close_icon);

@@ -29,7 +29,7 @@ namespace rct3::ui::loading_screen
             return s;
         }
 
-        void draw_line(DrawList& list, const Font* font, std::u16string_view text, const Rect& box, Color colour, Align horizontal)
+        void draw_line(DrawList& list, const font::Font* font, std::u16string_view text, const Rect& box, Color colour, Align horizontal)
         {
             if (font && !text.empty())
                 draw_text(list, *font, text, box, { .colour = colour, .horizontal = horizontal, .vertical = Align::Centre });

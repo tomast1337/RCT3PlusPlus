@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/font.hpp"
+#include "ui/font/font.hpp"
 
 #include "core/maybe.hpp"
 
 #include <algorithm>
 
-namespace rct3::ui
+namespace rct3::ui::font
 {
 
     Font Font::from(const ovl::Font& font, std::span<const Page> pages)
@@ -108,4 +108,4 @@ namespace rct3::ui
         return glyphs_[it->second];
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::font

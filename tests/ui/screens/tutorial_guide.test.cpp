@@ -2,7 +2,7 @@
 #include "ui/screens/tutorial_guide.hpp"
 
 #include "ui/desktop.hpp"
-#include "ui/font_set.hpp"
+#include "ui/font/set.hpp"
 #include "ui/game_style.hpp"
 
 #include <array>
@@ -10,6 +10,7 @@
 
 using namespace rct3;
 using namespace rct3::ui;
+using namespace rct3::ui::font;
 
 namespace
 {

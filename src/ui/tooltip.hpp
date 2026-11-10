@@ -19,7 +19,7 @@ namespace rct3::ui
     struct TooltipStyle
     {
         std::string skin; ///< Stretched behind the text
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         Color colour = hex("#000000");
         float delay = 0.5f;          ///< Seconds the pointer must rest before the tooltip shows
         float still_distance = 0.1f; ///< Movement up to this many units still counts as resting
@@ -53,7 +53,7 @@ namespace rct3::ui
         }
 
         /// The box the tooltip fills at `anchor`, kept inside `view`. Empty when the style's font is missing.
-        [[nodiscard]] Rect box(const TooltipStyle& style, const FontSet& fonts, const Rect& view) const;
+        [[nodiscard]] Rect box(const TooltipStyle& style, const font::FontSet& fonts, const Rect& view) const;
 
         /// Nothing when not shown.
         void draw(DrawContext& context, const TooltipStyle& style, const Rect& view) const;

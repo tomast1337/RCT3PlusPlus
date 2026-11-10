@@ -19,7 +19,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::font
 {
 
     struct Glyph
@@ -91,4 +91,4 @@ namespace rct3::ui
         std::vector<std::pair<char16_t, std::uint32_t>> index_; ///< Code to glyph, sorted by code
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::font

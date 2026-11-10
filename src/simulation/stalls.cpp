@@ -3,6 +3,7 @@
 
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"

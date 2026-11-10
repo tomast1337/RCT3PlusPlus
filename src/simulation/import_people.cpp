@@ -2,6 +2,7 @@
 #include "simulation/import_people.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/tuning.hpp"
 

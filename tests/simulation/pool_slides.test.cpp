@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/pools/pools.hpp"
 #include "simulation/coaster.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/swimming.hpp"

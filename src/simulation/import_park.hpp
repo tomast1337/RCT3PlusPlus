@@ -18,6 +18,7 @@
 #include "save/model/world.hpp"
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/stalls.hpp"
 

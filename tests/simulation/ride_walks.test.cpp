@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/ride_walks.hpp"
 
+#include "simulation/guests.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"

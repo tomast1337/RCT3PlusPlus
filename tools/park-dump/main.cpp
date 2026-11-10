@@ -14,6 +14,7 @@
 #include "save/model/people.hpp"
 #include "save/save_file.hpp"
 #include "simulation/components.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/import_people.hpp"
 
 #include <algorithm>

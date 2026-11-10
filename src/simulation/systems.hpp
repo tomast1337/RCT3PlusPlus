@@ -35,6 +35,10 @@ namespace rct3::simulation
 {
 
     class Workers;
+    enum class AgeGroup : std::uint8_t;
+    struct Draw;
+    struct Mood;
+    struct Needs;
 
     inline constexpr float kTickSeconds = 0.25f; ///< Simulated time a step covers
     /// Farthest a guest walks off a path tile's middle, along x and z.
@@ -176,6 +180,9 @@ namespace rct3::simulation
 
     /// Stands `pose` where `s` has got to between its two tiles, in its lanes, on the path's surface.
     void place(const PathNetwork& paths, const Stride& s, Pose& pose);
+
+    /// Where guests come into `ride`'s station `station` (0 the first).
+    [[nodiscard]] NodeId entrance_of(const entt::registry& r, entt::entity ride, std::size_t station);
 
     /// Where riders come off `ride` on to the paths at its station `station` (0 the first).
     [[nodiscard]] NodeId exit_of(const entt::registry& r, entt::entity ride, std::size_t station = 0);

@@ -17,6 +17,7 @@
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/crowds.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/park/messages.hpp"
 #include "simulation/parties.hpp"

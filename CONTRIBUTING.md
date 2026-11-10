@@ -42,7 +42,7 @@ the tools that use it only. It needs no audio package and no device to build or 
 loads ALSA, PulseAudio or JACK at run time, and falls back to its null backend when there is none.
 The game's music is Windows Media Audio, and the first release's startup movies Windows Media Video 9, both
 decoded by [a cut of FFmpeg](third_party/ffmpeg/) (LGPL-2.1-or-later) holding only those decoders, vendored
-and built into the binary.
+and built into the binary. On Windows the decoders are Media Foundation's, and FFmpeg is not built.
 
 The viewer's window comes from [GLFW](third_party/glfw/), vendored and built into the binary too. On Linux it
 has both the X11 and the Wayland back end and opens their libraries at run time; building needs only their

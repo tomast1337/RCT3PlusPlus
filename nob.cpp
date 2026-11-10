@@ -21,8 +21,8 @@
 // only. It needs no audio device or system audio package.
 //
 // Platform files: a source whose name (up to its first dot) ends in _windows is built only when nob itself is
-// built for Windows, one ending in _linux only on Linux, and one ending in _ffmpeg only when not on Windows;
-// Windows skips the FFmpeg cut too.
+// built for Windows (Media Foundation), one ending in _linux only on Linux, and one ending in _ffmpeg only when not
+// on Windows; Windows skips the FFmpeg cut and needs no FFmpeg download.
 //
 // -j N (or --jobs N) limits how many compilers run at once, to keep a build from taking the whole machine;
 // without it, NOB_JOBS does the same, and by default there is one per core, fewer when memory is short.
@@ -513,43 +513,6 @@ namespace
         return !ec;
     }
 
-#ifdef _WIN32
-    // The FFmpeg cut's config.h is configure output from Linux. On Windows the C library differs, so the build runs
-    // FFmpeg's own configure over the pinned source, once, and compiles the cut against the config.h it writes.
-    const Download kFfmpegSource { "https://github.com/FFmpeg/FFmpeg/archive/db69d06eeeab4f46da15030a80d539efb4503ca8.tar.gz", "173ba614d8636491106cba08d79db469b5dee4b479388bc4fbcead8ca1fb79b1", "ffmpeg-db69d06.tar.gz" };
-
-    // The flags of third_party/ffmpeg/README, plus --disable-w32threads: the cut has no threading code.
-    constexpr std::string_view kFfmpegConfigureFlags = "--disable-everything --disable-programs --disable-doc --disable-network --disable-autodetect "
-                                                       "--disable-asm --disable-x86asm --disable-inline-asm --disable-pthreads --disable-w32threads "
-                                                       "--disable-avdevice --disable-avformat --disable-swscale --disable-swresample --disable-avfilter "
-                                                       "--disable-iconv --enable-decoder=wmv3,wmav1,wmav2 --disable-hwaccels --disable-debug --enable-small";
-
-    // Runs FFmpeg's configure into build/ffmpeg unless config.h is there, and returns that folder in `dir`.
-    bool ffmpeg_windows_config(fs::path& dir)
-    {
-        dir = kBuildDir / "ffmpeg";
-        if (fs::exists(dir / "config.h"))
-            return true;
-        if (!fetch_one(kFfmpegSource))
-            return false;
-        const fs::path source = kDownloadDir / "ffmpeg-db69d06";
-        if (!fs::exists(source / "configure"))
-        {
-            if (!mkdir_p(source))
-                return false;
-            Cmd unpack;
-            unpack << "tar" << "-xzf" << (kDownloadDir / kFfmpegSource.file).generic_string() << "--strip-components=1" << "-C" << source.generic_string();
-            if (!run(unpack))
-                return false;
-        }
-        if (!mkdir_p(dir))
-            return false;
-        Cmd configure;
-        configure << "sh" << "-c" << std::format("cd '{}' && '{}/configure' {}", dir.generic_string(), fs::absolute(source).generic_string(), kFfmpegConfigureFlags);
-        return run(configure);
-    }
-#endif
-
     bool compile_audio(const Config& cfg, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
     {
         std::vector<fs::path> sources;
@@ -600,8 +563,9 @@ namespace
     Config with_audio_link(Config cfg)
     {
 #ifdef _WIN32
-        // No libdl on Windows; miniaudio loads its backends with LoadLibrary there.
-        cfg.link_flags.insert(cfg.link_flags.end(), { "-lpthread", "-lm" });
+        // No libdl on Windows; miniaudio loads its backends with LoadLibrary there. The WMA and WMV decoders
+        // are Media Foundation's.
+        cfg.link_flags.insert(cfg.link_flags.end(), { "-lpthread", "-lm", "-lmfplat", "-lmfuuid", "-lwmcodecdspuuid", "-lole32" });
 #else
         cfg.link_flags.insert(cfg.link_flags.end(), { "-ldl", "-lpthread", "-lm" });
 #endif

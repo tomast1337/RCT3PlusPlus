@@ -23,7 +23,24 @@ namespace rct3::scene::park
 {
 
     struct ParkScene;
-    struct ViewLines;
+
+    /// Lines over the ground in buffers for drawing (park/view_lines.hpp), made when first shown and again
+    /// when the ground changes.
+    struct ViewLines
+    {
+        render::BufferHandle vertices;
+        render::BufferHandle indices;
+        std::uint32_t count = 0;
+        bool stale = true; ///< The ground changed since they were made
+    };
+
+    /// An amount of money floating up from a point of the park.
+    struct FloatingMoney
+    {
+        glm::vec3 at { 0.0f };
+        std::int64_t amount = 0; ///< Hundredths; above 0 for money in
+        float age = 0;           ///< Seconds
+    };
 
     /// Makes the grid and contours the view menu shows, and drops those it hides.
     void update_view_lines(render::Device& device, ParkScene& scene);

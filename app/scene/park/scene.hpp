@@ -50,12 +50,14 @@
 #include "scene/park/deleting.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/glow.hpp"
+#include "scene/park/holding.hpp"
 #include "scene/park/lens.hpp"
 #include "scene/park/map_view.hpp"
 #include "scene/park/occlusion.hpp"
 #include "scene/park/particles.hpp"
 #include "scene/park/rain.hpp"
 #include "scene/park/supports.hpp"
+#include "scene/park/view.hpp"
 #include "scene/park/water.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/save_browser.hpp"
@@ -200,16 +202,6 @@ namespace rct3::scene::park
         glm::vec2 side { 0.0f };
     };
 
-    /// Lines over the ground in buffers for drawing (park/view_lines.hpp), made when first shown and again
-    /// when the ground changes.
-    struct ViewLines
-    {
-        render::BufferHandle vertices;
-        render::BufferHandle indices;
-        std::uint32_t count = 0;
-        bool stale = true; ///< The ground changed since they were made
-    };
-
     /// The enclosure list's fence tool out (scene/enclosure_tools.hpp): a drag marks tiles into an enclosure, or
     /// with the delete tool out of one. Or an animal from the animal list, put down where the button goes up.
     struct EnclosureTool
@@ -280,14 +272,6 @@ namespace rct3::scene::park
         std::vector<std::optional<std::array<float, 4>>> trail_ground; ///< By trail step, the ground's corners before its piece, when known
     };
 
-    /// An amount of money floating up from a point of the park (scene/park/view.hpp).
-    struct FloatingMoney
-    {
-        glm::vec3 at { 0.0f };
-        std::int64_t amount = 0; ///< Hundredths; above 0 for money in
-        float age = 0;           ///< Seconds
-    };
-
     /// Objects' shapes in buffers for drawing, and their billboards, turned whenever the eye moves. For crossing
     /// objects, the buffers hold CrossingVertex, and `bands` each billboard corner's band and side.
     struct ShownObjects
@@ -312,15 +296,6 @@ namespace rct3::scene::park
     {
         rct3::park::MovingMeshes riders;
         std::vector<std::size_t> cars;
-    };
-
-    /// A person the player holds under the pointer (scene/park/holding.hpp).
-    struct HeldPerson
-    {
-        entt::entity who = entt::null;
-        glm::vec3 from { 0.0f };       ///< Where they go if given back: where picked up, or a hire to the entrance
-        std::optional<glm::vec3> spot; ///< The ground or path under the pointer
-        bool allowed = false;          ///< They may be let go there
     };
 
     /// Ways of going on foot, as simulation::Gait numbers them.

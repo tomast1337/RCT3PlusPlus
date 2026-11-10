@@ -47,6 +47,7 @@
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 #include "scene/enclosure_tools.hpp"
+#include "scene/park/attraction_state.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/glow.hpp"
 #include "scene/park/map_view.hpp"

@@ -28,6 +28,7 @@
 #include "profiling/profiler.hpp"
 #include "save/model/design.hpp"
 #include "save/save_file.hpp"
+#include "scene/park/attraction_state.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/particles.hpp"
 #include "scene/park/scene.hpp"

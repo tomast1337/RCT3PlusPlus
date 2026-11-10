@@ -27,9 +27,9 @@ namespace rct3::park::path
         return category != std::to_underlying(ItemCategory::Fence) && !in(ItemCategory::EnclosureFence, ItemCategory::EnclosureView) && !in(ItemCategory::SupportColumn, ItemCategory::SupportCap) && !in(ItemCategory::PathPiece, ItemCategory::GuestSpawn) && !in(ItemCategory::LitterBin, ItemCategory::PathFeature);
     }
 
-    void add_path_decks(SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    void add_path_decks(SolidTiles& solids, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid)
     {
-        for (const save::PathTile& path : paths)
+        for (const save::model::PathTile& path : paths)
         {
             std::optional<float> deck;
             for (const Side side : kSides)
@@ -40,10 +40,10 @@ namespace rct3::park::path
         }
     }
 
-    SolidTiles solid_tiles(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid)
+    SolidTiles solid_tiles(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid)
     {
         SolidTiles out;
-        for (const save::PlacedObject& o : objects)
+        for (const save::model::PlacedObject& o : objects)
         {
             if (o.hidden)
                 continue;
@@ -104,7 +104,7 @@ namespace rct3::park::path
         return out;
     }
 
-    bool blocked(const SolidTiles& solids, save::Tile spot, float low, float high)
+    bool blocked(const SolidTiles& solids, save::model::Tile spot, float low, float high)
     {
         const auto found = solids.tiles.find(key_of(spot.col, spot.row));
         if (found == solids.tiles.end())
@@ -113,12 +113,12 @@ namespace rct3::park::path
         return std::ranges::any_of(found->second, [&](const SolidSpan& s) { return (s.room & kWholeTile) != 0 && s.low - s.below < high + kPathHeadroom && low < s.high + s.above; });
     }
 
-    Clash clash(const SolidTiles& mine, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    Clash clash(const SolidTiles& mine, const SolidTiles& solids, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid)
     {
         constexpr float kTopSlack = 0.05f; // An item may rest on another's top
         for (const auto& [key, spans] : mine.tiles)
         {
-            const save::Tile tile { static_cast<std::int32_t>(key & 0xFFFF), static_cast<std::int32_t>(key >> 16) };
+            const save::model::Tile tile { static_cast<std::int32_t>(key & 0xFFFF), static_cast<std::int32_t>(key >> 16) };
             const auto there = solids.tiles.find(key);
             for (const SolidSpan& s : spans)
             {
@@ -129,7 +129,7 @@ namespace rct3::park::path
                     }))
                     return Clash::Solid;
             }
-            for (const save::PathTile& path : paths)
+            for (const save::model::PathTile& path : paths)
             {
                 // shortcut: a path's height is taken at one edge, so a slope's lower end may pass under an item;
                 // take its lowest edge if that shows.
@@ -141,7 +141,7 @@ namespace rct3::park::path
         return Clash::None;
     }
 
-    std::optional<Refused> first_refused(std::span<const save::PlacedObject> items, const object::ObjectModels& models, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    std::optional<Refused> first_refused(std::span<const save::model::PlacedObject> items, const object::ObjectModels& models, const SolidTiles& solids, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid)
     {
         constexpr float kGroundSlack = 0.05f; // Standing on the ground is not above it
         for (std::size_t i = 0; i < items.size(); ++i)
@@ -150,9 +150,9 @@ namespace rct3::park::path
             const auto owned = [&](std::int32_t col, std::int32_t row, std::span<const SolidSpan> spans) {
                 if (!grid.contains(col, row))
                     return false;
-                const save::TerrainCell& cell = grid.at(col, row);
+                const save::model::TerrainCell& cell = grid.at(col, row);
                 const bool above = !spans.empty() && std::ranges::all_of(spans, [&](const SolidSpan& s) { return s.low > cell.max_height() + kGroundSlack; });
-                return cell.ownership() == save::Ownership::Owned || (cell.ownership() == save::Ownership::OwnedRights && above);
+                return cell.ownership() == save::model::Ownership::Owned || (cell.ownership() == save::model::Ownership::OwnedRights && above);
             };
             // An item without solid squares, by the tile it stands on.
             bool unowned = mine.tiles.empty() && !owned(items[i].col, items[i].row, { });

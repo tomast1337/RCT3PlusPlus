@@ -22,7 +22,7 @@ namespace rct3::park
         constexpr std::size_t kChannels = 4;
     } // namespace
 
-    std::vector<QueueSignSpot> queue_sign_spots(std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    std::vector<QueueSignSpot> queue_sign_spots(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid)
     {
         std::map<std::uint64_t, std::vector<std::size_t>> lines;
         for (std::size_t i = 0; i < paths.size(); ++i)
@@ -37,14 +37,14 @@ namespace rct3::park
             // show on the wrong deck of stacked queues.
             const auto led_into = [&](std::size_t tile) {
                 return std::ranges::any_of(tiles, [&](std::size_t from) {
-                    const save::PathTile& p = paths[from];
-                    return from != tile && path::stored_heading_or_bare(p.queue->end_direction).beyond({ p.col, p.row }) == save::Tile { paths[tile].col, paths[tile].row };
+                    const save::model::PathTile& p = paths[from];
+                    return from != tile && path::stored_heading_or_bare(p.queue->end_direction).beyond({ p.col, p.row }) == save::model::Tile { paths[tile].col, paths[tile].row };
                 });
             };
             const auto head = std::ranges::find_if(tiles, [&](std::size_t tile) { return !led_into(tile); });
             if (head == tiles.end())
                 continue;
-            const save::PathTile& p = paths[*head];
+            const save::model::PathTile& p = paths[*head];
             const auto side = path::stored_heading(p.queue->start_direction);
             if (!side)
                 continue;

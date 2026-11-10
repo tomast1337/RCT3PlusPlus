@@ -138,9 +138,9 @@ namespace rct3::simulation
         }
     }
 
-    void import_animals(SimWorld& world, std::span<const save::ZooAnimal> saved, const std::function<std::int32_t(glm::vec2)>& enclosure)
+    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::int32_t(glm::vec2)>& enclosure)
     {
-        for (const save::ZooAnimal& z : saved)
+        for (const save::model::ZooAnimal& z : saved)
         {
             // Its model's place: rows of the x, y and z axes, then the position.
             const glm::vec3 at { z.world[12], z.world[13], z.world[14] };

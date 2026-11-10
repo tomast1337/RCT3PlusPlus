@@ -16,7 +16,7 @@ namespace
 
 TEST_CASE("awards wait for the scenario to let them begin, then come once in five months")
 {
-    save::Awards awards { .available_mask = ~0u, .months_before_start = 1 };
+    save::model::Awards awards { .available_mask = ~0u, .months_before_start = 1 };
     random::RandomState dice = random::seeded({ });
     CHECK(simulation::award_month(awards, toilets(), dice).empty());
     CHECK(awards.months_before_start == 0);
@@ -30,7 +30,7 @@ TEST_CASE("awards wait for the scenario to let them begin, then come once in fiv
     CHECK(simulation::award_month(awards, toilets(), dice) == std::vector { 11 });
 
     // Not offered by the scenario, it is never given.
-    save::Awards none { .available_mask = ~(1u << 11) };
+    save::model::Awards none { .available_mask = ~(1u << 11) };
     CHECK(simulation::award_month(none, toilets(), dice).empty());
 }
 
@@ -101,10 +101,10 @@ TEST_CASE("dangerous happenings bring fines, coasters weighing more than pools")
 TEST_CASE("a ride or stall carries a theme when enough of its scenery stands round it")
 {
     const std::vector<park::BuildItem> catalogue { { .symbol = "Grave", .overlay = "Style/Themed/Gloom/Style", .width = 4, .length = 4, .style_index = 9, .style = "Gloom" } };
-    save::RideModel rides;
+    save::model::RideModel rides;
     for (const std::int32_t col : { 10, 90 })
-        rides.stalls.push_back({ .base = { .id = static_cast<save::ObjectId>(col), .overlay_path = "Style\\Themed\\Gloom\\Style", .spot = save::PlacementSpot { .col = col, .row = 10 } } });
-    std::vector<save::PlacedObject> objects;
+        rides.stalls.push_back({ .base = { .id = static_cast<save::model::ObjectId>(col), .overlay_path = "Style\\Themed\\Gloom\\Style", .spot = save::model::PlacementSpot { .col = col, .row = 10 } } });
+    std::vector<save::model::PlacedObject> objects;
     for (std::int32_t i = 0; i < 6; ++i)
         objects.push_back({ .id = 100 + static_cast<std::uint64_t>(i), .symbol = "Grave:svd", .overlay = "Style\\Themed\\Gloom\\Style", .col = 12 + i % 2, .row = 8 + i });
     // Only the stall among the graves carries the theme.

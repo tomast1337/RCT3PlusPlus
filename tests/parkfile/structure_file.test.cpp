@@ -9,7 +9,7 @@ using namespace rct3;
 
 TEST_CASE("a structure file reads back the structure written")
 {
-    const save::Structure s {
+    const save::model::Structure s {
         .name = "Arch",
         .cols = 2,
         .rows = 1,
@@ -31,7 +31,7 @@ TEST_CASE("a structure file reads back the structure written")
 
 TEST_CASE("a structure file whose tiles do not fit its box, or a cut one, is refused")
 {
-    const save::Structure bad { .name = "Bad", .cols = 3, .rows = 2, .tiles = { 1 } };
+    const save::model::Structure bad { .name = "Bad", .cols = 3, .rows = 2, .tiles = { 1 } };
     CHECK_FALSE(parkfile::read_structure_file(parkfile::write_structure_file(bad)));
     auto bytes = parkfile::write_structure_file({ .name = "Ok", .cols = 1, .rows = 1, .tiles = { 1 } });
     REQUIRE(parkfile::read_structure_file(bytes));

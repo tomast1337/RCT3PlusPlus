@@ -116,7 +116,7 @@ int main(int argc, char** argv)
             return 1;
         }
         const save::ObjectIndex index(*file);
-        const auto people = save::load_people(*file, index);
+        const auto people = save::model::load_people(*file, index);
         if (!people)
         {
             out.error("{}: people: {}", path, save::to_string(people.error()));

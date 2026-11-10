@@ -31,10 +31,10 @@ namespace rct3::park
         float gloom = 0;
         bool lightning = false;
     };
-    [[nodiscard]] WeatherAim weather_aim(save::WeatherType type);
+    [[nodiscard]] WeatherAim weather_aim(save::model::WeatherType type);
 
     /// Moves the look `seconds` on towards weather `type`. True when a stroke's thunder is to be heard now.
-    bool advance_weather_look(WeatherLook& look, save::WeatherType type, float seconds, random::RandomState& dice);
+    bool advance_weather_look(WeatherLook& look, save::model::WeatherType type, float seconds, random::RandomState& dice);
 
     /// Light of `colour` as the look leaves it: greyer and dimmer the gloomier, whiter in a flash. `strength`
     /// is how much the gloom takes from it, 1 for direct sunlight that the clouds hide most.

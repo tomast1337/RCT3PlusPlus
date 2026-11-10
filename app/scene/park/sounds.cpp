@@ -197,7 +197,7 @@ namespace rct3::scene::park
         }
         // The rain's loop for the weather, as loud as the rain shows hard; a stroke's thunder when it comes.
         {
-            using save::WeatherType;
+            using save::model::WeatherType;
             const WeatherType w = scene.park.weather;
             const std::size_t loop = w == WeatherType::LightRain ? 0 : w == WeatherType::HeavyRain ? 1 : w == WeatherType::Thunderstorm ? 2 : sounds.rain.size();
             const float level = quiet || scene.water.eye_in ? 0.0f : kRainLevel * scene.weather_look.rain;

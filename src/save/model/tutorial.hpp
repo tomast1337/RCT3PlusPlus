@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::save
+namespace rct3::save::model
 {
 
     struct TutorialStep
@@ -43,4 +43,4 @@ namespace rct3::save
     /// The save's tutorial, if it has one: the first Tutorial object.
     [[nodiscard]] std::expected<std::optional<TutorialScript>, Error> load_tutorial(const SaveFile& file);
 
-} // namespace rct3::save
+} // namespace rct3::save::model

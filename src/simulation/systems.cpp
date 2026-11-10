@@ -1469,7 +1469,7 @@ namespace rct3::simulation
             // shortcut: the payroll's week runs from when the park was opened, not from the calendar's week; count from
             // the calendar if the day wages go out ever shows.
             {
-                constexpr float kSecondsPerWeek = kSecondsPerHour * save::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
+                constexpr float kSecondsPerWeek = kSecondsPerHour * save::model::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
                 auto& payroll = r.ctx().emplace<Payroll>();
                 for (payroll.week.value += dt; payroll.week.value >= kSecondsPerWeek; payroll.week.value -= kSecondsPerWeek)
                     for (const auto [e, staff] : r.view<const Staff>().each())

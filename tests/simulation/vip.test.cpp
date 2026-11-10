@@ -15,14 +15,14 @@ using namespace rct3::simulation;
 
 namespace
 {
-    constexpr float kMonth = save::GameClock::kUnitsPerMonth;
-    using T = save::VipTarget;
+    constexpr float kMonth = save::model::GameClock::kUnitsPerMonth;
+    using T = save::model::VipTarget;
 
-    save::ObjectiveSet one_goal(T target)
+    save::model::ObjectiveSet one_goal(T target)
     {
-        save::ObjectiveSet set;
+        save::model::ObjectiveSet set;
         set.objectives = { { .difficulty = 0 } };
-        set.conditions = { { .kind = save::ConditionKind::Vip, .id = 7, .vip = target } };
+        set.conditions = { { .kind = save::model::ConditionKind::Vip, .id = 7, .vip = target } };
         return set;
     }
 

@@ -101,7 +101,7 @@ namespace rct3::scene::park
             {
             }
 
-            std::optional<std::uint32_t> of(const save::AttractionCommon& a, bool stall)
+            std::optional<std::uint32_t> of(const save::model::AttractionCommon& a, bool stall)
             {
                 const std::string key = std::format("{}|{}", a.overlay_path, a.symbol);
                 if (const auto known = types_.find(key); known != types_.end())
@@ -112,7 +112,7 @@ namespace rct3::scene::park
             }
 
         private:
-            std::optional<std::uint32_t> read(const save::AttractionCommon& a, bool stall)
+            std::optional<std::uint32_t> read(const save::model::AttractionCommon& a, bool stall)
             {
                 const ovl::Overlay* overlay = open(a.overlay_path);
                 if (overlay == nullptr)
@@ -238,13 +238,13 @@ namespace rct3::scene::park
 
     } // namespace
 
-    ParkMap park_map(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water, std::span<const save::PlacedObject> objects, const rct3::park::object::ObjectModels& models, const rct3::park::object::Fitted& fitted, const rct3::park::AttractionObjects& attractions, const save::RideModel& rides, const rct3::park::ground::GroundImages& images, const config::GameInstall& install)
+    ParkMap park_map(const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const save::model::WaterLayer& water, std::span<const save::model::PlacedObject> objects, const rct3::park::object::ObjectModels& models, const rct3::park::object::Fitted& fitted, const rct3::park::AttractionObjects& attractions, const save::model::RideModel& rides, const rct3::park::ground::GroundImages& images, const config::GameInstall& install)
     {
         const profiling::Scope zone("Map");
         ParkMap map;
         map.features = rct3::park::map_features(grid, paths, water);
         AttractionTypes types(install);
-        const auto layer_of = [&](const save::PlacedObject& o) -> std::optional<rct3::park::MapLayer> {
+        const auto layer_of = [&](const save::model::PlacedObject& o) -> std::optional<rct3::park::MapLayer> {
             const auto owner = attractions.find(o.id);
             if (owner == attractions.end())
             {
@@ -256,7 +256,7 @@ namespace rct3::scene::park
             const rct3::park::AttractionRef& ref = owner->second;
             if (ref.kind == rct3::park::AttractionRef::Kind::Stall && ref.index < rides.stalls.size())
                 return rct3::park::attraction_layer(types.of(rides.stalls[ref.index].base, true));
-            if (ref.kind == rct3::park::AttractionRef::Kind::Ride && ref.index < rides.rides.size() && rides.rides[ref.index].kind == save::RideKind::Special)
+            if (ref.kind == rct3::park::AttractionRef::Kind::Ride && ref.index < rides.rides.size() && rides.rides[ref.index].kind == save::model::RideKind::Special)
                 return rct3::park::attraction_layer(types.of(rides.rides[ref.index].base, false));
             return rct3::park::MapLayer::Rides;
         };
@@ -290,7 +290,7 @@ namespace rct3::scene::park
         map.since_people = 1e9f;
     }
 
-    std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::TerrainGrid& grid, const rct3::park::ParkCamera& camera, float aspect, const std::function<rct3::park::MapPeople()>& people, float elapsed)
+    std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::model::TerrainGrid& grid, const rct3::park::ParkCamera& camera, float aspect, const std::function<rct3::park::MapPeople()>& people, float elapsed)
     {
         auto panel = desktop.root().find_as<ui::screens::MapPanel>(kMapName);
         if (!panel || panel->closing() || grid.empty())

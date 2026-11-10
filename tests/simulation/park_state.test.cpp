@@ -7,17 +7,17 @@ using namespace rct3;
 
 TEST_CASE("a park starts from what its save holds")
 {
-    save::ParkModel park;
+    save::model::ParkModel park;
     park.has_finance = true;
     park.finance.cash = 123456;
     park.finance.loan = 5000;
     park.has_park = true;
     park.park.guests_in_park.samples = { 41.6f, 10.0f }; // Newest first
     park.park.park_rating.samples = { 250.0f };
-    save::WorldModel world;
-    world.weather = save::Weather { };
-    world.weather->type = save::WeatherType::Cloudy;
-    world.weather->forecast = save::WeatherType::LightRain;
+    save::model::WorldModel world;
+    world.weather = save::model::Weather { };
+    world.weather->type = save::model::WeatherType::Cloudy;
+    world.weather->forecast = save::model::WeatherType::LightRain;
     world.weather->temperature = 19.5f;
 
     const simulation::ParkState s = simulation::park_state(&park, world);
@@ -26,33 +26,33 @@ TEST_CASE("a park starts from what its save holds")
     CHECK(s.guests == 42);
     REQUIRE(s.rating);
     CHECK(*s.rating == doctest::Approx(0.25f));
-    CHECK(s.weather == save::WeatherType::Cloudy);
-    CHECK(s.forecast == save::WeatherType::LightRain);
+    CHECK(s.weather == save::model::WeatherType::Cloudy);
+    CHECK(s.forecast == save::model::WeatherType::LightRain);
     CHECK(s.temperature == 19.5f);
     CHECK(s.speed == simulation::GameSpeed { });
 }
 
 TEST_CASE("unlimited money has no amount, and a missing park leaves defaults")
 {
-    save::ParkModel park;
+    save::model::ParkModel park;
     park.has_finance = true;
-    park.finance.flags = save::Finance::kUnlimitedCash;
+    park.finance.flags = save::model::Finance::kUnlimitedCash;
     park.finance.cash = 99;
     CHECK_FALSE(simulation::park_state(&park, { }).cash);
 
     const simulation::ParkState none = simulation::park_state(nullptr, { });
     CHECK_FALSE(none.cash);
     CHECK_FALSE(none.rating);
-    CHECK(none.weather == save::WeatherType::Unknown);
+    CHECK(none.weather == save::model::WeatherType::Unknown);
     CHECK_FALSE(none.temperature);
 }
 
 TEST_CASE("the calendar runs on with game time, a whole day of the clock taking more than a month")
 {
-    save::ParkModel park;
+    save::model::ParkModel park;
     park.has_clock = true;
-    park.clock.time = save::GameClock::kUnitsPerMonth * 7 + save::GameClock::kUnitsPerWeek * 3; // Last week of the year
-    simulation::ParkState s = simulation::park_state(&park, save::WorldModel { });
+    park.clock.time = save::model::GameClock::kUnitsPerMonth * 7 + save::model::GameClock::kUnitsPerWeek * 3; // Last week of the year
+    simulation::ParkState s = simulation::park_state(&park, save::model::WorldModel { });
     CHECK(s.date.month == 7);
     CHECK(s.date.year == 0);
 
@@ -64,8 +64,8 @@ TEST_CASE("the calendar runs on with game time, a whole day of the clock taking 
     // A whole day of the clock is longer than a month of the calendar, shorter than two.
     const float before = s.time;
     simulation::pass_time(s, simulation::kSecondsPerHour * simulation::kHoursPerDay);
-    CHECK(s.time - before > save::GameClock::kUnitsPerMonth);
-    CHECK(s.time - before < 2 * save::GameClock::kUnitsPerMonth);
+    CHECK(s.time - before > save::model::GameClock::kUnitsPerMonth);
+    CHECK(s.time - before < 2 * save::model::GameClock::kUnitsPerMonth);
 
     // Paused, nothing moves.
     const float paused = s.time;
@@ -75,14 +75,14 @@ TEST_CASE("the calendar runs on with game time, a whole day of the clock taking 
 
 TEST_CASE("weeks are counted from the calendar's start, and a new week rates the park again")
 {
-    save::ParkModel park;
+    save::model::ParkModel park;
     park.has_clock = true;
     park.clock.zero_time = 50;
-    park.clock.time = 50 + save::GameClock::kUnitsPerWeek - 10;
+    park.clock.time = 50 + save::model::GameClock::kUnitsPerWeek - 10;
     park.has_park = true;
     park.park.park_rating.samples = { 900.0f };
-    park.park.flags.raw = static_cast<std::uint32_t>(save::ParkFlag::HarderRating);
-    simulation::ParkState s = simulation::park_state(&park, save::WorldModel { });
+    park.park.flags.raw = static_cast<std::uint32_t>(save::model::ParkFlag::HarderRating);
+    simulation::ParkState s = simulation::park_state(&park, save::model::WorldModel { });
     CHECK(s.harder_rating);
     CHECK_FALSE(s.rating_parts);
 
@@ -91,7 +91,7 @@ TEST_CASE("weeks are counted from the calendar's start, and a new week rates the
     CHECK(simulation::pass_time(s, simulation::kSecondsPerHour) == 1);
 
     // An empty park scores half its happiness, less the harder rating's share; the rating moves half way there.
-    simulation::rate_week(s, save::PeopleModel { }, save::RideModel { });
+    simulation::rate_week(s, save::model::PeopleModel { }, save::model::RideModel { });
     REQUIRE(s.rating_parts);
     CHECK(s.rating_parts->total == 250 - 38);
     REQUIRE(s.rating);
@@ -100,12 +100,12 @@ TEST_CASE("weeks are counted from the calendar's start, and a new week rates the
 
 TEST_CASE("the date counts its months and years from the calendar's start")
 {
-    save::ParkModel park;
+    save::model::ParkModel park;
     park.has_clock = true;
     // Started part way into an absolute month, and run for a year, a month and a week since.
     park.clock.zero_time = 1000;
-    park.clock.time = 1000 + save::GameClock::kUnitsPerYear + save::GameClock::kUnitsPerMonth + save::GameClock::kUnitsPerWeek;
-    simulation::ParkState s = simulation::park_state(&park, save::WorldModel { });
+    park.clock.time = 1000 + save::model::GameClock::kUnitsPerYear + save::model::GameClock::kUnitsPerMonth + save::model::GameClock::kUnitsPerWeek;
+    simulation::ParkState s = simulation::park_state(&park, save::model::WorldModel { });
     CHECK(s.date.year == 1);
     CHECK(s.date.month == 1);
     CHECK(s.date.week == 1);

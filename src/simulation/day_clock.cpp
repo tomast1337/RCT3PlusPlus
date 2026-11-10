@@ -28,7 +28,7 @@ namespace rct3::simulation
 
     DayWindow opening_hours(std::int32_t opening_minutes, std::int32_t closing_minutes)
     {
-        const auto fraction = [](std::int32_t minutes) { return wrapped(static_cast<float>(minutes) / static_cast<float>(save::kMinutesPerDay)); };
+        const auto fraction = [](std::int32_t minutes) { return wrapped(static_cast<float>(minutes) / static_cast<float>(save::model::kMinutesPerDay)); };
         return { fraction(opening_minutes), fraction(closing_minutes) };
     }
 

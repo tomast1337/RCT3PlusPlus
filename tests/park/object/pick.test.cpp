@@ -16,15 +16,15 @@ namespace
         return hit.transform([](const PickHit& h) { return h.index; });
     }
 
-    save::TerrainGrid flat(float height)
+    save::model::TerrainGrid flat(float height)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = 4;
         g.height = 4;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(16);
-        for (save::TerrainCell& c : g.cells)
+        for (save::model::TerrainCell& c : g.cells)
             c.corners = { height, height, height, height };
         return g;
     }
@@ -39,9 +39,9 @@ namespace
         return m;
     }
 
-    save::PlacedObject placed_object(std::uint64_t id, int col)
+    save::model::PlacedObject placed_object(std::uint64_t id, int col)
     {
-        save::PlacedObject o;
+        save::model::PlacedObject o;
         o.id = id;
         o.symbol = "Cube";
         o.overlay = "Things/Things";
@@ -55,7 +55,7 @@ namespace
         return { { x, 50, z }, { 0, -1, 0 } };
     }
 
-    const auto any = [](const save::PlacedObject&) { return true; };
+    const auto any = [](const save::model::PlacedObject&) { return true; };
 } // namespace
 
 TEST_CASE("a line meets a box where it enters it, and misses a box beside it")
@@ -71,7 +71,7 @@ TEST_CASE("a line meets a box where it enters it, and misses a box beside it")
 
 TEST_CASE("a line looking down meets the ground at its height, and nothing off the map")
 {
-    const save::TerrainGrid g = flat(3);
+    const save::model::TerrainGrid g = flat(3);
     REQUIRE(ground_hit(down_at(6, 6), g));
     CHECK(*ground_hit(down_at(6, 6), g) == doctest::Approx(47).epsilon(0.001));
     CHECK_FALSE(ground_hit(down_at(-20, 6), g));
@@ -80,10 +80,10 @@ TEST_CASE("a line looking down meets the ground at its height, and nothing off t
 
 TEST_CASE("the nearest wanted object on the line is picked")
 {
-    const save::TerrainGrid g = flat(0);
+    const save::model::TerrainGrid g = flat(0);
     ObjectModels models;
     models.emplace("Things/Things|Cube", cube());
-    const std::vector<save::PlacedObject> objects { placed_object(1, 0), placed_object(2, 1) };
+    const std::vector<save::model::PlacedObject> objects { placed_object(1, 0), placed_object(2, 1) };
     // Tile 1's middle is at x 6.
     CHECK(index_of(pick_object(down_at(6, 2), objects, models, g, { }, any)) == 1u);
     CHECK(index_of(pick_object(down_at(2, 2), objects, models, g, { }, any)) == 0u);
@@ -91,15 +91,15 @@ TEST_CASE("the nearest wanted object on the line is picked")
     // Looking along the row, the nearer one hides the farther.
     const Ray along { { -10, 1, 2 }, { 1, 0, 0 } };
     CHECK(index_of(pick_object(along, objects, models, g, { }, any)) == 0u);
-    CHECK(index_of(pick_object(along, objects, models, g, { }, [](const save::PlacedObject& o) { return o.id == 2; })) == 1u);
+    CHECK(index_of(pick_object(along, objects, models, g, { }, [](const save::model::PlacedObject& o) { return o.id == 2; })) == 1u);
 }
 
 TEST_CASE("ground in front hides an object, and a fitted object is found where it was fitted")
 {
-    save::TerrainGrid g = flat(0);
+    save::model::TerrainGrid g = flat(0);
     ObjectModels models;
     models.emplace("Things/Things|Cube", cube());
-    std::vector<save::PlacedObject> objects { placed_object(1, 1) };
+    std::vector<save::model::PlacedObject> objects { placed_object(1, 1) };
     // A hill on tile 0 stands between the line and the object.
     g.cells[0].corners = { 10, 10, 10, 10 };
     const Ray along { { -10, 1, 2 }, { 1, 0, 0 } };
@@ -112,7 +112,7 @@ TEST_CASE("ground in front hides an object, and a fitted object is found where i
 
 TEST_CASE("the nearest person on the line is picked, unless the ground is in front")
 {
-    const save::TerrainGrid g = flat(0);
+    const save::model::TerrainGrid g = flat(0);
     const std::vector<glm::mat4> people { glm::translate(glm::mat4(1.0f), glm::vec3(2, 0, 2)), glm::translate(glm::mat4(1.0f), glm::vec3(6, 0, 2)) };
     CHECK(index_of(pick_person(down_at(6, 2), people, g)) == 1u);
     CHECK_FALSE(pick_person(down_at(10, 10), people, g));
@@ -122,19 +122,19 @@ TEST_CASE("the nearest person on the line is picked, unless the ground is in fro
     CHECK(along.transform([](const PickHit& h) { return h.distance; }).value_or(-1) == doctest::Approx(12 - 0.4f));
     // Above their heads, nobody.
     CHECK_FALSE(pick_person({ { -10, 2.5f, 2 }, { 1, 0, 0 } }, people, g));
-    save::TerrainGrid hill = g;
+    save::model::TerrainGrid hill = g;
     hill.cells[0].corners = { 10, 10, 10, 10 };
     CHECK_FALSE(pick_person({ { -10, 1.5f, 2 }, { 1, 0, 0 } }, people, hill));
 }
 
 TEST_CASE("kept places and boxes are worked out again only for the objects that changed")
 {
-    save::TerrainGrid g = flat(0);
+    save::model::TerrainGrid g = flat(0);
     ObjectModels models;
     models.emplace("Things/Things|Cube", cube());
-    save::PlacedObject rock = placed_object(3, 2);
+    save::model::PlacedObject rock = placed_object(3, 2);
     rock.symbol = "Rock";
-    std::vector<save::PlacedObject> objects { placed_object(1, 0), placed_object(2, 1), rock };
+    std::vector<save::model::PlacedObject> objects { placed_object(1, 0), placed_object(2, 1), rock };
     ObjectPlaces places;
     std::vector<PickBox> boxes;
     const auto update = [&] {

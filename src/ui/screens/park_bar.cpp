@@ -76,7 +76,7 @@ namespace rct3::ui::screens
             return strings::to_utf16(s);
         }
 
-        std::size_t weather_index(save::WeatherType t)
+        std::size_t weather_index(save::model::WeatherType t)
         {
             const auto i = static_cast<std::int32_t>(t);
             return i >= 0 && i < 7 ? static_cast<std::size_t>(i) : 0;
@@ -139,7 +139,7 @@ namespace rct3::ui::screens
             v.temperature = temperature_text(*state.temperature, units.fahrenheit);
         v.weather = state.weather;
         v.forecast = state.forecast;
-        const auto minutes = static_cast<std::int32_t>(std::lround(day_time * save::kMinutesPerDay));
+        const auto minutes = static_cast<std::int32_t>(std::lround(day_time * save::model::kMinutesPerDay));
         v.date = park_bar_date(strings, state.date.month, state.date.year + 1, minutes, units.twelve_hour);
         return v;
     }
@@ -249,11 +249,11 @@ namespace rct3::ui::screens
         rating_area_->visible = rating_.has_value();
         rating_area_->tooltip = rating_ ? values.rating_help : std::u16string { };
 
-        const bool known = values.weather != save::WeatherType::Unknown;
+        const bool known = values.weather != save::model::WeatherType::Unknown;
         weather_->visible = known;
         weather_->skin = style_.weather_icons[weather_index(values.weather)];
         weather_->tooltip = known ? std::u16string(strings_.get(kWeatherHelp[weather_index(values.weather)])) : std::u16string { };
-        const bool coming = known && values.forecast && *values.forecast != values.weather && *values.forecast != save::WeatherType::Unknown;
+        const bool coming = known && values.forecast && *values.forecast != values.weather && *values.forecast != save::model::WeatherType::Unknown;
         arrow_->visible = coming;
         forecast_->visible = coming;
         if (coming)

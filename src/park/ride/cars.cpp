@@ -22,24 +22,24 @@ namespace rct3::park::ride
         return out;
     }
 
-    RideCars ride_cars(std::span<const save::Ride> rides, std::uint64_t last_id)
+    RideCars ride_cars(std::span<const save::model::Ride> rides, std::uint64_t last_id)
     {
         constexpr std::string_view kTrainTag = ":rit";
         RideCars out;
         for (std::size_t r = 0; r < rides.size(); ++r)
         {
-            const save::Ride& ride = rides[r];
+            const save::model::Ride& ride = rides[r];
             for (std::size_t t = 0; t < ride.trains.size(); ++t)
             {
-                const save::Train& train = ride.trains[t];
+                const save::model::Train& train = ride.trains[t];
                 std::string name = train.symbol;
                 if (name.ends_with(kTrainTag))
                     name.resize(name.size() - kTrainTag.size());
-                for (const save::Car& car : train.cars)
+                for (const save::model::Car& car : train.cars)
                 {
                     if (!car.position_valid || car.design_slot < 0 || name.empty())
                         continue;
-                    save::PlacedObject& o = out.pieces.emplace_back();
+                    save::model::PlacedObject& o = out.pieces.emplace_back();
                     o.id = ++last_id;
                     o.owner_ref = o.id;
                     o.overlay = train.overlay_path;

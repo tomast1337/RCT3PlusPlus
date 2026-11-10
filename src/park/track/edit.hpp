@@ -29,25 +29,25 @@ namespace rct3::park::track
 
     /// The pieces before and after the piece `piece` of `track` along its stretch, round the ends of a closed
     /// one; none for a piece at an open end, or past the track.
-    [[nodiscard]] std::optional<PieceNeighbours> piece_neighbours(const save::Track& track, std::size_t piece);
+    [[nodiscard]] std::optional<PieceNeighbours> piece_neighbours(const save::model::Track& track, std::size_t piece);
 
     /// Of `pieces`, those laid after `tip`, past the piece `last`, that end where the piece `next` starts
     /// (`goal`, as start_of gives it), leaving the way it goes, and whose end meets its start.
-    [[nodiscard]] std::vector<LaidPiece> pieces_between(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece next, const save::TerrainGrid& grid);
+    [[nodiscard]] std::vector<LaidPiece> pieces_between(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece next, const save::model::TerrainGrid& grid);
 
     /// Takes the piece `piece` out of `track`, which must have pieces either side of it (piece_neighbours),
     /// and returns it. The pieces up to it become the track's last stretch, open at the gap; the track is no
     /// longer a circuit.
-    save::TrackPiece take_out_piece(save::Track& track, std::size_t piece);
+    save::model::TrackPiece take_out_piece(save::model::Track& track, std::size_t piece);
 
     /// Joins the stretch `stretch` of `track` on after its last one, as one open stretch.
-    void join_stretch(save::Track& track, std::size_t stretch);
+    void join_stretch(save::model::Track& track, std::size_t stretch);
 
     /// Makes the stretch `stretch` of `track` its last, where building goes on.
-    void make_last(save::Track& track, std::size_t stretch);
+    void make_last(save::model::Track& track, std::size_t stretch);
 
     /// Adds `piece` to `track` at the end of the stretch `stretch`, or as a stretch of its own just before the
     /// last when none, keeping the last where building goes on. Returns the stretch it is in.
-    std::size_t add_piece(save::Track& track, std::optional<std::size_t> stretch, save::TrackPiece piece);
+    std::size_t add_piece(save::model::Track& track, std::optional<std::size_t> stretch, save::model::TrackPiece piece);
 
 } // namespace rct3::park::track

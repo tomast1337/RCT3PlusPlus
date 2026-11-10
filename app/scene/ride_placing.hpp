@@ -111,7 +111,7 @@ namespace rct3::scene
         /// Every show trick the game names, read from its main file when the first show ride is placed.
         std::optional<std::vector<std::string>> trick_names;
         /// Of a tracked ride getting a door: its station pieces, which the door stands beside
-        std::vector<save::TrackPiece> stations;
+        std::vector<save::model::TrackPiece> stations;
         /// Of those, a base standing on ground of its own (a tower's): the ground it covers, which the door goes round
         std::optional<rct3::park::ride::RideSite> base;
     };
@@ -121,7 +121,7 @@ namespace rct3::scene
     /// The highest id the park's objects, rides and stalls use; a new one takes the next.
     [[nodiscard]] std::uint64_t last_id(const park::ParkScene& scene);
     /// The tile of the ground under `at`, in a view of `size`.
-    [[nodiscard]] std::optional<save::Tile> ground_tile(const park::ParkScene& scene, ui::Point at, ui::Point size);
+    [[nodiscard]] std::optional<save::model::Tile> ground_tile(const park::ParkScene& scene, ui::Point at, ui::Point size);
 
     /// The height of something raised or sunk with Shift, the pointer's ray now being `ray`: its `height` when
     /// Shift went down with the pointer meeting the park at `at`, moved as far as the ray has moved up or down an
@@ -135,12 +135,12 @@ namespace rct3::scene
     /// Starts placing the entrance, or the `exit`, of the ride `ride` as `item` (the ride's) has it: of a tracked
     /// ride beside its `stations`, of a placed flat ride (no stations) round its ground; one placed before moves.
     /// False without stations on a tracked ride or a door in the item.
-    bool start_door_placing(park::ParkScene& scene, std::size_t ride, const rct3::park::BuildItem& item, std::vector<save::TrackPiece> stations, bool exit);
+    bool start_door_placing(park::ParkScene& scene, std::size_t ride, const rct3::park::BuildItem& item, std::vector<save::model::TrackPiece> stations, bool exit);
     /// Gives the new ride `ride` the fence of `item` (its theme's), in the fence's own colours.
-    void take_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::Ride& ride, const rct3::park::BuildItem& item);
+    void take_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Ride& ride, const rct3::park::BuildItem& item);
     /// Adds `door`, whose model is loaded, as the entrance (or `exit`) of station `station` of the tracked ride
     /// `ride`, standing at `height`, in place of the one it had.
-    void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t station, const save::PlacedObject& door, std::int32_t height, bool exit);
+    void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t station, const save::model::PlacedObject& door, std::int32_t height, bool exit);
 
     /// Puts the tool away.
     void stop_ride_placing(park::ParkScene& scene);

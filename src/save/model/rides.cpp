@@ -12,7 +12,7 @@
 #include <unordered_set>
 #include <utility>
 
-namespace rct3::save
+namespace rct3::save::model
 {
 
     namespace
@@ -1306,4 +1306,4 @@ namespace rct3::save
         return Loader(file, index).run();
     }
 
-} // namespace rct3::save
+} // namespace rct3::save::model

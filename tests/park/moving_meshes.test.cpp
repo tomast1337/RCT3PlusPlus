@@ -17,9 +17,9 @@ namespace
         return p;
     }
 
-    save::PlacedObject car(std::uint64_t id)
+    save::model::PlacedObject car(std::uint64_t id)
     {
-        save::PlacedObject o;
+        save::model::PlacedObject o;
         o.id = id;
         o.owner_ref = id;
         o.symbol = "Car";

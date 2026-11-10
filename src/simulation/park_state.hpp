@@ -31,17 +31,17 @@ namespace rct3::simulation
         /// Points a prize adds to each week's score, out of 1000, fading week by week.
         /// shortcut: not kept in the park file, so a park saved and opened again loses what is left of it.
         float rating_bonus = 0;
-        float time = 0;          ///< Calendar units since the park's calendar began, as the park file keeps them
-        float zero_time = 0;     ///< Where the calendar's weeks are counted from
-        save::CalendarDate date; ///< The calendar's date at `time`
-        save::WeatherType weather = save::WeatherType::Unknown;
-        std::optional<save::WeatherType> forecast; ///< The weather on its way
-        std::optional<float> temperature;          ///< Degrees Celsius
-        float wind = 0;                            ///< How strong the wind blows, 0 calm to 1 strong
-        std::int32_t climate = 0;                  ///< The park file's climate (simulation::Climate)
-        float weather_hold = 0;                    ///< Calendar units before the forecast arrives
-        float wind_change = 0;                     ///< How fast the wind is rising (falling when negative)
-        float wind_wait = 0;                       ///< Calendar units to the wind's next change; not saved
+        float time = 0;                 ///< Calendar units since the park's calendar began, as the park file keeps them
+        float zero_time = 0;            ///< Where the calendar's weeks are counted from
+        save::model::CalendarDate date; ///< The calendar's date at `time`
+        save::model::WeatherType weather = save::model::WeatherType::Unknown;
+        std::optional<save::model::WeatherType> forecast; ///< The weather on its way
+        std::optional<float> temperature;                 ///< Degrees Celsius
+        float wind = 0;                                   ///< How strong the wind blows, 0 calm to 1 strong
+        std::int32_t climate = 0;                         ///< The park file's climate (simulation::Climate)
+        float weather_hold = 0;                           ///< Calendar units before the forecast arrives
+        float wind_change = 0;                            ///< How fast the wind is rising (falling when negative)
+        float wind_wait = 0;                              ///< Calendar units to the wind's next change; not saved
         GameSpeed speed;
         ParkMessages messages;
     };
@@ -51,7 +51,7 @@ namespace rct3::simulation
     inline constexpr float kCalendarUnitsPerHour = 24.0f;
 
     /// The state a saved park starts in. `park` is null when the park's model could not be read.
-    [[nodiscard]] ParkState park_state(const save::ParkModel* park, const save::WorldModel& world);
+    [[nodiscard]] ParkState park_state(const save::model::ParkModel* park, const save::model::WorldModel& world);
 
     /// The weather the simulated guests feel, from the park's.
     [[nodiscard]] Weather guest_weather(const ParkState& state);
@@ -63,6 +63,6 @@ namespace rct3::simulation
     /// Scores the park for a new week, from its people and rides as they stand, and moves the rating towards
     /// the score.
     /// `old_litter`, when given, counts the litter lying long enough to count instead of the saved litter.
-    void rate_week(ParkState& state, const save::PeopleModel& people, const save::RideModel& rides, std::optional<std::int32_t> old_litter = std::nullopt);
+    void rate_week(ParkState& state, const save::model::PeopleModel& people, const save::model::RideModel& rides, std::optional<std::int32_t> old_litter = std::nullopt);
 
 } // namespace rct3::simulation

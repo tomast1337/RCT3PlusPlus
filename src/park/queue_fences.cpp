@@ -20,7 +20,7 @@ namespace rct3::park
         return slope == 2 || slope == 5;
     }
 
-    glm::vec2 edge_lean(const save::TerrainGrid& grid, save::Tile tile, Side side)
+    glm::vec2 edge_lean(const save::model::TerrainGrid& grid, save::model::Tile tile, Side side)
     {
         const auto [col, row] = tile;
         if (!grid.contains(col, row))
@@ -35,12 +35,12 @@ namespace rct3::park
         return { 0, (h[3] - h[1]) / grid.tile_size_z };
     }
 
-    QueueFences queue_fences(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::uint64_t last_id)
+    QueueFences queue_fences(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::uint64_t last_id)
     {
         QueueFences out;
-        for (const save::PathTile& p : paths)
+        for (const save::model::PathTile& p : paths)
         {
-            if (p.kind != save::PathKind::Queue || !p.queue || !p.elevation || p.queue->fence_symbol.empty())
+            if (p.kind != save::model::PathKind::Queue || !p.queue || !p.elevation || p.queue->fence_symbol.empty())
                 continue;
             const bool on_ground = ground::is_ground_queue(p);
             const float rise = on_ground ? 0.0f : ground::path_rise(p.elevation->slope);
@@ -68,7 +68,7 @@ namespace rct3::park
             {
                 if (rise > 0 ? side.on_columns() == facing->on_columns() : side == in || side == out_side)
                     continue;
-                save::PlacedObject o;
+                save::model::PlacedObject o;
                 o.id = ++last_id;
                 o.owner_ref = o.id;
                 o.fixture = true;

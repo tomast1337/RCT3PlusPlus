@@ -33,12 +33,12 @@ namespace rct3::simulation
 
     /// Ends the week in `park`'s graphs with `figures`, starting any series it has none of. Park value, company value, share price and publicity,
     /// which the simulation does not work out, carry on as they were.
-    void close_week(save::ParkModel& park, const WeekFigures& figures);
+    void close_week(save::model::ParkModel& park, const WeekFigures& figures);
 
     /// The ledger's period for the month `date` is in, the newest. As the calendar passes into later months, each
     /// starts a new period in front of the older ones, dropping the oldest past kLedgerPeriods. `kept` is the month,
     /// counted from the calendar's start, that the newest period stands for: none at first, when the newest is taken
     /// as this month's (as a park file leaves it).
-    [[nodiscard]] save::LedgerPeriod& ledger_month(save::Finance& finance, std::optional<std::int64_t>& kept, const save::CalendarDate& date);
+    [[nodiscard]] save::model::LedgerPeriod& ledger_month(save::model::Finance& finance, std::optional<std::int64_t>& kept, const save::model::CalendarDate& date);
 
 } // namespace rct3::simulation

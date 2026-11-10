@@ -446,7 +446,7 @@ namespace rct3::park::track
         return shape.record.joins[reversed ? 0 : 1];
     }
 
-    TrackTip tip_of(const save::PlacedObject& object, const PieceShape& shape, bool reversed, const save::TerrainGrid& grid)
+    TrackTip tip_of(const save::model::PlacedObject& object, const PieceShape& shape, bool reversed, const save::model::TerrainGrid& grid)
     {
         const glm::mat4 m = object::object_transform(object, shape.record.positioning, grid, shape.record.squares);
         TrackTip tip;
@@ -456,14 +456,14 @@ namespace rct3::park::track
         return tip;
     }
 
-    TrackTip start_of(const save::PlacedObject& object, const PieceShape& shape, bool reversed, const save::TerrainGrid& grid)
+    TrackTip start_of(const save::model::PlacedObject& object, const PieceShape& shape, bool reversed, const save::model::TerrainGrid& grid)
     {
         TrackTip tip = tip_of(object, shape, !reversed, grid);
         tip.end = { -tip.end.slope, wrap_bank(-tip.end.bank), tip.end.heading.reversed() };
         return tip;
     }
 
-    std::optional<PiecePlacement> place_after(const TrackTip& tip, const PieceShape& shape, bool reversed, const save::TerrainGrid& grid)
+    std::optional<PiecePlacement> place_after(const TrackTip& tip, const PieceShape& shape, bool reversed, const save::model::TerrainGrid& grid)
     {
         const PieceEnd entry = laid_entry(shape, reversed);
         if (!fits_after(tip.end, entry) || shape.record.positioning != object::Positioning::Tile || grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
@@ -484,7 +484,7 @@ namespace rct3::park::track
         if (!whole(col) || !whole(row) || !whole(height))
             return std::nullopt;
         PiecePlacement placed;
-        save::PlacedObject& o = placed.object;
+        save::model::PlacedObject& o = placed.object;
         o.symbol = shape.record.item;
         o.col = static_cast<std::int32_t>(std::lround(col));
         o.row = static_cast<std::int32_t>(std::lround(row));

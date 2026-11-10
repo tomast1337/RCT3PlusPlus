@@ -28,7 +28,7 @@ namespace rct3::simulation
 
     /// How much of what `vip` came to see they have seen, 0..1: each coaster wanted counts once, as do
     /// fireworks and a themed area. With nothing to see, how happy they are.
-    [[nodiscard]] float vip_opinion(const Vip& vip, const save::VipTarget& target, float happiness);
+    [[nodiscard]] float vip_opinion(const Vip& vip, const save::model::VipTarget& target, float happiness);
 
     /// What the park round a VIP holds that the simulation does not know itself.
     struct VipSurroundings
@@ -40,6 +40,6 @@ namespace rct3::simulation
     /// Moves the VIP goals of `set` on to calendar `time`, `game_seconds` after the last call: tells the player
     /// of a visit coming, lets the VIP in on the day, has them look round, and judges the visit as they leave,
     /// posting each to `messages`.
-    void advance_vips(SimWorld& world, save::ObjectiveSet& set, float time, float game_seconds, ParkMessages& messages, const VipSurroundings& around);
+    void advance_vips(SimWorld& world, save::model::ObjectiveSet& set, float time, float game_seconds, ParkMessages& messages, const VipSurroundings& around);
 
 } // namespace rct3::simulation

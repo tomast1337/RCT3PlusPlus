@@ -19,7 +19,7 @@ TEST_CASE("the stored background number picks a theme and its pictures")
 
 TEST_CASE("the ring stands round the middle of the map, dropped by its theme")
 {
-    save::TerrainGrid g;
+    save::model::TerrainGrid g;
     g.width = 30;
     g.height = 40;
     g.tile_size_x = 4;

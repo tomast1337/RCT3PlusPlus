@@ -55,7 +55,7 @@ namespace rct3::park::water
 
     /// The fades of every ride's water pieces among `objects` drawn with `models`; `pool_slides` says by ride
     /// which are pool slides, whose last piece is an open end when their track is not a circuit.
-    [[nodiscard]] object::FlowFades flow_fades(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const std::function<bool(std::size_t)>& pool_slides);
+    [[nodiscard]] object::FlowFades flow_fades(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const std::function<bool(std::size_t)>& pool_slides);
 
     /// How much of the water shows (0 to 1) at `along` its strip (ModelPart::flow) faded by `fade`, `last` being
     /// the strip's ModelPart::flow_last.

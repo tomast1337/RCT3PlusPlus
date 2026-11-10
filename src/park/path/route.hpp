@@ -60,9 +60,9 @@ namespace rct3::park::path
     /// the search limit. An empty route when the trail already ends on the goal. With `goal_height`, the route
     /// ends on the path on the goal tile standing at that height. With `solids`, it goes round what fills them.
     /// With `straight`, it keeps to the line from its start to the goal.
-    [[nodiscard]] std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, save::Tile goal, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height = std::nullopt, std::optional<const SolidTiles&> solids = std::nullopt, bool straight = false);
+    [[nodiscard]] std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, save::model::Tile goal, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height = std::nullopt, std::optional<const SolidTiles&> solids = std::nullopt, bool straight = false);
 
     /// What laying `route` costs, as the pieces' prices add up (walking over a path already there is free).
-    [[nodiscard]] std::int64_t route_price(std::span<const RouteStep> route, const FootpathBuilder& from, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::int32_t ground_cost);
+    [[nodiscard]] std::int64_t route_price(std::span<const RouteStep> route, const FootpathBuilder& from, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::int32_t ground_cost);
 
 } // namespace rct3::park::path

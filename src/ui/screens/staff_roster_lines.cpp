@@ -15,16 +15,16 @@ namespace rct3::ui::screens
     namespace
     {
         /// The place of `kind` among the switches; the jobs without one after them.
-        std::size_t job_rank(save::StaffKind kind)
+        std::size_t job_rank(save::model::StaffKind kind)
         {
             return static_cast<std::size_t>(std::ranges::find(kRosterJobs, kind, &RosterJob::kind) - kRosterJobs.begin());
         }
     } // namespace
 
-    bool shows_job(RosterJobs jobs, save::StaffKind kind)
+    bool shows_job(RosterJobs jobs, save::model::StaffKind kind)
     {
         // Lifeguards belong to their chairs, not to the list.
-        if (kind == save::StaffKind::LifeGuard)
+        if (kind == save::model::StaffKind::LifeGuard)
             return false;
         const std::size_t rank = job_rank(kind);
         return rank >= kRosterJobs.size() || (jobs & (1u << rank)) != 0;
@@ -37,7 +37,7 @@ namespace rct3::ui::screens
             return lines;
         for (std::size_t i = 0; i < facts.people->staff.size(); ++i)
         {
-            const save::Staff& s = facts.people->staff[i];
+            const save::model::Staff& s = facts.people->staff[i];
             if (!shows_job(jobs, s.kind))
                 continue;
             const PersonFacts person { .staff = &s, .people = facts.people, .rides = facts.rides };
@@ -45,7 +45,7 @@ namespace rct3::ui::screens
             simulation::set_wage_level(pay, s.wage_level);
             const StaffLook look = i < facts.staff_looks.size() ? facts.staff_looks[i] : StaffLook { };
             // Staff a scenario starts with were hired before its calendar began: they show its first day.
-            const save::CalendarDate hired = save::GameClock::date_at(s.person.start_time, facts.zero_time);
+            const save::model::CalendarDate hired = save::model::GameClock::date_at(s.person.start_time, facts.zero_time);
             lines.push_back(
                 {
                     .index = i,

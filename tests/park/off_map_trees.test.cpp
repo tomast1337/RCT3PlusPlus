@@ -10,9 +10,9 @@ using namespace rct3::park;
 
 namespace
 {
-    save::TerrainGrid flat(int size, float y)
+    save::model::TerrainGrid flat(int size, float y)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = size;
         g.height = size;
         g.tile_size_x = 4;
@@ -36,9 +36,9 @@ namespace
         return m;
     }
 
-    save::PlacedObject placed(std::uint64_t id, std::string symbol)
+    save::model::PlacedObject placed(std::uint64_t id, std::string symbol)
     {
-        save::PlacedObject o;
+        save::model::PlacedObject o;
         o.id = id;
         o.owner_ref = id;
         o.symbol = std::move(symbol);
@@ -49,13 +49,13 @@ namespace
 
 TEST_CASE("trees beyond the edge copy the park's plants near it, on the land round it")
 {
-    const save::TerrainGrid g = flat(20, 3); // 80 units across: trees reach 40 from their park tree
+    const save::model::TerrainGrid g = flat(20, 3); // 80 units across: trees reach 40 from their park tree
     object::ObjectModels models;
     models.emplace("Things/Things|Pine", plant());
     object::ObjectModel bench = plant();
     bench.sway = 0; // Still in the wind: not a plant
     models.emplace("Things/Things|Bench", bench);
-    std::vector<save::PlacedObject> objects;
+    std::vector<save::model::PlacedObject> objects;
     for (std::int32_t row = 0; row < 20; ++row)
     {
         objects.push_back(placed(static_cast<std::uint64_t>(row + 1), "Pine"));
@@ -70,11 +70,11 @@ TEST_CASE("trees beyond the edge copy the park's plants near it, on the land rou
 
     const LandRings land = land_rings(g);
     random::RandomState s = random::stream(random::Seed { 1 }, random::RandomStream::Scenery);
-    const std::vector<save::PlacedObject> trees = off_map_trees(objects, 0, models, g, land, s);
+    const std::vector<save::model::PlacedObject> trees = off_map_trees(objects, 0, models, g, land, s);
     REQUIRE(trees.size() > 20);
     CHECK(trees.size() <= 20 * kOffMapTries);
     std::uint64_t id = 100;
-    for (const save::PlacedObject& t : trees)
+    for (const save::model::PlacedObject& t : trees)
     {
         CHECK(t.symbol == "Pine");
         CHECK(t.id == ++id);
@@ -99,10 +99,10 @@ TEST_CASE("trees beyond the edge copy the park's plants near it, on the land rou
 
 TEST_CASE("a plant far from the edge seeds no trees beyond it")
 {
-    const save::TerrainGrid g = flat(40, 3); // 160 across: trees reach 80, the middle is 80 from every edge
+    const save::model::TerrainGrid g = flat(40, 3); // 160 across: trees reach 80, the middle is 80 from every edge
     object::ObjectModels models;
     models.emplace("Things/Things|Pine", plant());
-    std::vector<save::PlacedObject> objects { placed(1, "Pine") };
+    std::vector<save::model::PlacedObject> objects { placed(1, "Pine") };
     objects[0].col = 20;
     objects[0].row = 20;
     random::RandomState s = random::stream(random::Seed { 1 }, random::RandomStream::Scenery);
@@ -112,17 +112,17 @@ TEST_CASE("a plant far from the edge seeds no trees beyond it")
 TEST_CASE("a park without plants has no trees beyond it")
 {
     random::RandomState s = random::seeded(random::Seed { 1 });
-    const save::TerrainGrid g = flat(4, 0);
+    const save::model::TerrainGrid g = flat(4, 0);
     CHECK(off_map_trees({ }, 0, { }, g, land_rings(g), s).empty());
 }
 
 TEST_CASE("planting a tree seeds trees beyond the edge round it alone")
 {
-    const save::TerrainGrid g = flat(20, 3);
+    const save::model::TerrainGrid g = flat(20, 3);
     object::ObjectModels models;
     models.emplace("Things/Things|Pine", plant());
     models.emplace("Things/Things|Palm", plant());
-    std::vector<save::PlacedObject> objects;
+    std::vector<save::model::PlacedObject> objects;
     for (std::uint64_t i = 1; i <= 20; ++i)
         objects.push_back(placed(i, "Pine"));
     const LandRings land = land_rings(g);
@@ -131,27 +131,27 @@ TEST_CASE("planting a tree seeds trees beyond the edge round it alone")
     REQUIRE_FALSE(first.empty());
     objects.insert(objects.end(), first.begin(), first.end());
     objects.push_back(placed(5, "Palm")); // In the corner, by two edges
-    std::vector<save::PlacedObject> more;
+    std::vector<save::model::PlacedObject> more;
     for (int tries = 0; tries < 20 && more.empty(); ++tries)
         more = off_map_trees(objects, objects.size() - 1, models, g, land, s);
     REQUIRE_FALSE(more.empty());
-    for (const save::PlacedObject& t : more)
+    for (const save::model::PlacedObject& t : more)
         CHECK(t.symbol == "Palm");
     CHECK(more.front().id > first.back().id);
 }
 
 TEST_CASE("a park's own list of trees beyond the edge copies the plants it names, where it names")
 {
-    const save::TerrainGrid g = flat(20, 3);
+    const save::model::TerrainGrid g = flat(20, 3);
     object::ObjectModels models;
     models.emplace("Things/Things|Pine", plant());
     object::ObjectModel bench = plant();
     bench.sway = 0;
     models.emplace("Things/Things|Bench", bench);
-    std::vector<save::PlacedObject> objects { placed(1, "Pine"), placed(2, "Bench") };
+    std::vector<save::model::PlacedObject> objects { placed(1, "Pine"), placed(2, "Bench") };
     objects[0].rotation = 1;
     objects[0].colours = { 4, 5, 6 };
-    const std::vector<save::SkirtTree> listed {
+    const std::vector<save::model::SkirtTree> listed {
         { .scenery_ref = 1, .position = { -10, 50, 20 } }, { .scenery_ref = 2, .position = { -10, 0, 30 } }, // Not a plant
         { .scenery_ref = 9, .position = { -10, 0, 40 } },                                                    // No such item
         { .scenery_ref = 1, .position = { 40, 0, 40 } },                                                     // On the map
@@ -161,7 +161,7 @@ TEST_CASE("a park's own list of trees beyond the edge copies the plants it names
     REQUIRE(trees.size() == 2);
     CHECK(trees[0].id == 3);
     CHECK(trees[1].id == 4);
-    for (const save::PlacedObject& t : trees)
+    for (const save::model::PlacedObject& t : trees)
     {
         CHECK(t.symbol == "Pine");
         CHECK(t.colours == objects[0].colours);

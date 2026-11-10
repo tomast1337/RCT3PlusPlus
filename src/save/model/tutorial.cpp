@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/model/tutorial.hpp"
 
-namespace rct3::save
+namespace rct3::save::model
 {
 
     namespace
@@ -74,4 +74,4 @@ namespace rct3::save
         return std::nullopt;
     }
 
-} // namespace rct3::save
+} // namespace rct3::save::model

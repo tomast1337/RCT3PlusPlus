@@ -101,9 +101,9 @@ namespace rct3::scene
         int car_turn = 0;     ///< Degrees
         int brake_speed = 0;  ///< Whole m/s for brakes and block brakes; 0 until set, so they take the ride's
         std::uint8_t facing = 0;
-        std::optional<save::RideColours> colours; ///< Painted in the ring's colour tab; else as the piece before
+        std::optional<save::model::RideColours> colours; ///< Painted in the ring's colour tab; else as the piece before
         /// A track with no pieces yet starts on the tile the pointer was last over, turned `turn`.
-        std::optional<save::Tile> aim;
+        std::optional<save::model::Tile> aim;
         rct3::park::ModelTurn turn;
         /// The height Shift raised the first piece to, which it keeps once Shift is let go; never under the ground.
         std::optional<std::int32_t> raised;
@@ -151,17 +151,17 @@ namespace rct3::scene
         std::vector<bool> designs_locked; ///< By place in designs: waiting for a career scenario
         /// The pieces of the design picked, in track order, laid whole by the first click; empty for a track
         /// built piece by piece.
-        std::vector<save::TrackPiece> design;
+        std::vector<save::model::TrackPiece> design;
         /// A door the design places with its track: of which station, whether the exit, and where it stood.
         struct DesignDoor
         {
             std::size_t station = 0;
             bool exit = false;
-            save::PlacedObject object;
+            save::model::PlacedObject object;
         };
         std::vector<DesignDoor> design_doors;
         /// The design's ride, whose settings and colours the ride takes once the design is laid whole.
-        std::optional<save::Ride> design_ride;
+        std::optional<save::model::Ride> design_ride;
         /// While a design is in hand: why its ghost may not stand, if it may not; the name and tune (by place in
         /// the scene's tunes, from 1; 0 for none) the ride takes once it is laid; and whether the ground it passes
         /// into is cut (as smooth_cuts says) rather than refusing it. Its own round panel shows them.
@@ -171,10 +171,10 @@ namespace rct3::scene
         std::size_t design_tune = 0;
         bool cut_ground = false;
         /// What the design's panel was last shown for: the ground choice and the colours.
-        std::optional<std::tuple<bool, bool, save::RideColours>> design_tabs_for;
+        std::optional<std::tuple<bool, bool, save::model::RideColours>> design_tabs_for;
         /// What the round panel's tabs were last shown for: whether the first piece was still to lay, the
         /// ride's state, whether the construction strip was hidden, and whether cuts were smooth.
-        std::optional<std::tuple<bool, save::AttractionState, bool, bool>> tabs_for;
+        std::optional<std::tuple<bool, save::model::AttractionState, bool, bool>> tabs_for;
         bool smooth_cuts = false; ///< Whether ground the track passes into is cut smoothly, not sharply
         std::string preview_item; ///< The piece shown on the round panel's disc
         /// Auto-complete: while it looks for a way, the way nearest the station so far shows as the ghost; the way
@@ -264,7 +264,7 @@ namespace rct3::scene
     [[nodiscard]] std::int64_t track_cost(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
 
     /// The station pieces of the ride's track, which its entrance and exit stand beside.
-    [[nodiscard]] std::vector<save::TrackPiece> station_pieces(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
+    [[nodiscard]] std::vector<save::model::TrackPiece> station_pieces(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
 
     /// Handles the panel's events, and for a track with no pieces the pointer at `at` on a view of `size` (`over`
     /// the interface or not), the turn commands and `shift`, held to raise or sink the first piece. Call once per
@@ -280,7 +280,7 @@ namespace rct3::scene
     // Shared with path building, which places objects the same way.
 
     /// Makes sure the model of `object` is loaded, reading it through its overlay's own index kept in `cache`.
-    bool load_object_model(park::ParkScene& scene, std::map<std::string, TrackModels, std::less<>>& cache, const ui::InterfaceAssets& assets, const save::PlacedObject& object);
+    bool load_object_model(park::ParkScene& scene, std::map<std::string, TrackModels, std::less<>>& cache, const ui::InterfaceAssets& assets, const save::model::PlacedObject& object);
 
     /// Hands the scene's objects to the mesh builder again after a change, once a build reading them is done.
     void objects_changed(park::ParkScene& scene);
@@ -288,7 +288,7 @@ namespace rct3::scene
     /// Puts `pieces` in the place of the objects `ids` names, which then names the pieces. A piece the same as
     /// one standing keeps it, with its id and its place among the objects; the others take the places of those
     /// that went, so the objects after them do not move. Whether any object changed.
-    bool replace_fixtures(park::ParkScene& scene, std::vector<std::uint64_t>& ids, std::vector<save::PlacedObject> pieces);
+    bool replace_fixtures(park::ParkScene& scene, std::vector<std::uint64_t>& ids, std::vector<save::model::PlacedObject> pieces);
 
     /// Brings the objects' places and pick boxes up to date, working out again only the objects that changed.
     void place_objects(const park::ParkScene& scene);

@@ -17,14 +17,14 @@ namespace
     {
         Desktop desktop;
         StringTable strings;
-        save::PeopleModel people;
+        save::model::PeopleModel people;
         StaffRoster* window = nullptr;
 
         Fixture()
         {
-            for (const save::StaffKind kind : { save::StaffKind::Handyman, save::StaffKind::Mechanic, save::StaffKind::ParkInspector })
+            for (const save::model::StaffKind kind : { save::model::StaffKind::Handyman, save::model::StaffKind::Mechanic, save::model::StaffKind::ParkInspector })
             {
-                save::Staff s;
+                save::model::Staff s;
                 s.kind = kind;
                 people.staff.push_back(s);
             }
@@ -101,10 +101,10 @@ TEST_CASE("hiring a keeper with no animal house says an enclosure is needed inst
     f.show(true);
     f.button("Staff_HireAnimalKeeperIcon").click();
     f.desktop.update({ });
-    CHECK(f.window->take_asks().hire == save::StaffKind::AnimalKeeper);
+    CHECK(f.window->take_asks().hire == save::model::StaffKind::AnimalKeeper);
     f.button("Staff_HireMechanicIcon").click();
     f.desktop.update({ });
-    CHECK(f.window->take_asks().hire == save::StaffKind::Mechanic);
+    CHECK(f.window->take_asks().hire == save::model::StaffKind::Mechanic);
 }
 
 TEST_CASE("an unfolded row's switches and arrows ask for the worker's tasks and wage")

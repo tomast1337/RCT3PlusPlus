@@ -11,9 +11,9 @@ using namespace rct3::park;
 namespace
 {
     /// A `w` by `h` map of flat tiles at height `y`, painted with surface 1.
-    save::TerrainGrid flat(int w, int h, float y)
+    save::model::TerrainGrid flat(int w, int h, float y)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = w;
         g.height = h;
         g.tile_size_x = 4;
@@ -27,7 +27,7 @@ namespace
         return g;
     }
 
-    save::TerrainCell& cell(save::TerrainGrid& g, int col, int row)
+    save::model::TerrainCell& cell(save::model::TerrainGrid& g, int col, int row)
     {
         return g.cells[static_cast<std::size_t>(row * g.width + col)];
     }
@@ -35,7 +35,7 @@ namespace
 
 TEST_CASE("the land round a flat map stays at its height and fades out")
 {
-    const save::TerrainGrid g = flat(3, 2, 5);
+    const save::model::TerrainGrid g = flat(3, 2, 5);
     const TerrainMesh m = surrounding_land(g);
     REQUIRE_FALSE(m.vertices.empty());
     REQUIRE(m.batches.size() == 1);
@@ -58,7 +58,7 @@ TEST_CASE("the land round a flat map stays at its height and fades out")
 
 TEST_CASE("a hill at the edge rolls on and settles at the edge's mean height")
 {
-    save::TerrainGrid g = flat(4, 4, 0);
+    save::model::TerrainGrid g = flat(4, 4, 0);
     // Raise the corner at the middle of the first row's edge.
     cell(g, 1, 0).corners[1] = 40;
     cell(g, 2, 0).corners[0] = 40;
@@ -76,7 +76,7 @@ TEST_CASE("a hill at the edge rolls on and settles at the edge's mean height")
 
 TEST_CASE("the edge shows the park's mix of surfaces")
 {
-    save::TerrainGrid g = flat(4, 4, 0);
+    save::model::TerrainGrid g = flat(4, 4, 0);
     cell(g, 1, 0).surface = 7;
     const TerrainMesh m = surrounding_land(g);
     REQUIRE(m.batches.size() == 2);
@@ -91,7 +91,7 @@ TEST_CASE("the edge shows the park's mix of surfaces")
 
 TEST_CASE("a stretch of paint at the edge goes on out to the horizon beside it, and only there")
 {
-    save::TerrainGrid g = flat(16, 16, 0);
+    save::model::TerrainGrid g = flat(16, 16, 0);
     for (int col = 4; col < 12; ++col)
         cell(g, col, 0).surface = 7;
     const TerrainMesh m = surrounding_land(g);
@@ -110,7 +110,7 @@ TEST_CASE("a stretch of paint at the edge goes on out to the horizon beside it, 
 
 TEST_CASE("the land at the edge is lit as the park's ground there")
 {
-    save::TerrainGrid g = flat(3, 3, 0);
+    save::model::TerrainGrid g = flat(3, 3, 0);
     cell(g, 0, 0).corners = { 0, 4, 0, 4 }; // A slope rising along X
     const TerrainMesh m = surrounding_land(g);
     REQUIRE_FALSE(m.vertices.empty());
@@ -150,7 +150,7 @@ TEST_CASE("land added to the ground follows it")
 
 TEST_CASE("the land's height is found between its points")
 {
-    save::TerrainGrid g = flat(4, 4, 2);
+    save::model::TerrainGrid g = flat(4, 4, 2);
     cell(g, 0, 0).corners = { 6, 6, 6, 6 }; // The corner tile stands higher
     const LandRings rings = land_rings(g);
     REQUIRE(rings.points == 16);
@@ -172,9 +172,9 @@ TEST_CASE("the land's height is found between its points")
 TEST_CASE("water over the ground at the edge goes on out as a sea, with the land kept under it")
 {
     // A 16 by 16 map at height 2 with a lake at 3 over its first row: the -z side.
-    const save::TerrainGrid g = flat(16, 16, 2);
-    save::WaterLayer water;
-    save::WaterBody& lake = water.bodies.emplace_back();
+    const save::model::TerrainGrid g = flat(16, 16, 2);
+    save::model::WaterLayer water;
+    save::model::WaterBody& lake = water.bodies.emplace_back();
     lake.level = 3;
     for (std::uint8_t c = 0; c < 16; ++c)
         for (std::uint8_t t = 0; t < 2; ++t)

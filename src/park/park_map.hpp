@@ -86,7 +86,7 @@ namespace rct3::park
         float width = 1; ///< West to east
         float depth = 1; ///< South to north
     };
-    [[nodiscard]] MapFrame map_frame(const save::TerrainGrid& grid);
+    [[nodiscard]] MapFrame map_frame(const save::model::TerrainGrid& grid);
     /// The map point of the park point (x, z).
     [[nodiscard]] glm::vec2 to_map(const MapFrame& frame, glm::vec2 park);
     /// The park point (x, z) of a map point.
@@ -119,13 +119,13 @@ namespace rct3::park
     };
 
     /// The tiles of `paths` (each once) and the water of `water` over `grid`.
-    [[nodiscard]] MapFeatures map_features(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water);
+    [[nodiscard]] MapFeatures map_features(const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const save::model::WaterLayer& water);
 
     /// The shape of a box's ground: the corners of `box` (eight, the bit 1 of an index choosing the top) on
     /// the ground, in order round it.
     [[nodiscard]] std::array<glm::vec2, 4> ground_corners(std::span<const glm::vec3, 8> box);
     /// The shape of tile (col, row).
-    [[nodiscard]] std::array<glm::vec2, 4> tile_corners(const save::TerrainGrid& grid, save::Tile tile);
+    [[nodiscard]] std::array<glm::vec2, 4> tile_corners(const save::model::TerrainGrid& grid, save::model::Tile tile);
 
     /// A picture: rows from the top, four bytes a pixel (red, green, blue, straight alpha).
     struct MapPicture
@@ -139,7 +139,7 @@ namespace rct3::park
 
     /// Pixels per tile for the map of `grid`: enough that the picture is about a thousand pixels across,
     /// within limits that keep small parks crisp and large ones affordable.
-    [[nodiscard]] std::int32_t map_scale(const save::TerrainGrid& grid);
+    [[nodiscard]] std::int32_t map_scale(const save::model::TerrainGrid& grid);
     inline constexpr std::int32_t kMinMapScale = 2;
     inline constexpr std::int32_t kMaxMapScale = 8;
     inline constexpr std::int32_t kMapPixelsAcross = 1024;
@@ -153,10 +153,10 @@ namespace rct3::park
         MapPicture contours; ///< Clear but for the lines
         MapPicture water;    ///< Clear but for the water
     };
-    [[nodiscard]] MapGround map_ground(const save::TerrainGrid& grid, const MapFeatures& features, std::int32_t scale);
+    [[nodiscard]] MapGround map_ground(const save::model::TerrainGrid& grid, const MapFeatures& features, std::int32_t scale);
 
     /// The map with the layers in `layers`, people aside.
-    [[nodiscard]] MapPicture compose_map(const MapGround& ground, const save::TerrainGrid& grid, const MapFeatures& features, const MapLayers& layers);
+    [[nodiscard]] MapPicture compose_map(const MapGround& ground, const save::model::TerrainGrid& grid, const MapFeatures& features, const MapLayers& layers);
 
     struct MapPerson
     {
@@ -172,6 +172,6 @@ namespace rct3::park
 
     /// A clear picture the size of the map's with a dot for each person whose layer `layers` shows, over the
     /// patrol tiles tinted, deeper where areas overlap.
-    [[nodiscard]] MapPicture people_picture(const save::TerrainGrid& grid, std::int32_t scale, std::span<const MapPerson> people, const MapLayers& layers, std::span<const glm::ivec2> patrol_tiles = { });
+    [[nodiscard]] MapPicture people_picture(const save::model::TerrainGrid& grid, std::int32_t scale, std::span<const MapPerson> people, const MapLayers& layers, std::span<const glm::ivec2> patrol_tiles = { });
 
 } // namespace rct3::park

@@ -17,9 +17,9 @@ namespace
 {
     constexpr Rect kView { 0, 0, 1024, 768 };
 
-    save::TutorialScript lessons()
+    save::model::TutorialScript lessons()
     {
-        save::TutorialScript s;
+        save::model::TutorialScript s;
         s.name = "Lessons";
         s.title = "Looking about";
         s.steps.push_back({ "Step 1", "Look around.", { }, 0, 0 });
@@ -53,7 +53,7 @@ namespace
         Desktop desktop;
         TutorialGuide* window = nullptr;
 
-        explicit Fixture(save::TutorialScript script = lessons())
+        explicit Fixture(save::model::TutorialScript script = lessons())
         {
             fonts.set(FontRole::Small, test_font());
             strings.add("TutorialText_Lessons_Step1_Text", u"Regardez.");
@@ -74,7 +74,7 @@ TEST_CASE("a step's text is the language's where the strings have it, else the p
 {
     StringTable strings;
     strings.add("TutorialText_Lessons_Step2_StepTitle", u"Deux");
-    const save::TutorialScript s = lessons();
+    const save::model::TutorialScript s = lessons();
     const TutorialStepText first = tutorial_step_text(strings, s, 0);
     CHECK(first.title == u"Step 1");
     CHECK(first.text == u"Look around.");
@@ -85,7 +85,7 @@ TEST_CASE("a step's text is the language's where the strings have it, else the p
 TEST_CASE("the tutorial's name is the language's where the strings have it, else the park's")
 {
     StringTable strings;
-    const save::TutorialScript s = lessons();
+    const save::model::TutorialScript s = lessons();
     CHECK(tutorial_title(strings, s) == u"Looking about");
     strings.add("TutorialText_Lessons_Title", u"Regarder");
     CHECK(tutorial_title(strings, s) == u"Regarder");
@@ -220,7 +220,7 @@ TEST_CASE("each step goes to its own place, and stays put within the step")
 
 TEST_CASE("a long text makes the window taller, keeping it in its place")
 {
-    save::TutorialScript s = lessons();
+    save::model::TutorialScript s = lessons();
     s.name = "Long"; // Not the name the fixture's strings replace step one's text under
     for (int i = 0; i < 40; ++i)
         s.steps[0].text += "word word word word ";

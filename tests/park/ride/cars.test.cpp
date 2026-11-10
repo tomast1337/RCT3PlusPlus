@@ -10,12 +10,12 @@ using namespace rct3::park::ride;
 
 TEST_CASE("ride cars stand where the park kept them, turned as it kept them")
 {
-    save::Ride ride;
+    save::model::Ride ride;
     ride.car_colours = { 3, 4, 5 };
-    save::Train& train = ride.trains.emplace_back();
+    save::model::Train& train = ride.trains.emplace_back();
     train.symbol = "Coaster:rit";
     train.overlay_path = "Cars\\Coaster";
-    save::Car& car = train.cars.emplace_back();
+    save::model::Car& car = train.cars.emplace_back();
     car.design_slot = 2;
     car.position = { 10, 2, -4 };
     car.position_valid = true;
@@ -25,7 +25,7 @@ TEST_CASE("ride cars stand where the park kept them, turned as it kept them")
 
     const RideCars cars = ride_cars(std::span(&ride, 1), 100);
     REQUIRE(cars.pieces.size() == 1);
-    const save::PlacedObject& piece = cars.pieces[0];
+    const save::model::PlacedObject& piece = cars.pieces[0];
     CHECK(piece.id == 101);
     CHECK(piece.colours == std::array<std::int32_t, 3> { 3, 4, 5 });
     CHECK(cars.designs[0].train == "Coaster");

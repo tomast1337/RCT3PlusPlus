@@ -113,7 +113,7 @@ namespace rct3::simulation
         return model;
     }
 
-    RatingFeatures rating_features(const save::TestResults& t)
+    RatingFeatures rating_features(const save::model::TestResults& t)
     {
         return {
             1, t.max_speed, t.average_speed, t.ride_time, t.ride_length, std::max(t.max_positive_vertical / kGravity - 1, 0.0f), std::abs(t.max_negative_vertical) / kGravity, std::abs(t.max_lateral) / kGravity, t.air_time, static_cast<float>(t.drop_count), t.highest_drop, static_cast<float>(t.inversion_count), static_cast<float>(t.lift_hill_count),
@@ -122,7 +122,7 @@ namespace rct3::simulation
 
     // An approximation of the original's ratings, not a copy: weights fitted to saved parks, so expect a ride's
     // ratings to differ from what the same ride showed in the original game.
-    Ratings rate(const RatingModel& model, std::string_view type, const save::TestResults& test)
+    Ratings rate(const RatingModel& model, std::string_view type, const save::model::TestResults& test)
     {
         const auto in = [&](const RatingModel::Family& f) { return std::ranges::any_of(f.types, [&](const std::string& t) { return same_ignoring_case(t, type); }); };
         auto family = std::ranges::find_if(model.families, in);
@@ -142,13 +142,13 @@ namespace rct3::simulation
         return r;
     }
 
-    std::optional<save::TestResults> test_lap(Coaster c, float most)
+    std::optional<save::model::TestResults> test_lap(Coaster c, float most)
     {
         c.running = true;
         c.at = c.start;
         c.travelled = 0;
         c.speed = 0;
-        save::TestResults t;
+        save::model::TestResults t;
         constexpr float kStep = 0.25f;
         // The drop going on: from the highest point since the track last rose.
         float top = 0;

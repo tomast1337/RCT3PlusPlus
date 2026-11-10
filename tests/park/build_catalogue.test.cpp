@@ -74,9 +74,9 @@ TEST_CASE("a stall is offered in its shop list")
 
 TEST_CASE("a park offers what it made available and invented")
 {
-    rct3::save::RequiredContent content;
+    rct3::save::model::RequiredContent content;
     const auto entry = [](std::string stem, std::string symbol, bool available, bool invented, bool hidden) {
-        rct3::save::AssetRequirement r;
+        rct3::save::model::AssetRequirement r;
         r.overlay_stem = std::move(stem);
         r.symbol = std::move(symbol);
         r.available = available;
@@ -139,13 +139,13 @@ TEST_CASE("a species gives an animal item for each animal, under the species")
 
 TEST_CASE("a park offers the species it unlocked, and every fence, shelter and toy")
 {
-    rct3::save::RequiredContent content;
-    rct3::save::AssetRequirement open;
-    open.kind = rct3::save::AssetKind::AnimalSpecies;
+    rct3::save::model::RequiredContent content;
+    rct3::save::model::AssetRequirement open;
+    open.kind = rct3::save::model::AssetKind::AnimalSpecies;
     open.overlay_stem = "Wild/Animals";
     open.symbol = "wombat";
     open.unlocked = true;
-    rct3::save::AssetRequirement shut = open;
+    rct3::save::model::AssetRequirement shut = open;
     shut.symbol = "koala";
     shut.unlocked = false;
     content.entries = { open, shut };
@@ -163,7 +163,7 @@ TEST_CASE("a park offers the species it unlocked, and every fence, shelter and t
     CHECK(offer.offers(item(BuildKind::Shelter, "Den")));
     CHECK(offer.offers(item(BuildKind::AnimalToy, "Hoop")));
     // A park that records no species offers them all.
-    CHECK(BuildOffer(rct3::save::RequiredContent { }).offers(item(BuildKind::Animal, "koala")));
+    CHECK(BuildOffer(rct3::save::model::RequiredContent { }).offers(item(BuildKind::Animal, "koala")));
 }
 
 TEST_CASE("items of an overlay that gives only its theme's number take the theme's name")

@@ -57,11 +57,11 @@ namespace rct3::ui::screens
     /// attractions their references lead to.
     struct PersonFacts
     {
-        const save::Guest* guest = nullptr;
-        const save::Staff* staff = nullptr;
-        const save::PeopleModel* people = nullptr;
-        const save::RideModel* rides = nullptr;
-        std::span<const save::PlacedObject> objects { }; ///< The park's placed objects, for thoughts about path items
+        const save::model::Guest* guest = nullptr;
+        const save::model::Staff* staff = nullptr;
+        const save::model::PeopleModel* people = nullptr;
+        const save::model::RideModel* rides = nullptr;
+        std::span<const save::model::PlacedObject> objects { }; ///< The park's placed objects, for thoughts about path items
         /// Staff the simulation walks: the tiles of their patrol area (0 for none, the whole park), and whether
         /// clicks on the ground paint it. Empty for others.
         std::optional<std::size_t> patrol_tiles { };
@@ -78,7 +78,7 @@ namespace rct3::ui::screens
         /// Of a VIP on their visit: their patience and their opinion of the park, each 0..1.
         std::optional<std::pair<float, float>> vip { };
 
-        [[nodiscard]] std::optional<const save::Person&> person() const
+        [[nodiscard]] std::optional<const save::model::Person&> person() const
         {
             return guest != nullptr ? maybe(&guest->person) : staff != nullptr ? maybe(&staff->person) : std::nullopt;
         }

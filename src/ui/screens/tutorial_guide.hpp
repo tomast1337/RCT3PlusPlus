@@ -33,10 +33,10 @@ namespace rct3::ui::screens
         std::u16string title;
         std::u16string text;
     };
-    [[nodiscard]] TutorialStepText tutorial_step_text(const StringTable& strings, const save::TutorialScript& script, std::size_t index);
+    [[nodiscard]] TutorialStepText tutorial_step_text(const StringTable& strings, const save::model::TutorialScript& script, std::size_t index);
 
     /// The tutorial's own name, in the language where the strings have it.
-    [[nodiscard]] std::u16string tutorial_title(const StringTable& strings, const save::TutorialScript& script);
+    [[nodiscard]] std::u16string tutorial_title(const StringTable& strings, const save::model::TutorialScript& script);
 
     /// The skins and measurements of the guide window. Lengths in logical units.
     struct TutorialGuideStyle
@@ -88,7 +88,7 @@ namespace rct3::ui::screens
     {
     public:
         /// Shows step one of `script`.
-        TutorialGuide(std::string name, const TutorialGuideStyle& style, const StringTable& strings, save::TutorialScript script);
+        TutorialGuide(std::string name, const TutorialGuideStyle& style, const StringTable& strings, save::model::TutorialScript script);
 
         [[nodiscard]] std::size_t step() const
         {
@@ -98,7 +98,7 @@ namespace rct3::ui::screens
         {
             return script_.steps.size();
         }
-        [[nodiscard]] const save::TutorialScript& script() const
+        [[nodiscard]] const save::model::TutorialScript& script() const
         {
             return script_;
         }
@@ -130,7 +130,7 @@ namespace rct3::ui::screens
 
         TutorialGuideStyle style_;
         const StringTable& strings_;
-        save::TutorialScript script_;
+        save::model::TutorialScript script_;
         Label* step_line_ = nullptr;
         Label* text_ = nullptr;
         Button* continue_ = nullptr;

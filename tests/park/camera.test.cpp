@@ -10,9 +10,9 @@ using namespace rct3::park;
 
 namespace
 {
-    save::TerrainGrid slope(int size)
+    save::model::TerrainGrid slope(int size)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = size;
         g.height = size;
         g.tile_size_x = 4;
@@ -47,7 +47,7 @@ TEST_CASE("the eye sits back from and above the target, which lands mid-view")
 
 TEST_CASE("moving follows the way the camera faces, and keeps to the ground")
 {
-    const save::TerrainGrid g = slope(8);
+    const save::model::TerrainGrid g = slope(8);
     ParkCamera c = overview(g);
     CHECK(c.target.x == doctest::Approx(16));
     CHECK(c.target.y == doctest::Approx(4));

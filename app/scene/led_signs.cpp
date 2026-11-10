@@ -43,7 +43,7 @@ namespace rct3::scene
         /// The overlay of `ride`'s theme: the one it comes from when that is a theme's, else the plain one.
         /// shortcut: rides with a track come from their own folder and take the plain theme's sign; upgrade if
         /// a park shows themed coasters with themed signs.
-        std::string theme_of(const save::Ride& ride)
+        std::string theme_of(const save::model::Ride& ride)
         {
             const std::string path = forward_slashes(ride.base.overlay_path);
             const auto slash = path.rfind('/');
@@ -127,10 +127,10 @@ namespace rct3::scene
             std::map<std::uint64_t, std::size_t> ride_of_line;
             for (std::size_t r = 0; r < scene.rides.rides.size(); ++r)
             {
-                const save::Ride& ride = scene.rides.rides[r];
+                const save::model::Ride& ride = scene.rides.rides[r];
                 if (q.hidden.contains(ride.base.id) || ride.base.demolished)
                     continue;
-                for (const save::Station& station : ride.stations)
+                for (const save::model::Station& station : ride.stations)
                 {
                     if (station.queue_line != 0)
                         ride_of_line.emplace(station.queue_line, r);
@@ -163,7 +163,7 @@ namespace rct3::scene
             std::map<std::uint64_t, std::size_t> placed;
             for (std::size_t s = 0; s < scene.signs.size(); ++s)
                 placed.emplace(scene.signs[s].object_ref, s);
-            for (const save::PlacedObject& o : scene.objects)
+            for (const save::model::PlacedObject& o : scene.objects)
             {
                 const auto found = scene.models.find(rct3::park::object::model_ref(o));
                 const auto written = placed.find(o.id);
@@ -193,7 +193,7 @@ namespace rct3::scene
                     continue;
                 LedSign sign;
                 sign.ride = ride->second;
-                save::PlacedObject& o = sign.object;
+                save::model::PlacedObject& o = sign.object;
                 o.id = std::numeric_limits<std::uint64_t>::max() - q.signs.size();
                 o.owner_ref = o.id;
                 o.symbol = symbol;
@@ -245,9 +245,9 @@ namespace rct3::scene
         {
             // Objects only added, as a piece or a ride laid, put up no board unless one is an entrance or a sign.
             const bool added = !q.stale && q.counted[0] == counts[0] && q.counted[1] == counts[1] && counts[2] > q.counted[2];
-            const auto boarded = [&](const save::PlacedObject& o) {
+            const auto boarded = [&](const save::model::PlacedObject& o) {
                 const auto found = scene.models.find(rct3::park::object::model_ref(o));
-                return std::ranges::contains(scene.signs, o.id, &save::SignState::object_ref) || (found != scene.models.end() && found->second.category == std::to_underlying(rct3::park::ItemCategory::ParkEntrance));
+                return std::ranges::contains(scene.signs, o.id, &save::model::SignState::object_ref) || (found != scene.models.end() && found->second.category == std::to_underlying(rct3::park::ItemCategory::ParkEntrance));
             };
             if (!added || std::ranges::any_of(std::span(scene.objects).subspan(q.counted[2]), boarded))
                 put_up(device, scene, assets);
@@ -261,25 +261,25 @@ namespace rct3::scene
         {
             if ((sign.ride && *sign.ride >= scene.rides.rides.size()) || (sign.placed && *sign.placed >= scene.signs.size()))
                 continue;
-            const save::Park& park = scene.park_model.park;
+            const save::model::Park& park = scene.park_model.park;
             // An entrance shows the park's name, or that the park is closed. A placed sign shows what the player
             // wrote, or that there is no entry; other kinds show nothing. A ride's sign, open, shows the ride's name;
             // else what it is doing.
             std::u16string words;
             if (sign.placed)
             {
-                const save::SignState& placed = scene.signs[*sign.placed];
+                const save::model::SignState& placed = scene.signs[*sign.placed];
                 // A sign that cannot forbid entry shows its words whatever its kind says.
                 const auto model = scene.models.find(rct3::park::object::model_ref(sign.object));
                 const bool no_entry = placed.kind == 1 && model != scene.models.end() && model->second.no_entry;
                 words = no_entry ? std::u16string(assets.strings->get("Sign_NoEntry")) : placed.kind == 0 || placed.kind == 1 ? strings::to_utf16(placed.text) : std::u16string { };
             }
             else if (!sign.ride)
-                words = park.flags.has(save::ParkFlag::Open) ? ui::screens::park_name(park, *assets.strings) : std::u16string(assets.strings->get("AttractionStatusClosed"));
+                words = park.flags.has(save::model::ParkFlag::Open) ? ui::screens::park_name(park, *assets.strings) : std::u16string(assets.strings->get("AttractionStatusClosed"));
             else
             {
-                const save::AttractionCommon& ride = scene.rides.rides[*sign.ride].base;
-                words = ride.state == save::AttractionState::Open && ride.repair_status == save::RepairStatus::Fine ? ui::screens::attraction_name(ride, *assets.strings) : ui::screens::attraction_status(ride, *assets.strings);
+                const save::model::AttractionCommon& ride = scene.rides.rides[*sign.ride].base;
+                words = ride.state == save::model::AttractionState::Open && ride.repair_status == save::model::RepairStatus::Fine ? ui::screens::attraction_name(ride, *assets.strings) : ui::screens::attraction_status(ride, *assets.strings);
             }
             if (words == sign.shown)
                 continue;

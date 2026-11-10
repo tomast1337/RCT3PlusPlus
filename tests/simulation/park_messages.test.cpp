@@ -18,14 +18,14 @@ namespace
 
 TEST_CASE("a park's messages start from its save, oldest first")
 {
-    save::MessageLog log;
-    save::Message older;
+    save::model::MessageLog log;
+    save::model::Message older;
     older.text_key = "Invented_Thing:txt";
     older.time = 300;
     older.object = 77;
     older.object_name = "Big Wheel";
     older.panel = 8;
-    save::Message newer;
+    save::model::Message newer;
     newer.text_key = "Won_Prize";
     newer.time = 20;
     newer.award = 4;

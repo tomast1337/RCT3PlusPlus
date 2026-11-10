@@ -78,7 +78,7 @@ namespace rct3::park
             return kSteps[static_cast<std::size_t>(value & 3)];
         }
         /// The tile across this side of `tile`.
-        [[nodiscard]] constexpr save::Tile beyond(save::Tile tile) const noexcept
+        [[nodiscard]] constexpr save::model::Tile beyond(save::model::Tile tile) const noexcept
         {
             const auto [dc, dr] = step();
             return { tile.col + dc, tile.row + dr };

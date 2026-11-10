@@ -41,15 +41,15 @@ namespace rct3::park::ground
         std::vector<std::size_t> followers;             ///< Items that stand on the ground and follow it, of the objects
     };
 
-    [[nodiscard]] GroundHolds ground_holds(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    [[nodiscard]] GroundHolds ground_holds(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);
 
     /// Whether the ground of `tile` may not go from corners `was` to `now`.
-    [[nodiscard]] bool refuses(const GroundHolds& holds, save::Tile tile, const std::array<float, 4>& was, const std::array<float, 4>& now);
+    [[nodiscard]] bool refuses(const GroundHolds& holds, save::model::Tile tile, const std::array<float, 4>& was, const std::array<float, 4>& now);
 
     /// A tile's ground after a cut or levelling.
     struct GroundCut
     {
-        save::Tile tile { };
+        save::model::Tile tile { };
         std::array<float, 4> corners { };
     };
 
@@ -62,19 +62,19 @@ namespace rct3::park::ground
 
     /// Whether any of `cuts` may not be made: for `holds`, off land the park owns outright, or on a tile holding
     /// water of `bodies` or beside one.
-    [[nodiscard]] bool cuts_refused(std::span<const GroundCut> cuts, const save::TerrainGrid& grid, const GroundHolds& holds, std::span<const save::WaterBody> bodies);
+    [[nodiscard]] bool cuts_refused(std::span<const GroundCut> cuts, const save::model::TerrainGrid& grid, const GroundHolds& holds, std::span<const save::model::WaterBody> bodies);
 
     /// Leaves out of `cuts` those that may not be made (cuts_refused): every one when one of the footprint's may
     /// not, else those of the rim that may not. Whether the footprint's may all be made.
-    bool allow_cuts(GroundCuts& cuts, const save::TerrainGrid& grid, const GroundHolds& holds, std::span<const save::WaterBody> bodies);
+    bool allow_cuts(GroundCuts& cuts, const save::model::TerrainGrid& grid, const GroundHolds& holds, std::span<const save::model::WaterBody> bodies);
 
     /// What moving the ground to `cuts` costs, in hundredths.
-    [[nodiscard]] std::int64_t cuts_cost(const GroundCuts& cuts, const save::TerrainGrid& grid);
+    [[nodiscard]] std::int64_t cuts_cost(const GroundCuts& cuts, const save::model::TerrainGrid& grid);
 
     /// Moves the ground to `cuts`.
-    void make_cuts(save::TerrainGrid& grid, const GroundCuts& cuts);
+    void make_cuts(save::model::TerrainGrid& grid, const GroundCuts& cuts);
 
     /// Seats the followers with a tile from `first` to `last` under them on the ground again; whether there were any.
-    bool seat_followers(std::span<save::PlacedObject> objects, const GroundHolds& holds, const object::ObjectModels& models, const save::TerrainGrid& grid, save::Tile first, save::Tile last);
+    bool seat_followers(std::span<save::model::PlacedObject> objects, const GroundHolds& holds, const object::ObjectModels& models, const save::model::TerrainGrid& grid, save::model::Tile first, save::model::Tile last);
 
 } // namespace rct3::park::ground

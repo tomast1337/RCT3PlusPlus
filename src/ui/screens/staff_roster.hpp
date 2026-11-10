@@ -71,7 +71,7 @@ namespace rct3::ui::screens
     /// PersonControl, for the worker of that place in the park's staff.
     struct RosterAsks
     {
-        std::optional<save::StaffKind> hire;
+        std::optional<save::model::StaffKind> hire;
         std::optional<std::size_t> open;   ///< Their panel
         std::optional<std::size_t> centre; ///< The view to them
         std::optional<std::pair<std::size_t, InfoChange>> change;
@@ -95,7 +95,7 @@ namespace rct3::ui::screens
     };
 
     /// The switches of the tasks of `kind`, in the order they stand.
-    [[nodiscard]] std::span<const RosterTask> roster_tasks(save::StaffKind kind);
+    [[nodiscard]] std::span<const RosterTask> roster_tasks(save::model::StaffKind kind);
 
     class StaffRoster : public Window
     {

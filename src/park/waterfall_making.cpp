@@ -20,51 +20,51 @@ namespace rct3::park
         constexpr int kMaxEdgeTiles = 5;    ///< Most tiles along the edge one waterfall pours over.
         constexpr float kPickMargin = 1.0f; ///< World units round a waterfall it can be picked.
 
-        save::Tile step(save::Tile t, save::Tile d, int n = 1)
+        save::model::Tile step(save::model::Tile t, save::model::Tile d, int n = 1)
         {
             return { t.col + d.col * n, t.row + d.row * n };
         }
 
-        save::WorldPoint3 world(glm::vec3 p)
+        save::model::WorldPoint3 world(glm::vec3 p)
         {
             return { p.x, p.y, p.z };
         }
     } // namespace
 
-    std::expected<save::Waterfall, std::string_view> make_waterfall(const save::TerrainGrid& grid, std::span<const save::WaterBody> bodies, std::size_t first, std::size_t second, save::Tile near)
+    std::expected<save::model::Waterfall, std::string_view> make_waterfall(const save::model::TerrainGrid& grid, std::span<const save::model::WaterBody> bodies, std::size_t first, std::size_t second, save::model::Tile near)
     {
         if (first == second || first >= bodies.size() || second >= bodies.size())
             return std::unexpected(kWaterfallSameWater);
-        const save::WaterBody& high = bodies[first].level >= bodies[second].level ? bodies[first] : bodies[second];
-        const save::WaterBody& low = &high == &bodies[first] ? bodies[second] : bodies[first];
+        const save::model::WaterBody& high = bodies[first].level >= bodies[second].level ? bodies[first] : bodies[second];
+        const save::model::WaterBody& low = &high == &bodies[first] ? bodies[second] : bodies[first];
         if (high.level - low.level < kMinDrop)
             return std::unexpected(kWaterfallTooLittleDrop);
 
         // Which tiles each lake holds, looked up for every tile tried.
         std::vector<std::uint8_t> holding(static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height), 0);
         for (const auto& [body, bit] : { std::pair { &high, 1 }, std::pair { &low, 2 } })
-            for (const save::WaterTri& tri : body->tris)
+            for (const save::model::WaterTri& tri : body->tris)
                 if (grid.contains(tri.col, tri.row))
                     holding[static_cast<std::size_t>(tri.row) * static_cast<std::size_t>(grid.width) + tri.col] |= bit;
-        const auto in = [&](save::Tile t, int bit) { return grid.contains(t.col, t.row) && (holding[static_cast<std::size_t>(t.row) * static_cast<std::size_t>(grid.width) + static_cast<std::size_t>(t.col)] & bit) != 0; };
+        const auto in = [&](save::model::Tile t, int bit) { return grid.contains(t.col, t.row) && (holding[static_cast<std::size_t>(t.row) * static_cast<std::size_t>(grid.width) + static_cast<std::size_t>(t.col)] & bit) != 0; };
 
         // The edge tile of the higher lake with the shortest way straight out to the lower one.
-        constexpr std::array<save::Tile, 4> kWays { { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } };
+        constexpr std::array<save::model::Tile, 4> kWays { { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } };
         struct Way
         {
-            save::Tile from;
-            save::Tile out;
+            save::model::Tile from;
+            save::model::Tile out;
             int reach = 0;
             int off = 0; ///< Squared tiles from `near`
         };
         std::optional<Way> best;
-        for (const save::WaterTri& tri : high.tris)
+        for (const save::model::WaterTri& tri : high.tris)
         {
-            const save::Tile from { tri.col, tri.row };
-            for (const save::Tile out : kWays)
+            const save::model::Tile from { tri.col, tri.row };
+            for (const save::model::Tile out : kWays)
                 for (int k = 1; k <= kMaxReach; ++k)
                 {
-                    const save::Tile t = step(from, out, k);
+                    const save::model::Tile t = step(from, out, k);
                     if (!grid.contains(t.col, t.row) || in(t, 1))
                         break;
                     if (!in(t, 2))
@@ -79,8 +79,8 @@ namespace rct3::park
             return std::unexpected(kWaterfallTooFarApart);
 
         // The edge runs on to each side while the lake's border does and the lower lake lies as far out.
-        const save::Tile side { -best->out.row, best->out.col };
-        const auto edge = [&](save::Tile t) { return in(t, 1) && !in(step(t, best->out), 1) && in(step(t, best->out, best->reach), 2); };
+        const save::model::Tile side { -best->out.row, best->out.col };
+        const auto edge = [&](save::model::Tile t) { return in(t, 1) && !in(step(t, best->out), 1) && in(step(t, best->out, best->reach), 2); };
         int from = 0;
         int to = 0;
         while (to - from + 1 < kMaxEdgeTiles && edge(step(best->from, side, to + 1)))
@@ -90,19 +90,19 @@ namespace rct3::park
         for (int s = from; s <= to; ++s)
             for (int k = 0; k <= best->reach; ++k)
             {
-                const save::Tile t = step(step(best->from, side, s), best->out, k);
+                const save::model::Tile t = step(step(best->from, side, s), best->out, k);
                 if (!owned_outright(grid.at(t.col, t.row)))
                     return std::unexpected(kWaterfallNotOwned);
             }
 
         // The edge tiles, the spillway beyond them and the ground on the way down to the lower lake; none when the
         // lower lake lies against the edge.
-        std::vector<save::CarvedTile> carved;
+        std::vector<save::model::CarvedTile> carved;
         const bool spillway = best->reach > 1;
         for (int s = from; spillway && s <= to; ++s)
             for (int k = 0; k < best->reach; ++k)
             {
-                const save::Tile t = step(step(best->from, side, s), best->out, k);
+                const save::model::Tile t = step(step(best->from, side, s), best->out, k);
                 carved.push_back({ .tile = t, .corners = grid.at(t.col, t.row).corners });
             }
 
@@ -115,17 +115,17 @@ namespace rct3::park
         const glm::vec3 half = across * size * (static_cast<float>(to - from + 1) / 2);
         glm::vec3 bottom = centre + flow * size * static_cast<float>(best->reach);
         bottom.y = low.level;
-        return save::Waterfall { .lip_left = world(lip - half), .lip_right = world(lip + half), .top = world(centre), .bottom = world(bottom), .flow = world(flow), .carved = std::move(carved) };
+        return save::model::Waterfall { .lip_left = world(lip - half), .lip_right = world(lip + half), .top = world(centre), .bottom = world(bottom), .flow = world(flow), .carved = std::move(carved) };
     }
 
-    void cut_spillway(save::TerrainGrid& grid, const save::Waterfall& fall)
+    void cut_spillway(save::model::TerrainGrid& grid, const save::model::Waterfall& fall)
     {
         const glm::vec2 flow { fall.flow.x, fall.flow.z };
         const glm::vec2 lip = (glm::vec2 { fall.lip_left.x, fall.lip_left.z } + glm::vec2 { fall.lip_right.x, fall.lip_right.z }) / 2.0f;
         const float length = std::abs(flow.x) * grid.tile_size_x + std::abs(flow.y) * grid.tile_size_z; // Of a tile, along the flow
         const float level = fall.top.y;
         constexpr float kOn = 0.01f; ///< Tiles from a line a corner may be and still be on it
-        for (const save::CarvedTile& c : fall.carved)
+        for (const save::model::CarvedTile& c : fall.carved)
         {
             if (!grid.contains(c.tile.col, c.tile.row))
                 continue;
@@ -146,22 +146,22 @@ namespace rct3::park
         }
     }
 
-    void restore_spillway(save::TerrainGrid& grid, const save::Waterfall& fall)
+    void restore_spillway(save::model::TerrainGrid& grid, const save::model::Waterfall& fall)
     {
-        for (const save::CarvedTile& c : fall.carved)
+        for (const save::model::CarvedTile& c : fall.carved)
         {
             if (grid.contains(c.tile.col, c.tile.row))
                 grid.at(c.tile.col, c.tile.row).corners = c.corners;
         }
     }
 
-    std::optional<std::size_t> waterfall_at(std::span<const save::Waterfall> falls, float x, float z)
+    std::optional<std::size_t> waterfall_at(std::span<const save::model::Waterfall> falls, float x, float z)
     {
         std::optional<std::size_t> found;
         float nearest = 0;
         for (std::size_t i = 0; i < falls.size(); ++i)
         {
-            const save::Waterfall& f = falls[i];
+            const save::model::Waterfall& f = falls[i];
             const glm::vec2 left { f.lip_left.x, f.lip_left.z };
             const glm::vec2 right { f.lip_right.x, f.lip_right.z };
             const glm::vec2 lip = (left + right) / 2.0f;

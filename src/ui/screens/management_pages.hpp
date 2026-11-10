@@ -73,10 +73,10 @@ namespace rct3::ui::screens
     /// What the pages are written from. Any of it may be missing; its values then show as dashes.
     struct ManagementFacts
     {
-        const save::ParkModel* park = nullptr; ///< As saved
+        const save::model::ParkModel* park = nullptr; ///< As saved
         const simulation::ParkState* state = nullptr;
-        const save::PeopleModel* people = nullptr;
-        const save::RideModel* rides = nullptr;
+        const save::model::PeopleModel* people = nullptr;
+        const save::model::RideModel* rides = nullptr;
         std::uint32_t broken_items = 0;                     ///< Path items vandals have broken
         std::int64_t replace_cost = 0;                      ///< To replace them all at once, hundredths
         std::span<const simulation::GoalReading> goals { }; ///< By place in the park's goals, as last checked
@@ -103,7 +103,7 @@ namespace rct3::ui::screens
     /// The button on each page of the attractions window that puts every listed attraction in the state of the
     /// choice picked, by its place among the page's buttons, and those states by the place of their choice.
     inline constexpr std::size_t kOpenCloseAllButton = 0;
-    inline constexpr std::array<save::AttractionState, 2> kOpenCloseAllStates = { save::AttractionState::Open, save::AttractionState::Closed };
+    inline constexpr std::array<save::model::AttractionState, 2> kOpenCloseAllStates = { save::model::AttractionState::Open, save::model::AttractionState::Closed };
 
     /// The page of tab `tab` of `topic`'s window.
     [[nodiscard]] ManagementPage management_page(ManagementTopic topic, std::size_t tab, const ManagementFacts& facts, const StringTable& strings, const InfoUnits& units);
@@ -128,7 +128,7 @@ namespace rct3::ui::screens
 
     /// The park's name as shown: its text when the name is a string key, else the name with each "#ME#" standing
     /// for the scenario's name; the scenario's name when the park has none.
-    [[nodiscard]] std::u16string park_name(const save::Park& park, const StringTable& strings);
+    [[nodiscard]] std::u16string park_name(const save::model::Park& park, const StringTable& strings);
 
     [[nodiscard]] std::size_t management_row_id(ManagementRow row);
     [[nodiscard]] ManagementRow management_row(std::size_t id);

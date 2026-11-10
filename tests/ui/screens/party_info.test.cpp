@@ -25,8 +25,8 @@ namespace
 
     struct Park
     {
-        save::PeopleModel people;
-        save::RideModel rides;
+        save::model::PeopleModel people;
+        save::model::RideModel rides;
     };
 
     Park sample_park()
@@ -34,13 +34,13 @@ namespace
         Park p;
         for (const std::string_view name : { "Twister", "Zoom", "Drop" })
         {
-            save::Ride& r = p.rides.rides.emplace_back();
+            save::model::Ride& r = p.rides.rides.emplace_back();
             r.base.id = p.rides.rides.size();
             r.base.name = std::string(name);
         }
-        save::Guest& ada = p.people.guests.emplace_back();
+        save::model::Guest& ada = p.people.guests.emplace_back();
         ada.person.name = "Ada";
-        ada.person.state = save::PersonState::Queueing;
+        ada.person.state = save::model::PersonState::Queueing;
         ada.mood_now.happiness = 0.8f;
         ada.needs.food = 0.9f;
         ada.cash.current = 500;
@@ -49,7 +49,7 @@ namespace
         ada.cash.spent_park_entry = 500;
         ada.favourite_ride = { 2 };
         ada.person.attractions_visited = { { 1 }, { 2 } };
-        save::Guest& bo = p.people.guests.emplace_back();
+        save::model::Guest& bo = p.people.guests.emplace_back();
         bo.person.name = "Bo";
         bo.mood_now.happiness = 0.4f;
         bo.needs.food = 0.3f;
@@ -64,7 +64,7 @@ namespace
     PartyFacts party(const Park& p, std::optional<std::int32_t> kind = std::nullopt)
     {
         PartyFacts f { .kind = kind };
-        for (const save::Guest& g : p.people.guests)
+        for (const save::model::Guest& g : p.people.guests)
             f.members.push_back({ .guest = &g, .people = &p.people, .rides = &p.rides });
         return f;
     }

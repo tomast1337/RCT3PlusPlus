@@ -23,7 +23,7 @@ namespace rct3::simulation
     inline constexpr std::int32_t kMostWageLevel = 2;
 
     /// The job a saved staff member of `kind` does in the simulation.
-    [[nodiscard]] StaffRole staff_role(save::StaffKind kind);
+    [[nodiscard]] StaffRole staff_role(save::model::StaffKind kind);
 
     /// Whether staff doing `role` walk the paths: not vendors at their post, keepers in their enclosure, or
     /// lifeguards in their chair.
@@ -59,7 +59,7 @@ namespace rct3::simulation
     [[nodiscard]] float rest_chance(const Staff& staff);
 
     /// Takes up the work the saved worker `saved` had done.
-    void take_saved_work(Staff& staff, const save::Staff& saved);
+    void take_saved_work(Staff& staff, const save::model::Staff& saved);
 
     /// What they think now, at most one thought about their work and one about how they feel; counts the
     /// thoughts in a row they have been miserable.

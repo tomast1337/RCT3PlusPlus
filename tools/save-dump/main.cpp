@@ -247,6 +247,7 @@ namespace
     bool world_report(const rct3::save::SaveFile& file, const char* path, const char* png_path)
     {
         using namespace rct3::save;
+        using namespace rct3::save::model;
         const ObjectIndex index(file);
         const auto world = load_world(file, index);
         if (!world)
@@ -516,7 +517,7 @@ int main(int argc, char** argv)
                 continue;
             }
             const rct3::save::ObjectIndex index(*file);
-            const auto model = rct3::save::load_park(*file, index);
+            const auto model = rct3::save::model::load_park(*file, index);
             if (!model)
             {
                 out.info("{}: park load error {}", argv[i], rct3::save::to_string(model.error()));
@@ -536,13 +537,13 @@ int main(int argc, char** argv)
             out.info("  content    requirements {:d} without overlay {:d} invented {:d}", m.content.entries.size(), m.content.entries_without_overlay, m.content.invented_count());
             if (root)
             {
-                const auto rep = rct3::save::check_content(m.content, root);
+                const auto rep = rct3::save::model::check_content(m.content, root);
                 out.info(
                     "  install    resolved {:d} (exact {:d}, other case {:d}, with unique {:d}) missing {:d}"
                     " ({:d} distinct stems)",
                     rep.resolved, rep.exact_case, rep.resolved - rep.exact_case, rep.with_unique, rep.missing, rep.missing_stems.size());
             }
-            for (const auto& v : rct3::save::validate(m))
+            for (const auto& v : rct3::save::model::validate(m))
             {
                 out.info("  VIOLATION  {}", v.c_str());
                 ++bad;
@@ -555,6 +556,7 @@ int main(int argc, char** argv)
     if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--rating") == 0; }))
     {
         using namespace rct3::save;
+        using namespace rct3::save::model;
         double error_sum = 0;
         std::size_t compared = 0;
         for (int i = 1; i < argc; ++i)
@@ -590,6 +592,7 @@ int main(int argc, char** argv)
     if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--fences") == 0; }))
     {
         using namespace rct3::save;
+        using namespace rct3::save::model;
         for (int i = 1; i < argc; ++i)
         {
             if (std::strncmp(argv[i], "--", 2) == 0)
@@ -611,6 +614,7 @@ int main(int argc, char** argv)
     if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--trains") == 0; }))
     {
         using namespace rct3::save;
+        using namespace rct3::save::model;
         struct Seen
         {
             std::size_t count = 0, still = 0, platform = 0, riders = 0, files = 0;
@@ -711,6 +715,7 @@ int main(int argc, char** argv)
     if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--paths") == 0; }))
     {
         using namespace rct3::save;
+        using namespace rct3::save::model;
         struct Seen
         {
             std::size_t count = 0, underground = 0, no_base = 0;
@@ -824,6 +829,7 @@ int main(int argc, char** argv)
     if (argc > 1 && std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--people") == 0; }))
     {
         using namespace rct3::save;
+        using namespace rct3::save::model;
         PeopleModel total;
         std::map<std::string, std::size_t> issue_counts;
         std::map<std::string, std::size_t> kinds;
@@ -1054,7 +1060,7 @@ int main(int argc, char** argv)
     if (rides)
     {
         const rct3::save::ObjectIndex index(*file);
-        const auto model = rct3::save::load_rides(*file, index);
+        const auto model = rct3::save::model::load_rides(*file, index);
         if (!model)
         {
             out.info("rides          error: {}", rct3::save::to_string(model.error()));
@@ -1064,9 +1070,9 @@ int main(int argc, char** argv)
         std::size_t trains = 0, cars = 0, items = 0, extras = 0, segments = 0;
         for (const auto& r : model->rides)
         {
-            tracked += r.kind == rct3::save::RideKind::Tracked;
-            flat += r.kind == rct3::save::RideKind::Flat;
-            special += r.kind == rct3::save::RideKind::Special;
+            tracked += r.kind == rct3::save::model::RideKind::Tracked;
+            flat += r.kind == rct3::save::model::RideKind::Flat;
+            special += r.kind == rct3::save::model::RideKind::Special;
             stations += r.stations.size();
             trains += r.trains.size();
             for (const auto& t : r.trains)

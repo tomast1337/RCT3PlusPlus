@@ -47,13 +47,13 @@ namespace rct3::ui::screens
             return line != page.lines.end() ? std::optional(*line) : std::nullopt;
         }
 
-        std::u16string ride_called(const PersonFacts& f, save::PeopleObjectId id, const StringTable& strings)
+        std::u16string ride_called(const PersonFacts& f, save::model::PeopleObjectId id, const StringTable& strings)
         {
             if (f.rides == nullptr)
                 return { };
-            if (const auto r = std::ranges::find(f.rides->rides, id, [](const save::Ride& r) { return r.base.id; }); r != f.rides->rides.end())
+            if (const auto r = std::ranges::find(f.rides->rides, id, [](const save::model::Ride& r) { return r.base.id; }); r != f.rides->rides.end())
                 return attraction_name(r->base, strings);
-            if (const auto s = std::ranges::find(f.rides->stalls, id, [](const save::Stall& s) { return s.base.id; }); s != f.rides->stalls.end())
+            if (const auto s = std::ranges::find(f.rides->stalls, id, [](const save::model::Stall& s) { return s.base.id; }); s != f.rides->stalls.end())
                 return attraction_name(s->base, strings);
             return { };
         }
@@ -65,7 +65,7 @@ namespace rct3::ui::screens
             for (const std::string_view name : { "Guest_FavouriteRide", "Guest_RidesBeenOn" })
                 if (auto line = leader_line(f, PersonTab::Rides, name, strings, units))
                     page.lines.push_back(std::move(*line));
-            std::vector<save::PeopleObjectId> listed;
+            std::vector<save::model::PeopleObjectId> listed;
             for (const PersonFacts& m : f.members)
             {
                 for (auto it = m.guest->person.attractions_visited.rbegin(); it != m.guest->person.attractions_visited.rend() && page.lines.size() < kListLines; ++it)
@@ -94,14 +94,14 @@ namespace rct3::ui::screens
                     top = std::max(top, of(*m.guest));
                 return top;
             };
-            add(page, strings, "Guest_Happiness", percent(mean([](const save::Guest& g) { return g.mood_now.happiness; })), true);
-            add(page, strings, "Guest_Energy", percent(mean([](const save::Guest& g) { return g.mood_now.energy; })), true);
-            add(page, strings, "Guest_Hunger", percent(most([](const save::Guest& g) { return 1 - g.needs.food; })), true);
-            add(page, strings, "Guest_Thirst", percent(most([](const save::Guest& g) { return 1 - g.needs.drink; })), true);
-            add(page, strings, "Guest_Toilet", percent(most([](const save::Guest& g) { return g.needs.toilet; })), true);
-            add(page, strings, "Guest_Nausea", percent(mean([](const save::Guest& g) { return g.mood_now.nausea; })), true);
+            add(page, strings, "Guest_Happiness", percent(mean([](const save::model::Guest& g) { return g.mood_now.happiness; })), true);
+            add(page, strings, "Guest_Energy", percent(mean([](const save::model::Guest& g) { return g.mood_now.energy; })), true);
+            add(page, strings, "Guest_Hunger", percent(most([](const save::model::Guest& g) { return 1 - g.needs.food; })), true);
+            add(page, strings, "Guest_Thirst", percent(most([](const save::model::Guest& g) { return 1 - g.needs.drink; })), true);
+            add(page, strings, "Guest_Toilet", percent(most([](const save::model::Guest& g) { return g.needs.toilet; })), true);
+            add(page, strings, "Guest_Nausea", percent(mean([](const save::model::Guest& g) { return g.mood_now.nausea; })), true);
             if (std::ranges::all_of(f.members, [](const PersonFacts& m) { return m.guest->mood_now.sunburn.has_value(); }))
-                add(page, strings, "Guest_SunBurn", percent(mean([](const save::Guest& g) { return *g.mood_now.sunburn; })), true);
+                add(page, strings, "Guest_SunBurn", percent(mean([](const save::model::Guest& g) { return *g.mood_now.sunburn; })), true);
             // From the gentlest liking among them to the wildest.
             const auto [low, high] = std::ranges::minmax(f.members | std::views::transform([](const PersonFacts& m) { return static_cast<std::size_t>(m.guest->ride_preference.intensity); }));
             if (high < kIntensityWords.size())

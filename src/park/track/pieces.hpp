@@ -285,18 +285,18 @@ namespace rct3::park::track
     /// Where a piece goes in the park: an object to place and the open end it leaves.
     struct PiecePlacement
     {
-        save::PlacedObject object; ///< Tile, height and turn set; the rest left for the caller
+        save::model::PlacedObject object; ///< Tile, height and turn set; the rest left for the caller
         TrackTip next;
     };
 
     /// Where `shape` laid as `reversed` goes so that it carries on from `tip` on `grid`. Nothing when its
     /// start cannot meet the tip at a whole tile and height.
-    [[nodiscard]] std::optional<PiecePlacement> place_after(const TrackTip& tip, const PieceShape& shape, bool reversed, const save::TerrainGrid& grid);
+    [[nodiscard]] std::optional<PiecePlacement> place_after(const TrackTip& tip, const PieceShape& shape, bool reversed, const save::model::TerrainGrid& grid);
 
     /// The open end a placed piece leaves when laid as `reversed`.
-    [[nodiscard]] TrackTip tip_of(const save::PlacedObject& object, const PieceShape& shape, bool reversed, const save::TerrainGrid& grid);
+    [[nodiscard]] TrackTip tip_of(const save::model::PlacedObject& object, const PieceShape& shape, bool reversed, const save::model::TerrainGrid& grid);
     /// Where a placed piece laid as `reversed` starts, as the open end a piece before it would leave.
-    [[nodiscard]] TrackTip start_of(const save::PlacedObject& object, const PieceShape& shape, bool reversed, const save::TerrainGrid& grid);
+    [[nodiscard]] TrackTip start_of(const save::model::PlacedObject& object, const PieceShape& shape, bool reversed, const save::model::TerrainGrid& grid);
 
     /// The pieces that can follow `tip`, each with the way it is laid: a piece that fits both ways (a level
     /// curve, which turns the other way when laid backwards) comes twice. With `last`, the piece of `pieces`

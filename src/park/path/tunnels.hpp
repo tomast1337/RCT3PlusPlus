@@ -27,9 +27,9 @@ namespace rct3::park::path
     inline constexpr float kTunnelFloor = 0.1f;
 
     /// The hollows of the tunnel pieces among `paths`.
-    [[nodiscard]] std::vector<GroundOpening> tunnel_hollows(std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    [[nodiscard]] std::vector<GroundOpening> tunnel_hollows(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);
 
     /// The lining of `hollows`, in TunnelWall and TunnelCeiling batches by the tiles' cliff faces.
-    [[nodiscard]] TerrainMesh tunnel_lining(std::span<const GroundOpening> hollows, const save::TerrainGrid& grid);
+    [[nodiscard]] TerrainMesh tunnel_lining(std::span<const GroundOpening> hollows, const save::model::TerrainGrid& grid);
 
 } // namespace rct3::park::path

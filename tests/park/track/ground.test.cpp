@@ -13,28 +13,28 @@ using namespace rct3::park::track;
 
 namespace
 {
-    save::TerrainGrid owned_grid(int width, int height)
+    save::model::TerrainGrid owned_grid(int width, int height)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(static_cast<std::size_t>(width * height));
-        for (save::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::TileFlag::Owned);
+        for (save::model::TerrainCell& c : g.cells)
+            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
         return g;
     }
 
     /// A piece of track on tile (2, 1) at height 0, its one square solid from level 0 to 4.
-    std::pair<std::vector<save::PlacedObject>, object::ObjectModels> one_piece()
+    std::pair<std::vector<save::model::PlacedObject>, object::ObjectModels> one_piece()
     {
         object::ObjectModel model;
         model.category = std::to_underlying(ItemCategory::TrackPiece);
         model.ground_height = false;
         model.solid = { std::array<std::int32_t, 2> { 0, 4 } };
         model.levels = { { 100, { }, { } } };
-        save::PlacedObject o;
+        save::model::PlacedObject o;
         o.id = 1;
         o.symbol = "Piece";
         o.col = 2;
@@ -48,13 +48,13 @@ namespace
 
 TEST_CASE("a piece passing into the ground cuts its tile's corners down to its floor, not over it or in a tunnel")
 {
-    save::TerrainGrid g = owned_grid(5, 3);
+    save::model::TerrainGrid g = owned_grid(5, 3);
     auto [pieces, models] = one_piece();
     CHECK(ground_cuts(pieces, models, g, false).footprint.empty());
     g.at(2, 1).corners = { 0, 0, 1, 2 };
     auto cuts = ground_cuts(pieces, models, g, false).footprint;
     REQUIRE(cuts.size() == 1);
-    CHECK(cuts[0].tile == save::Tile { 2, 1 });
+    CHECK(cuts[0].tile == save::model::Tile { 2, 1 });
     CHECK(cuts[0].corners == std::array { 0.0f, 0.0f, 0.0f, 0.0f });
     pieces[0].base_height = 1;
     cuts = ground_cuts(pieces, models, g, false).footprint;
@@ -69,7 +69,7 @@ TEST_CASE("a piece passing into the ground cuts its tile's corners down to its f
 
 TEST_CASE("track keeps the riders' room clear of the ground: over its levels, or under them when its cars hang")
 {
-    save::TerrainGrid g = owned_grid(5, 3);
+    save::model::TerrainGrid g = owned_grid(5, 3);
     auto [pieces, models] = one_piece();
     // Ground a unit over the piece's top was a tunnel before the riders' room; now the piece cuts through it.
     g.at(2, 1).corners.fill(4 + kGroundCover);
@@ -95,7 +95,7 @@ TEST_CASE("track keeps the riders' room clear of the ground: over its levels, or
 
 TEST_CASE("a cut is refused off land the park owns outright and where the land tools may not move the ground")
 {
-    save::TerrainGrid g = owned_grid(5, 3);
+    save::model::TerrainGrid g = owned_grid(5, 3);
     const auto [pieces, models] = one_piece();
     g.at(2, 1).corners = { 0, 0, 1, 2 };
     const auto cuts = ground_cuts(pieces, models, g, false).footprint;
@@ -113,9 +113,9 @@ TEST_CASE("a cut is refused off land the park owns outright and where the land t
 
 TEST_CASE("a smooth cut slopes the tiles round it down to meet it, leaving the far side of each as it was")
 {
-    save::TerrainGrid g = owned_grid(5, 3);
+    save::model::TerrainGrid g = owned_grid(5, 3);
     auto [pieces, models] = one_piece();
-    for (save::TerrainCell& c : g.cells)
+    for (save::model::TerrainCell& c : g.cells)
         c.corners.fill(2);
     const ground::GroundCuts sharp = ground_cuts(pieces, models, g, false);
     CHECK(sharp.footprint.size() == 1);
@@ -125,9 +125,9 @@ TEST_CASE("a smooth cut slopes the tiles round it down to meet it, leaving the f
     REQUIRE(smooth.rim.size() == 8);
     for (const ground::GroundCut& cut : smooth.rim)
     {
-        if (cut.tile == save::Tile { 3, 1 }) // East: its west corners meet the cut
+        if (cut.tile == save::model::Tile { 3, 1 }) // East: its west corners meet the cut
             CHECK(cut.corners == std::array { 0.0f, 2.0f, 0.0f, 2.0f });
-        if (cut.tile == save::Tile { 1, 0 }) // North-west: only the corner it shares
+        if (cut.tile == save::model::Tile { 1, 0 }) // North-west: only the corner it shares
             CHECK(cut.corners == std::array { 2.0f, 2.0f, 2.0f, 0.0f });
     }
     CHECK(ground::cuts_cost(smooth, g) == std::lround(4 * 2 * ground::kShapeCost + 4 * 2 * 2 * ground::kShapeCost + 4 * 2 * ground::kShapeCost));
@@ -135,7 +135,7 @@ TEST_CASE("a smooth cut slopes the tiles round it down to meet it, leaving the f
 
 TEST_CASE("a piece, ride or stall under enough ground all round hollows its tile up to its top, scenery never does")
 {
-    save::TerrainGrid g = owned_grid(5, 3);
+    save::model::TerrainGrid g = owned_grid(5, 3);
     auto [pieces, models] = one_piece();
     g.at(2, 1).corners.fill(4 + path::kRiderRoom + kGroundCover);
     const auto hollows = buried_hollows(pieces, models, g);
@@ -157,7 +157,7 @@ TEST_CASE("a piece, ride or stall under enough ground all round hollows its tile
 
 TEST_CASE("an item lies buried only under enough ground on every tile it fills")
 {
-    save::TerrainGrid g = owned_grid(5, 3);
+    save::model::TerrainGrid g = owned_grid(5, 3);
     auto [pieces, models] = one_piece();
     CHECK_FALSE(lies_buried(pieces, models, g));
     g.at(2, 1).corners.fill(4 + path::kRiderRoom + kGroundCover);
@@ -170,7 +170,7 @@ TEST_CASE("an item lies buried only under enough ground on every tile it fills")
     models.begin()->second.solid.push_back(std::array<std::int32_t, 2> { 0, 4 });
     models.begin()->second.squares = { 1, 2 };
     CHECK_FALSE(lies_buried(pieces, models, g));
-    for (save::TerrainCell& c : g.cells)
+    for (save::model::TerrainCell& c : g.cells)
         c.corners.fill(4 + path::kRiderRoom + kGroundCover);
     CHECK(lies_buried(pieces, models, g));
 }

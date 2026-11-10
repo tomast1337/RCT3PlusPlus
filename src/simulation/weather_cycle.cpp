@@ -68,17 +68,17 @@ namespace rct3::simulation
         }
 
         /// The kind's place among the rolled kinds; snow and unknown weather count as cloudy.
-        std::size_t kind_index(save::WeatherType type)
+        std::size_t kind_index(save::model::WeatherType type)
         {
             const auto i = static_cast<std::int32_t>(type);
-            return i >= 0 && i < static_cast<std::int32_t>(kRolledWeathers) ? static_cast<std::size_t>(i) : static_cast<std::size_t>(save::WeatherType::Cloudy);
+            return i >= 0 && i < static_cast<std::int32_t>(kRolledWeathers) ? static_cast<std::size_t>(i) : static_cast<std::size_t>(save::model::WeatherType::Cloudy);
         }
 
-        save::WeatherType roll(std::int32_t climate, std::int32_t month, random::RandomState& dice)
+        save::model::WeatherType roll(std::int32_t climate, std::int32_t month, random::RandomState& dice)
         {
             const ClimateMonth m = climate_month(climate, month);
             const auto picked = pick_weighted(dice, m.odds);
-            return static_cast<save::WeatherType>(picked.value_or(0));
+            return static_cast<save::model::WeatherType>(picked.value_or(0));
         }
 
         float hold(random::RandomState& dice)
@@ -98,7 +98,7 @@ namespace rct3::simulation
         return { .warmth = c.warmth[m], .odds = { dry * (1 - c.cloud), dry * c.cloud / 2, dry * c.cloud / 2, rain * kLightShare, rain * (1 - kLightShare), wet * c.storm } };
     }
 
-    float weather_temperature(std::int32_t climate, std::int32_t month, save::WeatherType type)
+    float weather_temperature(std::int32_t climate, std::int32_t month, save::model::WeatherType type)
     {
         return shape(climate).warmth[month_index(month)] + kKindWarmth[kind_index(type)];
     }
@@ -140,9 +140,9 @@ namespace rct3::simulation
             return;
         const std::int32_t month = state.date.month;
         // A park without weather starts with some, and with its forecast.
-        if (state.weather == save::WeatherType::Unknown)
+        if (state.weather == save::model::WeatherType::Unknown)
             state.weather = roll(state.climate, month, dice);
-        if (!state.forecast || *state.forecast == save::WeatherType::Unknown)
+        if (!state.forecast || *state.forecast == save::model::WeatherType::Unknown)
         {
             state.forecast = roll(state.climate, month, dice);
             state.weather_hold = hold(dice);

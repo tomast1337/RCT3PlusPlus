@@ -31,6 +31,6 @@ namespace rct3::park
 
     /// Buys every tile of `tiles` inside `grid` that is on sale as `what`, at `price` hundredths each, while
     /// `cash` lasts (none: money never runs out).
-    LandBought buy_land(save::TerrainGrid& grid, std::span<const save::Tile> tiles, LandBuy what, std::int32_t price, std::optional<std::int64_t> cash);
+    LandBought buy_land(save::model::TerrainGrid& grid, std::span<const save::model::Tile> tiles, LandBuy what, std::int32_t price, std::optional<std::int64_t> cash);
 
 } // namespace rct3::park

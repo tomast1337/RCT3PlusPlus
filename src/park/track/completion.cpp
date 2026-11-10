@@ -36,7 +36,7 @@ namespace rct3::park::track
         }
     } // namespace
 
-    CompletionSearch start_completion(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::TerrainGrid& grid, std::function<bool(const save::PlacedObject&)> allowed)
+    CompletionSearch start_completion(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::model::TerrainGrid& grid, std::function<bool(const save::model::PlacedObject&)> allowed)
     {
         CompletionSearch s { .pieces = pieces, .goal = goal, .first = first, .grid = &grid, .allowed = std::move(allowed) };
         if (first.index >= pieces.size() || last.index >= pieces.size() || grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
@@ -87,7 +87,7 @@ namespace rct3::park::track
         return search.steps.empty() ? std::vector<LaidPlacement> { } : way_to(search, search.nearest);
     }
 
-    std::expected<std::vector<LaidPlacement>, CompletionFailure> complete_track(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::TerrainGrid& grid, const std::function<bool(const save::PlacedObject&)>& allowed, std::size_t tries)
+    std::expected<std::vector<LaidPlacement>, CompletionFailure> complete_track(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::model::TerrainGrid& grid, const std::function<bool(const save::model::PlacedObject&)>& allowed, std::size_t tries)
     {
         CompletionSearch search = start_completion(pieces, tip, last, goal, first, grid, allowed);
         return search_on(search, tries).value_or(std::unexpected(CompletionFailure::OutOfTries));

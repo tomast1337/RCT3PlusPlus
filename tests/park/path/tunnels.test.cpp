@@ -10,9 +10,9 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::TerrainGrid flat(int width, int height)
+    save::model::TerrainGrid flat(int width, int height)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
@@ -21,20 +21,20 @@ namespace
         return g;
     }
 
-    void raise(save::TerrainGrid& g, int col, int row, float height, std::uint8_t cliff = 2)
+    void raise(save::model::TerrainGrid& g, int col, int row, float height, std::uint8_t cliff = 2)
     {
-        save::TerrainCell& c = g.cells[static_cast<std::size_t>(row * g.width + col)];
+        save::model::TerrainCell& c = g.cells[static_cast<std::size_t>(row * g.width + col)];
         c.corners = { height, height, height, height };
         c.cliff = cliff;
     }
 
-    save::PathTile tunnel(int col, int row, std::int32_t height)
+    save::model::PathTile tunnel(int col, int row, std::int32_t height)
     {
-        save::PathTile p;
-        p.kind = save::PathKind::Flying;
+        save::model::PathTile p;
+        p.kind = save::model::PathKind::Flying;
         p.col = static_cast<std::uint8_t>(col);
         p.row = static_cast<std::uint8_t>(row);
-        p.elevation = save::PathElevation { };
+        p.elevation = save::model::PathElevation { };
         p.elevation->quantised_height = height;
         p.elevation->underground = true;
         return p;
@@ -53,9 +53,9 @@ namespace
 
 TEST_CASE("a tunnel piece hollows its tile, unless the ground over it was lowered")
 {
-    save::TerrainGrid g = flat(3, 3);
+    save::model::TerrainGrid g = flat(3, 3);
     raise(g, 1, 1, 6);
-    const std::vector<save::PathTile> paths { tunnel(1, 1, 0), tunnel(0, 0, 0) };
+    const std::vector<save::model::PathTile> paths { tunnel(1, 1, 0), tunnel(0, 0, 0) };
     const auto hollows = tunnel_hollows(paths, g);
     REQUIRE(hollows.size() == 1); // (0, 0) has no ground over it
     CHECK(hollows[0].col == 1);
@@ -65,7 +65,7 @@ TEST_CASE("a tunnel piece hollows its tile, unless the ground over it was lowere
 
 TEST_CASE("the walls round a hollowed tile leave the hollow open")
 {
-    save::TerrainGrid g = flat(3, 3);
+    save::model::TerrainGrid g = flat(3, 3);
     raise(g, 1, 1, 6);
     const auto whole = cliff_points(terrain_mesh(g, { }));
     CHECK(std::ranges::any_of(whole, [](glm::vec3 p) { return p.y < 1; }));
@@ -78,7 +78,7 @@ TEST_CASE("the walls round a hollowed tile leave the hollow open")
 TEST_CASE("a tunnel is lined with a ceiling, a floor, and walls where earth lies beyond")
 {
     // Two tunnel tiles in a row under a plateau, the row's ends opening onto low ground.
-    save::TerrainGrid g = flat(4, 3);
+    save::model::TerrainGrid g = flat(4, 3);
     for (int col = 1; col <= 2; ++col)
         for (int row = 0; row < 3; ++row)
             raise(g, col, row, 6);
@@ -101,7 +101,7 @@ TEST_CASE("a tunnel is lined with a ceiling, a floor, and walls where earth lies
 
 TEST_CASE("neighbouring hollows at different heights wall the step between them")
 {
-    save::TerrainGrid g = flat(4, 3);
+    save::model::TerrainGrid g = flat(4, 3);
     for (int col = 0; col < 4; ++col)
         for (int row = 0; row < 3; ++row)
             raise(g, col, row, 20);

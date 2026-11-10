@@ -73,15 +73,15 @@ namespace rct3::simulation
         return { origin_x + (static_cast<float>(tile.x) + 0.5f) * tile_size, origin_z + (static_cast<float>(tile.y) + 0.5f) * tile_size };
     }
 
-    WaterTiles water_tiles(const save::TerrainGrid& grid, std::span<const save::WaterBody> bodies, const park::path::SolidTiles& solids)
+    WaterTiles water_tiles(const save::model::TerrainGrid& grid, std::span<const save::model::WaterBody> bodies, const park::path::SolidTiles& solids)
     {
         WaterTiles w { .cols = grid.width, .rows = grid.height, .origin_x = grid.origin_x, .origin_z = grid.origin_z, .tile_size = grid.tile_size_x > 0 ? grid.tile_size_x : 4 };
         w.level.assign(static_cast<std::size_t>(std::max(grid.width, 0)) * static_cast<std::size_t>(std::max(grid.height, 0)), std::nullopt);
-        for (const save::WaterBody& body : bodies)
+        for (const save::model::WaterBody& body : bodies)
         {
             // Both triangles with all three corners under the surface.
             std::vector<std::uint8_t> under(w.level.size(), 0);
-            for (const save::WaterTri& t : body.tris)
+            for (const save::model::WaterTri& t : body.tris)
                 if (t.col < w.cols && t.row < w.rows && t.mask == 0b111)
                     under[static_cast<std::size_t>(t.row) * static_cast<std::size_t>(w.cols) + t.col] |= static_cast<std::uint8_t>(1u << (t.triangle & 1));
             for (std::size_t i = 0; i < under.size(); ++i)

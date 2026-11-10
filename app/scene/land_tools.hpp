@@ -96,14 +96,14 @@ namespace rct3::scene
             Buy,
         };
         Tool tool = Tool::None;
-        std::optional<save::Tile> tile; ///< Being shaped, or last painted, while the button is held
+        std::optional<save::model::Tile> tile; ///< Being shaped, or last painted, while the button is held
         float press_y = 0;
         std::size_t tile_tool = 0;                               ///< The tile tool chosen, by its place in its tab
         rct3::park::TileStroke stroke;                           ///< Of a tile tool
         std::vector<glm::vec3> marked;                           ///< Where the marks on the ground were made, to make them again only on a change
         rct3::park::ground::GroundHolds holds;                   ///< Gathered as a stroke starts
         std::unordered_set<std::uint32_t> refused;               ///< Tiles the stroke may not move, as GroundHolds keys them
-        std::optional<std::array<save::Tile, 2>> stirred;        ///< The first and last tiles the stroke moved
+        std::optional<std::array<save::model::Tile, 2>> stirred; ///< The first and last tiles the stroke moved
         std::vector<rct3::park::ground::GroundSurface> surfaces; ///< Read once, the first time the paint tool opens
         bool surfaces_read = false;
         std::size_t surface = 0;                               ///< Chosen, of `surfaces`
@@ -121,7 +121,7 @@ namespace rct3::scene
         float held = 0;                                        ///< Seconds of smoothing not yet applied
         std::uint64_t passes = 0;                              ///< Of smoothing, the seed of each pass
         std::optional<std::size_t> upper_lake;                 ///< Of a waterfall: the lake picked first, of the park's water
-        save::Tile upper_tile;                                 ///< Where it was picked
+        save::model::Tile upper_tile;                          ///< Where it was picked
         rct3::park::LandBuy buying = rct3::park::LandBuy::Land;
         std::optional<float> rumble; ///< While a shaping stroke goes: how loud its ground is heard moving, 0..1
     };

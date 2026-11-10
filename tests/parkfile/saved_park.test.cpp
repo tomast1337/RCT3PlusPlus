@@ -21,7 +21,7 @@ namespace
         park.grid.height = 1;
         park.grid.cells.resize(2);
         park.paths.emplace_back().col = 5;
-        save::PlacedObject& o = park.objects.emplace_back();
+        save::model::PlacedObject& o = park.objects.emplace_back();
         o.id = 42;
         o.symbol = "bench";
         o.base_height = 3;
@@ -30,7 +30,7 @@ namespace
         park.rides.stalls.emplace_back();
         park.progress.cash = 123456;
         park.progress.date.year = 2;
-        park.progress.forecast = save::WeatherType::Unknown;
+        park.progress.forecast = save::model::WeatherType::Unknown;
         park.progress.day_time = 0.25f;
         park.progress.climate = 6;
         park.progress.weather_hold = 33;
@@ -73,7 +73,7 @@ TEST_CASE("a saved park reads back as written")
     hidden.no_queue_signs = { 7, 9 };
     const auto again = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
     REQUIRE(again);
-    CHECK(again->no_queue_signs == std::vector<save::ObjectId> { 7, 9 });
+    CHECK(again->no_queue_signs == std::vector<save::model::ObjectId> { 7, 9 });
     CHECK_FALSE(again->shows); // None kept: read again from the original park
 
     hidden.shows = { { .ride = 4, .tricks = { { .name = "PonyShowIdle", .seconds = 4 }, { .name = "PonyShowHop", .seconds = 12, .invented = true } }, .order = { 1, 1 } } };
@@ -88,7 +88,7 @@ TEST_CASE("a saved park reads back as written")
 
     hidden.goals = parkfile::SavedGoals { .max_loan = 400, .interest_rate_percent = 2.5f };
     hidden.goals->objectives.objectives = { { .difficulty = 1, .prize_id = 5, .success = true } };
-    hidden.goals->objectives.conditions = { { .kind = save::ConditionKind::ParkGuests, .completed = true, .value = 250 } };
+    hidden.goals->objectives.conditions = { { .kind = save::model::ConditionKind::ParkGuests, .completed = true, .value = 250 } };
     const auto goals = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
     REQUIRE(goals);
     REQUIRE(goals->goals);
@@ -159,23 +159,23 @@ TEST_CASE("a unit is laid out as its bare number, so parks saved before it was w
 
 TEST_CASE("a save keeps the park's objects and those the player built, platforms too, not those loading makes")
 {
-    std::vector<save::PlacedObject> objects(11);
+    std::vector<save::model::PlacedObject> objects(11);
     for (std::size_t i = 0; i < objects.size(); ++i)
         objects[i].id = 10 + i;
     // 10 and 11 are the park's; 12 a support made on loading; 13 a path's deck; 14 a track piece; 15 a flat
     // ride and 16 its entrance; 17 a tree the player planted; 18 a stall; 19 one grown beyond the edge; 20 the
     // track piece's platform model, owned by its platform record 30.
     objects[10].owner_ref = 30;
-    std::vector<save::PathTile> paths(1);
+    std::vector<save::model::PathTile> paths(1);
     paths[0].elevation.emplace().scenery_ref = 13;
-    save::RideModel rides;
-    save::TrackPiece& piece = rides.rides.emplace_back().track.emplace().pieces.emplace_back();
+    save::model::RideModel rides;
+    save::model::TrackPiece& piece = rides.rides.emplace_back().track.emplace().pieces.emplace_back();
     piece.scenery = 14;
-    piece.platform = save::TrackPlatform { .id = 30 };
-    save::Ride& flat = rides.rides.emplace_back();
-    flat.base.spot = save::PlacementSpot { .object = 15 };
-    flat.stations.emplace_back().entrance_spot = save::PlacementSpot { .object = 16 };
-    rides.stalls.emplace_back().base.spot = save::PlacementSpot { .object = 18 };
+    piece.platform = save::model::TrackPlatform { .id = 30 };
+    save::model::Ride& flat = rides.rides.emplace_back();
+    flat.base.spot = save::model::PlacementSpot { .object = 15 };
+    flat.stations.emplace_back().entrance_spot = save::model::PlacementSpot { .object = 16 };
+    rides.stalls.emplace_back().base.spot = save::model::PlacementSpot { .object = 18 };
     const auto kept = parkfile::kept_objects(objects, 2, { 17 }, paths, rides);
     REQUIRE(kept.size() == 9);
     CHECK(kept[0].id == 10);
@@ -194,7 +194,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     using namespace simulation;
     SimWorld world;
     auto& r = world.registry;
-    save::PeopleModel model;
+    save::model::PeopleModel model;
     model.guests.resize(2);
     model.guests[0].in_park = true;
     model.staff.resize(1);
@@ -385,7 +385,7 @@ TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animal
     r.emplace<Dung>(dung, Dung { 0 });
     r.emplace<Pose>(dung, Pose { .position = { 2, 0, 3 } });
     r.get<KeeperDuty>(keeper) = { .house = r.get<KeeperDuty>(keeper).house, .job = KeeperJob::Clearing, .goal = { 2, 0, 3 }, .target = dung, .busy = { 4 } };
-    save::EnclosureMap map { .cols = 2, .rows = 1, .tiles = { 0, -1 }, .fences = { "Wood" } };
+    save::model::EnclosureMap map { .cols = 2, .rows = 1, .tiles = { 0, -1 }, .fences = { "Wood" } };
 
     parkfile::SavedPark park = small_park();
     park.people = parkfile::keep_people(world, { }, { });
@@ -464,7 +464,7 @@ TEST_CASE("a save keeps the pools, their extras and changing rooms")
 TEST_CASE("a save keeps a person's switches and a ride's call for a mechanic")
 {
     parkfile::SavedPark park = small_park();
-    save::PeopleModel model;
+    save::model::PeopleModel model;
     model.guests.resize(1);
     model.guests[0].person.thoughts_to_console = true;
     model.staff.resize(1);

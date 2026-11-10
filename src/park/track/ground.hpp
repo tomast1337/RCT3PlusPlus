@@ -33,14 +33,14 @@ namespace rct3::park::track
 
     /// The cuts the solid squares of `items` (their models loaded) make in the ground, a tile at a time: the
     /// tiles they pass into, and when `smooth` the tiles round those sloped down to meet them.
-    [[nodiscard]] ground::GroundCuts ground_cuts(std::span<const save::PlacedObject> items, const object::ObjectModels& models, const save::TerrainGrid& grid, bool smooth);
+    [[nodiscard]] ground::GroundCuts ground_cuts(std::span<const save::model::PlacedObject> items, const object::ObjectModels& models, const save::model::TerrainGrid& grid, bool smooth);
 
     /// The hollows of the pieces of track, rides, stalls and ride doors among `objects` (their models loaded)
     /// that lie under the ground.
-    [[nodiscard]] std::vector<GroundOpening> buried_hollows(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid);
+    [[nodiscard]] std::vector<GroundOpening> buried_hollows(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
 
     /// Whether `objects` lie wholly under the ground: each tile they fill with its ground at least kGroundCover over
     /// their top there, so that each hollows a cave (buried_hollows).
-    [[nodiscard]] bool lies_buried(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid);
+    [[nodiscard]] bool lies_buried(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
 
 } // namespace rct3::park::track

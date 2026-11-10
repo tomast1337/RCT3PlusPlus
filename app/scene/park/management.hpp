@@ -40,7 +40,7 @@ namespace rct3::scene::park
         bool buy_land = false;                         ///< Take out the tool buying land (ui::screens::kBuyLandButton)
         bool buy_rights = false;                       ///< Or building rights (ui::screens::kBuyRightsButton)
         /// Put every attraction in `listed` in this state (ui::screens::kOpenCloseAllButton)
-        std::optional<save::AttractionState> state_all;
+        std::optional<save::model::AttractionState> state_all;
         std::vector<ui::screens::ManagementRow> listed;
         ui::screens::RosterAsks staff; ///< Of the staff window
     };

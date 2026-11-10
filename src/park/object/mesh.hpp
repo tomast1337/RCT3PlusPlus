@@ -104,12 +104,12 @@ namespace rct3::park::object
     inline constexpr std::int8_t kNotDrawn = -1;
 
     /// The key `object`'s model is kept by: its overlay and its symbol.
-    [[nodiscard]] std::string model_key(const save::PlacedObject& object);
+    [[nodiscard]] std::string model_key(const save::model::PlacedObject& object);
     /// The same key, to look a model up by without building it.
-    [[nodiscard]] ModelRef model_ref(const save::PlacedObject& object);
+    [[nodiscard]] ModelRef model_ref(const save::model::PlacedObject& object);
 
     /// Where `object` stands in the world, model to world: as `fitted` has it, else as its model places it.
-    [[nodiscard]] glm::mat4 placed_transform(const save::PlacedObject& object, const ObjectModel* model, const save::TerrainGrid& grid, const Fitted& fitted = { });
+    [[nodiscard]] glm::mat4 placed_transform(const save::model::PlacedObject& object, const ObjectModel* model, const save::model::TerrainGrid& grid, const Fitted& fitted = { });
 
     /// Where each placed object stands and the model it is drawn with, kept from one change of the objects to
     /// the next: looking a model up by its key is most of the cost, so it is done again only for objects whose
@@ -123,10 +123,10 @@ namespace rct3::park::object
     };
 
     /// Brings `places` up to date with `objects`; the indices, rising, of those whose model or place changed.
-    std::vector<std::size_t> update_places(ObjectPlaces& places, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted);
+    std::vector<std::size_t> update_places(ObjectPlaces& places, std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted);
 
     /// Where each object's model origin lands in the park, by index.
-    [[nodiscard]] std::vector<glm::vec3> object_anchors(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { });
+    [[nodiscard]] std::vector<glm::vec3> object_anchors(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted = { });
 
     /// The lamps the objects' models carry, placed in the park, in the colour each names or each object's slot
     /// gives, at full strength. Each object stands at `places` by index when given (moving ride cars), else
@@ -134,7 +134,7 @@ namespace rct3::park::object
     /// Hidden objects are left out.
     /// shortcut: lamps on bones stand where the bone rests, so a turning ride's or an arm's lamps stay put;
     /// move them with the bones once ride lighting at night shows it.
-    [[nodiscard]] std::vector<Lamp> object_lamps(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { }, std::span<const glm::mat4> places = { }, std::span<const ObjectModel* const> found = { });
+    [[nodiscard]] std::vector<Lamp> object_lamps(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted = { }, std::span<const glm::mat4> places = { }, std::span<const ObjectModel* const> found = { });
 
     /// A particle effect a placed object shows.
     struct PlacedEffect
@@ -148,10 +148,10 @@ namespace rct3::park::object
 
     /// The particle effects the objects' models show, placed in the park as object_lamps places lamps.
     /// shortcut: effects on bones stand where the bone rests, as lamps do.
-    [[nodiscard]] std::vector<PlacedEffect> object_effects(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted = { }, std::span<const glm::mat4> places = { }, std::span<const ObjectModel* const> found = { });
+    [[nodiscard]] std::vector<PlacedEffect> object_effects(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted = { }, std::span<const glm::mat4> places = { }, std::span<const ObjectModel* const> found = { });
 
     /// The level of each object seen from `eye`, its models' distances scaled for its kind by `scales`.
-    [[nodiscard]] ObjectLevels object_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, const LevelScales& scales = { });
+    [[nodiscard]] ObjectLevels object_levels(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, const LevelScales& scales = { });
 
     /// How far round a crossing objects are already drawn as crossing, as a share of its distance, so ones the
     /// eye reaches between two looks at the levels are ready.
@@ -172,11 +172,11 @@ namespace rct3::park::object
     /// The plan for `objects` seen from `eye`, its models' distances scaled for its kind by `scales`. An object starts crossing
     /// into the next level `band` of a level's farthest distance before it, as the eye draws away, and is wholly
     /// at the next level at the distance itself; with `band` 0, objects jump from level to level.
-    [[nodiscard]] LevelPlan plan_levels(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, const LevelScales& scales = { });
+    [[nodiscard]] LevelPlan plan_levels(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, const LevelScales& scales = { });
 
     /// The shapes of the objects at `levels` (by index; when it does not cover every object, each is drawn at
     /// its finest level), leaning those in `leans`. Billboard levels are left out.
-    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, std::span<const std::int8_t> levels = { }, const ColourOverrides& overrides = { }, const Leans& leans = { }, const Fitted& fitted = { }, const Broken& broken = { }, const Chains& chains = { }, const FlowFades& fades = { });
+    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, std::span<const std::int8_t> levels = { }, const ColourOverrides& overrides = { }, const Leans& leans = { }, const Fitted& fitted = { }, const Broken& broken = { }, const Chains& chains = { }, const FlowFades& fades = { });
 
     /// Where a billboard stands and how big it is. Its four corners are the next four vertices of the mesh.
     struct BillboardStand
@@ -194,13 +194,13 @@ namespace rct3::park::object
     };
 
     /// The billboards of the objects at `levels`, each standing on its anchor, not yet turned.
-    [[nodiscard]] Billboards gather_billboards(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const ColourOverrides& overrides = { });
+    [[nodiscard]] Billboards gather_billboards(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const ColourOverrides& overrides = { });
 
     /// Places the corners of `boards` so each faces `eye`, turning only round the upright.
     void face_billboards(Billboards& boards, const glm::vec3& eye);
 
     /// The billboards of the objects at `levels`, each standing on its anchor and turned to face `eye`.
-    [[nodiscard]] ObjectMesh billboard_mesh(std::span<const save::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const glm::vec3& eye, const ColourOverrides& overrides = { });
+    [[nodiscard]] ObjectMesh billboard_mesh(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const glm::vec3& eye, const ColourOverrides& overrides = { });
 
     /// The painted pictures `batches` draw with, by their names. Batches whose picture is missing get none.
     [[nodiscard]] std::map<std::string, ovl::texture::RgbaImage, std::less<>> paint_batches(std::span<const ObjectBatch> batches, const ModelPictures& pictures);

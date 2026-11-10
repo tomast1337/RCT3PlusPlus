@@ -23,10 +23,10 @@ namespace rct3::simulation
 
     } // namespace
 
-    ParkMessages park_messages(const save::MessageLog& log)
+    ParkMessages park_messages(const save::model::MessageLog& log)
     {
         ParkMessages messages;
-        for (const save::Message& m : log.ordered)
+        for (const save::model::Message& m : log.ordered)
         {
             ParkMessage message;
             message.text_key = table_key(m.text_key);

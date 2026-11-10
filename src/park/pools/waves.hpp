@@ -113,19 +113,19 @@ namespace rct3::park::pools
 
     /// The waves of the wave machines among `map`'s extras and `scenery` (extras parks from the game placed as
     /// scenery), each with the settings of the complex it stands in (its changing rooms'; the first one found).
-    [[nodiscard]] std::vector<PoolWave> machine_waves(const PoolMap& map, std::span<const PoolExtra> scenery, const save::TerrainGrid& grid);
+    [[nodiscard]] std::vector<PoolWave> machine_waves(const PoolMap& map, std::span<const PoolExtra> scenery, const save::model::TerrainGrid& grid);
 
     /// What the pointer drew on the pool water at `points` (world x, world z, seconds), in the order it went there,
     /// made into a wave starting at `clock`: a line along a side of the grid or a circle. None for anything
     /// else, such as a click or a line drawn aslant, or when it did not start on a pool's water.
-    [[nodiscard]] std::optional<PoolWave> drawn_wave(const PoolMap& map, const save::TerrainGrid& grid, std::span<const glm::vec3> points, float clock, const PoolWaveLook& look = kPoolWaveLook);
+    [[nodiscard]] std::optional<PoolWave> drawn_wave(const PoolMap& map, const save::model::TerrainGrid& grid, std::span<const glm::vec3> points, float clock, const PoolWaveLook& look = kPoolWaveLook);
 
     /// Whether the water at world x and z `at` is a pool's.
-    [[nodiscard]] bool on_pool_water(const PoolMap& map, const save::TerrainGrid& grid, glm::vec2 at);
+    [[nodiscard]] bool on_pool_water(const PoolMap& map, const save::model::TerrainGrid& grid, glm::vec2 at);
 
     /// Rings spreading from world point `at`, where someone fell into the water at `clock` (or will then) with
     /// `strength` from 0 to 1. None unless `at` is over a pool's open water, past its coping, at about its surface.
-    [[nodiscard]] std::optional<PoolWave> entry_rings(const PoolMap& map, const save::TerrainGrid& grid, glm::vec3 at, float strength, float clock);
+    [[nodiscard]] std::optional<PoolWave> entry_rings(const PoolMap& map, const save::model::TerrainGrid& grid, glm::vec3 at, float strength, float clock);
 
     /// How high the leading crest of `rings` stands at `clock`: 0 before they start and once they are gone.
     [[nodiscard]] float ring_crest(const PoolWave& rings, float clock, const PoolWaveLook& look = kPoolWaveLook);

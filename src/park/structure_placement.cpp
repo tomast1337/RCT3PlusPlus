@@ -15,7 +15,7 @@ namespace rct3::park
     namespace
     {
 
-        const object::ObjectModel* model_of(const save::PlacedObject& o, const object::ObjectModels& models)
+        const object::ObjectModel* model_of(const save::model::PlacedObject& o, const object::ObjectModels& models)
         {
             const auto it = models.find(object::model_key(o));
             return it == models.end() ? nullptr : &it->second;
@@ -29,7 +29,7 @@ namespace rct3::park
         }
 
         /// A point of the box, in tiles from its first corner, turned with it: where it lies in the turned box.
-        glm::vec2 turned(glm::vec2 p, ModelTurn turn, const save::Structure& s)
+        glm::vec2 turned(glm::vec2 p, ModelTurn turn, const save::model::Structure& s)
         {
             const auto cols = static_cast<float>(s.cols);
             const auto rows = static_cast<float>(s.rows);
@@ -48,7 +48,7 @@ namespace rct3::park
 
         /// The first corner of the turned box centred on `at`: the box's middle tile, rounded down before it
         /// turns, stays on `at`.
-        glm::vec2 corner(const save::Structure& s, save::Tile at, ModelTurn turn)
+        glm::vec2 corner(const save::model::Structure& s, save::model::Tile at, ModelTurn turn)
         {
             const std::int32_t c = s.cols / 2;
             const std::int32_t r = s.rows / 2;
@@ -73,19 +73,19 @@ namespace rct3::park
         return !std::ranges::contains(kLeft, category);
     }
 
-    save::Structure pick_structure(std::span<const save::Tile> marked, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid)
+    save::model::Structure pick_structure(std::span<const save::model::Tile> marked, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid)
     {
-        save::Structure s;
+        save::model::Structure s;
         if (marked.empty())
             return s;
-        const auto [low_col, high_col] = std::ranges::minmax(marked, { }, &save::Tile::col);
-        const auto [low_row, high_row] = std::ranges::minmax(marked, { }, &save::Tile::row);
+        const auto [low_col, high_col] = std::ranges::minmax(marked, { }, &save::model::Tile::col);
+        const auto [low_row, high_row] = std::ranges::minmax(marked, { }, &save::model::Tile::row);
         s.cols = high_col.col - low_col.col + 1;
         s.rows = high_row.row - low_row.row + 1;
         s.tiles.assign(static_cast<std::size_t>(s.cols) * static_cast<std::size_t>(s.rows), 0);
-        for (const save::Tile t : marked)
+        for (const save::model::Tile t : marked)
             s.tiles[static_cast<std::size_t>(t.row - low_row.row) * static_cast<std::size_t>(s.cols) + static_cast<std::size_t>(t.col - low_col.col)] = 1;
-        for (const save::PlacedObject& o : objects)
+        for (const save::model::PlacedObject& o : objects)
         {
             if (o.fixture || o.hidden || !o.free_standing() || o.symbol.empty())
                 continue;
@@ -113,24 +113,24 @@ namespace rct3::park
                     .colours = o.colours,
                 });
         }
-        save::rebase_heights(s);
+        save::model::rebase_heights(s);
         return s;
     }
 
-    save::Tile structure_tile(const save::Structure& structure, save::Tile at, ModelTurn turn, std::int32_t col, std::int32_t row)
+    save::model::Tile structure_tile(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, std::int32_t col, std::int32_t row)
     {
         const glm::vec2 p = corner(structure, at, turn) + turned({ static_cast<float>(col) + 0.5f, static_cast<float>(row) + 0.5f }, turn, structure);
         return { static_cast<int>(std::floor(p.x)), static_cast<int>(std::floor(p.y)) };
     }
 
-    std::vector<save::PlacedObject> structure_objects(const save::Structure& structure, save::Tile at, ModelTurn turn, std::int32_t height, const object::ObjectModels& models)
+    std::vector<save::model::PlacedObject> structure_objects(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, std::int32_t height, const object::ObjectModels& models)
     {
-        std::vector<save::PlacedObject> out;
+        std::vector<save::model::PlacedObject> out;
         out.reserve(structure.pieces.size());
         const glm::vec2 origin = corner(structure, at, turn);
-        for (const save::StructurePiece& p : structure.pieces)
+        for (const save::model::StructurePiece& p : structure.pieces)
         {
-            save::PlacedObject o;
+            save::model::PlacedObject o;
             o.symbol = p.symbol;
             o.overlay = p.overlay;
             o.rotation = ModelTurn::from(p.rotation).turned(turn.value).value;
@@ -152,15 +152,15 @@ namespace rct3::park
         return out;
     }
 
-    StructureProblem structure_problem(const save::Structure& structure, save::Tile at, ModelTurn turn, std::span<const save::PlacedObject> placed, const object::ObjectModels& models, const path::SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid)
+    StructureProblem structure_problem(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, std::span<const save::model::PlacedObject> placed, const object::ObjectModels& models, const path::SolidTiles& solids, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid)
     {
         for (std::int32_t row = 0; row < structure.rows; ++row)
             for (std::int32_t col = 0; col < structure.cols; ++col)
             {
                 if (!structure.has_tile(col, row))
                     continue;
-                const save::Tile t = structure_tile(structure, at, turn, col, row);
-                if (!grid.contains(t) || grid.at(t.col, t.row).ownership() != save::Ownership::Owned)
+                const save::model::Tile t = structure_tile(structure, at, turn, col, row);
+                if (!grid.contains(t) || grid.at(t.col, t.row).ownership() != save::model::Ownership::Owned)
                     return StructureProblem::NotOwned;
             }
         const path::Clash c = path::clash(path::solid_tiles(placed, models, grid), solids, paths, grid);

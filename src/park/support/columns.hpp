@@ -47,12 +47,12 @@ namespace rct3::park::support
     inline constexpr std::int32_t kTallestColumn = 240;
 
     /// The tile under each square of `object`'s footprint, row by row like the footprint's squares.
-    [[nodiscard]] std::vector<std::pair<int, int>> footprint_tiles(const save::PlacedObject& object, const SupportFootprint& footprint);
+    [[nodiscard]] std::vector<std::pair<int, int>> footprint_tiles(const save::model::PlacedObject& object, const SupportFootprint& footprint);
 
     /// Where a spot on `object` lies in the park, in tiles from the grid's corner, at the middle of its third
     /// when `middle_of_third`: the footprint is laid out round its middle, its squares and thirds running along
     /// the model's -X and -Z.
-    [[nodiscard]] glm::vec2 spot_in_tiles(const save::PlacedObject& object, const SupportFootprint& footprint, const SupportSpot& spot, bool middle_of_third);
+    [[nodiscard]] glm::vec2 spot_in_tiles(const save::model::PlacedObject& object, const SupportFootprint& footprint, const SupportSpot& spot, bool middle_of_third);
 
     using SupportTile = std::pair<int, int>;
 
@@ -65,23 +65,23 @@ namespace rct3::park::support
 
     struct BuiltSupports
     {
-        std::vector<save::PlacedObject> pieces;
+        std::vector<save::model::PlacedObject> pieces;
         std::vector<SupportOf> of; ///< Of each piece
         object::Fitted fitted;     ///< Of the pieces that stand off the middle of a tile, are stretched, or are beams
     };
 
     /// The tiles whose columns `object` may change: under its footprint, and where its support points stand
     /// beside it. None when its model is not among `models` or columns pass by it.
-    [[nodiscard]] std::vector<SupportTile> support_tiles(const save::PlacedObject& object, const object::ObjectModels& models);
+    [[nodiscard]] std::vector<SupportTile> support_tiles(const save::model::PlacedObject& object, const object::ObjectModels& models);
 
     /// Whether `path` lies at the ground of its tile, which keeps a column off the ground there: a path or queue
     /// laid on the ground, or a raised piece whose heights reach into those of the tile's ground.
-    [[nodiscard]] bool path_at_ground(const save::PathTile& path, const save::TerrainGrid& grid);
+    [[nodiscard]] bool path_at_ground(const save::model::PathTile& path, const save::model::TerrainGrid& grid);
 
     /// Placed support pieces under the items among `objects` whose models ask for them, on `tiles` only when
     /// given. Items in `passed` are left out, as if not there. New objects take ids after `last_id`. `models`
     /// must hold the support sets' tops, caps and beams, whose shapes give their sizes. Each object has the model
     /// `found` gives by index when given (ObjectPlaces::models), else the one `models` has.
-    [[nodiscard]] BuiltSupports support_columns(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, std::span<const save::PathTile> paths, const save::TerrainGrid& grid, const SupportSets& sets, std::uint64_t last_id, const std::unordered_set<std::uint64_t>& passed = { }, std::optional<const std::set<SupportTile>&> tiles = std::nullopt, std::span<const object::ObjectModel* const> found = { });
+    [[nodiscard]] BuiltSupports support_columns(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, const SupportSets& sets, std::uint64_t last_id, const std::unordered_set<std::uint64_t>& passed = { }, std::optional<const std::set<SupportTile>&> tiles = std::nullopt, std::span<const object::ObjectModel* const> found = { });
 
 } // namespace rct3::park::support

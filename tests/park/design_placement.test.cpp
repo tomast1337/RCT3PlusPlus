@@ -50,12 +50,12 @@ TEST_CASE("design placement: a piece's pool sides turn and move with it")
     track::PieceRecord record;
     record.squares = { 1, 2 };
     record.pool_sides = { { .x = 0, .z = 1, .height = 2, .side = Side::kNextRow } };
-    const save::PlacedObject unturned { .col = 5, .row = 7, .base_height = 4 };
+    const save::model::PlacedObject unturned { .col = 5, .row = 7, .base_height = 4 };
     const std::vector<pools::PoolOpening> straight = piece_pool_openings(unturned, record);
     REQUIRE(straight.size() == 1);
     CHECK(straight[0].height == 6);
     CHECK(straight[0].side == Side::kNextRow);
-    save::PlacedObject turned = unturned;
+    save::model::PlacedObject turned = unturned;
     turned.rotation = 1;
     const std::vector<pools::PoolOpening> quarter = piece_pool_openings(turned, record);
     REQUIRE(quarter.size() == 1);

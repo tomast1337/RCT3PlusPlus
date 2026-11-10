@@ -14,7 +14,7 @@ namespace
     /// A bed on the tile at `col`, `row`, holding `water` of 300.
     entt::entity bed(Sandbox& park, std::int32_t col, std::int32_t row, float water)
     {
-        return add_flower_bed(park.world(), rct3::save::PlacedObject { .id = 7, .col = col, .row = row }, 300, water);
+        return add_flower_bed(park.world(), rct3::save::model::PlacedObject { .id = 7, .col = col, .row = row }, 300, water);
     }
 } // namespace
 

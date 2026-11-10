@@ -21,7 +21,7 @@ namespace rct3::park
         return { std::format("{}1", base), std::format("{}2", base) };
     }
 
-    MountainPlace mountain_place(const save::TerrainGrid& grid, std::string_view theme)
+    MountainPlace mountain_place(const save::model::TerrainGrid& grid, std::string_view theme)
     {
         const auto at = std::ranges::find(kBackgroundThemes, theme);
         const float drop = at != kBackgroundThemes.end() ? kMountainDrop[static_cast<std::size_t>(at - kBackgroundThemes.begin())] : 0.0f;

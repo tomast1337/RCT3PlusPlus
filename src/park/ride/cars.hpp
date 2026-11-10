@@ -36,10 +36,10 @@ namespace rct3::park::ride
 
     struct RideCars
     {
-        std::vector<save::PlacedObject> pieces; ///< Ids after `last_id`; overlay and symbol key the model
-        std::vector<CarDesign> designs;         ///< By piece
-        std::vector<CarSpot> spots;             ///< By piece
-        object::Fitted fitted;                  ///< Where each piece stands, by id
+        std::vector<save::model::PlacedObject> pieces; ///< Ids after `last_id`; overlay and symbol key the model
+        std::vector<CarDesign> designs;                ///< By piece
+        std::vector<CarSpot> spots;                    ///< By piece
+        object::Fitted fitted;                         ///< Where each piece stands, by id
     };
 
     /// The design slot of each car, front to back, of a train of `cars` passenger cars whose design fills the
@@ -49,6 +49,6 @@ namespace rct3::park::ride
     [[nodiscard]] std::vector<std::size_t> car_slots(int cars, const std::array<bool, 6>& filled);
 
     /// The cars of `rides` whose place the park kept, with ids from `last_id` + 1.
-    [[nodiscard]] RideCars ride_cars(std::span<const save::Ride> rides, std::uint64_t last_id);
+    [[nodiscard]] RideCars ride_cars(std::span<const save::model::Ride> rides, std::uint64_t last_id);
 
 } // namespace rct3::park::ride

@@ -232,7 +232,7 @@ namespace rct3::simulation
 
     /// The lap recorded into `lap`, newest sample first as saved and no more than kLapSamples, and starts the
     /// next.
-    [[nodiscard]] save::RideGraphs end_lap(LapRecorder& lap);
+    [[nodiscard]] save::model::RideGraphs end_lap(LapRecorder& lap);
 
     /// Where `coaster`'s front is drawn `along` (0 to 1) through its last step, between where it began and ended it.
     [[nodiscard]] float between_drives(const Coaster& coaster, float along);

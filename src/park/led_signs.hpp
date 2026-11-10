@@ -43,7 +43,7 @@ namespace rct3::park
 
     /// The sign spot of each line `paths` hold, by line id order; lines whose tiles all lead into each other
     /// have none.
-    [[nodiscard]] std::vector<QueueSignSpot> queue_sign_spots(std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    [[nodiscard]] std::vector<QueueSignSpot> queue_sign_spots(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);
 
     /// Of a theme's items, the sign it puts over queues: a sign whose settings name it a queue sign. Empty when
     /// the theme has none.

@@ -150,7 +150,7 @@ TEST_CASE("a pool slide's train kept past its open end is out of sight there, an
     slide.closed = false;
     slide.splash_out = true;
     slide.start = slide.at = 2;
-    save::Ride ride;
+    save::model::Ride ride;
     ride.trains.resize(3);
     ride.trains[0].distance = 2;
     ride.trains[1].distance = 10;

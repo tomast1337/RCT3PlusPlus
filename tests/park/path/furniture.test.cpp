@@ -10,9 +10,9 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::TerrainGrid flat_grid(int width, int height)
+    save::model::TerrainGrid flat_grid(int width, int height)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
@@ -21,23 +21,23 @@ namespace
         return g;
     }
 
-    save::PathTile ground(int col, int row)
+    save::model::PathTile ground(int col, int row)
     {
-        save::PathTile p;
-        p.kind = save::PathKind::Ground;
+        save::model::PathTile p;
+        p.kind = save::model::PathKind::Ground;
         p.col = static_cast<std::uint8_t>(col);
         p.row = static_cast<std::uint8_t>(row);
         return p;
     }
 
     /// A queue on the ground at `col`, `row`, its line running along the columns.
-    save::PathTile queue(int col, int row)
+    save::model::PathTile queue(int col, int row)
     {
-        save::PathTile p = ground(col, row);
-        p.kind = save::PathKind::Queue;
-        p.queue = save::PathQueueInfo { .start_direction = 0, .end_direction = 1 };
-        p.elevation = save::PathElevation { };
-        p.elevation->slope = save::kSlopeOnGround;
+        save::model::PathTile p = ground(col, row);
+        p.kind = save::model::PathKind::Queue;
+        p.queue = save::model::PathQueueInfo { .start_direction = 0, .end_direction = 1 };
+        p.elevation = save::model::PathElevation { };
+        p.elevation->slope = save::model::kSlopeOnGround;
         return p;
     }
 
@@ -48,16 +48,16 @@ namespace
     }
 
     /// A path along row 1 from column 1 to 3.
-    const std::vector<save::PathTile> kLine { ground(1, 1), ground(2, 1), ground(3, 1) };
+    const std::vector<save::model::PathTile> kLine { ground(1, 1), ground(2, 1), ground(3, 1) };
 } // namespace
 
 TEST_CASE("a bench goes against the free side of a path nearest the pointer")
 {
-    const save::TerrainGrid grid = flat_grid(8, 8);
+    const save::model::TerrainGrid grid = flat_grid(8, 8);
     // Nearest the joined side towards column 3, it takes the nearer of the free sides.
     const auto spot = furniture_spot(kLine, grid, at(2.9f, 1.6f), object::Positioning::PathSide, ModelTurn { 0 });
     REQUIRE(spot);
-    CHECK(spot->tile == save::Tile { 2, 1 });
+    CHECK(spot->tile == save::model::Tile { 2, 1 });
     CHECK(object::faced_side(spot->turn) == Side { 0 }); // Towards higher rows
     CHECK_FALSE(spot->raised);
     const auto other = furniture_spot(kLine, grid, at(2.5f, 1.1f), object::Positioning::PathSide, ModelTurn { 0 });
@@ -69,7 +69,7 @@ TEST_CASE("a bench goes against the free side of a path nearest the pointer")
 
 TEST_CASE("a sign where paths join takes a joined side, and the middle keeps the player's turn")
 {
-    const save::TerrainGrid grid = flat_grid(8, 8);
+    const save::model::TerrainGrid grid = flat_grid(8, 8);
     CHECK(object::faced_side(furniture_spot(kLine, grid, at(2.9f, 1.6f), object::Positioning::PathSideJoin, ModelTurn { 0 })->turn) == Side { 1 });
     CHECK(object::faced_side(furniture_spot(kLine, grid, at(2.1f, 1.6f), object::Positioning::PathSideJoin, ModelTurn { 0 })->turn) == Side { 3 });
     CHECK(furniture_spot(kLine, grid, at(2.9f, 1.6f), object::Positioning::PathCentre, ModelTurn { 3 })->turn == ModelTurn { 3 });
@@ -77,11 +77,11 @@ TEST_CASE("a sign where paths join takes a joined side, and the middle keeps the
 
 TEST_CASE("off the paths nothing goes, in a plaza only an edge tile's free side, on a deck its height")
 {
-    const save::TerrainGrid grid = flat_grid(8, 8);
+    const save::model::TerrainGrid grid = flat_grid(8, 8);
     CHECK_FALSE(furniture_spot(kLine, grid, at(5.5f, 5.5f), object::Positioning::PathSide, ModelTurn { 0 }));
     CHECK_FALSE(furniture_spot(kLine, grid, at(-1, 1.5f), object::Positioning::PathSide, ModelTurn { 0 }));
 
-    std::vector<save::PathTile> plaza;
+    std::vector<save::model::PathTile> plaza;
     for (int col = 1; col <= 3; ++col)
         for (int row = 1; row <= 3; ++row)
             plaza.push_back(ground(col, row));
@@ -92,10 +92,10 @@ TEST_CASE("off the paths nothing goes, in a plaza only an edge tile's free side,
     CHECK(object::faced_side(edge->turn) == Side { 1 });
 
     // A deck over the ground path on the same tile, taken when the pointer is up at it.
-    std::vector<save::PathTile> stacked = kLine;
-    save::PathTile deck = ground(2, 1);
-    deck.kind = save::PathKind::Flying;
-    deck.elevation = save::PathElevation { };
+    std::vector<save::model::PathTile> stacked = kLine;
+    save::model::PathTile deck = ground(2, 1);
+    deck.kind = save::model::PathKind::Flying;
+    deck.elevation = save::model::PathElevation { };
     deck.elevation->quantised_height = 6;
     stacked.push_back(deck);
     const auto up = furniture_spot(stacked, grid, at(2.5f, 1.9f, 5.5f), object::Positioning::PathSide, ModelTurn { 0 });
@@ -112,7 +112,7 @@ TEST_CASE("one item stands against each side of a tile, and one in its middle")
     models["Style|Fountain"].positioning = std::to_underlying(object::Positioning::PathCentre);
     models["Style|Tree"].positioning = std::to_underlying(object::Positioning::Tile);
     const auto placed = [](std::string symbol, std::int32_t rotation, std::int32_t height = 0) {
-        save::PlacedObject o;
+        save::model::PlacedObject o;
         o.overlay = "Style";
         o.symbol = std::move(symbol);
         o.col = 2;
@@ -121,7 +121,7 @@ TEST_CASE("one item stands against each side of a tile, and one in its middle")
         o.base_height = height;
         return o;
     };
-    std::vector<save::PlacedObject> objects { placed("Bench", 1), placed("Fountain", 0), placed("Tree", 2) };
+    std::vector<save::model::PlacedObject> objects { placed("Bench", 1), placed("Fountain", 0), placed("Tree", 2) };
     CHECK(furniture_taken(objects, models, placed("Bench", 1), object::Positioning::PathSide));
     CHECK_FALSE(furniture_taken(objects, models, placed("Bench", 3), object::Positioning::PathSide));
     // The tree is no path item, and the fountain takes only the middle.
@@ -135,15 +135,15 @@ TEST_CASE("one item stands against each side of a tile, and one in its middle")
 
 TEST_CASE("on a sloped deck a level-only item keeps to the slope's ends, and nothing stands in its middle")
 {
-    const save::TerrainGrid grid = flat_grid(8, 8);
+    const save::model::TerrainGrid grid = flat_grid(8, 8);
     // A lone deck rising along the columns.
-    save::PathTile slope = ground(2, 1);
-    slope.kind = save::PathKind::Flying;
+    save::model::PathTile slope = ground(2, 1);
+    slope.kind = save::model::PathKind::Flying;
     slope.direction = 1;
-    slope.elevation = save::PathElevation { };
+    slope.elevation = save::model::PathElevation { };
     slope.elevation->slope = 4;
     slope.elevation->quantised_height = 2;
-    const std::vector<save::PathTile> paths { slope };
+    const std::vector<save::model::PathTile> paths { slope };
     const glm::vec3 long_side = at(2.5f, 1.9f, 2.5f);
 
     const auto bin = furniture_spot(paths, grid, long_side, object::Positioning::PathSide, ModelTurn { 0 });
@@ -161,7 +161,7 @@ TEST_CASE("on a sloped deck a level-only item keeps to the slope's ends, and not
     CHECK(furniture_spot(paths, grid, long_side, object::Positioning::PathCentre, ModelTurn { 0 })->refused);
 
     // Level, the same deck takes them all as before.
-    std::vector<save::PathTile> level = paths;
+    std::vector<save::model::PathTile> level = paths;
     level[0].elevation->slope = 0;
     CHECK(object::faced_side(furniture_spot(level, grid, long_side, object::Positioning::PathSide, ModelTurn { 0 }, { .level_only = true })->turn) == Side { 0 });
     CHECK_FALSE(furniture_spot(level, grid, long_side, object::Positioning::PathCentre, ModelTurn { 0 })->refused);
@@ -169,8 +169,8 @@ TEST_CASE("on a sloped deck a level-only item keeps to the slope's ends, and not
 
 TEST_CASE("an item's data may keep it off queues, or on queues only")
 {
-    const save::TerrainGrid grid = flat_grid(8, 8);
-    const std::vector<save::PathTile> paths { queue(2, 1), ground(5, 1) };
+    const save::model::TerrainGrid grid = flat_grid(8, 8);
+    const std::vector<save::model::PathTile> paths { queue(2, 1), ground(5, 1) };
     for (const object::Positioning positioning : { object::Positioning::PathSide, object::Positioning::PathCentre })
     {
         CHECK_FALSE(furniture_spot(paths, grid, at(2.5f, 1.9f), positioning, ModelTurn { 0 })->refused);
@@ -183,9 +183,9 @@ TEST_CASE("an item's data may keep it off queues, or on queues only")
 
 TEST_CASE("between a road and the next lane of a queue a bench finds no side")
 {
-    const save::TerrainGrid grid = flat_grid(8, 8);
+    const save::model::TerrainGrid grid = flat_grid(8, 8);
     // A road along row 0, and two queue lanes along rows 1 and 2.
-    std::vector<save::PathTile> paths;
+    std::vector<save::model::PathTile> paths;
     for (int col = 1; col <= 3; ++col)
         paths.insert(paths.end(), { ground(col, 0), queue(col, 1), queue(col, 2) });
     CHECK(furniture_spot(paths, grid, at(2.5f, 1.9f), object::Positioning::PathSide, ModelTurn { 0 })->refused);

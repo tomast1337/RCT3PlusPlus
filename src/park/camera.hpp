@@ -84,7 +84,7 @@ namespace rct3::park
     [[nodiscard]] glm::mat4 projection(float aspect, const Seat& seat = std::nullopt, float across = kRideWideView);
 
     /// Looking at the middle of the map from the south-west, far enough to see much of it.
-    [[nodiscard]] ParkCamera overview(const save::TerrainGrid& grid);
+    [[nodiscard]] ParkCamera overview(const save::model::TerrainGrid& grid);
 
     /// Slid `right` and `forward` world units over the ground, as the camera faces.
     [[nodiscard]] ParkCamera panned(ParkCamera camera, float right, float forward);
@@ -105,7 +105,7 @@ namespace rct3::park
     /// box fills a square view without leaving it.
     [[nodiscard]] ParkCamera framed(std::span<const glm::vec3> points, float yaw, float pitch, float closest = kMinDistance);
     /// Kept over the map, its target on the surface; or, `lifted`, no lower than the surface.
-    [[nodiscard]] ParkCamera on_ground(ParkCamera camera, const save::TerrainGrid& grid, bool lifted = false);
+    [[nodiscard]] ParkCamera on_ground(ParkCamera camera, const save::model::TerrainGrid& grid, bool lifted = false);
 
     /// The choices of the control mode option, in its order: how the mouse and the keys move the camera.
     enum class ControlMode

@@ -80,14 +80,14 @@ namespace rct3::park
     };
 
     /// Starts a stroke over the tiles from (`col0`, `row0`) to (`col1`, `row1`), clipped to the grid.
-    [[nodiscard]] TileStroke begin_tile_stroke(const save::TerrainGrid& grid, int col0, int row0, int col1, int row1, TilePart part);
+    [[nodiscard]] TileStroke begin_tile_stroke(const save::model::TerrainGrid& grid, int col0, int row0, int col1, int row1, TilePart part);
 
     /// Sets the stroke's tiles for a drag of `amount` height units (up positive) from where it began, on the
     /// tiles `free` allows. Returns the sum of how far every corner moved from where the stroke found it.
-    float shape_tiles(save::TerrainGrid& grid, const TileStroke& stroke, TileShaping shaping, float amount, const std::function<bool(save::Tile)>& free);
+    float shape_tiles(save::model::TerrainGrid& grid, const TileStroke& stroke, TileShaping shaping, float amount, const std::function<bool(save::model::Tile)>& free);
 
     /// Adds strips on the ground that show what a stroke would move: the tiles' edges, the one edge, or a cross
     /// on the one corner.
-    void tile_marks(TerrainMesh& mesh, const save::TerrainGrid& grid, int col0, int row0, int col1, int row1, TilePart part, glm::vec4 colour);
+    void tile_marks(TerrainMesh& mesh, const save::model::TerrainGrid& grid, int col0, int row0, int col1, int row1, TilePart part, glm::vec4 colour);
 
 } // namespace rct3::park

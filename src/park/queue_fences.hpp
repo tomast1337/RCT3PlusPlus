@@ -24,18 +24,18 @@ namespace rct3::park
     [[nodiscard]] ModelTurn edge_turns(Side side) noexcept;
 
     /// How the ground rises along `side`'s edge of tile (`col`, `row`), per park unit along x and z.
-    [[nodiscard]] glm::vec2 edge_lean(const save::TerrainGrid& grid, save::Tile tile, Side side);
+    [[nodiscard]] glm::vec2 edge_lean(const save::model::TerrainGrid& grid, save::model::Tile tile, Side side);
 
     /// True for the slopes of path pieces that fall from their start towards their end.
     [[nodiscard]] bool slope_falls(std::uint8_t slope) noexcept;
 
     struct QueueFences
     {
-        std::vector<save::PlacedObject> pieces;
+        std::vector<save::model::PlacedObject> pieces;
         object::Leans leans; ///< Of the pieces that do not stand level
     };
 
     /// Placed fence pieces along the queues among `paths`. New objects take ids after `last_id`.
-    [[nodiscard]] QueueFences queue_fences(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::uint64_t last_id);
+    [[nodiscard]] QueueFences queue_fences(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::uint64_t last_id);
 
 } // namespace rct3::park

@@ -57,14 +57,14 @@ namespace rct3::simulation
     [[nodiscard]] const RatingModel& builtin_rating_model();
 
     /// The features of a test run, before caps. Forces are in metres per second squared.
-    [[nodiscard]] RatingFeatures rating_features(const save::TestResults& test);
+    [[nodiscard]] RatingFeatures rating_features(const save::model::TestResults& test);
 
     /// The ratings a test run of a ride of type `type` earns under `model`.
-    [[nodiscard]] Ratings rate(const RatingModel& model, std::string_view type, const save::TestResults& test);
+    [[nodiscard]] Ratings rate(const RatingModel& model, std::string_view type, const save::model::TestResults& test);
 
     /// A test run of `coaster` from a standing start, as far as the model knows: speeds, time, length and the
     /// drops it goes down. Forces, air time and turns are left at nothing. Nothing if the train does not come
     /// round within `most` seconds.
-    [[nodiscard]] std::optional<save::TestResults> test_lap(Coaster coaster, float most = 1200);
+    [[nodiscard]] std::optional<save::model::TestResults> test_lap(Coaster coaster, float most = 1200);
 
 } // namespace rct3::simulation

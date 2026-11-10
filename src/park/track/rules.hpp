@@ -85,7 +85,7 @@ namespace rct3::park::track
 
     /// The colours a new ride's track starts in: the default colours of the first piece its kind lists, or of the
     /// first of `pieces` when it lists none.
-    [[nodiscard]] save::RideColours starting_colours(const TrackRules& rules, std::span<const PieceShape> pieces);
+    [[nodiscard]] save::model::RideColours starting_colours(const TrackRules& rules, std::span<const PieceShape> pieces);
 
     /// The rules a ride file's item stores, with names copied out of the file. A ride whose special pieces
     /// fill only the first two slots, a stack of them, is built back from its station.
@@ -106,7 +106,7 @@ namespace rct3::park::track
     /// exits and for a ride of one entrance and one exit on an open track, an exit before the entrance. A flat
     /// ride has only the door checks, so it may always be tested. A pool ride's doors are its `pool_joined`
     /// stations, those joined to a pool complex.
-    [[nodiscard]] std::optional<std::string> open_refusal(const save::Ride& ride, const TrackRules& rules, save::AttractionState state, bool editing, std::optional<const TrackCourse&> course = std::nullopt, std::size_t pool_joined = 0);
+    [[nodiscard]] std::optional<std::string> open_refusal(const save::model::Ride& ride, const TrackRules& rules, save::model::AttractionState state, bool editing, std::optional<const TrackCourse&> course = std::nullopt, std::size_t pool_joined = 0);
 
     /// `track` (pieces of `pieces` laid in order) after every pattern of `patterns` has swapped what it
     /// matches: each pattern is tried at each piece in turn, its steps taking that piece and those after.

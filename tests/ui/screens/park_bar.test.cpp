@@ -103,7 +103,7 @@ TEST_CASE("the bar's values are written from the park's state")
     state.temperature = 30.2f;
     state.date.month = 1;
     state.date.year = 2;
-    state.weather = save::WeatherType::Sunny;
+    state.weather = save::model::WeatherType::Sunny;
     ParkBarUnits units;
     units.currency = { u"$", u"", u"." };
     const ParkBarValues v = park_bar_values(state, 0.75f, strings, units);
@@ -112,7 +112,7 @@ TEST_CASE("the bar's values are written from the park's state")
     CHECK(v.rating == 0.5f);
     CHECK(v.temperature == u"30\u00b0C");
     CHECK(v.date == u"April, Year 3  6:00 pm");
-    CHECK(v.weather == save::WeatherType::Sunny);
+    CHECK(v.weather == save::model::WeatherType::Sunny);
 
     state.cash.reset();
     units.fahrenheit = true;
@@ -128,8 +128,8 @@ TEST_CASE("the weather shows with its help, and the forecast only when it change
     Fixture f;
     CHECK_FALSE(f.bar->weather().visible);
     ParkBarValues v;
-    v.weather = save::WeatherType::Cloudy;
-    v.forecast = save::WeatherType::Cloudy;
+    v.weather = save::model::WeatherType::Cloudy;
+    v.forecast = save::model::WeatherType::Cloudy;
     v.date = u"May";
     f.bar->show(v);
     CHECK(f.bar->weather().visible);
@@ -138,7 +138,7 @@ TEST_CASE("the weather shows with its help, and the forecast only when it change
     CHECK_FALSE(f.bar->forecast().visible);
     CHECK(f.bar->date().text == u"May");
 
-    v.forecast = save::WeatherType::Snowstorm;
+    v.forecast = save::model::WeatherType::Snowstorm;
     f.bar->show(v);
     CHECK(f.bar->forecast().visible);
     CHECK(f.bar->forecast().skin == "IconSnow");

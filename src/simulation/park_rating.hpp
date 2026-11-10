@@ -65,13 +65,13 @@ namespace rct3::simulation
     };
 
     /// How long a piece of litter must lie, in calendar units, before it counts against the rating: a day.
-    inline constexpr float kLitterCountsAfter = save::GameClock::kUnitsPerWeek / 7;
+    inline constexpr float kLitterCountsAfter = save::model::GameClock::kUnitsPerWeek / 7;
 
     [[nodiscard]] RatingParts rate_park(const RatingInput& input);
 
     /// The score's inputs gathered from the park's people and rides at calendar time `now`. The guest count
     /// and the harder flag are left for the caller.
-    [[nodiscard]] RatingInput rating_input(const save::PeopleModel& people, const save::RideModel& rides, float now);
+    [[nodiscard]] RatingInput rating_input(const save::model::PeopleModel& people, const save::model::RideModel& rides, float now);
 
     /// The rating after a week: `before` (0..1, none for a park not rated yet) moved part of the way towards
     /// `score` (0..kMaxRating).

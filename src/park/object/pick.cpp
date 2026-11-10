@@ -21,7 +21,7 @@ namespace rct3::park::object
         constexpr int kGroundRefinements = 12;
 
         /// Above (true) or below the ground at `p`; off the map counts as above.
-        bool above(const save::TerrainGrid& grid, glm::vec3 p)
+        bool above(const save::model::TerrainGrid& grid, glm::vec3 p)
         {
             const auto h = grid.height_at(p.x, p.z);
             return !h || p.y >= *h;
@@ -46,7 +46,7 @@ namespace rct3::park::object
 
     } // namespace
 
-    std::optional<float> ground_hit(const Ray& ray, const save::TerrainGrid& grid, float reach)
+    std::optional<float> ground_hit(const Ray& ray, const save::model::TerrainGrid& grid, float reach)
     {
         if (grid.empty() || !above(grid, ray.origin))
             return std::nullopt;
@@ -94,7 +94,7 @@ namespace rct3::park::object
         return enter;
     }
 
-    std::vector<PickBox> pick_boxes(std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
+    std::vector<PickBox> pick_boxes(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted)
     {
         ObjectPlaces places;
         std::vector<PickBox> boxes;
@@ -147,7 +147,7 @@ namespace rct3::park::object
         boxes = std::move(out);
     }
 
-    std::optional<PickHit> pick_object(const Ray& ray, std::span<const PickBox> boxes, const save::TerrainGrid& grid, const std::function<bool(std::size_t)>& wanted)
+    std::optional<PickHit> pick_object(const Ray& ray, std::span<const PickBox> boxes, const save::model::TerrainGrid& grid, const std::function<bool(std::size_t)>& wanted)
     {
         std::optional<PickHit> best;
         float nearest = ground_hit(ray, grid).value_or(kFar);
@@ -168,12 +168,12 @@ namespace rct3::park::object
         return best;
     }
 
-    std::optional<PickHit> pick_object(const Ray& ray, std::span<const save::PlacedObject> objects, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted, const std::function<bool(const save::PlacedObject&)>& wanted)
+    std::optional<PickHit> pick_object(const Ray& ray, std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted, const std::function<bool(const save::model::PlacedObject&)>& wanted)
     {
         return pick_object(ray, pick_boxes(objects, models, grid, fitted), grid, [&](std::size_t i) { return !objects[i].hidden && wanted(objects[i]); });
     }
 
-    std::vector<glm::vec3> object_corners(const save::PlacedObject& object, const ObjectModels& models, const save::TerrainGrid& grid, const Fitted& fitted)
+    std::vector<glm::vec3> object_corners(const save::model::PlacedObject& object, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted)
     {
         const auto model = models.find(model_ref(object));
         if (model == models.end() || model->second.levels.empty())
@@ -192,7 +192,7 @@ namespace rct3::park::object
         return corners;
     }
 
-    std::optional<PickHit> pick_person(const Ray& ray, std::span<const glm::mat4> placements, const save::TerrainGrid& grid)
+    std::optional<PickHit> pick_person(const Ray& ray, std::span<const glm::mat4> placements, const save::model::TerrainGrid& grid)
     {
         std::optional<PickHit> best;
         float nearest = ground_hit(ray, grid).value_or(kFar);

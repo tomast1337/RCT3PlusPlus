@@ -40,7 +40,7 @@ namespace rct3::simulation
     struct GoalRide
     {
         RideGroup group = RideGroup::Other;
-        const save::Ride* ride = nullptr;
+        const save::model::Ride* ride = nullptr;
     };
 
     /// How the park stands, in the units the goals' targets are kept in.
@@ -65,10 +65,10 @@ namespace rct3::simulation
     };
 
     /// Reads goal `c` against `figures`. A goal the simulation cannot judge reads as unmet with no figure.
-    [[nodiscard]] GoalReading read_goal(const save::Condition& c, const ParkFigures& figures);
+    [[nodiscard]] GoalReading read_goal(const save::model::Condition& c, const ParkFigures& figures);
 
     /// Months goal `c` has been met without a break at calendar `time`; 0 while it is not.
-    [[nodiscard]] float months_held(const save::Condition& c, float time) noexcept;
+    [[nodiscard]] float months_held(const save::model::Condition& c, float time) noexcept;
 
     /// What the park took on rides and in shops in the last whole calendar month.
     struct Takings
@@ -82,25 +82,25 @@ namespace rct3::simulation
     void count_takings(Takings& takings, float time, std::int64_t rides_so_far, std::int64_t shops_so_far);
 
     /// Whether the simulation can tell if a goal of `kind` is met. Those it cannot are never met.
-    [[nodiscard]] bool judged(save::ConditionKind kind) noexcept;
+    [[nodiscard]] bool judged(save::model::ConditionKind kind) noexcept;
 
     /// Prize numbers past the scenario's own: those of the three levels.
     inline constexpr std::int32_t kApprenticePrize = 10;
 
     /// The level being played: the first not yet won, 0 apprentice to 2 tycoon. It stays at tycoon once that is won.
-    [[nodiscard]] std::int32_t level_playing(const save::ObjectiveSet& set);
+    [[nodiscard]] std::int32_t level_playing(const save::model::ObjectiveSet& set);
 
     /// Checks the goals of the level being played at calendar `time`, marking those met, and posts what dated
     /// goals tell the player to `messages`. When that makes the level won, marks it and returns the prizes it
     /// gives: the scenario's for the level (0 when none), then the level's own.
-    std::optional<std::array<std::int32_t, 2>> check_goals(save::ObjectiveSet& set, const ParkFigures& figures, float time, std::optional<ParkMessages&> messages = std::nullopt);
+    std::optional<std::array<std::int32_t, 2>> check_goals(save::model::ObjectiveSet& set, const ParkFigures& figures, float time, std::optional<ParkMessages&> messages = std::nullopt);
 
     /// Text key naming a goal of `kind`; empty for kinds without one.
-    [[nodiscard]] std::string_view condition_name(save::ConditionKind kind) noexcept;
+    [[nodiscard]] std::string_view condition_name(save::model::ConditionKind kind) noexcept;
 
     /// Gives the park prize `id`'s reward. The construction rights prize puts the land held back from the
     /// park on sale.
-    void give_prize(ParkState& park, save::Finance& finance, save::TerrainGrid& land, std::int32_t id);
+    void give_prize(ParkState& park, save::model::Finance& finance, save::model::TerrainGrid& land, std::int32_t id);
 
     /// Text keys of prize `id`'s name and of the message telling the player they have it.
     [[nodiscard]] std::string_view prize_name(std::int32_t id);

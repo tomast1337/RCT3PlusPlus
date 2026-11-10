@@ -27,7 +27,7 @@ namespace rct3::park
     /// A fence or wall along side `side` of `tile`, from height `low` to `high` in world units.
     struct EdgeWall
     {
-        save::Tile tile;
+        save::model::Tile tile;
         Side side;
         float low = 0;
         float high = 0;
@@ -37,12 +37,12 @@ namespace rct3::park
     using EdgeWalls = std::unordered_multimap<std::uint64_t, EdgeWall>;
 
     /// The wall `object` is, if it is a fence or wall that stands on an edge and is shown.
-    [[nodiscard]] std::optional<EdgeWall> edge_wall(const save::PlacedObject& object, const object::ObjectModels& models, const save::TerrainGrid& grid);
+    [[nodiscard]] std::optional<EdgeWall> edge_wall(const save::model::PlacedObject& object, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
 
     /// The walls among `objects`.
-    [[nodiscard]] EdgeWalls edge_walls(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid);
+    [[nodiscard]] EdgeWalls edge_walls(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
 
     /// Whether a wall stands along `side` of `tile` where a path's edge meets it at `height`.
-    [[nodiscard]] bool walled(const EdgeWalls& walls, save::Tile tile, Side side, float height);
+    [[nodiscard]] bool walled(const EdgeWalls& walls, save::model::Tile tile, Side side, float height);
 
 } // namespace rct3::park

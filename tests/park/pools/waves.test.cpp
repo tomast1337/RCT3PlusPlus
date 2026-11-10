@@ -30,7 +30,7 @@ namespace
         return map;
     }
 
-    save::TerrainGrid grid()
+    save::model::TerrainGrid grid()
     {
         return { .width = 16, .height = 16, .tile_size_x = 4, .tile_size_z = 4 };
     }
@@ -168,7 +168,7 @@ TEST_CASE("pool waves: the renderer gets each wave's place, shape and timing")
 
 TEST_CASE("pool waves: the surface they lift dies down at a wall and stays under the rim")
 {
-    const save::TerrainGrid g = grid();
+    const save::model::TerrainGrid g = grid();
     // Water on the right and below only: walls on the left and above, and the corner square up and to the left.
     const auto water = [](int dc, int dr) { return dc >= 0 && dr >= 0; };
     CHECK(pool_wall_room(g, { 0, 2 }, water) == 0);

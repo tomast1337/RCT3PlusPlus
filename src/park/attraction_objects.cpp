@@ -4,7 +4,7 @@
 namespace rct3::park
 {
 
-    AttractionObjects attraction_objects(const save::RideModel& rides, std::span<const save::PlacedObject> objects)
+    AttractionObjects attraction_objects(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects)
     {
         // Placements first, then every object hanging from one takes its attraction.
         std::unordered_map<std::uint64_t, AttractionRef> placements;
@@ -15,17 +15,17 @@ namespace rct3::park
         };
         for (std::size_t i = 0; i < rides.rides.size(); ++i)
         {
-            const save::Ride& r = rides.rides[i];
+            const save::model::Ride& r = rides.rides[i];
             const AttractionRef ref { AttractionRef::Kind::Ride, i };
             own(r.base.placement, ref);
-            for (const save::Station& s : r.stations)
+            for (const save::model::Station& s : r.stations)
             {
                 own(s.entrance, ref);
                 own(s.exit, ref);
             }
             if (r.track)
             {
-                for (const save::TrackPiece& p : r.track->pieces)
+                for (const save::model::TrackPiece& p : r.track->pieces)
                 {
                     if (p.scenery != 0)
                         out.emplace(p.scenery, ref);
@@ -34,7 +34,7 @@ namespace rct3::park
         }
         for (std::size_t i = 0; i < rides.stalls.size(); ++i)
             own(rides.stalls[i].base.placement, { AttractionRef::Kind::Stall, i });
-        for (const save::PlacedObject& o : objects)
+        for (const save::model::PlacedObject& o : objects)
         {
             if (const auto found = placements.find(o.owner_ref); found != placements.end())
                 out.emplace(o.id, found->second);
@@ -42,7 +42,7 @@ namespace rct3::park
         return out;
     }
 
-    std::vector<std::size_t> twins(std::span<const save::PlacedObject> objects, std::span<const std::size_t> of)
+    std::vector<std::size_t> twins(std::span<const save::model::PlacedObject> objects, std::span<const std::size_t> of)
     {
         // By id, each of `of` and the id it hangs from.
         std::unordered_map<std::uint64_t, std::size_t> by_id;
@@ -58,14 +58,14 @@ namespace rct3::park
         std::vector<std::size_t> out;
         for (std::size_t i = 0; i < objects.size(); ++i)
         {
-            const save::PlacedObject& o = objects[i];
+            const save::model::PlacedObject& o = objects[i];
             const auto child = by_id.find(o.owner_ref);
             const auto parent = by_owner.find(o.id);
             for (const auto found : { child != by_id.end() ? child->second : objects.size(), parent != by_owner.end() ? parent->second : objects.size() })
             {
                 if (found >= objects.size() || found == i)
                     continue;
-                const save::PlacedObject& t = objects[found];
+                const save::model::PlacedObject& t = objects[found];
                 if (t.symbol == o.symbol && t.overlay == o.overlay && t.col == o.col && t.row == o.row && t.quadrant == o.quadrant && t.rotation == o.rotation && t.base_height == o.base_height)
                 {
                     out.push_back(i);

@@ -29,7 +29,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::save
+namespace rct3::save::model
 {
 
     struct WorldPoint3
@@ -556,4 +556,4 @@ namespace rct3::save
     /// inconsistent data are reported in `issues` and leave the affected part empty.
     [[nodiscard]] std::expected<WorldModel, Error> load_world(const SaveFile& file, const ObjectIndex& index);
 
-} // namespace rct3::save
+} // namespace rct3::save::model

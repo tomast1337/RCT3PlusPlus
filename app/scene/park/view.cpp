@@ -115,7 +115,7 @@ namespace rct3::scene::park
         drop(device, scene.pool_marks);
     }
 
-    glm::vec3 tile_point(const save::TerrainGrid& grid, save::Tile tile)
+    glm::vec3 tile_point(const save::model::TerrainGrid& grid, save::model::Tile tile)
     {
         const float x = grid.world_x(tile.col) + grid.tile_size_x / 2;
         const float z = grid.world_z(tile.row) + grid.tile_size_z / 2;
@@ -195,7 +195,7 @@ namespace rct3::scene::park
                 return;
             found.push_back({ clip.w, { { (ndc.x + 1) / 2 * size.x, (1 - ndc.y) / 2 * size.y }, whole(height) } });
         };
-        const save::TerrainGrid& g = scene.grid;
+        const save::model::TerrainGrid& g = scene.grid;
         if (scene.show_path_heights)
         {
             for (const simulation::PathNode& n : scene.sim.paths.nodes())
@@ -208,10 +208,10 @@ namespace rct3::scene::park
         {
             for (std::size_t r = 0; r < scene.rides.rides.size(); ++r)
             {
-                const save::Ride& ride = scene.rides.rides[r];
+                const save::model::Ride& ride = scene.rides.rides[r];
                 if (!ride.track || ride.base.demolished || (!scene.show_ride_heights && r != built))
                     continue;
-                for (const save::TrackPiece& p : ride.track->pieces)
+                for (const save::model::TrackPiece& p : ride.track->pieces)
                 {
                     const auto height = static_cast<float>(p.height);
                     add({ g.world_x(p.tile_x) + g.tile_size_x / 2, height, g.world_z(p.tile_z) + g.tile_size_z / 2 }, height);

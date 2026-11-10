@@ -206,7 +206,7 @@ namespace rct3::park
     {
     public:
         BuildOffer() = default;
-        explicit BuildOffer(const save::RequiredContent& content);
+        explicit BuildOffer(const save::model::RequiredContent& content);
 
         /// Whether the park says anything about which items it offers.
         [[nodiscard]] bool known() const noexcept

@@ -35,8 +35,8 @@ TEST_CASE("every prop can be pulled down at once, and bins and signs get a tab o
     CHECK(plain[0].tab == SceneryTab::Destroy);
     CHECK(plain[0].action);
 
-    const save::BinState bin;
-    const save::SignState sign;
+    const save::model::BinState bin;
+    const save::model::SignState sign;
     const auto both = scenery_tabs({ .symbol = { }, .bin = &bin, .sign = &sign });
     REQUIRE(both.size() == 3);
     CHECK(both[1].tab == SceneryTab::Bin);
@@ -74,7 +74,7 @@ TEST_CASE("a prop is named after its asset, whatever the case of the name")
 TEST_CASE("a bin tells how full it is and when it was emptied")
 {
     const StringTable s = table();
-    save::BinState bin;
+    save::model::BinState bin;
     bin.capacity = 2;
     bin.contents = 0.5f;
     const SceneryFacts facts { .symbol = "StoneBin", .bin = &bin, .sign = nullptr };
@@ -85,12 +85,12 @@ TEST_CASE("a bin tells how full it is and when it was emptied")
     CHECK(page.lines[1].value == u"Not yet");
 
     // Two months and a little into the first year.
-    bin.last_emptied = 2 * save::GameClock::kUnitsPerMonth + 10;
+    bin.last_emptied = 2 * save::model::GameClock::kUnitsPerMonth + 10;
     page = scenery_page(SceneryTab::Bin, facts, s);
     CHECK(page.lines[1].value == u"Spring, Yr 1");
 
     // The date is counted from where the park's calendar starts: the same time is a year and a month earlier.
-    const SceneryFacts later { .symbol = "StoneBin", .bin = &bin, .sign = nullptr, .zero_time = -(save::GameClock::kUnitsPerYear + save::GameClock::kUnitsPerMonth) };
+    const SceneryFacts later { .symbol = "StoneBin", .bin = &bin, .sign = nullptr, .zero_time = -(save::model::GameClock::kUnitsPerYear + save::model::GameClock::kUnitsPerMonth) };
     CHECK(scenery_page(SceneryTab::Bin, later, s).lines[1].value != u"Spring, Yr 1");
     CHECK(scenery_page(SceneryTab::Bin, later, s).lines[1].value.ends_with(u"Yr 2"));
 }
@@ -98,7 +98,7 @@ TEST_CASE("a bin tells how full it is and when it was emptied")
 TEST_CASE("a sign shows its words, or that it forbids entry")
 {
     const StringTable s = table();
-    save::SignState sign;
+    save::model::SignState sign;
     sign.text = "Hello";
     const SceneryFacts facts { .symbol = { }, .bin = nullptr, .sign = &sign };
     InfoPage page = scenery_page(SceneryTab::Sign, facts, s);

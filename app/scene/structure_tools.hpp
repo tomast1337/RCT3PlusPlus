@@ -47,20 +47,20 @@ namespace rct3::scene
         };
         Tool tool = Tool::None;
         // Picking out
-        std::vector<std::uint8_t> marks;  ///< Of every tile of the park, row after row: 1 where marked
-        std::optional<save::Tile> corner; ///< Of the drag going on, where it began
-        std::optional<save::Tile> other;  ///< And where it is now
-        bool unmarking = false;           ///< The drag began on a marked tile
-        bool marks_changed = false;       ///< The marks shown are not the marks
+        std::vector<std::uint8_t> marks;         ///< Of every tile of the park, row after row: 1 where marked
+        std::optional<save::model::Tile> corner; ///< Of the drag going on, where it began
+        std::optional<save::model::Tile> other;  ///< And where it is now
+        bool unmarking = false;                  ///< The drag began on a marked tile
+        bool marks_changed = false;              ///< The marks shown are not the marks
         // Placing
-        std::optional<save::Structure> structure; ///< Picked out to save, or being placed
+        std::optional<save::model::Structure> structure; ///< Picked out to save, or being placed
         rct3::park::ModelTurn turn;
-        std::optional<save::Tile> at; ///< The tile pointed at
-        std::int32_t ground = 0;      ///< The ground's height there
-        std::int32_t height = 0;      ///< The lowest item's, the ground's unless raised with Shift
+        std::optional<save::model::Tile> at; ///< The tile pointed at
+        std::int32_t ground = 0;             ///< The ground's height there
+        std::int32_t height = 0;             ///< The lowest item's, the ground's unless raised with Shift
         std::optional<glm::vec3> lift_at;
         std::int32_t lift_height = 0;
-        std::vector<save::PlacedObject> placed; ///< The ghost's items
+        std::vector<save::model::PlacedObject> placed; ///< The ghost's items
         rct3::park::StructureProblem problem = rct3::park::StructureProblem::None;
         std::int64_t cost = 0; ///< Of all the items
         bool affordable = true;

@@ -19,9 +19,9 @@ namespace
     constexpr std::uint8_t kMinusZ = 2;
     constexpr std::uint8_t kPlusZ = 3;
 
-    save::TerrainGrid flat_grid(int width, int height, float level = 0)
+    save::model::TerrainGrid flat_grid(int width, int height, float level = 0)
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.origin_x = -4;
@@ -29,22 +29,22 @@ namespace
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(static_cast<std::size_t>(width * height));
-        for (save::TerrainCell& c : g.cells)
+        for (save::model::TerrainCell& c : g.cells)
             c.corners = { level, level, level, level };
         return g;
     }
 
-    save::PathTile queue(int col, int row, std::uint8_t start, std::uint8_t end, std::string style = "Lanes", std::array<std::int32_t, 3> colours = { 4, 5, 6 })
+    save::model::PathTile queue(int col, int row, std::uint8_t start, std::uint8_t end, std::string style = "Lanes", std::array<std::int32_t, 3> colours = { 4, 5, 6 })
     {
-        save::PathTile p;
-        p.kind = save::PathKind::Queue;
+        save::model::PathTile p;
+        p.kind = save::model::PathKind::Queue;
         p.col = static_cast<std::uint8_t>(col);
         p.row = static_cast<std::uint8_t>(row);
         p.surface_name = std::move(style);
         p.surface_colours = colours;
-        p.elevation = save::PathElevation { };
-        p.elevation->slope = save::kSlopeOnGround;
-        p.queue = save::PathQueueInfo { };
+        p.elevation = save::model::PathElevation { };
+        p.elevation->slope = save::model::kSlopeOnGround;
+        p.queue = save::model::PathQueueInfo { };
         p.queue->start_direction = start;
         p.queue->end_direction = end;
         return p;
@@ -58,7 +58,7 @@ TEST_CASE("stored directions name the sides they point out of")
     CHECK(path::stored_heading(kPlusX) == Side::kNextCol);
     CHECK(path::stored_heading(kMinusZ) == Side::kRowBefore);
     CHECK(path::stored_heading(kPlusZ) == Side::kNextRow);
-    CHECK_FALSE(path::stored_heading(save::kNoDirection).has_value());
+    CHECK_FALSE(path::stored_heading(save::model::kNoDirection).has_value());
 }
 
 TEST_CASE("a queue tile open on opposite sides is straight, turned to their axis")
@@ -101,10 +101,10 @@ TEST_CASE("a queue tile without usable sides is closed")
 
 TEST_CASE("ground queues draw one whole tile each, grouped by style and colours")
 {
-    const save::TerrainGrid g = flat_grid(4, 2, 1);
-    save::PathTile raised = queue(3, 1, kMinusX, kPlusX);
+    const save::model::TerrainGrid g = flat_grid(4, 2, 1);
+    save::model::PathTile raised = queue(3, 1, kMinusX, kPlusX);
     raised.elevation->slope = 0;
-    const std::vector<save::PathTile> paths { queue(0, 0, kMinusX, kPlusX), queue(1, 0, kMinusX, kPlusX), queue(2, 0, kMinusX, kPlusX, "Lanes", { 1, 1, 1 }), queue(9, 9, kMinusX, kPlusX), raised };
+    const std::vector<save::model::PathTile> paths { queue(0, 0, kMinusX, kPlusX), queue(1, 0, kMinusX, kPlusX), queue(2, 0, kMinusX, kPlusX, "Lanes", { 1, 1, 1 }), queue(9, 9, kMinusX, kPlusX), raised };
     const GroundQueues q = ground_queues(paths, g);
     REQUIRE(q.paintings.size() == 2);
     CHECK(q.paintings[0] == QueuePainting { "Lanes", { 4, 5, 6 } });
@@ -122,13 +122,13 @@ TEST_CASE("ground queues draw one whole tile each, grouped by style and colours"
 
 TEST_CASE("a ground path opens towards a queue's open end, not its walls")
 {
-    const save::TerrainGrid g = flat_grid(3, 2);
-    save::PathTile path;
-    path.kind = save::PathKind::Ground;
+    const save::model::TerrainGrid g = flat_grid(3, 2);
+    save::model::PathTile path;
+    path.kind = save::model::PathKind::Ground;
     path.surface_name = "Gravel";
-    save::PathTile below = path;
+    save::model::PathTile below = path;
     below.row = 1;
-    const std::vector<save::PathTile> paths { path, queue(1, 0, kMinusX, kPlusX), below, queue(1, 1, kPlusX, kMinusZ) };
+    const std::vector<save::model::PathTile> paths { path, queue(1, 0, kMinusX, kPlusX), below, queue(1, 1, kPlusX, kMinusZ) };
     const GroundPathMap map = ground_path_map(paths, g);
     CHECK(path_continues(map, g, { 0, 0 }, 1, 0));       // The queue is open towards -x
     CHECK_FALSE(path_continues(map, g, { 0, 1 }, 1, 0)); // This one is open towards +x and -z only

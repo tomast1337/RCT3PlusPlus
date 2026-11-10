@@ -212,7 +212,7 @@ namespace rct3::scene::park
         rct3::park::water::advance_ripples(water.ripples, seconds);
     }
 
-    bool ripple_park_water(ParkWater& water, const rct3::park::Ray& ray, const save::TerrainGrid& grid)
+    bool ripple_park_water(ParkWater& water, const rct3::park::Ray& ray, const save::model::TerrainGrid& grid)
     {
         const auto hit = rct3::park::water::water_hit(ray, water.surface);
         if (!hit)

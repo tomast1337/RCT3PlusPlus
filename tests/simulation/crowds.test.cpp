@@ -236,15 +236,15 @@ TEST_CASE("an entertainer picked up mid-show stops it, and the crowd walks on wi
 
 TEST_CASE("fans gather round a VIP, who signs for them one at a time; each autograph wears a VIP who minds hunters down")
 {
-    using T = save::VipTarget;
+    using T = save::model::VipTarget;
     Sandbox park;
     park.path({ 0, 0 }, { 6, 0 });
     auto& r = park.world().registry;
     r.emplace<ParkGate>(r.create(), ParkGate { park.world().paths.find({ 0, 0, 0 }).value() });
     park.run(1);
-    save::ObjectiveSet set;
+    save::model::ObjectiveSet set;
     set.objectives = { { .difficulty = 0 } };
-    set.conditions = { { .kind = save::ConditionKind::Vip, .id = 7, .vip = T { .wishes = T::kAutographs, .next_visit = 0, .months_to_stay = 4, .autograph_tolerance = 4 } } };
+    set.conditions = { { .kind = save::model::ConditionKind::Vip, .id = 7, .vip = T { .wishes = T::kAutographs, .next_visit = 0, .months_to_stay = 4, .autograph_tolerance = 4 } } };
     ParkMessages messages;
     advance_vips(park.world(), set, 0, 1, messages, { });
     const auto vips = r.view<Vip>();
@@ -285,18 +285,18 @@ namespace
     struct VipWalk
     {
         Sandbox park;
-        save::ObjectiveSet set;
+        save::model::ObjectiveSet set;
         entt::entity vip = entt::null;
 
         VipWalk()
         {
-            using T = save::VipTarget;
+            using T = save::model::VipTarget;
             park.path({ 0, 0 }, { 14, 0 });
             auto& r = park.world().registry;
             r.emplace<ParkGate>(r.create(), ParkGate { park.world().paths.find({ 0, 0, 0 }).value() });
             park.run(1);
             set.objectives = { { .difficulty = 0 } };
-            set.conditions = { { .kind = save::ConditionKind::Vip, .id = 7, .vip = T { .next_visit = 0, .months_to_stay = 4 } } };
+            set.conditions = { { .kind = save::model::ConditionKind::Vip, .id = 7, .vip = T { .next_visit = 0, .months_to_stay = 4 } } };
             ParkMessages messages;
             advance_vips(park.world(), set, 0, 1, messages, { });
             vip = *r.view<Vip>().begin();

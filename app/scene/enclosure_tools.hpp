@@ -39,7 +39,7 @@ namespace rct3::scene
 
     /// Puts up the keeper's hut beside animal house `house`, just placed at `site` from `item`, and hires its
     /// keeper, who starts at the hut.
-    void house_placed(park::ParkScene& scene, const ui::InterfaceAssets& assets, const save::PlacedObject& house, const rct3::park::BuildItem& item, const rct3::park::ride::RideSite& site);
+    void house_placed(park::ParkScene& scene, const ui::InterfaceAssets& assets, const save::model::PlacedObject& house, const rct3::park::BuildItem& item, const rct3::park::ride::RideSite& site);
 
     /// Builds the enclosures' fences again after they changed.
     /// shortcut: the old panels stay hidden among the objects; drop them when objects can be taken out.

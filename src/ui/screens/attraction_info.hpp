@@ -86,20 +86,20 @@ namespace rct3::ui::screens
     };
 
     /// The tabs of an attraction of `kind` in the state `state`, in the order of their slots.
-    [[nodiscard]] std::vector<AttractionTabInfo> attraction_tabs(AttractionKind kind, save::AttractionState state);
+    [[nodiscard]] std::vector<AttractionTabInfo> attraction_tabs(AttractionKind kind, save::model::AttractionState state);
 
     /// The kind of `ride`.
-    [[nodiscard]] AttractionKind attraction_kind(const save::Ride& ride);
+    [[nodiscard]] AttractionKind attraction_kind(const save::model::Ride& ride);
 
     /// The attraction's name as the player sees it: the name they gave it, a named string, or the name of its
     /// kind and its number.
-    [[nodiscard]] std::u16string attraction_name(const save::AttractionCommon& attraction, const StringTable& strings);
+    [[nodiscard]] std::u16string attraction_name(const save::model::AttractionCommon& attraction, const StringTable& strings);
 
     /// Open, testing, closed or broken down, in words.
-    [[nodiscard]] std::u16string attraction_status(const save::AttractionCommon& attraction, const StringTable& strings);
+    [[nodiscard]] std::u16string attraction_status(const save::model::AttractionCommon& attraction, const StringTable& strings);
 
     /// The text key naming how a ride has broken down; empty past the kinds known.
-    [[nodiscard]] std::string_view breakdown_key(save::BreakdownKind kind);
+    [[nodiscard]] std::string_view breakdown_key(save::model::BreakdownKind kind);
 
     /// The word for a rating of `value` (excitement, intensity or nausea): low, medium, high and so on.
     [[nodiscard]] std::u16string rating_word(float value, const StringTable& strings);
@@ -142,21 +142,21 @@ namespace rct3::ui::screens
 
     struct AttractionFacts
     {
-        const save::AttractionCommon* common = nullptr;
-        const save::Ride* ride = nullptr;
-        const save::Stall* stall = nullptr;
+        const save::model::AttractionCommon* common = nullptr;
+        const save::model::Ride* ride = nullptr;
+        const save::model::Stall* stall = nullptr;
         /// The colours it is painted in, one for each pot it offers; none when it cannot be painted.
         std::vector<std::size_t> colours { };
         /// While the park runs; the pages show these over what the save kept.
         std::optional<RideFlow> flow { };
         /// The park's guests, to tell how many the ride suits.
-        std::span<const save::Guest> guests { };
+        std::span<const save::model::Guest> guests { };
         /// Of a ride, whether signs stand over its queues.
         std::optional<bool> queue_signs { };
         /// Of a flat ride, whether it has rider seats the view can look out from.
         bool seats = false;
         /// Of a show ride, what it puts on.
-        const save::RideShow* show = nullptr;
+        const save::model::RideShow* show = nullptr;
         /// Of a tracked ride, whether its track has a station, which its entrance and exit stand beside; of a flat
         /// ride, whether it is placed.
         std::optional<bool> station { };
@@ -189,7 +189,7 @@ namespace rct3::ui::screens
     };
 
     /// How many of the guests in the park like rides of `intensity` (as saved, about 0 to 10).
-    [[nodiscard]] GuestsSuited guests_suited(float intensity, std::span<const save::Guest> guests);
+    [[nodiscard]] GuestsSuited guests_suited(float intensity, std::span<const save::model::Guest> guests);
 
     /// Ids of the controls on an attraction's pages (InfoControl::id).
     enum class AttractionControl : std::uint16_t
@@ -249,7 +249,7 @@ namespace rct3::ui::screens
 
     /// The tricks the player may put in `show`, by place in its tricks: not the first, which the performers do
     /// between shows, nor hidden ones, nor ones not yet offered or researched.
-    [[nodiscard]] std::vector<std::uint32_t> show_offers(const save::RideShow& show);
+    [[nodiscard]] std::vector<std::uint32_t> show_offers(const save::model::RideShow& show);
 
     /// The id of `control` on a page, and of the control for item `item` in a family.
     [[nodiscard]] constexpr int control_id(AttractionControl control, std::size_t item = 0)
@@ -293,16 +293,16 @@ namespace rct3::ui::screens
     [[nodiscard]] InfoPage attraction_page(AttractionTab tab, const AttractionFacts& facts, const StringTable& strings, const InfoUnits& units, std::size_t section = 0);
 
     /// The latest of the thoughts `all` on `page`, newest first, as many as it has room for, each with its mood's face.
-    void add_thoughts(InfoPage& page, std::span<const save::ThoughtEntry> all, const StringTable& strings);
+    void add_thoughts(InfoPage& page, std::span<const save::model::ThoughtEntry> all, const StringTable& strings);
 
     /// What a saved design's browser says of it, worded as a ride's results are: the ground it covers, its
     /// price, its ratings when it was rated and its test results when it was tested.
-    [[nodiscard]] std::vector<InfoLine> design_lines(const save::DesignSummary& design, const StringTable& strings, const InfoUnits& units);
+    [[nodiscard]] std::vector<InfoLine> design_lines(const save::model::DesignSummary& design, const StringTable& strings, const InfoUnits& units);
 
     /// A state the open-or-close tab offers.
     struct StateChoice
     {
-        save::AttractionState state = save::AttractionState::Open;
+        save::model::AttractionState state = save::model::AttractionState::Open;
         std::string_view icon;          ///< Skin
         std::string_view disabled_icon; ///< Skin when the attraction cannot be put in it
         std::string_view help;          ///< String key

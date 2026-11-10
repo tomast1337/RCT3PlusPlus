@@ -32,6 +32,6 @@ namespace rct3::park::ride
 
     /// Placed fence pieces round `ride`. `model_of` gives the models of the object a flat ride is built from and
     /// of its track pieces' objects; one not found is not fenced round. New objects take ids after `last_id`.
-    [[nodiscard]] std::vector<save::PlacedObject> ride_fences(const save::Ride& ride, const ModelOf& model_of, std::uint64_t last_id);
+    [[nodiscard]] std::vector<save::model::PlacedObject> ride_fences(const save::model::Ride& ride, const ModelOf& model_of, std::uint64_t last_id);
 
 } // namespace rct3::park::ride

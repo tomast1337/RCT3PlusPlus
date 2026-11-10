@@ -37,7 +37,7 @@ namespace rct3::park::path
 
     struct FurnitureSpot
     {
-        save::Tile tile;
+        save::model::Tile tile;
         ModelTurn turn;
         std::int32_t height = 0; ///< Whole units; the deck's on a raised path, the land's middle on the ground
         bool raised = false;
@@ -47,10 +47,10 @@ namespace rct3::park::path
     /// Where an item positioned `positioning` goes for the pointer at world point `hit`: on the path tile under it
     /// whose height is nearest, against the side chosen as above, or in the middle turned `turn`. Nothing off the
     /// paths. `rules` are the item's ObjectModel::path_rules.
-    [[nodiscard]] std::optional<FurnitureSpot> furniture_spot(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, glm::vec3 hit, object::Positioning positioning, ModelTurn turn, object::PathRules rules = { });
+    [[nodiscard]] std::optional<FurnitureSpot> furniture_spot(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, glm::vec3 hit, object::Positioning positioning, ModelTurn turn, object::PathRules rules = { });
 
     /// Whether another shown item of `objects` already stands where `item`, positioned `positioning`, would: in
     /// the middle of its tile, or against the same side, at about its height.
-    [[nodiscard]] bool furniture_taken(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::PlacedObject& item, object::Positioning positioning);
+    [[nodiscard]] bool furniture_taken(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::PlacedObject& item, object::Positioning positioning);
 
 } // namespace rct3::park::path

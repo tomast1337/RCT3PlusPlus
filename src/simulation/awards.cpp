@@ -154,7 +154,7 @@ namespace rct3::simulation
             std::map<std::string, float, std::less<>> tiles { };
         };
 
-        std::vector<Surroundings> surroundings(const save::RideModel& rides, std::span<const save::PlacedObject> objects, std::span<const park::BuildItem> catalogue)
+        std::vector<Surroundings> surroundings(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const park::BuildItem> catalogue)
         {
             constexpr float kReach = 6; ///< Fitted: tiles round a ride or stall its scenery counts within
             constexpr float kOwn = 8;   ///< Fitted: a ride or stall of the theme counts as this many tiles of its scenery
@@ -177,14 +177,14 @@ namespace rct3::simulation
             {
                 float col = 0, row = 0;
                 std::string_view theme;
-                save::ObjectId object = 0;
+                save::model::ObjectId object = 0;
                 std::uint64_t id = 0;
             };
             std::vector<Spot> attractions;
-            const auto add = [&](const save::AttractionCommon& base, std::span<const save::Station> stations) {
-                std::optional<save::PlacementSpot> spot = base.spot;
+            const auto add = [&](const save::model::AttractionCommon& base, std::span<const save::model::Station> stations) {
+                std::optional<save::model::PlacementSpot> spot = base.spot;
                 // Rides with a track stand where guests go in.
-                for (const save::Station& station : stations)
+                for (const save::model::Station& station : stations)
                     if (!spot && station.entrance_spot)
                         spot = station.entrance_spot;
                 if (!spot || base.demolished)
@@ -192,9 +192,9 @@ namespace rct3::simulation
                 const auto theme = theme_of.find(key(base.overlay_path));
                 attractions.push_back({ static_cast<float>(spot->col), static_cast<float>(spot->row), theme != theme_of.end() ? std::string_view(theme->second) : std::string_view { }, spot->object, base.id });
             };
-            for (const save::Ride& ride : rides.rides)
+            for (const save::model::Ride& ride : rides.rides)
                 add(ride.base, ride.stations);
-            for (const save::Stall& stall : rides.stalls)
+            for (const save::model::Stall& stall : rides.stalls)
                 add(stall.base, { });
             // Each ride and stall's tiles of each theme's scenery round it, its own theme first.
             std::vector<Surroundings> tiles(attractions.size());
@@ -204,7 +204,7 @@ namespace rct3::simulation
                 if (!attractions[i].theme.empty())
                     tiles[i].tiles[tiles[i].own] = kOwn;
             }
-            for (const save::PlacedObject& o : objects)
+            for (const save::model::PlacedObject& o : objects)
             {
                 const auto theme = o.hidden || o.fixture ? theme_of.end() : theme_of.find(key(o.overlay));
                 if (theme == theme_of.end() || std::ranges::contains(attractions, o.id, &Spot::object))
@@ -218,7 +218,7 @@ namespace rct3::simulation
         }
     } // namespace
 
-    std::map<std::string, std::int32_t, std::less<>> themed_attractions(const save::RideModel& rides, std::span<const save::PlacedObject> objects, std::span<const park::BuildItem> catalogue)
+    std::map<std::string, std::int32_t, std::less<>> themed_attractions(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const park::BuildItem> catalogue)
     {
         std::map<std::string, std::int32_t, std::less<>> themed;
         for (const Surroundings& round : surroundings(rides, objects, catalogue))
@@ -228,7 +228,7 @@ namespace rct3::simulation
         return themed;
     }
 
-    std::vector<std::uint64_t> off_theme_attractions(const save::RideModel& rides, std::span<const save::PlacedObject> objects, std::span<const park::BuildItem> catalogue)
+    std::vector<std::uint64_t> off_theme_attractions(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const park::BuildItem> catalogue)
     {
         std::vector<std::uint64_t> off;
         for (const Surroundings& round : surroundings(rides, objects, catalogue))
@@ -237,7 +237,7 @@ namespace rct3::simulation
         return off;
     }
 
-    std::vector<std::int32_t> award_month(save::Awards& awards, const AwardFigures& figures, random::RandomState& dice)
+    std::vector<std::int32_t> award_month(save::model::Awards& awards, const AwardFigures& figures, random::RandomState& dice)
     {
         if (awards.months_before_start > 0)
         {

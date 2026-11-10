@@ -36,7 +36,7 @@ namespace rct3::scene
     struct DesignFile
     {
         std::filesystem::path path;
-        save::DesignSummary summary;
+        save::model::DesignSummary summary;
     };
 
     struct BuildMenus
@@ -56,7 +56,7 @@ namespace rct3::scene
 
     /// Starts reading the install's items. `content`: what the park records of the items it offers, if
     /// it was read.
-    [[nodiscard]] BuildMenus start_build_menus(const config::GameInstall& install, const save::RequiredContent* content);
+    [[nodiscard]] BuildMenus start_build_menus(const config::GameInstall& install, const save::model::RequiredContent* content);
 
     /// Starts reading the saved designs in `folders`, in their order; those that do not read are left out.
     void start_design_scan(BuildMenus& menus, std::vector<std::filesystem::path> folders);

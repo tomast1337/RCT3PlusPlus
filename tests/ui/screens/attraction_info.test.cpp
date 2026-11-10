@@ -52,16 +52,16 @@ namespace
 
 TEST_CASE("each kind of attraction has its own tabs, in the order of their places on the ring")
 {
-    const auto tracked = attraction_tabs(AttractionKind::Tracked, save::AttractionState::Open);
+    const auto tracked = attraction_tabs(AttractionKind::Tracked, save::model::AttractionState::Open);
     CHECK(tracked.size() == 11);
     CHECK(has(tracked, AttractionTab::Graphs));
     CHECK(std::ranges::is_sorted(tracked, { }, &AttractionTabInfo::slot));
-    const auto flat = attraction_tabs(AttractionKind::Flat, save::AttractionState::Closed);
+    const auto flat = attraction_tabs(AttractionKind::Flat, save::model::AttractionState::Closed);
     CHECK(flat.size() == 9);
     CHECK_FALSE(has(flat, AttractionTab::Construction));
-    const auto facility = attraction_tabs(AttractionKind::Facility, save::AttractionState::Closed);
+    const auto facility = attraction_tabs(AttractionKind::Facility, save::model::AttractionState::Closed);
     CHECK(facility.size() == 5);
-    const auto stall = attraction_tabs(AttractionKind::Stall, save::AttractionState::Closed);
+    const auto stall = attraction_tabs(AttractionKind::Stall, save::model::AttractionState::Closed);
     CHECK(has(stall, AttractionTab::Items));
     CHECK_FALSE(has(stall, AttractionTab::Tests));
     // The open-or-close tab shows the state.
@@ -72,7 +72,7 @@ TEST_CASE("each kind of attraction has its own tabs, in the order of their place
 TEST_CASE("an attraction's name is its own, a named string, or its kind and number")
 {
     const StringTable s = table();
-    save::AttractionCommon a;
+    save::model::AttractionCommon a;
     a.name = "Loop the loop";
     CHECK(attraction_name(a, s) == u"Loop the loop");
     a.name = "#RideNameZoom#";
@@ -101,7 +101,7 @@ TEST_CASE("why a ride was not opened shows in place of its state")
 {
     StringTable s = table();
     s.add("RideHasNoStation", u"No station");
-    save::Ride ride;
+    save::model::Ride ride;
     ride.base.name = "Ride";
     AttractionFacts f;
     f.common = &ride.base;
@@ -116,9 +116,9 @@ TEST_CASE("why a ride was not opened shows in place of its state")
 TEST_CASE("pages are written from the attraction's state")
 {
     const StringTable s = table();
-    save::Ride ride;
+    save::model::Ride ride;
     ride.base.name = "Ride";
-    ride.base.state = save::AttractionState::Open;
+    ride.base.state = save::model::AttractionState::Open;
     ride.base.total_profit = 1234;
     const AttractionFacts f { &ride.base, &ride, nullptr };
     const InfoUnits units;
@@ -146,7 +146,7 @@ TEST_CASE("pages are written from the attraction's state")
     CHECK(tests.note == u"Not yet");
     ride.assessment.valid = true;
     ride.assessment.excitement = 0.25f;
-    save::TestResults lap;
+    save::model::TestResults lap;
     lap.valid = true;
     lap.max_speed = 10;
     ride.stats.last_lap = lap;
@@ -172,8 +172,8 @@ TEST_CASE("rides can be tested as well as opened and closed, other attractions o
     CHECK(state_choices(AttractionKind::Flat).size() == 3);
     const auto stall = state_choices(AttractionKind::Stall);
     REQUIRE(stall.size() == 2);
-    CHECK(stall[0].state == save::AttractionState::Open);
-    CHECK(stall[1].state == save::AttractionState::Closed);
+    CHECK(stall[0].state == save::model::AttractionState::Open);
+    CHECK(stall[1].state == save::model::AttractionState::Closed);
     CHECK(state_choices(AttractionKind::Facility).size() == 2);
     CHECK(state_choices(AttractionKind::Tracked, false).size() == 2);
 }
@@ -183,9 +183,9 @@ TEST_CASE("a tracked ride's test results come in sections, a flat ride's in one"
     StringTable s = table();
     s.add("RideTest_Force", u"Forces");
     s.add("AttractionResultsDialogLabel_MaxLateralG", u"Sideways");
-    save::Ride ride;
-    ride.kind = save::RideKind::Tracked;
-    save::TestResults lap;
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Tracked;
+    save::model::TestResults lap;
     lap.valid = true;
     lap.max_lateral = 9.81f * 2;
     ride.stats.last_lap = lap;
@@ -199,7 +199,7 @@ TEST_CASE("a tracked ride's test results come in sections, a flat ride's in one"
     // Asking past the last section shows the last.
     CHECK(attraction_page(AttractionTab::Tests, f, s, { }, 9).section == 3);
 
-    ride.kind = save::RideKind::Flat;
+    ride.kind = save::model::RideKind::Flat;
     CHECK(attraction_page(AttractionTab::Tests, f, s, { }, 2).sections.empty());
 }
 
@@ -210,11 +210,11 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
     s.add("RideOpModeDialog_OpModeShuttle", u"Back and forth");
     s.add("RideOpModeDialog_MinWaitTime", u"Least wait");
     s.add("Graph_Speed", u"Speed");
-    save::Ride ride;
-    ride.kind = save::RideKind::Tracked;
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Tracked;
     ride.base.symbol = "SpinnerRide:trr";
     ride.trains.resize(3);
-    ride.mode = save::OperatingMode::Shuttle;
+    ride.mode = save::model::OperatingMode::Shuttle;
     ride.options.min_wait = 12;
     const AttractionFacts f { &ride.base, &ride, nullptr };
 
@@ -224,7 +224,7 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
     {
         StringTable named = s;
         named.add("TeacupCarName", u"Teacup car");
-        save::Ride cups = ride;
+        save::model::Ride cups = ride;
         cups.trains[0].symbol = "Teacup:rit";
         CHECK(attraction_page(AttractionTab::Vehicles, { &cups.base, &cups, nullptr }, named, { }).heading == u"Teacup car");
     }
@@ -260,7 +260,7 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
     CHECK(find(AttractionControl::LowFriction).column == 1);
 
     // A launch's speed is set in the player's unit, in hundredths.
-    ride.mode = save::OperatingMode::PoweredLaunch;
+    ride.mode = save::model::OperatingMode::PoweredLaunch;
     ride.options.launch_speed = 10;
     InfoUnits imperial;
     imperial.distance = DistanceUnits::Imperial;
@@ -308,8 +308,8 @@ TEST_CASE("a flat ride's operating mode page sets how many times round it runs, 
 {
     StringTable s = table();
     s.add("RideOpModeDialog_NumCircuits", u"Circuits");
-    save::Ride ride;
-    ride.kind = save::RideKind::Flat;
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Flat;
     ride.loop_count = 0; // Never set: runs once
     const AttractionFacts f { &ride.base, &ride, nullptr };
     const InfoPage page = attraction_page(AttractionTab::Mode, f, s, { });
@@ -327,9 +327,9 @@ TEST_CASE("a show ride's operating mode page sets its show trick by trick")
     StringTable s = table();
     s.add("PonyHop", u"Hop");
     s.add("PonySpin", u"Spin");
-    save::Ride ride;
-    ride.kind = save::RideKind::Flat;
-    const save::RideShow show { .ride = 1, .tricks = { { .name = "PonyIdle", .seconds = 5, .available = true, .invented = true }, { .name = "PonyHop", .seconds = 30, .available = true, .invented = true }, { .name = "PonySecret", .seconds = 9, .hidden = true, .available = true, .invented = true }, { .name = "PonySpin", .seconds = 45, .available = true, .invented = true }, { .name = "PonyNew", .seconds = 9, .available = true } }, .order = { 3, 1 } };
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Flat;
+    const save::model::RideShow show { .ride = 1, .tricks = { { .name = "PonyIdle", .seconds = 5, .available = true, .invented = true }, { .name = "PonyHop", .seconds = 30, .available = true, .invented = true }, { .name = "PonySecret", .seconds = 9, .hidden = true, .available = true, .invented = true }, { .name = "PonySpin", .seconds = 45, .available = true, .invented = true }, { .name = "PonyNew", .seconds = 9, .available = true } }, .order = { 3, 1 } };
     CHECK(show_offers(show) == std::vector<std::uint32_t> { 1, 3 }); // Not the idle one, a hidden one or one not researched
     AttractionFacts f { &ride.base, &ride, nullptr };
     f.show = &show;
@@ -353,7 +353,7 @@ TEST_CASE("the thoughts page shows the latest thoughts about the attraction firs
     StringTable s = table();
     s.add("Thought_ImLost1", u"Lost at %NAME%");
     s.add("Thought_ImTired1", u"Tired");
-    save::Ride ride;
+    save::model::Ride ride;
     ride.base.name = "Big One";
     ride.thoughts = { { 0, 1, 10, 0 }, { 0, 0, -1, 0 }, { 0, 2, 20, 5 }, { 0, 1, 5, 0 } };
     const AttractionFacts f { &ride.base, &ride, nullptr };
@@ -370,8 +370,8 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     s.add("RideInspectionIntervalEvery30Mins", u"Half hourly");
     s.add("AttractionCustomersDialogLabel_Sold", u"%NAME% sold");
     s.add("AttractionCustomersDialogLabel_Customers", u"Per hour");
-    save::Ride ride;
-    ride.kind = save::RideKind::Flat;
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Flat;
     ride.ticket_price = 150;
     ride.breakdown.inspection_interval = 2;
     const AttractionFacts f { &ride.base, &ride, nullptr, { 3, 4, 5 } };
@@ -412,9 +412,9 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     CHECK(details.controls[4].id == control_id(AttractionControl::Locate));
     CHECK(details.controls[4].beside);
 
-    save::Stall stall;
+    save::model::Stall stall;
     stall.base.symbol = "SweetShopStall:shs";
-    save::StallItem sweets;
+    save::model::StallItem sweets;
     sweets.price = 90;
     sweets.total_sold = 41;
     stall.items = { sweets, sweets };
@@ -434,15 +434,15 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
 
 TEST_CASE("a stall's items page offers what its kind sells and is not yet on its menu")
 {
-    save::Stall stall;
+    save::model::Stall stall;
     stall.base.symbol = "BurgerStall:sta";
     stall.sync = true;
-    stall.items = { save::StallItem { .kind_symbol = "Burger:cid", .price = 150 } };
+    stall.items = { save::model::StallItem { .kind_symbol = "Burger:cid", .price = 150 } };
     AttractionFacts f { &stall.base, nullptr, &stall, { } };
     f.offers = { "Burger:cid", "MedBurger:cid", "LrgBurger:cid" };
     const park::CarriedKind burger { .symbol = "Burger:cid", .name_text = "CarriedItem_Hamburger", .icon = "BurgerIcon", .extras = { "Ketchup:ced", "Relish:ced" } };
     f.carried = std::span(&burger, 1);
-    stall.extras = { save::StallExtra { .kind_symbol = "Ketchup:ced", .level = 1 } };
+    stall.extras = { save::model::StallExtra { .kind_symbol = "Ketchup:ced", .level = 1 } };
     stall.items[0].extras = 1;
     StringTable s = table();
     s.add("CarriedItem_Hamburger", u"Hamburger");
@@ -471,8 +471,8 @@ TEST_CASE("a stall's extras page sets how much of each extra goes on")
     StringTable s = table();
     s.add("GUITextSymbol_ShopExtraSetting_NotProvided", u"Not Provided");
     s.add("GUITextSymbol_ShopExtraSetting_GuestChoice", u"Guest Choice");
-    save::Stall stall;
-    stall.extras = { save::StallExtra { .kind_symbol = "Ketchup:ced", .level = 5 } };
+    save::model::Stall stall;
+    stall.extras = { save::model::StallExtra { .kind_symbol = "Ketchup:ced", .level = 5 } };
     const InfoPage page = attraction_page(AttractionTab::Extras, AttractionFacts { &stall.base, nullptr, &stall, { } }, s, { });
     REQUIRE(page.controls.size() == 1);
     CHECK(page.controls[0].id == control_id(AttractionControl::ExtraLevel, 0));
@@ -489,8 +489,8 @@ TEST_CASE("a running ride shows its riders an hour, the wait its queue now has a
     s.add("AttractionCustomersDialogLabel_Customers", u"Per hour");
     s.add("AttractionCustomersDialogLabel_QueueTime", u"Queue");
     s.add("AttractionVehicleDialogLabelCapacity", u"Seats");
-    save::Ride ride;
-    ride.kind = save::RideKind::Tracked;
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Tracked;
     ride.stations.emplace_back().queue_time = 600; // What the save kept, no longer shown
     AttractionFacts f { &ride.base, &ride, nullptr };
     f.flow = RideFlow { .seats = 24, .queued = 60, .per_hour = 720 };

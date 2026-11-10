@@ -21,7 +21,7 @@ namespace rct3::park
 
     /// The chain parts' runs (see Chains) of every ride's track pieces, by the object carrying each piece, among
     /// `objects` drawn with `models`.
-    [[nodiscard]] object::Chains chain_runs(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const object::ObjectModels& models);
+    [[nodiscard]] object::Chains chain_runs(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models);
 
     /// A chain's shift, a share of its picture from 0 up to 1, `seconds` of park time on from `shift` with
     /// its lift pulling at `speed` metres a second.

@@ -298,25 +298,25 @@ namespace rct3::park::pools
     /// on its square at its own height, then the extras, at their squares' surface, then the changing rooms,
     /// at the surface of the square they open on. New objects take ids
     /// after `last_id`. Railings are left open where `openings` join the squares.
-    [[nodiscard]] std::vector<save::PlacedObject> pool_objects(const PoolMap& map, std::string_view overlay, std::uint64_t last_id, std::span<const PoolOpening> openings = { });
+    [[nodiscard]] std::vector<save::model::PlacedObject> pool_objects(const PoolMap& map, std::string_view overlay, std::uint64_t last_id, std::span<const PoolOpening> openings = { });
 
     /// The water of every water square, as the park's water mesh takes it.
-    [[nodiscard]] std::vector<save::PoolWater> pool_water(const PoolMap& map);
+    [[nodiscard]] std::vector<save::model::PoolWater> pool_water(const PoolMap& map);
 
     /// The pools a park from the game keeps, as squares and changing rooms the pool tool can work on: water,
     /// paving, spa pools, high diving boards, spiral staircases and pool paths, and the rooms among `objects` that
     /// open on them.
     /// shortcut: the extras stay the scenery they are placed as; take them in once the pool tool lays them.
-    [[nodiscard]] PoolMap saved_pools(const save::WorldModel& world, std::span<const save::PlacedObject> objects);
+    [[nodiscard]] PoolMap saved_pools(const save::model::WorldModel& world, std::span<const save::model::PlacedObject> objects);
 
     /// Takes out of `objects` the pieces a park from the game placed for `map`'s squares, so the squares alone place
     /// them and the pool tool's work redraws them: those in the pool type in `overlay` (named with either slash, in
     /// any case) that pool_objects lays for `map`. The rest stays as placed: the extras, and any piece it never lays.
-    void drop_saved_pool_pieces(const PoolMap& map, std::string_view overlay, std::vector<save::PlacedObject>& objects);
+    void drop_saved_pool_pieces(const PoolMap& map, std::string_view overlay, std::vector<save::model::PlacedObject>& objects);
 
     /// Digs the ground of `grid` down to the floor of each square of `map` where it is higher, keeping in the square
     /// the ground it dug; the ground under a raised square is left as it is.
-    void dig_under_pools(PoolMap& map, save::TerrainGrid& grid);
+    void dig_under_pools(PoolMap& map, save::model::TerrainGrid& grid);
 
     /// What laying `square` costs, from the pool type's price list (ovl::PoolType::prices); in hundredths.
     [[nodiscard]] std::int64_t pool_build_cost(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept;
@@ -333,7 +333,7 @@ namespace rct3::park::pools
 
     /// The squares of the complex the room `room` (of map.rooms) opens on: every square joined to the one it
     /// opens on.
-    [[nodiscard]] std::vector<save::Tile> pool_complex(const PoolMap& map, std::size_t room);
+    [[nodiscard]] std::vector<save::model::Tile> pool_complex(const PoolMap& map, std::size_t room);
 
     /// The changing rooms of the complex the room `room` (of map.rooms) opens on, itself among them.
     [[nodiscard]] std::vector<std::size_t> pool_complex_rooms(const PoolMap& map, std::size_t room);
@@ -347,6 +347,6 @@ namespace rct3::park::pools
 
     /// Takes up the squares of `map` from `a` to `b`, the extras on them and the changing rooms opening on
     /// them; returns the refund, below zero. Given a `level`, of squares stacked on a tile only the one nearest it.
-    std::int64_t take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::Tile a, save::Tile b, std::optional<std::int32_t> level = std::nullopt);
+    std::int64_t take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::model::Tile a, save::model::Tile b, std::optional<std::int32_t> level = std::nullopt);
 
 } // namespace rct3::park::pools

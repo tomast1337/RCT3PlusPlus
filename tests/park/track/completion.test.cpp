@@ -14,9 +14,9 @@ namespace
 {
     constexpr float kTile = 4;
 
-    save::TerrainGrid flat()
+    save::model::TerrainGrid flat()
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = 20;
         g.height = 20;
         g.tile_size_x = kTile;
@@ -39,16 +39,16 @@ namespace
         return shape_piece(r, l);
     }
 
-    save::PlacedObject at(int col, int row)
+    save::model::PlacedObject at(int col, int row)
     {
-        save::PlacedObject o;
+        save::model::PlacedObject o;
         o.col = col;
         o.row = row;
         o.force_absolute_height = true;
         return o;
     }
 
-    bool anywhere(const save::PlacedObject&)
+    bool anywhere(const save::model::PlacedObject&)
     {
         return true;
     }
@@ -56,11 +56,11 @@ namespace
 
 TEST_CASE("a track is finished with the plain pieces that bring it round to its start")
 {
-    const save::TerrainGrid g = flat();
+    const save::model::TerrainGrid g = flat();
     // A straight, and a tight right turn on one tile.
     const std::vector pieces { piece("Straight", { -kTile / 2, 0, 0 }, { -1, 0, 0 }), piece("Turn", { 0, 0, kTile / 2 }, { 0, 0, 1 }) };
     const LaidPiece straight { 0, false };
-    const save::PlacedObject first = at(5, 5);
+    const save::model::PlacedObject first = at(5, 5);
     const TrackTip goal = start_of(first, pieces[0], false, g);
     const TrackTip tip = tip_of(first, pieces[0], false, g);
     const auto way = complete_track(pieces, tip, straight, goal, straight, g, anywhere, 1000);
@@ -77,10 +77,10 @@ TEST_CASE("a track is finished with the plain pieces that bring it round to its 
 
 TEST_CASE("a track that cannot be brought round says so, and gives up after its tries")
 {
-    const save::TerrainGrid g = flat();
+    const save::model::TerrainGrid g = flat();
     const std::vector pieces { piece("Straight", { -kTile / 2, 0, 0 }, { -1, 0, 0 }), piece("Lift", { -kTile / 2, 0, 0 }, { -1, 0, 0 }, true) };
     const LaidPiece straight { 0, false };
-    const save::PlacedObject first = at(5, 5);
+    const save::model::PlacedObject first = at(5, 5);
     const TrackTip goal = start_of(first, pieces[0], false, g);
     const TrackTip tip = tip_of(first, pieces[0], false, g);
     // Straights only run away from the start; a chain is never laid.
@@ -91,26 +91,26 @@ TEST_CASE("a track that cannot be brought round says so, and gives up after its 
 
 TEST_CASE("a track is finished only with pieces allowed where they stand")
 {
-    const save::TerrainGrid g = flat();
+    const save::model::TerrainGrid g = flat();
     const std::vector pieces { piece("Straight", { -kTile / 2, 0, 0 }, { -1, 0, 0 }), piece("Turn", { 0, 0, kTile / 2 }, { 0, 0, 1 }) };
     const LaidPiece straight { 0, false };
-    const save::PlacedObject first = at(5, 5);
+    const save::model::PlacedObject first = at(5, 5);
     const TrackTip goal = start_of(first, pieces[0], false, g);
     const TrackTip tip = tip_of(first, pieces[0], false, g);
     // Kept to the columns 3..6: the way round must turn back inside them.
-    const auto inside = [](const save::PlacedObject& o) { return o.col >= 3 && o.col <= 6; };
+    const auto inside = [](const save::model::PlacedObject& o) { return o.col >= 3 && o.col <= 6; };
     const auto way = complete_track(pieces, tip, straight, goal, straight, g, inside, 1000);
     REQUIRE(way);
     CHECK(std::ranges::all_of(*way, [&](const LaidPlacement& p) { return inside(p.object); }));
-    CHECK(complete_track(pieces, tip, straight, goal, straight, g, [](const save::PlacedObject&) { return false; }, 1000).error() == CompletionFailure::NoWay);
+    CHECK(complete_track(pieces, tip, straight, goal, straight, g, [](const save::model::PlacedObject&) { return false; }, 1000).error() == CompletionFailure::NoWay);
 }
 
 TEST_CASE("a search run a few tries at a time finds the way a whole search does, nearer the goal as it goes")
 {
-    const save::TerrainGrid g = flat();
+    const save::model::TerrainGrid g = flat();
     const std::vector pieces { piece("Straight", { -kTile / 2, 0, 0 }, { -1, 0, 0 }), piece("Turn", { 0, 0, kTile / 2 }, { 0, 0, 1 }) };
     const LaidPiece straight { 0, false };
-    const save::PlacedObject first = at(5, 5);
+    const save::model::PlacedObject first = at(5, 5);
     const TrackTip goal = start_of(first, pieces[0], false, g);
     const TrackTip tip = tip_of(first, pieces[0], false, g);
     const auto whole = complete_track(pieces, tip, straight, goal, straight, g, anywhere, 1000);

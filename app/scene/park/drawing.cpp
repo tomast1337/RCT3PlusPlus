@@ -590,7 +590,7 @@ namespace rct3::scene::park
             scene.slide_pours.clear();
             scene.pours_next = 0;
             constexpr float kPourSpeed = 1.5f; ///< m/s the water leaves the lip at. Chosen by eye
-            for (const save::PlacedObject& o : scene.objects)
+            for (const save::model::PlacedObject& o : scene.objects)
             {
                 const auto model = scene.models.find(rct3::park::object::model_ref(o));
                 if (o.hidden || model == scene.models.end() || !model->second.pour)

@@ -170,7 +170,7 @@ namespace rct3::simulation
     void import_animal_houses(SimWorld& world, std::span<const AnimalHouse> houses, std::span<const std::pair<entt::entity, std::int32_t>> keepers);
 
     /// The zoo animals a park was saved with, where they stood, each in the enclosure `enclosure` says its spot is in.
-    void import_animals(SimWorld& world, std::span<const save::ZooAnimal> saved, const std::function<std::int32_t(glm::vec2)>& enclosure);
+    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::int32_t(glm::vec2)>& enclosure);
 
     /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape, and leaving what the
     /// park's inspector finds among the Findings.

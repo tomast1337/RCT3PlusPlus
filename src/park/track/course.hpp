@@ -63,13 +63,13 @@ namespace rct3::park::track
     };
 
     /// The shape of `piece`, standing as `object`; nothing when not known.
-    using PieceShapeOf = std::function<std::optional<const PieceShape&>(const save::TrackPiece& piece, const save::PlacedObject& object)>;
+    using PieceShapeOf = std::function<std::optional<const PieceShape&>(const save::model::TrackPiece& piece, const save::model::PlacedObject& object)>;
 
     /// The course of `ride`'s track, its pieces standing as `objects` place them: of a track in several stretches,
     /// the first stretch with a station, or the first stretch when none has one, knowing where the other stretches
     /// with a station are. Nothing when the ride has no
     /// track, or a piece's object or shape is missing.
-    [[nodiscard]] std::optional<TrackCourse> track_course(const save::Ride& ride, std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid, const object::Fitted& fitted, const PieceShapeOf& shape_of);
+    [[nodiscard]] std::optional<TrackCourse> track_course(const save::model::Ride& ride, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid, const object::Fitted& fitted, const PieceShapeOf& shape_of);
 
     /// The point `distance` along `course`, going round again past the end of a closed course and held at the
     /// ends of an open one. The course must have a point.
@@ -129,7 +129,7 @@ namespace rct3::park::track
     /// rear wheels to its front ones. A link between two cars reaches its length back along the track from where
     /// the car ahead couples on, at the height they couple at, and the car behind couples on where it ends. Sets each car's distance (its front), length, wheels and place and turn
     /// as the park keeps them, and the train's distance (its front) and length. Nothing without fits.
-    void stand_train(const TrackCourse& course, save::Train& train, std::span<const object::CarFit> fits, float front);
+    void stand_train(const TrackCourse& course, save::model::Train& train, std::span<const object::CarFit> fits, float front);
 
     using ArmAngles = std::array<float, 4>; ///< An arm's joint angles, degrees, from its base out
 

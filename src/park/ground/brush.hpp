@@ -15,6 +15,6 @@ namespace rct3::park::ground
     inline constexpr int kLargestBrush = 16; ///< Tiles across
 
     /// The tiles covered round `middle`, those inside a grid `columns` by `rows` only.
-    [[nodiscard]] std::vector<save::Tile> brush_tiles(save::Tile middle, int size, bool round, int columns, int rows);
+    [[nodiscard]] std::vector<save::model::Tile> brush_tiles(save::model::Tile middle, int size, bool round, int columns, int rows);
 
 } // namespace rct3::park::ground

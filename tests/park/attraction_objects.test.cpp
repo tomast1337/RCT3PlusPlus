@@ -8,19 +8,19 @@ using namespace rct3::park;
 
 TEST_CASE("track pieces, placements and stations find their attraction")
 {
-    save::RideModel rides;
-    save::Ride& coaster = rides.rides.emplace_back();
+    save::model::RideModel rides;
+    save::model::Ride& coaster = rides.rides.emplace_back();
     coaster.track.emplace();
     coaster.track->pieces.resize(2);
     coaster.track->pieces[0].scenery = 10;
     coaster.track->pieces[1].scenery = 11;
     coaster.stations.push_back({ .entrance = 20, .exit = 21 });
-    save::Ride& flat = rides.rides.emplace_back();
+    save::model::Ride& flat = rides.rides.emplace_back();
     flat.base.placement = 30;
-    save::Stall& stall = rides.stalls.emplace_back();
+    save::model::Stall& stall = rides.stalls.emplace_back();
     stall.base.placement = 40;
 
-    std::vector<save::PlacedObject> objects(5);
+    std::vector<save::model::PlacedObject> objects(5);
     objects[0].id = 1;
     objects[0].owner_ref = 30;
     objects[1].id = 2;
@@ -43,7 +43,7 @@ TEST_CASE("track pieces, placements and stations find their attraction")
 
 TEST_CASE("an object kept twice, one hanging from the other at the same place, is found as a twin")
 {
-    std::vector<save::PlacedObject> objects(4);
+    std::vector<save::model::PlacedObject> objects(4);
     objects[0] = { .id = 5, .symbol = "Wheel", .col = 3, .row = 4, .owner_ref = 1 };
     objects[1] = { .id = 6, .symbol = "Wheel", .col = 3, .row = 4, .owner_ref = 5 }; // Its twin
     objects[2] = { .id = 7, .symbol = "Wheel", .col = 9, .row = 4, .owner_ref = 5 }; // Elsewhere

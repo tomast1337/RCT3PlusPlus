@@ -31,7 +31,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace rct3::save
+namespace rct3::save::model
 {
 
     // ---------------------------------------------------------------------------------------------------------
@@ -608,4 +608,4 @@ namespace rct3::save
     /// range, loan within the maximum, finite clock.
     [[nodiscard]] std::vector<std::string> validate(const ParkModel& model);
 
-} // namespace rct3::save
+} // namespace rct3::save::model

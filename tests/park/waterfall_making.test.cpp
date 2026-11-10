@@ -14,29 +14,29 @@ namespace
 
     // Eight by four tiles of 4 units, all owned: a lake at height 10 over columns 0 and 1 of rows 0 to 2, and
     // one at height 2 over columns 4 and 5 of rows 0 to 3.
-    save::TerrainGrid owned_grid()
+    save::model::TerrainGrid owned_grid()
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = 8;
         g.height = 4;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(32);
-        for (save::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::TileFlag::Owned);
+        for (save::model::TerrainCell& c : g.cells)
+            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
         return g;
     }
 
-    save::WaterBody lake(float level, int col0, int col1, int row0, int row1)
+    save::model::WaterBody lake(float level, int col0, int col1, int row0, int row1)
     {
-        save::WaterBody b { .level = level };
+        save::model::WaterBody b { .level = level };
         for (int r = row0; r <= row1; ++r)
             for (int c = col0; c <= col1; ++c)
                 b.tris.push_back({ .col = static_cast<std::uint8_t>(c), .row = static_cast<std::uint8_t>(r) });
         return b;
     }
 
-    const std::vector<save::WaterBody> kLakes { lake(10, 0, 1, 0, 2), lake(2, 4, 5, 0, 3) };
+    const std::vector<save::model::WaterBody> kLakes { lake(10, 0, 1, 0, 2), lake(2, 4, 5, 0, 3) };
 
 } // namespace
 
@@ -55,14 +55,14 @@ TEST_CASE("make_waterfall: pours over the higher lake's edge toward the lower on
 
 TEST_CASE("make_waterfall: refuses one lake, too little drop, too far apart and land not owned")
 {
-    const save::TerrainGrid grid = owned_grid();
+    const save::model::TerrainGrid grid = owned_grid();
     CHECK(make_waterfall(grid, kLakes, 0, 0, { }).error() == kWaterfallSameWater);
-    std::vector<save::WaterBody> level = kLakes;
+    std::vector<save::model::WaterBody> level = kLakes;
     level[1].level = 9;
     CHECK(make_waterfall(grid, level, 0, 1, { }).error() == kWaterfallTooLittleDrop);
-    const std::vector<save::WaterBody> far { kLakes[0], lake(2, 7, 7, 3, 3) }; // Off to the side, not straight out
+    const std::vector<save::model::WaterBody> far { kLakes[0], lake(2, 7, 7, 3, 3) }; // Off to the side, not straight out
     CHECK(make_waterfall(grid, far, 0, 1, { }).error() == kWaterfallTooFarApart);
-    save::TerrainGrid sold = grid;
+    save::model::TerrainGrid sold = grid;
     sold.at(3, 1).flags = 0;
     sold.at(3, 0).flags = 0;
     sold.at(3, 2).flags = 0;
@@ -73,7 +73,7 @@ TEST_CASE("waterfall_at: finds the fall over the ground picked, and none beside 
 {
     const auto fall = make_waterfall(owned_grid(), kLakes, 0, 1, { 1, 1 });
     REQUIRE(fall);
-    const std::vector<save::Waterfall> falls { *fall };
+    const std::vector<save::model::Waterfall> falls { *fall };
     CHECK(waterfall_at(falls, 12.0f, 6.0f) == 0u);
     CHECK_FALSE(waterfall_at(falls, 12.0f, 30.0f));
     CHECK_FALSE(waterfall_at(falls, -10.0f, 6.0f));
@@ -82,14 +82,14 @@ TEST_CASE("waterfall_at: finds the fall over the ground picked, and none beside 
 TEST_CASE("make_waterfall: keeps the ground of the spillway, cut_spillway cuts it and restore_spillway puts it back")
 {
     // A bank at 12 from column 2 on, the higher lake's floor at 8.
-    save::TerrainGrid grid = owned_grid();
+    save::model::TerrainGrid grid = owned_grid();
     for (int r = 0; r < grid.height; ++r)
         for (int c = 0; c < grid.width; ++c)
             grid.at(c, r).corners.fill(c < 2 ? 8.0f : c < 4 ? 12.0f : 0.0f);
     const auto fall = make_waterfall(grid, kLakes, 0, 1, { 1, 1 });
     REQUIRE(fall);
     CHECK(fall->carved.size() == 9); // Columns 1 to 3 of rows 0 to 2
-    save::TerrainGrid cut = grid;
+    save::model::TerrainGrid cut = grid;
     cut_spillway(cut, *fall);
     constexpr float kFloor = 10 - kSpillwayDepth;
     constexpr float kRim = 10 + kSpillwayRim;
@@ -105,7 +105,7 @@ TEST_CASE("make_waterfall: keeps the ground of the spillway, cut_spillway cuts i
 
 TEST_CASE("make_waterfall: cuts nothing when the lower lake lies against the edge")
 {
-    const std::vector<save::WaterBody> close { lake(10, 0, 1, 0, 2), lake(2, 2, 3, 0, 3) };
+    const std::vector<save::model::WaterBody> close { lake(10, 0, 1, 0, 2), lake(2, 2, 3, 0, 3) };
     const auto fall = make_waterfall(owned_grid(), close, 0, 1, { 1, 1 });
     REQUIRE(fall);
     CHECK(fall->carved.empty());

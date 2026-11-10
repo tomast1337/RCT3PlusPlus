@@ -58,16 +58,16 @@ TEST_CASE("a dry climate never rains and a wet one does")
 TEST_CASE("the forecast arrives when the weather's hold runs out, and a new one is rolled")
 {
     ParkState s;
-    s.weather = save::WeatherType::Sunny;
-    s.forecast = save::WeatherType::HeavyRain;
+    s.weather = save::model::WeatherType::Sunny;
+    s.forecast = save::model::WeatherType::HeavyRain;
     s.weather_hold = 10;
     s.temperature = 20;
     auto dice = random::seeded({ 3 });
     advance_weather(s, 5, dice, false);
-    CHECK(s.weather == save::WeatherType::Sunny);
+    CHECK(s.weather == save::model::WeatherType::Sunny);
     CHECK(s.weather_hold == doctest::Approx(5));
     advance_weather(s, 6, dice, false);
-    CHECK(s.weather == save::WeatherType::HeavyRain);
+    CHECK(s.weather == save::model::WeatherType::HeavyRain);
     CHECK(s.forecast);
     CHECK(s.weather_hold > 0);
 }
@@ -76,12 +76,12 @@ TEST_CASE("the temperature eases towards what the weather and month bring")
 {
     ParkState s;
     s.climate = static_cast<std::int32_t>(Climate::Desert);
-    s.weather = save::WeatherType::Sunny;
-    s.forecast = save::WeatherType::Sunny;
+    s.weather = save::model::WeatherType::Sunny;
+    s.forecast = save::model::WeatherType::Sunny;
     s.weather_hold = 1e6f;
     s.temperature = 0;
     auto dice = random::seeded({ 1 });
-    const float goal = weather_temperature(s.climate, 0, save::WeatherType::Sunny);
+    const float goal = weather_temperature(s.climate, 0, save::model::WeatherType::Sunny);
     advance_weather(s, 1, dice, false);
     CHECK(*s.temperature > 0);
     CHECK(*s.temperature < goal);
@@ -95,15 +95,15 @@ TEST_CASE("the temperature eases towards what the weather and month bring")
 TEST_CASE("frozen weather stays as it is")
 {
     ParkState s;
-    s.weather = save::WeatherType::LightRain;
-    s.forecast = save::WeatherType::Sunny;
+    s.weather = save::model::WeatherType::LightRain;
+    s.forecast = save::model::WeatherType::Sunny;
     s.weather_hold = 1;
     s.temperature = 14;
     s.wind = 0.5f;
     auto dice = random::seeded({ 5 });
     advance_weather(s, 1000, dice, true);
-    CHECK(s.weather == save::WeatherType::LightRain);
-    CHECK(s.forecast == save::WeatherType::Sunny);
+    CHECK(s.weather == save::model::WeatherType::LightRain);
+    CHECK(s.forecast == save::model::WeatherType::Sunny);
     CHECK(*s.temperature == 14);
     CHECK(s.wind == 0.5f);
 }

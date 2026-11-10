@@ -27,9 +27,9 @@ namespace rct3::park::ground
         return { (a + 3) % 4 == b ? QueueCell::TurnLeftSide : QueueCell::TurnRightSide, turns };
     }
 
-    bool is_ground_queue(const save::PathTile& path) noexcept
+    bool is_ground_queue(const save::model::PathTile& path) noexcept
     {
-        return path.kind == save::PathKind::Queue && path.queue && path.elevation && path.elevation->slope == save::kSlopeOnGround;
+        return path.kind == save::model::PathKind::Queue && path.queue && path.elevation && path.elevation->slope == save::model::kSlopeOnGround;
     }
 
     namespace
@@ -57,12 +57,12 @@ namespace rct3::park::ground
 
     } // namespace
 
-    GroundQueues ground_queues(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::optional<TileRect> area)
+    GroundQueues ground_queues(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::optional<TileRect> area)
     {
         GroundQueues out;
         std::map<std::size_t, std::vector<GroundVertex>> by_painting;
         bool any = false;
-        for (const save::PathTile& p : paths)
+        for (const save::model::PathTile& p : paths)
         {
             if (!is_ground_queue(p) || p.surface_name.empty() || !grid.contains(p.col, p.row))
                 continue;
@@ -79,7 +79,7 @@ namespace rct3::park::ground
                 continue;
 
             const QueueShape shape = queue_shape(p.queue->start_direction, p.queue->end_direction);
-            const save::TerrainCell& cell = grid.at(p.col, p.row);
+            const save::model::TerrainCell& cell = grid.at(p.col, p.row);
             std::array<GroundVertex, 4> q;
             for (int c = 0; c < 4; ++c)
             {

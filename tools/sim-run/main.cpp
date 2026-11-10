@@ -138,9 +138,9 @@ int main(int argc, char** argv)
         return 1;
     }
     const save::ObjectIndex index(*file);
-    const auto people = save::load_people(*file, index);
-    const auto world_model = save::load_world(*file, index);
-    const auto rides = save::load_rides(*file, index);
+    const auto people = save::model::load_people(*file, index);
+    const auto world_model = save::model::load_world(*file, index);
+    const auto rides = save::model::load_rides(*file, index);
     if (!people || !world_model || !rides)
     {
         out.error("{}: cannot load people, world or rides", path);
@@ -179,7 +179,7 @@ int main(int argc, char** argv)
         // The folders the park's objects come from, as the game's folder spells them, and the overlays those
         // take assets from in turn.
         std::vector<std::string> folders;
-        for (const save::PlacedObject& o : world_model->objects)
+        for (const save::model::PlacedObject& o : world_model->objects)
         {
             const std::string_view top = std::string_view(o.overlay).substr(0, o.overlay.find_first_of("/\\"));
             if (const auto found = top.empty() || top.size() == o.overlay.size() ? std::nullopt : install->find(top))
@@ -200,7 +200,7 @@ int main(int argc, char** argv)
                 break;
         }
         park::object::ModelLoader loader(assets);
-        for (const save::PlacedObject& o : world_model->objects)
+        for (const save::model::PlacedObject& o : world_model->objects)
         {
             const auto model = loader.load(o.symbol, o.overlay);
             if (model)
@@ -210,14 +210,14 @@ int main(int argc, char** argv)
             else if (model && model->category == std::to_underlying(park::ItemCategory::ParkEntrance))
                 gates.emplace(o.id, model->squares);
         }
-        for (const save::Ride& ride : rides->rides)
-            if (ride.kind == save::RideKind::Special)
+        for (const save::model::Ride& ride : rides->rides)
+            if (ride.kind == save::model::RideKind::Special)
                 if (const auto file = install->find(std::format("{}.common.ovl", ride.base.overlay_path)))
                     if (const auto kind = park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))))
                         facility_kinds[ride.base.id] = *kind;
         std::map<std::string, std::optional<park::object::ObjectModel>, std::less<>> models;
         guests_room = simulation::ride_guests(*rides, [&](std::string_view path) { return install->find(path); });
-        timings = simulation::flat_ride_timings(*rides, world_model->objects, [&](const save::PlacedObject& o) -> const park::object::ObjectModel* {
+        timings = simulation::flat_ride_timings(*rides, world_model->objects, [&](const save::model::PlacedObject& o) -> const park::object::ObjectModel* {
             auto [at, added] = models.try_emplace(o.symbol);
             if (added)
                 at->second = loader.load(o.symbol, o.overlay);
@@ -225,7 +225,7 @@ int main(int argc, char** argv)
         });
         // Each coaster's course, checked against where the save has its cars.
         park::object::ObjectModels piece_models;
-        for (const save::PlacedObject& o : world_model->objects)
+        for (const save::model::PlacedObject& o : world_model->objects)
             if (!piece_models.contains(park::object::model_key(o)))
                 if (auto model = loader.load(o.symbol, o.overlay))
                     piece_models.emplace(park::object::model_key(o), std::move(*model));
@@ -234,8 +234,8 @@ int main(int argc, char** argv)
         std::map<std::string, std::optional<park::track::PieceCatalogue>, std::less<>> catalogues;
         for (std::size_t index = 0; index < rides->rides.size(); ++index)
         {
-            const save::Ride& ride = rides->rides[index];
-            const auto course = park::track::track_course(ride, world_model->objects, piece_models, world_model->terrain, { }, [&](const save::TrackPiece& piece, const save::PlacedObject& object) -> std::optional<const park::track::PieceShape&> {
+            const save::model::Ride& ride = rides->rides[index];
+            const auto course = park::track::track_course(ride, world_model->objects, piece_models, world_model->terrain, { }, [&](const save::model::TrackPiece& piece, const save::model::PlacedObject& object) -> std::optional<const park::track::PieceShape&> {
                 auto [at, added] = catalogues.try_emplace(object.overlay);
                 if (added)
                     if (const auto file = install->find(std::format("{}.common.ovl", object.overlay)))
@@ -249,8 +249,8 @@ int main(int argc, char** argv)
                 continue;
             float worst = 0;
             std::size_t cars = 0;
-            for (const save::Train& train : ride.trains)
-                for (const save::Car& car : train.cars)
+            for (const save::model::Train& train : ride.trains)
+                for (const save::model::Car& car : train.cars)
                     if (car.position_valid)
                     {
                         worst = std::max(worst, glm::distance(park::track::course_point(*course, car.distance), glm::vec3 { car.position[0], car.position[1], car.position[2] }));
@@ -291,25 +291,25 @@ int main(int argc, char** argv)
     const std::size_t seated = simulation::board_saved_riders(world, *people, guests, *rides, ride_entities);
     const std::size_t swimmers = simulation::resume_saved_swimmers(world, *people, guests);
     const std::size_t parties = simulation::import_parties(world, *people, guests);
-    const auto park_model = save::load_park(*file, index);
+    const auto park_model = save::model::load_park(*file, index);
     const std::size_t litter = simulation::import_litter(world, *people, simulation::park_state(park_model ? &*park_model : nullptr, *world_model).time);
     const std::size_t items = simulation::import_path_items(world, world_model->objects, world_model->bins, world_model->benches, world_model->signs);
     const auto staff = simulation::import_staff(world, *people);
-    const std::size_t facilities = simulation::import_facilities(world, *rides, [&](const save::Ride& ride) -> std::optional<std::uint32_t> {
+    const std::size_t facilities = simulation::import_facilities(world, *rides, [&](const save::model::Ride& ride) -> std::optional<std::uint32_t> {
         const auto found = facility_kinds.find(ride.base.id);
         return found != facility_kinds.end() ? std::optional(found->second) : std::nullopt;
     });
-    simulation::import_scenery(world, world_model->objects, [&](const save::PlacedObject& o) {
+    simulation::import_scenery(world, world_model->objects, [&](const save::model::PlacedObject& o) {
         const auto found = scenery.find(o.id);
         return found != scenery.end() ? found->second : 0.0f;
     });
-    const std::size_t sight_count = simulation::import_sights(world, world_model->objects, [&](const save::PlacedObject& o) {
+    const std::size_t sight_count = simulation::import_sights(world, world_model->objects, [&](const save::model::PlacedObject& o) {
         const auto found = sights.find(o.id);
         return found != sights.end() ? std::optional(found->second) : std::nullopt;
     });
     const bool gate = simulation::import_gate(
                           world, world_model->objects,
-                          [&](const save::PlacedObject& o) {
+                          [&](const save::model::PlacedObject& o) {
                               const auto found = gates.find(o.id);
                               return found != gates.end() ? std::optional(found->second) : std::nullopt;
                           })

@@ -117,7 +117,7 @@ namespace rct3::scene::park
             auto seat = static_cast<std::size_t>(std::ranges::find(*riders, guest) - riders->begin());
             if (const auto object = scene.ride_seats.find(errand.target); object != scene.ride_seats.end())
             {
-                const save::PlacedObject& o = scene.objects[object->second];
+                const save::model::PlacedObject& o = scene.objects[object->second];
                 const auto model = scene.models.find(rct3::park::object::model_ref(o));
                 if (model == scene.models.end() || seat >= model->second.seat_places.size())
                     return std::nullopt;
@@ -174,7 +174,7 @@ namespace rct3::scene::park
             const auto* item = linger != nullptr && r.valid(linger->bench) ? r.try_get<simulation::PathItem>(linger->bench) : nullptr;
             if (item == nullptr || linger->at == simulation::PathItemKind::Sight || linger->at == simulation::PathItemKind::PhotoSpot)
                 return std::nullopt;
-            const auto o = std::ranges::find(scene.objects, item->object, &save::PlacedObject::id);
+            const auto o = std::ranges::find(scene.objects, item->object, &save::model::PlacedObject::id);
             const auto model = o != scene.objects.end() && !o->hidden ? scene.models.find(rct3::park::object::model_ref(*o)) : scene.models.end();
             if (model == scene.models.end() || linger->seat >= model->second.seat_places.size())
                 return std::nullopt;
@@ -186,7 +186,7 @@ namespace rct3::scene::park
         {
             const auto& r = scene.sim.registry;
             const auto* path_item = r.valid(item) ? r.try_get<simulation::PathItem>(item) : nullptr;
-            const auto o = path_item != nullptr ? std::ranges::find(scene.objects, path_item->object, &save::PlacedObject::id) : scene.objects.end();
+            const auto o = path_item != nullptr ? std::ranges::find(scene.objects, path_item->object, &save::model::PlacedObject::id) : scene.objects.end();
             if (o == scene.objects.end() || o->hidden)
                 return std::nullopt;
             const auto model = scene.models.find(rct3::park::object::model_ref(*o));
@@ -619,7 +619,7 @@ namespace rct3::scene::park
                 const auto fountain_at = [&](simulation::NodeId node) -> std::optional<std::size_t> {
                     for (const auto [e, item] : r.view<const simulation::PathItem>().each())
                         if (item.kind == simulation::PathItemKind::Fountain && item.node == node)
-                            if (const auto k = std::ranges::find(scene.objects, item.object, &save::PlacedObject::id); k != scene.objects.end())
+                            if (const auto k = std::ranges::find(scene.objects, item.object, &save::model::PlacedObject::id); k != scene.objects.end())
                                 return static_cast<std::size_t>(k - scene.objects.begin());
                     return std::nullopt;
                 };
@@ -983,7 +983,7 @@ namespace rct3::scene::park
             if (const auto* linger = r.try_get<simulation::Linger>(shown.guest); linger != nullptr && linger->at == simulation::PathItemKind::PhotoSpot)
             {
                 const auto* item = r.valid(linger->bench) ? r.try_get<simulation::PathItem>(linger->bench) : nullptr;
-                const auto o = item != nullptr ? std::ranges::find(scene.objects, item->object, &save::PlacedObject::id) : scene.objects.end();
+                const auto o = item != nullptr ? std::ranges::find(scene.objects, item->object, &save::model::PlacedObject::id) : scene.objects.end();
                 if (o != scene.objects.end() && !o->hidden)
                 {
                     constexpr float kRowGap = 0.6f;  ///< Chosen by eye: between two in the row
@@ -1308,7 +1308,7 @@ namespace rct3::scene::park
         const auto object = scene.ride_seats.find(ride < scene.ride_entities.size() ? scene.ride_entities[ride] : entt::null);
         if (object == scene.ride_seats.end())
             return std::nullopt;
-        const save::PlacedObject& o = scene.objects[object->second];
+        const save::model::PlacedObject& o = scene.objects[object->second];
         const auto model = scene.models.find(rct3::park::object::model_ref(o));
         const std::vector<glm::mat4>* places = model == scene.models.end() ? nullptr : fixed ? &model->second.view_places : &model->second.seat_places;
         if (places == nullptr || at >= places->size())
@@ -1584,10 +1584,10 @@ namespace rct3::scene::park
         {
             const rct3::park::ride::CarSpot spot = scene.car_spots[arm.car];
             std::optional<rct3::park::track::ArmAngles> angles;
-            if (const save::Ride& ride = scene.rides.rides[spot.ride]; ride.track && scene.courses[spot.ride])
+            if (const save::model::Ride& ride = scene.rides.rides[spot.ride]; ride.track && scene.courses[spot.ride])
             {
                 std::vector<std::optional<rct3::park::track::ArmAngles>> held;
-                for (const save::TrackPiece& piece : std::span(ride.track->pieces).subspan(std::min(scene.courses[spot.ride]->first_piece, ride.track->pieces.size())))
+                for (const save::model::TrackPiece& piece : std::span(ride.track->pieces).subspan(std::min(scene.courses[spot.ride]->first_piece, ride.track->pieces.size())))
                     held.push_back(piece.arm_angles);
                 angles = rct3::park::track::arm_angles_at(*scene.courses[spot.ride], held, (spot.front + spot.rear) / 2 + moved[arm.car]);
             }
@@ -1638,8 +1638,8 @@ namespace rct3::scene::park
                 // A VIP wears their own clothes.
                 const auto* vip = r.try_get<simulation::Vip>(e);
                 const std::uint8_t celebrity = vip != nullptr ? vip->who : 0;
-                const auto type = vip != nullptr ? save::PersonType::Special : static_cast<save::PersonType>(std::to_underlying(visitor.age)); // The same numbers
-                const save::Sex sex = visitor.female && vip == nullptr ? save::Sex::Female : save::Sex::Male;
+                const auto type = vip != nullptr ? save::model::PersonType::Special : static_cast<save::model::PersonType>(std::to_underlying(visitor.age)); // The same numbers
+                const save::model::Sex sex = visitor.female && vip == nullptr ? save::model::Sex::Female : save::model::Sex::Male;
                 // Clothes, then swimwear for the body and legs.
                 std::array<const Outfit*, 5> worn { };
                 for (std::size_t k = 0; k < worn.size(); ++k)
@@ -1655,13 +1655,13 @@ namespace rct3::scene::park
                 }
                 if (std::ranges::contains(std::span(worn).first(3), nullptr))
                     continue;
-                save::Guest& kept = scene.people.guests.emplace_back();
+                save::model::Guest& kept = scene.people.guests.emplace_back();
                 kept.in_park = true;
                 kept.mood_now.happiness = mood.happiness.value;
                 kept.person.type = type;
                 kept.person.sub_type = vip != nullptr ? celebrity : std::to_underlying(sex);
                 kept.person.name = visitor.name.empty() ? std::format("Guest {}", scene.people.guests.size()) : visitor.name;
-                save::Appearance& a = kept.person.appearance;
+                save::model::Appearance& a = kept.person.appearance;
                 a.head = { worn[0]->id };
                 a.body = { worn[1]->id };
                 a.legs = { worn[2]->id };
@@ -1684,21 +1684,21 @@ namespace rct3::scene::park
                 const bool keeper = r.all_of<simulation::KeeperDuty>(e);
                 if (!scene.simulate || (!keeper && staff.role != simulation::StaffRole::Other) || !scene.known_guests.insert(e).second)
                     continue;
-                const auto type = keeper ? save::PersonType::AnimalKeeper : save::PersonType::LifeGuard;
+                const auto type = keeper ? save::model::PersonType::AnimalKeeper : save::model::PersonType::LifeGuard;
                 std::array<const Outfit*, 3> worn { };
                 for (const Outfit& o : scene.wardrobe)
                     if (o.type == type && !o.swim && worn[o.section] == nullptr)
                         worn[o.section] = &o;
                 if (std::ranges::contains(worn, nullptr))
                     continue;
-                save::Staff& kept = scene.people.staff.emplace_back();
-                kept.kind = keeper ? save::StaffKind::AnimalKeeper : save::StaffKind::LifeGuard;
+                save::model::Staff& kept = scene.people.staff.emplace_back();
+                kept.kind = keeper ? save::model::StaffKind::AnimalKeeper : save::model::StaffKind::LifeGuard;
                 kept.person.type = type;
                 kept.person.name = std::format("{} {}", keeper ? "Keeper" : "Lifeguard", scene.people.staff.size());
                 kept.task_flags = staff.tasks;
                 if (keeper)
-                    kept.work = save::KeeperWork { };
-                save::Appearance& a = kept.person.appearance;
+                    kept.work = save::model::KeeperWork { };
+                save::model::Appearance& a = kept.person.appearance;
                 a.head = { worn[0]->id };
                 a.body = { worn[1]->id };
                 a.legs = { worn[2]->id };
@@ -1714,11 +1714,11 @@ namespace rct3::scene::park
             if (scene.simulate)
             {
                 std::unordered_set<std::uint64_t> posts;
-                for (const save::Stall& stall : scene.rides.stalls)
+                for (const save::model::Stall& stall : scene.rides.stalls)
                     if (!stall.base.demolished && stall.base.spot && stall.base.spot->object != 0)
                         posts.insert(stall.base.spot->object);
-                for (const save::Ride& ride : scene.rides.rides)
-                    for (const save::Station& station : ride.stations)
+                for (const save::model::Ride& ride : scene.rides.rides)
+                    for (const save::model::Station& station : ride.stations)
                         if (!ride.base.demolished && station.entrance_spot && station.entrance_spot->object != 0)
                             posts.insert(station.entrance_spot->object);
                 // Each seller's post, by their place in shown_people, and the objects of all posts.
@@ -1726,14 +1726,14 @@ namespace rct3::scene::park
                 for (std::size_t i = 0; i < scene.shown_people.size(); ++i)
                 {
                     const ShownPerson& p = scene.shown_people[i];
-                    if (const auto* work = p.staff && p.saved < scene.people.staff.size() ? std::get_if<save::VendorWork>(&scene.people.staff[p.saved].work) : nullptr; work != nullptr && !work->scenery_item.is_none())
+                    if (const auto* work = p.staff && p.saved < scene.people.staff.size() ? std::get_if<save::model::VendorWork>(&scene.people.staff[p.saved].work) : nullptr; work != nullptr && !work->scenery_item.is_none())
                         sellers.emplace_back(i, work->scenery_item.id);
                 }
                 std::unordered_set<std::uint64_t> wanted = posts;
                 for (const auto& [i, post] : sellers)
                     wanted.insert(post);
-                std::unordered_map<std::uint64_t, const save::PlacedObject*> found;
-                for (const save::PlacedObject& o : scene.objects)
+                std::unordered_map<std::uint64_t, const save::model::PlacedObject*> found;
+                for (const save::model::PlacedObject& o : scene.objects)
                     if (wanted.contains(o.id))
                         found.emplace(o.id, &o);
                 // A seller goes with their object.
@@ -1746,8 +1746,8 @@ namespace rct3::scene::park
                         fire(scene, i);
                 }
                 std::int32_t number = 0;
-                for (const save::Staff& s : scene.people.staff)
-                    if (s.kind == save::StaffKind::Vendor)
+                for (const save::model::Staff& s : scene.people.staff)
+                    if (s.kind == save::model::StaffKind::Vendor)
                         number = std::max(number, s.type_id);
                 for (const std::uint64_t post : posts)
                 {
@@ -1755,25 +1755,25 @@ namespace rct3::scene::park
                     const auto model = object != found.end() && !object->second->hidden ? scene.models.find(rct3::park::object::model_key(*object->second)) : scene.models.end();
                     if (served.contains(post) || model == scene.models.end() || !model->second.vendor_place)
                         continue;
-                    const save::Sex sex = random::below(scene.looks, 2) == 0 ? save::Sex::Male : save::Sex::Female;
+                    const save::model::Sex sex = random::below(scene.looks, 2) == 0 ? save::model::Sex::Male : save::model::Sex::Female;
                     std::array<const Outfit*, 3> worn { };
                     for (const Outfit& o : scene.wardrobe)
-                        if (o.type == save::PersonType::Vendor && o.sex == sex && !o.swim && worn[o.section] == nullptr)
+                        if (o.type == save::model::PersonType::Vendor && o.sex == sex && !o.swim && worn[o.section] == nullptr)
                             worn[o.section] = &o;
                     if (std::ranges::contains(worn, nullptr))
                         continue;
                     const glm::mat4 place = rct3::park::object::placed_transform(*object->second, &model->second, scene.grid, scene.fitted) * *model->second.vendor_place;
                     const entt::entity e = simulation::add_vendor(scene.sim, glm::vec3(place[3]));
                     scene.known_guests.insert(e);
-                    save::Staff& kept = scene.people.staff.emplace_back();
-                    kept.kind = save::StaffKind::Vendor;
+                    save::model::Staff& kept = scene.people.staff.emplace_back();
+                    kept.kind = save::model::StaffKind::Vendor;
                     kept.type_id = ++number;
-                    kept.work = save::VendorWork { .scenery_item = { post } };
-                    kept.person.type = save::PersonType::Vendor;
+                    kept.work = save::model::VendorWork { .scenery_item = { post } };
+                    kept.person.type = save::model::PersonType::Vendor;
                     kept.person.sub_type = std::to_underlying(sex);
                     kept.person.name = std::format("%ME% {}", number); // As the game names them, after their job
                     kept.person.position = { place[3].x, place[3].y, place[3].z };
-                    save::Appearance& a = kept.person.appearance;
+                    save::model::Appearance& a = kept.person.appearance;
                     a.head = { worn[0]->id };
                     a.body = { worn[1]->id };
                     a.legs = { worn[2]->id };

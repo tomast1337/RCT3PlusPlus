@@ -18,12 +18,12 @@ namespace rct3::scene::park
     namespace
     {
 
-        SupportWatch::Seen seen(const ParkScene& scene, const save::PlacedObject& o)
+        SupportWatch::Seen seen(const ParkScene& scene, const save::model::PlacedObject& o)
         {
             return { o.symbol, o.overlay, o.col, o.row, o.rotation, o.base_height, o.hidden, o.support_set, rct3::park::support::support_tiles(o, scene.models) };
         }
 
-        bool same(const SupportWatch::Seen& s, const save::PlacedObject& o)
+        bool same(const SupportWatch::Seen& s, const save::model::PlacedObject& o)
         {
             return s.symbol == o.symbol && s.overlay == o.overlay && s.col == o.col && s.row == o.row && s.rotation == o.rotation && s.base_height == o.base_height && s.hidden == o.hidden && s.support_set == o.support_set;
         }
@@ -31,7 +31,7 @@ namespace rct3::scene::park
         std::vector<std::pair<int, int>> ground_paths(const ParkScene& scene)
         {
             std::vector<std::pair<int, int>> out;
-            for (const save::PathTile& p : scene.footpaths.paths)
+            for (const save::model::PathTile& p : scene.footpaths.paths)
             {
                 if (rct3::park::support::path_at_ground(p, scene.grid))
                     out.emplace_back(p.col, p.row);
@@ -41,11 +41,11 @@ namespace rct3::scene::park
             return out;
         }
 
-        std::vector<std::array<float, 4>> ground(const save::TerrainGrid& grid)
+        std::vector<std::array<float, 4>> ground(const save::model::TerrainGrid& grid)
         {
             std::vector<std::array<float, 4>> out;
             out.reserve(grid.cells.size());
-            for (const save::TerrainCell& c : grid.cells)
+            for (const save::model::TerrainCell& c : grid.cells)
                 out.push_back(c.corners);
             return out;
         }
@@ -56,7 +56,7 @@ namespace rct3::scene::park
     {
         SupportWatch& w = scene.supports;
         w.objects.clear();
-        for (const save::PlacedObject& o : scene.objects)
+        for (const save::model::PlacedObject& o : scene.objects)
         {
             if (o.overlay != rct3::park::support::kSupportOverlay)
                 w.objects.insert_or_assign(o.id, seen(scene, o));
@@ -81,7 +81,7 @@ namespace rct3::scene::park
         // The tiles where anything that holds up columns or is in their way changed.
         std::set<rct3::park::support::SupportTile> tiles;
         std::unordered_map<std::uint64_t, SupportWatch::Seen> now;
-        for (const save::PlacedObject& o : scene.objects)
+        for (const save::model::PlacedObject& o : scene.objects)
         {
             if (o.overlay == rct3::park::support::kSupportOverlay)
                 continue;
@@ -123,7 +123,7 @@ namespace rct3::scene::park
         std::vector<std::size_t> spare;
         for (std::size_t i = 0; i < scene.objects.size(); ++i)
         {
-            save::PlacedObject& o = scene.objects[i];
+            save::model::PlacedObject& o = scene.objects[i];
             if (o.overlay != rct3::park::support::kSupportOverlay)
                 continue;
             if (const auto column = scene.columns.find(o.id); column != scene.columns.end() && tiles.contains(column->second))
@@ -136,13 +136,13 @@ namespace rct3::scene::park
                 spare.push_back(i);
         }
         std::uint64_t last = 0;
-        for (const save::PlacedObject& o : scene.objects)
+        for (const save::model::PlacedObject& o : scene.objects)
             last = std::max(last, o.id);
         place_objects(scene); // Their models, kept
         rct3::park::support::BuiltSupports built = profiling::section("Columns", [&] { return rct3::park::support::support_columns(scene.objects, scene.models, scene.footpaths.paths, scene.grid, *sets, last, supports_passed(scene), tiles, scene.places.models); });
         for (std::size_t i = 0; i < built.pieces.size(); ++i)
         {
-            save::PlacedObject& piece = built.pieces[i];
+            save::model::PlacedObject& piece = built.pieces[i];
             if (!load_object_model(scene, scene.footpaths.models, assets, piece))
                 continue;
             scene.columns.emplace(piece.id, built.of[i].tile);

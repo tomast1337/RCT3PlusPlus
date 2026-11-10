@@ -61,17 +61,17 @@ namespace rct3::park
         std::vector<float> shore;
     };
 
-    [[nodiscard]] LandRings land_rings(const save::TerrainGrid& grid, const save::WaterLayer& water = { });
+    [[nodiscard]] LandRings land_rings(const save::model::TerrainGrid& grid, const save::model::WaterLayer& water = { });
 
     /// The land's height at world (x, z) beyond the map's edge, between its points. Nothing on the map, past
     /// the land's reach, or under the sea or the water by its shore.
-    [[nodiscard]] std::optional<float> land_height(const LandRings& rings, const save::TerrainGrid& grid, float x, float z);
+    [[nodiscard]] std::optional<float> land_height(const LandRings& rings, const save::model::TerrainGrid& grid, float x, float z);
 
     /// The height the land settles at far out: the mean height round the map's edge.
-    [[nodiscard]] float edge_level(const save::TerrainGrid& grid);
+    [[nodiscard]] float edge_level(const save::model::TerrainGrid& grid);
 
     /// The land round `grid`, batched by surface as terrain_mesh's ground is, and the sea where `water` goes
     /// on past the edge. Empty for an empty grid.
-    [[nodiscard]] TerrainMesh surrounding_land(const save::TerrainGrid& grid, const save::WaterLayer& water = { });
+    [[nodiscard]] TerrainMesh surrounding_land(const save::model::TerrainGrid& grid, const save::model::WaterLayer& water = { });
 
 } // namespace rct3::park

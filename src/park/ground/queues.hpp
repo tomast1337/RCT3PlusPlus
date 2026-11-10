@@ -69,11 +69,11 @@ namespace rct3::park::ground
     };
 
     /// True for a queue tile laid on the ground.
-    [[nodiscard]] bool is_ground_queue(const save::PathTile& path) noexcept;
+    [[nodiscard]] bool is_ground_queue(const save::model::PathTile& path) noexcept;
 
     /// The ground queues among `paths`, as one whole picture over each tile's ground, lifted as ground paths
     /// are. Tiles off the grid or without a style are left out, and with `area` those off it, though their
     /// paintings are still listed, so the paintings' order is the same for any area.
-    [[nodiscard]] GroundQueues ground_queues(std::span<const save::PathTile> paths, const save::TerrainGrid& grid, std::optional<TileRect> area = std::nullopt);
+    [[nodiscard]] GroundQueues ground_queues(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::optional<TileRect> area = std::nullopt);
 
 } // namespace rct3::park::ground

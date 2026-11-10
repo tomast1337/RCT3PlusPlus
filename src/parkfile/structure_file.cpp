@@ -10,7 +10,7 @@ namespace rct3::parkfile
 
     using namespace detail;
 
-    std::vector<std::byte> write_structure_file(const save::Structure& structure)
+    std::vector<std::byte> write_structure_file(const save::model::Structure& structure)
     {
         Writer w;
         write_header(w, 1);
@@ -18,9 +18,9 @@ namespace rct3::parkfile
         return w.take();
     }
 
-    std::expected<save::Structure, std::string> read_structure_file(std::span<const std::byte> bytes)
+    std::expected<save::model::Structure, std::string> read_structure_file(std::span<const std::byte> bytes)
     {
-        std::optional<save::Structure> out;
+        std::optional<save::model::Structure> out;
         auto read = read_chunks(bytes, [&](std::string_view tag, std::uint32_t version, Reader& body) -> std::expected<void, std::string> {
             if (tag != "STRC")
             {

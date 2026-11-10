@@ -44,7 +44,7 @@ namespace rct3::simulation
     };
 
     /// The list a saved park starts with: its messages oldest first, the newest kept when there are too many.
-    [[nodiscard]] ParkMessages park_messages(const save::MessageLog& log);
+    [[nodiscard]] ParkMessages park_messages(const save::model::MessageLog& log);
 
     /// Adds `message` as the newest, numbering it, and drops the oldest when the list is full.
     void post(ParkMessages& messages, ParkMessage message);

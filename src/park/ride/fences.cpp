@@ -13,7 +13,7 @@ namespace rct3::park::ride
     namespace
     {
 
-        using save::Tile;
+        using save::model::Tile;
 
         /// The fence a ride is drawn with, and its colours.
         struct FenceLook
@@ -23,7 +23,7 @@ namespace rct3::park::ride
             std::array<std::int32_t, 3> colours { };
         };
 
-        Tile tile_of(const save::PlacementSpot& spot)
+        Tile tile_of(const save::model::PlacementSpot& spot)
         {
             return { spot.col, spot.row };
         }
@@ -40,7 +40,7 @@ namespace rct3::park::ride
             /// A panel on the edge of `tile` that `turn` points its outward side at.
             void add(Tile tile, ModelTurn turn, std::int32_t height)
             {
-                save::PlacedObject& o = pieces_.emplace_back();
+                save::model::PlacedObject& o = pieces_.emplace_back();
                 o.id = ++last_id_;
                 o.owner_ref = o.id;
                 o.fixture = true;
@@ -54,7 +54,7 @@ namespace rct3::park::ride
                 o.force_absolute_height = true; // Level at the fenced thing's height, not following the ground
             }
 
-            [[nodiscard]] std::vector<save::PlacedObject> take()
+            [[nodiscard]] std::vector<save::model::PlacedObject> take()
             {
                 return std::move(pieces_);
             }
@@ -62,12 +62,12 @@ namespace rct3::park::ride
         private:
             const FenceLook& look_;
             std::uint64_t last_id_;
-            std::vector<save::PlacedObject> pieces_;
+            std::vector<save::model::PlacedObject> pieces_;
         };
 
         /// The panels round a flat ride's or a ride's base's footprint. Squares count along the model's own X and Z; `gaps` are the
         /// tiles a panel must not shut off.
-        void fence_footprint(Builder& out, const save::PlacementSpot& spot, const object::ObjectModel& item, std::array<std::optional<Tile>, 2> gaps)
+        void fence_footprint(Builder& out, const save::model::PlacementSpot& spot, const object::ObjectModel& item, std::array<std::optional<Tile>, 2> gaps)
         {
             const auto [xs, zs] = item.squares;
             const bool outline = !item.fence_outline.empty();
@@ -77,7 +77,7 @@ namespace rct3::park::ride
                 return !outline || item.fence_outline[static_cast<std::size_t>(z) * static_cast<std::size_t>(xs) + static_cast<std::size_t>(x)];
             };
 
-            save::PlacedObject placed;
+            save::model::PlacedObject placed;
             placed.col = spot.col;
             placed.row = spot.row;
             placed.rotation = spot.direction;
@@ -114,9 +114,9 @@ namespace rct3::park::ride
 
     } // namespace
 
-    std::vector<save::PlacedObject> ride_fences(const save::Ride& ride, const ModelOf& model_of, std::uint64_t last_id)
+    std::vector<save::model::PlacedObject> ride_fences(const save::model::Ride& ride, const ModelOf& model_of, std::uint64_t last_id)
     {
-        if (ride.kind == save::RideKind::Special)
+        if (ride.kind == save::model::RideKind::Special)
             return { };
         FenceLook look;
         if (!ride.override_fence_symbol.empty())
@@ -138,26 +138,26 @@ namespace rct3::park::ride
         std::array<std::optional<Tile>, 2> gaps;
         if (!ride.stations.empty())
         {
-            const save::Station& first = ride.stations.front();
+            const save::model::Station& first = ride.stations.front();
             if (first.entrance_spot)
                 gaps[0] = tile_of(*first.entrance_spot);
             if (first.exit_spot)
                 gaps[1] = tile_of(*first.exit_spot);
         }
-        if (ride.kind == save::RideKind::Flat && ride.base.spot)
+        if (ride.kind == save::model::RideKind::Flat && ride.base.spot)
         {
             if (const object::ObjectModel* item = model_of(ride.base.spot->object); item && !item->water_only)
                 fence_footprint(out, *ride.base.spot, *item, gaps);
         }
         if (ride.track)
         {
-            for (const save::TrackPiece& piece : ride.track->pieces)
+            for (const save::model::TrackPiece& piece : ride.track->pieces)
             {
                 if (const object::ObjectModel* item = piece.scenery != 0 ? model_of(piece.scenery) : nullptr; item && item->fenced_round)
                     fence_footprint(out, { piece.scenery, piece.tile_x, piece.tile_z, piece.height, piece.direction }, *item, gaps);
             }
         }
-        for (const save::Station& station : ride.stations)
+        for (const save::model::Station& station : ride.stations)
         {
             for (const auto& spot : { station.entrance_spot, station.exit_spot })
             {

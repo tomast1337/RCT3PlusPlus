@@ -833,7 +833,7 @@ namespace rct3::simulation
         std::vector<std::vector<entt::entity>> riders; ///< By train
         LapRecorder lap { };                           ///< Of the first train's lap under way
         /// The first train's last lap, for the ride's graphs, till the park takes it.
-        std::optional<save::RideGraphs> lap_done { };
+        std::optional<save::model::RideGraphs> lap_done { };
     };
 
     /// A ride whose trains have crashed, and how long since the last did. A crashed train's cars fly off as
@@ -1139,7 +1139,7 @@ namespace rct3::simulation
     struct Staff
     {
         StaffRole role = StaffRole::Other;
-        std::int32_t tasks = kEveryTask; ///< Task flags, as save::Staff keeps them
+        std::int32_t tasks = kEveryTask; ///< Task flags, as save::model::Staff keeps them
         Seconds busy { };                ///< Left at the job in hand
         entt::entity ride = entt::null;  ///< The ride a mechanic is going to, or working on, to repair or inspect
         Money wage { };                  ///< A month

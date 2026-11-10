@@ -20,19 +20,19 @@ namespace rct3::park
 
     struct BoundaryFence
     {
-        std::vector<save::PlacedObject> pieces;
+        std::vector<save::model::PlacedObject> pieces;
         object::Leans leans; ///< Of the pieces that do not stand level
     };
 
     /// Whether the park owns `cell` outright.
-    [[nodiscard]] bool owned_outright(const save::TerrainCell& cell) noexcept;
+    [[nodiscard]] bool owned_outright(const save::model::TerrainCell& cell) noexcept;
 
     /// How a fence panel on a tile's edge leans with the ground under that edge as it is now: by the rise
     /// between the edge's two corners, so it follows the ground when the ground is reshaped.
-    [[nodiscard]] glm::vec2 panel_lean(const save::TerrainGrid& grid, const save::PlacedObject& panel);
+    [[nodiscard]] glm::vec2 panel_lean(const save::model::TerrainGrid& grid, const save::model::PlacedObject& panel);
 
     /// The fence `symbol` from `overlay` round the land the park owns in `grid`, open where `paths` cross its
     /// edge. None when `symbol` is empty. New objects take ids after `last_id`.
-    [[nodiscard]] BoundaryFence boundary_fence(const std::string& symbol, const std::string& overlay, const save::TerrainGrid& grid, std::span<const save::PathTile> paths, std::uint64_t last_id);
+    [[nodiscard]] BoundaryFence boundary_fence(const std::string& symbol, const std::string& overlay, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::uint64_t last_id);
 
 } // namespace rct3::park

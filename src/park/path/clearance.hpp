@@ -31,7 +31,7 @@
 namespace rct3::park::path
 {
 
-    /// The room of a tile an item takes, as bits: one per quarter, as save::PlacedObject::quadrant counts them,
+    /// The room of a tile an item takes, as bits: one per quarter, as save::model::PlacedObject::quadrant counts them,
     /// then one per edge, as the item's quarter turns count them. Items whose rooms share no bit stand side by
     /// side on one tile, as small props in different quarters do, or a wall along an edge over a floor.
     inline constexpr std::uint8_t kWholeTile = 0x0F;
@@ -79,15 +79,15 @@ namespace rct3::park::path
     [[nodiscard]] bool blocks_paths(std::uint32_t category) noexcept;
 
     /// The solid squares of `objects` that are shown and block paths, by the tile under each.
-    [[nodiscard]] SolidTiles solid_tiles(std::span<const save::PlacedObject> objects, const object::ObjectModels& models, const save::TerrainGrid& grid);
+    [[nodiscard]] SolidTiles solid_tiles(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
 
     /// Adds to `solids` the deck of each of `paths`, as thin as a sheet at its tile's lowest edge, for what passes
     /// under paths rather than along them, as boats do.
-    void add_path_decks(SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    void add_path_decks(SolidTiles& solids, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);
 
     /// Whether something in `solids` fills `spot` between `low` and `high` and the headroom over it. What
     /// stands only along the tile's edges never does.
-    [[nodiscard]] bool blocked(const SolidTiles& solids, save::Tile spot, float low, float high);
+    [[nodiscard]] bool blocked(const SolidTiles& solids, save::model::Tile spot, float low, float high);
 
     enum class Clash : std::uint8_t
     {
@@ -99,7 +99,7 @@ namespace rct3::park::path
     /// What `mine`, the solid squares of an item about to stand, would clash with: the room `solids` take
     /// already, or a path of `paths`. Two items share a tile when they take different quarters or edges of it,
     /// or stand at other heights.
-    [[nodiscard]] Clash clash(const SolidTiles& mine, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    [[nodiscard]] Clash clash(const SolidTiles& mine, const SolidTiles& solids, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);
 
     /// Which of a group of items may not stand, and why.
     struct Refused
@@ -112,6 +112,6 @@ namespace rct3::park::path
     /// that may not: one in the room `solids` take or a path's way, or on a tile the park does not own. Land bought
     /// only to build over will do for what stands wholly above its ground. Nothing when every one may, so the group
     /// is placed whole or not at all.
-    [[nodiscard]] std::optional<Refused> first_refused(std::span<const save::PlacedObject> items, const object::ObjectModels& models, const SolidTiles& solids, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    [[nodiscard]] std::optional<Refused> first_refused(std::span<const save::model::PlacedObject> items, const object::ObjectModels& models, const SolidTiles& solids, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);
 
 } // namespace rct3::park::path

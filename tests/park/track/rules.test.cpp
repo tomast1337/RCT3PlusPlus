@@ -12,15 +12,15 @@ using namespace rct3::park::track;
 namespace
 {
     /// A tracked ride of `pieces` pieces in one part, with `stations` stations that have their doors.
-    save::Ride built_ride(std::size_t pieces, std::size_t stations = 1, bool circuit = true)
+    save::model::Ride built_ride(std::size_t pieces, std::size_t stations = 1, bool circuit = true)
     {
-        save::Ride r;
-        r.kind = save::RideKind::Tracked;
+        save::model::Ride r;
+        r.kind = save::model::RideKind::Tracked;
         r.track.emplace();
         r.track->pieces.resize(pieces);
         r.track->segments.resize(1);
         r.track->circuit = circuit;
-        r.stations.resize(stations, save::Station { .entrance = 1, .exit = 2 });
+        r.stations.resize(stations, save::model::Station { .entrance = 1, .exit = 2 });
         return r;
     }
 
@@ -51,17 +51,17 @@ namespace
         return r;
     }
 
-    constexpr auto kOpen = save::AttractionState::Open;
-    constexpr auto kTest = save::AttractionState::Testing;
+    constexpr auto kOpen = save::model::AttractionState::Open;
+    constexpr auto kTest = save::model::AttractionState::Testing;
 } // namespace
 
 TEST_CASE("a ride opens when its track and doors keep to its rules, and says why not first")
 {
     const TrackRules rules;
     CHECK_FALSE(open_refusal(built_ride(6), rules, kOpen, false));
-    CHECK_FALSE(open_refusal(built_ride(0, 0), rules, save::AttractionState::Closed, false));
+    CHECK_FALSE(open_refusal(built_ride(0, 0), rules, save::model::AttractionState::Closed, false));
 
-    save::Ride split = built_ride(6, 0);
+    save::model::Ride split = built_ride(6, 0);
     split.track->segments.resize(2);
     CHECK(open_refusal(split, rules, kOpen, false) == "TrackedRideIsDisjoint");
     CHECK(open_refusal(split, rules_with([](TrackRules& r) { r.may_be_split = true; }), kOpen, false) == "RideHasNoStation");
@@ -82,14 +82,14 @@ TEST_CASE("an unfinished track with a station tests and opens, as one stretch; w
     course.distance = { 0, 6, 20 };
     course.kinds = { K::Station, K::Plain, K::Plain };
     course.closed = false;
-    const save::Ride r = built_ride(4, 1, false);
+    const save::model::Ride r = built_ride(4, 1, false);
     CHECK_FALSE(open_refusal(r, TrackRules { }, kTest, false, course));
     CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
     // Tested while it is built; opened only once it is not.
     CHECK_FALSE(open_refusal(r, TrackRules { }, kTest, true, course));
     CHECK(open_refusal(r, TrackRules { }, kOpen, true, course) == "CannotOpenTrackedRideWhileEditing");
     CHECK(open_refusal(r, rules_with([](TrackRules& t) { t.circuit_only = true; }), kOpen, false, course) == "CannotOpenOrTestNotCircuit");
-    save::Ride split = r;
+    save::model::Ride split = r;
     split.track->segments.resize(2);
     CHECK(open_refusal(split, TrackRules { }, kTest, false, course) == "TrackedRideIsDisjoint");
     course.kinds[0] = K::Plain;
@@ -104,7 +104,7 @@ TEST_CASE("a slide climbed on foot opens with no station or doors, and tests onl
     course.kinds = { CourseKind::Plain, CourseKind::Plain };
     course.closed = false;
     course.climbs = { { { 0, 0, 0 }, { 0, 8, -6 }, { 3, 1, 10 } } };
-    save::Ride r = built_ride(1, 0, false);
+    save::model::Ride r = built_ride(1, 0, false);
     CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
     CHECK(open_refusal(r, rules_with([](TrackRules& t) { t.never_tested = true; }), kTest, false, course) == "CannotTestTrackedRide");
     course.climbs.clear();
@@ -113,7 +113,7 @@ TEST_CASE("a slide climbed on foot opens with no station or doors, and tests onl
 
 TEST_CASE("entrances and exits are counted as the ride's door rules say")
 {
-    save::Ride two = built_ride(6, 2);
+    save::model::Ride two = built_ride(6, 2);
     two.stations[1] = { };
     // At least one: the first station's do.
     CHECK_FALSE(open_refusal(two, TrackRules { }, kOpen, false));
@@ -129,7 +129,7 @@ TEST_CASE("entrances and exits are counted as the ride's door rules say")
     CHECK_FALSE(open_refusal(built_ride(6, 1), rules_with([](TrackRules& r) { r.entrances = 0; }), kOpen, false));
     CHECK(open_refusal(built_ride(6, 1), rules_with([](TrackRules& r) { r.entrances = 0; }), kOpen, false, course) == "CantOpenRideMissingEntrance");
     // None anywhere.
-    save::Ride bare = built_ride(6, 1);
+    save::model::Ride bare = built_ride(6, 1);
     bare.stations[0] = { .entrance = 1 };
     CHECK(open_refusal(bare, TrackRules { }, kOpen, false) == "CantOpenRideNoExit");
     CHECK_FALSE(open_refusal(bare, rules_with([](TrackRules& r) { r.exits = 1; }), kOpen, false));
@@ -140,8 +140,8 @@ TEST_CASE("entrances and exits are counted as the ride's door rules say")
 
 TEST_CASE("a flat ride always tests, and opens once it has its doors")
 {
-    save::Ride flat;
-    flat.kind = save::RideKind::Flat;
+    save::model::Ride flat;
+    flat.kind = save::model::RideKind::Flat;
     flat.stations.resize(1);
     CHECK_FALSE(open_refusal(flat, TrackRules { }, kTest, false));
     CHECK(open_refusal(flat, TrackRules { }, kOpen, false) == "CantOpenRideNoEntrance");
@@ -151,7 +151,7 @@ TEST_CASE("a flat ride always tests, and opens once it has its doors")
 
 TEST_CASE("a pool ride opens once its stations join a pool complex, with no entrance or exit")
 {
-    save::Ride river = built_ride(6, 2);
+    save::model::Ride river = built_ride(6, 2);
     const TrackRules pool = rules_with([](TrackRules& r) {
         r.entrances = 0;
         r.exits = 1;
@@ -211,7 +211,7 @@ TEST_CASE("a ride whose cable lift is missing does not open; one whose station i
     course.distance = { 0, 6, 10, 30 };
     course.kinds = { K::Station, K::Plain, K::Plain, K::Plain };
     course.closed = true;
-    save::Ride r = built_ride(6);
+    save::model::Ride r = built_ride(6);
     r.trains.resize(1);
     r.trains[0].length = 5;
     CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
@@ -222,14 +222,14 @@ TEST_CASE("a ride whose cable lift is missing does not open; one whose station i
     CHECK_FALSE(open_refusal(r, TrackRules { .circuit_only = true }, kTest, false, course));
 
     // Its station pieces count before the park keeps the station.
-    save::Ride bare = r;
+    save::model::Ride bare = r;
     bare.stations.clear();
     CHECK(open_refusal(bare, TrackRules { }, kOpen, false, course) == "CantOpenRideNoEntrance");
     course.kinds[0] = K::Plain;
     CHECK(open_refusal(bare, TrackRules { }, kOpen, false, course) == "RideHasNoStation");
     course.kinds[0] = K::Station;
 
-    r.mode = save::OperatingMode::ReverseCableLiftHill;
+    r.mode = save::model::OperatingMode::ReverseCableLiftHill;
     r.trains[0].length = 5;
     CHECK(open_refusal(r, TrackRules { }, kOpen, false, course) == "CannotOpenOrTestNoReverseCableLiftHill");
     course.reverse_lift = true;
@@ -261,7 +261,7 @@ TEST_CASE("a ride its file marks as one building is set down in one piece")
 TEST_CASE("a walk-through opens only when its exit comes after its entrance")
 {
     const TrackRules walk = rules_with([](TrackRules& r) { r.entrances = r.exits = kOneDoor; });
-    save::Ride r = built_ride(6, 2, false);
+    save::model::Ride r = built_ride(6, 2, false);
     r.stations[0] = { .entrance = 1 };
     r.stations[1] = { .exit = 2 };
     CHECK_FALSE(open_refusal(r, walk, kOpen, false));
@@ -292,7 +292,7 @@ TEST_CASE("a new track starts in the colours of the first piece its ride lists")
     std::vector<PieceShape> set { piece("InvStraight"), piece("Station"), piece("STRAIGHT") };
     set[0].record.colours = { 9, 9, 9 };
     set[2].record.colours = { 4, 5, 6 };
-    CHECK(starting_colours(rules, set) == save::RideColours { 4, 5, 6 });
-    CHECK(starting_colours(TrackRules { }, set) == save::RideColours { 9, 9, 9 });
-    CHECK(starting_colours(rules, { }) == save::RideColours { });
+    CHECK(starting_colours(rules, set) == save::model::RideColours { 4, 5, 6 });
+    CHECK(starting_colours(TrackRules { }, set) == save::model::RideColours { 9, 9, 9 });
+    CHECK(starting_colours(rules, { }) == save::model::RideColours { });
 }

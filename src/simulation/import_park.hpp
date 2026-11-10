@@ -34,28 +34,28 @@ namespace rct3::simulation
 {
 
     /// Adds a node for every ground, raised and queue path tile of `paths`, laid on `grid`.
-    void import_paths(SimWorld& world, std::span<const save::PathTile> paths, const save::TerrainGrid& grid);
+    void import_paths(SimWorld& world, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);
 
     /// Adds the node of path tile `path`, laid on `grid`, and joins it to the paths beside it; for a node already
     /// there, takes the queue line the tile is in now. Call after import_paths, which sets the network's
     /// measures.
-    NodeId add_path(SimWorld& world, const save::PathTile& path, const save::TerrainGrid& grid);
+    NodeId add_path(SimWorld& world, const save::model::PathTile& path, const save::model::TerrainGrid& grid);
 
     /// Takes the node of path tile `path` away. Whoever stood on it moves to another path on its tile, if any;
     /// whoever was walking onto it or meant to cross it stops at the tile they came from and thinks again;
     /// litter on it goes with it.
-    void remove_path(SimWorld& world, const save::PathTile& path, const save::TerrainGrid& grid);
+    void remove_path(SimWorld& world, const save::model::PathTile& path, const save::model::TerrainGrid& grid);
 
     /// The ground of tiles `first` to `last` went from `was` to `grid`: the paths laid on it there follow it, and so
     /// do the people on them and keepers on the ground; guests reel a moment as it moves under their feet, and
     /// those on foot whose ground grew steeper than tuning::Slides::steep slide down it (slide).
-    void follow_ground(SimWorld& world, std::span<const save::PathTile> paths, const save::TerrainGrid& was, const save::TerrainGrid& grid, save::Tile first, save::Tile last);
+    void follow_ground(SimWorld& world, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& was, const save::model::TerrainGrid& grid, save::model::Tile first, save::model::Tile last);
 
     /// Has each imported ride, stall and facility of `rides` find its entrance on the paths again, and each ride its
     /// queue line and exit at each of its stations, after paths changed or its doors moved. A station with guests
     /// in its queue keeps its entrance and line until the queue empties; its exit follows at once.
     /// Returns how many changed.
-    std::size_t relink_attractions(SimWorld& world, const save::RideModel& rides);
+    std::size_t relink_attractions(SimWorld& world, const save::model::RideModel& rides);
 
     /// Brings the pools of `pools` into the simulation, or brings them up to date after they or the paths
     /// changed: each complex (squares that meet side to side) the spots its swimmers go to, each changing room
@@ -66,10 +66,10 @@ namespace rct3::simulation
     /// Adds a shop for every stall of `rides` that sells a drink or food and has a path on the tile in front of
     /// it, near its height; a path beside it does not count. Returns how many were added. Its wares take the extras `kinds` says their items can, where the stall puts them on.
     /// Call after import_paths.
-    std::size_t import_stalls(SimWorld& world, const save::RideModel& rides, const park::CarriedKinds& kinds = { });
+    std::size_t import_stalls(SimWorld& world, const save::model::RideModel& rides, const park::CarriedKinds& kinds = { });
     /// Has the shop of `stall`, when it runs, sell what its menu now sells first, at that item's price, with
     /// its extras as import_stalls puts them on.
-    void restock(SimWorld& world, const save::Stall& stall, const park::CarriedKinds& kinds = { });
+    void restock(SimWorld& world, const save::model::Stall& stall, const park::CarriedKinds& kinds = { });
 
     /// How many a ride carries at once and how long one ride lasts: starting, `loops` of running, and stopping,
     /// in seconds. A ride timed by a whole lap runs one loop of it.
@@ -90,55 +90,55 @@ namespace rct3::simulation
 
     /// Has `ride` put on `show`: a go is the show's tricks one after another, with no starting or stopping. A
     /// show of no length leaves the ride as it was.
-    void stage_show(CycleRide& ride, const save::RideShow& show);
+    void stage_show(CycleRide& ride, const save::model::RideShow& show);
 
     /// The timing of each flat ride of `rides` by its place in `rides.rides`, from the model of the object it
     /// stands as among `objects`, found by `model_of`; nothing for other rides and those without a usable model.
-    [[nodiscard]] std::vector<std::optional<RideTiming>> flat_ride_timings(const save::RideModel& rides, std::span<const save::PlacedObject> objects, const std::function<const park::object::ObjectModel*(const save::PlacedObject&)>& model_of);
+    [[nodiscard]] std::vector<std::optional<RideTiming>> flat_ride_timings(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, const std::function<const park::object::ObjectModel*(const save::model::PlacedObject&)>& model_of);
 
     /// The coaster model's view of `ride` on `course`: heights along it, its chains and stations, and the
     /// ride's speeds and first train's length as its park keeps them. Nothing unless the course goes round and
     /// has a station; shuttles, slides and open water are left to their timing.
-    [[nodiscard]] std::optional<Coaster> coaster_of(const park::track::TrackCourse& course, const save::Ride& ride);
+    [[nodiscard]] std::optional<Coaster> coaster_of(const park::track::TrackCourse& course, const save::model::Ride& ride);
 
     /// Boats for the boat-hire and water-transport rides of `added` (the entities import_rides gave `rides`),
     /// one for each train, leaving the dock where its course in `courses` ends and coming back where it starts
     /// (transport boats calling at the course's other stations on the way), and the park's water for them to
     /// float on, closed where `solids` stand in it. Rides without a course keep their timing alone; those whose track goes round follow it as trains.
     /// A ride that has boats already gets them afresh, all back at its dock; the water is taken again as it is now.
-    void import_boats(SimWorld& world, const save::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::path::SolidTiles& solids = { });
+    void import_boats(SimWorld& world, const save::model::RideModel& rides, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::model::TerrainGrid& grid, std::span<const save::model::WaterBody> water, const park::path::SolidTiles& solids = { });
 
     /// Takes again the water the park's boats float on, `water` closed where `solids` stand in it but open at each
     /// boat ride's dock, as after the park's paths or water change. Nothing while no ride has boats.
-    void boat_water(SimWorld& world, const save::TerrainGrid& grid, std::span<const save::WaterBody> water, const park::path::SolidTiles& solids = { });
+    void boat_water(SimWorld& world, const save::model::TerrainGrid& grid, std::span<const save::model::WaterBody> water, const park::path::SolidTiles& solids = { });
 
     /// Links the rides of `added` whose stations, as their courses in `courses` run through them, stand on tiles
     /// side by side on the same level, so trains told to may leave them together.
-    void link_stations(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::TerrainGrid& grid);
+    void link_stations(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<park::track::TrackCourse>> courses, const save::model::TerrainGrid& grid);
 
     /// The saved litter lying on the paths, each piece on the path tile under it, aged from when it was dropped
     /// to `now` (calendar units, as the park keeps them). Returns how many pieces came over. Call after
     /// import_paths.
-    std::size_t import_litter(SimWorld& world, const save::PeopleModel& people, float now);
+    std::size_t import_litter(SimWorld& world, const save::model::PeopleModel& people, float now);
 
     /// The bins, benches and signs, each standing on the placed object of `objects` it names, that stand on a path tile, with what each bin holds;
     /// a no-entry sign bars its side of its tile to guests. Returns how many came over. Call after import_paths.
     /// shortcut: lamps carry nothing in saves that marks them out, so vandals leave them be; upgrade when path
     /// items are told apart by their models.
-    std::size_t import_path_items(SimWorld& world, std::span<const save::PlacedObject> objects, std::span<const save::BinState> bins, std::span<const std::uint64_t> benches, std::span<const save::SignState> signs);
+    std::size_t import_path_items(SimWorld& world, std::span<const save::model::PlacedObject> objects, std::span<const save::model::BinState> bins, std::span<const std::uint64_t> benches, std::span<const save::model::SignState> signs);
     /// Stands `wall` between the path tiles either side of it, or takes it away again when not `standing`.
     void set_wall(SimWorld& world, const park::EdgeWall& wall, bool standing);
 
     /// A path item of `kind` standing as `object` does, on the path tile under its tile's middle at the level
     /// nearest its base: a bin comes empty, holding kNewBinPieces. entt::null off the paths or for a hidden object.
-    entt::entity add_path_item(SimWorld& world, const save::PlacedObject& object, PathItemKind kind);
+    entt::entity add_path_item(SimWorld& world, const save::model::PlacedObject& object, PathItemKind kind);
     /// A flower bed standing as `object` does, holding `capacity` of water when full and `water` now (full when
     /// none, or negative as a bed never watered is saved), watered from a path tile on or beside its tile.
     /// entt::null with no path there or for a hidden object.
-    entt::entity add_flower_bed(SimWorld& world, const save::PlacedObject& object, float capacity, std::optional<float> water);
+    entt::entity add_flower_bed(SimWorld& world, const save::model::PlacedObject& object, float capacity, std::optional<float> water);
     /// The flower beds among `objects`, those `capacity_of` gives a capacity, each with the water `beds` saves
     /// for it. Returns how many came over. Call after import_paths.
-    std::size_t import_flower_beds(SimWorld& world, std::span<const save::PlacedObject> objects, std::span<const save::FlowerBedState> beds, const std::function<std::optional<float>(const save::PlacedObject&)>& capacity_of);
+    std::size_t import_flower_beds(SimWorld& world, std::span<const save::model::PlacedObject> objects, std::span<const save::model::FlowerBedState> beds, const std::function<std::optional<float>(const save::model::PlacedObject&)>& capacity_of);
     /// What a bin the player places holds, in pieces of rubbish, as the bins saved in the game's parks do.
     inline constexpr float kNewBinPieces = 40;
     /// A piece of rubbish in a saved bin's measure.
@@ -149,7 +149,7 @@ namespace rct3::simulation
     /// The park's staff, walking the paths at their work from where they stand; each one's entity by their
     /// place in `people.staff`; one off the paths or on a queue starts from the nearest walkway, null only when the
     /// park has none. Call after import_paths.
-    std::vector<entt::entity> import_staff(SimWorld& world, const save::PeopleModel& people);
+    std::vector<entt::entity> import_staff(SimWorld& world, const save::model::PeopleModel& people);
     /// A seller hired with a stall or a ride's entrance placed since, standing at `at` in their booth, paid as
     /// other new staff are.
     entt::entity add_vendor(SimWorld& world, glm::vec3 at);
@@ -164,7 +164,7 @@ namespace rct3::simulation
     /// The park's toilets, cash machines and first aid rooms, as shops guests go to by their needs; `kind_of`
     /// gives a special attraction's kind from the game's files. One opens onto all four sides and joins a path
     /// on any tile next to it, near its height. Returns how many came over. Call after import_paths.
-    std::size_t import_facilities(SimWorld& world, const save::RideModel& rides, const std::function<std::optional<std::uint32_t>(const save::Ride&)>& kind_of);
+    std::size_t import_facilities(SimWorld& world, const save::model::RideModel& rides, const std::function<std::optional<std::uint32_t>(const save::model::Ride&)>& kind_of);
     /// The kind of path item guests react to that an item of `category` and `feature` stands as: effects and
     /// animatronics, or a path feature guests know. Nothing for the rest, bins, benches and signs among them.
     [[nodiscard]] std::optional<PathItemKind> sight_of(std::uint32_t category, park::PathFeature feature);
@@ -173,51 +173,51 @@ namespace rct3::simulation
     [[nodiscard]] float scenery_weight(std::uint32_t category, park::PathFeature feature);
     /// Sets SceneryNear from `objects`, each adding what `weight_of` gives it to the path tiles within reach of
     /// its tile. Call after import_paths.
-    void import_scenery(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<float(const save::PlacedObject&)>& weight_of);
+    void import_scenery(SimWorld& world, std::span<const save::model::PlacedObject> objects, const std::function<float(const save::model::PlacedObject&)>& weight_of);
     /// Adds `object`, of `weight`, to SceneryNear.
-    void add_scenery(SimWorld& world, const save::PlacedObject& object, float weight);
+    void add_scenery(SimWorld& world, const save::model::PlacedObject& object, float weight);
     /// The objects `sight_of` gives a kind, each on the path tile it stands on or one beside it, for guests to
     /// react to. Returns how many came over. Call after import_paths.
-    std::size_t import_sights(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<std::optional<PathItemKind>(const save::PlacedObject&)>& sight_of);
+    std::size_t import_sights(SimWorld& world, std::span<const save::model::PlacedObject> objects, const std::function<std::optional<PathItemKind>(const save::model::PlacedObject&)>& sight_of);
     /// The park entrances `squares_of` picks out, giving the tiles each covers along its own X and Z: the first, at
     /// the path tile it stands on or one beside it, as the gate guests come in and leave by; and the path tiles
     /// under every one of them as EntrancePaths. entt::null when none is on the paths. Also the park's spawn
     /// points on the paths, each a GuestSpawn. Call after import_paths, then keep_staff_in.
-    entt::entity import_gate(SimWorld& world, std::span<const save::PlacedObject> objects, const std::function<std::optional<std::array<std::int32_t, 2>>(const save::PlacedObject&)>& squares_of);
+    entt::entity import_gate(SimWorld& world, std::span<const save::model::PlacedObject> objects, const std::function<std::optional<std::array<std::int32_t, 2>>(const save::model::PlacedObject&)>& squares_of);
     /// Keeps staff off the path tiles on land the park does not own and off those under its entrances, and lets
     /// them onto the others. Call after import_gate, and again when the park's land changes.
-    void keep_staff_in(SimWorld& world, const save::TerrainGrid& grid);
+    void keep_staff_in(SimWorld& world, const save::model::TerrainGrid& grid);
     /// The side of its path tile that a no-entry sign standing as `sign` bars: the side its front faces.
-    [[nodiscard]] park::Side no_entry_side(const save::PlacedObject& sign);
+    [[nodiscard]] park::Side no_entry_side(const save::model::PlacedObject& sign);
 
     /// Sets the park's own mix of parties (PartyMix) from the scenario's, when the save carries one.
-    void import_party_mix(SimWorld& world, const save::GroupMix& mix);
+    void import_party_mix(SimWorld& world, const save::model::GroupMix& mix);
 
     /// Marks the path tiles with a roof or shade over them, as `overhead` finds over the middle of each (see
     /// park/overhead.hpp). Returns how many are under a roof. Call after import_paths.
     std::size_t import_cover(SimWorld& world, const std::function<std::vector<park::Overhead>(std::span<const glm::vec3>)>& overhead);
 
     /// A saved ride's reliability, whether it stands broken down, and its inspections.
-    [[nodiscard]] Upkeep upkeep_of(const save::Ride& ride);
+    [[nodiscard]] Upkeep upkeep_of(const save::model::Ride& ride);
 
     /// When a ride with `options` leaves the station. A load the game does not list waits for any load.
-    [[nodiscard]] Departure departure_of(const save::OperatingOptions& options);
+    [[nodiscard]] Departure departure_of(const save::model::OperatingOptions& options);
 
     /// The speed a ride's trains are launched to, in the launch modes that run round a circuit.
-    [[nodiscard]] std::optional<float> launch_of(const save::Ride& ride);
+    [[nodiscard]] std::optional<float> launch_of(const save::model::Ride& ride);
 
     /// `ride`'s trains on `coaster`'s track, each where the park kept it.
-    [[nodiscard]] Trains trains_of(const Coaster& coaster, const save::Ride& ride);
+    [[nodiscard]] Trains trains_of(const Coaster& coaster, const save::model::Ride& ride);
 
     /// The guests each ride of `rides` makes room for in the park, by its place in `rides.rides`, as its kind's
     /// item in the overlay it names says. `find` finds an overlay's file in the install from its path relative
     /// to it; nothing where the file or the item is missing.
-    [[nodiscard]] std::vector<std::optional<std::uint32_t>> ride_guests(const save::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find);
+    [[nodiscard]] std::vector<std::optional<std::uint32_t>> ride_guests(const save::model::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find);
     /// The attraction kind of each ride of `rides`, found as `ride_guests` finds its guests.
-    [[nodiscard]] std::vector<std::optional<std::uint32_t>> ride_kinds(const save::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find);
+    [[nodiscard]] std::vector<std::optional<std::uint32_t>> ride_kinds(const save::model::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find);
     /// How the riders of each flat ride of `rides` sit (numbered as ride cars number their seatings), found as
     /// `ride_guests` finds its guests; nothing for tracked rides, whose cars say.
-    [[nodiscard]] std::vector<std::optional<std::uint32_t>> ride_seatings(const save::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find);
+    [[nodiscard]] std::vector<std::optional<std::uint32_t>> ride_seatings(const save::model::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find);
 
     /// Adds a ride for every flat ride and coaster of `rides` whose timing is known and whose entrance touches
     /// a queue or a path; returns each ride's entity by its place in `rides.rides`, null for those left out. A flat ride's timing is `flat_timings` at its place in
@@ -229,9 +229,9 @@ namespace rct3::simulation
     /// open and working. Call after import_paths.
     /// The park's run of `ride`, a pool slide with no cars that swimmers climb on foot (TrackCourse::climbs of
     /// `course`); none for another ride.
-    entt::entity import_climb_slide(SimWorld& world, const save::Ride& ride, const park::track::TrackCourse& course);
+    entt::entity import_climb_slide(SimWorld& world, const save::model::Ride& ride, const park::track::TrackCourse& course);
 
-    std::vector<entt::entity> import_rides(SimWorld& world, const save::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters = { }, std::span<const std::optional<std::uint32_t>> guests = { });
+    std::vector<entt::entity> import_rides(SimWorld& world, const save::model::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters = { }, std::span<const std::optional<std::uint32_t>> guests = { });
 
     /// Sets every guest walking from the path they stand on, or from the nearest path for one saved off the paths;
     /// returns how many. Call after import_paths.
@@ -240,10 +240,10 @@ namespace rct3::simulation
     /// Puts the guests the park had on a ride (`guests` by place in `people`, `rides` as import_rides made
     /// them) back on it: on a flat ride's turn, or on a train, sending off one that stands at the start. Those
     /// the ride has no room for walk off from its exit. Returns how many it seated. Call after start_guests.
-    std::size_t board_saved_riders(SimWorld& world, const save::PeopleModel& people, std::span<const entt::entity> guests, const save::RideModel& saved, std::span<const entt::entity> rides);
+    std::size_t board_saved_riders(SimWorld& world, const save::model::PeopleModel& people, std::span<const entt::entity> guests, const save::model::RideModel& saved, std::span<const entt::entity> rides);
     /// Puts the guests the park had swimming (`guests` by place in `people`) back in the pool they stand in,
     /// changed already, for the time the park says they had left. Returns how many. Call after start_guests
     /// and import_pools.
-    std::size_t resume_saved_swimmers(SimWorld& world, const save::PeopleModel& people, std::span<const entt::entity> guests);
+    std::size_t resume_saved_swimmers(SimWorld& world, const save::model::PeopleModel& people, std::span<const entt::entity> guests);
 
 } // namespace rct3::simulation

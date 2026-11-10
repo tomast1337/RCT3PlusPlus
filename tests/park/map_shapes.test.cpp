@@ -9,9 +9,9 @@ using namespace rct3::park;
 
 namespace
 {
-    save::TerrainGrid flat()
+    save::model::TerrainGrid flat()
     {
-        save::TerrainGrid g;
+        save::model::TerrainGrid g;
         g.width = 4;
         g.height = 4;
         g.tile_size_x = 4;
@@ -20,9 +20,9 @@ namespace
         return g;
     }
 
-    save::PlacedObject placed_object(std::uint64_t id, int col, int row)
+    save::model::PlacedObject placed_object(std::uint64_t id, int col, int row)
     {
-        save::PlacedObject o;
+        save::model::PlacedObject o;
         o.id = id;
         o.symbol = "Unknown";
         o.overlay = "Nowhere/Nothing";
@@ -35,10 +35,10 @@ namespace
 
 TEST_CASE("objects without a model cover their tile, in the layer they are given")
 {
-    const save::TerrainGrid g = flat();
-    std::vector<save::PlacedObject> objects { placed_object(1, 2, 3), placed_object(2, 0, 0), placed_object(3, 1, 1), placed_object(4, 9, 9) };
+    const save::model::TerrainGrid g = flat();
+    std::vector<save::model::PlacedObject> objects { placed_object(1, 2, 3), placed_object(2, 0, 0), placed_object(3, 1, 1), placed_object(4, 9, 9) };
     objects[1].hidden = true;
-    const auto layer_of = [](const save::PlacedObject& o) -> std::optional<MapLayer> {
+    const auto layer_of = [](const save::model::PlacedObject& o) -> std::optional<MapLayer> {
         if (o.id == 3)
             return std::nullopt;
         return o.id == 1 ? MapLayer::Toilets : MapLayer::Scenery;

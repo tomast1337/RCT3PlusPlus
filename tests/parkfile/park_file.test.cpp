@@ -2,6 +2,7 @@
 #include "parkfile/park_file.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/guests.hpp"
 
 #include <cstring>
 #include <doctest/doctest.h>

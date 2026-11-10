@@ -50,6 +50,7 @@
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/park/rating.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/swimming.hpp"

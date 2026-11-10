@@ -2,6 +2,7 @@
 #include "simulation/vip.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/objectives.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"

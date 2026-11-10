@@ -3,8 +3,8 @@
 // The pieces the simulation's entities are made of. Plain values with no behaviour, so systems can read and
 // write them in parallel and the park file can store them field by field.
 //
-// A guest is an entity with a Visitor, a Pose, Needs, a Mood and a Wallet; one the simulation moves also has
-// an Errand, a Stride and Dice. Guests who go round together are Members of a Party, an entity of its own
+// A guest is an entity with a Visitor, a Pose, Needs, a Mood and a Wallet (simulation/guests.hpp); one the
+// simulation moves also has an Errand, a Stride and Dice. Guests who go round together are Members of a Party, an entity of its own
 // (simulation/parties.hpp).
 // An attraction is an entity with an Attraction and either a Shop (simulation/stalls.hpp) or a
 // CycleRide: a ride that loads its riders, runs for a while and lets them off, flat ride or coaster.
@@ -34,23 +34,6 @@
 
 namespace rct3::simulation
 {
-
-    enum class AgeGroup : std::uint8_t
-    {
-        Child,
-        Teen,
-        Adult,
-    };
-
-    /// Someone visiting the park.
-    struct Visitor
-    {
-        AgeGroup age = AgeGroup::Adult;
-        bool female = false;
-        std::string name;
-        std::uint64_t arrived = 0; ///< Tick the visitor entered the park
-        bool avatar = false;       ///< Made by the player, who keeps the photos taken of them
-    };
 
     /// A guest of honour a scenario's goal sent (see vip.hpp). They go home only once their visit is over or
     /// their patience has run out.
@@ -82,24 +65,6 @@ namespace rct3::simulation
         Distance walked { }; ///< Ground covered up to `was`, across, for the feet to keep step with
     };
 
-    struct Needs
-    {
-        Share hunger { };
-        Share thirst { };
-        Share bladder { };
-        Share swim { }; ///< Wish to go swimming, grown by how much they like pools
-    };
-
-    struct Mood
-    {
-        Share happiness { 0.5f };
-        Share energy { 0.5f };
-        Share nausea { };
-        Share tolerance { 0.5f }; ///< How well the guest's stomach takes rides: the higher, the wilder the rides they go on and the slower they sicken
-        Share wet { };            ///< From dry (0) to soaked (1)
-        Share heat { };           ///< From cool (0) to sweltering (1), out in the hot sun
-    };
-
     /// The time of day the guests feel, in the registry's context; midday when none is there.
     struct Daylight
     {
@@ -111,25 +76,6 @@ namespace rct3::simulation
     {
         NodeId node = kNoNode;
         bool closed = false;
-    };
-
-    /// A place outside the park, mostly where its road leaves the map, where arriving guests appear and walk to
-    /// the gate from, and where those going home walk off.
-    struct GuestSpawn
-    {
-        NodeId node = kNoNode;
-    };
-
-    /// A guest on the paths outside the park, between a spawn point and the gate.
-    struct Outside
-    {
-        enum class Way : std::uint8_t
-        {
-            In,         ///< Walking to the gate, not paid yet
-            TurnedAway, ///< Could not pay at the gate, walking back
-            Home,       ///< Walking home from the gate
-        };
-        Way way = Way::In;
     };
 
     /// The path tiles under the park's entrances, in the registry's context: staff never step onto them, so they
@@ -144,27 +90,6 @@ namespace rct3::simulation
     {
     };
 
-    /// Guests in and out of the gate so far, in the registry's context, by AgeGroup.
-    struct Turnstile
-    {
-        std::array<std::uint32_t, 3> in { };
-        std::array<std::uint32_t, 3> out { };
-        std::uint32_t turned_away = 0; ///< Parties that could not pay to come in
-    };
-
-    /// The intensity of rides a guest likes, 0..1 as rides are rated; any when they have none.
-    struct Taste
-    {
-        Share least { };
-        Share most { 1 };
-        Share pools { 0.5f }; ///< How much they like swimming, which their wish to swim grows by
-    };
-
-    /// A guest carrying an umbrella, up while it rains.
-    struct Umbrella
-    {
-    };
-
     /// The weather the guests feel, in the registry's context; fair and mild when none is there.
     struct Weather
     {
@@ -172,39 +97,6 @@ namespace rct3::simulation
         bool storm = false;
         bool sunny = false; ///< Sun out, beating down on those not in the shade
         Degrees temperature { 20 };
-    };
-
-    /// What brings guests to the park, in the registry's context, kept up from the park as it runs. Guests
-    /// come in at the plain weather rate when none is there.
-    struct Draw
-    {
-        Money entrance_fee { };
-        std::uint32_t pool_squares = 0;  ///< Squares of pool water
-        std::optional<float> rating { }; ///< The park's, 0..1; none before it has one
-        Money guest_cash { };            ///< What guests bring in on average; none for the tuning's
-        Money guest_bank { };            ///< What cash machines can give them on average; none for the tuning's
-    };
-
-    /// Room in the park, in the registry's context, made by open rides that are not simulated yet (water
-    /// slides, lazy rivers, rides with no timing): guests still come for them.
-    struct RoomElsewhere
-    {
-        std::uint32_t guests = 0;
-    };
-
-    struct Wallet
-    {
-        Money cash { };
-        Money bank { };      ///< What cash machines can still give them
-        Money withdrawn { }; ///< What cash machines have given them
-        /// What they have paid the park in all, and for each kind of thing; toilets and first aid count in all only.
-        Money spent { };
-        Money spent_entry { };
-        Money spent_rides { };
-        Money spent_food { };
-        Money spent_drink { };
-        Money spent_souvenirs { };
-        bool needs_cash = false; ///< Could not afford something since they last drew cash
     };
 
     // ----- guests on the move -----

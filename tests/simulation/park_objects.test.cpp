@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/components.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/stalls.hpp"

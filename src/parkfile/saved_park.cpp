@@ -2,6 +2,7 @@
 #include "parkfile/saved_park.hpp"
 
 #include "parkfile/binary.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/staff_care.hpp"
 #include "simulation/swimming.hpp"

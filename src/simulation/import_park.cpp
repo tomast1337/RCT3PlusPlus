@@ -13,6 +13,7 @@
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/ratings.hpp"

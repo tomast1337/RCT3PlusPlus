@@ -2,6 +2,7 @@
 #include "simulation/crowds.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/objectives.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/staff_care.hpp"

@@ -71,9 +71,9 @@ namespace rct3::scene
 
         std::expected<void, std::string> load(render::Device& device, const config::GameInstall& install, StartupScreen& screen)
         {
-            const auto banner = install.find(ui::loading_screen::kLogoFile);
+            const auto banner = install.find(ui::screens::loading_screen::kLogoFile);
             if (!banner)
-                return std::unexpected(std::format("{} not found", ui::loading_screen::kLogoFile));
+                return std::unexpected(std::format("{} not found", ui::screens::loading_screen::kLogoFile));
             auto images = ui::load_image_set(*banner);
             if (!images)
                 return std::unexpected(std::format("banner: {}", images.error()));
@@ -190,7 +190,7 @@ namespace rct3::scene
     void draw_loading_screen(render::Device& device, StartupScreen& screen)
     {
         // In pixels, like the park's loading screen. Only the logo: the strings and fonts are what is loading.
-        namespace loading = ui::loading_screen;
+        namespace loading = ui::screens::loading_screen;
         const render::Extent extent = device.extent();
         screen.list.clear();
         screen.list.set_scale(1);

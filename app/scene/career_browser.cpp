@@ -119,12 +119,12 @@ namespace rct3::scene
                 import_prf(path, folder, strings);
         }
 
-        ui::CareerRow row_of(const career::Career& c)
+        ui::screens::CareerRow row_of(const career::Career& c)
         {
             return { strings::to_utf16(c.name), career::score(c), 0 };
         }
 
-        void list(render::Device& device, CareerBrowser& browser, ui::CareerDialog& dialog, int pack, const ui::StringTable& strings)
+        void list(render::Device& device, CareerBrowser& browser, ui::screens::CareerDialog& dialog, int pack, const ui::StringTable& strings)
         {
             free_pictures(device, browser);
             browser.ids = ui::career_scenario_ids(strings, pack);
@@ -132,7 +132,7 @@ namespace rct3::scene
             browser.careers = browser.folder.empty() ? std::vector<career::CareerEntry> { } : career::list_careers(browser.folder, pack, problems);
             for (const auto& problem : problems)
                 logging::logger("ui").warning("careers: {}", problem.message);
-            std::vector<ui::CareerRow> rows;
+            std::vector<ui::screens::CareerRow> rows;
             for (auto& entry : browser.careers)
             {
                 career::fit(entry.data.career, browser.ids);
@@ -149,7 +149,7 @@ namespace rct3::scene
         }
 
         /// The picture of the last game of the career's current scenario, if it has one.
-        void read_picture(render::Device& device, CareerBrowser& browser, ui::CareerDialog& dialog)
+        void read_picture(render::Device& device, CareerBrowser& browser, ui::screens::CareerDialog& dialog)
         {
             if (browser.next_picture >= browser.careers.size())
                 return;
@@ -169,7 +169,7 @@ namespace rct3::scene
             if (!texture)
                 return;
             browser.pictures.push_back(*texture);
-            ui::CareerRow row = row_of(c);
+            ui::screens::CareerRow row = row_of(c);
             row.picture = ui::texture_id(*texture);
             dialog.set_career(index, std::move(row));
         }
@@ -187,21 +187,21 @@ namespace rct3::scene
         }
 
         /// Shows the map of career `entry`.
-        void open_map(CareerBrowser& browser, ui::FrontEnd& front, career::CareerEntry entry, const ui::StringTable& strings)
+        void open_map(CareerBrowser& browser, ui::screens::FrontEnd& front, career::CareerEntry entry, const ui::StringTable& strings)
         {
             browser.playing = std::move(entry);
             const career::Career& c = browser.playing->data.career;
-            std::vector<ui::CareerBoardScenario> scenarios;
+            std::vector<ui::screens::CareerBoardScenario> scenarios;
             for (std::size_t i = 0; i < c.scenarios.size(); ++i)
             {
-                ui::CareerBoardScenario s;
+                ui::screens::CareerBoardScenario s;
                 s.info = ui::career_scenario(strings, c.pack, i, c.scenarios[i].id);
                 s.status = c.scenarios[i].status;
                 s.lock = career::lock(c, i);
                 s.can_resume = can_resume(*browser.playing, i);
                 scenarios.push_back(std::move(s));
             }
-            const ui::CareerBoard& map = front.open_career_board(std::move(scenarios), c.current);
+            const ui::screens::CareerBoard& map = front.open_career_board(std::move(scenarios), c.current);
             browser.map_opened = front.career_boards_opened();
             if (map.size() > 0)
                 browser.slideshow = ui::career_scenario(strings, c.pack, map.picked(), c.scenarios[map.picked()].id).slideshow;
@@ -244,7 +244,7 @@ namespace rct3::scene
             browser.played = true;
         }
 
-        void carry_out_map(CareerBrowser& browser, ui::FrontEnd& front, ui::CareerBoard& map, const ui::StringTable& strings, const config::GameInstall& install)
+        void carry_out_map(CareerBrowser& browser, ui::screens::FrontEnd& front, ui::screens::CareerBoard& map, const ui::StringTable& strings, const config::GameInstall& install)
         {
             career::CareerEntry& entry = *browser.playing;
             career::Career& c = entry.data.career;
@@ -266,11 +266,11 @@ namespace rct3::scene
             if (map.take_load() && c.current < c.scenarios.size())
             {
                 browser.game = career_game(entry, c.current);
-                front.open_files(ui::FrontAction::Campaign, config::UserFolder::Careers);
+                front.open_files(ui::screens::FrontAction::Campaign, config::UserFolder::Careers);
             }
         }
 
-        void carry_out(CareerBrowser& browser, ui::CareerDialog& dialog, ui::FrontEnd& front, int pack, const ui::StringTable& strings)
+        void carry_out(CareerBrowser& browser, ui::screens::CareerDialog& dialog, ui::screens::FrontEnd& front, int pack, const ui::StringTable& strings)
         {
             const auto log = logging::logger("ui");
             if (const auto rename = dialog.take_rename(); rename && rename->first < browser.careers.size())
@@ -304,7 +304,7 @@ namespace rct3::scene
 
     } // namespace
 
-    void update_career_browser(render::Device& device, CareerBrowser& browser, ui::FrontEnd& front, const ui::StringTable& strings, const config::GameInstall& install)
+    void update_career_browser(render::Device& device, CareerBrowser& browser, ui::screens::FrontEnd& front, const ui::StringTable& strings, const config::GameInstall& install)
     {
         auto map = front.career_board();
         if (map && browser.playing && browser.played && !browser.park)
@@ -354,7 +354,7 @@ namespace rct3::scene
         carry_out(browser, *dialog, front, front.career_pack(), strings);
     }
 
-    bool start_career_scenario(CareerBrowser& browser, ui::FrontEnd& front, int pack, std::size_t index, const ui::StringTable& strings, const config::GameInstall& install)
+    bool start_career_scenario(CareerBrowser& browser, ui::screens::FrontEnd& front, int pack, std::size_t index, const ui::StringTable& strings, const config::GameInstall& install)
     {
         const auto log = logging::logger("ui");
         if (!browser.data)

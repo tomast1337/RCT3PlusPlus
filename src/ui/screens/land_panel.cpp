@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <format>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -235,4 +235,4 @@ namespace rct3::ui
         plain({ m.x - 3, m.y - 3, m.x + 3, m.y + 3 }, round_corners(3), style_.brush_dot);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

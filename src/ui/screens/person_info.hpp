@@ -26,7 +26,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     enum class PersonTab : std::uint8_t
@@ -142,4 +142,4 @@ namespace rct3::ui
     /// The page of `tab`.
     [[nodiscard]] InfoPage person_page(PersonTab tab, const PersonFacts& facts, const StringTable& strings, const InfoUnits& units);
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     /// Sizes in units, the content's top-left the origin.
@@ -168,4 +168,4 @@ namespace rct3::ui
     /// The progress as the game writes it: three significant digits and a percent sign, e.g. "33.3%".
     [[nodiscard]] std::u16string career_percent(float percent);
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

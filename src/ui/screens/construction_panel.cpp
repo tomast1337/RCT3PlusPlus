@@ -8,7 +8,7 @@
 #include <tuple>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -360,4 +360,4 @@ namespace rct3::ui
         context.list.fill({ r.x0 + list_left_ - 3, r.y0, r.x0 + list_left_ - 2, r.y1 }, style_.divider);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -6,7 +6,7 @@
 #include <format>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     /// A legend row: a swatch and a name; a click shows or hides its layer.
@@ -134,4 +134,4 @@ namespace rct3::ui
             labels_[i]->style.colour = rows_[i]->shown ? style_.text : style_.text_off;
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

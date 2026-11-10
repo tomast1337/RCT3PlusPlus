@@ -266,7 +266,7 @@ namespace rct3::scene
     /// Handles the panel's events, and for a track with no pieces the pointer at `at` on a view of `size` (`over`
     /// the interface or not), the turn commands and `shift`, held to raise or sink the first piece. Call once per
     /// update after the interface, `elapsed` seconds after the last.
-    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed);
+    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed);
 
     /// The arrows where the picked piece starts and ends (see park/build_arrows.hpp); empty while no piece is.
     [[nodiscard]] park::TerrainMesh track_arrows(const ParkScene& scene);

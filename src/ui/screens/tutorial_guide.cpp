@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -179,4 +179,4 @@ namespace rct3::ui
         fit(static_cast<float>(lines.size()) * f->line_height(), true);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

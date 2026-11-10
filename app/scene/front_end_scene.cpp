@@ -68,8 +68,8 @@ namespace rct3::scene
 
         ui::Desktop& desktop = scene.live->desktop;
         desktop.tooltip_style = skins::tooltip_style(scene.assets.palette);
-        ui::FrontEndSetup front;
-        front.expansions = ui::named_expansions(*scene.assets.strings);
+        ui::screens::FrontEndSetup front;
+        front.expansions = ui::screens::named_expansions(*scene.assets.strings);
         front.choices.languages = std::move(setup.languages);
         front.choices.language = std::move(setup.language);
         front.choices.screen_sizes = std::move(setup.screen_sizes);
@@ -85,7 +85,7 @@ namespace rct3::scene
         front.twelve_hour = front.choices.language == ui::kDefaultLanguage;
         front.open_options = setup.reload;
         front.settled = setup.reload;
-        scene.live->front.emplace(desktop, ui::FrontEndStyle { skins::options_dialog_style(scene.assets.palette), skins::question_box_style(scene.assets.palette), skins::file_dialog_style(scene.assets.palette), skins::career_dialog_style(scene.assets.palette), skins::career_board_style(scene.assets.palette), skins::tutorial_picker_style(scene.assets.palette), skins::front_screen_round() }, *scene.assets.strings, scene.live->options, std::move(front));
+        scene.live->front.emplace(desktop, ui::screens::FrontEndStyle { skins::options_dialog_style(scene.assets.palette), skins::question_box_style(scene.assets.palette), skins::file_dialog_style(scene.assets.palette), skins::career_dialog_style(scene.assets.palette), skins::career_board_style(scene.assets.palette), skins::tutorial_picker_style(scene.assets.palette), skins::front_screen_round() }, *scene.assets.strings, scene.live->options, std::move(front));
         return scene;
     }
 
@@ -102,7 +102,7 @@ namespace rct3::scene
         const bool over = desktop.update(pointer, keyboard, { elapsed, scene.current_fonts });
         update_slideshow_view(device, scene.slideshow, elapsed);
         scene.live->front->update();
-        ui::FrontEnd& front = *scene.live->front;
+        ui::screens::FrontEnd& front = *scene.live->front;
         // A custom scenario started from one of the scenarios to start from is saved with the custom scenarios.
         const ParkGame files = front.file_folder() == config::UserFolder::Careers ? scene.careers.game : ParkGame { .folder = front.file_folder(), .sandbox = front.file_folder() == config::UserFolder::Parks };
         if (auto picked = update_save_browser(device, scene.saves, front.file_dialog(), front.file_dialogs_opened(), files))
@@ -150,7 +150,7 @@ namespace rct3::scene
         while (const auto request = scene.live->front->take_unhandled())
         {
             // A new sandbox is the game's blank landscape, saved as one of ours.
-            if (request->action == ui::FrontAction::NewSandbox)
+            if (request->action == ui::screens::FrontAction::NewSandbox)
             {
                 scene.park_to_play = scene.assets.install->find("Campaigns/Base/BlankLandscape.dat");
                 scene.game_to_play = { };
@@ -170,7 +170,7 @@ namespace rct3::scene
 
     FrontEndRequests take_front_end_requests(FrontEndScene& scene)
     {
-        ui::FrontEnd& front = *scene.live->front;
+        ui::screens::FrontEnd& front = *scene.live->front;
         FrontEndRequests r;
         r.quit = front.take_quit();
         r.screen_size = front.take_screen_size();

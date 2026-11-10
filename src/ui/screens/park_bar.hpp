@@ -35,7 +35,7 @@
 #include <string>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     struct ParkBarStyle
@@ -214,4 +214,4 @@ namespace rct3::ui
         Button* highlight_ = nullptr;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -25,7 +25,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     struct MessageDrawerStyle
@@ -172,4 +172,4 @@ namespace rct3::ui
         Button* newer_ = nullptr;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -105,7 +105,7 @@ namespace rct3::scene
             const auto* patrol = scene.sim.registry.try_get<simulation::Patrol>(staff);
             scene.patrol_stroke = patrol == nullptr || !std::ranges::contains(patrol->tiles, *tile);
         }
-        const int across = ui::kPatrolBrushes.at(static_cast<std::size_t>(std::clamp(scene.patrol_brush, 0, static_cast<int>(ui::kPatrolBrushes.size()) - 1)));
+        const int across = ui::screens::kPatrolBrushes.at(static_cast<std::size_t>(std::clamp(scene.patrol_brush, 0, static_cast<int>(ui::screens::kPatrolBrushes.size()) - 1)));
         simulation::paint_patrol(scene.sim.registry, staff, *tile, across, *scene.patrol_stroke);
         return false;
     }

@@ -68,7 +68,7 @@ namespace rct3::scene
     /// Opens the list of `item` above `bar`, the tool bar, in the middle of its shown buttons, in place of any
     /// list open before, titled with the help of `button`, the menu button that asked for it. False for an item
     /// that has no list.
-    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency);
+    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::screens::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency);
 
     /// Closes the open list, if one is.
     void close_build_list(ui::Widget& root);

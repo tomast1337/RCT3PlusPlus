@@ -21,7 +21,7 @@
 #include <string>
 #include <string_view>
 
-namespace rct3::ui::loading_screen
+namespace rct3::ui::screens::loading_screen
 {
 
     /// The game's logo, in the startup logos' overlay.
@@ -134,4 +134,4 @@ namespace rct3::ui::loading_screen
     /// Draws the whole screen over `screen`, in the list's units.
     void draw(DrawList& list, const Rect& screen, const Look& look, const Content& content);
 
-} // namespace rct3::ui::loading_screen
+} // namespace rct3::ui::screens::loading_screen

@@ -1090,7 +1090,7 @@ namespace rct3::scene
             if (!park.shown || park.shown->kind != park::AttractionRef::Kind::Ride || park.shown->index >= park.rides.rides.size())
                 return nullptr;
             const save::Ride& ride = park.rides.rides[park.shown->index];
-            for (const ui::AttractionTabInfo& t : ui::attraction_tabs(ui::attraction_kind(ride), ride.base.state))
+            for (const ui::screens::AttractionTabInfo& t : ui::screens::attraction_tabs(ui::screens::attraction_kind(ride), ride.base.state))
             {
                 if (t.tab == park.info_tab)
                     return Json { { "ride", park.shown->index }, { "tab", t.help } };

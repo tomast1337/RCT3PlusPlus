@@ -18,7 +18,7 @@
 #include <unordered_map>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -918,4 +918,4 @@ namespace rct3::ui
         return { static_cast<ManagementRow::Kind>(kind), id & ((std::size_t { 1 } << kRowKindShift) - 1) };
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

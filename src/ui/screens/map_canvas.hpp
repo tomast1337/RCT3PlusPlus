@@ -16,7 +16,7 @@
 #include <optional>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace map_view
@@ -112,4 +112,4 @@ namespace rct3::ui
         Point pointer_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

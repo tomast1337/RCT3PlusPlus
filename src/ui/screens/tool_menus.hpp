@@ -13,7 +13,7 @@
 #include <span>
 #include <string_view>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     enum class ToolItem : std::uint8_t
@@ -103,4 +103,4 @@ namespace rct3::ui
     /// Whether `item` is a switch of the view controls.
     [[nodiscard]] bool is_switch(ToolItem item);
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

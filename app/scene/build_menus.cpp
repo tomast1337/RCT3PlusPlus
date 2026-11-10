@@ -101,9 +101,9 @@ namespace rct3::scene
         }
     } // namespace
 
-    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency)
+    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::screens::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency)
     {
-        const auto list = ui::build_list(item);
+        const auto list = ui::screens::build_list(item);
         if (!list || !menus.items.valid())
             return false;
         close_build_list(root);
@@ -112,9 +112,9 @@ namespace rct3::scene
         if (menus.designs.valid() && menus.designs.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
             for (const DesignFile& d : menus.designs.get())
                 ++design_counts[std::string(design_kind(d))];
-        auto rows = ui::picker_rows(*list, menus.items.get(), menus.offer, strings, currency, design_counts);
+        auto rows = ui::screens::picker_rows(*list, menus.items.get(), menus.offer, strings, currency, design_counts);
         const auto* menu_button = dynamic_cast<const ui::Button*>(&button);
-        auto& picker = root.add<ui::BuildPicker>(std::string(kListName), skins::build_picker_style(palette), strings, button.tooltip, menu_button != nullptr ? menu_button->icon : std::string { }, std::move(rows), ui::has_theme_filters(*list) ? ui::picker_themes(menus.items.get()) : std::vector<ui::PickerTheme> { });
+        auto& picker = root.add<ui::screens::BuildPicker>(std::string(kListName), skins::build_picker_style(palette), strings, button.tooltip, menu_button != nullptr ? menu_button->icon : std::string { }, std::move(rows), ui::screens::has_theme_filters(*list) ? ui::screens::picker_themes(menus.items.get()) : std::vector<ui::screens::PickerTheme> { });
         picker.kinds_off = menus.kinds_off;
         picker.styles_off = menus.styles_off;
         picker.packs_only = menus.packs_only;
@@ -125,9 +125,9 @@ namespace rct3::scene
         const ui::Rect& r = root.rect();
         ui::Rect shown = button.rect();
         take_in_shown(bar, shown);
-        const ui::Point size = menus.size.value_or(ui::Point { ui::build_picker::kWidth, ui::build_picker::kHeight });
+        const ui::Point size = menus.size.value_or(ui::Point { ui::screens::build_picker::kWidth, ui::screens::build_picker::kHeight });
         const float x = (shown.x0 + shown.x1) / 2 - size.x / 2 - r.x0;
-        const float y = shown.y0 - ui::build_picker::kGap - size.y - r.y0;
+        const float y = shown.y0 - ui::screens::build_picker::kGap - size.y - r.y0;
         picker.placement = ui::top_left(x, y, size.x, size.y);
         return true;
     }
@@ -150,7 +150,7 @@ namespace rct3::scene
             menus.offer_designs = std::exchange(menus.asked_designs, false);
             return std::exchange(menus.asked, std::nullopt);
         }
-        auto picker = root.find_as<ui::BuildPicker>(kListName);
+        auto picker = root.find_as<ui::screens::BuildPicker>(kListName);
         if (!picker)
             return std::nullopt;
         picker->cash = cash;

@@ -9,7 +9,7 @@
 #include <cmath>
 #include <format>
 
-namespace rct3::ui::loading_screen
+namespace rct3::ui::screens::loading_screen
 {
 
     namespace
@@ -229,4 +229,4 @@ namespace rct3::ui::loading_screen
         }
     }
 
-} // namespace rct3::ui::loading_screen
+} // namespace rct3::ui::screens::loading_screen

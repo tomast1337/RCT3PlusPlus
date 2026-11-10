@@ -16,7 +16,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     /// What the staff window sorts its rows by, in the order its drop-down offers them.
@@ -99,4 +99,4 @@ namespace rct3::ui
     /// start date, the highest first by the others. Ties keep the order of the jobs, then the park's.
     [[nodiscard]] std::vector<RosterLine> roster_lines(const ManagementFacts& facts, const StringTable& strings, RosterJobs jobs, RosterSort sort);
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

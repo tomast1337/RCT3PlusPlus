@@ -7,6 +7,7 @@
 #include <vector>
 
 using namespace rct3::ui;
+using namespace rct3::ui::screens;
 using rct3::park::BuildItem;
 using rct3::park::BuildList;
 using rct3::park::BuildOffer;

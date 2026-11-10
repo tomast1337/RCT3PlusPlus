@@ -8,7 +8,7 @@
 #include <cmath>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -397,4 +397,4 @@ namespace rct3::ui
         draw_front_help(context, frame, help_title_, help_text_);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -30,7 +30,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     enum class AttractionKind : std::uint8_t
@@ -312,4 +312,4 @@ namespace rct3::ui
     /// `tested` (some tracked rides open without a test run, and offer none).
     [[nodiscard]] std::vector<StateChoice> state_choices(AttractionKind kind, bool tested = true);
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

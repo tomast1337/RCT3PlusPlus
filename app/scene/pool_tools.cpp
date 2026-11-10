@@ -38,9 +38,9 @@ namespace rct3::scene
         constexpr std::int32_t kHighestBoard = 30;
         constexpr float kArrowLift = 0.04f; ///< Of the arrow over the next pool path piece, so it shows over the piece, as on the path tool
 
-        std::optional<ui::PoolPanel&> panel_of(const ParkScene& scene)
+        std::optional<ui::screens::PoolPanel&> panel_of(const ParkScene& scene)
         {
-            return scene.desktop->root().find_as<ui::PoolPanel>(kPanelName);
+            return scene.desktop->root().find_as<ui::screens::PoolPanel>(kPanelName);
         }
 
         /// What the pool panel offers to pick, each in its order.
@@ -96,7 +96,7 @@ namespace rct3::scene
                 return stop_pooling(scene);
             if (!panel->showing())
                 return;
-            const ui::PoolEditor& e = panel->editor();
+            const ui::screens::PoolEditor& e = panel->editor();
             scene.pooling.height = e.snap ? std::nullopt : std::optional(e.height);
             scene.pooling.edge = static_cast<park::pools::PoolEdge>(std::clamp(e.edge, 0, 3));
             if (e.grid != scene.pooling.grid)
@@ -107,7 +107,7 @@ namespace rct3::scene
             const park::BuildItem* item = nullptr;
             if (const auto p = panel->placing())
             {
-                const auto& from = p->first == ui::PoolPage::Extras ? offer.extras : p->first == ui::PoolPage::Paths ? offer.stairs : offer.rooms;
+                const auto& from = p->first == ui::screens::PoolPage::Extras ? offer.extras : p->first == ui::screens::PoolPage::Paths ? offer.stairs : offer.rooms;
                 item = p->second < from.size() ? from[p->second] : nullptr;
             }
             else if (const auto& items = scene.build.items; items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
@@ -116,7 +116,7 @@ namespace rct3::scene
                 const park::PathSlope slope = scene.pooling.trail.slope;
                 const std::string_view path = slope == park::PathSlope::Flat ? park::kPoolPath : slope == park::PathSlope::Up || slope == park::PathSlope::Down ? park::kPoolPathSlope : park::kPoolPathStairs;
                 constexpr std::array<std::string_view, 3> kTools { "", park::kPoolTiles, park::kPoolDelete };
-                const std::string_view symbol = e.mode == ui::PoolMode::Water ? park::kPoolWater[static_cast<std::size_t>(std::clamp(e.depth, 1, 3) - 1)] : e.mode == ui::PoolMode::Path ? path : kTools[std::to_underlying(e.mode)];
+                const std::string_view symbol = e.mode == ui::screens::PoolMode::Water ? park::kPoolWater[static_cast<std::size_t>(std::clamp(e.depth, 1, 3) - 1)] : e.mode == ui::screens::PoolMode::Path ? path : kTools[std::to_underlying(e.mode)];
                 const auto found = std::ranges::find_if(items.get(), [&](const park::BuildItem& i) { return i.list == park::BuildList::Pools && i.overlay == park::kPoolOverlay && i.symbol == symbol; });
                 item = found != items.get().end() ? &*found : nullptr;
             }
@@ -471,7 +471,7 @@ namespace rct3::scene
                     scene.footpaths.camera_goal = glm::vec3 { scene.grid.world_x(next->col) + scene.grid.tile_size_x / 2, static_cast<float>(height), scene.grid.world_z(next->row) + scene.grid.tile_size_z / 2 };
                 }
             }
-            std::array<bool, ui::kPoolPathControls> usable;
+            std::array<bool, ui::screens::kPoolPathControls> usable;
             usable.fill(true);
             const bool going = park::next_spot(t.trail).has_value();
             usable[std::to_underlying(park::PathControl::TurnLeft)] = going && park::can_turn(t.trail);
@@ -528,7 +528,7 @@ namespace rct3::scene
         scene.pooling = PoolTool { .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .grid = scene.pooling.grid, .edge = scene.pooling.edge, .redraw = redraw, .side = scene.pooling.side, .preview_target = scene.pooling.preview_target, .preview_pixels = scene.pooling.preview_pixels }; // The marks go on the next frame
     }
 
-    void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ui::Currency& currency, std::optional<ui::PoolPage> page)
+    void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ui::Currency& currency, std::optional<ui::screens::PoolPage> page)
     {
         auto panel = panel_of(scene);
         if (panel && panel->showing() && !page)
@@ -538,12 +538,12 @@ namespace rct3::scene
             // The extras' pictures live in an overlay of their own.
             constexpr std::array<std::string_view, 1> kIconFiles { "Pool/PoolIcons.common.ovl" };
             (void)ui::add_extra_skins(device, assets, kIconFiles);
-            panel = scene.desktop->root().add<ui::PoolPanel>(std::string(kPanelName), ui::game_skins::pool_panel_style(assets.palette), *assets.strings);
+            panel = scene.desktop->root().add<ui::screens::PoolPanel>(std::string(kPanelName), ui::game_skins::pool_panel_style(assets.palette), *assets.strings);
         }
         const Offered offer = offered(scene);
         // Each choice's help is its name, and its price where it has one.
         const auto choices = [&](const std::vector<const park::BuildItem*>& items) {
-            std::vector<ui::PoolChoice> out;
+            std::vector<ui::screens::PoolChoice> out;
             for (const park::BuildItem* i : items)
                 out.push_back({ i->icon, std::u16string(assets.strings->get(i->name_text)) + (i->price > 0 ? u" : " + ui::money_text(currency, i->price) : std::u16string { }) });
             return out;
@@ -599,7 +599,7 @@ namespace rct3::scene
                 const glm::vec3 lift_at { g.origin_x + t.lift->spot.x * g.tile_size_x, static_cast<float>(t.lift->surface), g.origin_z + t.lift->spot.y * g.tile_size_z };
                 const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
                 if (const auto h = lifted_height(ray, lift_at, t.lift->surface))
-                    t.lifted = std::clamp(*h, ui::pool_panel::kHeightLowest, ui::pool_panel::kHeightHighest);
+                    t.lifted = std::clamp(*h, ui::screens::pool_panel::kHeightLowest, ui::screens::pool_panel::kHeightHighest);
                 spot = t.lift->spot;
             }
         }

@@ -25,7 +25,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     enum class ToolItem : std::uint8_t;
@@ -139,4 +139,4 @@ namespace rct3::ui
         float placed_for_ = -1; ///< The width the buttons were last placed for
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

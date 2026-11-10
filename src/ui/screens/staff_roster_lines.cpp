@@ -9,7 +9,7 @@
 #include <bit>
 #include <tuple>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -105,4 +105,4 @@ namespace rct3::ui
         return lines;
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

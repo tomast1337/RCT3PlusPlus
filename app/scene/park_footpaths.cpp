@@ -139,9 +139,9 @@ namespace rct3::scene
         constexpr std::string_view kQueueRailing = "Van_Scaffold2";
         constexpr std::string_view kQueueRailingOverlay = "Style\\Vanilla\\style";
 
-        std::optional<ui::FootpathPanel&> panel_of(const ParkScene& scene)
+        std::optional<ui::screens::FootpathPanel&> panel_of(const ParkScene& scene)
         {
-            return scene.desktop->root().find_as<ui::FootpathPanel>(kFootpathPanelName);
+            return scene.desktop->root().find_as<ui::screens::FootpathPanel>(kFootpathPanelName);
         }
 
         bool chosen_queue(const ParkFootpaths& f)
@@ -193,25 +193,25 @@ namespace rct3::scene
         }
 
         /// The panel's choices: path styles, then queue styles.
-        std::pair<std::vector<ui::FootpathStyle>, std::vector<ui::FootpathStyle>> panel_styles(const ParkFootpaths& f, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        std::pair<std::vector<ui::screens::FootpathStyle>, std::vector<ui::screens::FootpathStyle>> panel_styles(const ParkFootpaths& f, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
             const ui::Currency money = currency_of(assets, options);
-            std::pair<std::vector<ui::FootpathStyle>, std::vector<ui::FootpathStyle>> out;
+            std::pair<std::vector<ui::screens::FootpathStyle>, std::vector<ui::screens::FootpathStyle>> out;
             for (const park::path::PathStyle& s : f.styles)
                 (s.queue ? out.second : out.first).push_back({ s.icon, name_of(assets, s), ui::money_text(money, next_cost(s)) });
             return out;
         }
 
-        std::optional<ui::FootpathPick> pick_of(const ParkFootpaths& f)
+        std::optional<ui::screens::FootpathPick> pick_of(const ParkFootpaths& f)
         {
             if (!f.style || *f.style >= f.styles.size())
                 return std::nullopt;
             const bool queue = f.styles[*f.style].queue;
             const auto before = std::ranges::count_if(std::span(f.styles).first(*f.style), [&](const park::path::PathStyle& s) { return s.queue == queue; });
-            return ui::FootpathPick { queue, static_cast<std::size_t>(before) };
+            return ui::screens::FootpathPick { queue, static_cast<std::size_t>(before) };
         }
 
-        std::optional<std::size_t> style_of(const ParkFootpaths& f, ui::FootpathPick pick)
+        std::optional<std::size_t> style_of(const ParkFootpaths& f, ui::screens::FootpathPick pick)
         {
             std::size_t seen = 0;
             for (std::size_t i = 0; i < f.styles.size(); ++i)
@@ -1424,7 +1424,7 @@ namespace rct3::scene
             f.camera_goal.reset();
         // Once a trail is started only the controls that lead to a piece that fits; before, any slope may be
         // picked for the first piece.
-        std::array<bool, ui::kFootpathControls> usable { };
+        std::array<bool, ui::screens::kFootpathControls> usable { };
         if (f.builder.start)
             usable = park::fitting_controls(f.builder, scene.grid, f.paths, f.solids);
         else
@@ -1474,7 +1474,7 @@ namespace rct3::scene
         std::optional<park::Ray> controls_ray(const ParkScene& scene, ui::Point at, ui::Point size)
         {
             auto panel = panel_of(scene);
-            if (!panel || !panel->showing() || panel->page() != ui::FootpathPage::Controls || size.x <= 0 || size.y <= 0)
+            if (!panel || !panel->showing() || panel->page() != ui::screens::FootpathPage::Controls || size.x <= 0 || size.y <= 0)
                 return std::nullopt;
             const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
             return park::view_ray(scene.camera, size.x / size.y, ndc);

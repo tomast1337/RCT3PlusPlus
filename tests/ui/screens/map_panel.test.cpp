@@ -6,6 +6,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
+using namespace rct3::ui::screens;
 
 TEST_CASE("legend rows stack, with a gap above each that starts a group")
 {

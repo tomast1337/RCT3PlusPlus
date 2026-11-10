@@ -43,7 +43,7 @@ namespace rct3::scene
 
     /// Opens the pool panel (ui/screens/pool_panel.hpp) with the editor's tool out, or closes it; with `page`, opens it
     /// on that page whether it shows or not.
-    void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ui::Currency& currency, std::optional<ui::PoolPage> page = std::nullopt);
+    void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ui::Currency& currency, std::optional<ui::screens::PoolPage> page = std::nullopt);
 
     /// Swaps the pool tool's work shown, not yet kept, with the pools and the ground as they were before it;
     /// twice swaps it back.

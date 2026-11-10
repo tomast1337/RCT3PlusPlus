@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     struct OptionRowsStyle
@@ -167,4 +167,4 @@ namespace rct3::ui
         int count_ = 0; // For unique names
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

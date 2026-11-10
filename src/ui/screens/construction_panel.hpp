@@ -41,7 +41,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace construction_panel
@@ -340,4 +340,4 @@ namespace rct3::ui
         std::vector<ConstructionEvent> events_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

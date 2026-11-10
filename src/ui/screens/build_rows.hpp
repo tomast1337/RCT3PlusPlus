@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     /// The list a build menu item opens; nothing for items that open none.
@@ -43,4 +43,4 @@ namespace rct3::ui
     /// ride's row tells how many saved designs `design_counts` gives its kind, by symbol, when it has any.
     [[nodiscard]] std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency, const std::map<std::string, std::size_t, strings::LessIgnoringCase>& design_counts = { });
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

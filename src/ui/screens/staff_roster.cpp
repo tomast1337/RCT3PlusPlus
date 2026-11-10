@@ -12,7 +12,7 @@
 #include <cmath>
 #include <format>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -518,4 +518,4 @@ namespace rct3::ui
             page_age_ = 1e9f; // The owner shows the park again at once
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -7,7 +7,7 @@
 #include <ranges>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -258,4 +258,4 @@ namespace rct3::ui
         fit_page();
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

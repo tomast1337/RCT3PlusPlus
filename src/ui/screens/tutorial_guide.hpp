@@ -24,7 +24,7 @@
 #include <cstdint>
 #include <string>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     /// The title and text of step `index` (from 0) of `script`, in the language where the strings have it.
@@ -141,4 +141,4 @@ namespace rct3::ui
         bool quit_out_ = false;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -5,7 +5,7 @@
 
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     OptionsSession::OptionsSession(Desktop& desktop, OptionsDialogStyle style, const StringTable& strings, config::GameOptions& options, OptionsChoices choices)
@@ -91,4 +91,4 @@ namespace rct3::ui
         return dialog && dialog->waiting_for_keys();
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

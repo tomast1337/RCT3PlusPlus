@@ -5,7 +5,7 @@
 #include <cmath>
 #include <format>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -392,4 +392,4 @@ namespace rct3::ui
             row_now_ = table_->rows.at(*table_->selected()).id;
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -160,7 +160,7 @@ namespace rct3::scene
             for (const park::AttractionRef ref : refs)
             {
                 const save::AttractionCommon& a = ref.kind == park::AttractionRef::Kind::Stall ? scene.rides.stalls.at(ref.index).base : scene.rides.rides.at(ref.index).base;
-                names += (names.empty() ? u"" : u", ") + ui::attraction_name(a, strings);
+                names += (names.empty() ? u"" : u", ") + ui::screens::attraction_name(a, strings);
             }
             std::u16string text(strings.get(kDemolishText));
             if (const auto at = text.find(u"%NAME%"); at != std::u16string::npos)
@@ -182,7 +182,7 @@ namespace rct3::scene
                 text.replace(at, kSellPoolMark.size(), named.empty() ? std::u16string(strings.get(kPoolDefaultName)) : strings::to_utf16(named));
             // It names the room asked from as well.
             if (const auto at = text.find(u"%NAME%"); at != std::u16string::npos)
-                text.replace(at, 6, ui::scenery_name({ .symbol = scene.pools.rooms.at(room).symbol }, strings));
+                text.replace(at, 6, ui::screens::scenery_name({ .symbol = scene.pools.rooms.at(room).symbol }, strings));
             const ui::QuestionBoxStyle style = skins::question_box_style(palette);
             auto& box = scene.desktop->root().add<ui::QuestionBox>(std::string(kSellPoolName), style, std::move(text), std::vector<ui::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
             box.title = std::u16string(strings.get(kSellPoolTitle));
@@ -427,10 +427,10 @@ namespace rct3::scene
                 if (owner == scene.attractions.end() || owner->second != ref)
                     continue;
                 const auto model = scene.models.find(park::object::model_ref(scene.objects[i]));
-                ui::SceneryFacts f;
+                ui::screens::SceneryFacts f;
                 f.colours = scene.objects[i].colours;
                 f.colour_slots = model == scene.models.end() ? 0 : park::object::colour_slots(model->second);
-                if (std::vector<std::size_t> slots = ui::scenery_paint_slots(f); !slots.empty())
+                if (std::vector<std::size_t> slots = ui::screens::scenery_paint_slots(f); !slots.empty())
                     return std::pair { i, std::move(slots) };
             }
             return std::nullopt;
@@ -446,9 +446,9 @@ namespace rct3::scene
             return kind == items.get().end() ? nullptr : &*kind;
         }
 
-        ui::AttractionFacts facts(const ParkScene& scene, park::AttractionRef ref)
+        ui::screens::AttractionFacts facts(const ParkScene& scene, park::AttractionRef ref)
         {
-            ui::AttractionFacts f { .guests = scene.people.guests, .refusal = scene.refusal };
+            ui::screens::AttractionFacts f { .guests = scene.people.guests, .refusal = scene.refusal };
             if (ref.kind == park::AttractionRef::Kind::Stall)
             {
                 if (ref.index < scene.rides.stalls.size())
@@ -512,7 +512,7 @@ namespace rct3::scene
             {
                 if (const auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(scene.ride_entities[ref.index]))
                 {
-                    f.flow = ui::RideFlow { cycle->capacity, cycle->queue.size(), cycle->per_hour, cycle->riders.size() };
+                    f.flow = ui::screens::RideFlow { cycle->capacity, cycle->queue.size(), cycle->per_hour, cycle->riders.size() };
                     // A tracked ride's riders are aboard its trains.
                     if (const auto* fleet = scene.sim.registry.try_get<simulation::Trains>(scene.ride_entities[ref.index]))
                         for (const auto& aboard : fleet->riders)
@@ -560,9 +560,9 @@ namespace rct3::scene
             }
         }
 
-        ui::PersonFacts person_facts(const ParkScene& scene, std::size_t shown)
+        ui::screens::PersonFacts person_facts(const ParkScene& scene, std::size_t shown)
         {
-            ui::PersonFacts f;
+            ui::screens::PersonFacts f;
             f.people = &scene.people;
             f.rides = &scene.rides;
             f.objects = scene.objects;
@@ -605,11 +605,11 @@ namespace rct3::scene
             return f;
         }
 
-        ui::InfoUnits info_units(const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        ui::screens::InfoUnits info_units(const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
-            ui::InfoUnits units;
+            ui::screens::InfoUnits units;
             units.currency = ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
-            units.distance = static_cast<ui::DistanceUnits>(options.choice(config::GameOption::DistanceUnits));
+            units.distance = static_cast<ui::screens::DistanceUnits>(options.choice(config::GameOption::DistanceUnits));
             return units;
         }
 
@@ -631,9 +631,9 @@ namespace rct3::scene
             return entt::null;
         }
 
-        ui::SceneryFacts prop_facts(const ParkScene& scene, std::size_t index)
+        ui::screens::SceneryFacts prop_facts(const ParkScene& scene, std::size_t index)
         {
-            ui::SceneryFacts f;
+            ui::screens::SceneryFacts f;
             if (index >= scene.objects.size())
                 return f;
             const save::PlacedObject& o = scene.objects[index];
@@ -657,7 +657,7 @@ namespace rct3::scene
                 for (const auto [g, swimmer, errand] : r.view<const simulation::Swimmer, const simulation::Errand>().each())
                     people += door != nullptr && r.valid(errand.target) && r.all_of<simulation::PoolDoor>(errand.target) && r.get<simulation::PoolDoor>(errand.target).pool == door->pool;
                 const park::pools::PoolRoom& at = scene.pools.rooms[*room];
-                f.pool = ui::PoolComplexFacts {
+                f.pool = ui::screens::PoolComplexFacts {
                     .name = strings::to_utf16(at.complex_name), .number = static_cast<std::size_t>(std::ranges::count(scene.pools.rooms.begin(), scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room) + 1, at.symbol, &park::pools::PoolRoom::symbol)), .ticket = at.ticket, .open = at.open, .people = people, .dirt = pool != nullptr ? simulation::dirt_step(*pool) : 0, .fluid = at.fluid, .waves = at.waves, .refill = simulation::kTuning.pools.refill.at(std::min<std::size_t>(at.fluid, 2)).value
                 };
                 // The room's takings and upkeep, and what guests thought of it, as the simulation has them.
@@ -743,9 +743,9 @@ namespace rct3::scene
             return party;
         }
 
-        ui::PartyFacts party_facts(const ParkScene& scene)
+        ui::screens::PartyFacts party_facts(const ParkScene& scene)
         {
-            ui::PartyFacts f;
+            ui::screens::PartyFacts f;
             for (const std::size_t shown : scene.shown_party)
                 f.members.push_back(person_facts(scene, shown));
             if (const auto group = saved_group(scene, scene.shown_party.front()))
@@ -753,25 +753,25 @@ namespace rct3::scene
             return f;
         }
 
-        void show_info_page(ParkScene& scene, ui::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        void show_info_page(ParkScene& scene, ui::screens::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
             if (!scene.shown_party.empty())
-                panel.show_page(ui::party_page(scene.party_tab, party_facts(scene), *assets.strings, info_units(assets, options)));
+                panel.show_page(ui::screens::party_page(scene.party_tab, party_facts(scene), *assets.strings, info_units(assets, options)));
             else if (scene.shown_prop)
             {
-                ui::SceneryFacts f = prop_facts(scene, *scene.shown_prop);
+                ui::screens::SceneryFacts f = prop_facts(scene, *scene.shown_prop);
                 if (f.pool)
                     f.pool->currency = info_units(assets, options).currency;
-                panel.show_page(ui::scenery_page(scene.prop_tab, f, *assets.strings));
+                panel.show_page(ui::screens::scenery_page(scene.prop_tab, f, *assets.strings));
             }
             else if (scene.shown_person)
-                panel.show_page(ui::person_page(scene.person_tab, person_facts(scene, *scene.shown_person), *assets.strings, info_units(assets, options)));
+                panel.show_page(ui::screens::person_page(scene.person_tab, person_facts(scene, *scene.shown_person), *assets.strings, info_units(assets, options)));
             else if (scene.shown)
             {
                 // A tracked ride's train limits are read the first time its window shows them.
                 if (scene.shown->kind == park::AttractionRef::Kind::Ride && assets.install)
                     ready_trains(scene, *assets.install, scene.shown->index);
-                panel.show_page(ui::attraction_page(scene.info_tab, facts(scene, *scene.shown), *assets.strings, info_units(assets, options), scene.info_section));
+                panel.show_page(ui::screens::attraction_page(scene.info_tab, facts(scene, *scene.shown), *assets.strings, info_units(assets, options), scene.info_section));
             }
         }
 
@@ -788,31 +788,31 @@ namespace rct3::scene
 
         /// Opens the panel on the person `shown` (of the shown people), at the tab last opened on a person if
         /// they have it.
-        void open_person(ParkScene& scene, ui::InfoPanel& panel, std::size_t shown, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        void open_person(ParkScene& scene, ui::screens::InfoPanel& panel, std::size_t shown, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
             if (shown >= scene.shown_people.size())
                 return;
-            std::vector<ui::InfoTab> tabs;
+            std::vector<ui::screens::InfoTab> tabs;
             scene.person_tabs.clear();
             std::size_t picked = 0;
-            const ui::PersonFacts f = person_facts(scene, shown);
-            for (const ui::PersonTabInfo& t : ui::person_tabs(f))
+            const ui::screens::PersonFacts f = person_facts(scene, shown);
+            for (const ui::screens::PersonTabInfo& t : ui::screens::person_tabs(f))
             {
                 if (t.tab == scene.person_tab)
                     picked = tabs.size();
-                ui::InfoTab& tab = tabs.emplace_back();
+                ui::screens::InfoTab& tab = tabs.emplace_back();
                 tab.icon = t.icon;
                 tab.help = assets.strings->get(t.help);
                 tab.slot = t.slot;
                 // A uniform's pots show the colours the person is drawn in.
                 for (std::size_t pot = 0; pot < t.pots; ++pot)
-                    tab.paints.push_back(scene.shown_people[shown].pose.look.colours.at(ui::kUpperPalette + pot));
-                tab.colours = ui::kUniformColours;
-                tab.action = t.tab == ui::PersonTab::Party;
+                    tab.paints.push_back(scene.shown_people[shown].pose.look.colours.at(ui::screens::kUpperPalette + pot));
+                tab.colours = ui::screens::kUniformColours;
+                tab.action = t.tab == ui::screens::PersonTab::Party;
                 scene.person_tabs.push_back(t.tab);
             }
             // A uniform tab has no page of its own, nor the party's, which opens the party.
-            if (scene.person_tabs.at(picked) == ui::PersonTab::Uniform || scene.person_tabs.at(picked) == ui::PersonTab::Party)
+            if (scene.person_tabs.at(picked) == ui::screens::PersonTab::Uniform || scene.person_tabs.at(picked) == ui::screens::PersonTab::Party)
                 picked = 0;
             scene.person_tab = scene.person_tabs.at(picked);
             if (scene.shown_person != shown)
@@ -829,11 +829,11 @@ namespace rct3::scene
         }
 
         /// Opens the panel on the party shown person `shown` goes round with, at the tab last opened on a party.
-        void open_party(ParkScene& scene, ui::InfoPanel& panel, std::size_t shown, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        void open_party(ParkScene& scene, ui::screens::InfoPanel& panel, std::size_t shown, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
-            std::vector<ui::InfoTab> tabs;
+            std::vector<ui::screens::InfoTab> tabs;
             std::size_t picked = 0;
-            for (const ui::PartyTabInfo& t : ui::kPartyTabs)
+            for (const ui::screens::PartyTabInfo& t : ui::screens::kPartyTabs)
             {
                 if (t.tab == scene.party_tab)
                     picked = tabs.size();
@@ -848,12 +848,12 @@ namespace rct3::scene
         }
 
         /// Opens the panel on the attraction `ref`, at `tab`, else the tab last opened, if it has one.
-        void open_info(ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::GameOptions& options, std::optional<ui::AttractionTab> tab = std::nullopt)
+        void open_info(ParkScene& scene, ui::screens::InfoPanel& panel, park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::GameOptions& options, std::optional<ui::screens::AttractionTab> tab = std::nullopt)
         {
-            const ui::AttractionFacts f = facts(scene, ref);
+            const ui::screens::AttractionFacts f = facts(scene, ref);
             if (f.common == nullptr)
                 return;
-            const ui::AttractionKind kind = f.stall ? ui::AttractionKind::Stall : ui::attraction_kind(*f.ride);
+            const ui::screens::AttractionKind kind = f.stall ? ui::screens::AttractionKind::Stall : ui::screens::attraction_kind(*f.ride);
             if (const bool tracked = f.ride != nullptr && f.ride->kind == save::RideKind::Tracked; tracked != scene.info_tracked)
             {
                 std::swap(scene.info_tab, scene.other_info_tab);
@@ -861,24 +861,24 @@ namespace rct3::scene
             }
             if (tab)
                 scene.info_tab = *tab;
-            std::vector<ui::InfoTab> tabs;
+            std::vector<ui::screens::InfoTab> tabs;
             scene.shown_tabs.clear();
             std::size_t picked = 0;
-            for (const ui::AttractionTabInfo& t : ui::attraction_tabs(kind, f.common->state))
+            for (const ui::screens::AttractionTabInfo& t : ui::screens::attraction_tabs(kind, f.common->state))
             {
                 if (t.tab == scene.info_tab)
                     picked = tabs.size();
-                ui::InfoTab& tab = tabs.emplace_back();
+                ui::screens::InfoTab& tab = tabs.emplace_back();
                 tab.icon = t.icon;
                 tab.help = assets.strings->get(t.help);
                 tab.slot = t.slot;
                 tab.action = t.action;
-                if (t.tab == ui::AttractionTab::State)
+                if (t.tab == ui::screens::AttractionTab::State)
                     tab.choices = state_fan(scene, ref, *assets.strings);
                 scene.shown_tabs.push_back(t.tab);
             }
             // The open-or-close tab has no page of its own.
-            if (scene.shown_tabs.at(picked) == ui::AttractionTab::State)
+            if (scene.shown_tabs.at(picked) == ui::screens::AttractionTab::State)
                 picked = 0;
             scene.info_tab = scene.shown_tabs.at(picked);
             if (scene.shown != ref || scene.shown_person || !scene.shown_party.empty())
@@ -904,23 +904,23 @@ namespace rct3::scene
         }
 
         /// Opens the panel on the prop `index` (of the objects), with only its name showing, or on its tab `open`.
-        void open_prop(ParkScene& scene, ui::InfoPanel& panel, std::size_t index, const ui::InterfaceAssets& assets, const config::GameOptions& options, std::optional<ui::SceneryTab> open = std::nullopt)
+        void open_prop(ParkScene& scene, ui::screens::InfoPanel& panel, std::size_t index, const ui::InterfaceAssets& assets, const config::GameOptions& options, std::optional<ui::screens::SceneryTab> open = std::nullopt)
         {
             if (index >= scene.objects.size())
                 return;
-            std::vector<ui::InfoTab> tabs;
+            std::vector<ui::screens::InfoTab> tabs;
             scene.prop_tabs.clear();
-            for (const ui::SceneryTabInfo& t : ui::scenery_tabs(prop_facts(scene, index)))
+            for (const ui::screens::SceneryTabInfo& t : ui::screens::scenery_tabs(prop_facts(scene, index)))
             {
-                ui::InfoTab& tab = tabs.emplace_back();
+                ui::screens::InfoTab& tab = tabs.emplace_back();
                 tab.icon = t.icon;
                 tab.help = assets.strings->get(t.help);
                 tab.slot = t.slot;
                 tab.action = t.action;
                 tab.paints = t.paints;
                 // A changing room's flag opens or closes its complex, as a stall's does.
-                if (t.tab == ui::SceneryTab::RoomState)
-                    for (const ui::StateChoice& c : ui::state_choices(ui::AttractionKind::Stall))
+                if (t.tab == ui::screens::SceneryTab::RoomState)
+                    for (const ui::screens::StateChoice& c : ui::screens::state_choices(ui::screens::AttractionKind::Stall))
                         tab.choices.push_back({ std::string(c.icon), std::u16string(assets.strings->get(c.help)) });
                 scene.prop_tabs.push_back(t.tab);
             }
@@ -1123,7 +1123,7 @@ namespace rct3::scene
         if (scene.shown == ref)
         {
             scene.shown.reset();
-            if (auto info = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName))
+            if (auto info = scene.desktop->root().find_as<ui::screens::InfoPanel>(kInfoName))
                 info->hide();
         }
         logging::logger("park").info("demolished {}, {} back", base->name, back);
@@ -1203,7 +1203,7 @@ namespace rct3::scene
                     child->visible = false;
                     scene.hidden_for_ride.emplace_back(child->name());
                 }
-            root.add<ui::RideCameraPanel>(std::string(kRideCameraName), skins::ride_camera_panel_style(assets.palette), *assets.strings);
+            root.add<ui::screens::RideCameraPanel>(std::string(kRideCameraName), skins::ride_camera_panel_style(assets.palette), *assets.strings);
             scene.paused_for_ride = scene.park.speed.paused;
             scene.park.speed.paused = false;
         }
@@ -1244,11 +1244,11 @@ namespace rct3::scene
             scene.riding_fixed = fixed;
             const ui::StringTable& strings = *assets.strings;
             constexpr std::array<std::string_view, 2> kNames { "RidecamGUI_TypePeep", "RidecamGUI_TypeStatic" };
-            std::u16string info = ui::attraction_name(scene.rides.rides[ride].base, strings);
+            std::u16string info = ui::screens::attraction_name(scene.rides.rides[ride].base, strings);
             info += u"  " + std::u16string(strings.get(kNames[fixed])) + u" " + strings::to_utf16(std::format("{}", at + 1));
             const bool other = flat_views(scene, ride, !fixed) > 0;
-            const std::optional<std::size_t> next = other ? std::optional<std::size_t>(fixed ? ui::kFlatSeatType : ui::kFlatFixedType) : std::nullopt;
-            if (auto panel = scene.desktop->root().find_as<ui::RideCameraPanel>(kRideCameraName))
+            const std::optional<std::size_t> next = other ? std::optional<std::size_t>(fixed ? ui::screens::kFlatSeatType : ui::screens::kFlatFixedType) : std::nullopt;
+            if (auto panel = scene.desktop->root().find_as<ui::screens::RideCameraPanel>(kRideCameraName))
                 panel->show(std::move(info), flat_views(scene, ride, fixed) > 1, flat_rides(scene).size() > 1, strings.get("RidecamGUI_Ride"), next, other ? strings.get(kNames[!fixed]) : std::u16string_view { });
         }
 
@@ -1273,8 +1273,8 @@ namespace rct3::scene
             const save::Person* saved = p.staff ? (p.saved < scene.people.staff.size() ? &scene.people.staff[p.saved].person : nullptr) : (p.saved < scene.people.guests.size() ? &scene.people.guests[p.saved].person : nullptr);
             const ui::StringTable& strings = *assets.strings;
             constexpr std::array<std::string_view, 2> kNames { "RidecamGUI_TypePeep", "RidecamGUI_TypeStatic" };
-            if (auto panel = scene.desktop->root().find_as<ui::RideCameraPanel>(kRideCameraName))
-                panel->show(saved != nullptr ? strings::to_utf16(saved->name) : std::u16string { }, false, scene.shown_people.size() > 1, { }, behind ? ui::kFlatSeatType : ui::kFlatFixedType, strings.get(kNames[!behind]));
+            if (auto panel = scene.desktop->root().find_as<ui::screens::RideCameraPanel>(kRideCameraName))
+                panel->show(saved != nullptr ? strings::to_utf16(saved->name) : std::u16string { }, false, scene.shown_people.size() > 1, { }, behind ? ui::screens::kFlatSeatType : ui::screens::kFlatFixedType, strings.get(kNames[!behind]));
         }
 
         /// Rides along in `car`, from its camera of kind `eye`.
@@ -1298,14 +1298,14 @@ namespace rct3::scene
             for (std::size_t c = 0; c < car; ++c)
                 place += scene.car_spots[c].ride == spot.ride && scene.car_spots[c].train == spot.train ? 1 : 0;
             const ui::StringTable& strings = *assets.strings;
-            std::u16string info = ui::attraction_name(scene.rides.rides[spot.ride].base, strings);
+            std::u16string info = ui::screens::attraction_name(scene.rides.rides[spot.ride].base, strings);
             info += u"  " + std::u16string(strings.get("RidecamGUI_Train")) + u" " + strings::to_utf16(std::format("{}", spot.train + 1));
             info += u"  " + std::u16string(strings.get("RidecamGUI_Car")) + u" " + strings::to_utf16(std::format("{}", place));
             constexpr std::array<std::string_view, 3> kEyeNames { "RidecamGUI_TypeNose", "RidecamGUI_TypeFront", "RidecamGUI_TypeRear" };
             info += u"  " + std::u16string(strings.get(kEyeNames[std::to_underlying(eye)]));
             const auto cameras = std::ranges::count_if(ride_seats(scene, spot.ride, eye), [&](std::size_t seat) { return scene.car_spots[seat].train == spot.train; });
             const std::optional<park::object::RideEye> next = next_eye(scene, car, eye);
-            if (auto panel = root.find_as<ui::RideCameraPanel>(kRideCameraName))
+            if (auto panel = root.find_as<ui::screens::RideCameraPanel>(kRideCameraName))
                 panel->show(std::move(info), cameras > 1, train_stops(scene, eye).size() > 1, strings.get("RidecamGUI_Train"), next.transform([](park::object::RideEye e) { return std::size_t { std::to_underlying(e) }; }), next ? strings.get(kEyeNames[std::to_underlying(*next)]) : std::u16string_view { });
         }
 
@@ -1338,9 +1338,9 @@ namespace rct3::scene
         /// Leaves, or changes to the train's first camera of the next kind it has, or steps to the previous or next
         /// camera of the same kind on the train (round from the last to the first), or to the previous or next
         /// train, on from a ride's last train to the next ride's first, round the park.
-        void ride_action(ParkScene& scene, const ui::InterfaceAssets& assets, ui::RideCameraAction action)
+        void ride_action(ParkScene& scene, const ui::InterfaceAssets& assets, ui::screens::RideCameraAction action)
         {
-            using enum ui::RideCameraAction;
+            using enum ui::screens::RideCameraAction;
             if (action == Leave)
             {
                 stop_riding(scene);
@@ -1428,18 +1428,18 @@ namespace rct3::scene
 
         /// Writes a change the player made on an attraction's page into the save. Nothing is shown again, so a
         /// spinner held down keeps stepping; a page that looks different after the change is set up here.
-        void change_attraction(render::Device& device, ParkScene& scene, ui::InfoPanel& panel, park::AttractionRef ref, const ui::InfoChange& change, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        void change_attraction(render::Device& device, ParkScene& scene, ui::screens::InfoPanel& panel, park::AttractionRef ref, const ui::screens::InfoChange& change, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
-            using enum ui::AttractionControl;
+            using enum ui::screens::AttractionControl;
             save::Ride* ride = ref.kind == park::AttractionRef::Kind::Ride && ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index] : nullptr;
             save::Stall* stall = ref.kind == park::AttractionRef::Kind::Stall && ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index] : nullptr;
-            const auto wait_on = [&](std::int32_t& wait, ui::AttractionControl seconds) {
-                const auto field = panel.control(ui::control_id(seconds));
+            const auto wait_on = [&](std::int32_t& wait, ui::screens::AttractionControl seconds) {
+                const auto field = panel.control(ui::screens::control_id(seconds));
                 wait = change.value != 0 ? (field ? static_cast<const ui::Spinner&>(*field).value() : 0) : -1;
                 if (field)
                     field->enabled = change.value != 0;
             };
-            if (change.id == ui::control_id(Colours))
+            if (change.id == ui::screens::control_id(Colours))
             {
                 // Every object of the attraction takes the colour in the slot of the pot.
                 const auto painted = painted_object(scene, ref);
@@ -1453,13 +1453,13 @@ namespace rct3::scene
                         paint_prop(device, scene, i, slot, change.value);
                 }
             }
-            else if (change.id == ui::control_id(Name))
+            else if (change.id == ui::screens::control_id(Name))
             {
                 // A blank name keeps the old one, as in the game.
                 if (save::AttractionCommon* common = ride != nullptr ? &ride->base : stall != nullptr ? &stall->base : nullptr; common != nullptr && change.text.find_first_not_of(u' ') != std::u16string::npos)
                     common->name = strings::to_utf8(change.text);
             }
-            else if (change.id == ui::control_id(Locate))
+            else if (change.id == ui::screens::control_id(Locate))
             {
                 // The view turns round to the middle of the attraction's objects.
                 glm::vec3 sum { };
@@ -1476,18 +1476,18 @@ namespace rct3::scene
                 if (count > 0)
                     scene.camera.target = sum / static_cast<float>(count);
             }
-            else if (change.id == ui::control_id(RideCam) && ride != nullptr)
+            else if (change.id == ui::screens::control_id(RideCam) && ride != nullptr)
                 ride_cam(scene, assets, ref.index);
             else if (stall != nullptr)
             {
                 const std::size_t index = ref.index;
-                if (change.id == ui::control_id(SyncStalls))
+                if (change.id == ui::screens::control_id(SyncStalls))
                     stall->sync = change.value != 0;
-                else if (const auto item = ui::listed(change.id, ItemPrice); item && *item < stall->items.size())
+                else if (const auto item = ui::screens::listed(change.id, ItemPrice); item && *item < stall->items.size())
                     stall->items[*item].price = change.value;
-                else if (const auto gone = ui::listed(change.id, ItemRemove); gone && *gone < stall->items.size())
+                else if (const auto gone = ui::screens::listed(change.id, ItemRemove); gone && *gone < stall->items.size())
                     stall->items.erase(stall->items.begin() + static_cast<std::ptrdiff_t>(*gone));
-                else if (const auto added = ui::listed(change.id, ItemAdd))
+                else if (const auto added = ui::screens::listed(change.id, ItemAdd))
                 {
                     const park::BuildItem* kind = stall_kind(scene, *stall);
                     if (kind == nullptr || *added >= kind->goods.size())
@@ -1497,15 +1497,15 @@ namespace rct3::scene
                     const auto at = stall->items.begin() + std::clamp<std::ptrdiff_t>(change.value, 0, std::ssize(stall->items));
                     stall->items.insert(at, { .kind_symbol = std::format("{}:cid", g.item), .price = g.price, .name = "%ME%" });
                 }
-                else if (const auto moved = ui::listed(change.id, ItemMove); moved && *moved < stall->items.size())
+                else if (const auto moved = ui::screens::listed(change.id, ItemMove); moved && *moved < stall->items.size())
                     park::ride::move_item(*stall, *moved, static_cast<std::size_t>(std::max(change.value, 0)));
-                else if (const auto ticked = ui::listed(change.id, ItemExtras); ticked && *ticked < stall->items.size())
+                else if (const auto ticked = ui::screens::listed(change.id, ItemExtras); ticked && *ticked < stall->items.size())
                     stall->items[*ticked].extras = static_cast<std::uint32_t>(change.value);
-                else if (const auto named = ui::listed(change.id, ItemName); named && *named < stall->items.size())
+                else if (const auto named = ui::screens::listed(change.id, ItemName); named && *named < stall->items.size())
                     stall->items[*named].name = strings::to_utf8(change.text);
-                else if (const auto painted = ui::listed(change.id, ItemColour); painted && *painted < stall->items.size() && change.pot < save::RideColours { }.size())
+                else if (const auto painted = ui::screens::listed(change.id, ItemColour); painted && *painted < stall->items.size() && change.pot < save::RideColours { }.size())
                     stall->items[*painted].colours[change.pot] = static_cast<std::uint8_t>(change.value);
-                else if (const auto extra = ui::listed(change.id, ExtraLevel); extra && *extra < stall->extras.size())
+                else if (const auto extra = ui::screens::listed(change.id, ExtraLevel); extra && *extra < stall->extras.size())
                     stall->extras[*extra].level = change.value;
                 else
                     return;
@@ -1525,21 +1525,21 @@ namespace rct3::scene
                     simulation::restock(scene.sim, s, scene.carried);
                 }
                 // The menu's rows follow what changed; a price typed in stays as it is.
-                if (!ui::listed(change.id, ItemPrice))
+                if (!ui::screens::listed(change.id, ItemPrice))
                     show_info_page(scene, panel, assets, options);
             }
             else if (ride == nullptr)
                 return;
-            else if (change.id == ui::control_id(Price))
+            else if (change.id == ui::screens::control_id(Price))
                 ride->ticket_price = change.value;
-            else if (change.id == ui::control_id(Inspection))
+            else if (change.id == ui::screens::control_id(Inspection))
             {
                 ride->breakdown.inspection_interval = change.value;
                 if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
                     if (auto* upkeep = scene.sim.registry.try_get<simulation::Upkeep>(e))
                         upkeep->inspect_every = simulation::upkeep_of(*ride).inspect_every;
             }
-            else if (change.id == ui::control_id(Mechanic))
+            else if (change.id == ui::screens::control_id(Mechanic))
             {
                 // shortcut: the game also opens the mechanic's window and puts this job first on a busy one's list;
                 // add both with the staff window's job list.
@@ -1547,22 +1547,22 @@ namespace rct3::scene
                     if (auto* upkeep = scene.sim.registry.try_get<simulation::Upkeep>(e))
                         upkeep->called = true;
             }
-            else if (change.id == ui::control_id(MinWaitOn))
+            else if (change.id == ui::screens::control_id(MinWaitOn))
                 wait_on(ride->options.min_wait, MinWait);
-            else if (change.id == ui::control_id(MaxWaitOn))
+            else if (change.id == ui::screens::control_id(MaxWaitOn))
                 wait_on(ride->options.max_wait, MaxWait);
-            else if (change.id == ui::control_id(MinWait))
+            else if (change.id == ui::screens::control_id(MinWait))
                 ride->options.min_wait = change.value;
-            else if (change.id == ui::control_id(MaxWait))
+            else if (change.id == ui::screens::control_id(MaxWait))
                 ride->options.max_wait = change.value;
-            else if (change.id == ui::control_id(WaitFor))
+            else if (change.id == ui::screens::control_id(WaitFor))
                 ride->options.wait_for_load = change.value;
-            else if ((change.id == ui::control_id(Trains) || change.id == ui::control_id(Cars)) && scene.train_limits.contains(ref.index) && ride->base.state != save::AttractionState::Open && assets.install)
+            else if ((change.id == ui::screens::control_id(Trains) || change.id == ui::screens::control_id(Cars)) && scene.train_limits.contains(ref.index) && ride->base.state != save::AttractionState::Open && assets.install)
             {
-                const bool trains = change.id == ui::control_id(Trains);
+                const bool trains = change.id == ui::screens::control_id(Trains);
                 (void)set_trains(device, scene, *assets.install, ref.index, trains ? change.value : ride->train_count, trains ? ride->cars_per_train : change.value);
             }
-            else if (change.id == ui::control_id(CarKind) && scene.train_limits.contains(ref.index) && ride->base.state != save::AttractionState::Open && assets.install && !ride->trains.empty())
+            else if (change.id == ui::screens::control_id(CarKind) && scene.train_limits.contains(ref.index) && ride->base.state != save::AttractionState::Open && assets.install && !ride->trains.empty())
             {
                 // The next kind of train its kind runs, round to the first after the last.
                 const std::vector<std::string>& choices = scene.train_choices[ref.index];
@@ -1576,7 +1576,7 @@ namespace rct3::scene
                         update_platforms(scene, ref.index, assets);
                     }
             }
-            else if (change.id == ui::control_id(Circuits))
+            else if (change.id == ui::screens::control_id(Circuits))
             {
                 // A go under way runs as many times round as the new count, or stops if it is past it.
                 // shortcut: a tracked ride keeps the count but its trains go round once; run the laps once the
@@ -1586,14 +1586,14 @@ namespace rct3::scene
                     if (auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(e))
                         cycle->loops = static_cast<std::uint32_t>(std::max(change.value, 1));
             }
-            else if (const auto show = std::ranges::find(scene.shows, ride->base.id, &save::RideShow::ride); show != scene.shows.end() && (change.id == ui::control_id(ShowTrick) || change.id == ui::control_id(ShowDelete)))
+            else if (const auto show = std::ranges::find(scene.shows, ride->base.id, &save::RideShow::ride); show != scene.shows.end() && (change.id == ui::screens::control_id(ShowTrick) || change.id == ui::screens::control_id(ShowDelete)))
             {
                 // The ride puts the changed show on from its next go.
                 const std::size_t place = std::min(scene.info_section, show->order.size());
-                const std::vector<std::uint32_t> offers = ui::show_offers(*show);
-                if (change.id == ui::control_id(ShowDelete) && place < show->order.size() && show->order.size() > 1)
+                const std::vector<std::uint32_t> offers = ui::screens::show_offers(*show);
+                if (change.id == ui::screens::control_id(ShowDelete) && place < show->order.size() && show->order.size() > 1)
                     show->order.erase(show->order.begin() + static_cast<std::ptrdiff_t>(place));
-                else if (change.id == ui::control_id(ShowTrick) && change.value >= 0 && std::cmp_less(change.value, offers.size()))
+                else if (change.id == ui::screens::control_id(ShowTrick) && change.value >= 0 && std::cmp_less(change.value, offers.size()))
                 {
                     if (place < show->order.size())
                         show->order[place] = offers[static_cast<std::size_t>(change.value)];
@@ -1602,7 +1602,7 @@ namespace rct3::scene
                 }
                 stage_show(scene, *show);
             }
-            else if (change.id == ui::control_id(BlockSection))
+            else if (change.id == ui::screens::control_id(BlockSection))
             {
                 // shortcut: the game also caps the trains at one fewer than the blocks; upgrade with the trains'
                 // limits counting blocks.
@@ -1612,22 +1612,22 @@ namespace rct3::scene
                         for (simulation::Coaster& c : fleet->trains)
                             c.blocks = ride->options.block_sectioned;
             }
-            else if (change.id == ui::control_id(SyncStations))
+            else if (change.id == ui::screens::control_id(SyncStations))
                 ride->options.sync_trains = change.value != 0; // shortcut: stored, stations do not wait for each other yet
-            else if (change.id == ui::control_id(LeaveOnArrival))
+            else if (change.id == ui::screens::control_id(LeaveOnArrival))
                 ride->options.leave_if_other_train_enters_station = change.value != 0;
-            else if (change.id == ui::control_id(LowFriction))
+            else if (change.id == ui::screens::control_id(LowFriction))
             {
                 if (change.value != 0)
                     scene.low_friction.insert(ride->base.id);
                 else
                     scene.low_friction.erase(ride->base.id);
             }
-            else if (change.id == ui::control_id(LaunchSpeed) || change.id == ui::control_id(LiftSpeed))
+            else if (change.id == ui::screens::control_id(LaunchSpeed) || change.id == ui::screens::control_id(LiftSpeed))
             {
                 // The page shows hundredths of the player's unit.
-                const float speed = static_cast<float>(change.value) / 100 / ui::speed_scale(info_units(assets, options).distance);
-                if (change.id == ui::control_id(LaunchSpeed))
+                const float speed = static_cast<float>(change.value) / 100 / ui::screens::speed_scale(info_units(assets, options).distance);
+                if (change.id == ui::screens::control_id(LaunchSpeed))
                 {
                     ride->options.launch_speed = speed;
                     if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
@@ -1644,15 +1644,15 @@ namespace rct3::scene
                                 c.lift_speed = c.station_speed = speed;
                 }
             }
-            else if (change.id >= ui::control_id(SpeedSeries) && change.id <= ui::control_id(LateralSeries))
+            else if (change.id >= ui::screens::control_id(SpeedSeries) && change.id <= ui::screens::control_id(LateralSeries))
             {
-                const auto bit = static_cast<std::uint8_t>(1u << (change.id - ui::control_id(SpeedSeries)));
-                std::uint8_t& shown = scene.graph_series.try_emplace(ride->base.id, ui::kSpeedOnly).first->second;
+                const auto bit = static_cast<std::uint8_t>(1u << (change.id - ui::screens::control_id(SpeedSeries)));
+                std::uint8_t& shown = scene.graph_series.try_emplace(ride->base.id, ui::screens::kSpeedOnly).first->second;
                 shown = static_cast<std::uint8_t>(change.value != 0 ? shown | bit : shown & ~bit);
             }
-            else if (change.id == ui::control_id(Music))
+            else if (change.id == ui::screens::control_id(Music))
                 scene.ride_tunes[ride->base.id] = static_cast<std::size_t>(std::max(change.value, 0));
-            else if (change.id == ui::control_id(QueueSigns))
+            else if (change.id == ui::screens::control_id(QueueSigns))
             {
                 // The button turns them round.
                 if (scene.led_signs.hidden.contains(ride->base.id))
@@ -1772,9 +1772,9 @@ namespace rct3::scene
 
         /// Writes a change the player made on a person's page into the save. Returns whether the page is to be
         /// shown again for its new look.
-        bool change_person(ParkScene& scene, std::size_t shown, const ui::InfoChange& change)
+        bool change_person(ParkScene& scene, std::size_t shown, const ui::screens::InfoChange& change)
         {
-            using enum ui::PersonControl;
+            using enum ui::screens::PersonControl;
             if (shown >= scene.shown_people.size())
                 return false;
             const ShownPerson& p = scene.shown_people[shown];
@@ -1783,7 +1783,7 @@ namespace rct3::scene
             save::Person* person = staff != nullptr ? &staff->person : guest != nullptr ? &guest->person : nullptr;
             if (person == nullptr)
                 return false;
-            if (change.id == ui::person_control(Name))
+            if (change.id == ui::screens::person_control(Name))
             {
                 // A blank name keeps the old one.
                 if (change.text.empty())
@@ -1791,12 +1791,12 @@ namespace rct3::scene
                 person->name = strings::to_utf8(change.text);
                 return true;
             }
-            if (change.id == ui::person_control(ToConsole))
+            if (change.id == ui::screens::person_control(ToConsole))
             {
                 person->thoughts_to_console = !person->thoughts_to_console;
                 return true;
             }
-            if (change.id == ui::person_control(Highlight))
+            if (change.id == ui::screens::person_control(Highlight))
             {
                 person->highlight = !person->highlight;
                 return true;
@@ -1804,37 +1804,37 @@ namespace rct3::scene
             if (staff == nullptr)
                 return false;
             // The details page shows the tools for painting while it goes on.
-            if (change.id == ui::person_control(PatrolPaint))
+            if (change.id == ui::screens::person_control(PatrolPaint))
             {
                 scene.painting_patrol = change.value != 0;
                 return true;
             }
-            if (change.id == ui::person_control(PatrolEdit))
+            if (change.id == ui::screens::person_control(PatrolEdit))
             {
                 scene.painting_patrol = !scene.painting_patrol;
                 return true;
             }
-            if (const entt::entity e = shown_staff(scene); e != entt::null && change.id == ui::person_control(PatrolClear))
+            if (const entt::entity e = shown_staff(scene); e != entt::null && change.id == ui::screens::person_control(PatrolClear))
             {
                 simulation::clear_patrol(scene.sim.registry, e);
                 return true;
             }
-            else if (e != entt::null && change.id == ui::person_control(PatrolFill))
+            else if (e != entt::null && change.id == ui::screens::person_control(PatrolFill))
             {
                 simulation::fill_patrol(scene.sim.registry, e);
                 return true;
             }
-            else if (e != entt::null && change.id == ui::person_control(PatrolZone))
+            else if (e != entt::null && change.id == ui::screens::person_control(PatrolZone))
             {
                 simulation::join_zone(scene.sim.registry, e, static_cast<std::uint32_t>(std::max(change.value, 0)));
                 return true;
             }
-            if (change.id == ui::person_control(PatrolBrush))
+            if (change.id == ui::screens::person_control(PatrolBrush))
             {
                 scene.patrol_brush = change.value;
                 return false;
             }
-            if (change.id == ui::person_control(PatrolCopy))
+            if (change.id == ui::screens::person_control(PatrolCopy))
             {
                 copy_patrol(scene);
                 return true;
@@ -1848,13 +1848,13 @@ namespace rct3::scene
                 copy_mood(care, *staff);
                 return true;
             };
-            if (change.id == ui::person_control(Warn))
+            if (change.id == ui::screens::person_control(Warn))
             {
-                if (care.warnings < ui::kMostWarnings)
+                if (care.warnings < ui::screens::kMostWarnings)
                     simulation::warn(care);
                 return show();
             }
-            if (change.id == ui::person_control(Train))
+            if (change.id == ui::screens::person_control(Train))
             {
                 // Paid for at once, free in a park without money; none when the park cannot afford it.
                 const std::int64_t cost = simulation::training_cost(care);
@@ -1867,12 +1867,12 @@ namespace rct3::scene
                 }
                 return show();
             }
-            if (change.id == ui::person_control(Wage))
+            if (change.id == ui::screens::person_control(Wage))
             {
                 simulation::set_wage_level(care, change.value);
                 (void)show();
             }
-            else if (change.id == ui::person_control(Costume))
+            else if (change.id == ui::screens::person_control(Costume))
             {
                 person->sub_type = static_cast<std::uint8_t>(change.value);
                 // They change into it, where the install has it.
@@ -1888,9 +1888,9 @@ namespace rct3::scene
                     std::tie(person->appearance.head, person->appearance.body, person->appearance.legs) = std::tuple(save::PeopleRef { worn[0]->id }, save::PeopleRef { worn[1]->id }, save::PeopleRef { worn[2]->id });
                 }
             }
-            else if (change.id >= ui::person_control(Task))
+            else if (change.id >= ui::screens::person_control(Task))
             {
-                staff->task_flags ^= 1 << (change.id - ui::person_control(Task));
+                staff->task_flags ^= 1 << (change.id - ui::screens::person_control(Task));
                 care.tasks = staff->task_flags;
             }
             return false;
@@ -1899,14 +1899,14 @@ namespace rct3::scene
         /// Paints the clothes of pot `pot` of the person shown as `shown` in colour `colour`.
         void paint_person(ParkScene& scene, std::size_t shown, std::size_t pot, std::size_t colour)
         {
-            if (shown >= scene.shown_people.size() || ui::kUpperPalette + pot >= park::person::PersonLook { }.colours.size())
+            if (shown >= scene.shown_people.size() || ui::screens::kUpperPalette + pot >= park::person::PersonLook { }.colours.size())
                 return;
             change_people(scene);
             ShownPerson& p = scene.shown_people[shown];
             const auto c = static_cast<std::uint8_t>(colour);
-            p.pose.look.colours.at(ui::kUpperPalette + pot) = c;
+            p.pose.look.colours.at(ui::screens::kUpperPalette + pot) = c;
             save::Person* person = p.staff ? &scene.people.staff.at(p.saved).person : &scene.people.guests.at(p.saved).person;
-            person->appearance.palettes.at(ui::kUpperPalette + pot) = c;
+            person->appearance.palettes.at(ui::screens::kUpperPalette + pot) = c;
         }
 
         /// Whether the object is a prop the panel can tell about: one of the park's own.
@@ -1962,7 +1962,7 @@ namespace rct3::scene
             return model != scene.models.end() ? model->second.price : 0;
         }
 
-        ui::ManagementFacts management_facts(const ParkScene& scene)
+        ui::screens::ManagementFacts management_facts(const ParkScene& scene)
         {
             const auto broken = simulation::replacement(scene.sim, [&](std::uint64_t object) { return replace_price(scene, object); });
             return { .park = &scene.park_model, .state = &scene.park, .people = &scene.people, .rides = &scene.rides, .broken_items = broken.items, .replace_cost = broken.cost, .goals = scene.goal_readings, .animal_houses = !scene.sim.registry.view<simulation::AnimalHouse>().empty(), .staff_looks = scene.staff_looks, .zero_time = scene.park.zero_time };
@@ -1991,9 +1991,9 @@ namespace rct3::scene
         }
 
         /// Opens the info panel on what a management window's row is about, if the park shows it.
-        void open_row(ParkScene& scene, ui::InfoPanel& panel, ui::ManagementRow row, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        void open_row(ParkScene& scene, ui::screens::InfoPanel& panel, ui::screens::ManagementRow row, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
-            using Kind = ui::ManagementRow::Kind;
+            using Kind = ui::screens::ManagementRow::Kind;
             if (row.kind == Kind::Ride || row.kind == Kind::Stall)
             {
                 open_info(scene, panel, { row.kind == Kind::Stall ? park::AttractionRef::Kind::Stall : park::AttractionRef::Kind::Ride, row.index }, assets, options);
@@ -2137,18 +2137,18 @@ namespace rct3::scene
         return park::track::open_refusal(r, rules, state, scene.building.ride == ride, course, joined);
     }
 
-    std::vector<ui::StateChoice> state_choices(const ParkScene& scene, park::AttractionRef ref)
+    std::vector<ui::screens::StateChoice> state_choices(const ParkScene& scene, park::AttractionRef ref)
     {
         if (ref.kind == park::AttractionRef::Kind::Stall)
-            return ui::state_choices(ui::AttractionKind::Stall);
+            return ui::screens::state_choices(ui::screens::AttractionKind::Stall);
         const bool tested = ref.index >= scene.track_rules.size() || !scene.track_rules[ref.index].never_tested;
-        return ui::state_choices(ui::attraction_kind(scene.rides.rides.at(ref.index)), tested);
+        return ui::screens::state_choices(ui::screens::attraction_kind(scene.rides.rides.at(ref.index)), tested);
     }
 
-    std::vector<ui::InfoChoice> state_fan(const ParkScene& scene, park::AttractionRef ref, const ui::StringTable& strings)
+    std::vector<ui::screens::InfoChoice> state_fan(const ParkScene& scene, park::AttractionRef ref, const ui::StringTable& strings)
     {
-        std::vector<ui::InfoChoice> fan;
-        for (const ui::StateChoice& c : state_choices(scene, ref))
+        std::vector<ui::screens::InfoChoice> fan;
+        for (const ui::screens::StateChoice& c : state_choices(scene, ref))
         {
             // Greyed only where the attraction cannot be put in that state, saying why; the state it is in stays live.
             const auto refused = state_refusal(scene, ref, c.state);
@@ -2216,7 +2216,7 @@ namespace rct3::scene
         if (!asking && !build_list_open(desktop.root()))
         {
             const auto escape = std::ranges::remove_if(keys.presses, [](const ui::KeyPress& k) { return k.key == ui::Key::Escape; });
-            auto tools = desktop.root().find_as<ui::ToolRow>(kToolsName);
+            auto tools = desktop.root().find_as<ui::screens::ToolRow>(kToolsName);
             if (!escape.empty() && scene.holding)
                 hold_person(scene, { }, { }, false, true);
             else if (!escape.empty() && scene.riding_along())
@@ -2241,7 +2241,7 @@ namespace rct3::scene
         if (!scene.carried_read && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Stall)
         {
             load_carried(device, scene, assets);
-            if (auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName))
+            if (auto info = desktop.root().find_as<ui::screens::InfoPanel>(kInfoName))
                 show_info_page(scene, *info, assets, options);
         }
 
@@ -2261,7 +2261,7 @@ namespace rct3::scene
             // A lazy river has no trains: swimmers float round it; nor has a slide climbed on foot.
             if ((r.mode == save::OperatingMode::LazyRiver || (!coaster && !boats) || set_trains(device, scene, *assets.install, ride, r.train_count, r.cars_per_train)) && !ghosted && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
                 scene.placing.unjoined.push_back(ride);
-            if (auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName); info && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && scene.shown->index == ride)
+            if (auto info = desktop.root().find_as<ui::screens::InfoPanel>(kInfoName); info && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && scene.shown->index == ride)
                 show_info_page(scene, *info, assets, options);
         }
 
@@ -2271,7 +2271,7 @@ namespace rct3::scene
         const bool over_interface = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { elapsed, scene.current_fonts }); });
         // Riding along, the park takes no clicks: the whole screen counts as interface.
         const bool over = over_interface || scene.riding_along();
-        if (auto panel = scene.riding_along() ? desktop.root().find_as<ui::RideCameraPanel>(kRideCameraName) : std::nullopt)
+        if (auto panel = scene.riding_along() ? desktop.root().find_as<ui::screens::RideCameraPanel>(kRideCameraName) : std::nullopt)
         {
             const glm::vec2 moved(input.pointer.position.x - scene.last_pointer.x, input.pointer.position.y - scene.last_pointer.y);
             panel->pointer_moved(glm::length(moved) / scale);
@@ -2298,7 +2298,7 @@ namespace rct3::scene
         if (!scene.riding_along())
             profiling::section("Camera", [&] { move_camera(scene, input, over, options, elapsed); });
         scene.zooming = input.zoom_in_key == input.zoom_out_key ? 0 : (input.zoom_in_key ? 1 : -1);
-        auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName);
+        auto info = desktop.root().find_as<ui::screens::InfoPanel>(kInfoName);
         // What a click would open, for the pointer's look; not looked at every frame, as picking walks the park.
         scene.since_hover_pick += elapsed;
         if (over || !pointer.present || !info || scene.turning || scene.dragging)
@@ -2348,11 +2348,11 @@ namespace rct3::scene
             }
             else
                 deleting.dragging = false;
-            if (auto panel = desktop.root().find_as<ui::DeleteAreaPanel>(kDeleteAreaName); panel && area)
+            if (auto panel = desktop.root().find_as<ui::screens::DeleteAreaPanel>(kDeleteAreaName); panel && area)
             {
                 panel->set_marked(deleting.corner.has_value());
                 const auto asked = panel->take_action();
-                if (asked == ui::DeleteAreaAction::Delete && deleting.corner && deleting.other)
+                if (asked == ui::screens::DeleteAreaAction::Delete && deleting.corner && deleting.other)
                     delete_area(device, scene, assets, *deleting.corner, *deleting.other);
                 if (asked)
                 {
@@ -2446,10 +2446,10 @@ namespace rct3::scene
                         // An entrance opens the park's window, and its own panel too on the park's land.
                         const save::PlacedObject& o = scene.objects[*picked.prop];
                         if (park_entrance(scene, o))
-                            open_management_window(desktop, ui::ManagementTopic::ParkOperations, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
+                            open_management_window(desktop, ui::screens::ManagementTopic::ParkOperations, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
                         // A changing room's window opens on the tab last open in one.
                         if (pool_room(scene, o))
-                            open_prop(scene, *info, *picked.prop, assets, options, scene.room_tab.value_or(ui::SceneryTab::RoomDetails));
+                            open_prop(scene, *info, *picked.prop, assets, options, scene.room_tab.value_or(ui::screens::SceneryTab::RoomDetails));
                         else if (clickable_prop(scene, o))
                             open_prop(scene, *info, *picked.prop, assets, options);
                     }
@@ -2497,13 +2497,13 @@ namespace rct3::scene
             // The customers page follows the running park; it has no controls to lose a half-made change in. Any page
             // shows again once a crash closed its ride.
             scene.since_info_page += elapsed;
-            if (scene.shown && (std::exchange(scene.shown_closed, false) || (scene.simulate && scene.info_tab == ui::AttractionTab::Customers && scene.since_info_page >= kLivePageInterval)))
+            if (scene.shown && (std::exchange(scene.shown_closed, false) || (scene.simulate && scene.info_tab == ui::screens::AttractionTab::Customers && scene.since_info_page >= kLivePageInterval)))
             {
                 scene.since_info_page = 0;
                 show_info_page(scene, *info, assets, options);
             }
             const auto action = info->take_action();
-            if (action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::SceneryTab::Destroy)
+            if (action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::screens::SceneryTab::Destroy)
             {
                 // Pulled down at once and paid for, as in the game; the panel goes with it.
                 if (delete_props(device, scene, assets, std::span(&*scene.shown_prop, 1)).has_value())
@@ -2513,14 +2513,14 @@ namespace rct3::scene
                 }
             }
             // A changing room's construction tab opens the pool panel, to build on at its complex.
-            if (action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::SceneryTab::RoomConstruction)
-                if (const auto pools = scene.desktop->root().find_as<ui::PoolPanel>("pool_panel"); !pools || !pools->showing())
+            if (action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::screens::SceneryTab::RoomConstruction)
+                if (const auto pools = scene.desktop->root().find_as<ui::screens::PoolPanel>("pool_panel"); !pools || !pools->showing())
                     toggle_pool_panel(device, scene, assets, info_units(assets, options).currency);
-            if (action && scene.shown_person && *action < scene.person_tabs.size() && scene.person_tabs[*action] == ui::PersonTab::Party)
+            if (action && scene.shown_person && *action < scene.person_tabs.size() && scene.person_tabs[*action] == ui::screens::PersonTab::Party)
                 open_party(scene, *info, *scene.shown_person, assets, options);
-            if (action && scene.shown && *action < scene.shown_tabs.size() && scene.shown_tabs[*action] == ui::AttractionTab::Construction)
+            if (action && scene.shown && *action < scene.shown_tabs.size() && scene.shown_tabs[*action] == ui::screens::AttractionTab::Construction)
                 scene.construct_requested = *scene.shown;
-            const auto door = [](const ui::InfoChange& c) { return c.id == ui::control_id(ui::AttractionControl::Entrance) || c.id == ui::control_id(ui::AttractionControl::Exit); };
+            const auto door = [](const ui::screens::InfoChange& c) { return c.id == ui::screens::control_id(ui::screens::AttractionControl::Entrance) || c.id == ui::screens::control_id(ui::screens::AttractionControl::Exit); };
             // A tracked ride's entrance or exit goes beside its station, a flat ride's round its ground, placed as its
             // kind's item has it; a flat ride takes its own item, whose size it stands on.
             const auto start_door = [&](std::size_t ride, bool exit) {
@@ -2548,49 +2548,50 @@ namespace rct3::scene
             }
             if (const auto change = info->take_change(); change && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && door(*change))
             {
-                if (start_door(scene.shown->index, change->id == ui::control_id(ui::AttractionControl::Exit)))
+                if (start_door(scene.shown->index, change->id == ui::screens::control_id(ui::screens::AttractionControl::Exit)))
                 {
                     stop_land_tools(scene);
                     info->hide();
                 }
             }
-            else if (change && scene.shown && change->id == ui::control_id(ui::AttractionControl::Demolish))
+            else if (change && scene.shown && change->id == ui::screens::control_id(ui::screens::AttractionControl::Demolish))
                 ask_demolish(scene, *assets.strings, assets.palette, { *scene.shown });
             // A pool ride's join button opens the pool panel on its paths page, the window staying, as in the game.
-            else if (change && scene.shown && change->id == ui::control_id(ui::AttractionControl::JoinPool))
-                toggle_pool_panel(device, scene, assets, info_units(assets, options).currency, ui::PoolPage::Paths);
+            else if (change && scene.shown && change->id == ui::screens::control_id(ui::screens::AttractionControl::JoinPool))
+                toggle_pool_panel(device, scene, assets, info_units(assets, options).currency, ui::screens::PoolPage::Paths);
             else if (change && scene.shown)
             {
                 change_attraction(device, scene, *info, *scene.shown, *change, assets, options);
                 // Longer trains fit fewer times round the track, so the page shows the new limits; a new name and
                 // the graph's series show.
-                if (change->id == ui::control_id(ui::AttractionControl::Trains) || change->id == ui::control_id(ui::AttractionControl::Cars) || change->id == ui::control_id(ui::AttractionControl::Name) || change->id == ui::control_id(ui::AttractionControl::CarKind) || (change->id >= ui::control_id(ui::AttractionControl::SpeedSeries) && change->id <= ui::control_id(ui::AttractionControl::LateralSeries)))
+                if (change->id == ui::screens::control_id(ui::screens::AttractionControl::Trains) || change->id == ui::screens::control_id(ui::screens::AttractionControl::Cars) || change->id == ui::screens::control_id(ui::screens::AttractionControl::Name) || change->id == ui::screens::control_id(ui::screens::AttractionControl::CarKind)
+                    || (change->id >= ui::screens::control_id(ui::screens::AttractionControl::SpeedSeries) && change->id <= ui::screens::control_id(ui::screens::AttractionControl::LateralSeries)))
                     show_info_page(scene, *info, assets, options);
             }
             else if (const auto room = change && scene.shown_prop ? pool_room(scene, scene.objects[*scene.shown_prop]) : std::nullopt)
             {
                 const save::PlacedObject& o = scene.objects[*scene.shown_prop];
-                if (change->id == ui::kPoolDeleteRoomControl)
+                if (change->id == ui::screens::kPoolDeleteRoomControl)
                 {
                     scene.pools.rooms.erase(scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room));
                     pools_changed(device, scene, assets);
                     scene.shown_prop.reset();
                     info->hide();
                 }
-                else if (change->id == ui::kPoolDeleteComplexControl)
+                else if (change->id == ui::screens::kPoolDeleteComplexControl)
                     ask_sell_pool_complex(scene, *assets.strings, assets.palette, *room);
-                else if (change->id == ui::kPoolMechanicControl)
+                else if (change->id == ui::screens::kPoolMechanicControl)
                 {
                     if (const entt::entity e = room_entity(scene, *room); e != entt::null)
                         scene.sim.registry.get_or_emplace<simulation::Upkeep>(e).called = true;
                 }
-                else if (change->id == ui::kPoolInspectionControl)
+                else if (change->id == ui::screens::kPoolInspectionControl)
                 {
                     // Each room is inspected on its own, as each ride is.
                     if (const entt::entity e = room_entity(scene, *room); e != entt::null && change->value >= 0 && std::cmp_less(change->value, simulation::kInspectionSeconds.size()))
                         scene.sim.registry.get_or_emplace<simulation::Upkeep>(e).inspect_every = { simulation::kInspectionSeconds[static_cast<std::size_t>(change->value)] };
                 }
-                else if (change->id == ui::kPoolLocateControl)
+                else if (change->id == ui::screens::kPoolLocateControl)
                 {
                     const auto model = scene.models.find(park::object::model_ref(o));
                     scene.camera.target = glm::vec3(park::object::placed_transform(o, model == scene.models.end() ? nullptr : &model->second, scene.grid, scene.fitted)[3]);
@@ -2601,19 +2602,19 @@ namespace rct3::scene
                     // settings, all its rooms alike. A blank name keeps the old one, as an attraction's does.
                     for (const std::size_t r : park::pools::pool_complex_rooms(scene.pools, *room))
                     {
-                        if (change->id == ui::kPoolTicketControl)
+                        if (change->id == ui::screens::kPoolTicketControl)
                             scene.pools.rooms[r].ticket = change->value;
-                        else if (change->id == ui::kPoolFluidControl)
+                        else if (change->id == ui::screens::kPoolFluidControl)
                             scene.pools.rooms[r].fluid = static_cast<std::uint8_t>(std::clamp(change->value, 0, 2));
-                        else if (change->id == ui::kPoolWaveHeightControl)
+                        else if (change->id == ui::screens::kPoolWaveHeightControl)
                             scene.pools.rooms[r].waves.height = static_cast<float>(change->value);
-                        else if (change->id == ui::kPoolWaveLengthControl)
+                        else if (change->id == ui::screens::kPoolWaveLengthControl)
                             scene.pools.rooms[r].waves.frequency = park::pools::kLeastWaveFrequency + park::pools::kMostWaveFrequency - static_cast<float>(change->value);
-                        else if (change->id == ui::kPoolWaveOnControl)
+                        else if (change->id == ui::screens::kPoolWaveOnControl)
                             scene.pools.rooms[r].waves.on = static_cast<float>(change->value);
-                        else if (change->id == ui::kPoolWaveEveryControl)
+                        else if (change->id == ui::screens::kPoolWaveEveryControl)
                             scene.pools.rooms[r].waves.every = static_cast<float>(change->value) * 60;
-                        else if (change->id == ui::kPoolNameControl && change->text.find_first_not_of(u' ') != std::u16string::npos)
+                        else if (change->id == ui::screens::kPoolNameControl && change->text.find_first_not_of(u' ') != std::u16string::npos)
                             scene.pools.rooms[r].complex_name = strings::to_utf8(change->text);
                     }
                     open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
@@ -2626,13 +2627,13 @@ namespace rct3::scene
             }
             else if (change && scene.shown_person)
             {
-                if (change->id == ui::person_control(ui::PersonControl::PickUp))
+                if (change->id == ui::screens::person_control(ui::screens::PersonControl::PickUp))
                 {
                     // Only those walking in the park; riders are left be.
                     if (!pick_up_person(scene, *scene.shown_person) && (scene.shown_people[*scene.shown_person].guest == entt::null || scene.sim.registry.all_of<simulation::Left>(scene.shown_people[*scene.shown_person].guest)))
                         simulation::post(scene.park.messages, { .text_key = "Pincer_NotOwned" });
                 }
-                else if (change->id == ui::person_control(ui::PersonControl::Sack))
+                else if (change->id == ui::screens::person_control(ui::screens::PersonControl::Sack))
                 {
                     fire(scene, *scene.shown_person);
                     scene.shown_person.reset();
@@ -2641,7 +2642,7 @@ namespace rct3::scene
                 else if (change_person(scene, *scene.shown_person, *change))
                 {
                     show_info_page(scene, *info, assets, options);
-                    if (change->id == ui::person_control(ui::PersonControl::Name))
+                    if (change->id == ui::screens::person_control(ui::screens::PersonControl::Name))
                         name_cheats(scene, assets, *scene.shown_person, change->text);
                 }
             }
@@ -2651,7 +2652,7 @@ namespace rct3::scene
             if (paint && scene.shown_prop)
             {
                 // Pot k paints the k-th slot the prop takes; free, as in the game.
-                const std::vector<std::size_t> slots = ui::scenery_paint_slots(prop_facts(scene, *scene.shown_prop));
+                const std::vector<std::size_t> slots = ui::screens::scenery_paint_slots(prop_facts(scene, *scene.shown_prop));
                 if (paint->pot < slots.size())
                     paint_prop(device, scene, *scene.shown_prop, slots[paint->pot], static_cast<std::int32_t>(paint->colour));
             }
@@ -2667,9 +2668,9 @@ namespace rct3::scene
             }
             else if (tab && !scene.shown_party.empty())
             {
-                if (*tab < ui::kPartyTabs.size())
+                if (*tab < ui::screens::kPartyTabs.size())
                 {
-                    scene.party_tab = ui::kPartyTabs[*tab].tab;
+                    scene.party_tab = ui::screens::kPartyTabs[*tab].tab;
                     show_info_page(scene, *info, assets, options);
                 }
             }
@@ -2696,7 +2697,7 @@ namespace rct3::scene
             if (const auto room = choice && scene.shown_prop ? pool_room(scene, scene.objects[*scene.shown_prop]) : std::nullopt)
             {
                 // The whole complex opened or closed, all its rooms alike; then shown again for the flag's new look.
-                const std::vector<ui::StateChoice> states = ui::state_choices(ui::AttractionKind::Stall);
+                const std::vector<ui::screens::StateChoice> states = ui::screens::state_choices(ui::screens::AttractionKind::Stall);
                 if (choice->second < states.size())
                     for (const std::size_t r : park::pools::pool_complex_rooms(scene.pools, *room))
                         scene.pools.rooms[r].open = states[choice->second].state == save::AttractionState::Open;
@@ -2705,8 +2706,8 @@ namespace rct3::scene
             if (choice && scene.shown)
             {
                 // Put in the state picked, then shown again for the state tab's new look.
-                const ui::AttractionFacts f = facts(scene, *scene.shown);
-                const std::vector<ui::StateChoice> states = state_choices(scene, *scene.shown);
+                const ui::screens::AttractionFacts f = facts(scene, *scene.shown);
+                const std::vector<ui::screens::StateChoice> states = state_choices(scene, *scene.shown);
                 if (save::AttractionCommon* common = attraction_common(scene, *scene.shown); common != nullptr && choice->second < states.size())
                 {
                     const save::AttractionState state = states[choice->second].state;
@@ -2726,7 +2727,7 @@ namespace rct3::scene
                 scene.shown_party.clear();
             }
         }
-        if (const auto asked = std::exchange(scene.rename_requested, std::nullopt); asked && change_person(scene, asked->first, ui::InfoChange { .id = ui::person_control(ui::PersonControl::Name), .text = asked->second }))
+        if (const auto asked = std::exchange(scene.rename_requested, std::nullopt); asked && change_person(scene, asked->first, ui::screens::InfoChange { .id = ui::screens::person_control(ui::screens::PersonControl::Name), .text = asked->second }))
             name_cheats(scene, assets, asked->first, asked->second);
         if (const auto asked = std::exchange(scene.info_requested, std::nullopt); asked && info)
             open_info(scene, *info, *asked, assets, options);
@@ -2816,7 +2817,7 @@ namespace rct3::scene
         });
         profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
         profiling::section("ZooAnimals", [&] { place_animals(scene); });
-        auto bar = desktop.root().find_as<ui::ParkBar>(kBarName);
+        auto bar = desktop.root().find_as<ui::screens::ParkBar>(kBarName);
         if (bar)
         {
             if (const auto asked = bar->take_speed())
@@ -2824,9 +2825,9 @@ namespace rct3::scene
             if (const auto mode = bar->take_day_mode())
                 simulation::change_mode(scene.day, *mode);
             if (bar->objective_button().take_click())
-                open_management_window(desktop, ui::ManagementTopic::Objectives, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
+                open_management_window(desktop, ui::screens::ManagementTopic::Objectives, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
             if (bar->take_finances())
-                open_management_window(desktop, ui::ManagementTopic::Finances, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
+                open_management_window(desktop, ui::screens::ManagementTopic::Finances, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
         }
         for (const ui::PlayCommand c : input.commands)
         {
@@ -2838,15 +2839,15 @@ namespace rct3::scene
             else if (c == ui::PlayCommand::ToggleRideCamera && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride)
                 ride_cam(scene, assets, scene.shown->index);
             else if (c == ui::PlayCommand::NextRideCamera)
-                ride_action(scene, assets, ui::RideCameraAction::NextCamera);
+                ride_action(scene, assets, ui::screens::RideCameraAction::NextCamera);
             else if (c == ui::PlayCommand::PreviousRideCamera)
-                ride_action(scene, assets, ui::RideCameraAction::PreviousCamera);
+                ride_action(scene, assets, ui::screens::RideCameraAction::PreviousCamera);
             else if (c == ui::PlayCommand::NextRide)
-                ride_action(scene, assets, ui::RideCameraAction::NextTrain);
+                ride_action(scene, assets, ui::screens::RideCameraAction::NextTrain);
             else if (c == ui::PlayCommand::PreviousRide)
-                ride_action(scene, assets, ui::RideCameraAction::PreviousTrain);
+                ride_action(scene, assets, ui::screens::RideCameraAction::PreviousTrain);
             else if (c == ui::PlayCommand::NextCoasterCamType)
-                ride_action(scene, assets, ui::RideCameraAction::ChangeType);
+                ride_action(scene, assets, ui::screens::RideCameraAction::ChangeType);
         }
         profiling::section("Simulation", [&] {
             // The park's day, its calendar and its messages' ages run at the speed picked, and stop while paused.
@@ -3217,12 +3218,12 @@ namespace rct3::scene
                             if (const auto* door = r.try_get<simulation::PoolDoor>(at))
                                 if (const auto room = std::ranges::find_if(scene.pools.rooms, [&](const auto& room) { return room.col == door->col && room.row == door->row; }); room != scene.pools.rooms.end())
                                     message.subject_name = room->complex_name;
-                            message.panel = ui::message_panel(finding == TooDear || finding == TooCheap ? ui::AttractionTab::Items : (finding == NoMechanic || finding == NoMechanicCanReach || finding == BadZones) && !stall ? ui::AttractionTab::Maintenance : ui::AttractionTab::Mode);
+                            message.panel = ui::screens::message_panel(finding == TooDear || finding == TooCheap ? ui::screens::AttractionTab::Items : (finding == NoMechanic || finding == NoMechanicCanReach || finding == BadZones) && !stall ? ui::screens::AttractionTab::Maintenance : ui::screens::AttractionTab::Mode);
                         }
                         // shortcut: a worker is named but cannot be gone to from the message; add it once messages open people.
                         else if (const auto shown = std::ranges::find(scene.shown_people, at, &ShownPerson::guest); r.valid(at) && shown != scene.shown_people.end() && shown->staff && shown->saved < scene.people.staff.size())
                         {
-                            message.subject_name = strings::to_utf8(ui::person_name({ .staff = &scene.people.staff[shown->saved] }, *assets.strings));
+                            message.subject_name = strings::to_utf8(ui::screens::person_name({ .staff = &scene.people.staff[shown->saved] }, *assets.strings));
                             if (finding == Quit)
                                 quitting.push_back(at);
                         }
@@ -3246,7 +3247,7 @@ namespace rct3::scene
                         if (const auto shown = std::ranges::find(scene.shown_people, e, &ShownPerson::guest); shown != scene.shown_people.end())
                         {
                             const auto i = static_cast<std::size_t>(shown - scene.shown_people.begin());
-                            if (auto panel = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); panel && scene.shown_person == i)
+                            if (auto panel = scene.desktop->root().find_as<ui::screens::InfoPanel>(kInfoName); panel && scene.shown_person == i)
                                 panel->hide();
                             fire(scene, i);
                         }
@@ -3291,7 +3292,7 @@ namespace rct3::scene
                         if (const auto shown = std::ranges::find(scene.shown_people, e, &ShownPerson::guest); shown != scene.shown_people.end())
                         {
                             const auto i = static_cast<std::size_t>(shown - scene.shown_people.begin());
-                            if (auto panel = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); panel && scene.shown_person == i)
+                            if (auto panel = scene.desktop->root().find_as<ui::screens::InfoPanel>(kInfoName); panel && scene.shown_person == i)
                                 panel->hide();
                             fire(scene, i);
                         }
@@ -3474,9 +3475,9 @@ namespace rct3::scene
                     const bool stall = upkeep.break_in.value >= 0;
                     const auto tell = [&](std::string_view key) {
                         if (stall)
-                            simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = attraction.saved != 0 ? std::optional(attraction.saved) : std::nullopt, .panel = ui::message_panel(ui::AttractionTab::View) }); // Named once shown, as the window names it
+                            simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = attraction.saved != 0 ? std::optional(attraction.saved) : std::nullopt, .panel = ui::screens::message_panel(ui::screens::AttractionTab::View) }); // Named once shown, as the window names it
                         else
-                            simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = ui::message_panel(ui::AttractionTab::Maintenance), .field_key = std::string(ui::breakdown_key(static_cast<save::BreakdownKind>(std::to_underlying(upkeep.kind)))) });
+                            simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = ui::screens::message_panel(ui::screens::AttractionTab::Maintenance), .field_key = std::string(ui::screens::breakdown_key(static_cast<save::BreakdownKind>(std::to_underlying(upkeep.kind)))) });
                     };
                     const auto* shop = scene.sim.registry.try_get<simulation::Shop>(e);
                     const bool cash = shop != nullptr && shop->product == simulation::Product::CashMachine;
@@ -3517,7 +3518,7 @@ namespace rct3::scene
                     else
                         scene.broken_rides.erase(told);
                     // Its window, if open, shows it broken down or mended.
-                    if (auto panel = scene.desktop->root().find_as<ui::InfoPanel>(kInfoName); panel && panel->visible && scene.shown && scene.shown == attraction_with(scene, attraction.saved))
+                    if (auto panel = scene.desktop->root().find_as<ui::screens::InfoPanel>(kInfoName); panel && panel->visible && scene.shown && scene.shown == attraction_with(scene, attraction.saved))
                         show_info_page(scene, *panel, assets, options);
                     if (stall)
                     {
@@ -3562,18 +3563,18 @@ namespace rct3::scene
         const profiling::Scope zone("Bar");
         if (bar)
         {
-            ui::ParkBarUnits units;
+            ui::screens::ParkBarUnits units;
             units.currency = ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
             units.fahrenheit = options.choice(config::GameOption::TemperatureUnits) == kFahrenheit;
             // The game writes its times with am and pm in English only.
             units.twelve_hour = assets.fonts.language == ui::kDefaultLanguage;
-            ui::ParkBarValues values = ui::park_bar_values(scene.park, scene.day.time, *assets.strings, units);
+            ui::screens::ParkBarValues values = ui::screens::park_bar_values(scene.park, scene.day.time, *assets.strings, units);
             // The player chooses how the day goes in a sandbox, whatever its money.
             if (scene.game.sandbox)
                 values.day_mode = scene.day.mode;
             bar->show(values);
         }
-        if (auto messages = desktop.root().find_as<ui::MessageDrawer>(kMessagesName))
+        if (auto messages = desktop.root().find_as<ui::screens::MessageDrawer>(kMessagesName))
         {
             // shortcut: only rides and stalls can be gone to, not people or path items; add them when a message names one.
             // Saved parks keep messages without their subject's name, so it is filled in from the attraction.
@@ -3581,9 +3582,9 @@ namespace rct3::scene
             {
                 const auto ref = m.subject && m.subject_name.empty() ? attraction_with(scene, *m.subject) : std::nullopt;
                 if (ref)
-                    m.subject_name = strings::to_utf8(ui::attraction_name(ref->kind == park::AttractionRef::Kind::Stall ? scene.rides.stalls[ref->index].base : scene.rides.rides[ref->index].base, *assets.strings));
+                    m.subject_name = strings::to_utf8(ui::screens::attraction_name(ref->kind == park::AttractionRef::Kind::Stall ? scene.rides.stalls[ref->index].base : scene.rides.rides[ref->index].base, *assets.strings));
             }
-            std::vector<ui::DrawerMessage> shown = ui::drawer_messages(scene.park.messages, *assets.strings, messages->style());
+            std::vector<ui::screens::DrawerMessage> shown = ui::screens::drawer_messages(scene.park.messages, *assets.strings, messages->style());
             // A message about an attraction shows the attraction's own icon, the one it has in the build lists, and
             // the camera when it has none.
             const auto items = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready ? std::span(scene.build.items.get()) : std::span<const park::BuildItem> { };
@@ -3606,12 +3607,12 @@ namespace rct3::scene
             const auto message = serial ? std::ranges::find(scene.park.messages.list, *serial, &simulation::ParkMessage::serial) : scene.park.messages.list.end();
             // An award's icon opens the park's awards, as the game does.
             if (message != scene.park.messages.list.end() && message->award)
-                open_management_window(desktop, ui::ManagementTopic::ParkOperations, ui::kAwardsTab, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
+                open_management_window(desktop, ui::screens::ManagementTopic::ParkOperations, ui::screens::kAwardsTab, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
             // An attraction's takes the view to it and opens the info panel on it.
             else if (const auto ref = message != scene.park.messages.list.end() && message->subject ? attraction_with(scene, *message->subject) : std::nullopt; ref && info)
             {
                 // At the tab the message names; one the attraction lacks opens its view.
-                open_info(scene, *info, *ref, assets, options, ui::message_tab(message->panel.value_or(-1)));
+                open_info(scene, *info, *ref, assets, options, ui::screens::message_tab(message->panel.value_or(-1)));
                 // The middle of the whole attraction, the same on every click, as in the game.
                 const glm::vec3 at = scene.view_camera.target;
                 // Close enough to make it out, never further out than the player was.
@@ -3639,14 +3640,14 @@ namespace rct3::scene
                 scene.camera = park::on_ground(park::panned(scene.camera, 0, slide), scene.grid);
             }
         }
-        if (auto tools = desktop.root().find_as<ui::ToolRow>(kToolsName))
+        if (auto tools = desktop.root().find_as<ui::screens::ToolRow>(kToolsName))
         {
-            const std::optional<ui::ParkTool> pressed = tools->take_pressed();
-            if (pressed == ui::ParkTool::Leave)
+            const std::optional<ui::screens::ParkTool> pressed = tools->take_pressed();
+            if (pressed == ui::screens::ParkTool::Leave)
                 ask_leave(scene, *assets.strings, assets.palette);
-            else if (pressed == ui::ParkTool::Map)
+            else if (pressed == ui::screens::ParkTool::Map)
                 toggle_park_map(scene.map, desktop, *assets.strings, assets.palette);
-            else if (pressed == ui::ParkTool::Paths)
+            else if (pressed == ui::screens::ParkTool::Paths)
             {
                 close_track_building(scene); // One tool panel at the bottom left at a time
                 stop_ride_placing(scene);
@@ -3658,7 +3659,7 @@ namespace rct3::scene
             }
             if (const auto item = tools->take_item())
             {
-                if (*item == ui::ToolItem::ShapeGround || *item == ui::ToolItem::PaintGround || *item == ui::ToolItem::Water || *item == ui::ToolItem::Waterfalls)
+                if (*item == ui::screens::ToolItem::ShapeGround || *item == ui::screens::ToolItem::PaintGround || *item == ui::screens::ToolItem::Water || *item == ui::screens::ToolItem::Waterfalls)
                 {
                     close_track_building(scene);
                     stop_ride_placing(scene);
@@ -3667,9 +3668,9 @@ namespace rct3::scene
                     stop_structure_tools(scene);
                     stop_pooling(scene);
                     using enum LandTools::Tool;
-                    toggle_land_tool(scene, *item == ui::ToolItem::ShapeGround ? Shape : (*item == ui::ToolItem::PaintGround ? Paint : (*item == ui::ToolItem::Water ? Water : Waterfall)), assets);
+                    toggle_land_tool(scene, *item == ui::screens::ToolItem::ShapeGround ? Shape : (*item == ui::screens::ToolItem::PaintGround ? Paint : (*item == ui::screens::ToolItem::Water ? Water : Waterfall)), assets);
                 }
-                else if (*item == ui::ToolItem::DeleteOne || *item == ui::ToolItem::DeleteArea)
+                else if (*item == ui::screens::ToolItem::DeleteOne || *item == ui::screens::ToolItem::DeleteArea)
                 {
                     close_track_building(scene);
                     stop_ride_placing(scene);
@@ -3677,15 +3678,15 @@ namespace rct3::scene
                     stop_land_tools(scene);
                     stop_structure_tools(scene);
                     stop_pooling(scene);
-                    const auto tool = *item == ui::ToolItem::DeleteOne ? DeleteTools::Tool::One : DeleteTools::Tool::Area;
+                    const auto tool = *item == ui::screens::ToolItem::DeleteOne ? DeleteTools::Tool::One : DeleteTools::Tool::Area;
                     const bool out = scene.deleting.tool == tool;
                     stop_deleting(scene);
                     if (!out)
                         scene.deleting.tool = tool;
                     if (!out && tool == DeleteTools::Tool::Area)
-                        desktop.root().add<ui::DeleteAreaPanel>(std::string(kDeleteAreaName), skins::delete_area_panel_style(), *assets.strings);
+                        desktop.root().add<ui::screens::DeleteAreaPanel>(std::string(kDeleteAreaName), skins::delete_area_panel_style(), *assets.strings);
                 }
-                else if (*item == ui::ToolItem::StructureGrab || *item == ui::ToolItem::StructureList)
+                else if (*item == ui::screens::ToolItem::StructureGrab || *item == ui::screens::ToolItem::StructureList)
                 {
                     close_track_building(scene);
                     stop_ride_placing(scene);
@@ -3693,9 +3694,9 @@ namespace rct3::scene
                     stop_land_tools(scene);
                     stop_deleting(scene);
                     stop_pooling(scene);
-                    toggle_structure_tool(scene, *item == ui::ToolItem::StructureGrab ? StructureTools::Tool::Grab : StructureTools::Tool::Place, assets);
+                    toggle_structure_tool(scene, *item == ui::screens::ToolItem::StructureGrab ? StructureTools::Tool::Grab : StructureTools::Tool::Place, assets);
                 }
-                else if (*item == ui::ToolItem::Pools)
+                else if (*item == ui::screens::ToolItem::Pools)
                 {
                     // The pools button opens the pool panel, as in the game, not a list.
                     close_track_building(scene);
@@ -3708,33 +3709,33 @@ namespace rct3::scene
                     close_build_list(desktop.root());
                     toggle_pool_panel(device, scene, assets, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
                 }
-                else if (*item == ui::ToolItem::People)
+                else if (*item == ui::screens::ToolItem::People)
                     scene.show_people = tools->switched_on(*item);
-                else if (*item == ui::ToolItem::Scenery)
+                else if (*item == ui::screens::ToolItem::Scenery)
                     scene.show_scenery = tools->switched_on(*item);
-                else if (*item == ui::ToolItem::SeeThroughGround)
+                else if (*item == ui::screens::ToolItem::SeeThroughGround)
                     scene.see_through_ground = !tools->switched_on(*item); // Switched on, the ground shows whole
-                else if (*item == ui::ToolItem::Grid)
+                else if (*item == ui::screens::ToolItem::Grid)
                     scene.show_grid = tools->switched_on(*item);
-                else if (*item == ui::ToolItem::Contours)
+                else if (*item == ui::screens::ToolItem::Contours)
                     scene.show_contours = tools->switched_on(*item);
-                else if (*item == ui::ToolItem::PathHeights)
+                else if (*item == ui::screens::ToolItem::PathHeights)
                     scene.show_path_heights = tools->switched_on(*item);
-                else if (*item == ui::ToolItem::RideHeights)
+                else if (*item == ui::screens::ToolItem::RideHeights)
                     scene.show_ride_heights = tools->switched_on(*item);
-                else if (*item == ui::ToolItem::Money)
+                else if (*item == ui::screens::ToolItem::Money)
                     scene.show_money = tools->switched_on(*item);
-                else if (*item == ui::ToolItem::GuestPayments)
+                else if (*item == ui::screens::ToolItem::GuestPayments)
                     scene.show_guest_payments = tools->switched_on(*item);
-                else if (*item == ui::ToolItem::Supports)
+                else if (*item == ui::screens::ToolItem::Supports)
                 {
                     scene.show_supports = tools->switched_on(*item);
                     scene.levels = { };
                     scene.since_rebuild = kObjectRebuildInterval;
                 }
-                else if (*item == ui::ToolItem::Options || *item == ui::ToolItem::About || *item == ui::ToolItem::Save || *item == ui::ToolItem::Load)
+                else if (*item == ui::screens::ToolItem::Options || *item == ui::screens::ToolItem::About || *item == ui::screens::ToolItem::Save || *item == ui::screens::ToolItem::Load)
                     scene.window_requests.push_back(*item);
-                else if (const auto topic = ui::management_topic(*item))
+                else if (const auto topic = ui::screens::management_topic(*item))
                     toggle_management_window(desktop, *topic, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
                 else
                     open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *tools, *assets.strings, assets.palette, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
@@ -3815,7 +3816,7 @@ namespace rct3::scene
                 if (building)
                 {
                     close_build_list(desktop.root());
-                    if (auto tools = desktop.root().find_as<ui::ToolRow>(kToolsName); tools && tools->open_menu() && (*tools->open_menu() == ui::ParkTool::Rides || *tools->open_menu() == ui::ParkTool::Shops || *tools->open_menu() == ui::ParkTool::Scenery || *tools->open_menu() == ui::ParkTool::Paths))
+                    if (auto tools = desktop.root().find_as<ui::screens::ToolRow>(kToolsName); tools && tools->open_menu() && (*tools->open_menu() == ui::screens::ParkTool::Rides || *tools->open_menu() == ui::screens::ParkTool::Shops || *tools->open_menu() == ui::screens::ParkTool::Scenery || *tools->open_menu() == ui::screens::ParkTool::Paths))
                         tools->close_menu();
                 }
             }
@@ -3827,19 +3828,19 @@ namespace rct3::scene
             heights->labels = height_labels(scene, { view.width(), view.height() });
             // While the park bar's highlights are on, the people the player picked have their name and what
             // they are doing floating over them.
-            if (const auto bar = desktop.root().find_as<ui::ParkBar>(kBarName); bar && bar->highlights() && view.width() > 0 && view.height() > 0)
+            if (const auto bar = desktop.root().find_as<ui::screens::ParkBar>(kBarName); bar && bar->highlights() && view.width() > 0 && view.height() > 0)
             {
                 constexpr float kHighlightLift = 2.4f; ///< Chosen by eye: metres over their feet, clear of their head
                 const glm::mat4 camera = park::view_projection(scene.camera, view.width() / view.height());
                 for (const ShownPerson& p : scene.shown_people)
                 {
-                    const ui::PersonFacts f { .guest = p.staff ? nullptr : &scene.people.guests[p.saved], .staff = p.staff ? &scene.people.staff[p.saved] : nullptr, .people = &scene.people, .rides = &scene.rides };
+                    const ui::screens::PersonFacts f { .guest = p.staff ? nullptr : &scene.people.guests[p.saved], .staff = p.staff ? &scene.people.staff[p.saved] : nullptr, .people = &scene.people, .rides = &scene.rides };
                     if (!f.person()->highlight)
                         continue;
                     const glm::vec4 clip = camera * (p.pose.world * glm::vec4(0, kHighlightLift, 0, 1));
                     const glm::vec2 ndc = glm::vec2(clip) / clip.w;
                     if (clip.w > 0 && std::abs(ndc.x) <= 1 && std::abs(ndc.y) <= 1)
-                        heights->labels.push_back({ { (ndc.x + 1) / 2 * view.width(), (1 - ndc.y) / 2 * view.height() }, ui::person_name(f, *assets.strings) + u"\n" + ui::person_doing(f, *assets.strings) });
+                        heights->labels.push_back({ { (ndc.x + 1) / 2 * view.width(), (1 - ndc.y) / 2 * view.height() }, ui::screens::person_name(f, *assets.strings) + u"\n" + ui::screens::person_doing(f, *assets.strings) });
                 }
             }
         }
@@ -3859,13 +3860,13 @@ namespace rct3::scene
         {
             if (!p.staff || p.saved >= scene.staff_looks.size())
                 continue;
-            ui::StaffLook& look = scene.staff_looks[p.saved];
-            look.colours = { p.pose.look.colours.at(ui::kUpperPalette), p.pose.look.colours.at(ui::kUpperPalette + 1) };
+            ui::screens::StaffLook& look = scene.staff_looks[p.saved];
+            look.colours = { p.pose.look.colours.at(ui::screens::kUpperPalette), p.pose.look.colours.at(ui::screens::kUpperPalette + 1) };
             if (const auto* patrol = scene.sim.registry.valid(p.guest) ? scene.sim.registry.try_get<simulation::Patrol>(p.guest) : nullptr)
                 look.patrol_tiles = patrol->tiles.size();
             look.painting_patrol = p.guest != entt::null && p.guest == shown_staff(scene) && scene.painting_patrol;
         }
-        const ui::ManagementFacts facts = management_facts(scene);
+        const ui::screens::ManagementFacts facts = management_facts(scene);
         const ManagementAsks asks = update_management_windows(desktop, facts, *assets.strings, info_units(assets, options));
         if (asks.row && info)
             open_row(scene, *info, *asks.row, assets, options);
@@ -3883,8 +3884,8 @@ namespace rct3::scene
             return p != scene.shown_people.end() ? std::optional(static_cast<std::size_t>(p - scene.shown_people.begin())) : std::nullopt;
         };
         // A worker's patrol button in the list opens their details, where painting their area is done.
-        if (asks.staff.change && asks.staff.change->second.id == ui::person_control(ui::PersonControl::PatrolPaint))
-            scene.person_tab = ui::PersonTab::General;
+        if (asks.staff.change && asks.staff.change->second.id == ui::screens::person_control(ui::screens::PersonControl::PatrolPaint))
+            scene.person_tab = ui::screens::PersonTab::General;
         if (const auto who = asks.staff.open ? shown_worker(*asks.staff.open) : std::nullopt; who && info)
             open_person(scene, *info, *who, assets, options);
         if (const auto who = asks.staff.centre ? shown_worker(*asks.staff.centre) : std::nullopt)
@@ -3898,7 +3899,7 @@ namespace rct3::scene
         if (const auto change = asks.staff.change; change && shown_worker(change->first))
         {
             const std::size_t who = *shown_worker(change->first);
-            if (change->second.id == ui::person_control(ui::PersonControl::Sack))
+            if (change->second.id == ui::screens::person_control(ui::screens::PersonControl::Sack))
             {
                 if (info && scene.shown_person == who)
                 {
@@ -3913,18 +3914,18 @@ namespace rct3::scene
                 // unless the patrol button opened their panel for painting.
                 const auto kept = std::exchange(scene.shown_person, who);
                 const bool changed = change_person(scene, who, change->second);
-                if (change->second.id != ui::person_control(ui::PersonControl::PatrolPaint))
+                if (change->second.id != ui::screens::person_control(ui::screens::PersonControl::PatrolPaint))
                     scene.shown_person = kept;
                 if (changed && info && scene.shown_person == who)
                     show_info_page(scene, *info, assets, options);
             }
         }
         // Each listed ride that may take the state takes it; the others stay as they are.
-        for (const ui::ManagementRow& r : asks.listed)
+        for (const ui::screens::ManagementRow& r : asks.listed)
         {
-            if (r.kind == ui::ManagementRow::Kind::Ride && r.index < scene.rides.rides.size())
+            if (r.kind == ui::screens::ManagementRow::Kind::Ride && r.index < scene.rides.rides.size())
                 (void)change_ride_state(scene, r.index, *asks.state_all);
-            else if (r.kind == ui::ManagementRow::Kind::Stall && r.index < scene.rides.stalls.size())
+            else if (r.kind == ui::screens::ManagementRow::Kind::Stall && r.index < scene.rides.stalls.size())
                 set_attraction_state(scene, scene.rides.stalls[r.index].base, *asks.state_all);
         }
         if (asks.park_open)
@@ -3961,7 +3962,7 @@ namespace rct3::scene
         profiling::section("Footpaths", [&] { update_footpaths(device, scene, assets, options); });
         profiling::section("Supports", [&] { refresh_supports(scene, assets); });
         follow_footpaths(scene, elapsed);
-        if (auto guide = desktop.root().find_as<ui::TutorialGuide>(kGuideName); guide && guide->take_quit())
+        if (auto guide = desktop.root().find_as<ui::screens::TutorialGuide>(kGuideName); guide && guide->take_quit())
             ask_leave(scene, *assets.strings, assets.palette);
         if (auto question = desktop.root().find_as<ui::QuestionBox>(kQuestionName))
         {
@@ -3974,7 +3975,7 @@ namespace rct3::scene
                 if (const auto room = std::exchange(scene.pool_complex_asked, std::nullopt); room && *room < scene.pools.rooms.size())
                 {
                     delete_pool_complex(device, scene, assets, *room);
-                    if (auto info = desktop.root().find_as<ui::InfoPanel>(kInfoName); info && scene.shown_prop)
+                    if (auto info = desktop.root().find_as<ui::screens::InfoPanel>(kInfoName); info && scene.shown_prop)
                     {
                         scene.shown_prop.reset();
                         info->hide();
@@ -4031,7 +4032,7 @@ namespace rct3::scene
         pointer.zooming = scene.zooming;
         pointer.over_pickable = scene.hover_pickable;
         // While the path panel shows its controls, a click on the ground starts a path there.
-        if (auto paths = scene.desktop->root().find_as<const ui::FootpathPanel>(kFootpathPanelName); paths && paths->showing() && paths->page() == ui::FootpathPage::Controls)
+        if (auto paths = scene.desktop->root().find_as<const ui::screens::FootpathPanel>(kFootpathPanelName); paths && paths->showing() && paths->page() == ui::screens::FootpathPage::Controls)
             pointer.tool = ui::PointerTool::Path;
         return ui::park_cursor(pointer);
     }

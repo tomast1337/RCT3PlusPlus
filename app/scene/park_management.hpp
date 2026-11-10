@@ -19,10 +19,10 @@ namespace rct3::scene
 {
 
     /// Opens the window of `topic`, or closes it when it is open: the menu item works as a switch.
-    void toggle_management_window(ui::Desktop& desktop, ui::ManagementTopic topic, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::InfoUnits& units);
+    void toggle_management_window(ui::Desktop& desktop, ui::screens::ManagementTopic topic, const ui::screens::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::InfoUnits& units);
 
     /// Opens the window of `topic` at tab `tab`, or turns the open one to it.
-    void open_management_window(ui::Desktop& desktop, ui::ManagementTopic topic, std::size_t tab, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::InfoUnits& units);
+    void open_management_window(ui::Desktop& desktop, ui::screens::ManagementTopic topic, std::size_t tab, const ui::screens::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::InfoUnits& units);
 
     /// Whether any management window is open.
     [[nodiscard]] bool management_window_open(const ui::Desktop& desktop);
@@ -33,20 +33,20 @@ namespace rct3::scene
     /// What the player asked of the management windows this frame.
     struct ManagementAsks
     {
-        std::optional<ui::ManagementRow> row; ///< The row activated
-        bool replace_broken = false;          ///< Replace every broken path item (ui::kReplaceBrokenButton)
-        std::optional<bool> park_open;        ///< Open the park, or close it (ui::kOpenCloseParkButton)
-        bool centre_entrance = false;         ///< Take the view to the next entrance (ui::kCentreEntranceButton)
-        bool buy_land = false;                ///< Take out the tool buying land (ui::kBuyLandButton)
-        bool buy_rights = false;              ///< Or building rights (ui::kBuyRightsButton)
-        /// Put every attraction in `listed` in this state (ui::kOpenCloseAllButton)
+        std::optional<ui::screens::ManagementRow> row; ///< The row activated
+        bool replace_broken = false;                   ///< Replace every broken path item (ui::screens::kReplaceBrokenButton)
+        std::optional<bool> park_open;                 ///< Open the park, or close it (ui::screens::kOpenCloseParkButton)
+        bool centre_entrance = false;                  ///< Take the view to the next entrance (ui::screens::kCentreEntranceButton)
+        bool buy_land = false;                         ///< Take out the tool buying land (ui::screens::kBuyLandButton)
+        bool buy_rights = false;                       ///< Or building rights (ui::screens::kBuyRightsButton)
+        /// Put every attraction in `listed` in this state (ui::screens::kOpenCloseAllButton)
         std::optional<save::AttractionState> state_all;
-        std::vector<ui::ManagementRow> listed;
-        ui::RosterAsks staff; ///< Of the staff window
+        std::vector<ui::screens::ManagementRow> listed;
+        ui::screens::RosterAsks staff; ///< Of the staff window
     };
 
     /// Writes the open windows' pages again where the player picked a tab or where it is time to, and returns
     /// what the player asked.
-    [[nodiscard]] ManagementAsks update_management_windows(ui::Desktop& desktop, const ui::ManagementFacts& facts, const ui::StringTable& strings, const ui::InfoUnits& units);
+    [[nodiscard]] ManagementAsks update_management_windows(ui::Desktop& desktop, const ui::screens::ManagementFacts& facts, const ui::StringTable& strings, const ui::screens::InfoUnits& units);
 
 } // namespace rct3::scene

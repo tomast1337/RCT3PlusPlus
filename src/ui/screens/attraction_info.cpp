@@ -15,7 +15,7 @@
 #include <tuple>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -1105,4 +1105,4 @@ namespace rct3::ui
         return page;
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

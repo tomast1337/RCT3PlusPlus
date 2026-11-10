@@ -323,9 +323,9 @@ namespace rct3::ui
     {
         const Rect r = rect();
         const float divider_end = r.x0 + kRightStart;
-        draw_skin(context.list, context.skins.find(style_.left_frame), { r.x0, r.y0, r.x0 + park_bar::kLeftWidth, r.y1 });
-        draw_skin(context.list, context.skins.find(style_.divider), { r.x0 + park_bar::kLeftWidth, r.y0, divider_end, r.y1 });
-        draw_skin(context.list, context.skins.find(style_.right_frame), { divider_end, r.y0, r.x1, r.y1 });
+        skin::draw_skin(context.list, context.skins.find(style_.left_frame), { r.x0, r.y0, r.x0 + park_bar::kLeftWidth, r.y1 });
+        skin::draw_skin(context.list, context.skins.find(style_.divider), { r.x0 + park_bar::kLeftWidth, r.y0, divider_end, r.y1 });
+        skin::draw_skin(context.list, context.skins.find(style_.right_frame), { divider_end, r.y0, r.x1, r.y1 });
 
         if (!rating_)
             return;

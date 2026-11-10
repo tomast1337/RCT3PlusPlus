@@ -165,7 +165,7 @@ namespace rct3::ui
     void Menu::draw(DrawContext& context) const
     {
         if (!style.background.empty())
-            draw_skin(context.list, context.skins.find(style.background), rect());
+            skin::draw_skin(context.list, context.skins.find(style.background), rect());
         const auto f = context.fonts.get(style.font);
         for (std::size_t i = 0; i < items.size(); ++i)
         {
@@ -180,7 +180,7 @@ namespace rct3::ui
             if (highlighted_ == i)
             {
                 if (const auto s = style.highlight_skin.empty() ? std::nullopt : context.skins.find(style.highlight_skin))
-                    draw_skin(context.list, s, row);
+                    skin::draw_skin(context.list, s, row);
                 else
                     context.list.fill(row, style.highlight_colour);
             }
@@ -191,7 +191,7 @@ namespace rct3::ui
                 const float y = row.y0 + std::round((row.height() - size) / 2);
                 const Rect box { x, y, x + size, y + size };
                 if (const auto tick = style.tick.empty() ? std::nullopt : context.skins.find(style.tick))
-                    draw_skin(context.list, tick, box);
+                    skin::draw_skin(context.list, tick, box);
                 else
                     context.list.fill(box, style.text_colour);
             }

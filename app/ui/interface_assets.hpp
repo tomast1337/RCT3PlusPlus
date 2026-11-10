@@ -9,7 +9,7 @@
 #include "ui/font/set.hpp"
 #include "ui/interface_fonts.hpp"
 #include "ui/palette.hpp"
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 #include "ui/string_table.hpp"
 #include "ui/ui_renderer.hpp"
 #include "ui/ui_textures.hpp"
@@ -29,7 +29,7 @@ namespace rct3::ui
     {
         UiRenderer renderer;
         UiTextures textures;
-        SkinLibrary skins;
+        skin::SkinLibrary skins;
         /// The colours of everything drawn in code and of the game's styles. shortcut: chosen before the skins
         /// load and fixed after, windows keep the colours they opened with; upgrade when a palette can be
         /// picked in the options, by recolouring the skins (use_coded_skins) and reopening the windows.

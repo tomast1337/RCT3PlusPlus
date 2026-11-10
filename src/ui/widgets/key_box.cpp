@@ -63,7 +63,7 @@ namespace rct3::ui
     {
         const std::string& back = has_keyboard_focus() && !focused_skin.empty() ? focused_skin : skin;
         if (!back.empty())
-            draw_skin(context.list, context.skins.find(back), rect());
+            skin::draw_skin(context.list, context.skins.find(back), rect());
         const auto f = context.fonts.get(font);
         if (!f)
             return;

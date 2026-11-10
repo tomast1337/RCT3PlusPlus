@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/construction_panel.hpp"
 
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 
 #include <algorithm>
 #include <format>
@@ -354,7 +354,7 @@ namespace rct3::ui
     {
         const Rect r = rect();
         const float dial = dial_left(static_cast<std::size_t>(std::ranges::count_if(view_.toggles, [](const auto& t) { return t.has_value(); })));
-        draw_skin(context.list, context.skins.find(style_.dial), { r.x0 + dial, r.y0 + cp::kDialTop, r.x0 + dial + cp::kDialSize, r.y0 + cp::kDialTop + cp::kDialSize });
+        skin::draw_skin(context.list, context.skins.find(style_.dial), { r.x0 + dial, r.y0 + cp::kDialTop, r.x0 + dial + cp::kDialSize, r.y0 + cp::kDialTop + cp::kDialSize });
         // The lines that part the buttons from the name below them, and both from the list.
         context.list.fill({ r.x0 + cp::kLabelLeft - 4, r.y0 + cp::kDividerTop, r.x0 + list_left_ - 3, r.y0 + cp::kDividerTop + 1 }, style_.divider);
         context.list.fill({ r.x0 + list_left_ - 3, r.y0, r.x0 + list_left_ - 2, r.y1 }, style_.divider);

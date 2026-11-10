@@ -6,11 +6,12 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
+using namespace rct3::ui::skin;
 using namespace rct3::ui::font;
 
 namespace
 {
-    SkinRef skin(TextureId texture)
+    SkinRef skin_ref(TextureId texture)
     {
         SkinRef s;
         s.layout.xs = { 0, 8 };
@@ -87,9 +88,9 @@ TEST_CASE("buttons draw the family member for their state, then the icon")
 {
     Fixture f;
     SkinLibrary skins;
-    skins.add("BtnUp", skin(1));
-    skins.add("BtnUpOver", skin(2));
-    skins.add("Icon", skin(7));
+    skins.add("BtnUp", skin_ref(1));
+    skins.add("BtnUpOver", skin_ref(2));
+    skins.add("Icon", skin_ref(7));
     DrawList list;
     const FontSet fonts;
     DrawContext context { list, skins, fonts };
@@ -119,7 +120,7 @@ TEST_CASE("a toggle whose face has one picture shows lit while on and dimmed whi
     Fixture f;
     f.button.toggle = true;
     SkinLibrary skins;
-    skins.add("Btn", skin(1));
+    skins.add("Btn", skin_ref(1));
     DrawList list;
     const FontSet fonts;
     DrawContext context { list, skins, fonts };

@@ -24,15 +24,15 @@ namespace rct3::ui
         return true;
     }
 
-    SkinState Button::state() const
+    skin::SkinState Button::state() const
     {
         if (!enabled)
-            return SkinState::Disabled;
+            return skin::SkinState::Disabled;
         if (pressed() || kept_down)
-            return SkinState::Pressed;
+            return skin::SkinState::Pressed;
         if (toggle && on)
-            return hovered() ? SkinState::DownOver : SkinState::Down;
-        return hovered() ? SkinState::UpOver : SkinState::Up;
+            return hovered() ? skin::SkinState::DownOver : skin::SkinState::Down;
+        return hovered() ? skin::SkinState::UpOver : skin::SkinState::Up;
     }
 
     void Button::on_release(Point, bool inside)
@@ -74,17 +74,17 @@ namespace rct3::ui
 
     void Button::draw(DrawContext& context) const
     {
-        const SkinState s = state();
+        const skin::SkinState s = state();
         const Rect r = face();
         // A toggle on a face with one picture for every state would look held down, so dimmed, while on: it
         // shows lit while on and dimmed while off instead.
-        SkinState look = s;
-        if (toggle && s != SkinState::Pressed && s != SkinState::Disabled && as_pointer(context.skins.find(skin, SkinState::Down)) == as_pointer(context.skins.find(skin, SkinState::Up)))
-            look = on ? (hovered() ? SkinState::UpOver : SkinState::Up) : SkinState::Down;
-        draw_skin_state(context.list, context.skins, skin, look, r);
+        skin::SkinState look = s;
+        if (toggle && s != skin::SkinState::Pressed && s != skin::SkinState::Disabled && as_pointer(context.skins.find(skin, skin::SkinState::Down)) == as_pointer(context.skins.find(skin, skin::SkinState::Up)))
+            look = on ? (hovered() ? skin::SkinState::UpOver : skin::SkinState::Up) : skin::SkinState::Down;
+        skin::draw_skin_state(context.list, context.skins, skin, look, r);
 
         // The face looks pushed in while held: what is on it moves by one unit.
-        const float nudge = s == SkinState::Pressed ? 1.0f : 0.0f;
+        const float nudge = s == skin::SkinState::Pressed ? 1.0f : 0.0f;
         if (const auto glyph = icon.empty() ? std::nullopt : context.skins.find(icon))
         {
             // The icon grows with the face.
@@ -94,7 +94,7 @@ namespace rct3::ui
             const float h = std::round(glyph->size()[1] * grow);
             const float x = std::round(r.x0 + (r.width() - w) / 2) + nudge;
             const float y = std::round(r.y0 + (r.height() - h) / 2) + nudge;
-            draw_skin(context.list, glyph, { x, y, x + w, y + h }, s == SkinState::Disabled ? hex("#ffffff80") : icon_colour);
+            skin::draw_skin(context.list, glyph, { x, y, x + w, y + h }, s == skin::SkinState::Disabled ? hex("#ffffff80") : icon_colour);
         }
 
         const auto f = text.empty() ? std::nullopt : context.fonts.get(font);

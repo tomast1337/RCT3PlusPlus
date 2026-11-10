@@ -203,8 +203,8 @@ namespace rct3::ui
     {
         const auto arrow = [&](const std::string& skin, const Rect& box, int direction) {
             const bool at_end = direction > 0 ? value_ >= std::max(minimum, maximum) : value_ <= std::min(minimum, maximum);
-            const SkinState state = !enabled || at_end ? SkinState::Disabled : held_ == direction && pressed() ? SkinState::Pressed : SkinState::Up;
-            draw_skin_state(context.list, context.skins, skin, state, box);
+            const skin::SkinState state = !enabled || at_end ? skin::SkinState::Disabled : held_ == direction && pressed() ? skin::SkinState::Pressed : skin::SkinState::Up;
+            skin::draw_skin_state(context.list, context.skins, skin, state, box);
         };
         arrow(style_.up, up_arrow(), 1);
         arrow(style_.down, down_arrow(), -1);

@@ -7,6 +7,7 @@
 
 using namespace rct3;
 using namespace rct3::ui;
+using namespace rct3::ui::skin;
 using namespace rct3::ui::font;
 
 TEST_CASE("labels draw in their role's font and skip roles without one")

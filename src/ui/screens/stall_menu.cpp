@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/stall_menu.hpp"
 
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 #include "ui/text_layout.hpp"
 #include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/scroll_area.hpp"
@@ -433,9 +433,9 @@ namespace rct3::ui
 
     void StallMenu::draw(DrawContext& context) const
     {
-        draw_skin(context.list, context.skins.find(style_.bin), bin_rect(), bin_pressed_ ? style_.picked : kWhite);
+        skin::draw_skin(context.list, context.skins.find(style_.bin), bin_rect(), bin_pressed_ ? style_.picked : kWhite);
         for (std::size_t i = 0; i < view_.goods.size(); ++i)
-            draw_skin(context.list, context.skins.find(view_.goods[i].icon), good_rect(i));
+            skin::draw_skin(context.list, context.skins.find(view_.goods[i].icon), good_rect(i));
         // The tick's words, beside it.
         if (const auto f = context.fonts.get(font::FontRole::Small))
         {
@@ -457,7 +457,7 @@ namespace rct3::ui
                 for (std::size_t k = 0; k < rows_[r].extras.size(); ++k)
                 {
                     const float x = left + static_cast<float>(k) * h;
-                    draw_skin(context.list, context.skins.find(view_.extras[rows_[r].extras[k]].icon), { x, row.y0, x + h, row.y1 });
+                    skin::draw_skin(context.list, context.skins.find(view_.extras[rows_[r].extras[k]].icon), { x, row.y0, x + h, row.y1 });
                 }
                 continue;
             }
@@ -466,7 +466,7 @@ namespace rct3::ui
                 context.list.fill(row, style_.picked);
             else
                 fill_row(context.list, style_.rows, row, i);
-            draw_skin(context.list, context.skins.find(view_.lines[i].icon), { row.x0, row.y0, row.x0 + h, row.y1 }, drag_ && drag_->moving && drag_->line == i ? Color { 255, 255, 255, 96 } : kWhite);
+            skin::draw_skin(context.list, context.skins.find(view_.lines[i].icon), { row.x0, row.y0, row.x0 + h, row.y1 }, drag_ && drag_->moving && drag_->line == i ? Color { 255, 255, 255, 96 } : kWhite);
         }
     }
 
@@ -485,7 +485,7 @@ namespace rct3::ui
                 context.list.fill({ pane.x0, y - 1, back_->rect().x1, y + 1 }, style_.drop);
             context.list.pop_clip();
         }
-        draw_skin(context.list, context.skins.find(icon), { drag_->at.x - h / 2, drag_->at.y - h / 2, drag_->at.x + h / 2, drag_->at.y + h / 2 });
+        skin::draw_skin(context.list, context.skins.find(icon), { drag_->at.x - h / 2, drag_->at.y - h / 2, drag_->at.x + h / 2, drag_->at.y + h / 2 });
     }
 
 } // namespace rct3::ui

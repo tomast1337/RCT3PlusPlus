@@ -75,7 +75,7 @@ namespace rct3::ui
         const Rect r = box(style, context.fonts, view);
         if (!font || r.empty())
             return;
-        draw_skin(context.list, context.skins.find(style.skin), r);
+        skin::draw_skin(context.list, context.skins.find(style.skin), r);
         const Rect inner { r.x0 + style.padding.x0, r.y0 + style.padding.y0, r.x1 - style.padding.x1, r.y1 - style.padding.y1 };
         draw_text(context.list, *font, text_, inner, { style.colour, Align::Start, Align::Start, true });
     }

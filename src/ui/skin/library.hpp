@@ -16,7 +16,7 @@
 #include "strings/ascii.hpp"
 #include "ui/coded_frame.hpp"
 #include "ui/draw_list.hpp"
-#include "ui/skin.hpp"
+#include "ui/skin/skin.hpp"
 
 #include <array>
 #include <cstdint>
@@ -25,7 +25,7 @@
 #include <string>
 #include <string_view>
 
-namespace rct3::ui
+namespace rct3::ui::skin
 {
 
     struct SkinRef
@@ -90,4 +90,4 @@ namespace rct3::ui
     /// shows on plain skins.
     void draw_skin_state(DrawList& list, const SkinLibrary& skins, std::string_view family, SkinState state, const Rect& rect);
 
-} // namespace rct3::ui
+} // namespace rct3::ui::skin

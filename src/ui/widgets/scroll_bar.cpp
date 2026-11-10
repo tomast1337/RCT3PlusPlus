@@ -174,20 +174,20 @@ namespace rct3::ui
     {
         const ScrollBarParts p = parts();
         const bool idle = range() <= 0 || !enabled;
-        draw_skin(context.list, context.skins.find(style_.rail), p.track);
+        skin::draw_skin(context.list, context.skins.find(style_.rail), p.track);
         const auto arrow_tint = [&](Part part) {
             if (idle)
                 return kIdleTint;
             return held_ == part && pressed() ? kHeldTint : kWhite;
         };
-        draw_skin(context.list, context.skins.find(style_.back_arrow), p.back, arrow_tint(Part::Back));
-        draw_skin(context.list, context.skins.find(style_.forward_arrow), p.forward, arrow_tint(Part::Forward));
+        skin::draw_skin(context.list, context.skins.find(style_.back_arrow), p.back, arrow_tint(Part::Back));
+        skin::draw_skin(context.list, context.skins.find(style_.forward_arrow), p.forward, arrow_tint(Part::Forward));
         if (p.rider.empty())
             return;
-        SkinState state = hovered() ? SkinState::UpOver : SkinState::Up;
+        skin::SkinState state = hovered() ? skin::SkinState::UpOver : skin::SkinState::Up;
         if (held_ == Part::Rider)
-            state = SkinState::Pressed;
-        draw_skin(context.list, context.skins.find(style_.rider, state), p.rider);
+            state = skin::SkinState::Pressed;
+        skin::draw_skin(context.list, context.skins.find(style_.rider, state), p.rider);
     }
 
 } // namespace rct3::ui

@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/skin.hpp"
+#include "ui/skin/skin.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::ui;
+using namespace rct3::ui::skin;
 
 namespace
 {
-    ovl::GuiSkin skin(ovl::GuiSkinKind kind, std::vector<std::int32_t> coordinates)
+    ovl::GuiSkin gui_skin(ovl::GuiSkinKind kind, std::vector<std::int32_t> coordinates)
     {
         return { static_cast<std::uint32_t>(kind), "atlas", std::move(coordinates) };
     }
@@ -18,7 +19,7 @@ TEST_CASE("skin coordinates split into lines per kind")
 {
     SUBCASE("rect lists two corners")
     {
-        const auto layout = skin_layout(skin(ovl::GuiSkinKind::Rect, { 4, 8, 20, 30 }));
+        const auto layout = skin_layout(gui_skin(ovl::GuiSkinKind::Rect, { 4, 8, 20, 30 }));
         REQUIRE(layout);
         CHECK(layout->x_count == 2);
         CHECK(layout->xs[0] == 4);
@@ -28,26 +29,26 @@ TEST_CASE("skin coordinates split into lines per kind")
     }
     SUBCASE("three-cell kinds have four lines on their long axis")
     {
-        const auto h = skin_layout(skin(ovl::GuiSkinKind::HorizontalThree, { 0, 2, 10, 12, 5, 9 }));
+        const auto h = skin_layout(gui_skin(ovl::GuiSkinKind::HorizontalThree, { 0, 2, 10, 12, 5, 9 }));
         REQUIRE(h);
         CHECK(h->x_count == 4);
         CHECK(h->y_count == 2);
-        const auto v = skin_layout(skin(ovl::GuiSkinKind::VerticalThree, { 5, 9, 0, 2, 10, 12 }));
+        const auto v = skin_layout(gui_skin(ovl::GuiSkinKind::VerticalThree, { 5, 9, 0, 2, 10, 12 }));
         REQUIRE(v);
         CHECK(v->x_count == 2);
         CHECK(v->y_count == 4);
     }
     SUBCASE("bad input is refused")
     {
-        CHECK_FALSE(skin_layout(skin(ovl::GuiSkinKind::NinePatch, { 0, 1, 2, 3 })));
-        CHECK_FALSE(skin_layout(skin(ovl::GuiSkinKind::HorizontalThree, { 0, 10, 6, 12, 0, 8 })));
+        CHECK_FALSE(skin_layout(gui_skin(ovl::GuiSkinKind::NinePatch, { 0, 1, 2, 3 })));
+        CHECK_FALSE(skin_layout(gui_skin(ovl::GuiSkinKind::HorizontalThree, { 0, 10, 6, 12, 0, 8 })));
         CHECK_FALSE(skin_layout({ 77, "atlas", { } }));
     }
 }
 
 TEST_CASE("a rectangle given backwards is the picture mirrored")
 {
-    const auto layout = skin_layout(skin(ovl::GuiSkinKind::Rect, { 20, 8, 4, 30 }));
+    const auto layout = skin_layout(gui_skin(ovl::GuiSkinKind::Rect, { 20, 8, 4, 30 }));
     REQUIRE(layout);
     CHECK(layout->mirror_x);
     CHECK_FALSE(layout->mirror_y);
@@ -59,7 +60,7 @@ TEST_CASE("a rectangle given backwards is the picture mirrored")
     CHECK(pieces.items[0].uv.x1 == doctest::Approx(4.0f / 32));
     CHECK(pieces.items[0].uv.y0 == doctest::Approx(8.0f / 32));
 
-    const auto upside_down = skin_layout(skin(ovl::GuiSkinKind::Rect, { 4, 30, 20, 8 }));
+    const auto upside_down = skin_layout(gui_skin(ovl::GuiSkinKind::Rect, { 4, 30, 20, 8 }));
     REQUIRE(upside_down);
     CHECK(upside_down->mirror_y);
     CHECK(skin_pieces(*upside_down, { 0, 0, 16, 22 }, 32, 32).items[0].uv.y0 == doctest::Approx(30.0f / 32));
@@ -67,7 +68,7 @@ TEST_CASE("a rectangle given backwards is the picture mirrored")
 
 TEST_CASE("a nine-patch keeps its corners and stretches the rest")
 {
-    const auto layout = skin_layout(skin(ovl::GuiSkinKind::NinePatch, { 0, 4, 12, 16, 0, 4, 12, 16 }));
+    const auto layout = skin_layout(gui_skin(ovl::GuiSkinKind::NinePatch, { 0, 4, 12, 16, 0, 4, 12, 16 }));
     REQUIRE(layout);
     const auto pieces = skin_pieces(*layout, { 100, 200, 200, 260 }, 64, 32);
     REQUIRE(pieces.count == 9);
@@ -81,7 +82,7 @@ TEST_CASE("a nine-patch keeps its corners and stretches the rest")
 
 TEST_CASE("a frame leaves the centre out")
 {
-    const auto layout = skin_layout(skin(ovl::GuiSkinKind::Frame, { 0, 4, 12, 16, 0, 4, 12, 16 }));
+    const auto layout = skin_layout(gui_skin(ovl::GuiSkinKind::Frame, { 0, 4, 12, 16, 0, 4, 12, 16 }));
     REQUIRE(layout);
     const auto pieces = skin_pieces(*layout, { 0, 0, 50, 50 }, 16, 16);
     REQUIRE(pieces.count == 8);
@@ -91,7 +92,7 @@ TEST_CASE("a frame leaves the centre out")
 
 TEST_CASE("caps shrink in proportion when the target is too small")
 {
-    const auto layout = skin_layout(skin(ovl::GuiSkinKind::HorizontalThree, { 0, 6, 10, 12, 0, 8 }));
+    const auto layout = skin_layout(gui_skin(ovl::GuiSkinKind::HorizontalThree, { 0, 6, 10, 12, 0, 8 }));
     REQUIRE(layout);
     const auto pieces = skin_pieces(*layout, { 0, 0, 4, 8 }, 16, 8);
     const auto p = pieces.pieces();
@@ -103,17 +104,17 @@ TEST_CASE("caps shrink in proportion when the target is too small")
 
 TEST_CASE("solid skins and empty textures draw nothing")
 {
-    const auto solid = skin_layout(skin(ovl::GuiSkinKind::Solid, { }));
+    const auto solid = skin_layout(gui_skin(ovl::GuiSkinKind::Solid, { }));
     REQUIRE(solid);
     CHECK(skin_pieces(*solid, { 0, 0, 10, 10 }, 16, 16).count == 0);
-    const auto rect = skin_layout(skin(ovl::GuiSkinKind::Rect, { 0, 0, 4, 4 }));
+    const auto rect = skin_layout(gui_skin(ovl::GuiSkinKind::Rect, { 0, 0, 4, 4 }));
     REQUIRE(rect);
     CHECK(skin_pieces(*rect, { 0, 0, 10, 10 }, 0, 16).count == 0);
 }
 
 TEST_CASE("flipping mirrors y lines about the texture height")
 {
-    const auto layout = skin_layout(skin(ovl::GuiSkinKind::VerticalThree, { 0, 8, 2, 4, 10, 20 }));
+    const auto layout = skin_layout(gui_skin(ovl::GuiSkinKind::VerticalThree, { 0, 8, 2, 4, 10, 20 }));
     REQUIRE(layout);
     const SkinLayout flipped = flipped_vertically(*layout, 32);
     CHECK(flipped.ys[0] == 12);
@@ -124,7 +125,7 @@ TEST_CASE("flipping mirrors y lines about the texture height")
 
 TEST_CASE("draw_skin adds one quad per visible piece")
 {
-    const auto layout = skin_layout(skin(ovl::GuiSkinKind::NinePatch, { 0, 4, 12, 16, 0, 4, 12, 16 }));
+    const auto layout = skin_layout(gui_skin(ovl::GuiSkinKind::NinePatch, { 0, 4, 12, 16, 0, 4, 12, 16 }));
     REQUIRE(layout);
     DrawList list;
     draw_skin(list, *layout, { 0, 0, 40, 40 }, 9, 16, 16);

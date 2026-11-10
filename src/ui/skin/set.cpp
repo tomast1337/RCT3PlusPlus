@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/skin_set.hpp"
+#include "ui/skin/set.hpp"
 
 #include "ovl/gui_skin.hpp"
 #include "ovl/texture/pixels.hpp"
 #include "ovl/texture/texture.hpp"
 #include "strings/ascii.hpp"
 
-namespace rct3::ui
+namespace rct3::ui::skin
 {
 
     std::expected<SkinSet, std::string> load_skin_set(const std::filesystem::path& path, std::span<const std::string_view> whole_textures)
@@ -79,4 +79,4 @@ namespace rct3::ui
         return set;
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::skin

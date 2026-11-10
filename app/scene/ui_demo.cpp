@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/ui_demo.hpp"
 
-#include "ui/skin.hpp"
+#include "ui/skin/skin.hpp"
 
 #include <array>
 #include <cmath>
@@ -77,8 +77,8 @@ namespace rct3::scene
 
     void draw_ui_demo(render::Device& device, UiDemo& demo, double seconds)
     {
-        static const ui::SkinLayout window_skin = *ui::skin_layout(kWindowSkin);
-        static const ui::SkinLayout button_skin = *ui::skin_layout(kButtonSkin);
+        static const ui::skin::SkinLayout window_skin = *ui::skin::skin_layout(kWindowSkin);
+        static const ui::skin::SkinLayout button_skin = *ui::skin::skin_layout(kButtonSkin);
         const ui::TextureId skins = ui::texture_id(demo.skins);
         const auto t = static_cast<float>(seconds);
         constexpr auto kSize = static_cast<float>(kSkinSize);
@@ -89,7 +89,7 @@ namespace rct3::scene
         const render::Extent extent = device.extent();
         const float width = 320.0f + 60.0f * std::sin(t * 0.7f);
         const ui::Rect window { 24, static_cast<float>(extent.height) - 300.0f, 24 + width, static_cast<float>(extent.height) - 24.0f };
-        ui::draw_skin(list, window_skin, window, skins, kSize, kSize);
+        ui::skin::draw_skin(list, window_skin, window, skins, kSize, kSize);
 
         const ui::Rect title { window.x0 + 4, window.y0 + 4, window.x1 - 4, window.y0 + 26 };
         list.gradient(title, { { 60, 110, 190, 255 }, { 30, 60, 120, 255 }, { 20, 40, 90, 255 }, { 50, 90, 160, 255 } });
@@ -115,7 +115,7 @@ namespace rct3::scene
         for (std::size_t i = 0; i < kTints.size(); ++i)
         {
             const float x = area.x0 + static_cast<float>(i) * (button_width + 8);
-            ui::draw_skin(list, button_skin, { x, window.y1 - 40, x + button_width, window.y1 - 14 }, skins, kSize, kSize, kTints[i]);
+            ui::skin::draw_skin(list, button_skin, { x, window.y1 - 40, x + button_width, window.y1 - 14 }, skins, kSize, kSize, kTints[i]);
         }
 
         ui::render_draw_list(device, demo.renderer, list);

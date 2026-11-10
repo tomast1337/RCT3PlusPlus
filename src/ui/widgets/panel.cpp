@@ -15,7 +15,7 @@ namespace rct3::ui
         if (colour)
             context.list.fill(rect(), *colour);
         if (!skin.empty())
-            draw_skin(context.list, context.skins.find(skin), rect(), tint);
+            skin::draw_skin(context.list, context.skins.find(skin), rect(), tint);
     }
 
 } // namespace rct3::ui

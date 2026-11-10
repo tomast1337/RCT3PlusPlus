@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/design_browser.hpp"
 
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 
 #include <algorithm>
 
@@ -132,7 +132,7 @@ namespace rct3::ui
         if (!picture)
             return;
         const Rect& r = picture->rect();
-        draw_skin(context.list, context.skins.find(style_.border), r);
+        skin::draw_skin(context.list, context.skins.find(style_.border), r);
         context.list.image({ r.x0 + 2, r.y0 + 2, r.x1 - 2, r.y1 - 2 }, picture_, { 0, 0, 1, 1 });
     }
 

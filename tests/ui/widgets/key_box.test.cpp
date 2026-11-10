@@ -6,6 +6,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
+using namespace rct3::ui::skin;
 using namespace rct3::ui::font;
 
 namespace

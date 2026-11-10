@@ -85,7 +85,7 @@ namespace rct3::ui
     void Toolbar::draw(DrawContext& context) const
     {
         if (!style_.background.empty())
-            draw_skin(context.list, context.skins.find(style_.background), rect());
+            skin::draw_skin(context.list, context.skins.find(style_.background), rect());
         const bool horizontal = orientation_ == Orientation::Horizontal;
         for (const auto& c : children())
         {

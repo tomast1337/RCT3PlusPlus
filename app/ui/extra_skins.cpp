@@ -2,7 +2,7 @@
 #include "ui/extra_skins.hpp"
 
 #include "logging/log.hpp"
-#include "ui/skin_set.hpp"
+#include "ui/skin/set.hpp"
 #include "ui/ui_textures.hpp"
 
 #include <utility>
@@ -17,7 +17,7 @@ namespace rct3::ui
         for (const std::string_view name : files)
         {
             const auto path = assets.install ? assets.install->find(name) : std::nullopt;
-            auto set = path ? load_skin_set(*path) : std::unexpected(std::string("not found"));
+            auto set = path ? skin::load_skin_set(*path) : std::unexpected(std::string("not found"));
             if (!set)
             {
                 log.warning("skins {}: {}", name, set.error());
@@ -32,7 +32,7 @@ namespace rct3::ui
                 continue;
             }
             assets.textures.merge(*textures);
-            const SkinLibrary library = skin_library(set->skins, assets.textures);
+            const skin::SkinLibrary library = skin_library(set->skins, assets.textures);
             for (const auto& [skin, _] : set->skins)
             {
                 auto ref = library.find(skin);

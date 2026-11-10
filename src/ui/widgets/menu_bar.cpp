@@ -149,7 +149,7 @@ namespace rct3::ui
     void MenuBar::draw(DrawContext& context) const
     {
         if (!style.background.empty())
-            draw_skin(context.list, context.skins.find(style.background), rect());
+            skin::draw_skin(context.list, context.skins.find(style.background), rect());
         const auto f = context.fonts.get(style.font);
         for (std::size_t i = 0; i < menus.size(); ++i)
         {
@@ -158,7 +158,7 @@ namespace rct3::ui
             if (lit)
             {
                 if (const auto s = style.highlight_skin.empty() ? std::nullopt : context.skins.find(style.highlight_skin))
-                    draw_skin(context.list, s, title);
+                    skin::draw_skin(context.list, s, title);
                 else
                     context.list.fill(title, style.highlight_colour);
             }

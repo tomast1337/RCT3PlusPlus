@@ -5,7 +5,7 @@
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
 #include "ui/screens/about_window.hpp"
-#include "ui/skin_set.hpp"
+#include "ui/skin/set.hpp"
 #include "ui/translation_file.hpp"
 #include "ui/truetype_font.hpp"
 
@@ -21,7 +21,7 @@ namespace rct3::ui
         const auto main_ovl = install.find(game_skins::kMainOverlay);
         if (!main_ovl)
             return std::unexpected(std::format("{} not found", game_skins::kMainOverlay));
-        auto set = load_skin_set(*main_ovl, game_skins::kWholeTextures);
+        auto set = skin::load_skin_set(*main_ovl, game_skins::kWholeTextures);
         if (!set)
             return std::unexpected(set.error());
         for (const std::string_view name : more_skins)
@@ -33,7 +33,7 @@ namespace rct3::ui
                 log.info("skins {}: not in this install", name);
                 continue;
             }
-            auto more = load_skin_set(*path);
+            auto more = skin::load_skin_set(*path);
             if (!more)
             {
                 log.warning("skins {}: {}", name, more.error());

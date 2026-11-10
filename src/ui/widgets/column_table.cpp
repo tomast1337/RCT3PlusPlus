@@ -168,7 +168,7 @@ namespace rct3::ui
     void ColumnTable::draw(DrawContext& context) const
     {
         if (!style.background.empty())
-            draw_skin(context.list, context.skins.find(style.background), rect());
+            skin::draw_skin(context.list, context.skins.find(style.background), rect());
         const auto heading_font = context.fonts.get(style.heading_font);
         const auto font = context.fonts.get(style.font);
         const auto edges = column_edges();
@@ -219,7 +219,7 @@ namespace rct3::ui
                 if (selected_ == i)
                 {
                     if (const auto s = style.selection_skin.empty() ? std::nullopt : context.skins.find(style.selection_skin))
-                        draw_skin(context.list, s, row);
+                        skin::draw_skin(context.list, s, row);
                     else
                         context.list.fill(row, style.selection_colour);
                 }
@@ -236,7 +236,7 @@ namespace rct3::ui
                     if (c == 0 && !rows[i].icon.empty())
                     {
                         const float side = style.row_height - 4;
-                        draw_skin(context.list, context.skins.find(rows[i].icon), { text.x0, row.y0 + 2, text.x0 + side, row.y0 + 2 + side });
+                        skin::draw_skin(context.list, context.skins.find(rows[i].icon), { text.x0, row.y0 + 2, text.x0 + side, row.y0 + 2 + side });
                         text.x0 += side + style.cell_indent;
                     }
                     if (context.list.push_clip(text))

@@ -288,12 +288,12 @@ namespace rct3::ui
             context.list.fill(r, picked ? style_.picked_colour : style_.hover_colour);
         const float inset = (kTile - kTileIcon) / 2;
         if (const auto skin = context.skins.find(row_.icon))
-            draw_skin(context.list, skin, { r.x0 + inset, r.y0 + inset, r.x0 + inset + kTileIcon, r.y0 + inset + kTileIcon });
+            skin::draw_skin(context.list, skin, { r.x0 + inset, r.y0 + inset, r.x0 + inset + kTileIcon, r.y0 + inset + kTileIcon });
         const std::string& corner = is_heading() ? (open ? style_.open_heading : style_.closed_heading) : row_.badge;
         if (const auto skin = context.skins.find(corner))
-            draw_skin(context.list, skin, { r.x1 - kBadge, r.y0, r.x1, r.y0 + kBadge });
+            skin::draw_skin(context.list, skin, { r.x1 - kBadge, r.y0, r.x1, r.y0 + kBadge });
         if (const auto skin = row_.style.empty() ? std::nullopt : context.skins.find(style_.style_filter + row_.style))
-            draw_skin(context.list, skin, { r.x0, r.y0, r.x0 + kBadge, r.y0 + kBadge });
+            skin::draw_skin(context.list, skin, { r.x0, r.y0, r.x0 + kBadge, r.y0 + kBadge });
         if (dear)
             context.list.fill(r, style_.dear_colour);
     }

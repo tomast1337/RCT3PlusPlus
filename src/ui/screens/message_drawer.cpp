@@ -306,11 +306,11 @@ namespace rct3::ui
     {
         // The lip along the bottom in two halves, the back repeated above it.
         const float lip = r.y1 - kLipHeight;
-        draw_skin(context.list, context.skins.find(style.lip_left), { r.x0, lip, r.x0 + kLipSplit, r.y1 });
-        draw_skin(context.list, context.skins.find(style.lip_right), { r.x0 + kLipSplit, lip, r.x0 + kWidth, r.y1 });
+        skin::draw_skin(context.list, context.skins.find(style.lip_left), { r.x0, lip, r.x0 + kLipSplit, r.y1 });
+        skin::draw_skin(context.list, context.skins.find(style.lip_right), { r.x0 + kLipSplit, lip, r.x0 + kWidth, r.y1 });
         const auto back = context.skins.find(style.back);
         for (float y = lip; y > lip - kBackReach && y > r.y0; y -= kBackHeight)
-            draw_skin(context.list, back, { r.x0, y - kBackHeight, r.x0 + kWidth, y });
+            skin::draw_skin(context.list, back, { r.x0, y - kBackHeight, r.x0 + kWidth, y });
     }
 
     void MessageDrawer::draw(DrawContext& context) const
@@ -334,12 +334,12 @@ namespace rct3::ui
             const bool even = (i - skipped_) % 2 == 0;
             context.list.fill({ r.x0 + kStripeLeft, top, r.x0 + kStripeRight, bottom }, even ? style_.stripe : style_.stripe_alt);
             if (!messages_[i].icon.empty())
-                draw_skin(context.list, context.skins.find(messages_[i].icon), { r.x0 + kIconLeft, top, r.x0 + kIconLeft + kIconSize, top + kIconSize });
+                skin::draw_skin(context.list, context.skins.find(messages_[i].icon), { r.x0 + kIconLeft, top, r.x0 + kIconLeft + kIconSize, top + kIconSize });
             float text_left = kTextLeft;
             if (!messages_[i].mood.empty())
             {
                 const float y = top + kRowPadding / 2 + 1;
-                draw_skin(context.list, context.skins.find(messages_[i].mood), { r.x0 + kTextLeft, y, r.x0 + kTextLeft + kMoodSize, y + kMoodSize });
+                skin::draw_skin(context.list, context.skins.find(messages_[i].mood), { r.x0 + kTextLeft, y, r.x0 + kTextLeft + kMoodSize, y + kMoodSize });
                 text_left += kMoodShift;
             }
             if (font)

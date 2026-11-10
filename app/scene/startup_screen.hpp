@@ -15,7 +15,7 @@
 #include "config/game_install.hpp"
 #include "render/device.hpp"
 #include "ui/draw_list.hpp"
-#include "ui/skin_set.hpp"
+#include "ui/skin/set.hpp"
 #include "ui/startup_sequence.hpp"
 #include "ui/ui_renderer.hpp"
 #include "ui/ui_textures.hpp"

@@ -30,7 +30,7 @@
 #include "ui/screens/tool_row.hpp"
 #include "ui/screens/tutorial_guide.hpp"
 #include "ui/screens/tutorial_picker.hpp"
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 #include "ui/tooltip.hpp"
 #include "ui/widgets/dropdown.hpp"
 #include "ui/widgets/list_box.hpp"
@@ -234,7 +234,7 @@ namespace rct3::ui::game_skins
 
     /// Has `skins` draw in code, in the colours of `p`, every skin whose panel the game's look has moved to
     /// code. Called again with another palette, it recolours them.
-    inline void use_coded_skins(SkinLibrary& skins, const Palette& p)
+    inline void use_coded_skins(skin::SkinLibrary& skins, const Palette& p)
     {
         for (CodedSkin& coded : coded_skins(p))
         {

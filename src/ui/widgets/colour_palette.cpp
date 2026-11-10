@@ -50,7 +50,7 @@ namespace rct3::ui
     void ColourPalette::draw(DrawContext& context) const
     {
         if (!style_.back.empty())
-            draw_skin(context.list, context.skins.find(style_.back), rect());
+            skin::draw_skin(context.list, context.skins.find(style_.back), rect());
     }
 
 } // namespace rct3::ui

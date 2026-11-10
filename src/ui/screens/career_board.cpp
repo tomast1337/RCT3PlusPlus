@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/career_board.hpp"
 
-#include "ui/skin_library.hpp"
+#include "ui/skin/library.hpp"
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
@@ -55,11 +55,11 @@ namespace rct3::ui
             void draw(DrawContext& context) const override
             {
                 const Rect r = face();
-                draw_skin(context.list, context.skins.find(skin), r, state() == SkinState::Pressed ? kPressedTint : kWhite);
+                skin::draw_skin(context.list, context.skins.find(skin), r, state() == skin::SkinState::Pressed ? skin::kPressedTint : kWhite);
                 draw_icon(context, kWhite);
                 const float x = r.x0 + cm::kMarkAt.x * r.width();
                 const float y = r.y0 + cm::kMarkAt.y * r.height();
-                draw_skin(context.list, context.skins.find(mark), { x, y, x + cm::kMarkSize * r.width(), y + cm::kMarkSize * r.height() });
+                skin::draw_skin(context.list, context.skins.find(mark), { x, y, x + cm::kMarkSize * r.width(), y + cm::kMarkSize * r.height() });
             }
         };
 
@@ -371,7 +371,7 @@ namespace rct3::ui
                 picture = context.skins.find(style_.no_picture);
             const float scale = front ? cm::kPictureScale : 1;
             const float bottom = frame.at({ 0, fs::kDesignHeight - cm::kPictureBottom }).y;
-            const auto rect_of = [&](const SkinRef& skin, float k) {
+            const auto rect_of = [&](const skin::SkinRef& skin, float k) {
                 const auto [w, h] = skin.size();
                 const float width = w * frame.sx * scale * k;
                 const float height = h * frame.sy * scale * k;
@@ -380,12 +380,12 @@ namespace rct3::ui
                 return Rect { x, bottom - height, x + width, bottom };
             };
             if (picture)
-                draw_skin(context.list, picture, rect_of(*picture, 1));
+                skin::draw_skin(context.list, picture, rect_of(*picture, 1));
             if (front)
-                draw_skin(context.list, front, rect_of(*front, cm::pop(since_pick_)));
+                skin::draw_skin(context.list, front, rect_of(*front, cm::pop(since_pick_)));
         }
 
-        draw_skin(context.list, context.skins.find(style_.panel), panel_);
+        skin::draw_skin(context.list, context.skins.find(style_.panel), panel_);
         if (picked_ < scenarios_.size())
         {
             const CareerScenarioInfo& info = scenarios_[picked_].info;

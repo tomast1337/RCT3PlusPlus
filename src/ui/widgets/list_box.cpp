@@ -203,7 +203,7 @@ namespace rct3::ui
     {
         const std::string& back = has_keyboard_focus() && !style.focused.empty() ? style.focused : style.background;
         if (!back.empty())
-            draw_skin(context.list, context.skins.find(back), rect());
+            skin::draw_skin(context.list, context.skins.find(back), rect());
         const auto f = context.fonts.get(style.font);
         const Rect box = rows_box();
         if (context.list.push_clip(box) && style.row_height > 0)
@@ -220,7 +220,7 @@ namespace rct3::ui
                 if (selected_ == i)
                 {
                     if (const auto s = style.selection_skin.empty() ? std::nullopt : context.skins.find(style.selection_skin))
-                        draw_skin(context.list, s, row);
+                        skin::draw_skin(context.list, s, row);
                     else
                         context.list.fill(row, style.selection_colour);
                 }
@@ -230,7 +230,7 @@ namespace rct3::ui
                 {
                     const float top = std::round(row.y0 + (style.row_height - style.icon_size) / 2);
                     if (!icon.empty())
-                        draw_skin(context.list, context.skins.find(icon), { x, top, x + style.icon_size, top + style.icon_size }, faded ? style.greyed_tint : kWhite);
+                        skin::draw_skin(context.list, context.skins.find(icon), { x, top, x + style.icon_size, top + style.icon_size }, faded ? style.greyed_tint : kWhite);
                     x += style.icon_size + style.icon_gap;
                 }
                 if (f)

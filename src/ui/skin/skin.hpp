@@ -14,7 +14,7 @@
 #include <optional>
 #include <span>
 
-namespace rct3::ui
+namespace rct3::ui::skin
 {
 
     /// A skin item's cut lines in texture pixels, y growing down the picture as it is shown.
@@ -61,4 +61,4 @@ namespace rct3::ui
 
     void draw_skin(DrawList& list, const SkinLayout& layout, const Rect& target, TextureId texture, float texture_width, float texture_height, Color tint = kWhite);
 
-} // namespace rct3::ui
+} // namespace rct3::ui::skin

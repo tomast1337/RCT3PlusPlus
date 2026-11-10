@@ -21,7 +21,7 @@
 #include "ui/desktop.hpp"
 #include "ui/draw_list_painter.hpp"
 #include "ui/game_style.hpp"
-#include "ui/skin_set.hpp"
+#include "ui/skin/set.hpp"
 
 #include <algorithm>
 #include <charconv>
@@ -58,7 +58,7 @@ namespace
 
     struct Assets
     {
-        ui::SkinLibrary skins;
+        ui::skin::SkinLibrary skins;
         ui::PainterTextures textures;
         ui::font::FontSet fonts; // Empty: frames draw no text
     };
@@ -90,7 +90,7 @@ namespace
     void draw_skin_at(ui::DrawContext& context, std::string_view skin, std::initializer_list<ui::Rect> rects)
     {
         for (const ui::Rect& r : rects)
-            ui::draw_skin(context.list, context.skins.find(skin), r);
+            ui::skin::draw_skin(context.list, context.skins.find(skin), r);
     }
 
     void draw_lozenges(ui::DrawContext& context, PanelLook, ui::Rect)
@@ -168,7 +168,7 @@ namespace
                 y += row + 8;
                 row = 0;
             }
-            ui::draw_skin(context.list, skin, { x, y, x + w, y + h });
+            ui::skin::draw_skin(context.list, skin, { x, y, x + w, y + h });
             x += w + 8;
             row = std::max(row, h);
         }
@@ -340,7 +340,7 @@ namespace
     ovl::texture::RgbaImage render(const PanelCase& panel, PanelLook look, const Assets& assets, float scale)
     {
         // The coded look draws this panel's skins in code, whatever the game's look has them on.
-        ui::SkinLibrary skins = assets.skins;
+        ui::skin::SkinLibrary skins = assets.skins;
         if (look == PanelLook::Coded)
         {
             for (ui::game_skins::CodedSkin& coded : ui::game_skins::coded_skins(ui::kGamePalette))
@@ -363,7 +363,7 @@ namespace
         const auto path = install.find(ui::game_skins::kMainOverlay);
         if (!path)
             return std::unexpected(std::format("{} not found", ui::game_skins::kMainOverlay));
-        auto set = ui::load_skin_set(*path, ui::game_skins::kWholeTextures);
+        auto set = ui::skin::load_skin_set(*path, ui::game_skins::kWholeTextures);
         if (!set)
             return std::unexpected(set.error());
         Assets assets;

@@ -4,6 +4,7 @@
 #include "core/maybe.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/systems.hpp"
 
 #include <format>

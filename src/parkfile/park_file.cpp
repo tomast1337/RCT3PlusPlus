@@ -4,6 +4,7 @@
 #include "parkfile/binary.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
+#include "simulation/rides.hpp"
 
 #include <algorithm>
 #include <array>

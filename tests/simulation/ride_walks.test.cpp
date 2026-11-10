@@ -2,6 +2,7 @@
 #include "simulation/ride_walks.hpp"
 
 #include "simulation/guests.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"

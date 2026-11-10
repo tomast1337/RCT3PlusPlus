@@ -5,6 +5,7 @@
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/import_people.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"

@@ -4,6 +4,7 @@
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/objectives.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 

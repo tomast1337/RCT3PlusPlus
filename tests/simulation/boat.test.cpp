@@ -4,6 +4,7 @@
 #include "park/path/clearance.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
 
 #include <array>

@@ -11,6 +11,7 @@
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/swimming.hpp"
 
 #include <algorithm>

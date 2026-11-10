@@ -3,6 +3,7 @@
 
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
+#include "simulation/rides.hpp"
 
 #include <cstring>
 #include <doctest/doctest.h>

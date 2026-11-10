@@ -61,6 +61,7 @@
 #include "scene/structure_tools.hpp"
 #include "scene/track_building.hpp"
 #include "scene/zoo_animals.hpp"
+#include "simulation/boat.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/objectives.hpp"

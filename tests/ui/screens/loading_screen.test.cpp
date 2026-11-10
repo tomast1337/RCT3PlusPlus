@@ -6,7 +6,7 @@
 
 using namespace rct3::ui;
 using namespace rct3::ui::font;
-using namespace rct3::ui::loading_screen;
+using namespace rct3::ui::screens::loading_screen;
 
 namespace
 {

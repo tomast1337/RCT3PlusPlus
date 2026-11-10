@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     /// The panel's controls, in the order of park::PathControl.
@@ -299,4 +299,4 @@ namespace rct3::ui
         bool closed_ = false;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

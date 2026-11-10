@@ -29,7 +29,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     struct ManagementWindowStyle
@@ -192,4 +192,4 @@ namespace rct3::ui
         std::optional<std::size_t> row_now_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

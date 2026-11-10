@@ -275,11 +275,11 @@ namespace rct3::scene
                 words = no_entry ? std::u16string(assets.strings->get("Sign_NoEntry")) : placed.kind == 0 || placed.kind == 1 ? strings::to_utf16(placed.text) : std::u16string { };
             }
             else if (!sign.ride)
-                words = park.flags.has(save::ParkFlag::Open) ? ui::park_name(park, *assets.strings) : std::u16string(assets.strings->get("AttractionStatusClosed"));
+                words = park.flags.has(save::ParkFlag::Open) ? ui::screens::park_name(park, *assets.strings) : std::u16string(assets.strings->get("AttractionStatusClosed"));
             else
             {
                 const save::AttractionCommon& ride = scene.rides.rides[*sign.ride].base;
-                words = ride.state == save::AttractionState::Open && ride.repair_status == save::RepairStatus::Fine ? ui::attraction_name(ride, *assets.strings) : ui::attraction_status(ride, *assets.strings);
+                words = ride.state == save::AttractionState::Open && ride.repair_status == save::RepairStatus::Fine ? ui::screens::attraction_name(ride, *assets.strings) : ui::screens::attraction_status(ride, *assets.strings);
             }
             if (words == sign.shown)
                 continue;

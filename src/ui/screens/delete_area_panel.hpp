@@ -15,7 +15,7 @@
 #include <string>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     struct DeleteAreaPanelStyle
@@ -60,4 +60,4 @@ namespace rct3::ui
         std::optional<DeleteAreaAction> asked_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -75,12 +75,12 @@ namespace
     // The round panel in a corner, with a page of lines so the strip shows. Its style picks the look.
     void draw_info_panel(ui::DrawContext& context, PanelLook look, ui::Rect view)
     {
-        ui::InfoPanelStyle style = ui::game_skins::info_panel_style({ });
+        ui::screens::InfoPanelStyle style = ui::game_skins::info_panel_style({ });
         style.look = look;
         ui::Desktop desktop;
-        auto& panel = desktop.root().add<ui::InfoPanel>("info", style);
+        auto& panel = desktop.root().add<ui::screens::InfoPanel>("info", style);
         panel.show({ }, 0);
-        panel.set_body_size(ui::info_panel::kPageWidth, 60);
+        panel.set_body_size(ui::screens::info_panel::kPageWidth, 60);
         desktop.layout(view);
         // The frame alone: tabs, the close button and the page are pictures and text either way.
         panel.draw(context);
@@ -191,10 +191,10 @@ namespace
     {
         // A short bar: the left part, the divider with its notch, the right part.
         constexpr float kTop = 8;
-        constexpr float kBottom = kTop + ui::park_bar::kHeight;
+        constexpr float kBottom = kTop + ui::screens::park_bar::kHeight;
         draw_skin_at(context, "Top_WindowFrame_Left", { { 8, kTop, 128, kBottom } });
-        draw_skin_at(context, "Top_WindowFrame_Middle", { { 128, kTop, 128 + ui::park_bar::kDividerWidth, kBottom } });
-        draw_skin_at(context, "Top_WindowFrame_Right", { { 128 + ui::park_bar::kDividerWidth, kTop, 260, kBottom } });
+        draw_skin_at(context, "Top_WindowFrame_Middle", { { 128, kTop, 128 + ui::screens::park_bar::kDividerWidth, kBottom } });
+        draw_skin_at(context, "Top_WindowFrame_Right", { { 128 + ui::screens::park_bar::kDividerWidth, kTop, 260, kBottom } });
     }
 
     void draw_menu_circles(ui::DrawContext& context, PanelLook, ui::Rect)
@@ -217,7 +217,7 @@ namespace
     void draw_message_drawer(ui::DrawContext& context, PanelLook, ui::Rect)
     {
         // Pulled down far enough to show the back repeated three times.
-        ui::draw_drawer_frame(context, ui::game_skins::message_drawer_style({ }), { 8, 8, 8 + ui::message_drawer::kWidth, 155 });
+        ui::screens::draw_drawer_frame(context, ui::game_skins::message_drawer_style({ }), { 8, 8, 8 + ui::screens::message_drawer::kWidth, 155 });
     }
 
     void draw_window(ui::DrawContext& context, const ui::WindowStyle& style, ui::Rect view)
@@ -252,7 +252,7 @@ namespace
     // The front screen's backdrop at its design size, from the three pictures it is drawn with.
     void draw_front_backdrop(ui::DrawContext& context, PanelLook, ui::Rect)
     {
-        namespace fs = ui::front_screen;
+        namespace fs = ui::screens::front_screen;
         draw_skin_at(context, fs::kBandTopSkin, { fs::kBandTop });
         draw_skin_at(context, fs::kBandBottomSkin, { fs::kBandBottom });
         draw_skin_at(context, fs::kStripRightSkin, { fs::kStripRight });
@@ -262,7 +262,7 @@ namespace
     // a few shapes, and at its own size.
     void draw_label_band(ui::DrawContext& context, PanelLook, ui::Rect)
     {
-        namespace fs = ui::front_screen;
+        namespace fs = ui::screens::front_screen;
         draw_skin_at(context, fs::kPatchSkin, { { 8, 8, 103, 105 } });
         draw_skin_at(context, fs::kBandEndSkin, { { 112, 8, 207, 93 }, { 216, 8, 266, 58 }, { 276, 8, 316, 98 }, { 112, 100, 232, 130 } });
     }

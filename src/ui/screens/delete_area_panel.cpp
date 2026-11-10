@@ -3,7 +3,7 @@
 
 #include "ui/placement.hpp"
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -48,4 +48,4 @@ namespace rct3::ui
             asked_ = DeleteAreaAction::Delete;
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

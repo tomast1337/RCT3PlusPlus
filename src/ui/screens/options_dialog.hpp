@@ -43,7 +43,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     struct ScreenSize
@@ -234,4 +234,4 @@ namespace rct3::ui
         std::optional<KeyMap> picked_keys_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

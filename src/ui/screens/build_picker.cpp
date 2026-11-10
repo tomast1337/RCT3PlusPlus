@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -298,4 +298,4 @@ namespace rct3::ui
             context.list.fill(r, style_.dear_colour);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -149,7 +149,7 @@ namespace rct3::ui::game_skins
     };
 
     /// The front screen's design, the rectangle its backdrop's pieces are cut from.
-    inline constexpr Rect kFrontDesign { 0, 0, front_screen::kDesignWidth, front_screen::kDesignHeight };
+    inline constexpr Rect kFrontDesign { 0, 0, screens::front_screen::kDesignWidth, screens::front_screen::kDesignHeight };
 
     [[nodiscard]] inline std::vector<CodedSkin> coded_skins(const Palette& p)
     {
@@ -176,11 +176,11 @@ namespace rct3::ui::game_skins
             { kWindowFrame, "window", Coded, game_frames::window(p) },
             { kWindowFrameUnfocused, "window", Coded, game_frames::window(p) },
             { kWindowBackground, "window-background", Coded, game_frames::window_background(p) },
-            { front_screen::kBandTopSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), front_screen::kBandTop) },
-            { front_screen::kBandBottomSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), front_screen::kBandBottom) },
-            { front_screen::kStripRightSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), front_screen::kStripRight) },
-            { front_screen::kPatchSkin, "label-band", Coded, game_frames::label_patch(p) },
-            { front_screen::kBandEndSkin, "label-band", Coded, game_frames::label_end(p) },
+            { screens::front_screen::kBandTopSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), screens::front_screen::kBandTop) },
+            { screens::front_screen::kBandBottomSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), screens::front_screen::kBandBottom) },
+            { screens::front_screen::kStripRightSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), screens::front_screen::kStripRight) },
+            { screens::front_screen::kPatchSkin, "label-band", Coded, game_frames::label_patch(p) },
+            { screens::front_screen::kBandEndSkin, "label-band", Coded, game_frames::label_end(p) },
             { kStandardBorder, "controls", Coded, game_frames::plain_box(p) },
             { kListBox, "controls", Coded, game_frames::plain_box(p) },
             { kListBoxFocused, "controls", Coded, game_frames::focused_box(p) },
@@ -220,7 +220,7 @@ namespace rct3::ui::game_skins
             { "FlexiColourHighlightWhite", "small-parts", Coded, game_frames::colour_ring(p.colour_current, 20) },
             { "FlexiColourSurround", "small-parts", Coded, game_frames::colour_back(p) },
             { "Top_WindowFrame_Left", "park-bar", Coded, game_frames::park_bar_left(p) },
-            { "Top_WindowFrame_Middle", "park-bar", Coded, game_frames::park_bar_middle(p, park_bar::kDividerWidth, park_bar::kHeight, park_bar::kNotchRadius) },
+            { "Top_WindowFrame_Middle", "park-bar", Coded, game_frames::park_bar_middle(p, screens::park_bar::kDividerWidth, screens::park_bar::kHeight, screens::park_bar::kNotchRadius) },
             { "Top_WindowFrame_Right", "park-bar", Coded, game_frames::park_bar_right(p) },
         };
     }
@@ -442,9 +442,9 @@ namespace rct3::ui::game_skins
 
     /// The options window as the game lays it out: rows as tall as the small font with a little between,
     /// 12 unit tick boxes, level bars, the page's name in blue left of the tabs.
-    [[nodiscard]] inline OptionsDialogStyle options_dialog_style(const Palette& p)
+    [[nodiscard]] inline screens::OptionsDialogStyle options_dialog_style(const Palette& p)
     {
-        OptionsDialogStyle s;
+        screens::OptionsDialogStyle s;
         s.caption_colour = p.accent;
         s.keys.background = p.paper;
         s.rows.text_colour = p.text;
@@ -473,9 +473,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The about window in the game's frame: the page's name in blue left of two small picture tabs.
-    [[nodiscard]] inline AboutWindowStyle about_window_style(const Palette& p)
+    [[nodiscard]] inline screens::AboutWindowStyle about_window_style(const Palette& p)
     {
-        AboutWindowStyle s;
+        screens::AboutWindowStyle s;
         s.caption_colour = p.accent;
         s.text_colour = p.text;
         s.role_colour = p.accent;
@@ -488,9 +488,9 @@ namespace rct3::ui::game_skins
     /// The park's management windows in the large frame, laid out as the options window: picture tabs in the
     /// top-right corner, the open tab's name in blue on their left. Their lists sit in the edit box frame
     /// under a band of headings in the frames' blue (ours).
-    [[nodiscard]] inline ManagementWindowStyle management_window_style(const Palette& p)
+    [[nodiscard]] inline screens::ManagementWindowStyle management_window_style(const Palette& p)
     {
-        ManagementWindowStyle s;
+        screens::ManagementWindowStyle s;
         s.caption_colour = p.accent;
         s.text_colour = p.text;
         s.heading_colour = p.accent;
@@ -506,9 +506,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The saved designs' window in the game's frame, its list as the management windows' tables.
-    [[nodiscard]] inline DesignBrowserStyle design_browser_style(const Palette& p)
+    [[nodiscard]] inline screens::DesignBrowserStyle design_browser_style(const Palette& p)
     {
-        DesignBrowserStyle s;
+        screens::DesignBrowserStyle s;
         s.text_colour = p.text;
         s.window = window_style(p);
         s.scroll = scroll_bar_style(p, Orientation::Vertical);
@@ -523,9 +523,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The load and save window in the game's frame, the list and pictures in its plain border.
-    [[nodiscard]] inline FileDialogStyle file_dialog_style(const Palette& p)
+    [[nodiscard]] inline screens::FileDialogStyle file_dialog_style(const Palette& p)
     {
-        FileDialogStyle s;
+        screens::FileDialogStyle s;
         s.text_colour = p.text;
         s.line_colour = p.accent;
         s.selected_colour = p.stripe;
@@ -545,9 +545,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The window that picks a career in the game's frame, its rows framed like edit boxes.
-    [[nodiscard]] inline CareerDialogStyle career_dialog_style(const Palette& p)
+    [[nodiscard]] inline screens::CareerDialogStyle career_dialog_style(const Palette& p)
     {
-        CareerDialogStyle s;
+        screens::CareerDialogStyle s;
         s.text_colour = p.text;
         s.hover_colour = p.accent;
         s.row_colours = { p.stripe, p.paper };
@@ -569,9 +569,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The career map with the front screen's buttons and the game's marks.
-    [[nodiscard]] inline CareerBoardStyle career_board_style(const Palette& p)
+    [[nodiscard]] inline screens::CareerBoardStyle career_board_style(const Palette& p)
     {
-        CareerBoardStyle s;
+        screens::CareerBoardStyle s;
         s.text_colour = p.text;
         s.question = question_box_style(p);
         s.scenario_button = kMenuCircle;
@@ -590,9 +590,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The tutorials' menu on the front screen's buttons and white disc.
-    [[nodiscard]] inline TutorialPickerStyle tutorial_picker_style(const Palette& p)
+    [[nodiscard]] inline screens::TutorialPickerStyle tutorial_picker_style(const Palette& p)
     {
-        TutorialPickerStyle s;
+        screens::TutorialPickerStyle s;
         s.text_colour = p.text;
         s.button = kMenuCircle;
         s.start_icon = kStartTutorialIcon;
@@ -603,9 +603,9 @@ namespace rct3::ui::game_skins
 
     /// The tutorial guide in the large frame: the guide in the corner circle, the step's title on a line under
     /// the title rule, the page below that.
-    [[nodiscard]] inline TutorialGuideStyle tutorial_guide_style(const Palette& p)
+    [[nodiscard]] inline screens::TutorialGuideStyle tutorial_guide_style(const Palette& p)
     {
-        TutorialGuideStyle s;
+        screens::TutorialGuideStyle s;
         s.text_colour = p.text;
         s.window = window_style(p);
         s.window.content_inset.y0 += s.step_line.y1;
@@ -629,9 +629,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The bar along the top of the park view.
-    [[nodiscard]] inline ParkBarStyle park_bar_style(const Palette& p)
+    [[nodiscard]] inline screens::ParkBarStyle park_bar_style(const Palette& p)
     {
-        ParkBarStyle s;
+        screens::ParkBarStyle s;
         s.text_colour = p.text_on_band;
         s.left_frame = "Top_WindowFrame_Left";
         s.divider = "Top_WindowFrame_Middle";
@@ -649,9 +649,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The panel shown while riding along in a car.
-    [[nodiscard]] inline RideCameraPanelStyle ride_camera_panel_style(const Palette& p)
+    [[nodiscard]] inline screens::RideCameraPanelStyle ride_camera_panel_style(const Palette& p)
     {
-        RideCameraPanelStyle s;
+        screens::RideCameraPanelStyle s;
         s.text_colour = p.text_on_band;
         s.back = "CircularPanelDialog";
         s.button = kMenuButtonSmall;
@@ -665,9 +665,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The park's messages, hanging from the middle of the bar.
-    [[nodiscard]] inline MessageDrawerStyle message_drawer_style(const Palette& p)
+    [[nodiscard]] inline screens::MessageDrawerStyle message_drawer_style(const Palette& p)
     {
-        MessageDrawerStyle s;
+        screens::MessageDrawerStyle s;
         s.text_colour = p.text;
         s.stripe = p.paper;
         s.lip_left = kDrawerLipLeft;
@@ -684,9 +684,9 @@ namespace rct3::ui::game_skins
 
     /// The round panel in the bottom-right corner that tells about an attraction. Its frame is drawn in code,
     /// which panel-look scores against these skins; the skins stay named for falling back to them.
-    [[nodiscard]] inline InfoPanelStyle info_panel_style(const Palette& p)
+    [[nodiscard]] inline screens::InfoPanelStyle info_panel_style(const Palette& p)
     {
-        InfoPanelStyle s;
+        screens::InfoPanelStyle s;
         s.coded.body = p.strip;
         s.coded.band = p.accent;
         s.coded.disc = p.patch;
@@ -746,9 +746,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The window beside the build menus, in the options window's frame, with the game's theme filters.
-    [[nodiscard]] inline BuildPickerStyle build_picker_style(const Palette& p)
+    [[nodiscard]] inline screens::BuildPickerStyle build_picker_style(const Palette& p)
     {
-        BuildPickerStyle s;
+        screens::BuildPickerStyle s;
         s.text_colour = p.text;
         s.hint_colour = p.text_disabled;
         s.window = window_style(p);
@@ -769,10 +769,10 @@ namespace rct3::ui::game_skins
     }
 
     /// From the screen's bottom edge to the bottom-left panels: over the tool row and its open menu.
-    inline constexpr float kOverToolRow = tool_row::kMargin + tool_row::kButtonSize + tool_row::kItemGap + tool_row::kItemHeight + 4;
+    inline constexpr float kOverToolRow = screens::tool_row::kMargin + screens::tool_row::kButtonSize + screens::tool_row::kItemGap + screens::tool_row::kItemHeight + 4;
 
     /// The area delete tool's panel, over the tool row at the left.
-    [[nodiscard]] inline DeleteAreaPanelStyle delete_area_panel_style()
+    [[nodiscard]] inline screens::DeleteAreaPanelStyle delete_area_panel_style()
     {
         return {
             .back = "CircularPanelDialog",
@@ -785,7 +785,7 @@ namespace rct3::ui::game_skins
 
     /// The structure tools' panels, over the tool row and the scenery menu's smaller menu: picking one out, with
     /// buttons that clear the marks and save what stands on them, and placing one, with a button that turns it.
-    [[nodiscard]] inline DeleteAreaPanelStyle structure_grab_panel_style()
+    [[nodiscard]] inline screens::DeleteAreaPanelStyle structure_grab_panel_style()
     {
         return {
             .back = "CircularPanelDialog",
@@ -794,12 +794,12 @@ namespace rct3::ui::game_skins
             .remove = "SavedSelectionGrabber_SaveIcon",
             .clear_help = "SavedSelectionGrabber_TT_Clear",
             .remove_help = "SavedSelectionGrabber_TT_Save",
-            .bottom = kOverToolRow + tool_row::kItemStep,
+            .bottom = kOverToolRow + screens::tool_row::kItemStep,
         };
     }
     /// shortcut: turning only, without the game's button that recolours the structure; add it once it is known
     /// whether that recolours every item or only those with colours of their own.
-    [[nodiscard]] inline DeleteAreaPanelStyle structure_place_panel_style()
+    [[nodiscard]] inline screens::DeleteAreaPanelStyle structure_place_panel_style()
     {
         return {
             .back = "CircularPanelDialog",
@@ -807,16 +807,16 @@ namespace rct3::ui::game_skins
             .clear = "IconAttractionEditorRotate",
             .remove = { },
             .clear_help = "SavedSelectionPlacer_TT_Rotate",
-            .bottom = kOverToolRow + tool_row::kItemStep,
+            .bottom = kOverToolRow + screens::tool_row::kItemStep,
         };
     }
 
     /// The round panel in the bottom-left corner that lays paths, drawn in code like the info panel. The
     /// controls use the attraction editor's turn and slope pictures, which come in a usable and an unusable
     /// look.
-    [[nodiscard]] inline FootpathPanelStyle footpath_panel_style(const Palette& p)
+    [[nodiscard]] inline screens::FootpathPanelStyle footpath_panel_style(const Palette& p)
     {
-        FootpathPanelStyle s;
+        screens::FootpathPanelStyle s;
         s.text_colour = p.text_on_band;
         s.page_text_colour = p.text;
         s.chosen = p.paper;
@@ -853,9 +853,9 @@ namespace rct3::ui::game_skins
 
     /// The round panel in the bottom-left corner that shapes and paints the ground, drawn in code like the path
     /// panel.
-    [[nodiscard]] inline LandPanelStyle land_panel_style(const Palette& p)
+    [[nodiscard]] inline screens::LandPanelStyle land_panel_style(const Palette& p)
     {
-        LandPanelStyle s;
+        screens::LandPanelStyle s;
         s.text_colour = p.text_on_band;
         s.brush = p.patch;
         s.coded = info_panel_style(p).coded;
@@ -867,9 +867,9 @@ namespace rct3::ui::game_skins
     }
 
     /// The round panel in the bottom-left corner that builds swimming pools, drawn like the land panel.
-    [[nodiscard]] inline PoolPanelStyle pool_panel_style(const Palette& p)
+    [[nodiscard]] inline screens::PoolPanelStyle pool_panel_style(const Palette& p)
     {
-        PoolPanelStyle s;
+        screens::PoolPanelStyle s;
         s.text_colour = p.text_on_band;
         s.coded = info_panel_style(p).coded;
         s.tab_face = kMenuButtonSmall;
@@ -877,17 +877,17 @@ namespace rct3::ui::game_skins
         s.height = spinner_style(p);
         s.bottom = kOverToolRow;
         // The paths page has the path panel's controls but its cut switch.
-        const FootpathPanelStyle paths = footpath_panel_style(p);
-        std::copy_n(paths.usable_icons.begin(), kPoolPathControls, s.path_icons.begin());
-        std::copy_n(paths.unusable_icons.begin(), kPoolPathControls, s.path_unusable_icons.begin());
-        std::copy_n(paths.control_help.begin(), kPoolPathControls, s.path_help.begin());
+        const screens::FootpathPanelStyle paths = footpath_panel_style(p);
+        std::copy_n(paths.usable_icons.begin(), screens::kPoolPathControls, s.path_icons.begin());
+        std::copy_n(paths.unusable_icons.begin(), screens::kPoolPathControls, s.path_unusable_icons.begin());
+        std::copy_n(paths.control_help.begin(), screens::kPoolPathControls, s.path_help.begin());
         return s;
     }
 
     /// The large buttons along the bottom of the park view.
-    [[nodiscard]] inline ToolRowStyle tool_row_style(const Palette&)
+    [[nodiscard]] inline screens::ToolRowStyle tool_row_style(const Palette&)
     {
-        ToolRowStyle s;
+        screens::ToolRowStyle s;
         s.icons = { "Obj_Delete", "Land", "Obj_Paths", "Obj_Scenery", "Obj_Shops", "Obj_Rides", "Man", "File_Quit", "File", "View", "Map" };
         s.career_leave_icon = "File_CareerMap";
         s.item_face = kMenuButtonSmall;
@@ -896,9 +896,9 @@ namespace rct3::ui::game_skins
 
     /// The strip that builds track, its buttons in the game's pictures: each picture's base name, with "On",
     /// "Off" or "Dis" after it for its state.
-    [[nodiscard]] inline ConstructionPanelStyle construction_panel_style(const Palette& p)
+    [[nodiscard]] inline screens::ConstructionPanelStyle construction_panel_style(const Palette& p)
     {
-        ConstructionPanelStyle s;
+        screens::ConstructionPanelStyle s;
         s.text_colour = p.text;
         constexpr std::string_view kIcon = "AttractionEditor_Icon";
         const auto named = [&](std::string_view what) { return std::string(kIcon) + std::string(what); };

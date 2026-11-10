@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace tutorial_picker
@@ -132,4 +132,4 @@ namespace rct3::ui
         std::optional<std::size_t> start_out_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

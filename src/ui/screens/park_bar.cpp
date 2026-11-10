@@ -9,7 +9,7 @@
 #include <cmath>
 #include <format>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -336,4 +336,4 @@ namespace rct3::ui
         context.list.fill({ bar.x0, bar.y0, bar.x0 + std::round(bar.width() * t), bar.y1 }, mixed(style_.rating_low, style_.rating_high, t));
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

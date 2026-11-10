@@ -79,9 +79,9 @@ namespace rct3::scene
             return { c.r, c.g, c.b, c.a };
         }
 
-        ui::MapPanelStyle panel_style(const ui::Palette& palette)
+        ui::screens::MapPanelStyle panel_style(const ui::Palette& palette)
         {
-            ui::MapPanelStyle s;
+            ui::screens::MapPanelStyle s;
             s.window = ui::game_skins::window_style(palette);
             return s;
         }
@@ -278,13 +278,13 @@ namespace rct3::scene
             open->close();
             return;
         }
-        std::vector<ui::MapLegendEntry> entries;
+        std::vector<ui::screens::MapLegendEntry> entries;
         for (const LayerText& t : kLayerTexts)
         {
             const bool dots = t.layer >= park::MapLayer::Food && t.layer != park::MapLayer::Patrols;
             entries.push_back({ text(strings, t.key, t.own), colour(park::map_layer_colour(t.layer)), park::shows(map.layers, t.layer), t.starts_group, dots, std::string(t.key) });
         }
-        auto& panel = desktop.root().add<ui::MapPanel>(std::string(kMapName), panel_style(palette), text(strings, kTitleKey, u"Map"), std::move(entries));
+        auto& panel = desktop.root().add<ui::screens::MapPanel>(std::string(kMapName), panel_style(palette), text(strings, kTitleKey, u"Map"), std::move(entries));
         panel.icon = kMapIcon;
         map.stale = true;
         map.since_people = 1e9f;
@@ -292,7 +292,7 @@ namespace rct3::scene
 
     std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::TerrainGrid& grid, const park::ParkCamera& camera, float aspect, const std::function<park::MapPeople()>& people, float elapsed)
     {
-        auto panel = desktop.root().find_as<ui::MapPanel>(kMapName);
+        auto panel = desktop.root().find_as<ui::screens::MapPanel>(kMapName);
         if (!panel || panel->closing() || grid.empty())
             return std::nullopt;
 
@@ -319,7 +319,7 @@ namespace rct3::scene
         }
 
         const park::MapFrame frame = park::map_frame(grid);
-        ui::MapCanvas& canvas = panel->canvas();
+        ui::screens::MapCanvas& canvas = panel->canvas();
         canvas.picture = ui::texture_id(map.picture);
         canvas.people = ui::texture_id(map.people);
         canvas.aspect = frame.width / frame.depth;

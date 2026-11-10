@@ -5,7 +5,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
-using namespace rct3::ui::front_screen;
+using namespace rct3::ui::screens::front_screen;
 
 TEST_CASE("the design frame stretches to the screen, round things by the smaller scale")
 {

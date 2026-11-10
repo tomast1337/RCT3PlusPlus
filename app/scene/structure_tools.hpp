@@ -66,7 +66,7 @@ namespace rct3::scene
         park::path::SolidTiles solids;
         std::size_t solids_of = static_cast<std::size_t>(-1);
         // The windows that save and load them
-        std::optional<ui::FileDialogMode> asked; ///< A window to open, until the owner opens it
+        std::optional<ui::screens::FileDialogMode> asked; ///< A window to open, until the owner opens it
         SaveBrowser browser;
         std::size_t windows_opened = 0;
     };

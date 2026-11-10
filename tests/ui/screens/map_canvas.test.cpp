@@ -4,7 +4,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
-using namespace rct3::ui::map_view;
+using namespace rct3::ui::screens::map_view;
 
 TEST_CASE("the whole map fits the area keeping its shape, centred")
 {

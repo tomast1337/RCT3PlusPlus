@@ -26,7 +26,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     struct DesignBrowserStyle
@@ -111,4 +111,4 @@ namespace rct3::ui
         bool cancel_ = false;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

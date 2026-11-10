@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace rct3::ui::front_screen
+namespace rct3::ui::screens::front_screen
 {
 
     Frame frame_for(const Rect& screen, bool uniform)
@@ -95,4 +95,4 @@ namespace rct3::ui::front_screen
         return true;
     }
 
-} // namespace rct3::ui::front_screen
+} // namespace rct3::ui::screens::front_screen

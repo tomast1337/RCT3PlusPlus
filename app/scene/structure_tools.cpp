@@ -113,10 +113,10 @@ namespace rct3::scene
             t.tool = tool;
             t.marks.assign(static_cast<std::size_t>(scene.grid.width) * static_cast<std::size_t>(scene.grid.height), 0);
             t.marks_changed = true;
-            scene.desktop->root().add<ui::DeleteAreaPanel>(std::string(kGrabName), skins::structure_grab_panel_style(), *assets.strings);
+            scene.desktop->root().add<ui::screens::DeleteAreaPanel>(std::string(kGrabName), skins::structure_grab_panel_style(), *assets.strings);
         }
         else if (tool == StructureTools::Tool::Place)
-            t.asked = ui::FileDialogMode::Load;
+            t.asked = ui::screens::FileDialogMode::Load;
     }
 
     bool start_structure_placing(ParkScene& scene, const std::filesystem::path& file, const ui::InterfaceAssets& assets)
@@ -143,7 +143,7 @@ namespace rct3::scene
         t.tool = StructureTools::Tool::Place;
         t.structure = std::move(read);
         t.turn = { };
-        auto& panel = scene.desktop->root().add<ui::DeleteAreaPanel>(std::string(kPlaceName), skins::structure_place_panel_style(), *assets.strings);
+        auto& panel = scene.desktop->root().add<ui::screens::DeleteAreaPanel>(std::string(kPlaceName), skins::structure_place_panel_style(), *assets.strings);
         panel.set_marked(true);
         logging::logger("park").info("structures: placing {} ({} items)", t.structure->name, t.structure->pieces.size());
         return true;
@@ -178,23 +178,23 @@ namespace rct3::scene
                 t.corner.reset();
                 t.other.reset();
             }
-            if (auto panel = scene.desktop->root().find_as<ui::DeleteAreaPanel>(kGrabName))
+            if (auto panel = scene.desktop->root().find_as<ui::screens::DeleteAreaPanel>(kGrabName))
             {
                 const bool any = std::ranges::contains(t.marks, std::uint8_t { 1 });
                 panel->set_marked(any);
-                if (const auto asked = panel->take_action(); asked == ui::DeleteAreaAction::Clear)
+                if (const auto asked = panel->take_action(); asked == ui::screens::DeleteAreaAction::Clear)
                 {
                     std::ranges::fill(t.marks, 0);
                     t.marks_changed = true;
                 }
-                else if (asked == ui::DeleteAreaAction::Delete && any)
+                else if (asked == ui::screens::DeleteAreaAction::Delete && any)
                 {
                     save::Structure s = park::pick_structure(marked_tiles(t, scene.grid), scene.objects, scene.models, scene.grid);
                     logging::logger("park").info("structures: {} items on {} tiles picked out", s.pieces.size(), std::ranges::count(s.tiles, 1));
                     if (!s.pieces.empty())
                     {
                         t.structure = std::move(s);
-                        t.asked = ui::FileDialogMode::Save;
+                        t.asked = ui::screens::FileDialogMode::Save;
                     }
                 }
             }
@@ -210,8 +210,8 @@ namespace rct3::scene
         if (t.tool != StructureTools::Tool::Place || !t.structure)
             return;
 
-        auto panel = scene.desktop->root().find_as<ui::DeleteAreaPanel>(kPlaceName);
-        bool turned = panel && panel->take_action() == ui::DeleteAreaAction::Clear;
+        auto panel = scene.desktop->root().find_as<ui::screens::DeleteAreaPanel>(kPlaceName);
+        bool turned = panel && panel->take_action() == ui::screens::DeleteAreaAction::Clear;
         if (!typing(scene))
             for (const ui::PlayCommand c : commands)
             {

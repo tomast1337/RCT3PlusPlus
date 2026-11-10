@@ -28,10 +28,13 @@
 
 namespace rct3::ui
 {
-
     class EditBox;
     class ScrollArea;
     class Tickbox;
+} // namespace rct3::ui
+
+namespace rct3::ui::screens
+{
 
     /// Something the menu offers or shows: its name and its picture.
     struct MenuGood
@@ -217,4 +220,4 @@ namespace rct3::ui
         std::optional<MenuEvent> event_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

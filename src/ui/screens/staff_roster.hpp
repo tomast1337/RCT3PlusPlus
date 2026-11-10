@@ -35,7 +35,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     struct StaffRosterStyle
@@ -179,28 +179,29 @@ namespace rct3::ui
         RosterAsks asks_;
     };
 
-    namespace game_skins
-    {
-        /// The staff window in the large frame: its list on paper with every other row tinted, the uniforms'
-        /// colours picked from the info panel's board of swatches.
-        [[nodiscard]] inline StaffRosterStyle staff_roster_style(const Palette& p)
-        {
-            StaffRosterStyle s;
-            s.window = window_style(p);
-            s.dropdown = dropdown_style(p);
-            s.scroll = scroll_bar_style(p, Orientation::Vertical);
-            s.palette = info_panel_style(p).palette;
-            s.question = question_box_style(p);
-            s.menu = menu_style(p);
-            s.name_box = kListBox;
-            s.name_box_focused = kListBoxFocused;
-            s.list_back = kListBox;
-            s.text_colour = p.text;
-            s.accent_colour = p.accent;
-            s.stripe = p.stripe;
-            s.plain = p.paper;
-            return s;
-        }
-    } // namespace game_skins
+} // namespace rct3::ui::screens
 
-} // namespace rct3::ui
+namespace rct3::ui::game_skins
+{
+    /// The staff window in the large frame: its list on paper with every other row tinted, the uniforms'
+    /// colours picked from the info panel's board of swatches.
+    [[nodiscard]] inline screens::StaffRosterStyle staff_roster_style(const Palette& p)
+    {
+        screens::StaffRosterStyle s;
+        s.window = window_style(p);
+        s.dropdown = dropdown_style(p);
+        s.scroll = scroll_bar_style(p, Orientation::Vertical);
+        s.palette = info_panel_style(p).palette;
+        s.question = question_box_style(p);
+        s.menu = menu_style(p);
+        s.name_box = kListBox;
+        s.name_box_focused = kListBoxFocused;
+        s.list_back = kListBox;
+        s.text_colour = p.text;
+        s.accent_colour = p.accent;
+        s.stripe = p.stripe;
+        s.plain = p.paper;
+        return s;
+    }
+
+} // namespace rct3::ui::game_skins

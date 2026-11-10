@@ -8,7 +8,7 @@
 #include <cstdio>
 #include <format>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -343,4 +343,4 @@ namespace rct3::ui
             hover_->text = text(kDeleteLabel);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -55,7 +55,7 @@ namespace rct3::scene
 
     void add_loading_logo(render::Device& device, const config::GameInstall& install, ui::InterfaceAssets& assets)
     {
-        namespace loading = ui::loading_screen;
+        namespace loading = ui::screens::loading_screen;
         const auto log = logging::logger("ui");
         const auto path = install.find(loading::kLogoFile);
         auto images = path ? ui::load_image_set(*path) : std::unexpected(std::string("not found"));
@@ -83,7 +83,7 @@ namespace rct3::scene
 
     void draw_park_loading(render::Device& device, ui::InterfaceAssets& assets, ui::DrawList& list, ParkLoadStage stage, std::uint64_t log_from)
     {
-        namespace loading = ui::loading_screen;
+        namespace loading = ui::screens::loading_screen;
         const render::Extent extent = device.extent();
         const ui::Rect screen { 0, 0, static_cast<float>(extent.width), static_cast<float>(extent.height) };
         list.clear();

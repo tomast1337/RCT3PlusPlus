@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     struct MapPanelStyle
@@ -80,4 +80,4 @@ namespace rct3::ui
         std::vector<Label*> labels_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

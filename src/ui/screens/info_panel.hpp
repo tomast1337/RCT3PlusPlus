@@ -30,7 +30,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     /// The panel's frame drawn in code: the colours and measures of its shapes, in units. The strip is a slab
@@ -541,4 +541,4 @@ namespace rct3::ui
         float body_height_ = 0;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

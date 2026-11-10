@@ -44,7 +44,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace build_picker
@@ -243,4 +243,4 @@ namespace rct3::ui
         bool clicked_ = false;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -14,7 +14,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     enum class PartyTab : std::uint8_t
@@ -52,4 +52,4 @@ namespace rct3::ui
     /// The page of `tab`. On the members page, each member is a button whose id is their place in the members.
     [[nodiscard]] InfoPage party_page(PartyTab tab, const PartyFacts& facts, const StringTable& strings, const InfoUnits& units);
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

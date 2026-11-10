@@ -77,7 +77,7 @@ namespace rct3::ui
                 continue;
             if (auto game = StringTable::load(*path))
             {
-                add_game_credits(*assets.strings, *game);
+                screens::add_game_credits(*assets.strings, *game);
                 break;
             }
         }

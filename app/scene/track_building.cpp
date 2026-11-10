@@ -139,13 +139,13 @@ namespace rct3::scene
         constexpr std::string_view kSectionTag = ":tks";
         /// Above the tool row, so the two never overlap.
         /// Of the round panel's top, from the screen's bottom edge: its disc stands as the path panel does.
-        constexpr float kPanelTop = ui::game_skins::kOverToolRow + ui::info_panel::kDisc;
+        constexpr float kPanelTop = ui::game_skins::kOverToolRow + ui::screens::info_panel::kDisc;
         /// The controls' room in the strip: from a little left of their rows to a little right of their pager,
         /// as high as the strip holds.
-        constexpr float kControlsLeft = ui::construction_panel::kRowLeft - 8;
+        constexpr float kControlsLeft = ui::screens::construction_panel::kRowLeft - 8;
         constexpr float kControlsTop = 4;
-        constexpr float kControlsWidth = ui::construction_panel::kListRight + 4 - kControlsLeft;
-        constexpr float kControlsHeight = ui::construction_panel::kHeight - kControlsTop;
+        constexpr float kControlsWidth = ui::screens::construction_panel::kListRight + 4 - kControlsLeft;
+        constexpr float kControlsHeight = ui::screens::construction_panel::kHeight - kControlsTop;
         /// The ghost's tint and how much of what is behind it shows through.
 
         using park::track::kBankSteps;
@@ -154,7 +154,7 @@ namespace rct3::scene
         /// as positive.
         int panel_bank(std::size_t i)
         {
-            return i + 1 == ui::construction_panel::kBanks ? park::track::kUpsideDown : kBankSteps - 1 - static_cast<int>(i);
+            return i + 1 == ui::screens::construction_panel::kBanks ? park::track::kUpsideDown : kBankSteps - 1 - static_cast<int>(i);
         }
 
         std::string slashes(std::string path)
@@ -454,9 +454,9 @@ namespace rct3::scene
         }
 
         /// The car counts trains of the kind named `train_name` allow, as the install's file of it sets them.
-        ui::TrainLimits train_limits_of(const config::GameInstall& install, std::string_view train_name)
+        ui::screens::TrainLimits train_limits_of(const config::GameInstall& install, std::string_view train_name)
         {
-            ui::TrainLimits limits;
+            ui::screens::TrainLimits limits;
             const auto file = train_file(install, train_name);
             if (!file)
                 return limits;
@@ -776,9 +776,9 @@ namespace rct3::scene
                 v.colour *= b.off_water || b.clashes ? kRefusedTint : kGhostTint;
         }
 
-        ui::IconState state_of(bool picked, bool offered)
+        ui::screens::IconState state_of(bool picked, bool offered)
         {
-            return picked ? ui::IconState::On : offered ? ui::IconState::Off : ui::IconState::Dis;
+            return picked ? ui::screens::IconState::On : offered ? ui::screens::IconState::Off : ui::screens::IconState::Dis;
         }
 
         std::u16string piece_name(const ui::StringTable& strings, std::string_view name)
@@ -791,7 +791,7 @@ namespace rct3::scene
         /// ends, when it can be.
         struct ListedPiece
         {
-            ui::NamedPiece shown;
+            ui::screens::NamedPiece shown;
             std::optional<park::track::LaidPiece> laid;
         };
 
@@ -800,7 +800,7 @@ namespace rct3::scene
         std::vector<ListedPiece> listed_pieces(const ui::StringTable& strings, const park::track::PieceCatalogue& c, const park::track::TrackRules& rules, const park::track::ChoiceOptions& o)
         {
             const auto shown_as = [&](const park::track::PieceShape& p) {
-                ui::NamedPiece n { .name = piece_name(strings, p.record.name), .offered = false };
+                ui::screens::NamedPiece n { .name = piece_name(strings, p.record.name), .offered = false };
                 // Its kind, as its name says.
                 // shortcut: read from the section's name, upgrade if a ride names its pieces otherwise.
                 std::string name = p.record.name;
@@ -819,7 +819,7 @@ namespace rct3::scene
                 n.marks[0] = sideways > kMarkedRun ? "TrackSpecial_Right" : sideways < -kMarkedRun ? "TrackSpecial_Left" : run.y > kMarkedRun ? "TrackSpecial_Up" : run.y < -kMarkedRun ? "TrackSpecial_Down" : "";
                 return n;
             };
-            const auto same = [](const ui::NamedPiece& a, const ui::NamedPiece& b) { return a.name == b.name && a.marks == b.marks; };
+            const auto same = [](const ui::screens::NamedPiece& a, const ui::screens::NamedPiece& b) { return a.name == b.name && a.marks == b.marks; };
             std::vector<ListedPiece> list;
             for (const park::track::PieceUse use : { park::track::PieceUse::Station, park::track::PieceUse::Special })
             {
@@ -827,14 +827,14 @@ namespace rct3::scene
                 {
                     if (p.use != use || !park::track::lists_piece(rules, p.record.name))
                         continue;
-                    ui::NamedPiece n = shown_as(p);
+                    ui::screens::NamedPiece n = shown_as(p);
                     if (std::ranges::none_of(list, [&](const ListedPiece& l) { return same(l.shown, n); }))
                         list.push_back({ std::move(n), std::nullopt });
                 }
             }
             for (const park::track::LaidPiece& laid : o.named)
             {
-                const ui::NamedPiece n = shown_as(c.pieces[laid.index]);
+                const ui::screens::NamedPiece n = shown_as(c.pieces[laid.index]);
                 const auto found = std::ranges::find_if(list, [&](const ListedPiece& l) { return same(l.shown, n) && !l.laid; });
                 if (found == list.end())
                     continue;
@@ -845,12 +845,12 @@ namespace rct3::scene
         }
 
         /// The panel's view of what the building offers now.
-        ui::ConstructionView panel_view(const ParkScene& scene, const TrackBuilding& b, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units)
+        ui::screens::ConstructionView panel_view(const ParkScene& scene, const TrackBuilding& b, const ui::InterfaceAssets& assets, int currency, ui::screens::DistanceUnits units)
         {
-            ui::ConstructionView v;
-            v.curves.fill(ui::IconState::Dis);
-            v.slopes.fill(ui::IconState::Dis);
-            v.banks.fill(ui::IconState::Dis);
+            ui::screens::ConstructionView v;
+            v.curves.fill(ui::screens::IconState::Dis);
+            v.slopes.fill(ui::screens::IconState::Dis);
+            v.banks.fill(ui::screens::IconState::Dis);
             const save::Ride& ride = scene.rides.rides.at(*b.ride);
             v.can_demolish = ride.track && !ride.track->pieces.empty();
             v.can_complete = v.can_demolish && b.tip.has_value() && !b.backward && !opening(ride) && !b.selected;
@@ -874,7 +874,7 @@ namespace rct3::scene
                 v.curves.at(park::track::curve_index(curve)) = state_of(by_shape && curve == b.choice.curve, o.curves.at(park::track::curve_index(curve)));
             for (int slope = -park::track::kSlopeSteps; slope <= park::track::kSlopeSteps; ++slope)
                 v.slopes.at(park::track::slope_index(slope)) = state_of(by_shape && slope == b.choice.slope, o.slopes.at(park::track::slope_index(slope)));
-            for (std::size_t i = 0; i < ui::construction_panel::kBanks; ++i)
+            for (std::size_t i = 0; i < ui::screens::construction_panel::kBanks; ++i)
             {
                 const int bank = panel_bank(i);
                 v.banks.at(i) = state_of(by_shape && bank == b.choice.bank, o.banks.at(park::track::bank_index(bank)));
@@ -905,7 +905,7 @@ namespace rct3::scene
                     v.piece = assets.strings->get(b.complaint);
                     constexpr std::u16string_view kNameMark = u"%NAME%";
                     if (const auto at = v.piece.find(kNameMark); at != std::u16string::npos)
-                        v.piece.replace(at, kNameMark.size(), ui::attraction_name(scene.rides.rides.at(*b.ride).base, *assets.strings));
+                        v.piece.replace(at, kNameMark.size(), ui::screens::attraction_name(scene.rides.rides.at(*b.ride).base, *assets.strings));
                 }
                 // The price the piece's scenery item stores, in hundredths as the park's money is.
                 v.cost = std::u16string(assets.strings->get(kCostLabel)) + u" " + ui::money_text(ui::currency(*assets.strings, currency), shape.record.cost);
@@ -913,18 +913,18 @@ namespace rct3::scene
                 // shown in tenths of the player's unit, a step a metre a second; the ride's for its kind until set.
                 // shortcut: nothing holds a train for the time or turns the cars yet, upgrade with holding brakes
                 // and turning cars.
-                using enum ui::PieceParam;
+                using enum ui::screens::PieceParam;
                 if (shape.record.role == park::track::kRoleBrakes || shape.record.role == park::track::kRoleBlockBrake)
                 {
                     const float ride_speed = shape.record.role == park::track::kRoleBrakes ? ride.options.brake_speed : ride.options.block_brake_off_speed;
                     const float speed = b.brake_speed > 0 ? static_cast<float>(b.brake_speed) : std::round(ride_speed);
-                    const auto tenths = [&](float metres) { return static_cast<int>(std::lround(metres * ui::speed_scale(units) * 10)); };
-                    v.params.at(std::to_underlying(Speed)) = ui::ParamBox { .value = tenths(speed), .least = tenths(1), .most = tenths(kMostBrakeSpeed), .decimals = 1, .unit = std::u16string(ui::speed_unit(units)), .step = std::max(tenths(1), 1) };
+                    const auto tenths = [&](float metres) { return static_cast<int>(std::lround(metres * ui::screens::speed_scale(units) * 10)); };
+                    v.params.at(std::to_underlying(Speed)) = ui::screens::ParamBox { .value = tenths(speed), .least = tenths(1), .most = tenths(kMostBrakeSpeed), .decimals = 1, .unit = std::u16string(ui::screens::speed_unit(units)), .step = std::max(tenths(1), 1) };
                 }
                 if (shape.record.role == kHoldingRole)
-                    v.params.at(std::to_underlying(HoldingTime)) = ui::ParamBox { .value = b.holding_time, .most = kMostHoldingTime };
+                    v.params.at(std::to_underlying(HoldingTime)) = ui::screens::ParamBox { .value = b.holding_time, .most = kMostHoldingTime };
                 if (rules.car_rotation)
-                    v.params.at(std::to_underlying(CarTurn)) = ui::ParamBox { .value = b.car_turn, .least = -kMostCarTurn, .most = kMostCarTurn };
+                    v.params.at(std::to_underlying(CarTurn)) = ui::screens::ParamBox { .value = b.car_turn, .least = -kMostCarTurn, .most = kMostCarTurn };
             }
             return v;
         }
@@ -1552,21 +1552,21 @@ namespace rct3::scene
         scene.building.test.reset();
         if (auto panel = scene.desktop->root().find(kPanelName))
             panel->close();
-        if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName))
+        if (auto placing = scene.desktop->root().find_as<ui::screens::InfoPanel>(kPlacingName))
         {
             placing->set_body_size(0, 0);
             placing->set_paper(false);
         }
         if (auto arm = scene.desktop->root().find(kArmName))
             arm->close();
-        if (auto design = scene.desktop->root().find_as<ui::InfoPanel>(kDesignPlacingName); design && design->showing())
+        if (auto design = scene.desktop->root().find_as<ui::screens::InfoPanel>(kDesignPlacingName); design && design->showing())
             design->hide();
         scene.building.design_tabs_for.reset();
         if (auto browser = scene.desktop->root().find(kBrowserName))
             browser->close();
         scene.building.offer_designs = false;
         scene.building.design_shown.reset();
-        if (auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName); placing && placing->showing() && !ride_placing(scene))
+        if (auto placing = scene.desktop->root().find_as<ui::screens::InfoPanel>(kPlacingName); placing && placing->showing() && !ride_placing(scene))
         {
             placing->hide();
             placing->show_view_text({ });
@@ -1691,7 +1691,7 @@ namespace rct3::scene
                     if (t.train && !t.train->platform.empty() && strings::equals_ignoring_case(t.name, train_name))
                         ride.platform_type = t.train->platform;
             // As many cars as its kind usually has, and the fewest and most it may have.
-            const ui::TrainLimits& limits = scene.train_limits[index] = train_limits_of(install, train_name);
+            const ui::screens::TrainLimits& limits = scene.train_limits[index] = train_limits_of(install, train_name);
             return fit_trains(scene, install, index, 1, limits.usual_cars);
         }
         return std::nullopt;
@@ -2192,19 +2192,19 @@ namespace rct3::scene
         const auto& pieces = b.catalogues.at(b.overlay).pieces;
         use_split(scene, b, std::ranges::any_of(pieces, [](const park::track::PieceShape& p) { return p.record.side != 0; }) ? park::track::SplitState::JoinedLeft : park::track::SplitState::None);
         refresh(scene, b, assets);
-        auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName);
+        auto placing = scene.desktop->root().find_as<ui::screens::InfoPanel>(kPlacingName);
         if (!placing)
             return false;
         if (!scene.desktop->root().find(kPanelName))
         {
-            auto& panel = placing->body().add<ui::ConstructionPanel>("construction", ui::game_skins::construction_panel_style(assets.palette), std::array { std::u16string(assets.strings->get(kToggleHelps[0])), std::u16string(assets.strings->get(kToggleHelps[1])), std::u16string(assets.strings->get(kToggleHelps[2])), std::u16string(assets.strings->get(kToggleHelps[3])), std::u16string(assets.strings->get(kToggleHelps[4])) }, std::u16string(assets.strings->get(kDemolishHelp)));
-            panel.placement = ui::top_left(-kControlsLeft, -kControlsTop, ui::construction_panel::kWidth, ui::construction_panel::kHeight);
+            auto& panel = placing->body().add<ui::screens::ConstructionPanel>("construction", ui::game_skins::construction_panel_style(assets.palette), std::array { std::u16string(assets.strings->get(kToggleHelps[0])), std::u16string(assets.strings->get(kToggleHelps[1])), std::u16string(assets.strings->get(kToggleHelps[2])), std::u16string(assets.strings->get(kToggleHelps[3])), std::u16string(assets.strings->get(kToggleHelps[4])) }, std::u16string(assets.strings->get(kDemolishHelp)));
+            panel.placement = ui::top_left(-kControlsLeft, -kControlsTop, ui::screens::construction_panel::kWidth, ui::screens::construction_panel::kHeight);
             panel.complete_button().tooltip = assets.strings->get(kCompleteHelp);
             panel.new_segment_button().tooltip = assets.strings->get(kNewSegmentHelp);
             panel.split_button().tooltip = assets.strings->get(kSplitHelp);
             panel.heights_help = assets.strings->get("ATE_TT_HeightMarks");
             panel.facing_button().tooltip = assets.strings->get("ATE_TT_SpinAngle");
-            using enum ui::PieceParam;
+            using enum ui::screens::PieceParam;
             for (const auto& [param, help] : { std::pair { CarTurn, "TrackDesigner_CarSpin_TT" }, std::pair { HoldingTime, "TrackDesigner_HoldingTime_TT" }, std::pair { Speed, "TrackDesigner_BrakeSpeed_TT" } })
                 panel.param_spinner(param).tooltip = assets.strings->get(help);
             panel.heights_locked_help = assets.strings->get("ATE_TT_HeightMarksLocked");
@@ -2238,7 +2238,7 @@ namespace rct3::scene
             if (!strip)
             {
                 strip = scene.desktop->root().add<ui::Panel>(std::string(kArmName), std::string(skins::kCurvedStrip));
-                strip->placement = ui::bottom_left(ui::construction_panel::kStripLeft, kPanelTop, 540, kRow + 8);
+                strip->placement = ui::bottom_left(ui::screens::construction_panel::kStripLeft, kPanelTop, 540, kRow + 8);
                 auto& enable = strip->add<ui::Tickbox>("enable", std::string(skins::kTickbox), std::string(skins::kTick));
                 enable.tooltip = assets.strings->get(kArmEnableHelp);
                 enable.placement = ui::top_left(8, 6, 20, 20);
@@ -2324,19 +2324,19 @@ namespace rct3::scene
         }
     } // namespace
 
-    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed)
+    void update_track_building(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed)
     {
         TrackBuilding& b = scene.building;
         b.clock += elapsed;
-        auto browser = scene.desktop->root().find_as<ui::DesignBrowser>(kBrowserName);
+        auto browser = scene.desktop->root().find_as<ui::screens::DesignBrowser>(kBrowserName);
         if (b.design_picture && !browser)
         {
             // The design's picture goes with its window.
             device.destroy_texture(*b.design_picture);
             b.design_picture.reset();
         }
-        auto panel = scene.desktop->root().find_as<ui::ConstructionPanel>(kPanelName);
-        auto placing = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName);
+        auto panel = scene.desktop->root().find_as<ui::screens::ConstructionPanel>(kPanelName);
+        auto placing = scene.desktop->root().find_as<ui::screens::InfoPanel>(kPlacingName);
         if (!panel || !placing || !b.ride)
             return;
         if (placing->take_closed())
@@ -2387,7 +2387,7 @@ namespace rct3::scene
             b.tabs_for.reset();
         }
         const park::AttractionRef ref { .kind = park::AttractionRef::Kind::Ride, .index = *b.ride };
-        const std::vector<ui::StateChoice> states = state_choices(scene, ref);
+        const std::vector<ui::screens::StateChoice> states = state_choices(scene, ref);
         if (const auto choice = placing->take_choice(); choice && choice->first == State && choice->second < states.size())
         {
             scene.refusal = change_ride_state(scene, *b.ride, states[choice->second].state).value_or("");
@@ -2398,7 +2398,7 @@ namespace rct3::scene
         // not stand where it is; its colours; and cutting the ground it passes into smoothly or sharply. At most one
         // of the two is lit, pressing the lit one putting it out; with neither, ground in its way refuses it.
         const bool holding = starting && !b.design.empty();
-        auto design = scene.desktop->root().find_as<ui::InfoPanel>(kDesignPlacingName);
+        auto design = scene.desktop->root().find_as<ui::screens::InfoPanel>(kDesignPlacingName);
         if (design && holding)
         {
             enum DesignTab : std::size_t
@@ -2439,29 +2439,29 @@ namespace rct3::scene
             }
             if (const auto change = design->take_change())
             {
-                if (change->id == ui::control_id(ui::AttractionControl::Name))
+                if (change->id == ui::screens::control_id(ui::screens::AttractionControl::Name))
                     b.design_title = change->text;
-                else if (change->id == ui::control_id(ui::AttractionControl::Music))
+                else if (change->id == ui::screens::control_id(ui::screens::AttractionControl::Music))
                     b.design_tune = static_cast<std::size_t>(std::max(change->value, 0));
             }
             const auto page = [&] {
-                ui::InfoPage p;
-                ui::InfoControl name { .id = ui::control_id(ui::AttractionControl::Name), .name = "TT_AttractionDialogIconLabelButton", .kind = ui::InfoControlKind::Text, .maximum = ui::kLongestAttractionName, .text = b.design_title, .width = ui::kNameWidth, .help = std::u16string(assets.strings->get("TT_AttractionDialogIconLabelButton")) };
+                ui::screens::InfoPage p;
+                ui::screens::InfoControl name { .id = ui::screens::control_id(ui::screens::AttractionControl::Name), .name = "TT_AttractionDialogIconLabelButton", .kind = ui::screens::InfoControlKind::Text, .maximum = ui::screens::kLongestAttractionName, .text = b.design_title, .width = ui::screens::kNameWidth, .help = std::u16string(assets.strings->get("TT_AttractionDialogIconLabelButton")) };
                 p.controls.push_back(std::move(name));
-                ui::InfoControl music { .id = ui::control_id(ui::AttractionControl::Music), .name = "AttractionViewDialogMusicToolTip", .kind = ui::InfoControlKind::Choice, .value = static_cast<int>(b.design_tune), .beside = true, .width = ui::kNameWidth, .help = std::u16string(assets.strings->get("AttractionViewDialogMusicToolTip")) };
+                ui::screens::InfoControl music { .id = ui::screens::control_id(ui::screens::AttractionControl::Music), .name = "AttractionViewDialogMusicToolTip", .kind = ui::screens::InfoControlKind::Choice, .value = static_cast<int>(b.design_tune), .beside = true, .width = ui::screens::kNameWidth, .help = std::u16string(assets.strings->get("AttractionViewDialogMusicToolTip")) };
                 music.items.emplace_back(assets.strings->get("AttractionViewDialogNoMusic"));
                 music.items.insert(music.items.end(), scene.tunes.begin(), scene.tunes.end());
                 p.controls.push_back(std::move(music));
-                p.controls.push_back({ .name = "status", .kind = ui::InfoControlKind::Words });
+                p.controls.push_back({ .name = "status", .kind = ui::screens::InfoControlKind::Words });
                 return p;
             };
             const save::RideColours colours = next_colours(scene, b);
             if (const std::tuple now { b.cut_ground, b.smooth_cuts, colours }; b.design_tabs_for != now || !design->showing())
             {
-                std::vector<ui::InfoTab> tabs(5);
+                std::vector<ui::screens::InfoTab> tabs(5);
                 tabs[Turn] = { .icon = "IconAttractionEditorRotate", .help = std::u16string(assets.strings->get("ATE_TT_Rotate")), .action = true };
-                for (const ui::AttractionTabInfo& t : ui::attraction_tabs(ui::AttractionKind::Tracked, save::AttractionState::Closed))
-                    if (t.tab == ui::AttractionTab::View)
+                for (const ui::screens::AttractionTabInfo& t : ui::screens::attraction_tabs(ui::screens::AttractionKind::Tracked, save::AttractionState::Closed))
+                    if (t.tab == ui::screens::AttractionTab::View)
                         tabs[Page] = { .icon = std::string(t.icon), .help = std::u16string(assets.strings->get(t.help)) };
                 tabs[Paint] = { .icon = "Attraction_Colour", .help = std::u16string(assets.strings->get("Scenery_SetFlexiColours")), .paints = { colours.begin(), colours.end() } };
                 for (const auto& [tab, name, smooth] : { std::tuple { Smoothly, "Smooth", true }, std::tuple { Sharply, "Sharp", false } })
@@ -2491,12 +2491,12 @@ namespace rct3::scene
         }
         if (const std::tuple now { starting, scene.rides.rides.at(*b.ride).base.state, whole, b.smooth_cuts }; !holding && (b.tabs_for != now || !placing->showing()))
         {
-            std::vector<ui::InfoTab> tabs(7);
-            for (const ui::AttractionTabInfo& t : ui::attraction_tabs(ui::AttractionKind::Tracked, std::get<1>(now)))
+            std::vector<ui::screens::InfoTab> tabs(7);
+            for (const ui::screens::AttractionTabInfo& t : ui::screens::attraction_tabs(ui::screens::AttractionKind::Tracked, std::get<1>(now)))
             {
-                if (t.tab != ui::AttractionTab::View && t.tab != ui::AttractionTab::State && t.tab != ui::AttractionTab::Construction)
+                if (t.tab != ui::screens::AttractionTab::View && t.tab != ui::screens::AttractionTab::State && t.tab != ui::screens::AttractionTab::Construction)
                     continue;
-                ui::InfoTab& tab = tabs[t.tab == ui::AttractionTab::View ? Info : t.tab == ui::AttractionTab::State ? State : Construction];
+                ui::screens::InfoTab& tab = tabs[t.tab == ui::screens::AttractionTab::View ? Info : t.tab == ui::screens::AttractionTab::State ? State : Construction];
                 tab.icon = t.icon;
                 tab.help = assets.strings->get(t.help);
             }
@@ -2564,7 +2564,7 @@ namespace rct3::scene
             if (c == nullptr)
                 break;
             b.complaint.clear();
-            using enum ui::ConstructionAction;
+            using enum ui::screens::ConstructionAction;
             if (event->action != Complete)
             {
                 b.completing.reset();
@@ -2605,21 +2605,21 @@ namespace rct3::scene
                     b.heights = !b.heights;
                     break;
                 case Param:
-                    switch (static_cast<ui::PieceParam>(event->index))
+                    switch (static_cast<ui::screens::PieceParam>(event->index))
                     {
-                        case ui::PieceParam::CarTurn:
+                        case ui::screens::PieceParam::CarTurn:
                             b.car_turn = event->value;
                             break;
-                        case ui::PieceParam::HoldingTime:
+                        case ui::screens::PieceParam::HoldingTime:
                             b.holding_time = event->value;
                             break;
-                        case ui::PieceParam::Speed:
-                            b.brake_speed = std::clamp(static_cast<int>(std::lround(static_cast<float>(event->value) / 10 / ui::speed_scale(units))), 1, static_cast<int>(kMostBrakeSpeed));
+                        case ui::screens::PieceParam::Speed:
+                            b.brake_speed = std::clamp(static_cast<int>(std::lround(static_cast<float>(event->value) / 10 / ui::screens::speed_scale(units))), 1, static_cast<int>(kMostBrakeSpeed));
                             break;
                     }
                     break;
                 case Facing:
-                    b.facing = static_cast<std::uint8_t>((b.facing + 1) % ui::construction_panel::kFacings);
+                    b.facing = static_cast<std::uint8_t>((b.facing + 1) % ui::screens::construction_panel::kFacings);
                     break;
                 case NewSegment:
                 {
@@ -2827,7 +2827,7 @@ namespace rct3::scene
                 const auto key_of = [&](float v) { return d.assessment.valid ? std::optional<double>(v) : std::nullopt; };
                 rows.push_back({ .cells = { std::move(text), rated(d.assessment.excitement), rated(d.assessment.intensity) }, .keys = { std::nullopt, key_of(d.assessment.excitement), key_of(d.assessment.intensity) }, .id = i + 1 });
             }
-            browser = scene.desktop->root().add<ui::DesignBrowser>(std::string(kBrowserName), ui::game_skins::design_browser_style(assets.palette), std::u16string(strings.get("TrackBrowser_Title")), "Ride_Coaster", std::move(columns), std::move(rows), std::u16string(strings.get("TrackBrowser_BuildThis")), std::u16string(strings.get("TrackBrowser_Cancel")));
+            browser = scene.desktop->root().add<ui::screens::DesignBrowser>(std::string(kBrowserName), ui::game_skins::design_browser_style(assets.palette), std::u16string(strings.get("TrackBrowser_Title")), "Ride_Coaster", std::move(columns), std::move(rows), std::u16string(strings.get("TrackBrowser_BuildThis")), std::u16string(strings.get("TrackBrowser_Cancel")));
             b.browsing = true;
         }
         if (!browser)
@@ -2860,7 +2860,7 @@ namespace rct3::scene
             b.design_picture.reset();
             b.design_shown = *picked == 0 ? std::nullopt : std::optional(*picked - 1);
             ui::TextureId picture = 0;
-            std::vector<ui::InfoLine> lines;
+            std::vector<ui::screens::InfoLine> lines;
             bool locked = false;
             if (b.design_shown)
             {
@@ -2875,7 +2875,7 @@ namespace rct3::scene
                         b.design_picture = *texture;
                         picture = ui::texture_id(*texture);
                     }
-                lines = ui::design_lines(summary, *assets.strings, { ui::currency(*assets.strings, currency), units });
+                lines = ui::screens::design_lines(summary, *assets.strings, { ui::currency(*assets.strings, currency), units });
                 locked = b.designs_locked.at(*b.design_shown);
                 if (locked)
                     lines.push_back({ .label = ui::locked_design_help(*assets.strings, summary.scenario, summary.level), .name = std::string(kLockedHelp) });

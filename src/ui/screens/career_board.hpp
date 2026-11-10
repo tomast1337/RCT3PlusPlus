@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace career_board
@@ -228,4 +228,4 @@ namespace rct3::ui
         bool quit_out_ = false;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -41,7 +41,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     enum class FileDialogMode : std::uint8_t
@@ -230,4 +230,4 @@ namespace rct3::ui
     /// `name` as saving writes it: without ".dat", with ".park".
     [[nodiscard]] std::u16string with_save_extension(std::u16string_view name);
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

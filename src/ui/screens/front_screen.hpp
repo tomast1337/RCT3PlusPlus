@@ -27,7 +27,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace front_screen
@@ -218,4 +218,4 @@ namespace rct3::ui
         std::vector<FrontRequest> requests_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -21,7 +21,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     enum class SceneryTab : std::uint8_t
@@ -118,4 +118,4 @@ namespace rct3::ui
     /// The page of `tab`, or the page with no tab open when there is none.
     [[nodiscard]] InfoPage scenery_page(std::optional<SceneryTab> tab, const SceneryFacts& facts, const StringTable& strings);
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

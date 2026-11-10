@@ -14,7 +14,7 @@
 #include <format>
 #include <numbers>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     Point info_tab_offset(int slot)
@@ -1049,4 +1049,4 @@ namespace rct3::ui
         skin::draw_skin(context.list, skin(style_.rim), d);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

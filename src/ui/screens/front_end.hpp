@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     struct FrontEndStyle
@@ -177,4 +177,4 @@ namespace rct3::ui
         std::vector<FrontRequest> unhandled_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

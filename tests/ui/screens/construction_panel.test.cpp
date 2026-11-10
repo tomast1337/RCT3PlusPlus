@@ -9,7 +9,8 @@
 #include <utility>
 
 using namespace rct3::ui;
-namespace cp = rct3::ui::construction_panel;
+using namespace rct3::ui::screens;
+namespace cp = rct3::ui::screens::construction_panel;
 
 namespace
 {

@@ -364,7 +364,7 @@ namespace rct3::scene
         // A ride that is one building borrows the round panel while it is set down (track_building.cpp).
         if (!p.item && scene.building.ride)
             return;
-        auto panel = scene.desktop->root().find_as<ui::InfoPanel>(kPlacingName);
+        auto panel = scene.desktop->root().find_as<ui::screens::InfoPanel>(kPlacingName);
         if (panel && panel->take_closed())
             stop_ride_placing(scene);
         const bool whole = p.step == RidePlacing::Step::Ride || p.step == RidePlacing::Step::Scenery;
@@ -407,23 +407,23 @@ namespace rct3::scene
             // levelling it smoothly or sharply.
             const bool levelled = !scenery && !p.item->water_only;
             const auto placing_tabs = [&] {
-                std::vector<ui::InfoTab> tabs;
+                std::vector<ui::screens::InfoTab> tabs;
                 // Walls and other items that turn to the pointer have nothing to turn.
                 const auto positioning = static_cast<park::object::Positioning>(scene.models.at(park::object::model_key(alone)).positioning);
                 if (!scenery || !park::object::snapped_turn(positioning, { }))
                 {
-                    ui::InfoTab& turn = tabs.emplace_back();
+                    ui::screens::InfoTab& turn = tabs.emplace_back();
                     turn.icon = "IconAttractionEditorRotate";
                     turn.help = assets.strings->get("ATE_TT_Rotate");
                     turn.slot = kTurnSlot;
                     turn.action = true;
                 }
-                for (const ui::SceneryTabInfo& t : ui::scenery_tabs({ .colour_slots = park::object::colour_slots(scene.models.at(park::object::model_key(alone))), .colours = p.colours }))
+                for (const ui::screens::SceneryTabInfo& t : ui::screens::scenery_tabs({ .colour_slots = park::object::colour_slots(scene.models.at(park::object::model_key(alone))), .colours = p.colours }))
                 {
                     // A ride takes its own colours when placed.
-                    if (t.tab != ui::SceneryTab::Colour || !scenery)
+                    if (t.tab != ui::screens::SceneryTab::Colour || !scenery)
                         continue;
-                    ui::InfoTab& colour = tabs.emplace_back();
+                    ui::screens::InfoTab& colour = tabs.emplace_back();
                     colour.icon = t.icon;
                     colour.help = assets.strings->get(t.help);
                     colour.slot = kColourSlot;
@@ -433,7 +433,7 @@ namespace rct3::scene
                 {
                     if (!levelled)
                         break;
-                    tabs.push_back(ui::InfoTab { .icon = std::format("TerrainFlattener_{}{}", name, p.flatten == flatten ? "On" : "Off"), .help = std::u16string(assets.strings->get(std::format("TerrainFlattener_{}_ToolTip", name))), .slot = slot, .choices = { }, .action = true, .paints = { }, .colours = 0 });
+                    tabs.push_back(ui::screens::InfoTab { .icon = std::format("TerrainFlattener_{}{}", name, p.flatten == flatten ? "On" : "Off"), .help = std::u16string(assets.strings->get(std::format("TerrainFlattener_{}_ToolTip", name))), .slot = slot, .choices = { }, .action = true, .paints = { }, .colours = 0 });
                 }
                 return tabs;
             };
@@ -464,7 +464,7 @@ namespace rct3::scene
                 }
                 if (const auto paint = panel->take_paint())
                 {
-                    const auto slots = ui::scenery_paint_slots({ .colour_slots = park::object::colour_slots(scene.models.at(park::object::model_key(alone))), .colours = p.colours });
+                    const auto slots = ui::screens::scenery_paint_slots({ .colour_slots = park::object::colour_slots(scene.models.at(park::object::model_key(alone))), .colours = p.colours });
                     if (paint->pot < slots.size())
                     {
                         p.colours.at(slots[paint->pot]) = static_cast<std::int32_t>(paint->colour);

@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     /// One line of the rolling credits.
@@ -184,4 +184,4 @@ namespace rct3::ui
         AboutPage page_ = AboutPage::Info;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -8,7 +8,7 @@
 #include <cmath>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace map_view
@@ -221,4 +221,4 @@ namespace rct3::ui
         list.pop_clip();
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

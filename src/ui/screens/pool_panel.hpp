@@ -38,7 +38,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     /// The paths page's controls: the path panel's, in their order, but its cut switch.
@@ -249,4 +249,4 @@ namespace rct3::ui
         bool closed_ = false;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

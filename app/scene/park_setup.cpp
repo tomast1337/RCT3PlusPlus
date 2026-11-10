@@ -1601,27 +1601,28 @@ namespace rct3::scene
             scene.desktop->root().add<ui::MoneyFloaters>(std::string(kMoneyName)).stays_behind = true;
             // Behind the bar, which it hangs from.
             // Under the bar, even while it is dragged.
-            scene.desktop->root().add<ui::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(palette), strings).stays_behind = true;
-            auto& tools = scene.desktop->root().add<ui::ToolRow>(std::string(kToolsName), skins::tool_row_style(palette), strings);
+            scene.desktop->root().add<ui::screens::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(palette), strings).stays_behind = true;
+            auto& tools = scene.desktop->root().add<ui::screens::ToolRow>(std::string(kToolsName), skins::tool_row_style(palette), strings);
             // Only these menu items do anything yet; the rest show faded until their tools exist.
-            for (std::size_t t = 0; t < ui::kParkToolCount; ++t)
+            for (std::size_t t = 0; t < ui::screens::kParkToolCount; ++t)
             {
-                for (const ui::ToolMenuItem& entry : ui::tool_menu(static_cast<ui::ParkTool>(t)))
+                for (const ui::screens::ToolMenuItem& entry : ui::screens::tool_menu(static_cast<ui::screens::ParkTool>(t)))
                     tools.set_available(
                         entry.item,
-                        entry.item == ui::ToolItem::DeleteOne || entry.item == ui::ToolItem::DeleteArea || entry.item == ui::ToolItem::ShapeGround || entry.item == ui::ToolItem::PaintGround || entry.item == ui::ToolItem::Water || entry.item == ui::ToolItem::Waterfalls || entry.item == ui::ToolItem::People || entry.item == ui::ToolItem::Scenery || entry.item == ui::ToolItem::SeeThroughGround || entry.item == ui::ToolItem::Grid || entry.item == ui::ToolItem::Contours || entry.item == ui::ToolItem::PathHeights
-                            || entry.item == ui::ToolItem::RideHeights || entry.item == ui::ToolItem::Supports || entry.item == ui::ToolItem::Options || entry.item == ui::ToolItem::About || entry.item == ui::ToolItem::Save || entry.item == ui::ToolItem::Load || entry.item == ui::ToolItem::SavedStructures || ui::build_list(entry.item) || ui::management_topic(entry.item));
+                        entry.item == ui::screens::ToolItem::DeleteOne || entry.item == ui::screens::ToolItem::DeleteArea || entry.item == ui::screens::ToolItem::ShapeGround || entry.item == ui::screens::ToolItem::PaintGround || entry.item == ui::screens::ToolItem::Water || entry.item == ui::screens::ToolItem::Waterfalls || entry.item == ui::screens::ToolItem::People || entry.item == ui::screens::ToolItem::Scenery || entry.item == ui::screens::ToolItem::SeeThroughGround
+                            || entry.item == ui::screens::ToolItem::Grid || entry.item == ui::screens::ToolItem::Contours || entry.item == ui::screens::ToolItem::PathHeights || entry.item == ui::screens::ToolItem::RideHeights || entry.item == ui::screens::ToolItem::Supports || entry.item == ui::screens::ToolItem::Options || entry.item == ui::screens::ToolItem::About || entry.item == ui::screens::ToolItem::Save || entry.item == ui::screens::ToolItem::Load
+                            || entry.item == ui::screens::ToolItem::SavedStructures || ui::screens::build_list(entry.item) || ui::screens::management_topic(entry.item));
             }
-            scene.desktop->root().add<ui::ParkBar>(std::string(kBarName), skins::park_bar_style(palette), strings);
+            scene.desktop->root().add<ui::screens::ParkBar>(std::string(kBarName), skins::park_bar_style(palette), strings);
             // Both round panels stand over the tool row, as the path and land panels do.
-            ui::InfoPanelStyle info = skins::info_panel_style(palette);
-            info.raise = skins::kOverToolRow - ui::info_panel::kDiscMargin;
-            scene.desktop->root().add<ui::InfoPanel>(std::string(kInfoName), info);
-            ui::InfoPanelStyle placing = std::move(info);
+            ui::screens::InfoPanelStyle info = skins::info_panel_style(palette);
+            info.raise = skins::kOverToolRow - ui::screens::info_panel::kDiscMargin;
+            scene.desktop->root().add<ui::screens::InfoPanel>(std::string(kInfoName), info);
+            ui::screens::InfoPanelStyle placing = std::move(info);
             placing.left = true;
-            scene.desktop->root().add<ui::InfoPanel>(std::string(kDesignPlacingName), placing);
-            scene.desktop->root().add<ui::InfoPanel>(std::string(kPlacingName), std::move(placing));
-            scene.desktop->root().add<ui::FootpathPanel>(std::string(kFootpathPanelName), skins::footpath_panel_style(palette), strings);
+            scene.desktop->root().add<ui::screens::InfoPanel>(std::string(kDesignPlacingName), placing);
+            scene.desktop->root().add<ui::screens::InfoPanel>(std::string(kPlacingName), std::move(placing));
+            scene.desktop->root().add<ui::screens::FootpathPanel>(std::string(kFootpathPanelName), skins::footpath_panel_style(palette), strings);
         }
 
         // ── 9. People and simulation ──
@@ -1636,7 +1637,7 @@ namespace rct3::scene
             if (!tutorial)
                 log.warning("tutorial: {}", save::to_string(tutorial.error()));
             else if (*tutorial)
-                scene.desktop->root().add<ui::TutorialGuide>(std::string(kGuideName), skins::tutorial_guide_style(palette), strings, std::move(**tutorial));
+                scene.desktop->root().add<ui::screens::TutorialGuide>(std::string(kGuideName), skins::tutorial_guide_style(palette), strings, std::move(**tutorial));
             scene.desktop->tooltip_style = skins::tooltip_style(palette);
             scene.map = park_map(scene.grid, world->paths, world->water, scene.objects, scene.models, scene.fitted, scene.attractions, scene.rides, images, install);
             log.info("{}: {} by {} tiles", path.filename().string(), scene.grid.width, scene.grid.height);

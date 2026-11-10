@@ -34,7 +34,7 @@ namespace rct3::scene
         std::optional<std::filesystem::path> options_file; ///< Without it the options are not kept
         std::optional<config::UserData> data;              ///< Where the saves and careers are; without it there are none
         std::optional<std::filesystem::path> game_saves;   ///< The original game's folder of the player's games, if found
-        std::vector<ui::ScreenSize> screen_sizes;
+        std::vector<ui::screens::ScreenSize> screen_sizes;
         std::optional<std::size_t> screen_size;
         std::vector<int> anti_aliasing_levels;              ///< Samples per pixel the device offers above 1
         ui::KeyMap keys;                                    ///< In use, for the options window to change
@@ -58,7 +58,7 @@ namespace rct3::scene
         {
             config::GameOptions options;
             ui::Desktop desktop;
-            std::optional<ui::FrontEnd> front;
+            std::optional<ui::screens::FrontEnd> front;
         };
         std::unique_ptr<Live> live = std::make_unique<Live>();
         const ui::font::FontSet* current_fonts = nullptr; ///< The set for the width of the last update

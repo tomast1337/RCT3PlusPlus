@@ -26,7 +26,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     /// The management windows, in the order the menu offers them from its button outwards, most used first.
@@ -133,4 +133,4 @@ namespace rct3::ui
     [[nodiscard]] std::size_t management_row_id(ManagementRow row);
     [[nodiscard]] ManagementRow management_row(std::size_t id);
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -136,4 +136,4 @@ namespace rct3::ui
         context.list.image({ r.x0 + 2, r.y0 + 2, r.x1 - 2, r.y1 - 2 }, picture_, { 0, 0, 1, 1 });
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

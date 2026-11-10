@@ -12,7 +12,7 @@
 #include <format>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -488,4 +488,4 @@ namespace rct3::ui
         skin::draw_skin(context.list, context.skins.find(icon), { drag_->at.x - h / 2, drag_->at.y - h / 2, drag_->at.x + h / 2, drag_->at.y + h / 2 });
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

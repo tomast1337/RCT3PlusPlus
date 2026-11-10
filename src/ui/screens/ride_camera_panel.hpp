@@ -22,7 +22,7 @@
 #include <string>
 #include <utility>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     struct RideCameraPanelStyle
@@ -117,4 +117,4 @@ namespace rct3::ui
         float still_ = 0; ///< Seconds the pointer has been still
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

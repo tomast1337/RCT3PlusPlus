@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     namespace
@@ -102,4 +102,4 @@ namespace rct3::ui
         placement = bottom_right(0, -(1 - eased) * kHeight, kWidth, kHeight);
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

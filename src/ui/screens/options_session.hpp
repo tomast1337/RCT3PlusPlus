@@ -20,7 +20,7 @@
 #include <string>
 #include <string_view>
 
-namespace rct3::ui
+namespace rct3::ui::screens
 {
 
     class OptionsSession
@@ -71,4 +71,4 @@ namespace rct3::ui
         std::optional<KeyMap> keys_;
     };
 
-} // namespace rct3::ui
+} // namespace rct3::ui::screens

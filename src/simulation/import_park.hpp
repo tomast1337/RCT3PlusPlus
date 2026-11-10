@@ -19,6 +19,7 @@
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 #include "simulation/sim_world.hpp"
+#include "simulation/stalls.hpp"
 
 #include <array>
 #include <cstddef>

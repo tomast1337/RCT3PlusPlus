@@ -2,6 +2,7 @@
 #include "simulation/components.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/sandbox.hpp"
+#include "simulation/stalls.hpp"
 #include "simulation/systems.hpp"
 
 #include <doctest/doctest.h>

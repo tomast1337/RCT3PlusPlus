@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::ovl
+namespace rct3::ovl::animal
 {
 
     struct ShelterItem
@@ -44,4 +44,4 @@ namespace rct3::ovl
     /// the overlay's bytes.
     [[nodiscard]] std::vector<AnimalToyItem> read_animal_toys(const Overlay& overlay, const Part& part);
 
-} // namespace rct3::ovl
+} // namespace rct3::ovl::animal

@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::ovl
+namespace rct3::ovl::animal
 {
 
     /// The slots of a motion set, by number.
@@ -65,4 +65,4 @@ namespace rct3::ovl
     /// 0x08, then a pointer to that many animation references and one to that many lengths in seconds.
     [[nodiscard]] std::vector<AnimalMotionsItem> read_animal_motions(const Overlay& overlay, const Part& part);
 
-} // namespace rct3::ovl
+} // namespace rct3::ovl::animal

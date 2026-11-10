@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/build_catalogue.hpp"
 
-#include "ovl/animal_items.hpp"
-#include "ovl/animal_species.hpp"
+#include "ovl/animal/items.hpp"
+#include "ovl/animal/species.hpp"
 #include "ovl/animated_ride.hpp"
 #include "ovl/enclosure_fence.hpp"
 #include "ovl/integer_value.hpp"
@@ -164,7 +164,7 @@ namespace rct3::park
                 items.push_back(std::move(item));
             }
             // A shelter is listed as the scenery item it is placed as, which parks record.
-            for (const auto& e : ovl::read_shelters(overlay, part))
+            for (const auto& e : ovl::animal::read_shelters(overlay, part))
             {
                 const auto it = placed.find(e.scenery);
                 if (it == placed.end() || it->second->icon.empty())
@@ -182,7 +182,7 @@ namespace rct3::park
                 item.addon = s.addon;
                 items.push_back(std::move(item));
             }
-            for (const auto& e : ovl::read_animal_toys(overlay, part))
+            for (const auto& e : ovl::animal::read_animal_toys(overlay, part))
             {
                 if (!e.toy)
                     continue;
@@ -194,11 +194,11 @@ namespace rct3::park
                 item.price = e.toy->price;
                 items.push_back(std::move(item));
             }
-            for (const auto& e : ovl::read_animal_species(overlay, part))
+            for (const auto& e : ovl::animal::read_animal_species(overlay, part))
             {
                 if (!e.species)
                     continue;
-                const ovl::AnimalSpecies& s = *e.species;
+                const ovl::animal::AnimalSpecies& s = *e.species;
                 for (const auto& v : s.variants)
                 {
                     if (!v)

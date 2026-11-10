@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ovl/animal_species.hpp"
+#include "ovl/animal/species.hpp"
 
 #include "ovl/item_record.hpp"
 
-namespace rct3::ovl
+namespace rct3::ovl::animal
 {
 
     namespace
@@ -65,4 +65,4 @@ namespace rct3::ovl
         return items;
     }
 
-} // namespace rct3::ovl
+} // namespace rct3::ovl::animal

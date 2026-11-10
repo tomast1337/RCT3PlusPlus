@@ -37,20 +37,20 @@ namespace rct3::scene
         }
 
         /// The motion of `body` that shows what `animal` is doing, standing at `pose`.
-        ovl::AnimalMotion motion_of(const park::AnimalBody& body, const simulation::Animal& animal, const simulation::Pose& pose)
+        ovl::animal::AnimalMotion motion_of(const park::AnimalBody& body, const simulation::Animal& animal, const simulation::Pose& pose)
         {
             using simulation::AnimalJob;
             const bool moving = pose.position != pose.was;
-            ovl::AnimalMotion motion = ovl::AnimalMotion::Stand;
+            ovl::animal::AnimalMotion motion = ovl::animal::AnimalMotion::Stand;
             if (moving)
-                motion = ovl::AnimalMotion::Walk;
+                motion = ovl::animal::AnimalMotion::Walk;
             else if (animal.job == AnimalJob::Feeding)
-                motion = animal.hunger.value >= animal.thirst.value ? ovl::AnimalMotion::EatLoop : ovl::AnimalMotion::DrinkLoop;
+                motion = animal.hunger.value >= animal.thirst.value ? ovl::animal::AnimalMotion::EatLoop : ovl::animal::AnimalMotion::DrinkLoop;
             else if (animal.job == AnimalJob::Sleeping)
-                motion = ovl::AnimalMotion::SleepLoop;
+                motion = ovl::animal::AnimalMotion::SleepLoop;
             if (park::motion_seconds(body, motion) > 0)
                 return motion;
-            return park::motion_seconds(body, ovl::AnimalMotion::Stand) > 0 ? ovl::AnimalMotion::Stand : ovl::AnimalMotion::Idle1;
+            return park::motion_seconds(body, ovl::animal::AnimalMotion::Stand) > 0 ? ovl::animal::AnimalMotion::Stand : ovl::animal::AnimalMotion::Idle1;
         }
     } // namespace
 

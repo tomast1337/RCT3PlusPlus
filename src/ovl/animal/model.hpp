@@ -20,7 +20,7 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::ovl
+namespace rct3::ovl::animal
 {
 
     struct AnimalBone
@@ -51,4 +51,4 @@ namespace rct3::ovl
     /// point into the overlay's bytes.
     [[nodiscard]] std::vector<AnimalModelItem> read_animal_models(const Overlay& overlay, const Part& part);
 
-} // namespace rct3::ovl
+} // namespace rct3::ovl::animal

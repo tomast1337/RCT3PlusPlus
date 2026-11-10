@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ovl/animal_items.hpp"
+#include "ovl/animal/items.hpp"
 
-#include "record_file.hpp"
+#include "../record_file.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3::test;
-using rct3::ovl::read_animal_toys;
-using rct3::ovl::read_shelters;
+using rct3::ovl::animal::read_animal_toys;
+using rct3::ovl::animal::read_shelters;
 
 TEST_CASE("a shelter refers to the scenery item it is placed as, and its keeper's hut")
 {

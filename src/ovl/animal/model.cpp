@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ovl/animal_model.hpp"
+#include "ovl/animal/model.hpp"
 
 #include <cstring>
 #include <span>
 #include <unordered_map>
 
-namespace rct3::ovl
+namespace rct3::ovl::animal
 {
 
     namespace
@@ -311,4 +311,4 @@ namespace rct3::ovl
         return items;
     }
 
-} // namespace rct3::ovl
+} // namespace rct3::ovl::animal

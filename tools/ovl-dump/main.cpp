@@ -29,8 +29,8 @@
 #include "ovl/scenery_item.hpp"
 #include "ovl/terrain_type.hpp"
 // --- end scenery and placement item types ---
-#include "ovl/animal_model.hpp"
-#include "ovl/animal_motions.hpp"
+#include "ovl/animal/model.hpp"
+#include "ovl/animal/motions.hpp"
 #include "ovl/animated_ride.hpp"
 #include "ovl/bitmap_table.hpp"
 #include "ovl/bone_anim.hpp"
@@ -435,7 +435,7 @@ namespace
         }
         if (opt.mdl)
         {
-            const auto models = rct3::ovl::read_animal_models(overlay, part);
+            const auto models = rct3::ovl::animal::read_animal_models(overlay, part);
             const auto bad = std::ranges::count_if(models, [](const auto& item) { return !item.model; });
             out.info("animal models  {:d} ({:d} unreadable)", models.size(), bad);
             for (const auto& item : models)
@@ -463,7 +463,7 @@ namespace
         }
         if (opt.wad)
         {
-            for (const auto& item : rct3::ovl::read_animal_motions(overlay, part))
+            for (const auto& item : rct3::ovl::animal::read_animal_motions(overlay, part))
             {
                 const std::string name(item.name);
                 if (!item.motions)

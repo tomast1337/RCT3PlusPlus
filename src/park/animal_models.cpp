@@ -2,8 +2,8 @@
 #include "park/animal_models.hpp"
 
 #include "core/maybe.hpp"
-#include "ovl/animal_model.hpp"
-#include "ovl/animal_species.hpp"
+#include "ovl/animal/model.hpp"
+#include "ovl/animal/species.hpp"
 #include "ovl/model_anim.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/texture.hpp"
@@ -64,13 +64,13 @@ namespace rct3::park
 
     } // namespace
 
-    float motion_seconds(const AnimalBody& body, ovl::AnimalMotion motion)
+    float motion_seconds(const AnimalBody& body, ovl::animal::AnimalMotion motion)
     {
         const auto slot = static_cast<std::size_t>(motion);
         return slot < body.motions.size() && body.motions[slot] ? body.motions[slot]->seconds : 0.0f;
     }
 
-    std::vector<glm::mat4> animal_pose(const AnimalBody& body, ovl::AnimalMotion motion, float time)
+    std::vector<glm::mat4> animal_pose(const AnimalBody& body, ovl::animal::AnimalMotion motion, float time)
     {
         const std::size_t n = body.parents.size();
         std::vector<glm::vec3> positions = body.rest_positions;
@@ -194,12 +194,12 @@ namespace rct3::park
     {
         Files& f = *files_;
         std::string species_file;
-        const auto [unused, found] = f.find<ovl::AnimalSpecies>(species, "was", "", &ovl::read_animal_species, &ovl::AnimalSpeciesItem::species, &species_file);
+        const auto [unused, found] = f.find<ovl::animal::AnimalSpecies>(species, "was", "", &ovl::animal::read_animal_species, &ovl::animal::AnimalSpeciesItem::species, &species_file);
         if (!found)
             return std::nullopt;
-        const auto wanted = static_cast<std::size_t>(adult ? (male ? ovl::AnimalAge::AdultMale : ovl::AnimalAge::AdultFemale) : (male ? ovl::AnimalAge::YoungMale : ovl::AnimalAge::YoungFemale));
+        const auto wanted = static_cast<std::size_t>(adult ? (male ? ovl::animal::AnimalAge::AdultMale : ovl::animal::AnimalAge::AdultFemale) : (male ? ovl::animal::AnimalAge::YoungMale : ovl::animal::AnimalAge::YoungFemale));
         // The one asked for, the other sex of the same age, then any.
-        const std::optional<ovl::AnimalVariant>* variant = nullptr;
+        const std::optional<ovl::animal::AnimalVariant>* variant = nullptr;
         for (const std::size_t i : { wanted, wanted ^ 1, std::size_t { 0 }, std::size_t { 1 }, std::size_t { 2 }, std::size_t { 3 } })
         {
             if (found->variants[i] && !found->variants[i]->model.empty())
@@ -212,13 +212,13 @@ namespace rct3::park
             return std::nullopt;
 
         std::string model_file;
-        const auto [model_open, model] = f.find<ovl::AnimalModel>((*variant)->model, "mdl", species_file, &ovl::read_animal_models, &ovl::AnimalModelItem::model, &model_file);
+        const auto [model_open, model] = f.find<ovl::animal::AnimalModel>((*variant)->model, "mdl", species_file, &ovl::animal::read_animal_models, &ovl::animal::AnimalModelItem::model, &model_file);
         if (!model)
             return std::nullopt;
 
         AnimalBody body;
         std::vector<std::string> bone_names;
-        for (const ovl::AnimalBone& bone : model->bones)
+        for (const ovl::animal::AnimalBone& bone : model->bones)
         {
             body.parents.push_back(bone.parent);
             body.rest_positions.emplace_back(bone.position[0], bone.position[1], bone.position[2]);
@@ -267,9 +267,9 @@ namespace rct3::park
             }
         }
 
-        body.motions.resize(static_cast<std::size_t>(ovl::AnimalMotion::TurnRight90) + 1);
+        body.motions.resize(static_cast<std::size_t>(ovl::animal::AnimalMotion::TurnRight90) + 1);
         std::string motions_file;
-        const auto [motions_open, motions] = (*variant)->motions.empty() ? std::pair<Files::Open*, std::optional<ovl::AnimalMotions>> { } : f.find<ovl::AnimalMotions>((*variant)->motions, "wad", model_file, &ovl::read_animal_motions, &ovl::AnimalMotionsItem::motions, &motions_file);
+        const auto [motions_open, motions] = (*variant)->motions.empty() ? std::pair<Files::Open*, std::optional<ovl::animal::AnimalMotions>> { } : f.find<ovl::animal::AnimalMotions>((*variant)->motions, "wad", model_file, &ovl::animal::read_animal_motions, &ovl::animal::AnimalMotionsItem::motions, &motions_file);
         for (std::size_t slot = 0; motions && slot < motions->animations.size() && slot < body.motions.size(); ++slot)
         {
             const std::string_view name = motions->animations[slot];

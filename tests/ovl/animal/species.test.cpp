@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ovl/animal_species.hpp"
+#include "ovl/animal/species.hpp"
 
-#include "record_file.hpp"
+#include "../record_file.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3::test;
-using rct3::ovl::read_animal_species;
+using rct3::ovl::animal::read_animal_species;
 
 TEST_CASE("an animal species points to its animals and names its shelter")
 {

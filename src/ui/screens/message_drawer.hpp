@@ -13,7 +13,7 @@
 // through take_clicked().
 #pragma once
 
-#include "simulation/park_messages.hpp"
+#include "simulation/park/messages.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
 
@@ -48,7 +48,7 @@ namespace rct3::ui::screens
     /// One message as the drawer shows it.
     struct DrawerMessage
     {
-        std::uint64_t serial = 0; ///< Grows with each new message; see simulation::ParkMessage
+        std::uint64_t serial = 0; ///< Grows with each new message; see simulation::park::ParkMessage
         std::u16string text { };
         std::string icon { };   ///< Skin before the text
         std::string mood { };   ///< A thought's face between the icon and the text, for a message telling a thought
@@ -68,12 +68,12 @@ namespace rct3::ui::screens
 
     /// The text of `message`: its string with the subject's name, or the award's, filled in. A name that is
     /// not known is left out along with the separator before it.
-    [[nodiscard]] std::u16string message_text(const simulation::ParkMessage& message, const StringTable& strings);
+    [[nodiscard]] std::u16string message_text(const simulation::park::ParkMessage& message, const StringTable& strings);
 
     /// The drawer's messages, oldest first, each with the icon its kind has: an award's, a goal's, the inspector's,
     /// else the camera. Only an award's icon is clickable; the owner gives messages about an attraction theirs.
     /// A message whose text is a thought, such as the inspector's reports, also has that thought's face.
-    [[nodiscard]] std::vector<DrawerMessage> drawer_messages(const simulation::ParkMessages& messages, const StringTable& strings, const MessageDrawerStyle& style);
+    [[nodiscard]] std::vector<DrawerMessage> drawer_messages(const simulation::park::ParkMessages& messages, const StringTable& strings, const MessageDrawerStyle& style);
 
     /// The drawer's back and lip over `rect`, the drawer's own rectangle, without its messages.
     void draw_drawer_frame(DrawContext& context, const MessageDrawerStyle& style, const Rect& rect);

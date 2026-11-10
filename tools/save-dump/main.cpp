@@ -25,7 +25,7 @@
 #include "save/model/rides.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
-#include "simulation/park_rating.hpp"
+#include "simulation/park/rating.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -574,10 +574,10 @@ int main(int argc, char** argv)
             const auto ride_model = load_rides(*file, index);
             if (!park || !people || !ride_model || !park->park.rating())
                 continue;
-            auto input = rct3::simulation::rating_input(*people, *ride_model, park->clock.time);
+            auto input = rct3::simulation::park::rating_input(*people, *ride_model, park->clock.time);
             input.guests = static_cast<std::int32_t>(park->park.guests_in_park.latest().value_or(0.0f));
             input.harder = park->park.flags.has(ParkFlag::HarderRating);
-            const auto p = rct3::simulation::rate_park(input);
+            const auto p = rct3::simulation::park::rate_park(input);
             const float saved = *park->park.rating();
             error_sum += std::abs(static_cast<double>(p.total) - static_cast<double>(saved));
             ++compared;

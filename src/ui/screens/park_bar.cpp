@@ -100,10 +100,10 @@ namespace rct3::ui::screens
         return out;
     }
 
-    std::u16string park_rating_help(const StringTable& strings, float rating, const std::optional<simulation::RatingParts>& parts)
+    std::u16string park_rating_help(const StringTable& strings, float rating, const std::optional<simulation::park::RatingParts>& parts)
     {
         std::u16string out(strings.get(kRatingHelp));
-        out += ascii(std::format(" {}", std::lround(rating * simulation::kMaxRating)));
+        out += ascii(std::format(" {}", std::lround(rating * simulation::park::kMaxRating)));
         if (!parts)
             return out;
         // One line a part, with its sign; parts that only ever take away are left out while they take nothing.
@@ -126,7 +126,7 @@ namespace rct3::ui::screens
         return out;
     }
 
-    ParkBarValues park_bar_values(const simulation::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units)
+    ParkBarValues park_bar_values(const simulation::park::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units)
     {
         ParkBarValues v;
         v.speed = state.speed;

@@ -11,7 +11,7 @@
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "simulation/objectives.hpp"
-#include "simulation/park_state.hpp"
+#include "simulation/park/state.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/management_window.hpp"
 #include "ui/screens/tool_menus.hpp"
@@ -74,7 +74,7 @@ namespace rct3::ui::screens
     struct ManagementFacts
     {
         const save::model::ParkModel* park = nullptr; ///< As saved
-        const simulation::ParkState* state = nullptr;
+        const simulation::park::ParkState* state = nullptr;
         const save::model::PeopleModel* people = nullptr;
         const save::model::RideModel* rides = nullptr;
         std::uint32_t broken_items = 0;                     ///< Path items vandals have broken

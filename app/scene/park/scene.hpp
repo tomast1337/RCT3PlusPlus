@@ -64,8 +64,8 @@
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/objectives.hpp"
-#include "simulation/park_graphs.hpp"
-#include "simulation/park_state.hpp"
+#include "simulation/park/graphs.hpp"
+#include "simulation/park/state.hpp"
 #include "simulation/sim_world.hpp"
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
@@ -558,7 +558,7 @@ namespace rct3::scene::park
         /// park moves by it, so a pause freezes it all; the interface and its previews go by `clock`.
         float park_clock = 0;
         std::vector<float> chain_shifts;   ///< By ride, how far its lift chain has moved (park/chain_lifts.hpp)
-        simulation::ParkState park;        ///< Money, guests, rating, weather, date and speed as they are now
+        simulation::park::ParkState park;  ///< Money, guests, rating, weather, date and speed as they are now
         BuildMenus build;                  ///< The lists of rides, shops and scenery to build
         save::model::ParkModel park_model; ///< As saved: finances, objectives, research; read by the management windows
         simulation::DayClock day;          ///< The park's time of day
@@ -749,7 +749,7 @@ namespace rct3::scene::park
         bool chairs_changed = true;                 ///< The placed objects changed since lifeguards were last seated in their chairs
         bool themes_judged = false;                 ///< The attractions' fit with their scenery judged once since the park opened
         std::int64_t wages_seen = 0;                ///< Of the staff's pay, what has come out of the park's cash
-        std::optional<std::int64_t> ledger_month;   ///< Months into the calendar the newest ledger period is for (simulation::ledger_month)
+        std::optional<std::int64_t> ledger_month;   ///< Months into the calendar the newest ledger period is for (simulation::park::ledger_month)
         std::int64_t supplies_seen = 0;             ///< Of what supplies cost, what has come out of the park's cash
         std::int64_t receipts_seen = 0;             ///< Of what guests have paid, what has gone into the park's cash
         std::vector<BrokenRide> broken_rides;       ///< Rides the player has been told are broken down

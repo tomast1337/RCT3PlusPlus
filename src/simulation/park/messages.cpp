@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "simulation/park_messages.hpp"
+#include "simulation/park/messages.hpp"
 
 #include <algorithm>
 #include <string_view>
 #include <utility>
 
-namespace rct3::simulation
+namespace rct3::simulation::park
 {
 
     namespace
@@ -55,4 +55,4 @@ namespace rct3::simulation
         std::erase_if(messages.list, [](const ParkMessage& m) { return m.age > kMessageLifetime; });
     }
 
-} // namespace rct3::simulation
+} // namespace rct3::simulation::park

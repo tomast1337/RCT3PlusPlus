@@ -66,7 +66,7 @@ namespace rct3::ui::screens
 
     } // namespace
 
-    std::u16string message_text(const simulation::ParkMessage& message, const StringTable& strings)
+    std::u16string message_text(const simulation::park::ParkMessage& message, const StringTable& strings)
     {
         std::u16string text(strings.get(message.text_key));
         // An award's message is named by the award.
@@ -108,7 +108,7 @@ namespace rct3::ui::screens
         return text;
     }
 
-    std::vector<DrawerMessage> drawer_messages(const simulation::ParkMessages& messages, const StringTable& strings, const MessageDrawerStyle& style)
+    std::vector<DrawerMessage> drawer_messages(const simulation::park::ParkMessages& messages, const StringTable& strings, const MessageDrawerStyle& style)
     {
         std::vector<DrawerMessage> out;
         out.reserve(messages.list.size());

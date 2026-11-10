@@ -21,7 +21,7 @@
 
 #include "save/model/people.hpp"
 #include "simulation/components.hpp"
-#include "simulation/park_messages.hpp"
+#include "simulation/park/messages.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/units.hpp"
 
@@ -174,6 +174,6 @@ namespace rct3::simulation
 
     /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape, and leaving what the
     /// park's inspector finds among the Findings.
-    void step_animals(SimWorld& world, const AnimalGround& ground, Seconds dt, ParkMessages& messages);
+    void step_animals(SimWorld& world, const AnimalGround& ground, Seconds dt, park::ParkMessages& messages);
 
 } // namespace rct3::simulation

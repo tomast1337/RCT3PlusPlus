@@ -55,14 +55,14 @@ namespace rct3::simulation
         return wanted > 0 ? static_cast<float>(seen) / static_cast<float>(wanted) : happiness;
     }
 
-    void advance_vips(SimWorld& world, save::model::ObjectiveSet& set, float time, float game_seconds, ParkMessages& messages, const VipSurroundings& around)
+    void advance_vips(SimWorld& world, save::model::ObjectiveSet& set, float time, float game_seconds, park::ParkMessages& messages, const VipSurroundings& around)
     {
         using T = save::model::VipTarget;
         entt::registry& r = world.registry;
         const tuning::Vips& tune = kTuning.vips;
         const std::int32_t level = level_playing(set);
         const auto name_of = [&](std::uint8_t who) { return around.name ? around.name(who) : std::string { }; };
-        const auto tell = [&](std::string_view key, std::uint8_t who) { post(messages, { .text_key = std::string(key), .subject_name = name_of(who) }); };
+        const auto tell = [&](std::string_view key, std::uint8_t who) { park::post(messages, { .text_key = std::string(key), .subject_name = name_of(who) }); };
         // shortcut: VIP messages name the VIP but have no camera on them, as guests who came in since the park
         // was loaded have no id a message can keep; point them at the VIP once such guests are given one.
         for (save::model::Condition& c : set.conditions)

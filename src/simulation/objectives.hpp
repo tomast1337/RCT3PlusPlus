@@ -13,7 +13,7 @@
 #include "save/model/park.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
-#include "simulation/park_messages.hpp"
+#include "simulation/park/messages.hpp"
 
 #include <array>
 #include <cstdint>
@@ -23,7 +23,10 @@
 
 namespace rct3::simulation
 {
-    struct ParkState;
+    namespace park
+    {
+        struct ParkState;
+    } // namespace park
 
     /// The rides a coaster goal counts.
     enum class RideGroup : std::uint8_t
@@ -93,14 +96,14 @@ namespace rct3::simulation
     /// Checks the goals of the level being played at calendar `time`, marking those met, and posts what dated
     /// goals tell the player to `messages`. When that makes the level won, marks it and returns the prizes it
     /// gives: the scenario's for the level (0 when none), then the level's own.
-    std::optional<std::array<std::int32_t, 2>> check_goals(save::model::ObjectiveSet& set, const ParkFigures& figures, float time, std::optional<ParkMessages&> messages = std::nullopt);
+    std::optional<std::array<std::int32_t, 2>> check_goals(save::model::ObjectiveSet& set, const ParkFigures& figures, float time, std::optional<park::ParkMessages&> messages = std::nullopt);
 
     /// Text key naming a goal of `kind`; empty for kinds without one.
     [[nodiscard]] std::string_view condition_name(save::model::ConditionKind kind) noexcept;
 
     /// Gives the park prize `id`'s reward. The construction rights prize puts the land held back from the
     /// park on sale.
-    void give_prize(ParkState& park, save::model::Finance& finance, save::model::TerrainGrid& land, std::int32_t id);
+    void give_prize(park::ParkState& park, save::model::Finance& finance, save::model::TerrainGrid& land, std::int32_t id);
 
     /// Text keys of prize `id`'s name and of the message telling the player they have it.
     [[nodiscard]] std::string_view prize_name(std::int32_t id);

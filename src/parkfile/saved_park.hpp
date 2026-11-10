@@ -50,7 +50,7 @@
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
-#include "simulation/park_rating.hpp"
+#include "simulation/park/rating.hpp"
 #include "simulation/sim_world.hpp"
 
 #include <cstddef>
@@ -72,7 +72,7 @@ namespace rct3::parkfile
         std::optional<std::int64_t> cash; ///< Hundredths; none when money never runs out
         std::int64_t loan = 0;
         std::optional<float> rating;
-        std::optional<simulation::RatingParts> rating_parts;
+        std::optional<simulation::park::RatingParts> rating_parts;
         float time = 0;
         float zero_time = 0;
         save::model::CalendarDate date;

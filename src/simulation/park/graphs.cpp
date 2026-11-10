@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "simulation/park_graphs.hpp"
+#include "simulation/park/graphs.hpp"
 
 #include <algorithm>
 
-namespace rct3::simulation
+namespace rct3::simulation::park
 {
 
     namespace
@@ -81,4 +81,4 @@ namespace rct3::simulation
         return ledger[0];
     }
 
-} // namespace rct3::simulation
+} // namespace rct3::simulation::park

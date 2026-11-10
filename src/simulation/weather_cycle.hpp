@@ -21,7 +21,10 @@
 namespace rct3::simulation
 {
 
-    struct ParkState;
+    namespace park
+    {
+        struct ParkState;
+    } // namespace park
 
     /// The climates a park file can name, in the order of the scenario editor's list.
     enum class Climate : std::int32_t
@@ -62,6 +65,6 @@ namespace rct3::simulation
 
     /// Moves the weather on by `units` of calendar time, rolling forecasts with `dice`. Nothing changes while
     /// `frozen` (the Disable weather option).
-    void advance_weather(ParkState& state, float units, random::RandomState& dice, bool frozen);
+    void advance_weather(park::ParkState& state, float units, random::RandomState& dice, bool frozen);
 
 } // namespace rct3::simulation

@@ -4,7 +4,7 @@
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/import_park.hpp"
-#include "simulation/park_state.hpp"
+#include "simulation/park/state.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/staff_care.hpp"
 #include "simulation/systems.hpp"
@@ -13,6 +13,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
+using namespace rct3::simulation::park;
 
 TEST_CASE("a ride worn right down breaks now and then, and its queue gives up")
 {

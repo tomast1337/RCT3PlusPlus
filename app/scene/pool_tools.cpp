@@ -13,7 +13,7 @@
 #include "scene/park/view.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/track_building.hpp"
-#include "simulation/park_messages.hpp"
+#include "simulation/park/messages.hpp"
 #include "ui/extra_skins.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/pool_panel.hpp"
@@ -339,7 +339,7 @@ namespace rct3::scene
                     pools_changed(device, scene, assets);
                 }
                 else if (fits)
-                    simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(kNoMoney) });
+                    simulation::park::post(scene.park.messages, simulation::park::ParkMessage { .text_key = std::string(kNoMoney) });
             }
             draw_marks(device, scene, tile ? std::optional(marked(*tile, *tile)) : std::nullopt, rct3::park::TilePart::Whole, ok);
             turn_preview(device, scene, assets, item.symbol, item.overlay);
@@ -430,7 +430,7 @@ namespace rct3::scene
                         done = spot;
                     }
                     else if (allowed(scene, marked(spot, spot), 0))
-                        simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(kNoMoney) });
+                        simulation::park::post(scene.park.messages, simulation::park::ParkMessage { .text_key = std::string(kNoMoney) });
                 }
                 else if (step == rct3::park::PathStep::Remove && !t.trail.trail.empty() && t.trail.trail.back().laid != 0)
                 {
@@ -805,7 +805,7 @@ namespace rct3::scene
                 }
             }
             else if (t.faces && allowed(scene, marked(*t.corner, *t.other), 0))
-                simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(kNoMoney) });
+                simulation::park::post(scene.park.messages, simulation::park::ParkMessage { .text_key = std::string(kNoMoney) });
             t.corner.reset();
             t.other.reset();
             t.press_y.reset();

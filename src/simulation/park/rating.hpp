@@ -26,7 +26,7 @@
 #include <optional>
 #include <vector>
 
-namespace rct3::simulation
+namespace rct3::simulation::park
 {
 
     inline constexpr std::int32_t kMaxRating = 1000;
@@ -77,4 +77,4 @@ namespace rct3::simulation
     /// `score` (0..kMaxRating).
     [[nodiscard]] float next_rating(std::optional<float> before, std::int32_t score) noexcept;
 
-} // namespace rct3::simulation
+} // namespace rct3::simulation::park

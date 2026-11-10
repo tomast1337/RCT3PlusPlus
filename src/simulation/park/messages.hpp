@@ -16,7 +16,7 @@
 #include <optional>
 #include <string>
 
-namespace rct3::simulation
+namespace rct3::simulation::park
 {
 
     /// Messages kept at most.
@@ -52,4 +52,4 @@ namespace rct3::simulation
     /// Ages every message by `game_seconds` and drops those past their lifetime.
     void age(ParkMessages& messages, float game_seconds);
 
-} // namespace rct3::simulation
+} // namespace rct3::simulation::park

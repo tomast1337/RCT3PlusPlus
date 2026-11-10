@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "simulation/park_state.hpp"
+#include "simulation/park/state.hpp"
 
 #include "simulation/components.hpp"
 #include "simulation/tuning.hpp"
@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace rct3::simulation
+namespace rct3::simulation::park
 {
 
     ParkState park_state(const save::model::ParkModel* park, const save::model::WorldModel& world)
@@ -90,4 +90,4 @@ namespace rct3::simulation
         return { .rain = storm || state.weather == LightRain || state.weather == HeavyRain, .storm = storm, .sunny = state.weather == Sunny || state.weather == SunnyCloudy, .temperature = { state.temperature.value_or(Weather { }.temperature.value) } };
     }
 
-} // namespace rct3::simulation
+} // namespace rct3::simulation::park

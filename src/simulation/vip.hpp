@@ -11,7 +11,7 @@
 // Only the goals of the level being played send anyone; the others' dates roll on a month at a time.
 
 #include "save/model/park.hpp"
-#include "simulation/park_messages.hpp"
+#include "simulation/park/messages.hpp"
 #include "simulation/sim_world.hpp"
 
 #include <cstdint>
@@ -40,6 +40,6 @@ namespace rct3::simulation
     /// Moves the VIP goals of `set` on to calendar `time`, `game_seconds` after the last call: tells the player
     /// of a visit coming, lets the VIP in on the day, has them look round, and judges the visit as they leave,
     /// posting each to `messages`.
-    void advance_vips(SimWorld& world, save::model::ObjectiveSet& set, float time, float game_seconds, ParkMessages& messages, const VipSurroundings& around);
+    void advance_vips(SimWorld& world, save::model::ObjectiveSet& set, float time, float game_seconds, park::ParkMessages& messages, const VipSurroundings& around);
 
 } // namespace rct3::simulation

@@ -59,7 +59,7 @@
 #include "scene/ui_demo.hpp"
 #include "scene/widget_demo.hpp"
 #include "simulation/game_speed.hpp"
-#include "simulation/park_messages.hpp"
+#include "simulation/park/messages.hpp"
 #include "simulation/ratings.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/weather_cycle.hpp"
@@ -782,7 +782,7 @@ int main(int argc, char** argv)
         }
         log.info("picture: {}", saved->string());
         if (park)
-            rct3::simulation::post(park->park.messages, { .text_key = std::string { told }, .subject_name = saved->filename().string() });
+            rct3::simulation::park::post(park->park.messages, { .text_key = std::string { told }, .subject_name = saved->filename().string() });
     };
     // The menus' sound starts with the first front screen and goes on through language changes. The options it
     // reads are the front end's once there is one; until then, those in the file.

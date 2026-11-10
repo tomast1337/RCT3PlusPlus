@@ -1863,7 +1863,7 @@ namespace rct3::scene::park
                 if (simulation::train(care) && scene.park.cash)
                 {
                     *scene.park.cash -= cost;
-                    simulation::ledger_month(scene.park_model.finance, scene.ledger_month, scene.park.date).staff_training += static_cast<std::int32_t>(cost);
+                    simulation::park::ledger_month(scene.park_model.finance, scene.ledger_month, scene.park.date).staff_training += static_cast<std::int32_t>(cost);
                 }
                 return show();
             }
@@ -2631,7 +2631,7 @@ namespace rct3::scene::park
                 {
                     // Only those walking in the park; riders are left be.
                     if (!pick_up_person(scene, *scene.shown_person) && (scene.shown_people[*scene.shown_person].guest == entt::null || scene.sim.registry.all_of<simulation::Left>(scene.shown_people[*scene.shown_person].guest)))
-                        simulation::post(scene.park.messages, { .text_key = "Pincer_NotOwned" });
+                        simulation::park::post(scene.park.messages, { .text_key = "Pincer_NotOwned" });
                 }
                 else if (change->id == ui::screens::person_control(ui::screens::PersonControl::Sack))
                 {
@@ -2854,7 +2854,7 @@ namespace rct3::scene::park
             const float game_seconds = elapsed * simulation::time_factor(scene.park.speed);
             simulation::advance(scene.day, game_seconds);
             const float before = scene.park.time;
-            const std::int32_t weeks = simulation::pass_time(scene.park, game_seconds);
+            const std::int32_t weeks = simulation::park::pass_time(scene.park, game_seconds);
             simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, options.flag(config::GameOption::DisableWeather));
             scene.thunder = rct3::park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed, scene.weather_dice);
             // Each new week rates the park again; weeks run through in one frame are rated once.
@@ -2862,9 +2862,9 @@ namespace rct3::scene::park
             {
                 // While the park runs, its own litter counts, and much of it is told to the player.
                 const std::optional<std::int32_t> old = scene.simulate ? std::optional(simulation::old_litter(scene.sim)) : std::nullopt;
-                profiling::section("Rating", [&] { simulation::rate_week(scene.park, scene.people, scene.rides, old); });
+                profiling::section("Rating", [&] { simulation::park::rate_week(scene.park, scene.people, scene.rides, old); });
                 if (old >= kLitterWarning)
-                    simulation::post(scene.park.messages, { .text_key = "Thought_PI_Park_Litter1" });
+                    simulation::park::post(scene.park.messages, { .text_key = "Thought_PI_Park_Litter1" });
                 // Last month's takings, for the scenario's goals on money.
                 std::int64_t rides_taken = 0;
                 std::int64_t shops_taken = 0;
@@ -2888,10 +2888,10 @@ namespace rct3::scene::park
                     auto& began = scene.week_began;
                     if (!began.set)
                         began = { .intake = intake, .income = income, .cash = cash, .set = true };
-                    simulation::close_week(
+                    simulation::park::close_week(
                         scene.park_model,
                         {
-                            .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::kMaxRating)),
+                            .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
                             .guests = scene.park.guests,
                             .adults = ages[static_cast<std::size_t>(simulation::AgeGroup::Adult)],
                             .teenagers = ages[static_cast<std::size_t>(simulation::AgeGroup::Teen)],
@@ -2912,7 +2912,7 @@ namespace rct3::scene::park
                     const save::model::Finance& money = scene.park_model.finance;
                     simulation::AwardFigures f {
                         .guests = scene.park.guests,
-                        .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::kMaxRating)),
+                        .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
                         .money = scene.park.cash.has_value(),
                         .fee_charged = scene.park.cash.has_value() && !money.unlimited() && !money.entrance_fee_fixed(),
                         .entrance_fee = money.entrance_fee,
@@ -2984,7 +2984,7 @@ namespace rct3::scene::park
                         const auto slot = static_cast<std::size_t>(kind);
                         if (scene.park.cash && slot < scene.park_model.awards.prize_money.size())
                             *scene.park.cash += scene.park_model.awards.prize_money[slot];
-                        simulation::post(scene.park.messages, { .text_key = std::string(simulation::award_message(kind)), .award = kind });
+                        simulation::park::post(scene.park.messages, { .text_key = std::string(simulation::award_message(kind)), .award = kind });
                     }
                 }
             }
@@ -3007,7 +3007,7 @@ namespace rct3::scene::park
                 const simulation::ParkFigures figures {
                     .park_value = std::llround(scene.park_model.finance.park_value.latest().value_or(0)),
                     .guests = scene.park.guests,
-                    .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::kMaxRating)),
+                    .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
                     .loan = scene.park.loan,
                     .ride_income = scene.takings.rides,
                     .shop_profit = scene.takings.shops,
@@ -3049,13 +3049,13 @@ namespace rct3::scene::park
                     }
                 }
             }
-            simulation::age(scene.park.messages, game_seconds);
+            simulation::park::age(scene.park.messages, game_seconds);
             if (scene.simulate)
             {
                 // A long frame steps at most a few seconds, so the park catches up rather than stalls.
                 constexpr float kMostSeconds = 2;
                 scene.sim_time = std::min(scene.sim_time + game_seconds, kMostSeconds);
-                scene.sim.registry.ctx().insert_or_assign(simulation::guest_weather(scene.park));
+                scene.sim.registry.ctx().insert_or_assign(simulation::park::guest_weather(scene.park));
                 scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day.time });
                 const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;
                 // The pools taken in again once built on, or their rooms opened, closed, priced or given another fluid or
@@ -3163,10 +3163,10 @@ namespace rct3::scene::park
                 {
                     const auto broken = static_cast<float>(vandalism->broken - scene.vandalism_seen);
                     if (scene.park.rating)
-                        *scene.park.rating = std::max(0.0f, *scene.park.rating - kVandalismPenalty * broken / static_cast<float>(simulation::kMaxRating));
+                        *scene.park.rating = std::max(0.0f, *scene.park.rating - kVandalismPenalty * broken / static_cast<float>(simulation::park::kMaxRating));
                     scene.vandalism_seen = vandalism->broken;
                     for (; scene.vandalism_warnings_seen < vandalism->warnings; ++scene.vandalism_warnings_seen)
-                        simulation::post(scene.park.messages, { .text_key = "Thought_PI_Park_Vandalism1" });
+                        simulation::park::post(scene.park.messages, { .text_key = "Thought_PI_Park_Vandalism1" });
                 }
                 if (!scene.themes_judged && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
                     judge_themes(scene);
@@ -3206,7 +3206,7 @@ namespace rct3::scene::park
                     const auto& r = scene.sim.registry;
                     for (const auto& [finding, at] : findings->found)
                     {
-                        simulation::ParkMessage message { .text_key = std::string(kKeys[std::to_underlying(finding)]) };
+                        simulation::park::ParkMessage message { .text_key = std::string(kKeys[std::to_underlying(finding)]) };
                         if (const auto* attraction = r.valid(at) ? r.try_get<simulation::Attraction>(at) : nullptr)
                         {
                             const bool stall = r.all_of<simulation::Shop>(at);
@@ -3239,7 +3239,7 @@ namespace rct3::scene::park
                         }
                         else if (r.valid(at))
                             continue; // Gone since
-                        simulation::post(scene.park.messages, std::move(message));
+                        simulation::park::post(scene.park.messages, std::move(message));
                     }
                     findings->found.clear();
                     // A worker who quits goes as one sacked does, their window with them.
@@ -3384,7 +3384,7 @@ namespace rct3::scene::park
                         // shortcut: the message names what they thought about but cannot take the view to the
                         // person; add it once messages open people.
                         if (std::string key = ui::thought_text_key(*assets.strings, slots[0].id, slots[0].variant); person.thoughts_to_console && !key.empty())
-                            simulation::post(scene.park.messages, { .text_key = std::move(key), .subject = about != nullptr && about->saved != 0 ? std::optional(about->saved) : std::nullopt });
+                            simulation::park::post(scene.park.messages, { .text_key = std::move(key), .subject = about != nullptr && about->saved != 0 ? std::optional(about->saved) : std::nullopt });
                     }
                     p.thoughts_seen = thoughts->had;
                 }
@@ -3394,7 +3394,7 @@ namespace rct3::scene::park
                     if (scene.park.cash)
                     {
                         *scene.park.cash -= payroll->paid.value - scene.wages_seen;
-                        simulation::ledger_month(scene.park_model.finance, scene.ledger_month, scene.park.date).staff_wages += static_cast<std::int32_t>(payroll->paid.value - scene.wages_seen);
+                        simulation::park::ledger_month(scene.park_model.finance, scene.ledger_month, scene.park.date).staff_wages += static_cast<std::int32_t>(payroll->paid.value - scene.wages_seen);
                     }
                     scene.wages_seen = payroll->paid.value;
                 }
@@ -3459,7 +3459,7 @@ namespace rct3::scene::park
                         continue;
                     crashes = wrecks->crashes;
                     const std::uint32_t hurt = wrecks->injured - std::exchange(injured, wrecks->injured);
-                    simulation::post(scene.park.messages, { .text_key = hurt > 0 ? "Thought_PI_Ride_Crashed_Injuries1" : "Thought_PI_Ride_Crashed1", .subject = ride.base.id, .number = hurt });
+                    simulation::park::post(scene.park.messages, { .text_key = hurt > 0 ? "Thought_PI_Ride_Crashed_Injuries1" : "Thought_PI_Ride_Crashed1", .subject = ride.base.id, .number = hurt });
                     ride.base.state = save::model::AttractionState::Closed;
                     scene.shown_closed = scene.shown_closed || (scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && scene.shown->index == i);
                     auto& events = scene.park_model.awards.dangerous_coaster_events;
@@ -3475,9 +3475,9 @@ namespace rct3::scene::park
                     const bool stall = upkeep.break_in.value >= 0;
                     const auto tell = [&](std::string_view key) {
                         if (stall)
-                            simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = attraction.saved != 0 ? std::optional(attraction.saved) : std::nullopt, .panel = ui::screens::message_panel(ui::screens::AttractionTab::View) }); // Named once shown, as the window names it
+                            simulation::park::post(scene.park.messages, { .text_key = std::string(key), .subject = attraction.saved != 0 ? std::optional(attraction.saved) : std::nullopt, .panel = ui::screens::message_panel(ui::screens::AttractionTab::View) }); // Named once shown, as the window names it
                         else
-                            simulation::post(scene.park.messages, { .text_key = std::string(key), .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = ui::screens::message_panel(ui::screens::AttractionTab::Maintenance), .field_key = std::string(ui::screens::breakdown_key(static_cast<save::model::BreakdownKind>(std::to_underlying(upkeep.kind)))) });
+                            simulation::park::post(scene.park.messages, { .text_key = std::string(key), .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = ui::screens::message_panel(ui::screens::AttractionTab::Maintenance), .field_key = std::string(ui::screens::breakdown_key(static_cast<save::model::BreakdownKind>(std::to_underlying(upkeep.kind)))) });
                     };
                     const auto* shop = scene.sim.registry.try_get<simulation::Shop>(e);
                     const bool cash = shop != nullptr && shop->product == simulation::Product::CashMachine;
@@ -3578,7 +3578,7 @@ namespace rct3::scene::park
         {
             // shortcut: only rides and stalls can be gone to, not people or path items; add them when a message names one.
             // Saved parks keep messages without their subject's name, so it is filled in from the attraction.
-            for (simulation::ParkMessage& m : scene.park.messages.list)
+            for (simulation::park::ParkMessage& m : scene.park.messages.list)
             {
                 const auto ref = m.subject && m.subject_name.empty() ? attraction_with(scene, *m.subject) : std::nullopt;
                 if (ref)
@@ -3604,7 +3604,7 @@ namespace rct3::scene::park
             messages->show(shown);
             scene.message_alert = scene.message_alert || messages->take_alert();
             const auto serial = messages->take_clicked();
-            const auto message = serial ? std::ranges::find(scene.park.messages.list, *serial, &simulation::ParkMessage::serial) : scene.park.messages.list.end();
+            const auto message = serial ? std::ranges::find(scene.park.messages.list, *serial, &simulation::park::ParkMessage::serial) : scene.park.messages.list.end();
             // An award's icon opens the park's awards, as the game does.
             if (message != scene.park.messages.list.end() && message->award)
                 open_management_window(desktop, ui::screens::ManagementTopic::ParkOperations, ui::screens::kAwardsTab, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
@@ -4062,7 +4062,7 @@ namespace rct3::scene::park
         saved.paths = scene.footpaths.paths;
         saved.bins = scene.bins;
         saved.signs = scene.signs;
-        const simulation::ParkState& park = scene.park;
+        const simulation::park::ParkState& park = scene.park;
         saved.progress = { .cash = park.cash,
                            .loan = park.loan,
                            .rating = park.rating,

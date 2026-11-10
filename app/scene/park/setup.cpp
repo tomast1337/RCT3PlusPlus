@@ -1559,7 +1559,7 @@ namespace rct3::scene::park
         // ── 7. Park state ──
         {
             const auto& model = park_model;
-            scene.park = simulation::park_state(model ? &*model : nullptr, *world);
+            scene.park = simulation::park::park_state(model ? &*model : nullptr, *world);
             scene.build = start_build_menus(install, model ? &model->content : nullptr);
             if (model)
                 scene.park_model = *model;

@@ -845,6 +845,11 @@ int main(int argc, char** argv)
 
     if (command == "fuzz")
     {
+        if (fuzz_seconds <= 0) // libFuzzer would read -max_total_time=0 as no limit
+        {
+            log(Level::Error, "--seconds must be at least 1");
+            return 1;
+        }
         const Config cfg = make_config(false, false, true, job_count(jobs));
         std::vector<fs::path> targets;
         if (!build_fuzz(cfg, targets))

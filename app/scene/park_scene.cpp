@@ -152,14 +152,14 @@ namespace rct3::scene
         }
 
         /// Asks whether to pull `refs` down, naming them; the answer comes back in the park's update.
-        void ask_demolish(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, std::vector<park::AttractionRef> refs)
+        void ask_demolish(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, std::vector<rct3::park::AttractionRef> refs)
         {
             if (refs.empty() || scene.desktop->root().find(kDemolishName))
                 return;
             std::u16string names;
-            for (const park::AttractionRef ref : refs)
+            for (const rct3::park::AttractionRef ref : refs)
             {
-                const save::AttractionCommon& a = ref.kind == park::AttractionRef::Kind::Stall ? scene.rides.stalls.at(ref.index).base : scene.rides.rides.at(ref.index).base;
+                const save::AttractionCommon& a = ref.kind == rct3::park::AttractionRef::Kind::Stall ? scene.rides.stalls.at(ref.index).base : scene.rides.rides.at(ref.index).base;
                 names += (names.empty() ? u"" : u", ") + ui::screens::attraction_name(a, strings);
             }
             std::u16string text(strings.get(kDemolishText));
@@ -191,7 +191,7 @@ namespace rct3::scene
 
         void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, const config::GameOptions& options, float elapsed)
         {
-            using park::ControlMode;
+            using rct3::park::ControlMode;
             const ui::Point p = input.pointer.position;
             const float dx = p.x - scene.last_pointer.x;
             const float dy = p.y - scene.last_pointer.y;
@@ -199,11 +199,11 @@ namespace rct3::scene
             const auto mode = static_cast<ControlMode>(options.choice(config::GameOption::CameraMode));
             const float scale = scene.scale.value_or(1);
 
-            park::ParkCamera c = scene.camera;
+            rct3::park::ParkCamera c = scene.camera;
             if (mode == ControlMode::Isometric && scene.control_mode != mode)
             {
-                scene.iso_step = park::isometric_step(c.yaw);
-                c.pitch = park::kIsometricPitch;
+                scene.iso_step = rct3::park::isometric_step(c.yaw);
+                c.pitch = rct3::park::kIsometricPitch;
             }
             scene.control_mode = mode;
 
@@ -220,13 +220,13 @@ namespace rct3::scene
                 const ui::Rect screen = scene.desktop->root().rect();
                 const glm::vec2 size = glm::vec2 { screen.width(), screen.height() } * scale;
                 const glm::vec2 at = options.flag(config::GameOption::CameraFocusOnMiddle) ? size / 2.0f : glm::vec2 { p.x, p.y };
-                const park::Ray ray = park::view_ray(c, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
-                std::optional<float> hit = park::object::ground_hit(ray, scene.grid);
+                const rct3::park::Ray ray = rct3::park::view_ray(c, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
+                std::optional<float> hit = rct3::park::object::ground_hit(ray, scene.grid);
                 if (!options.flag(config::GameOption::CameraIgnoresScenery) && scene.show_scenery)
                 {
                     if (scene.pick_boxes_of != scene.objects.size())
                         place_objects(scene);
-                    if (const auto object = park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return !scene.objects[i].hidden; }))
+                    if (const auto object = rct3::park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return !scene.objects[i].hidden; }))
                         hit = object->distance;
                 }
                 scene.pivot = hit ? std::optional(ray.origin + ray.direction * *hit) : std::nullopt;
@@ -237,11 +237,11 @@ namespace rct3::scene
             scene.turning = false;
             scene.dragging = false;
             const auto turn = [&](float yaw, float pitch) {
-                c = scene.pivot && !free ? park::orbited(c, *scene.pivot, yaw, pitch) : park::turned(c, yaw, pitch, free);
+                c = scene.pivot && !free ? rct3::park::orbited(c, *scene.pivot, yaw, pitch) : rct3::park::turned(c, yaw, pitch, free);
                 scene.turning = true;
             };
             const auto pan = [&](float right, float forward) {
-                c = park::panned(c, right, forward);
+                c = rct3::park::panned(c, right, forward);
                 scene.dragging = true;
             };
             // Notches to zoom; free look has no zoom.
@@ -272,12 +272,12 @@ namespace rct3::scene
                     // The right button looks round, the middle one flies across and ahead.
                     if (held == DragButtons::Right)
                     {
-                        c = park::turned_at_eye(c, dx * kDragTurn, dy * kDragTurn);
+                        c = rct3::park::turned_at_eye(c, dx * kDragTurn, dy * kDragTurn);
                         scene.turning = true;
                     }
                     else if (held == DragButtons::Middle)
                     {
-                        c = park::flown(c, glm::vec3 { dx, 0, -dy } * kFlyDrag * fly);
+                        c = rct3::park::flown(c, glm::vec3 { dx, 0, -dy } * kFlyDrag * fly);
                         scene.dragging = true;
                     }
                     break;
@@ -296,13 +296,13 @@ namespace rct3::scene
                     {
                         // Across turns, up and down brings the view nearer and farther.
                         turn(dx * kDragTurn, 0);
-                        c = park::zoomed(c, std::pow(kDragZoom, dy), free);
+                        c = rct3::park::zoomed(c, std::pow(kDragZoom, dy), free);
                     }
                     if (scheme == 0)
                     {
                         // The wheel tilts instead of zooming.
                         if (wheel != 0)
-                            c = park::turned(c, 0, wheel * kWheelTilt, free);
+                            c = rct3::park::turned(c, 0, wheel * kWheelTilt, free);
                         wheel = 0;
                     }
                     break;
@@ -318,10 +318,10 @@ namespace rct3::scene
             scene.zoom_pending += wheel;
             if (scene.zoom_pending != 0)
             {
-                const float notches = park::zoom_step(scene.zoom_pending, elapsed, kWheelSeconds);
+                const float notches = rct3::park::zoom_step(scene.zoom_pending, elapsed, kWheelSeconds);
                 scene.zoom_pending -= notches;
-                const park::ParkCamera before = c;
-                c = park::zoomed(c, std::pow(kWheelZoom, notches), free);
+                const rct3::park::ParkCamera before = c;
+                c = rct3::park::zoomed(c, std::pow(kWheelZoom, notches), free);
                 if (c.distance == before.distance)
                     scene.zoom_pending = 0; // At a limit: what is left would roll in late once turned back
             }
@@ -330,7 +330,7 @@ namespace rct3::scene
             if (options.flag(config::GameOption::AutoScrollAtEdge) && input.in_window && !over_interface && held == DragButtons::None)
             {
                 const ui::Rect screen = scene.desktop->root().rect();
-                slide += park::edge_push({ p.x, p.y }, glm::vec2 { screen.width(), screen.height() } * scale, kEdgeBand * scale);
+                slide += rct3::park::edge_push({ p.x, p.y }, glm::vec2 { screen.width(), screen.height() } * scale, kEdgeBand * scale);
             }
             const float yaw = (input.turn_right_key ? 1.0f : 0.0f) - (input.turn_left_key ? 1.0f : 0.0f);
             const float pitch = (input.tilt_down_key ? 1.0f : 0.0f) - (input.tilt_up_key ? 1.0f : 0.0f);
@@ -339,16 +339,16 @@ namespace rct3::scene
                 // Free look flies the eye: the zoom keys take it up and down.
                 const float rise = (input.zoom_out_key ? 1.0f : 0.0f) - (input.zoom_in_key ? 1.0f : 0.0f);
                 if (slide != glm::vec2(0) || rise != 0)
-                    c = park::flown(c, glm::vec3 { slide.x, rise, slide.y } * fly * elapsed);
+                    c = rct3::park::flown(c, glm::vec3 { slide.x, rise, slide.y } * fly * elapsed);
                 if (yaw != 0 || pitch != 0)
-                    c = park::turned_at_eye(c, yaw * kKeyTurn * elapsed, pitch * kKeyTurn * elapsed);
+                    c = rct3::park::turned_at_eye(c, yaw * kKeyTurn * elapsed, pitch * kKeyTurn * elapsed);
                 // The eye stays over the map and above its ground.
-                const glm::vec3 at = park::eye(c);
+                const glm::vec3 at = rct3::park::eye(c);
                 glm::vec3 kept = at;
                 if (!scene.grid.empty())
                 {
-                    kept.x = std::clamp(kept.x, scene.grid.origin_x, scene.grid.world_x(scene.grid.width) - park::kNear);
-                    kept.z = std::clamp(kept.z, scene.grid.origin_z, scene.grid.world_z(scene.grid.height) - park::kNear);
+                    kept.x = std::clamp(kept.x, scene.grid.origin_x, scene.grid.world_x(scene.grid.width) - rct3::park::kNear);
+                    kept.z = std::clamp(kept.z, scene.grid.origin_z, scene.grid.world_z(scene.grid.height) - rct3::park::kNear);
                     if (const auto h = scene.grid.height_at(kept.x, kept.z))
                         kept.y = std::max(kept.y, *h + kFlyAboveGround);
                 }
@@ -357,28 +357,28 @@ namespace rct3::scene
                 return;
             }
             if (slide != glm::vec2(0))
-                c = park::panned(c, slide.x * kKeyPan * c.distance * elapsed, slide.y * kKeyPan * c.distance * elapsed);
+                c = rct3::park::panned(c, slide.x * kKeyPan * c.distance * elapsed, slide.y * kKeyPan * c.distance * elapsed);
             if (input.zoom_in_key != input.zoom_out_key)
-                c = park::zoomed(c, std::pow(kKeyZoom, (input.zoom_in_key ? -1.0f : 1.0f) * elapsed), free);
+                c = rct3::park::zoomed(c, std::pow(kKeyZoom, (input.zoom_in_key ? -1.0f : 1.0f) * elapsed), free);
             if (mode == ControlMode::Isometric)
             {
                 // The turn keys and the game's isometric turn commands step a quarter, once the last turn is done.
-                const float goal = park::isometric_yaw(scene.iso_step);
+                const float goal = rct3::park::isometric_yaw(scene.iso_step);
                 const bool settled = std::abs(std::remainder(c.yaw - goal, glm::two_pi<float>())) < 1e-3f;
                 int keyed = settled ? static_cast<int>(yaw) : 0;
                 for (const ui::PlayCommand command : input.commands)
                     if (command == ui::PlayCommand::RotateIsometric || command == ui::PlayCommand::ReverseIsometric)
                         keyed = command == ui::PlayCommand::ReverseIsometric ? -1 : 1;
                 scene.iso_step += keyed;
-                c.yaw = park::yaw_towards(c.yaw, park::isometric_yaw(scene.iso_step), kIsoTurnSpeed * elapsed);
-                c.pitch = park::kIsometricPitch;
+                c.yaw = rct3::park::yaw_towards(c.yaw, rct3::park::isometric_yaw(scene.iso_step), kIsoTurnSpeed * elapsed);
+                c.pitch = rct3::park::kIsometricPitch;
             }
             else if (yaw != 0 || pitch != 0)
-                c = park::turned(c, yaw * kKeyTurn * elapsed, pitch * kKeyTurn * elapsed, free);
+                c = rct3::park::turned(c, yaw * kKeyTurn * elapsed, pitch * kKeyTurn * elapsed, free);
             // Advanced turns round points above the ground too. The pool tool's work shown is not yet the
             // ground: the view settles as if it were not there, so a drag's squares stay under the pointer.
             swap_pool_work(scene);
-            scene.camera = free ? c : park::on_ground(c, scene.grid, mode == ControlMode::Advanced);
+            scene.camera = free ? c : rct3::park::on_ground(c, scene.grid, mode == ControlMode::Advanced);
             // Over a pool it settles on the surface, not on the ground dug out under it, so the view keeps still
             // while the pool tool shows its work there.
             const save::TerrainGrid& g = scene.grid;
@@ -392,24 +392,24 @@ namespace rct3::scene
         void show_time_of_day(ParkScene& scene, glm::vec3 viewer)
         {
             const simulation::DayClock& day = scene.day;
-            const park::Daylight light = park::mixed(park::daylight(day.shown), park::daylight(day.faded), day.fade);
+            const rct3::park::Daylight light = rct3::park::mixed(rct3::park::daylight(day.shown), rct3::park::daylight(day.faded), day.fade);
             scene.light = { .sun_direction = light.sun_direction, .sun = light.sun, .sky = light.sky, .ground = light.ground };
-            const float column = park::sky::sky_column(day.shown);
-            const float faded = park::sky::sky_column(day.faded);
-            const float night = glm::mix(park::sky::sky_darkness(day.shown), park::sky::sky_darkness(day.faded), day.fade);
+            const float column = rct3::park::sky::sky_column(day.shown);
+            const float faded = rct3::park::sky::sky_column(day.faded);
+            const float night = glm::mix(rct3::park::sky::sky_darkness(day.shown), rct3::park::sky::sky_darkness(day.faded), day.fade);
             scene.darkness = night;
-            scene.sky_mesh = park::sky::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .day = column, .faded_day = faded, .fade = day.fade, .night = night, .time = scene.park_clock, .tint = park::weathered(glm::vec3(1.0f), scene.weather_look, 0.6f), .overcast = scene.weather_look.gloom });
+            scene.sky_mesh = rct3::park::sky::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .day = column, .faded_day = faded, .fade = day.fade, .night = night, .time = scene.park_clock, .tint = rct3::park::weathered(glm::vec3(1.0f), scene.weather_look, 0.6f), .overcast = scene.weather_look.gloom });
             if (!scene.horizon_band.empty())
             {
-                const glm::vec4 c = glm::mix(park::sky::band_colour(scene.horizon_band, column), park::sky::band_colour(scene.horizon_band, faded), day.fade);
+                const glm::vec4 c = glm::mix(rct3::park::sky::band_colour(scene.horizon_band, column), rct3::park::sky::band_colour(scene.horizon_band, faded), day.fade);
                 scene.horizon = { c.r, c.g, c.b, c.a };
             }
             // Clouds hide the sun most and grey the sky; a stroke lights everything up.
-            const park::WeatherLook& weather = scene.weather_look;
-            scene.light.sun = park::weathered(scene.light.sun, weather, 1);
-            scene.light.sky = park::weathered(scene.light.sky, weather, 0.5f);
-            scene.light.ground = park::weathered(scene.light.ground, weather, 0.5f);
-            const glm::vec3 horizon = park::weathered({ scene.horizon.r, scene.horizon.g, scene.horizon.b }, weather, 0.5f);
+            const rct3::park::WeatherLook& weather = scene.weather_look;
+            scene.light.sun = rct3::park::weathered(scene.light.sun, weather, 1);
+            scene.light.sky = rct3::park::weathered(scene.light.sky, weather, 0.5f);
+            scene.light.ground = rct3::park::weathered(scene.light.ground, weather, 0.5f);
+            const glm::vec3 horizon = rct3::park::weathered({ scene.horizon.r, scene.horizon.g, scene.horizon.b }, weather, 0.5f);
             scene.horizon = { horizon.r, horizon.g, horizon.b, scene.horizon.a };
             // Far land fades into the horizon's colour, sooner in rain. Chosen by eye.
             constexpr float kRainHaze = 2.5f;
@@ -419,17 +419,17 @@ namespace rct3::scene
         }
 
         /// The first of the attraction's objects that takes colours, and the slots it takes.
-        std::optional<std::pair<std::size_t, std::vector<std::size_t>>> painted_object(const ParkScene& scene, park::AttractionRef ref)
+        std::optional<std::pair<std::size_t, std::vector<std::size_t>>> painted_object(const ParkScene& scene, rct3::park::AttractionRef ref)
         {
             for (std::size_t i = 0; i < scene.objects.size(); ++i)
             {
                 const auto owner = scene.attractions.find(scene.objects[i].id);
                 if (owner == scene.attractions.end() || owner->second != ref)
                     continue;
-                const auto model = scene.models.find(park::object::model_ref(scene.objects[i]));
+                const auto model = scene.models.find(rct3::park::object::model_ref(scene.objects[i]));
                 ui::screens::SceneryFacts f;
                 f.colours = scene.objects[i].colours;
-                f.colour_slots = model == scene.models.end() ? 0 : park::object::colour_slots(model->second);
+                f.colour_slots = model == scene.models.end() ? 0 : rct3::park::object::colour_slots(model->second);
                 if (std::vector<std::size_t> slots = ui::screens::scenery_paint_slots(f); !slots.empty())
                     return std::pair { i, std::move(slots) };
             }
@@ -437,26 +437,26 @@ namespace rct3::scene
         }
 
         /// The kind `stall` is of in the build lists, once they are read.
-        const park::BuildItem* stall_kind(const ParkScene& scene, const save::Stall& stall)
+        const rct3::park::BuildItem* stall_kind(const ParkScene& scene, const save::Stall& stall)
         {
             const auto& items = scene.build.items;
             if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
                 return nullptr;
-            const auto kind = std::ranges::find_if(items.get(), [&](const park::BuildItem& i) { return i.stall && i.overlay == stall.base.overlay_path && std::format("{}:sta", i.symbol) == stall.base.symbol; });
+            const auto kind = std::ranges::find_if(items.get(), [&](const rct3::park::BuildItem& i) { return i.stall && i.overlay == stall.base.overlay_path && std::format("{}:sta", i.symbol) == stall.base.symbol; });
             return kind == items.get().end() ? nullptr : &*kind;
         }
 
-        ui::screens::AttractionFacts facts(const ParkScene& scene, park::AttractionRef ref)
+        ui::screens::AttractionFacts facts(const ParkScene& scene, rct3::park::AttractionRef ref)
         {
             ui::screens::AttractionFacts f { .guests = scene.people.guests, .refusal = scene.refusal };
-            if (ref.kind == park::AttractionRef::Kind::Stall)
+            if (ref.kind == rct3::park::AttractionRef::Kind::Stall)
             {
                 if (ref.index < scene.rides.stalls.size())
                 {
                     f.stall = &scene.rides.stalls[ref.index];
                     f.common = &f.stall->base;
-                    if (const park::BuildItem* kind = stall_kind(scene, *f.stall))
-                        for (const park::BuildItem::Goods& g : kind->goods)
+                    if (const rct3::park::BuildItem* kind = stall_kind(scene, *f.stall))
+                        for (const rct3::park::BuildItem::Goods& g : kind->goods)
                             f.offers.push_back(std::format("{}:cid", g.item));
                     f.carried = scene.carried.items;
                     f.carried_extras = scene.carried.extras;
@@ -482,7 +482,7 @@ namespace rct3::scene
                 if (f.ride->kind == save::RideKind::Tracked)
                 {
                     const auto& course = ref.index < scene.courses.size() ? scene.courses[ref.index] : std::nullopt;
-                    f.station = !f.ride->stations.empty() || (course && std::ranges::contains(course->kinds, park::track::CourseKind::Station));
+                    f.station = !f.ride->stations.empty() || (course && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station));
                     f.pool_ride = ref.index < scene.track_rules.size() && scene.track_rules[ref.index].pool_ride;
                     // Its trains can change while it is not open, as in the game, and while none of them has riders
                     // aboard (set_trains).
@@ -496,14 +496,14 @@ namespace rct3::scene
                         f.other_cars = choices != scene.train_choices.end() && choices->second.size() > 1;
                         f.trains = limits->second;
                         // A ride from a saved park measured by its cars' kept lengths until its trains are made here.
-                        std::vector<park::object::CarFit> kept;
+                        std::vector<rct3::park::object::CarFit> kept;
                         for (const save::Car& car : f.ride->trains.empty() ? std::vector<save::Car> { } : f.ride->trains.front().cars)
                             kept.push_back({ .length = car.length });
                         const auto fits = scene.car_fits.find(ref.index);
-                        const park::track::TrackRules rules = ref.index < scene.track_rules.size() ? scene.track_rules[ref.index] : park::track::TrackRules { };
+                        const rct3::park::track::TrackRules rules = ref.index < scene.track_rules.size() ? scene.track_rules[ref.index] : rct3::park::track::TrackRules { };
                         // A shuttle runs one (fit_trains).
                         const auto coaster = course ? simulation::coaster_of(*course, *f.ride) : std::nullopt;
-                        f.trains->most_trains = course && !(coaster && coaster->shuttle != simulation::Shuttle::None) ? park::track::trains_fitting(*course, fits != scene.car_fits.end() ? std::span<const park::object::CarFit>(fits->second) : kept, f.ride->options.block_sectioned, rules.most_trains) : 1;
+                        f.trains->most_trains = course && !(coaster && coaster->shuttle != simulation::Shuttle::None) ? rct3::park::track::trains_fitting(*course, fits != scene.car_fits.end() ? std::span<const rct3::park::object::CarFit>(fits->second) : kept, f.ride->options.block_sectioned, rules.most_trains) : 1;
                     }
                 }
             }
@@ -527,9 +527,9 @@ namespace rct3::scene
             return f;
         }
 
-        save::AttractionCommon* attraction_common(ParkScene& scene, park::AttractionRef ref)
+        save::AttractionCommon* attraction_common(ParkScene& scene, rct3::park::AttractionRef ref)
         {
-            if (ref.kind == park::AttractionRef::Kind::Stall)
+            if (ref.kind == rct3::park::AttractionRef::Kind::Stall)
                 return ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index].base : nullptr;
             return ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index].base : nullptr;
         }
@@ -618,7 +618,7 @@ namespace rct3::scene
         {
             if (!o.fixture || !std::ranges::contains(scene.pool_pieces, o.id))
                 return std::nullopt;
-            const auto room = std::ranges::find_if(scene.pools.rooms, [&](const park::pools::PoolRoom& r) { return r.col == o.col && r.row == o.row && r.symbol == o.symbol; });
+            const auto room = std::ranges::find_if(scene.pools.rooms, [&](const rct3::park::pools::PoolRoom& r) { return r.col == o.col && r.row == o.row && r.symbol == o.symbol; });
             return room == scene.pools.rooms.end() ? std::nullopt : std::optional(static_cast<std::size_t>(room - scene.pools.rooms.begin()));
         }
 
@@ -640,8 +640,8 @@ namespace rct3::scene
             f.symbol = o.symbol;
             f.colours = o.colours;
             f.zero_time = scene.park.zero_time;
-            if (const auto model = scene.models.find(park::object::model_ref(o)); model != scene.models.end())
-                f.colour_slots = park::object::colour_slots(model->second);
+            if (const auto model = scene.models.find(rct3::park::object::model_ref(o)); model != scene.models.end())
+                f.colour_slots = rct3::park::object::colour_slots(model->second);
             if (const auto bin = std::ranges::find(scene.bins, o.id, &save::BinState::object_ref); bin != scene.bins.end())
                 f.bin = &*bin;
             if (const auto sign = std::ranges::find(scene.signs, o.id, &save::SignState::object_ref); sign != scene.signs.end())
@@ -656,9 +656,9 @@ namespace rct3::scene
                 std::int64_t people = 0;
                 for (const auto [g, swimmer, errand] : r.view<const simulation::Swimmer, const simulation::Errand>().each())
                     people += door != nullptr && r.valid(errand.target) && r.all_of<simulation::PoolDoor>(errand.target) && r.get<simulation::PoolDoor>(errand.target).pool == door->pool;
-                const park::pools::PoolRoom& at = scene.pools.rooms[*room];
+                const rct3::park::pools::PoolRoom& at = scene.pools.rooms[*room];
                 f.pool = ui::screens::PoolComplexFacts {
-                    .name = strings::to_utf16(at.complex_name), .number = static_cast<std::size_t>(std::ranges::count(scene.pools.rooms.begin(), scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room) + 1, at.symbol, &park::pools::PoolRoom::symbol)), .ticket = at.ticket, .open = at.open, .people = people, .dirt = pool != nullptr ? simulation::dirt_step(*pool) : 0, .fluid = at.fluid, .waves = at.waves, .refill = simulation::kTuning.pools.refill.at(std::min<std::size_t>(at.fluid, 2)).value
+                    .name = strings::to_utf16(at.complex_name), .number = static_cast<std::size_t>(std::ranges::count(scene.pools.rooms.begin(), scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room) + 1, at.symbol, &rct3::park::pools::PoolRoom::symbol)), .ticket = at.ticket, .open = at.open, .people = people, .dirt = pool != nullptr ? simulation::dirt_step(*pool) : 0, .fluid = at.fluid, .waves = at.waves, .refill = simulation::kTuning.pools.refill.at(std::min<std::size_t>(at.fluid, 2)).value
                 };
                 // The room's takings and upkeep, and what guests thought of it, as the simulation has them.
                 if (const auto* attraction = e != entt::null ? r.try_get<simulation::Attraction>(e) : nullptr)
@@ -677,8 +677,8 @@ namespace rct3::scene
                     for (const simulation::Thought& t : thoughts.recent)
                         if (e != entt::null && t.about == e)
                             f.pool->thoughts.push_back({ .thought = static_cast<std::int32_t>(std::to_underlying(t.kind)), .time = t.time.value, .variant = t.variant });
-                const std::vector<save::Tile> complex = park::pools::pool_complex(scene.pools, *room);
-                const auto machine = [&](const park::pools::PoolExtra& x) { return x.fit.wave_machine && std::ranges::contains(complex, save::Tile { x.col, x.row }); };
+                const std::vector<save::Tile> complex = rct3::park::pools::pool_complex(scene.pools, *room);
+                const auto machine = [&](const rct3::park::pools::PoolExtra& x) { return x.fit.wave_machine && std::ranges::contains(complex, save::Tile { x.col, x.row }); };
                 f.pool->machines = std::ranges::any_of(scene.pools.extras, machine) || std::ranges::any_of(scene.scenery_pool_extras, machine);
             }
             return f;
@@ -692,7 +692,7 @@ namespace rct3::scene
             if (!folder)
                 return;
             std::vector<std::string> files;
-            for (const std::filesystem::path& path : park::carried_overlays(*folder))
+            for (const std::filesystem::path& path : rct3::park::carried_overlays(*folder))
                 files.push_back(std::format("{}/{}", folder->filename().string(), path.filename().string()));
             const std::vector<std::string_view> names(files.begin(), files.end());
             const std::size_t skins = ui::add_extra_skins(device, assets, names);
@@ -769,16 +769,16 @@ namespace rct3::scene
             else if (scene.shown)
             {
                 // A tracked ride's train limits are read the first time its window shows them.
-                if (scene.shown->kind == park::AttractionRef::Kind::Ride && assets.install)
+                if (scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && assets.install)
                     ready_trains(scene, *assets.install, scene.shown->index);
                 panel.show_page(ui::screens::attraction_page(scene.info_tab, facts(scene, *scene.shown), *assets.strings, info_units(assets, options), scene.info_section));
             }
         }
 
         /// The round view of a person: looking at them from where the player looks from, turning from there.
-        park::ParkCamera person_view(const ParkScene& scene, std::size_t shown, float yaw)
+        rct3::park::ParkCamera person_view(const ParkScene& scene, std::size_t shown, float yaw)
         {
-            park::ParkCamera camera;
+            rct3::park::ParkCamera camera;
             camera.target = glm::vec3(scene.shown_people[shown].pose.world[3]) + glm::vec3(0, kPersonViewHeight, 0);
             camera.yaw = yaw;
             camera.pitch = kViewPitch;
@@ -848,7 +848,7 @@ namespace rct3::scene
         }
 
         /// Opens the panel on the attraction `ref`, at `tab`, else the tab last opened, if it has one.
-        void open_info(ParkScene& scene, ui::screens::InfoPanel& panel, park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::GameOptions& options, std::optional<ui::screens::AttractionTab> tab = std::nullopt)
+        void open_info(ParkScene& scene, ui::screens::InfoPanel& panel, rct3::park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::GameOptions& options, std::optional<ui::screens::AttractionTab> tab = std::nullopt)
         {
             const ui::screens::AttractionFacts f = facts(scene, ref);
             if (f.common == nullptr)
@@ -891,7 +891,7 @@ namespace rct3::scene
                     if (owner != scene.attractions.end() && owner->second == ref)
                         points.push_back(scene.anchors[i]);
                 }
-                scene.view_camera = park::framed(points, scene.camera.yaw, kViewPitch);
+                scene.view_camera = rct3::park::framed(points, scene.camera.yaw, kViewPitch);
             }
             scene.shown_person.reset();
             scene.shown_prop.reset();
@@ -925,7 +925,7 @@ namespace rct3::scene
                 scene.prop_tabs.push_back(t.tab);
             }
             if (scene.shown_prop != index)
-                scene.view_camera = park::framed(park::object::object_corners(scene.objects[index], scene.models, scene.grid, scene.fitted), scene.camera.yaw, kViewPitch, kPropViewClosest);
+                scene.view_camera = rct3::park::framed(rct3::park::object::object_corners(scene.objects[index], scene.models, scene.grid, scene.fitted), scene.camera.yaw, kViewPitch, kPropViewClosest);
             scene.shown.reset();
             scene.shown_person.reset();
             scene.shown_party.clear();
@@ -962,7 +962,7 @@ namespace rct3::scene
         {
             if (index >= scene.objects.size())
                 return;
-            const auto wall = park::edge_wall(scene.objects[index], scene.models, scene.grid);
+            const auto wall = rct3::park::edge_wall(scene.objects[index], scene.models, scene.grid);
             change_object(device, scene, index, [](save::PlacedObject& o) { o.hidden = true; });
             // Guests stop using what stood on the path, and the park keeps no bin or sign for it.
             const std::uint64_t id = scene.objects[index].id;
@@ -1005,8 +1005,8 @@ namespace rct3::scene
             bool entrance = false;
             for (const std::size_t i : indices)
             {
-                const auto model = scene.models.find(park::object::model_ref(scene.objects.at(i)));
-                if (model != scene.models.end() && model->second.category == std::to_underlying(park::ItemCategory::ParkEntrance))
+                const auto model = scene.models.find(rct3::park::object::model_ref(scene.objects.at(i)));
+                if (model != scene.models.end() && model->second.category == std::to_underlying(rct3::park::ItemCategory::ParkEntrance))
                     entrance = true;
                 else
                 {
@@ -1048,8 +1048,8 @@ namespace rct3::scene
                 const save::PlacedObject& o = scene.objects[i];
                 if (o.hidden || !std::ranges::binary_search(tiles, std::pair { o.col, o.row }))
                     continue;
-                const auto model = scene.models.find(park::object::model_ref(o));
-                if (model != scene.models.end() && model->second.category >= std::to_underlying(park::ItemCategory::LitterBin) && model->second.category <= std::to_underlying(park::ItemCategory::PathFeature))
+                const auto model = scene.models.find(rct3::park::object::model_ref(o));
+                if (model != scene.models.end() && model->second.category >= std::to_underlying(rct3::park::ItemCategory::LitterBin) && model->second.category <= std::to_underlying(rct3::park::ItemCategory::PathFeature))
                     extras.push_back(i);
             }
             const std::int64_t paid = delete_props(device, scene, assets, extras, false).value_or(0);
@@ -1058,12 +1058,12 @@ namespace rct3::scene
 
     } // namespace
 
-    void demolish(ParkScene& scene, const ui::InterfaceAssets& assets, park::AttractionRef ref)
+    void demolish(ParkScene& scene, const ui::InterfaceAssets& assets, rct3::park::AttractionRef ref)
     {
         save::AttractionCommon* base = attraction_common(scene, ref);
         if (base == nullptr || base->demolished)
             return;
-        const bool ride = ref.kind == park::AttractionRef::Kind::Ride;
+        const bool ride = ref.kind == rct3::park::AttractionRef::Kind::Ride;
         if (ride && scene.building.ride == ref.index)
             close_track_building(scene);
         stop_ride_placing(scene);
@@ -1071,10 +1071,10 @@ namespace rct3::scene
         // shortcut: a flat ride or a stall gives back its item's price by the tracked rides' rule; use what its
         // kind's data says it is worth once that is read.
         const auto main = base->spot ? std::ranges::find(scene.objects, base->spot->object, &save::PlacedObject::id) : scene.objects.end();
-        const auto model = main != scene.objects.end() ? scene.models.find(park::object::model_ref(*main)) : scene.models.end();
+        const auto model = main != scene.objects.end() ? scene.models.find(rct3::park::object::model_ref(*main)) : scene.models.end();
         const bool tracked = ride && scene.rides.rides[ref.index].kind == save::RideKind::Tracked;
         const std::int64_t value = tracked ? track_cost(scene, ref.index, assets) : (model != scene.models.end() ? model->second.price : 0);
-        const std::int64_t back = park::demolish_refund(value, (base->flags & save::AttractionCommon::kNeverOpened) == 0);
+        const std::int64_t back = rct3::park::demolish_refund(value, (base->flags & save::AttractionCommon::kNeverOpened) == 0);
         std::set<std::uint64_t> parts;
         // Its fence, which the park built round it, goes with it.
         if (const auto fence = scene.ride_fence_pieces.find(base->id); ride && fence != scene.ride_fence_pieces.end())
@@ -1141,12 +1141,12 @@ namespace rct3::scene
         /// Paints colour slot `slot` of the prop `index` in colour `colour` of the 32.
         void paint_prop(render::Device& device, ParkScene& scene, std::size_t index, std::size_t slot, std::int32_t colour)
         {
-            if (slot < park::kFlexiSlotCount)
+            if (slot < rct3::park::kFlexiSlotCount)
                 change_object(device, scene, index, [&](save::PlacedObject& o) { o.colours.at(slot) = colour; });
         }
 
         /// Of the cars of ride `ride`, those with a camera of kind `eye`, in the order the park keeps them.
-        std::vector<std::size_t> ride_seats(const ParkScene& scene, std::size_t ride, park::object::RideEye eye)
+        std::vector<std::size_t> ride_seats(const ParkScene& scene, std::size_t ride, rct3::park::object::RideEye eye)
         {
             std::vector<std::size_t> seats;
             for (std::size_t i = 0; i < scene.cars.size() && i < scene.car_spots.size() && !scene.rides.rides.at(ride).base.demolished; ++i)
@@ -1156,11 +1156,11 @@ namespace rct3::scene
         }
 
         /// The kinds of camera after `eye`, round from the rear to the nose, that the train car `car` is on has.
-        std::optional<park::object::RideEye> next_eye(const ParkScene& scene, std::size_t car, park::object::RideEye eye)
+        std::optional<rct3::park::object::RideEye> next_eye(const ParkScene& scene, std::size_t car, rct3::park::object::RideEye eye)
         {
             for (std::uint8_t step = 1; step < 3; ++step)
             {
-                const auto other = static_cast<park::object::RideEye>((std::to_underlying(eye) + step) % 3);
+                const auto other = static_cast<rct3::park::object::RideEye>((std::to_underlying(eye) + step) % 3);
                 if (std::ranges::any_of(ride_seats(scene, scene.car_spots[car].ride, other), [&](std::size_t c) { return scene.car_spots[c].train == scene.car_spots[car].train; }))
                     return other;
             }
@@ -1170,11 +1170,11 @@ namespace rct3::scene
         /// Every train of the park a view can ride along in, ride by ride in the park's order: the first car of
         /// each with a camera of kind `eye`, or on a ride with none of that kind, of the first kind it has of the
         /// front seat, rear seat and nose.
-        std::vector<std::pair<std::size_t, park::object::RideEye>> train_stops(const ParkScene& scene, park::object::RideEye eye)
+        std::vector<std::pair<std::size_t, rct3::park::object::RideEye>> train_stops(const ParkScene& scene, rct3::park::object::RideEye eye)
         {
-            std::vector<std::pair<std::size_t, park::object::RideEye>> stops;
+            std::vector<std::pair<std::size_t, rct3::park::object::RideEye>> stops;
             for (std::size_t ride = 0; ride < scene.rides.rides.size(); ++ride)
-                for (const park::object::RideEye kind : { eye, park::object::RideEye::Front, park::object::RideEye::Rear, park::object::RideEye::Nose })
+                for (const rct3::park::object::RideEye kind : { eye, rct3::park::object::RideEye::Front, rct3::park::object::RideEye::Rear, rct3::park::object::RideEye::Nose })
                     if (const std::vector<std::size_t> seats = ride_seats(scene, ride, kind); !seats.empty())
                     {
                         std::vector<std::size_t> trains;
@@ -1278,7 +1278,7 @@ namespace rct3::scene
         }
 
         /// Rides along in `car`, from its camera of kind `eye`.
-        void ride_along(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t car, park::object::RideEye eye)
+        void ride_along(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t car, rct3::park::object::RideEye eye)
         {
             ui::Widget& root = scene.desktop->root();
             start_riding(scene, assets);
@@ -1293,7 +1293,7 @@ namespace rct3::scene
             scene.riding = car;
             scene.riding_eye = eye;
             // Named as the game names them: the ride, then the train and the car counting from 1.
-            const park::ride::CarSpot spot = scene.car_spots[car];
+            const rct3::park::ride::CarSpot spot = scene.car_spots[car];
             std::size_t place = 1;
             for (std::size_t c = 0; c < car; ++c)
                 place += scene.car_spots[c].ride == spot.ride && scene.car_spots[c].train == spot.train ? 1 : 0;
@@ -1304,9 +1304,9 @@ namespace rct3::scene
             constexpr std::array<std::string_view, 3> kEyeNames { "RidecamGUI_TypeNose", "RidecamGUI_TypeFront", "RidecamGUI_TypeRear" };
             info += u"  " + std::u16string(strings.get(kEyeNames[std::to_underlying(eye)]));
             const auto cameras = std::ranges::count_if(ride_seats(scene, spot.ride, eye), [&](std::size_t seat) { return scene.car_spots[seat].train == spot.train; });
-            const std::optional<park::object::RideEye> next = next_eye(scene, car, eye);
+            const std::optional<rct3::park::object::RideEye> next = next_eye(scene, car, eye);
             if (auto panel = root.find_as<ui::screens::RideCameraPanel>(kRideCameraName))
-                panel->show(std::move(info), cameras > 1, train_stops(scene, eye).size() > 1, strings.get("RidecamGUI_Train"), next.transform([](park::object::RideEye e) { return std::size_t { std::to_underlying(e) }; }), next ? strings.get(kEyeNames[std::to_underlying(*next)]) : std::u16string_view { });
+                panel->show(std::move(info), cameras > 1, train_stops(scene, eye).size() > 1, strings.get("RidecamGUI_Train"), next.transform([](rct3::park::object::RideEye e) { return std::size_t { std::to_underlying(e) }; }), next ? strings.get(kEyeNames[std::to_underlying(*next)]) : std::u16string_view { });
         }
 
         void stop_riding(ParkScene& scene);
@@ -1326,7 +1326,7 @@ namespace rct3::scene
             }
             const entt::entity e = ride < scene.ride_entities.size() ? scene.ride_entities[ride] : entt::null;
             const auto* fleet = e != entt::null ? scene.sim.registry.try_get<simulation::Trains>(e) : nullptr;
-            for (const park::object::RideEye eye : { park::object::RideEye::Front, park::object::RideEye::Rear, park::object::RideEye::Nose })
+            for (const rct3::park::object::RideEye eye : { rct3::park::object::RideEye::Front, rct3::park::object::RideEye::Rear, rct3::park::object::RideEye::Nose })
                 if (const std::vector<std::size_t> seats = ride_seats(scene, ride, eye); !seats.empty())
                 {
                     const auto running = std::ranges::find_if(seats, [&](std::size_t car) { return fleet != nullptr && scene.car_spots[car].train < fleet->trains.size() && fleet->trains[scene.car_spots[car].train].running; });
@@ -1378,7 +1378,7 @@ namespace rct3::scene
             }
             if (!scene.riding)
                 return;
-            const park::ride::CarSpot spot = scene.car_spots[*scene.riding];
+            const rct3::park::ride::CarSpot spot = scene.car_spots[*scene.riding];
             if (action == ChangeType)
             {
                 if (const auto next = next_eye(scene, *scene.riding, scene.riding_eye))
@@ -1398,7 +1398,7 @@ namespace rct3::scene
                     ride_along(scene, assets, stops[step(static_cast<std::size_t>(at - stops.begin()), stops.size())], scene.riding_eye);
                 return;
             }
-            const std::vector<std::pair<std::size_t, park::object::RideEye>> stops = train_stops(scene, scene.riding_eye);
+            const std::vector<std::pair<std::size_t, rct3::park::object::RideEye>> stops = train_stops(scene, scene.riding_eye);
             const auto at = std::ranges::find_if(stops, [&](const auto& stop) { return scene.car_spots[stop.first].ride == spot.ride && scene.car_spots[stop.first].train == spot.train; });
             if (at != stops.end())
             {
@@ -1428,11 +1428,11 @@ namespace rct3::scene
 
         /// Writes a change the player made on an attraction's page into the save. Nothing is shown again, so a
         /// spinner held down keeps stepping; a page that looks different after the change is set up here.
-        void change_attraction(render::Device& device, ParkScene& scene, ui::screens::InfoPanel& panel, park::AttractionRef ref, const ui::screens::InfoChange& change, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        void change_attraction(render::Device& device, ParkScene& scene, ui::screens::InfoPanel& panel, rct3::park::AttractionRef ref, const ui::screens::InfoChange& change, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
             using enum ui::screens::AttractionControl;
-            save::Ride* ride = ref.kind == park::AttractionRef::Kind::Ride && ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index] : nullptr;
-            save::Stall* stall = ref.kind == park::AttractionRef::Kind::Stall && ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index] : nullptr;
+            save::Ride* ride = ref.kind == rct3::park::AttractionRef::Kind::Ride && ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index] : nullptr;
+            save::Stall* stall = ref.kind == rct3::park::AttractionRef::Kind::Stall && ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index] : nullptr;
             const auto wait_on = [&](std::int32_t& wait, ui::screens::AttractionControl seconds) {
                 const auto field = panel.control(ui::screens::control_id(seconds));
                 wait = change.value != 0 ? (field ? static_cast<const ui::Spinner&>(*field).value() : 0) : -1;
@@ -1469,8 +1469,8 @@ namespace rct3::scene
                     const auto owner = scene.attractions.find(o.id);
                     if (owner == scene.attractions.end() || owner->second != ref)
                         continue;
-                    const auto model = scene.models.find(park::object::model_ref(o));
-                    sum += glm::vec3(park::object::placed_transform(o, model == scene.models.end() ? nullptr : &model->second, scene.grid, scene.fitted)[3]);
+                    const auto model = scene.models.find(rct3::park::object::model_ref(o));
+                    sum += glm::vec3(rct3::park::object::placed_transform(o, model == scene.models.end() ? nullptr : &model->second, scene.grid, scene.fitted)[3]);
                     ++count;
                 }
                 if (count > 0)
@@ -1489,16 +1489,16 @@ namespace rct3::scene
                     stall->items.erase(stall->items.begin() + static_cast<std::ptrdiff_t>(*gone));
                 else if (const auto added = ui::screens::listed(change.id, ItemAdd))
                 {
-                    const park::BuildItem* kind = stall_kind(scene, *stall);
+                    const rct3::park::BuildItem* kind = stall_kind(scene, *stall);
                     if (kind == nullptr || *added >= kind->goods.size())
                         return;
-                    const park::BuildItem::Goods& g = kind->goods[*added];
+                    const rct3::park::BuildItem::Goods& g = kind->goods[*added];
                     // shortcut: it goes on at its kind's own price, as a new stall's items do; upgrade alongside them.
                     const auto at = stall->items.begin() + std::clamp<std::ptrdiff_t>(change.value, 0, std::ssize(stall->items));
                     stall->items.insert(at, { .kind_symbol = std::format("{}:cid", g.item), .price = g.price, .name = "%ME%" });
                 }
                 else if (const auto moved = ui::screens::listed(change.id, ItemMove); moved && *moved < stall->items.size())
-                    park::ride::move_item(*stall, *moved, static_cast<std::size_t>(std::max(change.value, 0)));
+                    rct3::park::ride::move_item(*stall, *moved, static_cast<std::size_t>(std::max(change.value, 0)));
                 else if (const auto ticked = ui::screens::listed(change.id, ItemExtras); ticked && *ticked < stall->items.size())
                     stall->items[*ticked].extras = static_cast<std::uint32_t>(change.value);
                 else if (const auto named = ui::screens::listed(change.id, ItemName); named && *named < stall->items.size())
@@ -1510,7 +1510,7 @@ namespace rct3::scene
                 else
                     return;
                 if (stall->sync)
-                    park::ride::copy_menu(scene.rides.stalls, index);
+                    rct3::park::ride::copy_menu(scene.rides.stalls, index);
                 for (std::size_t i = 0; i < scene.rides.stalls.size(); ++i)
                 {
                     save::Stall& s = scene.rides.stalls[i];
@@ -1521,7 +1521,7 @@ namespace rct3::scene
                     if (s.items.empty() && s.base.state == save::AttractionState::Open)
                         set_attraction_state(scene, s.base, save::AttractionState::Closed);
                     // An item put on brings the extras it takes.
-                    park::ride::offer_extras(s, scene.carried.items);
+                    rct3::park::ride::offer_extras(s, scene.carried.items);
                     simulation::restock(scene.sim, s, scene.carried);
                 }
                 // The menu's rows follow what changed; a price typed in stays as it is.
@@ -1757,7 +1757,7 @@ namespace rct3::scene
             shown.pose.look.legs = worn[2]->set;
             for (std::size_t i = 0; i < shown.pose.look.colours.size(); ++i)
                 shown.pose.look.colours[i] = a.palettes[i] = static_cast<std::uint8_t>(random::below(scene.looks, kColourCells));
-            shown.pose.motion = park::person::motion::kWalk;
+            shown.pose.motion = rct3::park::person::motion::kWalk;
             shown.pose.world = glm::translate(glm::mat4(1.0f), at);
             return scene.shown_people.size() - 1;
         }
@@ -1883,7 +1883,7 @@ namespace rct3::scene
                 if (!std::ranges::contains(worn, nullptr))
                 {
                     change_people(scene);
-                    park::person::PersonLook& look = scene.shown_people[shown].pose.look;
+                    rct3::park::person::PersonLook& look = scene.shown_people[shown].pose.look;
                     std::tie(look.head, look.body, look.legs) = std::tuple(worn[0]->set, worn[1]->set, worn[2]->set);
                     std::tie(person->appearance.head, person->appearance.body, person->appearance.legs) = std::tuple(save::PeopleRef { worn[0]->id }, save::PeopleRef { worn[1]->id }, save::PeopleRef { worn[2]->id });
                 }
@@ -1899,7 +1899,7 @@ namespace rct3::scene
         /// Paints the clothes of pot `pot` of the person shown as `shown` in colour `colour`.
         void paint_person(ParkScene& scene, std::size_t shown, std::size_t pot, std::size_t colour)
         {
-            if (shown >= scene.shown_people.size() || ui::screens::kUpperPalette + pot >= park::person::PersonLook { }.colours.size())
+            if (shown >= scene.shown_people.size() || ui::screens::kUpperPalette + pot >= rct3::park::person::PersonLook { }.colours.size())
                 return;
             change_people(scene);
             ShownPerson& p = scene.shown_people[shown];
@@ -1914,8 +1914,8 @@ namespace rct3::scene
         {
             if (scene.attractions.contains(o.id) || o.fixture)
                 return false;
-            const auto model = scene.models.find(park::object::model_ref(o));
-            return model != scene.models.end() && park::is_prop(model->second.category) && park::object::on_owned_land(o, model->second.squares, scene.grid);
+            const auto model = scene.models.find(rct3::park::object::model_ref(o));
+            return model != scene.models.end() && rct3::park::is_prop(model->second.category) && rct3::park::object::on_owned_land(o, model->second.squares, scene.grid);
         }
 
         /// Deletes what stands on the tiles from `a` to `b`: props and paths at once, and asks once about every
@@ -1924,7 +1924,7 @@ namespace rct3::scene
         {
             const auto inside = [&](std::int32_t col, std::int32_t row) { return col >= std::min(a.col, b.col) && col <= std::max(a.col, b.col) && row >= std::min(a.row, b.row) && row <= std::max(a.row, b.row); };
             std::vector<std::size_t> props;
-            std::vector<park::AttractionRef> attractions;
+            std::vector<rct3::park::AttractionRef> attractions;
             for (std::size_t i = 0; i < scene.objects.size(); ++i)
             {
                 const save::PlacedObject& o = scene.objects[i];
@@ -1950,15 +1950,15 @@ namespace rct3::scene
         /// Whether the object is one of the park's entrances, which a click opens the park's window on.
         bool park_entrance(const ParkScene& scene, const save::PlacedObject& o)
         {
-            const auto model = scene.models.find(park::object::model_ref(o));
-            return !o.hidden && model != scene.models.end() && model->second.category == std::to_underlying(park::ItemCategory::ParkEntrance);
+            const auto model = scene.models.find(rct3::park::object::model_ref(o));
+            return !o.hidden && model != scene.models.end() && model->second.category == std::to_underlying(rct3::park::ItemCategory::ParkEntrance);
         }
 
         /// What putting a broken path item back new costs: the price of the object it stands as.
         std::int64_t replace_price(const ParkScene& scene, std::uint64_t object)
         {
             const auto o = std::ranges::find(scene.objects, object, &save::PlacedObject::id);
-            const auto model = o != scene.objects.end() ? scene.models.find(park::object::model_ref(*o)) : scene.models.end();
+            const auto model = o != scene.objects.end() ? scene.models.find(rct3::park::object::model_ref(*o)) : scene.models.end();
             return model != scene.models.end() ? model->second.price : 0;
         }
 
@@ -1980,13 +1980,13 @@ namespace rct3::scene
         }
 
         /// The attraction whose saved id is `id`, as messages name their subject.
-        std::optional<park::AttractionRef> attraction_with(const ParkScene& scene, std::uint64_t id)
+        std::optional<rct3::park::AttractionRef> attraction_with(const ParkScene& scene, std::uint64_t id)
         {
-            using Kind = park::AttractionRef::Kind;
+            using Kind = rct3::park::AttractionRef::Kind;
             if (const auto ride = std::ranges::find(scene.rides.rides, id, [](const save::Ride& r) { return r.base.id; }); ride != scene.rides.rides.end())
-                return park::AttractionRef { Kind::Ride, static_cast<std::size_t>(ride - scene.rides.rides.begin()) };
+                return rct3::park::AttractionRef { Kind::Ride, static_cast<std::size_t>(ride - scene.rides.rides.begin()) };
             if (const auto stall = std::ranges::find(scene.rides.stalls, id, [](const save::Stall& s) { return s.base.id; }); stall != scene.rides.stalls.end())
-                return park::AttractionRef { Kind::Stall, static_cast<std::size_t>(stall - scene.rides.stalls.begin()) };
+                return rct3::park::AttractionRef { Kind::Stall, static_cast<std::size_t>(stall - scene.rides.stalls.begin()) };
             return std::nullopt;
         }
 
@@ -1996,7 +1996,7 @@ namespace rct3::scene
             using Kind = ui::screens::ManagementRow::Kind;
             if (row.kind == Kind::Ride || row.kind == Kind::Stall)
             {
-                open_info(scene, panel, { row.kind == Kind::Stall ? park::AttractionRef::Kind::Stall : park::AttractionRef::Kind::Ride, row.index }, assets, options);
+                open_info(scene, panel, { row.kind == Kind::Stall ? rct3::park::AttractionRef::Kind::Stall : rct3::park::AttractionRef::Kind::Ride, row.index }, assets, options);
                 return;
             }
             const bool staff = row.kind == Kind::Staff;
@@ -2010,7 +2010,7 @@ namespace rct3::scene
         /// What the pointer is on: an attraction, a person of the shown people or a prop of the objects.
         struct Picked
         {
-            std::optional<park::AttractionRef> attraction;
+            std::optional<rct3::park::AttractionRef> attraction;
             std::optional<std::size_t> person;
             std::optional<std::size_t> prop;
         };
@@ -2022,11 +2022,11 @@ namespace rct3::scene
             if (size.x <= 0 || size.y <= 0)
                 return { };
             const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
-            const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, ndc);
+            const rct3::park::Ray ray = rct3::park::view_ray(scene.camera, size.x / size.y, ndc);
             // What is hidden cannot be clicked.
             if (scene.pick_boxes_of != scene.objects.size())
                 place_objects(scene);
-            const auto object = park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) {
+            const auto object = rct3::park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) {
                 const save::PlacedObject& o = scene.objects[i];
                 return scene.show_scenery && !o.hidden && (scene.attractions.contains(o.id) || o.fixture || clickable_prop(scene, o) || park_entrance(scene, o));
             });
@@ -2037,7 +2037,7 @@ namespace rct3::scene
                 for (const ShownPerson& p : scene.shown_people)
                     placements.push_back(scene.simulate && p.guest != entt::null ? glm::translate(glm::mat4(1.0f), standing_at(scene, p)) : p.pose.world);
             }
-            const auto person = park::object::pick_person(ray, placements, scene.grid);
+            const auto person = rct3::park::object::pick_person(ray, placements, scene.grid);
             if (person && (!object || person->distance < object->distance))
                 return { .attraction = std::nullopt, .person = person->index, .prop = std::nullopt };
             // A fence the park built takes the click and does nothing with it, as in the game; a changing room
@@ -2051,9 +2051,9 @@ namespace rct3::scene
         }
 
         /// The people as the map draws them.
-        park::MapPeople map_people(const ParkScene& scene)
+        rct3::park::MapPeople map_people(const ParkScene& scene)
         {
-            park::MapPeople shown;
+            rct3::park::MapPeople shown;
             shown.people.reserve(scene.shown_people.size());
             for (const ShownPerson& p : scene.shown_people)
                 shown.people.push_back({ { p.pose.world[3].x, p.pose.world[3].z }, p.staff });
@@ -2101,16 +2101,16 @@ namespace rct3::scene
             }
     }
 
-    std::optional<std::string> state_refusal(const ParkScene& scene, park::AttractionRef ref, save::AttractionState state)
+    std::optional<std::string> state_refusal(const ParkScene& scene, rct3::park::AttractionRef ref, save::AttractionState state)
     {
-        if (ref.kind == park::AttractionRef::Kind::Stall)
+        if (ref.kind == rct3::park::AttractionRef::Kind::Stall)
         {
             if (state == save::AttractionState::Open && scene.rides.stalls.at(ref.index).items.empty())
                 return "CantOpenStallNoItems";
             return std::nullopt;
         }
         const std::size_t ride = ref.index;
-        const park::track::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : park::track::TrackRules { };
+        const rct3::park::track::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : rct3::park::track::TrackRules { };
         const auto course = ride < scene.courses.size() && scene.courses[ride] ? maybe(&*scene.courses[ride]) : std::nullopt;
         // A pool ride's doors are its stations joined to a pool complex. A slide's station joins where the paving, a
         // pool path or the top of path stairs meets a side of its platform off the track, at the deck's height; a lazy
@@ -2119,33 +2119,33 @@ namespace rct3::scene
         // shortcut: a river's only along the course's own stretch, not a split track's other stretches with
         // stations; upgrade when a pool ride may be split.
         const save::Ride& r = scene.rides.rides.at(ride);
-        std::vector<std::optional<park::pools::SlidePlatform>> platforms;
+        std::vector<std::optional<rct3::park::pools::SlidePlatform>> platforms;
         if (rules.pool_ride && r.track)
             for (const save::TrackPiece& p : r.track->pieces)
-                platforms.push_back(p.platform ? std::optional(park::pools::SlidePlatform { .col = p.platform->tile_x, .row = p.platform->tile_z, .height = p.platform->height, .turn = park::ModelTurn::from(p.platform->direction) }) : std::nullopt);
-        std::size_t joined = park::pools::joined_stations(scene.pools, platforms);
+                platforms.push_back(p.platform ? std::optional(rct3::park::pools::SlidePlatform { .col = p.platform->tile_x, .row = p.platform->tile_z, .height = p.platform->height, .turn = rct3::park::ModelTurn::from(p.platform->direction) }) : std::nullopt);
+        std::size_t joined = rct3::park::pools::joined_stations(scene.pools, platforms);
         if (rules.pool_ride && course && course->points.size() == course->kinds.size() && std::ranges::none_of(platforms, [](const auto& p) { return p.has_value(); }))
             for (std::size_t k = 0; k + 1 < course->kinds.size(); ++k)
             {
-                if (course->kinds[k] != park::track::CourseKind::Station)
+                if (course->kinds[k] != rct3::park::track::CourseKind::Station)
                     continue;
                 std::vector<glm::vec3> run { course->points[k] };
-                for (; k + 1 < course->kinds.size() && course->kinds[k] == park::track::CourseKind::Station; ++k)
+                for (; k + 1 < course->kinds.size() && course->kinds[k] == rct3::park::track::CourseKind::Station; ++k)
                     run.push_back(course->points[k + 1]);
                 joined += simulation::pool_beside(scene.sim, run).has_value() ? 1 : 0;
             }
-        return park::track::open_refusal(r, rules, state, scene.building.ride == ride, course, joined);
+        return rct3::park::track::open_refusal(r, rules, state, scene.building.ride == ride, course, joined);
     }
 
-    std::vector<ui::screens::StateChoice> state_choices(const ParkScene& scene, park::AttractionRef ref)
+    std::vector<ui::screens::StateChoice> state_choices(const ParkScene& scene, rct3::park::AttractionRef ref)
     {
-        if (ref.kind == park::AttractionRef::Kind::Stall)
+        if (ref.kind == rct3::park::AttractionRef::Kind::Stall)
             return ui::screens::state_choices(ui::screens::AttractionKind::Stall);
         const bool tested = ref.index >= scene.track_rules.size() || !scene.track_rules[ref.index].never_tested;
         return ui::screens::state_choices(ui::screens::attraction_kind(scene.rides.rides.at(ref.index)), tested);
     }
 
-    std::vector<ui::screens::InfoChoice> state_fan(const ParkScene& scene, park::AttractionRef ref, const ui::StringTable& strings)
+    std::vector<ui::screens::InfoChoice> state_fan(const ParkScene& scene, rct3::park::AttractionRef ref, const ui::StringTable& strings)
     {
         std::vector<ui::screens::InfoChoice> fan;
         for (const ui::screens::StateChoice& c : state_choices(scene, ref))
@@ -2159,7 +2159,7 @@ namespace rct3::scene
 
     std::optional<std::string> change_ride_state(ParkScene& scene, std::size_t ride, save::AttractionState state)
     {
-        auto refused = state_refusal(scene, { .kind = park::AttractionRef::Kind::Ride, .index = ride }, state);
+        auto refused = state_refusal(scene, { .kind = rct3::park::AttractionRef::Kind::Ride, .index = ride }, state);
         if (!refused)
             set_attraction_state(scene, scene.rides.rides.at(ride).base, state);
         if (!refused && state != save::AttractionState::Closed && scene.rides.rides[ride].kind == save::RideKind::Tracked && !std::ranges::contains(scene.readying, ride))
@@ -2169,7 +2169,7 @@ namespace rct3::scene
 
     std::optional<std::string> change_stall_state(ParkScene& scene, std::size_t stall, save::AttractionState state)
     {
-        auto refused = state_refusal(scene, { .kind = park::AttractionRef::Kind::Stall, .index = stall }, state);
+        auto refused = state_refusal(scene, { .kind = rct3::park::AttractionRef::Kind::Stall, .index = stall }, state);
         if (!refused)
             set_attraction_state(scene, scene.rides.stalls.at(stall).base, state);
         return refused;
@@ -2194,7 +2194,7 @@ namespace rct3::scene
         if (size.x <= 0 || size.y <= 0)
             return false;
         const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
-        return ripple_park_water(scene.water, park::view_ray(scene.camera, size.x / size.y, ndc), scene.grid);
+        return ripple_park_water(scene.water, rct3::park::view_ray(scene.camera, size.x / size.y, ndc), scene.grid);
     }
 
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed)
@@ -2238,7 +2238,7 @@ namespace rct3::scene
         }
 
         // A stall's window shows what it sells by name and picture once those are read.
-        if (!scene.carried_read && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Stall)
+        if (!scene.carried_read && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Stall)
         {
             load_carried(device, scene, assets);
             if (auto info = desktop.root().find_as<ui::screens::InfoPanel>(kInfoName))
@@ -2254,14 +2254,14 @@ namespace rct3::scene
             const save::Ride& r = scene.rides.rides[ride];
             const auto coaster = course ? simulation::coaster_of(*course, r) : std::nullopt;
             // Boats sail off a dock that is only station, which no train could run round.
-            const bool boats = (r.mode == save::OperatingMode::Boat || r.mode == save::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, park::track::CourseKind::Station);
+            const bool boats = (r.mode == save::OperatingMode::Boat || r.mode == save::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station);
             if (!assets.install || r.base.demolished || r.base.state == save::AttractionState::Closed || r.mode == save::OperatingMode::MiniGolf || (!coaster && !boats && !(course && !course->climbs.empty())))
                 continue;
             const bool ghosted = coaster && !coaster->closed && coaster->shuttle == simulation::Shuttle::None && scene.building.ride == ride;
             // A lazy river has no trains: swimmers float round it; nor has a slide climbed on foot.
             if ((r.mode == save::OperatingMode::LazyRiver || (!coaster && !boats) || set_trains(device, scene, *assets.install, ride, r.train_count, r.cars_per_train)) && !ghosted && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
                 scene.placing.unjoined.push_back(ride);
-            if (auto info = desktop.root().find_as<ui::screens::InfoPanel>(kInfoName); info && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && scene.shown->index == ride)
+            if (auto info = desktop.root().find_as<ui::screens::InfoPanel>(kInfoName); info && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && scene.shown->index == ride)
                 show_info_page(scene, *info, assets, options);
         }
 
@@ -2285,7 +2285,7 @@ namespace rct3::scene
             {
                 const glm::vec2 screen(desktop.root().rect().width() * scale, desktop.root().rect().height() * scale);
                 const float pitch = options.flag(config::GameOption::InvertRideCameraY) ? -1.0f : 1.0f;
-                scene.ride_turn = park::look_round_limited(scene.ride_turn + glm::vec2(-moved.x / screen.x, -pitch * moved.y / screen.y) * park::kRideLookPerScreen);
+                scene.ride_turn = rct3::park::look_round_limited(scene.ride_turn + glm::vec2(-moved.x / screen.x, -pitch * moved.y / screen.y) * rct3::park::kRideLookPerScreen);
             }
             if (!over_interface)
                 scene.ride_pull = std::clamp(scene.ride_pull - input.pointer.wheel.y * kRidePullPerNotch, 0.0f, kRidePullMost);
@@ -2315,7 +2315,7 @@ namespace rct3::scene
         {
             const profiling::Scope zone("InfoPanel");
             // A double click on a ride's round view rides along on it, as the ride camera key does.
-            if (info->take_view_double_click() && !scene.riding_along() && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride)
+            if (info->take_view_double_click() && !scene.riding_along() && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride)
                 ride_cam(scene, assets, scene.shown->index);
             // Pressing the park puts open colours away without picking.
             if ((pointer.down || input.right) && !over && info->painting())
@@ -2367,9 +2367,9 @@ namespace rct3::scene
                 marks = std::array { tile->col, tile->row, tile->col, tile->row };
             if (marks != deleting.drawn)
             {
-                park::TerrainMesh mesh;
+                rct3::park::TerrainMesh mesh;
                 if (marks)
-                    park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], park::TilePart::Whole, kDeleteMarkColour);
+                    rct3::park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], rct3::park::TilePart::Whole, kDeleteMarkColour);
                 set_view_lines(device, scene.delete_marks, mesh);
                 deleting.drawn = marks;
             }
@@ -2403,9 +2403,9 @@ namespace rct3::scene
             if (pointer.down && scene.press && view.width() > 0 && view.height() > 0)
             {
                 const glm::vec2 ndc { 2 * pointer.position.x / view.width() - 1, 1 - 2 * pointer.position.y / view.height() };
-                const park::Ray ray = park::view_ray(scene.camera, view.width() / view.height(), ndc);
-                if (const auto hit = park::water::water_hit(ray, scene.water.surface))
-                    if (const glm::vec3 at = ray.origin + ray.direction * *hit; park::pools::on_pool_water(scene.pools, scene.grid, { at.x, at.z }))
+                const rct3::park::Ray ray = rct3::park::view_ray(scene.camera, view.width() / view.height(), ndc);
+                if (const auto hit = rct3::park::water::water_hit(ray, scene.water.surface))
+                    if (const glm::vec3 at = ray.origin + ray.direction * *hit; rct3::park::pools::on_pool_water(scene.pools, scene.grid, { at.x, at.z }))
                         scene.stroke.push_back({ at.x, at.z, scene.clock });
             }
             if (!pointer.down && scene.press)
@@ -2422,9 +2422,9 @@ namespace rct3::scene
                 else if (!still && scene.deleting.tool == DeleteTools::Tool::None && scene.structures.tool == StructureTools::Tool::None && !ride_placing(scene) && !scene.building.ride)
                 {
                     // With no tool out, a line or a circle drawn on a pool's water makes waves or a whirlpool there.
-                    if (auto wave = park::pools::drawn_wave(scene.pools, scene.grid, scene.stroke, scene.park_clock))
+                    if (auto wave = rct3::park::pools::drawn_wave(scene.pools, scene.grid, scene.stroke, scene.park_clock))
                     {
-                        constexpr std::size_t kMostDrawn = park::pools::kMaxPoolWaves / 2; ///< Chosen by eye: the rest are the machines'
+                        constexpr std::size_t kMostDrawn = rct3::park::pools::kMaxPoolWaves / 2; ///< Chosen by eye: the rest are the machines'
                         if (scene.drawn_waves.size() >= kMostDrawn)
                             scene.drawn_waves.erase(scene.drawn_waves.begin());
                         scene.drawn_waves.push_back(*wave);
@@ -2524,17 +2524,17 @@ namespace rct3::scene
             // A tracked ride's entrance or exit goes beside its station, a flat ride's round its ground, placed as its
             // kind's item has it; a flat ride takes its own item, whose size it stands on.
             const auto start_door = [&](std::size_t ride, bool exit) {
-                const auto items = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready ? std::span(scene.build.items.get()) : std::span<const park::BuildItem> { };
+                const auto items = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready ? std::span(scene.build.items.get()) : std::span<const rct3::park::BuildItem> { };
                 std::string overlay = scene.rides.rides.at(ride).base.overlay_path;
                 std::ranges::replace(overlay, '\\', '/');
                 // A theme's flat rides share its overlay; the symbol, before its type tag, tells them apart.
                 const std::string_view symbol = scene.rides.rides[ride].base.symbol;
                 const std::string_view name = symbol.substr(0, symbol.find(':'));
-                const auto in_overlay = [&](const park::BuildItem& i) { return !i.entrance.empty() && strings::equals_ignoring_case(i.overlay, overlay); };
-                auto kind = std::ranges::find_if(items, [&](const park::BuildItem& i) { return in_overlay(i) && strings::equals_ignoring_case(i.symbol, name); });
+                const auto in_overlay = [&](const rct3::park::BuildItem& i) { return !i.entrance.empty() && strings::equals_ignoring_case(i.overlay, overlay); };
+                auto kind = std::ranges::find_if(items, [&](const rct3::park::BuildItem& i) { return in_overlay(i) && strings::equals_ignoring_case(i.symbol, name); });
                 if (kind == items.end())
                     kind = std::ranges::find_if(items, in_overlay);
-                const auto any = std::ranges::find_if(items, [](const park::BuildItem& i) { return !i.entrance.empty(); });
+                const auto any = std::ranges::find_if(items, [](const rct3::park::BuildItem& i) { return !i.entrance.empty(); });
                 const auto item = kind != items.end() || scene.rides.rides[ride].kind == save::RideKind::Flat ? kind : any;
                 return item != items.end() && start_door_placing(scene, ride, *item, station_pieces(scene, ride, assets), exit);
             };
@@ -2546,7 +2546,7 @@ namespace rct3::scene
                 if ((!entrance || stations.front().exit_spot == std::nullopt) && start_door(*ride, entrance))
                     stop_land_tools(scene);
             }
-            if (const auto change = info->take_change(); change && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && door(*change))
+            if (const auto change = info->take_change(); change && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && door(*change))
             {
                 if (start_door(scene.shown->index, change->id == ui::screens::control_id(ui::screens::AttractionControl::Exit)))
                 {
@@ -2593,14 +2593,14 @@ namespace rct3::scene
                 }
                 else if (change->id == ui::screens::kPoolLocateControl)
                 {
-                    const auto model = scene.models.find(park::object::model_ref(o));
-                    scene.camera.target = glm::vec3(park::object::placed_transform(o, model == scene.models.end() ? nullptr : &model->second, scene.grid, scene.fitted)[3]);
+                    const auto model = scene.models.find(rct3::park::object::model_ref(o));
+                    scene.camera.target = glm::vec3(rct3::park::object::placed_transform(o, model == scene.models.end() ? nullptr : &model->second, scene.grid, scene.fitted)[3]);
                 }
                 else
                 {
                     // The whole complex is opened or closed, takes the ticket price, the name and the wave
                     // settings, all its rooms alike. A blank name keeps the old one, as an attraction's does.
-                    for (const std::size_t r : park::pools::pool_complex_rooms(scene.pools, *room))
+                    for (const std::size_t r : rct3::park::pools::pool_complex_rooms(scene.pools, *room))
                     {
                         if (change->id == ui::screens::kPoolTicketControl)
                             scene.pools.rooms[r].ticket = change->value;
@@ -2609,7 +2609,7 @@ namespace rct3::scene
                         else if (change->id == ui::screens::kPoolWaveHeightControl)
                             scene.pools.rooms[r].waves.height = static_cast<float>(change->value);
                         else if (change->id == ui::screens::kPoolWaveLengthControl)
-                            scene.pools.rooms[r].waves.frequency = park::pools::kLeastWaveFrequency + park::pools::kMostWaveFrequency - static_cast<float>(change->value);
+                            scene.pools.rooms[r].waves.frequency = rct3::park::pools::kLeastWaveFrequency + rct3::park::pools::kMostWaveFrequency - static_cast<float>(change->value);
                         else if (change->id == ui::screens::kPoolWaveOnControl)
                             scene.pools.rooms[r].waves.on = static_cast<float>(change->value);
                         else if (change->id == ui::screens::kPoolWaveEveryControl)
@@ -2699,7 +2699,7 @@ namespace rct3::scene
                 // The whole complex opened or closed, all its rooms alike; then shown again for the flag's new look.
                 const std::vector<ui::screens::StateChoice> states = ui::screens::state_choices(ui::screens::AttractionKind::Stall);
                 if (choice->second < states.size())
-                    for (const std::size_t r : park::pools::pool_complex_rooms(scene.pools, *room))
+                    for (const std::size_t r : rct3::park::pools::pool_complex_rooms(scene.pools, *room))
                         scene.pools.rooms[r].open = states[choice->second].state == save::AttractionState::Open;
                 open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
             }
@@ -2734,7 +2734,7 @@ namespace rct3::scene
         if (const auto asked = std::exchange(scene.person_requested, std::nullopt); asked && info && *asked < scene.shown_people.size())
             open_person(scene, *info, *asked, assets, options);
         // The Construction tab has no page: it opens the panel that builds the ride's track.
-        if (const auto asked = std::exchange(scene.construct_requested, std::nullopt); asked && asked->kind == park::AttractionRef::Kind::Ride)
+        if (const auto asked = std::exchange(scene.construct_requested, std::nullopt); asked && asked->kind == rct3::park::AttractionRef::Kind::Ride)
         {
             // An open ride's track stays as it is; testing or closed, it may be changed.
             if (asked->index < scene.rides.rides.size() && scene.rides.rides[asked->index].base.state == save::AttractionState::Open)
@@ -2763,13 +2763,13 @@ namespace rct3::scene
         scene.view_camera.yaw += kViewTurn * elapsed;
         if (scene.shown_person && *scene.shown_person < scene.shown_people.size())
             scene.view_camera = person_view(scene, *scene.shown_person, scene.view_camera.yaw);
-        const glm::vec3 viewer = park::eye(scene.camera, scene.seat);
+        const glm::vec3 viewer = rct3::park::eye(scene.camera, scene.seat);
         profiling::section("Objects", [&] { refresh_objects(device, scene, viewer, elapsed); });
         if (scene.billboards_eye != viewer)
         {
             const profiling::Scope zone("Billboards");
             for (ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })
-                park::object::face_billboards(shown->billboards, viewer);
+                rct3::park::object::face_billboards(shown->billboards, viewer);
             scene.billboards_eye = viewer;
         }
         scene.clock += elapsed;
@@ -2777,7 +2777,7 @@ namespace rct3::scene
         scene.park_clock += park_seconds;
         scene.chain_shifts.resize(scene.rides.rides.size());
         for (std::size_t i = 0; i < scene.chain_shifts.size(); ++i)
-            scene.chain_shifts[i] = park::chain_shift(scene.chain_shifts[i], scene.rides.rides[i].options.lift_speed, park_seconds);
+            scene.chain_shifts[i] = rct3::park::chain_shift(scene.chain_shifts[i], scene.rides.rides[i].options.lift_speed, park_seconds);
         advance_park_particles(scene.particles, park_seconds, viewer, static_cast<std::size_t>(options.get(config::GameOption::ParticleBudget)));
         scene.water.look = water_look(options);
         scene.shadows = options.choice(config::GameOption::Shadows);
@@ -2789,8 +2789,8 @@ namespace rct3::scene
         scene.ambient_occlusion = options.flag(config::GameOption::AmbientOcclusion);
         scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
         advance_park_water(scene.water, park_seconds);
-        park::pools::drop_spent_waves(scene.drawn_waves, scene.park_clock);
-        park::pools::drop_spent_waves(scene.rings, scene.park_clock);
+        rct3::park::pools::drop_spent_waves(scene.drawn_waves, scene.park_clock);
+        rct3::park::pools::drop_spent_waves(scene.rings, scene.park_clock);
         scene.water.pool_waves = scene.machine_waves;
         scene.water.pool_waves.insert(scene.water.pool_waves.end(), scene.drawn_waves.begin(), scene.drawn_waves.end());
         scene.water.pool_waves.insert(scene.water.pool_waves.end(), scene.rings.begin(), scene.rings.end());
@@ -2801,7 +2801,7 @@ namespace rct3::scene
             if (scene.riding && *scene.riding < scene.car_waters.size())
                 splashes = std::pair { *scene.riding, scene.car_waters[*scene.riding].splashes };
             const LensSurroundings around {
-                .view_projection = park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across),
+                .view_projection = rct3::park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across),
                 .eye = viewer,
                 .aspect = aspect(device),
                 .under_water = scene.water.eye_in.has_value(),
@@ -2815,7 +2815,7 @@ namespace rct3::scene
             // As the game has it, drops are drawn only where refraction is.
             advance_park_lens(scene.lens, around, options.flag(config::GameOption::WaterDroplets) && options.flag(config::GameOption::Refraction), elapsed);
         });
-        profiling::section("People", [&] { refresh_people(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
+        profiling::section("People", [&] { refresh_people(scene, viewer, rct3::park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
         profiling::section("ZooAnimals", [&] { place_animals(scene); });
         auto bar = desktop.root().find_as<ui::screens::ParkBar>(kBarName);
         if (bar)
@@ -2836,7 +2836,7 @@ namespace rct3::scene
             // The ride camera key leaves, or rides along on the ride whose window is open.
             else if (c == ui::PlayCommand::ToggleRideCamera && scene.riding_along())
                 stop_riding(scene);
-            else if (c == ui::PlayCommand::ToggleRideCamera && scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride)
+            else if (c == ui::PlayCommand::ToggleRideCamera && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride)
                 ride_cam(scene, assets, scene.shown->index);
             else if (c == ui::PlayCommand::NextRideCamera)
                 ride_action(scene, assets, ui::screens::RideCameraAction::NextCamera);
@@ -2856,7 +2856,7 @@ namespace rct3::scene
             const float before = scene.park.time;
             const std::int32_t weeks = simulation::pass_time(scene.park, game_seconds);
             simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, options.flag(config::GameOption::DisableWeather));
-            scene.thunder = park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed, scene.weather_dice);
+            scene.thunder = rct3::park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed, scene.weather_dice);
             // Each new week rates the park again; weeks run through in one frame are rated once.
             if (weeks > 0)
             {
@@ -3062,17 +3062,17 @@ namespace rct3::scene
                 // other waves.
                 std::size_t pools = 14695981039346656037u;
                 const auto mix = [&](std::int64_t v) { pools = (pools ^ static_cast<std::size_t>(v)) * 1099511628211u; };
-                for (const park::pools::PoolSquare& s : scene.pools.squares)
+                for (const rct3::park::pools::PoolSquare& s : scene.pools.squares)
                     for (const std::int64_t v : { std::int64_t { s.col }, std::int64_t { s.row }, std::int64_t { std::to_underlying(s.kind) }, std::int64_t { s.surface } })
                         mix(v);
-                for (const park::pools::PoolRoom& room : scene.pools.rooms)
+                for (const rct3::park::pools::PoolRoom& room : scene.pools.rooms)
                     for (const std::int64_t v : { std::int64_t { room.col }, std::int64_t { room.row }, std::int64_t { room.side.value }, room.ticket, std::int64_t { room.open }, std::int64_t { room.fluid }, static_cast<std::int64_t>(std::llround(room.waves.height * 100)), static_cast<std::int64_t>(std::llround(room.waves.frequency * 100)), static_cast<std::int64_t>(std::llround(room.waves.on)), static_cast<std::int64_t>(std::llround(room.waves.every)) })
                         mix(v);
                 mix(static_cast<std::int64_t>(scene.pools.extras.size() + scene.scenery_pool_extras.size()));
                 if (std::exchange(scene.pools_seen, pools) != pools)
                 {
                     simulation::import_pools(scene.sim, scene.pools, scene.scenery_pool_extras);
-                    scene.machine_waves = park::pools::machine_waves(scene.pools, scene.scenery_pool_extras, scene.grid);
+                    scene.machine_waves = rct3::park::pools::machine_waves(scene.pools, scene.scenery_pool_extras, scene.grid);
                 }
                 scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(scene.footpaths.pools.size()), .rating = scene.park.rating, .guest_cash = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_cash : 0 }, .guest_bank = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_bank_funds : 0 } });
                 // What a crashed train's wrecks fly over and into: the ground, and the scenery, stalls and flat rides
@@ -3086,12 +3086,12 @@ namespace rct3::scene
                             [&scene](glm::vec3 p) {
                                 if (scene.pick_boxes_of != scene.objects.size())
                                     place_objects(scene);
-                                return std::ranges::any_of(scene.pick_boxes, [&](const park::object::PickBox& box) {
+                                return std::ranges::any_of(scene.pick_boxes, [&](const rct3::park::object::PickBox& box) {
                                     if (glm::any(glm::lessThan(p, box.park_low)) || glm::any(glm::greaterThan(p, box.park_high)))
                                         return false;
                                     const save::PlacedObject& o = scene.objects[box.index];
                                     const auto owner = scene.attractions.find(o.id);
-                                    const bool tracked = owner != scene.attractions.end() && owner->second.kind == park::AttractionRef::Kind::Ride && owner->second.index < scene.rides.rides.size() && scene.rides.rides[owner->second.index].track;
+                                    const bool tracked = owner != scene.attractions.end() && owner->second.kind == rct3::park::AttractionRef::Kind::Ride && owner->second.index < scene.rides.rides.size() && scene.rides.rides[owner->second.index].track;
                                     const glm::vec3 local(box.back * glm::vec4(p, 1));
                                     return !o.hidden && !o.fixture && !tracked && glm::all(glm::greaterThanEqual(local, box.low)) && glm::all(glm::lessThanEqual(local, box.high));
                                 });
@@ -3108,7 +3108,7 @@ namespace rct3::scene
                             return scene.enclosures.at(t.x, t.y);
                         },
                     .somewhere = [&](std::int32_t which, random::RandomState& dice) -> std::optional<glm::vec2> {
-                        const auto tiles = static_cast<std::uint64_t>(park::enclosure_size(scene.enclosures, which));
+                        const auto tiles = static_cast<std::uint64_t>(rct3::park::enclosure_size(scene.enclosures, which));
                         if (tiles == 0)
                             return std::nullopt;
                         for (std::uint64_t i = 0, pick = random::below(dice, tiles); i < scene.enclosures.tiles.size(); ++i)
@@ -3139,7 +3139,7 @@ namespace rct3::scene
                 std::map<std::string_view, std::int32_t, std::less<>> theme_of; // Of each themed item, by symbol
                 const auto themed = [&](glm::vec3 at, std::int32_t theme, std::int32_t reach) {
                     if (theme_of.empty() && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-                        for (const park::BuildItem& item : scene.build.items.get())
+                        for (const rct3::park::BuildItem& item : scene.build.items.get())
                             if (item.style_index >= 0)
                                 theme_of.try_emplace(item.symbol, item.style_index);
                     const save::TerrainGrid& g = scene.grid;
@@ -3234,7 +3234,7 @@ namespace rct3::scene
                         {
                             const auto placed = std::ranges::find(scene.objects, house->object, &save::PlacedObject::id);
                             if (placed != scene.objects.end() && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-                                if (const auto item = std::ranges::find(scene.build.items.get(), placed->symbol, &park::BuildItem::symbol); item != scene.build.items.get().end())
+                                if (const auto item = std::ranges::find(scene.build.items.get(), placed->symbol, &rct3::park::BuildItem::symbol); item != scene.build.items.get().end())
                                     message.subject_name = strings::to_utf8(assets.strings->get(item->name_text));
                         }
                         else if (r.valid(at))
@@ -3259,11 +3259,11 @@ namespace rct3::scene
                 {
                     scene.chairs_changed = false;
                     std::unordered_set<std::string_view> chair_symbols;
-                    std::unordered_map<std::string_view, park::pools::PoolExtraFit> extra_fits;
-                    for (const park::BuildItem& item : scene.build.items.get())
+                    std::unordered_map<std::string_view, rct3::park::pools::PoolExtraFit> extra_fits;
+                    for (const rct3::park::BuildItem& item : scene.build.items.get())
                         if (!item.pool_extra.empty())
                         {
-                            const park::pools::PoolExtraFit fit = park::pools::pool_extra_fit(item.pool_extra);
+                            const rct3::park::pools::PoolExtraFit fit = rct3::park::pools::pool_extra_fit(item.pool_extra);
                             extra_fits.emplace(item.symbol, fit);
                             if (fit.lifeguard)
                                 chair_symbols.insert(item.symbol);
@@ -3272,7 +3272,7 @@ namespace rct3::scene
                     scene.scenery_pool_extras.clear();
                     for (const save::PlacedObject& o : scene.objects)
                         if (const auto fit = extra_fits.find(o.symbol); fit != extra_fits.end() && !o.hidden && !std::ranges::contains(scene.pool_pieces, o.id))
-                            scene.scenery_pool_extras.push_back({ .symbol = o.symbol, .overlay = o.overlay, .col = o.col, .row = o.row, .side = park::ModelTurn::from(o.rotation).facing(), .fit = fit->second });
+                            scene.scenery_pool_extras.push_back({ .symbol = o.symbol, .overlay = o.overlay, .col = o.col, .row = o.row, .side = rct3::park::ModelTurn::from(o.rotation).facing(), .fit = fit->second });
                     const save::TerrainGrid& g = scene.grid;
                     const auto tile_of = [&g](glm::vec3 p) { return glm::ivec2 { static_cast<int>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((p.z - g.origin_z) / g.tile_size_z)) }; };
                     std::vector<std::size_t> chairs;
@@ -3315,7 +3315,7 @@ namespace rct3::scene
                     }
                 }
                 // What is broken looks it, and looks whole again once mended.
-                park::object::Broken broken;
+                rct3::park::object::Broken broken;
                 for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())
                     if (item.broken && item.object != 0)
                         broken.insert(item.object);
@@ -3346,7 +3346,7 @@ namespace rct3::scene
                             frame(photo.guest);
                         const float yaw = r.get<simulation::Pose>(photo.guest).heading.value + glm::pi<float>();
                         const std::string& name = r.get<simulation::Visitor>(photo.guest).name;
-                        scene.photos.push_back({ park::framed(points, yaw, kPhotoPitch, kPhotoClosest), std::format("{} at photo spot_", name.empty() ? "Guest" : name) });
+                        scene.photos.push_back({ rct3::park::framed(points, yaw, kPhotoPitch, kPhotoClosest), std::format("{} at photo spot_", name.empty() ? "Guest" : name) });
                     }
                 }
                 // Their money and mood into the saved guests, for their windows and the guest list to show.
@@ -3461,7 +3461,7 @@ namespace rct3::scene
                     const std::uint32_t hurt = wrecks->injured - std::exchange(injured, wrecks->injured);
                     simulation::post(scene.park.messages, { .text_key = hurt > 0 ? "Thought_PI_Ride_Crashed_Injuries1" : "Thought_PI_Ride_Crashed1", .subject = ride.base.id, .number = hurt });
                     ride.base.state = save::AttractionState::Closed;
-                    scene.shown_closed = scene.shown_closed || (scene.shown && scene.shown->kind == park::AttractionRef::Kind::Ride && scene.shown->index == i);
+                    scene.shown_closed = scene.shown_closed || (scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && scene.shown->index == i);
                     auto& events = scene.park_model.awards.dangerous_coaster_events;
                     events = events.value_or(0) + static_cast<std::int32_t>(wrecks->dangers - dangers);
                     dangers = wrecks->dangers;
@@ -3556,7 +3556,7 @@ namespace rct3::scene
                     objects_changed(scene);
                 }
             }
-            profiling::section("Cars", [&] { place_cars(scene, viewer, park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
+            profiling::section("Cars", [&] { place_cars(scene, viewer, rct3::park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
         });
         profiling::section("Daylight", [&] { show_time_of_day(scene, viewer); });
 
@@ -3582,21 +3582,21 @@ namespace rct3::scene
             {
                 const auto ref = m.subject && m.subject_name.empty() ? attraction_with(scene, *m.subject) : std::nullopt;
                 if (ref)
-                    m.subject_name = strings::to_utf8(ui::screens::attraction_name(ref->kind == park::AttractionRef::Kind::Stall ? scene.rides.stalls[ref->index].base : scene.rides.rides[ref->index].base, *assets.strings));
+                    m.subject_name = strings::to_utf8(ui::screens::attraction_name(ref->kind == rct3::park::AttractionRef::Kind::Stall ? scene.rides.stalls[ref->index].base : scene.rides.rides[ref->index].base, *assets.strings));
             }
             std::vector<ui::screens::DrawerMessage> shown = ui::screens::drawer_messages(scene.park.messages, *assets.strings, messages->style());
             // A message about an attraction shows the attraction's own icon, the one it has in the build lists, and
             // the camera when it has none.
-            const auto items = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready ? std::span(scene.build.items.get()) : std::span<const park::BuildItem> { };
+            const auto items = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready ? std::span(scene.build.items.get()) : std::span<const rct3::park::BuildItem> { };
             for (std::size_t i = 0; i < shown.size(); ++i)
             {
                 const auto& subject = scene.park.messages.list[i].subject;
                 const auto ref = subject ? attraction_with(scene, *subject) : std::nullopt;
                 if (!ref)
                     continue;
-                std::string overlay = ref->kind == park::AttractionRef::Kind::Stall ? scene.rides.stalls[ref->index].base.overlay_path : scene.rides.rides[ref->index].base.overlay_path;
+                std::string overlay = ref->kind == rct3::park::AttractionRef::Kind::Stall ? scene.rides.stalls[ref->index].base.overlay_path : scene.rides.rides[ref->index].base.overlay_path;
                 std::ranges::replace(overlay, '\\', '/');
-                const auto item = std::ranges::find_if(items, [&](const park::BuildItem& it) { return !it.icon.empty() && strings::equals_ignoring_case(it.overlay, overlay); });
+                const auto item = std::ranges::find_if(items, [&](const rct3::park::BuildItem& it) { return !it.icon.empty() && strings::equals_ignoring_case(it.overlay, overlay); });
                 if (item != items.end())
                     shown[i].icon = item->icon;
                 shown[i].clickable = true;
@@ -3618,13 +3618,13 @@ namespace rct3::scene
                 // Close enough to make it out, never further out than the player was.
                 scene.camera.target = { at.x, scene.camera.target.y, at.z };
                 scene.camera.distance = std::min(scene.camera.distance, std::max(scene.view_camera.distance * kFocusZoomOut, kFocusClosest));
-                scene.camera = park::on_ground(scene.camera, scene.grid);
+                scene.camera = rct3::park::on_ground(scene.camera, scene.grid);
                 // It shows in the middle of what the drawer leaves of the screen, not behind the drawer: the view
                 // slides on along the ground until it does, found by the secant method from no slide.
                 const ui::Rect screen = desktop.root().rect();
                 const float want = (messages->rect().y1 + screen.y1) / 2;
                 const auto off = [&](float slide) {
-                    const glm::vec4 clip = park::view_projection(park::panned(scene.camera, 0, slide), screen.width() / screen.height()) * glm::vec4(at, 1.0f);
+                    const glm::vec4 clip = rct3::park::view_projection(rct3::park::panned(scene.camera, 0, slide), screen.width() / screen.height()) * glm::vec4(at, 1.0f);
                     return clip.w > 0 ? (1 - clip.y / clip.w) / 2 * screen.height() - want : 0.0f;
                 };
                 float before = 0;
@@ -3637,7 +3637,7 @@ namespace rct3::scene
                         break;
                     before = std::exchange(slide, slide - b * (slide - before) / (b - a));
                 }
-                scene.camera = park::on_ground(park::panned(scene.camera, 0, slide), scene.grid);
+                scene.camera = rct3::park::on_ground(rct3::park::panned(scene.camera, 0, slide), scene.grid);
             }
         }
         if (auto tools = desktop.root().find_as<ui::screens::ToolRow>(kToolsName))
@@ -3745,7 +3745,7 @@ namespace rct3::scene
             if (!scene.build.kinds_named && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
             {
                 scene.build.kinds_named = true;
-                for (const park::BuildItem& item : scene.build.items.get())
+                for (const rct3::park::BuildItem& item : scene.build.items.get())
                 {
                     const std::string own = std::format("{}Name", item.symbol);
                     if (const auto name = assets.strings->get(item.name_text); !name.empty() && assets.strings->get_ignoring_case(own).empty())
@@ -3798,7 +3798,7 @@ namespace rct3::scene
                     stop_land_tools(scene);
                     stop_deleting(scene);
                     stop_structure_tools(scene);
-                    building = picked->kind != park::BuildKind::Scenery;
+                    building = picked->kind != rct3::park::BuildKind::Scenery;
                 }
                 else if (new_tracked_ride(scene, *picked, assets))
                 {
@@ -3831,7 +3831,7 @@ namespace rct3::scene
             if (const auto bar = desktop.root().find_as<ui::screens::ParkBar>(kBarName); bar && bar->highlights() && view.width() > 0 && view.height() > 0)
             {
                 constexpr float kHighlightLift = 2.4f; ///< Chosen by eye: metres over their feet, clear of their head
-                const glm::mat4 camera = park::view_projection(scene.camera, view.width() / view.height());
+                const glm::mat4 camera = rct3::park::view_projection(scene.camera, view.width() / view.height());
                 for (const ShownPerson& p : scene.shown_people)
                 {
                     const ui::screens::PersonFacts f { .guest = p.staff ? nullptr : &scene.people.guests[p.saved], .staff = p.staff ? &scene.people.staff[p.saved] : nullptr, .people = &scene.people, .rides = &scene.rides };
@@ -3852,7 +3852,7 @@ namespace rct3::scene
         if (const auto picked = update_park_map(device, scene.map, desktop, scene.grid, scene.camera, aspect(device), [&] { return map_people(scene); }, elapsed))
         {
             scene.camera.target = { picked->x, scene.camera.target.y, picked->y };
-            scene.camera = park::on_ground(scene.camera, scene.grid);
+            scene.camera = rct3::park::on_ground(scene.camera, scene.grid);
         }
         // What the staff window shows of each worker that the save does not hold: their clothes and patrol.
         scene.staff_looks.assign(scene.people.staff.size(), { });
@@ -3892,7 +3892,7 @@ namespace rct3::scene
         {
             const glm::vec3 at = scene.shown_people[*who].pose.world[3];
             scene.camera.target = { at.x, scene.camera.target.y, at.z };
-            scene.camera = park::on_ground(scene.camera, scene.grid);
+            scene.camera = rct3::park::on_ground(scene.camera, scene.grid);
         }
         if (const auto paint = asks.staff.paint; paint && shown_worker(paint->staff))
             paint_person(scene, *shown_worker(paint->staff), paint->pot, paint->colour);
@@ -3945,13 +3945,13 @@ namespace rct3::scene
             if (!entrances.empty())
             {
                 const save::PlacedObject& o = scene.objects[entrances[scene.entrance_centred++ % entrances.size()]];
-                const glm::vec2 middle = park::object::footprint_middle(o, scene.models.at(park::object::model_ref(o)).squares);
+                const glm::vec2 middle = rct3::park::object::footprint_middle(o, scene.models.at(rct3::park::object::model_ref(o)).squares);
                 scene.camera.target = { scene.grid.origin_x + middle.x * scene.grid.tile_size_x, scene.camera.target.y, scene.grid.origin_z + middle.y * scene.grid.tile_size_z };
-                scene.camera = park::on_ground(scene.camera, scene.grid);
+                scene.camera = rct3::park::on_ground(scene.camera, scene.grid);
             }
         }
         if (asks.buy_land || asks.buy_rights)
-            buy_land_tool(scene, asks.buy_rights ? park::LandBuy::Rights : park::LandBuy::Land, assets);
+            buy_land_tool(scene, asks.buy_rights ? rct3::park::LandBuy::Rights : rct3::park::LandBuy::Land, assets);
         // Every broken path item back new at once, at the full price of each: the dear way, a handyman's the free one.
         if (asks.replace_broken && facts.broken_items > 0 && (!scene.park.cash || *scene.park.cash >= facts.replace_cost))
         {
@@ -3985,7 +3985,7 @@ namespace rct3::scene
         if (auto question = desktop.root().find_as<ui::QuestionBox>(kDemolishName))
         {
             if (const auto answer = question->take_answer(); answer && *answer == 0)
-                for (const park::AttractionRef ref : std::exchange(scene.demolish_asked, { }))
+                for (const rct3::park::AttractionRef ref : std::exchange(scene.demolish_asked, { }))
                     demolish(scene, assets, ref);
         }
         // Prizes won are told in a box each, as the player closes the one before.
@@ -4009,10 +4009,10 @@ namespace rct3::scene
         return std::exchange(scene.message_alert, false);
     }
 
-    park::object::LevelScales level_scales(const config::GameOptions& options)
+    rct3::park::object::LevelScales level_scales(const config::GameOptions& options)
     {
-        static_assert(config::kDetailPairs.size() == park::kDetailKinds); // In the same order
-        park::object::LevelScales scales;
+        static_assert(config::kDetailPairs.size() == rct3::park::kDetailKinds); // In the same order
+        rct3::park::object::LevelScales scales;
         for (std::size_t i = 0; i < scales.size(); ++i)
             scales[i] = { .detail = options.get(config::kDetailPairs[i].detail), .distance = options.get(config::kDetailPairs[i].distance) };
         return scales;

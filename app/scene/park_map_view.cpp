@@ -42,31 +42,31 @@ namespace rct3::scene
         /// A legend row: the layer, the game's text for it where the game has one, else our own words.
         struct LayerText
         {
-            park::MapLayer layer;
+            rct3::park::MapLayer layer;
             std::string_view key;
             std::u16string_view own;
             bool starts_group = false;
         };
         constexpr std::array kLayerTexts {
-            LayerText { park::MapLayer::Relief, "LoadingScreen_Terrain", u"Terrain" },
-            LayerText { park::MapLayer::Contours, { }, u"Contours" },
-            LayerText { park::MapLayer::Water, { }, u"Water" },
-            LayerText { park::MapLayer::ParkLand, { }, u"Park land" },
-            LayerText { park::MapLayer::Paths, "Obj_PathsHelp", u"Paths", true },
-            LayerText { park::MapLayer::Scenery, "Obj_SceneryHelp", u"Scenery" },
-            LayerText { park::MapLayer::Rides, "MapText_ride", u"Rides", true },
-            LayerText { park::MapLayer::Food, "MapText_foodStall", u"Food" },
-            LayerText { park::MapLayer::Drinks, "MapText_drinkStall", u"Drinks" },
-            LayerText { park::MapLayer::Souvenirs, "MapText_souvenirStall", u"Souvenirs" },
-            LayerText { park::MapLayer::Information, "MapText_infoKiosk", u"Information kiosks" },
-            LayerText { park::MapLayer::FirstAid, "MapText_firstAid", u"First aid" },
-            LayerText { park::MapLayer::CashMachines, "MapText_ATM", u"Cash machines" },
-            LayerText { park::MapLayer::Toilets, "MapText_toilet", u"Toilets" },
-            LayerText { park::MapLayer::Guests, "Graph_Guests", u"Guests", true },
-            LayerText { park::MapLayer::Staff, "Staff_Title", u"Staff" },
-            LayerText { park::MapLayer::Patrols, { }, u"Patrol areas" },
+            LayerText { rct3::park::MapLayer::Relief, "LoadingScreen_Terrain", u"Terrain" },
+            LayerText { rct3::park::MapLayer::Contours, { }, u"Contours" },
+            LayerText { rct3::park::MapLayer::Water, { }, u"Water" },
+            LayerText { rct3::park::MapLayer::ParkLand, { }, u"Park land" },
+            LayerText { rct3::park::MapLayer::Paths, "Obj_PathsHelp", u"Paths", true },
+            LayerText { rct3::park::MapLayer::Scenery, "Obj_SceneryHelp", u"Scenery" },
+            LayerText { rct3::park::MapLayer::Rides, "MapText_ride", u"Rides", true },
+            LayerText { rct3::park::MapLayer::Food, "MapText_foodStall", u"Food" },
+            LayerText { rct3::park::MapLayer::Drinks, "MapText_drinkStall", u"Drinks" },
+            LayerText { rct3::park::MapLayer::Souvenirs, "MapText_souvenirStall", u"Souvenirs" },
+            LayerText { rct3::park::MapLayer::Information, "MapText_infoKiosk", u"Information kiosks" },
+            LayerText { rct3::park::MapLayer::FirstAid, "MapText_firstAid", u"First aid" },
+            LayerText { rct3::park::MapLayer::CashMachines, "MapText_ATM", u"Cash machines" },
+            LayerText { rct3::park::MapLayer::Toilets, "MapText_toilet", u"Toilets" },
+            LayerText { rct3::park::MapLayer::Guests, "Graph_Guests", u"Guests", true },
+            LayerText { rct3::park::MapLayer::Staff, "Staff_Title", u"Staff" },
+            LayerText { rct3::park::MapLayer::Patrols, { }, u"Patrol areas" },
         };
-        static_assert(kLayerTexts.size() == park::kMapLayerCount);
+        static_assert(kLayerTexts.size() == rct3::park::kMapLayerCount);
 
         std::u16string text(const ui::StringTable& strings, std::string_view key, std::u16string_view own)
         {
@@ -74,7 +74,7 @@ namespace rct3::scene
             return std::u16string(found.empty() ? own : found);
         }
 
-        ui::Color colour(park::MapRgba c)
+        ui::Color colour(rct3::park::MapRgba c)
         {
             return { c.r, c.g, c.b, c.a };
         }
@@ -162,14 +162,14 @@ namespace rct3::scene
 
         /// The ground the camera sees, as map points round it: where the lines through the view's corners
         /// meet the level of the point it looks at, cut off towards the horizon.
-        std::vector<ui::Point> seen_ground(const park::ParkCamera& camera, float aspect, const park::MapFrame& frame)
+        std::vector<ui::Point> seen_ground(const rct3::park::ParkCamera& camera, float aspect, const rct3::park::MapFrame& frame)
         {
-            const glm::vec3 eye = park::eye(camera);
+            const glm::vec3 eye = rct3::park::eye(camera);
             const float farthest = kFarthestSeen * camera.distance;
             std::vector<ui::Point> corners;
             for (const glm::vec2 at : { glm::vec2 { -1, -1 }, glm::vec2 { 1, -1 }, glm::vec2 { 1, 1 }, glm::vec2 { -1, 1 } })
             {
-                const park::Ray ray = park::view_ray(camera, aspect, at);
+                const rct3::park::Ray ray = rct3::park::view_ray(camera, aspect, at);
                 glm::vec2 ground { ray.direction.x, ray.direction.z };
                 const glm::vec2 from { eye.x, eye.z };
                 if (ray.direction.y < -1e-4f)
@@ -182,19 +182,19 @@ namespace rct3::scene
                     continue;
                 if (length > farthest || ray.direction.y >= -1e-4f)
                     ground *= farthest / length;
-                const glm::vec2 m = park::to_map(frame, from + ground);
+                const glm::vec2 m = rct3::park::to_map(frame, from + ground);
                 corners.push_back({ m.x, m.y });
             }
             return corners;
         }
 
         /// The mean colour of each surface's picture, by the surface's index.
-        std::vector<std::optional<park::MapRgba>> surface_colours(const park::ground::GroundImages& images)
+        std::vector<std::optional<rct3::park::MapRgba>> surface_colours(const rct3::park::ground::GroundImages& images)
         {
-            std::vector<std::optional<park::MapRgba>> colours;
+            std::vector<std::optional<rct3::park::MapRgba>> colours;
             for (std::size_t index = 0; index <= std::numeric_limits<std::uint8_t>::max(); ++index)
             {
-                const auto image = images.find(park::ground::ground_key(park::GroundPaint::Surface, static_cast<std::uint8_t>(index)));
+                const auto image = images.find(rct3::park::ground::ground_key(rct3::park::GroundPaint::Surface, static_cast<std::uint8_t>(index)));
                 if (image == images.end() || image->second.pixels.empty())
                 {
                     colours.emplace_back();
@@ -216,12 +216,12 @@ namespace rct3::scene
                     continue;
                 }
                 const auto mean = [&](std::size_t c) { return static_cast<std::uint8_t>(std::lround(sum.at(c) / weight)); };
-                colours.push_back(park::MapRgba { mean(0), mean(1), mean(2), 255 });
+                colours.push_back(rct3::park::MapRgba { mean(0), mean(1), mean(2), 255 });
             }
             return colours;
         }
 
-        void replace(render::Device& device, render::TextureHandle& texture, const park::MapPicture& picture, std::string_view label)
+        void replace(render::Device& device, render::TextureHandle& texture, const rct3::park::MapPicture& picture, std::string_view label)
         {
             if (texture)
                 device.destroy_texture(texture);
@@ -238,36 +238,36 @@ namespace rct3::scene
 
     } // namespace
 
-    ParkMap park_map(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water, std::span<const save::PlacedObject> objects, const park::object::ObjectModels& models, const park::object::Fitted& fitted, const park::AttractionObjects& attractions, const save::RideModel& rides, const park::ground::GroundImages& images, const config::GameInstall& install)
+    ParkMap park_map(const save::TerrainGrid& grid, std::span<const save::PathTile> paths, const save::WaterLayer& water, std::span<const save::PlacedObject> objects, const rct3::park::object::ObjectModels& models, const rct3::park::object::Fitted& fitted, const rct3::park::AttractionObjects& attractions, const save::RideModel& rides, const rct3::park::ground::GroundImages& images, const config::GameInstall& install)
     {
         const profiling::Scope zone("Map");
         ParkMap map;
-        map.features = park::map_features(grid, paths, water);
+        map.features = rct3::park::map_features(grid, paths, water);
         AttractionTypes types(install);
-        const auto layer_of = [&](const save::PlacedObject& o) -> std::optional<park::MapLayer> {
+        const auto layer_of = [&](const save::PlacedObject& o) -> std::optional<rct3::park::MapLayer> {
             const auto owner = attractions.find(o.id);
             if (owner == attractions.end())
             {
                 // What the park builds under paths and track is not scenery the player placed.
-                if (o.overlay == park::support::kSupportOverlay)
+                if (o.overlay == rct3::park::support::kSupportOverlay)
                     return std::nullopt;
-                return park::MapLayer::Scenery;
+                return rct3::park::MapLayer::Scenery;
             }
-            const park::AttractionRef& ref = owner->second;
-            if (ref.kind == park::AttractionRef::Kind::Stall && ref.index < rides.stalls.size())
-                return park::attraction_layer(types.of(rides.stalls[ref.index].base, true));
-            if (ref.kind == park::AttractionRef::Kind::Ride && ref.index < rides.rides.size() && rides.rides[ref.index].kind == save::RideKind::Special)
-                return park::attraction_layer(types.of(rides.rides[ref.index].base, false));
-            return park::MapLayer::Rides;
+            const rct3::park::AttractionRef& ref = owner->second;
+            if (ref.kind == rct3::park::AttractionRef::Kind::Stall && ref.index < rides.stalls.size())
+                return rct3::park::attraction_layer(types.of(rides.stalls[ref.index].base, true));
+            if (ref.kind == rct3::park::AttractionRef::Kind::Ride && ref.index < rides.rides.size() && rides.rides[ref.index].kind == save::RideKind::Special)
+                return rct3::park::attraction_layer(types.of(rides.rides[ref.index].base, false));
+            return rct3::park::MapLayer::Rides;
         };
-        map.features.shapes = park::map_shapes(objects, models, grid, fitted, layer_of);
+        map.features.shapes = rct3::park::map_shapes(objects, models, grid, fitted, layer_of);
         map.features.surfaces = surface_colours(images);
-        std::array<std::size_t, park::kMapLayerCount> counts { };
-        for (const park::MapShape& shape : map.features.shapes)
+        std::array<std::size_t, rct3::park::kMapLayerCount> counts { };
+        for (const rct3::park::MapShape& shape : map.features.shapes)
             ++counts.at(static_cast<std::size_t>(shape.layer));
         logging::logger("map").info(
-            "{} path tiles; shapes: {} scenery, {} rides, {} food, {} drinks, {} souvenirs, {} information, {} first aid, {} cash, {} toilets", map.features.paths.size(), counts[static_cast<std::size_t>(park::MapLayer::Scenery)], counts[static_cast<std::size_t>(park::MapLayer::Rides)], counts[static_cast<std::size_t>(park::MapLayer::Food)], counts[static_cast<std::size_t>(park::MapLayer::Drinks)], counts[static_cast<std::size_t>(park::MapLayer::Souvenirs)],
-            counts[static_cast<std::size_t>(park::MapLayer::Information)], counts[static_cast<std::size_t>(park::MapLayer::FirstAid)], counts[static_cast<std::size_t>(park::MapLayer::CashMachines)], counts[static_cast<std::size_t>(park::MapLayer::Toilets)]);
+            "{} path tiles; shapes: {} scenery, {} rides, {} food, {} drinks, {} souvenirs, {} information, {} first aid, {} cash, {} toilets", map.features.paths.size(), counts[static_cast<std::size_t>(rct3::park::MapLayer::Scenery)], counts[static_cast<std::size_t>(rct3::park::MapLayer::Rides)], counts[static_cast<std::size_t>(rct3::park::MapLayer::Food)], counts[static_cast<std::size_t>(rct3::park::MapLayer::Drinks)], counts[static_cast<std::size_t>(rct3::park::MapLayer::Souvenirs)],
+            counts[static_cast<std::size_t>(rct3::park::MapLayer::Information)], counts[static_cast<std::size_t>(rct3::park::MapLayer::FirstAid)], counts[static_cast<std::size_t>(rct3::park::MapLayer::CashMachines)], counts[static_cast<std::size_t>(rct3::park::MapLayer::Toilets)]);
         return map;
     }
 
@@ -281,8 +281,8 @@ namespace rct3::scene
         std::vector<ui::screens::MapLegendEntry> entries;
         for (const LayerText& t : kLayerTexts)
         {
-            const bool dots = t.layer >= park::MapLayer::Food && t.layer != park::MapLayer::Patrols;
-            entries.push_back({ text(strings, t.key, t.own), colour(park::map_layer_colour(t.layer)), park::shows(map.layers, t.layer), t.starts_group, dots, std::string(t.key) });
+            const bool dots = t.layer >= rct3::park::MapLayer::Food && t.layer != rct3::park::MapLayer::Patrols;
+            entries.push_back({ text(strings, t.key, t.own), colour(rct3::park::map_layer_colour(t.layer)), rct3::park::shows(map.layers, t.layer), t.starts_group, dots, std::string(t.key) });
         }
         auto& panel = desktop.root().add<ui::screens::MapPanel>(std::string(kMapName), panel_style(palette), text(strings, kTitleKey, u"Map"), std::move(entries));
         panel.icon = kMapIcon;
@@ -290,7 +290,7 @@ namespace rct3::scene
         map.since_people = 1e9f;
     }
 
-    std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::TerrainGrid& grid, const park::ParkCamera& camera, float aspect, const std::function<park::MapPeople()>& people, float elapsed)
+    std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::TerrainGrid& grid, const rct3::park::ParkCamera& camera, float aspect, const std::function<rct3::park::MapPeople()>& people, float elapsed)
     {
         auto panel = desktop.root().find_as<ui::screens::MapPanel>(kMapName);
         if (!panel || panel->closing() || grid.empty())
@@ -304,33 +304,33 @@ namespace rct3::scene
             map.since_people = 1e9f;
         }
         if (!map.ground)
-            map.ground = profiling::section("MapGround", [&] { return park::map_ground(grid, map.features, park::map_scale(grid)); });
+            map.ground = profiling::section("MapGround", [&] { return rct3::park::map_ground(grid, map.features, rct3::park::map_scale(grid)); });
         if (map.stale)
         {
-            replace(device, map.picture, profiling::section("MapCompose", [&] { return park::compose_map(*map.ground, grid, map.features, map.layers); }), "park map");
+            replace(device, map.picture, profiling::section("MapCompose", [&] { return rct3::park::compose_map(*map.ground, grid, map.features, map.layers); }), "park map");
             map.stale = false;
         }
         map.since_people += elapsed;
         if (map.since_people >= kPeopleInterval)
         {
-            const park::MapPeople shown = people();
-            replace(device, map.people, park::people_picture(grid, map.ground->scale, shown.people, map.layers, shown.patrol_tiles), "park map people");
+            const rct3::park::MapPeople shown = people();
+            replace(device, map.people, rct3::park::people_picture(grid, map.ground->scale, shown.people, map.layers, shown.patrol_tiles), "park map people");
             map.since_people = 0;
         }
 
-        const park::MapFrame frame = park::map_frame(grid);
+        const rct3::park::MapFrame frame = rct3::park::map_frame(grid);
         ui::screens::MapCanvas& canvas = panel->canvas();
         canvas.picture = ui::texture_id(map.picture);
         canvas.people = ui::texture_id(map.people);
         canvas.aspect = frame.width / frame.depth;
-        const glm::vec2 target = park::to_map(frame, { camera.target.x, camera.target.z });
+        const glm::vec2 target = rct3::park::to_map(frame, { camera.target.x, camera.target.z });
         canvas.camera.target = { target.x, target.y };
         // The way the camera looks, on the map: east is right, north is up.
         canvas.camera.facing = { std::sin(camera.yaw) / frame.width, -std::cos(camera.yaw) / frame.depth };
         canvas.camera.sees = seen_ground(camera, aspect, frame);
 
         if (const auto pick = canvas.take_pick())
-            return park::to_park(frame, { pick->x, pick->y });
+            return rct3::park::to_park(frame, { pick->x, pick->y });
         return std::nullopt;
     }
 

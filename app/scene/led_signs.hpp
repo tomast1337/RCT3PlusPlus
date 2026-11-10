@@ -42,10 +42,10 @@ namespace rct3::scene
         std::optional<std::size_t> ride;   ///< Of the scene's rides, for a queue sign
         std::optional<std::size_t> placed; ///< Of the scene's signs, for a sign placed as scenery
         save::PlacedObject object;
-        park::object::ObjectMesh mesh;              ///< Its board's batch painted with `board`
-        std::string board;                          ///< Key of the board's picture in LedSigns::textures
-        std::uint32_t width = 0;                    ///< Of the board's picture, whole lamps
-        park::LampColour colour = park::kSignWhite; ///< Of its lamps
+        rct3::park::object::ObjectMesh mesh;                    ///< Its board's batch painted with `board`
+        std::string board;                                      ///< Key of the board's picture in LedSigns::textures
+        std::uint32_t width = 0;                                ///< Of the board's picture, whole lamps
+        rct3::park::LampColour colour = rct3::park::kSignWhite; ///< Of its lamps
         std::u16string shown;
         ovl::texture::RgbaImage loop;
         std::uint32_t shift = UINT32_MAX; ///< Of the loop the board shows; UINT32_MAX before it shows any

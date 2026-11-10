@@ -51,12 +51,12 @@ namespace rct3::scene
         if (size.x > 0 && size.y > 0)
         {
             const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
-            const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, ndc);
-            const auto ground = park::object::ground_hit(ray, scene.grid);
+            const rct3::park::Ray ray = rct3::park::view_ray(scene.camera, size.x / size.y, ndc);
+            const auto ground = rct3::park::object::ground_hit(ray, scene.grid);
             std::optional<glm::vec3> spot;
             bool allowed = false;
             // A path under the pointer, at the height the simulation walks it there.
-            if (const auto under = park::path::path_under(ray, scene.footpaths.paths, scene.grid); under && std::abs(ray.direction.y) > 1e-6f)
+            if (const auto under = rct3::park::path::path_under(ray, scene.footpaths.paths, scene.grid); under && std::abs(ray.direction.y) > 1e-6f)
             {
                 const save::PathTile& p = scene.footpaths.paths[under->path];
                 float nearest = std::numeric_limits<float>::max();
@@ -95,8 +95,8 @@ namespace rct3::scene
                 const int col = static_cast<int>(std::floor((spot->x - scene.grid.origin_x) / scene.grid.tile_size_x));
                 const int row = static_cast<int>(std::floor((spot->z - scene.grid.origin_z) / scene.grid.tile_size_z));
                 // shortcut: the park's lakes never take them, as nobody treads water there yet; let them in once they do.
-                const auto water = park::water::water_hit(ray, scene.water.surface);
-                allowed = scene.grid.contains(col, row) && park::owned_outright(scene.grid.at(col, row)) && !(water && *water < *ground + 1e-3f);
+                const auto water = rct3::park::water::water_hit(ray, scene.water.surface);
+                allowed = scene.grid.contains(col, row) && rct3::park::owned_outright(scene.grid.at(col, row)) && !(water && *water < *ground + 1e-3f);
             }
             if (spot)
             {

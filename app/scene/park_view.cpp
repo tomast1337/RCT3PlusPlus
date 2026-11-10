@@ -59,7 +59,7 @@ namespace rct3::scene
         }
     } // namespace
 
-    void set_view_lines(render::Device& device, ViewLines& lines, const park::TerrainMesh& mesh)
+    void set_view_lines(render::Device& device, ViewLines& lines, const rct3::park::TerrainMesh& mesh)
     {
         drop(device, lines);
         lines.stale = false;
@@ -83,8 +83,8 @@ namespace rct3::scene
 
     void update_view_lines(render::Device& device, ParkScene& scene)
     {
-        update(device, scene.grid_lines, scene.show_grid, [&] { return park::grid_lines(scene.grid, kGridColour); });
-        update(device, scene.contour_lines, scene.show_contours, [&] { return park::contour_lines(scene.grid, park::kContourStep, kContourColour); });
+        update(device, scene.grid_lines, scene.show_grid, [&] { return rct3::park::grid_lines(scene.grid, kGridColour); });
+        update(device, scene.contour_lines, scene.show_contours, [&] { return rct3::park::contour_lines(scene.grid, rct3::park::kContourStep, kContourColour); });
     }
 
     void draw_view_lines(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
@@ -151,7 +151,7 @@ namespace rct3::scene
         std::erase_if(scene.money, [](const FloatingMoney& m) { return m.age >= ui::kMoneyFloatLife; });
         if (size.x <= 0 || size.y <= 0)
             return { };
-        const glm::mat4 view = park::view_projection(scene.camera, size.x / size.y);
+        const glm::mat4 view = rct3::park::view_projection(scene.camera, size.x / size.y);
         std::vector<ui::MoneyFloat> shown;
         const auto show = [&](const FloatingMoney& m) {
             // Off the screen it waits unseen, as a label would.
@@ -181,7 +181,7 @@ namespace rct3::scene
         const std::optional<std::size_t> built = scene.building.heights ? scene.building.ride : std::nullopt;
         if ((!scene.show_path_heights && !scene.show_ride_heights && !built) || size.x <= 0 || size.y <= 0)
             return { };
-        const glm::mat4 view = park::view_projection(scene.camera, size.x / size.y);
+        const glm::mat4 view = rct3::park::view_projection(scene.camera, size.x / size.y);
         const glm::vec3 middle = scene.camera.target;
         std::vector<std::pair<float, ui::WorldLabel>> found;
         const auto add = [&](glm::vec3 at, float height) {

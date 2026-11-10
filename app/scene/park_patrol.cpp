@@ -46,8 +46,8 @@ namespace rct3::scene
             if (size.x <= 0 || size.y <= 0)
                 return std::nullopt;
             const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
-            const park::Ray ray = park::view_ray(scene.camera, size.x / size.y, ndc);
-            const auto distance = park::object::ground_hit(ray, scene.grid);
+            const rct3::park::Ray ray = rct3::park::view_ray(scene.camera, size.x / size.y, ndc);
+            const auto distance = rct3::park::object::ground_hit(ray, scene.grid);
             if (!distance)
                 return std::nullopt;
             const glm::vec3 hit = ray.origin + ray.direction * *distance;
@@ -57,7 +57,7 @@ namespace rct3::scene
 
         using PathHeights = std::map<std::pair<int, int>, float>; ///< Of the highest path on each tile with paths
 
-        void add_area(park::TerrainMesh& mesh, const ParkScene& scene, const PathHeights& heights, const simulation::Patrol& patrol, glm::vec4 colour)
+        void add_area(rct3::park::TerrainMesh& mesh, const ParkScene& scene, const PathHeights& heights, const simulation::Patrol& patrol, glm::vec4 colour)
         {
             for (const glm::ivec2 tile : patrol.tiles)
             {
@@ -140,7 +140,7 @@ namespace rct3::scene
             auto [at, _] = heights.try_emplace({ n.tile.col, n.tile.row }, n.height);
             at->second = std::max(at->second, n.height);
         }
-        park::TerrainMesh mesh;
+        rct3::park::TerrainMesh mesh;
         // The others first and faint, then the shown one's over them.
         const auto& r = scene.sim.registry;
         for (const auto [e, staff, patrol] : r.view<const simulation::Staff, const simulation::Patrol>().each())

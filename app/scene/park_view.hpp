@@ -29,7 +29,7 @@ namespace rct3::scene
     void update_view_lines(render::Device& device, ParkScene& scene);
 
     /// Puts `mesh` in the lines' buffers, in place of what they held.
-    void set_view_lines(render::Device& device, ViewLines& lines, const park::TerrainMesh& mesh);
+    void set_view_lines(render::Device& device, ViewLines& lines, const rct3::park::TerrainMesh& mesh);
 
     /// Draws the grid, the contours and the land tools' marks over the ground.
     void draw_view_lines(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);

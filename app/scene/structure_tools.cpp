@@ -60,7 +60,7 @@ namespace rct3::scene
             if (!scene.build.items.valid() || scene.build.items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
                 return 0;
             const auto& items = scene.build.items.get();
-            const auto item = std::ranges::find(items, symbol, &park::BuildItem::symbol);
+            const auto item = std::ranges::find(items, symbol, &rct3::park::BuildItem::symbol);
             return item == items.end() ? 0 : item->price;
         }
 
@@ -189,7 +189,7 @@ namespace rct3::scene
                 }
                 else if (asked == ui::screens::DeleteAreaAction::Delete && any)
                 {
-                    save::Structure s = park::pick_structure(marked_tiles(t, scene.grid), scene.objects, scene.models, scene.grid);
+                    save::Structure s = rct3::park::pick_structure(marked_tiles(t, scene.grid), scene.objects, scene.models, scene.grid);
                     logging::logger("park").info("structures: {} items on {} tiles picked out", s.pieces.size(), std::ranges::count(s.tiles, 1));
                     if (!s.pieces.empty())
                     {
@@ -201,9 +201,9 @@ namespace rct3::scene
         }
         if (t.marks_changed)
         {
-            park::TerrainMesh mesh;
+            rct3::park::TerrainMesh mesh;
             for (const save::Tile m : marked_tiles(t, scene.grid))
-                park::tile_marks(mesh, scene.grid, m.col, m.row, m.col, m.row, park::TilePart::Whole, kMarkColour);
+                rct3::park::tile_marks(mesh, scene.grid, m.col, m.row, m.col, m.row, rct3::park::TilePart::Whole, kMarkColour);
             set_view_lines(device, scene.delete_marks, mesh);
             t.marks_changed = false;
         }
@@ -224,7 +224,7 @@ namespace rct3::scene
             t.turn = t.turn.turned(1);
 
         // Raised with Shift it stays on its tiles; otherwise it follows the ground under the pointer.
-        const std::optional<park::Ray> ray = !over && size.x > 0 && size.y > 0 ? std::optional(park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y })) : std::nullopt;
+        const std::optional<rct3::park::Ray> ray = !over && size.x > 0 && size.y > 0 ? std::optional(rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y })) : std::nullopt;
         if (shift && t.at && t.lift_at)
         {
             if (ray)
@@ -233,13 +233,13 @@ namespace rct3::scene
         }
         else if (ray)
         {
-            const auto distance = park::object::ground_hit(*ray, scene.grid);
+            const auto distance = rct3::park::object::ground_hit(*ray, scene.grid);
             const auto tile = ground_tile(scene, at, size);
             t.at = tile;
             t.lift_at.reset();
             if (tile && distance)
             {
-                t.ground = park::ride::ride_site(*tile, { 1, 1 }, { }, scene.grid).height;
+                t.ground = rct3::park::ride::ride_site(*tile, { 1, 1 }, { }, scene.grid).height;
                 t.height = t.ground;
                 if (shift)
                 {
@@ -256,14 +256,14 @@ namespace rct3::scene
         }
         if (t.solids_of != scene.objects.size())
         {
-            t.solids = park::path::solid_tiles(scene.objects, scene.models, scene.grid);
+            t.solids = rct3::park::path::solid_tiles(scene.objects, scene.models, scene.grid);
             t.solids_of = scene.objects.size();
         }
-        std::vector<save::PlacedObject> placed = park::structure_objects(*t.structure, *t.at, t.turn, t.height, scene.models);
+        std::vector<save::PlacedObject> placed = rct3::park::structure_objects(*t.structure, *t.at, t.turn, t.height, scene.models);
         std::erase_if(placed, [&](const save::PlacedObject& o) { return !load_object_model(scene, t.models, assets, o); });
         const bool moved = placed.size() != t.placed.size() || !std::ranges::equal(placed, t.placed, [](const save::PlacedObject& a, const save::PlacedObject& b) { return a.col == b.col && a.row == b.row && a.base_height == b.base_height && a.rotation == b.rotation; });
         t.placed = std::move(placed);
-        const park::StructureProblem problem = park::structure_problem(*t.structure, *t.at, t.turn, t.placed, scene.models, t.solids, scene.footpaths.paths, scene.grid);
+        const rct3::park::StructureProblem problem = rct3::park::structure_problem(*t.structure, *t.at, t.turn, t.placed, scene.models, t.solids, scene.footpaths.paths, scene.grid);
         t.cost = 0;
         for (const save::PlacedObject& o : t.placed)
             t.cost += price_of(scene, o.symbol);
@@ -272,9 +272,9 @@ namespace rct3::scene
             return;
         t.problem = problem;
         t.affordable = affordable;
-        t.ghost_mesh = park::object::object_mesh(t.placed, scene.models, scene.grid);
-        const glm::vec4 tint = problem == park::StructureProblem::None && affordable ? kGhostTint : kRefusedTint;
-        for (park::GroundVertex& v : t.ghost_mesh.vertices)
+        t.ghost_mesh = rct3::park::object::object_mesh(t.placed, scene.models, scene.grid);
+        const glm::vec4 tint = problem == rct3::park::StructureProblem::None && affordable ? kGhostTint : kRefusedTint;
+        for (rct3::park::GroundVertex& v : t.ghost_mesh.vertices)
             v.colour *= tint;
         ghost_textures(device, scene, t.ghost_mesh);
     }
@@ -286,7 +286,7 @@ namespace rct3::scene
             return true; // Its drags mark; a click picks nothing
         if (t.tool != StructureTools::Tool::Place || !t.structure)
             return false;
-        if (t.placed.empty() || t.problem != park::StructureProblem::None || !t.affordable)
+        if (t.placed.empty() || t.problem != rct3::park::StructureProblem::None || !t.affordable)
             return true;
         wait_for_build(scene);
         ++scene.built;
@@ -303,7 +303,7 @@ namespace rct3::scene
         objects_changed(scene);
         for (std::size_t i = first; i < scene.objects.size(); ++i)
         {
-            if (const auto wall = park::edge_wall(scene.objects[i], scene.models, scene.grid))
+            if (const auto wall = rct3::park::edge_wall(scene.objects[i], scene.models, scene.grid))
                 wall_changed(device, scene, assets, *wall, true);
             animate_scenery(device, scene, i);
         }

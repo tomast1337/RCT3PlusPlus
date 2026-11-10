@@ -42,7 +42,7 @@ namespace rct3::scene
 
     void advance_park_lens(ParkLens& lens, const LensSurroundings& around, bool on, float seconds)
     {
-        park::LensWater& water = lens.water;
+        rct3::park::LensWater& water = lens.water;
         if (!on)
         {
             water.drops.clear();
@@ -65,7 +65,7 @@ namespace rct3::scene
         if (around.under_water)
             water.drops.clear();
         else if (lens.was_under)
-            park::wet_lens(water, park::kSoakingDrops, park::kSoakingSheets, around.aspect);
+            rct3::park::wet_lens(water, rct3::park::kSoakingDrops, rct3::park::kSoakingSheets, around.aspect);
         lens.was_under = around.under_water;
 
         // Rain lands on a lens looking out level or up into it, less the more it looks down, none straight down.
@@ -74,19 +74,19 @@ namespace rct3::scene
         {
             lens.rain_due += kRainPerSecond[rain] * std::clamp(1.0f + ahead.y * 1.5f, 0.0f, 1.0f) * seconds;
             const auto whole = static_cast<std::size_t>(lens.rain_due);
-            park::wet_lens(water, whole, 0, around.aspect);
+            rct3::park::wet_lens(water, whole, 0, around.aspect);
             lens.rain_due -= static_cast<float>(whole);
         }
 
         // A splash of the car ridden (park/car_splashes.hpp).
         if (around.car_splashes && lens.car_splashes && around.car_splashes->first == lens.car_splashes->first && around.car_splashes->second != lens.car_splashes->second && !around.under_water)
-            park::wet_lens(water, kSplashDrops, kSplashSheets, around.aspect);
+            rct3::park::wet_lens(water, kSplashDrops, kSplashSheets, around.aspect);
         lens.car_splashes = around.car_splashes;
 
         // The wind keeps to one way, swinging slowly either side of it.
         const float way = kWindSwing * std::sin(lens.clock * 6.2831853f / kWindPeriod);
         const glm::vec3 wind = glm::vec3 { std::cos(way), 0.0f, std::sin(way) } * (std::clamp(around.wind, 0.0f, 1.0f) * kWindPush);
-        park::LensPush push { .aspect = around.aspect, .down = across({ 0, -1, 0 }), .wind = across(wind) };
+        rct3::park::LensPush push { .aspect = around.aspect, .down = across({ 0, -1, 0 }), .wind = across(wind) };
         if (lens.last_ahead && lens.last_eye && seconds > 0)
         {
             // Where the way the view looked a frame ago is on screen now: how far the world swept across it.
@@ -98,7 +98,7 @@ namespace rct3::scene
         lens.last_ahead = ahead;
         lens.last_eye = around.eye;
         if (!water.drops.empty())
-            park::run_lens_water(water, push, seconds);
+            rct3::park::run_lens_water(water, push, seconds);
     }
 
     void draw_park_lens(render::Device& device, ParkLens& lens)
@@ -128,7 +128,7 @@ namespace rct3::scene
         const float aspect = static_cast<float>(size.width) / static_cast<float>(std::max(size.height, 1u));
         std::vector<LensCorner>& corners = lens.corners;
         corners.clear();
-        for (const park::LensDrop& drop : lens.water.drops)
+        for (const rct3::park::LensDrop& drop : lens.water.drops)
         {
             const float shown = std::min({ 1.0f, drop.age / kFadeIn, (drop.life - drop.age) / kFadeOut });
             if (shown <= 0)

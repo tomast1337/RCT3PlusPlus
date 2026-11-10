@@ -130,7 +130,7 @@ namespace rct3::ui::screens
         }
         [[nodiscard]] std::optional<QuestionBox&> question() const
         {
-            return maybe(question_);
+            return core::maybe(question_);
         }
 
         /// True once the user has confirmed quitting.

@@ -74,7 +74,7 @@ namespace rct3::ui
         }
         [[nodiscard]] std::optional<Menu&> menu() const
         {
-            return maybe(menu_);
+            return core::maybe(menu_);
         }
         /// Where title `index` is, in desktop units, as of the last update.
         [[nodiscard]] Rect title_rect(std::size_t index) const;

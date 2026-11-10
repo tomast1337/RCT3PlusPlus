@@ -292,7 +292,7 @@ namespace rct3::scene::park
                 rct3::park::add_carried_kinds(*overlay, scene.carried);
                 const std::string file = path.filename().string();
                 const std::string name = std::format("{}/{}", folder, std::string_view(file).substr(0, file.size() - kCommonEnding.size()));
-                for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+                for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
                     for (const ovl::CarriedItemEntry& e : part ? ovl::read_carried_items(*overlay, *part) : std::vector<ovl::CarriedItemEntry> { })
                         if (e.item && !e.item->shapes[0].empty())
                             items.emplace(std::string(e.name), Item { std::string(e.item->shapes[0]), std::string(e.item->remains), name });
@@ -331,7 +331,7 @@ namespace rct3::scene::park
                 groups.emplace(g.id, g.symbol);
             const auto set = [&](const save::model::PeopleRef& ref) -> const rct3::park::person::PartSet* {
                 const auto it = groups.find(ref.id);
-                return it != groups.end() ? as_pointer(library.part_set(it->second)) : nullptr;
+                return it != groups.end() ? core::as_pointer(library.part_set(it->second)) : nullptr;
             };
             // Colours left for the game to pick are picked here, the same each time for the same park and seed.
             scene.looks = random::stream(seed, random::RandomStream::Effects);
@@ -454,7 +454,7 @@ namespace rct3::scene::park
                     });
                     const bool swim = swim_section != kSwimSections.end();
                     const auto number = static_cast<std::uint8_t>(swim ? swim_section - kSwimSections.begin() + 1 : section - kSections.begin());
-                    const rct3::park::person::PartSet* part = section != kSections.end() || swim ? as_pointer(library.part_set(symbol)) : nullptr;
+                    const rct3::park::person::PartSet* part = section != kSections.end() || swim ? core::as_pointer(library.part_set(symbol)) : nullptr;
                     if (part == nullptr)
                         continue;
                     scene.wardrobe.push_back({ group(symbol, number, worn_by, type), part, static_cast<save::model::PersonType>(type), vip != 0 ? save::model::Sex::Male : static_cast<save::model::Sex>(worn_by), number, vip, swim });
@@ -470,7 +470,7 @@ namespace rct3::scene::park
                 const auto overlay = ovl::Overlay::load(file.path());
                 if (!overlay)
                     continue;
-                for (const ovl::Part* part : { &overlay->common(), as_pointer(overlay->unique()) })
+                for (const ovl::Part* part : { &overlay->common(), core::as_pointer(overlay->unique()) })
                     for (const ovl::CostumeEntry& c : part != nullptr ? ovl::read_costumes(*overlay, *part) : std::vector<ovl::CostumeEntry> { })
                     {
                         // shortcut: a costume's number is read from the digits ending its name, as the install numbers them; read it from elsewhere if a costume ever lacks them.
@@ -479,7 +479,7 @@ namespace rct3::scene::park
                         if (!c.costume || c.costume->sections.size() < 3 || std::from_chars(std::to_address(digits), c.name.data() + c.name.size(), number).ec != std::errc { } || number > 255)
                             continue;
                         for (std::uint8_t k = 0; k < 3; ++k)
-                            if (const rct3::park::person::PartSet* set = as_pointer(library.part_set(c.costume->sections[k])))
+                            if (const rct3::park::person::PartSet* set = core::as_pointer(library.part_set(c.costume->sections[k])))
                                 scene.wardrobe.push_back({ .id = group(c.costume->sections[k], k, 0, std::to_underlying(save::model::PersonType::Entertainer)), .set = set, .type = save::model::PersonType::Entertainer, .section = k, .costume = static_cast<std::uint8_t>(number) });
                     }
             }
@@ -1536,7 +1536,7 @@ namespace rct3::scene::park
                 {
                     const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
                     std::map<std::string, ovl::texture::RgbaImage, std::less<>> chrome;
-                    for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+                    for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
                     {
                         if (!part)
                             continue;

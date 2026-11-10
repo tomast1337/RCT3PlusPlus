@@ -40,7 +40,7 @@ namespace rct3::ui
         collect(scope, order);
         if (order.empty())
             return std::nullopt;
-        const auto it = std::ranges::find(order, as_pointer(current));
+        const auto it = std::ranges::find(order, core::as_pointer(current));
         if (it == order.end())
             return backwards ? *order.back() : *order.front();
         const auto at = static_cast<std::size_t>(it - order.begin());

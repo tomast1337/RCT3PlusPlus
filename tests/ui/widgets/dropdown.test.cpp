@@ -60,7 +60,7 @@ TEST_CASE("pressing a drop-down opens its menu below it")
         CHECK(!f.list.menu());
         CHECK(f.list.selected() == 2u);
         CHECK(f.list.take_change());
-        CHECK(rct3::as_pointer(f.desktop.keyboard_focus()) == &f.list); // Back from the menu
+        CHECK(rct3::core::as_pointer(f.desktop.keyboard_focus()) == &f.list); // Back from the menu
     }
     SUBCASE("a press on the field closes it")
     {
@@ -98,12 +98,12 @@ TEST_CASE("the keys step a drop-down without opening it, enter opens it")
     CHECK(f.list.selected() == 0u);
     REQUIRE(f.list.menu());
     f.desktop.update({ { 390, 390 }, false, true });
-    CHECK(rct3::as_pointer(f.desktop.keyboard_focus()) == rct3::as_pointer(f.list.menu()));
+    CHECK(rct3::core::as_pointer(f.desktop.keyboard_focus()) == rct3::core::as_pointer(f.list.menu()));
     keys.presses = { { Key::Down }, { Key::Enter } };
     f.desktop.update({ { 390, 390 }, false, true }, keys);
     f.desktop.update({ { 390, 390 }, false, true });
     CHECK(f.list.selected() == 1u);
-    CHECK(rct3::as_pointer(f.desktop.keyboard_focus()) == &f.list);
+    CHECK(rct3::core::as_pointer(f.desktop.keyboard_focus()) == &f.list);
 }
 
 TEST_CASE("removing a drop-down closes its menu")

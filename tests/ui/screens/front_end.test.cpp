@@ -196,7 +196,7 @@ TEST_CASE("a game's tutorial button shows its tutorials until the menu of games 
     CHECK_FALSE(f.front.take_unhandled());
 
     // Under the screen's windows: the screen first, then the menu.
-    CHECK(f.desktop.root().children().at(1).get() == rct3::as_pointer(f.front.tutorial_picker()));
+    CHECK(f.desktop.root().children().at(1).get() == rct3::core::as_pointer(f.front.tutorial_picker()));
 
     f.press(f.front.screen().button(FrontMenu::Tutorials, 0));
     CHECK(f.front.tutorial_pickers_opened() == 1);

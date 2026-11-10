@@ -170,7 +170,7 @@ namespace rct3::ui
 
     std::optional<Widget&> Desktop::keyboard_focus() const
     {
-        return focus_ != nullptr && in_tree(*root_, focus_) ? maybe(focus_) : std::nullopt;
+        return focus_ != nullptr && in_tree(*root_, focus_) ? core::maybe(focus_) : std::nullopt;
     }
 
     std::optional<Widget&> Desktop::hit(Point p) const
@@ -212,7 +212,7 @@ namespace rct3::ui
             focus_ = nullptr;
         drop_shut_out_focus();
 
-        Widget* under = pointer.present ? as_pointer(hit(pointer.position)) : nullptr;
+        Widget* under = pointer.present ? core::as_pointer(hit(pointer.position)) : nullptr;
         const bool down = pointer.present && pointer.down;
         // Any press, even on the 3D view, takes the focus from where it was, and closes the popups it
         // misses.
@@ -220,7 +220,7 @@ namespace rct3::ui
         {
             focus_ = nullptr;
             focus_shown_ = false;
-            Widget* pressed_top = pointer.present ? top_level(*root_, as_pointer(deepest(pointer.position))) : nullptr;
+            Widget* pressed_top = pointer.present ? top_level(*root_, core::as_pointer(deepest(pointer.position))) : nullptr;
             bool closed = false;
             for (const auto& top : root_->children())
             {
@@ -238,7 +238,7 @@ namespace rct3::ui
             held_ = under;
             if (Widget* window = top_level(*root_, under); window && !window->stays_behind)
                 root_->raise(*window);
-            for (Widget* w = as_pointer(deepest(pointer.position)); w && !focus_; w = w->parent())
+            for (Widget* w = core::as_pointer(deepest(pointer.position)); w && !focus_; w = w->parent())
             {
                 if (w->takes_focus() && usable(*w))
                     focus_ = w;
@@ -264,7 +264,7 @@ namespace rct3::ui
         // The wheel goes to the deepest widget under the pointer that wants it, then up through its parents.
         if (pointer.present && (pointer.wheel.x != 0 || pointer.wheel.y != 0) && held_ == nullptr)
         {
-            for (Widget* w = as_pointer(deepest(pointer.position)); w; w = w->parent())
+            for (Widget* w = core::as_pointer(deepest(pointer.position)); w; w = w->parent())
             {
                 if (w->enabled && w->on_wheel(pointer.wheel))
                     break;
@@ -302,7 +302,7 @@ namespace rct3::ui
                 Widget* scope = focus_ != nullptr ? top_level(*root_, focus_) : top;
                 if (scope != nullptr)
                 {
-                    if (auto next = next_focus(*scope, maybe(focus_), key.shift))
+                    if (auto next = next_focus(*scope, core::maybe(focus_), key.shift))
                     {
                         focus_ = &*next;
                         focus_shown_ = true;
@@ -316,7 +316,7 @@ namespace rct3::ui
 
         // Input may have moved or raised things: lay out and look again so the flags match what is drawn.
         layout(view_);
-        under = pointer.present ? as_pointer(hit(pointer.position)) : nullptr;
+        under = pointer.present ? core::as_pointer(hit(pointer.position)) : nullptr;
         const auto& tops = root_->children();
         for (std::size_t i = 0; i < tops.size(); ++i)
             set_flags_tree(*tops[i], under, held_, i + 1 == tops.size(), focus_);
@@ -337,7 +337,7 @@ namespace rct3::ui
         follow_popups();
         drop_shut_out_focus();
         layout(view_);
-        under = pointer.present ? as_pointer(hit(pointer.position)) : nullptr;
+        under = pointer.present ? core::as_pointer(hit(pointer.position)) : nullptr;
         tooltip_.update(under, pointer.position, down, context.elapsed, tooltip_style);
         cursor_ = pointer_cursor(pointer, under);
         return under || held_ || (pointer.present && top_modal());

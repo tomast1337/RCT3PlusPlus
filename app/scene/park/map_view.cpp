@@ -118,7 +118,7 @@ namespace rct3::scene::park
                 if (overlay == nullptr)
                     return std::nullopt;
                 const std::string_view name = bare(a.symbol);
-                for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+                for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
                 {
                     if (!part)
                         continue;

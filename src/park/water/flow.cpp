@@ -158,7 +158,7 @@ namespace rct3::park::water
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
         const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;

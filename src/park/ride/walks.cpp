@@ -91,7 +91,7 @@ namespace rct3::park::ride
             else if (name == "InsideEntranceExitXOffset")
                 platform.inside = value;
         };
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;

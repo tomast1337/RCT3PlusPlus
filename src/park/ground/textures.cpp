@@ -64,7 +64,7 @@ namespace rct3::park::ground
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
         const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
         std::size_t missing = 2;
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
@@ -91,7 +91,7 @@ namespace rct3::park::ground
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
         const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
@@ -146,7 +146,7 @@ namespace rct3::park::ground
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
         std::vector<ovl::FlexiTextureItem> items;
         std::vector<std::string_view> names;
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
@@ -218,7 +218,7 @@ namespace rct3::park::ground
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
@@ -268,7 +268,7 @@ namespace rct3::park::ground
         const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
 
         std::map<std::string, ovl::texture::Texture, std::less<>> textures;
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
@@ -280,7 +280,7 @@ namespace rct3::park::ground
         }
 
         std::size_t missing = 0;
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
@@ -305,7 +305,7 @@ namespace rct3::park::ground
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
         std::vector<GroundSurface> out;
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;

@@ -284,7 +284,7 @@ namespace rct3::scene
                     return std::nullopt;
                 // By name in any case: types are not spelt as their pieces.
                 std::vector<std::string> names;
-                for (const auto part : { maybe(&loaded->common()), loaded->unique() })
+                for (const auto part : { core::maybe(&loaded->common()), loaded->unique() })
                     for (const auto& symbol : part ? part->symbols : std::vector<ovl::Symbol> { })
                         if (const ovl::SymbolName n = ovl::split_symbol_name(symbol.name); n.tag == "sid")
                             names.emplace_back(n.name);
@@ -461,7 +461,7 @@ namespace rct3::scene
             if (!file)
                 return limits;
             const auto car_file = ovl::Overlay::load(*file);
-            for (const auto part : car_file ? std::array { maybe(&car_file->common()), car_file->unique() } : std::array<std::optional<const ovl::Part&>, 2> { })
+            for (const auto part : car_file ? std::array { core::maybe(&car_file->common()), car_file->unique() } : std::array<std::optional<const ovl::Part&>, 2> { })
                 for (const ovl::RideTrainItem& t : part ? ovl::read_ride_trains(*car_file, *part) : std::vector<ovl::RideTrainItem> { })
                     if (t.train && strings::equals_ignoring_case(t.name, train_name) && t.train->fewest_cars > 0 && t.train->fewest_cars <= t.train->most_cars)
                         limits = { .fewest_cars = static_cast<int>(t.train->fewest_cars), .most_cars = static_cast<int>(t.train->most_cars), .usual_cars = static_cast<int>(std::clamp(t.train->usual_cars, t.train->fewest_cars, t.train->most_cars)) };
@@ -950,7 +950,7 @@ namespace rct3::scene
                 const auto objects = object_indices(scene);
                 const auto object_of = [&](const save::model::TrackPiece& p) {
                     const auto found = objects.find(p.scenery);
-                    return found != objects.end() ? maybe(&scene.objects[found->second]) : std::nullopt;
+                    return found != objects.end() ? core::maybe(&scene.objects[found->second]) : std::nullopt;
                 };
                 for (std::size_t i = 0; i < laid.size(); ++i)
                 {
@@ -1686,7 +1686,7 @@ namespace rct3::scene
             // shortcut: a train naming none keeps the platforms of the train before it; upgrade by keeping the
             // kind's own platform type apart if a ride offers trains of both sorts.
             const auto car_file = ovl::Overlay::load(*file);
-            for (const auto part : car_file ? std::array { maybe(&car_file->common()), car_file->unique() } : std::array<std::optional<const ovl::Part&>, 2> { })
+            for (const auto part : car_file ? std::array { core::maybe(&car_file->common()), car_file->unique() } : std::array<std::optional<const ovl::Part&>, 2> { })
                 for (const ovl::RideTrainItem& t : part ? ovl::read_ride_trains(*car_file, *part) : std::vector<ovl::RideTrainItem> { })
                     if (t.train && !t.train->platform.empty() && strings::equals_ignoring_case(t.name, train_name))
                         ride.platform_type = t.train->platform;
@@ -1708,7 +1708,7 @@ namespace rct3::scene
         if (const auto file = choices.empty() ? install.find(std::format("{}.common.ovl", ride.base.overlay_path)) : std::nullopt)
         {
             const auto overlay = ovl::Overlay::load(*file);
-            for (const auto part : overlay ? std::array { maybe(&overlay->common()), overlay->unique() } : std::array<std::optional<const ovl::Part&>, 2> { })
+            for (const auto part : overlay ? std::array { core::maybe(&overlay->common()), overlay->unique() } : std::array<std::optional<const ovl::Part&>, 2> { })
                 for (const ovl::TrackedRideItem& t : part ? ovl::read_tracked_rides(*overlay, *part) : std::vector<ovl::TrackedRideItem> { })
                     if (strings::equals_ignoring_case(t.name, kind) && t.ride && t.ride->operating)
                         choices.assign(t.ride->operating->trains.begin(), t.ride->operating->trains.end());
@@ -1870,7 +1870,7 @@ namespace rct3::scene
         // One train of the first the ride's file lists, seated as its car models are; its window changes them
         // until it opens.
         std::string_view train_name;
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
             for (const ovl::TrackedRideItem& t : part ? ovl::read_tracked_rides(*overlay, *part) : std::vector<ovl::TrackedRideItem> { })
                 if (strings::equals_ignoring_case(t.name, item.symbol) && t.ride && t.ride->operating)
                 {
@@ -2846,7 +2846,7 @@ namespace rct3::scene
                 // Named as its file names it, else by its own name.
                 if (const auto file = train_file(*assets.install, trains[b.design_train]))
                     if (const auto car_file = ovl::Overlay::load(*file))
-                        for (const auto part : std::array { maybe(&car_file->common()), car_file->unique() })
+                        for (const auto part : std::array { core::maybe(&car_file->common()), car_file->unique() })
                             for (const ovl::RideTrainItem& t : part ? ovl::read_ride_trains(*car_file, *part) : std::vector<ovl::RideTrainItem> { })
                                 if (const auto text = t.train ? assets.strings->get(t.train->display_name) : std::u16string_view { }; !text.empty())
                                     name = text;

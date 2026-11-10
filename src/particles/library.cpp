@@ -39,7 +39,7 @@ namespace rct3::particles
             return std::unexpected(std::format("{}: {}", kSprites, ovl::to_string(overlay.error())));
         Library library;
         std::set<std::string, std::less<>> wanted;
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
@@ -52,7 +52,7 @@ namespace rct3::particles
             }
         }
         const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;

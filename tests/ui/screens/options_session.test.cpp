@@ -54,7 +54,7 @@ TEST_CASE("keys picked show in the next window")
     auto dialog = f.session.window();
     REQUIRE(dialog);
     dialog->show_page(OptionsPage::Keys);
-    auto usual = dynamic_cast<Button*>(rct3::as_pointer(dialog->find("content/GameOptionsDialog_KeyBindingsHelp/usual_keys")));
+    auto usual = dynamic_cast<Button*>(rct3::core::as_pointer(dialog->find("content/GameOptionsDialog_KeyBindingsHelp/usual_keys")));
     REQUIRE(usual != nullptr);
     f.session.choices().keys.bind(Command::Copy, { Key::F3 }); // As if set before
     usual->click();

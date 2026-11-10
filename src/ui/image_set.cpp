@@ -15,7 +15,7 @@ namespace rct3::ui
         const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
 
         ImageSet images;
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;

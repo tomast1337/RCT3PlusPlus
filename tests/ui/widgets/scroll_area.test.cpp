@@ -206,7 +206,7 @@ TEST_CASE("a focused scroll area moves with the keys")
     desktop.layout({ 0, 0, 300, 300 });
     desktop.update({ { 20, 20 }, true, true });
     desktop.update({ { 20, 20 }, false, true });
-    REQUIRE(rct3::as_pointer(desktop.keyboard_focus()) == &area);
+    REQUIRE(rct3::core::as_pointer(desktop.keyboard_focus()) == &area);
     ScrollBar& v = *area.vertical();
     ScrollBar& h = *area.horizontal();
     REQUIRE(v.visible == 100);

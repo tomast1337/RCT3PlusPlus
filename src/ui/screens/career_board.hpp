@@ -168,7 +168,7 @@ namespace rct3::ui::screens
         }
         [[nodiscard]] std::optional<QuestionBox&> question() const
         {
-            return maybe(question_);
+            return core::maybe(question_);
         }
         /// The panel's text and the two lines along the bottom.
         [[nodiscard]] std::u16string_view title() const

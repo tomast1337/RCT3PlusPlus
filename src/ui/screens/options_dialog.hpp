@@ -164,7 +164,7 @@ namespace rct3::ui::screens
         }
         [[nodiscard]] std::optional<Dropdown&> language_list() const
         {
-            return maybe(language_);
+            return core::maybe(language_);
         }
         [[nodiscard]] KeyBox& key_box(Command command) const
         {
@@ -173,11 +173,11 @@ namespace rct3::ui::screens
         /// Nothing for a game command whose keys cannot be changed.
         [[nodiscard]] std::optional<KeyBox&> play_key_box(PlayCommand command) const
         {
-            return maybe(play_boxes_.at(static_cast<std::size_t>(command)));
+            return core::maybe(play_boxes_.at(static_cast<std::size_t>(command)));
         }
         [[nodiscard]] std::optional<Dropdown&> background_music_list() const
         {
-            return maybe(music_);
+            return core::maybe(music_);
         }
         /// The lines saying what each mouse button does in the chosen camera mode.
         [[nodiscard]] const Label& camera_help(std::size_t line) const

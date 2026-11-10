@@ -247,7 +247,7 @@ namespace rct3::ui
 
     std::optional<const Rect&> DrawList::clip() const
     {
-        return clips_.empty() ? std::nullopt : maybe(&clips_.back());
+        return clips_.empty() ? std::nullopt : core::maybe(&clips_.back());
     }
 
 } // namespace rct3::ui

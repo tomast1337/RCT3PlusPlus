@@ -109,8 +109,8 @@ TEST_CASE("an enabled button under the page reports its press; a stub does not")
     page.buttons = { { { }, u"Open all", { }, true }, { { }, u"Close all", { }, false } };
     f.window->show_page(page);
     f.desktop.layout({ 0, 0, 1024, 768 });
-    auto open = dynamic_cast<Button*>(rct3::as_pointer(f.window->find("content/page/lines/button0")));
-    auto close = dynamic_cast<Button*>(rct3::as_pointer(f.window->find("content/page/lines/button1")));
+    auto open = dynamic_cast<Button*>(rct3::core::as_pointer(f.window->find("content/page/lines/button0")));
+    auto close = dynamic_cast<Button*>(rct3::core::as_pointer(f.window->find("content/page/lines/button1")));
     REQUIRE(open != nullptr);
     REQUIRE(close != nullptr);
     CHECK_FALSE(close->enabled);
@@ -126,7 +126,7 @@ TEST_CASE("a button with choices fans them out and reports the one picked, not i
     page.buttons = { { "All", { }, { }, true, { { "Yes", { } }, { "No", { } } } } };
     f.window->show_page(page);
     f.desktop.layout({ 0, 0, 1024, 768 });
-    auto all = dynamic_cast<Button*>(rct3::as_pointer(f.window->find("content/page/lines/All")));
+    auto all = dynamic_cast<Button*>(rct3::core::as_pointer(f.window->find("content/page/lines/All")));
     REQUIRE(all != nullptr);
     CHECK_FALSE(f.window->find("content/page/lines/No"));
     all->click();
@@ -134,7 +134,7 @@ TEST_CASE("a button with choices fans them out and reports the one picked, not i
     CHECK_FALSE(f.window->take_button());
     f.window->show_page(page); // A page coming again keeps the fan open
     f.desktop.layout({ 0, 0, 1024, 768 });
-    auto no = dynamic_cast<Button*>(rct3::as_pointer(f.window->find("content/page/lines/No")));
+    auto no = dynamic_cast<Button*>(rct3::core::as_pointer(f.window->find("content/page/lines/No")));
     REQUIRE(no != nullptr);
     no->click();
     f.desktop.update({ });

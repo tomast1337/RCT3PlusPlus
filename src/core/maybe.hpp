@@ -7,7 +7,7 @@
 
 #include <optional>
 
-namespace rct3
+namespace rct3::core
 {
 
     /// What `p` points to, or nothing when it is null.
@@ -22,4 +22,4 @@ namespace rct3
         return r ? &*r : nullptr;
     }
 
-} // namespace rct3
+} // namespace rct3::core

@@ -18,7 +18,7 @@ namespace rct3::ui::font
 
         std::map<std::string, ovl::texture::Texture, std::less<>> textures;
         std::vector<FontImages> fonts;
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;

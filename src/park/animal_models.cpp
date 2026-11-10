@@ -152,7 +152,7 @@ namespace rct3::park
                 return { nullptr, std::nullopt };
             if (path_out)
                 *path_out = *path;
-            for (const auto part : { maybe(&opened->overlay.common()), opened->overlay.unique() })
+            for (const auto part : { core::maybe(&opened->overlay.common()), opened->overlay.unique() })
             {
                 if (!part)
                     continue;

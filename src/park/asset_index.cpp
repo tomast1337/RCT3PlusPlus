@@ -103,7 +103,7 @@ namespace rct3::park
         if (path.size() <= kCommonEnding.size() || path.starts_with(".."))
             return false;
         path.resize(path.size() - kCommonEnding.size());
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;

@@ -57,7 +57,7 @@ namespace rct3::ui::skin
     std::optional<const SkinRef&> SkinLibrary::find(std::string_view name) const
     {
         const auto it = skins_.find(name);
-        return it == skins_.end() ? std::nullopt : maybe(&it->second);
+        return it == skins_.end() ? std::nullopt : core::maybe(&it->second);
     }
 
     std::optional<const SkinRef&> SkinLibrary::find(std::string_view base, SkinState state) const
@@ -117,7 +117,7 @@ namespace rct3::ui::skin
     {
         const auto face = skins.find(family, state);
         Color tint = kWhite;
-        const bool fell_back = as_pointer(face) == as_pointer(skins.find(family, SkinState::Up)); // The same skin, not an equal one
+        const bool fell_back = core::as_pointer(face) == core::as_pointer(skins.find(family, SkinState::Up)); // The same skin, not an equal one
         if (fell_back && (state == SkinState::Pressed || state == SkinState::Down || state == SkinState::DownOver))
             tint = kPressedTint;
         else if (fell_back && state == SkinState::Disabled)

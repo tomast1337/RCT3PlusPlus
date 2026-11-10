@@ -18,7 +18,7 @@ namespace rct3::ui::skin
 
         // Skins do not always spell their picture's name as the picture does.
         std::map<std::string, ovl::texture::Texture, strings::LessIgnoringCase> textures;
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;
@@ -30,7 +30,7 @@ namespace rct3::ui::skin
         }
 
         SkinSet set;
-        for (const auto part : { maybe(&overlay->common()), overlay->unique() })
+        for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
                 continue;

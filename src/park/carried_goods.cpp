@@ -19,7 +19,7 @@ namespace rct3::park
 
     void add_carried_kinds(const ovl::Overlay& overlay, CarriedKinds& kinds)
     {
-        for (const auto part : { maybe(&overlay.common()), overlay.unique() })
+        for (const auto part : { core::maybe(&overlay.common()), overlay.unique() })
         {
             if (!part)
                 continue;

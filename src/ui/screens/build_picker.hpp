@@ -209,7 +209,7 @@ namespace rct3::ui::screens
         }
         [[nodiscard]] std::optional<BuildPickerRow&> heading() const
         {
-            return maybe(heading_);
+            return core::maybe(heading_);
         }
         [[nodiscard]] bool is_heading() const
         {

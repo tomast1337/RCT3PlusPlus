@@ -38,11 +38,11 @@ namespace rct3::ui
         /// Nothing when the area does not scroll that way.
         [[nodiscard]] std::optional<ScrollBar&> vertical()
         {
-            return maybe(vertical_);
+            return core::maybe(vertical_);
         }
         [[nodiscard]] std::optional<ScrollBar&> horizontal()
         {
-            return maybe(horizontal_);
+            return core::maybe(horizontal_);
         }
 
         /// So a press on empty parts of the view stays in the interface and focuses the area.

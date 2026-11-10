@@ -489,7 +489,7 @@ int main(int argc, char** argv)
             const auto& turnstile = world.registry.ctx().emplace<simulation::Turnstile>();
             out.info("{:02d}:00{} in the park: {:d} children, {:d} teens, {:d} adults; came {:d}/{:d}/{:d}, went {:d}/{:d}/{:d}; at a pool {:d}, going to one {:d}", now, simulation::is_night(day.time) ? " (dark)" : "", in[0], in[1], in[2], turnstile.in[0], turnstile.in[1], turnstile.in[2], turnstile.out[0], turnstile.out[1], turnstile.out[2], swimming, to_pool);
         }
-        profiling::section("Step", [&] { simulation::step(world, maybe(workers.get())); });
+        profiling::section("Step", [&] { simulation::step(world, core::maybe(workers.get())); });
         profiling::capture_frame();
         for (const auto [e, item] : world.registry.view<const simulation::PathItem>().each())
         {

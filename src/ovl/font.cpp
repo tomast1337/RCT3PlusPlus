@@ -124,7 +124,7 @@ namespace rct3::ovl
         if (code < font.first_char)
             return std::nullopt;
         const std::uint64_t index = std::uint64_t { code } - font.first_char;
-        return index < font.glyphs.size() ? maybe(&font.glyphs[static_cast<std::size_t>(index)]) : std::nullopt;
+        return index < font.glyphs.size() ? core::maybe(&font.glyphs[static_cast<std::size_t>(index)]) : std::nullopt;
     }
 
     std::vector<FontItem> read_fonts(const Overlay& overlay, const Part& part)

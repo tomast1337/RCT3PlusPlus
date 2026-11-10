@@ -23,13 +23,13 @@ namespace rct3::scene::park
 
         std::optional<ui::screens::ManagementWindow&> find_window(const ui::Desktop& desktop, ui::screens::ManagementTopic topic)
         {
-            return maybe(dynamic_cast<ui::screens::ManagementWindow*>(as_pointer(desktop.root().find(window_name(topic)))));
+            return core::maybe(dynamic_cast<ui::screens::ManagementWindow*>(core::as_pointer(desktop.root().find(window_name(topic)))));
         }
 
         /// The staff window, which keeps a list of its own rather than tabs of pages.
         std::optional<ui::screens::StaffRoster&> find_roster(const ui::Desktop& desktop)
         {
-            return maybe(dynamic_cast<ui::screens::StaffRoster*>(as_pointer(desktop.root().find(window_name(ui::screens::ManagementTopic::Staff)))));
+            return core::maybe(dynamic_cast<ui::screens::StaffRoster*>(core::as_pointer(desktop.root().find(window_name(ui::screens::ManagementTopic::Staff)))));
         }
 
         void show(ui::screens::ManagementWindow& window, ui::screens::ManagementTopic topic, const ui::screens::ManagementFacts& facts, const ui::StringTable& strings, const ui::screens::InfoUnits& units)

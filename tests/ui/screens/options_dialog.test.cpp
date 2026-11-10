@@ -231,7 +231,7 @@ TEST_CASE("the usual keys button puts every command back")
     Fixture f(choices);
     f.dialog->show_page(OptionsPage::Keys);
     CHECK(key_boxes(f)[static_cast<std::size_t>(Command::Copy)]->combos == std::vector { KeyCombo { Key::F3 } });
-    auto usual = dynamic_cast<Button*>(rct3::as_pointer(f.dialog->find("content/GameOptionsDialog_KeyBindingsHelp/usual_keys")));
+    auto usual = dynamic_cast<Button*>(rct3::core::as_pointer(f.dialog->find("content/GameOptionsDialog_KeyBindingsHelp/usual_keys")));
     REQUIRE(usual != nullptr);
     usual->click();
     f.desktop.update({ });
@@ -252,7 +252,7 @@ TEST_CASE("the keys page lists the game's commands in groups, any key binding th
     CHECK(pause->game_key);
 
     // Plain letters and Escape bind; the key leaves the command that had it.
-    f.desktop.set_keyboard_focus(rct3::as_pointer(reset));
+    f.desktop.set_keyboard_focus(rct3::core::as_pointer(reset));
     press(f, { Key::Enter });
     press(f, { Key::Letter, false, false, U'p' });
     CHECK(reset->combos == std::vector { KeyCombo { Key::Letter, U'p' } });
@@ -262,7 +262,7 @@ TEST_CASE("the keys page lists the game's commands in groups, any key binding th
     CHECK(keys->play_key(PlayCommand::ResetCamera) == KeyCombo { Key::Letter, U'p' });
     CHECK_FALSE(keys->play_key(PlayCommand::TogglePause));
 
-    f.desktop.set_keyboard_focus(rct3::as_pointer(pause));
+    f.desktop.set_keyboard_focus(rct3::core::as_pointer(pause));
     press(f, { Key::Enter });
     press(f, { Key::Escape });
     CHECK(pause->combos == std::vector { KeyCombo { Key::Escape } });

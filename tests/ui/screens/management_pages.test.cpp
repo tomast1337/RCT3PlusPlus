@@ -100,7 +100,7 @@ TEST_CASE("the finances show the running cash and the ledger a month a column, t
     park.finance.ledger_periods_loaded = 2;
     park.finance.ledger[0].shop_sales = -1500; // Money in
     park.finance.ledger[1].shop_sales = 700;
-    simulation::ParkState state;
+    simulation::park::ParkState state;
     state.cash = 42000;
     state.loan = 20000;
     state.date.month = 0;
@@ -123,7 +123,7 @@ TEST_CASE("a weekly graph leaves out the week still running, oldest first, with 
     park.has_park = true;
     park.park.guests_in_park = { .samples = { 50, 40, 20 }, .capacity = 64 };
     park.park.adults_in_park = { .samples = { 30, 10, 5 }, .capacity = 64 };
-    simulation::ParkState state;
+    simulation::park::ParkState state;
     state.time = 5 * save::model::GameClock::kUnitsPerWeek; // The second week of the second month
     const ManagementPage page = management_page(ManagementTopic::ParkOperations, 1, { .park = &park, .state = &state }, s, kUnits);
     REQUIRE(page.graph.size() == 2);
@@ -166,7 +166,7 @@ TEST_CASE("a weekly graph has no month marks from before the calendar began")
     const StringTable s = test_strings();
     save::model::ParkModel park;
     park.park.guests_in_park = { .samples = { 5, 5, 5 }, .capacity = 64 };
-    simulation::ParkState state;
+    simulation::park::ParkState state;
     state.time = 2 * save::model::GameClock::kUnitsPerWeek;
     const ManagementPage page = management_page(ManagementTopic::ParkOperations, 1, { .park = &park, .state = &state }, s, kUnits);
     REQUIRE(page.graph_ticks.size() == 1);
@@ -260,7 +260,7 @@ TEST_CASE("an objective's condition shows where the park stands on it and how lo
     c.start_time = 0;
     c.consistency_flags = std::to_underlying(save::model::ConditionFlag::TimerRunning);
     park.objectives.conditions = { c };
-    simulation::ParkState state;
+    simulation::park::ParkState state;
     state.time = 1.5f * save::model::GameClock::kUnitsPerMonth;
     const std::array goals { simulation::GoalReading { .now = 900, .met = true } };
     const ManagementPage page = management_page(ManagementTopic::Objectives, 0, { .park = &park, .state = &state, .goals = goals }, s, kUnits);

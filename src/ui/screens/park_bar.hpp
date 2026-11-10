@@ -21,8 +21,8 @@
 
 #include "save/model/world.hpp"
 #include "simulation/day_clock.hpp"
-#include "simulation/park_rating.hpp"
-#include "simulation/park_state.hpp"
+#include "simulation/park/rating.hpp"
+#include "simulation/park/state.hpp"
 #include "ui/money_text.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
@@ -104,9 +104,9 @@ namespace rct3::ui::screens
 
     /// The bar's values for the park's state at `day_time` (a fraction of the day).
     /// The rating's tooltip: the rating out of the most there is, then a line for each of its parts when known.
-    [[nodiscard]] std::u16string park_rating_help(const StringTable& strings, float rating, const std::optional<simulation::RatingParts>& parts);
+    [[nodiscard]] std::u16string park_rating_help(const StringTable& strings, float rating, const std::optional<simulation::park::RatingParts>& parts);
 
-    [[nodiscard]] ParkBarValues park_bar_values(const simulation::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units);
+    [[nodiscard]] ParkBarValues park_bar_values(const simulation::park::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units);
 
     class ParkBar : public Widget
     {

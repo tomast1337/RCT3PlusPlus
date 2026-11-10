@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "simulation/park_graphs.hpp"
+#include "simulation/park/graphs.hpp"
 
 #include <algorithm>
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::simulation;
+using namespace rct3::simulation::park;
 
 TEST_CASE("a week's end puts its figures in the week's slot and starts the next")
 {

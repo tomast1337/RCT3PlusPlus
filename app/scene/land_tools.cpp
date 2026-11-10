@@ -18,7 +18,7 @@
 #include "scene/ride_placing.hpp"
 #include "scene/track_building.hpp"
 #include "simulation/import_park.hpp"
-#include "simulation/park_messages.hpp"
+#include "simulation/park/messages.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/land_panel.hpp"
 
@@ -425,7 +425,7 @@ namespace rct3::scene
 
         void say(park::ParkScene& scene, std::string_view key)
         {
-            simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(key) });
+            simulation::park::post(scene.park.messages, simulation::park::ParkMessage { .text_key = std::string(key) });
         }
 
         /// Fills the lake holding the tile under `top` again at its level, on the ground as it now is, over the tiles

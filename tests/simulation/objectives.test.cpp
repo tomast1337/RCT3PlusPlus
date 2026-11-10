@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/objectives.hpp"
 
-#include "simulation/park_state.hpp"
+#include "simulation/park/state.hpp"
 
 #include <doctest/doctest.h>
 #include <utility>
@@ -94,7 +94,7 @@ TEST_CASE("takings count the last whole month, and prizes pay out")
     CHECK(t.rides == 1200);
     CHECK(t.shops == 40);
 
-    simulation::ParkState park;
+    simulation::park::ParkState park;
     park.cash = 0;
     park.rating = 0.99f;
     save::model::Finance finance { .max_loan = 1000, .interest_rate_percent = 8 };
@@ -125,10 +125,10 @@ TEST_CASE("a dated goal warns a month and a week before, is judged on its date, 
     dated.next_check_time = 6 * kMonth;
     dated.consistency_flags = std::to_underlying(save::model::ConditionFlag::HasDeadline);
     set.conditions = { dated };
-    simulation::ParkMessages messages;
+    simulation::park::ParkMessages messages;
     const auto keys = [&] {
         std::vector<std::string> out;
-        for (const simulation::ParkMessage& m : std::exchange(messages.list, { }))
+        for (const simulation::park::ParkMessage& m : std::exchange(messages.list, { }))
         {
             CHECK(m.field_key == "ObjectiveCondition_ParkGuests");
             out.push_back(m.text_key);
@@ -189,7 +189,7 @@ TEST_CASE("a goal reads where the park stands on it and whether that meets it")
 
 TEST_CASE("the rating prize lifts the rating at once and each week's score while it fades")
 {
-    simulation::ParkState park;
+    simulation::park::ParkState park;
     park.rating = 0.5f;
     save::model::Finance finance;
     save::model::TerrainGrid land;
@@ -197,9 +197,9 @@ TEST_CASE("the rating prize lifts the rating at once and each week's score while
     CHECK(park.rating > 0.5f);
     const float bonus = park.rating_bonus;
     REQUIRE(bonus > 0);
-    simulation::rate_week(park, { }, { });
+    simulation::park::rate_week(park, { }, { });
     CHECK(park.rating_bonus < bonus);
     for (int week = 0; week < 100 && park.rating_bonus > 0; ++week)
-        simulation::rate_week(park, { }, { });
+        simulation::park::rate_week(park, { }, { });
     CHECK(park.rating_bonus == 0);
 }

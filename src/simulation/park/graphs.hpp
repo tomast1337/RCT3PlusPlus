@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <optional>
 
-namespace rct3::simulation
+namespace rct3::simulation::park
 {
 
     /// Weeks a graph keeps when the park file gave its series none.
@@ -41,4 +41,4 @@ namespace rct3::simulation
     /// as this month's (as a park file leaves it).
     [[nodiscard]] save::model::LedgerPeriod& ledger_month(save::model::Finance& finance, std::optional<std::int64_t>& kept, const save::model::CalendarDate& date);
 
-} // namespace rct3::simulation
+} // namespace rct3::simulation::park

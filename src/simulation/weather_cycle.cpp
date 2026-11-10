@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/weather_cycle.hpp"
 
-#include "simulation/park_state.hpp"
+#include "simulation/park/state.hpp"
 #include "simulation/random_events.hpp"
 
 #include <algorithm>
@@ -134,7 +134,7 @@ namespace rct3::simulation
         return static_cast<std::int32_t>(found->second);
     }
 
-    void advance_weather(ParkState& state, float units, random::RandomState& dice, bool frozen)
+    void advance_weather(park::ParkState& state, float units, random::RandomState& dice, bool frozen)
     {
         if (frozen || !(units > 0))
             return;

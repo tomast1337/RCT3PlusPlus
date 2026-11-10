@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/components.hpp"
-#include "simulation/park_state.hpp"
+#include "simulation/park/state.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
+using namespace rct3::simulation::park;
 
 TEST_CASE("rain soaks a guest with nothing over them and spoils their mood, not one under an umbrella")
 {

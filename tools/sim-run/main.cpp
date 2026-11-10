@@ -32,7 +32,7 @@
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/import_people.hpp"
-#include "simulation/park_state.hpp"
+#include "simulation/park/state.hpp"
 #include "simulation/ratings.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/workers.hpp"
@@ -292,7 +292,7 @@ int main(int argc, char** argv)
     const std::size_t swimmers = simulation::resume_saved_swimmers(world, *people, guests);
     const std::size_t parties = simulation::import_parties(world, *people, guests);
     const auto park_model = save::model::load_park(*file, index);
-    const std::size_t litter = simulation::import_litter(world, *people, simulation::park_state(park_model ? &*park_model : nullptr, *world_model).time);
+    const std::size_t litter = simulation::import_litter(world, *people, simulation::park::park_state(park_model ? &*park_model : nullptr, *world_model).time);
     const std::size_t items = simulation::import_path_items(world, world_model->objects, world_model->bins, world_model->benches, world_model->signs);
     const auto staff = simulation::import_staff(world, *people);
     const std::size_t facilities = simulation::import_facilities(world, *rides, [&](const save::model::Ride& ride) -> std::optional<std::uint32_t> {
@@ -358,8 +358,8 @@ int main(int argc, char** argv)
     }
     world.registry.ctx().insert_or_assign(simulation::Daylight { day.time });
     // The park's own weather, unless another is asked for.
-    const simulation::ParkState state = simulation::park_state(park_model ? &*park_model : nullptr, *world_model);
-    auto& sky = world.registry.ctx().insert_or_assign(simulation::guest_weather(state));
+    const simulation::park::ParkState state = simulation::park::park_state(park_model ? &*park_model : nullptr, *world_model);
+    auto& sky = world.registry.ctx().insert_or_assign(simulation::park::guest_weather(state));
     const std::int64_t fee = park_model && park_model->has_finance ? park_model->finance.entrance_fee : 0;
     const auto& draw = world.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(world_model->pool_water.size()), .rating = state.rating, .guest_cash = { park_model && park_model->has_finance ? park_model->finance.average_guest_cash : 0 }, .guest_bank = { park_model && park_model->has_finance ? park_model->finance.average_guest_bank_funds : 0 } });
     if (weather == "rain" || weather == "storm")

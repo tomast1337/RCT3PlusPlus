@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/weather_cycle.hpp"
 
-#include "simulation/park_state.hpp"
+#include "simulation/park/state.hpp"
 
 #include <doctest/doctest.h>
 #include <numeric>
 
 using namespace rct3;
 using namespace rct3::simulation;
+using namespace rct3::simulation::park;
 
 namespace
 {

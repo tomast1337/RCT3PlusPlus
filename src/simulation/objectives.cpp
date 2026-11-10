@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/objectives.hpp"
 
-#include "simulation/park_state.hpp"
+#include "simulation/park/state.hpp"
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
@@ -207,12 +207,12 @@ namespace rct3::simulation
         return kLevels - 1;
     }
 
-    std::optional<std::array<std::int32_t, 2>> check_goals(save::model::ObjectiveSet& set, const ParkFigures& figures, float time, std::optional<ParkMessages&> messages)
+    std::optional<std::array<std::int32_t, 2>> check_goals(save::model::ObjectiveSet& set, const ParkFigures& figures, float time, std::optional<park::ParkMessages&> messages)
     {
         using enum save::model::ConditionFlag;
         const auto tell = [&](const save::model::Condition& c, std::string_view key) {
             if (messages)
-                post(*messages, { .text_key = std::string(key), .field_key = std::string(condition_name(c.kind)) });
+                park::post(*messages, { .text_key = std::string(key), .field_key = std::string(condition_name(c.kind)) });
         };
         const std::int32_t level = level_playing(set);
         std::optional<save::model::Objective&> objective = objective_of(set, level);
@@ -329,7 +329,7 @@ namespace rct3::simulation
         return { };
     }
 
-    void give_prize(ParkState& park, save::model::Finance& finance, save::model::TerrainGrid& land, std::int32_t id)
+    void give_prize(park::ParkState& park, save::model::Finance& finance, save::model::TerrainGrid& land, std::int32_t id)
     {
         const tuning::Prizes& p = kTuning.prizes;
         switch (id)
@@ -342,7 +342,7 @@ namespace rct3::simulation
             case 4:
                 park.rating_bonus += p.rating_bonus.value;
                 if (park.rating)
-                    *park.rating = std::min(*park.rating + p.rating_bonus.value / static_cast<float>(kMaxRating), 1.0f);
+                    *park.rating = std::min(*park.rating + p.rating_bonus.value / static_cast<float>(park::kMaxRating), 1.0f);
                 break;
             case 5:
                 finance.interest_rate_percent /= 2;

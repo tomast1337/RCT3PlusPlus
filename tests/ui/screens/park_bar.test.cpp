@@ -96,7 +96,7 @@ TEST_CASE("the bar's values are written from the park's state")
     strings.add("Month1", u"April");
     strings.add("Year", u"Year");
     strings.add("Cash_Unlimited", u"no limit");
-    simulation::ParkState state;
+    simulation::park::ParkState state;
     state.cash = -150075;
     state.guests = 312;
     state.rating = 0.5f;
@@ -157,7 +157,7 @@ TEST_CASE("the rating's help gives its number, then its parts once a week has be
     strings.add("Rct3pp_RatingScore", u"Score:");
     CHECK(park_rating_help(strings, 0.4f, std::nullopt) == u"Rating: 400");
 
-    simulation::RatingParts parts;
+    simulation::park::RatingParts parts;
     parts.happiness = 300;
     parts.rides = 50;
     parts.reliability = 40;

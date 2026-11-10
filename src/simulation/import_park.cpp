@@ -13,7 +13,7 @@
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
-#include "simulation/park_state.hpp"
+#include "simulation/park/state.hpp"
 #include "simulation/ratings.hpp"
 #include "simulation/staff_care.hpp"
 #include "simulation/systems.hpp"
@@ -1597,7 +1597,7 @@ namespace rct3::simulation
             const auto at = l.state == save::model::LitterState::OnGround ? world.paths.nearest({ l.position.x, l.position.y, l.position.z }) : std::nullopt;
             if (!at)
                 continue;
-            const float age = std::max(now - l.create_time, 0.0f) * kSecondsPerHour / kCalendarUnitsPerHour;
+            const float age = std::max(now - l.create_time, 0.0f) * kSecondsPerHour / park::kCalendarUnitsPerHour;
             world.registry.emplace<Litter>(world.registry.create(), Litter { *at, l.type, age });
             ++added;
         }

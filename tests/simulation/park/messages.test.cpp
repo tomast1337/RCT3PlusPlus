@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "simulation/park_messages.hpp"
+#include "simulation/park/messages.hpp"
 
 #include <doctest/doctest.h>
 
@@ -7,9 +7,9 @@ using namespace rct3;
 
 namespace
 {
-    simulation::ParkMessage note(std::string key, float age = 0)
+    simulation::park::ParkMessage note(std::string key, float age = 0)
     {
-        simulation::ParkMessage m;
+        simulation::park::ParkMessage m;
         m.text_key = std::move(key);
         m.age = age;
         return m;
@@ -31,7 +31,7 @@ TEST_CASE("a park's messages start from its save, oldest first")
     newer.award = 4;
     log.ordered = { older, newer };
 
-    const auto messages = simulation::park_messages(log);
+    const auto messages = simulation::park::park_messages(log);
     REQUIRE(messages.list.size() == 2);
     CHECK(messages.list[0].text_key == "Invented_Thing");
     CHECK(messages.list[0].age == 300);
@@ -46,20 +46,20 @@ TEST_CASE("a park's messages start from its save, oldest first")
 
 TEST_CASE("the list keeps the newest messages and lets old ones go")
 {
-    simulation::ParkMessages messages;
-    for (std::size_t i = 0; i < simulation::kMessageCapacity + 3; ++i)
-        simulation::post(messages, note("Note", static_cast<float>(i)));
-    REQUIRE(messages.list.size() == simulation::kMessageCapacity);
+    simulation::park::ParkMessages messages;
+    for (std::size_t i = 0; i < simulation::park::kMessageCapacity + 3; ++i)
+        simulation::park::post(messages, note("Note", static_cast<float>(i)));
+    REQUIRE(messages.list.size() == simulation::park::kMessageCapacity);
     CHECK(messages.list.front().serial == 4);
-    CHECK(messages.list.back().serial == simulation::kMessageCapacity + 3);
+    CHECK(messages.list.back().serial == simulation::park::kMessageCapacity + 3);
 
-    simulation::ParkMessages few;
-    simulation::post(few, note("Old", simulation::kMessageLifetime - 10));
-    simulation::post(few, note("New"));
-    simulation::age(few, 5);
+    simulation::park::ParkMessages few;
+    simulation::park::post(few, note("Old", simulation::park::kMessageLifetime - 10));
+    simulation::park::post(few, note("New"));
+    simulation::park::age(few, 5);
     CHECK(few.list.size() == 2);
     CHECK(few.list.back().age == 5);
-    simulation::age(few, 6);
+    simulation::park::age(few, 6);
     REQUIRE(few.list.size() == 1);
     CHECK(few.list.front().text_key == "New");
 }

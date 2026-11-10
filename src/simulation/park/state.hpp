@@ -10,8 +10,8 @@
 #include "save/model/world.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/game_speed.hpp"
-#include "simulation/park_messages.hpp"
-#include "simulation/park_rating.hpp"
+#include "simulation/park/messages.hpp"
+#include "simulation/park/rating.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -19,7 +19,10 @@
 namespace rct3::simulation
 {
     struct Weather;
+} // namespace rct3::simulation
 
+namespace rct3::simulation::park
+{
     struct ParkState
     {
         std::optional<std::int64_t> cash;        ///< Hundredths of the currency unit; none when money never runs out
@@ -65,4 +68,4 @@ namespace rct3::simulation
     /// `old_litter`, when given, counts the litter lying long enough to count instead of the saved litter.
     void rate_week(ParkState& state, const save::model::PeopleModel& people, const save::model::RideModel& rides, std::optional<std::int32_t> old_litter = std::nullopt);
 
-} // namespace rct3::simulation
+} // namespace rct3::simulation::park

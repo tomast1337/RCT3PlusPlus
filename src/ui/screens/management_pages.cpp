@@ -173,7 +173,7 @@ namespace rct3::ui::screens
 
         /// Marks along a weekly graph where each month began, named by the month, back from the week before
         /// `time`'s.
-        void month_ticks(ManagementPage& page, const StringTable& strings, const simulation::ParkState* state)
+        void month_ticks(ManagementPage& page, const StringTable& strings, const simulation::park::ParkState* state)
         {
             if (state == nullptr)
                 return;

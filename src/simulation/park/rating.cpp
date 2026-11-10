@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "simulation/park_rating.hpp"
+#include "simulation/park/rating.hpp"
 
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-namespace rct3::simulation
+namespace rct3::simulation::park
 {
 
     namespace
@@ -95,4 +95,4 @@ namespace rct3::simulation
         return before ? *before + (target - *before) * kTuning.rating.weekly_move.value : target;
     }
 
-} // namespace rct3::simulation
+} // namespace rct3::simulation::park

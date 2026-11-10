@@ -64,7 +64,7 @@ TEST_CASE("a message's text fills in its subject's name, or leaves the name out"
     strings.add("Opened", u"New attraction: %NAME%");
     strings.add("Warned", u"Soon the %NAME% test is due");
     strings.add("Plain", u"100% fun");
-    simulation::ParkMessage m;
+    simulation::park::ParkMessage m;
     m.text_key = "Opened";
     m.subject_name = "Big Wheel";
     CHECK(message_text(m, strings) == u"New attraction: Big Wheel");
@@ -81,7 +81,7 @@ TEST_CASE("a message's other field is filled from its field key")
     StringTable strings;
     strings.add("Broken", u"%NAME% broke down (%KIND%)");
     strings.add("Jammed", u"doors jammed");
-    simulation::ParkMessage m { .text_key = "Broken", .subject_name = "Big Wheel", .field_key = "Jammed" };
+    simulation::park::ParkMessage m { .text_key = "Broken", .subject_name = "Big Wheel", .field_key = "Jammed" };
     CHECK(message_text(m, strings) == u"Big Wheel broke down (doors jammed)");
 }
 
@@ -89,7 +89,7 @@ TEST_CASE("a message's number fills its %d")
 {
     StringTable strings;
     strings.add("Crashed", u"A crash on %NAME% has injured %d people!");
-    simulation::ParkMessage m { .text_key = "Crashed", .subject_name = "Big Dipper", .number = 16 };
+    simulation::park::ParkMessage m { .text_key = "Crashed", .subject_name = "Big Dipper", .number = 16 };
     CHECK(message_text(m, strings) == u"A crash on Big Dipper has injured 16 people!");
 }
 
@@ -100,9 +100,9 @@ TEST_CASE("an award's message is named by the award, a fine's too")
     strings.add("Award_Fine", u"Fined: %NAME%");
     strings.add("Award_Best_Toilets", u"Best Toilets");
     strings.add("Award_Most_Untidy", u"Most Untidy");
-    const simulation::ParkMessage won { .text_key = std::string(simulation::award_message(11)), .award = 11 };
+    const simulation::park::ParkMessage won { .text_key = std::string(simulation::award_message(11)), .award = 11 };
     CHECK(message_text(won, strings) == u"Won: Best Toilets");
-    const simulation::ParkMessage fined { .text_key = std::string(simulation::award_message(1)), .award = 1 };
+    const simulation::park::ParkMessage fined { .text_key = std::string(simulation::award_message(1)), .award = 1 };
     CHECK(message_text(fined, strings) == u"Fined: Most Untidy");
     CHECK(simulation::award_name(simulation::kAwardKinds).empty());
 }
@@ -111,11 +111,11 @@ TEST_CASE("every message has an icon for its kind; only an award's leads somewhe
 {
     StringTable strings;
     const MessageDrawerStyle style = game_skins::message_drawer_style(kGamePalette);
-    simulation::ParkMessages messages;
-    simulation::post(messages, { .text_key = "Award_Award", .award = 11 });
-    simulation::post(messages, { .text_key = "ObjectiveMessage_WeekWarning" });
-    simulation::post(messages, { .text_key = "Thought_PI_Park_Litter1" });
-    simulation::post(messages, { .text_key = "RideFixedMessage", .subject = 7 });
+    simulation::park::ParkMessages messages;
+    simulation::park::post(messages, { .text_key = "Award_Award", .award = 11 });
+    simulation::park::post(messages, { .text_key = "ObjectiveMessage_WeekWarning" });
+    simulation::park::post(messages, { .text_key = "Thought_PI_Park_Litter1" });
+    simulation::park::post(messages, { .text_key = "RideFixedMessage", .subject = 7 });
     const std::vector<DrawerMessage> shown = drawer_messages(messages, strings, style);
     REQUIRE(shown.size() == 4);
     CHECK(shown[0].icon == style.award);
@@ -131,9 +131,9 @@ TEST_CASE("a message telling a thought has the thought's face; others have none"
 {
     StringTable strings;
     const MessageDrawerStyle style = game_skins::message_drawer_style(kGamePalette);
-    simulation::ParkMessages messages;
-    simulation::post(messages, { .text_key = "Thought_PI_Stall_TooExpensive1", .subject = 3 });
-    simulation::post(messages, { .text_key = "RideFixedMessage", .subject = 7 });
+    simulation::park::ParkMessages messages;
+    simulation::park::post(messages, { .text_key = "Thought_PI_Stall_TooExpensive1", .subject = 3 });
+    simulation::park::post(messages, { .text_key = "RideFixedMessage", .subject = 7 });
     const std::vector<DrawerMessage> shown = drawer_messages(messages, strings, style);
     REQUIRE(shown.size() == 2);
     CHECK(shown[0].mood == mood_icon(Mood::Sad));

@@ -18,7 +18,7 @@
 #include "simulation/components.hpp"
 #include "simulation/crowds.hpp"
 #include "simulation/import_park.hpp"
-#include "simulation/park_messages.hpp"
+#include "simulation/park/messages.hpp"
 #include "simulation/systems.hpp"
 #include "strings/unicode.hpp"
 #include "ui/key_combo.hpp"
@@ -446,17 +446,17 @@ namespace rct3::scene
             park::ParkScene& park = park_of(park_);
             if (a.empty() || !a[0].is_string())
                 throw std::invalid_argument("park.postMessage takes a text key, and may take a ride's place in rides.list() and a tab number");
-            simulation::ParkMessage message { .text_key = a[0].get<std::string>() };
+            simulation::park::ParkMessage message { .text_key = a[0].get<std::string>() };
             if (a.size() > 1 && a[1].is_number_unsigned() && a[1].get<std::size_t>() < park.rides.rides.size())
                 message.subject = park.rides.rides[a[1].get<std::size_t>()].base.id;
             if (a.size() > 2 && a[2].is_number_integer())
                 message.panel = a[2].get<std::int32_t>();
-            simulation::post(park.park.messages, std::move(message));
+            simulation::park::post(park.park.messages, std::move(message));
             return Json(nullptr);
         });
         engine_.define("park.messages", [this](const Json&) {
             Json out = Json::array();
-            for (const simulation::ParkMessage& m : park_of(park_).park.messages.list)
+            for (const simulation::park::ParkMessage& m : park_of(park_).park.messages.list)
                 out.push_back({ { "key", m.text_key }, { "name", m.subject_name } });
             return out;
         });

@@ -12,6 +12,7 @@
 
 using namespace rct3;
 using namespace rct3::simulation;
+using namespace rct3::simulation::park;
 
 namespace
 {

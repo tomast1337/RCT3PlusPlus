@@ -160,7 +160,7 @@ namespace rct3::simulation
         }
     }
 
-    void step_animals(SimWorld& world, const AnimalGround& ground, Seconds dt, ParkMessages& messages)
+    void step_animals(SimWorld& world, const AnimalGround& ground, Seconds dt, park::ParkMessages& messages)
     {
         auto& r = world.registry;
         const float now = static_cast<float>(world.tick) * kTickSeconds;
@@ -217,7 +217,7 @@ namespace rct3::simulation
             // Where it stands decides its enclosure; in none, it is out.
             const std::int32_t standing = ground.enclosure ? ground.enclosure({ pose.position.x, pose.position.z }) : animal.enclosure;
             if (standing < 0 && !animal.escaped)
-                post(messages, { .text_key = std::string(kAnimalEscaped), .subject_name = animal.name });
+                park::post(messages, { .text_key = std::string(kAnimalEscaped), .subject_name = animal.name });
             animal.escaped = standing < 0;
             animal.enclosure = standing;
             rise(animal.hunger, dt, kRates.hungry);

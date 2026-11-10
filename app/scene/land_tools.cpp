@@ -11,10 +11,10 @@
 #include "park/water/fill.hpp"
 #include "park/waterfall_making.hpp"
 #include "park/waterfall_mesh.hpp"
-#include "scene/park_footpaths.hpp"
-#include "scene/park_refresh.hpp"
-#include "scene/park_scene.hpp"
-#include "scene/park_view.hpp"
+#include "scene/park/footpaths.hpp"
+#include "scene/park/refresh.hpp"
+#include "scene/park/scene.hpp"
+#include "scene/park/view.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/track_building.hpp"
 #include "simulation/import_park.hpp"
@@ -56,17 +56,17 @@ namespace rct3::scene
             return t;
         }
 
-        bool affordable(const ParkScene& scene, std::int32_t cost)
+        bool affordable(const park::ParkScene& scene, std::int32_t cost)
         {
             return !scene.park.cash || *scene.park.cash >= cost;
         }
 
         /// Pays `cost` for work on `tile`, floating it up from there.
-        void pay(ParkScene& scene, std::int32_t cost, save::Tile tile)
+        void pay(park::ParkScene& scene, std::int32_t cost, save::Tile tile)
         {
             if (scene.park.cash)
                 *scene.park.cash -= cost;
-            float_money(scene, tile_point(scene.grid, tile), -cost);
+            park::float_money(scene, park::tile_point(scene.grid, tile), -cost);
         }
 
         /// The raising and lowering brushes' tab, by its place in the panel.
@@ -102,13 +102,13 @@ namespace rct3::scene
         }
 
         /// Whether a tool may move the ground of `tile` at all this stroke: owned outright and not refused yet.
-        bool shapeable(const ParkScene& scene, save::Tile tile)
+        bool shapeable(const park::ParkScene& scene, save::Tile tile)
         {
             return rct3::park::owned_outright(scene.grid.at(tile)) && !scene.land.refused.contains(tile_key(tile));
         }
 
         /// Gathers what stands on the ground as a stroke starts; the ground under a stroke cannot reach it.
-        void start_stroke(ParkScene& scene)
+        void start_stroke(park::ParkScene& scene)
         {
             LandTools& l = scene.land;
             l.holds = rct3::park::ground::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
@@ -118,7 +118,7 @@ namespace rct3::scene
         }
 
         /// Ends a stroke: seats the scenery standing on the ground it moved on its new height.
-        void end_stroke(ParkScene& scene)
+        void end_stroke(park::ParkScene& scene)
         {
             LandTools& l = scene.land;
             l.rumble.reset();
@@ -129,7 +129,7 @@ namespace rct3::scene
             if (rct3::park::ground::seat_followers(scene.objects, l.holds, scene.models, scene.grid, (*l.stirred)[0], (*l.stirred)[1]))
             {
                 scene.levels = { };
-                scene.since_rebuild = kObjectRebuildInterval;
+                scene.since_rebuild = park::kObjectRebuildInterval;
             }
             l.stirred.reset();
         }
@@ -137,7 +137,7 @@ namespace rct3::scene
         /// Shapes a copy of the ground `from` with `shape` (which returns what it moved) again until what stands on it lets
         /// every tile it moved go, holding those it refuses for the rest of the stroke. Nothing when a tile refused
         /// still moved.
-        template<typename Shape> std::optional<std::pair<save::TerrainGrid, float>> try_shape(ParkScene& scene, const save::TerrainGrid& from, Shape&& shape)
+        template<typename Shape> std::optional<std::pair<save::TerrainGrid, float>> try_shape(park::ParkScene& scene, const save::TerrainGrid& from, Shape&& shape)
         {
             LandTools& l = scene.land;
             for (;;)
@@ -171,14 +171,14 @@ namespace rct3::scene
         }
 
         /// Takes on the shaped ground `trial`, the scenery on it following.
-        void take_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, save::TerrainGrid trial, bool drain = true)
+        void take_ground(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, save::TerrainGrid trial, bool drain = true)
         {
             LandTools& l = scene.land;
             // The meshes built beside the frame read the ground.
             if (scene.object_build.valid())
             {
                 if (auto built = scene.object_build.get())
-                    show_objects(device, scene, std::move(*built));
+                    park::show_objects(device, scene, std::move(*built));
             }
             if (scene.people_build.valid())
                 scene.people_build.wait();
@@ -197,12 +197,12 @@ namespace rct3::scene
             // Water the new ground may not hold goes, as do the waterfalls beside it.
             const bool drained = drain && rct3::park::water::drain_moved(scene.footpaths.water, scene.footpaths.waterfalls, was, scene.grid);
             if (drained)
-                show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
+                park::show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &park::ParkParticles::sprays);
             // A drained lake may reach far from the step; a moved corner shades the tiles beside those round it.
             std::optional<rct3::park::TileRect> touched;
             if (step && !drained)
                 touched = rct3::park::TileRect { (*step)[0].col, (*step)[0].row, (*step)[1].col + 1, (*step)[1].row + 1 }.grown(1);
-            rebuild_ground(device, scene, assets, touched);
+            park::rebuild_ground(device, scene, assets, touched);
             if (!step)
                 return;
             simulation::follow_ground(scene.sim, scene.footpaths.paths, was, scene.grid, (*step)[0], (*step)[1]);
@@ -221,7 +221,7 @@ namespace rct3::scene
             if (std::ranges::any_of(l.holds.followers, near))
             {
                 scene.levels = { };
-                scene.since_rebuild = kObjectRebuildInterval;
+                scene.since_rebuild = park::kObjectRebuildInterval;
             }
         }
 
@@ -232,7 +232,7 @@ namespace rct3::scene
             save::Tile last;
             rct3::park::TilePart part = rct3::park::TilePart::Whole;
         };
-        std::optional<TileTarget> tile_target(const ParkScene& scene, std::optional<glm::vec2> spot)
+        std::optional<TileTarget> tile_target(const park::ParkScene& scene, std::optional<glm::vec2> spot)
         {
             if (!spot)
                 return std::nullopt;
@@ -252,7 +252,7 @@ namespace rct3::scene
             return t;
         }
 
-        void shape(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
+        void shape(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
         {
             LandTools& l = scene.land;
             if (!l.tile)
@@ -284,7 +284,7 @@ namespace rct3::scene
         }
 
         /// Makes the marks on the ground again when what the tool out works on changed.
-        void mark(render::Device& device, ParkScene& scene, ui::Point at, ui::Point size, bool over)
+        void mark(render::Device& device, park::ParkScene& scene, ui::Point at, ui::Point size, bool over)
         {
             LandTools& l = scene.land;
             rct3::park::TerrainMesh mesh;
@@ -322,10 +322,10 @@ namespace rct3::scene
             if (marked == l.marked && (scene.land_marks.count > 0) == !marked.empty())
                 return;
             l.marked = std::move(marked);
-            set_view_lines(device, scene.land_marks, mesh);
+            park::set_view_lines(device, scene.land_marks, mesh);
         }
 
-        void brush_shape(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
+        void brush_shape(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
         {
             LandTools& l = scene.land;
             if (!l.tile)
@@ -362,7 +362,7 @@ namespace rct3::scene
             take_ground(device, scene, assets, std::move(trial->first));
         }
 
-        void smooth(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, float elapsed)
+        void smooth(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, float elapsed)
         {
             LandTools& l = scene.land;
             const SmoothTool tool = kSmoothTools[*l.smoothing];
@@ -399,7 +399,7 @@ namespace rct3::scene
                 take_ground(device, scene, assets, std::move(*shaped));
         }
 
-        void paint(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
+        void paint(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
         {
             LandTools& l = scene.land;
             const auto tile = over ? std::nullopt : ground_tile(scene, at, size);
@@ -420,17 +420,17 @@ namespace rct3::scene
                 painted = !painted ? one : rct3::park::TileRect { std::min(painted->col, one.col), std::min(painted->row, one.row), std::max(painted->end_col, one.end_col), std::max(painted->end_row, one.end_row) };
             }
             if (painted)
-                rebuild_ground(device, scene, assets, painted);
+                park::rebuild_ground(device, scene, assets, painted);
         }
 
-        void say(ParkScene& scene, std::string_view key)
+        void say(park::ParkScene& scene, std::string_view key)
         {
             simulation::post(scene.park.messages, simulation::ParkMessage { .text_key = std::string(key) });
         }
 
         /// Fills the lake holding the tile under `top` again at its level, on the ground as it now is, over the tiles
         /// it held and those of `more`; never beyond, so it cannot run out through a gap the ground left.
-        void refit_lake(ParkScene& scene, const save::WorldPoint3& top, std::span<const save::CarvedTile> more)
+        void refit_lake(park::ParkScene& scene, const save::WorldPoint3& top, std::span<const save::CarvedTile> more)
         {
             const save::TerrainGrid& g = scene.grid;
             const save::Tile tile { static_cast<int>(std::floor((top.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((top.z - g.origin_z) / g.tile_size_z)) };
@@ -446,7 +446,7 @@ namespace rct3::scene
         }
 
         /// A click with the water tool: takes the lake clicked away, or pours one up to the height clicked.
-        void pour(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
+        void pour(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
         {
             LandTools& l = scene.land;
             if (l.tile || over || size.x <= 0 || size.y <= 0)
@@ -476,7 +476,7 @@ namespace rct3::scene
                 // Its waterfalls go with it, putting back the ground they cut.
                 save::TerrainGrid ground = g;
                 rct3::park::water::remove_lake(scene.footpaths.water, scene.footpaths.waterfalls, ground, *l.tile);
-                show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
+                park::show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &park::ParkParticles::sprays);
                 start_stroke(scene);
                 take_ground(device, scene, assets, std::move(ground), false);
                 return end_stroke(scene);
@@ -487,11 +487,11 @@ namespace rct3::scene
                 scene.footpaths.water = std::move(*poured);
             else
                 return say(scene, kWaterRefused);
-            rebuild_ground(device, scene, assets);
+            park::rebuild_ground(device, scene, assets);
         }
 
         /// A click with the waterfall tool: picks the first lake, or makes the waterfall to the second.
-        void pick_lake(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
+        void pick_lake(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
         {
             LandTools& l = scene.land;
             if (l.tile)
@@ -528,13 +528,13 @@ namespace rct3::scene
             end_stroke(scene);
             refit_lake(scene, fall->top, fall->carved);
             scene.footpaths.waterfalls.push_back(*fall);
-            show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
-            rebuild_ground(device, scene, assets);
+            park::show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &park::ParkParticles::sprays);
+            park::rebuild_ground(device, scene, assets);
         }
 
         /// The fence round the park's land built again, and the staff kept to that land, after it changed.
         /// shortcut: the old panels stay hidden among the objects; drop them when objects can be taken out.
-        void land_owned_changed(ParkScene& scene, const ui::InterfaceAssets& assets)
+        void land_owned_changed(park::ParkScene& scene, const ui::InterfaceAssets& assets)
         {
             simulation::keep_staff_in(scene.sim, scene.grid);
             wait_for_build(scene);
@@ -559,7 +559,7 @@ namespace rct3::scene
         }
 
         /// A press with the buying tool: buys what is on sale under the brush, once for each tile the pointer moves to.
-        void buy(ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
+        void buy(park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
         {
             LandTools& l = scene.land;
             const auto spot = over ? std::nullopt : ground_spot(scene, at, size);
@@ -578,7 +578,7 @@ namespace rct3::scene
                 return;
             if (scene.park.cash)
                 *scene.park.cash -= bought.spent;
-            float_money(scene, tile_point(scene.grid, tile), -bought.spent);
+            park::float_money(scene, park::tile_point(scene.grid, tile), -bought.spent);
             land_owned_changed(scene, assets);
         }
 
@@ -604,13 +604,13 @@ namespace rct3::scene
             }
         }
 
-        std::optional<ui::screens::LandPanel&> panel_of(const ParkScene& scene)
+        std::optional<ui::screens::LandPanel&> panel_of(const park::ParkScene& scene)
         {
             return scene.desktop->root().find_as<ui::screens::LandPanel>(kPanelName);
         }
 
         /// The panel with the tabs of the tool out: shaping's, or painting's with the surfaces read.
-        void open_panel(ParkScene& scene, const ui::InterfaceAssets& assets)
+        void open_panel(park::ParkScene& scene, const ui::InterfaceAssets& assets)
         {
             const LandTools& l = scene.land;
             const ui::StringTable& strings = *assets.strings;
@@ -656,7 +656,7 @@ namespace rct3::scene
         }
     } // namespace
 
-    void toggle_land_tool(ParkScene& scene, LandTools::Tool tool, const ui::InterfaceAssets& assets)
+    void toggle_land_tool(park::ParkScene& scene, LandTools::Tool tool, const ui::InterfaceAssets& assets)
     {
         const bool out = scene.land.tool == tool;
         stop_land_tools(scene);
@@ -669,7 +669,7 @@ namespace rct3::scene
             open_panel(scene, assets);
     }
 
-    void buy_land_tool(ParkScene& scene, rct3::park::LandBuy what, const ui::InterfaceAssets& assets)
+    void buy_land_tool(park::ParkScene& scene, rct3::park::LandBuy what, const ui::InterfaceAssets& assets)
     {
         stop_land_tools(scene);
         scene.land.tool = LandTools::Tool::Buy;
@@ -677,7 +677,7 @@ namespace rct3::scene
         open_panel(scene, assets);
     }
 
-    void stop_land_tools(ParkScene& scene)
+    void stop_land_tools(park::ParkScene& scene)
     {
         LandTools& l = scene.land;
         if (auto panel = panel_of(scene))
@@ -691,12 +691,12 @@ namespace rct3::scene
         l.upper_lake.reset();
     }
 
-    bool land_tool(const ParkScene& scene)
+    bool land_tool(const park::ParkScene& scene)
     {
         return scene.land.tool != LandTools::Tool::None;
     }
 
-    bool delete_waterfall(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size)
+    bool delete_waterfall(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size)
     {
         if (scene.land.tool != LandTools::Tool::Waterfall)
             return false;
@@ -722,16 +722,16 @@ namespace rct3::scene
         rct3::park::restore_spillway(ground, f);
         const save::WorldPoint3 top = f.top;
         falls.erase(falls.begin() + static_cast<std::ptrdiff_t>(*fall));
-        show_park_particles(scene.particles, rct3::park::waterfall_spray(falls), &ParkParticles::sprays);
+        park::show_park_particles(scene.particles, rct3::park::waterfall_spray(falls), &park::ParkParticles::sprays);
         start_stroke(scene);
         take_ground(device, scene, assets, std::move(ground), false);
         end_stroke(scene);
         refit_lake(scene, top, { });
-        rebuild_ground(device, scene, assets);
+        park::rebuild_ground(device, scene, assets);
         return true;
     }
 
-    void update_land_tools(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed)
+    void update_land_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed)
     {
         LandTools& l = scene.land;
         if (l.rumble)

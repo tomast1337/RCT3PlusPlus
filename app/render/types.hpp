@@ -227,17 +227,17 @@ namespace rct3::render
         /// shrinks `DrawCommand::texture` by half, keeping the part above colour green (0 keeps all); with alpha 0
         /// it grows it with a tent of reads colour red texels apart. Times colour blue, opaque.
         Glow,
-        /// Ambient occlusion worked out on the screen, one step of it a draw (app/scene/park_occlusion.hpp).
+        /// Ambient occlusion worked out on the screen, one step of it a draw (app/scene/park/occlusion.hpp).
         /// Input: location 0 the position in clip space (Float2), drawn as is. The step and what it reads are
         /// in `DrawCommand::occlusion`; `DrawCommand::transform` is a matrix the step needs, not applied.
         Occlusion,
-        /// Sunlight seen in the air, as shafts where shadows cross it (app/scene/park_glow.hpp). Inputs as Glow,
+        /// Sunlight seen in the air, as shafts where shadows cross it (app/scene/park/glow.hpp). Inputs as Glow,
         /// with location 0 the position in clip space, drawn as is; colour red is the strength and green how far
         /// into the air it reads, in world units. `DrawCommand::transform` takes the screen's clip space to the
         /// world, not applied; the sun is `DrawCommand::light`'s. The extra textures are, in order: the screen's
         /// depth, the sun's shadow map and the view it was drawn with (`SceneLight::shadow_view`).
         Shafts,
-        /// Water on the camera's lens (app/scene/park_lens.hpp), over a copy of the screen in `DrawCommand::texture`.
+        /// Water on the camera's lens (app/scene/park/lens.hpp), over a copy of the screen in `DrawCommand::texture`.
         /// Inputs as Textured, with location 0 the position in clip space; uv runs -1..1 across each drop, colour
         /// red is how much it shows, green 1 for a sheet of water, and blue and alpha its middle on the screen
         /// (0..1, y down). Alpha blended.

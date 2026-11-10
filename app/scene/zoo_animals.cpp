@@ -2,8 +2,8 @@
 #include "scene/zoo_animals.hpp"
 
 #include "logging/log.hpp"
-#include "scene/park_scene.hpp"
-#include "scene/park_setup.hpp"
+#include "scene/park/scene.hpp"
+#include "scene/park/setup.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/systems.hpp"
 
@@ -20,7 +20,7 @@ namespace rct3::scene
         constexpr float kMotionSpread = 0.37f;
 
         /// Uploads the pictures of the bodies read since the last upload.
-        void upload_new_pictures(render::Device& device, ParkScene& scene)
+        void upload_new_pictures(render::Device& device, park::ParkScene& scene)
         {
             DrawnAnimals& drawn = scene.drawn_animals;
             rct3::park::ground::GroundImages fresh;
@@ -29,7 +29,7 @@ namespace rct3::scene
                     fresh.emplace(key, picture);
             if (fresh.empty())
                 return;
-            fit_texture_detail(scene, fresh);
+            park::fit_texture_detail(scene, fresh);
             if (auto uploaded = ui::upload_textures(device, fresh))
                 drawn.textures.merge(*uploaded);
             else
@@ -54,7 +54,7 @@ namespace rct3::scene
         }
     } // namespace
 
-    void load_zoo_animals(ParkScene& scene, const config::GameInstall& install)
+    void load_zoo_animals(park::ParkScene& scene, const config::GameInstall& install)
     {
         constexpr std::string_view kAnimalFolder = "WildAnimals";
         const auto folder = install.find(kAnimalFolder);
@@ -73,12 +73,12 @@ namespace rct3::scene
         return crate;
     }
 
-    void animals_changed(render::Device& device, ParkScene& scene)
+    void animals_changed(render::Device& device, park::ParkScene& scene)
     {
         DrawnAnimals& drawn = scene.drawn_animals;
         save::PlacedObject crate = animal_crate();
         if (scene.models.contains(rct3::park::object::model_key(crate)))
-            add_textures(device, scene, rct3::park::moving_meshes(std::span(&crate, 1), scene.models, scene.grid).mesh.batches);
+            park::add_textures(device, scene, rct3::park::moving_meshes(std::span(&crate, 1), scene.models, scene.grid).mesh.batches);
         if (drawn.library)
         {
             for (const auto [e, animal] : scene.sim.registry.view<const simulation::Animal>().each())
@@ -91,7 +91,7 @@ namespace rct3::scene
         place_animals(scene);
     }
 
-    void place_animals(ParkScene& scene)
+    void place_animals(park::ParkScene& scene)
     {
         DrawnAnimals& drawn = scene.drawn_animals;
         const auto& r = scene.sim.registry;

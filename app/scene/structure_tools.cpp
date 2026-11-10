@@ -9,9 +9,9 @@
 #include "park/tile_shaping.hpp"
 #include "parkfile/saved_park.hpp"
 #include "parkfile/structure_file.hpp"
-#include "scene/park_footpaths.hpp"
-#include "scene/park_scene.hpp"
-#include "scene/park_view.hpp"
+#include "scene/park/footpaths.hpp"
+#include "scene/park/scene.hpp"
+#include "scene/park/view.hpp"
 #include "scene/ride_placing.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/delete_area_panel.hpp"
@@ -55,7 +55,7 @@ namespace rct3::scene
 
         /// What `symbol` costs, as the build lists price it; nothing until they are read or for one they lack.
         /// shortcut: found by its symbol alone; match the overlay too once items of two overlays share a symbol.
-        std::int64_t price_of(const ParkScene& scene, std::string_view symbol)
+        std::int64_t price_of(const park::ParkScene& scene, std::string_view symbol)
         {
             if (!scene.build.items.valid() || scene.build.items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
                 return 0;
@@ -75,7 +75,7 @@ namespace rct3::scene
             return bytes;
         }
 
-        void close_panels(ParkScene& scene)
+        void close_panels(park::ParkScene& scene)
         {
             for (const std::string_view name : { kGrabName, kPlaceName })
                 if (auto panel = scene.desktop->root().find(name))
@@ -84,7 +84,7 @@ namespace rct3::scene
 
     } // namespace
 
-    void stop_structure_tools(ParkScene& scene)
+    void stop_structure_tools(park::ParkScene& scene)
     {
         close_panels(scene);
         StructureTools& t = scene.structures;
@@ -101,7 +101,7 @@ namespace rct3::scene
         t.marks_changed = shown; // The marks go on the next frame
     }
 
-    void toggle_structure_tool(ParkScene& scene, StructureTools::Tool tool, const ui::InterfaceAssets& assets)
+    void toggle_structure_tool(park::ParkScene& scene, StructureTools::Tool tool, const ui::InterfaceAssets& assets)
     {
         StructureTools& t = scene.structures;
         const bool out = t.tool == tool;
@@ -119,7 +119,7 @@ namespace rct3::scene
             t.asked = ui::screens::FileDialogMode::Load;
     }
 
-    bool start_structure_placing(ParkScene& scene, const std::filesystem::path& file, const ui::InterfaceAssets& assets)
+    bool start_structure_placing(park::ParkScene& scene, const std::filesystem::path& file, const ui::InterfaceAssets& assets)
     {
         const auto bytes = read_bytes(file);
         if (!bytes)
@@ -149,7 +149,7 @@ namespace rct3::scene
         return true;
     }
 
-    void update_structure_tools(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, bool shift, std::span<const ui::PlayCommand> commands)
+    void update_structure_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, bool shift, std::span<const ui::PlayCommand> commands)
     {
         StructureTools& t = scene.structures;
         if (t.tool == StructureTools::Tool::Grab)
@@ -204,7 +204,7 @@ namespace rct3::scene
             rct3::park::TerrainMesh mesh;
             for (const save::Tile m : marked_tiles(t, scene.grid))
                 rct3::park::tile_marks(mesh, scene.grid, m.col, m.row, m.col, m.row, rct3::park::TilePart::Whole, kMarkColour);
-            set_view_lines(device, scene.delete_marks, mesh);
+            park::set_view_lines(device, scene.delete_marks, mesh);
             t.marks_changed = false;
         }
         if (t.tool != StructureTools::Tool::Place || !t.structure)
@@ -212,7 +212,7 @@ namespace rct3::scene
 
         auto panel = scene.desktop->root().find_as<ui::screens::DeleteAreaPanel>(kPlaceName);
         bool turned = panel && panel->take_action() == ui::screens::DeleteAreaAction::Clear;
-        if (!typing(scene))
+        if (!park::typing(scene))
             for (const ui::PlayCommand c : commands)
             {
                 if (c == ui::PlayCommand::TurnItemRight)
@@ -279,7 +279,7 @@ namespace rct3::scene
         ghost_textures(device, scene, t.ghost_mesh);
     }
 
-    bool structure_tools_click(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
+    bool structure_tools_click(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         StructureTools& t = scene.structures;
         if (t.tool == StructureTools::Tool::Grab)
@@ -304,19 +304,19 @@ namespace rct3::scene
         for (std::size_t i = first; i < scene.objects.size(); ++i)
         {
             if (const auto wall = rct3::park::edge_wall(scene.objects[i], scene.models, scene.grid))
-                wall_changed(device, scene, assets, *wall, true);
-            animate_scenery(device, scene, i);
+                park::wall_changed(device, scene, assets, *wall, true);
+            park::animate_scenery(device, scene, i);
         }
         if (scene.park.cash)
             *scene.park.cash -= t.cost;
         const save::TerrainGrid& g = scene.grid;
-        float_money(scene, { g.world_x(t.at->col) + g.tile_size_x / 2, static_cast<float>(t.height), g.world_z(t.at->row) + g.tile_size_z / 2 }, -t.cost);
+        park::float_money(scene, { g.world_x(t.at->col) + g.tile_size_x / 2, static_cast<float>(t.height), g.world_z(t.at->row) + g.tile_size_z / 2 }, -t.cost);
         logging::logger("park").info("structures: built {} ({} items) at {},{} height {} turned {}", t.structure->name, t.placed.size(), t.at->col, t.at->row, t.height, t.turn.value);
         t.ghost_mesh = { };
         return true;
     }
 
-    void draw_structure_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
+    void draw_structure_ghost(render::Device& device, const park::ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {
         if (scene.structures.tool == StructureTools::Tool::Place && !scene.structures.ghost_mesh.vertices.empty())
             draw_ghost_mesh(device, scene, scene.structures.ghost_mesh, transform, light);

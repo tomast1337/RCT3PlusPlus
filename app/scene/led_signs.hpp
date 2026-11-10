@@ -35,7 +35,10 @@
 namespace rct3::scene
 {
 
-    struct ParkScene;
+    namespace park
+    {
+        struct ParkScene;
+    }
 
     struct LedSign
     {
@@ -70,13 +73,13 @@ namespace rct3::scene
 
     /// Puts the signs up again from the paths and rides as they are now, when they changed; sets each board's
     /// words from its ride. Call once per update.
-    void update_led_signs(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
+    void update_led_signs(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets);
 
     /// Moves the boards' words on. Call inside the screen pass; it ends the pass and begins it again keeping what
     /// was drawn when a board's picture moves.
-    void roll_led_signs(render::Device& device, ParkScene& scene);
+    void roll_led_signs(render::Device& device, park::ParkScene& scene);
 
-    void draw_led_signs(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
+    void draw_led_signs(render::Device& device, const park::ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
     void destroy_led_signs(render::Device& device, LedSigns& signs);
 

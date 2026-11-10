@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// render::Shader::LensDrops, water on the camera's lens (app/scene/park_lens.hpp), drawn with the Textured vertex
+// render::Shader::LensDrops, water on the camera's lens (app/scene/park/lens.hpp), drawn with the Textured vertex
 // stage over a copy of the screen. Each drop is a quad whose uv runs -1..1 across it; colour red is how much of
 // it shows, green 1 for a sheet of water, and blue and alpha the drop's middle on screen (0..1, y down). A drop is
 // a little lens: it shows the scene round it shrunk and upside down, out of focus, darker at its rim and with a

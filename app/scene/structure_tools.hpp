@@ -32,7 +32,10 @@
 namespace rct3::scene
 {
 
-    struct ParkScene;
+    namespace park
+    {
+        struct ParkScene;
+    }
 
     struct StructureTools
     {
@@ -72,19 +75,19 @@ namespace rct3::scene
     };
 
     /// Takes out the tool, or puts it away when it is out.
-    void toggle_structure_tool(ParkScene& scene, StructureTools::Tool tool, const ui::InterfaceAssets& assets);
+    void toggle_structure_tool(park::ParkScene& scene, StructureTools::Tool tool, const ui::InterfaceAssets& assets);
     /// Puts the tools away.
-    void stop_structure_tools(ParkScene& scene);
+    void stop_structure_tools(park::ParkScene& scene);
     /// Starts placing the structure in `file`, ours or the original game's; false when it does not read.
-    bool start_structure_placing(ParkScene& scene, const std::filesystem::path& file, const ui::InterfaceAssets& assets);
+    bool start_structure_placing(park::ParkScene& scene, const std::filesystem::path& file, const ui::InterfaceAssets& assets);
 
     /// Each frame, after the area delete tool: the pointer at `at` (of a view `size`, `over` the interface or
     /// not), the left button `down`, `shift` and the game's `commands`, and the panels.
-    void update_structure_tools(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, bool shift, std::span<const ui::PlayCommand> commands);
+    void update_structure_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, bool shift, std::span<const ui::PlayCommand> commands);
 
     /// A click on the park: builds the structure placed. False when no structure is being placed.
-    bool structure_tools_click(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
+    bool structure_tools_click(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets);
 
-    void draw_structure_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
+    void draw_structure_ghost(render::Device& device, const park::ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
 } // namespace rct3::scene

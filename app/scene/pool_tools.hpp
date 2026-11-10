@@ -33,41 +33,44 @@
 namespace rct3::scene
 {
 
-    struct ParkScene;
+    namespace park
+    {
+        struct ParkScene;
+    }
 
     /// Takes out the pool tool for `item` when it is one; false otherwise.
-    bool start_pooling(ParkScene& scene, const rct3::park::BuildItem& item);
+    bool start_pooling(park::ParkScene& scene, const rct3::park::BuildItem& item);
 
     /// Puts the pool tool away, and the pool panel.
-    void stop_pooling(ParkScene& scene);
+    void stop_pooling(park::ParkScene& scene);
 
     /// Opens the pool panel (ui/screens/pool_panel.hpp) with the editor's tool out, or closes it; with `page`, opens it
     /// on that page whether it shows or not.
-    void toggle_pool_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const ui::Currency& currency, std::optional<ui::screens::PoolPage> page = std::nullopt);
+    void toggle_pool_panel(render::Device& device, park::ParkScene& scene, ui::InterfaceAssets& assets, const ui::Currency& currency, std::optional<ui::screens::PoolPage> page = std::nullopt);
 
     /// Swaps the pool tool's work shown, not yet kept, with the pools and the ground as they were before it;
     /// twice swaps it back.
-    void swap_pool_work(ParkScene& scene);
+    void swap_pool_work(park::ParkScene& scene);
 
     /// Marks the squares under a drag at `at`, in a view of `size`, while `down`; lays them when it ends.
-    void update_pooling(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, bool shift, std::span<const ui::PlayCommand> commands);
+    void update_pooling(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, bool shift, std::span<const ui::PlayCommand> commands);
 
     /// Takes up the pool complex the changing room `room` (of the pools' rooms) opens on, its squares, extras
     /// and rooms, refunded as the delete tool refunds them.
-    void delete_pool_complex(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t room);
+    void delete_pool_complex(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t room);
 
     /// A right click at `at`, in a view of `size`, with a pool tool out: takes up the top pool square pointed at,
     /// with what stands on it, refunded as the delete tool refunds it. False when no square is there.
-    bool delete_pool_square(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size);
+    bool delete_pool_square(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size);
 
     /// Draws the extra or changing room picked, see-through where it would go.
-    void draw_pool_ghost(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
+    void draw_pool_ghost(render::Device& device, const park::ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
     /// Builds the pools' pieces and water again after they changed, on the tiles of `touched` or anywhere.
     /// shortcut: the old pieces stay hidden among the objects; drop them when objects can be taken out.
     /// Where the rides' pieces and slide stations join the pools: railings are left open there and paths join them.
-    [[nodiscard]] std::vector<rct3::park::pools::PoolOpening> pool_openings(const ParkScene& scene);
+    [[nodiscard]] std::vector<rct3::park::pools::PoolOpening> pool_openings(const park::ParkScene& scene);
 
-    void pools_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<rct3::park::TileRect> touched = std::nullopt);
+    void pools_changed(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<rct3::park::TileRect> touched = std::nullopt);
 
 } // namespace rct3::scene

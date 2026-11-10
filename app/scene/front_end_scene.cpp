@@ -4,7 +4,7 @@
 #include "config/option_effects.hpp"
 #include "logging/log.hpp"
 #include "scene/menu_audio.hpp"
-#include "scene/park_loading.hpp"
+#include "scene/park/loading.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
 #include "ui/scale.hpp"
@@ -47,7 +47,7 @@ namespace rct3::scene
 
         FrontEndScene scene;
         scene.assets = std::move(*assets);
-        add_loading_logo(device, install, scene.assets);
+        park::add_loading_logo(device, install, scene.assets);
         scene.slideshow.show.set_pictures(ui::slideshow_pictures(setup.picture_folders, setup.picture_seed));
         scene.picture_folders = std::move(setup.picture_folders);
         scene.picture_seed = setup.picture_seed;

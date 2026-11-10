@@ -79,7 +79,10 @@ namespace rct3::ui
 namespace rct3::scene
 {
 
-    struct ParkScene;
+    namespace park
+    {
+        struct ParkScene;
+    }
 
     struct LandTools
     {
@@ -124,18 +127,18 @@ namespace rct3::scene
     };
 
     /// Picks `tool` from the land menu, or puts it away when it is already out.
-    void toggle_land_tool(ParkScene& scene, LandTools::Tool tool, const ui::InterfaceAssets& assets);
+    void toggle_land_tool(park::ParkScene& scene, LandTools::Tool tool, const ui::InterfaceAssets& assets);
     /// Takes out the tool that buys `what` of the land on sale, opening the panel on it.
-    void buy_land_tool(ParkScene& scene, rct3::park::LandBuy what, const ui::InterfaceAssets& assets);
-    void stop_land_tools(ParkScene& scene);
-    [[nodiscard]] bool land_tool(const ParkScene& scene);
+    void buy_land_tool(park::ParkScene& scene, rct3::park::LandBuy what, const ui::InterfaceAssets& assets);
+    void stop_land_tools(park::ParkScene& scene);
+    [[nodiscard]] bool land_tool(const park::ParkScene& scene);
 
     /// A right click at `at` (of a view `size`) with the waterfall tool out: deletes the waterfall there; whether
     /// there was one.
-    bool delete_waterfall(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size);
+    bool delete_waterfall(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size);
 
     /// Each frame: follows the pointer at `at` (of a view `size`, not `over` the interface) while the left
     /// button is `down`.
-    void update_land_tools(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed);
+    void update_land_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed);
 
 } // namespace rct3::scene

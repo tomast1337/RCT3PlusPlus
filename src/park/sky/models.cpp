@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/sky_models.hpp"
+#include "park/sky/models.hpp"
 
 #include "ovl/overlay.hpp"
 #include "ovl/static_shape.hpp"
@@ -10,7 +10,7 @@
 #include <array>
 #include <cmath>
 
-namespace rct3::park
+namespace rct3::park::sky
 {
 
     namespace
@@ -161,4 +161,4 @@ namespace rct3::park
         return band;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::sky

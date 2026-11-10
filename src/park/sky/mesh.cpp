@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "park/sky_mesh.hpp"
+#include "park/sky/mesh.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 
-namespace rct3::park
+namespace rct3::park::sky
 {
 
     namespace
@@ -84,4 +84,4 @@ namespace rct3::park
         return mesh;
     }
 
-} // namespace rct3::park
+} // namespace rct3::park::sky

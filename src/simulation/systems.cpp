@@ -3794,7 +3794,7 @@ namespace rct3::simulation
                 // And lazy rivers with a station joined to it.
                 const auto rivers = static_cast<std::size_t>(std::ranges::count_if(r.view<const River>(), [&](entt::entity e) { return std::ranges::any_of(r.get<River>(e).stations, [&](const River::Station& s) { return s.pool == pool; }); }));
                 const auto* swim_pool = r.valid(pool) ? r.try_get<SwimPool>(pool) : nullptr;
-                const std::int64_t worth = swim_pool != nullptr ? park::pools::pool_worth(swim_pool->tally, slides, rivers, swim_pool->dirt.value) : 0;
+                const std::int64_t worth = swim_pool != nullptr ? rct3::park::pools::pool_worth(swim_pool->tally, slides, rivers, swim_pool->dirt.value) : 0;
                 const auto swim = [&](entt::entity g) {
                     auto& attraction = r.get<Attraction>(arrived[i]);
                     const bool inspector = r.all_of<Staff>(g);
@@ -4201,7 +4201,7 @@ namespace rct3::simulation
             if (square != pool->water.end() && open_water(*pool, static_cast<std::size_t>(square - pool->water.begin()), { at.x, 0, at.y }, paths.tile_size))
                 water = square->y;
             else if (square != pool->water.end() && !paved)
-                paved = square->y - park::kPoolBrim * paths.level_height + kTuning.pools.deck;
+                paved = square->y - rct3::park::kPoolBrim * paths.level_height + kTuning.pools.deck;
             const bool in_spa = swimmer.to_spa && within(swimmer.goal);
             const bool wet = water && (!paved || std::abs(*water - pose.position.y) <= std::abs(*paved - pose.position.y));
             // At the open water's edge, not on the way to a ladder: in off it, diving where they stand on the paving,

@@ -154,7 +154,7 @@ namespace rct3::simulation
             std::map<std::string, float, std::less<>> tiles { };
         };
 
-        std::vector<Surroundings> surroundings(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const park::BuildItem> catalogue)
+        std::vector<Surroundings> surroundings(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const rct3::park::BuildItem> catalogue)
         {
             constexpr float kReach = 6; ///< Fitted: tiles round a ride or stall its scenery counts within
             constexpr float kOwn = 8;   ///< Fitted: a ride or stall of the theme counts as this many tiles of its scenery
@@ -167,7 +167,7 @@ namespace rct3::simulation
             };
             std::map<std::string, std::string, std::less<>> theme_of;
             std::map<std::string, float, std::less<>> tiles_of; // Footprint of each item, by overlay and symbol
-            for (const park::BuildItem& item : catalogue)
+            for (const rct3::park::BuildItem& item : catalogue)
             {
                 if (item.style_index > 0 && !item.style.empty())
                     theme_of.try_emplace(key(item.overlay), item.style);
@@ -218,7 +218,7 @@ namespace rct3::simulation
         }
     } // namespace
 
-    std::map<std::string, std::int32_t, std::less<>> themed_attractions(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const park::BuildItem> catalogue)
+    std::map<std::string, std::int32_t, std::less<>> themed_attractions(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const rct3::park::BuildItem> catalogue)
     {
         std::map<std::string, std::int32_t, std::less<>> themed;
         for (const Surroundings& round : surroundings(rides, objects, catalogue))
@@ -228,7 +228,7 @@ namespace rct3::simulation
         return themed;
     }
 
-    std::vector<std::uint64_t> off_theme_attractions(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const park::BuildItem> catalogue)
+    std::vector<std::uint64_t> off_theme_attractions(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const rct3::park::BuildItem> catalogue)
     {
         std::vector<std::uint64_t> off;
         for (const Surroundings& round : surroundings(rides, objects, catalogue))

@@ -494,9 +494,9 @@ namespace rct3::simulation
         std::vector<glm::vec3> steps { }; ///< Its pool path stairs, at their top, which a pool ride's station may join as it may its paving
         std::vector<PoolBoard> boards { };
         std::vector<PoolLadder> ladders { };
-        std::vector<PoolWalk> walks { };  ///< Its squares as swimmers go from one to the next
-        Share dirt { };                   ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
-        park::pools::PoolTally tally { }; ///< What it has, for its excitement and what its ticket is worth
+        std::vector<PoolWalk> walks { };        ///< Its squares as swimmers go from one to the next
+        Share dirt { };                         ///< From clean (0) to a health hazard (1); swimmers dirty it, its rooms' fluid cleans it
+        rct3::park::pools::PoolTally tally { }; ///< What it has, for its excitement and what its ticket is worth
     };
 
     /// How dirty a pool looks, in the six steps the pool's window names, cleanest first.

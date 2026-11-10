@@ -22,15 +22,15 @@ namespace
     /// by two squares of water below that and a square `beside` at (7, 3) next to the water, pool path stairs unless
     /// told, their foot towards the river and their top at `surface` towards the water; and an open lazy river round a
     /// loop from column 8 to 12 and row 2 to 5, its station along column 8.
-    entt::entity river_by_pool(Sandbox& park, park::pools::PoolKind beside = park::pools::PoolKind::PathStairs, std::int32_t surface = 0)
+    entt::entity river_by_pool(Sandbox& park, rct3::park::pools::PoolKind beside = rct3::park::pools::PoolKind::PathStairs, std::int32_t surface = 0)
     {
         park.path({ 0, 0 }, { 5, 0 });
-        park::pools::PoolMap pools;
-        pools.squares.push_back({ .col = 5, .row = 2, .kind = park::pools::PoolKind::Tile });
+        rct3::park::pools::PoolMap pools;
+        pools.squares.push_back({ .col = 5, .row = 2, .kind = rct3::park::pools::PoolKind::Tile });
         for (std::int32_t row = 3; row < 5; ++row)
             for (std::int32_t col = 4; col < 7; ++col)
                 pools.squares.push_back({ .col = col, .row = row });
-        pools.squares.push_back({ .col = 7, .row = 3, .kind = beside, .surface = surface - (beside == park::pools::PoolKind::PathStairs ? park::pools::kPathStairsRise : 0), .side = rct3::park::Side { 1 } });
+        pools.squares.push_back({ .col = 7, .row = 3, .kind = beside, .surface = surface - (beside == rct3::park::pools::PoolKind::PathStairs ? rct3::park::pools::kPathStairsRise : 0), .side = rct3::park::Side { 1 } });
         pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
         import_pools(park.world(), pools);
         const auto& paths = park.world().paths;
@@ -114,7 +114,7 @@ TEST_CASE("paddling along a lazy river's current speeds a rider up, and against 
 
 TEST_CASE("a lazy river's station joins the pool paving or pool path along its side, at its level, and riders board from it")
 {
-    using K = park::pools::PoolKind;
+    using K = rct3::park::pools::PoolKind;
     for (const K kind : { K::Tile, K::Path, K::PathStairs })
     {
         Sandbox park;

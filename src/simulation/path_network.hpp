@@ -44,7 +44,7 @@ namespace rct3::simulation
     using NodeId = std::uint32_t;
 
     /// The network's number for park side `side`: the park's count with each pair swapped.
-    [[nodiscard]] constexpr std::size_t network_side(park::Side side) noexcept
+    [[nodiscard]] constexpr std::size_t network_side(rct3::park::Side side) noexcept
     {
         return static_cast<std::size_t>(side.value ^ 1);
     }
@@ -121,9 +121,9 @@ namespace rct3::simulation
 
         /// Stands a wall along `side` of tile (`col`, `row`), from world height `low` to `high`, and parts the
         /// tiles it stands between.
-        void add_wall(int col, int row, park::Side side, float low, float high);
+        void add_wall(int col, int row, rct3::park::Side side, float low, float high);
         /// Takes such a wall away again, and joins what it kept apart.
-        void remove_wall(int col, int row, park::Side side, float low, float high);
+        void remove_wall(int col, int row, rct3::park::Side side, float low, float high);
 
         [[nodiscard]] const std::vector<PathNode>& nodes() const
         {
@@ -146,7 +146,7 @@ namespace rct3::simulation
         /// the sides it may join across (`open`, as PathNode::open); joins its tile again to suit.
         void set_corners(NodeId node, std::array<float, 4> corners, std::uint8_t open = 0b1111);
         /// Bars side `side` of a node's tile to guests coming in, or lifts the bar.
-        void set_no_entry(NodeId node, park::Side side, bool barred)
+        void set_no_entry(NodeId node, rct3::park::Side side, bool barred)
         {
             const auto bit = static_cast<std::uint8_t>(1U << network_side(side));
             nodes_[node].no_entry = barred ? nodes_[node].no_entry | bit : nodes_[node].no_entry & ~bit;

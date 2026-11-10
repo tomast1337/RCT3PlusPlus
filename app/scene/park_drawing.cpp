@@ -734,7 +734,7 @@ namespace rct3::scene
         const profiling::Scope zone("Interface");
         scene.list.clear();
         scene.list.set_scale(scale_for(device, scene));
-        static const ui::FontSet kNoFonts;
+        static const ui::font::FontSet kNoFonts;
         ui::DrawContext context { scene.list, assets.skins, scene.current_fonts != nullptr ? *scene.current_fonts : kNoFonts, assets.palette };
         scene.desktop->draw(context);
         ui::render_draw_list(device, assets.renderer, scene.list);

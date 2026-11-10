@@ -31,7 +31,7 @@ namespace rct3::ui
         bool opener_in_corner = false; ///< The arrow in the top-right corner instead of inset and centred
         Color text_colour = hex("#000000");
         Color disabled_text_colour = hex("#7f7f7f");
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         float opener_width = 16; ///< The arrow is a square this wide at the right edge, centred vertically
         float text_indent = 5;
         MenuStyle menu;

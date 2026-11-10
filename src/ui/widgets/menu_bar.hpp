@@ -28,7 +28,7 @@ namespace rct3::ui
         std::string highlight_skin; ///< Behind the open or marked title; the colour is filled when empty
         Color highlight_colour = hex("#5aa8e6");
         Color text_colour = hex("#000000");
-        FontRole font = FontRole::Small;
+        font::FontRole font = font::FontRole::Small;
         float title_padding = 10; ///< Each side of a title's text
         float first_indent = 4;
         MenuStyle menu;

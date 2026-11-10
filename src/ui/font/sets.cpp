@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/font_sets.hpp"
+#include "ui/font/sets.hpp"
 
 #include "ui/language.hpp"
 
 #include <algorithm>
 #include <format>
 
-namespace rct3::ui
+namespace rct3::ui::font
 {
 
     std::string font_overlay(std::string_view language, int width)
@@ -22,4 +22,4 @@ namespace rct3::ui
         return it != kSetFonts.end() ? std::optional(it->first) : std::nullopt;
     }
 
-} // namespace rct3::ui
+} // namespace rct3::ui::font

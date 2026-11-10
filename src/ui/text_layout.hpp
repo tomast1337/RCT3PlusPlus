@@ -8,7 +8,7 @@
 #pragma once
 
 #include "ui/draw_list.hpp"
-#include "ui/font.hpp"
+#include "ui/font/font.hpp"
 
 #include <cstdint>
 #include <string_view>
@@ -39,14 +39,14 @@ namespace rct3::ui
     };
 
     /// The pen movement of `text` on one line.
-    [[nodiscard]] float text_width(const Font& font, std::u16string_view text);
+    [[nodiscard]] float text_width(const font::Font& font, std::u16string_view text);
 
     /// Splits `text` into lines no wider than `max_width` where possible. A `max_width` of 0 or less breaks
     /// only at line feeds.
-    [[nodiscard]] std::vector<TextLine> break_lines(const Font& font, std::u16string_view text, float max_width);
+    [[nodiscard]] std::vector<TextLine> break_lines(const font::Font& font, std::u16string_view text, float max_width);
 
     /// Draws `text` inside `box`, aligned by `style`. Lines that do not fit spill out of the box; push a
     /// clip first to cut them.
-    void draw_text(DrawList& list, const Font& font, std::u16string_view text, const Rect& box, const TextStyle& style);
+    void draw_text(DrawList& list, const font::Font& font, std::u16string_view text, const Rect& box, const TextStyle& style);
 
 } // namespace rct3::ui

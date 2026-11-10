@@ -460,7 +460,7 @@ namespace rct3::ui
         }
         /// Places the lines' values and the controls across the page, measuring the labels with `font`, or
         /// guessing at their widths without one.
-        void place_page(std::optional<const Font&> font);
+        void place_page(std::optional<const font::Font&> font);
         void draw_skins(DrawContext& context) const;
         void draw_coded(DrawList& list) const;
         void mark_picked();

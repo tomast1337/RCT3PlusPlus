@@ -41,7 +41,7 @@ namespace rct3::ui
 
     void MoneyFloaters::draw(DrawContext& context) const
     {
-        const auto font = context.fonts.get(FontRole::Medium);
+        const auto font = context.fonts.get(font::FontRole::Medium);
         if (!font)
             return;
         const float height = font->line_height();

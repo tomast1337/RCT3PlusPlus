@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/font.hpp"
+#include "ui/font/font.hpp"
 
 #include <doctest/doctest.h>
 
 using namespace rct3;
 using namespace rct3::ui;
+using namespace rct3::ui::font;
 
 namespace
 {

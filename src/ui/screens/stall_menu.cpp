@@ -437,7 +437,7 @@ namespace rct3::ui
         for (std::size_t i = 0; i < view_.goods.size(); ++i)
             draw_skin(context.list, context.skins.find(view_.goods[i].icon), good_rect(i));
         // The tick's words, beside it.
-        if (const auto f = context.fonts.get(FontRole::Small))
+        if (const auto f = context.fonts.get(font::FontRole::Small))
         {
             const Rect tick = sync_->rect();
             draw_text(context.list, *f, view_.sync_help, { tick.x1 + 4, tick.y0, rect().x1, tick.y1 }, { style_.help_colour, Align::Start, Align::Centre, false });

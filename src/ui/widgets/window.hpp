@@ -17,7 +17,7 @@
 // update() override that calls Window::update() first.
 #pragma once
 
-#include "ui/font_set.hpp"
+#include "ui/font/set.hpp"
 #include "ui/widget.hpp"
 #include "ui/widgets/button.hpp"
 
@@ -43,7 +43,7 @@ namespace rct3::ui
         Rect content_inset { 12, 28, 12, 12 }; ///< Content area in from the left, top, right and bottom edges
         float title_button_size = 14;
         Point title_button_margin { 10, 6 }; ///< From the top-right corner
-        FontRole title_font = FontRole::Medium;
+        font::FontRole title_font = font::FontRole::Medium;
         Rect title_box { 12, 2, 40, 20 }; ///< Title text: left inset, top, right inset, bottom; tops and bottoms from the top edge
         Color title_colour = hex("#000000");
         float resize_band = 6;                ///< Inside each edge of a resizable window, the part that drags it

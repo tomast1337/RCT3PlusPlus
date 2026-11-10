@@ -9,8 +9,8 @@
 #include "scene/park_scene.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
-#include "ui/font_images.hpp"
-#include "ui/font_sets.hpp"
+#include "ui/font/images.hpp"
+#include "ui/font/sets.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/management_pages.hpp"
 #include "ui/sign_text.hpp"
@@ -213,23 +213,23 @@ namespace rct3::scene
             }
         }
 
-        const ui::Font* board_font(LedSigns& q, const ui::InterfaceAssets& assets)
+        const ui::font::Font* board_font(LedSigns& q, const ui::InterfaceAssets& assets)
         {
             if (!std::exchange(q.font_tried, true) && assets.install)
             {
-                const std::string relative = ui::font_overlay(assets.fonts.language, ui::kFontSetWidths.back());
+                const std::string relative = ui::font::font_overlay(assets.fonts.language, ui::font::kFontSetWidths.back());
                 const auto path = assets.install->find(relative);
-                auto loaded = path ? ui::load_font_images(*path) : std::unexpected(std::format("{} not found", relative));
+                auto loaded = path ? ui::font::load_font_images(*path) : std::unexpected(std::format("{} not found", relative));
                 if (!loaded)
                     logging::logger("park").warning("LED signs: {}", loaded.error());
-                for (ui::FontImages& f : loaded ? *loaded : std::vector<ui::FontImages> { })
+                for (ui::font::FontImages& f : loaded ? *loaded : std::vector<ui::font::FontImages> { })
                 {
                     if (f.name != kBoardFont)
                         continue;
-                    std::vector<ui::Font::Page> pages;
+                    std::vector<ui::font::Font::Page> pages;
                     for (std::size_t i = 0; i < f.pages.size(); ++i)
                         pages.push_back({ static_cast<ui::TextureId>(i), static_cast<float>(f.pages[i].width), static_cast<float>(f.pages[i].height) });
-                    q.font = ui::Font::from(f.font, pages, f.face);
+                    q.font = ui::font::Font::from(f.font, pages, f.face);
                     q.font_pages = std::move(f.pages);
                 }
             }
@@ -254,7 +254,7 @@ namespace rct3::scene
             q.stale = false;
             q.counted = counts;
         }
-        const ui::Font* font = board_font(q, assets);
+        const ui::font::Font* font = board_font(q, assets);
         if (font == nullptr)
             return;
         for (LedSign& sign : q.signs)

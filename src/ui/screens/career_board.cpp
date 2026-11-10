@@ -86,7 +86,7 @@ namespace rct3::ui
             return { };
         }
 
-        float text_height(const UpdateContext& context, FontRole role, std::u16string_view text, float width)
+        float text_height(const UpdateContext& context, font::FontRole role, std::u16string_view text, float width)
         {
             const auto font = context.fonts ? context.fonts->get(role) : std::nullopt;
             if (!font || text.empty())
@@ -278,10 +278,10 @@ namespace rct3::ui
         const float wrap = (cm::kTextRight - cm::kTextLeft) * frame.sx;
         const std::u16string_view title_text = picked_ < scenarios_.size() ? std::u16string_view(scenarios_[picked_].info.title) : std::u16string_view { };
         const std::u16string_view description = picked_ < scenarios_.size() ? std::u16string_view(scenarios_[picked_].info.description) : std::u16string_view { };
-        const float title_height = text_height(context, FontRole::ScaledLarge, title_text, wrap) + cm::kTitleGap * frame.sy;
+        const float title_height = text_height(context, font::FontRole::ScaledLarge, title_text, wrap) + cm::kTitleGap * frame.sy;
         const float button = cm::kButtonSize * frame.round;
         const float room = (cm::kPanelBottom - cm::kPanelTop) * frame.sy - title_height;
-        const float extra = std::max(0.0f, text_height(context, FontRole::ScaledSmall, description, wrap) + 2 * button - room);
+        const float extra = std::max(0.0f, text_height(context, font::FontRole::ScaledSmall, description, wrap) + 2 * button - room);
         const Point top_left = frame.at({ cm::kPanelLeft, cm::kPanelTop });
         const Point bottom_right = frame.at({ cm::kPanelRight, cm::kPanelBottom });
         panel_ = { top_left.x, top_left.y, bottom_right.x, bottom_right.y + extra };
@@ -389,9 +389,9 @@ namespace rct3::ui
         if (picked_ < scenarios_.size())
         {
             const CareerScenarioInfo& info = scenarios_[picked_].info;
-            if (const auto f = context.fonts.get(FontRole::ScaledLarge))
+            if (const auto f = context.fonts.get(font::FontRole::ScaledLarge))
                 draw_text(context.list, *f, info.title, title_box_, { style_.text_colour, Align::Start, Align::Centre, true });
-            if (const auto f = context.fonts.get(FontRole::ScaledSmall))
+            if (const auto f = context.fonts.get(font::FontRole::ScaledSmall))
                 draw_text(context.list, *f, info.description, description_box_, { style_.text_colour, Align::Start, Align::Start, true });
         }
         draw_front_help(context, frame, help_title_, help_text_);

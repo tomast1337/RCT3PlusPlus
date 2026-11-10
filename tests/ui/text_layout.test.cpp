@@ -5,6 +5,7 @@
 
 using namespace rct3;
 using namespace rct3::ui;
+using namespace rct3::ui::font;
 
 namespace
 {

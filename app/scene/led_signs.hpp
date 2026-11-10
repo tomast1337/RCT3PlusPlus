@@ -20,7 +20,7 @@
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "scene/track_building.hpp"
-#include "ui/font.hpp"
+#include "ui/font/font.hpp"
 #include "ui/interface_assets.hpp"
 
 #include <array>
@@ -57,7 +57,7 @@ namespace rct3::scene
         std::set<save::ObjectId> hidden; ///< Rides whose queues have no signs, by id
         std::map<std::string, TrackModels, std::less<>> models;
         std::map<std::string, std::string, std::less<>> sign_of; ///< A theme's queue sign, by its overlay
-        std::optional<ui::Font> font;
+        std::optional<ui::font::Font> font;
         std::vector<ovl::texture::RgbaImage> font_pages; ///< Of `font`, by its glyphs' page index
         bool font_tried = false;
         ui::UiTextures textures; ///< The boards' pictures

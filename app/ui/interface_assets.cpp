@@ -84,7 +84,7 @@ namespace rct3::ui
         return assets;
     }
 
-    const FontSet& fonts_for(render::Device& device, InterfaceAssets& assets, float view_width)
+    const font::FontSet& fonts_for(render::Device& device, InterfaceAssets& assets, float view_width)
     {
         return fonts_for(device, *assets.install, assets.fonts, view_width);
     }

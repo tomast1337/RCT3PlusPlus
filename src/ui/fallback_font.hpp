@@ -34,7 +34,7 @@ namespace rct3::ui
     };
 
     /// How far a capital H reaches above the baseline in `font`; its ascent when it has no H.
-    [[nodiscard]] inline float cap_height(const Font& font)
+    [[nodiscard]] inline float cap_height(const font::Font& font)
     {
         auto h = font.find(u'H');
         return h && h->box.y0 < 0 ? -h->box.y0 : font.ascent();

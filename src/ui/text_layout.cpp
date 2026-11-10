@@ -9,7 +9,7 @@ namespace rct3::ui
     namespace
     {
 
-        float advance(const Font& font, char16_t c)
+        float advance(const font::Font& font, char16_t c)
         {
             const auto g = font.find(c);
             return !g ? 0 : g->advance;
@@ -58,7 +58,7 @@ namespace rct3::ui
         }
 
         // Width without trailing spaces, which a line ending in a break should not count.
-        TextLine trimmed(const Font& font, std::u16string_view text)
+        TextLine trimmed(const font::Font& font, std::u16string_view text)
         {
             while (!text.empty() && text.back() == u' ')
                 text.remove_suffix(1);
@@ -67,7 +67,7 @@ namespace rct3::ui
 
     } // namespace
 
-    float text_width(const Font& font, std::u16string_view text)
+    float text_width(const font::Font& font, std::u16string_view text)
     {
         float width = 0;
         for (const char16_t c : text)
@@ -75,7 +75,7 @@ namespace rct3::ui
         return width;
     }
 
-    std::vector<TextLine> break_lines(const Font& font, std::u16string_view text, float max_width)
+    std::vector<TextLine> break_lines(const font::Font& font, std::u16string_view text, float max_width)
     {
         std::vector<TextLine> lines;
         std::size_t start = 0;
@@ -117,7 +117,7 @@ namespace rct3::ui
         return lines;
     }
 
-    void draw_text(DrawList& list, const Font& font, std::u16string_view text, const Rect& box, const TextStyle& style)
+    void draw_text(DrawList& list, const font::Font& font, std::u16string_view text, const Rect& box, const TextStyle& style)
     {
         const std::vector<TextLine> lines = break_lines(font, text, style.wrap ? box.width() : 0);
         const float height = font.line_height() * static_cast<float>(lines.size());

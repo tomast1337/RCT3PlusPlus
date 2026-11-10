@@ -9,7 +9,7 @@
 #pragma once
 
 #include "ovl/texture/image.hpp"
-#include "ui/font.hpp"
+#include "ui/font/font.hpp"
 
 #include <cstdint>
 #include <expected>
@@ -70,6 +70,6 @@ namespace rct3::ui
     [[nodiscard]] std::expected<BakedFont, std::string> bake_truetype(const TrueTypeFile& file, float em_pixels, std::span<const CodeRange> ranges, const BakeOptions& options = { });
 
     /// The baked font on its uploaded pages, in the order of BakedFont::pages.
-    [[nodiscard]] Font font_from_baked(const BakedFont& baked, std::span<const Font::Page> pages);
+    [[nodiscard]] font::Font font_from_baked(const BakedFont& baked, std::span<const font::Font::Page> pages);
 
 } // namespace rct3::ui

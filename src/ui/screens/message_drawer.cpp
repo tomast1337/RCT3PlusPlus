@@ -245,7 +245,7 @@ namespace rct3::ui
         since_press_ += context.elapsed;
 
         // Each message's row is as tall as its text wrapped to the row's width.
-        const auto font = context.fonts ? context.fonts->get(FontRole::Small) : std::nullopt;
+        const auto font = context.fonts ? context.fonts->get(font::FontRole::Small) : std::nullopt;
         row_heights_.clear();
         for (const auto& m : messages_)
         {
@@ -326,7 +326,7 @@ namespace rct3::ui
         draw_drawer_frame(context, style_, r);
 
         // The newest message at the bottom, older ones above it.
-        const auto font = context.fonts.get(FontRole::Small);
+        const auto font = context.fonts.get(font::FontRole::Small);
         float bottom = r.y1 - kFirstRow;
         for (std::size_t i = skipped_; i < messages_.size() && i < row_heights_.size() && bottom > r.y0; ++i)
         {

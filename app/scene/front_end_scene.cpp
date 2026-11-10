@@ -204,7 +204,7 @@ namespace rct3::scene
     {
         scene.list.clear();
         scene.list.set_scale(scale_for(device, scene));
-        static const ui::FontSet kNoFonts;
+        static const ui::font::FontSet kNoFonts;
         ui::DrawContext context { scene.list, scene.assets.skins, scene.current_fonts != nullptr ? *scene.current_fonts : kNoFonts, scene.assets.palette };
         // The pictures show through the front screen's open corner and circle.
         const ui::Rect& screen = scene.live->desktop.root().rect();

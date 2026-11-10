@@ -101,7 +101,7 @@ namespace rct3::ui
 
         Label& add_label(Widget& parent, std::string name, std::u16string text, Placement placement, Color colour, Align align = Align::Start)
         {
-            Label& l = parent.add<Label>(std::move(name), std::move(text), FontRole::Small);
+            Label& l = parent.add<Label>(std::move(name), std::move(text), font::FontRole::Small);
             l.placement = placement;
             l.style.colour = colour;
             l.style.horizontal = align;

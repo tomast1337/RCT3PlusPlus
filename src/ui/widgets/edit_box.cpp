@@ -76,7 +76,7 @@ namespace rct3::ui
         }
 
         // The character position nearest to `x` units from the start of the text.
-        std::size_t position_at(const Font& font, const std::u16string& s, float x)
+        std::size_t position_at(const font::Font& font, const std::u16string& s, float x)
         {
             float left = 0;
             for (std::size_t i = 0; i < s.size();)

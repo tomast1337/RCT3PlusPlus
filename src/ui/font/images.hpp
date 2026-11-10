@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui
+namespace rct3::ui::font
 {
 
     struct FontImages
@@ -29,4 +29,4 @@ namespace rct3::ui
     /// pixels in the same overlay.
     [[nodiscard]] std::expected<std::vector<FontImages>, std::string> load_font_images(const std::filesystem::path& path);
 
-} // namespace rct3::ui
+} // namespace rct3::ui::font

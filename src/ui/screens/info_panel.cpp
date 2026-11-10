@@ -45,12 +45,12 @@ namespace rct3::ui
         body_->clip_children = true;
         bar_ = &add<ScrollBar>("scroll", style_.menu.bar, Orientation::Vertical);
         // Over the band along the strip's top, outside the body, which cuts its lines to itself.
-        title_ = &add<Label>("title", std::u16string { }, FontRole::Medium);
+        title_ = &add<Label>("title", std::u16string { }, font::FontRole::Medium);
         title_->style.colour = style_.text_colour;
         title_->style.vertical = Align::Centre;
         title_->copyable = true;
         title_->selection_colour = hex("#ffffff60"); // The band is blue, as the usual tint is
-        view_text_ = &add<Label>("view_text", std::u16string { }, FontRole::Medium);
+        view_text_ = &add<Label>("view_text", std::u16string { }, font::FontRole::Medium);
         view_text_->style.colour = style_.text_colour;
         view_text_->style.horizontal = Align::Centre;
         view_text_->style.vertical = Align::Centre;
@@ -204,7 +204,7 @@ namespace rct3::ui
         striped_ = !page.lines.empty() || std::ranges::any_of(page.controls, [](const InfoControl& c) { return c.kind == InfoControlKind::Tick && !c.icon.empty(); });
         const Color ink = paper_ ? style_.paper_text_colour : style_.text_colour;
         float y = 0;
-        const auto line = [&](std::string name, const std::u16string& text, float x, float width, FontRole font) -> Label& {
+        const auto line = [&](std::string name, const std::u16string& text, float x, float width, font::FontRole font) -> Label& {
             Label& l = body_->add<Label>(std::move(name), text, font);
             l.placement = top_left(x, y, width, info_panel::kLineHeight);
             l.style.colour = ink;
@@ -213,7 +213,7 @@ namespace rct3::ui
         title_->text = page.title;
         if (!page.heading.empty())
         {
-            line("heading", page.heading, 0, info_panel::kPageWidth, FontRole::Small);
+            line("heading", page.heading, 0, info_panel::kPageWidth, font::FontRole::Small);
             y += info_panel::kLineHeight;
         }
         if (page.sections.size() > 1 && page.section_list)
@@ -238,7 +238,7 @@ namespace rct3::ui
                 // Plain words: the shown one stands out by its colour.
                 Button& b = body_->add<Button>(std::format("section{}", i), std::string { });
                 b.text = page.sections[i];
-                b.font = FontRole::Tiny;
+                b.font = font::FontRole::Tiny;
                 if (paper_)
                     b.text_colour = i == page.section ? ink : style_.coded.band;
                 else
@@ -260,8 +260,8 @@ namespace rct3::ui
                     const float width = (info_panel::kPageWidth - info_panel::kRingReach) / 2 - info_panel::kPairGap;
                     const float x = right ? info_panel::kPageWidth - info_panel::kRingReach - width : 0;
                     // The value at the column's right edge, so a long label keeps the room a short value leaves it.
-                    line(keyed_name(l.name, "label", i), l.label, x, width, FontRole::Small);
-                    line(keyed_name(l.name, "value", i), l.value, x, width, FontRole::Small).style.horizontal = Align::End;
+                    line(keyed_name(l.name, "label", i), l.label, x, width, font::FontRole::Small);
+                    line(keyed_name(l.name, "value", i), l.value, x, width, font::FontRole::Small).style.horizontal = Align::End;
                     if (right)
                         y += info_panel::kLineHeight;
                     right = !right;
@@ -280,7 +280,7 @@ namespace rct3::ui
                     body_->add<Panel>(keyed_name(l.name, "icon", i), l.icon).placement = top_left(0, y + (info_panel::kLineHeight - info_panel::kLineIcon) / 2, info_panel::kLineIcon, info_panel::kLineIcon);
                     label_left = info_panel::kLineIcon + info_panel::kLineIconGap;
                 }
-                Label& label = line(keyed_name(l.name, "label", i), l.label, label_left, label_width - label_left, FontRole::Small);
+                Label& label = line(keyed_name(l.name, "label", i), l.label, label_left, label_width - label_left, font::FontRole::Small);
                 // A bar goes under its value, so it is made first; place_page puts it where the value goes.
                 Panel* bar = l.bar ? &body_->add<Panel>(keyed_name(l.name, "bar", i), std::string { }) : nullptr;
                 Panel* filled = l.bar ? &body_->add<Panel>(keyed_name(l.name, "filled", i), std::string { }) : nullptr;
@@ -297,7 +297,7 @@ namespace rct3::ui
                     face.placement = top_left(info_panel::kValueColumn, y + (info_panel::kLineHeight - info_panel::kLineIcon) / 2, info_panel::kLineIcon, info_panel::kLineIcon);
                     value_icons_.push_back(&face);
                 }
-                Label& value = line(keyed_name(l.name, "value", i), l.value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, FontRole::Small);
+                Label& value = line(keyed_name(l.name, "value", i), l.value, info_panel::kValueColumn, info_panel::kPageWidth - info_panel::kValueColumn, font::FontRole::Small);
                 if (!l.value.empty())
                     value_rows_.push_back({ &label, &value, bar, filled, std::clamp(l.bar.value_or(0), 0.0f, 1.0f) });
                 y += info_panel::kLineHeight;
@@ -306,7 +306,7 @@ namespace rct3::ui
                 y += info_panel::kLineHeight;
             if (!page.note.empty() && to == page.lines.size())
             {
-                line("note", page.note, 0, info_panel::kPageWidth, FontRole::Small);
+                line("note", page.note, 0, info_panel::kPageWidth, font::FontRole::Small);
                 y += info_panel::kLineHeight;
             }
         };
@@ -325,7 +325,7 @@ namespace rct3::ui
             {
                 // Each number centred on its height up the plot.
                 const float at = page.graph_axis.size() > 1 ? plot_height * static_cast<float>(i) / static_cast<float>(page.graph_axis.size() - 1) : 0;
-                Label& n = line(std::format("axis{}", i), page.graph_axis[i], 0, left - info_panel::kPairGap, FontRole::Tiny);
+                Label& n = line(std::format("axis{}", i), page.graph_axis[i], 0, left - info_panel::kPairGap, font::FontRole::Tiny);
                 n.placement = top_left(0, y + at - info_panel::kLineHeight / 2, left - info_panel::kPairGap, info_panel::kLineHeight);
                 n.style.horizontal = Align::End;
                 n.style.vertical = Align::Centre;
@@ -342,7 +342,7 @@ namespace rct3::ui
                     continue;
                 // Kept inside the plot, clear of the numbers up its left.
                 const float x = left + std::clamp(plot_x(t.back, plot.span(), plot_width), 20.0f, plot_width - 20);
-                Label& word = line(std::format("mark{}", i), t.label, 0, 0, FontRole::Tiny);
+                Label& word = line(std::format("mark{}", i), t.label, 0, 0, font::FontRole::Tiny);
                 word.placement = top_left(x - 20, y + plot_height - info_panel::kLineHeight, 40, info_panel::kLineHeight);
                 word.style.horizontal = Align::Centre;
                 word.style.vertical = Align::End;
@@ -356,7 +356,7 @@ namespace rct3::ui
                     plot.series.push_back({ .values = page.graph[i].values, .colour = colour, .full = page.graph[i].full, .centred = page.graph[i].centred });
                 if (!page.graph_axis.empty())
                     continue;
-                Label& name = body_->add<Label>(keyed_name(page.graph[i].key, page.graph[i].key.empty() ? "series" : "", i), page.graph[i].name, FontRole::Small);
+                Label& name = body_->add<Label>(keyed_name(page.graph[i].key, page.graph[i].key.empty() ? "series" : "", i), page.graph[i].name, font::FontRole::Small);
                 name.placement = top_left(width * static_cast<float>(i), y, width, info_panel::kLineHeight);
                 name.style.colour = colour;
             }
@@ -379,7 +379,7 @@ namespace rct3::ui
             const bool joins = c.beside && !control_rows_.empty() && control_rows_.back().column == column;
             const float top = joins ? control_rows_.back().y : bottom[column];
             bottom[column] = std::max(joins ? bottom[column] : top, top + height + (striped ? 0 : 1));
-            Label& label = line(keyed_name(c.name, "label", i), c.label, 0, 0, FontRole::Small);
+            Label& label = line(keyed_name(c.name, "label", i), c.label, 0, 0, font::FontRole::Small);
             label.style.vertical = Align::Centre;
             if (c.colour)
                 label.style.colour = *c.colour;
@@ -430,7 +430,7 @@ namespace rct3::ui
                     // An icon sits on a bubble, as the tabs' do.
                     Button& b = body_->add<Button>(name, c.icon.empty() ? style_.button : style_.tab_face, c.icon);
                     b.text = c.text;
-                    b.font = FontRole::Small;
+                    b.font = font::FontRole::Small;
                     b.icon_scale = info_panel::kPaintSize / info_panel::kIconSize;
                     b.kept_down = c.value != 0;
                     w = &b;
@@ -475,7 +475,7 @@ namespace rct3::ui
             Label* shown = nullptr;
             if (!c.shown.empty())
             {
-                shown = &line(keyed_name(c.name, "value", i), c.shown, 0, 0, FontRole::Small);
+                shown = &line(keyed_name(c.name, "value", i), c.shown, 0, 0, font::FontRole::Small);
                 shown->style.vertical = Align::Centre;
             }
             controls_.emplace_back(c, w);
@@ -513,7 +513,7 @@ namespace rct3::ui
         set_body_size(y > 0 ? page_width_ : 0, y);
     }
 
-    void InfoPanel::place_page(std::optional<const Font&> font)
+    void InfoPanel::place_page(std::optional<const font::Font&> font)
     {
         const float gap = info_panel::kPairGap;
         // shortcut: without the fonts a label is guessed at 6 units a letter; they are measured on the next update.
@@ -843,7 +843,7 @@ namespace rct3::ui
         }
         // The parts follow the screen's corner.
         place();
-        if (const auto f = context.fonts && !measured_ ? context.fonts->get(FontRole::Small) : std::nullopt)
+        if (const auto f = context.fonts && !measured_ ? context.fonts->get(font::FontRole::Small) : std::nullopt)
         {
             place_page(f);
             measured_ = true;

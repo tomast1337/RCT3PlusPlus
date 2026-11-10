@@ -60,7 +60,7 @@ namespace
     {
         ui::SkinLibrary skins;
         ui::PainterTextures textures;
-        ui::FontSet fonts; // Empty: frames draw no text
+        ui::font::FontSet fonts; // Empty: frames draw no text
     };
 
     // A panel to compare: the size of the picture in units, and how to draw its frame in a look.

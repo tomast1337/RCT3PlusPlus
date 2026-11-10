@@ -14,7 +14,7 @@ namespace rct3::ui
         constexpr std::size_t kChannels = 4;
     } // namespace
 
-    ovl::texture::RgbaImage sign_text_loop(const Font& font, std::span<const ovl::texture::RgbaImage> pages, std::u16string_view text, std::uint32_t height)
+    ovl::texture::RgbaImage sign_text_loop(const font::Font& font, std::span<const ovl::texture::RgbaImage> pages, std::u16string_view text, std::uint32_t height)
     {
         float width = 0;
         for (const char16_t c : text)

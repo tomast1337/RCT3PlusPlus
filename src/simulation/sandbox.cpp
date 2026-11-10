@@ -2,6 +2,7 @@
 #include "simulation/sandbox.hpp"
 
 #include "core/maybe.hpp"
+#include "simulation/parties.hpp"
 #include "simulation/systems.hpp"
 
 #include <format>

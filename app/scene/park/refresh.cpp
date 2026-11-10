@@ -19,6 +19,7 @@
 #include "simulation/components.hpp"
 #include "simulation/crowds.hpp"
 #include "simulation/import_park.hpp"
+#include "simulation/parties.hpp"
 #include "simulation/staff_motions.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"

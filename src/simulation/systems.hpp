@@ -158,11 +158,6 @@ namespace rct3::simulation
     /// against `ideal`) and its entrance fee against `fair_fee`.
     [[nodiscard]] double drawn(const Draw& draw, std::uint32_t guests, std::uint32_t ideal, std::int64_t fair_fee);
 
-    /// How often each PartyKind comes in at the gate against the others: the park's mix (PartyMix, else the
-    /// tuning's), tilted toward teens by wild rides and toward families by gentle ones, and after dark mostly
-    /// teens.
-    [[nodiscard]] std::array<double, kPartyKinds> party_weights(const SimWorld& world, bool night);
-
     /// Whether a time of day (a fraction from midnight) is dark: from 20:00 to 6:00, our own hours.
     [[nodiscard]] bool is_night(float time);
 
@@ -178,6 +173,12 @@ namespace rct3::simulation
 
     /// The guest thinks `kind` about `about` at `now` (seconds into the run), unless they thought it lately.
     void think(entt::registry& r, entt::entity guest, ThoughtKind kind, entt::entity about, float now);
+
+    /// Stands `pose` where `s` has got to between its two tiles, in its lanes, on the path's surface.
+    void place(const PathNetwork& paths, const Stride& s, Pose& pose);
+
+    /// Where riders come off `ride` on to the paths at its station `station` (0 the first).
+    [[nodiscard]] NodeId exit_of(const entt::registry& r, entt::entity ride, std::size_t station = 0);
 
     /// Stops `stride` at `node`, its route dropped, and stands `pose` there.
     void stop_at(const PathNetwork& paths, NodeId node, Stride& stride, Pose& pose);

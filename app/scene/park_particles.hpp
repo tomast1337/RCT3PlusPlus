@@ -32,7 +32,7 @@ namespace rct3::scene
             std::vector<const particles::Sprite*> sprites;
             glm::vec3 position { 0.0f };
             std::string effect { }; ///< Its file's name
-            float size = 1;         ///< As park::PlacedEffect::size
+            float size = 1;         ///< As park::object::PlacedEffect::size
             bool awake = false;     ///< Ran in the last advance, so it is drawn
         };
 

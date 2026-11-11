@@ -436,8 +436,8 @@ namespace rct3::simulation::tuning
         double tracked_running_share = 0.02;
         double flat_running_share = 0.0017;
         /// A facility built here (a toilet, a cash machine, first aid) costs this to run each week, whatever its kind.
-        /// Tuned against the facilities of saved scenarios.
-        Money facility_running_cost { 105 };
+        /// Tuned against the facilities of the base campaign's saved scenarios.
+        Money facility_running_cost { 80 };
     };
 
     /// Trains crashing off the end of their track.

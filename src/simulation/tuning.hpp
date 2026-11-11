@@ -424,6 +424,19 @@ namespace rct3::simulation::tuning
         Money per_excitement { 46'000 }; ///< An open ride is worth this times its excitement rating squared
     };
 
+    /// What the park is charged each week.
+    struct WeeklyCharges
+    {
+        /// A loan's yearly rate of interest is spread over this many weeks. Tuned against the ledgers of saved
+        /// scenarios, so that a week's interest on their loans at their rates comes to what their ledgers show.
+        double interest_weeks = 48;
+        /// A ride built here costs this share of its build cost to run each week: a tracked ride its track's, a
+        /// flat ride its own. Tuned against the open rides of saved scenarios, from what each costs to run against
+        /// what building it costs; a flat ride's share is far smaller.
+        double tracked_running_share = 0.02;
+        double flat_running_share = 0.0017;
+    };
+
     /// Trains crashing off the end of their track.
     struct Crashes
     {
@@ -695,6 +708,7 @@ namespace rct3::simulation::tuning
         Boats boats;
         Prizes prizes;
         ParkValue park_value;
+        WeeklyCharges charges;
         Crashes crashes;
         Vips vips;
         Shows shows;

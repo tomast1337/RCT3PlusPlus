@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/park/finance.hpp"
 
+#include "simulation/components.hpp"
+#include "simulation/day_clock.hpp"
+#include "simulation/park/state.hpp"
+#include "simulation/sim_world.hpp"
+#include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
@@ -133,6 +138,31 @@ namespace rct3::simulation::park
             if (ride.kind != save::model::RideKind::Special && !ride.base.demolished && ride.base.state == save::model::AttractionState::Open && ride.assessment.valid)
                 worth += ride.assessment.excitement * ride.assessment.excitement;
         return std::max(guests, 0) * kTuning.park_value.per_guest.value + std::llround(worth * static_cast<float>(kTuning.park_value.per_excitement.value));
+    }
+
+    std::int64_t weekly_interest(std::int64_t loan, float rate_percent)
+    {
+        return std::llround(static_cast<double>(loan) * static_cast<double>(rate_percent) / 100 / kTuning.charges.interest_weeks);
+    }
+
+    std::int64_t running_cost(std::int64_t build_cost, bool tracked)
+    {
+        return std::llround(static_cast<double>(build_cost) * (tracked ? kTuning.charges.tracked_running_share : kTuning.charges.flat_running_share));
+    }
+
+    void step_charges(SimWorld& world)
+    {
+        constexpr float kSecondsPerWeek = kSecondsPerHour * save::model::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
+        entt::registry& r = world.registry;
+        auto& charges = r.ctx().emplace<Charges>();
+        for (charges.week.value += kTickSeconds; charges.week.value >= kSecondsPerWeek; charges.week.value -= kSecondsPerWeek)
+        {
+            charges.interest.value += weekly_interest(charges.loan, charges.rate);
+            // A ride broken down is shut to guests but still open to the player, and goes on costing.
+            for (const auto [e, a] : r.view<const Attraction>().each())
+                if (const auto* upkeep = r.try_get<Upkeep>(e); a.kind == AttractionKind::Ride && (a.open || (upkeep != nullptr && upkeep->broken)))
+                    charges.running.value += a.running_cost.value;
+        }
     }
 
 } // namespace rct3::simulation::park

@@ -1496,6 +1496,14 @@ namespace rct3::scene::park
                     scene.supplies_seen = *supplies;
                 if (receipts)
                     scene.receipts_seen = *receipts;
+                // The loan's interest and the open rides' running costs come out of it whether it can pay or not.
+                {
+                    auto& charges = scene.sim.registry.ctx().emplace<simulation::Charges>();
+                    charges.loan = scene.park.loan;
+                    charges.rate = scene.park_model.finance.interest_rate_percent;
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.interest.value, 0), simulation::park::LedgerLine::LoanInterest, true);
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.running.value, 0), simulation::park::LedgerLine::RideRunningCosts, true);
+                }
                 // The staff's mood into the saved staff, for their windows to show.
                 for (const ShownPerson& p : scene.shown_people)
                     if (const auto* staff = p.staff && p.saved < scene.people.staff.size() && scene.sim.registry.valid(p.guest) ? scene.sim.registry.try_get<simulation::Staff>(p.guest) : nullptr)

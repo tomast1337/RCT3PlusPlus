@@ -13,6 +13,11 @@
 #include <cstdint>
 #include <optional>
 
+namespace rct3::simulation
+{
+    struct SimWorld;
+} // namespace rct3::simulation
+
 namespace rct3::simulation::park
 {
 
@@ -45,5 +50,19 @@ namespace rct3::simulation::park
     /// nothing. The company is worth this and its cash less its loan; where money never runs out, the cash counts
     /// for nothing.
     [[nodiscard]] std::int64_t park_value(std::int32_t guests, const save::model::RideModel& rides);
+
+    /// A week's interest on `loan` (hundredths) at a yearly rate of `rate_percent`: the year's interest spread
+    /// over kTuning.charges.interest_weeks weeks, rounded to the hundredth.
+    [[nodiscard]] std::int64_t weekly_interest(std::int64_t loan, float rate_percent);
+
+    /// What a ride built here costs to run each week, from what it cost to build (hundredths): a set share of it,
+    /// larger for a `tracked` ride's track than for a flat ride.
+    [[nodiscard]] std::int64_t running_cost(std::int64_t build_cost, bool tracked);
+
+    /// As each week ends, charges the loan's interest and each open ride's running cost to Charges in the
+    /// registry's context, for whoever shows the park to take from its cash, broken down or not. Stalls, facilities
+    /// and pools pay none.
+    /// shortcut: the week runs from when the park was opened, as the payroll's does.
+    void step_charges(SimWorld& world);
 
 } // namespace rct3::simulation::park

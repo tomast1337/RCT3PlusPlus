@@ -70,6 +70,7 @@
 #include "simulation/objectives.hpp"
 #include "simulation/park/graphs.hpp"
 #include "simulation/park/state.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/swimming.hpp"
 #include "ui/desktop.hpp"

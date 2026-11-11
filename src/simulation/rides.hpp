@@ -29,7 +29,22 @@ namespace rct3::simulation
     struct Weather;
     enum class AgeGroup : std::uint8_t;
     enum class GestureKind : std::uint8_t;
-    enum class RideReaction : std::uint8_t;
+
+    /// How a rider on a coaster shows what they feel.
+    enum class RideReaction : std::uint8_t
+    {
+        Waiting,   ///< In the station or pulled up a lift
+        Calm,      ///< Sitting through it
+        HandsUp,   ///< Loving it, or floating over a hill
+        CoverEyes, ///< Too wild for them, going down
+        Strained,  ///< Pressed hard into their seat or sideways
+    };
+
+    /// A guest seated on a ride, and how they react to it now.
+    struct Thrill
+    {
+        RideReaction reaction = RideReaction::Waiting;
+    };
 
     /// Where a ride without trains is in its cycle. It loads standing still, starts, runs its loops, stops, and
     /// lets its riders off as it goes back to loading.

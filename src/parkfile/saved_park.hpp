@@ -24,6 +24,8 @@
 //              shows are read again from the original park.
 //   "GOAL" v1  SavedGoals: how far the scenario's goals have got. Only for parks that set goals; without it,
 //              they start again from the original park.
+//   "RSCH" v1  simulation::Research: how far research has got and what it has invented. Saves made before it
+//              lack it; their research starts again from the original park.
 //   "BRKN" v1  std::vector<std::uint64_t>: the path items vandals have broken, by object id. Only when there
 //              are any.
 //   "FALL" v1  std::vector<save::model::Waterfall>: the park's waterfalls, with those the player made or deleted.
@@ -52,6 +54,7 @@
 #include "simulation/day_clock.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/park/rating.hpp"
+#include "simulation/research.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/staff/patrol.hpp"
 #include "simulation/swimming.hpp"
@@ -206,6 +209,7 @@ namespace rct3::parkfile
         std::vector<save::model::ObjectId> no_queue_signs; ///< Rides whose queues have no signs
         std::optional<std::vector<save::model::RideShow>> shows;
         std::optional<SavedGoals> goals;
+        std::optional<simulation::Research> research;                  ///< None in saves made before research was kept
         std::vector<std::uint64_t> broken_items;                       ///< Path items vandals have broken, by object id
         std::optional<std::vector<save::model::Waterfall>> waterfalls; ///< None in saves made before waterfalls were kept
         std::optional<simulation::DayMode> day_mode;                   ///< None in saves made before the mode was kept

@@ -308,7 +308,26 @@ namespace rct3::scene
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
             const save::model::LedgerPeriod& l = park_->park_model.finance.ledger[0];
-            return { { "landPurchase", l.land_purchase }, { "landscaping", l.landscaping }, { "rideConstruction", l.ride_construction } };
+            return { { "landPurchase", l.land_purchase }, { "landscaping", l.landscaping }, { "rideConstruction", l.ride_construction }, { "research", l.research } };
+        });
+        engine_.define("park.research", [this](const Json&) -> Json {
+            const park::ParkScene& scene = park_of(park_);
+            const simulation::Research& r = scene.research;
+            // Items are told by their symbols, which a park saved and opened again keeps.
+            const auto symbol = [&](std::uint64_t id) -> Json {
+                const auto entry = std::ranges::find(scene.park_model.content.entries, id, &save::model::AssetRequirement::id);
+                return entry != scene.park_model.content.entries.end() ? Json(entry->symbol) : Json(nullptr);
+            };
+            Json invented = Json::array();
+            for (const std::uint64_t id : r.invented)
+                invented.push_back(symbol(id));
+            return { { "budget", r.budget }, { "spent", r.spent }, { "current", r.current ? symbol(*r.current) : Json(nullptr) }, { "invented", std::move(invented) }, { "left", scene.research_items ? Json(scene.research_items->size()) : Json(nullptr) } };
+        });
+        engine_.define("park.setResearch", [this](const Json& a) -> Json {
+            if (a.size() != 1 || !a[0].is_number_integer() || a[0].get<std::int64_t>() < 0)
+                throw std::invalid_argument("park.setResearch takes a monthly budget in hundredths");
+            park_of(park_).research.budget = a[0].get<std::int64_t>();
+            return Json(nullptr);
         });
         engine_.define("park.history", [this](const Json&) -> Json {
             if (park_ == nullptr)
@@ -723,6 +742,16 @@ namespace rct3::scene
             for (const rct3::park::pools::PoolRoom& room : pools.rooms)
                 rooms.push_back({ { "col", room.col }, { "row", room.row } });
             return Json { { "squares", squares }, { "ramps", ramps }, { "rooms", rooms } };
+        });
+        engine_.define("build.offers", [this](const Json& a) -> Json {
+            if (a.size() != 1 || !a[0].is_string())
+                throw std::invalid_argument("build.offers takes an item's symbol");
+            const park::ParkScene& scene = park_of(park_);
+            const auto items = build_items(scene);
+            if (!items)
+                return nullptr;
+            const std::string symbol = a[0].get<std::string>();
+            return std::ranges::any_of(*items, [&](const rct3::park::BuildItem& item) { return item.symbol == symbol && scene.build.offer.offers(item); });
         });
         engine_.define("build.flatRides", [this](const Json&) -> Json {
             const auto items = build_items(park_of(park_));

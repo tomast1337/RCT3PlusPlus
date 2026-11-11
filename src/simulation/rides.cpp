@@ -743,7 +743,7 @@ namespace rct3::simulation
                         // slide free, on the complex's ticket.
                         const bool inspector = r.all_of<Staff>(guest);
                         const Money price = r.all_of<Swimmer>(guest) ? Money { } : attraction.price;
-                        if (!attraction.open || (!inspector && !pay(r, guest, price, &Wallet::spent_rides)))
+                        if (!attraction.open || (!inspector && !pay(r, guest, price, &Wallet::spent_rides, park::LedgerLine::RideTickets)))
                         {
                             if (attraction.open)
                             {

@@ -1484,20 +1484,18 @@ namespace rct3::scene::park
                     simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, payroll->paid.value - scene.wages_seen, simulation::park::LedgerLine::StaffWages, true);
                     scene.wages_seen = payroll->paid.value;
                 }
-                // So are pools' cleaning fluids and stalls' stock.
-                if (const auto* supplies = scene.sim.registry.ctx().find<simulation::Supplies>())
-                {
-                    if (scene.park.cash)
-                        *scene.park.cash -= supplies->paid.value - scene.supplies_seen;
-                    scene.supplies_seen = supplies->paid.value;
-                }
-                // What guests pay for rides, shops and entry goes into it.
-                if (const auto* receipts = scene.sim.registry.ctx().find<simulation::Receipts>())
-                {
-                    if (scene.park.cash)
-                        *scene.park.cash += receipts->paid.value - scene.receipts_seen;
-                    scene.receipts_seen = receipts->paid.value;
-                }
+                // So are pools' cleaning fluids and stalls' stock, and what guests pay for rides, shops and entry
+                // goes into it, each on its own line. A line nothing moved on stays as it was, unshown if the park
+                // file never had it.
+                const auto* supplies = scene.sim.registry.ctx().find<simulation::Supplies>();
+                const auto* receipts = scene.sim.registry.ctx().find<simulation::Receipts>();
+                for (std::size_t line = 0; line < simulation::park::kLedgerLines; ++line)
+                    if (const std::int64_t cost = (supplies ? supplies->paid[line].value - scene.supplies_seen.paid[line].value : 0) - (receipts ? receipts->paid[line].value - scene.receipts_seen.paid[line].value : 0); cost != 0)
+                        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, static_cast<simulation::park::LedgerLine>(line), true);
+                if (supplies)
+                    scene.supplies_seen = *supplies;
+                if (receipts)
+                    scene.receipts_seen = *receipts;
                 // The staff's mood into the saved staff, for their windows to show.
                 for (const ShownPerson& p : scene.shown_people)
                     if (const auto* staff = p.staff && p.saved < scene.people.staff.size() && scene.sim.registry.valid(p.guest) ? scene.sim.registry.try_get<simulation::Staff>(p.guest) : nullptr)

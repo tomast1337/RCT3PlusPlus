@@ -6,15 +6,20 @@
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 
+#include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
+#include <utility>
 
 using namespace rct3::simulation;
+using rct3::simulation::park::LedgerLine;
 
-TEST_CASE("what guests pay at shops and rides adds up in the park's receipts")
+TEST_CASE("a ride ticket, a food or drink sale and the stock it took each land on their own ledger line")
 {
     Sandbox park;
     park.path({ 0, 0 }, { 6, 0 });
     const auto stand = park.shop("Drinks", Product::Drink, { 0, 0 }, 150);
+    park.world().registry.get<Shop>(stand).menu = { { .product = Product::Drink, .price = { 150 }, .symbol = "Cola", .cost = { 40 } } };
     const auto ride = park.flat_ride("Spinner", { 6, 0 }, 200, { .capacity = 2, .cycle_seconds = 5 });
     auto& r = park.world().registry;
     park.guest({ 3, 0 }, { .thirst = 0.9f });
@@ -23,7 +28,14 @@ TEST_CASE("what guests pay at shops and rides adds up in the park's receipts")
     CHECK(park.run_until([&] { return r.get<Attraction>(stand).customers >= 1 && r.get<Attraction>(ride).customers >= 1; }, 60));
     const auto* receipts = r.ctx().find<Receipts>();
     REQUIRE(receipts != nullptr);
-    CHECK(receipts->paid.value == r.get<Attraction>(stand).income.value + r.get<Attraction>(ride).income.value);
+    const auto on = [](const auto& lines, LedgerLine line) { return lines.paid[std::to_underlying(line)].value; };
+    CHECK(on(*receipts, LedgerLine::FoodDrinkSales) == r.get<Attraction>(stand).income.value);
+    CHECK(on(*receipts, LedgerLine::RideTickets) == r.get<Attraction>(ride).income.value);
+    CHECK(std::ranges::fold_left(receipts->paid, std::int64_t { 0 }, [](std::int64_t sum, Money m) { return sum + m.value; }) == r.get<Attraction>(stand).income.value + r.get<Attraction>(ride).income.value);
+    const auto* supplies = r.ctx().find<Supplies>();
+    REQUIRE(supplies != nullptr);
+    CHECK(on(*supplies, LedgerLine::FoodDrinkStock) == 40 * r.get<Attraction>(stand).customers);
+    CHECK(std::ranges::fold_left(supplies->paid, std::int64_t { 0 }, [](std::int64_t sum, Money m) { return sum + m.value; }) == on(*supplies, LedgerLine::FoodDrinkStock));
 }
 
 TEST_CASE("guests bring cash and bank around the park's averages, or the tuning's where it sets none")
@@ -95,8 +107,9 @@ TEST_CASE("guests pay the entrance fee at the gate, and a party that cannot is t
                 entry += wallet.spent_entry.value;
             }
             REQUIRE(receipts != nullptr);
-            CHECK(receipts->paid.value == fee * static_cast<std::int64_t>(r.view<Visitor>().size()));
-            CHECK(entry == receipts->paid.value);
+            const std::int64_t gate = receipts->paid[std::to_underlying(LedgerLine::ParkEntranceTickets)].value;
+            CHECK(gate == fee * static_cast<std::int64_t>(r.view<Visitor>().size()));
+            CHECK(entry == gate);
         }
         else
         {

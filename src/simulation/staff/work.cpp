@@ -259,7 +259,7 @@ namespace rct3::simulation::staff
                     if (auto* tank = r.try_get<PoolTank>(staff.ride))
                     {
                         const auto price = kTuning.pools.refill[std::to_underlying(tank->fluid)].value;
-                        r.ctx().emplace<Supplies>().paid.value += std::llround(static_cast<double>(price) * (1 - tank->left.value));
+                        r.ctx().emplace<Supplies>().paid[std::to_underlying(park::LedgerLine::Other)].value += std::llround(static_cast<double>(price) * (1 - tank->left.value));
                         tank->left.value = 1;
                     }
                     staff.ride = entt::null;

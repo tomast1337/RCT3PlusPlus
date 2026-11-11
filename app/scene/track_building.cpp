@@ -331,13 +331,24 @@ namespace rct3::scene
             return BuiltPiece { static_cast<std::size_t>(object - scene.objects.begin()), *laid };
         }
 
+        /// Adds to ride `ride`'s running cost what building `cost` of its track adds (taking it away when below
+        /// nought), on the ride and on the attraction the park runs for it.
+        void add_running_cost(park::ParkScene& scene, save::model::Ride& ride, std::int64_t cost)
+        {
+            ride.base.running_cost = std::max<std::int64_t>(ride.base.running_cost + simulation::park::running_cost(cost, true), 0);
+            for (const auto [e, a] : scene.sim.registry.view<simulation::Attraction>().each())
+                if (a.saved == ride.base.id)
+                    a.running_cost.value = ride.base.running_cost;
+        }
+
         /// Pays back what piece `piece` of ride `ride`, standing as object `object`, cost to build, as pulling the
-        /// whole ride down would, floating it up from where the piece starts.
-        void refund_piece(park::ParkScene& scene, const rct3::park::track::PieceCatalogue& c, const save::model::Ride& ride, const save::model::TrackPiece& piece, const save::model::PlacedObject& object)
+        /// whole ride down would, floating it up from where the piece starts. The ride costs that much less to run.
+        void refund_piece(park::ParkScene& scene, const rct3::park::track::PieceCatalogue& c, save::model::Ride& ride, const save::model::TrackPiece& piece, const save::model::PlacedObject& object)
         {
             const auto shape = rct3::park::track::shape_named(c, piece.symbol);
             if (!shape)
                 return;
+            add_running_cost(scene, ride, -shape->record.cost);
             const std::int64_t back = rct3::park::demolish_refund(shape->record.cost, (ride.base.flags & save::model::AttractionCommon::kNeverOpened) == 0);
             simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, false);
             park::float_money(scene, rct3::park::track::start_of(object, *shape, piece.reversed, scene.grid).position, back);
@@ -1044,6 +1055,7 @@ namespace rct3::scene
             const rct3::park::track::PieceShape& shape = c->pieces[b.picked->index];
             if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, shape.record.cost, simulation::park::LedgerLine::RideConstruction, forced))
                 return;
+            add_running_cost(scene, ride, shape.record.cost);
             ++scene.built;
             // The ground it passes into is cut down round it, sharply or smoothly, the scenery standing there seated
             // again; the ground is built again for that, or for the tunnel it lies in.

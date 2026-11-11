@@ -367,6 +367,7 @@ int main(int argc, char** argv)
     const simulation::park::ParkState state = simulation::park::park_state(park_model ? &*park_model : nullptr, *world_model);
     auto& sky = world.registry.ctx().insert_or_assign(simulation::park::guest_weather(state));
     const std::int64_t fee = park_model && park_model->has_finance ? park_model->finance.entrance_fee : 0;
+    world.registry.ctx().insert_or_assign(simulation::Charges { .loan = state.loan, .rate = park_model && park_model->has_finance ? park_model->finance.interest_rate_percent : 0 });
     const auto& draw = world.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(world_model->pool_water.size()), .rating = state.rating, .guest_cash = { park_model && park_model->has_finance ? park_model->finance.average_guest_cash : 0 }, .guest_bank = { park_model && park_model->has_finance ? park_model->finance.average_guest_bank_funds : 0 } });
     if (weather == "rain" || weather == "storm")
         sky = simulation::Weather { .rain = true, .storm = weather == "storm", .temperature = 15 };
@@ -697,8 +698,8 @@ int main(int argc, char** argv)
         }
         out.info("rides: {:d} breakdowns, {:d} repaired, {:d} inspections, {:d} down now, reliability {:.2f} on average; {:d} mechanics; wages paid {:.2f}", breakdowns, tally.repaired, tally.inspected, down, static_cast<double>(ride_count > 0 ? reliability / static_cast<float>(ride_count) : 0), mechanics, static_cast<double>(payroll ? payroll->paid.value : 0) / 100);
         {
-            // The park's cash over the run: what guests paid in, less the supplies and the staff's wages, each line
-            // of the ledger they went on.
+            // The park's cash over the run: what guests paid in, less the supplies, the staff's wages, the loan's interest and the
+            // rides' running costs, each line of the ledger they went on.
             constexpr std::array<std::string_view, simulation::park::kLedgerLines> kLines { "food and drink sales", "food and drink stock", "land purchase", "landscaping", "loan interest", "marketing", "other", "entry", "prize money", "research", "ride construction", "ride running costs", "ride tickets", "shop sales", "shop stock", "staff training", "staff wages", "pool tickets", "billboards", "viewing gallery tickets", "other animal spending" };
             const auto lines = [&](const auto* by_line) {
                 std::int64_t sum = 0;
@@ -715,9 +716,12 @@ int main(int argc, char** argv)
             const auto [stock, bought] = lines(r.ctx().find<simulation::Supplies>());
             const std::int64_t wages = payroll ? payroll->paid.value : 0;
             const auto* turnstile = r.ctx().find<simulation::Turnstile>();
-            const std::string paid = std::format("guests paid {:.2f} ({}), {:d} parties turned away; supplies {:.2f} ({}); wages {:.2f}", static_cast<double>(in) / 100, received, turnstile ? turnstile->turned_away : 0, static_cast<double>(stock) / 100, bought, static_cast<double>(wages) / 100);
+            const auto* charges = r.ctx().find<simulation::Charges>();
+            const std::int64_t interest = charges ? charges->interest.value : 0;
+            const std::int64_t running = charges ? charges->running.value : 0;
+            const std::string paid = std::format("guests paid {:.2f} ({}), {:d} parties turned away; supplies {:.2f} ({}); wages {:.2f}; loan interest {:.2f}; rides' running costs {:.2f}", static_cast<double>(in) / 100, received, turnstile ? turnstile->turned_away : 0, static_cast<double>(stock) / 100, bought, static_cast<double>(wages) / 100, static_cast<double>(interest) / 100, static_cast<double>(running) / 100);
             if (state.cash)
-                out.info("money: park cash {:.2f} to {:.2f}; {}", static_cast<double>(*state.cash) / 100, static_cast<double>(*state.cash + in - stock - wages) / 100, paid);
+                out.info("money: park cash {:.2f} to {:.2f}; {}", static_cast<double>(*state.cash) / 100, static_cast<double>(*state.cash + in - stock - wages - interest - running) / 100, paid);
             else
                 out.info("money: unlimited; {}", paid);
         }

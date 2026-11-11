@@ -1320,7 +1320,7 @@ namespace rct3::simulation
             return entt::null;
         auto& r = world.registry;
         const entt::entity e = r.create();
-        r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id });
+        r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = { ride.base.running_cost } });
         const auto& rated = kTuning.climbs.rated;
         const bool valid = ride.assessment.valid;
         CycleRide cycle { .capacity = 0, .splash = true };
@@ -1358,7 +1358,7 @@ namespace rct3::simulation
             {
                 auto& r = world.registry;
                 const entt::entity e = r.create();
-                r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id });
+                r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = { ride.base.running_cost } });
                 const auto& rated = kTuning.rivers.rated;
                 const auto valid = ride.assessment.valid;
                 CycleRide cycle { .capacity = 0, .splash = true };
@@ -1414,7 +1414,7 @@ namespace rct3::simulation
             std::vector<NodeId> line = links ? std::move(links->line) : std::vector<NodeId> { };
             auto& r = world.registry;
             const entt::entity e = r.create();
-            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = entrance, .price = ride.ticket_price, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id });
+            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = entrance, .price = ride.ticket_price, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = { ride.base.running_cost } });
             // Rated as the park has it; else from its last test, or a test run of our own.
             std::optional<Ratings> rated;
             if (ride.assessment.valid)

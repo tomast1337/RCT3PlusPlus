@@ -10,6 +10,7 @@
 #include "simulation/day_clock.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
+#include "simulation/park/finance.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/ride_walks.hpp"
@@ -462,6 +463,9 @@ namespace rct3::simulation
 
             // Staff: paid, at their posts and walking the paths at their jobs (simulation/staff/work.cpp).
             staff::step_work(world);
+
+            // Loan interest and rides' running costs (simulation/park/finance.cpp).
+            park::step_charges(world);
 
             // Crowds round entertainers and VIPs (simulation/crowds.cpp).
             step_crowds(world);

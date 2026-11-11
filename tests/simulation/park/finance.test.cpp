@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/park/finance.hpp"
 
+#include "simulation/components.hpp"
+#include "simulation/day_clock.hpp"
+#include "simulation/park/state.hpp"
+#include "simulation/sandbox.hpp"
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -162,4 +167,66 @@ TEST_CASE("a park is worth its guests and its open rides by their excitement")
     rides.rides.push_back(ride(save::model::RideKind::Flat, save::model::AttractionState::Open, 5));
     rides.rides.back().base.demolished = true;
     CHECK(park_value(0, rides) == 20 * point);
+}
+
+namespace
+{
+    constexpr float kWeek = kSecondsPerHour * save::model::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
+} // namespace
+
+TEST_CASE("a loan is charged a week's interest as each week ends, and no loan none")
+{
+    CHECK(weekly_interest(1'000'000, 6) == std::llround(1'000'000 * 0.06 / kTuning.charges.interest_weeks));
+    CHECK(weekly_interest(0, 6) == 0);
+    Sandbox park;
+    auto& charges = park.world().registry.ctx().emplace<Charges>(Charges { .loan = 1'000'000, .rate = 6 });
+    park.run_seconds(kWeek * 0.9f);
+    CHECK(charges.interest.value == 0);
+    park.run_seconds(kWeek * 0.2f);
+    CHECK(charges.interest.value == weekly_interest(1'000'000, 6));
+    CHECK(charges.interest.value > 0);
+    charges.loan = 0;
+    park.run_seconds(kWeek);
+    CHECK(charges.interest.value == weekly_interest(1'000'000, 6));
+}
+
+TEST_CASE("an open ride costs its running cost each week; a closed ride and a stall nothing")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    auto& r = park.world().registry;
+    r.get<Attraction>(park.flat_ride("Twister", { 1, 0 }, 0)).running_cost = { 500 };
+    const auto closed = park.flat_ride("Swinger", { 2, 0 }, 0);
+    r.get<Attraction>(closed).running_cost = { 700 };
+    r.get<Attraction>(closed).open = false;
+    r.get<Attraction>(park.shop("Burgers", Product::Food, { 3, 0 }, 100)).running_cost = { 900 };
+    park.run_seconds(kWeek * 2.1f);
+    CHECK(r.ctx().get<Charges>().running.value == 2 * 500);
+    // Broken down, it is shut to guests but still costs.
+    const auto broken = park.flat_ride("Breaker", { 4, 0 }, 0);
+    r.get<Attraction>(broken).running_cost = { 300 };
+    r.get<Attraction>(broken).open = false;
+    r.emplace<Upkeep>(broken, Upkeep { .broken = true, .inspect_every = -1 });
+    park.run_seconds(kWeek);
+    CHECK(r.ctx().get<Charges>().running.value == 3 * 500 + 300);
+}
+
+TEST_CASE("a ride built here costs a share of its build cost to run")
+{
+    CHECK(running_cost(0, true) == 0);
+    CHECK(running_cost(1'000'000, true) == std::llround(1'000'000 * kTuning.charges.tracked_running_share));
+    CHECK(running_cost(1'000'000, false) == std::llround(1'000'000 * kTuning.charges.flat_running_share));
+    CHECK(running_cost(1'000'000, false) > 0);
+    CHECK(running_cost(2'000'000, true) == 2 * running_cost(1'000'000, true));
+}
+
+TEST_CASE("a park whose money never runs out pays no interest or running costs")
+{
+    ParkState park;
+    save::model::Finance money;
+    std::optional<std::int64_t> kept;
+    CHECK(book(park, money, kept, weekly_interest(1'000'000, 6), LedgerLine::LoanInterest, true));
+    CHECK(book(park, money, kept, 500, LedgerLine::RideRunningCosts, true));
+    CHECK(money.ledger[0].loan_interest == 0);
+    CHECK(money.ledger[0].ride_running_costs == 0);
 }

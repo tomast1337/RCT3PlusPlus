@@ -37,6 +37,7 @@
 #include "simulation/parties.hpp"
 #include "simulation/ratings.hpp"
 #include "simulation/rides.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
@@ -692,7 +693,7 @@ int main(int argc, char** argv)
             std::size_t away = 0; // Patrolled staff outside their area now
             for (const auto [s, stride, area] : r.view<const simulation::Stride, const simulation::Patrol>().each())
                 away += !area.covers(world.paths.nodes()[stride.to].tile);
-            out.info("patrols: {:d} staff on 9x9 areas; {:d} ticks walking outside on no job; litter {:d} on handymen's areas, {:d} off them; {:d} outside their area now; paths no handyman patrols {:d}, no mechanic {:d}", patrolled, strays, on, off, away, simulation::uncovered_paths(world, simulation::StaffRole::Handyman), simulation::uncovered_paths(world, simulation::StaffRole::Mechanic));
+            out.info("patrols: {:d} staff on 9x9 areas; {:d} ticks walking outside on no job; litter {:d} on handymen's areas, {:d} off them; {:d} outside their area now; paths no handyman patrols {:d}, no mechanic {:d}", patrolled, strays, on, off, away, simulation::staff::uncovered_paths(world, simulation::StaffRole::Handyman), simulation::staff::uncovered_paths(world, simulation::StaffRole::Mechanic));
         }
         out.info("rides: {:d} breakdowns, {:d} repaired, {:d} inspections, {:d} down now, reliability {:.2f} on average; {:d} mechanics; wages paid {:.2f}", breakdowns, tally.repaired, tally.inspected, down, static_cast<double>(ride_count > 0 ? reliability / static_cast<float>(ride_count) : 0), mechanics, static_cast<double>(payroll ? payroll->paid.value : 0) / 100);
         {

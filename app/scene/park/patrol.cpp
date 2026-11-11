@@ -6,6 +6,7 @@
 #include "park/terrain_mesh.hpp"
 #include "scene/park/scene.hpp"
 #include "simulation/components.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/systems.hpp"
 #include "ui/screens/person_info.hpp"
 
@@ -106,7 +107,7 @@ namespace rct3::scene::park
             scene.patrol_stroke = patrol == nullptr || !std::ranges::contains(patrol->tiles, *tile);
         }
         const int across = ui::screens::kPatrolBrushes.at(static_cast<std::size_t>(std::clamp(scene.patrol_brush, 0, static_cast<int>(ui::screens::kPatrolBrushes.size()) - 1)));
-        simulation::paint_patrol(scene.sim.registry, staff, *tile, across, *scene.patrol_stroke);
+        simulation::staff::paint_patrol(scene.sim.registry, staff, *tile, across, *scene.patrol_stroke);
         return false;
     }
 

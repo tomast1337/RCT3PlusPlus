@@ -106,23 +106,6 @@ namespace rct3::simulation
     /// from its exit, and those on their way to it or waiting for it go on to something else.
     void pull_down(SimWorld& world, entt::entity attraction);
 
-    /// Path tiles (not queues) that no member of staff in `role` has in their patrol. None when any of them has
-    /// no patrol, as they walk the whole park, or when there is no one in the role.
-    [[nodiscard]] std::size_t uncovered_paths(const SimWorld& world, StaffRole role);
-
-    /// Adds the square of tiles `across` wide round `at` to `staff`'s patrol area, or takes them away, and does
-    /// the same to everyone sharing their zone. An area left with no tiles goes: the whole park again.
-    void paint_patrol(entt::registry& r, entt::entity staff, glm::ivec2 at, int across, bool add);
-
-    /// Empties `staff`'s patrol area and their zone's: the whole park again. They stay on their zone.
-    void clear_patrol(entt::registry& r, entt::entity staff);
-
-    /// Fills the box round `staff`'s patrol area, for them and everyone sharing their zone.
-    void fill_patrol(entt::registry& r, entt::entity staff);
-
-    /// Puts `staff` on shared zone `zone` (0 none). Joining a zone others are on takes its tiles.
-    void join_zone(entt::registry& r, entt::entity staff, std::uint32_t zone);
-
     /// Guests a second coming in at a gate in `weather`: fewer in rain, storms and the cold, more on sunny days.
     [[nodiscard]] double arrivals_per_second(const Weather& weather);
 

@@ -10,6 +10,7 @@
 #include "simulation/animals.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/staff/care.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/systems.hpp"
 #include "strings/unicode.hpp"
 
@@ -192,17 +193,17 @@ namespace rct3::scene::park
         }
         if (const entt::entity e = shown_staff(scene); e != entt::null && change.id == ui::screens::person_control(PatrolClear))
         {
-            simulation::clear_patrol(scene.sim.registry, e);
+            simulation::staff::clear_patrol(scene.sim.registry, e);
             return true;
         }
         else if (e != entt::null && change.id == ui::screens::person_control(PatrolFill))
         {
-            simulation::fill_patrol(scene.sim.registry, e);
+            simulation::staff::fill_patrol(scene.sim.registry, e);
             return true;
         }
         else if (e != entt::null && change.id == ui::screens::person_control(PatrolZone))
         {
-            simulation::join_zone(scene.sim.registry, e, static_cast<std::uint32_t>(std::max(change.value, 0)));
+            simulation::staff::join_zone(scene.sim.registry, e, static_cast<std::uint32_t>(std::max(change.value, 0)));
             return true;
         }
         if (change.id == ui::screens::person_control(PatrolBrush))

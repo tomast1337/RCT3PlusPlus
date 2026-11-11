@@ -13,15 +13,35 @@
 #include "save/model/park.hpp"
 #include "simulation/park/messages.hpp"
 #include "simulation/sim_world.hpp"
+#include "simulation/units.hpp"
 
 #include <cstdint>
 #include <functional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace rct3::simulation
 {
-    struct Vip;
+    /// A guest of honour a scenario's goal sent. They go home only once their visit is over or
+    /// their patience has run out.
+    struct Vip
+    {
+        std::uint64_t goal = 0;                 ///< The goal's condition, by its id
+        std::uint8_t who = 0;                   ///< Which celebrity, as the goal numbers them
+        Share patience { 1 };                   ///< Litter and breakdowns wear it down; at 0 they leave unhappy
+        std::vector<entt::entity> coasters { }; ///< Different coasters they rode that were exciting enough
+        bool fireworks = false;
+        bool themed = false;
+        float came = 0;          ///< Calendar time they came in
+        Seconds look { };        ///< Until they next look round
+        float happiness_sum = 0; ///< Over their looks, for their average
+        std::uint32_t looks = 0;
+        bool leaving = false;
+        Seconds poll { };             ///< Until they next look for fans about them
+        std::uint32_t fans = 0;       ///< Gathered round them for an autograph now
+        std::uint32_t signatures = 0; ///< Autographs given since their last look round
+    };
 
     /// Text key of celebrity `who`'s name; empty for a number with none.
     [[nodiscard]] std::string_view vip_name_key(std::uint8_t who) noexcept;

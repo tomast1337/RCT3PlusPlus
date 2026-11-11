@@ -26,6 +26,7 @@
 #include "simulation/rides.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
+#include "simulation/vip.hpp"
 #include "strings/unicode.hpp"
 #include "ui/key_combo.hpp"
 #include "ui/screens/attraction_info.hpp"

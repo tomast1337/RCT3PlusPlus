@@ -29,6 +29,7 @@
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
+#include "simulation/vip.hpp"
 #include "ui/scale.hpp"
 
 #include <algorithm>

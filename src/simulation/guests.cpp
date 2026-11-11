@@ -13,6 +13,7 @@
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
+#include "simulation/vip.hpp"
 #include "simulation/workers.hpp"
 
 #include <algorithm>

@@ -32,26 +32,6 @@
 namespace rct3::simulation
 {
 
-    /// A guest of honour a scenario's goal sent (see vip.hpp). They go home only once their visit is over or
-    /// their patience has run out.
-    struct Vip
-    {
-        std::uint64_t goal = 0;                 ///< The goal's condition, by its id
-        std::uint8_t who = 0;                   ///< Which celebrity, as the goal numbers them
-        Share patience { 1 };                   ///< Litter and breakdowns wear it down; at 0 they leave unhappy
-        std::vector<entt::entity> coasters { }; ///< Different coasters they rode that were exciting enough
-        bool fireworks = false;
-        bool themed = false;
-        float came = 0;          ///< Calendar time they came in
-        Seconds look { };        ///< Until they next look round
-        float happiness_sum = 0; ///< Over their looks, for their average
-        std::uint32_t looks = 0;
-        bool leaving = false;
-        Seconds poll { };             ///< Until they next look for fans about them
-        std::uint32_t fans = 0;       ///< Gathered round them for an autograph now
-        std::uint32_t signatures = 0; ///< Autographs given since their last look round
-    };
-
     /// Where an entity stands in the world.
     struct Pose
     {

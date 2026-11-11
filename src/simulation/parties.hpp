@@ -70,6 +70,13 @@ namespace rct3::simulation
         entt::entity party = entt::null;
     };
 
+    /// A party member with no way over to the others: they stand looking about for `left` ticks, then are put
+    /// with them.
+    struct Lost
+    {
+        std::uint32_t left = 0;
+    };
+
     /// How often each PartyKind comes in at the gate against the others: the park's mix (PartyMix, else the
     /// tuning's), tilted toward teens by wild rides and toward families by gentle ones, and after dark mostly
     /// teens.

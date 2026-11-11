@@ -388,13 +388,6 @@ namespace rct3::simulation
         Seconds waited { };
     };
 
-    /// A party member with no way over to the others: they stand looking about for `left` ticks, then are put
-    /// with them.
-    struct Lost
-    {
-        std::uint32_t left = 0;
-    };
-
     /// A person the player has picked up, hanging under the cursor: out of the simulation's walking and
     /// queueing till let go, their party waiting for them. Where they hang is the player's to move (Pose).
     struct Held

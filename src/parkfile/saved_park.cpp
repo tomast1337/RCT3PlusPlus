@@ -133,7 +133,7 @@ namespace rct3::parkfile
         for (const auto [e, staff, pose] : r.view<const Staff, const Pose>().each())
         {
             SavedWorker& w = out.staff.emplace_back(SavedWorker { .look = look(e, model.staff.size()), .role = staff.role, .wage = staff.wage.value, .wage_level = staff.wage_level, .training = staff.training, .warnings = staff.warnings, .happiness = staff.happiness.value, .laziness = staff.laziness.value, .position = pose.position, .heading = pose.heading.value, .mended = staff.mended, .think = staff.think.value, .miserable = staff.miserable });
-            if (const auto* patrol = r.try_get<Patrol>(e))
+            if (const auto* patrol = r.try_get<staff::Patrol>(e))
                 w.patrol = *patrol;
         }
         out.model = std::move(model);
@@ -250,7 +250,7 @@ namespace rct3::parkfile
             r.emplace<Staff>(e, staff);
             r.emplace<Pose>(e, w.position, w.heading, w.position, w.heading);
             if (w.patrol)
-                r.emplace<Patrol>(e, *w.patrol);
+                r.emplace<staff::Patrol>(e, *w.patrol);
             if (walks)
                 start_walking(world, e, *at);
             out[i] = e;

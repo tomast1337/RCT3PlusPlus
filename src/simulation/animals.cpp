@@ -3,6 +3,7 @@
 
 #include "simulation/components.hpp"
 #include "simulation/staff/care.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/systems.hpp"
 
 #include <algorithm>
@@ -330,7 +331,7 @@ namespace rct3::simulation
             return staff == nullptr || (staff->tasks & task) != 0;
         };
         const auto covers = [&](entt::entity k, glm::vec3 at) {
-            const auto* patrol = r.try_get<Patrol>(k);
+            const auto* patrol = r.try_get<staff::Patrol>(k);
             return patrol == nullptr || patrol->tiles.empty() || std::ranges::contains(patrol->tiles, glm::ivec2(glm::floor((glm::vec2(at.x, at.z) - world.paths.origin) / world.paths.tile_size)));
         };
         const auto keepers = r.view<KeeperDuty>();

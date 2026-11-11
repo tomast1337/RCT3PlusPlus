@@ -493,19 +493,6 @@ namespace rct3::simulation
         ControlFailure = 8,
     };
 
-    /// The tiles a staff member keeps to. They wander and work only on these, and walk back to them when
-    /// they find themselves outside, after a job elsewhere. Staff without one have the whole park.
-    struct Patrol
-    {
-        std::vector<glm::ivec2> tiles; ///< (col, row), any level
-        std::uint32_t zone = 0;        ///< A shared zone: painting one on it paints all on it; 0 none
-
-        [[nodiscard]] bool covers(const PathTileSpot& at) const
-        {
-            return std::ranges::contains(tiles, glm::ivec2(at.col, at.row));
-        }
-    };
-
     /// The intervals the maintenance page lists, in its order, in seconds: every 10, 20, 30 and 45 minutes, every
     /// hour, every two hours, never.
     inline constexpr std::array<float, 7> kInspectionSeconds { 600, 1200, 1800, 2700, 3600, 7200, -1 };
@@ -602,21 +589,6 @@ namespace rct3::simulation
         // Not the inspector's: a worker's own news (staff/care.hpp), with the worker
         WantsToQuit,
         Quit, ///< The park lets them go once told
-    };
-
-    /// Where an inspector is in their rounds. On a visit they carry a guest's Needs, Mood and Wallet, and the
-    /// guests' code walks, queues and rides them; let go, they are staff again.
-    struct Rounds
-    {
-        std::uint8_t task = 0; ///< The next of their tasks to look at, by its bit among the task flags
-        Seconds gap { };       ///< Before they next look for somewhere to go
-        /// The attractions visited and workers watched, with when (seconds into the run).
-        std::vector<std::pair<entt::entity, float>> seen { };
-        entt::entity watching = entt::null; ///< The worker they are after, or watching
-        float chased_from = 0;              ///< When they set off after them
-        float watched_from = -1;            ///< When they came close enough to watch; -1 not yet
-        /// What they told the player about what, with when: not told again for a while.
-        std::vector<std::tuple<entt::entity, Finding, float>> told { };
     };
 
     /// The inspectors' findings and the workers' own news, oldest first, in the registry's context, for the park

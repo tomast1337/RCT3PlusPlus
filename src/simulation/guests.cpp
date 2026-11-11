@@ -9,6 +9,7 @@
 #include "simulation/parties.hpp"
 #include "simulation/ride_walks.hpp"
 #include "simulation/rides.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
@@ -356,7 +357,7 @@ namespace rct3::simulation
         return true;
     }
 
-    NodeId wander(const PathNetwork& paths, NodeId at, NodeId came, Dice& dice, Walker who, const Patrol* patrol)
+    NodeId wander(const PathNetwork& paths, NodeId at, NodeId came, Dice& dice, Walker who, const staff::Patrol* patrol)
     {
         std::array<NodeId, 4> ways { };
         std::size_t count = 0;

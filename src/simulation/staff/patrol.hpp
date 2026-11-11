@@ -7,8 +7,10 @@
 #include "simulation/components.hpp"
 #include "simulation/entt.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 namespace rct3::simulation
 {
@@ -17,6 +19,19 @@ namespace rct3::simulation
 
 namespace rct3::simulation::staff
 {
+
+    /// The tiles a staff member keeps to. They wander and work only on these, and walk back to them when
+    /// they find themselves outside, after a job elsewhere. Staff without one have the whole park.
+    struct Patrol
+    {
+        std::vector<glm::ivec2> tiles; ///< (col, row), any level
+        std::uint32_t zone = 0;        ///< A shared zone: painting one on it paints all on it; 0 none
+
+        [[nodiscard]] bool covers(const PathTileSpot& at) const
+        {
+            return std::ranges::contains(tiles, glm::ivec2(at.col, at.row));
+        }
+    };
 
     /// Path tiles (not queues) that no member of staff in `role` has in their patrol. None when any of them has
     /// no patrol, as they walk the whole park, or when there is no one in the role.

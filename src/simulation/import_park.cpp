@@ -21,6 +21,7 @@
 #include "simulation/ride_walks.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/staff/care.hpp"
+#include "simulation/staff/work.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
@@ -1721,7 +1722,7 @@ namespace rct3::simulation
                 r.emplace<Needs>(e);
                 r.emplace<Mood>(e);
                 r.emplace<Wallet>(e);
-                r.emplace<Rounds>(e, Rounds { .seen = { { *door, 0.0f } } });
+                r.emplace<staff::Rounds>(e, staff::Rounds { .seen = { { *door, 0.0f } } });
                 r.get<Errand>(e) = { .kind = ErrandKind::Swimming, .target = *door };
                 const Seconds left = saved.time_in_pool ? Seconds { std::max(*saved.time_in_pool, 0.0f) } : kTuning.pools.stay;
                 r.emplace<Swimmer>(e, Swimmer { .changed = true, .left = left, .goal = position, .in_water = std::ranges::any_of(pool.water, within) });

@@ -89,7 +89,7 @@ namespace rct3::scene::park
                 f.guest = &scene.people.guests[p.saved];
             if (const entt::entity e = shown_staff(scene); e != entt::null)
             {
-                const auto* patrol = scene.sim.registry.try_get<simulation::Patrol>(e);
+                const auto* patrol = scene.sim.registry.try_get<simulation::staff::Patrol>(e);
                 f.patrol_tiles = patrol != nullptr ? patrol->tiles.size() : 0;
                 f.painting_patrol = scene.painting_patrol;
                 f.patrol_brush = scene.patrol_brush;

@@ -339,11 +339,11 @@ int main(int argc, char** argv)
             if ((staff.role != simulation::StaffRole::Handyman && staff.role != simulation::StaffRole::Mechanic) || stride.to >= world.paths.nodes().size())
                 continue;
             const simulation::PathTileSpot at = world.paths.nodes()[stride.to].tile;
-            simulation::Patrol area;
+            simulation::staff::Patrol area;
             for (int col = -4; col <= 4; ++col)
                 for (int row = -4; row <= 4; ++row)
                     area.tiles.emplace_back(at.col + col, at.row + row);
-            world.registry.emplace<simulation::Patrol>(e, std::move(area));
+            world.registry.emplace<simulation::staff::Patrol>(e, std::move(area));
             ++patrolled;
         }
     {
@@ -476,7 +476,7 @@ int main(int argc, char** argv)
             ++stepping;
             across += std::ranges::contains(world.paths.nodes()[stride.from].corner, stride.to);
         }
-        for (const auto [e, staff, stride, area] : world.registry.view<const simulation::Staff, const simulation::Stride, const simulation::Patrol>().each())
+        for (const auto [e, staff, stride, area] : world.registry.view<const simulation::Staff, const simulation::Stride, const simulation::staff::Patrol>().each())
             strays += staff.ride == entt::null && stride.route.empty() && stride.from != stride.to && !area.covers(world.paths.nodes()[stride.to].tile);
         const auto hour = static_cast<int>(day.time * simulation::kHoursPerDay);
         simulation::advance(day, simulation::kTickSeconds);
@@ -683,15 +683,15 @@ int main(int argc, char** argv)
             // Litter lying on the handymen's patrols and off them.
             std::size_t on = 0;
             std::size_t off = 0;
-            const auto areas = r.view<const simulation::Staff, const simulation::Patrol>();
+            const auto areas = r.view<const simulation::Staff, const simulation::staff::Patrol>();
             for (const auto [_, litter] : r.view<const simulation::Litter>().each())
             {
                 const simulation::PathTileSpot at = world.paths.nodes()[litter.node].tile;
-                const bool covered = std::ranges::any_of(areas, [&](entt::entity s) { return areas.get<const simulation::Staff>(s).role == simulation::StaffRole::Handyman && areas.get<const simulation::Patrol>(s).covers(at); });
+                const bool covered = std::ranges::any_of(areas, [&](entt::entity s) { return areas.get<const simulation::Staff>(s).role == simulation::StaffRole::Handyman && areas.get<const simulation::staff::Patrol>(s).covers(at); });
                 ++(covered ? on : off);
             }
             std::size_t away = 0; // Patrolled staff outside their area now
-            for (const auto [s, stride, area] : r.view<const simulation::Stride, const simulation::Patrol>().each())
+            for (const auto [s, stride, area] : r.view<const simulation::Stride, const simulation::staff::Patrol>().each())
                 away += !area.covers(world.paths.nodes()[stride.to].tile);
             out.info("patrols: {:d} staff on 9x9 areas; {:d} ticks walking outside on no job; litter {:d} on handymen's areas, {:d} off them; {:d} outside their area now; paths no handyman patrols {:d}, no mechanic {:d}", patrolled, strays, on, off, away, simulation::staff::uncovered_paths(world, simulation::StaffRole::Handyman), simulation::staff::uncovered_paths(world, simulation::StaffRole::Mechanic));
         }

@@ -5,6 +5,7 @@
 #include "simulation/import_park.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
+#include "simulation/staff/work.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
@@ -166,7 +167,7 @@ TEST_CASE("an inspector goes after a worker, watches them and tells if they are 
         r.get<Staff>(worker).happiness = { good ? 1.0f : 0.1f };
         const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });
         r.get<Staff>(inspector).tasks = kStaffTask;
-        const auto watching = [&] { return r.all_of<Rounds>(inspector) ? r.get<Rounds>(inspector).watching : entt::null; };
+        const auto watching = [&] { return r.all_of<staff::Rounds>(inspector) ? r.get<staff::Rounds>(inspector).watching : entt::null; };
         CHECK(park.run_until([&] { return watching() == worker; }, 60));
         CHECK(park.run_until([&] { return watching() == entt::null; }, kTuning.inspector.chase.value + kTuning.inspector.watch.value));
         CHECK(found(r, Finding::Lazy, worker) == !good);

@@ -2,6 +2,7 @@
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 
@@ -74,7 +75,7 @@ TEST_CASE("a handyman leaves dry beds alone without the task, and those outside 
         const auto dry = bed(park, 8, 1, 0);
         const auto handyman = park.staff(StaffRole::Handyman, { 0, 0 });
         if (patrolled)
-            r.emplace<Patrol>(handyman, Patrol { { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 3, 0 } } });
+            r.emplace<staff::Patrol>(handyman, staff::Patrol { { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 3, 0 } } });
         else
             r.get<Staff>(handyman).tasks = kEveryTask & ~kWaterGardensTask;
         park.run_seconds(120);

@@ -2,6 +2,7 @@
 #include "simulation/animals.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/staff/patrol.hpp"
 
 #include <algorithm>
 #include <array>
@@ -197,10 +198,10 @@ TEST_CASE("animals: a keeper fills another house in their enclosure, but not one
     r.destroy(*std::ranges::find_if(r.view<KeeperDuty>(), [&](entt::entity k) { return k != keeper; }));
     r.get<AnimalHouse>(other).food = { 0.1f };
     world.paths.tile_size = 1;
-    r.emplace<Patrol>(keeper, Patrol { .tiles = { { 0, 0 } } });
+    r.emplace<staff::Patrol>(keeper, staff::Patrol { .tiles = { { 0, 0 } } });
     run(world, ground, 40);
     CHECK(r.get<AnimalHouse>(other).food.value < 0.2f);
-    r.get<Patrol>(keeper).tiles.push_back({ 3, 3 });
+    r.get<staff::Patrol>(keeper).tiles.push_back({ 3, 3 });
     run(world, ground, 40);
     CHECK(r.get<AnimalHouse>(other).food.value > 0.8f);
 }
@@ -240,7 +241,7 @@ TEST_CASE("animals: the inspector tells of a house its keepers' patrols all leav
     const entt::entity house = r.view<AnimalHouse>().front();
     r.get<AnimalHouse>(house).food = { 0.1f };
     world.paths.tile_size = 1;
-    r.emplace<Patrol>(r.view<KeeperDuty>().front(), Patrol { .tiles = { { 0, 0 } } });
+    r.emplace<staff::Patrol>(r.view<KeeperDuty>().front(), staff::Patrol { .tiles = { { 0, 0 } } });
     CHECK(std::ranges::contains(found_after(world, ground, 1), std::pair { Finding::KeeperBadZones, house }));
 }
 

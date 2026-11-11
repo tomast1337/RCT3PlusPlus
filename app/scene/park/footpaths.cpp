@@ -714,8 +714,7 @@ namespace rct3::scene::park
         {
             const rct3::park::path::PathStyle* style = style_named(scene.footpaths, path);
             const std::int64_t back = style != nullptr ? rct3::park::laid_price(path, scene.grid, style->piece_cost) : 0;
-            if (scene.park.cash)
-                *scene.park.cash += back;
+            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::Landscaping, false);
             glm::vec3 at = tile_point(scene.grid, { path.col, path.row });
             if (path.elevation && !rct3::park::ground::is_ground_queue(path))
                 at.y = static_cast<float>(path.elevation->quantised_height);
@@ -972,7 +971,7 @@ namespace rct3::scene::park
                 return;
             }
             const std::int64_t cost = stroke_cost(f, *plan);
-            if (scene.park.cash && *scene.park.cash < cost)
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
             {
                 f.notice = std::u16string(assets.strings->get(kNoMoney));
                 return;
@@ -986,8 +985,6 @@ namespace rct3::scene::park
                 f.stroke.push_back(id++);
             }
             sim_paths(scene, std::span(f.paths).last(plan->lay.size()), { });
-            if (scene.park.cash)
-                *scene.park.cash -= cost;
             float_money(scene, tile_point(scene.grid, plan->lay.back()), -cost);
             // The trail goes on from the last tile, the way the stroke last went.
             const save::model::Tile last = brush.back();
@@ -1048,7 +1045,8 @@ namespace rct3::scene::park
             const rct3::park::NextPiece piece = *rct3::park::next_piece(f.builder, scene.grid);
             const bool there = rct3::park::same_piece_at(f.paths, piece, f.builder).has_value();
             const std::int64_t cost = piece_price(style, piece, scene.grid);
-            if (!there && scene.park.cash && *scene.park.cash < cost)
+            // Paid before the ground is cut; walking over the same piece costs nothing.
+            if (!there && !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
             {
                 f.notice = std::u16string(assets.strings->get(kNoMoney));
                 return;
@@ -1062,8 +1060,6 @@ namespace rct3::scene::park
             f.stroke.clear();
             f.route_laid = 0;
             f.last_height = piece.end;
-            if (scene.park.cash)
-                *scene.park.cash -= cost;
             const glm::vec3 ground = tile_point(scene.grid, piece.spot);
             float_money(scene, { ground.x, static_cast<float>(std::max(piece.start, piece.end)), ground.z }, -cost);
             // The queue tile laid before may now open towards this one.

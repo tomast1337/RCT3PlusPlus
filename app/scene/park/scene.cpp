@@ -2039,12 +2039,8 @@ namespace rct3::scene::park
         if (asks.buy_land || asks.buy_rights)
             buy_land_tool(scene, asks.buy_rights ? rct3::park::LandBuy::Rights : rct3::park::LandBuy::Land, assets);
         // Every broken path item back new at once, at the full price of each: the dear way, a handyman's the free one.
-        if (asks.replace_broken && facts.broken_items > 0 && (!scene.park.cash || *scene.park.cash >= facts.replace_cost))
-        {
+        if (asks.replace_broken && facts.broken_items > 0 && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, facts.replace_cost, simulation::park::LedgerLine::Landscaping, false))
             simulation::replace_broken(scene.sim);
-            if (scene.park.cash)
-                *scene.park.cash -= facts.replace_cost;
-        }
         profiling::section("Footpaths", [&] { update_footpaths(device, scene, assets, options); });
         profiling::section("Supports", [&] { refresh_supports(scene, assets); });
         follow_footpaths(scene, elapsed);

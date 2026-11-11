@@ -92,6 +92,8 @@ declare namespace park {
     function cash(): number | undefined;
     /** Sets the cash, in hundredths of the currency, of a park with money. */
     function setCash(hundredths: number): void;
+    /** The building lines of the newest month's ledger, in hundredths: spending above zero, refunds below. */
+    function ledger(): { landPurchase: number; landscaping: number; rideConstruction: number };
     /** Guests in the park now. */
     function guests(): number;
     /** The path tiles under the park's entrances, where guests come in and go out. */

@@ -84,14 +84,12 @@ namespace rct3::scene::park
             scene.prizes.emplace_back(kEntranceStays);
         if (going.empty())
             return std::nullopt;
-        if (cost > 0 && scene.park.cash && *scene.park.cash < cost)
+        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
         {
             scene.prizes.emplace_back(kNoMoney);
             return std::nullopt;
         }
         const save::model::PlacedObject& first = scene.objects[going.front()];
-        if (scene.park.cash)
-            *scene.park.cash -= cost;
         if (floated)
             float_money(scene, tile_point(scene.grid, { first.col, first.row }), -cost, true);
         for (const std::size_t i : going)
@@ -178,8 +176,7 @@ namespace rct3::scene::park
             scene.ride_entities[ref.index] = entt::null;
         base->state = save::model::AttractionState::Closed;
         base->demolished = true;
-        if (scene.park.cash)
-            *scene.park.cash += back;
+        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, false);
         if (at)
             float_money(scene, *at, back);
         if (scene.shown == ref)

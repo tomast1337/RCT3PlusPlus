@@ -317,7 +317,7 @@ namespace rct3::scene
                     ++scene.built;
                     pools_changed(device, scene, assets);
                 }
-                else if (ok)
+                else if (ok && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, item.price, simulation::park::LedgerLine::RideConstruction, false))
                 {
                     save::model::PlacedObject model { .symbol = item.symbol, .overlay = item.overlay };
                     const bool loaded = load_object_model(scene, scene.placing.models, assets, model);
@@ -332,8 +332,6 @@ namespace rct3::scene
                             .fit = fit,
                         });
                     ++scene.built;
-                    if (scene.park.cash)
-                        *scene.park.cash -= item.price;
                     if (item.price != 0)
                         park::float_money(scene, park::tile_point(scene.grid, *tile), -item.price);
                     pools_changed(device, scene, assets);
@@ -456,8 +454,8 @@ namespace rct3::scene
                 if (done)
                 {
                     ++scene.built;
-                    if (scene.park.cash)
-                        *scene.park.cash -= cost;
+                    // Laying was allowed only when paid for; taking up pays back.
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::RideConstruction, false);
                     if (cost != 0)
                         park::float_money(scene, park::tile_point(scene.grid, *done), -cost);
                     scene.supports.stale = true;
@@ -775,11 +773,9 @@ namespace rct3::scene
         {
             // Let go: the work is kept and paid for. Work on the park's own land that it cannot pay for is
             // turned down with a message.
-            if (t.before)
+            if (t.before && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, t.cost, simulation::park::LedgerLine::RideConstruction, false))
             {
                 ++scene.built;
-                if (scene.park.cash)
-                    *scene.park.cash -= t.cost;
                 if (t.cost != 0)
                     park::float_money(scene, park::tile_point(scene.grid, *t.other), -t.cost);
                 t.before.reset();
@@ -898,8 +894,7 @@ namespace rct3::scene
                     scene.grid.at(tile.col, tile.row).corners = *s.ground;
             cost += rct3::park::pools::take_up_pool(scene.pools, prices, tile, tile);
         }
-        if (scene.park.cash)
-            *scene.park.cash -= cost;
+        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::RideConstruction, false); // A refund, below zero
         if (cost != 0)
             park::float_money(scene, park::tile_point(scene.grid, complex.front()), -cost);
         pools_changed(device, scene, assets);
@@ -934,8 +929,7 @@ namespace rct3::scene
                 scene.grid.at(s.col, s.row).corners = *s.ground;
         scene.pools = std::move(map);
         ++scene.built;
-        if (scene.park.cash)
-            *scene.park.cash -= cost;
+        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::RideConstruction, false); // A refund, below zero
         if (cost != 0)
             park::float_money(scene, park::tile_point(scene.grid, *tile), -cost);
         scene.supports.stale = true;

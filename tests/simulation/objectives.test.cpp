@@ -83,32 +83,33 @@ TEST_CASE("a coaster goal counts the tested coasters reaching its figure")
     CHECK_FALSE(met({ .value = 20, .flags = 7 | save::model::CoasterTarget::kEveryRide, .rides = 1 }));
 }
 
-TEST_CASE("takings count the last whole month, and prizes pay out")
+TEST_CASE("the goals on money read last month's ledger: ride tickets, and shop and food sales less their stock")
 {
-    simulation::Takings t;
-    simulation::count_takings(t, 0.5f * kMonth, 1000, 50);
-    simulation::count_takings(t, 1.2f * kMonth, 1400, 60);
-    simulation::count_takings(t, 1.9f * kMonth, 2000, 90);
-    CHECK(t.rides == 400); // The first, part counted month
-    simulation::count_takings(t, 2.1f * kMonth, 2600, 100);
-    CHECK(t.rides == 1200);
-    CHECK(t.shops == 40);
+    const simulation::ParkFigures f { .last_month = { .food_drink_sales = -900, .food_drink_stock = 300, .park_entrance_tickets = -5000, .ride_tickets = -1200, .shop_sales = -100, .shop_stock = 60 } };
+    CHECK(simulation::read_goal(goal(0, save::model::ConditionKind::RideIncome, 1000), f).now == 1200);
+    CHECK(simulation::read_goal(goal(0, save::model::ConditionKind::ShopProfit, 1000), f).now == 640);
+    CHECK_FALSE(simulation::read_goal(goal(0, save::model::ConditionKind::ShopProfit, 1000), f).met);
+}
 
+TEST_CASE("prizes pay out, their cash booked as prize money")
+{
     simulation::park::ParkState park;
     park.cash = 0;
     park.rating = 0.99f;
     save::model::Finance finance { .max_loan = 1000, .interest_rate_percent = 8 };
     save::model::TerrainGrid land { .width = 2, .height = 1, .cells = { { .flags = std::to_underlying(save::model::TileFlag::NeverPurchasable) }, { } } };
-    simulation::give_prize(park, finance, land, 1);
-    simulation::give_prize(park, finance, land, 2);
+    std::optional<std::int64_t> kept;
+    simulation::give_prize(park, finance, kept, land, 1);
+    simulation::give_prize(park, finance, kept, land, 2);
     CHECK(park.cash > 0);
-    simulation::give_prize(park, finance, land, 4);
+    CHECK(finance.ledger[0].prize_money == -*park.cash); // Income, below nought
+    simulation::give_prize(park, finance, kept, land, 4);
     CHECK(park.rating == 1.0f);
-    simulation::give_prize(park, finance, land, 5);
-    simulation::give_prize(park, finance, land, 6);
+    simulation::give_prize(park, finance, kept, land, 5);
+    simulation::give_prize(park, finance, kept, land, 6);
     CHECK(finance.interest_rate_percent == 4);
     CHECK(finance.max_loan == 2000);
-    simulation::give_prize(park, finance, land, 7);
+    simulation::give_prize(park, finance, kept, land, 7);
     CHECK(land.cells[0].has(save::model::TileFlag::ForSale));
     CHECK_FALSE(land.cells[1].has(save::model::TileFlag::ForSale));
     CHECK(simulation::prize_message(12) == "Prize_TycoonAward");
@@ -160,7 +161,7 @@ TEST_CASE("a goal on last month's takings holds for one month less, as that mont
     save::model::ObjectiveSet set;
     set.objectives = { { .difficulty = 0 } };
     set.conditions = { goal(0, save::model::ConditionKind::RideIncome, 1000, 2) };
-    const simulation::ParkFigures f { .ride_income = 1500 };
+    const simulation::ParkFigures f { .last_month = { .ride_tickets = -1500 } };
     CHECK_FALSE(simulation::check_goals(set, f, 0));
     CHECK(simulation::months_held(set.conditions[0], 0.5f * kMonth) == doctest::Approx(0.5f));
     CHECK_FALSE(simulation::check_goals(set, f, 0.9f * kMonth));
@@ -193,7 +194,8 @@ TEST_CASE("the rating prize lifts the rating at once and each week's score while
     park.rating = 0.5f;
     save::model::Finance finance;
     save::model::TerrainGrid land;
-    simulation::give_prize(park, finance, land, 4);
+    std::optional<std::int64_t> kept;
+    simulation::give_prize(park, finance, kept, land, 4);
     CHECK(park.rating > 0.5f);
     const float bonus = park.rating_bonus;
     REQUIRE(bonus > 0);

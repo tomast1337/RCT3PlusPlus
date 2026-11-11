@@ -576,7 +576,6 @@ namespace rct3::scene::park
         std::vector<entt::entity> ride_entities;
         std::vector<simulation::RideGroup> ride_groups;     ///< By ride, for the scenario's coaster goals and the awards
         std::int32_t awards_month = -1;                     ///< The calendar month the awards were last looked at in
-        simulation::Takings takings;                        ///< Last month's, for the scenario's goals on money
         std::int64_t goals_day = -1;                        ///< The calendar day the scenario's goals were last checked on
         std::vector<simulation::GoalReading> goal_readings; ///< By place in the park's goals, as last checked
         /// The park's running totals as the week began (week_totals), for its weekly graphs, and its cash. A week

@@ -49,12 +49,13 @@ namespace rct3::simulation
     /// How the park stands, in the units the goals' targets are kept in.
     struct ParkFigures
     {
-        std::int64_t park_value = 0;    ///< Hundredths of the currency unit
-        std::int32_t guests = 0;        ///< In the park now
-        std::int32_t rating = 0;        ///< 0 to 1000
-        std::int64_t loan = 0;          ///< Hundredths
-        std::int64_t ride_income = 0;   ///< Last month's, hundredths
-        std::int64_t shop_profit = 0;   ///< Last month's, hundredths
+        std::int64_t park_value = 0; ///< Hundredths of the currency unit
+        std::int32_t guests = 0;     ///< In the park now
+        std::int32_t rating = 0;     ///< 0 to 1000
+        std::int64_t loan = 0;       ///< Hundredths
+        /// Last month's ledger period, for the goals on ride income (its ride tickets) and shop profit (shop
+        /// and food sales less their stock); all nought before a month has ended.
+        save::model::LedgerPeriod last_month { };
         std::int32_t animal_health = 0; ///< The animals' average, 0 to 100; 0 with no animals
         std::int32_t dung = 0;          ///< Piles of dung lying in the park
         std::span<const GoalRide> rides { };
@@ -73,17 +74,6 @@ namespace rct3::simulation
     /// Months goal `c` has been met without a break at calendar `time`; 0 while it is not.
     [[nodiscard]] float months_held(const save::model::Condition& c, float time) noexcept;
 
-    /// What the park took on rides and in shops in the last whole calendar month.
-    struct Takings
-    {
-        std::int64_t month = -1;                         ///< The month being counted; -1 before counting began
-        std::int64_t rides_before = 0, shops_before = 0; ///< Takings so far when that month began
-        std::int64_t rides = 0, shops = 0;               ///< Last month's; 0 until a month has ended
-    };
-
-    /// Moves `takings` on to calendar `time` (counted from the calendar's start), given all the park has taken on rides and in shops so far.
-    void count_takings(Takings& takings, float time, std::int64_t rides_so_far, std::int64_t shops_so_far);
-
     /// Whether the simulation can tell if a goal of `kind` is met. Those it cannot are never met.
     [[nodiscard]] bool judged(save::model::ConditionKind kind) noexcept;
 
@@ -101,9 +91,9 @@ namespace rct3::simulation
     /// Text key naming a goal of `kind`; empty for kinds without one.
     [[nodiscard]] std::string_view condition_name(save::model::ConditionKind kind) noexcept;
 
-    /// Gives the park prize `id`'s reward. The construction rights prize puts the land held back from the
-    /// park on sale.
-    void give_prize(park::ParkState& park, save::model::Finance& finance, save::model::TerrainGrid& land, std::int32_t id);
+    /// Gives the park prize `id`'s reward, cash booked as prize money in `finance`'s ledger (`kept` as for
+    /// park::book). The construction rights prize puts the land held back from the park on sale.
+    void give_prize(park::ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, save::model::TerrainGrid& land, std::int32_t id);
 
     /// Text keys of prize `id`'s name and of the message telling the player they have it.
     [[nodiscard]] std::string_view prize_name(std::int32_t id);

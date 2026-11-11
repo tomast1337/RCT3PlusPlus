@@ -971,12 +971,6 @@ namespace rct3::scene::park
                 profiling::section("Rating", [&] { simulation::park::rate_week(scene.park, scene.people, scene.rides, old); });
                 if (old >= kLitterWarning)
                     simulation::park::post(scene.park.messages, { .text_key = "Thought_PI_Park_Litter1" });
-                // Last month's takings, for the scenario's goals on money.
-                std::int64_t rides_taken = 0;
-                std::int64_t shops_taken = 0;
-                for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
-                    (attraction.kind == simulation::AttractionKind::Ride ? rides_taken : shops_taken) += attraction.income.value;
-                simulation::count_takings(scene.takings, scene.park.time - scene.park.zero_time, rides_taken, shops_taken);
                 {
                     // The week's figures for the park's graphs.
                     std::array<std::int32_t, 3> ages { };
@@ -1080,8 +1074,8 @@ namespace rct3::scene::park
                     for (const std::int32_t kind : simulation::award_month(scene.park_model.awards, f, scene.gameplay))
                     {
                         const auto slot = static_cast<std::size_t>(kind);
-                        if (scene.park.cash && slot < scene.park_model.awards.prize_money.size())
-                            *scene.park.cash += scene.park_model.awards.prize_money[slot];
+                        if (slot < scene.park_model.awards.prize_money.size())
+                            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -scene.park_model.awards.prize_money[slot], simulation::park::LedgerLine::PrizeMoney, true);
                         simulation::park::post(scene.park.messages, { .text_key = std::string(simulation::award_message(kind)), .award = kind });
                     }
                 }
@@ -1101,13 +1095,16 @@ namespace rct3::scene::park
                     health += animal.health.value;
                     ++animals;
                 }
+                // The ledger moved on to this month, so that the period before it is last month's.
+                save::model::Finance& money = scene.park_model.finance;
+                (void)simulation::park::ledger_month(money, scene.ledger_month, scene.park.date);
+                const save::model::LedgerPeriod last_month = money.ledger_periods_loaded > 1 ? money.ledger[1] : save::model::LedgerPeriod { };
                 const simulation::ParkFigures figures {
                     .park_value = simulation::park::park_value(scene.park.guests, scene.rides),
                     .guests = scene.park.guests,
                     .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
                     .loan = scene.park.loan,
-                    .ride_income = scene.takings.rides,
-                    .shop_profit = scene.takings.shops,
+                    .last_month = last_month,
                     .animal_health = animals > 0 ? static_cast<std::int32_t>(std::floor(health / static_cast<float>(animals) * 100)) : 0,
                     .dung = static_cast<std::int32_t>(scene.sim.registry.view<const simulation::Dung>().size()),
                     .rides = goal_rides,
@@ -1121,7 +1118,7 @@ namespace rct3::scene::park
                     {
                         if (prize == 0)
                             continue;
-                        simulation::give_prize(scene.park, scene.park_model.finance, scene.grid, prize);
+                        simulation::give_prize(scene.park, scene.park_model.finance, scene.ledger_month, scene.grid, prize);
                         scene.prizes.emplace_back(simulation::prize_message(prize));
                         // A level won, every guest out on the paths jumps for joy.
                         if (prize >= simulation::kApprenticePrize)

@@ -68,6 +68,7 @@
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/objectives.hpp"
+#include "simulation/park/finance.hpp"
 #include "simulation/park/graphs.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/rides.hpp"

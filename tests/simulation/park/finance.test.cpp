@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/park/finance.hpp"
 
+#include "simulation/tuning.hpp"
+
 #include <algorithm>
 #include <doctest/doctest.h>
 
@@ -133,4 +135,31 @@ TEST_CASE("a park whose money never runs out has no loan to change")
     CHECK(loan_step(park, 500'000, true) == 0);
     CHECK_FALSE(change_loan(park, 500'000, true));
     CHECK(park.loan == 0);
+}
+
+TEST_CASE("a park is worth its guests and its open rides by their excitement")
+{
+    const auto ride = [](save::model::RideKind kind, save::model::AttractionState state, float excitement) {
+        save::model::Ride r { .kind = kind };
+        r.base.state = state;
+        r.assessment = { .valid = true, .excitement = excitement };
+        return r;
+    };
+    save::model::RideModel rides;
+    const auto guest = kTuning.park_value.per_guest.value;
+    const auto point = kTuning.park_value.per_excitement.value;
+    CHECK(park_value(10, rides) == 10 * guest);
+    rides.rides.push_back(ride(save::model::RideKind::Tracked, save::model::AttractionState::Open, 2));
+    CHECK(park_value(10, rides) == 10 * guest + 4 * point);
+    // Twice as exciting, four times the worth.
+    rides.rides.push_back(ride(save::model::RideKind::Flat, save::model::AttractionState::Open, 4));
+    CHECK(park_value(0, rides) == 20 * point);
+    // Closed, untested, pulled down, and facilities: nothing.
+    rides.rides.push_back(ride(save::model::RideKind::Tracked, save::model::AttractionState::Closed, 5));
+    rides.rides.push_back(ride(save::model::RideKind::Special, save::model::AttractionState::Open, 5));
+    rides.rides.push_back(ride(save::model::RideKind::Flat, save::model::AttractionState::Open, 5));
+    rides.rides.back().assessment.valid = false;
+    rides.rides.push_back(ride(save::model::RideKind::Flat, save::model::AttractionState::Open, 5));
+    rides.rides.back().base.demolished = true;
+    CHECK(park_value(0, rides) == 20 * point);
 }

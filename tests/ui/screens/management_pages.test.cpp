@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/management_pages.hpp"
 
+#include "simulation/park/finance.hpp"
 #include "ui/thought_text.hpp"
 
 #include <algorithm>
@@ -343,4 +344,23 @@ TEST_CASE("a park's name fills in the scenario's for its placeholder")
     CHECK(park_name(park, strings) == u"Valley");
     park.name = "My Park";
     CHECK(park_name(park, strings) == u"My Park");
+}
+
+TEST_CASE("the finances show what the park and the company are worth now")
+{
+    StringTable s = test_strings();
+    s.add("FinancialSummary_ParkValue", u"Park value:");
+    s.add("FinancialSummary_CompanyValue", u"Company value:");
+    save::model::ParkModel park;
+    park.has_finance = true;
+    park.finance.park_value = { .samples = { 1 } };
+    save::model::RideModel rides;
+    simulation::park::ParkState state;
+    state.cash = 42000;
+    state.loan = 20000;
+    state.guests = 3;
+    const std::int64_t worth = simulation::park::park_value(3, rides);
+    const ManagementPage page = management_page(ManagementTopic::Finances, 0, { .park = &park, .state = &state, .rides = &rides }, s, kUnits);
+    CHECK(value_of(page, u"Park value:") == money(worth));
+    CHECK(value_of(page, u"Company value:") == money(42000 - 20000 + worth));
 }

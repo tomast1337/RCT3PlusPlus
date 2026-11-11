@@ -28,10 +28,12 @@ namespace rct3::simulation::park
         std::int64_t cash_less_loan = 0; ///< Now
         std::int64_t income = 0;         ///< Taken during the week
         std::int64_t profit = 0;         ///< Change in cash over the week
+        std::int64_t park_value = 0;     ///< Now (see park_value)
     };
 
-    /// Ends the week in `park`'s graphs with `figures`, starting any series it has none of. Park value, company value, share price and publicity,
-    /// which the simulation does not work out, carry on as they were.
+    /// Ends the week in `park`'s graphs with `figures`, starting any series it has none of. The company is worth
+    /// its cash less its loan and the park's value. Share price and publicity, which the simulation does not work
+    /// out, carry on as they were.
     void close_week(save::model::ParkModel& park, const WeekFigures& figures);
 
 } // namespace rct3::simulation::park

@@ -1175,7 +1175,7 @@ namespace rct3::scene::park
                     {
                         if (prize == 0)
                             continue;
-                        simulation::give_prize(scene.park, scene.park_model.finance, scene.ledger_month, scene.grid, prize);
+                        simulation::give_prize(scene.park, scene.park_model.finance, scene.ledger_month, scene.grid, scene.research, prize);
                         scene.prizes.emplace_back(simulation::prize_message(prize));
                         // A level won, every guest out on the paths jumps for joy.
                         if (prize >= simulation::kApprenticePrize)

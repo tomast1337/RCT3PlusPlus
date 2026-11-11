@@ -437,22 +437,6 @@ namespace rct3::simulation
         std::vector<entt::entity> from;
     };
 
-    /// How a rider on a coaster shows what they feel.
-    enum class RideReaction : std::uint8_t
-    {
-        Waiting,   ///< In the station or pulled up a lift
-        Calm,      ///< Sitting through it
-        HandsUp,   ///< Loving it, or floating over a hill
-        CoverEyes, ///< Too wild for them, going down
-        Strained,  ///< Pressed hard into their seat or sideways
-    };
-
-    /// A guest seated on a ride, and how they react to it now.
-    struct Thrill
-    {
-        RideReaction reaction = RideReaction::Waiting;
-    };
-
     /// A party member with no way over to the others: they stand looking about for `left` ticks, then are put
     /// with them.
     struct Lost

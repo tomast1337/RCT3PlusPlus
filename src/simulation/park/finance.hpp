@@ -59,9 +59,9 @@ namespace rct3::simulation::park
     /// larger for a `tracked` ride's track than for a flat ride.
     [[nodiscard]] std::int64_t running_cost(std::int64_t build_cost, bool tracked);
 
-    /// As each week ends, charges the loan's interest and each open ride's running cost to Charges in the
-    /// registry's context, for whoever shows the park to take from its cash, broken down or not. Stalls, facilities
-    /// and pools pay none.
+    /// As each week ends, charges the loan's interest and each open attraction's running cost to Charges in the
+    /// registry's context, for whoever shows the park to take from its cash, broken down or not. Stalls and pools
+    /// carry none.
     /// shortcut: the week runs from when the park was opened, as the payroll's does.
     void step_charges(SimWorld& world);
 

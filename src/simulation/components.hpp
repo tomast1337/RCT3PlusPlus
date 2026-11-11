@@ -242,7 +242,7 @@ namespace rct3::simulation
         Money income { };       ///< Taken so far
         std::uint32_t customers = 0;
         std::uint64_t saved = 0; ///< The saved park's own id of it; 0 when not from a save
-        Money running_cost { };  ///< Rides: charged each week it is open
+        Money running_cost { };  ///< Charged each week it is open; none for stalls and pools
     };
 
     /// A guest riding from one station of a ride to another on the way somewhere: what they were doing, and the
@@ -529,7 +529,7 @@ namespace rct3::simulation
     };
 
     /// What the park has been charged as each week ends, kept in the registry's context: interest on its loan and
-    /// open rides' running costs. Whoever shows the park keeps the loan and its yearly rate up to date.
+    /// open rides' and facilities' running costs. Whoever shows the park keeps the loan and its yearly rate up to date.
     struct Charges
     {
         std::int64_t loan = 0; ///< Hundredths

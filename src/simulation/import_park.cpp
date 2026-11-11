@@ -1127,7 +1127,7 @@ namespace rct3::simulation
             // Cash machines break down as stalls do; toilets and first aid do not.
             const bool breaks = *product == Product::CashMachine;
             const bool broken = breaks && (ride.base.flags & save::model::AttractionCommon::kBrokenDown) != 0;
-            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = ride.base.name, .entrance = entrance, .price = std::max<std::int64_t>(ride.ticket_price, 0), .open = ride.base.state == save::model::AttractionState::Open && !broken, .saved = ride.base.id });
+            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = ride.base.name, .entrance = entrance, .price = std::max<std::int64_t>(ride.ticket_price, 0), .open = ride.base.state == save::model::AttractionState::Open && !broken, .saved = ride.base.id, .running_cost = { ride.base.running_cost } });
             r.emplace<Shop>(e, *product);
             if (breaks)
                 r.emplace<Upkeep>(e, Upkeep { .broken = broken, .inspect_every = { -1 }, .break_in = { 0 } });

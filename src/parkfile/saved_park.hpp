@@ -88,6 +88,8 @@ namespace rct3::parkfile
         float wind = 0;
         float wind_change = 0;
         std::vector<save::model::LedgerPeriod> ledger; ///< The months' accounts, newest first
+        std::int32_t max_loan = 0;                     ///< Hundredths; goal prizes may have raised it
+        float interest_rate_percent = 0;               ///< Goal prizes may have lowered it
     };
 
     /// A guest in the park.
@@ -141,12 +143,10 @@ namespace rct3::parkfile
         std::vector<SavedWorker> staff;
     };
 
-    /// How far the scenario's goals have got, and the loan terms their prizes may have changed.
+    /// How far the scenario's goals have got.
     struct SavedGoals
     {
         save::model::ObjectiveSet objectives { };
-        std::int32_t max_loan = 0;
-        float interest_rate_percent = 0;
     };
 
     /// An animal house, and which of SavedPeople::staff keeps it; -1 for none, with the job they are at.

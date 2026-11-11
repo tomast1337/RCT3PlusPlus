@@ -2038,6 +2038,8 @@ namespace rct3::scene::park
         }
         if (asks.buy_land || asks.buy_rights)
             buy_land_tool(scene, asks.buy_rights ? rct3::park::LandBuy::Rights : rct3::park::LandBuy::Land, assets);
+        if (asks.borrow)
+            simulation::park::change_loan(scene.park, scene.park_model.finance.max_loan, *asks.borrow);
         // Every broken path item back new at once, at the full price of each: the dear way, a handyman's the free one.
         if (asks.replace_broken && facts.broken_items > 0 && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, facts.replace_cost, simulation::park::LedgerLine::Landscaping, false))
             simulation::replace_broken(scene.sim);
@@ -2160,7 +2162,9 @@ namespace rct3::scene::park
                            .weather_hold = park.weather_hold,
                            .wind = park.wind,
                            .wind_change = park.wind_change,
-                           .ledger = { scene.park_model.finance.ledger.begin(), scene.park_model.finance.ledger.begin() + static_cast<std::ptrdiff_t>(std::min(scene.park_model.finance.ledger_periods_loaded, save::model::kLedgerPeriods)) } };
+                           .ledger = { scene.park_model.finance.ledger.begin(), scene.park_model.finance.ledger.begin() + static_cast<std::ptrdiff_t>(std::min(scene.park_model.finance.ledger_periods_loaded, save::model::kLedgerPeriods)) },
+                           .max_loan = scene.park_model.finance.max_loan,
+                           .interest_rate_percent = scene.park_model.finance.interest_rate_percent };
         saved.camera = scene.camera;
         std::unordered_map<entt::entity, std::int32_t> looks;
         for (const ShownPerson& p : scene.shown_people)
@@ -2183,7 +2187,7 @@ namespace rct3::scene::park
         for (const auto [e, bed] : scene.sim.registry.view<const simulation::FlowerBed>().each())
             saved.flower_beds.push_back({ .object_ref = bed.object, .water = bed.water });
         if (!scene.park_model.objectives.objectives.empty())
-            saved.goals = parkfile::SavedGoals { .objectives = scene.park_model.objectives, .max_loan = scene.park_model.finance.max_loan, .interest_rate_percent = scene.park_model.finance.interest_rate_percent };
+            saved.goals = parkfile::SavedGoals { .objectives = scene.park_model.objectives };
         return parkfile::write_saved_park(saved);
     }
 

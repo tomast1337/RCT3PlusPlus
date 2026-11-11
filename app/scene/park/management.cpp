@@ -123,6 +123,8 @@ namespace rct3::scene::park
                 asks.buy_land = *button == ui::screens::kBuyLandButton;
                 asks.buy_rights = *button == ui::screens::kBuyRightsButton;
             }
+            if (button && topic == ui::screens::ManagementTopic::Finances && window->tab() == 0 && (*button == ui::screens::kBorrowButton || *button == ui::screens::kRepayButton))
+                asks.borrow = *button == ui::screens::kBorrowButton;
             const auto choice = window->take_choice();
             if (choice && park_page && choice->first == ui::screens::kOpenCloseParkButton)
                 asks.park_open = choice->second == 0;

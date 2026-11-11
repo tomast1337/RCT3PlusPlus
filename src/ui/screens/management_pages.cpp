@@ -3,6 +3,7 @@
 
 #include "simulation/awards.hpp"
 #include "simulation/objectives.hpp"
+#include "simulation/park/finance.hpp"
 #include "strings/unicode.hpp"
 #include "ui/save_text.hpp"
 #include "ui/screens/person_info.hpp"
@@ -328,6 +329,12 @@ namespace rct3::ui::screens
             line("FinancialSummary_EntranceFee", m != nullptr ? money(units, m->entrance_fee) : std::u16string(kDash));
             line("FinancialSummary_ParkValue", m != nullptr ? optional_money(units, m->park_value.latest()) : std::u16string(kDash));
             line("FinancialSummary_CompanyValue", m != nullptr ? optional_money(units, m->company_value.latest()) : std::u16string(kDash));
+            const auto loan_button = [&](std::string_view key, std::string_view help, bool borrow) {
+                const bool movable = f.state != nullptr && m != nullptr && simulation::park::loan_step(*f.state, m->max_loan, borrow) > 0;
+                page.buttons.push_back({ { }, text(strings, key), text(strings, help), movable, { }, std::string(key) });
+            };
+            loan_button("Rct3pp_Borrow", "Rct3pp_BorrowHelp", true);
+            loan_button("Rct3pp_Repay", "Rct3pp_RepayHelp", false);
             if (m == nullptr || m->ledger_periods_loaded == 0)
             {
                 page.note = text(strings, kNotRead);

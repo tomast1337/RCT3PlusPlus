@@ -117,6 +117,32 @@ TEST_CASE("the finances show the running cash and the ledger a month a column, t
     CHECK(sales->cells[2] == money(-700));
 }
 
+TEST_CASE("the loan buttons borrow and repay, each greyed out at its limit")
+{
+    const StringTable s = test_strings();
+    save::model::ParkModel park;
+    park.has_finance = true;
+    park.finance.max_loan = 300'000;
+    simulation::park::ParkState state { .cash = 50'000, .loan = 0 };
+    const auto enabled = [&] {
+        const ManagementPage page = management_page(ManagementTopic::Finances, 0, { .park = &park, .state = &state }, s, kUnits);
+        REQUIRE(page.buttons.size() == 2);
+        CHECK(page.buttons[kBorrowButton].key == "Rct3pp_Borrow");
+        CHECK(page.buttons[kRepayButton].key == "Rct3pp_Repay");
+        return std::pair { page.buttons[kBorrowButton].enabled, page.buttons[kRepayButton].enabled };
+    };
+    CHECK(enabled() == std::pair { true, false }); // No loan to repay
+    state.loan = 300'000;
+    state.cash = 350'000;
+    CHECK(enabled() == std::pair { false, true }); // At the maximum
+    state.cash = 10'000;
+    CHECK(enabled() == std::pair { false, false }); // Not the cash to repay a step
+    state.cash.reset();
+    state.loan = 0;
+    CHECK(enabled() == std::pair { false, false }); // Money never runs out
+    CHECK(std::ranges::none_of(management_page(ManagementTopic::Finances, 0, { }, s, kUnits).buttons, &ManagementButton::enabled));
+}
+
 TEST_CASE("a weekly graph leaves out the week still running, oldest first, with a mark where each month began")
 {
     const StringTable s = test_strings();

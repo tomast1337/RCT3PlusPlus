@@ -81,6 +81,7 @@ namespace rct3::ui::screens
         std::u16string help;
         bool enabled = true;
         std::vector<InfoChoice> choices { };
+        std::string key { }; ///< Widget name of a button without an icon
     };
 
     struct ManagementPage

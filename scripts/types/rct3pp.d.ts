@@ -90,6 +90,8 @@ declare namespace park {
     function ready(): Promise<void>;
     /** Hundredths of the currency; undefined in a park without money. */
     function cash(): number | undefined;
+    /** The loan, in hundredths of the currency. */
+    function loan(): number;
     /** Sets the cash, in hundredths of the currency, of a park with money. */
     function setCash(hundredths: number): void;
     /** The building lines of the newest month's ledger, in hundredths: spending above zero, refunds below. */

@@ -220,7 +220,7 @@ namespace rct3::ui::screens
             for (std::size_t i = 0; i < shown.buttons.size(); ++i)
             {
                 const ManagementButton& b = shown.buttons[i];
-                widgets::Button& button = lines_->add<widgets::Button>(b.icon.empty() ? std::format("button{}", i) : b.icon, style_.button, b.icon);
+                widgets::Button& button = lines_->add<widgets::Button>(!b.key.empty() ? b.key : b.icon.empty() ? std::format("button{}", i) : b.icon, style_.button, b.icon);
                 button.text = b.text;
                 button.text_inset = style_.button_inset;
                 button.tooltip = b.help;

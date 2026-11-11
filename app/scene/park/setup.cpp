@@ -1568,11 +1568,7 @@ namespace rct3::scene::park
             if (model)
                 scene.park_model = *model;
             if (saved && saved->goals)
-            {
                 scene.park_model.objectives = std::move(saved->goals->objectives);
-                scene.park_model.finance.max_loan = saved->goals->max_loan;
-                scene.park_model.finance.interest_rate_percent = saved->goals->interest_rate_percent;
-            }
             if (saved)
             {
                 const parkfile::SavedProgress& p = saved->progress;
@@ -1590,6 +1586,8 @@ namespace rct3::scene::park
                 scene.park.weather_hold = p.weather_hold;
                 scene.park.wind = p.wind;
                 scene.park.wind_change = p.wind_change;
+                scene.park_model.finance.max_loan = p.max_loan;
+                scene.park_model.finance.interest_rate_percent = p.interest_rate_percent;
                 if (!p.ledger.empty())
                 {
                     std::ranges::copy(p.ledger | std::views::take(save::model::kLedgerPeriods), scene.park_model.finance.ledger.begin());

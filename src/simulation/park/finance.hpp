@@ -52,4 +52,16 @@ namespace rct3::simulation::park
     /// may leave the cash below nought.
     bool book(ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, std::int64_t cost, LedgerLine line, bool forced);
 
+    /// How much the loan moves at a time: 1,000.00 in hundredths. Chosen by eye: a few presses buy a ride.
+    inline constexpr std::int64_t kLoanStep = 100'000;
+
+    /// How much `park` can borrow (`borrow`) or repay in one step: kLoanStep, cut short to keep the loan between
+    /// nought and `max_loan` (hundredths). A repayment needs the cash in hand. Nought when nothing can move, as in
+    /// a park whose money never runs out.
+    [[nodiscard]] std::int64_t loan_step(const ParkState& park, std::int64_t max_loan, bool borrow);
+
+    /// Borrows or repays one loan_step: the cash and the loan move together, with no ledger line. Returns
+    /// whether the loan changed.
+    bool change_loan(ParkState& park, std::int64_t max_loan, bool borrow);
+
 } // namespace rct3::simulation::park

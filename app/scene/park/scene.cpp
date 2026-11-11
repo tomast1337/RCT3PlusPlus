@@ -990,6 +990,7 @@ namespace rct3::scene::park
                             .cash_less_loan = cash - scene.park.loan,
                             .income = income - began.income,
                             .profit = cash - began.cash,
+                            .park_value = simulation::park::park_value(scene.park.guests, scene.rides),
                         });
                     began = { .intake = intake, .income = income, .cash = cash, .set = true };
                 }
@@ -1093,9 +1094,8 @@ namespace rct3::scene::park
                     health += animal.health.value;
                     ++animals;
                 }
-                // shortcut: the park's value stays as saved, as the simulation does not value the park yet; work it out once it does.
                 const simulation::ParkFigures figures {
-                    .park_value = std::llround(scene.park_model.finance.park_value.latest().value_or(0)),
+                    .park_value = simulation::park::park_value(scene.park.guests, scene.rides),
                     .guests = scene.park.guests,
                     .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
                     .loan = scene.park.loan,

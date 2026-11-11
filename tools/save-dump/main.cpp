@@ -25,6 +25,7 @@
 #include "save/model/rides.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
+#include "simulation/park/finance.hpp"
 #include "simulation/park/rating.hpp"
 
 #include <algorithm>
@@ -530,6 +531,8 @@ int main(int argc, char** argv)
             out.info("  park       rating {:g} guests {:g} flags {:x} open {:d}..{:d}", static_cast<double>(m.park.rating().value_or(-1.0f)), static_cast<double>(m.park.guests_in_park.latest().value_or(-1.0f)), m.park.flags.raw, m.park.opening_minutes, m.park.closing_minutes);
             out.info("  clock      time {:g} year {:d} month {:d} week {:d}", static_cast<double>(m.clock.time), static_cast<long long>(date.year), date.month, date.week);
             out.info("  finance    cash {:d} loan {:d}/{:d} ledger periods {:d} sum0 {:d}", m.finance.cash, m.finance.loan, m.finance.max_loan, m.finance.ledger_periods_loaded, static_cast<long long>(m.finance.ledger[0].raw_sum()));
+            if (const auto rides = rct3::save::model::load_rides(*file, index))
+                out.info("  value      saved {:.0f} ours {:d}", static_cast<double>(m.finance.park_value.latest().value_or(-1.0f)), rct3::simulation::park::park_value(static_cast<std::int32_t>(m.park.guests_in_park.latest().value_or(0.0f)), *rides));
             out.info(
                 "  scenario   objectives {:d} conditions {:d} challenges {:d} categories {:d} messages {:d}/{:d}"
                 " particles {:d}",

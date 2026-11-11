@@ -416,6 +416,14 @@ namespace rct3::simulation::tuning
         RatingPoints rating_bonus_fade { 4 }; ///< Chosen by eye: taken off that bonus each week, so it is gone in five months
     };
 
+    /// What a park is worth, for its graphs and the goals on it. Tuned against the park value series of saved
+    /// scenarios and community parks, so that our figure lands in the same range as theirs.
+    struct ParkValue
+    {
+        Money per_guest { 1'000 };       ///< Each guest in the park
+        Money per_excitement { 46'000 }; ///< An open ride is worth this times its excitement rating squared
+    };
+
     /// Trains crashing off the end of their track.
     struct Crashes
     {
@@ -686,6 +694,7 @@ namespace rct3::simulation::tuning
         Rating rating;
         Boats boats;
         Prizes prizes;
+        ParkValue park_value;
         Crashes crashes;
         Vips vips;
         Shows shows;

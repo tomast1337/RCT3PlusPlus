@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/park/finance.hpp"
 
+#include "simulation/tuning.hpp"
+
 #include <algorithm>
+#include <cmath>
 
 namespace rct3::simulation::park
 {
@@ -121,6 +124,15 @@ namespace rct3::simulation::park
         *park.cash += borrow ? step : -step;
         park.loan += borrow ? step : -step;
         return true;
+    }
+
+    std::int64_t park_value(std::int32_t guests, const save::model::RideModel& rides)
+    {
+        float worth = 0;
+        for (const save::model::Ride& ride : rides.rides)
+            if (ride.kind != save::model::RideKind::Special && !ride.base.demolished && ride.base.state == save::model::AttractionState::Open && ride.assessment.valid)
+                worth += ride.assessment.excitement * ride.assessment.excitement;
+        return std::max(guests, 0) * kTuning.park_value.per_guest.value + std::llround(worth * static_cast<float>(kTuning.park_value.per_excitement.value));
     }
 
 } // namespace rct3::simulation::park

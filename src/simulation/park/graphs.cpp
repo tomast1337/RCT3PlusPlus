@@ -56,8 +56,8 @@ namespace rct3::simulation::park
             total(m.income, static_cast<float>(f.income));
             total(m.weekly_profit, static_cast<float>(f.profit));
             total(m.expenditure, static_cast<float>(std::max<std::int64_t>(0, f.income - f.profit)));
-            carry(m.park_value);
-            carry(m.company_value);
+            level(m.park_value, static_cast<float>(f.park_value));
+            level(m.company_value, static_cast<float>(f.cash_less_loan + f.park_value));
             carry(m.share_price);
         }
     }

@@ -327,8 +327,22 @@ namespace rct3::ui::screens
                 interest = ascii(std::format("{:.1f} % ", m->interest_rate_percent)) + text(strings, "FinancialSummary_PercentPerYear");
             line("Money_LoanInterest", interest);
             line("FinancialSummary_EntranceFee", m != nullptr ? money(units, m->entrance_fee) : std::u16string(kDash));
-            line("FinancialSummary_ParkValue", m != nullptr ? optional_money(units, m->park_value.latest()) : std::u16string(kDash));
-            line("FinancialSummary_CompanyValue", m != nullptr ? optional_money(units, m->company_value.latest()) : std::u16string(kDash));
+            // While the park runs, what it and the company are worth now; otherwise as saved.
+            std::u16string value(kDash);
+            std::u16string company(kDash);
+            if (f.state != nullptr && f.rides != nullptr)
+            {
+                const std::int64_t worth = simulation::park::park_value(f.state->guests, *f.rides);
+                value = money(units, worth);
+                company = money(units, f.state->cash.value_or(0) - f.state->loan + worth);
+            }
+            else if (m != nullptr)
+            {
+                value = optional_money(units, m->park_value.latest());
+                company = optional_money(units, m->company_value.latest());
+            }
+            line("FinancialSummary_ParkValue", value);
+            line("FinancialSummary_CompanyValue", company);
             const auto loan_button = [&](std::string_view key, std::string_view help, bool borrow) {
                 const bool movable = f.state != nullptr && m != nullptr && simulation::park::loan_step(*f.state, m->max_loan, borrow) > 0;
                 page.buttons.push_back({ { }, text(strings, key), text(strings, help), movable, { }, std::string(key) });

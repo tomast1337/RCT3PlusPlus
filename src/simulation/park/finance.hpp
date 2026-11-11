@@ -6,6 +6,7 @@
 #pragma once
 
 #include "save/model/park.hpp"
+#include "save/model/rides.hpp"
 #include "simulation/park/state.hpp"
 
 #include <cstdint>
@@ -63,5 +64,11 @@ namespace rct3::simulation::park
     /// Borrows or repays one loan_step: the cash and the loan move together, with no ledger line. Returns
     /// whether the loan changed.
     bool change_loan(ParkState& park, std::int64_t max_loan, bool borrow);
+
+    /// What the park is worth, in hundredths: its guests, and each open ride by how exciting it was rated, a
+    /// thrilling ride worth many gentle ones. Facilities, rides not yet rated, scenery, paths and land count for
+    /// nothing. The company is worth this and its cash less its loan; where money never runs out, the cash counts
+    /// for nothing.
+    [[nodiscard]] std::int64_t park_value(std::int32_t guests, const save::model::RideModel& rides);
 
 } // namespace rct3::simulation::park

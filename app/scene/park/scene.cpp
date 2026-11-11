@@ -52,6 +52,7 @@
 #include "simulation/parties.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/staff/care.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
@@ -250,7 +251,7 @@ namespace rct3::scene::park
             shown.people.reserve(scene.shown_people.size());
             for (const ShownPerson& p : scene.shown_people)
                 shown.people.push_back({ { p.pose.world[3].x, p.pose.world[3].z }, p.staff });
-            for (const auto [_, patrol] : scene.sim.registry.view<const simulation::Patrol>().each())
+            for (const auto [_, patrol] : scene.sim.registry.view<const simulation::staff::Patrol>().each())
                 shown.patrol_tiles.insert(shown.patrol_tiles.end(), patrol.tiles.begin(), patrol.tiles.end());
             return shown;
         }
@@ -1951,7 +1952,7 @@ namespace rct3::scene::park
                 continue;
             ui::screens::StaffLook& look = scene.staff_looks[p.saved];
             look.colours = { p.pose.look.colours.at(ui::screens::kUpperPalette), p.pose.look.colours.at(ui::screens::kUpperPalette + 1) };
-            if (const auto* patrol = scene.sim.registry.valid(p.guest) ? scene.sim.registry.try_get<simulation::Patrol>(p.guest) : nullptr)
+            if (const auto* patrol = scene.sim.registry.valid(p.guest) ? scene.sim.registry.try_get<simulation::staff::Patrol>(p.guest) : nullptr)
                 look.patrol_tiles = patrol->tiles.size();
             look.painting_patrol = p.guest != entt::null && p.guest == shown_staff(scene) && scene.painting_patrol;
         }

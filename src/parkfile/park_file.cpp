@@ -5,6 +5,7 @@
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/rides.hpp"
+#include "simulation/staff/patrol.hpp"
 
 #include <algorithm>
 #include <array>
@@ -205,12 +206,12 @@ namespace rct3::parkfile
             }
         };
 
-        template<> struct Stored<simulation::Patrol>
+        template<> struct Stored<simulation::staff::Patrol>
         {
             static constexpr std::string_view kTag = "PTRL";
             static constexpr std::uint32_t kVersion = 1;
             static constexpr std::size_t kMinRecord = 4 + 4 + 4;
-            static void write(Writer& w, const simulation::Patrol& p)
+            static void write(Writer& w, const simulation::staff::Patrol& p)
             {
                 w.number(p.zone);
                 w.number(static_cast<std::uint32_t>(p.tiles.size()));
@@ -220,9 +221,9 @@ namespace rct3::parkfile
                     w.number(std::int32_t { t.y });
                 }
             }
-            static std::expected<simulation::Patrol, std::string> read(Reader& r)
+            static std::expected<simulation::staff::Patrol, std::string> read(Reader& r)
             {
-                simulation::Patrol p;
+                simulation::staff::Patrol p;
                 p.zone = r.number<std::uint32_t>();
                 const auto count = r.number<std::uint32_t>();
                 if (count > r.left() / 8)
@@ -237,7 +238,7 @@ namespace rct3::parkfile
             }
         };
 
-        using Components = std::tuple<simulation::Visitor, simulation::Pose, simulation::Needs, simulation::Mood, simulation::Wallet, simulation::Departure, simulation::Upkeep, simulation::Patrol>;
+        using Components = std::tuple<simulation::Visitor, simulation::Pose, simulation::Needs, simulation::Mood, simulation::Wallet, simulation::Departure, simulation::Upkeep, simulation::staff::Patrol>;
 
         std::uint32_t id(entt::entity e)
         {

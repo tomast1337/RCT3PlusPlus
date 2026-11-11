@@ -2,6 +2,7 @@
 #include "simulation/components.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/sandbox.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
@@ -115,7 +116,7 @@ TEST_CASE("a mechanic keeps to their patrol, and when every patrol leaves a brok
     auto& r = park.world().registry;
     r.emplace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = -1 });
     const auto mechanic = park.staff(StaffRole::Mechanic, { 0, 0 });
-    r.emplace<Patrol>(mechanic, Patrol { { { 0, 0 }, { 1, 0 }, { 2, 0 } } });
+    r.emplace<staff::Patrol>(mechanic, staff::Patrol { { { 0, 0 }, { 1, 0 }, { 2, 0 } } });
     r.get<Staff>(park.staff(StaffRole::Inspector, { 0, 0 })).tasks = 0;
     park.run_seconds(120);
     CHECK(r.get<Upkeep>(ride).broken);

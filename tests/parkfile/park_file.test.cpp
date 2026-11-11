@@ -4,6 +4,7 @@
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/rides.hpp"
+#include "simulation/staff/patrol.hpp"
 
 #include <cstring>
 #include <doctest/doctest.h>
@@ -206,7 +207,7 @@ TEST_CASE("a ride mid-breakdown and a staff member's patrol are read back as wri
     upkeep.sample_clock.value = 0.75f;
     r.emplace<simulation::Upkeep>(ride, upkeep);
     const auto handyman = r.create();
-    r.emplace<simulation::Patrol>(handyman, simulation::Patrol { { { 3, 4 }, { -1, 200 } }, 2 });
+    r.emplace<simulation::staff::Patrol>(handyman, simulation::staff::Patrol { { { 3, 4 }, { -1, 200 } }, 2 });
     const auto bytes = parkfile::write_park_file(world);
     const auto read = parkfile::read_park_file(bytes);
     REQUIRE_MESSAGE(read, read.error());
@@ -217,7 +218,7 @@ TEST_CASE("a ride mid-breakdown and a staff member's patrol are read back as wri
     CHECK(back.downtime == upkeep.downtime);
     CHECK(back.downtime_share() == doctest::Approx(31.0 / 160));
     CHECK(back.samples == 11);
-    CHECK(read->registry.get<simulation::Patrol>(handyman).tiles == std::vector<glm::ivec2> { { 3, 4 }, { -1, 200 } });
-    CHECK(read->registry.get<simulation::Patrol>(handyman).zone == 2);
+    CHECK(read->registry.get<simulation::staff::Patrol>(handyman).tiles == std::vector<glm::ivec2> { { 3, 4 }, { -1, 200 } });
+    CHECK(read->registry.get<simulation::staff::Patrol>(handyman).zone == 2);
     CHECK(parkfile::write_park_file(*read) == bytes);
 }

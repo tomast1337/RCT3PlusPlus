@@ -4,6 +4,7 @@
 #include "parkfile/binary.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/parties.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/units.hpp"
 
@@ -229,7 +230,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     const entt::entity sweeper = r.create();
     r.emplace<Staff>(sweeper, Staff { .role = StaffRole::Handyman, .wage = 900, .training = 1, .laziness = 0.25f, .mended = 5, .think = { 12.5f }, .miserable = 3 });
     r.emplace<Pose>(sweeper, Pose { .position = { 3, 0, 4 } });
-    r.emplace<Patrol>(sweeper, Patrol { { { 1, 2 }, { 3, 4 } }, 7 });
+    r.emplace<staff::Patrol>(sweeper, staff::Patrol { { { 1, 2 }, { 3, 4 } }, 7 });
 
     parkfile::SavedPark park = small_park();
     park.people = parkfile::keep_people(world, model, { { ann, 1 }, { sweeper, 0 } });

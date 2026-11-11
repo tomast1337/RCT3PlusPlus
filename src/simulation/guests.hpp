@@ -21,6 +21,11 @@ namespace rct3::simulation::tuning
     struct TasteBand;
 }
 
+namespace rct3::simulation::staff
+{
+    struct Patrol;
+}
+
 namespace rct3::simulation
 {
 
@@ -175,7 +180,7 @@ namespace rct3::simulation
     bool pay(entt::registry& r, entt::entity guest, Money price, Money Wallet::* on);
 
     /// The next tile for `who` wandering at `at`, not back where they came from unless it is the only way.
-    [[nodiscard]] NodeId wander(const PathNetwork& paths, NodeId at, NodeId came, Dice& dice, Walker who, const Patrol* patrol = nullptr);
+    [[nodiscard]] NodeId wander(const PathNetwork& paths, NodeId at, NodeId came, Dice& dice, Walker who, const staff::Patrol* patrol = nullptr);
 
     /// A lane near `was`, so walkers drift across the path rather than zigzag from tile to tile. A party
     /// member keeps `slot` off their party's middle, and the middle drifts so the whole ring stays on the path.

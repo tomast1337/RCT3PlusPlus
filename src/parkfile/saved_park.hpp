@@ -53,6 +53,7 @@
 #include "simulation/guests.hpp"
 #include "simulation/park/rating.hpp"
 #include "simulation/sim_world.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/swimming.hpp"
 
 #include <cstddef>
@@ -127,7 +128,7 @@ namespace rct3::parkfile
         float laziness = 0;
         glm::vec3 position { 0.0f };
         float heading = 0;
-        std::optional<simulation::Patrol> patrol { };
+        std::optional<simulation::staff::Patrol> patrol { };
         std::uint32_t mended = 0;    ///< Broken path items mended
         float think = 0;             ///< Seconds to their next thought
         std::uint32_t miserable = 0; ///< Thoughts in a row had while miserable, towards quitting

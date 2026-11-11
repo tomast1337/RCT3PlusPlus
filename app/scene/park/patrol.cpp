@@ -58,7 +58,7 @@ namespace rct3::scene::park
 
         using PathHeights = std::map<std::pair<int, int>, float>; ///< Of the highest path on each tile with paths
 
-        void add_area(rct3::park::TerrainMesh& mesh, const ParkScene& scene, const PathHeights& heights, const simulation::Patrol& patrol, glm::vec4 colour)
+        void add_area(rct3::park::TerrainMesh& mesh, const ParkScene& scene, const PathHeights& heights, const simulation::staff::Patrol& patrol, glm::vec4 colour)
         {
             for (const glm::ivec2 tile : patrol.tiles)
             {
@@ -103,7 +103,7 @@ namespace rct3::scene::park
         if (!scene.patrol_stroke)
         {
             // Adds, unless it starts on the area.
-            const auto* patrol = scene.sim.registry.try_get<simulation::Patrol>(staff);
+            const auto* patrol = scene.sim.registry.try_get<simulation::staff::Patrol>(staff);
             scene.patrol_stroke = patrol == nullptr || !std::ranges::contains(patrol->tiles, *tile);
         }
         const int across = ui::screens::kPatrolBrushes.at(static_cast<std::size_t>(std::clamp(scene.patrol_brush, 0, static_cast<int>(ui::screens::kPatrolBrushes.size()) - 1)));
@@ -117,16 +117,16 @@ namespace rct3::scene::park
         if (staff == entt::null)
             return;
         auto& r = scene.sim.registry;
-        const auto* patrol = r.try_get<simulation::Patrol>(staff);
+        const auto* patrol = r.try_get<simulation::staff::Patrol>(staff);
         const simulation::StaffRole role = r.get<simulation::Staff>(staff).role;
         for (const auto [e, other] : r.view<const simulation::Staff>().each())
         {
             if (e == staff || other.role != role)
                 continue;
             if (patrol != nullptr)
-                r.emplace_or_replace<simulation::Patrol>(e, simulation::Patrol { patrol->tiles }); // The tiles, not the zone
+                r.emplace_or_replace<simulation::staff::Patrol>(e, simulation::staff::Patrol { patrol->tiles }); // The tiles, not the zone
             else
-                r.remove<simulation::Patrol>(e);
+                r.remove<simulation::staff::Patrol>(e);
         }
     }
 
@@ -144,10 +144,10 @@ namespace rct3::scene::park
         rct3::park::TerrainMesh mesh;
         // The others first and faint, then the shown one's over them.
         const auto& r = scene.sim.registry;
-        for (const auto [e, staff, patrol] : r.view<const simulation::Staff, const simulation::Patrol>().each())
+        for (const auto [e, staff, patrol] : r.view<const simulation::Staff, const simulation::staff::Patrol>().each())
             if (e != shown)
                 add_area(mesh, scene, heights, patrol, glm::vec4(role_colour(staff.role), kOthersAlpha));
-        if (const auto* patrol = r.try_get<simulation::Patrol>(shown))
+        if (const auto* patrol = r.try_get<simulation::staff::Patrol>(shown))
             add_area(mesh, scene, heights, *patrol, glm::vec4(role_colour(r.get<simulation::Staff>(shown).role), kShownAlpha));
         if (mesh.indices.empty())
             return;

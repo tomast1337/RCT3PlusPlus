@@ -8,6 +8,7 @@
 #include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/staff/care.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/systems.hpp"
 
 #include <algorithm>
@@ -267,8 +268,8 @@ TEST_CASE("a breakdown goes to the mechanic whose patrol takes the ride in, befo
     auto& r = park.world().registry;
     const auto near = park.staff(StaffRole::Mechanic, { 6, 0 });
     const auto far = park.staff(StaffRole::Mechanic, { 0, 0 });
-    r.emplace<Patrol>(near, Patrol { { { 5, 0 }, { 6, 0 } } });
-    r.emplace<Patrol>(far, Patrol { { { 0, 0 }, { 8, 0 } } });
+    r.emplace<staff::Patrol>(near, staff::Patrol { { { 5, 0 }, { 6, 0 } } });
+    r.emplace<staff::Patrol>(far, staff::Patrol { { { 0, 0 }, { 8, 0 } } });
     r.emplace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = -1 });
     park.run(1);
     CHECK(r.get<Upkeep>(ride).mechanic == far);

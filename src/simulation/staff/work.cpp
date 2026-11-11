@@ -12,6 +12,7 @@
 #include "simulation/rides.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/staff/care.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"

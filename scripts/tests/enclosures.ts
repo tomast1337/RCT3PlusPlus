@@ -96,18 +96,20 @@ async function screenshot_once(): Promise<void> {
 const cash = park.cash()!;
 const construction = park.ledger().rideConstruction;
 expect(build.pick("Enclosures/Fences/Wood/Wood_Stub", "Wood"), "the wooden fence in the enclosure list");
-// With no money a fence dragged twice goes up nowhere and nothing is paid, and the refusals say so once.
-const told = () => park.messages().filter((m) => m.key === "PlaceObject_NotEnoughMoney").length;
-const told_before = told();
-park.setCash(1);
-await drag_enclosure([c0, r0], [c0 + 1, r0]);
-await drag_enclosure([c0, r0], [c0 + 1, r0 + 1]);
-expect(map.tile(c0, r0)!.enclosure < 0 && park.cash() === 1 && fenced() === panels.length, "no fence without the money");
-expect(told() === told_before + 1, `the not enough money message once, not ${told() - told_before} times`);
-park.setCash(cash);
 const one = await drag_enclosure([c0, r0], [c0, r0]);
 const length = one.cost / 4; // What one length of wooden fence costs: a single tile is fenced on four sides
 expect(one.tiles === 1 && length > 0, `one tile priced, not ${JSON.stringify(one)}`);
+// With no money a fence dragged twice goes up nowhere and nothing is paid, and the refusals say so once.
+const told = () => park.messages().filter((m) => m.key === "PlaceObject_NotEnoughMoney").length;
+const told_before = told();
+const fenced_before = fenced();
+const cash_before_broke = park.cash()!;
+park.setCash(1);
+await drag_enclosure([c0 + 2, r0 + 2], [c0 + 3, r0 + 2]);
+await drag_enclosure([c0 + 2, r0 + 2], [c0 + 3, r0 + 3]);
+expect(map.tile(c0 + 2, r0 + 2)!.enclosure < 0 && park.cash() === 1 && fenced() === fenced_before, "no fence without the money");
+expect(told() === told_before + 1, `the not enough money message once, not ${told() - told_before} times`);
+park.setCash(cash_before_broke);
 const five_by_four = await drag_enclosure([c0, r0], [c0 + 4, r0 + 3]);
 // The tile already enclosed stays; the rest join it: 18 lengths round, the 2 round the first tile inside the
 // rectangle taken down again.

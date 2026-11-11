@@ -3,6 +3,7 @@
 
 #include "simulation/park/finance.hpp"
 #include "simulation/park/state.hpp"
+#include "simulation/research.hpp"
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
@@ -313,7 +314,7 @@ namespace rct3::simulation
         return { };
     }
 
-    void give_prize(park::ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, save::model::TerrainGrid& land, std::int32_t id)
+    void give_prize(park::ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, save::model::TerrainGrid& land, Research& research, std::int32_t id)
     {
         const tuning::Prizes& p = kTuning.prizes;
         switch (id)
@@ -341,10 +342,12 @@ namespace rct3::simulation
                         cell.flags |= std::to_underlying(save::model::TileFlag::ForSale);
                 }
                 break;
+            case 9:
+                research.boost += p.research_boost.value;
+                break;
             default:
                 // A coaster design prize only tells the player: saved designs held back for a scenario's level open once
                 // the career has that level.
-                // shortcut: the research boost only tells the player too; give it once research runs.
                 break;
         }
     }

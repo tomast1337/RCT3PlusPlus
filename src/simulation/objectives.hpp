@@ -23,6 +23,7 @@
 
 namespace rct3::simulation
 {
+    struct Research;
     namespace park
     {
         struct ParkState;
@@ -92,8 +93,9 @@ namespace rct3::simulation
     [[nodiscard]] std::string_view condition_name(save::model::ConditionKind kind) noexcept;
 
     /// Gives the park prize `id`'s reward, cash booked as prize money in `finance`'s ledger (`kept` as for
-    /// park::book). The construction rights prize puts the land held back from the park on sale.
-    void give_prize(park::ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, save::model::TerrainGrid& land, std::int32_t id);
+    /// park::book). The construction rights prize puts the land held back from the park on sale; the research prize
+    /// adds to `research`'s boost, counted with the next part of the budget paid.
+    void give_prize(park::ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, save::model::TerrainGrid& land, Research& research, std::int32_t id);
 
     /// Text keys of prize `id`'s name and of the message telling the player they have it.
     [[nodiscard]] std::string_view prize_name(std::int32_t id);

@@ -414,6 +414,7 @@ namespace rct3::simulation::tuning
         Money small_cash { 250'000 };
         RatingPoints rating_bonus { 80 };     ///< Chosen by eye: added to the park's rating at once, and to each week's score
         RatingPoints rating_bonus_fade { 4 }; ///< Chosen by eye: taken off that bonus each week, so it is gone in five months
+        Money research_boost { 24'000 };      ///< Chosen by eye: free research progress, enough to invent a tracked ride outright
     };
 
     /// What a park is worth, for its graphs and the goals on it. Tuned against the park value series of saved

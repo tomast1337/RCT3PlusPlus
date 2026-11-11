@@ -15,7 +15,7 @@
 //   "BINS" v1  std::vector<save::model::BinState>
 //   "SIGN" v1  std::vector<save::model::SignState>
 //   "RIDE" v1  save::model::RideModel
-//   "PARK" v1  SavedProgress
+//   "PARK" v1  SavedProgress: the money, the calendar and the weather, with the ledger and the weekly graphs
 //   "VIEW" v1  park::ParkCamera
 //   "PEOP" v3  SavedPeople: the people's looks and pages, and where the guests and staff stand and how
 //              they are. Saves made before it lack it; their people start again from the original park.
@@ -90,6 +90,13 @@ namespace rct3::parkfile
         std::vector<save::model::LedgerPeriod> ledger; ///< The months' accounts, newest first
         std::int32_t max_loan = 0;                     ///< Hundredths; goal prizes may have raised it
         float interest_rate_percent = 0;               ///< Goal prizes may have lowered it
+        std::optional<std::int64_t> ledger_month;      ///< The month the newest ledger period is for (simulation::park::ledger_month)
+        /// The weekly graphs (simulation/park/graphs.hpp), the money's then the park's, as the models keep them.
+        save::model::Series cash_less_loan, company_value, expenditure, income, park_value, share_price, weekly_profit;
+        save::model::Series park_rating, guests_in_park, adults_in_park, teenagers_in_park, children_in_park, guest_intake, publicity_level;
+        /// The week still running, for the graphs to count it whole: guests come in and attractions' takings so
+        /// far, and the cash as it began (hundredths).
+        std::int64_t week_intake = 0, week_income = 0, week_cash = 0;
     };
 
     /// A guest in the park.

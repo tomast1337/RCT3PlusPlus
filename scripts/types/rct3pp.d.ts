@@ -96,6 +96,9 @@ declare namespace park {
     function setCash(hundredths: number): void;
     /** The building lines of the newest month's ledger, in hundredths: spending above zero, refunds below. */
     function ledger(): { landPurchase: number; landscaping: number; rideConstruction: number };
+    /** The weekly graphs' samples, newest first (money in hundredths), each ledger period's sum newest first, and
+     *  the month, counted from the calendar's start, that the newest period is for (null before anything is booked). */
+    function history(): { cashLessLoan: number[]; companyValue: number[]; parkValue: number[]; income: number[]; expenditure: number[]; weeklyProfit: number[]; rating: number[]; guests: number[]; intake: number[]; ledger: number[]; ledgerMonth: number | null };
     /** Guests in the park now. */
     function guests(): number;
     /** The path tiles under the park's entrances, where guests come in and go out. */

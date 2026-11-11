@@ -130,6 +130,35 @@ TEST_CASE("a saved park reads back as written")
     CHECK(beds->flower_beds.front().water == 7.5f);
 }
 
+TEST_CASE("a saved park keeps its money and park history, the ledger's month and the week so far")
+{
+    parkfile::SavedPark park = small_park();
+    park.progress.ledger = { { .ride_tickets = -4200, .staff_wages = 900 }, { .shop_stock = 150 } };
+    park.progress.ledger_month = 17;
+    park.progress.company_value = { .samples = { 5.0f, 4.0f, 3.0f }, .capacity = 64 };
+    park.progress.weekly_profit = { .samples = { -12.5f }, .capacity = 64 };
+    park.progress.guest_intake = { .samples = { 0.0f, 31.0f }, .capacity = 64 };
+    park.progress.week_intake = 6;
+    park.progress.week_income = 750;
+    park.progress.week_cash = 99'000;
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE(read);
+    const parkfile::SavedProgress& p = read->progress;
+    REQUIRE(p.ledger.size() == 2);
+    CHECK(p.ledger[0].ride_tickets == -4200);
+    CHECK(p.ledger[0].staff_wages == 900);
+    CHECK(p.ledger[1].shop_stock == 150);
+    CHECK(p.ledger_month == 17);
+    CHECK(p.company_value.samples == std::vector { 5.0f, 4.0f, 3.0f });
+    CHECK(p.company_value.capacity == 64);
+    CHECK(p.weekly_profit.samples == std::vector { -12.5f });
+    CHECK(p.guest_intake.samples == std::vector { 0.0f, 31.0f });
+    CHECK(p.park_value.empty()); // A series the park never had stays empty
+    CHECK(p.week_intake == 6);
+    CHECK(p.week_income == 750);
+    CHECK(p.week_cash == 99'000);
+}
+
 TEST_CASE("a saved park keeps its day mode")
 {
     parkfile::SavedPark park = small_park();

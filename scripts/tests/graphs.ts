@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The graphs of a park that has run a while: the park window's (rating, guests and the rest), the finances'
-// (cash, values, profit) and a tested coaster's (speed, height and forces).
+// (cash, values, profit), kept with the ledger through a save and a reload, and a tested coaster's (speed, height
+// and forces).
 //
 //   ./nob script scripts/tests/graphs.ts -- --no-audio
 
@@ -69,6 +70,32 @@ await frames(90);
 expect(ui.find(tick)?.on === false, "the weekly profit unticked");
 await screenshot("finance_graphs");
 await close("FinancialManagement_Title");
+
+// Saved and opened again, paused so nothing is booked between: the graphs and the ledger as they were.
+await ui.click("bar/Top_Pause");
+await frames(5);
+const before = JSON.stringify(park.history());
+const files = async (item: string) => {
+    if (ui.find(`tools/Files/${item}`) === undefined)
+        await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
+    await until(() => ui.find(`tools/Files/${item}`) !== undefined, 120, "the files menu");
+    await ui.click(`tools/Files/${item}`);
+};
+await files("File_SaveGame");
+await until(() => ui.find("park_files") !== undefined, 120, "the save window");
+await ui.click("park_files/content/open");
+await until(() => ui.find("park_files") === undefined, 120, "the save window to close");
+await files("File_LoadGame");
+await until(() => ui.find("park_files/content/list/view/content/row0") !== undefined, 120, "the save in the load window");
+await ui.click("park_files/content/list/view/content/row0");
+await ui.click("park_files/content/open");
+await frames(5);
+await until(() => park.loaded(), 1200, "the saved park");
+const after = JSON.stringify(park.history());
+log("history:", before);
+expect(after === before, `the history as saved, not ${after}`);
+await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined, 1200, "the saved park's tools");
+await frames(30);
 
 // A coaster's lap run here replaces the graphs it was saved with.
 const coaster = rides.list().findIndex((r) => !r.flat && !r.demolished && r.open === true && r.graphSamples > 0);

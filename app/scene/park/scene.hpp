@@ -579,11 +579,11 @@ namespace rct3::scene::park
         simulation::Takings takings;                        ///< Last month's, for the scenario's goals on money
         std::int64_t goals_day = -1;                        ///< The calendar day the scenario's goals were last checked on
         std::vector<simulation::GoalReading> goal_readings; ///< By place in the park's goals, as last checked
-        /// The park's running totals as the week began, for its weekly graphs; unset until a week has ended.
+        /// The park's running totals as the week began (week_totals), for its weekly graphs, and its cash. A week
+        /// begun before a saved park was loaded began below nought, the simulation counting again from there.
         struct
         {
             std::int64_t intake = 0, income = 0, cash = 0;
-            bool set = false;
         } week_began;
         /// The cars of each simulated ride, by their places in `cars`, front to back.
         std::map<entt::entity, std::vector<std::size_t>> ride_cars; ///< In the simulation, by ride; null when not there

@@ -1593,7 +1593,28 @@ namespace rct3::scene::park
                     std::ranges::copy(p.ledger | std::views::take(save::model::kLedgerPeriods), scene.park_model.finance.ledger.begin());
                     scene.park_model.finance.ledger_periods_loaded = std::min(p.ledger.size(), save::model::kLedgerPeriods);
                 }
+                scene.ledger_month = p.ledger_month;
+                save::model::Finance& m = scene.park_model.finance;
+                m.cash_less_loan = p.cash_less_loan;
+                m.company_value = p.company_value;
+                m.expenditure = p.expenditure;
+                m.income = p.income;
+                m.park_value = p.park_value;
+                m.share_price = p.share_price;
+                m.weekly_profit = p.weekly_profit;
+                save::model::Park& g = scene.park_model.park;
+                g.park_rating = p.park_rating;
+                g.guests_in_park = p.guests_in_park;
+                g.adults_in_park = p.adults_in_park;
+                g.teenagers_in_park = p.teenagers_in_park;
+                g.children_in_park = p.children_in_park;
+                g.guest_intake = p.guest_intake;
+                g.publicity_level = p.publicity_level;
+                // The simulation counts its totals again from nought.
+                scene.week_began = { .intake = -p.week_intake, .income = -p.week_income, .cash = p.week_cash };
             }
+            else
+                scene.week_began.cash = scene.park.cash.value_or(0);
         }
 
         // ── 8. UI layout ──

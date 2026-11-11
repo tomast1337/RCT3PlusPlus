@@ -255,6 +255,22 @@ namespace rct3::scene::park
                 shown.patrol_tiles.insert(shown.patrol_tiles.end(), patrol.tiles.begin(), patrol.tiles.end());
             return shown;
         }
+
+        /// The running totals the weekly graphs are counted from: guests come in at the gates and what the
+        /// attractions have taken, both since the park was opened, as the simulation counts them. Where money
+        /// never runs out the park books nothing, so its takings count nought.
+        std::pair<std::int64_t, std::int64_t> week_totals(const ParkScene& scene)
+        {
+            std::int64_t intake = 0;
+            if (const auto* gate = scene.sim.registry.ctx().find<simulation::Turnstile>())
+                for (const std::uint32_t n : gate->in)
+                    intake += n;
+            std::int64_t income = 0;
+            if (scene.park.cash)
+                for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
+                    income += attraction.income.value;
+            return { intake, income };
+        }
     } // namespace
 
     save::model::AttractionCommon* attraction_common(ParkScene& scene, rct3::park::AttractionRef ref)
@@ -966,18 +982,9 @@ namespace rct3::scene::park
                     std::array<std::int32_t, 3> ages { };
                     for (const auto [e, visitor] : scene.sim.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>).each())
                         ++ages[static_cast<std::size_t>(visitor.age)];
-                    std::int64_t intake = 0;
-                    if (const auto* gate = scene.sim.registry.ctx().find<simulation::Turnstile>())
-                        for (const std::uint32_t n : gate->in)
-                            intake += n;
-                    // Where money never runs out the park books nothing, so its income stays flat.
-                    const std::int64_t income = scene.park.cash ? rides_taken + shops_taken : 0;
+                    const auto [intake, income] = week_totals(scene);
                     const std::int64_t cash = scene.park.cash.value_or(0);
-                    // shortcut: the week the park was opened in counts nothing in, taken or made; keep the week's totals
-                    // in the park file to count it whole.
                     auto& began = scene.week_began;
-                    if (!began.set)
-                        began = { .intake = intake, .income = income, .cash = cash, .set = true };
                     simulation::park::close_week(
                         scene.park_model,
                         {
@@ -992,7 +999,7 @@ namespace rct3::scene::park
                             .profit = cash - began.cash,
                             .park_value = simulation::park::park_value(scene.park.guests, scene.rides),
                         });
-                    began = { .intake = intake, .income = income, .cash = cash, .set = true };
+                    began = { .intake = intake, .income = income, .cash = cash };
                 }
                 // Awards, as each month begins, from the park as it runs. The month the park opens in is not judged.
                 const bool new_month = scene.awards_month >= 0 && scene.park.date.month != scene.awards_month;
@@ -2170,7 +2177,31 @@ namespace rct3::scene::park
                            .wind_change = park.wind_change,
                            .ledger = { scene.park_model.finance.ledger.begin(), scene.park_model.finance.ledger.begin() + static_cast<std::ptrdiff_t>(std::min(scene.park_model.finance.ledger_periods_loaded, save::model::kLedgerPeriods)) },
                            .max_loan = scene.park_model.finance.max_loan,
-                           .interest_rate_percent = scene.park_model.finance.interest_rate_percent };
+                           .interest_rate_percent = scene.park_model.finance.interest_rate_percent,
+                           .ledger_month = scene.ledger_month };
+        {
+            parkfile::SavedProgress& p = saved.progress;
+            const save::model::Finance& m = scene.park_model.finance;
+            p.cash_less_loan = m.cash_less_loan;
+            p.company_value = m.company_value;
+            p.expenditure = m.expenditure;
+            p.income = m.income;
+            p.park_value = m.park_value;
+            p.share_price = m.share_price;
+            p.weekly_profit = m.weekly_profit;
+            const save::model::Park& g = scene.park_model.park;
+            p.park_rating = g.park_rating;
+            p.guests_in_park = g.guests_in_park;
+            p.adults_in_park = g.adults_in_park;
+            p.teenagers_in_park = g.teenagers_in_park;
+            p.children_in_park = g.children_in_park;
+            p.guest_intake = g.guest_intake;
+            p.publicity_level = g.publicity_level;
+            const auto [intake, income] = week_totals(scene);
+            p.week_intake = intake - scene.week_began.intake;
+            p.week_income = income - scene.week_began.income;
+            p.week_cash = scene.week_began.cash;
+        }
         saved.camera = scene.camera;
         std::unordered_map<entt::entity, std::int32_t> looks;
         for (const ShownPerson& p : scene.shown_people)

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 
 #include "simulation/tuning.hpp"
 
@@ -7,6 +7,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
+using namespace rct3::simulation::staff;
 
 namespace
 {

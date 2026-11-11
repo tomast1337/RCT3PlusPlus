@@ -14,7 +14,7 @@
 #include "simulation/parties.hpp"
 #include "simulation/ride_walks.hpp"
 #include "simulation/rides.hpp"
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/tuning.hpp"
@@ -808,13 +808,13 @@ namespace rct3::simulation
                 const auto* duty = r.try_get<KeeperDuty>(e);
                 if (staff.role != StaffRole::Vendor && staff.role != StaffRole::Other && duty == nullptr)
                     continue;
-                care_for(staff, duty != nullptr ? duty->job != KeeperJob::Idle && duty->job != KeeperJob::Strolling : guests_near(pose.position), dt);
+                staff::care_for(staff, duty != nullptr ? duty->job != KeeperJob::Idle && duty->job != KeeperJob::Strolling : guests_near(pose.position), dt);
                 if (staff.think.value -= dt; staff.think.value <= 0)
                 {
                     staff.think = kTuning.staff.think;
                     if (!r.all_of<Dice>(e))
                         r.emplace<Dice>(e, dice_for(world, e));
-                    for (const ThoughtKind kind : staff_thoughts(staff))
+                    for (const ThoughtKind kind : staff::staff_thoughts(staff))
                     {
                         if (kind == ThoughtKind::StaffWantToQuit && duty == nullptr)
                             continue;
@@ -822,7 +822,7 @@ namespace rct3::simulation
                         if (kind == ThoughtKind::StaffWantToQuit)
                             r.ctx().emplace<Findings>().found.emplace_back(Finding::WantsToQuit, e);
                     }
-                    if (duty != nullptr && quits(staff))
+                    if (duty != nullptr && staff::quits(staff))
                         r.ctx().emplace<Findings>().found.emplace_back(Finding::Quit, e);
                 }
             }
@@ -959,23 +959,23 @@ namespace rct3::simulation
                 if (staff.ride != entt::null && !r.valid(staff.ride))
                     staff.ride = entt::null;
                 // An entertainer is at work while there are guests near to entertain.
-                care_for(staff, staff.role == StaffRole::Entertainer ? guests_near(pose.position) : (staff.busy.value > 0 && staff.job != StaffJob::Rest) || staff.ride != entt::null, dt);
+                staff::care_for(staff, staff.role == StaffRole::Entertainer ? guests_near(pose.position) : (staff.busy.value > 0 && staff.job != StaffJob::Rest) || staff.ride != entt::null, dt);
                 if (staff.think.value -= dt; staff.think.value <= 0)
                 {
                     staff.think = kTuning.staff.think;
-                    for (const ThoughtKind kind : staff_thoughts(staff))
+                    for (const ThoughtKind kind : staff::staff_thoughts(staff))
                     {
                         think(r, e, kind, entt::null, now);
                         if (kind == ThoughtKind::StaffWantToQuit)
                             r.ctx().emplace<Findings>().found.emplace_back(Finding::WantsToQuit, e);
                     }
-                    if (quits(staff))
+                    if (staff::quits(staff))
                         r.ctx().emplace<Findings>().found.emplace_back(Finding::Quit, e);
                 }
                 // A lazy one, with nothing to do, stops where they are now and then.
-                if (staff.busy.value == 0 && staff.ride == entt::null && random::chance(dice.state, rest_chance(staff) * dt))
+                if (staff.busy.value == 0 && staff.ride == entt::null && random::chance(dice.state, staff::rest_chance(staff) * dt))
                 {
-                    staff.busy.value = staff.job_length.value = kRestSeconds;
+                    staff.busy.value = staff.job_length.value = staff::kRestSeconds;
                     staff.job = StaffJob::Rest;
                 }
                 if (staff.busy.value > 0)
@@ -1283,7 +1283,7 @@ namespace rct3::simulation
                     else
                     {
                         const bool broken = r.get<Upkeep>(staff.ride).broken;
-                        staff.busy.value = staff.job_length.value = (broken ? kTuning.wear.repair.value : kTuning.wear.inspect.value) * work_slowdown(staff);
+                        staff.busy.value = staff.job_length.value = (broken ? kTuning.wear.repair.value : kTuning.wear.inspect.value) * staff::work_slowdown(staff);
                         staff.job = broken ? StaffJob::Fix : StaffJob::Inspect;
                         stride.to = at;
                         stride.progress.value = 1;
@@ -1291,13 +1291,13 @@ namespace rct3::simulation
                 }
                 else if (const float busy = job(); busy > 0)
                 {
-                    staff.busy.value = staff.job_length.value = busy * work_slowdown(staff);
+                    staff.busy.value = staff.job_length.value = busy * staff::work_slowdown(staff);
                     stride.to = at;
                     stride.progress.value = 1;
                 }
-                else if (staff.role == StaffRole::Guard && random::chance(dice.state, kWatchChance))
+                else if (staff.role == StaffRole::Guard && random::chance(dice.state, staff::kWatchChance))
                 {
-                    staff.busy.value = staff.job_length.value = kWatchSeconds;
+                    staff.busy.value = staff.job_length.value = staff::kWatchSeconds;
                     staff.job = StaffJob::Watch;
                     stride.to = at;
                     stride.progress.value = 1;

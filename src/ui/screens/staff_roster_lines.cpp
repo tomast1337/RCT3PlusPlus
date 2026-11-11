@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/staff_roster_lines.hpp"
 
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 #include "ui/save_text.hpp"
 #include "ui/screens/person_info.hpp"
 
@@ -41,8 +41,8 @@ namespace rct3::ui::screens
             if (!shows_job(jobs, s.kind))
                 continue;
             const PersonFacts person { .staff = &s, .people = facts.people, .rides = facts.rides };
-            simulation::Staff pay { .role = simulation::staff_role(s.kind), .training = s.training };
-            simulation::set_wage_level(pay, s.wage_level);
+            simulation::Staff pay { .role = simulation::staff::staff_role(s.kind), .training = s.training };
+            simulation::staff::set_wage_level(pay, s.wage_level);
             const StaffLook look = i < facts.staff_looks.size() ? facts.staff_looks[i] : StaffLook { };
             // Staff a scenario starts with were hired before its calendar began: they show its first day.
             const save::model::CalendarDate hired = save::model::GameClock::date_at(s.person.start_time, facts.zero_time);
@@ -59,7 +59,7 @@ namespace rct3::ui::screens
                     .training = s.training,
                     .wage_level = pay.wage_level,
                     .wage = pay.wage.value,
-                    .training_cost = simulation::training_cost(pay),
+                    .training_cost = simulation::staff::training_cost(pay),
                     .tasks = s.task_flags,
                     .patrol_tiles = look.patrol_tiles,
                     .painting_patrol = look.painting_patrol,

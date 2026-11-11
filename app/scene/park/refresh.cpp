@@ -24,7 +24,7 @@
 #include "simulation/parties.hpp"
 #include "simulation/ride_walks.hpp"
 #include "simulation/rides.hpp"
-#include "simulation/staff_motions.hpp"
+#include "simulation/staff/motions.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
@@ -771,7 +771,7 @@ namespace rct3::scene::park
                 const simulation::Pose& now = r.get<simulation::Pose>(shown.guest);
                 const bool walking = now.was != now.position;
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-                pose.motion = rct3::park::person::motion_number(simulation::keeper_motion(job, walking)).value_or(walking ? rct3::park::person::motion::kWalk : rct3::park::person::motion::kIdle);
+                pose.motion = rct3::park::person::motion_number(simulation::staff::keeper_motion(job, walking)).value_or(walking ? rct3::park::person::motion::kWalk : rct3::park::person::motion::kIdle);
                 pose.time = walking && shown.paces[0] > 0 ? at.walked.value / shown.paces[0] : shown.saved_time + clock * shown.speed;
                 return pose;
             }
@@ -1196,7 +1196,7 @@ namespace rct3::scene::park
             if (staff != nullptr && staff->job != simulation::StaffJob::None && staff->busy.value > 0 && !walking)
             {
                 const auto* upkeep = r.valid(staff->ride) ? r.try_get<simulation::Upkeep>(staff->ride) : nullptr;
-                const simulation::WorkLook look = simulation::work_look(staff->job, upkeep != nullptr ? upkeep->kind : simulation::Breakdown::None);
+                const simulation::staff::WorkLook look = simulation::staff::work_look(staff->job, upkeep != nullptr ? upkeep->kind : simulation::Breakdown::None);
                 // Played once, the start and the end as long as they last; the rest of the job repeats its loop.
                 const auto once = [&](std::string_view name) -> std::optional<rct3::park::person::Clip> {
                     const auto number = name.empty() ? std::nullopt : rct3::park::person::motion_number(name);

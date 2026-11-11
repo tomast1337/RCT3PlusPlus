@@ -4,7 +4,7 @@
 #include "parkfile/binary.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 
@@ -235,7 +235,7 @@ namespace rct3::parkfile
             const SavedWorker& w = people.staff[i];
             const auto at = world.paths.nearest(w.position);
             // A vendor stays in their booth, a keeper in their enclosure, a lifeguard in their chair.
-            const bool walks = walks_paths(w.role);
+            const bool walks = staff::walks_paths(w.role);
             if (walks && (!at || world.paths.nodes()[*at].queue))
                 continue;
             const entt::entity e = r.create();
@@ -243,7 +243,7 @@ namespace rct3::parkfile
             const bool paged = w.look >= 0 && static_cast<std::size_t>(w.look) < people.model.staff.size();
             Staff staff { .role = w.role, .tasks = paged ? people.model.staff[static_cast<std::size_t>(w.look)].task_flags : kEveryTask, .wage = w.wage, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = w.happiness, .laziness = w.laziness };
             if (paged)
-                take_saved_work(staff, people.model.staff[static_cast<std::size_t>(w.look)]);
+                staff::take_saved_work(staff, people.model.staff[static_cast<std::size_t>(w.look)]);
             staff.mended = w.mended;
             staff.think = Seconds { w.think };
             staff.miserable = w.miserable;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/staff_roster.hpp"
 
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 #include "strings/unicode.hpp"
 #include "ui/money_text.hpp"
 #include "ui/screens/person_info.hpp"
@@ -305,12 +305,12 @@ namespace rct3::ui::screens
             return;
         add_label(p, "Laziness", strings::to_utf16(std::format("{}%", std::lround(l.laziness * 100))), top_right(2 * kIcon + 12, y, 50, kTaskSize), style_.text_colour, Align::End).tooltip = text(strings, "StaffWindow_LazinessColumnHelp");
         r.discipline = &add_icon(p, "Discipline", { }, "Staff_DisciplineColumnIcon", top_right(kIcon + 4, y, kIcon, kIcon), text(strings, "StaffWindow_DisciplineSackHelp"));
-        r.train = &add_icon(p, "Train", { }, std::format("Staff_Training{}Icon", std::clamp(l.training, 0, simulation::kMostTraining)), top_right(2, y, kIcon, kIcon), text(strings, "StaffWindow_TrainHelp"));
+        r.train = &add_icon(p, "Train", { }, std::format("Staff_Training{}Icon", std::clamp(l.training, 0, simulation::staff::kMostTraining)), top_right(2, y, kIcon, kIcon), text(strings, "StaffWindow_TrainHelp"));
         y += style_.line_height;
         add_label(p, "Wage", money_text(units_.currency, l.wage), top_left(x, y, 60, style_.line_height), style_.text_colour).tooltip = text(strings, "StaffWindow_WageColumnHelp");
         r.wage_up = &add_icon(p, "WageUp", "SpinnerUp", { }, top_left(x + 64, y + 2, 20, 8), text(strings, "StaffWindow_WageColumnHelp"));
         r.wage_down = &add_icon(p, "WageDown", "SpinnerDown", { }, top_left(x + 64, y + 10, 20, 8), text(strings, "StaffWindow_WageColumnHelp"));
-        r.wage_up->enabled = l.wage_level < simulation::kMostWageLevel;
+        r.wage_up->enabled = l.wage_level < simulation::staff::kMostWageLevel;
         r.wage_down->enabled = l.wage_level > 0;
         add_label(p, "Hired", l.hired_text, top_right(2, y, 120, style_.line_height), style_.text_colour, Align::End).tooltip = text(strings, "StaffWindow_StartDateColumnHelp");
     }

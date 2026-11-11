@@ -2,7 +2,7 @@
 #include "simulation/animals.hpp"
 
 #include "simulation/components.hpp"
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 #include "simulation/systems.hpp"
 
 #include <algorithm>
@@ -88,7 +88,7 @@ namespace rct3::simulation
         auto& r = world.registry;
         const entt::entity keeper = r.create();
         Staff staff { .role = StaffRole::Keeper, .tasks = kClearDungTask | kFillTroughsTask };
-        set_wage_level(staff, staff.wage_level); // Paid as other new staff are
+        staff::set_wage_level(staff, staff.wage_level); // Paid as other new staff are
         r.emplace<Staff>(keeper, staff);
         r.emplace<Pose>(keeper, Pose { .position = at, .was = at });
         r.emplace<KeeperDuty>(keeper, KeeperDuty { .house = home });

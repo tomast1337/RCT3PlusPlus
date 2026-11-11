@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/crowds.hpp"
 
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
@@ -26,13 +26,13 @@ namespace rct3::simulation
     std::int32_t show_quality(const Staff& staff)
     {
         const std::int32_t less = (staff.happiness.value < kTuning.staff.miserable.value ? 1 : 0) + (staff.laziness.value >= kTuning.staff.tired.value ? 1 : 0);
-        return std::clamp(staff.training - less, 0, kMostTraining);
+        return std::clamp(staff.training - less, 0, staff::kMostTraining);
     }
 
     std::vector<ShowMove> show_moves(std::int32_t quality, bool poor, random::RandomState& dice)
     {
         using enum ShowMove;
-        quality = std::clamp(quality, 0, kMostTraining);
+        quality = std::clamp(quality, 0, staff::kMostTraining);
         const auto count = static_cast<std::size_t>(kTuning.shows.moves + quality);
         std::vector<ShowMove> moves;
         if (poor)

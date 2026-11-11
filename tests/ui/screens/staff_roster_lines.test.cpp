@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/staff_roster_lines.hpp"
 
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 
 #include <doctest/doctest.h>
 
@@ -123,12 +123,12 @@ TEST_CASE("a line holds the worker's wage and what their next training costs, no
     green.training = 0;
     green.wage_level = 1;
     save::model::Staff trained = green;
-    trained.training = simulation::kMostTraining;
+    trained.training = simulation::staff::kMostTraining;
     people.staff = { green, trained };
     const std::vector<RosterLine> lines = roster_lines({ .people = &people }, s, kAllRosterJobs, RosterSort::Job);
     REQUIRE(lines.size() == 2);
     CHECK(lines[0].wage_level == 1);
     CHECK(lines[0].training_cost > 0);
     CHECK(lines[1].training_cost == 0);
-    CHECK(lines[0].wage == simulation::wage_at(simulation::StaffRole::Handyman, 1));
+    CHECK(lines[0].wage == simulation::staff::wage_at(simulation::StaffRole::Handyman, 1));
 }

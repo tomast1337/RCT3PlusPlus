@@ -20,7 +20,7 @@
 #include "simulation/ratings.hpp"
 #include "simulation/ride_walks.hpp"
 #include "simulation/rides.hpp"
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
@@ -1691,10 +1691,10 @@ namespace rct3::simulation
         {
             const save::model::Person& p = people.staff[i].person;
             const glm::vec3 position { p.position.x, p.position.y, p.position.z };
-            const StaffRole role = staff_role(people.staff[i].kind);
+            const StaffRole role = staff::staff_role(people.staff[i].kind);
             // A vendor stays in their booth, a keeper in their enclosure (import_animal_houses gives them their work), a
             // lifeguard in their chair, where the park left them. A lifeguard comes and goes with their chair.
-            const bool walks = walks_paths(role);
+            const bool walks = staff::walks_paths(role);
             if (const auto* guard = std::get_if<save::model::LifeGuardWork>(&people.staff[i].work); guard != nullptr && guard->chair.is_none())
                 continue;
             auto at = world.paths.nearest(position);
@@ -1704,9 +1704,9 @@ namespace rct3::simulation
                 continue;
             const entt::entity e = r.create();
             const save::model::Staff& saved = people.staff[i];
-            Staff staff { .role = role, .tasks = saved.task_flags, .training = std::clamp(saved.training, 0, kMostTraining), .warnings = saved.warnings, .happiness = std::clamp(saved.happiness, 0.0f, 1.0f), .laziness = std::clamp(saved.laziness, 0.0f, 1.0f) };
-            set_wage_level(staff, saved.wage_level);
-            take_saved_work(staff, saved);
+            Staff staff { .role = role, .tasks = saved.task_flags, .training = std::clamp(saved.training, 0, staff::kMostTraining), .warnings = saved.warnings, .happiness = std::clamp(saved.happiness, 0.0f, 1.0f), .laziness = std::clamp(saved.laziness, 0.0f, 1.0f) };
+            staff::set_wage_level(staff, saved.wage_level);
+            staff::take_saved_work(staff, saved);
             r.emplace<Staff>(e, staff);
             r.emplace<Pose>(e, position, -p.heading, position, -p.heading); // The original turns the other way
             if (walks)
@@ -1738,7 +1738,7 @@ namespace rct3::simulation
         auto& r = world.registry;
         const entt::entity e = r.create();
         Staff staff { .role = StaffRole::Vendor };
-        set_wage_level(staff, staff.wage_level);
+        staff::set_wage_level(staff, staff.wage_level);
         r.emplace<Staff>(e, staff);
         r.emplace<Pose>(e, Pose { .position = at, .was = at });
         return e;
@@ -1749,7 +1749,7 @@ namespace rct3::simulation
         auto& r = world.registry;
         const entt::entity e = r.create();
         Staff staff { .role = StaffRole::Other };
-        set_wage_level(staff, staff.wage_level);
+        staff::set_wage_level(staff, staff.wage_level);
         r.emplace<Staff>(e, staff);
         r.emplace<Pose>(e, Pose { .position = at, .heading = heading, .was = at, .was_heading = heading });
         return e;
@@ -1760,7 +1760,7 @@ namespace rct3::simulation
         const entt::entity e = world.registry.create();
         // An inspector's mood never changes; saved ones are all half content.
         Staff staff { .role = role, .happiness = role == StaffRole::Inspector ? 0.5f : 1.0f };
-        set_wage_level(staff, staff.wage_level);
+        staff::set_wage_level(staff, staff.wage_level);
         world.registry.emplace<Staff>(e, staff);
         start_walking(world, e, at);
         return e;

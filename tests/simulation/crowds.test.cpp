@@ -6,7 +6,7 @@
 #include "simulation/holding.hpp"
 #include "simulation/objectives.hpp"
 #include "simulation/sandbox.hpp"
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 #include "simulation/vip.hpp"
@@ -69,7 +69,7 @@ TEST_CASE("an untrained entertainer keeps their spirits while guests are about, 
         auto& r = stage.park.world().registry;
         Staff& staff = r.get<Staff>(stage.star);
         staff.training = 0;
-        set_wage_level(staff, 0);
+        staff::set_wage_level(staff, 0);
         stage.park.run_seconds(1800);
         CHECK(staff.happiness.value > kTuning.staff.miserable.value);
         CHECK(staff.miserable == 0);
@@ -81,7 +81,7 @@ TEST_CASE("an untrained entertainer keeps their spirits while guests are about, 
         const entt::entity star = park.staff(StaffRole::Entertainer, { 4, 0 });
         Staff& staff = park.world().registry.get<Staff>(star);
         staff.training = 0;
-        set_wage_level(staff, 0);
+        staff::set_wage_level(staff, 0);
         staff.happiness.value = content;
         park.run_seconds(1800);
         CHECK(staff.happiness.value < kTuning.staff.miserable.value);

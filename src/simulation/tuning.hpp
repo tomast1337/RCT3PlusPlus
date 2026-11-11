@@ -424,6 +424,20 @@ namespace rct3::simulation::tuning
         Money per_excitement { 46'000 }; ///< An open ride is worth this times its excitement rating squared
     };
 
+    /// Research: how its budget is paid and what inventing costs.
+    struct Research
+    {
+        /// A month's budget leaves in this many equal parts. Fitted against the ledgers of saved scenarios, whose
+        /// research line moves by a thirtieth of their budget at a time.
+        double parts_per_month = 30;
+        /// What inventing an item costs, by its kind. Chosen by eye: at the 200.00 a month saved scenarios set
+        /// aside, a tracked ride takes a little over a month, a flat ride most of one and a stall half of one.
+        Money tracked_ride_cost { 24000 };
+        Money flat_ride_cost { 16000 };
+        Money shop_cost { 10000 };
+        Money other_cost { 6000 };
+    };
+
     /// What the park is charged each week.
     struct WeeklyCharges
     {
@@ -712,6 +726,7 @@ namespace rct3::simulation::tuning
         Prizes prizes;
         ParkValue park_value;
         WeeklyCharges charges;
+        Research research;
         Crashes crashes;
         Vips vips;
         Shows shows;

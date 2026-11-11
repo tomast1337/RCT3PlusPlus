@@ -8,6 +8,7 @@
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
 #include "simulation/park/state.hpp"
+#include "simulation/parties.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/staff/care.hpp"

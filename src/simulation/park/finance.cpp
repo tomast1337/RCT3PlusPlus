@@ -3,6 +3,7 @@
 
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
+#include "simulation/park/messages.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/systems.hpp"
@@ -10,6 +11,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 namespace rct3::simulation::park
 {
@@ -33,12 +35,21 @@ namespace rct3::simulation::park
         return ledger[0];
     }
 
+    void cannot_pay(ParkState& park)
+    {
+        if (std::ranges::none_of(park.messages.list, [](const ParkMessage& m) { return m.text_key == kCannotPayKey && m.age < kCannotPayGap; }))
+            post(park.messages, { .text_key = std::string(kCannotPayKey) });
+    }
+
     bool book(ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, std::int64_t cost, LedgerLine line, bool forced)
     {
         if (!park.cash)
             return true;
         if (!forced && cost > 0 && *park.cash < cost)
+        {
+            cannot_pay(park);
             return false;
+        }
         *park.cash -= cost;
         save::model::LedgerPeriod& p = ledger_month(finance, kept, park.date);
         const auto c = static_cast<std::int32_t>(cost);

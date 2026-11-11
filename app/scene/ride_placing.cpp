@@ -773,7 +773,7 @@ namespace rct3::scene
         if (!p.item)
             return false;
         const auto o = ghost_object(p);
-        if (!o || p.problem != rct3::park::ride::SiteProblem::None || !p.affordable || !scene.models.contains(rct3::park::object::model_key(*o)))
+        if (!o || p.problem != rct3::park::ride::SiteProblem::None || !scene.models.contains(rct3::park::object::model_key(*o)))
             return true;
         // Paid before anything goes down, so a spend refused builds nothing. A ride set on the ground pays for its
         // levelling with it (see below); doors are free.

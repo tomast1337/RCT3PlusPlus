@@ -339,8 +339,7 @@ namespace rct3::scene
             if (!shape)
                 return;
             const std::int64_t back = rct3::park::demolish_refund(shape->record.cost, (ride.base.flags & save::model::AttractionCommon::kNeverOpened) == 0);
-            if (scene.park.cash)
-                *scene.park.cash += back;
+            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, false);
             park::float_money(scene, rct3::park::track::start_of(object, *shape, piece.reversed, scene.grid).position, back);
         }
 
@@ -1043,12 +1042,8 @@ namespace rct3::scene
                 object.colours = { (*b.colours)[0], (*b.colours)[1], (*b.colours)[2] };
             }
             const rct3::park::track::PieceShape& shape = c->pieces[b.picked->index];
-            if (scene.park.cash)
-            {
-                if (*scene.park.cash < shape.record.cost && !forced)
-                    return;
-                *scene.park.cash -= shape.record.cost;
-            }
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, shape.record.cost, simulation::park::LedgerLine::RideConstruction, forced))
+                return;
             ++scene.built;
             // The ground it passes into is cut down round it, sharply or smoothly, the scenery standing there seated
             // again; the ground is built again for that, or for the tunnel it lies in.

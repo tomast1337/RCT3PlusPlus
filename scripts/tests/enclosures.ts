@@ -94,6 +94,7 @@ async function screenshot_once(): Promise<void> {
 }
 
 const cash = park.cash()!;
+const construction = park.ledger().rideConstruction;
 expect(build.pick("Enclosures/Fences/Wood/Wood_Stub", "Wood"), "the wooden fence in the enclosure list");
 const one = await drag_enclosure([c0, r0], [c0, r0]);
 const length = one.cost / 4; // What one length of wooden fence costs: a single tile is fenced on four sides
@@ -108,6 +109,7 @@ expect(pieces_in(c0, r0, c0 + 4, r0 + 3) === JSON.stringify([["Corner", 4], ["Ed
 expect(fenced() === panels.length + 14, `14 pieces round a five by four enclosure, not ${fenced() - panels.length}`);
 log("fence paid", cash - park.cash()!);
 expect(park.cash()! < cash, "the fence paid for");
+expect(park.ledger().rideConstruction - construction === cash - park.cash()!, `the fence booked as ride construction, ${park.ledger().rideConstruction - construction} for ${cash - park.cash()!}`);
 await screenshot("enclosure_built");
 camera.look({ col: c0 + 2.5, row: r0 + 2 }, { col: c0 + 2.5, row: r0 + 2.3, up: 22 }); // From above
 await frames(10);

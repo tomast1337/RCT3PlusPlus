@@ -304,6 +304,12 @@ namespace rct3::scene
                 throw std::runtime_error("no park is open");
             return park_->park.cash ? Json(*park_->park.cash) : Json(nullptr);
         });
+        engine_.define("park.ledger", [this](const Json&) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            const save::model::LedgerPeriod& l = park_->park_model.finance.ledger[0];
+            return { { "landPurchase", l.land_purchase }, { "landscaping", l.landscaping }, { "rideConstruction", l.ride_construction } };
+        });
         engine_.define("park.setCash", [this](const Json& a) -> Json {
             if (park_ == nullptr || !park_->park.cash)
                 throw std::runtime_error("no park with money is open");

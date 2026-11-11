@@ -286,7 +286,7 @@ namespace rct3::scene
             return true; // Its drags mark; a click picks nothing
         if (t.tool != StructureTools::Tool::Place || !t.structure)
             return false;
-        if (t.placed.empty() || t.problem != rct3::park::StructureProblem::None || !t.affordable)
+        if (t.placed.empty() || t.problem != rct3::park::StructureProblem::None || !t.affordable || !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, t.cost, simulation::park::LedgerLine::Landscaping, false))
             return true;
         wait_for_build(scene);
         ++scene.built;
@@ -307,8 +307,6 @@ namespace rct3::scene
                 park::wall_changed(device, scene, assets, *wall, true);
             park::animate_scenery(device, scene, i);
         }
-        if (scene.park.cash)
-            *scene.park.cash -= t.cost;
         const save::model::TerrainGrid& g = scene.grid;
         park::float_money(scene, { g.world_x(t.at->col) + g.tile_size_x / 2, static_cast<float>(t.height), g.world_z(t.at->row) + g.tile_size_z / 2 }, -t.cost);
         logging::logger("park").info("structures: built {} ({} items) at {},{} height {} turned {}", t.structure->name, t.placed.size(), t.at->col, t.at->row, t.height, t.turn.value);

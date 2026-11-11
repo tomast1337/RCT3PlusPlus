@@ -775,6 +775,12 @@ namespace rct3::scene
         const auto o = ghost_object(p);
         if (!o || p.problem != rct3::park::ride::SiteProblem::None || !p.affordable || !scene.models.contains(rct3::park::object::model_key(*o)))
             return true;
+        // Paid before anything goes down, so a spend refused builds nothing. A ride set on the ground pays for its
+        // levelling with it (see below); doors are free.
+        const bool levels = p.site->height == p.ground;
+        const std::int64_t price = p.step == RidePlacing::Step::Scenery ? p.item->price : p.step == RidePlacing::Step::Ride ? p.item->price + (levels ? p.levelling_cost : 0) : 0;
+        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, price, p.step == RidePlacing::Step::Scenery ? simulation::park::LedgerLine::Landscaping : simulation::park::LedgerLine::RideConstruction, false))
+            return true;
         wait_for_build(scene);
         ++scene.built;
         if (p.step == RidePlacing::Step::Scenery)
@@ -814,8 +820,6 @@ namespace rct3::scene
                     objects_changed(scene);
                 }
             }
-            if (scene.park.cash)
-                *scene.park.cash -= p.item->price;
             park::float_money(scene, site_point(scene, *p.site), -p.item->price);
             logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, o->col, o->row, p.site->height);
             p.ghost_mesh = { };
@@ -826,8 +830,6 @@ namespace rct3::scene
             // Raised or lowered with Shift, it stands over the ground as it is or lies buried in it; else the ground is
             // levelled for it, paid with it, and the scenery standing there seated again. Taken away, it leaves the
             // ground levelled.
-            const bool levels = p.site->height == p.ground;
-            const auto price = p.item->price + (levels ? p.levelling_cost : 0);
             if (levels)
             {
                 rct3::park::ground::make_cuts(scene.grid, p.levelling);
@@ -858,8 +860,6 @@ namespace rct3::scene
                     stall.items.push_back({ .kind_symbol = std::format("{}:cid", g.item), .price = g.price, .name = "%ME%" });
                 // And the extras those take, at the usual amount, on none of them yet.
                 rct3::park::ride::offer_extras(stall, scene.carried.items);
-                if (scene.park.cash)
-                    *scene.park.cash -= price;
                 park::float_money(scene, site_point(scene, *p.site), -price);
                 logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
                 p.unjoined_stalls.push_back(p.ride);
@@ -887,8 +887,6 @@ namespace rct3::scene
                 facility.base.placement = object;
                 facility.base.spot = save::model::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turn.value) };
                 facility.base.facing = static_cast<std::uint8_t>(p.site->turn.value);
-                if (scene.park.cash)
-                    *scene.park.cash -= price;
                 park::float_money(scene, site_point(scene, *p.site), -price);
                 logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
                 p.unjoined_facilities.emplace_back(p.ride, p.item->type);
@@ -931,8 +929,6 @@ namespace rct3::scene
             ride.base.placement = object;
             ride.base.spot = save::model::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turn.value) };
             ride.base.facing = static_cast<std::uint8_t>(p.site->turn.value);
-            if (scene.park.cash)
-                *scene.park.cash -= price;
             park::float_money(scene, site_point(scene, *p.site), -price);
             logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
             take_fence(scene, assets, ride, *p.item);

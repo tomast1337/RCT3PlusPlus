@@ -56,17 +56,14 @@ namespace rct3::scene
             return t;
         }
 
-        bool affordable(const park::ParkScene& scene, std::int32_t cost)
+        /// Pays `cost` for work on `tile` as landscaping, floating it up from there. False when the park cannot
+        /// afford it, and nothing is paid.
+        bool pay(park::ParkScene& scene, std::int32_t cost, save::model::Tile tile)
         {
-            return !scene.park.cash || *scene.park.cash >= cost;
-        }
-
-        /// Pays `cost` for work on `tile`, floating it up from there.
-        void pay(park::ParkScene& scene, std::int32_t cost, save::model::Tile tile)
-        {
-            if (scene.park.cash)
-                *scene.park.cash -= cost;
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
+                return false;
             park::float_money(scene, park::tile_point(scene.grid, tile), -cost);
+            return true;
         }
 
         /// The raising and lowering brushes' tab, by its place in the panel.
@@ -275,9 +272,8 @@ namespace rct3::scene
                 return;
             const float moved = trial->second;
             const auto cost = static_cast<std::int32_t>(std::lround(std::max(moved - l.paid_for, 0.0f) * rct3::park::ground::kShapeCost));
-            if (!affordable(scene, cost))
+            if (!pay(scene, cost, *l.tile))
                 return;
-            pay(scene, cost, *l.tile);
             l.paid_for = std::max(l.paid_for, moved);
             l.amount = amount;
             take_ground(device, scene, assets, std::move(trial->first));
@@ -354,9 +350,8 @@ namespace rct3::scene
                 return;
             const float moved = trial->second;
             const auto cost = static_cast<std::int32_t>(std::lround(std::max(moved - l.paid_for, 0.0f) * rct3::park::ground::kShapeCost));
-            if (!affordable(scene, cost))
+            if (!pay(scene, cost, *l.tile))
                 return;
-            pay(scene, cost, *l.tile);
             l.paid_for = std::max(l.paid_for, moved);
             l.amount = amount;
             take_ground(device, scene, assets, std::move(trial->first));
@@ -390,9 +385,8 @@ namespace rct3::scene
                 if (!trial)
                     continue;
                 const auto cost = static_cast<std::int32_t>(std::lround(trial->second * rct3::park::ground::kShapeCost));
-                if (trial->second <= 0 || !affordable(scene, cost))
+                if (trial->second <= 0 || !pay(scene, cost, { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }))
                     continue;
-                pay(scene, cost, { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) });
                 shaped = std::move(trial->first);
             }
             if (shaped)
@@ -412,10 +406,9 @@ namespace rct3::scene
             {
                 save::model::TerrainCell& cell = scene.grid.at(t.col, t.row);
                 std::uint8_t& face = l.cliff ? cell.cliff : cell.surface;
-                if (face == surface || !rct3::park::owned_outright(cell) || !affordable(scene, kPaintCost))
+                if (face == surface || !rct3::park::owned_outright(cell) || !pay(scene, kPaintCost, *tile)) // From the brush's middle, so a dab floats up as one sum
                     continue;
                 face = surface;
-                pay(scene, kPaintCost, *tile); // From the brush's middle, so a dab floats up as one sum
                 const rct3::park::TileRect one { t.col, t.row, t.col + 1, t.row + 1 };
                 painted = !painted ? one : rct3::park::TileRect { std::min(painted->col, one.col), std::min(painted->row, one.row), std::max(painted->end_col, one.end_col), std::max(painted->end_row, one.end_row) };
             }
@@ -576,8 +569,8 @@ namespace rct3::scene
                 say(scene, kNoMoney);
             if (bought.tiles == 0)
                 return;
-            if (scene.park.cash)
-                *scene.park.cash -= bought.spent;
+            // buy_land took no more than the cash could pay for.
+            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, bought.spent, simulation::park::LedgerLine::LandPurchase, false);
             park::float_money(scene, park::tile_point(scene.grid, tile), -bought.spent);
             land_owned_changed(scene, assets);
         }

@@ -158,9 +158,9 @@ namespace rct3::simulation::park
         for (charges.week.value += kTickSeconds; charges.week.value >= kSecondsPerWeek; charges.week.value -= kSecondsPerWeek)
         {
             charges.interest.value += weekly_interest(charges.loan, charges.rate);
-            // A ride broken down is shut to guests but still open to the player, and goes on costing.
+            // One broken down is shut to guests but still open to the player, and goes on costing.
             for (const auto [e, a] : r.view<const Attraction>().each())
-                if (const auto* upkeep = r.try_get<Upkeep>(e); a.kind == AttractionKind::Ride && (a.open || (upkeep != nullptr && upkeep->broken)))
+                if (const auto* upkeep = r.try_get<Upkeep>(e); a.open || (upkeep != nullptr && upkeep->broken))
                     charges.running.value += a.running_cost.value;
         }
     }

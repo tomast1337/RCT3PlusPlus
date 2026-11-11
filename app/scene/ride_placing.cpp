@@ -887,6 +887,7 @@ namespace rct3::scene
                 facility.base.placement = object;
                 facility.base.spot = save::model::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turn.value) };
                 facility.base.facing = static_cast<std::uint8_t>(p.site->turn.value);
+                facility.base.running_cost = simulation::kTuning.charges.facility_running_cost.value;
                 park::float_money(scene, site_point(scene, *p.site), -price);
                 logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
                 p.unjoined_facilities.emplace_back(p.ride, p.item->type);

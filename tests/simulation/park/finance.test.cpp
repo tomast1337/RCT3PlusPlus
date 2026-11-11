@@ -190,7 +190,7 @@ TEST_CASE("a loan is charged a week's interest as each week ends, and no loan no
     CHECK(charges.interest.value == weekly_interest(1'000'000, 6));
 }
 
-TEST_CASE("an open ride costs its running cost each week; a closed ride and a stall nothing")
+TEST_CASE("an open ride costs its running cost each week; a closed ride nothing")
 {
     Sandbox park;
     park.path({ 0, 0 }, { 4, 0 });
@@ -199,7 +199,7 @@ TEST_CASE("an open ride costs its running cost each week; a closed ride and a st
     const auto closed = park.flat_ride("Swinger", { 2, 0 }, 0);
     r.get<Attraction>(closed).running_cost = { 700 };
     r.get<Attraction>(closed).open = false;
-    r.get<Attraction>(park.shop("Burgers", Product::Food, { 3, 0 }, 100)).running_cost = { 900 };
+    (void)park.shop("Burgers", Product::Food, { 3, 0 }, 100);
     park.run_seconds(kWeek * 2.1f);
     CHECK(r.ctx().get<Charges>().running.value == 2 * 500);
     // Broken down, it is shut to guests but still costs.
@@ -209,6 +209,22 @@ TEST_CASE("an open ride costs its running cost each week; a closed ride and a st
     r.emplace<Upkeep>(broken, Upkeep { .broken = true, .inspect_every = -1 });
     park.run_seconds(kWeek);
     CHECK(r.ctx().get<Charges>().running.value == 3 * 500 + 300);
+}
+
+TEST_CASE("an open facility costs its running cost each week; a closed one and a stall nothing")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    auto& r = park.world().registry;
+    // A facility is an attraction guests use like a shop, carrying a running cost; a stall carries none.
+    const auto toilet = park.shop("Toilet", Product::Toilet, { 1, 0 }, 0);
+    r.get<Attraction>(toilet).running_cost = kTuning.charges.facility_running_cost;
+    const auto shut = park.shop("Toilet", Product::Toilet, { 2, 0 }, 0);
+    r.get<Attraction>(shut).running_cost = kTuning.charges.facility_running_cost;
+    r.get<Attraction>(shut).open = false;
+    (void)park.shop("Burgers", Product::Food, { 3, 0 }, 100);
+    park.run_seconds(kWeek * 1.1f);
+    CHECK(r.ctx().get<Charges>().running.value == kTuning.charges.facility_running_cost.value);
 }
 
 TEST_CASE("a ride built here costs a share of its build cost to run")

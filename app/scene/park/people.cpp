@@ -234,14 +234,9 @@ namespace rct3::scene::park
         if (change.id == ui::screens::person_control(Train))
         {
             // Paid for at once, free in a park without money; none when the park cannot afford it.
-            const std::int64_t cost = simulation::staff::training_cost(care);
-            if (scene.park.cash && *scene.park.cash < cost)
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, simulation::staff::training_cost(care), simulation::park::LedgerLine::StaffTraining, false))
                 return false;
-            if (simulation::staff::train(care) && scene.park.cash)
-            {
-                *scene.park.cash -= cost;
-                simulation::park::ledger_month(scene.park_model.finance, scene.ledger_month, scene.park.date).staff_training += static_cast<std::int32_t>(cost);
-            }
+            simulation::staff::train(care);
             return show();
         }
         if (change.id == ui::screens::person_control(Wage))

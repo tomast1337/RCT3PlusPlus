@@ -1480,11 +1480,7 @@ namespace rct3::scene::park
                 // Staff are paid from the park's cash, and the player hears of rides breaking down and being fixed.
                 if (const auto* payroll = scene.sim.registry.ctx().find<simulation::Payroll>())
                 {
-                    if (scene.park.cash)
-                    {
-                        *scene.park.cash -= payroll->paid.value - scene.wages_seen;
-                        simulation::park::ledger_month(scene.park_model.finance, scene.ledger_month, scene.park.date).staff_wages += static_cast<std::int32_t>(payroll->paid.value - scene.wages_seen);
-                    }
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, payroll->paid.value - scene.wages_seen, simulation::park::LedgerLine::StaffWages, true);
                     scene.wages_seen = payroll->paid.value;
                 }
                 // So are pools' cleaning fluids and stalls' stock.

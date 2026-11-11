@@ -7,6 +7,7 @@
 #include <expected>
 #include <filesystem>
 #include <map>
+#include <ranges>
 #include <string>
 #include <string_view>
 
@@ -32,6 +33,11 @@ namespace rct3::ui
         [[nodiscard]] std::size_t size() const
         {
             return strings_.size();
+        }
+        /// Every key, in order.
+        [[nodiscard]] auto keys() const
+        {
+            return std::views::keys(strings_);
         }
 
     private:

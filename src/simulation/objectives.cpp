@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/objectives.hpp"
 
+#include "simulation/park/finance.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/tuning.hpp"
 
@@ -133,9 +134,9 @@ namespace rct3::simulation
             case save::model::ConditionKind::ParkRating:
                 return compare(f.rating);
             case save::model::ConditionKind::RideIncome:
-                return compare(f.ride_income);
+                return compare(-std::int64_t { f.last_month.ride_tickets }); // Income is kept below nought
             case save::model::ConditionKind::ShopProfit:
-                return compare(f.shop_profit);
+                return compare(-(std::int64_t { f.last_month.shop_sales } + f.last_month.food_drink_sales + f.last_month.shop_stock + f.last_month.food_drink_stock));
             case save::model::ConditionKind::AnimalHealth:
                 return compare(f.animal_health);
             case save::model::ConditionKind::Dung:
@@ -177,23 +178,6 @@ namespace rct3::simulation
             default:
                 return RideGroup::Other;
         }
-    }
-
-    void count_takings(Takings& takings, float time, std::int64_t rides_so_far, std::int64_t shops_so_far)
-    {
-        const auto month = static_cast<std::int64_t>(std::floor(time / save::model::GameClock::kUnitsPerMonth));
-        if (month == takings.month)
-            return;
-        // shortcut: the month counting begins in is only partly counted, so the first month's figures come out low;
-        // keep the takings in the park file if goals on them should count from the start.
-        if (takings.month >= 0)
-        {
-            takings.rides = rides_so_far - takings.rides_before;
-            takings.shops = shops_so_far - takings.shops_before;
-        }
-        takings.month = month;
-        takings.rides_before = rides_so_far;
-        takings.shops_before = shops_so_far;
     }
 
     std::int32_t level_playing(const save::model::ObjectiveSet& set)
@@ -329,15 +313,14 @@ namespace rct3::simulation
         return { };
     }
 
-    void give_prize(park::ParkState& park, save::model::Finance& finance, save::model::TerrainGrid& land, std::int32_t id)
+    void give_prize(park::ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, save::model::TerrainGrid& land, std::int32_t id)
     {
         const tuning::Prizes& p = kTuning.prizes;
         switch (id)
         {
             case 1:
             case 2:
-                if (park.cash)
-                    *park.cash += id == 1 ? p.large_cash.value : p.small_cash.value;
+                park::book(park, finance, kept, -(id == 1 ? p.large_cash.value : p.small_cash.value), park::LedgerLine::PrizeMoney, true);
                 break;
             case 4:
                 park.rating_bonus += p.rating_bonus.value;

@@ -929,6 +929,7 @@ namespace rct3::scene
             ride.base.placement = object;
             ride.base.spot = save::model::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turn.value) };
             ride.base.facing = static_cast<std::uint8_t>(p.site->turn.value);
+            ride.base.running_cost = simulation::park::running_cost(p.item->price, false);
             park::float_money(scene, site_point(scene, *p.site), -price);
             logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
             take_fence(scene, assets, ride, *p.item);

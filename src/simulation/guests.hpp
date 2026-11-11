@@ -103,6 +103,30 @@ namespace rct3::simulation
     {
     };
 
+    /// Food or drink a guest carries from a stall, in their left hand: eaten or drunk a bite at a time, then
+    /// held as an empty (a wrapper, a cup) until they are rid of it: in a bin, in a pocket, or on the path.
+    struct Carried
+    {
+        static constexpr std::uint8_t kPockets = 2; ///< As saved guests have: a left and a right one
+
+        entt::entity stall = entt::null; ///< Where it came from, for what it looks like
+        std::uint8_t ware = 0;           ///< Its place on that stall's menu
+        std::uint8_t kind = 0;           ///< As Litter::kind, once dropped
+        bool food = true;                ///< Else drink
+        std::uint8_t bites = 0;          ///< Left; none once it is an empty
+        Share fill { };                  ///< Of their hunger or thirst each bite takes away
+        Seconds since { };               ///< Since the last bite, or since it was finished
+        bool held = true;                ///< In hand; else only empties in their pockets are left
+        std::uint8_t pocketed = 0;       ///< Empties in their pockets, up to kPockets
+    };
+
+    /// A look a guest gives something they walk on past, their head turned towards it a moment.
+    struct Glance
+    {
+        entt::entity at = entt::null; ///< The path item looked at: jumping fountains
+        Seconds left { };
+    };
+
     /// What brings guests to the park, in the registry's context, kept up from the park as it runs. Guests
     /// come in at the plain weather rate when none is there.
     struct Draw

@@ -7,6 +7,7 @@
 
 #include "math/glm.hpp"
 #include "profiling/profiler.hpp"
+#include "random/generator.hpp"
 #include "simulation/boat.hpp"
 #include "simulation/coaster.hpp"
 #include "simulation/crash.hpp"
@@ -26,6 +27,9 @@ namespace rct3::simulation
 
     struct SimWorld;
     struct Weather;
+    enum class AgeGroup : std::uint8_t;
+    enum class GestureKind : std::uint8_t;
+    enum class RideReaction : std::uint8_t;
 
     /// Where a ride without trains is in its cycle. It loads standing still, starts, runs its loops, stops, and
     /// lets its riders off as it goes back to loading.
@@ -176,5 +180,41 @@ namespace rct3::simulation
     /// trains and boats run. `weather` and `night` are the tick's, as the riders feel them. Times the phase on
     /// `phase`.
     void step_rides(SimWorld& world, const Weather& weather, bool night, std::optional<profiling::Scope>& phase);
+
+    /// Where guests come into `ride`'s station `station` (0 the first).
+    [[nodiscard]] NodeId entrance_of(const entt::registry& r, entt::entity ride, std::size_t station);
+
+    /// Where riders come off `ride` on to the paths at its station `station` (0 the first).
+    [[nodiscard]] NodeId exit_of(const entt::registry& r, entt::entity ride, std::size_t station = 0);
+
+    /// A rider off `ride` and on the paths at the exit of the station they get off at: on to what they do
+    /// next, showing how the ride left them, and sick there if it turned their stomach.
+    void let_out(entt::registry& r, const PathNetwork& paths, entt::entity guest, entt::entity ride, std::optional<GestureKind> gesture);
+
+    /// A coaster rider's own leanings, each a share fixed for the rider: towards raising their hands, bracing
+    /// against the forces and covering their eyes; the higher, the likelier.
+    struct Leanings
+    {
+        float hands = 0;
+        float brace = 0;
+        float eyes = 0;
+    };
+
+    /// How a rider reacting as `now` reacts `dt` seconds on, as the train they ride feels (`running` it is off
+    /// round the track, `lifted` up a lift chain): waiting at the station and up the lift; bracing against
+    /// strong forces; covering their eyes going down a ride `over` (intensity past what they like) too wild for
+    /// them; throwing up their hands when `happiness` thrills them or floating over a hill, more readily in
+    /// the `front` car, and keeping them up till the forces grow too strong. Drawn with `dice`.
+    [[nodiscard]] RideReaction react(RideReaction now, const Felt& feel, bool running, bool lifted, Share happiness, float over, const Leanings& leanings, bool front, random::RandomState& dice, float dt);
+
+    /// How a flat ride's rider reacting as `now` reacts `dt` seconds on, the ride `running` its cycle or not:
+    /// waiting while it stands; covering their eyes on a ride `over` (intensity past what they like) too wild
+    /// for them; otherwise throwing up their hands, once and for the rest of the run, when `happiness` thrills
+    /// them or the ride suits them. Drawn with `dice`.
+    [[nodiscard]] RideReaction react_flat(RideReaction now, bool running, Share happiness, float over, const Leanings& leanings, random::RandomState& dice, float dt);
+
+    /// How exciting a guest of `age` finds a ride rated `excitement`: in the dark a coaster thrills teens more
+    /// and families less.
+    [[nodiscard]] float felt_excitement(float excitement, bool coaster, AgeGroup age, bool night);
 
 } // namespace rct3::simulation

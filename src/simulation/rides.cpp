@@ -843,4 +843,78 @@ namespace rct3::simulation
         }
     }
 
+    NodeId entrance_of(const entt::registry& r, entt::entity ride, std::size_t station)
+    {
+        const CycleRide& cycle = r.get<CycleRide>(ride);
+        return station > 0 && station <= cycle.stops.size() ? cycle.stops[station - 1].entrance : r.get<Attraction>(ride).entrance;
+    }
+
+    NodeId exit_of(const entt::registry& r, entt::entity ride, std::size_t station)
+    {
+        const CycleRide& cycle = r.get<CycleRide>(ride);
+        if (station > 0 && station <= cycle.stops.size())
+            return cycle.stops[station - 1].exit != kNoNode ? cycle.stops[station - 1].exit : cycle.stops[station - 1].entrance;
+        return cycle.exit != kNoNode ? cycle.exit : r.get<Attraction>(ride).entrance;
+    }
+
+    void let_out(entt::registry& r, const PathNetwork& paths, entt::entity guest, entt::entity ride, std::optional<GestureKind> gesture)
+    {
+        const NodeId out = exit_of(r, ride, r.get<Errand>(guest).off);
+        r.get<Errand>(guest) = after_ride(r, guest, ride);
+        stop_at(paths, out, r.get<Stride>(guest), r.get<Pose>(guest));
+        // Riding across the park, they walk on where they were going; one in a party waits for the others
+        // first (phase 5).
+        if (auto* crossing = r.try_get<Crossing>(guest); crossing != nullptr && crossing->ride == ride && !r.all_of<Member>(guest))
+        {
+            r.get<Errand>(guest) = crossing->errand;
+            r.get<Stride>(guest).route = std::move(crossing->route);
+            r.remove<Crossing>(guest);
+        }
+        auto& dice = r.get<Dice>(guest).state;
+        if (gesture && random::chance(dice, kTuning.gestures.chance.value))
+            r.emplace_or_replace<Gesture>(guest, *gesture, kTuning.gestures.shown.value);
+        if (r.get<Mood>(guest).nausea.value >= kTuning.sickness.sick.value && random::chance(dice, kTuning.sickness.sick_after_ride.value))
+            be_sick(r, guest, out);
+    }
+
+    RideReaction react(RideReaction now, const Felt& feel, bool running, bool lifted, Share happiness, float over, const Leanings& leanings, bool front, random::RandomState& dice, float dt)
+    {
+        const auto& k = kTuning.reactions;
+        if (!running || lifted)
+            return RideReaction::Waiting;
+        if (leanings.brace >= k.stoic.value && (feel.vertical > k.strain || std::abs(feel.lateral) > k.strain_across))
+            return RideReaction::Strained;
+        if (over > k.too_wild.value && leanings.eyes < k.hide_eyes.value && feel.slope < k.diving)
+            return RideReaction::CoverEyes;
+        bool hands = now == RideReaction::HandsUp && feel.vertical < k.hands_down && std::abs(feel.lateral) < k.hands_down;
+        if (!hands && leanings.hands >= (front ? k.timid_front : k.timid).value)
+        {
+            if (happiness.value > k.thrilled.value)
+                hands = random::chance(dice, k.hands_up.value * dt);
+            else if (feel.vertical < k.airtime)
+                hands = random::chance(dice, k.floating.value * dt);
+        }
+        return hands ? RideReaction::HandsUp : RideReaction::Calm;
+    }
+
+    RideReaction react_flat(RideReaction now, bool running, Share happiness, float over, const Leanings& leanings, random::RandomState& dice, float dt)
+    {
+        const auto& k = kTuning.reactions;
+        if (!running)
+            return RideReaction::Waiting;
+        if (over > k.too_wild.value && leanings.eyes < k.hide_eyes.value)
+            return RideReaction::CoverEyes;
+        if (now == RideReaction::HandsUp)
+            return now;
+        const bool thrilled = happiness.value > k.thrilled.value || over > -k.suits.value;
+        return thrilled && leanings.hands >= k.timid.value && random::chance(dice, k.hands_up.value * dt) ? RideReaction::HandsUp : RideReaction::Calm;
+    }
+
+    float felt_excitement(float excitement, bool coaster, AgeGroup age, bool night)
+    {
+        if (!coaster || !night)
+            return excitement;
+        return excitement * (age == AgeGroup::Teen ? 1 + kTuning.night.thrill.value : 1 - kTuning.night.dread.value);
+    }
+
 } // namespace rct3::simulation

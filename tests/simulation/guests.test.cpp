@@ -2,6 +2,7 @@
 #include "simulation/guests.hpp"
 
 #include "simulation/coaster.hpp"
+#include "simulation/holding.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"

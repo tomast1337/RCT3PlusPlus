@@ -14,6 +14,7 @@
 #include "simulation/parties.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/staff/care.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 #include "simulation/vip.hpp"
@@ -94,7 +95,7 @@ namespace rct3::scene::park
                 f.patrol_brush = scene.patrol_brush;
                 f.patrol_zone = patrol != nullptr ? patrol->zone : 0;
                 const auto& staff = scene.sim.registry.get<simulation::Staff>(e);
-                f.uncovered_paths = simulation::uncovered_paths(scene.sim, staff.role);
+                f.uncovered_paths = simulation::staff::uncovered_paths(scene.sim, staff.role);
                 if (staff.role == simulation::StaffRole::Handyman)
                     f.items_mended = staff.mended;
             }

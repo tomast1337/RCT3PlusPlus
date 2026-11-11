@@ -2,6 +2,7 @@
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/sandbox.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
@@ -212,12 +213,12 @@ TEST_CASE("paths no handyman patrols are counted once every handyman has a patro
     auto& r = park.world().registry;
     const auto a = park.staff(StaffRole::Handyman, { 0, 0 });
     const auto b = park.staff(StaffRole::Handyman, { 9, 0 });
-    CHECK(uncovered_paths(park.world(), StaffRole::Handyman) == 0);
+    CHECK(staff::uncovered_paths(park.world(), StaffRole::Handyman) == 0);
     r.emplace<Patrol>(a, Patrol { { { 0, 0 }, { 1, 0 }, { 2, 0 } } });
-    CHECK(uncovered_paths(park.world(), StaffRole::Handyman) == 0); // b still walks everywhere
+    CHECK(staff::uncovered_paths(park.world(), StaffRole::Handyman) == 0); // b still walks everywhere
     r.emplace<Patrol>(b, Patrol { { { 8, 0 }, { 9, 0 } } });
-    CHECK(uncovered_paths(park.world(), StaffRole::Handyman) == 5);
-    CHECK(uncovered_paths(park.world(), StaffRole::Mechanic) == 0);
+    CHECK(staff::uncovered_paths(park.world(), StaffRole::Handyman) == 5);
+    CHECK(staff::uncovered_paths(park.world(), StaffRole::Mechanic) == 0);
 }
 
 TEST_CASE("a patrol is painted a brush at a time, filled to its box, and shared by those on one zone")
@@ -229,31 +230,31 @@ TEST_CASE("a patrol is painted a brush at a time, filled to its box, and shared 
     const auto b = park.staff(StaffRole::Handyman, { 9, 0 });
     const auto c = park.staff(StaffRole::Handyman, { 5, 0 });
 
-    paint_patrol(r, a, { 5, 5 }, 3, true);
+    staff::paint_patrol(r, a, { 5, 5 }, 3, true);
     CHECK(r.get<Patrol>(a).tiles.size() == 9);
-    paint_patrol(r, a, { 5, 5 }, 1, false);
+    staff::paint_patrol(r, a, { 5, 5 }, 1, false);
     CHECK(r.get<Patrol>(a).tiles.size() == 8);
     CHECK_FALSE(r.get<Patrol>(a).covers({ 5, 5, 0 }));
-    fill_patrol(r, a);
+    staff::fill_patrol(r, a);
     CHECK(r.get<Patrol>(a).tiles.size() == 9);
-    paint_patrol(r, a, { 5, 5 }, 5, false);
+    staff::paint_patrol(r, a, { 5, 5 }, 5, false);
     CHECK_FALSE(r.all_of<Patrol>(a)); // Nothing left: the whole park again
 
     // Two on one zone: painting either paints both; one more joining takes its tiles; leaving keeps their own.
-    join_zone(r, a, 1);
-    join_zone(r, b, 1);
-    paint_patrol(r, b, { 2, 0 }, 1, true);
+    staff::join_zone(r, a, 1);
+    staff::join_zone(r, b, 1);
+    staff::paint_patrol(r, b, { 2, 0 }, 1, true);
     CHECK(r.get<Patrol>(a).covers({ 2, 0, 0 }));
-    join_zone(r, c, 1);
+    staff::join_zone(r, c, 1);
     CHECK(r.get<Patrol>(c).tiles == r.get<Patrol>(b).tiles);
-    join_zone(r, c, 0);
-    paint_patrol(r, a, { 3, 0 }, 1, true);
+    staff::join_zone(r, c, 0);
+    staff::paint_patrol(r, a, { 3, 0 }, 1, true);
     CHECK(r.get<Patrol>(b).covers({ 3, 0, 0 }));
     CHECK_FALSE(r.get<Patrol>(c).covers({ 3, 0, 0 }));
 
     // On a zone not painted yet, a handyman still sweeps the whole park.
     const auto d = park.staff(StaffRole::Handyman, { 7, 0 });
-    join_zone(r, d, 2);
+    staff::join_zone(r, d, 2);
     for (const auto e : { a, b, c })
         r.remove<Patrol>(e);
     park.litter({ 7, 0 }, 2);

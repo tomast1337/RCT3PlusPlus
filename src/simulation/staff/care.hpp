@@ -16,7 +16,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace rct3::simulation
+namespace rct3::simulation::staff
 {
 
     inline constexpr std::int32_t kMostTraining = 3;
@@ -72,4 +72,4 @@ namespace rct3::simulation
     inline constexpr float kWatchSeconds = 6;   ///< Chosen by eye: how long a guard stops on their rounds to keep watch
     inline constexpr float kWatchChance = 0.1f; ///< Chosen by eye: how often a guard stops so, at each path node
 
-} // namespace rct3::simulation
+} // namespace rct3::simulation::staff

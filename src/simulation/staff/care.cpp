@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 
 #include "simulation/tuning.hpp"
 
@@ -8,7 +8,7 @@
 #include <utility>
 #include <variant>
 
-namespace rct3::simulation
+namespace rct3::simulation::staff
 {
 
     static_assert(kTuning.staff.training_cost.size() == kMostTraining);
@@ -143,4 +143,4 @@ namespace rct3::simulation
         return staff.laziness.value * kTuning.staff.rest.value;
     }
 
-} // namespace rct3::simulation
+} // namespace rct3::simulation::staff

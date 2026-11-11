@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "simulation/staff_motions.hpp"
+#include "simulation/staff/motions.hpp"
 
-namespace rct3::simulation
+namespace rct3::simulation::staff
 {
 
     WorkLook work_look(StaffJob job, Breakdown breakdown)
@@ -66,4 +66,4 @@ namespace rct3::simulation
         }
     }
 
-} // namespace rct3::simulation
+} // namespace rct3::simulation::staff

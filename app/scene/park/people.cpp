@@ -9,7 +9,7 @@
 #include "scene/park/setup.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/import_park.hpp"
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 #include "simulation/systems.hpp"
 #include "strings/unicode.hpp"
 
@@ -82,7 +82,7 @@ namespace rct3::scene::park
             return std::nullopt;
         }
         const auto type = kind == Handyman ? save::model::PersonType::Handyman : kind == Mechanic ? save::model::PersonType::Mechanic : kind == SecurityGuard ? save::model::PersonType::SecurityGuard : save::model::PersonType::Entertainer;
-        const auto role = simulation::staff_role(kind);
+        const auto role = simulation::staff::staff_role(kind);
         // Each entertainer the next costume in turn, as the game gives them out.
         std::vector<std::uint8_t> costumes;
         for (const Outfit& o : scene.wardrobe)
@@ -102,7 +102,7 @@ namespace rct3::scene::park
         if (std::ranges::contains(worn, nullptr) || walkways.empty())
             return std::nullopt;
         const entt::entity e = simulation::add_staff(scene.sim, role, walkways[random::below(scene.looks, walkways.size())]);
-        r.get<simulation::Staff>(e).training = simulation::hired_training(scene.park.cash.has_value());
+        r.get<simulation::Staff>(e).training = simulation::staff::hired_training(scene.park.cash.has_value());
         scene.known_guests.insert(e);
         change_people(scene);
         std::int32_t number = 0;
@@ -227,16 +227,16 @@ namespace rct3::scene::park
         if (change.id == ui::screens::person_control(Warn))
         {
             if (care.warnings < ui::screens::kMostWarnings)
-                simulation::warn(care);
+                simulation::staff::warn(care);
             return show();
         }
         if (change.id == ui::screens::person_control(Train))
         {
             // Paid for at once, free in a park without money; none when the park cannot afford it.
-            const std::int64_t cost = simulation::training_cost(care);
+            const std::int64_t cost = simulation::staff::training_cost(care);
             if (scene.park.cash && *scene.park.cash < cost)
                 return false;
-            if (simulation::train(care) && scene.park.cash)
+            if (simulation::staff::train(care) && scene.park.cash)
             {
                 *scene.park.cash -= cost;
                 simulation::park::ledger_month(scene.park_model.finance, scene.ledger_month, scene.park.date).staff_training += static_cast<std::int32_t>(cost);
@@ -245,7 +245,7 @@ namespace rct3::scene::park
         }
         if (change.id == ui::screens::person_control(Wage))
         {
-            simulation::set_wage_level(care, change.value);
+            simulation::staff::set_wage_level(care, change.value);
             (void)show();
         }
         else if (change.id == ui::screens::person_control(Costume))

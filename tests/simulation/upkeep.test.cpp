@@ -7,7 +7,7 @@
 #include "simulation/park/state.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 #include "simulation/systems.hpp"
 
 #include <algorithm>
@@ -87,13 +87,13 @@ TEST_CASE("staff are paid a quarter of their monthly wage as each week ends, ven
     Sandbox park;
     park.path({ 0, 0 }, { 2, 0 });
     auto& r = park.world().registry;
-    set_wage_level(r.get<Staff>(park.staff(StaffRole::Handyman, { 0, 0 })), 1);
+    staff::set_wage_level(r.get<Staff>(park.staff(StaffRole::Handyman, { 0, 0 })), 1);
     (void)add_vendor(park.world(), { 0, 0, 0 });
     // A keeper and an inspector, paid or not wherever they are.
     for (const StaffRole role : { StaffRole::Keeper, StaffRole::Inspector })
     {
         Staff s { .role = role };
-        set_wage_level(s, kMostWageLevel - (role == StaffRole::Keeper));
+        staff::set_wage_level(s, staff::kMostWageLevel - (role == StaffRole::Keeper));
         const entt::entity e = r.create();
         r.emplace<Staff>(e, s);
     }
@@ -101,7 +101,7 @@ TEST_CASE("staff are paid a quarter of their monthly wage as each week ends, ven
     park.run_seconds(week * 0.9f);
     CHECK(r.ctx().get<Payroll>().paid.value == 0);
     park.run_seconds(week * 0.2f);
-    CHECK(r.ctx().get<Payroll>().paid.value == (wage_at(StaffRole::Handyman, 1) + wage_at(StaffRole::Vendor, 1) + wage_at(StaffRole::Keeper, 1)) / 4);
+    CHECK(r.ctx().get<Payroll>().paid.value == (staff::wage_at(StaffRole::Handyman, 1) + staff::wage_at(StaffRole::Vendor, 1) + staff::wage_at(StaffRole::Keeper, 1)) / 4);
 }
 
 TEST_CASE("a vendor's mood moves as other staff's do, but they never quit")
@@ -110,7 +110,7 @@ TEST_CASE("a vendor's mood moves as other staff's do, but they never quit")
     park.path({ 0, 0 }, { 2, 0 });
     auto& r = park.world().registry;
     const entt::entity vendor = add_vendor(park.world(), { 0, 0, 0 });
-    set_wage_level(r.get<Staff>(vendor), 0);
+    staff::set_wage_level(r.get<Staff>(vendor), 0);
     r.get<Staff>(vendor).training = 0;
     // No guest ever comes by: idle, they grow unhappy and think so.
     park.run_seconds(3 * 3600);
@@ -140,7 +140,7 @@ TEST_CASE("an idle keeper grows unhappy and, unhappy enough, quits")
     park.path({ 0, 0 }, { 2, 0 });
     auto& r = park.world().registry;
     const entt::entity keeper = add_animal_house(park.world(), { .enclosure = 0 }, { 50, 0, 50 });
-    set_wage_level(r.get<Staff>(keeper), 0);
+    staff::set_wage_level(r.get<Staff>(keeper), 0);
     r.get<Staff>(keeper).training = 0;
     CHECK(park.run_until(
         [&] {

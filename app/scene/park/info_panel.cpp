@@ -13,7 +13,7 @@
 #include "simulation/import_park.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/rides.hpp"
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 #include "simulation/vip.hpp"
@@ -79,10 +79,10 @@ namespace rct3::scene::park
             if (p.staff && p.saved < scene.people.staff.size())
             {
                 f.staff = &scene.people.staff[p.saved];
-                simulation::Staff pay { .role = simulation::staff_role(f.staff->kind), .training = f.staff->training };
-                simulation::set_wage_level(pay, f.staff->wage_level);
+                simulation::Staff pay { .role = simulation::staff::staff_role(f.staff->kind), .training = f.staff->training };
+                simulation::staff::set_wage_level(pay, f.staff->wage_level);
                 f.wage = pay.wage.value;
-                f.training_cost = simulation::training_cost(pay);
+                f.training_cost = simulation::staff::training_cost(pay);
             }
             else if (!p.staff && p.saved < scene.people.guests.size())
                 f.guest = &scene.people.guests[p.saved];

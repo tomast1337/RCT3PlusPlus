@@ -51,7 +51,7 @@
 #include "simulation/import_park.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/rides.hpp"
-#include "simulation/staff_care.hpp"
+#include "simulation/staff/care.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"

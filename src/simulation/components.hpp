@@ -554,8 +554,8 @@ namespace rct3::simulation
         Seconds busy { };                ///< Left at the job in hand
         entt::entity ride = entt::null;  ///< The ride a mechanic is going to, or working on, to repair or inspect
         Money wage { };                  ///< A month
-        std::int32_t wage_level = 1;     ///< 0 to 2, what `wage` follows (staff_care.hpp); 1 as hired
-        std::int32_t training = 3;       ///< 0 untrained to 3; a hire's is set by hired_training (staff_care.hpp)
+        std::int32_t wage_level = 1;     ///< 0 to 2, what `wage` follows (staff/care.hpp); 1 as hired
+        std::int32_t training = 3;       ///< 0 untrained to 3; a hire's is set by hired_training (staff/care.hpp)
         std::int32_t warnings = 0;
         Share happiness { 1 };
         Share laziness { };            ///< How much longer each job takes, and how often they stop to rest
@@ -695,7 +695,7 @@ namespace rct3::simulation
         TroughsEmpty,       ///< A hungry animal (the finding's entity) finding its house's food trough empty, time and again
         TooMuchDung,        ///< An animal house whose enclosure has more dung than its animals put up with
         DangerousFlume,     ///< A pool slide that threw a rider onto hard ground, not into water; it is shut
-        // Not the inspector's: a worker's own news (staff_care.hpp), with the worker
+        // Not the inspector's: a worker's own news (staff/care.hpp), with the worker
         WantsToQuit,
         Quit, ///< The park lets them go once told
     };

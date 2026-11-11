@@ -209,4 +209,9 @@ namespace rct3::simulation
     /// paths and in queues, and arriving where they headed. Times each phase on `phase`.
     void step_guests(SimWorld& world, std::optional<Workers&> workers, const Weather& weather, bool night, std::optional<profiling::Scope>& phase);
 
+    /// One tick at the park's gates, in `weather`: guests outside with nowhere to go walk to the gate to come in,
+    /// or off to the nearest spawn point; new parties come, families by day and mostly teens after dark, at a
+    /// spawn point to walk to the gate, or at the gate itself. Run as part of the "Tidy" phase.
+    void step_gates(SimWorld& world, const Weather& weather);
+
 } // namespace rct3::simulation

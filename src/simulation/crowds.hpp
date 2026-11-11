@@ -20,6 +20,8 @@
 namespace rct3::simulation
 {
 
+    struct SimWorld;
+
     /// The chance an entertainer starts a show when they find guests near: higher trained, happy and keen.
     [[nodiscard]] float show_chance(const Staff& staff);
 
@@ -40,5 +42,10 @@ namespace rct3::simulation
 
     /// The move of `show` they make now, and the seconds into it; the last once the show is through.
     [[nodiscard]] std::pair<ShowMove, float> show_move_at(const Show& show);
+
+    /// One tick of the crowds: entertainers' shows go on or start, fans gather round VIPs for autographs, and
+    /// those watching step to their place round the star; nothing without paths. Run as part of the "Tidy"
+    /// phase, after the staff.
+    void step_crowds(SimWorld& world);
 
 } // namespace rct3::simulation

@@ -94,8 +94,13 @@ declare namespace park {
     function loan(): number;
     /** Sets the cash, in hundredths of the currency, of a park with money. */
     function setCash(hundredths: number): void;
-    /** The building lines of the newest month's ledger, in hundredths: spending above zero, refunds below. */
-    function ledger(): { landPurchase: number; landscaping: number; rideConstruction: number };
+    /** The building and research lines of the newest month's ledger, in hundredths: spending above zero, refunds below. */
+    function ledger(): { landPurchase: number; landscaping: number; rideConstruction: number; research: number };
+    /** Research: the monthly budget and what is counted towards the current item (hundredths), the current item and
+     *  those invented since the original park, by symbol, and how many items are left (null until the build lists are read). */
+    function research(): { budget: number; spent: number; current: string | null; invented: (string | null)[]; left: number | null };
+    /** Sets the monthly research budget, in hundredths of the currency; nought stops research. */
+    function setResearch(hundredths: number): void;
     /** The weekly graphs' samples, newest first (money in hundredths), each ledger period's sum newest first, and
      *  the month, counted from the calendar's start, that the newest period is for (null before anything is booked). */
     function history(): { cashLessLoan: number[]; companyValue: number[]; parkValue: number[]; income: number[]; expenditure: number[]; weeklyProfit: number[]; rating: number[]; guests: number[]; intake: number[]; ledger: number[]; ledgerMonth: number | null };
@@ -289,6 +294,8 @@ interface StallItem {
 }
 
 declare namespace build {
+    /** Whether the park lets an item of this symbol be built; undefined while the lists are still being read. */
+    function offers(symbol: string): boolean | undefined;
     /** The install's rides placed whole; undefined while the lists are still being read. */
     function flatRides(): FlatRideItem[] | undefined;
     /** The install's stalls; undefined while the lists are still being read. Picked as rides are. */

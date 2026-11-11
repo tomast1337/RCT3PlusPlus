@@ -71,6 +71,7 @@
 #include "simulation/park/finance.hpp"
 #include "simulation/park/graphs.hpp"
 #include "simulation/park/state.hpp"
+#include "simulation/research.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/swimming.hpp"
@@ -695,14 +696,18 @@ namespace rct3::scene::park
         /// Which series each ride's graph shows, by ride id, as ui::screens::AttractionFacts::graph_series; speed alone
         /// for those not listed. shortcut: not saved with the park; keep it with the ride once saves carry it.
         std::unordered_map<std::uint32_t, std::uint8_t> graph_series;
-        float since_info_page = 0;                  ///< Seconds since a live page was shown again
-        bool shown_closed = false;                  ///< The park closed the ride shown, as a crash does, so its page shows again
-        std::uint32_t vandalism_seen = 0;           ///< Breaks the park has been charged for
-        std::uint32_t vandalism_warnings_seen = 0;  ///< Warnings already posted as messages
-        bool chairs_changed = true;                 ///< The placed objects changed since lifeguards were last seated in their chairs
-        bool themes_judged = false;                 ///< The attractions' fit with their scenery judged once since the park opened
-        std::int64_t wages_seen = 0;                ///< Of the staff's pay, what has come out of the park's cash
-        std::optional<std::int64_t> ledger_month;   ///< Months into the calendar the newest ledger period is for (simulation::park::ledger_month)
+        float since_info_page = 0;                 ///< Seconds since a live page was shown again
+        bool shown_closed = false;                 ///< The park closed the ride shown, as a crash does, so its page shows again
+        std::uint32_t vandalism_seen = 0;          ///< Breaks the park has been charged for
+        std::uint32_t vandalism_warnings_seen = 0; ///< Warnings already posted as messages
+        bool chairs_changed = true;                ///< The placed objects changed since lifeguards were last seated in their chairs
+        bool themes_judged = false;                ///< The attractions' fit with their scenery judged once since the park opened
+        std::int64_t wages_seen = 0;               ///< Of the staff's pay, what has come out of the park's cash
+        std::optional<std::int64_t> ledger_month;  ///< Months into the calendar the newest ledger period is for (simulation::park::ledger_month)
+        simulation::Research research;             ///< How far the park's research has got
+        /// What is left to invent; none until the build lists are read, which says what each item is.
+        std::optional<std::vector<simulation::ResearchItem>> research_items;
+        std::optional<float> research_time;         ///< The calendar's time research was last moved on to; none before the first time
         simulation::Supplies supplies_seen;         ///< Of what supplies cost, what has come out of the park's cash
         simulation::Receipts receipts_seen;         ///< Of what guests have paid, what has gone into the park's cash
         std::vector<BrokenRide> broken_rides;       ///< Rides the player has been told are broken down

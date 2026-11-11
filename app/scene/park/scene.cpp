@@ -963,6 +963,29 @@ namespace rct3::scene::park
             const std::int32_t weeks = simulation::park::pass_time(scene.park, game_seconds);
             simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, options.flag(config::GameOption::DisableWeather));
             scene.thunder = rct3::park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed, scene.weather_dice);
+            // Research, once the build lists say what each item is. It goes by the calendar, so that a calendar set
+            // on by hand takes research with it.
+            if (scene.research.budget > 0 && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+            {
+                const std::vector<rct3::park::BuildItem>& catalogue = scene.build.items.get();
+                if (!scene.research_items)
+                    scene.research_items = simulation::research_items(scene.park_model.content, catalogue);
+                const std::size_t had = scene.research.invented.size();
+                simulation::step_research(scene.research, scene.park.time - scene.research_time.value_or(scene.park.time), *scene.research_items, scene.park, scene.park_model.finance, scene.ledger_month, scene.gameplay);
+                // Each new invention can be built from now on, and the player is told.
+                for (std::size_t i = had; i < scene.research.invented.size(); ++i)
+                {
+                    const auto entry = std::ranges::find(scene.park_model.content.entries, scene.research.invented[i], &save::model::AssetRequirement::id);
+                    if (entry == scene.park_model.content.entries.end())
+                        continue;
+                    entry->invented = true;
+                    const auto item = std::ranges::find_if(catalogue, [&](const rct3::park::BuildItem& b) { return strings::equals_ignoring_case(b.symbol, entry->symbol) && strings::equals_ignoring_case(b.overlay, entry->overlay_stem); });
+                    simulation::park::post(scene.park.messages, { .text_key = std::string(simulation::kInventedKey), .subject_name = item != catalogue.end() ? strings::to_utf8(assets.strings->get(item->name_text)) : entry->symbol });
+                }
+                if (scene.research.invented.size() != had)
+                    scene.build.offer = rct3::park::BuildOffer(scene.park_model.content);
+            }
+            scene.research_time = scene.park.time;
             // Each new week rates the park again; weeks run through in one frame are rated once.
             if (weeks > 0)
             {
@@ -2222,6 +2245,7 @@ namespace rct3::scene::park
             saved.flower_beds.push_back({ .object_ref = bed.object, .water = bed.water });
         if (!scene.park_model.objectives.objectives.empty())
             saved.goals = parkfile::SavedGoals { .objectives = scene.park_model.objectives };
+        saved.research = scene.research;
         return parkfile::write_saved_park(saved);
     }
 

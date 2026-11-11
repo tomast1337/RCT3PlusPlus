@@ -168,21 +168,8 @@ namespace rct3::simulation
     /// next, showing how the ride left them, and sick there if it turned their stomach.
     void let_out(entt::registry& r, const PathNetwork& paths, entt::entity guest, entt::entity ride, std::optional<GestureKind> gesture);
 
-    /// Throws `person`, on foot or just let out of a crashed ride, from `at` at `velocity`: they fly, land
-    /// knocked over, lie there a while, then walk to `node` and go on from there.
-    void throw_person(entt::registry& r, entt::entity person, glm::vec3 at, glm::vec3 velocity, NodeId node);
-
     /// Stops `stride` at `node`, its route dropped, and stands `pose` there.
     void stop_at(const PathNetwork& paths, NodeId node, Stride& stride, Pose& pose);
-
-    /// Takes `person` out of what they were doing on foot: out of the queue they stood in, away from their party
-    /// till they land (rejoin), and, a mechanic, off the job in hand.
-    void step_out(entt::registry& r, entt::entity person);
-
-    /// The path under `ground`, else the nearest one a person there may walk on; nothing without paths.
-    /// shortcut: off the paths they walk straight to it, over whatever lies between; route round scenery once
-    /// the ground is walkable.
-    [[nodiscard]] std::optional<NodeId> path_to_rejoin(const PathNetwork& paths, glm::vec3 ground);
 
     /// The entities of `view`, in ascending order, so serial phases go the same way every time.
     template<typename View> std::vector<entt::entity> sorted(const View& view)
@@ -203,27 +190,6 @@ namespace rct3::simulation
     /// Brings in `who` (each an age, and whether female) on path node `at` as one party, the first its leader,
     /// with tastes from `band`. Returns its members.
     std::vector<entt::entity> admit_guests(SimWorld& world, random::RandomState& dice, NodeId at, std::span<const std::pair<AgeGroup, bool>> who, const tuning::TasteBand& band);
-
-    /// The player picks `person` up, guest or staff, out of what they were doing: a guest leaves their queue
-    /// and their party, a mechanic the ride they were going to, a swimmer the pool, keeping their swimwear on
-    /// till they land. False, and nothing done, for one who cannot be picked up now: on a ride, in a booth,
-    /// changing, gone home or held already.
-    bool pick_up(SimWorld& world, entt::entity person);
-
-    /// The player lets a held person go over `ground`, a point on the ground, a path or a pool complex: they
-    /// fall to it and walk to the nearest path to go on from, or, a guest let go over a pool complex, swim there
-    /// as if they had come in through its changing room. False, and still held, where there are no paths to
-    /// walk to.
-    bool let_go(SimWorld& world, entt::entity person, glm::vec3 ground);
-
-    /// Where a worker just hired goes when the player gives them back without putting them down: the middle of
-    /// the walkway staff may use nearest the park's entrance. None without an entrance or such a walkway.
-    [[nodiscard]] std::optional<glm::vec3> entrance_drop(const SimWorld& world);
-
-    /// The ground under `person`, on foot, grew too steep: they slide down it, keeping to the ground, till it
-    /// levels out enough to stop them, fall over, get up and walk to the nearest path. False, and nothing done,
-    /// for one not on foot: riding, swimming, seated, in a booth, held or already falling.
-    bool slide(SimWorld& world, entt::entity person);
 
     /// Advances `world` by one tick, sharing work out over `workers` when given.
     void step(SimWorld& world, std::optional<Workers&> workers = std::nullopt);

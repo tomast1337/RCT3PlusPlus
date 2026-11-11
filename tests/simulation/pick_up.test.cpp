@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/components.hpp"
+#include "simulation/holding.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"

@@ -7,6 +7,7 @@
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/guests.hpp"
+#include "simulation/holding.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/ride_walks.hpp"
 #include "simulation/swimming.hpp"

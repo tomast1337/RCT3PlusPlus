@@ -2,6 +2,7 @@
 #include "park/pools/pools.hpp"
 
 #include "simulation/guests.hpp"
+#include "simulation/holding.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/swimming.hpp"

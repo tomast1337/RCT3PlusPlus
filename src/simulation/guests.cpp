@@ -20,6 +20,7 @@
 #include <cmath>
 #include <functional>
 #include <limits>
+#include <numeric>
 #include <optional>
 #include <ranges>
 #include <span>
@@ -1435,6 +1436,195 @@ namespace rct3::simulation
             for (const entt::entity m : party)
                 r.destroy(m);
         }
+    }
+
+    Gait pick_gait(AgeGroup age, const Mood& mood, const Needs& needs, random::RandomState& dice)
+    {
+        const auto& gaits = kTuning.gaits;
+        if (mood.nausea.value >= kTuning.sickness.sick.value)
+            return Gait::Queasy;
+        if (needs.bladder.value >= gaits.bursting.value)
+            return Gait::Bursting;
+        if (mood.energy.value < gaits.weary.value)
+            return Gait::Weary;
+        return random::chance(dice, gaits.run[std::to_underlying(age)].value * mood.energy.value) ? Gait::Run : Gait::Walk;
+    }
+
+    Pace gait_pace(Pace walk, Share energy, Gait gait)
+    {
+        const auto& gaits = kTuning.gaits;
+        const double by_gait = gait == Gait::Run ? gaits.run_pace.value : gait == Gait::Weary ? gaits.weary_pace.value : gait == Gait::Queasy ? gaits.queasy_pace.value : gait == Gait::Bursting ? gaits.bursting_pace.value : 1.0;
+        const double by_energy = gaits.drained.value + (gaits.fresh.value - gaits.drained.value) * std::clamp(energy.value, 0.0f, 1.0f);
+        return { static_cast<float>(walk.value * by_energy * by_gait) };
+    }
+
+    double arrivals_per_second(const Weather& weather)
+    {
+        double rate = kTuning.arrivals.rate.value * (weather.storm ? kTuning.arrivals.storm.value : weather.rain ? kTuning.arrivals.rain.value : 1);
+        if (weather.temperature.value < kTuning.weather.cold.value)
+            rate *= kTuning.arrivals.cold.value;
+        else if (weather.sunny && !weather.rain)
+            rate *= kTuning.arrivals.sunny.value;
+        return rate;
+    }
+
+    std::uint32_t ideal_guests(const SimWorld& world)
+    {
+        const entt::registry& r = world.registry;
+        std::uint32_t room = 0;
+        for (const auto [e, ride, at] : r.view<const CycleRide, const Attraction>().each())
+        {
+            const auto* upkeep = r.try_get<Upkeep>(e);
+            if (at.open && (upkeep == nullptr || !upkeep->broken))
+                room += ride.room > 0 ? ride.room : ride.capacity * kTuning.arrivals.guests_per_seat;
+        }
+        const auto* draw = r.ctx().find<Draw>();
+        room += draw != nullptr ? draw->pool_squares * kTuning.arrivals.guests_per_pool_square : 0;
+        if (const auto* elsewhere = r.ctx().find<RoomElsewhere>())
+            room += elsewhere->guests;
+        return static_cast<std::uint32_t>(std::lround(room * kTuning.arrivals.room_to_spare.value));
+    }
+
+    std::int64_t fair_entrance_fee(const SimWorld& world)
+    {
+        const entt::registry& r = world.registry;
+        std::int64_t over = 0;
+        for (const auto [e, ride, at] : r.view<const CycleRide, const Attraction>().each())
+        {
+            if (!at.open)
+                continue;
+            float worth = kTuning.arrivals.ride_worth.value * (ride.excitement.value + kTuning.arrivals.intensity_worth.value * ride.intensity.value);
+            if (ride.intensity.value > kTuning.arrivals.too_intense.value)
+                worth /= 2;
+            over += std::max<std::int64_t>(0, std::lround(worth) - at.price.value);
+        }
+        return std::llround(static_cast<double>(over) * kTuning.arrivals.fair_fee.value);
+    }
+
+    double drawn(const Draw& draw, std::uint32_t guests, std::uint32_t ideal, std::int64_t fair_fee)
+    {
+        // Against the plain rate: an unknown park's share, rising in step with the rating to all of it at the plain
+        // rating and on past it, up to the famous rating.
+        const tuning::Arrivals& a = kTuning.arrivals;
+        const float known = std::clamp(draw.rating.value_or(a.plain_rating.value), a.unknown_rating.value, a.famous_rating.value) - a.unknown_rating.value;
+        double rate = a.unknown_draw.value + (1 - a.unknown_draw.value) * known / (a.plain_rating.value - a.unknown_rating.value);
+        if (guests >= ideal)
+            rate *= kTuning.arrivals.crowded.value;
+        if (draw.entrance_fee.value > fair_fee)
+            rate *= kTuning.arrivals.overpriced.value;
+        if (draw.entrance_fee.value > 2 * fair_fee)
+            rate *= kTuning.arrivals.overpriced.value;
+        return rate;
+    }
+
+    void start_walking(SimWorld& world, entt::entity guest, NodeId at)
+    {
+        auto& r = world.registry;
+        // A guest who already stands somewhere keeps to where they stand on the tile.
+        glm::vec2 lane { 0.0f };
+        if (const auto* pose = r.try_get<Pose>(guest))
+        {
+            const glm::vec3 off = pose->position - world.paths.centre(at);
+            lane = glm::clamp(glm::vec2(off.x, off.z), -kLaneReach, kLaneReach);
+        }
+        r.emplace_or_replace<Errand>(guest);
+        const auto* visitor = r.try_get<Visitor>(guest);
+        const float speed = visitor != nullptr ? kTuning.walking.speed[std::to_underlying(visitor->age)].value : Stride { }.speed.value;
+        r.emplace_or_replace<Stride>(guest, Stride { .from = at, .to = at, .progress = 1, .speed = speed, .lane_from = lane, .lane_to = lane });
+        r.emplace_or_replace<Dice>(guest, dice_for(world, guest));
+        auto& pose = r.get_or_emplace<Pose>(guest);
+        place(world.paths, r.get<Stride>(guest), pose);
+        pose.was = pose.position;
+        pose.was_heading.value = pose.heading.value;
+    }
+
+    std::vector<entt::entity> admit_party(SimWorld& world, random::RandomState& dice, NodeId at)
+    {
+        entt::registry& r = world.registry;
+        const auto weights = party_weights(world, is_night(time_of_day(r)));
+        double roll = random::unit(dice) * std::reduce(weights.begin(), weights.end());
+        std::size_t pick = 0;
+        while (pick + 1 < kPartyKinds && roll >= weights[pick])
+            roll -= weights[pick++];
+        const auto kind = static_cast<PartyKind>(pick);
+        const auto* mix = r.ctx().find<PartyMix>();
+        // Who comes, the leader first: an adult wherever there are children.
+        std::vector<std::pair<AgeGroup, bool>> who; // Age, and whether female
+        const bool female = random::chance(dice, 0.5);
+        const auto children = [&] {
+            for (auto n = random::between(dice, std::int64_t { 1 }, kTuning.parties.most_children); n > 0; --n)
+                who.emplace_back(AgeGroup::Child, random::chance(dice, 0.5));
+        };
+        switch (kind)
+        {
+            case PartyKind::LoneTeen:
+            case PartyKind::LoneAdult:
+                who.emplace_back(kind == PartyKind::LoneTeen ? AgeGroup::Teen : AgeGroup::Adult, female);
+                break;
+            case PartyKind::TeenCouple:
+            case PartyKind::AdultCouple:
+            {
+                const AgeGroup age = kind == PartyKind::TeenCouple ? AgeGroup::Teen : AgeGroup::Adult;
+                who = { { age, female }, { age, !female } };
+                break;
+            }
+            case PartyKind::TeenGang:
+            case PartyKind::AdultParty:
+                for (auto n = random::between(dice, std::int64_t { 2 }, kTuning.parties.most_friends); n > 0; --n)
+                    who.emplace_back(kind == PartyKind::TeenGang ? AgeGroup::Teen : AgeGroup::Adult, random::chance(dice, 0.5));
+                break;
+            case PartyKind::Family:
+                who.emplace_back(AgeGroup::Adult, female);
+                if (!random::chance(dice, mix != nullptr ? mix->single_parent.value : kTuning.parties.single_parent.value))
+                    who.emplace_back(AgeGroup::Adult, !female);
+                children();
+                break;
+            case PartyKind::DayTrip:
+                who.emplace_back(AgeGroup::Adult, female);
+                children();
+                break;
+        }
+        const tuning::TasteBand band = kind == PartyKind::LoneTeen || kind == PartyKind::TeenGang ? kTuning.parties.thrill : kind == PartyKind::Family || kind == PartyKind::DayTrip ? kTuning.parties.gentle : kTuning.parties.middle;
+        return admit_guests(world, dice, at, who, band);
+    }
+
+    std::vector<entt::entity> admit_guests(SimWorld& world, random::RandomState& dice, NodeId at, std::span<const std::pair<AgeGroup, bool>> who, const tuning::TasteBand& band)
+    {
+        entt::registry& r = world.registry;
+        const PathNetwork& paths = world.paths;
+        std::vector<entt::entity> members;
+        for (const auto [age, is_female] : who)
+        {
+            const entt::entity guest = members.emplace_back(r.create());
+            r.emplace<Visitor>(guest, age, is_female, std::string { }, world.tick);
+            r.emplace<Pose>(guest, paths.centre(at), 0.0f);
+            // Some come wishing for a swim already, the more the more they like pools.
+            const auto liking = static_cast<float>(random::between(dice, double { kTuning.pools.least_liking.value }, double { kTuning.pools.most_liking.value }));
+            r.emplace<Needs>(guest, Needs { .swim = { liking * static_cast<float>(random::unit(dice)) } });
+            r.emplace<Mood>(guest, Mood { .happiness = kTuning.arrivals.mood, .energy = { 1 }, .tolerance = age == AgeGroup::Teen ? kTuning.arrivals.teen_tolerance : Mood { }.tolerance });
+            const auto spread = [&] { return static_cast<float>(random::between(dice, -1.0, 1.0)) * kTuning.parties.taste_spread.value; };
+            const float least = std::clamp(band.least.value + spread(), 0.0f, 1.0f);
+            r.emplace<Taste>(guest, least, std::clamp(band.most.value + spread(), least, 1.0f), liking);
+            // Around the park's averages, each on its own.
+            const auto* draw = r.ctx().find<Draw>();
+            const auto around = [&](Money average, Money fallback) { return Money { std::llround(static_cast<double>(average.value > 0 ? average.value : fallback.value) * (1 + random::between(dice, -1.0, 1.0) * kTuning.arrivals.cash_spread.value)) }; };
+            const Money cash = around(draw != nullptr ? draw->guest_cash : Money { }, kTuning.arrivals.cash);
+            r.emplace<Wallet>(guest, cash, around(draw != nullptr ? draw->guest_bank : Money { }, kTuning.arrivals.bank));
+            start_walking(world, guest, at);
+            ++r.ctx().emplace<Turnstile>().in[static_cast<std::size_t>(age)];
+        }
+        if (members.size() > 1)
+        {
+            const entt::entity party = r.create();
+            for (const entt::entity m : members)
+            {
+                r.emplace<Member>(m, party);
+                if (m != members.front())
+                    r.get<Errand>(m) = { ErrandKind::Following, entt::null, 0 };
+            }
+            r.emplace<Party>(party, members.front(), members);
+        }
+        return members;
     }
 
 } // namespace rct3::simulation

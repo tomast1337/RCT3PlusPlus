@@ -16,6 +16,11 @@
 #include <utility>
 #include <vector>
 
+namespace rct3::simulation::tuning
+{
+    struct TasteBand;
+}
+
 namespace rct3::simulation
 {
 
@@ -213,5 +218,41 @@ namespace rct3::simulation
     /// or off to the nearest spawn point; new parties come, families by day and mostly teens after dark, at a
     /// spawn point to walk to the gate, or at the gate itself. Run as part of the "Tidy" phase.
     void step_gates(SimWorld& world, const Weather& weather);
+
+    /// The gait a guest of `age`, feeling as `mood` and `needs` have them, goes on in from a tile: worn out,
+    /// sick or bursting they show it, and otherwise now and then they run, children most and the fresher the
+    /// likelier. Drawn with `dice`.
+    [[nodiscard]] Gait pick_gait(AgeGroup age, const Mood& mood, const Needs& needs, random::RandomState& dice);
+
+    /// The ground covered in a second by a guest whose own walk is `walk`, with `energy` left, in `gait`.
+    [[nodiscard]] Pace gait_pace(Pace walk, Share energy, Gait gait);
+
+    /// Guests a second coming in at a gate in `weather`: fewer in rain, storms and the cold, more on sunny days.
+    [[nodiscard]] double arrivals_per_second(const Weather& weather);
+
+    /// Guests the park has room for, with some to spare: what its open rides that are not broken down make
+    /// room for (or a share for each seat, where a ride's data does not say), and a share for each square of
+    /// pool water, and the room of rides not simulated (RoomElsewhere).
+    [[nodiscard]] std::uint32_t ideal_guests(const SimWorld& world);
+
+    /// The entrance fee guests think fair, in hundredths: what the open rides are worth to them over what they
+    /// charge.
+    [[nodiscard]] std::int64_t fair_entrance_fee(const SimWorld& world);
+
+    /// How many guests come in against a plain park, from the park's rating, how crowded it is (`guests`
+    /// against `ideal`) and its entrance fee against `fair_fee`.
+    [[nodiscard]] double drawn(const Draw& draw, std::uint32_t guests, std::uint32_t ideal, std::int64_t fair_fee);
+
+    /// Gives guest `guest` what it needs to walk, standing on path node `at` with nothing to do. Its dice are
+    /// seeded from the world's seed and its id, so the same park always plays out the same way.
+    void start_walking(SimWorld& world, entt::entity guest, NodeId at);
+
+    /// Brings a whole party in on path node `at`, of a kind the park's mix picks, as the gate does: a lone guest
+    /// or a party, each walking with nothing to do yet. Returns its members, the leader first.
+    std::vector<entt::entity> admit_party(SimWorld& world, random::RandomState& dice, NodeId at);
+
+    /// Brings in `who` (each an age, and whether female) on path node `at` as one party, the first its leader,
+    /// with tastes from `band`. Returns its members.
+    std::vector<entt::entity> admit_guests(SimWorld& world, random::RandomState& dice, NodeId at, std::span<const std::pair<AgeGroup, bool>> who, const tuning::TasteBand& band);
 
 } // namespace rct3::simulation

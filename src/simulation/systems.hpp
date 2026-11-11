@@ -35,10 +35,6 @@ namespace rct3::simulation
 {
 
     class Workers;
-    enum class AgeGroup : std::uint8_t;
-    struct Draw;
-    struct Mood;
-    struct Needs;
 
     inline constexpr float kTickSeconds = 0.25f; ///< Simulated time a step covers
     /// Farthest a guest walks off a path tile's middle, along x and z.
@@ -55,36 +51,6 @@ namespace rct3::simulation
     /// (x, z): radians, the way Pose's heading grows; none when that is more than `most` to either side, as
     /// behind it.
     [[nodiscard]] std::optional<float> cannon_turn(float heading, glm::vec2 way, float most);
-
-    /// The gait a guest of `age`, feeling as `mood` and `needs` have them, goes on in from a tile: worn out,
-    /// sick or bursting they show it, and otherwise now and then they run, children most and the fresher the
-    /// likelier. Drawn with `dice`.
-    [[nodiscard]] Gait pick_gait(AgeGroup age, const Mood& mood, const Needs& needs, random::RandomState& dice);
-
-    /// The ground covered in a second by a guest whose own walk is `walk`, with `energy` left, in `gait`.
-    [[nodiscard]] Pace gait_pace(Pace walk, Share energy, Gait gait);
-
-    /// A coaster rider's own leanings, each a share fixed for the rider: towards raising their hands, bracing
-    /// against the forces and covering their eyes; the higher, the likelier.
-    struct Leanings
-    {
-        float hands = 0;
-        float brace = 0;
-        float eyes = 0;
-    };
-
-    /// How a rider reacting as `now` reacts `dt` seconds on, as the train they ride feels (`running` it is off
-    /// round the track, `lifted` up a lift chain): waiting at the station and up the lift; bracing against
-    /// strong forces; covering their eyes going down a ride `over` (intensity past what they like) too wild for
-    /// them; throwing up their hands when `happiness` thrills them or floating over a hill, more readily in
-    /// the `front` car, and keeping them up till the forces grow too strong. Drawn with `dice`.
-    [[nodiscard]] RideReaction react(RideReaction now, const Felt& feel, bool running, bool lifted, Share happiness, float over, const Leanings& leanings, bool front, random::RandomState& dice, float dt);
-
-    /// How a flat ride's rider reacting as `now` reacts `dt` seconds on, the ride `running` its cycle or not:
-    /// waiting while it stands; covering their eyes on a ride `over` (intensity past what they like) too wild
-    /// for them; otherwise throwing up their hands, once and for the rest of the run, when `happiness` thrills
-    /// them or the ride suits them. Drawn with `dice`.
-    [[nodiscard]] RideReaction react_flat(RideReaction now, bool running, Share happiness, float over, const Leanings& leanings, random::RandomState& dice, float dt);
 
     /// Pieces of litter lying long enough to count against the park's rating (tuning::Litter::old).
     [[nodiscard]] std::int32_t old_litter(const SimWorld& world);
@@ -106,28 +72,8 @@ namespace rct3::simulation
     /// from its exit, and those on their way to it or waiting for it go on to something else.
     void pull_down(SimWorld& world, entt::entity attraction);
 
-    /// Guests a second coming in at a gate in `weather`: fewer in rain, storms and the cold, more on sunny days.
-    [[nodiscard]] double arrivals_per_second(const Weather& weather);
-
-    /// Guests the park has room for, with some to spare: what its open rides that are not broken down make
-    /// room for (or a share for each seat, where a ride's data does not say), and a share for each square of
-    /// pool water, and the room of rides not simulated (RoomElsewhere).
-    [[nodiscard]] std::uint32_t ideal_guests(const SimWorld& world);
-
-    /// The entrance fee guests think fair, in hundredths: what the open rides are worth to them over what they
-    /// charge.
-    [[nodiscard]] std::int64_t fair_entrance_fee(const SimWorld& world);
-
-    /// How many guests come in against a plain park, from the park's rating, how crowded it is (`guests`
-    /// against `ideal`) and its entrance fee against `fair_fee`.
-    [[nodiscard]] double drawn(const Draw& draw, std::uint32_t guests, std::uint32_t ideal, std::int64_t fair_fee);
-
     /// Whether a time of day (a fraction from midnight) is dark: from 20:00 to 6:00, our own hours.
     [[nodiscard]] bool is_night(float time);
-
-    /// How exciting a guest of `age` finds a ride rated `excitement`: in the dark a coaster thrills teens more
-    /// and families less.
-    [[nodiscard]] float felt_excitement(float excitement, bool coaster, AgeGroup age, bool night);
 
     /// Ticks in `seconds` of simulated time, rounded up.
     [[nodiscard]] std::uint32_t ticks(float seconds);
@@ -141,16 +87,6 @@ namespace rct3::simulation
     /// Stands `pose` where `s` has got to between its two tiles, in its lanes, on the path's surface.
     void place(const PathNetwork& paths, const Stride& s, Pose& pose);
 
-    /// Where guests come into `ride`'s station `station` (0 the first).
-    [[nodiscard]] NodeId entrance_of(const entt::registry& r, entt::entity ride, std::size_t station);
-
-    /// Where riders come off `ride` on to the paths at its station `station` (0 the first).
-    [[nodiscard]] NodeId exit_of(const entt::registry& r, entt::entity ride, std::size_t station = 0);
-
-    /// A rider off `ride` and on the paths at the exit of the station they get off at: on to what they do
-    /// next, showing how the ride left them, and sick there if it turned their stomach.
-    void let_out(entt::registry& r, const PathNetwork& paths, entt::entity guest, entt::entity ride, std::optional<GestureKind> gesture);
-
     /// Stops `stride` at `node`, its route dropped, and stands `pose` there.
     void stop_at(const PathNetwork& paths, NodeId node, Stride& stride, Pose& pose);
 
@@ -161,18 +97,6 @@ namespace rct3::simulation
         std::ranges::sort(out);
         return out;
     }
-
-    /// Gives guest `guest` what it needs to walk, standing on path node `at` with nothing to do. Its dice are
-    /// seeded from the world's seed and its id, so the same park always plays out the same way.
-    void start_walking(SimWorld& world, entt::entity guest, NodeId at);
-
-    /// Brings a whole party in on path node `at`, of a kind the park's mix picks, as the gate does: a lone guest
-    /// or a party, each walking with nothing to do yet. Returns its members, the leader first.
-    std::vector<entt::entity> admit_party(SimWorld& world, random::RandomState& dice, NodeId at);
-
-    /// Brings in `who` (each an age, and whether female) on path node `at` as one party, the first its leader,
-    /// with tastes from `band`. Returns its members.
-    std::vector<entt::entity> admit_guests(SimWorld& world, random::RandomState& dice, NodeId at, std::span<const std::pair<AgeGroup, bool>> who, const tuning::TasteBand& band);
 
     /// Advances `world` by one tick, sharing work out over `workers` when given.
     void step(SimWorld& world, std::optional<Workers&> workers = std::nullopt);

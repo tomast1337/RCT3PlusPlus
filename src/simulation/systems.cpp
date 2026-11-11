@@ -100,6 +100,12 @@ namespace rct3::simulation
 
     namespace
     {
+        /// Whether a guest doing `kind` is walking the paths.
+        bool walking(ErrandKind kind)
+        {
+            return kind == ErrandKind::Wandering || kind == ErrandKind::Heading || kind == ErrandKind::Following || kind == ErrandKind::Waiting;
+        }
+
         /// The gates, litter, path items and vandals, then the staff and the crowds, for one tick: after the guests
         /// have walked and bought.
         void tidy(SimWorld& world)

@@ -34,6 +34,41 @@ namespace rct3::simulation
 {
     namespace
     {
+        /// The nearest spawn point a guest on path node `from` can walk to, and the way there; none without one.
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> way_off(const entt::registry& r, const PathNetwork& paths, NodeId from)
+        {
+            std::vector<entt::entity> spawns;
+            std::vector<NodeId> nodes;
+            for (const auto [e, spawn] : r.view<const GuestSpawn>().each())
+            {
+                spawns.push_back(e);
+                nodes.push_back(spawn.node);
+            }
+            auto found = nodes.empty() ? std::nullopt : paths.route_nearest(from, nodes);
+            if (!found)
+                return std::nullopt;
+            return std::pair { spawns[found->first], std::move(found->second) };
+        }
+
+        /// Each of `party` pays the entrance fee, the party making up what one is short of. False, with nothing
+        /// paid, when together they cannot pay for all of them: they are turned away, and no longer counted in.
+        bool pay_entry(entt::registry& r, std::span<const entt::entity> party)
+        {
+            const Money fee = r.ctx().contains<Draw>() ? r.ctx().get<Draw>().entrance_fee : Money { };
+            if (fee.value <= 0)
+                return true;
+            if (std::ranges::fold_left(party, std::int64_t { 0 }, [&](std::int64_t sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) >= fee.value * static_cast<std::int64_t>(party.size()))
+            {
+                for (const entt::entity m : party)
+                    pay(r, m, fee, &Wallet::spent_entry);
+                return true;
+            }
+            for (const entt::entity m : party)
+                --r.ctx().get<Turnstile>().in[std::to_underlying(r.get<Visitor>(m).age)];
+            ++r.ctx().emplace<Turnstile>().turned_away;
+            return false;
+        }
+
         void share(std::optional<Workers&> workers, std::size_t count, const std::function<void(std::size_t, std::size_t)>& body)
         {
             if (workers)
@@ -407,19 +442,6 @@ namespace rct3::simulation
         pose.position.y = paths.surface(s.from, s.to, { pose.position.x, pose.position.z });
     }
 
-    Errand after_ride(const entt::registry& r, entt::entity guest, entt::entity ride)
-    {
-        // Out of a pool slide's queue, a swimmer swims on.
-        if (const auto* swimmer = r.try_get<Swimmer>(guest); swimmer != nullptr && r.valid(swimmer->room))
-            return { .kind = ErrandKind::Swimming, .target = swimmer->room };
-        if (r.all_of<Member>(guest))
-        {
-            const Errand& was = r.get<Errand>(guest);
-            return { .kind = ErrandKind::Waiting, .target = ride, .station = was.station, .off = was.off };
-        }
-        return { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
-    }
-
     bool eating(const entt::registry& r, entt::entity guest)
     {
         const auto* carried = r.try_get<Carried>(guest);
@@ -471,38 +493,6 @@ namespace rct3::simulation
         return found != nullptr ? found->time.value : Daylight { }.time.value;
     }
 
-    std::optional<std::pair<entt::entity, std::vector<NodeId>>> way_off(const entt::registry& r, const PathNetwork& paths, NodeId from)
-    {
-        std::vector<entt::entity> spawns;
-        std::vector<NodeId> nodes;
-        for (const auto [e, spawn] : r.view<const GuestSpawn>().each())
-        {
-            spawns.push_back(e);
-            nodes.push_back(spawn.node);
-        }
-        auto found = nodes.empty() ? std::nullopt : paths.route_nearest(from, nodes);
-        if (!found)
-            return std::nullopt;
-        return std::pair { spawns[found->first], std::move(found->second) };
-    }
-
-    bool pay_entry(entt::registry& r, std::span<const entt::entity> party)
-    {
-        const Money fee = r.ctx().contains<Draw>() ? r.ctx().get<Draw>().entrance_fee : Money { };
-        if (fee.value <= 0)
-            return true;
-        if (std::ranges::fold_left(party, std::int64_t { 0 }, [&](std::int64_t sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) >= fee.value * static_cast<std::int64_t>(party.size()))
-        {
-            for (const entt::entity m : party)
-                pay(r, m, fee, &Wallet::spent_entry);
-            return true;
-        }
-        for (const entt::entity m : party)
-            --r.ctx().get<Turnstile>().in[std::to_underlying(r.get<Visitor>(m).age)];
-        ++r.ctx().emplace<Turnstile>().turned_away;
-        return false;
-    }
-
     Weather weather_in(const entt::registry& r)
     {
         const auto* found = r.ctx().find<Weather>();
@@ -513,11 +503,6 @@ namespace rct3::simulation
     {
         const float side = kTuning.queues.reach.value * static_cast<float>(random::between(dice, 0.2, 1.0));
         return ahead > 0 || (ahead == 0 && random::chance(dice, 0.5)) ? -side : side;
-    }
-
-    bool walking(ErrandKind kind)
-    {
-        return kind == ErrandKind::Wandering || kind == ErrandKind::Heading || kind == ErrandKind::Following || kind == ErrandKind::Waiting;
     }
 
     void step_guests(SimWorld& world, std::optional<Workers&> workers, const Weather& weather, bool night, std::optional<profiling::Scope>& phase)

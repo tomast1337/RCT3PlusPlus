@@ -65,3 +65,20 @@ TEST_CASE("every key our code names is in the English files, and each of our key
             FAIL_CHECK(key << " is used nowhere: remove it from assets/lang");
     }
 }
+
+// The built-in files load as one: names from every file are found, with their text, as the game's windows ask.
+TEST_CASE("the English files load whole: ride, scenario and pack names among them")
+{
+    const auto english = load_translation(kOwnBaseLanguage);
+    REQUIRE_MESSAGE(english, english.error());
+    CHECK(english->get("AirPoweredRCName") == u"Air Powered Coaster");          // a ride kind's name
+    CHECK(english->get("AccessoriesStallName") == u"Accessories");              // a stall's name
+    CHECK(english->get("Scenario01_Lookup") == u"VanillaHills");                // the first career scenario
+    CHECK(english->get("AOP0_Scenario01_Lookup") == u"CaptainBlackheartsCove"); // the first expansion's
+    CHECK(english->get("AOP_FSName_1") == u"Wild");                             // an expansion's folder
+    CHECK(english->get("SceneryItem_1m") == u"1m support");
+    CHECK(english->get("TrackDesign_4DTerror") == u"4D Terror");
+    CHECK(english->get("CarriedItemExtra_Cheese") == u"Cheese");
+    CHECK(english->get("AttractionName_LoopingWasp") == u"Looping Wasp");
+    CHECK(english->keys().size() > 13'000);
+}

@@ -29,6 +29,20 @@ namespace rct3::simulation
 
     namespace
     {
+        /// What a guest does once let go by a ride: a party member waits for the rest, others wander on.
+        Errand after_ride(const entt::registry& r, entt::entity guest, entt::entity ride)
+        {
+            // Out of a pool slide's queue, a swimmer swims on.
+            if (const auto* swimmer = r.try_get<Swimmer>(guest); swimmer != nullptr && r.valid(swimmer->room))
+                return { .kind = ErrandKind::Swimming, .target = swimmer->room };
+            if (r.all_of<Member>(guest))
+            {
+                const Errand& was = r.get<Errand>(guest);
+                return { .kind = ErrandKind::Waiting, .target = ride, .station = was.station, .off = was.off };
+            }
+            return { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
+        }
+
         // Downtime windows: a game hour each, sampled 20 times, so each counts 0..20 as saved parks' do.
         constexpr std::uint8_t kDowntimeSamples = 20;
         constexpr float kDowntimeSampleSeconds = kSecondsPerHour / kDowntimeSamples;

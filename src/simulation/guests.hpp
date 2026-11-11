@@ -197,9 +197,6 @@ namespace rct3::simulation
     /// swing them to and fro, and no faster than turn_rate.
     void face_moved(Pose& pose, float dt);
 
-    /// What a guest does once let go by a ride: a party member waits for the rest, others wander on.
-    [[nodiscard]] Errand after_ride(const entt::registry& r, entt::entity guest, entt::entity ride);
-
     /// Whether a guest is still eating what they bought.
     [[nodiscard]] bool eating(const entt::registry& r, entt::entity guest);
 
@@ -222,22 +219,12 @@ namespace rct3::simulation
     /// The time of day the guests feel, from the Daylight in the registry's context.
     [[nodiscard]] float time_of_day(const entt::registry& r);
 
-    /// The nearest spawn point a guest on path node `from` can walk to, and the way there; none without one.
-    [[nodiscard]] std::optional<std::pair<entt::entity, std::vector<NodeId>>> way_off(const entt::registry& r, const PathNetwork& paths, NodeId from);
-
-    /// Each of `party` pays the entrance fee, the party making up what one is short of. False, with nothing
-    /// paid, when together they cannot pay for all of them: they are turned away, and no longer counted in.
-    [[nodiscard]] bool pay_entry(entt::registry& r, std::span<const entt::entity> party);
-
     /// The weather the guests feel, from the registry's context.
     [[nodiscard]] Weather weather_in(const entt::registry& r);
 
     /// How far right of a line's middle a guest stands: to the other side from `ahead`, the one before them,
     /// so a line of people fills its width two abreast.
     [[nodiscard]] float side_after(random::RandomState& dice, float ahead);
-
-    /// Whether a guest doing `kind` is walking the paths.
-    [[nodiscard]] bool walking(ErrandKind kind);
 
     /// One tick of the guests: needs and moods, walking, followers keeping to their leader, spacing out on the
     /// paths and in queues, and arriving where they headed. Times each phase on `phase`.

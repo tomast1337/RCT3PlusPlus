@@ -38,6 +38,8 @@ namespace
         park.progress.climate = 6;
         park.progress.weather_hold = 33;
         park.progress.wind_change = -0.1f;
+        park.progress.max_loan = 400'000; // Loan terms kept without goals
+        park.progress.interest_rate_percent = 2.5f;
         park.camera.target = { 1, 2, 3 };
         return park;
     }
@@ -64,6 +66,8 @@ TEST_CASE("a saved park reads back as written")
     CHECK(read->progress.cash == 123456);
     CHECK(read->progress.date.year == 2);
     CHECK(read->progress.day_time == 0.25f);
+    CHECK(read->progress.max_loan == 400'000);
+    CHECK(read->progress.interest_rate_percent == 2.5f);
     CHECK(read->progress.climate == 6); // The weather goes on where it was
     CHECK(read->progress.weather_hold == 33);
     CHECK(read->progress.wind_change == -0.1f);
@@ -89,7 +93,7 @@ TEST_CASE("a saved park reads back as written")
     CHECK(shown->shows->front().order == std::vector<std::uint32_t> { 1, 1 });
     CHECK_FALSE(shown->goals); // None kept: they start again from the original park
 
-    hidden.goals = parkfile::SavedGoals { .max_loan = 400, .interest_rate_percent = 2.5f };
+    hidden.goals.emplace();
     hidden.goals->objectives.objectives = { { .difficulty = 1, .prize_id = 5, .success = true } };
     hidden.goals->objectives.conditions = { { .kind = save::model::ConditionKind::ParkGuests, .completed = true, .value = 250 } };
     const auto goals = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
@@ -97,7 +101,6 @@ TEST_CASE("a saved park reads back as written")
     REQUIRE(goals->goals);
     CHECK(goals->goals->objectives.objectives.at(0).success);
     CHECK(goals->goals->objectives.conditions.at(0).value == 250);
-    CHECK(goals->goals->interest_rate_percent == 2.5f);
     CHECK(goals->broken_items.empty());
 
     hidden.broken_items = { 42, 43 };

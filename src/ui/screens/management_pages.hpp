@@ -100,6 +100,11 @@ namespace rct3::ui::screens
     /// price, by its place among the page's buttons. Our own: the game has no way to mend them.
     inline constexpr std::size_t kReplaceBrokenButton = 4;
 
+    /// The finances window's first page's buttons, by their place among its buttons: borrowing a step more and
+    /// repaying a step of the loan (see simulation::park::change_loan).
+    inline constexpr std::size_t kBorrowButton = 0;
+    inline constexpr std::size_t kRepayButton = 1;
+
     /// The button on each page of the attractions window that puts every listed attraction in the state of the
     /// choice picked, by its place among the page's buttons, and those states by the place of their choice.
     inline constexpr std::size_t kOpenCloseAllButton = 0;

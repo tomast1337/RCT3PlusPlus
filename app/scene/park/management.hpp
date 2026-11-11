@@ -39,6 +39,7 @@ namespace rct3::scene::park
         bool centre_entrance = false;                  ///< Take the view to the next entrance (ui::screens::kCentreEntranceButton)
         bool buy_land = false;                         ///< Take out the tool buying land (ui::screens::kBuyLandButton)
         bool buy_rights = false;                       ///< Or building rights (ui::screens::kBuyRightsButton)
+        std::optional<bool> borrow;                    ///< Borrow a step of loan, or repay one (ui::screens::kBorrowButton, kRepayButton)
         /// Put every attraction in `listed` in this state (ui::screens::kOpenCloseAllButton)
         std::optional<save::model::AttractionState> state_all;
         std::vector<ui::screens::ManagementRow> listed;

@@ -103,4 +103,24 @@ namespace rct3::simulation::park
         return true;
     }
 
+    std::int64_t loan_step(const ParkState& park, std::int64_t max_loan, bool borrow)
+    {
+        if (!park.cash)
+            return 0;
+        if (borrow)
+            return std::clamp<std::int64_t>(max_loan - park.loan, 0, kLoanStep);
+        const std::int64_t step = std::clamp<std::int64_t>(park.loan, 0, kLoanStep);
+        return *park.cash >= step ? step : 0;
+    }
+
+    bool change_loan(ParkState& park, std::int64_t max_loan, bool borrow)
+    {
+        const std::int64_t step = loan_step(park, max_loan, borrow);
+        if (step == 0)
+            return false;
+        *park.cash += borrow ? step : -step;
+        park.loan += borrow ? step : -step;
+        return true;
+    }
+
 } // namespace rct3::simulation::park

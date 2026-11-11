@@ -94,3 +94,43 @@ TEST_CASE("a park whose file kept no ledger starts one at its first booking")
     CHECK(money.ledger_periods_loaded == 1);
     CHECK(money.ledger[0].staff_wages == 875);
 }
+
+TEST_CASE("the loan moves a step at a time between nought and the maximum, cash and loan together")
+{
+    ParkState park { .cash = 50'000, .loan = 0 };
+    CHECK_FALSE(change_loan(park, 250'000, false)); // Nothing to repay
+    CHECK(change_loan(park, 250'000, true));
+    CHECK(park.cash == 150'000);
+    CHECK(park.loan == kLoanStep);
+    CHECK(change_loan(park, 250'000, true));
+    CHECK(change_loan(park, 250'000, true)); // The last step is cut short at the maximum
+    CHECK(park.loan == 250'000);
+    CHECK(park.cash == 300'000);
+    CHECK(loan_step(park, 250'000, true) == 0);
+    CHECK_FALSE(change_loan(park, 250'000, true));
+    CHECK(park.loan == 250'000);
+    CHECK(change_loan(park, 250'000, false));
+    CHECK(park.loan == 150'000);
+    CHECK(park.cash == 200'000);
+}
+
+TEST_CASE("repaying the loan needs the cash in hand")
+{
+    ParkState park { .cash = kLoanStep - 1, .loan = 300'000 };
+    CHECK(loan_step(park, 500'000, false) == 0);
+    CHECK_FALSE(change_loan(park, 500'000, false));
+    CHECK(park.cash == kLoanStep - 1);
+    CHECK(park.loan == 300'000);
+    park.loan = 40'000; // Less than a step left: only that is repaid
+    CHECK(change_loan(park, 500'000, false));
+    CHECK(park.loan == 0);
+    CHECK(park.cash == kLoanStep - 1 - 40'000);
+}
+
+TEST_CASE("a park whose money never runs out has no loan to change")
+{
+    ParkState park { .loan = 0 };
+    CHECK(loan_step(park, 500'000, true) == 0);
+    CHECK_FALSE(change_loan(park, 500'000, true));
+    CHECK(park.loan == 0);
+}

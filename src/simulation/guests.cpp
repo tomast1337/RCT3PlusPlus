@@ -60,7 +60,7 @@ namespace rct3::simulation
             if (std::ranges::fold_left(party, std::int64_t { 0 }, [&](std::int64_t sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) >= fee.value * static_cast<std::int64_t>(party.size()))
             {
                 for (const entt::entity m : party)
-                    pay(r, m, fee, &Wallet::spent_entry);
+                    pay(r, m, fee, &Wallet::spent_entry, park::LedgerLine::ParkEntranceTickets);
                 return true;
             }
             for (const entt::entity m : party)
@@ -367,7 +367,7 @@ namespace rct3::simulation
         return ware.worth[band].value > 0 ? ware.worth[band] : flat;
     }
 
-    bool pay(entt::registry& r, entt::entity guest, Money price, Money Wallet::* on)
+    bool pay(entt::registry& r, entt::entity guest, Money price, Money Wallet::* on, park::LedgerLine line)
     {
         std::vector<entt::entity> payers { guest };
         if (const auto* member = r.try_get<Member>(guest); member != nullptr && r.valid(member->party))
@@ -388,7 +388,7 @@ namespace rct3::simulation
                 (wallet.*on).value += part;
             owed -= part;
         }
-        r.ctx().emplace<Receipts>().paid.value += price.value;
+        r.ctx().emplace<Receipts>().paid[std::to_underlying(line)].value += price.value;
         return true;
     }
 
@@ -1091,7 +1091,7 @@ namespace rct3::simulation
                 return false;
             }
             Money Wallet::* const on = shop.product == Product::Drink ? &Wallet::spent_drink : shop.product == Product::Food ? &Wallet::spent_food : umbrella ? &Wallet::spent_souvenirs : nullptr;
-            if (!attraction.open || wallet.cash.value < price.value || !pay(r, guest, price, on))
+            if (!attraction.open || wallet.cash.value < price.value || !pay(r, guest, price, on, meal ? park::LedgerLine::FoodDrinkSales : park::LedgerLine::ShopSales))
             {
                 mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
                 if (attraction.open)
@@ -1107,7 +1107,7 @@ namespace rct3::simulation
             ++attraction.customers;
             // The park pays for the stock each one sold took, its extras with it.
             if (ware < shop.menu.size())
-                r.ctx().emplace<Supplies>().paid.value += shop.menu[ware].cost.value;
+                r.ctx().emplace<Supplies>().paid[std::to_underlying(meal ? park::LedgerLine::FoodDrinkStock : park::LedgerLine::ShopStock)].value += shop.menu[ware].cost.value;
             if (meal)
             {
                 // Eaten or drunk a bite at a time from now on, in the hand: an empty still in it goes in a pocket,
@@ -1266,7 +1266,7 @@ namespace rct3::simulation
                         r.get<Errand>(g) = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
                         return;
                     }
-                    if (!attraction.open || (!inspector && !pay(r, g, attraction.price, &Wallet::spent_rides)))
+                    if (!attraction.open || (!inspector && !pay(r, g, attraction.price, &Wallet::spent_rides, park::LedgerLine::PoolTickets)))
                     {
                         if (attraction.open)
                         {

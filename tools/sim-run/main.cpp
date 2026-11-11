@@ -697,17 +697,27 @@ int main(int argc, char** argv)
         }
         out.info("rides: {:d} breakdowns, {:d} repaired, {:d} inspections, {:d} down now, reliability {:.2f} on average; {:d} mechanics; wages paid {:.2f}", breakdowns, tally.repaired, tally.inspected, down, static_cast<double>(ride_count > 0 ? reliability / static_cast<float>(ride_count) : 0), mechanics, static_cast<double>(payroll ? payroll->paid.value : 0) / 100);
         {
-            // The park's cash over the run: what guests paid in, less the staff's wages.
-            const auto* receipts = r.ctx().find<simulation::Receipts>();
-            const std::int64_t in = receipts ? receipts->paid.value : 0;
+            // The park's cash over the run: what guests paid in, less the supplies and the staff's wages, each line
+            // of the ledger they went on.
+            constexpr std::array<std::string_view, simulation::park::kLedgerLines> kLines { "food and drink sales", "food and drink stock", "land purchase", "landscaping", "loan interest", "marketing", "other", "entry", "prize money", "research", "ride construction", "ride running costs", "ride tickets", "shop sales", "shop stock", "staff training", "staff wages", "pool tickets", "billboards", "viewing gallery tickets", "other animal spending" };
+            const auto lines = [&](const auto* by_line) {
+                std::int64_t sum = 0;
+                std::string listed;
+                for (std::size_t i = 0; by_line != nullptr && i < kLines.size(); ++i)
+                    if (const std::int64_t m = by_line->paid[i].value; m != 0)
+                    {
+                        sum += m;
+                        listed += std::format("{}{} {:.2f}", listed.empty() ? "" : ", ", kLines[i], static_cast<double>(m) / 100);
+                    }
+                return std::pair { sum, listed };
+            };
+            const auto [in, received] = lines(r.ctx().find<simulation::Receipts>());
+            const auto [stock, bought] = lines(r.ctx().find<simulation::Supplies>());
             const std::int64_t wages = payroll ? payroll->paid.value : 0;
-            std::int64_t takings = 0; // At rides and shops; the rest of what guests paid is entry
-            for (const auto [_, a] : r.view<const simulation::Attraction>().each())
-                takings += a.income.value;
             const auto* turnstile = r.ctx().find<simulation::Turnstile>();
-            const std::string paid = std::format("guests paid {:.2f} ({:.2f} at the gate), {:d} parties turned away; wages {:.2f}", static_cast<double>(in) / 100, static_cast<double>(in - takings) / 100, turnstile ? turnstile->turned_away : 0, static_cast<double>(wages) / 100);
+            const std::string paid = std::format("guests paid {:.2f} ({}), {:d} parties turned away; supplies {:.2f} ({}); wages {:.2f}", static_cast<double>(in) / 100, received, turnstile ? turnstile->turned_away : 0, static_cast<double>(stock) / 100, bought, static_cast<double>(wages) / 100);
             if (state.cash)
-                out.info("money: park cash {:.2f} to {:.2f}; {}", static_cast<double>(*state.cash) / 100, static_cast<double>(*state.cash + in - wages) / 100, paid);
+                out.info("money: park cash {:.2f} to {:.2f}; {}", static_cast<double>(*state.cash) / 100, static_cast<double>(*state.cash + in - stock - wages) / 100, paid);
             else
                 out.info("money: unlimited; {}", paid);
         }

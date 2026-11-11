@@ -16,6 +16,7 @@
 #include "math/glm.hpp"
 #include "random/generator.hpp"
 #include "simulation/entt.hpp"
+#include "simulation/park/ledger_line.hpp"
 #include "simulation/path_network.hpp"
 #include "simulation/units.hpp"
 
@@ -533,17 +534,18 @@ namespace rct3::simulation
         Seconds week { }; ///< Into the week, paid as it ends
     };
 
-    /// What the park has paid for supplies, such as pools' cleaning fluid and stalls' stock, kept in the registry's
-    /// context.
+    /// What the park has paid for supplies, such as pools' cleaning fluid and stalls' stock, by the ledger line it
+    /// goes on (an index of park::LedgerLine), kept in the registry's context.
     struct Supplies
     {
-        Money paid { };
+        std::array<Money, park::kLedgerLines> paid { };
     };
 
-    /// What guests have paid the park for rides, shops and entry, kept in the registry's context.
+    /// What guests have paid the park for rides, shops and entry, by the ledger line it goes on (an index of
+    /// park::LedgerLine), kept in the registry's context.
     struct Receipts
     {
-        Money paid { };
+        std::array<Money, park::kLedgerLines> paid { };
     };
 
     /// The park's run of vandalism, kept in the registry's context.

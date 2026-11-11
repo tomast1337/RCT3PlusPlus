@@ -176,8 +176,9 @@ namespace rct3::simulation
     [[nodiscard]] Money worth_of(const Ware& ware, Money flat, float temperature);
 
     /// The guest pays the park `price`, counted in all and under `on` (none: in all only), whether they
-    /// could. The rest of their party makes up what they are short of, the richest first.
-    bool pay(entt::registry& r, entt::entity guest, Money price, Money Wallet::* on);
+    /// could. The rest of their party makes up what they are short of, the richest first. The park takes it in
+    /// on `line` of its Receipts.
+    bool pay(entt::registry& r, entt::entity guest, Money price, Money Wallet::* on, park::LedgerLine line);
 
     /// The next tile for `who` wandering at `at`, not back where they came from unless it is the only way.
     [[nodiscard]] NodeId wander(const PathNetwork& paths, NodeId at, NodeId came, Dice& dice, Walker who, const staff::Patrol* patrol = nullptr);

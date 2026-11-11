@@ -85,7 +85,7 @@ TEST_CASE("a drink worth more in the cold sells on a cold day and not a mild one
         const auto guest = park.guest({ 0, 0 }, { .thirst = 0.9f });
         park.run_seconds(30);
         CHECK(r.all_of<Carried>(guest) == cold);
-        CHECK((r.ctx().contains<Supplies>() ? r.ctx().get<Supplies>().paid.value : 0) == (cold ? 40 : 0));
+        CHECK((r.ctx().contains<Supplies>() ? r.ctx().get<Supplies>().paid[std::to_underlying(rct3::simulation::park::LedgerLine::FoodDrinkStock)].value : 0) == (cold ? 40 : 0));
     }
 }
 

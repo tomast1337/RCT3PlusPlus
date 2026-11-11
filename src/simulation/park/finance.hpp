@@ -7,6 +7,7 @@
 
 #include "save/model/park.hpp"
 #include "save/model/rides.hpp"
+#include "simulation/park/ledger_line.hpp"
 #include "simulation/park/state.hpp"
 
 #include <cstdint>
@@ -14,32 +15,6 @@
 
 namespace rct3::simulation::park
 {
-
-    /// A line of a ledger period (save::model::LedgerPeriod), one per counter.
-    enum class LedgerLine
-    {
-        FoodDrinkSales,
-        FoodDrinkStock,
-        LandPurchase,
-        Landscaping,
-        LoanInterest,
-        Marketing,
-        Other,
-        ParkEntranceTickets,
-        PrizeMoney,
-        Research,
-        RideConstruction,
-        RideRunningCosts,
-        RideTickets,
-        ShopSales,
-        ShopStock,
-        StaffTraining,
-        StaffWages,
-        PoolTickets,
-        Billboards,
-        ViewingGalleryTickets,
-        OtherAnimalSpending,
-    };
 
     /// The ledger's period for the month `date` is in, the newest. As the calendar passes into later months, each
     /// starts a new period in front of the older ones, dropping the oldest past kLedgerPeriods. `kept` is the month,

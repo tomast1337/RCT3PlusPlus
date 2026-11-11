@@ -413,7 +413,7 @@ TEST_CASE("a mechanic fills a changing room's tank running low, and the park pay
     park.staff(StaffRole::Mechanic, { 0, 0 });
     REQUIRE(park.run_until([&] { return r.get<PoolTank>(room).left.value == 1; }, 300));
     REQUIRE(r.ctx().contains<Supplies>());
-    const auto paid = r.ctx().get<Supplies>().paid.value;
+    const auto paid = r.ctx().get<Supplies>().paid[std::to_underlying(rct3::simulation::park::LedgerLine::Other)].value;
     CHECK(paid > kTuning.pools.refill[1].value * 8 / 10);
     CHECK(paid <= kTuning.pools.refill[1].value);
 }

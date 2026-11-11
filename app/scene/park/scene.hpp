@@ -704,8 +704,8 @@ namespace rct3::scene::park
         bool themes_judged = false;                 ///< The attractions' fit with their scenery judged once since the park opened
         std::int64_t wages_seen = 0;                ///< Of the staff's pay, what has come out of the park's cash
         std::optional<std::int64_t> ledger_month;   ///< Months into the calendar the newest ledger period is for (simulation::park::ledger_month)
-        std::int64_t supplies_seen = 0;             ///< Of what supplies cost, what has come out of the park's cash
-        std::int64_t receipts_seen = 0;             ///< Of what guests have paid, what has gone into the park's cash
+        simulation::Supplies supplies_seen;         ///< Of what supplies cost, what has come out of the park's cash
+        simulation::Receipts receipts_seen;         ///< Of what guests have paid, what has gone into the park's cash
         std::vector<BrokenRide> broken_rides;       ///< Rides the player has been told are broken down
         std::vector<entt::entity> unreliable_rides; ///< Rides the player has been told are unreliable, until they recover
         /// Of each ride whose trains have crashed, the crashes, dangers and injured (simulation::Wrecks) already taken in.

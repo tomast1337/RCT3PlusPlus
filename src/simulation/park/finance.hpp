@@ -12,6 +12,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <string_view>
 
 namespace rct3::simulation
 {
@@ -27,10 +28,19 @@ namespace rct3::simulation::park
     /// as this month's (as a park file leaves it).
     [[nodiscard]] save::model::LedgerPeriod& ledger_month(save::model::Finance& finance, std::optional<std::int64_t>& kept, const save::model::CalendarDate& date);
 
+    /// The message telling the player the park cannot pay for something: the game's own text.
+    inline constexpr std::string_view kCannotPayKey = "PlaceObject_NotEnoughMoney";
+    /// Game seconds before that message is posted again. Chosen by eye: a tool dragged with no cash says it once.
+    inline constexpr float kCannotPayGap = 5;
+
+    /// Tells the player `park` cannot pay: posts kCannotPayKey to its messages, unless one was posted less than
+    /// kCannotPayGap ago.
+    void cannot_pay(ParkState& park);
+
     /// Takes `cost` (hundredths; negative for money coming in) from `park`'s cash and books it on `line` of the
     /// month's ledger in `finance` (see ledger_month). A park whose money never runs out books nothing. Unless
-    /// `forced`, a spend the park cannot afford is refused: nothing changes and false comes back. A forced one
-    /// may leave the cash below nought.
+    /// `forced`, a spend the park cannot afford is refused: the money and ledger stay as they were, the player is
+    /// told (see cannot_pay) and false comes back. A forced one may leave the cash below nought.
     bool book(ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, std::int64_t cost, LedgerLine line, bool forced);
 
     /// How much the loan moves at a time: 1,000.00 in hundredths. Chosen by eye: a few presses buy a ride.

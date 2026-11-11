@@ -43,7 +43,6 @@ namespace rct3::scene
         constexpr float kRumbleFade = 0.6f;   ///< Chosen by eye: seconds it takes to fall back to that once the ground stops moving
 
         constexpr std::string_view kPanelName = "land_panel";
-        constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
         constexpr std::string_view kWaterRefused = "Rct3pp_WaterRefused";
         constexpr float kInFront = 0.01f; ///< Back along the pointer's ray from the ground it meets, in world units
 
@@ -566,7 +565,7 @@ namespace rct3::scene
             const std::int32_t price = l.buying == rct3::park::LandBuy::Land ? prices.land_buy_cost : prices.rights_buy_cost;
             const rct3::park::LandBought bought = rct3::park::buy_land(scene.grid, rct3::park::ground::brush_tiles(tile, l.brush, false, scene.grid.width, scene.grid.height), l.buying, price, scene.park.cash);
             if (bought.short_of_cash)
-                say(scene, kNoMoney);
+                simulation::park::cannot_pay(scene.park);
             if (bought.tiles == 0)
                 return;
             // buy_land took no more than the cash could pay for.

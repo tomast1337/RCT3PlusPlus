@@ -40,6 +40,29 @@ TEST_CASE("a spend the park cannot afford is refused and changes nothing")
     CHECK(money.ledger[0].staff_training == 4000);
 }
 
+TEST_CASE("a refused spend tells the player, once in a while however often it is tried")
+{
+    ParkState park;
+    park.cash = 100;
+    save::model::Finance money;
+    std::optional<std::int64_t> kept;
+    const auto told = [&] { return std::ranges::count(park.messages.list, kCannotPayKey, &ParkMessage::text_key); };
+    for (int i = 0; i < 10; ++i)
+        CHECK_FALSE(book(park, money, kept, 300, LedgerLine::Landscaping, false));
+    CHECK(told() == 1);
+    age(park.messages, kCannotPayGap / 2);
+    CHECK_FALSE(book(park, money, kept, 300, LedgerLine::Landscaping, false));
+    CHECK(told() == 1);
+    age(park.messages, kCannotPayGap);
+    CHECK_FALSE(book(park, money, kept, 300, LedgerLine::Landscaping, false));
+    CHECK(told() == 2);
+    // Forced or paid for, nothing is said.
+    CHECK(book(park, money, kept, 300, LedgerLine::StaffWages, true));
+    age(park.messages, kCannotPayGap);
+    CHECK(book(park, money, kept, -50, LedgerLine::RideTickets, false));
+    CHECK(told() == 2);
+}
+
 TEST_CASE("a forced spend may take the cash below nought")
 {
     ParkState park;

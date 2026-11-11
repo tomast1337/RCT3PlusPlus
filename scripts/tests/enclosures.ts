@@ -6,7 +6,7 @@
 // Beside an enclosure of another fence it stays apart; a column taken out cuts one in two and put back joins
 // it again, and the fence taken down is paid back. Dragged over a path, it leaves the path out. An animal house goes only inside it, with its keeper's hut and a keeper, who walks
 // about the enclosure. An animal goes only inside it too, coming in a crate. A drag with the list's delete tool
-// takes some of the tiles out again. Saved and loaded, the enclosures, the keeper and the animals are all back.
+// takes some of the tiles out again. With no money a fence goes up nowhere, told once. Saved and loaded, the enclosures, the keeper and the animals are all back.
 //
 //   RCT3PP_DATA=<an empty folder> ./nob script scripts/tests/enclosures.ts -- --no-audio
 
@@ -96,6 +96,15 @@ async function screenshot_once(): Promise<void> {
 const cash = park.cash()!;
 const construction = park.ledger().rideConstruction;
 expect(build.pick("Enclosures/Fences/Wood/Wood_Stub", "Wood"), "the wooden fence in the enclosure list");
+// With no money a fence dragged twice goes up nowhere and nothing is paid, and the refusals say so once.
+const told = () => park.messages().filter((m) => m.key === "PlaceObject_NotEnoughMoney").length;
+const told_before = told();
+park.setCash(1);
+await drag_enclosure([c0, r0], [c0 + 1, r0]);
+await drag_enclosure([c0, r0], [c0 + 1, r0 + 1]);
+expect(map.tile(c0, r0)!.enclosure < 0 && park.cash() === 1 && fenced() === panels.length, "no fence without the money");
+expect(told() === told_before + 1, `the not enough money message once, not ${told() - told_before} times`);
+park.setCash(cash);
 const one = await drag_enclosure([c0, r0], [c0, r0]);
 const length = one.cost / 4; // What one length of wooden fence costs: a single tile is fenced on four sides
 expect(one.tiles === 1 && length > 0, `one tile priced, not ${JSON.stringify(one)}`);

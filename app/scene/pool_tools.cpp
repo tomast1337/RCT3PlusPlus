@@ -33,7 +33,6 @@ namespace rct3::scene
         constexpr glm::vec4 kMarkColour { 0.3f, 0.75f, 1.0f, 0.9f };
         constexpr glm::vec4 kRefusedColour { 1.0f, 0.35f, 0.3f, 0.9f };
         constexpr std::string_view kPanelName = "pool_panel";
-        constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
         constexpr float kPixelsPerBoardUnit = 10; ///< Of a drag up, to raise a high diving board a unit
         constexpr std::int32_t kHighestBoard = 30;
         constexpr float kArrowLift = 0.04f; ///< Of the arrow over the next pool path piece, so it shows over the piece, as on the path tool
@@ -337,7 +336,7 @@ namespace rct3::scene
                     pools_changed(device, scene, assets);
                 }
                 else if (fits)
-                    simulation::park::post(scene.park.messages, simulation::park::ParkMessage { .text_key = std::string(kNoMoney) });
+                    simulation::park::cannot_pay(scene.park);
             }
             draw_marks(device, scene, tile ? std::optional(marked(*tile, *tile)) : std::nullopt, rct3::park::TilePart::Whole, ok);
             turn_preview(device, scene, assets, item.symbol, item.overlay);
@@ -428,7 +427,7 @@ namespace rct3::scene
                         done = spot;
                     }
                     else if (allowed(scene, marked(spot, spot), 0))
-                        simulation::park::post(scene.park.messages, simulation::park::ParkMessage { .text_key = std::string(kNoMoney) });
+                        simulation::park::cannot_pay(scene.park);
                 }
                 else if (step == rct3::park::PathStep::Remove && !t.trail.trail.empty() && t.trail.trail.back().laid != 0)
                 {
@@ -801,7 +800,7 @@ namespace rct3::scene
                 }
             }
             else if (t.faces && allowed(scene, marked(*t.corner, *t.other), 0))
-                simulation::park::post(scene.park.messages, simulation::park::ParkMessage { .text_key = std::string(kNoMoney) });
+                simulation::park::cannot_pay(scene.park);
             t.corner.reset();
             t.other.reset();
             t.press_y.reset();

@@ -24,7 +24,6 @@ namespace rct3::scene::park
     {
 
         constexpr std::string_view kEntranceStays = "YouMayNotSellParkEntrance";
-        constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
 
         /// Takes the prop `index` out of the park.
         void destroy_prop(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t index)
@@ -85,10 +84,7 @@ namespace rct3::scene::park
         if (going.empty())
             return std::nullopt;
         if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
-        {
-            scene.prizes.emplace_back(kNoMoney);
             return std::nullopt;
-        }
         const save::model::PlacedObject& first = scene.objects[going.front()];
         if (floated)
             float_money(scene, tile_point(scene.grid, { first.col, first.row }), -cost, true);

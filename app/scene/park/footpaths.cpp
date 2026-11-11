@@ -1221,6 +1221,7 @@ namespace rct3::scene::park
             }
             if (scene.park.cash && *scene.park.cash < route_cost(scene, *route))
             {
+                simulation::park::cannot_pay(scene.park);
                 f.notice = std::u16string(assets.strings->get(kNoMoney));
                 return;
             }

@@ -133,11 +133,11 @@ namespace rct3::scene
             return !scene.park.cash || *scene.park.cash >= cost;
         }
 
-        /// Whether the animal picked may come down on `tile`: on the park's own land, and paid for. Outside every
-        /// enclosure it gets out as its crate opens.
+        /// Whether an animal may come down on `tile`: on the park's own land. Outside every enclosure it gets out as
+        /// its crate opens.
         bool crate_allowed(const park::ParkScene& scene, save::model::Tile tile)
         {
-            return scene.grid.contains(tile.col, tile.row) && rct3::park::owned_outright(scene.grid.at(tile.col, tile.row)) && affordable(scene, scene.enclosing.item->price);
+            return scene.grid.contains(tile.col, tile.row) && rct3::park::owned_outright(scene.grid.at(tile.col, tile.row));
         }
 
         /// The animal of `item` in its crate on `tile`, paid for.
@@ -188,7 +188,7 @@ namespace rct3::scene
         }
         else if (t.corner && t.other && animal)
         {
-            // Let go: the animal comes down in its crate, and the tool stays out for the next.
+            // Let go: the animal comes down in its crate when paid for, and the tool stays out for the next.
             if (crate_allowed(scene, *t.other))
                 put_animal(device, scene, assets, *t.item, *t.other);
             t.corner.reset();
@@ -227,7 +227,7 @@ namespace rct3::scene
         {
             rct3::park::TerrainMesh mesh;
             if (animal && marks)
-                rct3::park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], rct3::park::TilePart::Whole, crate_allowed(scene, { (*marks)[0], (*marks)[1] }) ? kMarkColour : kRefusedColour);
+                rct3::park::tile_marks(mesh, scene.grid, (*marks)[0], (*marks)[1], (*marks)[2], (*marks)[3], rct3::park::TilePart::Whole, crate_allowed(scene, { (*marks)[0], (*marks)[1] }) && affordable(scene, scene.enclosing.item->price) ? kMarkColour : kRefusedColour);
             else if (dragging)
             {
                 const park::EnclosureTool::Marked& m = marked_now(scene);

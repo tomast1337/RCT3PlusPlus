@@ -40,20 +40,29 @@ TEST_CASE("anything but strings and groups fails, saying where")
     CHECK_FALSE(parse_translation(deep));
 }
 
-TEST_CASE("translation files are named by language and region code")
+TEST_CASE("a key given twice fails, whichever way it is written")
 {
-    CHECK(translation_path("English") == "lang/en-US.json");
-    CHECK(translation_path("braziliANPortuguese") == "lang/pt-BR.json");
+    const auto twice = parse_translation(R"({ "Rct3pp": { "A": "First" }, "Rct3pp_A": "Second" })");
+    REQUIRE_FALSE(twice);
+    CHECK(twice.error().starts_with("Rct3pp_A"));
 }
 
-TEST_CASE("our built-in English parses and backs other languages")
+TEST_CASE("translation folders are named by language and region code")
 {
-    const StringTable english = own_strings(kOwnBaseLanguage);
+    CHECK(translation_path("English") == "lang/en-US/");
+    CHECK(translation_path("braziliANPortuguese") == "lang/pt-BR/");
+}
+
+TEST_CASE("our built-in English parses, each key once, and backs other languages")
+{
+    const auto loaded = own_strings(kOwnBaseLanguage);
+    REQUIRE_MESSAGE(loaded, loaded.error());
+    const StringTable& english = *loaded;
     CHECK_FALSE(english.get("Rct3pp_UsualKeys").empty());
     CHECK_FALSE(english.get("Rct3pp_Command_Copy").empty());
     // It also has the keys the game's windows use, with line breaks as real characters.
     CHECK_FALSE(english.get("ProgramInfoDialog_Title").empty());
     CHECK(english.get("TutorialText_Tutorial1_Step2_Text").find(u'\n') != std::u16string::npos);
     // A language without a file of its own falls back to English.
-    CHECK(own_strings("Klingon").get("Rct3pp_UsualKeys") == english.get("Rct3pp_UsualKeys"));
+    CHECK(own_strings("Klingon")->get("Rct3pp_UsualKeys") == english.get("Rct3pp_UsualKeys"));
 }

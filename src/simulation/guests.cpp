@@ -2,6 +2,7 @@
 #include "simulation/guests.hpp"
 
 #include "profiling/profiler.hpp"
+#include "simulation/animals.hpp"
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
@@ -1350,6 +1351,89 @@ namespace rct3::simulation
                     if (r.get<Mood>(m).nausea.value < kTuning.needs.max_nausea.value && random::chance(r.get<Dice>(m).state, kTuning.walking.join_chance.value))
                         join(m);
             }
+        }
+    }
+
+    void step_gates(SimWorld& world, const Weather& weather)
+    {
+        entt::registry& r = world.registry;
+        const PathNetwork& paths = world.paths;
+        constexpr float dt = kTickSeconds;
+        // Guests outside the park with nowhere to go (just loaded, or put down there by the player) go on to the
+        // gate to come in, or off to the nearest spawn point. With no way there they count as in the park.
+        for (const entt::entity g : sorted(r.view<const Outside, Errand, Stride>()))
+        {
+            auto& errand = r.get<Errand>(g);
+            auto& stride = r.get<Stride>(g);
+            const auto* member = r.try_get<Member>(g);
+            if (errand.kind != ErrandKind::Wandering || stride.to >= paths.nodes().size() || (member != nullptr && r.get<Party>(member->party).leader != g))
+                continue;
+            std::optional<std::pair<entt::entity, std::vector<NodeId>>> goal;
+            if (r.get<Outside>(g).way != Outside::Way::In)
+                goal = way_off(r, paths, stride.to);
+            else
+                for (const auto [gate, at_gate] : r.view<const ParkGate>().each())
+                    if (auto walk = paths.route(stride.to, at_gate.node))
+                    {
+                        goal = std::pair { gate, std::move(*walk) };
+                        break;
+                    }
+            if (!goal)
+            {
+                if (member != nullptr)
+                    for (const entt::entity m : r.get<Party>(member->party).members)
+                        r.remove<Outside>(m);
+                r.remove<Outside>(g);
+                continue;
+            }
+            errand = { ErrandKind::Heading, goal->first, 0 };
+            stride.route = std::move(goal->second);
+        }
+
+        // Parties come families by day, mostly teens after dark, appearing at one of the park's spawn points
+        // to walk to the gate; at the gate itself where no spawn point has a way there.
+        double arrivals = arrivals_per_second(weather);
+        if (const auto* draw = r.ctx().find<Draw>(); draw != nullptr && !r.view<const ParkGate>().empty())
+        {
+            const auto guests = static_cast<std::uint32_t>(std::ranges::distance(r.view<const Visitor>(entt::exclude<Left>)));
+            const std::uint32_t ideal = ideal_guests(world);
+            // A bigger park draws more till it is full: enough to fill its room in a day's opening, never fewer
+            // than a small one's. Once full only the few of a small park still come.
+            const double fill = guests < ideal ? std::max(1.0, ideal / (kTuning.arrivals.fill.value * kTuning.arrivals.rate.value)) : 1.0;
+            arrivals *= fill * drawn(*draw, guests, ideal, fair_entrance_fee(world));
+        }
+        for (const entt::entity gate : sorted(r.view<const ParkGate>()))
+        {
+            if (!r.all_of<Dice>(gate))
+                r.emplace<Dice>(gate, dice_for(world, gate));
+            auto& dice = r.get<Dice>(gate).state;
+            if (!random::chance(dice, arrivals * dt) || r.get<ParkGate>(gate).closed)
+                continue;
+            const NodeId entry = r.get<ParkGate>(gate).node;
+            const auto spawns = sorted(r.view<const GuestSpawn>());
+            std::optional<std::vector<NodeId>> walk;
+            NodeId from = entry;
+            for (std::size_t k = 0, first = spawns.empty() ? 0 : random::below(dice, spawns.size()); k < spawns.size() && !walk; ++k)
+            {
+                from = r.get<GuestSpawn>(spawns[(first + k) % spawns.size()]).node;
+                walk = paths.route(from, entry);
+            }
+            const std::vector<entt::entity> party = admit_party(world, dice, walk ? from : entry);
+            if (walk)
+            {
+                for (const entt::entity m : party)
+                    r.emplace<Outside>(m);
+                r.get<Errand>(party.front()) = { ErrandKind::Heading, gate, 0 };
+                r.get<Stride>(party.front()).route = std::move(*walk);
+                continue;
+            }
+            // At the gate they pay at once; a party that cannot is gone again.
+            if (pay_entry(r, party))
+                continue;
+            if (const auto* member = r.try_get<Member>(party.front()))
+                r.destroy(member->party);
+            for (const entt::entity m : party)
+                r.destroy(m);
         }
     }
 

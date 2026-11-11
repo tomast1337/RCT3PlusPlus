@@ -137,7 +137,7 @@ int main(int argc, char** argv)
     const std::string folder = ui::translation_path(ui::kOwnBaseLanguage);
     for (const assets::EmbeddedFile& f : assets::embedded_files())
     {
-        if (!f.path.starts_with(folder.substr(0, folder.rfind('.'))) || !f.path.ends_with(".json"))
+        if (!f.path.starts_with(folder) || !f.path.ends_with(".json"))
             continue;
         const auto table = ui::parse_translation(assets::as_text(f.bytes));
         if (!table)

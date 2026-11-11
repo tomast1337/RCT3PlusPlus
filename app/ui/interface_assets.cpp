@@ -18,6 +18,10 @@ namespace rct3::ui
     std::expected<InterfaceAssets, std::string> load_interface_assets(render::Device& device, const config::GameInstall& install, const std::string& language, const std::filesystem::path& fallback_font, std::span<const std::string_view> more_skins)
     {
         const auto log = logging::logger("ui");
+        // Our own strings; a key the language lacks falls back to English.
+        auto strings = own_strings(language);
+        if (!strings)
+            return std::unexpected(std::format("strings: {}", strings.error()));
         const auto main_ovl = install.find(game_skins::kMainOverlay);
         if (!main_ovl)
             return std::unexpected(std::format("{} not found", game_skins::kMainOverlay));
@@ -66,8 +70,7 @@ namespace rct3::ui
         assets.skins = skin_library(set->skins, assets.textures);
         game_skins::use_coded_skins(assets.skins, assets.palette);
 
-        // Our own strings; a key the language lacks falls back to English.
-        *assets.strings = own_strings(language);
+        *assets.strings = std::move(*strings);
         // The credits and copyright lines stay the game's own words, read from the install: the language's,
         // else English's.
         for (const std::string& name : { language, std::string(kDefaultLanguage) })

@@ -408,35 +408,6 @@ namespace rct3::simulation
         Seconds waited { };
     };
 
-    /// What an entertainer does in a show, in turn: the motions their costume has for it.
-    enum class ShowMove : std::uint8_t
-    {
-        Wave,
-        Idle,
-        IdleTwo,
-        DanceOne,
-        DanceTwo,
-        DanceThree,
-        FallOver, ///< Going down, in a poor show
-        GetUp,
-        Dejected, ///< At the end of a poor show
-    };
-
-    /// An entertainer's shows: the one they put on now, if any, and the wait before the next.
-    struct Show
-    {
-        std::vector<ShowMove> moves; ///< Empty between shows
-        Seconds into { };            ///< Since the show began
-        bool poor = false;           ///< Put on miserable or lazy: the crowd goes away unimpressed
-        Seconds gap { };             ///< Before they look for a crowd again
-    };
-
-    /// The VIPs a guest has had an autograph from, so they do not ask again.
-    struct Autographs
-    {
-        std::vector<entt::entity> from;
-    };
-
     /// A party member with no way over to the others: they stand looking about for `left` ticks, then are put
     /// with them.
     struct Lost

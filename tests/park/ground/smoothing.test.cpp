@@ -37,17 +37,25 @@ TEST_CASE("averaging pulls a spike down, a little each pass, and only inside the
     CHECK(smooth_ground(far, GroundSmoothing::Average, { 1, 1 }, 1, 0.5f, 0, 1, anywhere) == 0);
 }
 
-TEST_CASE("levelling goes to the target; whole units round; random stays within half a unit")
+TEST_CASE("levelling goes to the target, a pad to one whole unit; random stays within half a unit")
 {
     save::model::TerrainGrid g = spiked(10);
     smooth_ground(g, GroundSmoothing::Level, { 5, 5 }, 3, 1, 3, 1, anywhere);
     CHECK(g.at(5, 5).corners[0] == doctest::Approx(3));
     CHECK(g.at(6, 6).corners[0] == doctest::Approx(3));
 
+    // A pad: the whole brush goes to the one whole unit of the height it was levelled from, slopes and all.
     save::model::TerrainGrid w = spiked(10);
-    w.at(7, 7).corners[0] = w.at(6, 7).corners[1] = w.at(7, 6).corners[2] = w.at(6, 6).corners[3] = 2.4f;
-    smooth_ground(w, GroundSmoothing::WholeUnits, { 7, 7 }, 1, 1, 0, 1, anywhere);
-    CHECK(w.at(7, 7).corners[0] == doctest::Approx(2));
+    for (int c = 0; c < 10; ++c)
+        for (int r = 0; r < 10; ++r)
+            w.at(c, r).corners = { c * 0.7f, (c + 1) * 0.7f, c * 0.7f, (c + 1) * 0.7f };
+    CHECK(whole_level(3.4f) == 3);
+    CHECK(whole_level(3.5f) == 4);
+    CHECK(whole_level(-0.4f) == 0);
+    smooth_ground(w, GroundSmoothing::Level, { 5, 5 }, 2, 1, whole_level(3.4f), 1, anywhere);
+    for (int c = 4; c <= 5; ++c)
+        for (const float h : w.at(c, 5).corners)
+            CHECK(h == doctest::Approx(3));
 
     save::model::TerrainGrid r = spiked(10);
     smooth_ground(r, GroundSmoothing::Random, { 2, 2 }, 2, 1, 0, 7, anywhere);

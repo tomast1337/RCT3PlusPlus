@@ -124,6 +124,8 @@ namespace rct3::ui::screens
         constexpr std::string_view kLedgerLine = "Rct3pp_Finance_Line";
         constexpr std::string_view kLedgerLineHelp = "Rct3pp_Finance_LineHelp";
         constexpr std::string_view kRunningCost = "Rct3pp_Finance_RunningCost";
+        constexpr std::string_view kExport = "Rct3pp_Finance_Export";
+        constexpr std::string_view kExportHelp = "Rct3pp_Finance_ExportHelp";
 
         constexpr std::size_t kRowKindShift = 48;
 
@@ -362,6 +364,16 @@ namespace rct3::ui::screens
             return period.raw_sum();
         }
 
+        /// The name of the ledger's month `back` months before `now`. Months before the calendar began, which a park
+        /// file may hold, go by their names alone.
+        std::u16string ledger_month(const StringTable& strings, save::model::CalendarDate now, std::size_t back)
+        {
+            constexpr auto kMonthsPerYear = static_cast<std::int64_t>(save::model::GameClock::kUnitsPerYear / save::model::GameClock::kUnitsPerMonth);
+            const std::int64_t month = now.year * kMonthsPerYear + now.month - static_cast<std::int64_t>(back);
+            const auto in_year = static_cast<std::int32_t>((month % kMonthsPerYear + kMonthsPerYear) % kMonthsPerYear);
+            return month >= 0 ? date_text(strings, 0, in_year, static_cast<std::int32_t>(month / kMonthsPerYear + 1)) : short_month(strings, in_year);
+        }
+
         void finance_summary(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             const save::model::Finance* m = f.park != nullptr && f.park->has_finance ? &f.park->finance : nullptr;
@@ -454,7 +466,7 @@ namespace rct3::ui::screens
                 page.note = text(strings, kNotRead);
                 return;
             }
-            constexpr auto kMonthsPerYear = static_cast<std::int64_t>(save::model::GameClock::kUnitsPerYear / save::model::GameClock::kUnitsPerMonth);
+            page.buttons.push_back({ { }, text(strings, kExport), text(strings, kExportHelp), true, { }, std::string(kExport) });
             const save::model::CalendarDate now = f.state != nullptr ? f.state->date : f.park->clock.date();
             for (std::size_t p = 0; p < m->ledger.size(); ++p)
             {
@@ -468,11 +480,7 @@ namespace rct3::ui::screens
                     (v < 0 ? in : out) += std::abs(v);
                 }
                 const std::optional<std::int64_t> line = ledger_value(period, kLedger[pick]);
-                // Months before the calendar began, which a park file may hold, go by their names alone.
-                const std::int64_t month = now.year * kMonthsPerYear + now.month - static_cast<std::int64_t>(p);
-                const auto in_year = static_cast<std::int32_t>((month % kMonthsPerYear + kMonthsPerYear) % kMonthsPerYear);
-                const std::u16string name = month >= 0 ? date_text(strings, 0, in_year, static_cast<std::int32_t>(month / kMonthsPerYear + 1)) : short_month(strings, in_year);
-                page.rows.push_back({ { name, money(units, in), money(units, out), money(units, in - out), line ? money(units, -*line) : std::u16string(kDash) }, { static_cast<double>(month), static_cast<double>(in), static_cast<double>(out), static_cast<double>(in - out), line ? std::optional(static_cast<double>(-*line)) : std::nullopt }, p });
+                page.rows.push_back({ { ledger_month(strings, now, p), money(units, in), money(units, out), money(units, in - out), line ? money(units, -*line) : std::u16string(kDash) }, { -static_cast<double>(p), static_cast<double>(in), static_cast<double>(out), static_cast<double>(in - out), line ? std::optional(static_cast<double>(-*line)) : std::nullopt }, p });
             }
         }
 
@@ -1067,6 +1075,38 @@ namespace rct3::ui::screens
                 break;
         }
         return tabs(kChallengeTabs, strings);
+    }
+
+    std::string ledger_csv(const ManagementFacts& f, const StringTable& strings)
+    {
+        const save::model::Finance* m = f.park != nullptr && f.park->has_finance ? &f.park->finance : nullptr;
+        if (m == nullptr || m->ledger.empty())
+            return { };
+        // Text goes in quotes, any quote in it doubled, so commas in names keep to their cell.
+        const auto quoted = [](std::u16string_view text) {
+            std::string out = "\"";
+            for (const char c : strings::to_utf8(text))
+                out += c == '"' ? std::string("\"\"") : std::string(1, c);
+            return out + "\"";
+        };
+        std::string csv = quoted(text(strings, kLedgerMonth));
+        for (const LedgerRow& row : kLedger)
+            csv += "," + quoted(text(strings, row.key));
+        csv += "\n";
+        const save::model::CalendarDate now = f.state != nullptr ? f.state->date : f.park->clock.date();
+        for (std::size_t p = m->ledger.size(); p-- > 0;)
+        {
+            csv += quoted(ledger_month(strings, now, p));
+            for (const LedgerRow& row : kLedger)
+            {
+                csv += ",";
+                // As a statement reads: money in above nought. A line the park does not have is left empty.
+                if (const std::optional<std::int64_t> v = ledger_value(m->ledger[p], row))
+                    csv += std::format("{}{}.{:02}", *v > 0 ? "-" : "", std::abs(*v) / 100, std::abs(*v) % 100);
+            }
+            csv += "\n";
+        }
+        return csv;
     }
 
     ManagementPage management_page(ManagementTopic topic, std::size_t tab, const ManagementFacts& facts, const StringTable& strings, const InfoUnits& units)

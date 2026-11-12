@@ -42,6 +42,7 @@ namespace
         s.add("ShortMonth0", u"Mar");
         s.add("ShortMonth1", u"Apr");
         s.add("ShortMonth7", u"Oct");
+        s.add("Rct3pp_Finance_Month", u"Month");
         s.add("Year", u"Year");
         s.add("Money_ShopSales", u"Shop sales");
         s.add("Money_ShopStock", u"Shop stock");
@@ -164,6 +165,30 @@ TEST_CASE("the finances ledger has a row for every month kept, named with its ye
     CHECK(page.controls[0].shown == u"Shop stock");
     CHECK(page.columns[4].heading == u"Shop stock");
     CHECK(now.cells[4] == money(-400));
+}
+
+TEST_CASE("the ledger writes out as comma-separated values, every line, the oldest month first")
+{
+    const StringTable s = test_strings();
+    save::model::ParkModel park;
+    park.has_finance = true;
+    park.finance.ledger.resize(2);
+    park.finance.ledger[0].ride_tickets = -1250;
+    park.finance.ledger[1].staff_wages = 905;
+    simulation::park::ParkState state;
+    state.date = { .year = 0, .month = 1 };
+    const std::string csv = ledger_csv({ .park = &park, .state = &state }, s);
+    const auto first = csv.find('\n');
+    REQUIRE(first != std::string::npos);
+    const std::string heading = csv.substr(0, first);
+    CHECK(heading.starts_with("\"Month\","));
+    CHECK(std::ranges::count(heading, ',') == 22);
+    const std::string older = csv.substr(first + 1, csv.find('\n', first + 1) - first - 1);
+    const std::string newer = csv.substr(csv.find('\n', first + 1) + 1);
+    CHECK(older.starts_with("\"Mar, Year 1\","));
+    CHECK(older.find(",-9.05,") != std::string::npos);
+    CHECK(newer.find(",12.50,") != std::string::npos);
+    CHECK(ledger_csv({ }, s).empty());
 }
 
 TEST_CASE("the finances' attractions tab lists each ride and stall with its takings so far, the best first")

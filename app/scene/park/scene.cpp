@@ -84,6 +84,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <format>
+#include <fstream>
 #include <future>
 #include <map>
 #include <set>
@@ -2093,6 +2094,20 @@ namespace rct3::scene::park
         const ManagementAsks asks = update_management_windows(desktop, facts, *assets.strings, info_units(assets, options));
         if (asks.row && info)
             open_row(scene, *info, *asks.row, assets, options);
+        if (asks.export_ledger && scene.saves.data)
+        {
+            // A new file each time, beside those written before.
+            auto folder = scene.saves.data->make_folder(config::UserFolder::Exports);
+            std::filesystem::path path;
+            for (int n = 1; folder && (path.empty() || std::filesystem::exists(path)); ++n)
+                path = *folder / std::format("ledger_{}.csv", n);
+            std::ofstream out(path, std::ios::binary | std::ios::trunc);
+            out << ui::screens::ledger_csv(facts, *assets.strings);
+            if (folder && out)
+                simulation::park::post(scene.park.messages, { .text_key = "Rct3pp_Finance_Exported", .subject_name = path.string() });
+            else
+                logging::logger("ui").warning("ledger: writing {} failed", folder ? path.string() : folder.error());
+        }
         // A worker hired is handed to the pointer at once, to be put down where the player likes, or given back
         // to go to the park's entrance; whoever was held before goes back first.
         if (const auto hired = asks.staff.hire ? hire(scene, *asks.staff.hire) : std::nullopt)

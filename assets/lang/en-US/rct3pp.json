@@ -135,7 +135,10 @@
             "Profit": "Profit",
             "Line": "Line shown:",
             "LineHelp": "The ledger line shown in the last column",
-            "RunningCost": "Running cost a week"
+            "RunningCost": "Running cost a week",
+            "Export": "Save as a spreadsheet",
+            "ExportHelp": "Write every month of the ledger, every line, to a file a spreadsheet opens",
+            "Exported": "Ledger written to %NAME%"
         }
     }
 }

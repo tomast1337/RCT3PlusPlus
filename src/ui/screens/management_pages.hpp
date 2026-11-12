@@ -137,6 +137,9 @@ namespace rct3::ui::screens
     /// The finances ledger's control picking the line its last column shows, by index of the summary's lines.
     inline constexpr int kLedgerLineControl = 0;
 
+    /// The finances ledger's button writing it out (ledger_csv), by its place among the page's buttons.
+    inline constexpr std::size_t kExportLedgerButton = 0;
+
     /// The finances window's summary's buttons, by their place among its buttons: borrowing a step more and
     /// repaying a step of the loan (see simulation::park::change_loan).
     inline constexpr std::size_t kBorrowButton = 0;
@@ -167,6 +170,11 @@ namespace rct3::ui::screens
 
     /// The page of tab `tab` of `topic`'s window.
     [[nodiscard]] ManagementPage management_page(ManagementTopic topic, std::size_t tab, const ManagementFacts& facts, const StringTable& strings, const InfoUnits& units);
+
+    /// The whole ledger as comma-separated values for a spreadsheet: a heading row, then a row a month, the oldest
+    /// first, with the month's name and each line in whole units of the currency, money in above nought. Empty
+    /// when the park has no ledger.
+    [[nodiscard]] std::string ledger_csv(const ManagementFacts& facts, const StringTable& strings);
 
     /// What a table row is about: a guest, a member of staff, a ride or a stall, by its index in the park's
     /// people or attractions. Rows carry it packed in their id.

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The finances window's tabs: a park run on for more months than a park file keeps shows each of them on the
-// ledger tab, the attractions' takings on theirs, and the original layout's two tabs when the option asks for it.
+// ledger tab, which writes out as a spreadsheet, the attractions' takings on theirs, and the original layout's
+// two tabs when the option asks for it.
 //
 //   ./nob script scripts/tests/finances.ts -- --no-audio
 
@@ -65,6 +66,10 @@ await open_finances();
 await tab("Man_Finances");
 expect(under(kWindow, "Rct3pp_Finance_Line") !== undefined, "the ledger's line picker");
 await screenshot("ledger");
+// Written out, the player is told where.
+await ui.click(under(kWindow, "Rct3pp_Finance_Export")!);
+await frames(30);
+await screenshot("exported");
 await tab("AttractionListDialogIconAllAttractions");
 await screenshot("attractions");
 await close();

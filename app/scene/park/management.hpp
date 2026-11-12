@@ -42,6 +42,7 @@ namespace rct3::scene::park
         bool buy_land = false;                         ///< Take out the tool buying land (ui::screens::kBuyLandButton)
         bool buy_rights = false;                       ///< Or building rights (ui::screens::kBuyRightsButton)
         std::optional<bool> borrow;                    ///< Borrow a step of loan, or repay one (ui::screens::kBorrowButton, kRepayButton)
+        bool export_ledger = false;                    ///< Write the ledger out (ui::screens::kExportLedgerButton)
         /// Put every attraction in `listed` in this state (ui::screens::kOpenCloseAllButton)
         std::optional<save::model::AttractionState> state_all;
         std::vector<ui::screens::ManagementRow> listed;

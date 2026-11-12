@@ -629,8 +629,10 @@ namespace rct3::scene::park
                     delete_under(pointer.position, { screen.width(), screen.height() });
                 else if (still && !over && (structure_tools_click(device, scene, assets) || ride_placing_click(device, scene, assets) || track_building_click(scene, assets, pointer.position, { screen.width(), screen.height() })))
                     ;
-                else if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }, input.control))
+                else if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }, input.control) && !footpath_panel_open(scene) && !scene.building.ride)
                 {
+                    // Not with the path panel or track building out: a click they did not take would open a window
+                    // in their place and put them away.
                     const Picked picked = picked_at(scene, pointer.position, { screen.width(), screen.height() });
                     if (picked.person)
                         open_person(scene, *info, *picked.person, assets, options);

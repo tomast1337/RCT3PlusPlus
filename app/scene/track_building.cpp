@@ -1113,10 +1113,6 @@ namespace rct3::scene
                 piece.holding_time = b.holding_time;
             piece.car_turn = static_cast<float>(b.car_turn);
             piece.facing = b.facing;
-            // The first piece down, the station, opens the ride's window, as in the game; a closed circuit goes on to
-            // its doors.
-            if (ride.track->pieces.empty())
-                scene.info_requested = rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Ride, *b.ride };
             if (over)
             {
                 save::model::TrackPiece& old = ride.track->pieces[*b.selected];

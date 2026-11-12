@@ -155,6 +155,7 @@ namespace rct3::scene::park
 
     /// Closes the path panel if it is open.
     void close_footpath_panel(ParkScene& scene);
+    [[nodiscard]] bool footpath_panel_open(const ParkScene& scene);
 
     /// Builds the ground again from the scene's grid, with the paths and what the rides and stalls pave as they are now;
     /// what changed lies on the tiles of `touched`, or anywhere without it.

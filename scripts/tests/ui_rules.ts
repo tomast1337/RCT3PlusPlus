@@ -2,6 +2,7 @@
 //
 // What closes what in a park. One panel at a time at the bottom of the screen: opening a tool menu, the map or a
 // files window puts the tool out away, the paths button closes the open menu, and an item list goes with its menu.
+// A ride's window shares that place: it and a tool's panel put each other away.
 //
 //   ./nob script scripts/tests/ui_rules.ts -- --no-intro --no-audio --no-simulate --seed 1
 
@@ -96,5 +97,25 @@ await screenshot("scenery_list_stays");
 await press("Scenery");
 expect(ui.find("build_list") === undefined && open_menu() === "", "the list to close with the scenery menu");
 build.stop();
+
+// 3. A ride's window and a tool's panel take each other's place.
+rides.show(0);
+await until(() => ui.find("info") !== undefined, 120, "the ride's window");
+await press("Paths");
+expect(ui.find("footpaths") !== undefined && ui.find("info") === undefined, "the path panel to put the ride's window away");
+rides.show(0);
+await until(() => ui.find("info") !== undefined, 120, "the ride's window again");
+expect(ui.find("footpaths") === undefined, "the ride's window to put the path panel away");
+await pick("Land", "Land_Brush_Height");
+expect(ui.find("land_panel") !== undefined && ui.find("info") === undefined, "the land menu and its panel to put the ride's window away");
+rides.show(0);
+await until(() => ui.find("info") !== undefined, 120, "the ride's window a third time");
+expect(ui.find("land_panel") === undefined, "the ride's window to put the shaping panel away");
+await screenshot("ride_window_alone");
+await ui.click("tools/Map/Map");
+await frames(6);
+expect(ui.find("park_map") !== undefined && ui.find("info") === undefined, "the map to put the ride's window away");
+await ui.click("park_map/close");
+await frames(6);
 
 quit(0);

@@ -801,6 +801,7 @@ namespace rct3::scene::park
         std::optional<ui::screens::SceneryTab> room_tab;                ///< Last open in a changing room's window
         std::vector<rct3::park::AttractionRef> demolish_asked;          ///< Waiting on the question whether to pull them down
         std::vector<std::string> prizes;                                ///< Text keys told one box at a time, oldest first: prizes won, deletes refused
+        bool info_shown = false;                                        ///< The info panel showed last frame, to tell it opening
         std::optional<ui::screens::ParkTool> menu_shown;                ///< The tool row's menu open last frame, to tell one opening
         std::vector<ui::screens::ToolItem> window_requests;             ///< Files menu items that open a window the owner opens (scene/park/files_menu.hpp)
         std::unique_ptr<ui::screens::OptionsSession> options;           ///< The options window over the park, once opened

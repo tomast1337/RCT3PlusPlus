@@ -1200,6 +1200,7 @@ namespace rct3::scene::park
                         // A level won, every guest out on the paths jumps for joy.
                         if (prize >= simulation::kApprenticePrize)
                         {
+                            ++scene.levels_won;
                             // In a career, the scenario is done at that level.
                             if (!scene.game.career.empty())
                             {

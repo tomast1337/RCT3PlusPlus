@@ -127,6 +127,9 @@ namespace rct3::scene::park
         s.thunder = main(kThunder);
         constexpr std::array<std::string_view, 2> kThumps { "EarthThump1", "EarthThump2" };
         s.thumps = main(kThumps);
+        constexpr std::array<std::string_view, 1> kFanfare { "Fanfare1x" };
+        if (auto found = main(kFanfare); !found.empty())
+            s.fanfare = std::move(found.front());
         constexpr std::array<std::string_view, 3> kRumbles { "EarthMove1", "EarthMove2", "EarthMove3" };
         s.rumbles = main(kRumbles);
         constexpr std::array<std::string_view, 2> kWaterfall { "Waterfall3", "Waterfall4" };
@@ -164,6 +167,12 @@ namespace rct3::scene::park
         {
             play_any(engine, sounds.thumps, sounds.random, { .volume = kThumpLevel });
             sounds.since_thump = 0;
+        }
+        // A level won, heard paused too.
+        if (scene.levels_won != std::exchange(sounds.levels_heard, scene.levels_won) && sounds.fanfare)
+        {
+            (void)engine.play(*sounds.fanfare, { });
+            logging::logger("audio").info("fanfare for a level won");
         }
         if (!scene.land.rumble)
         {

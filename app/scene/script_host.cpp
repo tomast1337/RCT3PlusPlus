@@ -20,6 +20,7 @@
 #include "simulation/crowds.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/import_park.hpp"
+#include "simulation/objectives.hpp"
 #include "simulation/park/messages.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/ride_walks.hpp"
@@ -540,6 +541,15 @@ namespace rct3::scene
             park_of(park_).park.time = a[0].get<float>();
             return Json(nullptr);
         });
+        engine_.define("park.givePrize", [this](const Json& a) -> Json {
+            if (a.size() != 1 || !a[0].is_number_integer())
+                throw std::invalid_argument("park.givePrize takes a prize number");
+            park::ParkScene& scene = park_of(park_);
+            simulation::give_prize(scene.park, scene.park_model.finance, scene.ledger_month, scene.grid, scene.research, a[0].get<std::int32_t>());
+            scene.prizes.emplace_back(simulation::prize_message(a[0].get<std::int32_t>()));
+            scene.map.stale = true;
+            return Json(nullptr);
+        });
         engine_.define("park.setTemperature", [this](const Json& a) -> Json {
             if (a.size() != 1 || !a[0].is_number())
                 throw std::invalid_argument("park.setTemperature takes degrees");
@@ -592,7 +602,7 @@ namespace rct3::scene
             if (!g.contains(col, row))
                 return nullptr;
             const save::model::TerrainCell& c = g.at(col, row);
-            Json tile { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff }, { "owned", rct3::park::owned_outright(c) }, { "enclosure", park_->enclosures.at(col, row) } };
+            Json tile { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff }, { "owned", rct3::park::owned_outright(c) }, { "ownership", save::model::to_string(c.ownership()) }, { "enclosure", park_->enclosures.at(col, row) } };
             for (const save::model::WaterBody& b : park_->footpaths.water.bodies)
                 if (rct3::park::water::holds(b, { col, row }))
                     tile["water"] = b.level;

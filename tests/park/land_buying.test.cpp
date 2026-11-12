@@ -52,3 +52,16 @@ TEST_CASE("buying land stops at the tiles the park cannot pay for, and says so")
     CHECK(bought.short_of_cash);
     CHECK(g.at(2, 0).ownership() == save::model::Ownership::ForSale);
 }
+
+TEST_CASE("land held back is not for sale until put on sale, then bought like any other")
+{
+    constexpr auto kHeldBack = std::to_underlying(save::model::TileFlag::HeldBack);
+    save::model::TerrainGrid g = strip({ kHeldBack, kHeldBack | kForSale });
+    const std::array<save::model::Tile, 2> all { save::model::Tile { 0, 0 }, { 1, 0 } };
+    CHECK(g.at(0, 0).ownership() == save::model::Ownership::Locked);
+    CHECK(g.at(1, 0).ownership() == save::model::Ownership::ForSale);
+    const LandBought land = buy_land(g, all, LandBuy::Land, 300, std::nullopt);
+    CHECK(land.tiles == 1);
+    CHECK(g.at(0, 0).ownership() == save::model::Ownership::Locked);
+    CHECK(g.at(1, 0).ownership() == save::model::Ownership::Owned);
+}

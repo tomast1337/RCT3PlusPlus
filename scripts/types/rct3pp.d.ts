@@ -152,6 +152,8 @@ declare namespace park {
     function setTime(fraction: number): void;
     /** The calendar, in units of 90 a week and 360 a month. */
     function date(): number;
+    /** Gives the park prize `id` as winning a level would, its box told like one won. */
+    function givePrize(id: number): void;
     /** Moves the calendar to `units`; the clock of the day runs on as it was. */
     function setDate(units: number): void;
     /** The scenario's VIP goals: their level, which celebrity, when they next visit, the months they stay,
@@ -197,6 +199,8 @@ interface Tile {
     cliff: number;
     /** Whether the park owns it outright. */
     owned: boolean;
+    /** Who has it: the park, nobody, on sale (land or building rights only), or held back and not for sale. */
+    ownership: "owned" | "owned (rights)" | "unowned" | "for sale" | "for sale (rights)" | "locked";
     /** The animal enclosure it is in, by number; -1 when in none. */
     enclosure: number;
     /** The surface height of the water on it, when it holds any. */

@@ -53,11 +53,11 @@ namespace rct3::save::model
     {
         ForSale = 0x01,
         Owned = 0x02,
-        RightsOnly = 0x04,       ///< Combined with ForSale or Owned: the rights-only variant
-        EditorMarkA = 0x08,      ///< Transient, editor only
-        EditorMarkB = 0x10,      ///< Transient, editor only
-        EntranceFront = 0x20,    ///< Transient: tile in front of the park entrance
-        NeverPurchasable = 0x40, ///< Edge of the world, cannot be bought
+        RightsOnly = 0x04,    ///< Combined with ForSale or Owned: the rights-only variant
+        EditorMarkA = 0x08,   ///< Transient, editor only
+        EditorMarkB = 0x10,   ///< Transient, editor only
+        EntranceFront = 0x20, ///< Transient: tile in front of the park entrance
+        HeldBack = 0x40,      ///< Not for sale until the construction rights prize puts it on sale
     };
 
     /// A coarse reading of the ownership bits.

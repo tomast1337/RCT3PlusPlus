@@ -298,14 +298,13 @@ namespace rct3::save::model
 
     Ownership TerrainCell::ownership() const noexcept
     {
-        if (has(TileFlag::NeverPurchasable))
-            return Ownership::Locked;
         const bool rights = has(TileFlag::RightsOnly);
         if (has(TileFlag::Owned))
             return rights ? Ownership::OwnedRights : Ownership::Owned;
+        // Land held back keeps its mark once the prize puts it on sale, and once bought.
         if (has(TileFlag::ForSale))
             return rights ? Ownership::ForSaleRights : Ownership::ForSale;
-        return Ownership::Unowned;
+        return has(TileFlag::HeldBack) ? Ownership::Locked : Ownership::Unowned;
     }
 
     float TerrainCell::min_height() const noexcept

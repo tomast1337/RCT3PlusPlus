@@ -99,7 +99,7 @@ TEST_CASE("prizes pay out, their cash booked as prize money")
     park.cash = 0;
     park.rating = 0.99f;
     save::model::Finance finance { .max_loan = 1000, .interest_rate_percent = 8 };
-    save::model::TerrainGrid land { .width = 2, .height = 1, .cells = { { .flags = std::to_underlying(save::model::TileFlag::NeverPurchasable) }, { } } };
+    save::model::TerrainGrid land { .width = 2, .height = 1, .cells = { { .flags = std::to_underlying(save::model::TileFlag::HeldBack) }, { } } };
     std::optional<std::int64_t> kept;
     simulation::Research research;
     simulation::give_prize(park, finance, kept, land, research, 1);

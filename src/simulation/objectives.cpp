@@ -225,15 +225,16 @@ namespace rct3::simulation
             if (c.has(HasDeadline) && judged(c.kind))
             {
                 const float deadline = c.next_check_time;
+                // The week's warning first: given, the month's is past telling.
+                if (!c.has(WarnedTwice) && time >= deadline - save::model::GameClock::kUnitsPerWeek && time < deadline)
+                {
+                    c.consistency_flags |= std::to_underlying(WarnedOnce) | std::to_underlying(WarnedTwice);
+                    tell(c, "ObjectiveMessage_WeekWarning");
+                }
                 if (!c.has(WarnedOnce) && time >= deadline - save::model::GameClock::kUnitsPerMonth && time < deadline)
                 {
                     c.consistency_flags |= std::to_underlying(WarnedOnce);
                     tell(c, "ObjectiveMessage_MonthWarning");
-                }
-                if (!c.has(WarnedTwice) && time >= deadline - save::model::GameClock::kUnitsPerWeek && time < deadline)
-                {
-                    c.consistency_flags |= std::to_underlying(WarnedTwice);
-                    tell(c, "ObjectiveMessage_WeekWarning");
                 }
                 if (time < deadline)
                 {

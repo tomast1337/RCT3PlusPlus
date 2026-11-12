@@ -177,6 +177,22 @@ TEST_CASE("a dated goal warns a month and a week before, is judged on its date, 
     CHECK(keys() == std::vector<std::string> { "ObjectiveMessage_MetCondition" }); // No warnings once the date has come
 }
 
+TEST_CASE("a dated goal first looked at in its last week gets only the week's warning")
+{
+    save::model::ObjectiveSet set;
+    set.objectives = { { .difficulty = 0 } };
+    save::model::Condition dated = goal(0, save::model::ConditionKind::ParkGuests, 300);
+    dated.next_check_time = 6 * kMonth;
+    dated.consistency_flags = std::to_underlying(save::model::ConditionFlag::HasDeadline);
+    set.conditions = { dated };
+    simulation::park::ParkMessages messages;
+    CHECK_FALSE(simulation::check_goals(set, { .guests = 10 }, 6 * kMonth - 1, messages));
+    REQUIRE(messages.list.size() == 1);
+    CHECK(messages.list[0].text_key == "ObjectiveMessage_WeekWarning");
+    CHECK_FALSE(simulation::check_goals(set, { .guests = 10 }, 6 * kMonth - 0.5f, messages));
+    CHECK(messages.list.size() == 1);
+}
+
 TEST_CASE("a goal on last month's takings holds for one month less, as that month already counts")
 {
     save::model::ObjectiveSet set;

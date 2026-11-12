@@ -531,7 +531,12 @@ namespace rct3::scene
         engine_.define("park.messages", [this](const Json&) {
             Json out = Json::array();
             for (const simulation::park::ParkMessage& m : park_of(park_).park.messages.list)
-                out.push_back({ { "key", m.text_key }, { "name", m.subject_name } });
+            {
+                Json message = { { "key", m.text_key }, { "name", m.subject_name } };
+                if (m.award)
+                    message["award"] = *m.award;
+                out.push_back(std::move(message));
+            }
             return out;
         });
         engine_.define("park.date", [this](const Json&) { return Json(park_of(park_).park.time); });

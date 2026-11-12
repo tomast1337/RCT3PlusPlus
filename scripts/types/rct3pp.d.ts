@@ -138,8 +138,9 @@ declare namespace park {
     /** Posts a message with the text `key`, about ride `ride` of rides.list() if given, naming tab number `tab`
      *  for its camera to open (as saved messages number them). */
     function postMessage(key: string, ride?: number, tab?: number): void;
-    /** The park's messages, oldest first: each one's text key and the name it was posted about. */
-    function messages(): { key: string; name: string }[];
+    /** The park's messages, oldest first: each one's text key, the name it was posted about, and for an award or a
+     *  fine, its number as the park file keeps them. */
+    function messages(): { key: string; name: string; award?: number }[];
     /** The weather now, as "sunny", "cloudy", "light rain", "heavy rain", "thunderstorm" and the rest. */
     function weather(): string;
     /** Sets the weather now, by one of the names weather() gives. */

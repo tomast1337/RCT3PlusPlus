@@ -59,7 +59,11 @@ namespace rct3::ui::screens
             { "Difficulty_Hat_Entrepreneur", "Difficulty_Entrepreneur" },
             { "Difficulty_Hat_Tycoon", "Difficulty_Tycoon" },
         } };
-        constexpr std::array<TabSpec, 1> kResearchTabs = { { { "Man_Research", "Research_Label_Priorities" } } };
+        constexpr std::array<TabSpec, 3> kResearchTabs = { {
+            { "Man_Research", "Research_Label_Priorities" },
+            { "AttractionListDialogIconAllAttractions", "Rct3pp_Research_Invented" }, // Ours: what was invented, and when
+            { "Obj_Rides", "Rct3pp_Research_Coming" },                                // Ours: what may come next, to focus on
+        } };
         constexpr std::array<TabSpec, 1> kChallengeTabs = { { { "Icon_Challenges_Large", "ChallengeWindow_Title" } } };
 
         enum class AttractionListTab : std::uint8_t
@@ -95,6 +99,10 @@ namespace rct3::ui::screens
         constexpr std::string_view kMonthLeft = "Rct3pp_Research_MonthLeft";
         constexpr std::string_view kMonthsLeft = "Rct3pp_Research_MonthsLeft";
         constexpr std::string_view kNothingLeft = "Rct3pp_Research_NothingLeft";
+        constexpr std::string_view kFocused = "Rct3pp_Research_Focused";
+        constexpr std::string_view kNothingYet = "Rct3pp_Research_NothingYet";
+        constexpr std::string_view kFocus = "Rct3pp_Research_Focus";
+        constexpr std::string_view kUnfocus = "Rct3pp_Research_Unfocus";
 
         constexpr std::size_t kRowKindShift = 48;
 
@@ -738,7 +746,7 @@ namespace rct3::ui::screens
 
         // ----- research -----
 
-        void research(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
+        void research(ManagementPage& page, std::size_t tab, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             if (f.research == nullptr)
             {
@@ -746,17 +754,68 @@ namespace rct3::ui::screens
                 return;
             }
             const simulation::Research& r = *f.research;
+            const auto name = [&](std::uint64_t id) {
+                const std::u16string named = f.research_name ? text(strings, f.research_name(id)) : std::u16string { };
+                return named.empty() ? std::u16string(kDash) : named;
+            };
+            // A row is told by its item's place in the park's content, which stays put while the park is open.
+            const auto row_id = [&](std::uint64_t id) {
+                const std::span<const save::model::AssetRequirement> entries = f.park != nullptr ? std::span(f.park->content.entries) : std::span<const save::model::AssetRequirement> { };
+                return management_row_id({ ManagementRow::Kind::None, static_cast<std::size_t>(std::ranges::find(entries, id, &save::model::AssetRequirement::id) - entries.begin()) });
+            };
+
+            if (tab == kInventedTab)
+            {
+                // What was invented since the park file was made, newest first.
+                page.columns = {
+                    { text(strings, "AttractionListDialogName"), 0, Align::Start, true },
+                    { text(strings, "Research_TT_InventedOn"), 110, Align::Start, true },
+                };
+                for (std::size_t i = 0; i < r.invented.size(); ++i)
+                {
+                    const float at = i < r.invented_at.size() ? r.invented_at[i] : 0;
+                    const save::model::CalendarDate date = save::model::GameClock::date_at(at, f.zero_time);
+                    page.rows.push_back({ { name(r.invented[i]), i < r.invented_at.size() ? date_text(strings, date.day, date.month, static_cast<std::int32_t>(date.year + 1)) : std::u16string(kDash) }, { std::nullopt, static_cast<double>(i) }, row_id(r.invented[i]) });
+                }
+                page.sort = 1;
+                page.sort_descending = true;
+                if (r.invented.empty())
+                    page.note = text(strings, kNothingYet);
+                return;
+            }
             // What is under way, how far it has got and about how long it has to go at this budget, or that nothing is
             // left.
             const auto progress = f.research_left ? simulation::research_progress(r, *f.research_left) : std::nullopt;
             const bool done = f.research_left && f.research_left->empty();
-            page.lines.push_back({ text(strings, kResearching), done ? text(strings, kNothingLeft) : progress ? text(strings, f.researching) : std::u16string(kDash), false, std::string(kResearching) });
+            page.lines.push_back({ text(strings, r.focus ? kFocused : kResearching), done ? text(strings, kNothingLeft) : progress ? name(progress->id) : std::u16string(kDash), false, std::string(kResearching) });
             if (progress && !done)
             {
                 std::u16string left = progress->months ? text(strings, *progress->months == 1 ? kMonthLeft : kMonthsLeft) : std::u16string(kDash);
                 if (const auto at = left.find(u'#'); at != std::u16string::npos)
                     left.replace(at, 1, whole(*progress->months));
                 page.lines.push_back({ .label = std::move(left), .value = share(progress->done), .name = std::string(kMonthsLeft), .bar = progress->done });
+            }
+
+            if (tab == kComingTab)
+            {
+                // The cheapest few of each area, which the player may focus research on at a higher cost.
+                page.columns = {
+                    { text(strings, "AttractionListDialogName"), 0, Align::Start, true },
+                    { text(strings, "Rct3pp_Research_Area"), 130, Align::Start, true },
+                    { text(strings, "Rct3pp_Research_Cost"), 60, Align::End, true },
+                };
+                const std::vector<simulation::ResearchItem> coming = f.research_left ? simulation::research_preview(r, *f.research_left, kComingPerArea) : std::vector<simulation::ResearchItem> { };
+                for (const simulation::ResearchItem& i : coming)
+                    page.rows.push_back({ { name(i.id), text(strings, kResearchAreas.at(static_cast<std::size_t>(i.area))), money(units, i.cost) }, { std::nullopt, static_cast<double>(i.area), static_cast<double>(i.cost) }, row_id(i.id) });
+                const auto picked = std::ranges::find(coming, f.research_pick, [](const simulation::ResearchItem& i) { return std::optional(i.id); });
+                std::u16string focus = text(strings, kFocus);
+                if (const auto at = focus.find(u"%AMOUNT%"); at != std::u16string::npos)
+                    focus.replace(at, 8, picked != coming.end() ? money(units, simulation::research_cost(*picked, true)) : std::u16string(kDash));
+                page.buttons.push_back({ .text = std::move(focus), .enabled = picked != coming.end(), .key = std::string(kFocus) });
+                page.buttons.push_back({ .text = text(strings, kUnfocus), .enabled = r.focus.has_value(), .key = std::string(kUnfocus) });
+                if (done)
+                    page.note = text(strings, kNothingLeft);
+                return;
             }
 
             page.controls.push_back({ .id = kResearchBudgetControl, .name = "Research_Label_Budget", .kind = InfoControlKind::Number, .label = text(strings, "Research_Label_Budget"), .value = static_cast<int>(std::clamp<std::int64_t>(r.budget, 0, kMostResearchBudget)), .maximum = kMostResearchBudget, .step = kResearchBudgetStep, .shown = money(units, r.budget), .help = text(strings, "Research_TT_AdjustBudget") });
@@ -937,7 +996,7 @@ namespace rct3::ui::screens
                 objectives(page, std::min<std::size_t>(tab, 2), facts, strings, units);
                 break;
             case ManagementTopic::Research:
-                research(page, facts, strings, units);
+                research(page, tab, facts, strings, units);
                 break;
             case ManagementTopic::Challenges:
             case ManagementTopic::Count_:

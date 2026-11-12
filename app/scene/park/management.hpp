@@ -49,6 +49,8 @@ namespace rct3::scene::park
         std::optional<std::int64_t> research_budget; ///< A month, in hundredths (ui::screens::kResearchBudgetControl)
         /// A research area's priority, from 0 to 1 (ui::screens::kFirstPriorityControl)
         std::optional<std::pair<std::size_t, float>> research_priority;
+        /// Focus research on this item, or end the focus when it holds none (ui::screens::kFocusButton, kUnfocusButton)
+        std::optional<std::optional<std::uint64_t>> research_focus;
     };
 
     /// Writes the open windows' pages again where the player picked a tab or where it is time to, and returns

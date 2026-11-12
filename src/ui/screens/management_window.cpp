@@ -13,7 +13,7 @@ namespace rct3::ui::screens
     namespace
     {
         /// A text button's width for `text`, without measuring: enough for the small font's letters.
-        constexpr float kLetterWidth = 6;
+        constexpr float kLetterWidth = 7; // A long text of 6 a letter ran past its button
         constexpr float kTextButtonMargin = 24;
         constexpr float kNarrowestTextButton = 70;
         constexpr std::size_t kSeriesPerRow = 4; ///< Names of a graph's series in a row under it, at most
@@ -330,11 +330,14 @@ namespace rct3::ui::screens
         const bool has_table = !shown.columns.empty();
         table_->visible = has_table;
         if (!has_table)
+        {
+            shown_row_.reset();
             return;
+        }
         if (y > 0)
             y += style_.gap;
         table_->placement = { { 0, 0, 1, 1 }, { 0, y, 0, -bottom } };
-        const auto selected = table_->selected() ? std::optional(table_->rows.at(*table_->selected()).id) : std::nullopt;
+        const auto selected = picked_row();
         table_->columns = shown.columns;
         table_->rows = shown.rows;
         page_sort_ = shown.sort ? std::optional(std::pair(*shown.sort, shown.sort_descending)) : std::nullopt;
@@ -346,6 +349,12 @@ namespace rct3::ui::screens
             if (found != table_->rows.end())
                 table_->select(static_cast<std::size_t>(found - table_->rows.begin()));
         }
+        shown_row_ = picked_row();
+    }
+
+    std::optional<std::size_t> ManagementWindow::picked_row() const
+    {
+        return table_->visible && table_->selected() ? std::optional(table_->rows.at(*table_->selected()).id) : std::nullopt;
     }
 
     void ManagementWindow::open_choices(std::size_t i)

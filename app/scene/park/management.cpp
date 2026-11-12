@@ -32,9 +32,22 @@ namespace rct3::scene::park
             return core::maybe(dynamic_cast<ui::screens::StaffRoster*>(core::as_pointer(desktop.root().find(window_name(ui::screens::ManagementTopic::Staff)))));
         }
 
+        /// The research item of the row picked on the research window's list of what may come next.
+        std::optional<std::uint64_t> research_pick(const ui::screens::ManagementWindow& window, const ui::screens::ManagementFacts& facts)
+        {
+            const auto row = window.picked_row();
+            if (!row || facts.park == nullptr || window.tab() != ui::screens::kComingTab)
+                return std::nullopt;
+            const std::size_t at = ui::screens::management_row(*row).index;
+            return at < facts.park->content.entries.size() ? std::optional(facts.park->content.entries[at].id) : std::nullopt;
+        }
+
         void show(ui::screens::ManagementWindow& window, ui::screens::ManagementTopic topic, const ui::screens::ManagementFacts& facts, const ui::StringTable& strings, const ui::screens::InfoUnits& units)
         {
-            window.show_page(ui::screens::management_page(topic, window.tab(), facts, strings, units));
+            ui::screens::ManagementFacts shown = facts;
+            if (topic == ui::screens::ManagementTopic::Research)
+                shown.research_pick = research_pick(window, facts);
+            window.show_page(ui::screens::management_page(topic, window.tab(), shown, strings, units));
         }
     } // namespace
 
@@ -112,7 +125,8 @@ namespace rct3::scene::park
             if (!window || window->closing())
                 continue;
             const bool picked = window->take_tab().has_value();
-            if (picked || window->page_age() >= kRefresh)
+            // The research window's focus button names the cost of the row picked.
+            if (picked || window->page_age() >= kRefresh || (topic == ui::screens::ManagementTopic::Research && window->picked_row_changed()))
                 show(*window, topic, facts, strings, units);
             const bool park_page = topic == ui::screens::ManagementTopic::ParkOperations && window->tab() == 0;
             const auto button = window->take_button();
@@ -133,6 +147,16 @@ namespace rct3::scene::park
                 asks.state_all = ui::screens::kOpenCloseAllStates[choice->second];
                 for (const ui::widgets::TableRow& r : ui::screens::management_page(topic, window->tab(), facts, strings, units).rows)
                     asks.listed.push_back(ui::screens::management_row(r.id));
+            }
+            if (button && topic == ui::screens::ManagementTopic::Research && window->tab() == ui::screens::kComingTab)
+            {
+                if (*button == ui::screens::kFocusButton)
+                {
+                    if (const auto pick = research_pick(*window, facts))
+                        asks.research_focus.emplace(*pick);
+                }
+                else if (*button == ui::screens::kUnfocusButton)
+                    asks.research_focus.emplace(std::nullopt);
             }
             if (const auto change = window->take_change(); change && topic == ui::screens::ManagementTopic::Research)
             {

@@ -85,9 +85,9 @@ namespace rct3::ui::screens
     /// it when pressed, and reports the one picked instead of the press.
     struct ManagementButton
     {
-        std::string icon;
-        std::u16string text;
-        std::u16string help;
+        std::string icon { };
+        std::u16string text { };
+        std::u16string help { };
         bool enabled = true;
         std::vector<InfoChoice> choices { };
         std::string key { }; ///< Widget name of a button without an icon
@@ -166,6 +166,13 @@ namespace rct3::ui::screens
         {
             return core::maybe(table_);
         }
+        /// The id of the table row picked, when the page has a table and one is picked.
+        [[nodiscard]] std::optional<std::size_t> picked_row() const;
+        /// Whether the row picked is another than when the page was last shown.
+        [[nodiscard]] bool picked_row_changed() const
+        {
+            return picked_row() != shown_row_;
+        }
 
         void update(const UpdateContext& context) override;
 
@@ -208,6 +215,7 @@ namespace rct3::ui::screens
         std::optional<std::size_t> button_now_;
         std::optional<std::pair<std::size_t, std::size_t>> choice_now_;
         std::optional<std::size_t> row_now_;
+        std::optional<std::size_t> shown_row_; ///< The row picked when the page was last shown
         struct Control
         {
             InfoControl control;

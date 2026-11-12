@@ -259,6 +259,19 @@ namespace rct3::simulation
                     std::erase(r.get<CycleRide>(from).riders, g);
                 r.remove<Climbing>(g);
                 const float ground = pool != nullptr && !pool->water.empty() ? std::ranges::min_element(pool->water, { }, [&](const glm::vec3& w) { return glm::distance(glm::vec2(w.x, w.z), glm::vec2(at.x, at.z)); })->y : at.y;
+                // With no water under the end they come down on hard ground: a dangerous happening, and the park's
+                // inspector, if it has one, says so of an open slide.
+                if (pool == nullptr || pool->water.empty())
+                {
+                    ++r.ctx().emplace<PoolDangers>().landings;
+                    if (const auto* attraction = r.valid(from) ? r.try_get<const Attraction>(from) : nullptr; attraction != nullptr && attraction->open)
+                        for (const auto [i, staff] : r.view<const Staff>().each())
+                            if (staff.role == StaffRole::Inspector)
+                            {
+                                tell(r, i, Finding::DangerousFlume, from, static_cast<float>(world.tick) * kTickSeconds);
+                                break;
+                            }
+                }
                 step_out(r, g);
                 r.remove<Errand, Stride, Linger, Gesture, Watching, RideWalk>(g);
                 pose.position = at; // On from where they were as the step began
@@ -596,7 +609,22 @@ namespace rct3::simulation
             if (swimmer.dive != DiveStep::None)
             {
                 if (swimmer.board >= 0 && static_cast<std::size_t>(swimmer.board) < pool->boards.size())
+                {
+                    const bool falling = swimmer.dive == DiveStep::Fall;
                     dive_off(*pool, pool->boards[static_cast<std::size_t>(swimmer.board)], swimmer, pose, r.get<Mood>(g), r.get<Stride>(g).speed.value, paths.tile_size, dt);
+                    // Down on hard ground, not in the water: a dangerous happening, and the park's inspector, if it
+                    // has one, says so of the complex.
+                    if (falling && swimmer.dive == DiveStep::Surface && !swimmer.in_water)
+                    {
+                        ++r.ctx().emplace<PoolDangers>().landings;
+                        for (const auto [i, staff] : r.view<const Staff>().each())
+                            if (staff.role == StaffRole::Inspector)
+                            {
+                                tell(r, i, Finding::DangerousDivingBoard, errand.target, now);
+                                break;
+                            }
+                    }
+                }
                 else
                     swimmer.dive = DiveStep::None;
                 continue;

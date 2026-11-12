@@ -116,6 +116,12 @@ TEST_CASE("a saved park reads back as written")
     CHECK(research->research->priorities == std::vector<float> { 0.5f, 1.0f });
     CHECK(research->research->since_part == doctest::Approx(3.5f));
     CHECK(research->research->invented == std::vector<std::uint64_t> { 9 });
+    CHECK(research->locked_improvements.empty()); // None kept: every improvement invented
+
+    hidden.locked_improvements = { "loops", "helixes" };
+    const auto locked = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
+    REQUIRE(locked);
+    CHECK(locked->locked_improvements == std::vector<std::string> { "loops", "helixes" });
 
     hidden.broken_items = { 42, 43 };
     const auto broken = parkfile::read_saved_park(parkfile::write_saved_park(hidden));

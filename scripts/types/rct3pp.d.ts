@@ -100,6 +100,10 @@ declare namespace park {
      *  those invented since the original park, by symbol, how many items are left (null until the build lists are read),
      *  and the priority of each research area from 0 to 1, in the research window's order (areas past the end weigh 1). */
     function research(): { budget: number; spent: number; current: string | null; invented: (string | null)[]; left: number | null; priorities: number[] };
+    /** The ride improvements research can invent: each one's id, research cost in hundredths and whether the park has it. */
+    function improvements(): { id: string; cost: number; invented: boolean }[];
+    /** Invents the ride improvement `id`, or locks it again so that research has it to invent. */
+    function setImprovement(id: string, invented: boolean): void;
     /** Sets the monthly research budget, in hundredths of the currency; nought stops research. */
     function setResearch(hundredths: number): void;
     /** The weekly graphs' samples, newest first (money in hundredths), each ledger period's sum newest first, and
@@ -309,7 +313,7 @@ declare namespace build {
      * kind's saved designs ("design_browser"), as picking it in its build list does when it has some. An
      * enclosure fence, or the enclosure list's delete tool ("", "EnclosureDelete"), takes out the enclosure tool. */
     function pick(overlay: string, symbol: string, offer?: "designs"): boolean;
-    /** The construction panel's ride (its place in rides.list()), how many pieces fit where the track goes on,
+    /** The construction panel's ride (its place in rides.list()), how many pieces fit where the track goes on and their names,
      * the one picked, whether it can be built there (and its arrows show), whether it may not stand there (for a design,
      * any of its pieces or doors) and whether for land the park does not own, for a design in hand the string key of why
      * it may not stand ("" when it may) and the tiles where its ghost meets a pool beside them (each with the height and the side, as
@@ -318,7 +322,7 @@ declare namespace build {
      * track), null while building at the open end, and on a ride of two tracks side by side the split button's
      * state: 1 joined from the left track, 2 the left alone, 3 joined from the right, 4 the right alone; 0 on
      * other rides. Undefined while the panel is shut. */
-    function construction(): { ride: number; offered: number; piece: string | null; ghost: boolean; arrows: boolean; ghostAt: { col: number; row: number; height: number } | null; clashes: boolean; unowned: boolean; refusal: string; turn: number; poolSides: { col: number; row: number; height: number; side: number }[]; ghostDoors: number; ghostPlatform: string; completing: boolean; proposed: number; complaint: string; testing: boolean; testAt: number | null; testWrecks: number; designs: string[]; selected: number | null; split: number } | undefined;
+    function construction(): { ride: number; offered: number; fits: string[]; piece: string | null; ghost: boolean; arrows: boolean; ghostAt: { col: number; row: number; height: number } | null; clashes: boolean; unowned: boolean; refusal: string; turn: number; poolSides: { col: number; row: number; height: number; side: number }[]; ghostDoors: number; ghostPlatform: string; completing: boolean; proposed: number; complaint: string; testing: boolean; testAt: number | null; testWrecks: number; designs: string[]; selected: number | null; split: number } | undefined;
     /** What building gave to be heard: how many thumps of something put down were asked for since the park opened
      * (several close together are heard as one), and while a shaping stroke goes the loudness of its rumble, 0..1. */
     function sounds(): { thumps: number; rumble: number | null };

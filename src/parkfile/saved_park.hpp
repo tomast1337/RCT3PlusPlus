@@ -26,6 +26,8 @@
 //              they start again from the original park.
 //   "RSCH" v1  simulation::Research: how far research has got and what it has invented. Saves made before it
 //              lack it; their research starts again from the original park.
+//   "IMPR" v1  std::vector<std::string>: the ride improvements not invented yet, by id. Only when there are any;
+//              without it, every improvement is invented.
 //   "BRKN" v1  std::vector<std::uint64_t>: the path items vandals have broken, by object id. Only when there
 //              are any.
 //   "FALL" v1  std::vector<save::model::Waterfall>: the park's waterfalls, with those the player made or deleted.
@@ -210,6 +212,7 @@ namespace rct3::parkfile
         std::optional<std::vector<save::model::RideShow>> shows;
         std::optional<SavedGoals> goals;
         std::optional<simulation::Research> research;                  ///< None in saves made before research was kept
+        std::vector<std::string> locked_improvements;                  ///< Ride improvements not invented yet, by id
         std::vector<std::uint64_t> broken_items;                       ///< Path items vandals have broken, by object id
         std::optional<std::vector<save::model::Waterfall>> waterfalls; ///< None in saves made before waterfalls were kept
         std::optional<simulation::DayMode> day_mode;                   ///< None in saves made before the mode was kept

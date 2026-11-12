@@ -86,13 +86,15 @@
             "GuestPaymentsHelp": "Show what guests pay at rides and stalls floating up from their entrances"
         },
         "Improvement": {
+            "Area": "Ride improvements",
             "Loops": "Vertical loops",
             "Corkscrews": "Corkscrews",
             "Rolls": "Rolls and twists",
             "Launches": "Launched sections",
             "Helixes": "Helixes",
             "Splashes": "Water splashes",
-            "Locked": "Not invented yet: %NAME%. Research ride improvements to build it."
+            "Locked": "Not invented yet: %NAME%. Research ride improvements to build it.",
+            "Invented": "New ride improvement: %NAME%"
         },
         "Command": {
             "Cancel": "Close, cancel, go back",

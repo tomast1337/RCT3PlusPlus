@@ -996,7 +996,11 @@ namespace rct3::scene::park
             {
                 const std::vector<rct3::park::BuildItem>& catalogue = scene.build.items.get();
                 if (!scene.research_items)
+                {
                     scene.research_items = simulation::research_items(scene.park_model.content, catalogue);
+                    // With the ride improvements a park of ours has locked.
+                    std::ranges::copy(simulation::improvement_items(rct3::park::track::builtin_improvements(), scene.locked_improvements), std::back_inserter(*scene.research_items));
+                }
                 const std::size_t had = scene.research.invented.size();
                 simulation::step_research(scene.research, scene.park.time - scene.research_time.value_or(scene.park.time), *scene.research_items, scene.park, scene.park_model.finance, scene.ledger_month, scene.gameplay);
                 // Each new invention can be built from now on, and the player is told.
@@ -1004,7 +1008,14 @@ namespace rct3::scene::park
                 {
                     const auto entry = std::ranges::find(scene.park_model.content.entries, scene.research.invented[i], &save::model::AssetRequirement::id);
                     if (entry == scene.park_model.content.entries.end())
+                    {
+                        // A ride improvement: its pieces can be built from now on.
+                        const std::span<const rct3::park::track::Improvement> table = rct3::park::track::builtin_improvements();
+                        const auto improvement = std::ranges::find(table, scene.research.invented[i], [](const rct3::park::track::Improvement& m) { return simulation::improvement_item(m.id); });
+                        if (improvement != table.end() && std::erase(scene.locked_improvements, improvement->id) > 0)
+                            simulation::park::post(scene.park.messages, { .text_key = std::string(simulation::kImprovementInventedKey), .subject_name = strings::to_utf8(assets.strings->get(improvement->name)) });
                         continue;
+                    }
                     entry->invented = true;
                     const auto item = content_item(scene, entry->id);
                     simulation::park::post(scene.park.messages, { .text_key = std::string(simulation::kInventedKey), .subject_name = item ? strings::to_utf8(assets.strings->get(catalogue[*item].name_text)) : entry->symbol, .build_item = item });
@@ -2307,6 +2318,7 @@ namespace rct3::scene::park
         if (!scene.park_model.objectives.objectives.empty())
             saved.goals = parkfile::SavedGoals { .objectives = scene.park_model.objectives };
         saved.research = scene.research;
+        saved.locked_improvements = scene.locked_improvements;
         return parkfile::write_saved_park(saved);
     }
 

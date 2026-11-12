@@ -8,11 +8,12 @@
 //
 // A park with no budget does no research: what it may build is what its file says, which in a sandbox is
 // everything.
-// shortcut: only attractions are researched; scenery and ride improvements stay as the park file has them
-// until their categories are read.
+// Ride improvements, our own addition, are researched too: those a park of ours has locked.
+// shortcut: scenery stays as the park file has it until its categories are read.
 #pragma once
 
 #include "park/build_catalogue.hpp"
+#include "park/track/improvements.hpp"
 #include "random/generator.hpp"
 #include "save/model/park.hpp"
 #include "simulation/park/state.hpp"
@@ -21,6 +22,7 @@
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -42,11 +44,14 @@ namespace rct3::simulation
         Paths,
         ShowElements,
         PoolRides,
+        RideImprovements, ///< Families of track pieces (park::track::Improvement); no park file has a priority for it
     };
-    inline constexpr std::size_t kResearchAreas = 12;
+    inline constexpr std::size_t kResearchAreas = 13;
 
     /// The message telling the player an attraction was invented: the game's own text, naming the attraction.
     inline constexpr std::string_view kInventedKey = "Invented_Attraction";
+    /// The message telling the player a ride improvement was invented, naming it.
+    inline constexpr std::string_view kImprovementInventedKey = "Rct3pp_Improvement_Invented";
 
     /// Something the park may invent.
     struct ResearchItem
@@ -75,6 +80,13 @@ namespace rct3::simulation
     /// What is left to invent: each attraction the park makes available, has not invented and does not hide,
     /// that `catalogue` knows, with the area of the list it is built from and what its kind costs to invent.
     [[nodiscard]] std::vector<ResearchItem> research_items(const save::model::RequiredContent& content, std::span<const rct3::park::BuildItem> catalogue);
+
+    /// The id research knows the ride improvement `id` by: a hash of it with the top bit set, which keeps it apart
+    /// from the park's own object ids, counted up from one.
+    [[nodiscard]] std::uint64_t improvement_item(std::string_view id);
+
+    /// The ride improvements of `table` still `locked` (by id), as items of their own area at the table's costs.
+    [[nodiscard]] std::vector<ResearchItem> improvement_items(std::span<const rct3::park::track::Improvement> table, std::span<const std::string> locked);
 
     /// Moves research on by `units` of the calendar, a month at most. Once a part of the budget is due, it is
     /// taken from `park`'s cash and booked as research spending, and counts towards the current item with any

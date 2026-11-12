@@ -71,8 +71,8 @@ namespace rct3::ui::screens
         };
 
         /// The research areas the priorities belong to, in the priorities' order.
-        constexpr std::array<std::string_view, 12> kResearchAreas = {
-            "Obj_Rides_RollerCoastersHelp", "Obj_Rides_JuniorCoastersHelp", "Obj_Rides_ThrillRidesHelp", "Obj_Rides_WaterRidesHelp", "Obj_Rides_GentleRidesHelp", "Obj_Rides_TransportRidesHelp", "Obj_Rides_OtherRidesHelp", "Obj_ShopsHelp", "Obj_SceneryHelp", "Obj_PathsHelp", "ResearchCategory_ShowElements", "Obj_Rides_PoolRidesHelp",
+        constexpr std::array<std::string_view, simulation::kResearchAreas> kResearchAreas = {
+            "Obj_Rides_RollerCoastersHelp", "Obj_Rides_JuniorCoastersHelp", "Obj_Rides_ThrillRidesHelp", "Obj_Rides_WaterRidesHelp", "Obj_Rides_GentleRidesHelp", "Obj_Rides_TransportRidesHelp", "Obj_Rides_OtherRidesHelp", "Obj_ShopsHelp", "Obj_SceneryHelp", "Obj_PathsHelp", "ResearchCategory_ShowElements", "Obj_Rides_PoolRidesHelp", "Rct3pp_Improvement_Area",
         };
 
         constexpr std::array<std::string_view, 11> kGroupTypes = {

@@ -1621,6 +1621,9 @@ namespace rct3::scene::park
                 e.invented = e.invented || std::ranges::contains(scene.research.invented, e.id);
             if (model && !scene.research.invented.empty())
                 scene.build.offer = rct3::park::BuildOffer(scene.park_model.content);
+            // A park from the original game has every ride improvement; one of ours keeps those it has not invented.
+            if (saved)
+                scene.locked_improvements = saved->locked_improvements;
         }
 
         // ── 8. UI layout ──

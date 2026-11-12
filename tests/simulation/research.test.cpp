@@ -241,3 +241,20 @@ TEST_CASE("the progress of the current item and the months the budget takes to f
         CHECK_FALSE(research_progress(r, items));
     }
 }
+
+TEST_CASE("locked ride improvements are items of their own area, which research invents")
+{
+    const std::vector<rct3::park::track::Improvement> table { { .id = "loops", .cost = 5000, .pieces = { "loop" } }, { .id = "helixes", .cost = 3000, .pieces = { "helix" } } };
+    const std::vector<std::string> locked { "loops" };
+    Lab lab;
+    lab.items = improvement_items(table, locked);
+    REQUIRE(lab.items.size() == 1);
+    CHECK(lab.items[0].area == ResearchArea::RideImprovements);
+    CHECK(lab.items[0].cost == 5000);
+    CHECK(lab.items[0].id == improvement_item("loops"));
+    CHECK(improvement_item("loops") != improvement_item("helixes"));
+    CHECK(improvement_item("loops") > std::uint64_t { 1 } << 63); // Apart from the park's object ids
+    lab.pass(kMonth);
+    CHECK(lab.research.invented == std::vector<std::uint64_t> { improvement_item("loops") });
+    CHECK(lab.items.empty());
+}

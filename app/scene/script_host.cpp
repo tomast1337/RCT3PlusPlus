@@ -316,12 +316,37 @@ namespace rct3::scene
             // Items are told by their symbols, which a park saved and opened again keeps.
             const auto symbol = [&](std::uint64_t id) -> Json {
                 const auto entry = std::ranges::find(scene.park_model.content.entries, id, &save::model::AssetRequirement::id);
-                return entry != scene.park_model.content.entries.end() ? Json(entry->symbol) : Json(nullptr);
+                if (entry != scene.park_model.content.entries.end())
+                    return Json(entry->symbol);
+                // A ride improvement, by its id.
+                const std::span<const rct3::park::track::Improvement> table = rct3::park::track::builtin_improvements();
+                const auto improvement = std::ranges::find(table, id, [](const rct3::park::track::Improvement& m) { return simulation::improvement_item(m.id); });
+                return improvement != table.end() ? Json(improvement->id) : Json(nullptr);
             };
             Json invented = Json::array();
             for (const std::uint64_t id : r.invented)
                 invented.push_back(symbol(id));
             return { { "budget", r.budget }, { "spent", r.spent }, { "current", r.current ? symbol(*r.current) : Json(nullptr) }, { "invented", std::move(invented) }, { "left", scene.research_items ? Json(scene.research_items->size()) : Json(nullptr) }, { "priorities", r.priorities } };
+        });
+        engine_.define("park.improvements", [this](const Json&) -> Json {
+            const park::ParkScene& scene = park_of(park_);
+            Json out = Json::array();
+            for (const rct3::park::track::Improvement& i : rct3::park::track::builtin_improvements())
+                out.push_back({ { "id", i.id }, { "cost", i.cost }, { "invented", !std::ranges::contains(scene.locked_improvements, i.id) } });
+            return out;
+        });
+        engine_.define("park.setImprovement", [this](const Json& a) -> Json {
+            if (a.size() != 2 || !a[0].is_string() || !a[1].is_boolean())
+                throw std::invalid_argument("park.setImprovement takes an improvement's id and whether it is invented");
+            park::ParkScene& scene = park_of(park_);
+            const std::string id = a[0].get<std::string>();
+            if (!std::ranges::contains(rct3::park::track::builtin_improvements(), id, &rct3::park::track::Improvement::id))
+                throw std::invalid_argument(std::format("no ride improvement {}", id));
+            std::erase(scene.locked_improvements, id);
+            if (!a[1].get<bool>())
+                scene.locked_improvements.push_back(id);
+            scene.research_items.reset(); // Listed again with the improvements as they are now
+            return Json(nullptr);
         });
         engine_.define("park.setResearch", [this](const Json& a) -> Json {
             if (a.size() != 1 || !a[0].is_number_integer() || a[0].get<std::int64_t>() < 0)
@@ -863,6 +888,14 @@ namespace rct3::scene
                 designs.push_back(d.path.filename().string());
             return { { "ride", *b.ride },
                      { "offered", b.candidates.size() },
+                     { "fits",
+                       [&] {
+                           Json fits = Json::array();
+                           if (c != b.catalogues.end())
+                               for (const rct3::park::track::LaidPiece& l : b.candidates)
+                                   fits.push_back(c->second.pieces[l.index].record.name);
+                           return fits;
+                       }() },
                      { "piece", named ? Json(c->second.pieces[b.picked->index].record.name) : Json(nullptr) },
                      { "ghost", b.ghost.has_value() },
                      { "arrows", !track_arrows(park_of(park_)).vertices.empty() },

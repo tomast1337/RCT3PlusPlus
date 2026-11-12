@@ -84,6 +84,24 @@ namespace rct3::simulation
         return items;
     }
 
+    std::uint64_t improvement_item(std::string_view id)
+    {
+        // FNV-1a.
+        std::uint64_t hash = 14695981039346656037ull;
+        for (const char c : id)
+            hash = (hash ^ static_cast<unsigned char>(c)) * 1099511628211ull;
+        return hash | (std::uint64_t { 1 } << 63);
+    }
+
+    std::vector<ResearchItem> improvement_items(std::span<const rct3::park::track::Improvement> table, std::span<const std::string> locked)
+    {
+        std::vector<ResearchItem> items;
+        for (const rct3::park::track::Improvement& i : table)
+            if (std::ranges::contains(locked, i.id))
+                items.push_back({ .id = improvement_item(i.id), .area = ResearchArea::RideImprovements, .cost = i.cost });
+        return items;
+    }
+
     void step_research(Research& research, float units, std::vector<ResearchItem>& items, park::ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, random::RandomState& dice)
     {
         constexpr float kMonth = save::model::GameClock::kUnitsPerMonth;

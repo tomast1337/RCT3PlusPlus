@@ -128,7 +128,7 @@ TEST_CASE("a park whose money never runs out gets nothing from a cash prize")
     simulation::Research research;
     simulation::give_prize(park, finance, kept, land, research, 1);
     CHECK_FALSE(park.cash);
-    CHECK(finance.ledger[0].prize_money == 0);
+    CHECK(finance.ledger.empty()); // Nothing booked
 }
 
 TEST_CASE("the research prize is free progress at the next part of the budget paid")

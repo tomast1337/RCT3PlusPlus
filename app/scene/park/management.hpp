@@ -29,9 +29,6 @@ namespace rct3::scene::park
     /// Whether any management window is open.
     [[nodiscard]] bool management_window_open(const ui::Desktop& desktop);
 
-    /// Closes the management window on top of the others, if any is open; returns whether it closed one.
-    bool close_top_management_window(ui::Desktop& desktop);
-
     /// What the player asked of the management windows this frame.
     struct ManagementAsks
     {

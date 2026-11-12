@@ -101,20 +101,6 @@ namespace rct3::scene::park
         return find_roster(desktop).has_value();
     }
 
-    bool close_top_management_window(ui::Desktop& desktop)
-    {
-        const auto children = desktop.root().children();
-        for (auto it = children.rbegin(); it != children.rend(); ++it)
-        {
-            if (auto* window = dynamic_cast<ui::widgets::Window*>(it->get()); window != nullptr && !window->closing() && (dynamic_cast<ui::screens::ManagementWindow*>(window) != nullptr || dynamic_cast<ui::screens::StaffRoster*>(window) != nullptr))
-            {
-                window->close();
-                return true;
-            }
-        }
-        return false;
-    }
-
     ManagementAsks update_management_windows(ui::Desktop& desktop, const ui::screens::ManagementFacts& facts, const ui::StringTable& strings, const ui::screens::InfoUnits& units)
     {
         ManagementAsks asks;

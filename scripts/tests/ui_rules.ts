@@ -3,7 +3,7 @@
 // What closes what in a park. One panel at a time at the bottom of the screen: opening a tool menu, the map or a
 // files window puts the tool out away, the paths button closes the open menu, and an item list goes with its menu.
 // A ride's window shares that place: it and a tool's panel put each other away. The path panel starts clean each
-// time it opens.
+// time it opens. Escape closes what is on top, one thing a press, and asks to leave only once nothing is left.
 //
 //   ./nob script scripts/tests/ui_rules.ts -- --no-intro --no-audio --no-simulate --seed 1
 
@@ -31,6 +31,13 @@ async function pick(tool: string, item: string): Promise<void> {
         await press(tool);
     await ui.click(`tools/${tool}/${item}`);
     await frames(6);
+}
+
+/** What the path panel's band tells with the pointer on it, off the ground where it would tell what a click lays. */
+async function band(): Promise<string | undefined> {
+    pointer.move(ui.find("footpaths/status")!.x, ui.find("footpaths/status")!.y);
+    await frames(4);
+    return ui.find("footpaths/status")?.text;
 }
 
 async function escape(): Promise<void> {
@@ -121,7 +128,7 @@ await frames(6);
 
 // 4. The path panel starts clean: what was switched on is off again, and no trail goes on.
 await press("Paths");
-const fresh = ui.find("footpaths/status")?.text;
+const fresh = await band();
 await ui.click("footpaths/remove");
 await ui.click("footpaths/straight");
 await frames(2);
@@ -129,14 +136,73 @@ expect(ui.find("footpaths/remove")?.on === true && ui.find("footpaths/straight")
 await ui.click("footpaths/remove");
 await pointer.click(0.55, 0.5);
 await frames(6);
-expect(ui.find("footpaths/status")?.text !== fresh, `a trail started on the ground, the band no longer "${fresh}"`);
+expect((await band()) !== fresh, `a trail started on the ground, the band no longer "${fresh}"`);
 await screenshot("path_trail_started");
 await ui.click("footpaths/close");
 await frames(4);
 await press("Paths");
 expect(ui.find("footpaths/remove")?.on === false && ui.find("footpaths/straight")?.on === false && ui.find("footpaths/route")?.on === false, "the tabs off again");
-expect(ui.find("footpaths/status")?.text === fresh, `no trail going on, the band "${fresh}" again and not "${ui.find("footpaths/status")?.text}"`);
+expect((await band()) === fresh, `no trail going on, the band "${fresh}" again`);
 await screenshot("path_panel_clean");
 await press("Paths");
+
+// 5. Escape closes what is on top, one thing a press: the windows from the top down, the item list, the menu, a
+// path trail and then the path panel, a ride's window, and only then asks to leave.
+const question = "leave_tutorial";
+await pick("Management", "Man_Finances");
+await pick("Files", "File_GameOptions");
+await until(() => ui.find("options") !== undefined, 120, "the options window");
+await pick("Files", "File_AboutRCT");
+await until(() => ui.find("about") !== undefined, 120, "the about window");
+await screenshot("windows_stacked");
+await escape();
+expect(ui.find("about") === undefined && ui.find("options") !== undefined, "the first Escape to close the about window, on top");
+await escape();
+expect(ui.find("options") === undefined && ui.find("FinancialManagement_Title") !== undefined, "the second to close the options, over the finances");
+await escape();
+expect(ui.find("FinancialManagement_Title") === undefined && open_menu() === "Files", "the third to close the finances");
+await escape();
+expect(open_menu() === "" && ui.find(question) === undefined, "the fourth to close the menu");
+
+await ui.click("tools/Map/Map");
+await frames(6);
+await escape();
+expect(ui.find("park_map") === undefined && ui.find(question) === undefined, "Escape to close the map");
+
+await pick("Rides", "Obj_Rides_ThrillRides");
+await until(() => ui.find("build_list") !== undefined, 300, "the thrill rides' list");
+await pointer.click(0.9, 0.3); // The list keeps no keyboard focus
+await frames(2);
+await escape();
+expect(ui.find("build_list") === undefined && open_menu() === "Rides", "Escape to close the item list before its menu");
+await escape();
+expect(open_menu() === "", "and then the menu");
+
+await press("Paths");
+await pointer.click(0.55, 0.5);
+await frames(6);
+expect((await band()) !== fresh, "a trail started");
+await escape();
+expect(ui.find("footpaths") !== undefined && (await band()) === fresh, "Escape to let the trail go and leave the panel");
+await escape();
+expect(ui.find("footpaths") === undefined && ui.find(question) === undefined, "and then to close the path panel");
+
+expect(build.pick("tracks/coasters/Corkscrew/Corkscrew", "Corkscrew"), "a corkscrew coaster to build");
+await until(() => build.construction() !== undefined, 300, "the construction panel");
+await escape();
+expect(build.construction() === undefined && ui.find(question) === undefined, "Escape to close track building");
+
+rides.show(0);
+await until(() => ui.find("info") !== undefined, 120, "the ride's window");
+await escape();
+expect(ui.find("info") === undefined && ui.find(question) === undefined, "Escape to close the ride's window");
+
+await escape();
+expect(ui.find(question) !== undefined, "Escape to ask to leave once nothing is left");
+const asked = ui.find(`${question}/content/text`)?.text ?? "";
+expect(asked.length > 0 && !asked.includes("tutorial"), `the question not to speak of a tutorial outside one: "${asked}"`);
+await screenshot("leave_question");
+await escape();
+expect(ui.find(question) === undefined, "Escape to answer no");
 
 quit(0);

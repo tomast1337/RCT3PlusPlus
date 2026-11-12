@@ -387,33 +387,49 @@ namespace rct3::scene::park
         ui::Desktop& desktop = *scene.desktop;
         desktop.layout({ 0, 0, static_cast<float>(extent.width) / scale, static_cast<float>(extent.height) / scale });
 
-        // Escape asks to leave, as the guide's quit does, unless the question is already open: then it
-        // answers it. An open build list takes it first, to empty its search and then to close; a tool out is
-        // put away, and a path trail going on let go, before anything closes.
+        // Escape closes what is on top, one thing a press: a person held is put down and a ride left; then the window
+        // on top (an item list empties its search first), the open menu, a path trail going on, the tool out with
+        // its panel, and the window of a ride or a person. With nothing left it asks to leave, as the guide's quit
+        // does, and with that question open it answers it. A window being typed in takes the key itself.
         const bool asking = desktop.root().find(kQuestionName).has_value();
         ui::KeyboardState keys = keyboard;
-        if (!asking && !build_list_open(desktop.root()))
+        const auto is_escape = [](const ui::KeyPress& k) { return k.key == ui::Key::Escape; };
+        if (!asking && std::ranges::any_of(keys.presses, is_escape))
         {
-            const auto escape = std::ranges::remove_if(keys.presses, [](const ui::KeyPress& k) { return k.key == ui::Key::Escape; });
+            const auto window_of = [&](ui::Widget* w) {
+                while (w != nullptr && w->parent() != nullptr && w->parent() != &desktop.root())
+                    w = w->parent();
+                return w != nullptr && w->name() != kGuideName ? dynamic_cast<ui::widgets::Window*>(w) : nullptr;
+            };
+            ui::widgets::Window* top = nullptr;
+            const auto children = desktop.root().children();
+            for (auto it = children.rbegin(); it != children.rend() && top == nullptr; ++it)
+                if (auto* window = window_of(it->get()); window != nullptr && window->visible && !window->closing())
+                    top = window;
+            const auto focus = desktop.keyboard_focus();
             auto tools = desktop.root().find_as<ui::screens::ToolRow>(kToolsName);
-            if (!escape.empty() && scene.holding)
+            const bool tool_out = ride_placing(scene) || scene.building.ride || scene.structures.tool != StructureTools::Tool::None || scene.deleting.tool != DeleteTools::Tool::None || scene.pooling.item || scene.enclosing.item || land_tool(scene) || tool_panel_out(scene);
+            bool taken = true;
+            if (scene.holding)
                 hold_person(scene, { }, { }, false, true);
-            else if (!escape.empty() && scene.riding_along())
+            else if (scene.riding_along())
                 stop_riding(scene);
-            else if (!escape.empty() && tools && tools->open_menu())
+            else if (focus && window_of(&*focus) != nullptr)
+                taken = false; // Left in for the window typed in
+            else if (top != nullptr)
+                top->on_key({ .key = ui::Key::Escape });
+            else if (tools && tools->open_menu())
                 tools->close_menu();
-            else if (!escape.empty() && (ride_placing(scene) || scene.structures.tool != StructureTools::Tool::None || scene.deleting.tool != DeleteTools::Tool::None || scene.pooling.item || scene.enclosing.item || land_tool(scene)))
-            {
-                stop_ride_placing(scene);
-                stop_structure_tools(scene);
-                stop_deleting(scene);
-                stop_pooling(scene);
-                stop_enclosing(scene);
-                stop_land_tools(scene);
-            }
-            else if (!escape.empty() && !drop_footpath_trail(scene) && !close_top_management_window(desktop))
+            else if (drop_footpath_trail(scene))
+                ;
+            else if (tool_out)
+                put_tools_away(scene);
+            else if (auto info = desktop.root().find_as<ui::screens::InfoPanel>(kInfoName); info && info->visible)
+                hide_info(scene);
+            else
                 ask_leave(scene, *assets.strings, assets.palette);
-            keys.presses.erase(escape.begin(), escape.end());
+            if (taken)
+                std::erase_if(keys.presses, is_escape);
         }
 
         // A stall's window shows what it sells by name and picture once those are read.

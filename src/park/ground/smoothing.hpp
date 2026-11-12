@@ -2,13 +2,14 @@
 //
 // Smoothing the ground under a brush, a little more for every moment the brush is held: our own tools.
 //
-// Most work on the tiles' shared corner points (park/ground/shapes.hpp), each moved part of the way to where
-// the tool wants it, the share growing with `strength` (the part of the way a pass goes, 0 to 1). Points the
-// owner holds and cliff edges stay.
-//   - Average eases each point towards the mean of the four next to it.
+// Most work on the tiles' corner points, each moved part of the way to where the tool wants it, the share
+// growing with `strength` (the part of the way a pass goes, 0 to 1). Every tile keeps its own corners: where the
+// tiles round a point disagree, they move together and the cliff between them stays as high as it was. Points
+// the owner holds stay.
+//   - Average eases each point towards the mean of the four next to it, each side of a cliff by itself.
 //   - Random roughens: each point goes up or down by up to half a unit.
 //   - Level goes towards `target` (the owner's: the height under the pointer, the brush's mean, a whole unit).
-//   - Whole units goes towards each point's nearest whole unit, for rides and scenery to stand on.
+//   - Whole units goes towards each corner's nearest whole unit, for rides and scenery to stand on.
 // The other two work on whole tiles that the owner lets them change, easing them part of the way each pass too:
 //   - Join edges takes away the cliffs between those tiles: each corner the tiles round it disagree on goes
 //     towards their mean.

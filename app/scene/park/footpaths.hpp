@@ -146,6 +146,10 @@ namespace rct3::scene::park
         std::u16string notice;                                         ///< Why the last piece was not laid, until the next control
     };
 
+    /// Reads the install's path and queue styles into `f` once, for the panel, for paying back paths taken away and
+    /// for research.
+    void read_path_styles(ParkFootpaths& f, const ui::InterfaceAssets& assets);
+
     /// Opens the path panel, or closes it when it is open.
     void toggle_footpath_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options);
 

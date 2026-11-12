@@ -482,9 +482,12 @@ namespace rct3::save::model
         Scenery,       ///< Scenery pieces and track sections
         Attraction,    ///< Rides, stalls, facilities
         AnimalSpecies, ///< Zoo animals; these record only whether the park has unlocked them
+        PathType,      ///< Path styles, named by the style's own name with no overlay
+        QueueType,     ///< Queue styles, the same
     };
 
-    /// One database entry of the save: an installed overlay and a symbol within it, plus the research flags.
+    /// One database entry of the save: an installed overlay and a symbol within it, plus the research flags. Path and
+    /// queue styles name only the style, which goes in `symbol`.
     struct AssetRequirement
     {
         AssetKind kind = AssetKind::Other;
@@ -500,7 +503,7 @@ namespace rct3::save::model
 
     struct RequiredContent
     {
-        std::vector<AssetRequirement> entries { }; ///< Entries that name an overlay
+        std::vector<AssetRequirement> entries { }; ///< Entries that name an overlay, and path and queue styles
         std::size_t entries_without_overlay = 0;   ///< Database entries that carry only a symbol or a type name
         [[nodiscard]] std::size_t invented_count() const noexcept;
     };

@@ -37,6 +37,7 @@ namespace rct3::park::path
     PathStyle path_style(const ovl::PathType& type)
     {
         PathStyle style { std::string(type.name), std::string(type.name_text), std::string(type.icon), first_cost(type.items), false, { }, { }, first_group(type.items) };
+        style.names_category = !type.research.empty();
         for (std::size_t at = kGroundNames; at < type.piece_names.size() && style.pieces.size() < kPieces; at += kNamesPerPiece)
             style.pieces.emplace_back(type.piece_names[at]);
         return style;
@@ -45,6 +46,7 @@ namespace rct3::park::path
     PathStyle queue_style(const ovl::QueueType& type)
     {
         PathStyle style { std::string(type.name), std::string(type.name_text), std::string(type.icon), first_cost(type.items), true, { }, { }, first_group(type.items) };
+        style.names_category = !type.research.empty();
         for (const std::string_view name : type.piece_names)
             style.pieces.emplace_back(name);
         return style;

@@ -58,8 +58,8 @@ ui.click = async (path) => {
 {
     // The park asked for loads as the frame ends.
     const open = park.open;
-    park.open = async (path) => {
-        open(path);
+    park.open = async (path, settings) => {
+        open(path, settings ?? { });
         await frames(1);
         await park.ready();
     };

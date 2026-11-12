@@ -35,6 +35,9 @@ namespace rct3::park::path
         std::string overlay;
         /// The support set its pieces name. What a ride, stall or door paved in it stands on once placed, too.
         std::string support_group { };
+        /// Names a research category, as the plain path and queue do: research never invents it, and a park offers
+        /// it whenever it makes it available.
+        bool names_category = false;
     };
 
     /// The install's folders of path styles and of queue styles, relative to its root.

@@ -192,31 +192,39 @@ namespace rct3::scene::park
             return o;
         }
 
-        /// The panel's choices: path styles, then queue styles.
-        std::pair<std::vector<ui::screens::FootpathStyle>, std::vector<ui::screens::FootpathStyle>> panel_styles(const ParkFootpaths& f, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        bool offered(const rct3::park::BuildOffer& offer, const rct3::park::path::PathStyle& style)
+        {
+            return offer.offers_path(style.name, style.names_category);
+        }
+
+        /// The panel's choices: the path styles the park offers, then its queue styles.
+        std::pair<std::vector<ui::screens::FootpathStyle>, std::vector<ui::screens::FootpathStyle>> panel_styles(const ParkFootpaths& f, const rct3::park::BuildOffer& offer, const ui::InterfaceAssets& assets, const config::GameOptions& options)
         {
             const ui::Currency money = currency_of(assets, options);
             std::pair<std::vector<ui::screens::FootpathStyle>, std::vector<ui::screens::FootpathStyle>> out;
             for (const rct3::park::path::PathStyle& s : f.styles)
-                (s.queue ? out.second : out.first).push_back({ s.icon, name_of(assets, s), ui::money_text(money, next_cost(s)) });
+            {
+                if (offered(offer, s))
+                    (s.queue ? out.second : out.first).push_back({ s.icon, name_of(assets, s), ui::money_text(money, next_cost(s)) });
+            }
             return out;
         }
 
-        std::optional<ui::screens::FootpathPick> pick_of(const ParkFootpaths& f)
+        std::optional<ui::screens::FootpathPick> pick_of(const ParkFootpaths& f, const rct3::park::BuildOffer& offer)
         {
             if (!f.style || *f.style >= f.styles.size())
                 return std::nullopt;
             const bool queue = f.styles[*f.style].queue;
-            const auto before = std::ranges::count_if(std::span(f.styles).first(*f.style), [&](const rct3::park::path::PathStyle& s) { return s.queue == queue; });
+            const auto before = std::ranges::count_if(std::span(f.styles).first(*f.style), [&](const rct3::park::path::PathStyle& s) { return s.queue == queue && offered(offer, s); });
             return ui::screens::FootpathPick { queue, static_cast<std::size_t>(before) };
         }
 
-        std::optional<std::size_t> style_of(const ParkFootpaths& f, ui::screens::FootpathPick pick)
+        std::optional<std::size_t> style_of(const ParkFootpaths& f, const rct3::park::BuildOffer& offer, ui::screens::FootpathPick pick)
         {
             std::size_t seen = 0;
             for (std::size_t i = 0; i < f.styles.size(); ++i)
             {
-                if (f.styles[i].queue != pick.queue)
+                if (f.styles[i].queue != pick.queue || !offered(offer, f.styles[i]))
                     continue;
                 if (seen++ == pick.index)
                     return i;
@@ -691,21 +699,6 @@ namespace rct3::scene::park
             const bool queue = path.kind == save::model::PathKind::Queue;
             const auto found = std::ranges::find_if(f.styles, [&](const rct3::park::path::PathStyle& s) { return s.queue == queue && s.name == path.surface_name; });
             return found != f.styles.end() ? &*found : nullptr;
-        }
-
-        /// Reads the path and queue styles once, for the panel or for paying back paths taken away.
-        void read_styles(ParkFootpaths& f, const ui::InterfaceAssets& assets)
-        {
-            if (!f.styles.empty() || !assets.install)
-                return;
-            for (const std::string_view folder : { rct3::park::path::kPathStyleFolder, rct3::park::path::kQueueStyleFolder })
-            {
-                if (const auto found = assets.install->find(folder))
-                {
-                    std::vector<rct3::park::path::PathStyle> more = rct3::park::path::folder_path_styles(*found);
-                    f.styles.insert(f.styles.end(), std::make_move_iterator(more.begin()), std::make_move_iterator(more.end()));
-                }
-            }
         }
 
         /// Pays back what laying `path` cost, floating it up from there with `also` (hundredths, above 0 for money
@@ -1253,6 +1246,20 @@ namespace rct3::scene::park
         rebuild_ground(device, scene, assets, rct3::park::TileRect { wall.tile.col, wall.tile.row, wall.tile.col + 1, wall.tile.row + 1 });
     }
 
+    void read_path_styles(ParkFootpaths& f, const ui::InterfaceAssets& assets)
+    {
+        if (!f.styles.empty() || !assets.install)
+            return;
+        for (const std::string_view folder : { rct3::park::path::kPathStyleFolder, rct3::park::path::kQueueStyleFolder })
+        {
+            if (const auto found = assets.install->find(folder))
+            {
+                std::vector<rct3::park::path::PathStyle> more = rct3::park::path::folder_path_styles(*found);
+                f.styles.insert(f.styles.end(), std::make_move_iterator(more.begin()), std::make_move_iterator(more.end()));
+            }
+        }
+    }
+
     void toggle_footpath_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options)
     {
         auto panel = panel_of(scene);
@@ -1268,15 +1275,16 @@ namespace rct3::scene::park
         {
             f.loaded = true;
             const std::size_t skins = ui::add_extra_skins(device, assets, kIconFiles);
-            read_styles(f, assets);
+            read_path_styles(f, assets);
             logging::logger("park").info("{} path and queue styles, {} pictures", f.styles.size(), skins);
-            const auto first = std::ranges::find_if(f.styles, [](const rct3::park::path::PathStyle& s) { return !s.queue; });
+            const auto first = std::ranges::find_if(f.styles, [&](const rct3::park::path::PathStyle& s) { return !s.queue && offered(scene.build.offer, s); });
             if (first != f.styles.end())
                 f.style = static_cast<std::size_t>(first - f.styles.begin());
         }
-        auto [paths, queues] = panel_styles(f, assets, options);
+        // Styles invented while the panel is shut show when it opens next.
+        auto [paths, queues] = panel_styles(f, scene.build.offer, assets, options);
         panel->show(std::move(paths), std::move(queues));
-        panel->set_chosen(pick_of(f));
+        panel->set_chosen(pick_of(f, scene.build.offer));
         panel->set_following(options.flag(config::GameOption::PathCameraFollow));
         f.dirty = true;
     }
@@ -1315,7 +1323,7 @@ namespace rct3::scene::park
         }
         if (const auto pick = panel->take_style())
         {
-            f.style = style_of(f, *pick);
+            f.style = style_of(f, scene.build.offer, *pick);
             f.notice.clear();
             f.dirty = true;
         }
@@ -1823,7 +1831,7 @@ namespace rct3::scene::park
     {
         if (ids.empty())
             return;
-        read_styles(scene.footpaths, assets);
+        read_path_styles(scene.footpaths, assets);
         take_paths(device, scene, assets, ids, also);
         scene.footpaths.dirty = true;
     }

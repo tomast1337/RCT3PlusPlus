@@ -128,6 +128,7 @@ namespace rct3::park
             item.length = s.z_squares;
             item.addon = s.addon;
             item.type = s.type;
+            item.names_category = !s.research.empty();
             if ((s.flags & kBillboardFlag) != 0)
             {
                 item.list = BuildList::Billboards;
@@ -685,24 +686,38 @@ namespace rct3::park
         return items;
     }
 
+    bool researchable(const BuildItem& item) noexcept
+    {
+        using C = ItemCategory;
+        const auto in = [&](C low, C high) { return item.type >= static_cast<std::uint32_t>(low) && item.type <= static_cast<std::uint32_t>(high); };
+        const auto is = [&](C c) { return item.type == static_cast<std::uint32_t>(c); };
+        const bool for_looks = in(C::Tree, C::Animatronic) || in(C::LitterBin, C::WallCorner) || in(C::RideEntrance, C::RideExit) || is(C::ParkEntrance) || is(C::RideEvent) || is(C::Effect);
+        return item.kind == BuildKind::Scenery && for_looks && item.price > 0 && !item.names_category;
+    }
+
     BuildOffer::BuildOffer(const save::model::RequiredContent& content)
         : known_(!content.entries.empty())
     {
+        using save::model::AssetKind;
         for (const save::model::AssetRequirement& e : content.entries)
         {
-            const bool species = e.kind == save::model::AssetKind::AnimalSpecies;
+            const bool species = e.kind == AssetKind::AnimalSpecies;
             species_known_ = species_known_ || species;
-            const bool locked = e.kind == save::model::AssetKind::Attraction && e.available && !e.invented && !e.hidden;
+            const bool locked = e.kind == AssetKind::Attraction && e.available && !e.invented && !e.hidden;
             const State s = (species ? e.unlocked : e.available && e.invented && !e.hidden) ? State::Offered : locked ? State::Locked : State::Hidden;
+            const std::string k = key(e.overlay_stem, e.symbol);
             // An item listed twice takes the most either entry allows.
-            State& at = listed_[key(e.overlay_stem, e.symbol)];
+            State& at = listed_[k];
             at = std::max(at, s);
+            if (e.kind == AssetKind::Scenery || e.kind == AssetKind::PathType || e.kind == AssetKind::QueueType)
+                flags_[k] = { .available = e.available, .invented = e.invented };
         }
     }
 
     BuildOffer::State BuildOffer::state(const BuildItem& item) const
     {
-        const auto listed = listed_.find(key(item.overlay, item.symbol));
+        const std::string k = key(item.overlay, item.symbol);
+        const auto listed = listed_.find(k);
         switch (item.kind)
         {
             case BuildKind::Animal:
@@ -714,10 +729,21 @@ namespace rct3::park
             case BuildKind::PoolExtra:
             case BuildKind::PoolRoom:
                 return State::Offered; // parks list these without saying whether they may be built
+            case BuildKind::Scenery:
+                // The hidden mark says nothing here: the game's fireworks carry it in every park.
+                if (const auto found = flags_.find(k); found != flags_.end())
+                    return !found->second.available ? State::Hidden : found->second.invented || !researchable(item) ? State::Offered : State::Locked;
+                [[fallthrough]];
             default:
                 // Parks saved before an expansion do not list its items, and offer them all.
                 return listed != listed_.end() ? listed->second : State::Offered;
         }
+    }
+
+    bool BuildOffer::offers_path(std::string_view name, bool names_category) const
+    {
+        const auto found = flags_.find(key({ }, name));
+        return found == flags_.end() || (found->second.available && (found->second.invented || names_category));
     }
 
 } // namespace rct3::park

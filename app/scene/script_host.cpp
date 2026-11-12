@@ -281,9 +281,9 @@ namespace rct3::scene
             return Json(nullptr);
         });
         engine_.define("park.open", [this](const Json& a) {
-            if (a.empty() || !a[0].is_string())
-                throw std::invalid_argument("park.open takes a path in the game's folder");
-            open_ = a[0].get<std::string>();
+            if (a.empty() || !a[0].is_string() || (a.size() > 1 && !a[1].is_object()))
+                throw std::invalid_argument("park.open takes a path in the game's folder and optional settings");
+            open_ = { a[0].get<std::string>(), a.size() < 2 || a[1].value("sandbox", true) };
             return Json(nullptr);
         });
         engine_.define("render.live", [this](const Json&) -> Json {
@@ -324,9 +324,12 @@ namespace rct3::scene
             return { { "budget", r.budget }, { "spent", r.spent }, { "current", r.current ? symbol(*r.current) : Json(nullptr) }, { "invented", std::move(invented) }, { "left", scene.research_items ? Json(scene.research_items->size()) : Json(nullptr) }, { "priorities", r.priorities } };
         });
         engine_.define("park.setResearch", [this](const Json& a) -> Json {
-            if (a.size() != 1 || !a[0].is_number_integer() || a[0].get<std::int64_t>() < 0)
-                throw std::invalid_argument("park.setResearch takes a monthly budget in hundredths");
-            park_of(park_).research.budget = a[0].get<std::int64_t>();
+            if (a.empty() || a.size() > 2 || !a[0].is_number_integer() || a[0].get<std::int64_t>() < 0 || (a.size() == 2 && !a[1].is_array()))
+                throw std::invalid_argument("park.setResearch takes a monthly budget in hundredths and optional priorities");
+            simulation::Research& r = park_of(park_).research;
+            r.budget = a[0].get<std::int64_t>();
+            if (a.size() == 2)
+                r.priorities = a[1].get<std::vector<float>>();
             return Json(nullptr);
         });
         engine_.define("park.history", [this](const Json&) -> Json {
@@ -1441,7 +1444,7 @@ namespace rct3::scene
         return std::exchange(career_, std::nullopt);
     }
 
-    std::optional<std::string> ScriptHost::take_park()
+    std::optional<std::pair<std::string, bool>> ScriptHost::take_park()
     {
         return std::exchange(open_, std::nullopt);
     }

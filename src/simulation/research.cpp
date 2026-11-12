@@ -25,14 +25,33 @@ namespace rct3::simulation
         };
     }
 
-    std::vector<ResearchItem> research_items(const save::model::RequiredContent& content, std::span<const rct3::park::BuildItem> catalogue)
+    std::vector<ResearchItem> research_items(const save::model::RequiredContent& content, std::span<const rct3::park::BuildItem> catalogue, std::span<const rct3::park::path::PathStyle> paths)
     {
         using rct3::park::BuildKind;
         using rct3::park::BuildList;
+        using save::model::AssetKind;
+        const tuning::Research& t = kTuning.research;
         std::vector<ResearchItem> items;
         for (const save::model::AssetRequirement& e : content.entries)
         {
-            if (e.kind != save::model::AssetKind::Attraction || !e.available || e.invented || e.hidden)
+            if (!e.available || e.invented)
+                continue;
+            if (e.kind == AssetKind::PathType || e.kind == AssetKind::QueueType)
+            {
+                const bool queue = e.kind == AssetKind::QueueType;
+                const auto style = std::ranges::find_if(paths, [&](const rct3::park::path::PathStyle& s) { return s.queue == queue && strings::equals_ignoring_case(s.name, e.symbol); });
+                if (style != paths.end() && !style->names_category)
+                    items.push_back({ .id = e.id, .area = ResearchArea::Paths, .cost = t.other_cost.value });
+                continue;
+            }
+            if (e.kind == AssetKind::Scenery)
+            {
+                const auto item = std::ranges::find_if(catalogue, [&](const rct3::park::BuildItem& i) { return i.kind == BuildKind::Scenery && strings::equals_ignoring_case(i.symbol, e.symbol) && strings::equals_ignoring_case(i.overlay, e.overlay_stem); });
+                if (item != catalogue.end() && rct3::park::researchable(*item))
+                    items.push_back({ .id = e.id, .area = ResearchArea::Scenery, .cost = std::min<std::int64_t>(std::llround(item->price * t.scenery_cost_per_price), t.scenery_cost_cap.value) });
+                continue;
+            }
+            if (e.kind != AssetKind::Attraction || e.hidden)
                 continue;
             const auto item = std::ranges::find_if(catalogue, [&](const rct3::park::BuildItem& i) { return strings::equals_ignoring_case(i.symbol, e.symbol) && strings::equals_ignoring_case(i.overlay, e.overlay_stem); });
             if (item == catalogue.end())
@@ -77,7 +96,6 @@ namespace rct3::simulation
                 default:
                     break;
             }
-            const tuning::Research& t = kTuning.research;
             const Money cost = item->kind == BuildKind::TrackedRide ? t.tracked_ride_cost : item->kind == BuildKind::FlatRide ? t.flat_ride_cost : item->kind == BuildKind::Shop ? t.shop_cost : t.other_cost;
             items.push_back({ .id = e.id, .area = area, .cost = cost.value });
         }

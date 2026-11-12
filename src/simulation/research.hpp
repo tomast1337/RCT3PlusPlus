@@ -6,13 +6,16 @@
 // invented and the next is drawn, by how much the player cares for each research area. What is spent beyond a
 // cost carries over to the next item.
 //
+// Besides attractions, research invents the scenery that is put up for its looks (park::researchable) and the
+// path and queue styles other than the plain ones.
+//
 // A park with no budget does no research: what it may build is what its file says, which in a sandbox is
 // everything.
-// shortcut: only attractions are researched; scenery and ride improvements stay as the park file has them
-// until their categories are read.
+// shortcut: ride improvements stay as the park file has them; upgrade when improvements are invented over time.
 #pragma once
 
 #include "park/build_catalogue.hpp"
+#include "park/path/styles.hpp"
 #include "random/generator.hpp"
 #include "save/model/park.hpp"
 #include "simulation/park/state.hpp"
@@ -45,8 +48,11 @@ namespace rct3::simulation
     };
     inline constexpr std::size_t kResearchAreas = 12;
 
-    /// The message telling the player an attraction was invented: the game's own text, naming the attraction.
+    /// The messages telling the player something was invented: the game's own texts, naming what it was.
     inline constexpr std::string_view kInventedKey = "Invented_Attraction";
+    inline constexpr std::string_view kInventedSceneryKey = "Invented_SceneryItem";
+    inline constexpr std::string_view kInventedPathKey = "Invented_Path";
+    inline constexpr std::string_view kInventedQueueKey = "Invented_Queue";
 
     /// Something the park may invent.
     struct ResearchItem
@@ -72,9 +78,11 @@ namespace rct3::simulation
     /// Research as a park file leaves it.
     [[nodiscard]] Research start_research(const save::model::ResearchState& saved);
 
-    /// What is left to invent: each attraction the park makes available, has not invented and does not hide,
-    /// that `catalogue` knows, with the area of the list it is built from and what its kind costs to invent.
-    [[nodiscard]] std::vector<ResearchItem> research_items(const save::model::RequiredContent& content, std::span<const rct3::park::BuildItem> catalogue);
+    /// What is left to invent, among what the park makes available and has not invented: each attraction it does
+    /// not hide that `catalogue` knows, with the area of the list it is built from and what its kind costs; each
+    /// researchable scenery item `catalogue` knows, costing by its price; and each style of `paths` that names
+    /// no research category.
+    [[nodiscard]] std::vector<ResearchItem> research_items(const save::model::RequiredContent& content, std::span<const rct3::park::BuildItem> catalogue, std::span<const rct3::park::path::PathStyle> paths);
 
     /// Moves research on by `units` of the calendar, a month at most. Once a part of the budget is due, it is
     /// taken from `park`'s cash and booked as research spending, and counts towards the current item with any

@@ -1364,7 +1364,7 @@ namespace rct3::scene::park
                 if (auto* findings = scene.sim.registry.ctx().find<simulation::Findings>())
                 {
                     using enum simulation::Finding;
-                    constexpr std::array<std::string_view, 25> kKeys { // By Finding
+                    constexpr std::array<std::string_view, 26> kKeys { // By Finding
                                                                        "Thought_PI_Stall_TooExpensive1",
                                                                        "Thought_PI_Stall_TooCheap1",
                                                                        "Thought_PI_Ride_LongQueueTime1",
@@ -1388,6 +1388,7 @@ namespace rct3::scene::park
                                                                        "Thought_PI_AnimalHungryFoodTroughsEmpty1",
                                                                        "Thought_PI_TooMuchDung1",
                                                                        "Thought_PI_DangerousFlume1",
+                                                                       "Thought_PI_DangerousDivingBoard1",
                                                                        "StaffMessage_WantsToResign",
                                                                        "StaffMessage_Resigned"
                     };
@@ -1656,6 +1657,12 @@ namespace rct3::scene::park
                     auto& events = scene.park_model.awards.dangerous_coaster_events;
                     events = events.value_or(0) + static_cast<std::int32_t>(wrecks->dangers - dangers);
                     dangers = wrecks->dangers;
+                }
+                // Each hard landing off a pool slide or a diving board is dangerous for the awards too.
+                if (auto* pool = scene.sim.registry.ctx().find<simulation::PoolDangers>(); pool != nullptr && pool->landings > 0)
+                {
+                    auto& events = scene.park_model.awards.dangerous_pool_events;
+                    events = events.value_or(0) + static_cast<std::int32_t>(std::exchange(pool->landings, 0));
                 }
                 for (const auto [e, upkeep, attraction] : scene.sim.registry.view<const simulation::Upkeep, const simulation::Attraction>().each())
                 {

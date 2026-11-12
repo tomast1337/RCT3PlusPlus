@@ -373,17 +373,19 @@ namespace rct3::simulation
                         if (pool == nullptr || pool->water.empty() || !node)
                         {
                             throw_person(r, guest, at, velocity, node.value_or(kNoNode));
-                            // Thrown onto hard ground, not into water: the slide is shut as dangerous, and the park's
-                            // inspector, if it has one, says so.
-                            if (attraction.open && (pool == nullptr || pool->water.empty()))
+                            // Thrown onto hard ground, not into water: a dangerous happening, the slide is shut as
+                            // dangerous, and the park's inspector, if it has one, says so.
+                            if (pool != nullptr && !pool->water.empty())
+                                continue;
+                            ++r.ctx().emplace<PoolDangers>().landings;
+                            if (attraction.open)
                                 for (const auto [i, staff] : r.view<const Staff>().each())
                                     if (staff.role == StaffRole::Inspector)
                                     {
                                         tell(r, i, Finding::DangerousFlume, e, now);
                                         break;
                                     }
-                            if (pool == nullptr || pool->water.empty())
-                                attraction.open = false;
+                            attraction.open = false;
                             continue;
                         }
                         const auto nearest = std::ranges::min_element(pool->water, { }, [&](const glm::vec3& w) { return glm::distance(glm::vec2(w.x, w.z), glm::vec2(at.x, at.z)); });

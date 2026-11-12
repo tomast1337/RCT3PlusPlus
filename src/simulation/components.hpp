@@ -590,16 +590,17 @@ namespace rct3::simulation
         Hungry, ///< Many of the guests; with no entity, as are the next three
         Thirsty,
         Tired,
-        Bursting,           ///< Needing the toilet
-        NoMechanicCanReach, ///< A broken attraction no free mechanic has a way to
-        BadZones,           ///< A broken attraction outside every mechanic's patrol, all of them having one
-        Breakdowns,         ///< Many of the attractions broken down at once; with no entity
-        NoPathToStaff,      ///< A worker they found no way to
-        NoKeeperCanReach,   ///< An animal house wanting its troughs filled that no keeper of its enclosure is set to fill
-        KeeperBadZones,     ///< One that every such keeper has a patrol leaving out
-        TroughsEmpty,       ///< A hungry animal (the finding's entity) finding its house's food trough empty, time and again
-        TooMuchDung,        ///< An animal house whose enclosure has more dung than its animals put up with
-        DangerousFlume,     ///< A pool slide that threw a rider onto hard ground, not into water; it is shut
+        Bursting,             ///< Needing the toilet
+        NoMechanicCanReach,   ///< A broken attraction no free mechanic has a way to
+        BadZones,             ///< A broken attraction outside every mechanic's patrol, all of them having one
+        Breakdowns,           ///< Many of the attractions broken down at once; with no entity
+        NoPathToStaff,        ///< A worker they found no way to
+        NoKeeperCanReach,     ///< An animal house wanting its troughs filled that no keeper of its enclosure is set to fill
+        KeeperBadZones,       ///< One that every such keeper has a patrol leaving out
+        TroughsEmpty,         ///< A hungry animal (the finding's entity) finding its house's food trough empty, time and again
+        TooMuchDung,          ///< An animal house whose enclosure has more dung than its animals put up with
+        DangerousFlume,       ///< A pool slide that threw a rider onto hard ground, not into water; it is shut
+        DangerousDivingBoard, ///< A diving board a swimmer dived off onto hard ground, not into water
         // Not the inspector's: a worker's own news (staff/care.hpp), with the worker
         WantsToQuit,
         Quit, ///< The park lets them go once told
@@ -610,6 +611,13 @@ namespace rct3::simulation
     struct Findings
     {
         std::vector<std::pair<Finding, entt::entity>> found { }; ///< With the attraction or worker
+    };
+
+    /// Riders thrown off a pool slide and swimmers dived off a diving board who came down on hard ground, not in
+    /// water, in the registry's context; the park takes them each step as dangerous happenings for the awards.
+    struct PoolDangers
+    {
+        std::uint32_t landings = 0;
     };
 
     struct Vandalism

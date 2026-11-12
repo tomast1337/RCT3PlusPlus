@@ -21,8 +21,9 @@ namespace
 {
     /// A path along row 0 from column 0 to 5, a changing room at (5, 1) opening on the paved square below it and
     /// three by two squares of water below that; and a slide for one rider at a time, from 2 m over the paved
-    /// square down into the near row of water, its riders flying on clear of the far wall, its station first.
-    entt::entity slide_by_pool(Sandbox& park)
+    /// square down into the near row of water (or `onto_path`), its riders flying on clear of the far wall, its
+    /// station first.
+    entt::entity slide_by_pool(Sandbox& park, bool onto_path = false)
     {
         park.path({ 0, 0 }, { 5, 0 });
         rct3::park::pools::PoolMap pools;
@@ -35,7 +36,8 @@ namespace
         auto& r = park.world().registry;
         const SwimPool& pool = r.get<SwimPool>(r.get<PoolDoor>(r.view<const PoolDoor>().front()).pool);
         const glm::vec3 top = pool.paved.front() + glm::vec3(0, 2, 0);
-        const glm::vec3 bottom = *std::ranges::min_element(pool.water, { }, &glm::vec3::z) + glm::vec3(0, 0.5f, 0);
+        // Or down to the path, away from the complex.
+        const glm::vec3 bottom = onto_path ? top + glm::vec3(0, -1.5f, -2 * park.world().paths.tile_size) : *std::ranges::min_element(pool.water, { }, &glm::vec3::z) + glm::vec3(0, 0.5f, 0);
         const auto ride = park.flat_ride("Slide", { 4, 0 }, 100, { .capacity = 1 });
         Coaster train;
         train.points = { top, top + glm::normalize(bottom - top) * 2.0f, bottom };
@@ -92,8 +94,10 @@ TEST_CASE("a swimmer goes up a slide ending in their pool, rides it free in thei
     park.run(1);
     CHECK(in_swimwear(r, guest));
     CHECK(r.get<Swimmer>(guest).in_water);
-    // No crash: nothing wrecked, nobody hurt, the slide still open, and its train back at the station.
+    // No crash: nothing wrecked, nobody hurt, nothing dangerous, the slide still open, and its train back at the
+    // station.
     CHECK_FALSE(r.all_of<Wrecks>(slide));
+    CHECK(r.ctx().find<PoolDangers>() == nullptr);
     CHECK_FALSE(thought(r, guest, ThoughtKind::BeenInjured));
     CHECK(r.get<Attraction>(slide).open);
     const Coaster& train = r.get<Trains>(slide).trains.front();
@@ -228,4 +232,19 @@ TEST_CASE("swimmers queueing for a pool slide stand apart in a line, never two o
     CAPTURE(most);
     CHECK(most >= 3);
     CHECK(closest > kTuning.pools.queue_gap / 2);
+}
+
+TEST_CASE("a slide that throws its rider onto the path is a danger: it is shut, and the inspector says so")
+{
+    Sandbox park;
+    const auto slide = slide_by_pool(park, true);
+    auto& r = park.world().registry;
+    park.staff(StaffRole::Inspector, { 0, 0 });
+    park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    REQUIRE(park.run_until([&] { return r.ctx().find<PoolDangers>() != nullptr; }, 900));
+    CHECK(r.ctx().get<PoolDangers>().landings == 1);
+    CHECK_FALSE(r.get<Attraction>(slide).open);
+    const auto* findings = r.ctx().find<Findings>();
+    REQUIRE(findings != nullptr);
+    CHECK(std::ranges::contains(findings->found, std::pair { Finding::DangerousFlume, slide }));
 }

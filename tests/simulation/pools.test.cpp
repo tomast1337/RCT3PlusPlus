@@ -603,6 +603,7 @@ TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into t
     }
     CHECK(done);
     CHECK(most == 1);
+    CHECK(r.ctx().find<PoolDangers>() == nullptr); // All came down in the water
 
     // A small board built while someone climbs: the boards are laid out again, and the climber comes down.
     entt::entity climber = entt::null;
@@ -658,6 +659,30 @@ TEST_CASE("swimmers spend a good part of their time out on the paving round the 
     CHECK(out > (in + out) / 4);
     CHECK(out < (in + out) * 2 / 3);
     CHECK(walking > out / 2);
+}
+
+TEST_CASE("a high diving board whose end is past the water is a danger, and the inspector says so")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 5, 0 });
+    rct3::park::pools::PoolMap pools;
+    pools.squares.push_back({ .col = 5, .row = 2, .kind = rct3::park::pools::PoolKind::Tile });
+    pools.squares.push_back({ .col = 6, .row = 2, .kind = rct3::park::pools::PoolKind::HighDive, .board = 6, .side = rct3::park::Side { 0 } });
+    // One row of water only: the boards reach past it, over the ground.
+    for (std::int32_t col = 5; col < 7; ++col)
+        pools.squares.push_back({ .col = col, .row = 3 });
+    pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
+    import_pools(park.world(), pools);
+    auto& r = park.world().registry;
+    REQUIRE(r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool).boards.size() == 1);
+    park.staff(StaffRole::Inspector, { 0, 0 });
+    for (int i = 0; i < 12; ++i)
+        park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    REQUIRE(park.run_until([&] { return r.ctx().find<PoolDangers>() != nullptr; }, 4 * kTuning.pools.stay.value));
+    CHECK(r.ctx().get<PoolDangers>().landings >= 1);
+    const auto* findings = r.ctx().find<Findings>();
+    REQUIRE(findings != nullptr);
+    CHECK(std::ranges::contains(findings->found, std::pair { Finding::DangerousDivingBoard, room_of(r) }));
 }
 
 TEST_CASE("swimmers waiting for a high diving board stand in a line behind its ladder, not on one spot, and only on the paving")

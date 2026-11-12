@@ -128,49 +128,123 @@ TEST_CASE("taking a lake away takes the waterfalls pouring from or into it")
     CHECK_FALSE(remove_lake(water, falls, grid, { 0, 0 }));
 }
 
-TEST_CASE("shaping the ground under or beside a lake takes it away, and only that lake")
+TEST_CASE("a lake keeps the water the reshaped ground still holds")
 {
     const save::model::TerrainGrid was = valley();
     save::model::WaterLayer water;
-    water.bodies.push_back(*fill_water(was, { 1, 0 }, 2, any));
-    water.bodies.push_back(*fill_water(was, { 4, 0 }, 1.5f, any)); // Lower than the edge it will get
-    std::vector<save::model::Waterfall> falls(1);
-    falls[0].top = { 6, 2, 2 }; // Over tile 1
+    water.bodies.push_back(*fill_water(was, { 1, 0 }, 3, any));
+    water.bodies.push_back(*fill_water(was, { 4, 0 }, 1.5f, any));
+    std::vector<save::model::Waterfall> falls;
 
-    // Raising the ridge between them leaks nothing.
-    save::model::TerrainGrid grid = was;
-    grid.at(3, 0).corners = { 6, 6, 6, 6 };
-    CHECK_FALSE(drain_moved(water, falls, was, grid));
-    CHECK(water.bodies.size() == 2);
+    SUBCASE("ground moved away from every lake changes nothing")
+    {
+        save::model::TerrainGrid grid = was;
+        grid.at(3, 0).corners = { 6, 6, 6, 6 };
+        CHECK_FALSE(settle_water(water, falls, was, grid));
+        CHECK(water.bodies.size() == 2);
+    }
+    SUBCASE("digging under it keeps it at its level")
+    {
+        save::model::TerrainGrid grid = was;
+        grid.at(1, 0).corners = { 0, -1, 0, -1 };
+        grid.at(2, 0).corners = { -1, 0, -1, 0 };
+        settle_water(water, falls, was, grid);
+        REQUIRE(water.bodies.size() == 2);
+        CHECK(water.bodies[0].level == 3);
+        CHECK(holds(water.bodies[0], { 1, 0 }));
+        CHECK(holds(water.bodies[0], { 2, 0 }));
+    }
+    SUBCASE("a tile risen out of it dries, and one risen through its middle splits it")
+    {
+        save::model::TerrainGrid grid = was;
+        grid.at(2, 0).corners = { 5, 5, 5, 5 };
+        CHECK(settle_water(water, falls, was, grid));
+        REQUIRE(water.bodies.size() == 2);
+        CHECK(holds(water.bodies[0], { 1, 0 }));
+        CHECK_FALSE(holds(water.bodies[0], { 2, 0 }));
 
-    // Lowering it under the first lake's level opens that lake's side; the second stays.
-    grid.at(3, 0).corners = { 1.5f, 1.5f, 1.5f, 1.5f };
-    CHECK(drain_moved(water, falls, was, grid));
-    REQUIRE(water.bodies.size() == 1);
-    CHECK(holds(water.bodies[0], { 4, 0 }));
-    CHECK(falls.empty()); // It poured from the lake taken
-
-    // Moving the ground under the second takes it too.
-    grid = was;
-    grid.at(4, 0).corners = { 0, 1, 1, 1 };
-    CHECK(drain_moved(water, falls, was, grid));
-    CHECK(water.bodies.empty());
+        // Three tiles of water, the middle one raised.
+        save::model::TerrainGrid wide = was;
+        wide.at(3, 0).corners = { 1, 1, 1, 1 };
+        save::model::WaterLayer one;
+        one.bodies.push_back(*fill_water(wide, { 1, 0 }, 3, any));
+        REQUIRE(holds(one.bodies[0], { 4, 0 }));
+        save::model::TerrainGrid split = wide;
+        split.at(3, 0).corners = { 5, 5, 5, 5 };
+        CHECK(settle_water(one, falls, wide, split));
+        REQUIRE(one.bodies.size() == 2);
+        CHECK(one.bodies[0].level == 3);
+        CHECK(one.bodies[1].level == 3);
+        CHECK(holds(one.bodies[0], { 2, 0 }) != holds(one.bodies[1], { 2, 0 }));
+        CHECK(holds(one.bodies[0], { 4, 0 }) != holds(one.bodies[1], { 4, 0 }));
+    }
+    SUBCASE("ground dug beside it floods")
+    {
+        save::model::TerrainGrid grid = was;
+        grid.at(3, 0).corners = { 2, 4, 2, 4 }; // Open to the lake, shut to the dip beyond
+        CHECK(settle_water(water, falls, was, grid));
+        REQUIRE(water.bodies.size() == 2);
+        CHECK(water.bodies[0].level == 3);
+        CHECK(holds(water.bodies[0], { 3, 0 }));
+        CHECK(holds(water.bodies[1], { 4, 0 }));
+    }
+    SUBCASE("a bank cut open lowers it to the highest whole level that holds")
+    {
+        save::model::TerrainGrid open = was;
+        open.at(5, 0).corners = { 0, 0, 0, 0 }; // Dry low ground beyond the bank, as the stroke found it
+        save::model::WaterLayer high;
+        high.bodies.push_back(*fill_water(open, { 1, 0 }, 3, any));
+        save::model::TerrainGrid cut = open;
+        cut.at(3, 0).corners = { 2.5f, 2.5f, 2.5f, 2.5f };
+        cut.at(4, 0).corners = { 1, 1, 1, 0 };
+        CHECK(settle_water(high, falls, open, cut));
+        REQUIRE(high.bodies.size() == 1);
+        CHECK(high.bodies[0].level == 2);
+        CHECK(holds(high.bodies[0], { 1, 0 }));
+        CHECK_FALSE(holds(high.bodies[0], { 3, 0 }));
+    }
+    SUBCASE("it goes only when no level holds")
+    {
+        save::model::TerrainGrid open = was;
+        open.at(4, 0).corners = { 1, 4, 1, 4 };
+        open.at(5, 0).corners = { 0, 0, 0, 0 };
+        save::model::WaterLayer low;
+        low.bodies.push_back(*fill_water(open, { 4, 0 }, 2, any));
+        REQUIRE(low.bodies[0].tris.size() == 2);
+        save::model::TerrainGrid cut = open;
+        cut.at(4, 0).corners = { 1, 0, 1, 0 };
+        CHECK(settle_water(low, falls, open, cut));
+        CHECK(low.bodies.empty());
+    }
 }
 
-TEST_CASE("shaping the ground beside a waterfall takes it away with its lakes")
+TEST_CASE("shaping the ground beside a waterfall takes it away and keeps its lakes")
 {
     const save::model::TerrainGrid was = valley();
     save::model::WaterLayer water;
     water.bodies.push_back(*fill_water(was, { 1, 0 }, 2, any));
-    std::vector<save::model::Waterfall> falls(1);
+    std::vector<save::model::Waterfall> falls(2);
     falls[0].lip_left = falls[0].lip_right = { 20, 4, 2 }; // On tile 5's edge
     falls[0].top = { 6, 2, 2 };                            // Over tile 1
     falls[0].bottom = { 22, 0, 2 };
+    falls[1].lip_left = falls[1].lip_right = falls[1].bottom = { 2, 4, 2 }; // On tile 0
+    falls[1].top = { 6, 2, 2 };
     save::model::TerrainGrid grid = was;
     grid.at(5, 0).corners = { 5, 5, 5, 5 };
-    CHECK(drain_moved(water, falls, was, grid));
-    CHECK(falls.empty());
+    CHECK(settle_water(water, falls, was, grid));
+    REQUIRE(falls.size() == 1);
+    CHECK(falls[0].lip_left.x == 2);
+    CHECK(water.bodies.size() == 1);
+
+    // Its lake dried under it: it goes too.
+    save::model::TerrainGrid dry = was;
+    dry.at(1, 0).corners = { 4, 4, 4, 4 };
+    dry.at(2, 0).corners = { 4, 4, 4, 4 };
+    falls[0].lip_left = falls[0].lip_right = falls[0].bottom = { 22, 4, 2 }; // Far from the tiles moved
+    falls[0].top = { 10, 2, 2 };                                             // Over tile 2
+    CHECK(settle_water(water, falls, was, dry));
     CHECK(water.bodies.empty());
+    CHECK(falls.empty());
 }
 
 TEST_CASE("taking a lake away puts back the ground its waterfalls cut")

@@ -2,7 +2,8 @@
 //
 // What closes what in a park. One panel at a time at the bottom of the screen: opening a tool menu, the map or a
 // files window puts the tool out away, the paths button closes the open menu, and an item list goes with its menu.
-// A ride's window shares that place: it and a tool's panel put each other away.
+// A ride's window shares that place: it and a tool's panel put each other away. The path panel starts clean each
+// time it opens.
 //
 //   ./nob script scripts/tests/ui_rules.ts -- --no-intro --no-audio --no-simulate --seed 1
 
@@ -117,5 +118,25 @@ await frames(6);
 expect(ui.find("park_map") !== undefined && ui.find("info") === undefined, "the map to put the ride's window away");
 await ui.click("park_map/close");
 await frames(6);
+
+// 4. The path panel starts clean: what was switched on is off again, and no trail goes on.
+await press("Paths");
+const fresh = ui.find("footpaths/status")?.text;
+await ui.click("footpaths/remove");
+await ui.click("footpaths/straight");
+await frames(2);
+expect(ui.find("footpaths/remove")?.on === true && ui.find("footpaths/straight")?.on === true, "the remove and straight tabs switched on");
+await ui.click("footpaths/remove");
+await pointer.click(0.55, 0.5);
+await frames(6);
+expect(ui.find("footpaths/status")?.text !== fresh, `a trail started on the ground, the band no longer "${fresh}"`);
+await screenshot("path_trail_started");
+await ui.click("footpaths/close");
+await frames(4);
+await press("Paths");
+expect(ui.find("footpaths/remove")?.on === false && ui.find("footpaths/straight")?.on === false && ui.find("footpaths/route")?.on === false, "the tabs off again");
+expect(ui.find("footpaths/status")?.text === fresh, `no trail going on, the band "${fresh}" again and not "${ui.find("footpaths/status")?.text}"`);
+await screenshot("path_panel_clean");
+await press("Paths");
 
 quit(0);

@@ -147,7 +147,8 @@ namespace rct3::ui::screens
     public:
         FootpathPanel(std::string name, FootpathPanelStyle style, const StringTable& strings);
 
-        /// Opens the panel with the styles to choose from and the controls page out.
+        /// Opens the panel with the styles to choose from, the controls page out and the route, straight and remove
+        /// tabs off.
         void show(std::vector<FootpathStyle> paths, std::vector<FootpathStyle> queues);
         void hide();
         [[nodiscard]] bool showing() const

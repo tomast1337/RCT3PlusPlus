@@ -128,6 +128,7 @@ namespace rct3::ui::screens
         Summary, ///< The money, and the ledger's last months a column each
         Ledger,  ///< Every month the park keeps, a row each
         Graphs,
+        Loan,        ///< The loan, set with a bar, and the cash it leaves in the months ahead
         Attractions, ///< What each attraction has taken
     };
 
@@ -136,6 +137,8 @@ namespace rct3::ui::screens
 
     /// The finances ledger's control picking the line its last column shows, by index of the summary's lines.
     inline constexpr int kLedgerLineControl = 0;
+    /// The finances loan page's bar setting the loan, in hundredths, a simulation::park::kLoanStep at a time.
+    inline constexpr int kLoanControl = 0;
 
     /// The finances ledger's button writing it out (ledger_csv), by its place among the page's buttons.
     inline constexpr std::size_t kExportLedgerButton = 0;

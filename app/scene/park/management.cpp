@@ -163,9 +163,15 @@ namespace rct3::scene::park
                     asks.research_focus.emplace(std::nullopt);
             }
             const auto change = window->take_change();
-            // The ledger's line picked shows at once.
-            if (change && topic == ui::screens::ManagementTopic::Finances)
+            // The ledger's line picked shows at once; the loan once it has moved, on the next update.
+            const ui::screens::FinancePage finance = ui::screens::finance_page(window->tab(), units.original_finances);
+            if (change && topic == ui::screens::ManagementTopic::Finances && finance == ui::screens::FinancePage::Ledger)
                 show(*window, topic, facts, strings, units);
+            if (change && topic == ui::screens::ManagementTopic::Finances && finance == ui::screens::FinancePage::Loan && change->id == ui::screens::kLoanControl)
+            {
+                asks.loan = change->value;
+                window->age_page();
+            }
             if (change && topic == ui::screens::ManagementTopic::Research)
             {
                 if (change->id == ui::screens::kResearchBudgetControl)

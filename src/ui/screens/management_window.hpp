@@ -28,6 +28,7 @@
 
 #include <array>
 #include <cstddef>
+#include <limits>
 #include <optional>
 #include <string>
 #include <utility>
@@ -173,6 +174,11 @@ namespace rct3::ui::screens
         [[nodiscard]] float page_age() const
         {
             return page_age_;
+        }
+        /// Makes the page as old as can be, so it is made again on the next update, once what it shows has moved.
+        void age_page()
+        {
+            page_age_ = std::numeric_limits<float>::infinity();
         }
         [[nodiscard]] std::optional<widgets::ColumnTable&> table() const
         {

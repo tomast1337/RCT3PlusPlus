@@ -2192,6 +2192,14 @@ namespace rct3::scene::park
             buy_land_tool(scene, asks.buy_rights ? rct3::park::LandBuy::Rights : rct3::park::LandBuy::Land, assets);
         if (asks.borrow)
             simulation::park::change_loan(scene.park, scene.park_model.finance.max_loan, *asks.borrow);
+        // A step at a time, as the buttons do, until the loan reaches the bar's or can move no more.
+        if (asks.loan)
+        {
+            const bool borrow = *asks.loan > scene.park.loan;
+            while (*asks.loan != scene.park.loan && (*asks.loan > scene.park.loan) == borrow && simulation::park::change_loan(scene.park, scene.park_model.finance.max_loan, borrow))
+            {
+            }
+        }
         if (asks.research_budget)
             scene.research.budget = *asks.research_budget;
         if (asks.research_focus && scene.research_items)

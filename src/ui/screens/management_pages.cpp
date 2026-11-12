@@ -49,10 +49,11 @@ namespace rct3::ui::screens
             { { "CashGraphTabIcon", "FinancialSummary_GraphsHelp" }, FinancePage::Graphs },
         } };
         // Ours: the longer ledger and the attractions' takings.
-        constexpr std::array<FinanceTab, 4> kFinanceTabs = { {
+        constexpr std::array<FinanceTab, 5> kFinanceTabs = { {
             { { "FinancialSummaryTabIcon", "FinancialSummary_MonthlySummaryHelp" }, FinancePage::Summary },
             { { "Man_Finances", "Rct3pp_Finance_Ledger" }, FinancePage::Ledger },
             { { "CashGraphTabIcon", "FinancialSummary_GraphsHelp" }, FinancePage::Graphs },
+            { { "Attraction_Finances", "Rct3pp_Finance_Loan" }, FinancePage::Loan },
             { { "AttractionListDialogIconAllAttractions", "Rct3pp_Finance_Attractions" }, FinancePage::Attractions },
         } };
         constexpr std::array<TabSpec, 4> kGuestTabs = { {
@@ -493,6 +494,33 @@ namespace rct3::ui::screens
                 const std::optional<std::int64_t> line = ledger_value(period, kLedger[pick]);
                 page.rows.push_back({ { ledger_month(strings, now, p), money(units, in), money(units, out), money(units, in - out), line ? money(units, -*line) : std::u16string(kDash) }, { -static_cast<double>(p), static_cast<double>(in), static_cast<double>(out), static_cast<double>(in - out), line ? std::optional(static_cast<double>(-*line)) : std::nullopt }, p });
             }
+        }
+
+        void finance_loan(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
+        {
+            const save::model::Finance* m = f.park != nullptr && f.park->has_finance ? &f.park->finance : nullptr;
+            const auto line = [&](std::string_view key, std::u16string value) { page.lines.push_back({ text(strings, key), std::move(value), false, std::string(key) }); };
+            if (m == nullptr || f.state == nullptr)
+            {
+                page.note = text(strings, kNotRead);
+                return;
+            }
+            constexpr auto kWeeksPerMonth = static_cast<std::int64_t>(save::model::GameClock::kUnitsPerMonth / save::model::GameClock::kUnitsPerWeek);
+            const std::int64_t loan = f.state->loan;
+            const std::int64_t weekly = simulation::park::weekly_interest(loan, m->interest_rate_percent);
+            line("FinancialSummary_Loan", money(units, loan));
+            line("FinancialSummary_MaxLoan", money(units, m->max_loan));
+            line("Money_LoanInterest", ascii(std::format("{:.1f} % ", m->interest_rate_percent)) + text(strings, "FinancialSummary_PercentPerYear"));
+            line("Rct3pp_Loan_WeeklyInterest", money(units, weekly));
+            line("Rct3pp_Loan_MonthlyInterest", money(units, kWeeksPerMonth * weekly));
+            // The cash ahead: last month's profit as if it had paid no interest, less a month of it on this loan.
+            // shortcut: one month's profit stands for every month ahead; average the months kept if it swings.
+            const std::optional<std::int64_t> month = m->ledger.size() > 1 && f.state->cash ? std::optional(-m->ledger[1].raw_sum() + m->ledger[1].loan_interest - kWeeksPerMonth * weekly) : std::nullopt;
+            for (const auto& [key, months] : { std::pair { "Rct3pp_Loan_In1", 1 }, { "Rct3pp_Loan_In2", 2 }, { "Rct3pp_Loan_In3", 3 }, { "Rct3pp_Loan_In6", 6 } })
+                line(key, month ? money(units, *f.state->cash + months * *month) : std::u16string(kDash));
+            const bool movable = f.state->cash.has_value() && m->max_loan > 0;
+            page.controls.push_back({ .id = kLoanControl, .name = "FinancialSummary_Loan", .kind = InfoControlKind::Bar, .label = text(strings, "FinancialSummary_Loan"), .value = static_cast<int>(loan), .maximum = static_cast<int>(m->max_loan), .step = static_cast<int>(simulation::park::kLoanStep), .shown = money(units, loan), .enabled = movable, .help = text(strings, "Rct3pp_Loan_BarHelp") });
+            page.note = text(strings, "Rct3pp_Loan_Note");
         }
 
         void finance_attractions(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
@@ -1146,6 +1174,9 @@ namespace rct3::ui::screens
                         break;
                     case FinancePage::Graphs:
                         finance_graphs(page, facts, strings, units);
+                        break;
+                    case FinancePage::Loan:
+                        finance_loan(page, facts, strings, units);
                         break;
                     case FinancePage::Attractions:
                         finance_attractions(page, facts, strings, units);

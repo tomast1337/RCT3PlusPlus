@@ -56,6 +56,9 @@ TEST_CASE("the bar sits centred along the top, its items inside it and in order"
     float last = r.x0;
     for (const auto& child : f.bar->children())
     {
+        // Hidden ones may share a place with another, as the money's two arrows do.
+        if (!child->visible)
+            continue;
         const Rect c = child->rect();
         CHECK(c.x0 >= last);
         CHECK(c.x1 <= r.x1);
@@ -117,10 +120,12 @@ TEST_CASE("the bar's values are written from the park's state")
 
     // After a month, an arrow the way it went, and its profit under the pointer.
     strings.add("Rct3pp_LastMonthProfit", u"Last month:");
-    CHECK(park_bar_values(state, 0.75f, strings, units, 2500).money == u"\u2191-$1,500.75");
+    CHECK_FALSE(v.money_rose);
+    CHECK(park_bar_values(state, 0.75f, strings, units, 2500).money_rose == true);
+    CHECK(park_bar_values(state, 0.75f, strings, units, 2500).money == u"-$1,500.75");
     CHECK(park_bar_values(state, 0.75f, strings, units, 2500).money_help == u"Last month: $25.00");
-    CHECK(park_bar_values(state, 0.75f, strings, units, -2500).money == u"\u2193-$1,500.75");
-    CHECK(park_bar_values(state, 0.75f, strings, units, 0).money == u"-$1,500.75");
+    CHECK(park_bar_values(state, 0.75f, strings, units, -2500).money_rose == false);
+    CHECK_FALSE(park_bar_values(state, 0.75f, strings, units, 0).money_rose);
 
     state.cash.reset();
     units.fahrenheit = true;
@@ -255,4 +260,27 @@ TEST_CASE("the bar's last button turns the people's highlights on and off, off a
     f.click(f.bar->highlight_button());
     f.desktop.update({ });
     CHECK_FALSE(f.bar->highlights());
+}
+
+TEST_CASE("an arrow before the money shows which way last month went")
+{
+    Fixture f;
+    const auto shown = [&](std::string_view name) { return f.bar->find(name)->visible; };
+    CHECK_FALSE(shown("money_rose"));
+    CHECK_FALSE(shown("money_fell"));
+    ParkBarValues v;
+    v.money_rose = true;
+    v.money_help = u"Last month: $25.00";
+    f.bar->show(v);
+    CHECK(shown("money_rose"));
+    CHECK_FALSE(shown("money_fell"));
+    CHECK(f.bar->find("money_rose")->tooltip == u"Last month: $25.00");
+    CHECK(f.bar->find("money_rose")->rect().x1 <= f.bar->money().rect().x0);
+    v.money_rose = false;
+    f.bar->show(v);
+    CHECK_FALSE(shown("money_rose"));
+    CHECK(shown("money_fell"));
+    v.money_rose.reset();
+    f.bar->show(v);
+    CHECK_FALSE(shown("money_fell"));
 }

@@ -644,6 +644,7 @@ namespace rct3::ui::game_skins
         s.thumb_up = "Top_ThumbsUp";
         s.weather_icons = { "IconSun", "IconCloudWithSun", "IconCloud", "IconLightRain", "IconHeavyRain", "IconThunderstorm", "IconSnow" };
         s.forecast_arrow = "IconWeatherArrow";
+        s.money_trend_icons = { "ArrowUp", "ArrowDown" };
         s.day_mode_icons = { "GUI2_DayNightCycle_DayNight", "GUI2_DayNightCycle_Day", "GUI2_DayNightCycle_Night" };
         s.highlight_icons = { "Guest_Group_Disabled", "Guest_Group" };
         return s;

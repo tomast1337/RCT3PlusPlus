@@ -44,9 +44,12 @@ namespace rct3::ui::screens
         constexpr float kSpeedHeight = 13;
         constexpr float kMoneyWidth = 100;
         constexpr float kNarrowMoneyWidth = 90; ///< While the day mode button shows
-        constexpr float kArcRadius = 24;        ///< From the day mode button's middle to each mode's
-        constexpr float kArcSpread = 0.8f;      ///< Radians between neighbouring modes in the arc
-        constexpr float kDoubleClick = 0.4f;    ///< Seconds within which a second click on the money counts
+        /// The arrow before the money, out of its width. Chosen by eye: square, as tall as the money's figures.
+        constexpr float kTrendWidth = 9;
+        constexpr float kTrendHeight = 9;
+        constexpr float kArcRadius = 24;     ///< From the day mode button's middle to each mode's
+        constexpr float kArcSpread = 0.8f;   ///< Radians between neighbouring modes in the arc
+        constexpr float kDoubleClick = 0.4f; ///< Seconds within which a second click on the money counts
         constexpr float kGuestsWidth = 40;
         constexpr float kThumbWidth = 12;
         constexpr float kThumbHeight = 15;
@@ -135,7 +138,7 @@ namespace rct3::ui::screens
         if (state.cash && last_month_profit)
         {
             if (*last_month_profit != 0)
-                v.money = (*last_month_profit > 0 ? u"\u2191" : u"\u2193") + v.money;
+                v.money_rose = *last_month_profit > 0;
             v.money_help = std::u16string(strings.get(kLastMonthProfit)) + u" " + money_text(units.currency, *last_month_profit);
         }
         v.guests = ascii(std::to_string(state.guests));
@@ -187,6 +190,11 @@ namespace rct3::ui::screens
             speeds_[i] = &add<widgets::Button>(style_.speed_icons[i], std::string { }, style_.speed_icons[i]);
             speeds_[i]->tooltip = strings_.get(kSpeedHelp[i]);
         }
+        for (std::size_t i = 0; i < money_trend_.size(); ++i)
+        {
+            money_trend_[i] = &add<widgets::Panel>(i == 0 ? "money_rose" : "money_fell", style_.money_trend_icons[i]);
+            money_trend_[i]->visible = false;
+        }
         money_ = &add<widgets::Button>("money", std::string { });
         money_->text_colour = style_.text_colour;
         guests_ = &label("guests", Align::Centre);
@@ -226,7 +234,9 @@ namespace rct3::ui::screens
         x = put(*day_mode_, day ? x + kWide : x, day ? kSmallIcon : 0, kSmallIcon);
         for (std::size_t i = 0; i < speeds_.size(); ++i)
             x = put(*speeds_[i], x + kWide, kSpeedWidths[i], kSpeedHeight);
-        x = put(*money_, x + kNarrow, day ? kNarrowMoneyWidth : kMoneyWidth, park_bar::kHeight - park_bar::kLowerEdge);
+        for (widgets::Panel* trend : money_trend_)
+            put(*trend, x + kNarrow, kTrendWidth, kTrendHeight);
+        x = put(*money_, x + kNarrow + kTrendWidth, (day ? kNarrowMoneyWidth : kMoneyWidth) - kTrendWidth, park_bar::kHeight - park_bar::kLowerEdge);
         x = put(*guests_, x + kNarrow, kGuestsWidth, park_bar::kHeight - park_bar::kLowerEdge);
         x = put(*thumb_down_, x + kWide, kThumbWidth, kThumbHeight);
         x = put(*rating_area_, x + kNarrow, kRatingWidth, kRatingHeight);
@@ -249,6 +259,10 @@ namespace rct3::ui::screens
         show_speed();
         money_->text = values.money;
         money_->tooltip = values.money_help;
+        money_trend_[0]->visible = values.money_rose == true;
+        money_trend_[1]->visible = values.money_rose == false;
+        for (widgets::Panel* trend : money_trend_)
+            trend->tooltip = values.money_help;
         guests_->text = values.guests;
         temperature_->text = values.temperature;
         date_->text = values.date;

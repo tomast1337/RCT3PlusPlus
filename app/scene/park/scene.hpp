@@ -574,6 +574,9 @@ namespace rct3::scene::park
         std::vector<glm::mat4> car_mesh_places;                             ///< car_places, then each arm car's joints from the base out
         std::vector<std::optional<rct3::park::track::TrackCourse>> courses; ///< By ride, of those whose track is known whole
         std::vector<rct3::park::track::TrackRules> track_rules;             ///< By ride, what its kind asks of its track; defaults past the end
+        /// The ride improvements (rct3::park::track::builtin_improvements) not invented yet, by id: their pieces cannot be
+        /// built. None in a park from the original game, which offers every piece.
+        std::vector<std::string> locked_improvements;
         std::vector<entt::entity> ride_entities;
         std::vector<simulation::RideGroup> ride_groups;     ///< By ride, for the scenario's coaster goals and the awards
         std::int32_t awards_month = -1;                     ///< The calendar month the awards were last looked at in

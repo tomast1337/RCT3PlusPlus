@@ -85,6 +85,15 @@
             "MoneyHelp": "Show money spent and paid back floating up where it happens",
             "GuestPaymentsHelp": "Show what guests pay at rides and stalls floating up from their entrances"
         },
+        "Improvement": {
+            "Loops": "Vertical loops",
+            "Corkscrews": "Corkscrews",
+            "Rolls": "Rolls and twists",
+            "Launches": "Launched sections",
+            "Helixes": "Helixes",
+            "Splashes": "Water splashes",
+            "Locked": "Not invented yet: %NAME%. Research ride improvements to build it."
+        },
         "Command": {
             "Cancel": "Close, cancel, go back",
             "DefaultButton": "Default button",

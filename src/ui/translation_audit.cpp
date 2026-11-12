@@ -16,8 +16,9 @@ namespace rct3::ui
     namespace
     {
 
-        constexpr std::array<std::string_view, 3> kFolders = { "src", "app", "tools" };
-        constexpr std::array<std::string_view, 3> kExtensions = { ".cpp", ".hpp", ".h" };
+        // With the data tables of ours that name string keys, as the ride improvements do.
+        constexpr std::array<std::string_view, 4> kFolders = { "src", "app", "tools", "assets/simulation" };
+        constexpr std::array<std::string_view, 4> kExtensions = { ".cpp", ".hpp", ".h", ".json" };
         /// What comes right before a literal that is looked up as a key.
         constexpr std::array<std::string_view, 6> kLookups = { "strings.get(", "strings->get(", "strings_.get(", "get_ignoring_case(", "str(strings,", "text(strings," };
 

@@ -1,0 +1,41 @@
+{
+  "about": "Ride improvements research can invent: families of special track pieces. Each has an id (saves and scripts name it by this), the string key of its name, its research cost in hundredths of the currency, and the words that mark its pieces: a piece picked by name whose name holds one, in any case, belongs to it. Costs are in the range of the attractions research invents. Parks from the original game start with every improvement invented.",
+  "improvements": [
+    {
+      "id": "loops",
+      "name": "Rct3pp_Improvement_Loops",
+      "cost": 20000,
+      "pieces": ["loop"]
+    },
+    {
+      "id": "corkscrews",
+      "name": "Rct3pp_Improvement_Corkscrews",
+      "cost": 18000,
+      "pieces": ["corkscrew"]
+    },
+    {
+      "id": "rolls",
+      "name": "Rct3pp_Improvement_Rolls",
+      "cost": 16000,
+      "pieces": ["roll", "twist"]
+    },
+    {
+      "id": "launches",
+      "name": "Rct3pp_Improvement_Launches",
+      "cost": 24000,
+      "pieces": ["launchsection", "launchedlifthill"]
+    },
+    {
+      "id": "helixes",
+      "name": "Rct3pp_Improvement_Helixes",
+      "cost": 12000,
+      "pieces": ["helix"]
+    },
+    {
+      "id": "splashes",
+      "name": "Rct3pp_Improvement_Splashes",
+      "cost": 10000,
+      "pieces": ["watersplash"]
+    }
+  ]
+}

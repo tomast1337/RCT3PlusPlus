@@ -172,7 +172,8 @@ namespace rct3::ui::screens
         std::string icon { }; ///< Skin of its picture: one with a picture stands as a picture button, not in the list
         /// Skins of the small marks before its name in the list, its way's then its kind's; empty for none.
         std::array<std::string, 2> marks { };
-        bool offered = true; ///< It can go on where the track ends; greyed otherwise
+        bool offered = true;       ///< It can go on where the track ends; greyed otherwise
+        std::u16string locked { }; ///< Help saying which ride improvement it waits for; empty when it waits for none
     };
 
     /// What the panel shows: one state per button, the piece's name and price, the named pieces.

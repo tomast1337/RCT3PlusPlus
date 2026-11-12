@@ -119,6 +119,15 @@ namespace rct3::ui::widgets
         }
     }
 
+    void ListBox::on_hover(Point p)
+    {
+        // A list without help by row keeps whatever help it was given.
+        if (tips.empty())
+            return;
+        const auto row = row_at(p);
+        tooltip = row && *row < tips.size() ? tips[*row] : std::u16string { };
+    }
+
     bool ListBox::on_wheel(Point notches)
     {
         return bar_->on_wheel(notches);

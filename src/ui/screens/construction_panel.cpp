@@ -238,6 +238,7 @@ namespace rct3::ui::screens
         list_->items.clear();
         list_->icons.clear();
         list_->greyed.clear();
+        list_->tips.clear();
         std::optional<std::size_t> picked;
         for (const std::size_t index : listed_)
         {
@@ -247,6 +248,7 @@ namespace rct3::ui::screens
             list_->items.push_back(piece.name);
             list_->icons.emplace_back(piece.marks.begin(), piece.marks.end());
             list_->greyed.push_back(!piece.offered);
+            list_->tips.push_back(piece.locked);
         }
         // Selected only when it changes, so the player can scroll away from it.
         if (list_->selected() != picked)
@@ -259,7 +261,7 @@ namespace rct3::ui::screens
                 continue;
             const NamedPiece& piece = view_.named[pictured_[i]];
             b.icon = piece.icon;
-            b.tooltip = piece.name;
+            b.tooltip = piece.locked.empty() ? piece.name : piece.locked;
             b.on = view_.named_on == pictured_[i];
             b.enabled = piece.offered;
             // With no face to light, the picked one shows by the others fading.

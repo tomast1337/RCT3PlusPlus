@@ -52,6 +52,7 @@ namespace rct3::ui::widgets
         std::vector<std::u16string> items;
         std::vector<std::vector<std::string>> icons; ///< Skins of the pictures before each row's text, by row
         std::vector<bool> greyed;                    ///< By row; rows past its end are not
+        std::vector<std::u16string> tips;            ///< By row, help while the pointer rests on it; when set, rows past its end have none
 
         [[nodiscard]] std::optional<std::size_t> selected() const
         {
@@ -87,6 +88,7 @@ namespace rct3::ui::widgets
         }
         void on_press(Point p) override;
         void on_drag(Point p) override;
+        void on_hover(Point p) override;
         bool on_wheel(Point notches) override;
         bool on_key(const KeyPress& key) override;
         void update(const UpdateContext& context) override;

@@ -157,3 +157,13 @@ TEST_CASE("an empty list leaves the keys to its parents")
     CHECK(list.selected() == 0u);
     CHECK_FALSE(list.on_key({ Key::Escape }));
 }
+
+TEST_CASE("a row with help shows it while the pointer rests on it")
+{
+    Fixture f;
+    f.list.tips = { u"", u"Waits for an improvement" };
+    f.desktop.update({ { 20, 25 }, false, true });
+    CHECK(f.list.tooltip == u"Waits for an improvement");
+    f.desktop.update({ { 20, 5 }, false, true });
+    CHECK(f.list.tooltip.empty());
+}

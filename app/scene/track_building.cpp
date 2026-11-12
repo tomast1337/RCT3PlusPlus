@@ -22,6 +22,7 @@
 #include "park/track/completion.hpp"
 #include "park/track/edit.hpp"
 #include "park/track/ground.hpp"
+#include "park/track/improvements.hpp"
 #include "park/track/rules.hpp"
 #include "park/track/split.hpp"
 #include "park/water/fill.hpp"
@@ -106,6 +107,7 @@ namespace rct3::scene
         constexpr std::string_view kNotOwned = "PlaceObject_NotOwned"; ///< A piece off land the park owns
         constexpr std::string_view kInGround = "PlaceObject_IntersectsGround";
         constexpr std::string_view kCostLabel = "ShopItem_CostValue";
+        constexpr std::string_view kImprovementLocked = "Rct3pp_Improvement_Locked"; ///< Help on a piece waiting for its improvement
         /// The roles track files give pieces (ovl::TrackSection::role) that have a picture of their own in the
         /// construction panel, and the picture.
         struct RoleIcon
@@ -565,6 +567,7 @@ namespace rct3::scene
             b.test.reset(); // A test runs the track as it was
             const rct3::park::track::PieceCatalogue* c = catalogue(b);
             b.candidates.clear();
+            b.locked = scene.locked_improvements;
             b.picked.reset();
             b.ghost.reset();
             b.ghost_mesh = { };
@@ -620,6 +623,8 @@ namespace rct3::scene
             }
             // Only the pieces its kind lists, not others of the same track overlay.
             std::erase_if(b.candidates, [&](const rct3::park::track::LaidPiece& l) { return !rct3::park::track::lists_piece(rules, c->pieces[l.index].record.name); });
+            // Nor those whose ride improvement is not invented yet.
+            std::erase_if(b.candidates, [&](const rct3::park::track::LaidPiece& l) { return rct3::park::track::locking_improvement(rct3::park::track::builtin_improvements(), b.locked, c->pieces[l.index]).has_value(); });
             // Only pieces that can be laid there, so a piece offered one way round is not hidden by the other.
             if (!starting)
                 std::erase_if(b.candidates, [&](const rct3::park::track::LaidPiece& l) { return !rct3::park::track::place_after(*b.tip, c->pieces[l.index], l.reversed, scene.grid); });
@@ -808,11 +813,19 @@ namespace rct3::scene
         };
 
         /// Every piece of `c` with a use of its own that `rules` let the ride build, stations first, then in the
-        /// file's order, once for each name and marks; those `o` offers where the track ends are offered.
-        std::vector<ListedPiece> listed_pieces(const ui::StringTable& strings, const rct3::park::track::PieceCatalogue& c, const rct3::park::track::TrackRules& rules, const rct3::park::track::ChoiceOptions& o)
+        /// file's order, once for each name and marks; those `o` offers where the track ends are offered. Those
+        /// waiting for a ride improvement still `locked` say so.
+        std::vector<ListedPiece> listed_pieces(const ui::StringTable& strings, const rct3::park::track::PieceCatalogue& c, const rct3::park::track::TrackRules& rules, const rct3::park::track::ChoiceOptions& o, std::span<const std::string> locked)
         {
             const auto shown_as = [&](const rct3::park::track::PieceShape& p) {
                 ui::screens::NamedPiece n { .name = piece_name(strings, p.record.name), .offered = false };
+                if (const auto waits = rct3::park::track::locking_improvement(rct3::park::track::builtin_improvements(), locked, p))
+                {
+                    n.locked = strings.get(kImprovementLocked);
+                    constexpr std::u16string_view kNameMark = u"%NAME%";
+                    if (const auto at = n.locked.find(kNameMark); at != std::u16string::npos)
+                        n.locked.replace(at, kNameMark.size(), strings.get(waits->name));
+                }
                 // Its kind, as its name says.
                 // shortcut: read from the section's name, upgrade if a ride names its pieces otherwise.
                 std::string name = p.record.name;
@@ -897,7 +910,7 @@ namespace rct3::scene
                 if ((o.any_toggles & bit) != 0)
                     v.toggles.at(i) = state_of((b.choice.toggles & o.toggles & bit) != 0, (o.toggles & bit) != 0);
             }
-            for (ListedPiece& l : listed_pieces(*assets.strings, *c, rules, o))
+            for (ListedPiece& l : listed_pieces(*assets.strings, *c, rules, o, scene.locked_improvements))
             {
                 if (l.laid && b.choice.named == l.laid)
                     v.named_on = v.named.size();
@@ -1232,7 +1245,7 @@ namespace rct3::scene
                 const rct3::park::track::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : rct3::park::track::TrackRules { };
                 b.completing = rct3::park::track::start_completion(c->pieces, *b.tip, *last, rct3::park::track::start_of(scene.objects[object->second], *shape, first.reversed, scene.grid), start, scene.grid, [&scene, &b, &assets, c, rules, taken = taken_room(scene, b)](save::model::PlacedObject o) {
                     o.overlay = b.overlay;
-                    const bool listed = std::ranges::any_of(c->pieces, [&](const rct3::park::track::PieceShape& p) { return p.record.item == o.symbol && rct3::park::track::lists_piece(rules, p.record.name); });
+                    const bool listed = std::ranges::any_of(c->pieces, [&](const rct3::park::track::PieceShape& p) { return p.record.item == o.symbol && rct3::park::track::lists_piece(rules, p.record.name) && !rct3::park::track::locking_improvement(rct3::park::track::builtin_improvements(), scene.locked_improvements, p); });
                     return listed && !off_water(scene, b, assets, o) && !clashes(scene, taken, o);
                 });
                 return;
@@ -2354,7 +2367,8 @@ namespace rct3::scene
             return;
         }
         const rct3::park::track::PieceCatalogue* c = catalogue(b);
-        bool changed = false;
+        // An improvement invented or locked since the pieces were offered offers them anew.
+        bool changed = b.locked != scene.locked_improvements;
         // The round panel's ring, in this order: the ride's window, turning the first piece, the construction
         // strip, its state, the colours of the pieces built next, and cutting the ground smoothly or sharply, one
         // of the two always lit. The turn shows greyed while it does nothing.
@@ -2596,7 +2610,7 @@ namespace rct3::scene
                 case Named:
                 {
                     const rct3::park::track::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : rct3::park::track::TrackRules { };
-                    const std::vector<ListedPiece> list = listed_pieces(*assets.strings, *c, rules, rct3::park::track::choice_options(c->pieces, b.candidates, b.choice));
+                    const std::vector<ListedPiece> list = listed_pieces(*assets.strings, *c, rules, rct3::park::track::choice_options(c->pieces, b.candidates, b.choice), scene.locked_improvements);
                     if (event->index < list.size() && list[event->index].laid)
                         b.choice.named = list[event->index].laid;
                     break;

@@ -45,7 +45,7 @@ namespace rct3::ui
         std::vector<std::pair<std::string, SourcePlace>> lookups;
     };
 
-    /// The keys the sources under `root` (the repository) name.
+    /// The keys the sources and data tables under `root` (the repository) name.
     [[nodiscard]] CodeKeys scan_code(const std::filesystem::path& root);
 
     /// Literals in `code` that are keys for certain but `strings` lacks: our own keys (kOwnKeyPrefix) in full,

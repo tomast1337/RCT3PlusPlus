@@ -116,6 +116,7 @@ namespace rct3::scene
         };
         std::optional<Lift> lift;
         std::vector<rct3::park::track::LaidPiece> candidates;
+        std::vector<std::string> locked; ///< The ride improvements locked when `candidates` were worked out
         rct3::park::track::TrackChoice choice;
         bool station_first = false; ///< The choice is still to be set to the station of a track being begun
         std::optional<rct3::park::track::LaidPiece> picked;

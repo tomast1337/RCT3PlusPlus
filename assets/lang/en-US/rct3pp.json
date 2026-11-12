@@ -114,7 +114,15 @@
             "MonthsLeft": "About # months left",
             "NothingLeft": "Nothing left to research",
             "Locked": "Not invented yet",
-            "UnderWay": "Being researched"
+            "UnderWay": "Being researched",
+            "Invented": "Invented",
+            "NothingYet": "Nothing invented yet",
+            "Coming": "Coming next",
+            "Area": "Area",
+            "Cost": "Cost",
+            "Focus": "Focus on this (costs %AMOUNT%)",
+            "Unfocus": "Stop focusing",
+            "Focused": "Focused on:"
         }
     }
 }

@@ -185,10 +185,22 @@ namespace rct3::scene::park
             return item != catalogue.end() ? std::optional(static_cast<std::size_t>(item - catalogue.begin())) : std::nullopt;
         }
 
+        /// The string key of the name of the park's content entry `id`, as its build list or path style names it;
+        /// empty when neither is known.
+        std::string_view content_name(const ParkScene& scene, std::uint64_t id)
+        {
+            if (const auto item = content_item(scene, id))
+                return scene.build.items.get()[*item].name_text;
+            const auto entry = std::ranges::find(scene.park_model.content.entries, id, &save::model::AssetRequirement::id);
+            if (entry == scene.park_model.content.entries.end() || (entry->kind != save::model::AssetKind::PathType && entry->kind != save::model::AssetKind::QueueType))
+                return { };
+            const auto style = std::ranges::find_if(scene.footpaths.styles, [&](const rct3::park::path::PathStyle& s) { return s.queue == (entry->kind == save::model::AssetKind::QueueType) && strings::equals_ignoring_case(s.name, entry->symbol); });
+            return style != scene.footpaths.styles.end() ? std::string_view(style->name_text) : std::string_view { };
+        }
+
         ui::screens::ManagementFacts management_facts(const ParkScene& scene)
         {
             const auto broken = simulation::replacement(scene.sim, [&](std::uint64_t object) { return replace_price(scene, object); });
-            const auto researching = scene.research.current ? content_item(scene, *scene.research.current) : std::nullopt;
             return {
                 .park = &scene.park_model,
                 .state = &scene.park,
@@ -202,7 +214,7 @@ namespace rct3::scene::park
                 .zero_time = scene.park.zero_time,
                 .research = &scene.research,
                 .research_left = scene.research_items ? std::optional(std::span<const simulation::ResearchItem>(*scene.research_items)) : std::nullopt,
-                .researching = researching ? std::string_view(scene.build.items.get()[*researching].name_text) : std::string_view { },
+                .research_name = [&scene](std::uint64_t id) { return content_name(scene, id); },
             };
         }
 
@@ -1011,15 +1023,9 @@ namespace rct3::scene::park
                     entry->invented = true;
                     using save::model::AssetKind;
                     const auto item = content_item(scene, entry->id);
-                    std::string_view name_text = item ? std::string_view(catalogue[*item].name_text) : std::string_view { };
-                    if (entry->kind == AssetKind::PathType || entry->kind == AssetKind::QueueType)
-                    {
-                        if (const auto found = std::ranges::find_if(scene.footpaths.styles, [&](const rct3::park::path::PathStyle& s) { return s.queue == (entry->kind == AssetKind::QueueType) && strings::equals_ignoring_case(s.name, entry->symbol); }); found != scene.footpaths.styles.end())
-                            name_text = found->name_text;
-                    }
                     const std::string_view key = entry->kind == AssetKind::Scenery ? simulation::kInventedSceneryKey : entry->kind == AssetKind::PathType ? simulation::kInventedPathKey : entry->kind == AssetKind::QueueType ? simulation::kInventedQueueKey : simulation::kInventedKey;
                     // Named as its build list names it.
-                    const std::u16string_view name = assets.strings->get_ignoring_case(name_text);
+                    const std::u16string_view name = assets.strings->get_ignoring_case(content_name(scene, entry->id));
                     simulation::park::post(scene.park.messages, { .text_key = std::string(key), .subject_name = name.empty() ? entry->symbol : strings::to_utf8(name), .build_item = item });
                 }
                 if (scene.research.invented.size() != had)
@@ -2140,6 +2146,8 @@ namespace rct3::scene::park
             simulation::park::change_loan(scene.park, scene.park_model.finance.max_loan, *asks.borrow);
         if (asks.research_budget)
             scene.research.budget = *asks.research_budget;
+        if (asks.research_focus && scene.research_items)
+            (void)simulation::focus_research(scene.research, *asks.research_focus, *scene.research_items);
         // Areas past the end of the priorities weigh the most until set.
         if (const auto& p = asks.research_priority; p && p->first < simulation::kResearchAreas)
         {

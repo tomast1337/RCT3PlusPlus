@@ -315,7 +315,7 @@ TEST_CASE("the research window sets the budget and a priority an area")
     s.add("Carousel_Name", u"Carousel");
     simulation::Research research { .budget = 5000, .spent = 4000, .current = 7, .priorities = { 0.5f, 0.25f, 1.0f } };
     std::vector<simulation::ResearchItem> left { { .id = 7, .area = simulation::ResearchArea::GentleRides, .cost = 16000 } };
-    ManagementPage page = management_page(ManagementTopic::Research, 0, { .research = &research, .research_left = left, .researching = "Carousel_Name" }, s, kUnits);
+    ManagementPage page = management_page(ManagementTopic::Research, 0, { .research = &research, .research_left = left, .research_name = [](std::uint64_t) { return std::string_view("Carousel_Name"); } }, s, kUnits);
     CHECK(value_of(page, u"Researching:") == u"Carousel");
     REQUIRE(page.lines.size() == 2);
     CHECK(page.lines[1].label == u"About 3 months left"); // 120.00 left at 50.00 a month
@@ -336,6 +336,43 @@ TEST_CASE("the research window sets the budget and a priority an area")
     page = management_page(ManagementTopic::Research, 0, { .research = &research, .research_left = left }, s, kUnits);
     CHECK(value_of(page, u"Researching:") == u"Nothing left");
     CHECK(page.lines.size() == 1);
+}
+
+TEST_CASE("the research window lists what was invented, newest first, with its date")
+{
+    StringTable s = test_strings();
+    s.add("Carousel_Name", u"Carousel");
+    save::model::ParkModel park;
+    park.content.entries = { { .id = 7 }, { .id = 8 } };
+    const simulation::Research research { .invented = { 7, 8 }, .invented_at = { 0, 8 * save::model::GameClock::kUnitsPerMonth } }; // A year apart
+    const ManagementPage page = management_page(ManagementTopic::Research, kInventedTab, { .park = &park, .research = &research, .research_name = [](std::uint64_t id) { return std::string_view(id == 7 ? "Carousel_Name" : ""); } }, s, kUnits);
+    REQUIRE(page.rows.size() == 2);
+    CHECK(page.sort == 1);
+    CHECK(page.sort_descending);
+    CHECK(page.rows[0].cells[0] == u"Carousel");
+    CHECK(page.rows[1].cells[0] == u"-"); // Not named
+    CHECK(page.rows[0].cells[1] != page.rows[1].cells[1]);
+    CHECK(management_row(page.rows[1].id).index == 1);
+}
+
+TEST_CASE("the research window's list of what may come next offers a focus on the row picked")
+{
+    StringTable s = test_strings();
+    s.add("Rct3pp_Research_Focus", u"Focus (%AMOUNT%)");
+    const simulation::Research research { .budget = 20000, .current = 1 };
+    const std::vector<simulation::ResearchItem> left {
+        { .id = 1, .area = simulation::ResearchArea::Shops, .cost = 10000 },
+        { .id = 2, .area = simulation::ResearchArea::Shops, .cost = 6000 },
+        { .id = 3, .area = simulation::ResearchArea::Coasters, .cost = 24000 },
+    };
+    ManagementPage page = management_page(ManagementTopic::Research, kComingTab, { .research = &research, .research_left = left }, s, kUnits);
+    CHECK(page.rows.size() == 2); // Not the item under way
+    REQUIRE(page.buttons.size() == 2);
+    CHECK_FALSE(page.buttons[kFocusButton].enabled);
+    CHECK_FALSE(page.buttons[kUnfocusButton].enabled);
+    page = management_page(ManagementTopic::Research, kComingTab, { .research = &research, .research_left = left, .research_pick = 2 }, s, kUnits);
+    CHECK(page.buttons[kFocusButton].enabled);
+    CHECK(page.buttons[kFocusButton].text == u"Focus (" + money(9000) + u")"); // 60.00 half as much again
 }
 
 TEST_CASE("without challenges the window says there are none")

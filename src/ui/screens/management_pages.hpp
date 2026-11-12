@@ -21,6 +21,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <span>
 #include <string>
@@ -87,7 +88,10 @@ namespace rct3::ui::screens
         const simulation::Research* research = nullptr;     ///< As it runs
         /// What is left to invent, once the build lists say what each item is.
         std::optional<std::span<const simulation::ResearchItem>> research_left { };
-        std::string_view researching { }; ///< String key of the name of the item being worked on
+        /// The string key of the name of a research item (simulation::ResearchItem::id); empty when unknown.
+        std::function<std::string_view(std::uint64_t)> research_name { };
+        /// The item picked on the research window's list of what may come next.
+        std::optional<std::uint64_t> research_pick { };
     };
 
     /// The park operations window's tab of the awards won and fines received.
@@ -118,6 +122,15 @@ namespace rct3::ui::screens
     /// 200.00 a month scenarios usually set aside.
     inline constexpr int kResearchBudgetStep = 5000;
     inline constexpr int kMostResearchBudget = 100000;
+    /// The research window's tabs after the priorities: what has been invented and when, and what may come next.
+    inline constexpr std::size_t kInventedTab = 1;
+    inline constexpr std::size_t kComingTab = 2;
+    /// The buttons under the list of what may come next: focusing research on the item picked, and ending the
+    /// focus.
+    inline constexpr std::size_t kFocusButton = 0;
+    inline constexpr std::size_t kUnfocusButton = 1;
+    /// Items listed of each area as what may come next. Chosen by eye: a few to pick from without a long list.
+    inline constexpr std::size_t kComingPerArea = 3;
 
     /// The button on each page of the attractions window that puts every listed attraction in the state of the
     /// choice picked, by its place among the page's buttons, and those states by the place of their choice.

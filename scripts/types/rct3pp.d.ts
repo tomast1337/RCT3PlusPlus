@@ -48,7 +48,7 @@ declare namespace clipboard {
 
 declare namespace ui {
     /** The middle of the widget at `path` (such as "tools/Land/Land") and its edges, or undefined when it is not shown;
-     * `on` for a toggle button or a tick box, `text` for an edit box or a label, `tooltip` for one with help. */
+     * `on` for a toggle button or a tick box, `text` for an edit box, a label or a button with words, `tooltip` for one with help. */
     function find(path: string): { x: number; y: number; left: number; top: number; right: number; bottom: number; on?: boolean; text?: string; tooltip?: string } | undefined;
     /** Moves the pointer to the widget at `path`, presses and lets go. Throws when it is not shown. */
     function click(path: string): Promise<void>;
@@ -98,9 +98,14 @@ declare namespace park {
     /** The building and research lines of the newest month's ledger, in hundredths: spending above zero, refunds below. */
     function ledger(): { landPurchase: number; landscaping: number; rideConstruction: number; research: number };
     /** Research: the monthly budget and what is counted towards the current item (hundredths), the current item and
-     *  those invented since the original park, by symbol, how many items are left (null until the build lists are read),
-     *  and the priority of each research area from 0 to 1, in the research window's order (areas past the end weigh 1). */
-    function research(): { budget: number; spent: number; current: string | null; invented: (string | null)[]; left: number | null; priorities: number[] };
+     *  those invented since the original park, by symbol, with the calendar time each was invented (as park.date()),
+     *  the item research is focused on, the cheapest few of each area that may come next, how many items are left
+     *  (null until the build lists are read), and the priority of each research area from 0 to 1, in the research
+     *  window's order (areas past the end weigh 1). */
+    function research(): { budget: number; spent: number; current: string | null; invented: (string | null)[]; inventedAt: number[]; focus: string | null; next: (string | null)[]; left: number | null; priorities: number[] };
+    /** Focuses research on the item left to research named `symbol`, at once and at a higher cost, or with null ends
+     *  the focus. False when no such item is left. */
+    function focusResearch(symbol: string | null): boolean;
     /** Sets the monthly research budget, in hundredths of the currency; nought stops research. `priorities` weighs
      *  each research area in the research window's order, as research() gives them. */
     function setResearch(hundredths: number, priorities?: number[]): void;

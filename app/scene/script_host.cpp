@@ -30,6 +30,7 @@
 #include "strings/unicode.hpp"
 #include "ui/key_combo.hpp"
 #include "ui/screens/attraction_info.hpp"
+#include "ui/screens/management_pages.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/label.hpp"
@@ -223,6 +224,8 @@ namespace rct3::scene
             Json found { { "x", (r.x0 + r.x1) / 2 * across }, { "y", (r.y0 + r.y1) / 2 * down }, { "left", r.x0 * across }, { "top", r.y0 * down }, { "right", r.x1 * across }, { "bottom", r.y1 * down } };
             if (const auto* b = dynamic_cast<const ui::widgets::Button*>(core::as_pointer(w)); b != nullptr && b->toggle)
                 found["on"] = b->on;
+            if (const auto* b = dynamic_cast<const ui::widgets::Button*>(core::as_pointer(w)); b != nullptr && !b->text.empty())
+                found["text"] = strings::to_utf8(b->text);
             if (const auto* t = dynamic_cast<const ui::widgets::Tickbox*>(core::as_pointer(w)); t != nullptr)
                 found["on"] = t->ticked;
             if (const auto* e = dynamic_cast<const ui::widgets::EditBox*>(core::as_pointer(w)); e != nullptr)
@@ -321,7 +324,27 @@ namespace rct3::scene
             Json invented = Json::array();
             for (const std::uint64_t id : r.invented)
                 invented.push_back(symbol(id));
-            return { { "budget", r.budget }, { "spent", r.spent }, { "current", r.current ? symbol(*r.current) : Json(nullptr) }, { "invented", std::move(invented) }, { "left", scene.research_items ? Json(scene.research_items->size()) : Json(nullptr) }, { "priorities", r.priorities } };
+            Json next = Json::array();
+            if (scene.research_items)
+            {
+                for (const simulation::ResearchItem& i : simulation::research_preview(r, *scene.research_items, ui::screens::kComingPerArea))
+                    next.push_back(symbol(i.id));
+            }
+            return { { "budget", r.budget }, { "spent", r.spent }, { "current", r.current ? symbol(*r.current) : Json(nullptr) }, { "invented", std::move(invented) }, { "inventedAt", r.invented_at }, { "focus", r.focus ? symbol(*r.focus) : Json(nullptr) }, { "next", std::move(next) }, { "left", scene.research_items ? Json(scene.research_items->size()) : Json(nullptr) }, { "priorities", r.priorities } };
+        });
+        engine_.define("park.focusResearch", [this](const Json& a) -> Json {
+            if (a.size() != 1 || !(a[0].is_string() || a[0].is_null()))
+                throw std::invalid_argument("park.focusResearch takes the symbol of an item left to research, or null to end the focus");
+            park::ParkScene& scene = park_of(park_);
+            if (!scene.research_items)
+                return Json(false);
+            if (a[0].is_null())
+                return Json(simulation::focus_research(scene.research, std::nullopt, *scene.research_items));
+            const auto item = std::ranges::find_if(*scene.research_items, [&](const simulation::ResearchItem& i) {
+                const auto entry = std::ranges::find(scene.park_model.content.entries, i.id, &save::model::AssetRequirement::id);
+                return entry != scene.park_model.content.entries.end() && entry->symbol == a[0].get<std::string>();
+            });
+            return Json(item != scene.research_items->end() && simulation::focus_research(scene.research, item->id, *scene.research_items));
         });
         engine_.define("park.setResearch", [this](const Json& a) -> Json {
             if (a.empty() || a.size() > 2 || !a[0].is_number_integer() || a[0].get<std::int64_t>() < 0 || (a.size() == 2 && !a[1].is_array()))

@@ -664,7 +664,8 @@ namespace rct3::scene::park
             if (input.right || input.middle)
                 scene.press.reset();
             // A right click deletes what is under the pointer with the tools that build or place things one by one, as
-            // the delete menu's tool does, and the tool stays out; the other tools are put away. Escape puts any away.
+            // the delete menu's tools do, and with the structure tools; the tool stays out. Only a land tool is put
+            // away. Escape puts any away.
             if (input.right && !scene.right_press && !over)
                 scene.right_press = pointer.position;
             else if (!input.right && scene.right_press)
@@ -675,17 +676,13 @@ namespace rct3::scene::park
                 const bool still = std::abs(pointer.position.x - from.x) <= kClickSlack && std::abs(pointer.position.y - from.y) <= kClickSlack;
                 if (!still)
                     ;
-                else if (scene.structures.tool != StructureTools::Tool::None)
-                    stop_structure_tools(scene);
-                else if (scene.deleting.tool == DeleteTools::Tool::Area)
-                    stop_deleting(scene);
                 else if (scene.pooling.item)
                 {
                     // A pool tool takes up the pool square pointed at first.
                     if (!over && !delete_pool_square(device, scene, assets, pointer.position, { screen.width(), screen.height() }))
                         delete_under(pointer.position, { screen.width(), screen.height() });
                 }
-                else if (ride_placing(scene) || scene.deleting.tool == DeleteTools::Tool::One || scene.enclosing.item)
+                else if (ride_placing(scene) || scene.deleting.tool != DeleteTools::Tool::None || scene.enclosing.item || scene.structures.tool != StructureTools::Tool::None)
                 {
                     if (!over)
                         delete_under(pointer.position, { screen.width(), screen.height() });

@@ -172,11 +172,16 @@ expect(ui.find("land_panel") !== undefined, "the shaping tool's panel");
 await escape("tools/Land/Land_Brush_Height");
 expect(ui.find("land_panel") === undefined, "the shaping tool put away by Escape");
 
+await plant();
 if (!ui.find("tools/Delete/GUI2_DeleteSelection"))
     await ui.click("tools/Delete/Obj_Delete");
 await ui.click("tools/Delete/GUI2_DeleteSelection");
 await frames(2);
 expect(ui.find("delete_area") !== undefined, "the area delete panel");
+await pointer.click(tx, ty - 0.03, "right");
+await frames(3);
+expect(trees() === 0, "the tree deleted by a right click with the area delete tool");
+expect(ui.find("delete_area") !== undefined, "the area delete tool still out after the right click");
 await escape("tools/Delete/GUI2_DeleteSelection");
 expect(ui.find("delete_area") === undefined, "the area delete tool put away by Escape");
 
@@ -206,11 +211,16 @@ pointer.release();
 await frames(2);
 expect(fencing === undefined, "no fence drawn once Escape put the fence tool away");
 
+await plant();
 await ui.click("tools/Scenery/Obj_Scenery");
 await ui.click("tools/Scenery/SavedSelection_SubMenu");
 await ui.click("tools/Scenery/SavedSelection_Grab");
 await frames(2);
 expect(ui.find("structure_grab") !== undefined, "the picking out panel");
+await pointer.click(tx, ty - 0.03, "right");
+await frames(3);
+expect(trees() === 0, "the tree deleted by a right click with the picking out tool");
+expect(ui.find("structure_grab") !== undefined, "the picking out tool still out after the right click");
 await escape("tools/Scenery/SavedSelection_Grab");
 expect(ui.find("structure_grab") === undefined, "the picking out tool put away by Escape");
 

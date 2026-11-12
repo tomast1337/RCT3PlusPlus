@@ -4,7 +4,7 @@
 // files window puts the tool out away, the paths button closes the open menu, and an item list goes with its menu.
 // A ride's window shares that place: it and a tool's panel put each other away. The path panel starts clean each
 // time it opens. Escape closes what is on top, one thing a press, and asks to leave only once nothing is left.
-// Loading asks first whether to save.
+// Loading asks first whether to save. A right click leaves the delete and structure tools out.
 //
 //   ./nob script scripts/tests/ui_rules.ts -- --no-intro --no-audio --no-simulate --seed 1
 
@@ -227,5 +227,17 @@ await ui.click("load_question/content/answer0");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window after yes");
 await screenshot("save_window");
 await escape();
+
+// 7. A right click deletes what is under the pointer and leaves the tool out (scripts/tests/right_click_delete.ts
+// checks what goes); here the area delete and the picking out tools stay after one.
+await pick("Delete", "GUI2_DeleteSelection");
+await until(() => ui.find("delete_area") !== undefined, 120, "the area delete panel");
+await pointer.click(0.55, 0.5, "right");
+await frames(4);
+expect(ui.find("delete_area") !== undefined, "the area delete tool to stay out after a right click");
+await screenshot("right_click_keeps_tool");
+await escape();
+await escape();
+expect(ui.find("delete_area") === undefined && open_menu() === "", "Escape to close the menu and then the tool");
 
 quit(0);

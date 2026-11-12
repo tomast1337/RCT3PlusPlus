@@ -4,6 +4,7 @@
 // files window puts the tool out away, the paths button closes the open menu, and an item list goes with its menu.
 // A ride's window shares that place: it and a tool's panel put each other away. The path panel starts clean each
 // time it opens. Escape closes what is on top, one thing a press, and asks to leave only once nothing is left.
+// Loading asks first whether to save.
 //
 //   ./nob script scripts/tests/ui_rules.ts -- --no-intro --no-audio --no-simulate --seed 1
 
@@ -204,5 +205,27 @@ expect(asked.length > 0 && !asked.includes("tutorial"), `the question not to spe
 await screenshot("leave_question");
 await escape();
 expect(ui.find(question) === undefined, "Escape to answer no");
+
+// 6. Loading asks first whether to save: yes opens the save window, no the load window, cancel neither.
+await pick("Files", "File_LoadGame");
+await until(() => ui.find("load_question") !== undefined, 120, "the question before loading");
+expect(ui.find("park_files") === undefined, "no file window before the answer");
+await screenshot("load_question");
+await escape();
+expect(ui.find("load_question") === undefined && ui.find("park_files") === undefined, "Escape to cancel loading");
+await pick("Files", "File_LoadGame");
+await until(() => ui.find("load_question") !== undefined, 120, "the question again");
+await ui.click("load_question/content/answer1");
+await until(() => ui.find("park_files") !== undefined, 120, "the load window after no");
+log("files", JSON.stringify(ui.children("park_files")), JSON.stringify(ui.children("park_files/content")), JSON.stringify(ui.find("park_files/title")));
+await screenshot("load_window");
+await escape();
+expect(ui.find("park_files") === undefined, "Escape to close the load window");
+await pick("Files", "File_LoadGame");
+await until(() => ui.find("load_question") !== undefined, 120, "the question a third time");
+await ui.click("load_question/content/answer0");
+await until(() => ui.find("park_files") !== undefined, 120, "the save window after yes");
+await screenshot("save_window");
+await escape();
 
 quit(0);

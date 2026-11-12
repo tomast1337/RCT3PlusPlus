@@ -8,6 +8,7 @@
 #include "ui/language.hpp"
 #include "ui/screens/about_window.hpp"
 #include "ui/screens/file_dialog.hpp"
+#include "ui/widgets/question_box.hpp"
 
 #include <algorithm>
 #include <array>
@@ -27,6 +28,10 @@ namespace rct3::scene::park
         constexpr std::string_view kAboutName = "about";
         constexpr std::string_view kFilesName = "park_files";
         constexpr std::string_view kStructureFilesName = "structure_files";
+        constexpr std::string_view kLoadQuestionName = "load_question"; ///< Asks whether to save before another game is loaded
+        constexpr std::string_view kLoadQuestionTitle = "FSM_SaveBeforeLoad_Title";
+        constexpr std::string_view kLoadQuestionText = "FSM_SaveBeforeLoad_Message";
+        constexpr std::array<std::string_view, 3> kLoadAnswers { "SMB_Label_Yes", "SMB_Label_No", "SMB_Label_Cancel" };
         constexpr std::u16string_view kStructureName = u"MyBuilding"; ///< Offered for a new structure, as in the game
         /// A new sandbox starts from the blank landscape in the game's folder; its first save is offered this name.
         constexpr std::string_view kBlankLandscape = "BlankLandscape";
@@ -129,9 +134,21 @@ namespace rct3::scene::park
                 open_options(park, front);
             else if (item == ui::screens::ToolItem::Save)
                 open_files(park, front, ui::screens::FileDialogMode::Save);
-            else if (item == ui::screens::ToolItem::Load)
-                open_files(park, front, ui::screens::FileDialogMode::Load);
+            else if (item == ui::screens::ToolItem::Load && !park.desktop->root().find(kLoadQuestionName))
+            {
+                // Loading drops the park as it is, so it asks first whether to save it.
+                const ui::StringTable& strings = *front.assets.strings;
+                std::vector<ui::widgets::QuestionAnswer> answers;
+                for (const std::string_view answer : kLoadAnswers)
+                    answers.push_back({ std::u16string(strings.get(answer)), { } });
+                auto& box = park.desktop->root().add<ui::widgets::QuestionBox>(std::string(kLoadQuestionName), skins::question_box_style(front.assets.palette), std::u16string(strings.get(kLoadQuestionText)), answers);
+                box.title = std::u16string(strings.get(kLoadQuestionTitle));
+            }
         }
+        // Yes opens the save window, no the load window, and cancel neither.
+        if (auto question = park.desktop->root().find_as<ui::widgets::QuestionBox>(kLoadQuestionName))
+            if (const auto answer = question->take_answer(); answer && *answer < 2)
+                open_files(park, front, *answer == 0 ? ui::screens::FileDialogMode::Save : ui::screens::FileDialogMode::Load);
         if (auto picked = update_save_browser(device, park.saves, file_dialog(park), park.file_windows_opened, park.game, [&park](const std::filesystem::path& path) {
                 // Saved again, it is offered under this name.
                 park.file = path;

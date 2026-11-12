@@ -2809,12 +2809,12 @@ namespace rct3::scene
         if (std::exchange(b.offer_designs, false) && !browser)
         {
             const ui::StringTable& strings = *assets.strings;
-            // shortcut: a design opens once any career of the base game has completed its scenario, not only the
-            // one being played; upgrade once the park knows its career.
+            // A design opens by what the career being played has done; outside a career, by the best of them all.
             std::vector<career::Career> careers;
             if (scene.saves.data)
                 for (career::CareerEntry& e : career::list_careers(scene.saves.data->folder(config::UserFolder::Careers), 0, std::nullopt))
-                    careers.push_back(std::move(e.data.career));
+                    if (scene.game.career.empty() || e.path == scene.game.career)
+                        careers.push_back(std::move(e.data.career));
             const auto heading = [&](std::string_view key) {
                 std::u16string h(strings.get(key));
                 while (!h.empty() && (h.back() == u':' || h.back() == u' '))

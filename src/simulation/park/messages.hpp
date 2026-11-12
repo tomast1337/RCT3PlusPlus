@@ -26,15 +26,16 @@ namespace rct3::simulation::park
 
     struct ParkMessage
     {
-        std::uint64_t serial = 0;                 ///< Counts up from 1 in the order messages joined the list
-        std::string text_key { };                 ///< Names the message's text in the string table
-        float age = 0;                            ///< Game seconds since it was posted
-        std::optional<std::uint64_t> subject { }; ///< The object the message is about
-        std::string subject_name { };             ///< Its name when the message was posted; may be empty
-        std::optional<std::int32_t> panel { };    ///< The info panel's tab its subject opens at, by number (ui::screens::kMessageTabs); none or negative keeps the last
-        std::optional<std::int32_t> award { };    ///< Award messages: which award
-        std::string field_key { };                ///< Text key filling its other field, such as a breakdown's kind; none drops the field
-        std::optional<std::int64_t> number { };   ///< Fills the %d in its text, such as how many a crash hurt
+        std::uint64_t serial = 0;                  ///< Counts up from 1 in the order messages joined the list
+        std::string text_key { };                  ///< Names the message's text in the string table
+        float age = 0;                             ///< Game seconds since it was posted
+        std::optional<std::uint64_t> subject { };  ///< The object the message is about
+        std::string subject_name { };              ///< Its name when the message was posted; may be empty
+        std::optional<std::int32_t> panel { };     ///< The info panel's tab its subject opens at, by number (ui::screens::kMessageTabs); none or negative keeps the last
+        std::optional<std::int32_t> award { };     ///< Award messages: which award
+        std::string field_key { };                 ///< Text key filling its other field, such as a breakdown's kind; none drops the field
+        std::optional<std::int64_t> number { };    ///< Fills the %d in its text, such as how many a crash hurt
+        std::optional<std::size_t> build_item { }; ///< An item of the build lists it is about, such as an invention, by its place in them
     };
 
     struct ParkMessages

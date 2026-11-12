@@ -129,6 +129,9 @@ namespace rct3::ui::screens
         {
             return picked_;
         }
+        /// Marks the row of `item` (the owner's number for it), opening its heading, without picking it.
+        // shortcut: the list is not scrolled to the row; scroll it once lists grow long enough to hide it.
+        void show_item(std::size_t item);
         /// What the park can pay; items dearer are shaded. None: money never runs out.
         std::optional<std::int64_t> cash;
         /// A line under the grid, e.g. to say what the window leaves out.

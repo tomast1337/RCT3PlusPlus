@@ -2,7 +2,8 @@
 //
 // Research in a scenario that budgets for it: over a few months attractions are invented, each told in a
 // message and offered in the build lists, the money booked as research spending; the research window sets the
-// budget and the areas' priorities; saved and opened again, research is where it was. A sandbox does none.
+// budget and the areas' priorities; saved and opened again, research is where it was, and an invention's message
+// opens its build list on it. A sandbox does none.
 //
 //   ./nob script scripts/tests/research.ts -- --no-audio
 
@@ -118,6 +119,35 @@ await until(() => park.research().left !== null, 1200, "the saved park's items l
 log("research reloaded:", JSON.stringify(park.research()));
 expect(JSON.stringify(park.research()) === before, `research as saved, not ${JSON.stringify(park.research())}`);
 expect(after.invented.every((symbol) => build.offers(symbol!) === true), "each invention still offered");
+
+// The newest invention's message leads to the item in its build list, marked there.
+const inventedBefore = park.research().invented.length;
+const newest = () => park.messages().at(-1);
+for (let i = 0; i < 60 && !(park.research().invented.length > inventedBefore && newest()?.key === "Invented_Attraction"); ++i) {
+    park.setDate(park.date() + 30);
+    await frames(3);
+}
+const invention = park.research().invented.at(-1)!;
+expect(newest()?.key === "Invented_Attraction", `an invention's message the newest, not ${newest()?.key}`);
+const drawerWidth = 480;
+const drawerOpen = 360;
+const isOpen = () => {
+    const d = ui.find("messages")!;
+    return d.bottom - d.top > ((d.right - d.left) * (drawerOpen - 1)) / drawerWidth / 2;
+};
+for (let tries = 0; tries < 3 && !isOpen(); ++tries) {
+    const d = ui.find("messages")!;
+    await pointer.click(d.x, d.y);
+    await pointer.click(d.x, d.y);
+    await frames(30);
+}
+const drawer = ui.find("messages")!;
+await pointer.click(drawer.left + ((drawer.right - drawer.left) * 27) / drawerWidth, drawer.bottom - ((drawer.bottom - drawer.top) * 35) / drawerOpen); // The newest message's icon
+await until(() => ui.find("build_list") !== undefined, 60, "the build list");
+await frames(5);
+log("invention:", invention, "shown at", JSON.stringify(ui.find(under("build_list", invention) ?? "build_list")));
+expect(under("build_list", invention) !== undefined && ui.find(under("build_list", invention)!) !== undefined, `${invention} shown in its list`);
+await screenshot("invention_list");
 
 // A sandbox budgets nothing and invents nothing.
 await park.open("Campaigns/Base/BlankLandscape.dat");

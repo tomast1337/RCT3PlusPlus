@@ -109,6 +109,18 @@ TEST_CASE("a heading opens to show its rows and is not picked")
     CHECK(after.rect().x0 == heading.rect().x0 + 2 * build_picker::kTile);
 }
 
+TEST_CASE("showing an item marks it and opens its heading without picking it")
+{
+    Fixture f({ row(u"Set", 1, { row(u"Piece", 2) }), row(u"After", 3) });
+    f.picker->show_item(2);
+    f.step();
+    CHECK(f.picker->rows()[0]->open);
+    CHECK(f.picker->rows()[1]->visible);
+    CHECK(f.picker->rows()[1]->picked);
+    CHECK_FALSE(f.picker->rows()[0]->picked); // The heading has the same item number as its first row
+    CHECK_FALSE(f.picker->take_picked().has_value());
+}
+
 TEST_CASE("the items fill as many columns as the panel is wide")
 {
     std::vector<PickerRow> rows;

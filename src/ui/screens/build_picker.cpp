@@ -138,6 +138,17 @@ namespace rct3::ui::screens
         return widgets::Window::on_key(key);
     }
 
+    void BuildPicker::show_item(std::size_t item)
+    {
+        for (BuildPickerRow* row : rows_)
+        {
+            row->picked = !row->is_heading() && row->row().item == item;
+            if (auto heading = row->heading(); heading && row->picked)
+                heading->open = true;
+        }
+        dirty_ = true;
+    }
+
     bool BuildPicker::shows(const PickerRow& row) const
     {
         if (!row.children.empty())

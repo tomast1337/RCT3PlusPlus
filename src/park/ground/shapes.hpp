@@ -38,6 +38,10 @@ namespace rct3::park::ground
     inline constexpr float kDragDeadZone = 25; ///< Pixels the pointer moves from where it pressed before the ground starts to move
     inline constexpr float kDragRate = 0.25f;  ///< Height units the middle of a brush moves for each pixel past that
 
+    inline constexpr float kSprayRate = 0.2f; ///< Height units a second the middle of a sprayed brush moves, for each step of the spray speed
+    inline constexpr int kFastestSpray = 9;   ///< The spray speed runs from 1 to this
+    inline constexpr int kDefaultSpray = 5;
+
     /// How far the middle of a dragged brush has gone with the pointer `pixels` up from where it pressed (down
     /// when negative): nothing inside the dead zone, then evenly, with no steps.
     [[nodiscard]] float drag_amount(float pixels);
@@ -50,9 +54,9 @@ namespace rct3::park::ground
     /// The ground as a stroke found it.
     struct GroundBefore
     {
-        int width = 0;                             ///< Of the grid, in tiles
-        std::vector<std::array<float, 4>> corners; ///< Every tile's own, row by row
-        std::vector<bool> held;                    ///< By corner point, (width + 1) by (height + 1), row by row
+        int width = 0;                                 ///< Of the grid, in tiles
+        std::vector<std::array<float, 4>> corners { }; ///< Every tile's own, row by row
+        std::vector<bool> held { };                    ///< By corner point, (width + 1) by (height + 1), row by row
     };
 
     /// The grid's ground as it is, its corner points held where `free` refuses a tile touching them.

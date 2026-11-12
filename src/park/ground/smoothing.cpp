@@ -21,12 +21,12 @@ namespace rct3::park::ground
             return glm::length(point - middle) <= reach;
         }
 
-        /// Part of the way from `from` to `to`, all of it once within kSettled, so the ground comes to rest.
-        float ease(float from, float to, float strength)
+        /// How strongly a brush works at `point`: all at its middle, falling off with the square of the distance
+        /// to nothing at its edge.
+        float weight_at(glm::vec2 point, glm::vec2 middle, float reach)
         {
-            constexpr float kSettled = 0.01f; ///< In height units.
-            const float next = from + (to - from) * strength;
-            return std::abs(to - next) < kSettled ? to : next;
+            const glm::vec2 off = (point - middle) / reach;
+            return std::max(1 - glm::dot(off, off), 0.0f);
         }
 
         constexpr float kSame = 0.001f; ///< Heights closer than this are one
@@ -55,9 +55,17 @@ namespace rct3::park::ground
         return count > 0 ? sum / static_cast<float>(count) : 0;
     }
 
-    float smooth_ground(save::model::TerrainGrid& grid, GroundSmoothing tool, glm::vec2 middle, float reach, float strength, float target, std::uint64_t seed, const std::function<bool(save::model::Tile)>& free)
+    float smooth_ground(save::model::TerrainGrid& grid, GroundSmoothing tool, glm::vec2 middle, float reach, float share, float most, float target, std::uint64_t seed, const std::function<bool(save::model::Tile)>& free)
     {
-        strength = std::clamp(strength, 0.0f, 1.0f);
+        if (reach <= 0)
+            return 0;
+        // Where a height goes on its way to `to`, at a point the brush works on with `weight`: never past it, and
+        // all of the way once within kSettled, so the ground comes to rest.
+        const auto ease = [&](float from, float to, float weight) {
+            constexpr float kSettled = 0.01f; ///< In height units
+            const float by = std::clamp((to - from) * std::min(weight * std::max(share, 0.0f), 1.0f), -weight * most, weight * most);
+            return weight > 0 && std::abs(to - from - by) < kSettled ? to : from + by;
+        };
         const int c0 = std::max(static_cast<int>(std::floor(middle.x - reach)), 0);
         const int c1 = std::min(static_cast<int>(std::ceil(middle.x + reach)), grid.width);
         const int r0 = std::max(static_cast<int>(std::floor(middle.y - reach)), 0);
@@ -69,13 +77,14 @@ namespace rct3::park::ground
             for (int r = r0; r < r1; ++r)
                 for (int c = c0; c < c1; ++c)
                 {
-                    if (!grid.contains(c, r) || !free({ c, r }) || !within(glm::vec2 { c + 0.5f, r + 0.5f }, middle, reach))
+                    const float weight = weight_at(glm::vec2 { c + 0.5f, r + 0.5f }, middle, reach);
+                    if (!grid.contains(c, r) || !free({ c, r }) || weight <= 0)
                         continue;
                     auto& corners = grid.at(c, r).corners;
                     const float level = std::round((corners[0] + corners[1] + corners[2] + corners[3]) / 4);
                     for (float& h : corners)
                     {
-                        const float to = ease(h, level, strength);
+                        const float to = ease(h, level, weight);
                         moved += std::abs(to - h);
                         h = to;
                     }
@@ -128,7 +137,8 @@ namespace rct3::park::ground
         for (int r = r0; r <= r1; ++r)
             for (int c = c0; c <= c1; ++c)
             {
-                if (!within(glm::vec2 { c, r }, middle, reach))
+                const float weight = weight_at(glm::vec2 { c, r }, middle, reach);
+                if (weight <= 0)
                     continue;
                 bool all_free = true;
                 float low = 1e9f;
@@ -160,16 +170,16 @@ namespace rct3::park::ground
                         switch (tool)
                         {
                             case GroundSmoothing::JoinEdges:
-                                to = ease(*h, sum / static_cast<float>(count), strength); // The one tool that closes a cliff
+                                to = ease(*h, sum / static_cast<float>(count), weight); // The one tool that closes a cliff
                                 break;
                             case GroundSmoothing::Average:
-                                to = *h + (averaged(c - 1 + dc, r - 1 + dr, c, r) - *h) * strength;
+                                to = ease(*h, averaged(c - 1 + dc, r - 1 + dr, c, r), weight);
                                 break;
                             case GroundSmoothing::Random:
-                                to = *h + (roll - 0.5f) * strength;
+                                to = ease(*h, *h + roll - 0.5f, weight);
                                 break;
                             case GroundSmoothing::Level:
-                                to = *h + (target - *h) * strength;
+                                to = ease(*h, target, weight);
                                 break;
                             default:
                                 break;

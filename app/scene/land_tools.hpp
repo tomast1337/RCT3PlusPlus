@@ -15,15 +15,24 @@
 // refused keeps its corners for the rest of the stroke. Scenery standing on the ground moves with it. A lake on
 // ground that moves settles on it (see Water below); a waterfall beside it goes.
 //
-// Raising and lowering, one tab: press on the ground and move the pointer up to raise a ridge, mountain, mesa or
+// Raising and lowering, one tab. Dragged: press on the ground and move the pointer up to raise a ridge, mountain, mesa or
 // hill there, or down to sink a canyon, trough or crater: once past a short dead zone the ground moves evenly
 // with the pointer (park/ground/shapes.hpp). Moved the other way, each makes its shape upside down: a mountain dragged down digs
 // a pit, a crater dragged up builds a mound. The shape reaches as far as the brush's radius from where the pointer pressed;
 // a ridge runs across the view. Ground the park does not own outright or that what stands on it holds stays;
 // a cliff under the brush moves with the ground and keeps its height. Each unit a tile's corner moves is paid for, once.
+// Sprayed, a raising brush only raises and a lowering one only lowers, under the pointer as it moves.
 //
-// Smoothing: holding the button works the ground under the brush a little more every moment
-// (park/ground/smoothing.hpp), following the pointer. Its tools by their place in the tab: average, level to
+// The mode tab sets how the raising, lowering and smoothing brushes are worked, for all of them at once:
+//   - Drag (as the panel opens): press and move the pointer up or down; the ground under the brush goes with
+//     it, both ways, and comes back when the pointer does. Good for fine work.
+//   - Spray: hold the button and the ground under the pointer goes one way, a little every moment, at the
+//     spray speed set by the tab's number (1 to 9); moving the pointer while holding leaves a trail. Good for
+//     big changes.
+//
+// Smoothing (park/ground/smoothing.hpp) is strongest at the brush's middle and falls off to its edge. Sprayed,
+// it works the ground under the pointer for as long as the button is held; dragged, it works the ground round
+// where the pointer pressed further the further the pointer is dragged, either way. Its tools by their place in the tab: average, level to
 // the height under the pointer as it moves, level to the height where the stroke began, level to that height's
 // whole unit (a flat pad for rides and scenery), join the tiles' edges, and square them. The game's data also holds pictures for roughening and a second whole-unit
 // level, but they are not usable (one picture is malformed, the other repeats a third), so those are left out.
@@ -135,11 +144,12 @@ namespace rct3::scene
             std::vector<save::model::Waterfall> waterfalls;
         };
         std::optional<Start> start;
-        std::optional<glm::vec3> cost_at;      ///< Where the stroke's cost is shown, once it has paid
-        float paid_for = 0;                    ///< The most ground the stroke has moved, already paid for
+        std::optional<glm::vec3> cost_at; ///< Where the stroke's cost is shown, once it has paid
+        float paid_for = 0;               ///< The most ground the stroke has moved, already paid for
+        bool spray = false;               ///< The brushes spray while held, rather than follow a drag
+        int spray_speed = rct3::park::ground::kDefaultSpray;
         std::optional<std::size_t> smoothing;  ///< The smoothing brush chosen, by its place in its tab
         float target = 0;                      ///< Of a levelling stroke
-        float held = 0;                        ///< Seconds of smoothing not yet applied
         std::uint64_t passes = 0;              ///< Of smoothing, the seed of each pass
         std::optional<std::size_t> upper_lake; ///< Of a waterfall: the lake picked first, of the park's water
         save::model::Tile upper_tile;          ///< Where it was picked

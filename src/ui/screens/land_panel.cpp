@@ -72,6 +72,17 @@ namespace rct3::ui::screens
         for (widgets::Button* b : tools_)
             (void)body_->remove(*b);
         tools_.clear();
+        if (number_)
+            (void)body_->remove(*std::exchange(number_, nullptr));
+        if (page_ && !data_[*page_].number.empty())
+        {
+            const LandTab& t = data_[*page_];
+            number_ = &body_->add<widgets::Spinner>(t.number, style_.size);
+            number_->minimum = t.number_least;
+            number_->maximum = t.number_most;
+            number_->set_value(t.number_value);
+            number_->tooltip = t.number_help;
+        }
         if (page_)
             for (const LandTool& t : data_[*page_].tools)
             {
@@ -97,7 +108,8 @@ namespace rct3::ui::screens
         if (!page_)
             return { 0, 0 };
         const auto columns = (tools_.size() + land_panel::kRows - 1) / land_panel::kRows;
-        return { land_panel::kToolCell * static_cast<float>(std::max<std::size_t>(columns, 1)), land_panel::kToolCell * static_cast<float>(land_panel::kRows) };
+        const float number = number_ ? land_panel::kNumberGap + land_panel::kSizeWidth : 0;
+        return { land_panel::kToolCell * static_cast<float>(std::max<std::size_t>(columns, 1)) + number, land_panel::kToolCell * static_cast<float>(land_panel::kRows) };
     }
 
     Rect LandPanel::disc() const
@@ -143,6 +155,8 @@ namespace rct3::ui::screens
             const auto row = static_cast<float>(i % land_panel::kRows);
             tools_[i]->placement = top_left(column * cell + 2, row * cell + 2, cell - 4, cell - 4);
         }
+        if (number_)
+            number_->placement = top_left(body.x - land_panel::kSizeWidth, (body.y - land_panel::kSizeHeight) / 2, land_panel::kSizeWidth, land_panel::kSizeHeight);
     }
 
     bool LandPanel::covers(Point p) const
@@ -171,6 +185,11 @@ namespace rct3::ui::screens
                 return;
             }
         (void)size_->take_change();
+        if (number_ && page_)
+        {
+            (void)number_->take_change();
+            data_[*page_].number_value = number_->value();
+        }
         status_->text.clear();
         if (page_)
             status_->text = data_[*page_].help;
@@ -180,8 +199,11 @@ namespace rct3::ui::screens
                 status_->text = data_[*page_].tools[i].help;
             if (tools_[i]->take_click())
             {
-                chosen_ = { *page_, i };
-                pick_now_ = chosen_;
+                pick_now_ = LandPick { *page_, i };
+                if (data_[*page_].setting)
+                    data_[*page_].on = i;
+                else
+                    chosen_ = *pick_now_;
             }
         }
     }
@@ -211,8 +233,9 @@ namespace rct3::ui::screens
             plain(shifted(slab, info_panel::kShadowOffset), top, c.shadow);
             plain(slab, top, c.body);
             plain({ slab.x0, slab.y0, slab.x1, slab.y0 + c.band_height }, top, c.band);
-            if (chosen_.tab == *page_ && chosen_.tool < tools_.size())
-                plain(tools_[chosen_.tool]->rect(), round_corners((land_panel::kToolCell - 4) / 2), style_.chosen);
+            const LandTab& tab = data_[*page_];
+            if (const std::size_t marked = tab.setting ? tab.on : chosen_.tool; (tab.setting || chosen_.tab == *page_) && marked < tools_.size())
+                plain(tools_[marked]->rect(), round_corners((land_panel::kToolCell - 4) / 2), style_.chosen);
         }
 
         // The disc: round on the left, flat on the right where it meets the strip.

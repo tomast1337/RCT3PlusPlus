@@ -60,7 +60,7 @@ namespace rct3::ui::screens
     [[nodiscard]] ManagementLayout management_layout(ManagementTopic topic);
 
     /// The tabs of `topic`'s window, with their names.
-    [[nodiscard]] std::vector<ManagementTab> management_tabs(ManagementTopic topic, const StringTable& strings);
+    [[nodiscard]] std::vector<ManagementTab> management_tabs(ManagementTopic topic, const StringTable& strings, const InfoUnits& units);
 
     /// What the running park shows of a worker that their save does not hold: the colours they are drawn in
     /// (upper then lower clothes), the tiles of their patrol area (0 for none, the whole park) and whether the
@@ -70,6 +70,13 @@ namespace rct3::ui::screens
         std::array<std::uint8_t, 2> colours { };
         std::size_t patrol_tiles = 0;
         bool painting_patrol = false;
+    };
+
+    /// What an attraction has taken since the park was opened, which its saved totals do not hold yet.
+    struct AttractionTakings
+    {
+        std::int64_t income = 0; ///< Hundredths
+        std::int64_t customers = 0;
     };
 
     /// What the pages are written from. Any of it may be missing; its values then show as dashes.
@@ -92,6 +99,11 @@ namespace rct3::ui::screens
         std::function<std::string_view(std::uint64_t)> research_name { };
         /// The item picked on the research window's list of what may come next.
         std::optional<std::uint64_t> research_pick { };
+        /// The line the finances ledger shows in its last column (kLedgerLineControl).
+        std::size_t ledger_line = 0;
+        /// What the attraction with saved id `id` (save::model::AttractionCommon::id) has taken since the park was
+        /// opened; nothing when not given.
+        std::function<AttractionTakings(std::uint64_t)> takings { };
     };
 
     /// The park operations window's tab of the awards won and fines received.
@@ -109,7 +121,23 @@ namespace rct3::ui::screens
     /// price, by its place among the page's buttons. Our own: the game has no way to mend them.
     inline constexpr std::size_t kReplaceBrokenButton = 4;
 
-    /// The finances window's first page's buttons, by their place among its buttons: borrowing a step more and
+    /// The finances window's pages. Ours are on tabs in this order; the original's, which the player may ask for
+    /// (InfoUnits::original_finances), are the summary and the graphs.
+    enum class FinancePage : std::uint8_t
+    {
+        Summary, ///< The money, and the ledger's last months a column each
+        Ledger,  ///< Every month the park keeps, a row each
+        Graphs,
+        Attractions, ///< What each attraction has taken
+    };
+
+    /// The page on tab `tab` of the finances window, ours or the `original` layout's.
+    [[nodiscard]] FinancePage finance_page(std::size_t tab, bool original);
+
+    /// The finances ledger's control picking the line its last column shows, by index of the summary's lines.
+    inline constexpr int kLedgerLineControl = 0;
+
+    /// The finances window's summary's buttons, by their place among its buttons: borrowing a step more and
     /// repaying a step of the loan (see simulation::park::change_loan).
     inline constexpr std::size_t kBorrowButton = 0;
     inline constexpr std::size_t kRepayButton = 1;

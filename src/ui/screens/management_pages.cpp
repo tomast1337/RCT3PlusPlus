@@ -39,9 +39,21 @@ namespace rct3::ui::screens
             { "ParkInfoDialogIcon_Campaigns", "PID_TT_CampaignsTabPopUp" },
             { "ParkInfoDialogIcon_Awards", "PID_TT_AwardTabPopUp" },
         } };
-        constexpr std::array<TabSpec, 2> kFinanceTabs = { {
-            { "FinancialSummaryTabIcon", "FinancialSummary_MonthlySummaryHelp" },
-            { "CashGraphTabIcon", "FinancialSummary_GraphsHelp" },
+        struct FinanceTab
+        {
+            TabSpec spec;
+            FinancePage page = FinancePage::Summary;
+        };
+        constexpr std::array<FinanceTab, 2> kOriginalFinanceTabs = { {
+            { { "FinancialSummaryTabIcon", "FinancialSummary_MonthlySummaryHelp" }, FinancePage::Summary },
+            { { "CashGraphTabIcon", "FinancialSummary_GraphsHelp" }, FinancePage::Graphs },
+        } };
+        // Ours: the longer ledger and the attractions' takings.
+        constexpr std::array<FinanceTab, 4> kFinanceTabs = { {
+            { { "FinancialSummaryTabIcon", "FinancialSummary_MonthlySummaryHelp" }, FinancePage::Summary },
+            { { "Man_Finances", "Rct3pp_Finance_Ledger" }, FinancePage::Ledger },
+            { { "CashGraphTabIcon", "FinancialSummary_GraphsHelp" }, FinancePage::Graphs },
+            { { "AttractionListDialogIconAllAttractions", "Rct3pp_Finance_Attractions" }, FinancePage::Attractions },
         } };
         constexpr std::array<TabSpec, 4> kGuestTabs = { {
             { "Guest_Member", "GuestList_IndividualGuests" },
@@ -105,6 +117,14 @@ namespace rct3::ui::screens
         constexpr std::string_view kFocus = "Rct3pp_Research_Focus";
         constexpr std::string_view kUnfocus = "Rct3pp_Research_Unfocus";
 
+        constexpr std::string_view kLedgerMonth = "Rct3pp_Finance_Month";
+        constexpr std::string_view kIncome = "Rct3pp_Finance_Income";
+        constexpr std::string_view kSpending = "Rct3pp_Finance_Spending";
+        constexpr std::string_view kProfit = "Rct3pp_Finance_Profit";
+        constexpr std::string_view kLedgerLine = "Rct3pp_Finance_Line";
+        constexpr std::string_view kLedgerLineHelp = "Rct3pp_Finance_LineHelp";
+        constexpr std::string_view kRunningCost = "Rct3pp_Finance_RunningCost";
+
         constexpr std::size_t kRowKindShift = 48;
 
         std::u16string text(const StringTable& strings, std::string_view key)
@@ -151,6 +171,14 @@ namespace rct3::ui::screens
             std::vector<ManagementTab> out;
             for (const TabSpec& t : specs)
                 out.push_back({ std::string(t.icon), text(strings, t.name) });
+            return out;
+        }
+
+        template<std::size_t N> std::vector<ManagementTab> tabs(const std::array<FinanceTab, N>& specs, const StringTable& strings)
+        {
+            std::vector<ManagementTab> out;
+            for (const FinanceTab& t : specs)
+                out.push_back({ std::string(t.spec.icon), text(strings, t.spec.name) });
             return out;
         }
 
@@ -323,6 +351,17 @@ namespace rct3::ui::screens
             { "Money_Total", nullptr, nullptr },
         } };
 
+        /// What `period` holds on `row`, as the park keeps it (money in negative); none for a line the park does not
+        /// have. The total row sums them all.
+        std::optional<std::int64_t> ledger_value(const save::model::LedgerPeriod& period, const LedgerRow& row)
+        {
+            if (row.value != nullptr)
+                return period.*row.value;
+            if (row.optional != nullptr)
+                return period.*row.optional;
+            return period.raw_sum();
+        }
+
         void finance_summary(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             const save::model::Finance* m = f.park != nullptr && f.park->has_finance ? &f.park->finance : nullptr;
@@ -386,14 +425,7 @@ namespace rct3::ui::screens
                 bool any = row.optional == nullptr;
                 for (std::size_t p = 0; p < periods; ++p)
                 {
-                    const save::model::LedgerPeriod& period = m->ledger.at(p);
-                    std::optional<std::int64_t> value;
-                    if (row.value != nullptr)
-                        value = period.*row.value;
-                    else if (row.optional != nullptr)
-                        value = period.*row.optional;
-                    else
-                        value = period.raw_sum();
+                    const std::optional<std::int64_t> value = ledger_value(m->ledger.at(p), row);
                     any = any || value.has_value();
                     // The park keeps money coming in as negative and money going out as positive; shown the
                     // other way round, as a statement reads.
@@ -403,6 +435,76 @@ namespace rct3::ui::screens
                 if (any)
                     page.rows.push_back(std::move(out));
             }
+        }
+
+        void finance_ledger(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
+        {
+            // The last column shows the line picked: any but the total, which the profit already is.
+            constexpr std::size_t kLines = kLedger.size() - 1;
+            const std::size_t pick = std::min(f.ledger_line, kLines - 1);
+            page.controls.push_back({ .id = kLedgerLineControl, .name = std::string(kLedgerLine), .label = text(strings, kLedgerLine), .value = static_cast<int>(pick), .maximum = static_cast<int>(kLines - 1), .shown = text(strings, kLedger[pick].key), .help = text(strings, kLedgerLineHelp) });
+            page.columns = {
+                { text(strings, kLedgerMonth), 0, Align::Start, true }, { text(strings, kIncome), 96, Align::End, true }, { text(strings, kSpending), 96, Align::End, true }, { text(strings, kProfit), 96, Align::End, true }, { text(strings, kLedger[pick].key), 150, Align::End, true },
+            };
+            page.sort = 0;
+            page.sort_descending = true; // This month first
+            const save::model::Finance* m = f.park != nullptr && f.park->has_finance ? &f.park->finance : nullptr;
+            if (m == nullptr || m->ledger.empty())
+            {
+                page.note = text(strings, kNotRead);
+                return;
+            }
+            constexpr auto kMonthsPerYear = static_cast<std::int64_t>(save::model::GameClock::kUnitsPerYear / save::model::GameClock::kUnitsPerMonth);
+            const save::model::CalendarDate now = f.state != nullptr ? f.state->date : f.park->clock.date();
+            for (std::size_t p = 0; p < m->ledger.size(); ++p)
+            {
+                const save::model::LedgerPeriod& period = m->ledger[p];
+                // Shown as a statement reads: money in above nought.
+                std::int64_t in = 0;
+                std::int64_t out = 0;
+                for (std::size_t r = 0; r < kLines; ++r)
+                {
+                    const std::int64_t v = ledger_value(period, kLedger[r]).value_or(0);
+                    (v < 0 ? in : out) += std::abs(v);
+                }
+                const std::optional<std::int64_t> line = ledger_value(period, kLedger[pick]);
+                // Months before the calendar began, which a park file may hold, go by their names alone.
+                const std::int64_t month = now.year * kMonthsPerYear + now.month - static_cast<std::int64_t>(p);
+                const auto in_year = static_cast<std::int32_t>((month % kMonthsPerYear + kMonthsPerYear) % kMonthsPerYear);
+                const std::u16string name = month >= 0 ? date_text(strings, 0, in_year, static_cast<std::int32_t>(month / kMonthsPerYear + 1)) : short_month(strings, in_year);
+                page.rows.push_back({ { name, money(units, in), money(units, out), money(units, in - out), line ? money(units, -*line) : std::u16string(kDash) }, { static_cast<double>(month), static_cast<double>(in), static_cast<double>(out), static_cast<double>(in - out), line ? std::optional(static_cast<double>(-*line)) : std::nullopt }, p });
+            }
+        }
+
+        void finance_attractions(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
+        {
+            page.columns = {
+                { text(strings, "AttractionListDialogName"), 0, Align::Start, true },
+                { text(strings, "AttractionCustomersDialogLabel_TotalCustomers"), 128, Align::End, true },
+                { text(strings, kRunningCost), 150, Align::End, true },
+                { text(strings, "AttractionFinancesDialogLabel_TotalProfit"), 110, Align::End, true },
+            };
+            page.sort = 3;
+            page.sort_descending = true; // The best earners first
+            if (f.rides == nullptr)
+            {
+                page.note = text(strings, kNotRead);
+                return;
+            }
+            // shortcut: the running costs charged since the park was opened are not taken off each attraction's profit,
+            // as the simulation charges them all at once; count them by attraction when its finances tab needs it.
+            const auto add = [&](const save::model::AttractionCommon& a, ManagementRow ref) {
+                if (a.demolished)
+                    return;
+                const AttractionTakings now = f.takings ? f.takings(a.id) : AttractionTakings { };
+                const std::int64_t guests = a.total_guests + now.customers;
+                const std::int64_t profit = a.total_profit + now.income;
+                page.rows.push_back({ { attraction_name(a, strings), whole(guests), money(units, a.running_cost), money(units, profit) }, { std::nullopt, static_cast<double>(guests), static_cast<double>(a.running_cost), static_cast<double>(profit) }, management_row_id(ref) });
+            };
+            for (std::size_t i = 0; i < f.rides->rides.size(); ++i)
+                add(f.rides->rides[i].base, { ManagementRow::Kind::Ride, i });
+            for (std::size_t i = 0; i < f.rides->stalls.size(); ++i)
+                add(f.rides->stalls[i].base, { ManagementRow::Kind::Stall, i });
         }
 
         void finance_graphs(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
@@ -935,14 +1037,21 @@ namespace rct3::ui::screens
         return { "Man_Challenges", "ChallengeWindow_Title", 460, 320 };
     }
 
-    std::vector<ManagementTab> management_tabs(ManagementTopic topic, const StringTable& strings)
+    FinancePage finance_page(std::size_t tab, bool original)
+    {
+        if (original)
+            return kOriginalFinanceTabs.at(std::min(tab, kOriginalFinanceTabs.size() - 1)).page;
+        return kFinanceTabs.at(std::min(tab, kFinanceTabs.size() - 1)).page;
+    }
+
+    std::vector<ManagementTab> management_tabs(ManagementTopic topic, const StringTable& strings, const InfoUnits& units)
     {
         switch (topic)
         {
             case ManagementTopic::ParkOperations:
                 return tabs(kParkTabs, strings);
             case ManagementTopic::Finances:
-                return tabs(kFinanceTabs, strings);
+                return units.original_finances ? tabs(kOriginalFinanceTabs, strings) : tabs(kFinanceTabs, strings);
             case ManagementTopic::Guests:
                 return tabs(kGuestTabs, strings);
             case ManagementTopic::Attractions:
@@ -976,10 +1085,21 @@ namespace rct3::ui::screens
                     park_awards(page, facts, strings);
                 break;
             case ManagementTopic::Finances:
-                if (tab == 0)
-                    finance_summary(page, facts, strings, units);
-                else
-                    finance_graphs(page, facts, strings, units);
+                switch (finance_page(tab, units.original_finances))
+                {
+                    case FinancePage::Summary:
+                        finance_summary(page, facts, strings, units);
+                        break;
+                    case FinancePage::Ledger:
+                        finance_ledger(page, facts, strings, units);
+                        break;
+                    case FinancePage::Graphs:
+                        finance_graphs(page, facts, strings, units);
+                        break;
+                    case FinancePage::Attractions:
+                        finance_attractions(page, facts, strings, units);
+                        break;
+                }
                 break;
             case ManagementTopic::Staff: // A window of its own (staff_roster.hpp)
                 break;

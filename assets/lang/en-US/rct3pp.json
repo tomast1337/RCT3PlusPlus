@@ -59,6 +59,8 @@
         "LightShafts": "Light shafts",
         "DisableWeather": "Disable weather",
         "DisableWeatherHelp": "Tick to keep the weather as it is now: no new forecasts, no change in the temperature or the wind.",
+        "OriginalFinances": "Original finances window",
+        "OriginalFinancesHelp": "Tick for the finances window as the original game had it: the monthly summary and the graphs, without the longer ledger and the rest.",
         "LightShaftsHelp": "Sunlight shows in the air as a soft haze, cut into rays by the shadows of trees, rides and buildings.",
         "SurfaceDetailRelief": "Grain",
         "SurfaceDetailGrain": "Grain and relief",
@@ -123,6 +125,17 @@
             "Focus": "Focus on this (costs %AMOUNT%)",
             "Unfocus": "Stop focusing",
             "Focused": "Focused on:"
+        },
+        "Finance": {
+            "Ledger": "Ledger by month",
+            "Attractions": "Takings by attraction",
+            "Month": "Month",
+            "Income": "Income",
+            "Spending": "Spending",
+            "Profit": "Profit",
+            "Line": "Line shown:",
+            "LineHelp": "The ledger line shown in the last column",
+            "RunningCost": "Running cost a week"
         }
     }
 }

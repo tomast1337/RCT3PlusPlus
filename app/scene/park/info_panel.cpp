@@ -254,6 +254,7 @@ namespace rct3::scene::park
         ui::screens::InfoUnits units;
         units.currency = ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
         units.distance = static_cast<ui::screens::DistanceUnits>(options.choice(config::GameOption::DistanceUnits));
+        units.original_finances = options.flag(config::GameOption::OriginalFinances);
         return units;
     }
 

@@ -39,8 +39,12 @@ namespace
         s.add("GuestStats_NumGuests", u"Number of guests:");
         s.add("Month0", u"Spring");
         s.add("Month7", u"Autumn");
+        s.add("ShortMonth0", u"Mar");
         s.add("ShortMonth1", u"Apr");
+        s.add("ShortMonth7", u"Oct");
+        s.add("Year", u"Year");
         s.add("Money_ShopSales", u"Shop sales");
+        s.add("Money_ShopStock", u"Shop stock");
         s.add("ObjectiveCondition_ForManyMonths0", u"Held for");
         s.add("ObjectiveCondition_ForManyMonths1", u"months.");
         s.add("ObjectiveCondition_ParkGuests", u"Guests in park");
@@ -72,7 +76,7 @@ TEST_CASE("each management menu item opens its own window, and only those")
     CHECK_FALSE(management_topic(ToolItem::People));
     // The staff window keeps one list of its own (staff_roster.hpp), without tabs.
     for (std::size_t t = 0; t < kManagementTopicCount; ++t)
-        CHECK(management_tabs(static_cast<ManagementTopic>(t), test_strings()).empty() == (static_cast<ManagementTopic>(t) == ManagementTopic::Staff));
+        CHECK(management_tabs(static_cast<ManagementTopic>(t), test_strings(), kUnits).empty() == (static_cast<ManagementTopic>(t) == ManagementTopic::Staff));
 }
 
 TEST_CASE("a row's id gives back what it is about")
@@ -114,6 +118,74 @@ TEST_CASE("the finances show the running cash and the ledger a month a column, t
     REQUIRE(sales != page.rows.end());
     CHECK(sales->cells[1] == money(1500));
     CHECK(sales->cells[2] == money(-700));
+}
+
+TEST_CASE("the finances window has our ledger and attractions tabs, or the original's two when asked")
+{
+    const StringTable s = test_strings();
+    CHECK(management_tabs(ManagementTopic::Finances, s, kUnits).size() == 4);
+    CHECK(finance_page(0, false) == FinancePage::Summary);
+    CHECK(finance_page(1, false) == FinancePage::Ledger);
+    CHECK(finance_page(2, false) == FinancePage::Graphs);
+    CHECK(finance_page(3, false) == FinancePage::Attractions);
+    InfoUnits original = kUnits;
+    original.original_finances = true;
+    CHECK(management_tabs(ManagementTopic::Finances, s, original).size() == 2);
+    CHECK(finance_page(0, true) == FinancePage::Summary);
+    CHECK(finance_page(1, true) == FinancePage::Graphs);
+}
+
+TEST_CASE("the finances ledger has a row for every month kept, named with its year, and the line picked")
+{
+    const StringTable s = test_strings();
+    save::model::ParkModel park;
+    park.has_finance = true;
+    // Seven months back from March of the second year: more than a park file's five.
+    park.finance.ledger.assign(7, { });
+    park.finance.ledger[0] = { .shop_sales = -1500, .shop_stock = 400, .staff_wages = 300 };
+    park.finance.ledger[1] = { .shop_sales = -200 };
+    simulation::park::ParkState state;
+    state.date = { .year = 1, .month = 0 };
+    const ManagementPage page = management_page(ManagementTopic::Finances, 1, { .park = &park, .state = &state, .ledger_line = 9 }, s, kUnits);
+    REQUIRE(page.rows.size() == 7);
+    CHECK(page.sort == 0);
+    CHECK(page.sort_descending);
+    const TableRow& now = page.rows[0];
+    CHECK(now.cells[0] == u"Mar, Year 2");
+    CHECK(now.cells[1] == money(1500)); // In
+    CHECK(now.cells[2] == money(700));  // Out: stock and wages
+    CHECK(now.cells[3] == money(800));
+    CHECK(page.rows[1].cells[0] == u"Oct, Year 1");
+    // Newer months sort after older ones.
+    CHECK(now.keys[0] > page.rows[1].keys[0]);
+    REQUIRE(page.controls.size() == 1);
+    CHECK(page.controls[0].id == kLedgerLineControl);
+    CHECK(page.controls[0].value == 9);
+    CHECK(page.controls[0].shown == u"Shop stock");
+    CHECK(page.columns[4].heading == u"Shop stock");
+    CHECK(now.cells[4] == money(-400));
+}
+
+TEST_CASE("the finances' attractions tab lists each ride and stall with its takings so far, the best first")
+{
+    const StringTable s = test_strings();
+    save::model::RideModel rides;
+    rides.rides.push_back({ });
+    rides.rides[0].base = { .id = 7, .total_guests = 40, .total_profit = 9000, .running_cost = 120 };
+    rides.stalls.push_back({ });
+    rides.stalls[0].base = { .total_guests = 15, .total_profit = 500 };
+    rides.stalls.push_back({ });
+    rides.stalls[1].base.demolished = true;
+    // Taken since the park was opened, on top of what the park file kept.
+    const auto takings = [](std::uint64_t id) { return id == 7 ? AttractionTakings { .income = 1000, .customers = 5 } : AttractionTakings { }; };
+    const ManagementPage page = management_page(ManagementTopic::Finances, 3, { .rides = &rides, .takings = takings }, s, kUnits);
+    REQUIRE(page.rows.size() == 2);
+    CHECK(page.sort == 3);
+    CHECK(page.sort_descending);
+    CHECK(page.rows[0].cells[1] == u"45");
+    CHECK(page.rows[0].cells[3] == money(10000));
+    CHECK(page.rows[0].cells[2] == money(120));
+    CHECK(management_row(page.rows[1].id) == ManagementRow { ManagementRow::Kind::Stall, 0 });
 }
 
 TEST_CASE("the loan buttons borrow and repay, each greyed out at its limit")
@@ -175,7 +247,7 @@ TEST_CASE("a weekly graph of money that went below nought has nought across its 
     save::model::ParkModel park;
     park.has_finance = true;
     park.finance.weekly_profit = { .samples = { 0, -300, 100 }, .capacity = 64 };
-    const ManagementPage page = management_page(ManagementTopic::Finances, 1, { .park = &park }, s, kUnits);
+    const ManagementPage page = management_page(ManagementTopic::Finances, 2, { .park = &park }, s, kUnits);
     REQUIRE(page.graph.size() == 1);
     CHECK(page.graph[0].centred);
     CHECK(page.graph[0].full == doctest::Approx(500));
@@ -184,7 +256,7 @@ TEST_CASE("a weekly graph of money that went below nought has nought across its 
     CHECK(page.graph[0].axis[4] == money(-500));
     // Money too small to see reads against a whole unit.
     park.finance.weekly_profit = { .samples = { 0, 0, 0 }, .capacity = 64 };
-    CHECK(management_page(ManagementTopic::Finances, 1, { .park = &park }, s, kUnits).graph[0].full == doctest::Approx(100));
+    CHECK(management_page(ManagementTopic::Finances, 2, { .park = &park }, s, kUnits).graph[0].full == doctest::Approx(100));
 }
 
 TEST_CASE("a weekly graph has no month marks from before the calendar began")

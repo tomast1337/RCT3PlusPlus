@@ -352,6 +352,20 @@ namespace rct3::ui::screens
         shown_row_ = picked_row();
     }
 
+    std::optional<int> ManagementWindow::control_value(int id) const
+    {
+        for (const Control& c : controls_)
+        {
+            if (c.control.id != id)
+                continue;
+            if (const auto* n = dynamic_cast<const widgets::Spinner*>(c.widget))
+                return n->value();
+            if (const auto* b = dynamic_cast<const widgets::Slider*>(c.widget))
+                return static_cast<int>(std::lround(b->value()));
+        }
+        return std::nullopt;
+    }
+
     std::optional<std::size_t> ManagementWindow::picked_row() const
     {
         return table_->visible && table_->selected() ? std::optional(table_->rows.at(*table_->selected()).id) : std::nullopt;

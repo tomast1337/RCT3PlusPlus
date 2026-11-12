@@ -224,11 +224,58 @@ const hill_top = high(hill_at, row);
 await ui.click("land_panel/Land_Brush_Height_Smooth");
 await until(() => ui.find("land_panel/body/Land_Brush_Height_Smooth_Average") !== undefined, 60, "the averaging brush");
 await ui.click("land_panel/body/Land_Brush_Height_Smooth_Average");
+// Dragged, as the panel opens: further from the press wears the hill further; back at the press it stands again.
 const [sx, sy] = on_view(hill_at, row);
-await pointer.drag([sx, sy], [sx + 0.01, sy], 40);
-log("smoothed hill:", hill_top, "->", high(hill_at, row));
+pointer.move(sx, sy);
+pointer.press();
+for (let i = 1; i <= 20; ++i) {
+    pointer.move(sx, sy + (0.25 * i) / 20);
+    await frames(1);
+}
+const worn = high(hill_at, row);
+log("hill smoothed by a drag:", hill_top, "->", worn);
 await screenshot("smoothed");
-expect(high(hill_at, row) < hill_top, "the hill to wear down");
+expect(worn < hill_top, "the hill to wear down under a dragged smoothing brush");
+pointer.move(sx, sy);
+await frames(2);
+expect(Math.abs(high(hill_at, row) - hill_top) < 1e-3, "the hill back as it was with the pointer back at its press");
+pointer.release();
+await frames(2);
+
+// Sprayed: the mode tab's other choice. Holding the button still wears the hill down, more the longer.
+await ui.click("land_panel/Land_Brush_Height_Mode");
+await until(() => ui.find("land_panel/body/Land_Brush_Height_Mode_Spray") !== undefined, 60, "the mode tab");
+expect(ui.find("land_panel/body/Land_Brush_Height_Mode_SpraySpeed") !== undefined, "the spray speed on the mode tab");
+await ui.click("land_panel/body/Land_Brush_Height_Mode_Spray");
+pointer.move(sx, sy);
+pointer.press();
+await frames(30);
+const sprayed = high(hill_at, row);
+await frames(30);
+pointer.release();
+await frames(2);
+log("hill smoothed by a spray:", hill_top, "->", sprayed, "->", high(hill_at, row));
+expect(sprayed < hill_top && high(hill_at, row) < sprayed, "the hill to wear down for as long as a smoothing spray is held");
+
+// A raising brush sprayed builds where the pointer goes, one way only.
+await ui.click("land_panel/Land_Brush_Height_Raise");
+await until(() => ui.find("land_panel/body/Land_Brush_Height_Raise_Hill") !== undefined, 60, "the hill brush");
+await ui.click("land_panel/body/Land_Brush_Height_Raise_Hill");
+const [spray_x, spray_y] = on_view(hill_at + 4, row - 2);
+const flat = high(hill_at + 4, row - 2);
+pointer.move(spray_x, spray_y);
+pointer.press();
+await frames(40);
+pointer.move(spray_x, spray_y + 0.1); // Down the view: a drag would lower; a spray keeps raising, under the pointer
+await frames(2);
+pointer.release();
+await frames(2);
+log("sprayed hill:", flat, "->", high(hill_at + 4, row - 2));
+await screenshot("sprayed");
+expect(high(hill_at + 4, row - 2) > flat, "the ground raised under a held raising spray");
+await ui.click("land_panel/Land_Brush_Height_Mode");
+await until(() => ui.find("land_panel/body/Land_Brush_Height_Mode_Drag") !== undefined, 60, "the mode tab");
+await ui.click("land_panel/body/Land_Brush_Height_Mode_Drag");
 
 // Cliff faces: painted on the tiles under the brush, like surfaces.
 await pick("Land_Brush_Paint");

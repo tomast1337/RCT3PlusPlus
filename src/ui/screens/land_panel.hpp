@@ -5,7 +5,8 @@
 // strip running out to the right of the disc that shows the tools of the tab picked, in two rows.
 //
 // The owner says which tabs there are with show(): each with its picture, its help, the tools it holds and
-// which of them can be used. The tool chosen is marked; one tool is chosen across all the tabs. The disc
+// which of them can be used. The tool chosen is marked; one tool is chosen across all the tabs. A tab of
+// settings marks its own choice instead and may show a number after its tools. The disc
 // shows the brush, its circle growing with the size set in the number at its foot. The band along the strip's
 // top tells what the tool under the pointer does, else the tab's help.
 //
@@ -52,6 +53,7 @@ namespace rct3::ui::screens
         inline constexpr float kStatusGap = 8;
         inline constexpr float kSizeWidth = 44; ///< Of the brush's number
         inline constexpr float kSizeHeight = 16;
+        inline constexpr float kNumberGap = 8;   ///< From a tab's tools to its number
         inline constexpr float kSizeBottom = 10; ///< From the disc's foot to the number's
         inline constexpr float kCloseLeft = 9;   ///< From the screen's left edge
         inline constexpr float kCloseBottom = 9;
@@ -70,6 +72,16 @@ namespace rct3::ui::screens
         std::u16string help;
         int slot = 0; ///< On the ring, as footpath_tab_offset counts them
         std::vector<LandTool> tools;
+        /// A tab of settings: its tools are a choice of their own, `on` the one in force. A pick there is told
+        /// like any other but leaves the tool chosen as it is.
+        bool setting = false;
+        std::size_t on = 0;
+        /// A number after its tools, when `number` names one: its widget's name, its help and its range.
+        std::string number { };
+        std::u16string number_help { };
+        int number_value = 1;
+        int number_least = 1;
+        int number_most = 1;
     };
 
     /// A tool chosen: its tab and its place there.
@@ -108,7 +120,13 @@ namespace rct3::ui::screens
             return size_->value();
         }
 
-        /// The tool chosen since the last call.
+        /// The number on the tab named `tab`, as the player left it; that tab's own when it is not out.
+        [[nodiscard]] int number(std::size_t tab) const
+        {
+            return data_.at(tab).number_value;
+        }
+
+        /// The tool picked since the last call.
         [[nodiscard]] std::optional<LandPick> take_pick()
         {
             return std::exchange(pick_now_, std::nullopt);
@@ -152,6 +170,7 @@ namespace rct3::ui::screens
         const StringTable& strings_;
         widgets::Button* close_ = nullptr;
         widgets::Spinner* size_ = nullptr;
+        widgets::Spinner* number_ = nullptr; ///< Of the tab out, when it has one
         Widget* body_ = nullptr;
         widgets::Label* status_ = nullptr;
         std::vector<widgets::Button*> tabs_;

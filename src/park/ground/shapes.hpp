@@ -8,7 +8,9 @@
 // distance times the amount. Tiles that agree at a corner point still agree afterwards, so smooth ground stays
 // in one piece, and tiles that do not keep their difference: a cliff under the brush rides up or down with the
 // ground. The heights are those the stroke found when it began, so moving the pointer back undoes what it did.
-// A ridge runs along `along` and is narrow across it.
+// A ridge and a canyon run along `along` and are narrow across it. No shape is quite smooth: each corner point is
+// a little off it, more for the rugged shapes (a ridge, a crater) than the gentle ones (a hill), by a draw
+// that stays the same for the whole stroke.
 //
 // A corner point is held where the owner says so (land the park does not own, paths, things standing on it).
 #pragma once
@@ -46,10 +48,14 @@ namespace rct3::park::ground
     /// when negative): nothing inside the dead zone, then evenly, with no steps.
     [[nodiscard]] float drag_amount(float pixels);
 
-    /// The share of the amount the shape takes at `across`, the distance from the middle (or for a ridge from
-    /// its line) over the reach, and `along`, the distance along a ridge's line over the reach. Raising shapes
+    /// The share of the amount the shape takes at `across`, the distance from the middle (or for a ridge or a
+    /// canyon from its line) over the reach, and `along`, the distance along that line over the reach. Raising shapes
     /// give 0 to 1, lowering ones -1 to 0 (a crater's rim rises a little); 0 from the reach out.
     [[nodiscard]] float shape_share(GroundShape shape, float across, float along = 0);
+
+    /// How rough the shape is: the most a corner point at the brush's middle is off the shape either way, twice
+    /// over, as a share of the amount; it falls off evenly to nothing at the reach.
+    [[nodiscard]] float shape_roughness(GroundShape shape);
 
     /// The ground as a stroke found it.
     struct GroundBefore
@@ -63,7 +69,8 @@ namespace rct3::park::ground
     [[nodiscard]] GroundBefore ground_before(const save::model::TerrainGrid& grid, const std::function<bool(save::model::Tile)>& free);
 
     /// A stroke `amount` units high (down when negative) of `shape`, centred on `middle` with `reach` tiles,
-    /// over the heights `before`. Returns the sum of how far every corner of every tile moved from where it stood.
-    float shape_ground(save::model::TerrainGrid& grid, const GroundBefore& before, GroundShape shape, glm::vec2 middle, float reach, glm::vec2 along, float amount);
+    /// over the heights `before`, rough by the draws `seed` picks. Returns the sum of how far every corner of
+    /// every tile moved from where it stood.
+    float shape_ground(save::model::TerrainGrid& grid, const GroundBefore& before, GroundShape shape, glm::vec2 middle, float reach, glm::vec2 along, float amount, std::uint64_t seed);
 
 } // namespace rct3::park::ground

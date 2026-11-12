@@ -19,7 +19,8 @@
 // hill there, or down to sink a canyon, trough or crater: once past a short dead zone the ground moves evenly
 // with the pointer (park/ground/shapes.hpp). Moved the other way, each makes its shape upside down: a mountain dragged down digs
 // a pit, a crater dragged up builds a mound. The shape reaches as far as the brush's radius from where the pointer pressed;
-// a ridge runs across the view. Ground the park does not own outright or that what stands on it holds stays;
+// a ridge and a canyon run the way the pointer was going over the ground before it pressed (across the view
+// when it had not moved), and the rugged shapes come out rough. Ground the park does not own outright or that what stands on it holds stays;
 // a cliff under the brush moves with the ground and keeps its height. Each unit a tile's corner moves is paid for, once.
 // Sprayed, a raising brush only raises and a lowering one only lowers, under the pointer as it moves.
 //
@@ -86,6 +87,7 @@
 #include <cstdint>
 #include <optional>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace rct3::ui
@@ -126,15 +128,17 @@ namespace rct3::scene
         std::optional<std::array<save::model::Tile, 2>> stirred; ///< The first and last tiles the stroke moved
         std::vector<rct3::park::ground::GroundSurface> surfaces; ///< Read once, the first time the paint tool opens
         bool surfaces_read = false;
-        std::size_t surface = 0;                               ///< Chosen, of `surfaces`
-        std::vector<rct3::park::ground::GroundSurface> cliffs; ///< The cliff faces, read with the surfaces
-        std::optional<std::size_t> cliff;                      ///< Chosen, of `cliffs`, in place of a surface
-        int brush = rct3::park::ground::kDefaultBrush;         ///< The brushes' radius, in world units
-        std::optional<rct3::park::ground::GroundShape> shape;  ///< The raising or lowering brush chosen; none for the tile tool
-        rct3::park::ground::GroundBefore before;               ///< The ground as a brush stroke found it
-        glm::vec2 middle { 0 };                                ///< Of a brush stroke, in tile units
-        glm::vec2 along { 1, 0 };                              ///< Of a ridge: across the view as the stroke began
-        float amount = 0;                                      ///< Of the brush stroke so far, in height units
+        std::size_t surface = 0;                                    ///< Chosen, of `surfaces`
+        std::vector<rct3::park::ground::GroundSurface> cliffs;      ///< The cliff faces, read with the surfaces
+        std::optional<std::size_t> cliff;                           ///< Chosen, of `cliffs`, in place of a surface
+        int brush = rct3::park::ground::kDefaultBrush;              ///< The brushes' radius, in world units
+        std::optional<rct3::park::ground::GroundShape> shape;       ///< The raising or lowering brush chosen; none for the tile tool
+        rct3::park::ground::GroundBefore before;                    ///< The ground as a brush stroke found it
+        glm::vec2 middle { 0 };                                     ///< Of a brush stroke, in tile units
+        glm::vec2 along { 1, 0 };                                   ///< Of a ridge or a canyon: the way it runs
+        std::optional<glm::vec2> travel;                            ///< The way the pointer last went over the ground, in tile units
+        std::optional<std::pair<glm::vec2, glm::vec2>> travel_from; ///< Where that was last read: on the view, and on the ground
+        float amount = 0;                                           ///< Of the brush stroke so far, in height units
         /// The ground, lakes and waterfalls as the stroke found them. The water settles from these onto the ground
         /// as it is now, so a lake a drag lowered or dried comes back when the drag does, within the stroke.
         /// Later: with the ground now, all an undo of the stroke needs.

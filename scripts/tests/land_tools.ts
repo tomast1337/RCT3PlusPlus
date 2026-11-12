@@ -132,7 +132,7 @@ log("lakes after clicking the lake:", map.water().length);
 await screenshot("water_removed");
 expect(map.water().length === lakes, "the lake taken away");
 
-// Digging under a lake takes it away too, rather than leaving water the new ground cannot hold.
+// Digging under a lake keeps it, at its level over the deeper floor; a click then takes it away.
 await pointer.click((foot.x + top.x) / 2, (foot.y + top.y) / 2);
 await frames(2);
 expect(map.water().length === lakes + 1, "the lake poured again");
@@ -142,8 +142,12 @@ await pointer.drag([dx, dy], [dx, dy + 0.15], 20);
 await frames(2);
 log("lakes after digging under one:", map.water().length, "floor", low(col, row));
 await screenshot("water_dug");
-expect(map.water().length === lakes, "the lake taken away by digging under it");
-await pick("Land_Brush_Height"); // Put away
+expect(map.water().length === lakes + 1 && map.tile(col, row)?.water === level, "the lake kept at its level by digging under it");
+await pick("Land_Water");
+await pointer.click(...on_view(col, row));
+await frames(2);
+expect(map.water().length === lakes, "the dug lake taken away");
+await pick("Land_Water"); // Put away
 
 // Brushes: a hill raised beside the pit, then a crater sunk on the other side.
 function high(col: number, row: number): number {

@@ -7,7 +7,7 @@
 //
 // The water tool pours with a click: up to the height clicked, rounded up to a whole unit, taking in the lakes
 // the flood reaches. Clicking a lake takes it away, with the waterfalls pouring from or into it. Shaping the
-// ground under or beside a lake takes it away, rather than leaving water the new ground cannot hold.
+// ground under or beside a lake leaves it the water the new ground still holds (settle_water).
 #pragma once
 
 #include "save/model/world.hpp"
@@ -34,13 +34,13 @@ namespace rct3::park::water
     /// the ground their spillways were cut from; whether there was one.
     bool remove_lake(save::model::WaterLayer& water, std::vector<save::model::Waterfall>& falls, save::model::TerrainGrid& grid, save::model::Tile tile);
 
-    /// After the ground moved from `was` to `grid`: takes out of `water` every lake on a tile that moved, or beside
-    /// one that now dips below its level, and out of `falls` every waterfall with an end on or beside a tile that
-    /// moved, with its lakes, and those pouring from or into a lake taken. Whether any went.
-    /// shortcut: the whole lake goes, where it could keep the water the new ground still holds (drying what rose
-    /// out of it, or sinking to the highest level that does not leak); upgrade when players miss lakes they
-    /// reshaped the banks of.
-    bool drain_moved(save::model::WaterLayer& water, std::vector<save::model::Waterfall>& falls, const save::model::TerrainGrid& was, const save::model::TerrainGrid& grid);
+    /// After the ground moved from `was` to `grid`: settles every lake on a tile that moved, or beside one that now
+    /// dips below its level. Such a lake keeps its level where the ground still holds it: tiles that rose out of it
+    /// dry, ground dug beside it floods, and ground risen through its middle splits it in two. Where the ground
+    /// that moved lets it run out onto ground that was dry, it sinks, a whole unit at a time, to the highest level
+    /// that runs out nowhere, and goes only when there is none. Takes out of `falls` every waterfall with an end on
+    /// or beside a tile that moved, and those whose lake at either end went or sank. Whether anything changed.
+    bool settle_water(save::model::WaterLayer& water, std::vector<save::model::Waterfall>& falls, const save::model::TerrainGrid& was, const save::model::TerrainGrid& grid);
     /// Whether `body` holds water on tile `col`, `row`.
     [[nodiscard]] bool holds(const save::model::WaterBody& body, save::model::Tile tile);
 

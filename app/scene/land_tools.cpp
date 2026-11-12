@@ -121,6 +121,7 @@ namespace rct3::scene
             LandTools& l = scene.land;
             l.holds = rct3::park::ground::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
             l.refused = l.holds.held;
+            l.start = LandTools::Start { .grid = scene.grid, .water = scene.footpaths.water, .waterfalls = scene.footpaths.waterfalls };
             if (l.tool == LandTools::Tool::Shape)
                 l.rumble = kRumbleQuiet;
         }
@@ -131,6 +132,7 @@ namespace rct3::scene
             LandTools& l = scene.land;
             l.rumble.reset();
             l.cost_at.reset();
+            l.start.reset();
             if (!l.stirred)
                 return;
             if (scene.object_build.valid())
@@ -203,11 +205,21 @@ namespace rct3::scene
                     (*step)[0] = { std::min((*step)[0].col, c), std::min((*step)[0].row, r) };
                     (*step)[1] = { std::max((*step)[1].col, c), std::max((*step)[1].row, r) };
                 }
-            // Water the new ground may not hold goes, as do the waterfalls beside it.
-            const bool drained = drain && rct3::park::water::drain_moved(scene.footpaths.water, scene.footpaths.waterfalls, was, scene.grid);
+            // The lakes settle on the new ground, from how the stroke found them; waterfalls beside it go.
+            bool drained = false;
+            if (drain && l.start)
+            {
+                save::model::WaterLayer water = l.start->water;
+                std::vector<save::model::Waterfall> falls = l.start->waterfalls;
+                rct3::park::water::settle_water(water, falls, l.start->grid, scene.grid);
+                const auto same = [](const save::model::WaterBody& a, const save::model::WaterBody& b) { return a.level == b.level && std::ranges::equal(a.tris, b.tris, [](const save::model::WaterTri& x, const save::model::WaterTri& y) { return x.col == y.col && x.row == y.row && x.triangle == y.triangle && x.mask == y.mask; }); };
+                drained = falls.size() != scene.footpaths.waterfalls.size() || !std::ranges::equal(water.bodies, scene.footpaths.water.bodies, same);
+                scene.footpaths.water = std::move(water);
+                scene.footpaths.waterfalls = std::move(falls);
+            }
             if (drained)
                 park::show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &park::ParkParticles::sprays);
-            // A drained lake may reach far from the step; a moved corner shades the tiles beside those round it.
+            // A lake that changed may reach far from the step; a moved corner shades the tiles beside those round it.
             std::optional<rct3::park::TileRect> touched;
             if (step && !drained)
                 touched = rct3::park::TileRect { (*step)[0].col, (*step)[0].row, (*step)[1].col + 1, (*step)[1].row + 1 }.grown(1);

@@ -37,7 +37,9 @@
 //
 // Water: a click on the ground pours a lake up to the height clicked, rounded up to a whole unit, so clicking
 // higher up a bank fills it deeper; it spreads over every tile it can reach below that (park/water/fill.hpp)
-// and takes in the lakes it meets. A click on a lake takes it away, with its waterfalls. Water only goes on land
+// and takes in the lakes it meets. A click on a lake takes it away, with its waterfalls. Shaping the ground
+// under or beside a lake leaves it what the new ground holds: risen tiles dry, dug ones flood, a bank cut open
+// lowers it a whole unit at a time, and it goes only when no level holds. Water only goes on land
 // the park owns outright without paths on the ground, and never under a higher lake; a message says when it
 // cannot. Water is free.
 //
@@ -120,14 +122,24 @@ namespace rct3::scene
         glm::vec2 middle { 0 };                                ///< Of a brush stroke, in tile units
         glm::vec2 along { 1, 0 };                              ///< Of a ridge: across the view as the stroke began
         float amount = 0;                                      ///< Of the brush stroke so far, in height units
-        std::optional<glm::vec3> cost_at;                      ///< Where the stroke's cost is shown, once it has paid
-        float paid_for = 0;                                    ///< The most ground the stroke has moved, already paid for
-        std::optional<std::size_t> smoothing;                  ///< The smoothing brush chosen, by its place in its tab
-        float target = 0;                                      ///< Of a levelling stroke
-        float held = 0;                                        ///< Seconds of smoothing not yet applied
-        std::uint64_t passes = 0;                              ///< Of smoothing, the seed of each pass
-        std::optional<std::size_t> upper_lake;                 ///< Of a waterfall: the lake picked first, of the park's water
-        save::model::Tile upper_tile;                          ///< Where it was picked
+        /// The ground, lakes and waterfalls as the stroke found them. The water settles from these onto the ground
+        /// as it is now, so a lake a drag lowered or dried comes back when the drag does, within the stroke.
+        /// Later: with the ground now, all an undo of the stroke needs.
+        struct Start
+        {
+            save::model::TerrainGrid grid;
+            save::model::WaterLayer water;
+            std::vector<save::model::Waterfall> waterfalls;
+        };
+        std::optional<Start> start;
+        std::optional<glm::vec3> cost_at;      ///< Where the stroke's cost is shown, once it has paid
+        float paid_for = 0;                    ///< The most ground the stroke has moved, already paid for
+        std::optional<std::size_t> smoothing;  ///< The smoothing brush chosen, by its place in its tab
+        float target = 0;                      ///< Of a levelling stroke
+        float held = 0;                        ///< Seconds of smoothing not yet applied
+        std::uint64_t passes = 0;              ///< Of smoothing, the seed of each pass
+        std::optional<std::size_t> upper_lake; ///< Of a waterfall: the lake picked first, of the park's water
+        save::model::Tile upper_tile;          ///< Where it was picked
         rct3::park::LandBuy buying = rct3::park::LandBuy::Land;
         std::optional<float> rumble; ///< While a shaping stroke goes: how loud its ground is heard moving, 0..1
     };

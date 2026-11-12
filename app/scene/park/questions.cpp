@@ -2,6 +2,7 @@
 #include "scene/park/questions.hpp"
 
 #include "scene/park/scene.hpp"
+#include "scene/park/setup.hpp"
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/attraction_info.hpp"
@@ -19,7 +20,9 @@ namespace rct3::scene::park
 
         namespace skins = ui::game_skins;
 
-        constexpr std::string_view kLeaveText = "TutorialWindow_ConfirmQuit";
+        constexpr std::string_view kLeaveTutorialText = "TutorialWindow_ConfirmQuit";
+        constexpr std::string_view kLeaveCareerText = "FSM_ConfirmExitToCareerMap_Message";
+        constexpr std::string_view kLeaveText = "FSM_ConfirmExit_Message";
         constexpr std::string_view kYes = "SMB_Label_Yes";
         constexpr std::string_view kNo = "SMB_Label_No";
         constexpr std::string_view kDemolishTitle = "SingleItemDeleteEditor_AI_Title";
@@ -36,7 +39,9 @@ namespace rct3::scene::park
         if (scene.desktop->root().find(kQuestionName))
             return;
         const ui::widgets::QuestionBoxStyle style = skins::question_box_style(palette);
-        scene.desktop->root().add<ui::widgets::QuestionBox>(std::string(kQuestionName), style, std::u16string(strings.get(kLeaveText)), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
+        // The question names where leaving goes: out of the tutorial, back to the career screen or to the main menu.
+        const std::string_view text = scene.desktop->root().find(kGuideName) ? kLeaveTutorialText : (scene.game.career.empty() ? kLeaveText : kLeaveCareerText);
+        scene.desktop->root().add<ui::widgets::QuestionBox>(std::string(kQuestionName), style, std::u16string(strings.get(text)), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
     }
 
     void ask_demolish(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, std::vector<rct3::park::AttractionRef> refs)

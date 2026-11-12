@@ -625,7 +625,11 @@ namespace rct3::scene::park
     void fit_texture_detail(const ParkScene& scene, rct3::park::ground::GroundImages& images)
     {
         for (auto& [name, image] : images)
-            image = ovl::texture::halved(std::move(image), ovl::texture::texture_halvings(scene.texture_detail, image.width, image.height));
+        {
+            // Worked out first: the size cannot be read in the same call that moves the image away.
+            const int halvings = ovl::texture::texture_halvings(scene.texture_detail, image.width, image.height);
+            image = ovl::texture::halved(std::move(image), halvings);
+        }
     }
 
     /// Paints and uploads the pictures of `batches` the scene does not have yet.

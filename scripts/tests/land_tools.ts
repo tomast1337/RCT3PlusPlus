@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The land tools on the game's blank landscape: digs a pit with Shape ground, heard rumbling while the stroke
-// goes, paints round it with Paint ground, fills it with Water by clicking its wall and takes the lake away again,
-// by clicking it and by digging under it, then raises the ground under a tree planted there, which rises with it.
+// goes, paints round it with Paint ground, fills it with Water by clicking its wall, takes the lake away again
+// by clicking it and keeps it while digging under it, then raises the ground under a tree planted there, which rises with it.
 // Every height brush works both ways: a crater dragged up builds a mound, a mountain dragged down digs a pit.
+// The mode tab's spray wears a hill down and raises the ground for as long as the button is held.
 //
 //   ./nob script scripts/tests/land_tools.ts -- --no-intro --no-audio --no-simulate --seed 1
 

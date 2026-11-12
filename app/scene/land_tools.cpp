@@ -37,7 +37,6 @@ namespace rct3::scene
     namespace
     {
         // Prices, in hundredths: painting one tile (moving the ground is rct3::park::ground::kShapeCost).
-        constexpr std::int32_t kPaintCost = 50;
         constexpr float kLongestStep = 0.1f;  ///< Seconds a spray counts a frame as at most, so a hitch does not jolt the ground
         constexpr float kSteepestDrag = 0.5f; ///< Chosen by eye: a tile tool reads a view steeper than this (the part of the pointer's ray along the ground) as this steep
         constexpr float kRumbleQuiet = 0.25f; ///< Chosen by eye: the rumble of a shaping stroke while the ground stays still
@@ -432,10 +431,18 @@ namespace rct3::scene
             }
             // A lowering brush digs as the pointer goes down; the other way, each brush makes its shape upside down.
             const bool lowers = rct3::park::ground::shape_share(*l.shape, 0) < 0;
-            const float amount = rct3::park::ground::drag_amount(lowers ? at.y - l.press_y : l.press_y - at.y);
+            float amount = rct3::park::ground::drag_amount(lowers ? at.y - l.press_y : l.press_y - at.y);
             if (amount == l.amount)
                 return;
-            auto trial = try_shape(scene, scene.grid, [&](save::model::TerrainGrid& g) { return rct3::park::ground::shape_ground(g, l.before, *l.shape, l.middle, reach, l.along, amount); });
+            const auto shaped = [&](save::model::TerrainGrid& g) { return rct3::park::ground::shape_ground(g, l.before, *l.shape, l.middle, reach, l.along, amount); };
+            auto trial = try_shape(scene, scene.grid, shaped);
+            // Short of cash, the stroke goes as far as the cash pays for: what it moves grows evenly with it.
+            if (const float can = l.paid_for + static_cast<float>(std::max<std::int64_t>(scene.park.cash.value_or(0) - 1, 0)) / rct3::park::ground::kShapeCost; trial && scene.park.cash && trial->second > can)
+            {
+                simulation::park::cannot_pay(scene.park);
+                amount *= can / trial->second;
+                trial = try_shape(scene, scene.grid, shaped);
+            }
             if (!trial)
                 return;
             const float moved = trial->second;
@@ -512,8 +519,7 @@ namespace rct3::scene
             const auto spot = over ? std::nullopt : ground_spot(scene, at, size);
             if (!spot || (l.tile && *spot == l.middle) || (l.cliff ? *l.cliff >= l.cliffs.size() : l.surface >= l.surfaces.size()))
                 return;
-            const std::optional<save::model::Tile> tile = save::model::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
-            l.tile = tile;
+            l.tile = save::model::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
             l.middle = *spot;
             const std::uint8_t surface = l.cliff ? l.cliffs[*l.cliff].index : l.surfaces[l.surface].index;
             std::optional<rct3::park::TileRect> painted;
@@ -521,7 +527,7 @@ namespace rct3::scene
             {
                 save::model::TerrainCell& cell = scene.grid.at(t.col, t.row);
                 std::uint8_t& face = l.cliff ? cell.cliff : cell.surface;
-                if (face == surface || !rct3::park::owned_outright(cell) || !pay(scene, kPaintCost, *tile)) // From the brush's middle, so a dab floats up as one sum
+                if (face == surface || !rct3::park::owned_outright(cell))
                     continue;
                 face = surface;
                 const rct3::park::TileRect one { t.col, t.row, t.col + 1, t.row + 1 };

@@ -9,16 +9,16 @@
 // and down an upright plane through the point pressed, so it stays under it at any distance;
 // seen from steeply overhead it moves less than the pointer (park/tile_shaping.hpp). The tools stand in pairs: the first of each works on the one
 // tile under the pointer, where the pointer's place in it picks the whole tile, an edge or a corner; the second
-// on the brush's square of tiles. The pairs, in order: snap to the heights of the tiles round, move freely,
+// on a square of tiles as wide as the brush. The pairs, in order: snap to the heights of the tiles round, move freely,
 // move in whole units. Only the tiles' own corners move, so cliffs open at their sides. A tile is only shaped
 // on land the park owns outright, and only as far as what stands on it lets it (park/ground/holds.hpp); a tile
 // refused keeps its corners for the rest of the stroke. Scenery standing on the ground moves with it. A lake on
-// ground that moves, or beside ground that sinks under its level, goes, as does a waterfall beside it.
+// ground that moves settles on it (see Water below); a waterfall beside it goes.
 //
 // Raising and lowering, one tab: press on the ground and move the pointer up to raise a ridge, mountain, mesa or
 // hill there, or down to sink a canyon, trough or crater: once past a short dead zone the ground moves evenly
 // with the pointer (park/ground/shapes.hpp). Moved the other way, each makes its shape upside down: a mountain dragged down digs
-// a pit, a crater dragged up builds a mound. The shape is as wide as the brush's number, centred where the pointer pressed;
+// a pit, a crater dragged up builds a mound. The shape reaches as far as the brush's radius from where the pointer pressed;
 // a ridge runs across the view. Ground the park does not own outright or that what stands on it holds stays;
 // a cliff under the brush moves with the ground and keeps its height. Each unit a tile's corner moves is paid for, once.
 //
@@ -30,8 +30,8 @@
 // The ground moved is paid for as it goes.
 //
 // Paint ground: the panel's surface tab shows the land surfaces the game's terrain files list, each by its
-// own picture. Pressing the ground and moving over it paints the tiles a round brush covers, as wide as the
-// number on the panel's disc (park/ground/brush.hpp), with the surface chosen, on land the park owns
+// own picture. Pressing the ground and moving over it paints the tile under the pointer and those with
+// a corner within the brush's radius (park/ground/brush.hpp), with the surface chosen, on land the park owns
 // outright, each tile paid for. The cliff tab paints the faces of the cliffs on the tiles under the brush
 // the same way, with the cliff faces the terrain files list. Closing the panel puts the tool away.
 //
@@ -47,8 +47,10 @@
 // lower (park/waterfall_making.hpp), or a message says why it cannot. A right click on a waterfall deletes it;
 // anywhere else it puts the tool away.
 //
-// While a tool is out, marks on the ground show what it would work on: the tiles under the brush, the tile
-// being poured on, or the one tile, edge or corner a tile tool picks.
+// While a tool is out, marks on the ground show what it would work on: a ring as wide as the brush (and the tiles
+// it would paint), the tile being poured on, the tiles to buy, or the one tile, edge or corner a tile tool
+// picks. The brush is a radius in world units round the point under the pointer, 1 to 64, set by the number
+// on the panel's disc and shared by shaping, smoothing and painting.
 //
 // Buying land: the park window's buy land and buy rights buttons open the panel with a tab of the two. Pressing
 // the ground and moving over it buys the tiles on sale under the brush's square (park/land_buying.hpp), each
@@ -60,6 +62,7 @@
 #pragma once
 
 #include "park/camera.hpp"
+#include "park/ground/brush.hpp"
 #include "park/ground/holds.hpp"
 #include "park/ground/shapes.hpp"
 #include "park/ground/smoothing.hpp"
@@ -116,7 +119,7 @@ namespace rct3::scene
         std::size_t surface = 0;                               ///< Chosen, of `surfaces`
         std::vector<rct3::park::ground::GroundSurface> cliffs; ///< The cliff faces, read with the surfaces
         std::optional<std::size_t> cliff;                      ///< Chosen, of `cliffs`, in place of a surface
-        int brush = 3;                                         ///< Tiles across the brushes cover
+        int brush = rct3::park::ground::kDefaultBrush;         ///< The brushes' radius, in world units
         std::optional<rct3::park::ground::GroundShape> shape;  ///< The raising or lowering brush chosen; none for the tile tool
         rct3::park::ground::GroundBefore before;               ///< The ground as a brush stroke found it
         glm::vec2 middle { 0 };                                ///< Of a brush stroke, in tile units

@@ -1132,10 +1132,27 @@ namespace rct3::scene::park
                     f.crashed = static_cast<std::int32_t>(std::ranges::count_if(scene.rides.rides, [](const save::model::Ride& ride) { return ride.base.time_since_crash >= 0; }));
                     f.coaster_dangers = scene.park_model.awards.dangerous_coaster_events.value_or(0);
                     f.pool_dangers = scene.park_model.awards.dangerous_pool_events.value_or(0);
-                    if (scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                    const bool listed = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+                    if (listed)
                     {
                         f.themed = simulation::themed_attractions(scene.rides, scene.objects, scene.build.items.get());
                         judge_themes(scene);
+                    }
+                    const std::span<const rct3::park::BuildItem> catalogue = listed ? std::span<const rct3::park::BuildItem>(scene.build.items.get()) : std::span<const rct3::park::BuildItem> { };
+                    for (const auto [e, animal] : r.view<const simulation::Animal>().each())
+                    {
+                        if (animal.job == simulation::AnimalJob::Crated)
+                            continue;
+                        // The catalogue lists each kind's adult male, adult female, young male and young female in turn.
+                        float rarity = 0;
+                        std::size_t nth = (animal.adult ? 0 : 2) + (animal.male ? 0 : 1);
+                        for (const rct3::park::BuildItem& item : catalogue)
+                            if (item.kind == rct3::park::BuildKind::Animal && strings::equals_ignoring_case(item.symbol, animal.species) && nth-- == 0)
+                            {
+                                rarity = item.rarity;
+                                break;
+                            }
+                        f.animals.push_back({ .rarity = rarity, .health = animal.health.value, .young = !animal.adult });
                     }
                     if (!f.downtime.empty())
                         f.reliability /= static_cast<float>(f.downtime.size());

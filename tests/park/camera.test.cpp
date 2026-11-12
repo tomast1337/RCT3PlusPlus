@@ -295,3 +295,26 @@ TEST_CASE("turning round a pivot keeps it where it was on the view, and round th
     CHECK(glm::length(on_view(turned_round) - on_view(c)) < 0.02f);
     CHECK(glm::length(eye(turned_round) - pivot) == doctest::Approx(glm::length(eye(c) - pivot)));
 }
+
+TEST_CASE("what is dragged up an upright plane stays under the pointer, near and far")
+{
+    for (const float distance : { 30.0f, 240.0f })
+    {
+        ParkCamera c { .target = { 40, 0, 40 }, .yaw = 0.4f, .pitch = 0.7f, .distance = distance };
+        const float aspect = 16.0f / 9;
+        const glm::vec3 pressed { 44, 1, 38 };
+        // Where a point six units over the one pressed shows on the view: the pointer there reads six units up.
+        const glm::vec4 clip = view_projection(c, aspect) * glm::vec4 { pressed + glm::vec3 { 0, 6, 0 }, 1 };
+        const auto height = upright_height(view_ray(c, aspect, glm::vec2 { clip } / clip.w), pressed);
+        REQUIRE(height);
+        CHECK(*height == doctest::Approx(pressed.y + 6).epsilon(0.01));
+    }
+    CHECK_FALSE(upright_height(Ray { .origin = { 0, 10, 0 }, .direction = { 0, -1, 0 } }, { 0, 0, 0 }));
+
+    // From nearly overhead a small move reads as a great height, unless the ray is taken as no steeper than a limit.
+    const Ray steep { .origin = { 0, 100, 0 }, .direction = glm::normalize(glm::vec3 { 0, -1, 0.02f }) };
+    const Ray moved { .origin = { 0, 100, 0 }, .direction = glm::normalize(glm::vec3 { 0, -1, 0.03f }) };
+    const glm::vec3 at { 0, 0, 2 };
+    CHECK(std::abs(*upright_height(moved, at) - *upright_height(steep, at)) > 30);
+    CHECK(std::abs(*upright_height(moved, at, 0.5f) - *upright_height(steep, at, 0.5f)) < 0.1f);
+}

@@ -15,7 +15,7 @@
 //          where the drag takes it
 //   Whole  on the nearest whole unit
 //
-// Tiles the owner refuses keep their corners.
+// Tiles the owner refuses stay as they are.
 #pragma once
 
 #include "park/terrain_mesh.hpp"

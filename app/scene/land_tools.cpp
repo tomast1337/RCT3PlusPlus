@@ -4,7 +4,6 @@
 #include "logging/log.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
-#include "park/footpath_builder.hpp"
 #include "park/ground/brush.hpp"
 #include "park/object/pick.hpp"
 #include "park/ride/placement.hpp"
@@ -39,6 +38,7 @@ namespace rct3::scene
         constexpr std::int32_t kPaintCost = 50;
         constexpr float kSmoothRate = 2.5f;   ///< Of the way to where a smoothing brush wants the ground, a second
         constexpr float kSmoothPass = 0.05f;  ///< Seconds between smoothing passes
+        constexpr float kSteepestDrag = 0.5f; ///< Chosen by eye: a tile tool reads a view steeper than this (the part of the pointer's ray along the ground) as this steep
         constexpr float kRumbleQuiet = 0.25f; ///< Chosen by eye: the rumble of a shaping stroke while the ground stays still
         constexpr float kRumbleFade = 0.6f;   ///< Chosen by eye: seconds it takes to fall back to that once the ground stops moving
 
@@ -268,16 +268,25 @@ namespace rct3::scene
                 const auto target = over ? std::nullopt : tile_target(scene, ground_spot(scene, at, size));
                 if (!target)
                     return;
+                // The stroke's tiles go up and down with the pointer from the point of the ground it pressed on.
+                const rct3::park::Ray ray = rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
+                const auto distance = rct3::park::object::ground_hit(ray, scene.grid);
+                if (!distance)
+                    return;
+                l.press_at = ray.origin + ray.direction * *distance;
+                l.press_height = rct3::park::upright_height(ray, l.press_at, kSteepestDrag).value_or(l.press_at.y);
+                l.press_camera = scene.camera;
                 l.tile = target->first;
-                l.press_y = at.y;
                 l.amount = 0;
                 l.paid_for = 0;
                 start_stroke(scene);
                 l.stroke = rct3::park::begin_tile_stroke(scene.grid, target->first.col, target->first.row, target->last.col, target->last.row, target->part);
             }
-            const float amount = std::round((l.press_y - at.y) / rct3::park::kSlopeDragStep * 4) / 4; // In quarter units
-            if (amount == l.amount)
+            // Read through the view as it was at the press: the view rises with the ground it looks at.
+            const auto height = size.y > 0 ? rct3::park::upright_height(rct3::park::view_ray(l.press_camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y }), l.press_at, kSteepestDrag) : std::nullopt;
+            if (!height || *height - l.press_height == l.amount)
                 return;
+            const float amount = *height - l.press_height;
             auto trial = try_shape(scene, scene.grid, [&](save::model::TerrainGrid& g) { return rct3::park::shape_tiles(g, l.stroke, kTileShapings[l.tile_tool / 2], amount, [&](save::model::Tile t) { return shapeable(scene, t); }); });
             if (!trial)
                 return;
@@ -350,10 +359,9 @@ namespace rct3::scene
                 start_stroke(scene);
                 l.before = rct3::park::ground::ground_before(scene.grid, [&](save::model::Tile t) { return shapeable(scene, t); });
             }
-            const float steps = (l.press_y - at.y) / rct3::park::kSlopeDragStep;
             // A lowering brush digs as the pointer goes down; the other way, each brush makes its shape upside down.
             const bool lowers = rct3::park::ground::shape_share(*l.shape, 0) < 0;
-            const float amount = std::round((lowers ? -steps : steps) * 4) / 4; // In quarter units
+            const float amount = rct3::park::ground::drag_amount(lowers ? at.y - l.press_y : l.press_y - at.y);
             if (amount == l.amount)
                 return;
             auto trial = try_shape(scene, scene.grid, [&](save::model::TerrainGrid& g) { return rct3::park::ground::shape_ground(g, l.before, *l.shape, l.middle, static_cast<float>(l.brush) / 2, l.along, amount); });

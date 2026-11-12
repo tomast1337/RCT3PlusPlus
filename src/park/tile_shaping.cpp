@@ -130,9 +130,11 @@ namespace rct3::park
             for (int c = stroke.col0; c <= stroke.col1; ++c)
             {
                 const auto& before = stroke.before[static_cast<std::size_t>((r - stroke.row0) * columns + (c - stroke.col0))];
-                std::array<float, 4> corners = before;
+                // A tile refused part of the way through a stroke stays where it had got to.
+                std::array<float, 4> corners = grid.at(c, r).corners;
                 if (free({ c, r }))
                 {
+                    corners = before;
                     for (std::size_t k = 0; k < 4; ++k)
                     {
                         // Only corners the drag passes move: the others are already further that way.

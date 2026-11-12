@@ -77,6 +77,11 @@ namespace rct3::park
     /// The line of sight through `at` on the view, from -1 to 1 left to right and bottom to top, for a view
     /// `aspect` times as wide as it is tall.
     [[nodiscard]] Ray view_ray(const ParkCamera& camera, float aspect, glm::vec2 at);
+    /// The height at which `ray` crosses the upright plane through `at` that is square to it, so what is dragged
+    /// up or down from `at` stays under the pointer at any distance. Nothing while the ray looks straight down. A ray
+    /// steeper than `steepest` (the length of its part along the ground) is read as that steep, so a view from
+    /// overhead does not turn a small move into a great height; the height at `at` is then no longer its own.
+    [[nodiscard]] std::optional<float> upright_height(const Ray& ray, glm::vec3 at, float steepest = 0);
     /// World to clip space for a view `aspect` times as wide as it is tall.
     /// Riding, the view takes in `across` radians across the screen.
     [[nodiscard]] glm::mat4 view_projection(const ParkCamera& camera, float aspect, const Seat& seat = std::nullopt, float across = kRideWideView);

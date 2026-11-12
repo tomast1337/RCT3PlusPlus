@@ -90,6 +90,11 @@ TEST_CASE("refused tiles keep their corners")
     CHECK(g.at(0, 0).corners[0] == 3);
     CHECK(g.at(1, 0).corners == kLevelTwo);
     CHECK(g.at(2, 0).corners[0] == 3);
+
+    // Refused part of the way through the stroke, a tile stays where it had got to.
+    shape_tiles(g, s, TileShaping::Free, 2, [](save::model::Tile t) { return t.col != 2; });
+    CHECK(g.at(0, 0).corners[0] == 4);
+    CHECK(g.at(2, 0).corners[0] == 3);
 }
 
 TEST_CASE("marks outline whole tiles, one edge, or cross one corner")

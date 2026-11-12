@@ -5,8 +5,9 @@
 // Shape ground and paint ground open the land panel (ui/screens/land_panel.hpp) in the bottom-left corner.
 // Shaping's tabs hold the tile tools and the smoothing, raising and lowering brushes.
 //
-// Tile tools: press on the ground and move the pointer up or down to move it, a height unit for each
-// kSlopeDragStep moved (park/tile_shaping.hpp). The tools stand in pairs: the first of each works on the one
+// Tile tools: press on the ground and move the pointer up or down to move it: the ground follows the pointer, up
+// and down an upright plane through the point pressed, so it stays under it at any distance;
+// seen from steeply overhead it moves less than the pointer (park/tile_shaping.hpp). The tools stand in pairs: the first of each works on the one
 // tile under the pointer, where the pointer's place in it picks the whole tile, an edge or a corner; the second
 // on the brush's square of tiles. The pairs, in order: snap to the heights of the tiles round, move freely,
 // move in whole units. Only the tiles' own corners move, so cliffs open at their sides. A tile is only shaped
@@ -15,8 +16,8 @@
 // ground that moves, or beside ground that sinks under its level, goes, as does a waterfall beside it.
 //
 // Raising and lowering, one tab: press on the ground and move the pointer up to raise a ridge, mountain, mesa or
-// hill there, or down to sink a canyon, trough or crater, a height unit for each kSlopeDragStep moved
-// (park/ground/shapes.hpp). Moved the other way, each makes its shape upside down: a mountain dragged down digs
+// hill there, or down to sink a canyon, trough or crater: once past a short dead zone the ground moves evenly
+// with the pointer (park/ground/shapes.hpp). Moved the other way, each makes its shape upside down: a mountain dragged down digs
 // a pit, a crater dragged up builds a mound. The shape is as wide as the brush's number, centred where the pointer pressed;
 // a ridge runs across the view. Ground the park does not own outright or that what stands on it holds stays;
 // a cliff under the brush moves with the ground and keeps its height. Each unit a tile's corner moves is paid for, once.
@@ -56,6 +57,7 @@
 // A shaping stroke rumbles from press to release, softly while the ground stays still and loudest as it moves.
 #pragma once
 
+#include "park/camera.hpp"
 #include "park/ground/holds.hpp"
 #include "park/ground/shapes.hpp"
 #include "park/ground/smoothing.hpp"
@@ -96,8 +98,11 @@ namespace rct3::scene
             Buy,
         };
         Tool tool = Tool::None;
-        std::optional<save::model::Tile> tile; ///< Being shaped, or last painted, while the button is held
-        float press_y = 0;
+        std::optional<save::model::Tile> tile;                   ///< Being shaped, or last painted, while the button is held
+        float press_y = 0;                                       ///< Of a brush stroke, on the view
+        glm::vec3 press_at { 0 };                                ///< Of a tile tool's stroke: the point of the ground pressed on
+        rct3::park::ParkCamera press_camera;                     ///< The view as the stroke began
+        float press_height = 0;                                  ///< What the pointer read there as the stroke began
         std::size_t tile_tool = 0;                               ///< The tile tool chosen, by its place in its tab
         rct3::park::TileStroke stroke;                           ///< Of a tile tool
         std::vector<glm::vec3> marked;                           ///< Where the marks on the ground were made, to make them again only on a change

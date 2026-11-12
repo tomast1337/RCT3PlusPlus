@@ -52,6 +52,8 @@ namespace rct3::ui::screens
         /// One for each kind of weather, in the order of save::model::WeatherType.
         std::array<std::string, 7> weather_icons;
         std::string forecast_arrow;
+        /// Before the money: last month made money, and lost it.
+        std::array<std::string, 2> money_trend_icons;
         /// The day's modes, in the order of simulation::DayMode.
         std::array<std::string, 3> day_mode_icons;
         /// The highlights button's picture while off and while on.
@@ -66,8 +68,9 @@ namespace rct3::ui::screens
     struct ParkBarValues
     {
         simulation::GameSpeed speed;
-        std::u16string money;      ///< After an arrow up or down, as last month made or lost money
-        std::u16string money_help; ///< Last month's profit; empty before a month has ended
+        std::u16string money;
+        std::u16string money_help;      ///< Last month's profit; empty before a month has ended
+        std::optional<bool> money_rose; ///< Whether last month made money; nothing for an even month or none yet
         std::u16string guests;
         std::optional<float> rating; ///< 0 to 1; no bar without one
         std::u16string rating_help;  ///< The rating's tooltip: its number, and its parts once a week has been rated
@@ -203,6 +206,7 @@ namespace rct3::ui::screens
         widgets::Button* day_mode_ = nullptr;
         std::array<widgets::Button*, 3> day_choices_ { };
         std::array<widgets::Button*, 4> speeds_ { };
+        std::array<widgets::Panel*, 2> money_trend_ { }; ///< Rose and fell, by ParkBarStyle::money_trend_icons
         widgets::Button* money_ = nullptr;
         widgets::Label* guests_ = nullptr;
         widgets::Panel* thumb_down_ = nullptr;

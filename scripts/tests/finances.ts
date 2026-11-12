@@ -70,6 +70,24 @@ await screenshot("ledger");
 await ui.click(under(kWindow, "Rct3pp_Finance_Export")!);
 await frames(30);
 await screenshot("exported");
+// The graphs over the last month, zoomed out a few notches with the wheel, and read out under the pointer.
+await tab("CashGraphTabIcon");
+await ui.click(under(kWindow, "range0")!);
+await frames(5);
+const graph = ui.find(under(kWindow, "graph")!)!;
+pointer.move(graph.right - (graph.right - graph.left) / 3, (graph.top + graph.bottom) / 2);
+await frames(3);
+for (let notch = 0; notch < 3; ++notch) {
+    pointer.wheel(-1);
+    await frames(2);
+}
+await frames(90);
+expect((ui.find(under(kWindow, "graph")!)!.tooltip ?? "").includes(":"), "a readout under the pointer");
+log("readout", ui.find(under(kWindow, "graph")!)!.tooltip);
+await screenshot("graphs_zoomed");
+await ui.click(under(kWindow, "range2")!);
+await frames(5);
+await screenshot("graphs_all");
 await tab("AttractionListDialogIconAllAttractions");
 await screenshot("attractions");
 await close();

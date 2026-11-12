@@ -125,6 +125,9 @@ namespace rct3::ui::screens
         constexpr std::string_view kLedgerLineHelp = "Rct3pp_Finance_LineHelp";
         constexpr std::string_view kRunningCost = "Rct3pp_Finance_RunningCost";
         constexpr std::string_view kExport = "Rct3pp_Finance_Export";
+        constexpr std::string_view kGraphMonth = "Rct3pp_Graph_Month";
+        constexpr std::string_view kGraphYear = "Rct3pp_Graph_Year";
+        constexpr std::string_view kGraphAll = "Rct3pp_Graph_All";
         constexpr std::string_view kExportHelp = "Rct3pp_Finance_ExportHelp";
 
         constexpr std::size_t kRowKindShift = 48;
@@ -207,18 +210,25 @@ namespace rct3::ui::screens
             // Money reads in whole units at least, so a series of nought or a few cents is not on a scale of one.
             if (money_values)
                 full = std::max(full, 100.0f);
+            const auto words = [&](float v) { return money_values ? money(units, std::llround(v)) : whole(std::lround(v)); };
             std::vector<std::u16string> axis;
             for (const float v : widgets::axis_values(full, centred))
-                axis.push_back(money_values ? money(units, std::llround(v)) : whole(std::lround(v)));
-            page.graph.push_back({ .name = text(strings, key), .values = std::move(values), .key = std::string(key), .full = full, .centred = centred, .axis = std::move(axis) });
+                axis.push_back(words(v));
+            std::vector<std::u16string> readings;
+            for (const float v : values)
+                readings.push_back(words(v));
+            page.graph.push_back({ .name = text(strings, key), .values = std::move(values), .key = std::string(key), .full = full, .centred = centred, .axis = std::move(axis), .readings = std::move(readings) });
             // At least as many weeks as a park file keeps, the original graphs' span, and more once the park has them.
             page.graph_slots = std::max(page.graph_slots, std::min<std::size_t>(series.capacity, std::max<std::size_t>(series.samples.size(), simulation::park::kFileWeeks)) - 1);
         }
 
         /// Marks along a weekly graph where each month began, named by the month, back from the week before
-        /// `time`'s.
+        /// `time`'s; each week's day for the readout; and the spans to pick: a month, a year or all of it.
         void month_ticks(ManagementPage& page, const StringTable& strings, const simulation::park::ParkState* state)
         {
+            constexpr auto kWeeksPerMonth = static_cast<std::size_t>(save::model::GameClock::kUnitsPerMonth / save::model::GameClock::kUnitsPerWeek);
+            constexpr auto kWeeksPerYear = static_cast<std::size_t>(save::model::GameClock::kUnitsPerYear / save::model::GameClock::kUnitsPerWeek);
+            page.graph_ranges = { { text(strings, kGraphMonth), kWeeksPerMonth }, { text(strings, kGraphYear), kWeeksPerYear }, { text(strings, kGraphAll), 0 } };
             if (state == nullptr)
                 return;
             for (std::size_t back = 0; back < page.graph_slots; ++back)
@@ -228,6 +238,7 @@ namespace rct3::ui::screens
                 if (time < state->zero_time)
                     break;
                 const save::model::CalendarDate date = save::model::GameClock::date_at(time, state->zero_time);
+                page.graph_when.push_back(date_text(strings, date.week * 7 + 1, date.month, date.year + 1));
                 if (date.week == 0)
                     page.graph_ticks.push_back({ static_cast<float>(back), short_month(strings, date.month) });
             }

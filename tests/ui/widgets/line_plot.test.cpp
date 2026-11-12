@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/line_plot.hpp"
 
+#include "ui/desktop.hpp"
+
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -55,4 +57,36 @@ TEST_CASE("a plot spans its slots, or its longest series")
     CHECK(plot.span() == 3);
     plot.slots = 64;
     CHECK(plot.span() == 64);
+}
+
+TEST_CASE("the wheel zooms a plot in on its newest samples and out again, and the pointer picks a sample")
+{
+    Desktop desktop;
+    LinePlot& plot = desktop.root().add<LinePlot>("plot");
+    plot.placement = top_left(0, 0, 101, 50);
+    plot.slots = 101;
+    desktop.layout({ 0, 0, 200, 100 });
+    CHECK_FALSE(plot.pointed());
+    desktop.update({ .position = { 100.8f, 10 } });
+    CHECK(plot.pointed() == 0); // The newest, at the right edge
+    desktop.update({ .position = { 0, 10 } });
+    CHECK(plot.pointed() == 100);
+
+    // Not without a most to zoom out to.
+    desktop.update({ .position = { 50, 10 }, .wheel = { 0, 1 } });
+    CHECK_FALSE(plot.take_zoom());
+    CHECK(plot.span() == 101);
+
+    plot.most_slots = 101;
+    desktop.update({ .position = { 50, 10 }, .wheel = { 0, 1 } });
+    CHECK(plot.take_zoom() == 81);
+    CHECK_FALSE(plot.take_zoom());
+    for (int i = 0; i < 30; ++i)
+        desktop.update({ .position = { 50, 10 }, .wheel = { 0, 1 } });
+    CHECK(plot.span() == plot.fewest_slots);
+    for (int i = 0; i < 30; ++i)
+        desktop.update({ .position = { 50, 10 }, .wheel = { 0, -1 } });
+    CHECK(plot.span() == 101);
+    desktop.update({ .position = { 300, 10 } });
+    CHECK_FALSE(plot.pointed());
 }

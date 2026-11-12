@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <utility>
 
 namespace rct3::ui::widgets
 {
@@ -60,6 +61,34 @@ namespace rct3::ui::widgets
         return most;
     }
 
+    void LinePlot::on_hover(Point p)
+    {
+        const Rect r = rect();
+        const std::size_t across = span();
+        if (r.width() <= 0 || across < 2)
+            under_ = 0;
+        else
+            under_ = static_cast<std::size_t>(std::lround(std::clamp((r.x1 - p.x) / r.width(), 0.0f, 1.0f) * static_cast<float>(across - 1)));
+    }
+
+    bool LinePlot::on_wheel(Point notches)
+    {
+        if (most_slots == 0 || notches.y == 0)
+            return false;
+        // Chosen by eye: a fifth more or less a notch, quick across twenty years of weeks without jumping past a few.
+        const float scaled = static_cast<float>(span()) * std::pow(1.25f, -notches.y);
+        slots = std::clamp(static_cast<std::size_t>(std::lround(scaled)), std::min(fewest_slots, most_slots), most_slots);
+        zoomed_ = slots;
+        return true;
+    }
+
+    std::optional<std::size_t> LinePlot::pointed() const
+    {
+        if (!hovered())
+            return std::nullopt;
+        return under_;
+    }
+
     void LinePlot::draw(DrawContext& context) const
     {
         const Rect r = rect();
@@ -72,6 +101,9 @@ namespace rct3::ui::widgets
         const std::size_t across = span();
         for (const PlotTick& t : ticks)
         {
+            // Ticks before the span, zoomed in, are off the plot.
+            if (t.back + 1 > static_cast<float>(across))
+                continue;
             const float x = std::round(r.x0 + plot_x(t.back, across, r.width()));
             context.list.fill({ x, r.y1 - (t.major ? 2 * tick : tick), x + 1, r.y1 }, rule_colour);
         }
@@ -110,6 +142,11 @@ namespace rct3::ui::widgets
                 const std::array<std::array<float, 2>, 4> band { { { x0 + nx, y0 + ny }, { x1 + nx, y1 + ny }, { x1 - nx, y1 - ny }, { x0 - nx, y0 - ny } } };
                 context.list.polygon(band, s.colour);
             }
+        }
+        if (const auto back = pointed())
+        {
+            const float x = std::round(r.x0 + plot_x(static_cast<float>(*back), across, r.width()));
+            context.list.fill({ x, r.y0, x + 1, r.y1 }, rule_colour);
         }
         context.list.pop_clip();
     }

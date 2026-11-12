@@ -93,6 +93,14 @@ namespace rct3::ui::screens
         std::string key { }; ///< Widget name of a button without an icon
     };
 
+    /// A span of a graph the player may pick, by its name: `slots` samples back from the newest, or all of them
+    /// for 0.
+    struct GraphRange
+    {
+        std::u16string name;
+        std::size_t slots = 0;
+    };
+
     struct ManagementPage
     {
         std::vector<InfoLine> lines;
@@ -102,6 +110,8 @@ namespace rct3::ui::screens
         std::vector<InfoSeries> graph;
         std::vector<InfoTick> graph_ticks;
         std::size_t graph_slots = 0;               ///< Samples across the graph; see LinePlot::slots
+        std::vector<GraphRange> graph_ranges;      ///< Above the graph, which the wheel zooms too; none for neither
+        std::vector<std::u16string> graph_when;    ///< Each sample's time, newest first, heading the readout
         std::vector<widgets::TableColumn> columns; ///< No table without any
         std::vector<widgets::TableRow> rows;
         std::optional<std::size_t> sort; ///< The column the rows are sorted by until the player picks one
@@ -190,6 +200,8 @@ namespace rct3::ui::screens
         void close_choices();
         /// Gives the graph the series that are ticked and its numbers those of the one in focus.
         void fill_graph();
+        /// Spans the graph over the samples the player picked, and names the marks under it that fit.
+        void span_graph();
 
         ManagementWindowStyle style_;
         std::vector<widgets::Button*> tabs_;
@@ -204,6 +216,14 @@ namespace rct3::ui::screens
         std::array<widgets::Label*, 5> axis_ { };     ///< Numbers up the graph's left, top first
         std::vector<std::string> hidden_;             ///< Keys of the series the player unticked
         std::string focus_;                           ///< Key of the series the player ticked last; the first when none
+        std::optional<std::size_t> graph_span_;       ///< Samples the player zoomed the graph to; all when none
+        std::size_t graph_slots_ = 0;                 ///< The page's graph's own, all of its samples
+        std::vector<InfoTick> graph_ticks_;           ///< The page's graph's marks
+        std::vector<std::u16string> graph_when_;      ///< See ManagementPage::graph_when
+        std::vector<widgets::Label*> marks_;          ///< Words under the graph's marks that fit its span
+        std::pair<float, float> marks_top_ { };       ///< Of the marks' words: an anchor and an offset down the page
+        std::vector<widgets::Button*> ranges_;        ///< Picking the graph's span, by graph_ranges_
+        std::vector<GraphRange> graph_ranges_;
         std::vector<widgets::Button*> buttons_;
         std::vector<std::vector<InfoChoice>> button_choices_; ///< Of each of buttons_
         std::vector<widgets::Button*> choices_;               ///< Fanned out beside the button choosing_

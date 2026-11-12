@@ -138,7 +138,18 @@
             "RunningCost": "Running cost a week",
             "Export": "Save as a spreadsheet",
             "ExportHelp": "Write every month of the ledger, every line, to a file a spreadsheet opens",
-            "Exported": "Ledger written to %NAME%"
+            "Exported": "Ledger written to %NAME%",
+            "Loan": "Loan"
+        },
+        "Loan": {
+            "WeeklyInterest": "Interest a week",
+            "MonthlyInterest": "Interest a month",
+            "In1": "Cash in a month",
+            "In2": "Cash in two months",
+            "In3": "Cash in three months",
+            "In6": "Cash in six months",
+            "BarHelp": "Borrow or repay, a step at a time; repaying needs the cash in hand",
+            "Note": "The cash ahead goes on last month's profit, without the interest it paid, less the interest on the loan now."
         },
         "Graph": {
             "Month": "Month",

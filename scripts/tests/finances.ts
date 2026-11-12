@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The finances window's tabs: a park run on for more months than a park file keeps shows each of them on the
-// ledger tab, which writes out as a spreadsheet, the attractions' takings on theirs, and the original layout's
-// two tabs when the option asks for it.
+// ledger tab, which writes out as a spreadsheet; the graphs zoom and read out; the loan's bar borrows; the
+// attractions' takings show on their tab; and the original layout has its two tabs when the option asks for it.
 //
 //   ./nob script scripts/tests/finances.ts -- --no-audio
 
@@ -88,6 +88,22 @@ await screenshot("graphs_zoomed");
 await ui.click(under(kWindow, "range2")!);
 await frames(5);
 await screenshot("graphs_all");
+// The loan's bar dragged to its end borrows up to the most, and back repays.
+await tab("Attraction_Finances");
+const loan_before = park.loan();
+const bar = ui.find(under(under(kWindow, "controls")!, "FinancialSummary_Loan")!)!;
+// Past its end, a little: the pointer goes by shares of the screen.
+await pointer.drag([bar.x, bar.y], [bar.right + 0.02, bar.y], 10);
+await frames(70);
+log("loan", loan_before, "to", park.loan());
+expect(park.loan() > loan_before, "the bar to borrow");
+await screenshot("loan");
+// Back to nought repays what the cash in hand covers.
+const borrowed = park.loan();
+await pointer.drag([bar.right - 0.005, bar.y], [bar.left - 0.02, bar.y], 10);
+await frames(70);
+log("repaid to", park.loan(), "cash", park.cash());
+expect(park.loan() < borrowed, "the bar to repay");
 await tab("AttractionListDialogIconAllAttractions");
 await screenshot("attractions");
 await close();

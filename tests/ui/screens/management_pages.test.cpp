@@ -121,14 +121,15 @@ TEST_CASE("the finances show the running cash and the ledger a month a column, t
     CHECK(sales->cells[2] == money(-700));
 }
 
-TEST_CASE("the finances window has our ledger and attractions tabs, or the original's two when asked")
+TEST_CASE("the finances window has our ledger, loan and attractions tabs, or the original's two when asked")
 {
     const StringTable s = test_strings();
-    CHECK(management_tabs(ManagementTopic::Finances, s, kUnits).size() == 4);
+    CHECK(management_tabs(ManagementTopic::Finances, s, kUnits).size() == 5);
     CHECK(finance_page(0, false) == FinancePage::Summary);
     CHECK(finance_page(1, false) == FinancePage::Ledger);
     CHECK(finance_page(2, false) == FinancePage::Graphs);
-    CHECK(finance_page(3, false) == FinancePage::Attractions);
+    CHECK(finance_page(3, false) == FinancePage::Loan);
+    CHECK(finance_page(4, false) == FinancePage::Attractions);
     InfoUnits original = kUnits;
     original.original_finances = true;
     CHECK(management_tabs(ManagementTopic::Finances, s, original).size() == 2);
@@ -203,7 +204,7 @@ TEST_CASE("the finances' attractions tab lists each ride and stall with its taki
     rides.stalls[1].base.demolished = true;
     // Taken since the park was opened, on top of what the park file kept.
     const auto takings = [](std::uint64_t id) { return id == 7 ? AttractionTakings { .income = 1000, .customers = 5 } : AttractionTakings { }; };
-    const ManagementPage page = management_page(ManagementTopic::Finances, 3, { .rides = &rides, .takings = takings }, s, kUnits);
+    const ManagementPage page = management_page(ManagementTopic::Finances, 4, { .rides = &rides, .takings = takings }, s, kUnits);
     REQUIRE(page.rows.size() == 2);
     CHECK(page.sort == 3);
     CHECK(page.sort_descending);
@@ -211,6 +212,53 @@ TEST_CASE("the finances' attractions tab lists each ride and stall with its taki
     CHECK(page.rows[0].cells[3] == money(10000));
     CHECK(page.rows[0].cells[2] == money(120));
     CHECK(management_row(page.rows[1].id) == ManagementRow { ManagementRow::Kind::Stall, 0 });
+}
+
+TEST_CASE("the loan tab sets the loan with a bar and reckons the cash ahead from last month's profit")
+{
+    const StringTable s = test_strings();
+    save::model::ParkModel park;
+    park.has_finance = true;
+    park.finance.max_loan = 1'000'000;
+    park.finance.interest_rate_percent = 0;
+    park.finance.ledger.resize(2);
+    // Last month: 900.00 in, 200.00 out of which 50.00 was interest.
+    park.finance.ledger[1].ride_tickets = -90'000;
+    park.finance.ledger[1].staff_wages = 15'000;
+    park.finance.ledger[1].loan_interest = 5'000;
+    simulation::park::ParkState state;
+    state.cash = 100'000;
+    state.loan = 300'000;
+    const ManagementPage page = management_page(ManagementTopic::Finances, 3, { .park = &park, .state = &state }, s, kUnits);
+    REQUIRE(page.controls.size() == 1);
+    CHECK(page.controls[0].id == kLoanControl);
+    CHECK(page.controls[0].kind == InfoControlKind::Bar);
+    CHECK(page.controls[0].value == 300'000);
+    CHECK(page.controls[0].maximum == 1'000'000);
+    CHECK(page.controls[0].step == simulation::park::kLoanStep);
+    CHECK(page.controls[0].enabled);
+    const auto value = [&](std::string_view key) {
+        const auto found = std::ranges::find(page.lines, std::string(key), &InfoLine::name);
+        REQUIRE(found != page.lines.end());
+        return found->value;
+    };
+    // No interest at nought percent: 750.00 a month ahead, the 50.00 paid last month left out.
+    CHECK(value("Rct3pp_Loan_In1") == money(100'000 + 75'000));
+    CHECK(value("Rct3pp_Loan_In6") == money(100'000 + 6 * 75'000));
+    // A month's interest on the loan now comes off each month.
+    park.finance.interest_rate_percent = 10;
+    const std::int64_t weekly = simulation::park::weekly_interest(300'000, 10);
+    CHECK(weekly > 0);
+    const ManagementPage charged = management_page(ManagementTopic::Finances, 3, { .park = &park, .state = &state }, s, kUnits);
+    const auto in2 = std::ranges::find(charged.lines, std::string("Rct3pp_Loan_In2"), &InfoLine::name);
+    REQUIRE(in2 != charged.lines.end());
+    CHECK(in2->value == money(100'000 + 2 * (75'000 - 4 * weekly)));
+    // Without a full month behind it, nothing to go on.
+    park.finance.ledger.resize(1);
+    const ManagementPage early = management_page(ManagementTopic::Finances, 3, { .park = &park, .state = &state }, s, kUnits);
+    const auto in1 = std::ranges::find(early.lines, std::string("Rct3pp_Loan_In1"), &InfoLine::name);
+    REQUIRE(in1 != early.lines.end());
+    CHECK(in1->value == u"-");
 }
 
 TEST_CASE("the loan buttons borrow and repay, each greyed out at its limit")

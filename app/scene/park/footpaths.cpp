@@ -1281,6 +1281,8 @@ namespace rct3::scene::park
             if (first != f.styles.end())
                 f.style = static_cast<std::size_t>(first - f.styles.begin());
         }
+        // It starts clean: no trail goes on from where the last one was left.
+        (void)drop_footpath_trail(scene);
         // Styles invented while the panel is shut show when it opens next.
         auto [paths, queues] = panel_styles(f, scene.build.offer, assets, options);
         panel->show(std::move(paths), std::move(queues));

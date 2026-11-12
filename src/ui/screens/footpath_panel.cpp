@@ -88,6 +88,10 @@ namespace rct3::ui::screens
         queues_ = std::move(queues);
         visible = true;
         closed_ = false;
+        // It starts clean each time: what was switched on when it closed is off again.
+        route_->on = false;
+        straight_->on = false;
+        remove_->on = false;
         open_page(FootpathPage::Controls);
     }
 

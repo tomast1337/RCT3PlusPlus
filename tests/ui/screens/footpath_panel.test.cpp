@@ -179,3 +179,23 @@ TEST_CASE("the open page's tab folds the strip away, and the close button hides 
     CHECK(f.panel->take_closed());
     CHECK_FALSE(f.panel->take_closed());
 }
+
+TEST_CASE("the panel opens with its route, straight and remove tabs off again")
+{
+    Fixture f;
+    f.open();
+    f.click(Fixture::middle(f.panel->route_tab().rect()));
+    f.click(Fixture::middle(f.panel->straight_tab().rect()));
+    CHECK(f.panel->routing());
+    CHECK(f.panel->straight());
+    f.panel->hide();
+    f.open();
+    CHECK_FALSE(f.panel->routing());
+    CHECK_FALSE(f.panel->straight());
+
+    f.click(Fixture::middle(f.panel->remove_tab().rect()));
+    CHECK(f.panel->removing());
+    f.panel->hide();
+    f.open();
+    CHECK_FALSE(f.panel->removing());
+}

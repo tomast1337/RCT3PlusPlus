@@ -117,3 +117,59 @@ TEST_CASE("a ride or stall carries a theme when enough of its scenery stands rou
     CHECK(simulation::award_earned(17, park, 0, dice));
     CHECK_FALSE(simulation::award_earned(16, park, 0, dice));
 }
+
+TEST_CASE("healthy rare animals win best animals, and sickly ones count hard against it")
+{
+    random::RandomState dice = random::seeded({ });
+    simulation::AwardFigures zoo;
+    // Thirteen endangered animals in full health make 13; fewer do not pass 12.
+    zoo.animals.assign(13, { .rarity = 1, .health = 1 });
+    CHECK(simulation::award_earned(28, zoo, 0, dice));
+    zoo.animals.resize(12);
+    CHECK_FALSE(simulation::award_earned(28, zoo, 0, dice));
+    // One at a quarter health takes away what five healthy ones give.
+    zoo.animals.assign(16, { .rarity = 1, .health = 1 });
+    CHECK(simulation::award_earned(28, zoo, 0, dice));
+    zoo.animals.push_back({ .rarity = 1, .health = 0.25f });
+    CHECK_FALSE(simulation::award_earned(28, zoo, 0, dice));
+    // Common animals count for nothing.
+    zoo.animals.assign(40, { .rarity = 0, .health = 1 });
+    CHECK_FALSE(simulation::award_earned(28, zoo, 0, dice));
+}
+
+TEST_CASE("the sum for best animals drops its fraction as each animal is added")
+{
+    random::RandomState dice = random::seeded({ });
+    // Each adds 0.9: kept whole, nothing builds up, though the true sum would pass 12.
+    simulation::AwardFigures zoo;
+    zoo.animals.assign(20, { .rarity = 0.9f, .health = 1 });
+    CHECK_FALSE(simulation::award_earned(28, zoo, 0, dice));
+}
+
+TEST_CASE("young healthy rare animals are the cutest")
+{
+    random::RandomState dice = random::seeded({ });
+    simulation::AwardFigures zoo;
+    zoo.animals.assign(11, { .rarity = 1, .health = 1, .young = true });
+    CHECK(simulation::award_earned(29, zoo, 0, dice));
+    // Adults are not cute.
+    for (auto& a : zoo.animals)
+        a.young = false;
+    CHECK_FALSE(simulation::award_earned(29, zoo, 0, dice));
+    // A quarter rarity halves an animal's part: 21 such young ones make 10.5.
+    zoo.animals.assign(21, { .rarity = 0.25f, .health = 1, .young = true });
+    CHECK(simulation::award_earned(29, zoo, 0, dice));
+    zoo.animals.resize(20);
+    CHECK_FALSE(simulation::award_earned(29, zoo, 0, dice));
+}
+
+TEST_CASE("more than four poorly animals bring the fine for neglect")
+{
+    random::RandomState dice = random::seeded({ });
+    simulation::AwardFigures zoo;
+    zoo.animals.assign(5, { .rarity = 0.5f, .health = 0.3f });
+    CHECK(simulation::award_earned(30, zoo, 0, dice));
+    CHECK(simulation::award_is_fine(30));
+    zoo.animals.back().health = 0.4f;
+    CHECK_FALSE(simulation::award_earned(30, zoo, 0, dice));
+}

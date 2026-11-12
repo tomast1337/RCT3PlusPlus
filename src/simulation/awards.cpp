@@ -135,9 +135,34 @@ namespace rct3::simulation
                 constexpr std::int32_t kPools = 12; ///< Happenings at pools, at least
                 return f.pool_dangers >= kPools;
             }
+            case 28: // Best animals
+            {
+                constexpr float kFit = 0.5f; ///< Health over which an animal adds to the park's name, under which it takes away
+                constexpr float kGain = 2;   ///< What each share of health over kFit adds, for an endangered animal
+                constexpr float kLoss = 20;  ///< And what each share under it takes away
+                constexpr float kBest = 12;  ///< The sum the park must pass
+                float sum = 0;
+                // Each animal's part is weighed by its rarity; the sum so far drops its fraction as each is added.
+                for (const AwardFigures::Animal& a : f.animals)
+                    sum = std::trunc(sum) + (a.health - kFit) * (a.health > kFit ? kGain : kLoss) * a.rarity;
+                return sum > kBest;
+            }
+            case 29: // Cutest animals
+            {
+                constexpr float kCutest = 10; ///< The sum the park must pass
+                float sum = 0;
+                // Young animals only: the rarer and the healthier, the cuter.
+                for (const AwardFigures::Animal& a : f.animals)
+                    sum += a.young ? std::sqrt(a.rarity) * std::sqrt(a.health) : 0;
+                return sum > kCutest;
+            }
+            case 30: // Most neglected animals
+            {
+                constexpr float kPoorly = 0.4f;   ///< Health under which an animal is neglected
+                constexpr std::int32_t kMany = 4; ///< Neglected animals the park gets away with
+                return std::ranges::count_if(f.animals, [&](const AwardFigures::Animal& a) { return a.health < kPoorly; }) > kMany;
+            }
             default:
-                // shortcut: scenery themes and animals are never given, as what they count is not simulated; add them
-                // as it is.
                 return false;
         }
     }

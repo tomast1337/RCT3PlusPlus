@@ -64,6 +64,14 @@ namespace rct3::simulation
         std::int32_t pool_dangers = 0;    ///< And at pools
         /// By theme, as the themes' overlays name them ("Spooky"): rides and stalls that stand among its scenery.
         std::map<std::string, std::int32_t, std::less<>> themed { };
+        /// An animal out of its crate, as the animal awards weigh it.
+        struct Animal
+        {
+            float rarity = 0; ///< Of its kind, from 0, common, to 1, endangered
+            float health = 0; ///< 0 to 1
+            bool young = false;
+        };
+        std::vector<Animal> animals { };
     };
 
     /// Of the park's rides and stalls, how many carry each theme: those with enough scenery of the theme round

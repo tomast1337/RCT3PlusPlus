@@ -1589,10 +1589,7 @@ namespace rct3::scene::park
                 scene.park_model.finance.max_loan = p.max_loan;
                 scene.park_model.finance.interest_rate_percent = p.interest_rate_percent;
                 if (!p.ledger.empty())
-                {
-                    std::ranges::copy(p.ledger | std::views::take(save::model::kLedgerPeriods), scene.park_model.finance.ledger.begin());
-                    scene.park_model.finance.ledger_periods_loaded = std::min(p.ledger.size(), save::model::kLedgerPeriods);
-                }
+                    scene.park_model.finance.ledger.assign(p.ledger.begin(), p.ledger.begin() + static_cast<std::ptrdiff_t>(std::min(p.ledger.size(), save::model::kKeptMonths)));
                 scene.ledger_month = p.ledger_month;
                 save::model::Finance& m = scene.park_model.finance;
                 m.cash_less_loan = p.cash_less_loan;

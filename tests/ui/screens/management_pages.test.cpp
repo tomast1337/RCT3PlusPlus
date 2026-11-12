@@ -99,9 +99,7 @@ TEST_CASE("the finances show the running cash and the ledger a month a column, t
     park.has_finance = true;
     park.finance.cash = 50000;
     park.finance.loan = 20000;
-    park.finance.ledger_periods_loaded = 2;
-    park.finance.ledger[0].shop_sales = -1500; // Money in
-    park.finance.ledger[1].shop_sales = 700;
+    park.finance.ledger = { { .shop_sales = -1500 }, { .shop_sales = 700 } }; // Money in, then out
     simulation::park::ParkState state;
     state.cash = 42000;
     state.loan = 20000;

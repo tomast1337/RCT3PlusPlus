@@ -22,8 +22,7 @@ TEST_CASE("a park whose money never runs out books nothing")
     std::optional<std::int64_t> kept;
     CHECK(book(park, money, kept, 5000, LedgerLine::StaffTraining, false));
     CHECK_FALSE(park.cash.has_value());
-    CHECK(money.ledger[0].staff_training == 0);
-    CHECK(money.ledger_periods_loaded == 0);
+    CHECK(money.ledger.empty());
 }
 
 TEST_CASE("a spend the park cannot afford is refused and changes nothing")
@@ -34,7 +33,7 @@ TEST_CASE("a spend the park cannot afford is refused and changes nothing")
     std::optional<std::int64_t> kept;
     CHECK_FALSE(book(park, money, kept, 5000, LedgerLine::StaffTraining, false));
     CHECK(park.cash == 4000);
-    CHECK(money.ledger[0].staff_training == 0);
+    CHECK(money.ledger.empty());
     CHECK(book(park, money, kept, 4000, LedgerLine::StaffTraining, false));
     CHECK(park.cash == 0);
     CHECK(money.ledger[0].staff_training == 4000);
@@ -91,14 +90,12 @@ TEST_CASE("money coming in adds to the cash and books negative")
 TEST_CASE("the ledger books into this month's period and starts a new one as each month begins")
 {
     save::model::Finance money;
-    money.ledger[0].staff_wages = 700; // This month so far, as the park file left it
-    money.ledger[0].pool_tickets = -50;
-    money.ledger[1].staff_wages = 900;
-    money.ledger_periods_loaded = 2;
+    // This month so far, as the park file left it, and the month before.
+    money.ledger = { { .staff_wages = 700, .pool_tickets = -50 }, { .staff_wages = 900 } };
     std::optional<std::int64_t> kept;
     ledger_month(money, kept, { .year = 1, .month = 3 }).staff_wages += 100;
     CHECK(money.ledger[0].staff_wages == 800);
-    CHECK(money.ledger_periods_loaded == 2);
+    CHECK(money.ledger.size() == 2);
     // The next month: the older ones move back a place.
     ledger_month(money, kept, { .year = 1, .month = 4 }).staff_training += 5000;
     CHECK(money.ledger[0].staff_wages == 0);
@@ -107,12 +104,15 @@ TEST_CASE("the ledger books into this month's period and starts a new one as eac
     CHECK_FALSE(money.ledger[0].billboards.has_value());
     CHECK(money.ledger[1].staff_wages == 800);
     CHECK(money.ledger[2].staff_wages == 900);
-    CHECK(money.ledger_periods_loaded == 3);
-    // Across the year's end, and months passed in one go keep only as many as the ledger holds.
+    CHECK(money.ledger.size() == 3);
+    // Across the year's end, each month passed a period of its own, more than a park file keeps.
     ledger_month(money, kept, { .year = 2, .month = 0 }).staff_wages += 1;
     CHECK(money.ledger[4].staff_training == 5000);
-    CHECK(money.ledger_periods_loaded == save::model::kLedgerPeriods);
-    (void)ledger_month(money, kept, { .year = 9, .month = 0 });
+    CHECK(money.ledger.size() == 7);
+    CHECK(money.ledger.size() > save::model::kLedgerPeriods);
+    // Months passed in one go keep only as many as the ledger holds.
+    (void)ledger_month(money, kept, { .year = 90, .month = 0 });
+    CHECK(money.ledger.size() == save::model::kKeptMonths);
     CHECK(std::ranges::all_of(money.ledger, [](const save::model::LedgerPeriod& p) { return p.staff_wages == 0; }));
 }
 
@@ -121,7 +121,7 @@ TEST_CASE("a park whose file kept no ledger starts one at its first booking")
     save::model::Finance money;
     std::optional<std::int64_t> kept;
     ledger_month(money, kept, { }).staff_wages += 875;
-    CHECK(money.ledger_periods_loaded == 1);
+    CHECK(money.ledger.size() == 1);
     CHECK(money.ledger[0].staff_wages == 875);
 }
 
@@ -266,6 +266,5 @@ TEST_CASE("a park whose money never runs out pays no interest or running costs")
     std::optional<std::int64_t> kept;
     CHECK(book(park, money, kept, weekly_interest(1'000'000, 6), LedgerLine::LoanInterest, true));
     CHECK(book(park, money, kept, 500, LedgerLine::RideRunningCosts, true));
-    CHECK(money.ledger[0].loan_interest == 0);
-    CHECK(money.ledger[0].ride_running_costs == 0);
+    CHECK(money.ledger.empty());
 }

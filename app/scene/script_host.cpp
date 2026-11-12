@@ -311,7 +311,8 @@ namespace rct3::scene
         engine_.define("park.ledger", [this](const Json&) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
-            const save::model::LedgerPeriod& l = park_->park_model.finance.ledger[0];
+            const auto& ledger = park_->park_model.finance.ledger;
+            const save::model::LedgerPeriod l = ledger.empty() ? save::model::LedgerPeriod { } : ledger.front();
             return { { "landPurchase", l.land_purchase }, { "landscaping", l.landscaping }, { "rideConstruction", l.ride_construction }, { "research", l.research } };
         });
         engine_.define("park.research", [this](const Json&) -> Json {
@@ -362,8 +363,8 @@ namespace rct3::scene
             const save::model::Finance& m = park_->park_model.finance;
             const save::model::Park& g = park_->park_model.park;
             Json ledger = Json::array();
-            for (std::size_t i = 0; i < m.ledger_periods_loaded && i < m.ledger.size(); ++i)
-                ledger.push_back(m.ledger[i].raw_sum());
+            for (const save::model::LedgerPeriod& period : m.ledger)
+                ledger.push_back(period.raw_sum());
             return { { "cashLessLoan", m.cash_less_loan.samples }, { "companyValue", m.company_value.samples }, { "parkValue", m.park_value.samples }, { "income", m.income.samples }, { "expenditure", m.expenditure.samples }, { "weeklyProfit", m.weekly_profit.samples }, { "rating", g.park_rating.samples }, { "guests", g.guests_in_park.samples }, { "intake", g.guest_intake.samples }, { "ledger", std::move(ledger) }, { "ledgerMonth", park_->ledger_month ? Json(*park_->ledger_month) : Json(nullptr) } };
         });
         engine_.define("park.loan", [this](const Json&) -> Json {

@@ -171,7 +171,7 @@ TEST_CASE("a park that cannot pay a part makes no progress")
     lab.pass(12);
     CHECK(lab.park.cash == 100);
     CHECK(lab.research.spent == 0);
-    CHECK(lab.money.ledger[0].research == 0);
+    CHECK(lab.money.ledger.empty());
     CHECK(lab.park.messages.list.empty()); // Said nowhere: it happens thirty times a month
     lab.park.cash = 1000;
     lab.pass(12);
@@ -184,7 +184,7 @@ TEST_CASE("a park whose money never runs out researches for free")
     lab.research.current = 2;
     lab.pass(kMonth);
     CHECK_FALSE(lab.park.cash.has_value());
-    CHECK(lab.money.ledger[0].research == 0);
+    CHECK(lab.money.ledger.empty());
     CHECK(lab.research.invented == std::vector<std::uint64_t> { 2 });
 }
 

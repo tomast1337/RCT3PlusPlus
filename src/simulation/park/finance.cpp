@@ -21,18 +21,20 @@ namespace rct3::simulation::park
         constexpr auto kMonthsPerYear = static_cast<std::int64_t>(save::model::GameClock::kUnitsPerYear / save::model::GameClock::kUnitsPerMonth);
         const std::int64_t month = date.year * kMonthsPerYear + date.month;
         auto& ledger = finance.ledger;
-        for (std::int64_t n = std::min<std::int64_t>(month - kept.value_or(month), save::model::kLedgerPeriods); n > 0; --n)
+        if (ledger.empty())
+            ledger.emplace_back();
+        for (std::int64_t n = std::min<std::int64_t>(month - kept.value_or(month), save::model::kKeptMonths); n > 0; --n)
         {
-            std::shift_right(ledger.begin(), ledger.end(), 1);
             // The counters only some parks have stay shown in the months that follow.
-            const save::model::LedgerPeriod& before = ledger[1];
+            const save::model::LedgerPeriod& before = ledger.front();
             const auto zero = [](std::int32_t) { return 0; };
-            ledger[0] = { .pool_tickets = before.pool_tickets.transform(zero), .billboards = before.billboards.transform(zero), .viewing_gallery_tickets = before.viewing_gallery_tickets.transform(zero), .other_animal_spending = before.other_animal_spending.transform(zero) };
-            finance.ledger_periods_loaded = std::min(finance.ledger_periods_loaded + 1, save::model::kLedgerPeriods);
+            const save::model::LedgerPeriod next { .pool_tickets = before.pool_tickets.transform(zero), .billboards = before.billboards.transform(zero), .viewing_gallery_tickets = before.viewing_gallery_tickets.transform(zero), .other_animal_spending = before.other_animal_spending.transform(zero) };
+            ledger.insert(ledger.begin(), next);
+            if (ledger.size() > save::model::kKeptMonths)
+                ledger.pop_back();
         }
         kept = std::max(kept.value_or(month), month);
-        finance.ledger_periods_loaded = std::max<std::size_t>(finance.ledger_periods_loaded, 1);
-        return ledger[0];
+        return ledger.front();
     }
 
     void cannot_pay(ParkState& park)

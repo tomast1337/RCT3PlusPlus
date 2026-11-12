@@ -1174,7 +1174,7 @@ namespace rct3::scene::park
                 // The ledger moved on to this month, so that the period before it is last month's.
                 save::model::Finance& money = scene.park_model.finance;
                 (void)simulation::park::ledger_month(money, scene.ledger_month, scene.park.date);
-                const save::model::LedgerPeriod last_month = money.ledger_periods_loaded > 1 ? money.ledger[1] : save::model::LedgerPeriod { };
+                const save::model::LedgerPeriod last_month = money.ledger.size() > 1 ? money.ledger[1] : save::model::LedgerPeriod { };
                 const simulation::ParkFigures figures {
                     .park_value = simulation::park::park_value(scene.park.guests, scene.rides),
                     .guests = scene.park.guests,
@@ -2279,7 +2279,7 @@ namespace rct3::scene::park
                            .weather_hold = park.weather_hold,
                            .wind = park.wind,
                            .wind_change = park.wind_change,
-                           .ledger = { scene.park_model.finance.ledger.begin(), scene.park_model.finance.ledger.begin() + static_cast<std::ptrdiff_t>(std::min(scene.park_model.finance.ledger_periods_loaded, save::model::kLedgerPeriods)) },
+                           .ledger = scene.park_model.finance.ledger,
                            .max_loan = scene.park_model.finance.max_loan,
                            .interest_rate_percent = scene.park_model.finance.interest_rate_percent,
                            .ledger_month = scene.ledger_month };

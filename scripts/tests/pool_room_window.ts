@@ -113,9 +113,10 @@ await until(() => ui.find("info/Attraction_General_Closed") !== undefined, 60, "
 await frames(3);
 expect(ui.find("info/body/status_label")?.text === "Closed", `the complex closed, not ${ui.find("info/body/status_label")?.text}`);
 
-// The construction tab opens the pool panel, the window staying.
+// The construction tab opens the pool panel, which takes the window's place.
 await ui.click("info/Attraction_Construction");
 await until(() => ui.find("pool_panel") !== undefined, 120, "the pool panel");
-expect(ui.find("info") !== undefined, "the room's window still open");
+await frames(3);
+expect(ui.find("info") === undefined, "the room's window put away by the pool panel");
 await frames(3);
 await screenshot("pool_room_window_construction");

@@ -3,7 +3,7 @@
 // Research in a scenario that budgets for it: over a few months attractions are invented, each told in a
 // message and offered in the build lists, the money booked as research spending; the research window sets the
 // budget and the areas' priorities; saved and opened again, research is where it was, and an invention's message
-// opens its build list on it. A sandbox does none.
+// opens its build list on it, where the item under research shows locked. A sandbox does none.
 //
 //   ./nob script scripts/tests/research.ts -- --no-audio
 
@@ -148,6 +148,39 @@ await frames(5);
 log("invention:", invention, "shown at", JSON.stringify(ui.find(under("build_list", invention) ?? "build_list")));
 expect(under("build_list", invention) !== undefined && ui.find(under("build_list", invention)!) !== undefined, `${invention} shown in its list`);
 await screenshot("invention_list");
+
+// The item under research shows locked in its list, with how far it has got, and does not pick; hidden items
+// never show.
+build.stop();
+const researched = park.research().current!;
+let lockedRow: string | undefined;
+for (const menu of ["Rides", "Shops"]) {
+    // The menu's entries are there only while it is out.
+    const first = ui.children(`tools/${menu}`)![0];
+    const button = `tools/${menu}/${first}`;
+    await ui.click(button);
+    await frames(5);
+    const items = (ui.children(`tools/${menu}`) ?? []).filter((c) => c !== first && c.startsWith("Obj_") && c !== "Obj_Pools" && c !== "Obj_Enclosures"); // Tools, not lists
+    for (const entry of items) {
+        if (!ui.find(`tools/${menu}/${entry}`))
+            await ui.click(button);
+        await until(() => ui.find(`tools/${menu}/${entry}`) !== undefined, 120, `the ${menu} menu`);
+        await ui.click(`tools/${menu}/${entry}`);
+        await frames(3);
+        lockedRow = ui.find("build_list") ? under("build_list", researched) : undefined;
+        if (lockedRow)
+            break;
+    }
+    if (lockedRow)
+        break;
+}
+expect(lockedRow !== undefined, `${researched} listed, locked`);
+log("locked:", JSON.stringify(ui.find(lockedRow!)));
+expect(ui.find(lockedRow!)!.tooltip!.includes("Being researched"), `${researched} told as being researched`);
+await screenshot("locked_item");
+await ui.click(lockedRow!);
+await frames(5);
+expect(build.placing() === undefined, `${researched} not placed while locked`);
 
 // A sandbox budgets nothing and invents nothing.
 await park.open("Campaigns/Base/BlankLandscape.dat");

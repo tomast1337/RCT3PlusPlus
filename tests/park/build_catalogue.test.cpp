@@ -97,11 +97,39 @@ TEST_CASE("a park offers what it made available and invented")
     CHECK(offer.offers(item("fizz")));
     CHECK_FALSE(offer.offers(item("Later")));
     CHECK_FALSE(offer.offers(item("Gone")));
-    CHECK(offer.offers(item("Unlisted"))); // Added later, as the expansions' items are to older parks
+    CHECK(offer.offers(item("Unlisted")));                          // Added later, as the expansions' items are to older parks
+    CHECK(offer.state(item("Later")) == BuildOffer::State::Hidden); // Only attractions are invented
 
     const BuildOffer open;
     CHECK_FALSE(open.known());
     CHECK(open.offers(item("Unlisted")));
+}
+
+TEST_CASE("an attraction made available but not invented is locked, and an entry listed twice takes the most")
+{
+    rct3::save::model::RequiredContent content;
+    const auto entry = [](std::string symbol, bool invented, bool hidden) {
+        rct3::save::model::AssetRequirement r;
+        r.kind = rct3::save::model::AssetKind::Attraction;
+        r.overlay_stem = "Style/Made/style";
+        r.symbol = std::move(symbol);
+        r.available = true;
+        r.invented = invented;
+        r.hidden = hidden;
+        return r;
+    };
+    content.entries = { entry("Later", false, false), entry("Secret", false, true), entry("Twice", false, false), entry("Twice", true, false) };
+    const BuildOffer offer(content);
+    const auto item = [](std::string symbol) {
+        BuildItem i;
+        i.overlay = "Style/Made/Style";
+        i.symbol = std::move(symbol);
+        return i;
+    };
+    CHECK(offer.state(item("Later")) == BuildOffer::State::Locked);
+    CHECK_FALSE(offer.offers(item("Later")));
+    CHECK(offer.state(item("Secret")) == BuildOffer::State::Hidden);
+    CHECK(offer.state(item("Twice")) == BuildOffer::State::Offered);
 }
 
 TEST_CASE("a species gives an animal item for each animal, under the species")

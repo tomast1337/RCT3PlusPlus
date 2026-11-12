@@ -79,6 +79,8 @@ namespace rct3::ui::screens
         std::uint32_t addon = 0;         ///< 0 for the base game, else its add-on pack
         std::string kind;                ///< Its object filter's name ("Coaster_Steel"); empty for none
         std::size_t item = 0;            ///< The owner's number for the item
+        bool locked = false;             ///< Shown, but not to be picked until it is invented
+        std::optional<float> progress;   ///< How far research has got with it, 0 to 1, while it is under way
         int rank = 0;                    ///< Rows sort by this first, then by name
         std::vector<PickerRow> children; ///< A heading's rows; a row with any is a heading
     };
@@ -113,6 +115,9 @@ namespace rct3::ui::screens
         Color picked_colour = hex("#2484be60");
         Color pack_on_colour = hex("#2484be90"); ///< Behind a pack filter that is on
         Color dear_colour = hex("#d0101070");    ///< Over items the park cannot pay for
+        Color locked_colour = hex("#f4f0f8b0");  ///< Over items not invented yet
+        Color progress_back = hex("#00000040");  ///< Under the bar of the item under research
+        Color progress_colour = hex("#40b840ff");
     };
 
     class BuildPickerRow;

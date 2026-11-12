@@ -4,6 +4,8 @@
 #include <doctest/doctest.h>
 #include <format>
 #include <string_view>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 using namespace rct3::ui;
@@ -98,6 +100,35 @@ TEST_CASE("rows are the items of one list the park offers, in name order, sets u
 
     const auto all = picker_rows(BuildList::Props, items, BuildOffer(), strings, kCoins);
     CHECK(all.size() == 4); // peach too, when the park says nothing
+}
+
+TEST_CASE("an item still to be invented shows locked, and the one under way how far it has got")
+{
+    StringTable strings;
+    strings.add("Rct3pp_Research_Locked", u"Locked");
+    strings.add("Rct3pp_Research_UnderWay", u"Under way");
+    rct3::save::model::RequiredContent content;
+    for (const auto& [symbol, invented, hidden] : { std::tuple { "Old", true, false }, { "Next", false, false }, { "Later", false, false }, { "Secret", false, true } })
+    {
+        rct3::save::model::AssetRequirement r;
+        r.kind = rct3::save::model::AssetKind::Attraction;
+        r.overlay_stem = "Style/Made/Style";
+        r.symbol = symbol;
+        r.available = true;
+        r.invented = invented;
+        r.hidden = hidden;
+        content.entries.push_back(r);
+    }
+    const std::vector items { scenery("Old", BuildList::Facilities, "A"), scenery("Next", BuildList::Facilities, "B"), scenery("Later", BuildList::Facilities, "C"), scenery("Secret", BuildList::Facilities, "D") };
+    const auto rows = picker_rows(BuildList::Facilities, items, BuildOffer(content), strings, kCoins, { }, std::pair { std::size_t { 1 }, 0.25f });
+    REQUIRE(rows.size() == 3); // Never the hidden one; by name, which is the symbol here: Later, Next, Old
+    CHECK(rows[0].locked);
+    CHECK_FALSE(rows[0].progress.has_value());
+    CHECK(rows[0].size == u"Locked");
+    CHECK(rows[1].locked);
+    CHECK(rows[1].progress == 0.25f);
+    CHECK(rows[1].size == u"Under way");
+    CHECK_FALSE(rows[2].locked);
 }
 
 TEST_CASE("an item without a name string shows its symbol")

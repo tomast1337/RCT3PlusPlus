@@ -20,6 +20,8 @@ namespace rct3::ui::screens
         constexpr std::string_view kCustomTrack = "RideSelectionWindow_BuildCustomTrack";
         constexpr std::string_view kPlaceAttraction = "RideSelectionWindow_BuildAttraction";
         constexpr std::string_view kDesignsAvailable = "RideSelectionWindow_DesignsAvailable";
+        constexpr std::string_view kLocked = "Rct3pp_Research_Locked";
+        constexpr std::string_view kUnderWay = "Rct3pp_Research_UnderWay";
         constexpr std::u16string_view kNumber = u"%NUMBER%";
         /// The badge of items that came with an expansion, by the expansion's number less one.
         constexpr std::string_view kBadgePrefix = "ObjectSelectionWindow_AOPBadge_";
@@ -299,14 +301,15 @@ namespace rct3::ui::screens
         return strings::to_utf16(std::format("{} x {}", item.width, item.length));
     }
 
-    std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency, const std::map<std::string, std::size_t, strings::LessIgnoringCase>& design_counts)
+    std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency, const std::map<std::string, std::size_t, strings::LessIgnoringCase>& design_counts, std::optional<std::pair<std::size_t, float>> researching)
     {
         std::vector<PickerRow> rows;
         std::map<std::pair<std::string, std::string>, std::size_t> headings; // by set icon and name
         for (std::size_t i = 0; i < items.size(); ++i)
         {
             const park::BuildItem& item = items[i];
-            if (item.list != list || !offer.offers(item))
+            const park::BuildOffer::State state = offer.state(item);
+            if (item.list != list || state == park::BuildOffer::State::Hidden)
                 continue;
             PickerRow row;
             row.name = name_of(strings, item.name_text, item.symbol);
@@ -353,6 +356,13 @@ namespace rct3::ui::screens
             row.style = item.style;
             row.addon = item.addon;
             row.kind = object_filter(item);
+            if (state == park::BuildOffer::State::Locked)
+            {
+                row.locked = true;
+                if (researching && researching->first == i)
+                    row.progress = researching->second;
+                row.size = std::u16string(strings.get(row.progress ? kUnderWay : kLocked));
+            }
             if (item.addon >= 1 && item.addon <= kBadges)
                 row.badge = std::string(kBadgePrefix) + std::to_string(item.addon - 1);
 

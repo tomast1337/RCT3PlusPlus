@@ -1011,6 +1011,13 @@ namespace rct3::scene::park
                 }
                 if (scene.research.invented.size() != had)
                     scene.build.offer = rct3::park::BuildOffer(scene.park_model.content);
+                // shortcut: an open list shows the progress it had when opened; refresh it if players watch it grow.
+                scene.build.researching = std::nullopt;
+                if (const auto progress = simulation::research_progress(scene.research, *scene.research_items))
+                {
+                    if (const auto item = content_item(scene, progress->id))
+                        scene.build.researching = std::pair { *item, progress->done };
+                }
             }
             scene.research_time = scene.park.time;
             // Each new week rates the park again; weeks run through in one frame are rated once.

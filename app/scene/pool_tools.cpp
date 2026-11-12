@@ -525,6 +525,12 @@ namespace rct3::scene
         scene.pooling = park::PoolTool { .drawn = scene.pooling.drawn, .drawn_look = scene.pooling.drawn_look, .grid = scene.pooling.grid, .edge = scene.pooling.edge, .redraw = redraw, .side = scene.pooling.side, .preview_target = scene.pooling.preview_target, .preview_pixels = scene.pooling.preview_pixels }; // The marks go on the next frame
     }
 
+    bool pool_panel_open(const park::ParkScene& scene)
+    {
+        const auto panel = panel_of(scene);
+        return panel && panel->showing();
+    }
+
     void toggle_pool_panel(render::Device& device, park::ParkScene& scene, ui::InterfaceAssets& assets, const ui::Currency& currency, std::optional<ui::screens::PoolPage> page)
     {
         auto panel = panel_of(scene);

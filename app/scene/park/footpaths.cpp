@@ -1311,6 +1311,12 @@ namespace rct3::scene::park
         scene.footpaths.drop = false;
     }
 
+    bool footpath_panel_open(const ParkScene& scene)
+    {
+        const auto panel = panel_of(scene);
+        return panel && panel->showing();
+    }
+
     void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options)
     {
         auto panel = panel_of(scene);

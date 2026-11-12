@@ -320,11 +320,32 @@ namespace rct3::scene::park
             return { intake, income };
         }
 
-        /// One panel at a time at the bottom of the screen: puts the tool out away, with its panel.
-        void put_tools_away(ParkScene& scene)
+        /// Whether a tool's panel is out at the bottom of the screen. A ride's doors are placed with none.
+        bool tool_panel_out(const ParkScene& scene)
+        {
+            const bool placing = scene.placing.item && (scene.placing.step == RidePlacing::Step::Ride || scene.placing.step == RidePlacing::Step::Scenery);
+            const bool land = scene.land.tool == LandTools::Tool::Shape || scene.land.tool == LandTools::Tool::Paint || scene.land.tool == LandTools::Tool::Buy;
+            return scene.building.ride || placing || land || footpath_panel_open(scene) || pool_panel_open(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool != StructureTools::Tool::None;
+        }
+
+        /// Puts the window of a ride, a stall, a person or a piece of scenery away.
+        void hide_info(ParkScene& scene)
+        {
+            if (auto info = scene.desktop->root().find_as<ui::screens::InfoPanel>(kInfoName); info && info->visible)
+                info->hide();
+            scene.shown.reset();
+            scene.shown_person.reset();
+            scene.shown_prop.reset();
+            scene.shown_party.clear();
+        }
+
+        /// One panel at a time at the bottom of the screen: puts the tool out away, with its panel. A ride's doors
+        /// being placed stay out with `keep_doors`.
+        void put_tools_away(ParkScene& scene, bool keep_doors = false)
         {
             close_track_building(scene);
-            stop_ride_placing(scene);
+            if (!keep_doors || scene.placing.step == RidePlacing::Step::Ride || scene.placing.step == RidePlacing::Step::Scenery)
+                stop_ride_placing(scene);
             close_footpath_panel(scene);
             stop_land_tools(scene);
             stop_deleting(scene);
@@ -1886,7 +1907,10 @@ namespace rct3::scene::park
             {
                 close_build_list(desktop.root());
                 if (menu && *menu != ui::screens::ParkTool::View)
+                {
                     put_tools_away(scene);
+                    hide_info(scene);
+                }
                 scene.menu_shown = menu;
             }
             const std::optional<ui::screens::ParkTool> pressed = tools->take_pressed();
@@ -1895,6 +1919,7 @@ namespace rct3::scene::park
             else if (pressed == ui::screens::ParkTool::Map)
             {
                 put_tools_away(scene);
+                hide_info(scene);
                 toggle_park_map(scene.map, desktop, *assets.strings, assets.palette);
             }
             else if (pressed == ui::screens::ParkTool::Paths)
@@ -1987,6 +2012,7 @@ namespace rct3::scene::park
                 else if (*item == ui::screens::ToolItem::Options || *item == ui::screens::ToolItem::About || *item == ui::screens::ToolItem::Save || *item == ui::screens::ToolItem::Load)
                 {
                     put_tools_away(scene);
+                    hide_info(scene);
                     scene.window_requests.push_back(*item);
                 }
                 else if (const auto topic = ui::screens::management_topic(*item))
@@ -2074,6 +2100,19 @@ namespace rct3::scene::park
                         tools->close_menu();
                 }
             }
+        }
+        // The window of a ride, a stall, a person or a piece of scenery shares its place with the tools' panels: the
+        // one that opens puts the other away. The doors of a ride just placed go on being placed beside its window.
+        if (info)
+        {
+            if (info->visible && tool_panel_out(scene))
+            {
+                if (scene.info_shown)
+                    hide_info(scene);
+                else
+                    put_tools_away(scene, true);
+            }
+            scene.info_shown = info->visible;
         }
         update_view_lines(device, scene);
         if (auto heights = desktop.root().find_as<ui::widgets::WorldLabels>(kHeightsName))

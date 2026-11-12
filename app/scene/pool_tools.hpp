@@ -43,6 +43,7 @@ namespace rct3::scene
 
     /// Puts the pool tool away, and the pool panel.
     void stop_pooling(park::ParkScene& scene);
+    [[nodiscard]] bool pool_panel_open(const park::ParkScene& scene);
 
     /// Opens the pool panel (ui/screens/pool_panel.hpp) with the editor's tool out, or closes it; with `page`, opens it
     /// on that page whether it shows or not.

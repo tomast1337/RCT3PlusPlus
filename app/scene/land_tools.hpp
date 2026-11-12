@@ -41,7 +41,7 @@
 // Paint ground: the panel's surface tab shows the land surfaces the game's terrain files list, each by its
 // own picture. Pressing the ground and moving over it paints the tile under the pointer and those with
 // a corner within the brush's radius (park/ground/brush.hpp), with the surface chosen, on land the park owns
-// outright, each tile paid for. The cliff tab paints the faces of the cliffs on the tiles under the brush
+// outright. The cliff tab paints the faces of the cliffs on the tiles under the brush
 // the same way, with the cliff faces the terrain files list. Closing the panel puts the tool away.
 //
 // Water: a click on the ground pours a lake up to the height clicked, rounded up to a whole unit, so clicking
@@ -65,7 +65,8 @@
 // the ground and moving over it buys the tiles on sale under the brush's square (park/land_buying.hpp), each
 // paid for, and a message says when money ran short. The park's fence and where its staff may walk follow.
 //
-// Every other change is paid for. A right click or Escape puts either tool away.
+// Painting is free too; shaping is paid for as it goes, the stroke's cost shown as one sum that grows. A
+// dragged brush short of cash goes as far as the cash pays for. A right click or Escape puts either tool away.
 //
 // A shaping stroke rumbles from press to release, softly while the ground stays still and loudest as it moves.
 #pragma once

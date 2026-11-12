@@ -216,6 +216,7 @@ namespace rct3::ui::screens
         rows.choice(O::TemperatureUnits, str(strings, "GameOptionsDialog_Temperature"), items(strings, { "GameOptionsDialog_Celcius", "GameOptionsDialog_Fahrenheit" }));
         rows.level(O::Brightness, str(strings, "GameOptionsDialog_Brightness"));
         rows.tick(O::DisableWeather, str(strings, "Rct3pp_DisableWeather"), str(strings, "Rct3pp_DisableWeatherHelp"));
+        rows.tick(O::OriginalFinances, str(strings, "Rct3pp_OriginalFinances"), str(strings, "Rct3pp_OriginalFinancesHelp"));
         rows.section();
         rows.level(O::GameVolume, str(strings, "GameOptionsDialog_SetVolumeGame"));
         rows.level(O::MusicVolume, str(strings, "GameOptionsDialog_SetVolumeMusic"));

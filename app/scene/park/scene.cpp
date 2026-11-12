@@ -215,6 +215,14 @@ namespace rct3::scene::park
                 .research = &scene.research,
                 .research_left = scene.research_items ? std::optional(std::span<const simulation::ResearchItem>(*scene.research_items)) : std::nullopt,
                 .research_name = [&scene](std::uint64_t id) { return content_name(scene, id); },
+                .takings =
+                    [&scene](std::uint64_t id) {
+                        ui::screens::AttractionTakings t;
+                        for (const auto [e, a] : scene.sim.registry.view<simulation::Attraction>().each())
+                            if (id != 0 && a.saved == id)
+                                t = { .income = t.income + a.income.value, .customers = t.customers + a.customers };
+                        return t;
+                    },
             };
         }
 
@@ -2269,6 +2277,19 @@ namespace rct3::scene::park
         // What was pulled down only keeps its place while the park is shown.
         std::erase_if(saved.rides.rides, [](const save::model::Ride& r) { return r.base.demolished; });
         std::erase_if(saved.rides.stalls, [](const save::model::Stall& s) { return s.base.demolished; });
+        // What each attraction has taken goes into its totals, which the simulation counts afresh from when loaded.
+        for (const auto [e, a] : scene.sim.registry.view<simulation::Attraction>().each())
+        {
+            const auto fold = [&](save::model::AttractionCommon& c) {
+                if (a.saved != 0 && c.id == a.saved)
+                {
+                    c.total_profit += a.income.value;
+                    c.total_guests += a.customers;
+                }
+            };
+            std::ranges::for_each(saved.rides.rides, [&](save::model::Ride& r) { fold(r.base); });
+            std::ranges::for_each(saved.rides.stalls, [&](save::model::Stall& s) { fold(s.base); });
+        }
         saved.objects = parkfile::kept_objects(scene.objects, scene.own_objects, scene.placed, scene.footpaths.paths, saved.rides);
         if (auto summary = save::read_summary(scene.base))
             saved.summary = std::move(*summary);

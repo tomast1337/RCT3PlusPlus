@@ -47,6 +47,8 @@ namespace rct3::scene::park
             ui::screens::ManagementFacts shown = facts;
             if (topic == ui::screens::ManagementTopic::Research)
                 shown.research_pick = research_pick(window, facts);
+            if (topic == ui::screens::ManagementTopic::Finances)
+                shown.ledger_line = static_cast<std::size_t>(std::max(0, window.control_value(ui::screens::kLedgerLineControl).value_or(0)));
             window.show_page(ui::screens::management_page(topic, window.tab(), shown, strings, units));
         }
     } // namespace
@@ -85,7 +87,7 @@ namespace rct3::scene::park
             roster.show(facts, strings, units);
             return;
         }
-        auto& window = desktop.root().add<ui::screens::ManagementWindow>(window_name(topic), ui::game_skins::management_window_style(palette), layout.width, layout.height, ui::screens::management_tabs(topic, strings), tab);
+        auto& window = desktop.root().add<ui::screens::ManagementWindow>(window_name(topic), ui::game_skins::management_window_style(palette), layout.width, layout.height, ui::screens::management_tabs(topic, strings, units), tab);
         window.title = strings.get(layout.title);
         window.icon = layout.icon;
         show(window, topic, facts, strings, units);
@@ -158,7 +160,11 @@ namespace rct3::scene::park
                 else if (*button == ui::screens::kUnfocusButton)
                     asks.research_focus.emplace(std::nullopt);
             }
-            if (const auto change = window->take_change(); change && topic == ui::screens::ManagementTopic::Research)
+            const auto change = window->take_change();
+            // The ledger's line picked shows at once.
+            if (change && topic == ui::screens::ManagementTopic::Finances)
+                show(*window, topic, facts, strings, units);
+            if (change && topic == ui::screens::ManagementTopic::Research)
             {
                 if (change->id == ui::screens::kResearchBudgetControl)
                     asks.research_budget = change->value;

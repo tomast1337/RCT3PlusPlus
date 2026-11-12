@@ -111,10 +111,12 @@ namespace rct3::ui::screens
         SI,       ///< m/s and metres
     };
 
+    /// How the player asked to see amounts and distances, and the windows that show them.
     struct InfoUnits
     {
         Currency currency;
         DistanceUnits distance = DistanceUnits::Metric;
+        bool original_finances = false; ///< The finances window as the original laid it out (see FinancePage)
     };
 
     /// The attraction a page is written about: its common part, and the ride or the stall it is.

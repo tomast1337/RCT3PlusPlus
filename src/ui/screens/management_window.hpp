@@ -145,6 +145,8 @@ namespace rct3::ui::screens
         {
             return std::exchange(choice_now_, std::nullopt);
         }
+        /// Where the page's control `id` stands now, a number's or a bar's, perhaps moved since the page came.
+        [[nodiscard]] std::optional<int> control_value(int id) const;
         /// The control the player changed since the last call, the last one.
         [[nodiscard]] std::optional<InfoChange> take_change()
         {

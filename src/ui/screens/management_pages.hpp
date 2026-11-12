@@ -12,6 +12,7 @@
 #include "save/model/rides.hpp"
 #include "simulation/objectives.hpp"
 #include "simulation/park/state.hpp"
+#include "simulation/research.hpp"
 #include "ui/screens/attraction_info.hpp"
 #include "ui/screens/management_window.hpp"
 #include "ui/screens/tool_menus.hpp"
@@ -83,6 +84,10 @@ namespace rct3::ui::screens
         bool animal_houses = false;                         ///< Whether the park has any, which keepers are hired to
         std::span<const StaffLook> staff_looks { };         ///< By place in the park's staff; may be short
         float zero_time = 0;                                ///< Where the park's calendar starts, for hire dates
+        const simulation::Research* research = nullptr;     ///< As it runs
+        /// What is left to invent, once the build lists say what each item is.
+        std::optional<std::span<const simulation::ResearchItem>> research_left { };
+        std::string_view researching { }; ///< String key of the name of the item being worked on
     };
 
     /// The park operations window's tab of the awards won and fines received.
@@ -104,6 +109,15 @@ namespace rct3::ui::screens
     /// repaying a step of the loan (see simulation::park::change_loan).
     inline constexpr std::size_t kBorrowButton = 0;
     inline constexpr std::size_t kRepayButton = 1;
+
+    /// The research window's controls (InfoControl::id): the monthly budget, then the priority of each research
+    /// area (simulation::ResearchArea) in order, from 0 to 100.
+    inline constexpr int kResearchBudgetControl = 0;
+    inline constexpr int kFirstPriorityControl = 1;
+    /// The research budget's step and most, in hundredths. Chosen by eye: steps of 50.00, up to five times the
+    /// 200.00 a month scenarios usually set aside.
+    inline constexpr int kResearchBudgetStep = 5000;
+    inline constexpr int kMostResearchBudget = 100000;
 
     /// The button on each page of the attractions window that puts every listed attraction in the state of the
     /// choice picked, by its place among the page's buttons, and those states by the place of their choice.

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Research in a scenario that budgets for it: over a few months attractions are invented, each told in a
-// message and offered in the build lists, the money booked as research spending; saved and opened again, research
-// is where it was. A sandbox does none.
+// message and offered in the build lists, the money booked as research spending; the research window sets the
+// budget and the areas' priorities; saved and opened again, research is where it was. A sandbox does none.
 //
 //   ./nob script scripts/tests/research.ts -- --no-audio
 
@@ -11,6 +11,19 @@ export {};
 function expect(ok: boolean, what: string): void {
     if (!ok)
         throw new Error(`expected ${what}`);
+}
+
+/** The path of the widget named `name` somewhere under `path`. */
+function under(path: string, name: string): string | undefined {
+    for (const child of ui.children(path) ?? []) {
+        const at = `${path}/${child}`;
+        if (child === name)
+            return at;
+        const found = under(at, name);
+        if (found !== undefined)
+            return found;
+    }
+    return undefined;
 }
 
 await park.open("Campaigns/Base/Gunslinger.dat");
@@ -53,6 +66,32 @@ park.setDate(park.date() + 360);
 await frames(10);
 expect(JSON.stringify(park.research()) === stopped, "research standing still without a budget");
 park.setResearch(20000);
+
+// The research window: the budget's arrows and an area's bar set them, and it tells what is under way.
+await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+await until(() => ui.find("tools/Management/Man_Research") !== undefined, 120, "the management menu");
+await ui.click("tools/Management/Man_Research");
+await until(() => under("Research_Title", "Research_Label_Budget") !== undefined, 120, "the research window");
+await frames(70); // A page written again, now the window has drawn once
+const current = ui.find(under("Research_Title", "Rct3pp_Research_Current_value")!)!;
+const left = ui.find(under("Research_Title", "Rct3pp_Research_MonthsLeft_label")!)!;
+log("window:", current.text, "/", left.text);
+expect(current.text !== undefined && current.text.length > 1, `the item under way named, not ${current.text}`);
+expect(left.text !== undefined && /\d|month/.test(left.text), `the months left, not ${left.text}`);
+await screenshot("research_window");
+const arrows = ui.find(under("Research_Title", "Research_Label_Budget")!)!;
+await pointer.click(arrows.x, arrows.top + (arrows.bottom - arrows.top) / 4); // The upper arrow
+await frames(5);
+expect(park.research().budget === 25000, `a step of 50.00 more, not ${park.research().budget}`);
+const thrill = ui.find(under("Research_Title", "Obj_Rides_ThrillRidesHelp")!)!;
+await pointer.click(thrill.left + (thrill.right - thrill.left) * 0.8, thrill.y);
+await frames(5);
+log("priorities:", JSON.stringify(park.research().priorities));
+expect(Math.abs(park.research().priorities[2] - 0.8) < 0.03, `thrill rides at about 80 %, not ${park.research().priorities[2]}`);
+await frames(70);
+expect(ui.find(under("Research_Title", "Research_Label_Budget_value")!)!.text!.includes("250"), "the window showing the new budget");
+await ui.click("Research_Title/close");
+await until(() => ui.find("Research_Title") === undefined, 120, "the research window to close");
 
 // Saved and opened again, paused so nothing moves between: research as it was.
 await ui.click("bar/Top_Pause");

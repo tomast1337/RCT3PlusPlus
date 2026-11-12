@@ -173,10 +173,37 @@ namespace rct3::scene::park
             return model != scene.models.end() ? model->second.price : 0;
         }
 
+        /// The build lists' item that the park's content entry `id` names, by its place in them; none before they
+        /// are read or when they lack it.
+        std::optional<std::size_t> content_item(const ParkScene& scene, std::uint64_t id)
+        {
+            const auto entry = std::ranges::find(scene.park_model.content.entries, id, &save::model::AssetRequirement::id);
+            if (entry == scene.park_model.content.entries.end() || !scene.build.items.valid() || scene.build.items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+                return std::nullopt;
+            const std::vector<rct3::park::BuildItem>& catalogue = scene.build.items.get();
+            const auto item = std::ranges::find_if(catalogue, [&](const rct3::park::BuildItem& b) { return strings::equals_ignoring_case(b.symbol, entry->symbol) && strings::equals_ignoring_case(b.overlay, entry->overlay_stem); });
+            return item != catalogue.end() ? std::optional(static_cast<std::size_t>(item - catalogue.begin())) : std::nullopt;
+        }
+
         ui::screens::ManagementFacts management_facts(const ParkScene& scene)
         {
             const auto broken = simulation::replacement(scene.sim, [&](std::uint64_t object) { return replace_price(scene, object); });
-            return { .park = &scene.park_model, .state = &scene.park, .people = &scene.people, .rides = &scene.rides, .broken_items = broken.items, .replace_cost = broken.cost, .goals = scene.goal_readings, .animal_houses = !scene.sim.registry.view<simulation::AnimalHouse>().empty(), .staff_looks = scene.staff_looks, .zero_time = scene.park.zero_time };
+            const auto researching = scene.research.current ? content_item(scene, *scene.research.current) : std::nullopt;
+            return {
+                .park = &scene.park_model,
+                .state = &scene.park,
+                .people = &scene.people,
+                .rides = &scene.rides,
+                .broken_items = broken.items,
+                .replace_cost = broken.cost,
+                .goals = scene.goal_readings,
+                .animal_houses = !scene.sim.registry.view<simulation::AnimalHouse>().empty(),
+                .staff_looks = scene.staff_looks,
+                .zero_time = scene.park.zero_time,
+                .research = &scene.research,
+                .research_left = scene.research_items ? std::optional(std::span<const simulation::ResearchItem>(*scene.research_items)) : std::nullopt,
+                .researching = researching ? std::string_view(scene.build.items.get()[*researching].name_text) : std::string_view { },
+            };
         }
 
         /// Marks the simulated rides and stalls that do not fit the scenery round them, for the park's inspector.
@@ -965,7 +992,7 @@ namespace rct3::scene::park
             scene.thunder = rct3::park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed, scene.weather_dice);
             // Research, once the build lists say what each item is. It goes by the calendar, so that a calendar set
             // on by hand takes research with it.
-            if (scene.research.budget > 0 && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+            if (scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
             {
                 const std::vector<rct3::park::BuildItem>& catalogue = scene.build.items.get();
                 if (!scene.research_items)
@@ -2073,6 +2100,15 @@ namespace rct3::scene::park
             buy_land_tool(scene, asks.buy_rights ? rct3::park::LandBuy::Rights : rct3::park::LandBuy::Land, assets);
         if (asks.borrow)
             simulation::park::change_loan(scene.park, scene.park_model.finance.max_loan, *asks.borrow);
+        if (asks.research_budget)
+            scene.research.budget = *asks.research_budget;
+        // Areas past the end of the priorities weigh the most until set.
+        if (const auto& p = asks.research_priority; p && p->first < simulation::kResearchAreas)
+        {
+            if (scene.research.priorities.size() <= p->first)
+                scene.research.priorities.resize(p->first + 1, 1.0f);
+            scene.research.priorities[p->first] = p->second;
+        }
         // Every broken path item back new at once, at the full price of each: the dear way, a handyman's the free one.
         if (asks.replace_broken && facts.broken_items > 0 && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, facts.replace_cost, simulation::park::LedgerLine::Landscaping, false))
             simulation::replace_broken(scene.sim);

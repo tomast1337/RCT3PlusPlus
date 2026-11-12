@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/management_window.hpp"
 
+#include "ui/widgets/panel.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <format>
@@ -51,6 +53,8 @@ namespace rct3::ui::screens
         page_ = &body.add<Widget>("page");
         page_->placement = { { 0, 0, 1, 1 }, { 0, tabs_.empty() ? 0 : style.tab_bar_height, 0, 0 } };
         lines_ = &page_->add<Widget>("lines");
+        controls_box_ = &page_->add<Widget>("controls");
+        controls_box_->placement = fill();
         table_ = &page_->add<widgets::ColumnTable>("table", style.table, style.scroll);
         table_->visible = false;
         open_tab(std::min(picked, tabs_.empty() ? 0 : tabs_.size() - 1));
@@ -116,12 +120,95 @@ namespace rct3::ui::screens
             else
             {
                 label(keyed_name(l.name, "label", i), l.label, band(0, style_.value_column, y, style_.line_height), style_.text_colour);
-                label(keyed_name(l.name, "value", i), l.value, band(style_.value_column, 1, y, style_.line_height), style_.text_colour);
+                Placement value = band(style_.value_column, 1, y, style_.line_height);
+                if (l.bar)
+                {
+                    // The value after its bar.
+                    const Placement bar = { { style_.value_column, 0, style_.value_column, 0 }, { 0, y + 1, style_.bar_width, y + style_.line_height - 1 } };
+                    auto& back = lines_->add<widgets::Panel>(keyed_name(l.name, "bar", i), std::string { });
+                    back.placement = bar;
+                    back.colour = style_.bar_back;
+                    auto& filled = lines_->add<widgets::Panel>(keyed_name(l.name, "filled", i), std::string { });
+                    filled.placement = bar;
+                    filled.placement.offsets.x1 = std::round(style_.bar_width * std::clamp(*l.bar, 0.0f, 1.0f));
+                    filled.colour = l.bar_colour;
+                    value.offsets.x0 = style_.bar_width + style_.gap;
+                }
+                label(keyed_name(l.name, "value", i), l.value, value, style_.text_colour);
             }
             y += style_.line_height;
         }
         if (right)
             y += style_.line_height;
+
+        // The controls, a row each. The widgets stay while the controls are the same ones, so a drag goes on.
+        const bool same = std::ranges::equal(shown.controls, controls_, [](const InfoControl& a, const Control& b) { return a.id == b.control.id && a.kind == b.control.kind; });
+        if (!same)
+        {
+            while (!controls_box_->children().empty())
+                (void)controls_box_->remove(*controls_box_->children().back());
+            controls_.clear();
+            for (std::size_t i = 0; i < shown.controls.size(); ++i)
+            {
+                const InfoControl& c = shown.controls[i];
+                Control made { .control = c };
+                made.label = &controls_box_->add<widgets::Label>(keyed_name(c.name, "label", i), std::u16string { }, font::FontRole::Small);
+                const std::string name = keyed_name(c.name, c.name.empty() ? "control" : "", i);
+                if (c.kind == InfoControlKind::Number)
+                {
+                    auto& n = controls_box_->add<widgets::Spinner>(name, style_.spinner);
+                    n.field().visible = false;
+                    made.widget = &n;
+                }
+                else if (c.kind == InfoControlKind::Bar)
+                {
+                    made.widget = &controls_box_->add<widgets::Slider>(name, style_.bar);
+                }
+                if (made.widget != nullptr)
+                    made.shown = &controls_box_->add<widgets::Label>(keyed_name(c.name, "value", i), std::u16string { }, font::FontRole::Small);
+                controls_.push_back(made);
+            }
+        }
+        for (std::size_t i = 0; i < controls_.size(); ++i)
+        {
+            const InfoControl& c = shown.controls[i];
+            Control& at = controls_[i];
+            at.control = c;
+            const bool words = at.widget == nullptr;
+            if (words && y > 0)
+                y += style_.gap / 2;
+            at.label->text = c.label;
+            at.label->style.colour = words ? style_.heading_colour : style_.text_colour;
+            at.label->tooltip = c.help;
+            at.label->placement = band(0, words ? 1 : style_.value_column, y, style_.line_height);
+            if (!words)
+            {
+                // The arrows or the bar in the value column, the value in words after them.
+                const float width = c.kind == InfoControlKind::Number ? style_.spinner.arrow_width : style_.bar_width;
+                at.widget->placement = { { style_.value_column, 0, style_.value_column, 0 }, { 0, y, width, y + style_.line_height } };
+                at.widget->enabled = c.enabled;
+                at.widget->tooltip = c.help;
+                if (auto* n = dynamic_cast<widgets::Spinner*>(at.widget))
+                {
+                    n->minimum = c.minimum;
+                    n->maximum = c.maximum;
+                    n->step = c.step;
+                    n->set_value(c.value);
+                }
+                else if (auto* b = dynamic_cast<widgets::Slider*>(at.widget))
+                {
+                    b->minimum = static_cast<float>(c.minimum);
+                    b->maximum = static_cast<float>(c.maximum);
+                    b->step = static_cast<float>(c.step);
+                    b->set_value(static_cast<float>(c.value));
+                }
+                at.shown->text = c.shown;
+                at.shown->style.colour = style_.text_colour;
+                at.shown->placement = { { style_.value_column, 0, 1, 0 }, { width + style_.gap, y, 0, y + style_.line_height } };
+            }
+            y += style_.line_height;
+        }
+
         // Room the buttons take from the page's bottom.
         float bottom = 0;
         for (const ManagementButton& b : shown.buttons)
@@ -387,6 +474,13 @@ namespace rct3::ui::screens
                 const auto found = std::ranges::find(table_->rows, *selected, &widgets::TableRow::id);
                 table_->select(found != table_->rows.end() ? std::optional(static_cast<std::size_t>(found - table_->rows.begin())) : std::nullopt);
             }
+        }
+        for (const Control& c : controls_)
+        {
+            if (auto* n = dynamic_cast<widgets::Spinner*>(c.widget); n != nullptr && n->take_change())
+                change_now_ = InfoChange { c.control.id, n->value(), 0, { } };
+            else if (auto* b = dynamic_cast<widgets::Slider*>(c.widget); b != nullptr && b->take_change())
+                change_now_ = InfoChange { c.control.id, static_cast<int>(std::lround(b->value())), 0, { } };
         }
         if (table_->take_activate() && table_->selected())
             row_now_ = table_->rows.at(*table_->selected()).id;

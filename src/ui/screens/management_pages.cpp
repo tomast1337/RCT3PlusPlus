@@ -91,6 +91,10 @@ namespace rct3::ui::screens
         constexpr std::string_view kLeader = "Rct3pp_ManagementLeader";
         constexpr std::string_view kMembers = "Rct3pp_ManagementMembers";
         constexpr std::string_view kCount = "Rct3pp_ManagementCount";
+        constexpr std::string_view kResearching = "Rct3pp_Research_Current";
+        constexpr std::string_view kMonthLeft = "Rct3pp_Research_MonthLeft";
+        constexpr std::string_view kMonthsLeft = "Rct3pp_Research_MonthsLeft";
+        constexpr std::string_view kNothingLeft = "Rct3pp_Research_NothingLeft";
 
         constexpr std::size_t kRowKindShift = 48;
 
@@ -736,19 +740,36 @@ namespace rct3::ui::screens
 
         void research(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const InfoUnits& units)
         {
-            const save::model::ResearchState* r = f.park != nullptr && f.park->research.has_simple_research ? &f.park->research : nullptr;
-            page.lines.push_back({ text(strings, "Research_Label_Budget"), r != nullptr ? money(units, r->monthly_budget) : std::u16string(kDash), false, "Research_Label_Budget" });
-            page.columns = {
-                { text(strings, "Research_Label_TechTree"), 0, Align::Start, false },
-                { text(strings, "Research_Label_Priorities"), 120, Align::End, false },
-            };
-            if (r == nullptr)
+            if (f.research == nullptr)
             {
                 page.note = text(strings, kNotRead);
                 return;
             }
-            for (std::size_t i = 0; i < r->priorities.size() && i < kResearchAreas.size(); ++i)
-                page.rows.push_back({ { text(strings, kResearchAreas.at(i)), share(r->priorities[i]) }, { std::nullopt, r->priorities[i] }, management_row_id({ ManagementRow::Kind::None, i }) });
+            const simulation::Research& r = *f.research;
+            // What is under way, how far it has got and about how long it has to go at this budget, or that nothing is
+            // left.
+            const auto progress = f.research_left ? simulation::research_progress(r, *f.research_left) : std::nullopt;
+            const bool done = f.research_left && f.research_left->empty();
+            page.lines.push_back({ text(strings, kResearching), done ? text(strings, kNothingLeft) : progress ? text(strings, f.researching) : std::u16string(kDash), false, std::string(kResearching) });
+            if (progress && !done)
+            {
+                std::u16string left = progress->months ? text(strings, *progress->months == 1 ? kMonthLeft : kMonthsLeft) : std::u16string(kDash);
+                if (const auto at = left.find(u'#'); at != std::u16string::npos)
+                    left.replace(at, 1, whole(*progress->months));
+                page.lines.push_back({ .label = std::move(left), .value = share(progress->done), .name = std::string(kMonthsLeft), .bar = progress->done });
+            }
+
+            page.controls.push_back({ .id = kResearchBudgetControl, .name = "Research_Label_Budget", .kind = InfoControlKind::Number, .label = text(strings, "Research_Label_Budget"), .value = static_cast<int>(std::clamp<std::int64_t>(r.budget, 0, kMostResearchBudget)), .maximum = kMostResearchBudget, .step = kResearchBudgetStep, .shown = money(units, r.budget), .help = text(strings, "Research_TT_AdjustBudget") });
+            page.controls.push_back({ .id = -1, .name = "Research_Label_TechTree", .kind = InfoControlKind::Words, .label = text(strings, "Research_Label_TechTree") });
+            // The areas the park keeps a priority for, and any other that has something left to invent.
+            for (std::size_t i = 0; i < kResearchAreas.size(); ++i)
+            {
+                const bool left = f.research_left && std::ranges::any_of(*f.research_left, [&](const simulation::ResearchItem& item) { return static_cast<std::size_t>(item.area) == i; });
+                if (i >= r.priorities.size() && !left)
+                    continue;
+                const float priority = i < r.priorities.size() ? std::clamp(r.priorities[i], 0.0f, 1.0f) : 1.0f;
+                page.controls.push_back({ .id = kFirstPriorityControl + static_cast<int>(i), .name = std::string(kResearchAreas.at(i)), .kind = InfoControlKind::Bar, .label = text(strings, kResearchAreas.at(i)), .value = static_cast<int>(std::lround(priority * 100)), .maximum = 100, .shown = share(priority), .help = text(strings, "Research_TT_PriorityBar") });
+            }
         }
 
         // ----- challenges -----

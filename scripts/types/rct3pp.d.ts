@@ -97,8 +97,9 @@ declare namespace park {
     /** The building and research lines of the newest month's ledger, in hundredths: spending above zero, refunds below. */
     function ledger(): { landPurchase: number; landscaping: number; rideConstruction: number; research: number };
     /** Research: the monthly budget and what is counted towards the current item (hundredths), the current item and
-     *  those invented since the original park, by symbol, and how many items are left (null until the build lists are read). */
-    function research(): { budget: number; spent: number; current: string | null; invented: (string | null)[]; left: number | null };
+     *  those invented since the original park, by symbol, how many items are left (null until the build lists are read),
+     *  and the priority of each research area from 0 to 1, in the research window's order (areas past the end weigh 1). */
+    function research(): { budget: number; spent: number; current: string | null; invented: (string | null)[]; left: number | null; priorities: number[] };
     /** Sets the monthly research budget, in hundredths of the currency; nought stops research. */
     function setResearch(hundredths: number): void;
     /** The weekly graphs' samples, newest first (money in hundredths), each ledger period's sum newest first, and

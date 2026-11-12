@@ -107,6 +107,12 @@
         "ManagementFamiliesNote": "Families are made with the family designer on the front screen. Here they can only be looked at.",
         "ManagementLeader": "Leader",
         "ManagementMembers": "Members",
-        "ManagementCount": "Count"
+        "ManagementCount": "Count",
+        "Research": {
+            "Current": "Researching:",
+            "MonthLeft": "About a month left",
+            "MonthsLeft": "About # months left",
+            "NothingLeft": "Nothing left to research"
+        }
     }
 }

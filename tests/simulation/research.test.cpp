@@ -207,3 +207,37 @@ TEST_CASE("the next item is drawn from the areas the player cares for")
         CHECK(shops < 180);
     }
 }
+
+TEST_CASE("the progress of the current item and the months the budget takes to finish it")
+{
+    const std::vector<ResearchItem> items { { .id = 1, .cost = 24000 }, { .id = 2, .cost = 10000 } };
+    Research r { .budget = 20000, .spent = 6000, .current = 1 };
+    auto p = research_progress(r, items);
+    REQUIRE(p);
+    CHECK(p->id == 1);
+    CHECK(p->done == doctest::Approx(0.25));
+    CHECK(p->months == 1); // 180.00 left at 200.00 a month
+
+    r.budget = 5000;
+    CHECK(research_progress(r, items)->months == 4); // 180.00 at 50.00: three months and a bit
+
+    SUBCASE("a boost waiting counts as spent")
+    {
+        r.boost = 18000;
+        p = research_progress(r, items);
+        CHECK(p->done == doctest::Approx(1));
+        CHECK(p->months == 1);
+    }
+    SUBCASE("no budget, no estimate")
+    {
+        r.budget = 0;
+        CHECK(research_progress(r, items)->months == std::nullopt);
+    }
+    SUBCASE("nothing under way")
+    {
+        r.current = 3;
+        CHECK_FALSE(research_progress(r, items));
+        r.current.reset();
+        CHECK_FALSE(research_progress(r, items));
+    }
+}

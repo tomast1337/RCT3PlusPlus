@@ -163,4 +163,18 @@ namespace rct3::simulation
         }
     }
 
+    std::optional<ResearchProgress> research_progress(const Research& research, std::span<const ResearchItem> items)
+    {
+        const auto item = std::ranges::find(items, research.current, [](const ResearchItem& i) { return std::optional(i.id); });
+        if (item == items.end())
+            return std::nullopt;
+        const std::int64_t got = research.spent + research.boost;
+        const std::int64_t left = std::max<std::int64_t>(item->cost - got, 0);
+        return ResearchProgress {
+            .id = item->id,
+            .done = item->cost > 0 ? std::clamp(static_cast<float>(got) / static_cast<float>(item->cost), 0.0f, 1.0f) : 1.0f,
+            .months = research.budget > 0 ? std::optional(std::max<std::int64_t>((left + research.budget - 1) / research.budget, 1)) : std::nullopt,
+        };
+    }
+
 } // namespace rct3::simulation

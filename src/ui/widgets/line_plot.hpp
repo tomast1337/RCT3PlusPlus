@@ -7,12 +7,15 @@
 // largest sample either side of zero. A series that never goes below zero runs from zero at the bottom to its
 // full value at the top; one that does has zero across the middle. The newest sample is at the right edge, and
 // a plot with a fixed number of slots spaces samples one slot apart, so a short history fills only its right.
+// The wheel zooms a plot that allows it in on its newest samples and out again, and a rule marks the sample under
+// the pointer.
 #pragma once
 
 #include "ui/widget.hpp"
 
 #include <array>
 #include <cstddef>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -47,11 +50,31 @@ namespace rct3::ui::widgets
         int rules = 8;                        ///< Spaces between level lines, top to bottom
         float line = 1.5f;                    ///< Width of the series' lines
         float tick = 4;                       ///< Height of a tick; a major one is twice as tall
+        std::size_t most_slots = 0;           ///< The wheel zooms out to this many slots at most; 0 for no zooming
+        std::size_t fewest_slots = 4;         ///< And in to this many at least
 
+        [[nodiscard]] bool takes_pointer() const override
+        {
+            return true;
+        }
+        void on_hover(Point p) override;
+        bool on_wheel(Point notches) override;
         void draw(DrawContext& context) const override;
+
+        /// The sample under the pointer, by how many samples before the newest; none when it is not over the plot.
+        [[nodiscard]] std::optional<std::size_t> pointed() const;
+        /// The slots the wheel zoomed to since the last call.
+        [[nodiscard]] std::optional<std::size_t> take_zoom()
+        {
+            return std::exchange(zoomed_, std::nullopt);
+        }
 
         /// Samples across the plot: its slots, or as many as the longest series has.
         [[nodiscard]] std::size_t span() const;
+
+    private:
+        std::size_t under_ = 0;
+        std::optional<std::size_t> zoomed_;
     };
 
     /// The full value of a scale for `values`: the smallest 1, 2 or 5 times a power of ten at least as large as

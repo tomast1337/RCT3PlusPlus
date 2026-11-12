@@ -139,6 +139,11 @@
             "Export": "Save as a spreadsheet",
             "ExportHelp": "Write every month of the ledger, every line, to a file a spreadsheet opens",
             "Exported": "Ledger written to %NAME%"
+        },
+        "Graph": {
+            "Month": "Month",
+            "Year": "Year",
+            "All": "All"
         }
     }
 }

@@ -142,3 +142,58 @@ TEST_CASE("a button with choices fans them out and reports the one picked, not i
     CHECK(f.window->take_choice() == std::optional(std::pair<std::size_t, std::size_t>(0, 1)));
     CHECK_FALSE(f.window->find("content/page/lines/No"));
 }
+
+TEST_CASE("a graph's span is picked by its ranges or zoomed by the wheel, and reads out the week under the pointer")
+{
+    Fixture f;
+    ManagementPage page;
+    std::vector<float> values(64);
+    std::vector<std::u16string> readings(64);
+    for (std::size_t i = 0; i < values.size(); ++i)
+    {
+        values[i] = static_cast<float>(i);
+        readings[i] = std::u16string(1, static_cast<char16_t>(u'A' + i % 26));
+    }
+    page.graph = { { .name = u"Cash", .values = values, .key = "cash", .readings = readings } };
+    page.graph_slots = 64;
+    page.graph_ranges = { { u"Month", 4 }, { u"All", 0 } };
+    page.graph_when = { u"Newest", u"Older" };
+    for (std::size_t back = 0; back < 64; back += 4)
+        page.graph_ticks.push_back({ static_cast<float>(back), u"M" });
+    f.window->show_page(page);
+    f.desktop.layout({ 0, 0, 1024, 768 });
+    auto plot = dynamic_cast<LinePlot*>(rct3::core::as_pointer(f.window->find("content/page/lines/graph")));
+    auto month = dynamic_cast<Button*>(rct3::core::as_pointer(f.window->find("content/page/lines/range0")));
+    REQUIRE(plot != nullptr);
+    REQUIRE(month != nullptr);
+    CHECK(plot->span() == 64);
+    const auto marks = [&] {
+        std::size_t n = 0;
+        for (const auto& w : plot->parent()->children())
+            n += w->name().starts_with("mark") ? 1 : 0;
+        return n;
+    };
+    CHECK(marks() == 8); // Every other one of the sixteen
+
+    month->click();
+    f.desktop.update({ });
+    CHECK(plot->span() == 4);
+    CHECK(month->kept_down);
+    CHECK(marks() == 1);
+    // A new page keeps the span picked.
+    f.window->show_page(page);
+    f.desktop.layout({ 0, 0, 1024, 768 });
+    plot = dynamic_cast<LinePlot*>(rct3::core::as_pointer(f.window->find("content/page/lines/graph")));
+    REQUIRE(plot != nullptr);
+    CHECK(plot->span() == 4);
+
+    // The newest week at the right edge, read out with its time.
+    const Rect r = plot->rect();
+    f.desktop.update({ .position = { r.x1 - 1, (r.y0 + r.y1) / 2 } });
+    f.desktop.update({ .position = { r.x1 - 1, (r.y0 + r.y1) / 2 } });
+    CHECK(plot->tooltip == u"Newest\nCash: L"); // values[63]: 'A' + 63 % 26
+    f.desktop.update({ .position = { r.x1 - 1, (r.y0 + r.y1) / 2 }, .wheel = { 0, -1 } });
+    f.desktop.update({ .position = { r.x1 - 1, (r.y0 + r.y1) / 2 } });
+    CHECK(plot->span() == 5);
+    CHECK_FALSE(month->kept_down);
+}

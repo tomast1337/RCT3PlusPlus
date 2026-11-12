@@ -17,6 +17,9 @@ namespace rct3::ui::screens
         constexpr float kTextButtonMargin = 24;
         constexpr float kNarrowestTextButton = 70;
         constexpr std::size_t kSeriesPerRow = 4; ///< Names of a graph's series in a row under it, at most
+        /// Words under a graph's marks, at most; the rest are left out, evenly. Chosen by eye: a year of months
+        /// fits the window without the words running into each other.
+        constexpr std::size_t kMostMarkWords = 8;
 
         Placement band(float x0, float x1, float y, float height)
         {
@@ -83,6 +86,8 @@ namespace rct3::ui::screens
             (void)lines_->remove(*lines_->children().back());
         buttons_.clear();
         button_choices_.clear();
+        marks_.clear();
+        ranges_.clear();
 
         float y = 0;
         const auto label = [&](std::string name, const std::u16string& text, Placement placement, Color colour, Align align = Align::Start) {
@@ -143,6 +148,8 @@ namespace rct3::ui::screens
 
         // The controls, a row each. The widgets stay while the controls are the same ones, so a drag goes on.
         const bool same = std::ranges::equal(shown.controls, controls_, [](const InfoControl& a, const Control& b) { return a.id == b.control.id && a.kind == b.control.kind; });
+        // Over the whole page, an empty box would take the wheel from the graph under it.
+        controls_box_->visible = !shown.controls.empty();
         if (!same)
         {
             while (!controls_box_->children().empty())
@@ -215,12 +222,31 @@ namespace rct3::ui::screens
             bottom = std::max(bottom, (b.text.empty() ? style_.icon_button_size : style_.button_height) + style_.gap);
         plot_ = nullptr;
         graph_ = shown.graph;
+        graph_slots_ = shown.graph_slots;
+        graph_ticks_ = shown.graph_ticks;
+        graph_when_ = shown.graph_when;
+        graph_ranges_ = shown.graph_ranges;
         series_ticks_.clear();
         axis_.fill(nullptr);
         if (!shown.graph.empty())
         {
             if (y > 0)
                 y += style_.gap;
+            // The spans to pick, in a row at the right above the plot.
+            float right = 0;
+            for (std::size_t i = shown.graph_ranges.size(); i-- > 0;)
+            {
+                const GraphRange& range = shown.graph_ranges[i];
+                widgets::Button& button = lines_->add<widgets::Button>(std::format("range{}", i), style_.button);
+                button.text = range.name;
+                button.text_inset = style_.button_inset;
+                const float width = std::max(kNarrowestTextButton, static_cast<float>(range.name.size()) * kLetterWidth + kTextButtonMargin);
+                button.placement = top_right(right, y, width, style_.button_height);
+                right += width + style_.gap / 2;
+                ranges_.insert(ranges_.begin(), &button);
+            }
+            if (!ranges_.empty())
+                y += style_.button_height + style_.gap / 2;
             // The series' ticks and names under the plot, a few to a row, and under the plot the marks' words. A
             // page with nothing under its graph gives the graph all the room down to the buttons.
             const std::size_t n = shown.graph.size();
@@ -241,6 +267,7 @@ namespace rct3::ui::screens
             plot.background = style_.plot_background;
             plot.rule_colour = style_.plot_rule;
             plot.slots = shown.graph_slots;
+            plot.most_slots = shown.graph_ranges.empty() ? 0 : shown.graph_slots;
             for (const InfoTick& t : shown.graph_ticks)
                 plot.ticks.push_back({ t.back, !t.label.empty() });
             plot_ = &plot;
@@ -256,19 +283,8 @@ namespace rct3::ui::screens
             }
             // Under the plot: the marks' words, centred on them, then the ticks.
             const auto [under_anchor, under] = down(1);
-            for (std::size_t k = 0; k < shown.graph_ticks.size(); ++k)
-            {
-                const InfoTick& t = shown.graph_ticks[k];
-                if (t.label.empty())
-                    continue;
-                // Across the plot, which starts axis_width in from the page's left.
-                const float across = widgets::plot_x(t.back, plot.span(), 1);
-                const float x = style_.axis_width * (1 - across);
-                widgets::Label& word = lines_->add<widgets::Label>(std::format("mark{}", k), t.label, font::FontRole::Tiny);
-                word.placement = { { across, under_anchor, across, under_anchor }, { x - 30, under + 1, x + 30, under + 1 + style_.line_height } };
-                word.style.colour = style_.text_colour;
-                word.style.horizontal = Align::Centre;
-            }
+            marks_top_ = { under_anchor, under + 1 };
+            span_graph();
             const float names_top = under + 1 + (marked ? style_.line_height : 0);
             for (std::size_t i = 0; i < n; ++i)
             {
@@ -413,6 +429,43 @@ namespace rct3::ui::screens
                 axis_[k]->text = focus != nullptr && k < focus->axis.size() ? focus->axis[k] : std::u16string { };
     }
 
+    void ManagementWindow::span_graph()
+    {
+        for (widgets::Label* word : marks_)
+            (void)lines_->remove(*word);
+        marks_.clear();
+        if (plot_ == nullptr)
+            return;
+        // shortcut: zoomed in, each series keeps the scale of all its samples; fit it to those in sight if small
+        // changes get lost.
+        plot_->slots = graph_span_ && graph_slots_ > 0 ? std::min(*graph_span_, graph_slots_) : graph_slots_;
+        for (std::size_t i = 0; i < ranges_.size(); ++i)
+        {
+            const std::size_t slots = graph_ranges_[i].slots;
+            ranges_[i]->kept_down = slots == 0 ? !graph_span_ : graph_span_ == slots;
+        }
+        const std::size_t span = plot_->span();
+        const auto fits = [&](const InfoTick& t) { return !t.label.empty() && t.back + 1 <= static_cast<float>(span); };
+        const auto named = static_cast<std::size_t>(std::ranges::count_if(graph_ticks_, fits));
+        const std::size_t every = std::max<std::size_t>(1, (named + kMostMarkWords - 1) / kMostMarkWords);
+        std::size_t seen = 0;
+        for (std::size_t k = 0; k < graph_ticks_.size(); ++k)
+        {
+            const InfoTick& t = graph_ticks_[k];
+            if (!fits(t) || seen++ % every != 0)
+                continue;
+            // Across the plot, which starts axis_width in from the page's left.
+            const float across = widgets::plot_x(t.back, span, 1);
+            const float x = style_.axis_width * (1 - across);
+            widgets::Label& word = lines_->add<widgets::Label>(std::format("mark{}", k), t.label, font::FontRole::Tiny);
+            const auto [anchor, top] = marks_top_;
+            word.placement = { { across, anchor, across, anchor }, { x - 30, top, x + 30, top + style_.line_height } };
+            word.style.colour = style_.text_colour;
+            word.style.horizontal = Align::Centre;
+            marks_.push_back(&word);
+        }
+    }
+
     void ManagementWindow::close_choices()
     {
         for (widgets::Button* b : choices_)
@@ -462,6 +515,39 @@ namespace rct3::ui::screens
             else
                 hidden_.push_back(key);
             fill_graph();
+        }
+        for (std::size_t i = 0; i < ranges_.size(); ++i)
+        {
+            if (!ranges_[i]->take_click())
+                continue;
+            const std::size_t slots = graph_ranges_[i].slots;
+            graph_span_ = slots == 0 || slots >= graph_slots_ ? std::nullopt : std::optional(slots);
+            span_graph();
+            break;
+        }
+        if (const auto zoomed = plot_ != nullptr ? plot_->take_zoom() : std::nullopt)
+        {
+            graph_span_ = *zoomed >= graph_slots_ ? std::nullopt : zoomed;
+            span_graph();
+        }
+        // The readout of the week under the pointer: when it was, and each series shown then.
+        if (plot_ != nullptr)
+        {
+            std::u16string readout;
+            if (const auto back = plot_->pointed())
+            {
+                if (*back < graph_when_.size())
+                    readout = graph_when_[*back];
+                for (const InfoSeries& s : graph_)
+                {
+                    if (std::ranges::contains(hidden_, s.key) || *back >= s.readings.size())
+                        continue;
+                    if (!readout.empty())
+                        readout += u'\n';
+                    readout += s.name + u": " + s.readings[s.readings.size() - 1 - *back];
+                }
+            }
+            plot_->tooltip = std::move(readout);
         }
         for (std::size_t j = 0; j < choices_.size(); ++j)
         {

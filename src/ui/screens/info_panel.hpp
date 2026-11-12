@@ -214,6 +214,9 @@ namespace rct3::ui::screens
         bool centred = false;      ///< Its scale has zero across the middle
         /// Numbers up the graph's left, top first, when it is the series in focus.
         std::vector<std::u16string> axis = { };
+        /// Each value in words, oldest first, read out when the pointer is over it; none for a graph without a
+        /// readout.
+        std::vector<std::u16string> readings = { };
     };
 
     /// A mark along the bottom of a graph, `back` samples before the newest one; one with a label is longer.

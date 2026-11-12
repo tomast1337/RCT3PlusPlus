@@ -43,6 +43,7 @@ namespace rct3::config
         LaserEffects,    ///< laser_effects/: the player's own laser effects
         WaterJetEffects, ///< water_jet_effects/: the player's own water jet effects
         Logs,            ///< logs/: a log of each run, ending with a crash report when it crashed
+        Exports,         ///< exports/: what the player writes out of a park, such as its ledger
 
         Count_, ///< Number of folders; not a folder
     };

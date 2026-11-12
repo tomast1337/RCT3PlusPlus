@@ -35,6 +35,7 @@ namespace rct3::config
             { UserFolder::LaserEffects, "laser_effects", "The player's own laser effects" },
             { UserFolder::WaterJetEffects, "water_jet_effects", "The player's own water jet effects" },
             { UserFolder::Logs, "logs", "A log of each run" },
+            { UserFolder::Exports, "exports", "What the player writes out of a park, such as its ledger" },
         } };
 
         constexpr std::array<UserFileInfo, kUserFileCount> kFiles = { {

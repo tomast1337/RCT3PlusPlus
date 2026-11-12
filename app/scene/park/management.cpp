@@ -141,6 +141,8 @@ namespace rct3::scene::park
             }
             if (button && topic == ui::screens::ManagementTopic::Finances && window->tab() == 0 && (*button == ui::screens::kBorrowButton || *button == ui::screens::kRepayButton))
                 asks.borrow = *button == ui::screens::kBorrowButton;
+            if (button && topic == ui::screens::ManagementTopic::Finances && ui::screens::finance_page(window->tab(), units.original_finances) == ui::screens::FinancePage::Ledger)
+                asks.export_ledger = *button == ui::screens::kExportLedgerButton;
             const auto choice = window->take_choice();
             if (choice && park_page && choice->first == ui::screens::kOpenCloseParkButton)
                 asks.park_open = choice->second == 0;

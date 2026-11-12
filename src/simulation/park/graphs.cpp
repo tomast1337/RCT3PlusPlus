@@ -11,8 +11,7 @@ namespace rct3::simulation::park
         /// Ends the week in `series` with `value`, starting the next at `next`.
         void close(save::model::Series& series, float value, float next)
         {
-            if (series.capacity == 0)
-                series.capacity = kGraphWeeks;
+            series.capacity = std::max(series.capacity, kGraphWeeks);
             if (series.samples.empty())
                 series.samples.push_back(value);
             else

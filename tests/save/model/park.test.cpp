@@ -260,13 +260,12 @@ TEST_CASE("park: a minimal park, economy and clock")
 
     CHECK(m.finance.cash == 12345);
     CHECK(m.finance.interest_rate_percent == 7.5f);
-    CHECK(m.finance.ledger_periods_loaded == 2);
+    REQUIRE(m.finance.ledger.size() == 2);
     CHECK(m.finance.ledger[0].shop_sales == 1);
     CHECK(m.finance.ledger[1].marketing == 5);
     REQUIRE(m.finance.ledger[1].pool_tickets.has_value());
     CHECK(*m.finance.ledger[1].pool_tickets == 6);
     CHECK_FALSE(m.finance.ledger[1].billboards.has_value());
-    CHECK(m.finance.ledger[2].shop_sales == 0); // absent period stays default
 
     const auto d = m.clock.date();
     CHECK(d.year == 1);
@@ -398,13 +397,13 @@ TEST_CASE("park: hostile counts and sizes")
         Field f { { "MonthlyExpendature", "list", 0, { { "ShopSales", "int32", 4, { } } } }, Bytes().blob(p) };
         const auto l = load({ { "Money", 1, { f, fint("Cash", 7) } } });
         CHECK(l->model.finance.cash == 7);
-        CHECK(l->model.finance.ledger_periods_loaded == 0);
+        CHECK(l->model.finance.ledger.empty());
     }
     SUBCASE("more ledger periods than five are truncated")
     {
         std::vector<std::vector<std::int32_t>> rows(9, { 1 });
         const auto l = load({ { "Money", 1, { fledger("MonthlyExpendature", { "ShopSales" }, rows) } } });
-        CHECK(l->model.finance.ledger_periods_loaded == kLedgerPeriods);
+        CHECK(l->model.finance.ledger.size() == kLedgerPeriods);
     }
     SUBCASE("a graph with more samples than capacity is kept and flagged by validation")
     {

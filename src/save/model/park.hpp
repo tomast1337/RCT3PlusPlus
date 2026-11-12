@@ -203,10 +203,10 @@ namespace rct3::save::model
 
         Series cash_less_loan { }, company_value { }, expenditure { }, income { }, park_value { }, share_price { }, weekly_profit { };
 
-        /// Five periods, the current one first (that order is assumed, not confirmed). Periods the file did not
-        /// provide are default-constructed; `ledger_periods_loaded` says how many were real.
-        std::array<LedgerPeriod, kLedgerPeriods> ledger { };
-        std::size_t ledger_periods_loaded = 0;
+        /// A period a month, the current one first (that order is assumed, not confirmed). A park file gives up to
+        /// kLedgerPeriods; a running park keeps up to kKeptMonths (simulation::park::ledger_month). Empty when the
+        /// file gave none.
+        std::vector<LedgerPeriod> ledger { };
         std::optional<LedgerPeriod> cumulative { };
     };
 
@@ -250,6 +250,12 @@ namespace rct3::save::model
             return date_at(time, zero_time);
         }
     };
+
+    /// How far back a running park keeps its history: its ledger a period a month (Finance::ledger) and its weekly
+    /// graphs a sample a week (Series). Chosen for a long career park; the park file keeps much less.
+    inline constexpr std::size_t kKeptYears = 20;
+    inline constexpr auto kKeptMonths = static_cast<std::size_t>(kKeptYears * GameClock::kUnitsPerYear / GameClock::kUnitsPerMonth);
+    inline constexpr auto kKeptWeeks = static_cast<std::size_t>(kKeptMonths * GameClock::kUnitsPerMonth / GameClock::kUnitsPerWeek);
 
     // ---------------------------------------------------------------------------------------------------------
     // Awards

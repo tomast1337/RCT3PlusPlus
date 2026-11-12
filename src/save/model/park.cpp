@@ -485,10 +485,8 @@ namespace rct3::save::model
             if (const auto l = o.find(kLedger); l && l->kind() == ValueKind::List)
             {
                 const auto items = l->items();
-                const auto n = std::min(items.size(), kLedgerPeriods);
-                for (std::size_t i = 0; i < n; ++i)
-                    f.ledger[i] = ledger_of(items[i]);
-                f.ledger_periods_loaded = n;
+                for (std::size_t i = 0; i < std::min(items.size(), kLedgerPeriods); ++i)
+                    f.ledger.push_back(ledger_of(items[i]));
             }
             if (const auto c = o.find(kCumulative); c && c->kind() == ValueKind::Struct)
                 f.cumulative = ledger_of(*c);

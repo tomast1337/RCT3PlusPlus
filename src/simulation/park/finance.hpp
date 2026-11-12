@@ -23,7 +23,7 @@ namespace rct3::simulation::park
 {
 
     /// The ledger's period for the month `date` is in, the newest. As the calendar passes into later months, each
-    /// starts a new period in front of the older ones, dropping the oldest past kLedgerPeriods. `kept` is the month,
+    /// starts a new period in front of the older ones, dropping the oldest past save::model::kKeptMonths. `kept` is the month,
     /// counted from the calendar's start, that the newest period stands for: none at first, when the newest is taken
     /// as this month's (as a park file leaves it).
     [[nodiscard]] save::model::LedgerPeriod& ledger_month(save::model::Finance& finance, std::optional<std::int64_t>& kept, const save::model::CalendarDate& date);

@@ -16,8 +16,10 @@ TEST_CASE("a week's end puts its figures in the week's slot and starts the next"
     park.park.guest_intake = { .samples = { 12, 40 }, .capacity = 3 };
     park.finance.share_price = { .samples = { 5000 }, .capacity = 3 };
     close_week(park, { .guests = 100, .intake = 30, .income = 700, .profit = 500 });
-    // A level starts the new week where it is; the oldest falls off past the capacity.
-    CHECK(park.park.guests_in_park.samples == std::vector<float> { 100, 100, 80 });
+    // A level starts the new week where it is. A park file's series keeps its oldest, growing to the weeks a graph
+    // keeps.
+    CHECK(park.park.guests_in_park.samples == std::vector<float> { 100, 100, 80, 70 });
+    CHECK(park.park.guests_in_park.capacity == kGraphWeeks);
     // A total over the week starts at nought.
     CHECK(park.park.guest_intake.samples == std::vector<float> { 0, 30, 40 });
     // What the simulation does not work out carries on.

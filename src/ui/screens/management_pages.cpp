@@ -4,6 +4,7 @@
 #include "simulation/awards.hpp"
 #include "simulation/objectives.hpp"
 #include "simulation/park/finance.hpp"
+#include "simulation/park/graphs.hpp"
 #include "strings/unicode.hpp"
 #include "ui/save_text.hpp"
 #include "ui/screens/person_info.hpp"
@@ -164,7 +165,7 @@ namespace rct3::ui::screens
         }
 
         /// Adds a weekly series to a page's graph, on a scale up to `full` (its own when 0), its numbers counts or
-        /// amounts of money. The graph spans the weeks the longest series keeps.
+        /// amounts of money. The graph spans the weeks the longest series has, at least a park file's.
         void add_series(ManagementPage& page, const StringTable& strings, const InfoUnits& units, std::string_view key, const save::model::Series& series, bool money_values, float full = 0)
         {
             if (series.empty())
@@ -180,8 +181,8 @@ namespace rct3::ui::screens
             for (const float v : widgets::axis_values(full, centred))
                 axis.push_back(money_values ? money(units, std::llround(v)) : whole(std::lround(v)));
             page.graph.push_back({ .name = text(strings, key), .values = std::move(values), .key = std::string(key), .full = full, .centred = centred, .axis = std::move(axis) });
-            if (series.capacity > 1)
-                page.graph_slots = std::max<std::size_t>(page.graph_slots, series.capacity - 1);
+            // At least as many weeks as a park file keeps, the original graphs' span, and more once the park has them.
+            page.graph_slots = std::max(page.graph_slots, std::min<std::size_t>(series.capacity, std::max<std::size_t>(series.samples.size(), simulation::park::kFileWeeks)) - 1);
         }
 
         /// Marks along a weekly graph where each month began, named by the month, back from the week before
@@ -361,7 +362,7 @@ namespace rct3::ui::screens
             };
             loan_button("Rct3pp_Borrow", "Rct3pp_BorrowHelp", true);
             loan_button("Rct3pp_Repay", "Rct3pp_RepayHelp", false);
-            if (m == nullptr || m->ledger_periods_loaded == 0)
+            if (m == nullptr || m->ledger.empty())
             {
                 page.note = text(strings, kNotRead);
                 return;
@@ -370,7 +371,7 @@ namespace rct3::ui::screens
             // One column a month, this month first, going back. Chosen by eye: wide enough for the longest month's
             // name, so the headings do not run into each other.
             constexpr float kMonthWidth = 86;
-            const std::size_t periods = std::min(m->ledger_periods_loaded, save::model::kLedgerPeriods);
+            const std::size_t periods = std::min(m->ledger.size(), save::model::kLedgerPeriods);
             page.columns.push_back({ std::u16string { }, 0, Align::Start, false });
             const std::int32_t month = f.state != nullptr ? f.state->date.month : f.park->clock.date().month;
             for (std::size_t p = 0; p < periods; ++p)

@@ -13,8 +13,10 @@
 namespace rct3::simulation::park
 {
 
-    /// Weeks a graph keeps when the park file gave its series none.
-    inline constexpr std::uint32_t kGraphWeeks = 64;
+    /// Weeks a park file's graphs hold, the span the graph windows show at first.
+    inline constexpr std::uint32_t kFileWeeks = 64;
+    /// Weeks a graph keeps: more than a park file's, whose series grow to it as the park runs.
+    inline constexpr auto kGraphWeeks = static_cast<std::uint32_t>(save::model::kKeptWeeks);
 
     /// The park's figures as a week ends. Money in hundredths, like cash.
     struct WeekFigures

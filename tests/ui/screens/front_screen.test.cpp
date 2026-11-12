@@ -84,7 +84,8 @@ TEST_CASE("buttons open menus, back returns, other buttons are requests")
     CHECK(f.screen->current() == FrontMenu::Play);
     CHECK(f.screen->on_key({ Key::Escape }));
     CHECK(f.screen->current() == FrontMenu::Main);
-    CHECK_FALSE(f.screen->on_key({ Key::Escape })); // Nothing further back
+    CHECK(f.screen->on_key({ Key::Escape })); // Nothing further back: it asks to quit
+    CHECK(f.screen->take_request() == FrontRequest { FrontAction::Quit, 0 });
 
     f.click(f.screen->button(FrontMenu::Main, 2));
     CHECK(f.screen->take_request() == FrontRequest { FrontAction::Options, 0 });

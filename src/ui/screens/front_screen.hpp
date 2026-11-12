@@ -5,7 +5,8 @@
 // Each menu is a short list of round picture buttons. A button either opens another menu, whose buttons fly
 // in along the circle while the old ones move out of the way, or asks for something the front screen does
 // not do itself (start a game, open the options); the owner takes those with take_request(). Back returns
-// to the menu before, and Escape does the same. Quit is a request too, so the owner can ask first.
+// to the menu before, and Escape does the same; on the first menu Escape asks to quit. Quit is a request, so
+// the owner can ask first.
 //
 // Resting the pointer on a button shows its name and a line of help along the bottom of the screen; the
 // names also show in the boxes beside the buttons once they have arrived.

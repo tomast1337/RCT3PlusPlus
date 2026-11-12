@@ -313,12 +313,14 @@ namespace rct3::ui::screens
 
     bool FrontScreen::on_key(const KeyPress& key)
     {
-        if (key.key == Key::Escape && current_ != FrontMenu::Main)
-        {
+        if (key.key != Key::Escape)
+            return false;
+        // Back a menu; from the first one, where there is nothing further back, it asks to quit.
+        if (current_ != FrontMenu::Main)
             back();
-            return true;
-        }
-        return false;
+        else
+            requests_.push_back({ FrontAction::Quit, 0 });
+        return true;
     }
 
     fs::Polar FrontScreen::goal(FrontMenu menu, std::size_t i) const

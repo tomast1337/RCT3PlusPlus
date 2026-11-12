@@ -62,6 +62,10 @@ const months = park.history().ledger.length;
 log("ledger months", months);
 expect(months > 5, "more ledger months than a park file's five");
 
+// The bar's money with an arrow the way last month went, and its profit under the pointer.
+const money = ui.find("bar/money")!;
+log("bar money", money.text, money.tooltip);
+expect(/^[\u2191\u2193]/.test(money.text ?? "") && (money.tooltip ?? "") !== "", "the money's trend");
 await open_finances();
 await tab("Man_Finances");
 expect(under(kWindow, "Rct3pp_Finance_Line") !== undefined, "the ledger's line picker");

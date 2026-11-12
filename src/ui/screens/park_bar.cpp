@@ -18,6 +18,7 @@ namespace rct3::ui::screens
         constexpr std::string_view kMonth = "Month"; ///< Followed by the month's number from 0
         constexpr std::string_view kYear = "Year";
         constexpr std::string_view kUnlimitedCash = "Cash_Unlimited";
+        constexpr std::string_view kLastMonthProfit = "Rct3pp_LastMonthProfit";
         constexpr std::string_view kObjectiveHelp = "PID_TT_ObjectiveTabPopUp";
         constexpr std::array<std::string_view, 4> kSpeedHelp = { "Playing_PauseHelp", "Playing_PlayHelp", "Playing_FastForwardHelp", "Playing_SuperFastForwardHelp" };
         constexpr std::string_view kGuestsHelp = "Toolbar_TT_GuestsInPark";
@@ -126,11 +127,17 @@ namespace rct3::ui::screens
         return out;
     }
 
-    ParkBarValues park_bar_values(const simulation::park::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units)
+    ParkBarValues park_bar_values(const simulation::park::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units, std::optional<std::int64_t> last_month_profit)
     {
         ParkBarValues v;
         v.speed = state.speed;
         v.money = state.cash ? money_text(units.currency, *state.cash) : std::u16string(strings.get(kUnlimitedCash));
+        if (state.cash && last_month_profit)
+        {
+            if (*last_month_profit != 0)
+                v.money = (*last_month_profit > 0 ? u"\u2191" : u"\u2193") + v.money;
+            v.money_help = std::u16string(strings.get(kLastMonthProfit)) + u" " + money_text(units.currency, *last_month_profit);
+        }
         v.guests = ascii(std::to_string(state.guests));
         v.rating = state.rating;
         if (state.rating)
@@ -241,6 +248,7 @@ namespace rct3::ui::screens
         speed_ = values.speed;
         show_speed();
         money_->text = values.money;
+        money_->tooltip = values.money_help;
         guests_->text = values.guests;
         temperature_->text = values.temperature;
         date_->text = values.date;

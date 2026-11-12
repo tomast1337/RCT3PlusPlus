@@ -1751,7 +1751,8 @@ namespace rct3::scene::park
             units.fahrenheit = options.choice(config::GameOption::TemperatureUnits) == kFahrenheit;
             // The game writes its times with am and pm in English only.
             units.twelve_hour = assets.fonts.language == ui::kDefaultLanguage;
-            ui::screens::ParkBarValues values = ui::screens::park_bar_values(scene.park, scene.day.time, *assets.strings, units);
+            const auto& ledger = scene.park_model.finance.ledger;
+            ui::screens::ParkBarValues values = ui::screens::park_bar_values(scene.park, scene.day.time, *assets.strings, units, ledger.size() > 1 ? std::optional(-ledger[1].raw_sum()) : std::nullopt);
             // The player chooses how the day goes in a sandbox, whatever its money.
             if (scene.game.sandbox)
                 values.day_mode = scene.day.mode;

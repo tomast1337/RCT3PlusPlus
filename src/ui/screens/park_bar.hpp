@@ -66,7 +66,8 @@ namespace rct3::ui::screens
     struct ParkBarValues
     {
         simulation::GameSpeed speed;
-        std::u16string money;
+        std::u16string money;      ///< After an arrow up or down, as last month made or lost money
+        std::u16string money_help; ///< Last month's profit; empty before a month has ended
         std::u16string guests;
         std::optional<float> rating; ///< 0 to 1; no bar without one
         std::u16string rating_help;  ///< The rating's tooltip: its number, and its parts once a week has been rated
@@ -102,11 +103,12 @@ namespace rct3::ui::screens
         bool twelve_hour = true;
     };
 
-    /// The bar's values for the park's state at `day_time` (a fraction of the day).
+    /// The bar's values for the park's state at `day_time` (a fraction of the day), with the profit of the last
+    /// month that ended (hundredths), when one has.
     /// The rating's tooltip: the rating out of the most there is, then a line for each of its parts when known.
     [[nodiscard]] std::u16string park_rating_help(const StringTable& strings, float rating, const std::optional<simulation::park::RatingParts>& parts);
 
-    [[nodiscard]] ParkBarValues park_bar_values(const simulation::park::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units);
+    [[nodiscard]] ParkBarValues park_bar_values(const simulation::park::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units, std::optional<std::int64_t> last_month_profit = std::nullopt);
 
     class ParkBar : public Widget
     {

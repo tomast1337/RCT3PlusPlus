@@ -113,6 +113,14 @@ TEST_CASE("the bar's values are written from the park's state")
     CHECK(v.temperature == u"30\u00b0C");
     CHECK(v.date == u"April, Year 3  6:00 pm");
     CHECK(v.weather == save::model::WeatherType::Sunny);
+    CHECK(v.money_help.empty()); // No month ended yet
+
+    // After a month, an arrow the way it went, and its profit under the pointer.
+    strings.add("Rct3pp_LastMonthProfit", u"Last month:");
+    CHECK(park_bar_values(state, 0.75f, strings, units, 2500).money == u"\u2191-$1,500.75");
+    CHECK(park_bar_values(state, 0.75f, strings, units, 2500).money_help == u"Last month: $25.00");
+    CHECK(park_bar_values(state, 0.75f, strings, units, -2500).money == u"\u2193-$1,500.75");
+    CHECK(park_bar_values(state, 0.75f, strings, units, 0).money == u"-$1,500.75");
 
     state.cash.reset();
     units.fahrenheit = true;

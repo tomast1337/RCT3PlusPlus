@@ -616,12 +616,13 @@ TEST_CASE("park: required content, overlay stems and particle skipping")
             { "WASDatabaseEntry", 3, { fstr("OVERLAYFILENAME", "wild/Zone"), fstr("SYMBOLNAME", "z"), fbool("ISUNLOCKED", true) } },
             { "SIDDatabaseEntry", 4, { fstr("OVERLAYFILENAME", "../escape/Out"), fstr("SYMBOLNAME", "bad") } },
             { "PPGDatabaseEntry", 5, { fstr("SymbolName", "person") } },
+            { "QueueTypeDatabaseEntry", 9, { fbool("IsAvailable", true), fstr("SystemName", "QueueTwo") } },
             { "ParticleDesc", 6, { fstr("Name", "p") } },
             { "ParticleEmitterDesc", 7, { fint("NumParticles", 3) } },
             { "ParticleSource", 8, { } },
         });
     const auto& c = l->model.content;
-    REQUIRE(c.entries.size() == 3);
+    REQUIRE(c.entries.size() == 4);
     CHECK(c.entries_without_overlay == 2); // symbol-only entry, and the stem that tries to leave the root
     CHECK(c.entries[0].kind == AssetKind::Scenery);
     CHECK(c.entries[0].overlay_stem == "Style/Invented/Sample");
@@ -634,6 +635,10 @@ TEST_CASE("park: required content, overlay stems and particle skipping")
     CHECK(c.entries[2].kind == AssetKind::AnimalSpecies);
     CHECK(c.entries[2].unlocked);
     CHECK_FALSE(c.entries[0].unlocked);
+    CHECK(c.entries[3].kind == AssetKind::QueueType);
+    CHECK(c.entries[3].symbol == "QueueTwo");
+    CHECK(c.entries[3].overlay_stem.empty());
+    CHECK(c.entries[3].available);
     CHECK(c.invented_count() == 1);
     CHECK(l->model.particle_objects == 3);
 }

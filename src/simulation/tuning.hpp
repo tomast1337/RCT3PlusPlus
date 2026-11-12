@@ -436,7 +436,12 @@ namespace rct3::simulation::tuning
         Money tracked_ride_cost { 24000 };
         Money flat_ride_cost { 16000 };
         Money shop_cost { 10000 };
-        Money other_cost { 6000 };
+        Money other_cost { 6000 }; ///< Also each path and queue style
+        /// A scenery item costs its price times this, up to the cap. Chosen by eye: at the usual 200.00 a month an
+        /// item of the usual price, about 15.00, takes under a third of a month, and the dearest (ride events, at
+        /// hundreds) are held to under half a month, less than a stall.
+        double scenery_cost_per_price = 4;
+        Money scenery_cost_cap { 8000 };
     };
 
     /// What the park is charged each week.

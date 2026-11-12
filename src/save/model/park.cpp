@@ -39,6 +39,8 @@ namespace rct3::save::model
             constexpr std::string_view kSceneryEntryClass = "SIDDatabaseEntry";
             constexpr std::string_view kAttractionEntryClass = "AIDDatabaseEntry";
             constexpr std::string_view kAnimalSpeciesEntryClass = "WASDatabaseEntry";
+            constexpr std::string_view kPathTypeEntryClass = "PathTypeDatabaseEntry";
+            constexpr std::string_view kQueueTypeEntryClass = "QueueTypeDatabaseEntry";
             // Condition classes are found by owning the slot attribute; these classes give the family.
             constexpr std::array kConditionKinds = {
                 std::pair { std::string_view { "ParkValueCondition" }, ConditionKind::ParkValue },
@@ -222,6 +224,7 @@ namespace rct3::save::model
             constexpr std::string_view kEntryHidden = "IsHidden";
             constexpr std::string_view kEntryInvented = "IsInvented";
             constexpr std::string_view kEntryUnlocked = "ISUNLOCKED";
+            constexpr std::string_view kEntryStyleName = "SystemName"; ///< Path and queue styles' entries
 
             // Graph storage layout (the value decoder's names for the parts of a graphedValue)
             constexpr std::string_view kGraphCapacity = "capacity";
@@ -710,6 +713,10 @@ namespace rct3::save::model
                 return AssetKind::Attraction;
             if (cls == names::kAnimalSpeciesEntryClass)
                 return AssetKind::AnimalSpecies;
+            if (cls == names::kPathTypeEntryClass)
+                return AssetKind::PathType;
+            if (cls == names::kQueueTypeEntryClass)
+                return AssetKind::QueueType;
             return AssetKind::Other;
         }
 
@@ -774,6 +781,10 @@ namespace rct3::save::model
             std::optional<std::string> stem;
             if (overlay && overlay->kind() == ValueKind::String)
                 stem = normalise_overlay_stem(overlay->text());
+            const AssetKind kind = kind_of_entry(o.class_name);
+            const bool style = kind == AssetKind::PathType || kind == AssetKind::QueueType;
+            if (style)
+                stem = std::string { };
             if (!stem)
             {
                 ++content.entries_without_overlay;
@@ -781,10 +792,10 @@ namespace rct3::save::model
             }
             content.entries.push_back(
                 AssetRequirement {
-                    .kind = kind_of_entry(o.class_name),
+                    .kind = kind,
                     .class_name = std::string(o.class_name),
                     .overlay_stem = std::move(*stem),
-                    .symbol = string_of(o.find(kSymbolName)),
+                    .symbol = string_of(o.find(style ? kEntryStyleName : kSymbolName)),
                     .available = bool_of(o.find(kEntryAvailable), false),
                     .hidden = bool_of(o.find(kEntryHidden), false),
                     .invented = bool_of(o.find(kEntryInvented), false),
@@ -1044,6 +1055,8 @@ namespace rct3::save::model
         std::unordered_map<std::string, std::optional<OverlayFiles>> memo;
         for (const auto& e : content.entries)
         {
+            if (e.overlay_stem.empty())
+                continue; // a path or queue style, which names no overlay
             ++rep.entries;
             auto it = memo.find(e.overlay_stem);
             if (it == memo.end())

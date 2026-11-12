@@ -990,6 +990,14 @@ int main(int argc, char** argv)
                 park->saves.game_saves = front->saves.game_saves;
             }
             park->game = park_game;
+            // A sandbox offers everything, whatever its file says.
+            if (park_game.sandbox)
+            {
+                for (rct3::save::model::AssetRequirement& e : park->park_model.content.entries)
+                    e.available = e.invented = e.unlocked = true;
+                park->build.offer = rct3::park::BuildOffer(park->park_model.content);
+                park->research_items.reset();
+            }
             // A career scenario's weather follows its setting.
             if (!park_game.career.empty())
                 park->park.climate = rct3::simulation::career_climate(park_game.scenario).value_or(park->park.climate);
@@ -1087,10 +1095,10 @@ int main(int argc, char** argv)
                         }
                         if (const auto wanted = script->take_park())
                         {
-                            park_to_load = install ? install->find(*wanted) : std::nullopt;
-                            park_game = { };
+                            park_to_load = install ? install->find(wanted->first) : std::nullopt;
+                            park_game = { .sandbox = wanted->second };
                             if (!park_to_load)
-                                script->fail(std::format("park.open: no {} in the game's folder", *wanted));
+                                script->fail(std::format("park.open: no {} in the game's folder", wanted->first));
                         }
                         if (const auto code = script->quit())
                         {

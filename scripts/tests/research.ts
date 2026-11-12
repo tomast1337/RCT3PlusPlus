@@ -3,7 +3,8 @@
 // Research in a scenario that budgets for it: over a few months attractions are invented, each told in a
 // message and offered in the build lists, the money booked as research spending; the research window sets the
 // budget and the areas' priorities; saved and opened again, research is where it was, and an invention's message
-// opens its build list on it, where the item under research shows locked. A sandbox does none.
+// opens its build list on it, where the item under research shows locked. With only scenery wanted, scenery
+// the scenario has not invented is. A sandbox does none.
 //
 //   ./nob script scripts/tests/research.ts -- --no-audio
 
@@ -27,9 +28,16 @@ function under(path: string, name: string): string | undefined {
     return undefined;
 }
 
-await park.open("Campaigns/Base/Gunslinger.dat");
+/** The priorities that want only the areas listed (scenery is 8, paths 9), or all but them. */
+function wanting(areas: number[], only: boolean): number[] {
+    return Array.from({ length: 12 }, (_, i) => (areas.includes(i) === only ? 1 : 0));
+}
+
+await park.open("Campaigns/Base/Gunslinger.dat", { sandbox: false });
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined, 1200, "the park");
 await until(() => park.research().left !== null, 1200, "the items left to research");
+// Attractions only, so that what follows finds them in the rides and shops lists.
+park.setResearch(20000, wanting([8, 9], false));
 const start = park.research();
 log("research at first:", JSON.stringify(start));
 expect(start.budget === 20000, `the scenario's budget, not ${start.budget}`);
@@ -182,11 +190,30 @@ await ui.click(lockedRow!);
 await frames(5);
 expect(build.placing() === undefined, `${researched} not placed while locked`);
 
-// A sandbox budgets nothing and invents nothing.
+// Scenery alone wanted: once the scenario's item is done, its scenery not yet invented is.
+const events = ["Canyon", "RockSlide", "SignBanner"];
+await park.open("Campaigns/Base/Gunslinger.dat", { sandbox: false });
+await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined, 1200, "the park again");
+await until(() => park.research().left !== null, 1200, "the items left to research again");
+expect(events.every((symbol) => build.offers(symbol) === false), "the scenario's scenery to research not offered");
+park.setResearch(20000, wanting([8], true));
+for (let month = 0; month < 2; ++month) {
+    park.setDate(park.date() + 360);
+    await frames(10);
+}
+const scenery = park.research().invented.filter((symbol) => events.includes(symbol!));
+log("scenery invented:", JSON.stringify(park.research()));
+expect(scenery.length >= 1, `a piece of scenery invented within two months, not ${JSON.stringify(park.research().invented)}`);
+expect(scenery.every((symbol) => build.offers(symbol!) === true), "the scenery invented offered");
+const sceneryTold = park.messages().filter((m) => m.key === "Invented_SceneryItem");
+expect(sceneryTold.length === scenery.length && sceneryTold.every((m) => m.name.length > 0), `a named message for each, not ${JSON.stringify(sceneryTold)}`);
+
+// A sandbox budgets nothing and invents nothing, and offers everything.
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined, 1200, "the sandbox");
 await frames(30);
 park.setDate(park.date() + 360);
 await frames(10);
 expect(park.research().budget === 0 && park.research().invented.length === 0, "no research in a sandbox");
+expect(events.every((symbol) => build.offers(symbol) === true), "the sandbox offering its scenery");
 quit(0);

@@ -25,7 +25,8 @@
 //   screenshot(name)    saved to the screenshots folder, or as NN_name.png in the report folder when there is
 //                       one; resolves once it is written
 //   quit(code)          leaves the game with `code` (also when the script ends: 0, or 1 when it failed)
-//   park.open(path)     opens the park at `path` in the game's folder and waits until it shows
+//   park.open(path, { sandbox })  opens the park at `path` in the game's folder and waits until it shows;
+//                       played as a sandbox unless `sandbox` is false
 //   park.advance(seconds)  runs the park on `seconds` of its time without drawing them, a step of its
 //                       simulation at a time; park.advanceUntil(check, seconds, what) a park second at a time
 //                       until check() holds
@@ -132,8 +133,8 @@ namespace rct3::scene
         [[nodiscard]] std::optional<Pointer> pointer(const render::Device& device) const;
         /// The career scenario the script asked to start, once: the game and the scenario's place.
         [[nodiscard]] std::optional<std::pair<int, std::size_t>> take_career();
-        /// The park the script asked for, once: a path in the game's folder.
-        [[nodiscard]] std::optional<std::string> take_park();
+        /// The park the script asked for, once: a path in the game's folder, and whether it is played as a sandbox.
+        [[nodiscard]] std::optional<std::pair<std::string, bool>> take_park();
         /// The keys the script pressed and typed since the last call, oldest first, as the window reports them.
         [[nodiscard]] std::vector<ui::KeyPress> take_keys()
         {
@@ -177,7 +178,7 @@ namespace rct3::scene
         std::optional<std::filesystem::path> report_;
         std::ofstream report_log_;
         int shots_ = 0;
-        std::optional<std::string> open_;
+        std::optional<std::pair<std::string, bool>> open_;
         std::optional<std::pair<int, std::size_t>> career_;
         std::optional<int> quit_;
         float advance_ = 0;

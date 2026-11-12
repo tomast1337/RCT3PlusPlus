@@ -77,8 +77,9 @@ declare namespace render {
 type PathItemKind = "bin" | "bench" | "sign" | "sight" | "photo spot" | "fountain" | "water cannon" | "speaker" | "passport post";
 
 declare namespace park {
-    /** Opens the park at `path` in the game's folder, such as "Campaigns/Base/BlankLandscape.dat", and waits until it shows. */
-    function open(path: string): Promise<void>;
+    /** Opens the park at `path` in the game's folder, such as "Campaigns/Base/BlankLandscape.dat", and waits until it shows.
+     *  It is played as a sandbox, which offers everything, unless `sandbox` is false. */
+    function open(path: string, settings?: { sandbox?: boolean }): Promise<void>;
     function loaded(): boolean;
     /** Runs the park on `seconds` of its own time, whatever its speed, without drawing them: a step of its
      *  simulation at a time, as frames would run them; nothing while paused. Resolves a frame later, drawn as it is then. */
@@ -100,8 +101,9 @@ declare namespace park {
      *  those invented since the original park, by symbol, how many items are left (null until the build lists are read),
      *  and the priority of each research area from 0 to 1, in the research window's order (areas past the end weigh 1). */
     function research(): { budget: number; spent: number; current: string | null; invented: (string | null)[]; left: number | null; priorities: number[] };
-    /** Sets the monthly research budget, in hundredths of the currency; nought stops research. */
-    function setResearch(hundredths: number): void;
+    /** Sets the monthly research budget, in hundredths of the currency; nought stops research. `priorities` weighs
+     *  each research area in the research window's order, as research() gives them. */
+    function setResearch(hundredths: number, priorities?: number[]): void;
     /** The weekly graphs' samples, newest first (money in hundredths), each ledger period's sum newest first, and
      *  the month, counted from the calendar's start, that the newest period is for (null before anything is booked). */
     function history(): { cashLessLoan: number[]; companyValue: number[]; parkValue: number[]; income: number[]; expenditure: number[]; weeklyProfit: number[]; rating: number[]; guests: number[]; intake: number[]; ledger: number[]; ledgerMonth: number | null };

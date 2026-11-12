@@ -996,7 +996,10 @@ namespace rct3::scene::park
             {
                 const std::vector<rct3::park::BuildItem>& catalogue = scene.build.items.get();
                 if (!scene.research_items)
-                    scene.research_items = simulation::research_items(scene.park_model.content, catalogue);
+                {
+                    read_path_styles(scene.footpaths, assets);
+                    scene.research_items = simulation::research_items(scene.park_model.content, catalogue, scene.footpaths.styles);
+                }
                 const std::size_t had = scene.research.invented.size();
                 simulation::step_research(scene.research, scene.park.time - scene.research_time.value_or(scene.park.time), *scene.research_items, scene.park, scene.park_model.finance, scene.ledger_month, scene.gameplay);
                 // Each new invention can be built from now on, and the player is told.
@@ -1006,8 +1009,18 @@ namespace rct3::scene::park
                     if (entry == scene.park_model.content.entries.end())
                         continue;
                     entry->invented = true;
+                    using save::model::AssetKind;
                     const auto item = content_item(scene, entry->id);
-                    simulation::park::post(scene.park.messages, { .text_key = std::string(simulation::kInventedKey), .subject_name = item ? strings::to_utf8(assets.strings->get(catalogue[*item].name_text)) : entry->symbol, .build_item = item });
+                    std::string_view name_text = item ? std::string_view(catalogue[*item].name_text) : std::string_view { };
+                    if (entry->kind == AssetKind::PathType || entry->kind == AssetKind::QueueType)
+                    {
+                        if (const auto found = std::ranges::find_if(scene.footpaths.styles, [&](const rct3::park::path::PathStyle& s) { return s.queue == (entry->kind == AssetKind::QueueType) && strings::equals_ignoring_case(s.name, entry->symbol); }); found != scene.footpaths.styles.end())
+                            name_text = found->name_text;
+                    }
+                    const std::string_view key = entry->kind == AssetKind::Scenery ? simulation::kInventedSceneryKey : entry->kind == AssetKind::PathType ? simulation::kInventedPathKey : entry->kind == AssetKind::QueueType ? simulation::kInventedQueueKey : simulation::kInventedKey;
+                    // Named as its build list names it.
+                    const std::u16string_view name = assets.strings->get_ignoring_case(name_text);
+                    simulation::park::post(scene.park.messages, { .text_key = std::string(key), .subject_name = name.empty() ? entry->symbol : strings::to_utf8(name), .build_item = item });
                 }
                 if (scene.research.invented.size() != had)
                     scene.build.offer = rct3::park::BuildOffer(scene.park_model.content);

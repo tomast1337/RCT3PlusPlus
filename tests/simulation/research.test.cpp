@@ -3,6 +3,7 @@
 
 #include "simulation/tuning.hpp"
 
+#include <cmath>
 #include <cstdlib>
 #include <doctest/doctest.h>
 
@@ -65,7 +66,7 @@ TEST_CASE("the items to research are the attractions made available and not yet 
     entry(5, "Drinks", "style/plain/style", false, false);  // Not part of this park
     content.entries.push_back({ .kind = save::model::AssetKind::Scenery, .overlay_stem = "style/plain/style", .symbol = "Carousel", .available = true, .id = 6 });
 
-    const std::vector<ResearchItem> items = research_items(content, catalogue);
+    const std::vector<ResearchItem> items = research_items(content, catalogue, { });
     REQUIRE(items.size() == 2);
     CHECK(items[0].id == 1);
     CHECK(items[0].area == ResearchArea::Coasters);
@@ -73,6 +74,54 @@ TEST_CASE("the items to research are the attractions made available and not yet 
     CHECK(items[1].id == 3);
     CHECK(items[1].area == ResearchArea::Shops);
     CHECK(items[1].cost == kTuning.research.shop_cost.value);
+}
+
+TEST_CASE("researchable scenery and path styles join research, scenery costing by its price")
+{
+    using rct3::park::BuildItem;
+    using rct3::park::BuildKind;
+    using save::model::AssetKind;
+    std::vector<BuildItem> catalogue(3);
+    const auto scenery = [&](std::size_t at, std::string symbol, std::uint32_t category, std::int32_t price) {
+        catalogue[at].kind = BuildKind::Scenery;
+        catalogue[at].overlay = "style/plain/style";
+        catalogue[at].symbol = std::move(symbol);
+        catalogue[at].type = category;
+        catalogue[at].price = price;
+    };
+    scenery(0, "Bench", 31, 1500);
+    scenery(1, "Volcano", 28, 95000); // dear enough to meet the cap
+    scenery(2, "Column", 12, 1000);   // never researched
+    std::vector<rct3::park::path::PathStyle> paths(3);
+    paths[0].name = "Tarmac";
+    paths[1].name = "Plain";
+    paths[1].names_category = true;
+    paths[2].name = "Gold";
+    paths[2].queue = true;
+    save::model::RequiredContent content;
+    const auto entry = [&](std::uint64_t id, AssetKind kind, std::string symbol, bool available) { content.entries.push_back({ .kind = kind, .overlay_stem = kind == AssetKind::Scenery ? "style/plain/style" : "", .symbol = std::move(symbol), .available = available, .id = id }); };
+    entry(1, AssetKind::Scenery, "Bench", true);
+    entry(2, AssetKind::Scenery, "Volcano", true);
+    entry(3, AssetKind::Scenery, "Column", true);
+    entry(4, AssetKind::PathType, "Tarmac", true);
+    entry(5, AssetKind::PathType, "Plain", true);
+    entry(6, AssetKind::QueueType, "Gold", true);
+    entry(7, AssetKind::PathType, "Gold", true); // a queue's name, not a path's
+    entry(8, AssetKind::Scenery, "Bench", false);
+
+    const tuning::Research& t = kTuning.research;
+    const std::vector<ResearchItem> items = research_items(content, catalogue, paths);
+    REQUIRE(items.size() == 4);
+    CHECK(items[0].id == 1);
+    CHECK(items[0].area == ResearchArea::Scenery);
+    CHECK(items[0].cost == std::llround(1500 * t.scenery_cost_per_price));
+    CHECK(items[1].id == 2);
+    CHECK(items[1].cost == t.scenery_cost_cap.value);
+    CHECK(items[2].id == 4);
+    CHECK(items[2].area == ResearchArea::Paths);
+    CHECK(items[2].cost == t.other_cost.value);
+    CHECK(items[3].id == 6);
+    CHECK(items[3].area == ResearchArea::Paths);
 }
 
 TEST_CASE("the budget is paid in parts and booked as research spending")

@@ -194,6 +194,66 @@ TEST_CASE("a park offers the species it unlocked, and every fence, shelter and t
     CHECK(BuildOffer(rct3::save::model::RequiredContent { }).offers(item(BuildKind::Animal, "koala")));
 }
 
+TEST_CASE("a park offers scenery by its kind: what research invents once invented, the rest when available")
+{
+    using rct3::save::model::AssetKind;
+    using rct3::save::model::AssetRequirement;
+    const auto item = [](std::string symbol, std::uint32_t category, std::int32_t price, bool names_category = false) {
+        BuildItem i;
+        i.overlay = "Style/Plain/Style";
+        i.symbol = std::move(symbol);
+        i.type = category;
+        i.price = price;
+        i.names_category = names_category;
+        return i;
+    };
+    const BuildItem bench = item("Bench", 31, 1500);
+    const BuildItem gate = item("Gate", 20, 0);         // a park entrance, which costs nothing
+    const BuildItem support = item("Column", 12, 1000); // not put up for its looks
+    const BuildItem named = item("Statue", 7, 1500, true);
+    const BuildItem sign = item("Sign", 32, 1800);
+    CHECK(rct3::park::researchable(bench));
+    CHECK_FALSE(rct3::park::researchable(gate));
+    CHECK_FALSE(rct3::park::researchable(support));
+    CHECK_FALSE(rct3::park::researchable(named));
+
+    rct3::save::model::RequiredContent content;
+    for (const BuildItem* i : { &bench, &gate, &support, &named })
+        content.entries.push_back({ .kind = AssetKind::Scenery, .overlay_stem = i->overlay, .symbol = i->symbol, .available = true });
+    // Invented and hidden, as the game's fireworks are in every park: hidden says nothing.
+    content.entries.push_back({ .kind = AssetKind::Scenery, .overlay_stem = sign.overlay, .symbol = sign.symbol, .available = true, .hidden = true, .invented = true });
+    const BuildOffer offer(content);
+    CHECK(offer.state(bench) == BuildOffer::State::Locked);
+    CHECK(offer.offers(gate));
+    CHECK(offer.offers(support));
+    CHECK(offer.offers(named));
+    CHECK(offer.offers(sign));
+    CHECK(offer.offers(item("Unlisted", 7, 1500)));
+
+    content.entries[0].invented = true;
+    CHECK(BuildOffer(content).offers(bench));
+    content.entries[0].available = false;
+    content.entries[2].available = false;
+    CHECK(BuildOffer(content).state(bench) == BuildOffer::State::Hidden);
+    CHECK(BuildOffer(content).state(support) == BuildOffer::State::Hidden);
+}
+
+TEST_CASE("a park offers path styles it invented, and the plain ones when available")
+{
+    using rct3::save::model::AssetKind;
+    rct3::save::model::RequiredContent content;
+    content.entries.push_back({ .kind = AssetKind::PathType, .symbol = "Tarmac", .available = true });
+    content.entries.push_back({ .kind = AssetKind::PathType, .symbol = "Plain", .available = true });
+    content.entries.push_back({ .kind = AssetKind::QueueType, .symbol = "Gold", .available = true, .invented = true });
+    content.entries.push_back({ .kind = AssetKind::PathType, .symbol = "Dirt", .available = false, .invented = true });
+    const BuildOffer offer(content);
+    CHECK_FALSE(offer.offers_path("tarmac", false));
+    CHECK(offer.offers_path("Plain", true));
+    CHECK(offer.offers_path("Gold", false));
+    CHECK_FALSE(offer.offers_path("Dirt", false));
+    CHECK(offer.offers_path("Unlisted", false));
+}
+
 TEST_CASE("items of an overlay that gives only its theme's number take the theme's name")
 {
     std::vector<BuildItem> items(4);

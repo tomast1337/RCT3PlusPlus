@@ -174,6 +174,7 @@ namespace rct3::park
         float rarity = 0; ///< Animals: from 0, common, to 1, endangered
         /// Shops: whether placed as a stall, as against a special attraction such as a toilet.
         bool stall = false;
+        bool names_category = false; ///< Scenery: names a research category, which keeps it out of research
         /// Stalls: what a new one sells, each a carried item's name and the price it starts at, in hundredths;
         /// empty when the stall's overlay does not give them.
         struct Goods
@@ -197,12 +198,19 @@ namespace rct3::park
     /// read are skipped.
     [[nodiscard]] std::vector<BuildItem> read_build_catalogue(const std::filesystem::path& root);
 
+    /// Whether research invents `item`: scenery of a kind put up for its looks (trees to animatronics, entrances
+    /// and exits, ride events, path extras, building parts and effects) that has a price and names no research
+    /// category. In a sandbox park file every such item is marked invented and no other scenery is.
+    [[nodiscard]] bool researchable(const BuildItem& item) noexcept;
+
     /// Which items a park lets the player build, by what it records of each: those it has made available
     /// and invented, and does not hide, and the animal species it has unlocked. Attractions it has made
-    /// available and not hidden but not invented yet are locked: research may invent them. A park that records
-    /// nothing lets every item be built, and one that records no species every animal. Enclosure fences,
-    /// shelters and toys are always offered: parks list them without saying whether they may be built. So are
-    /// the pool tools, which no park lists.
+    /// available and not hidden but not invented yet are locked: research may invent them. Scenery goes by its
+    /// kind: researchable scenery is offered once made available and invented, and locked while only made
+    /// available; other scenery is offered when made available. A park that records nothing lets every item be
+    /// built, and one that records no species every animal. Enclosure fences, shelters and toys are always
+    /// offered: parks list them without saying whether they may be built. So are the pool tools, which no park
+    /// lists.
     class BuildOffer
     {
     public:
@@ -227,11 +235,23 @@ namespace rct3::park
         {
             return state(item) == State::Offered;
         }
+        /// Whether the path or queue style `name` may be laid: one the park has made available and invented, or
+        /// only made available when the style `names_category` (the plain path and queue, which research
+        /// never invents). Styles the park does not list may be laid.
+        [[nodiscard]] bool offers_path(std::string_view name, bool names_category) const;
 
     private:
+        struct Flags
+        {
+            bool available = false;
+            bool invented = false;
+        };
         bool known_ = false;
         bool species_known_ = false;
         std::map<std::string, State> listed_; // By "overlay|symbol", in lower case
+        /// Of scenery and of path and queue styles (by "|name"), the park's flags: other entries can share a scenery
+        /// item's name, such as a stall's.
+        std::map<std::string, Flags, std::less<>> flags_;
     };
 
 } // namespace rct3::park

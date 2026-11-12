@@ -83,4 +83,15 @@ namespace rct3::simulation
     /// from the areas that still have any, by their priorities. With nothing left to invent, nothing is paid.
     void step_research(Research& research, float units, std::vector<ResearchItem>& items, park::ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, random::RandomState& dice);
 
+    /// How far the item being worked on has got.
+    struct ResearchProgress
+    {
+        std::uint64_t id = 0;                   ///< ResearchItem::id
+        float done = 0;                         ///< Of its cost, 0 to 1, with any boost waiting
+        std::optional<std::int64_t> months { }; ///< Whole months the budget takes to cover the rest, at least one; none without a budget
+    };
+
+    /// The progress of the current item, if it is among `items`.
+    [[nodiscard]] std::optional<ResearchProgress> research_progress(const Research& research, std::span<const ResearchItem> items);
+
 } // namespace rct3::simulation

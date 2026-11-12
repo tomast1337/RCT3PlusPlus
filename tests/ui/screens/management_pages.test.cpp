@@ -306,15 +306,36 @@ TEST_CASE("an objective's condition the simulation cannot judge says so")
     CHECK(value_of(page, u"At any time.") == u"Not simulated yet");
 }
 
-TEST_CASE("the research priorities show one row an area")
+TEST_CASE("the research window sets the budget and a priority an area")
 {
-    const StringTable s = test_strings();
-    save::model::ParkModel park;
-    park.research.has_simple_research = true;
-    park.research.priorities = { 0.5f, 0.25f, 1.0f };
-    const ManagementPage page = management_page(ManagementTopic::Research, 0, { .park = &park }, s, kUnits);
-    REQUIRE(page.rows.size() == 3);
-    CHECK(page.rows[1].cells[1] == u"25 %");
+    StringTable s = test_strings();
+    s.add("Rct3pp_Research_Current", u"Researching:");
+    s.add("Rct3pp_Research_MonthsLeft", u"About # months left");
+    s.add("Rct3pp_Research_NothingLeft", u"Nothing left");
+    s.add("Carousel_Name", u"Carousel");
+    simulation::Research research { .budget = 5000, .spent = 4000, .current = 7, .priorities = { 0.5f, 0.25f, 1.0f } };
+    std::vector<simulation::ResearchItem> left { { .id = 7, .area = simulation::ResearchArea::GentleRides, .cost = 16000 } };
+    ManagementPage page = management_page(ManagementTopic::Research, 0, { .research = &research, .research_left = left, .researching = "Carousel_Name" }, s, kUnits);
+    CHECK(value_of(page, u"Researching:") == u"Carousel");
+    REQUIRE(page.lines.size() == 2);
+    CHECK(page.lines[1].label == u"About 3 months left"); // 120.00 left at 50.00 a month
+    CHECK(page.lines[1].value == u"25 %");
+    CHECK(page.lines[1].bar == doctest::Approx(0.25));
+
+    REQUIRE(page.controls.size() == 2 + 4); // The budget, the areas' heading, three areas kept and the one with an item
+    CHECK(page.controls[0].id == kResearchBudgetControl);
+    CHECK(page.controls[0].value == 5000);
+    CHECK(page.controls[0].shown == money(5000));
+    CHECK(page.controls[3].id == kFirstPriorityControl + 1);
+    CHECK(page.controls[3].value == 25);
+    CHECK(page.controls[3].shown == u"25 %");
+    CHECK(page.controls[5].id == kFirstPriorityControl + static_cast<int>(simulation::ResearchArea::GentleRides));
+    CHECK(page.controls[5].value == 100); // Not set, so the most
+
+    left.clear();
+    page = management_page(ManagementTopic::Research, 0, { .research = &research, .research_left = left }, s, kUnits);
+    CHECK(value_of(page, u"Researching:") == u"Nothing left");
+    CHECK(page.lines.size() == 1);
 }
 
 TEST_CASE("without challenges the window says there are none")

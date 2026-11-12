@@ -134,6 +134,13 @@ namespace rct3::scene::park
                 for (const ui::widgets::TableRow& r : ui::screens::management_page(topic, window->tab(), facts, strings, units).rows)
                     asks.listed.push_back(ui::screens::management_row(r.id));
             }
+            if (const auto change = window->take_change(); change && topic == ui::screens::ManagementTopic::Research)
+            {
+                if (change->id == ui::screens::kResearchBudgetControl)
+                    asks.research_budget = change->value;
+                else if (change->id >= ui::screens::kFirstPriorityControl)
+                    asks.research_priority = std::pair(static_cast<std::size_t>(change->id - ui::screens::kFirstPriorityControl), static_cast<float>(change->value) / 100);
+            }
             if (const auto row = window->take_row())
                 asks.row = ui::screens::management_row(*row);
         }

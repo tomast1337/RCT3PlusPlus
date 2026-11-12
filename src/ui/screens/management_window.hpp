@@ -4,13 +4,15 @@
 // frame: its icon in the corner, its name as the title, picture tabs in the top-right corner with the open
 // tab's name on their left, and under them the open tab's page.
 //
-// A page is lines of a label and a value, then a graph, then a table of rows under headings, then a row of
-// buttons; any of them may be missing. The table fills what the rest leaves of the window. The window does not
+// A page is lines of a label and a value, then controls the player sets, then a graph, then a table of rows
+// under headings, then a row of buttons; any of them may be missing. The table fills what the rest leaves of the window. The window does not
 // know what it shows: the owner hears which tab the player picked through take_tab() and gives the page with
 // show_page(), again whenever what it shows has changed. The window sorts the table's rows itself, by the
 // heading the player pressed last on that tab, and keeps the scroll and the selection across new pages. A
 // graph has a tick box by each series' name to show or hide it; the numbers up its left are those of the series
-// ticked last, and which series are hidden is kept across new pages.
+// ticked last, and which series are hidden is kept across new pages. A new page with the same controls keeps
+// their widgets, so a bar dragged or an arrow held goes on working; the owner hears of changes through
+// take_change().
 #pragma once
 
 #include "core/maybe.hpp"
@@ -19,6 +21,8 @@
 #include "ui/widgets/column_table.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/line_plot.hpp"
+#include "ui/widgets/slider.hpp"
+#include "ui/widgets/spinner.hpp"
 #include "ui/widgets/tickbox.hpp"
 #include "ui/widgets/window.hpp"
 
@@ -63,6 +67,11 @@ namespace rct3::ui::screens
         std::vector<Color> series_colours { hex("#2484be"), hex("#e0402a"), hex("#3aa83a"), hex("#e0a020"), hex("#8a4fc0"), hex("#20a0a0"), hex("#c04080"), hex("#707070") };
         Color plot_background = hex("#ffffffa0");
         Color plot_rule = hex("#7f7f7f60"); ///< Of a graph's level lines and ticks
+        widgets::SpinnerStyle spinner;      ///< Of a page's numbers, shown in words with only the arrows
+        /// Of a page's bars set by pressing along them, as the info panel's; colours chosen by eye.
+        widgets::SliderStyle bar { .rail = { }, .thumb = { }, .thumb_width = 0, .bar = true, .bar_back_colour = hex("#ece8f0") };
+        float bar_width = 130;             ///< Of a line's bar and a control's
+        Color bar_back = hex("#00000040"); ///< Of a line's bar, behind its filled part
     };
 
     /// A tab: the skin of its picture and its name, shown as its help and beside the tabs while it is open.
@@ -87,6 +96,9 @@ namespace rct3::ui::screens
     struct ManagementPage
     {
         std::vector<InfoLine> lines;
+        /// Under the lines, a row each: numbers (with InfoControl::shown), bars, and words across the page as a
+        /// heading; other kinds are left out.
+        std::vector<InfoControl> controls;
         std::vector<InfoSeries> graph;
         std::vector<InfoTick> graph_ticks;
         std::size_t graph_slots = 0;               ///< Samples across the graph; see LinePlot::slots
@@ -132,6 +144,11 @@ namespace rct3::ui::screens
         [[nodiscard]] std::optional<std::pair<std::size_t, std::size_t>> take_choice()
         {
             return std::exchange(choice_now_, std::nullopt);
+        }
+        /// The control the player changed since the last call, the last one.
+        [[nodiscard]] std::optional<InfoChange> take_change()
+        {
+            return std::exchange(change_now_, std::nullopt);
         }
         /// The id of the table row the player activated since the last call.
         [[nodiscard]] std::optional<std::size_t> take_row()
@@ -191,6 +208,16 @@ namespace rct3::ui::screens
         std::optional<std::size_t> button_now_;
         std::optional<std::pair<std::size_t, std::size_t>> choice_now_;
         std::optional<std::size_t> row_now_;
+        struct Control
+        {
+            InfoControl control;
+            widgets::Label* label = nullptr;
+            Widget* widget = nullptr;        ///< The spinner or the bar; none for words
+            widgets::Label* shown = nullptr; ///< Its value in words
+        };
+        Widget* controls_box_ = nullptr; ///< Holds the controls' widgets, kept while the page's controls stay the same
+        std::vector<Control> controls_;
+        std::optional<InfoChange> change_now_;
     };
 
 } // namespace rct3::ui::screens

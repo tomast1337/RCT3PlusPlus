@@ -502,6 +502,7 @@ namespace rct3::ui::game_skins
         s.button_inset = kLozengeInset;
         s.tick_box = kTickbox;
         s.tick = kTick;
+        s.spinner = spinner_style(p);
         return s;
     }
 

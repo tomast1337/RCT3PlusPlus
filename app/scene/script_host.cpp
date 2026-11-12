@@ -321,7 +321,7 @@ namespace rct3::scene
             Json invented = Json::array();
             for (const std::uint64_t id : r.invented)
                 invented.push_back(symbol(id));
-            return { { "budget", r.budget }, { "spent", r.spent }, { "current", r.current ? symbol(*r.current) : Json(nullptr) }, { "invented", std::move(invented) }, { "left", scene.research_items ? Json(scene.research_items->size()) : Json(nullptr) } };
+            return { { "budget", r.budget }, { "spent", r.spent }, { "current", r.current ? symbol(*r.current) : Json(nullptr) }, { "invented", std::move(invented) }, { "left", scene.research_items ? Json(scene.research_items->size()) : Json(nullptr) }, { "priorities", r.priorities } };
         });
         engine_.define("park.setResearch", [this](const Json& a) -> Json {
             if (a.size() != 1 || !a[0].is_number_integer() || a[0].get<std::int64_t>() < 0)

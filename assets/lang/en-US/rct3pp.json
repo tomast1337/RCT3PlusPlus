@@ -112,7 +112,9 @@
             "Current": "Researching:",
             "MonthLeft": "About a month left",
             "MonthsLeft": "About # months left",
-            "NothingLeft": "Nothing left to research"
+            "NothingLeft": "Nothing left to research",
+            "Locked": "Not invented yet",
+            "UnderWay": "Being researched"
         }
     }
 }

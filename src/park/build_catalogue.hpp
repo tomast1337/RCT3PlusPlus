@@ -27,8 +27,8 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <optional>
-#include <set>
 #include <span>
 #include <string>
 #include <string_view>
@@ -198,13 +198,22 @@ namespace rct3::park
     [[nodiscard]] std::vector<BuildItem> read_build_catalogue(const std::filesystem::path& root);
 
     /// Which items a park lets the player build, by what it records of each: those it has made available
-    /// and invented, and does not hide, and the animal species it has unlocked. A park that records nothing
-    /// lets every item be built, and one that records no species every animal. Enclosure fences, shelters
-    /// and toys are always offered: parks list them without saying whether they may be built. So are the
-    /// pool tools, which no park lists.
+    /// and invented, and does not hide, and the animal species it has unlocked. Attractions it has made
+    /// available and not hidden but not invented yet are locked: research may invent them. A park that records
+    /// nothing lets every item be built, and one that records no species every animal. Enclosure fences,
+    /// shelters and toys are always offered: parks list them without saying whether they may be built. So are
+    /// the pool tools, which no park lists.
     class BuildOffer
     {
     public:
+        /// What the park lets the player do with an item, from least to most.
+        enum class State : std::uint8_t
+        {
+            Hidden, ///< Not part of this park
+            Locked, ///< To be invented first
+            Offered,
+        };
+
         BuildOffer() = default;
         explicit BuildOffer(const save::model::RequiredContent& content);
 
@@ -213,13 +222,16 @@ namespace rct3::park
         {
             return known_;
         }
-        [[nodiscard]] bool offers(const BuildItem& item) const;
+        [[nodiscard]] State state(const BuildItem& item) const;
+        [[nodiscard]] bool offers(const BuildItem& item) const
+        {
+            return state(item) == State::Offered;
+        }
 
     private:
         bool known_ = false;
         bool species_known_ = false;
-        std::set<std::string> offered_; // "overlay|symbol", in lower case
-        std::set<std::string> listed_;  // The same, offered or not
+        std::map<std::string, State> listed_; // By "overlay|symbol", in lower case
     };
 
 } // namespace rct3::park

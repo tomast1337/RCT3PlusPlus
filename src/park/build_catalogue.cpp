@@ -692,31 +692,31 @@ namespace rct3::park
         {
             const bool species = e.kind == save::model::AssetKind::AnimalSpecies;
             species_known_ = species_known_ || species;
-            listed_.insert(key(e.overlay_stem, e.symbol));
-            if (species ? e.unlocked : e.available && e.invented && !e.hidden)
-                offered_.insert(key(e.overlay_stem, e.symbol));
+            const bool locked = e.kind == save::model::AssetKind::Attraction && e.available && !e.invented && !e.hidden;
+            const State s = (species ? e.unlocked : e.available && e.invented && !e.hidden) ? State::Offered : locked ? State::Locked : State::Hidden;
+            // An item listed twice takes the most either entry allows.
+            State& at = listed_[key(e.overlay_stem, e.symbol)];
+            at = std::max(at, s);
         }
     }
 
-    bool BuildOffer::offers(const BuildItem& item) const
+    BuildOffer::State BuildOffer::state(const BuildItem& item) const
     {
+        const auto listed = listed_.find(key(item.overlay, item.symbol));
         switch (item.kind)
         {
             case BuildKind::Animal:
-                return !species_known_ || offered_.contains(key(item.overlay, item.symbol));
+                return !species_known_ || (listed != listed_.end() && listed->second == State::Offered) ? State::Offered : State::Hidden;
             case BuildKind::EnclosureFence:
             case BuildKind::Shelter:
             case BuildKind::AnimalToy:
             case BuildKind::PoolSquare:
             case BuildKind::PoolExtra:
             case BuildKind::PoolRoom:
-                return true; // parks list these without saying whether they may be built
+                return State::Offered; // parks list these without saying whether they may be built
             default:
-            {
                 // Parks saved before an expansion do not list its items, and offer them all.
-                const std::string k = key(item.overlay, item.symbol);
-                return !listed_.contains(k) || offered_.contains(k);
-            }
+                return listed != listed_.end() ? listed->second : State::Offered;
         }
     }
 

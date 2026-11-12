@@ -121,6 +121,16 @@ TEST_CASE("showing an item marks it and opens its heading without picking it")
     CHECK_FALSE(f.picker->take_picked().has_value());
 }
 
+TEST_CASE("a locked row is not picked")
+{
+    PickerRow locked = row(u"Later", 4);
+    locked.locked = true;
+    Fixture f({ locked });
+    f.press(*f.picker->rows()[0]);
+    CHECK_FALSE(f.picker->take_picked().has_value());
+    CHECK_FALSE(f.picker->rows()[0]->picked);
+}
+
 TEST_CASE("the items fill as many columns as the panel is wide")
 {
     std::vector<PickerRow> rows;

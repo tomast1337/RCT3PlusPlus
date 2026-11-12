@@ -112,7 +112,7 @@ namespace rct3::scene
         if (menus.designs.valid() && menus.designs.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
             for (const DesignFile& d : menus.designs.get())
                 ++design_counts[std::string(design_kind(d))];
-        auto rows = ui::screens::picker_rows(*list, menus.items.get(), menus.offer, strings, currency, design_counts);
+        auto rows = ui::screens::picker_rows(*list, menus.items.get(), menus.offer, strings, currency, design_counts, menus.researching);
         const auto* menu_button = dynamic_cast<const ui::widgets::Button*>(&button);
         auto& picker = root.add<ui::screens::BuildPicker>(std::string(kListName), skins::build_picker_style(palette), strings, button.tooltip, menu_button != nullptr ? menu_button->icon : std::string { }, std::move(rows), ui::screens::has_theme_filters(*list) ? ui::screens::picker_themes(menus.items.get()) : std::vector<ui::screens::PickerTheme> { });
         picker.kinds_off = menus.kinds_off;

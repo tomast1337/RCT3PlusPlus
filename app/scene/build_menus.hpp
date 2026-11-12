@@ -27,6 +27,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace rct3::scene
@@ -43,15 +44,16 @@ namespace rct3::scene
     {
         std::shared_future<std::vector<rct3::park::BuildItem>> items;
         rct3::park::BuildOffer offer;
-        std::optional<ui::Point> size;                       ///< Of the last list resized, for the next one opened
-        std::set<std::string, std::less<>> kinds_off;        ///< Object filters turned off; the lists share them
-        std::set<std::string, std::less<>> styles_off;       ///< Theme filters turned off
-        std::set<std::uint32_t> packs_only;                  ///< Pack filters turned on
-        std::optional<rct3::park::BuildItem> asked;          ///< Picked by a script, taken as a pick from a list
-        bool asked_designs = false;                          ///< The script asks for the saved designs, as a list does
-        bool offer_designs = false;                          ///< The last pick offers the ride's saved designs
-        std::shared_future<std::vector<DesignFile>> designs; ///< In the order of their folders, then their names
-        bool kinds_named = false;                            ///< Whether the strings know each kind's name by its symbol
+        std::optional<ui::Point> size;                            ///< Of the last list resized, for the next one opened
+        std::set<std::string, std::less<>> kinds_off;             ///< Object filters turned off; the lists share them
+        std::set<std::string, std::less<>> styles_off;            ///< Theme filters turned off
+        std::set<std::uint32_t> packs_only;                       ///< Pack filters turned on
+        std::optional<rct3::park::BuildItem> asked;               ///< Picked by a script, taken as a pick from a list
+        bool asked_designs = false;                               ///< The script asks for the saved designs, as a list does
+        bool offer_designs = false;                               ///< The last pick offers the ride's saved designs
+        std::shared_future<std::vector<DesignFile>> designs;      ///< In the order of their folders, then their names
+        bool kinds_named = false;                                 ///< Whether the strings know each kind's name by its symbol
+        std::optional<std::pair<std::size_t, float>> researching; ///< The item under research, by its index, and how far it has got
     };
 
     /// Starts reading the install's items. `content`: what the park records of the items it offers, if

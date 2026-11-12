@@ -228,10 +228,10 @@ namespace rct3::ui::screens
             b.icon = (b.on ? (object ? style_.object_filter : style_.style_filter) : (object ? style_.object_filter_off : style_.style_filter_off)) + key.name;
         }
         for (BuildPickerRow* row : rows_)
-            row->dear = cash && row->row().cost > *cash;
+            row->dear = cash && !row->row().locked && row->row().cost > *cash;
         for (BuildPickerRow* row : rows_)
         {
-            if (!row->take_click())
+            if (!row->take_click() || row->row().locked)
                 continue;
             if (row->is_heading())
             {
@@ -307,6 +307,15 @@ namespace rct3::ui::screens
             skin::draw_skin(context.list, skin, { r.x0, r.y0, r.x0 + kBadge, r.y0 + kBadge });
         if (dear)
             context.list.fill(r, style_.dear_colour);
+        if (row_.locked)
+            context.list.fill(r, style_.locked_colour);
+        if (row_.progress)
+        {
+            // Chosen by eye: a thin bar along the tile's foot.
+            const Rect bar { r.x0 + inset, r.y1 - inset - 4, r.x1 - inset, r.y1 - inset };
+            context.list.fill(bar, style_.progress_back);
+            context.list.fill({ bar.x0, bar.y0, bar.x0 + (bar.x1 - bar.x0) * std::clamp(*row_.progress, 0.0f, 1.0f), bar.y1 }, style_.progress_colour);
+        }
     }
 
 } // namespace rct3::ui::screens

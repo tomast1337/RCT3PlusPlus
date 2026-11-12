@@ -139,6 +139,12 @@ expect(queueStyle !== undefined && pathStyle !== undefined, `a path style and a 
 let queueNow = true;
 /** Picks the queue style, or the path style. */
 async function choose(queue: boolean): Promise<void> {
+    // The rides' windows took the panel's place.
+    if (ui.find("footpaths") === undefined) {
+        await ui.click("tools/Paths/Obj_Paths");
+        await until(() => ui.find("footpaths/route") !== undefined, 120, "the path panel again");
+        await ui.toggle("footpaths/follow", false);
+    }
     if (queue === queueNow)
         return;
     await ui.click(`footpaths/${queue ? "queues" : "paths"}`);

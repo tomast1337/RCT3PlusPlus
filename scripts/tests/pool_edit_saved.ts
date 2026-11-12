@@ -154,6 +154,9 @@ if (!ui.find("tools/Files/File_LoadGame"))
     await click_tool("Files");
 await until(() => ui.find("tools/Files/File_LoadGame") !== undefined, 120, "the files menu");
 await ui.click("tools/Files/File_LoadGame");
+// Loading asks first whether to save; the park was saved just now.
+await until(() => ui.find("load_question") !== undefined, 120, "the question before loading");
+await ui.click("load_question/content/answer1");
 await until(() => ui.find("park_files/content/list/view/content/row0") !== undefined, 120, "the save in the load window");
 await ui.click("park_files/content/list/view/content/row0");
 await ui.click("park_files/content/open");

@@ -541,6 +541,7 @@ namespace rct3::scene
             park_of(park_).park.time = a[0].get<float>();
             return Json(nullptr);
         });
+        engine_.define("park.levelsWon", [this](const Json&) { return Json(park_of(park_).levels_won); });
         engine_.define("park.givePrize", [this](const Json& a) -> Json {
             if (a.size() != 1 || !a[0].is_number_integer())
                 throw std::invalid_argument("park.givePrize takes a prize number");

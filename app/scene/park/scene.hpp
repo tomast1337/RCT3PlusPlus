@@ -796,6 +796,7 @@ namespace rct3::scene::park
         bool leave = false;
         bool message_alert = false;
         std::uint32_t built = 0;                                        ///< Things put down so far, each heard as a thump (scene/park/sounds.hpp)
+        std::uint32_t levels_won = 0;                                   ///< Levels of the scenario won while playing, each heard as a fanfare (scene/park/sounds.hpp)
         std::optional<std::size_t> pool_complex_asked;                  ///< Of the pools' rooms, one whose complex the player was asked to sell
         std::optional<ui::screens::SceneryTab> room_tab;                ///< Last open in a changing room's window
         std::vector<rct3::park::AttractionRef> demolish_asked;          ///< Waiting on the question whether to pull them down

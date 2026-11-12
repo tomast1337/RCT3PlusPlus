@@ -73,9 +73,11 @@ namespace rct3::scene::park
         std::array<std::optional<audio::SoundBuffer>, 3> rain; ///< Loops of light rain, heavy rain and a storm
         std::array<audio::VoiceHandle, 3> rain_voices;
         std::vector<audio::SoundBuffer> thunder;
-        std::vector<audio::SoundBuffer> thumps;  ///< Of something put down
-        std::uint32_t built_heard = 0;           ///< ParkScene::built when last looked at
-        std::vector<audio::SoundBuffer> rumbles; ///< Of the ground being shaped
+        std::vector<audio::SoundBuffer> thumps;    ///< Of something put down
+        std::uint32_t built_heard = 0;             ///< ParkScene::built when last looked at
+        std::optional<audio::SoundBuffer> fanfare; ///< Of a level won
+        std::uint32_t levels_heard = 0;            ///< ParkScene::levels_won when last looked at
+        std::vector<audio::SoundBuffer> rumbles;   ///< Of the ground being shaped
         audio::VoiceHandle rumble;
         bool rumbling = false; ///< A stroke's rumble was started; one a stroke, though it ends first
         float since_thump = 1; ///< Seconds

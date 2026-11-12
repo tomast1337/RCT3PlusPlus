@@ -152,6 +152,8 @@ declare namespace park {
     function setTime(fraction: number): void;
     /** The calendar, in units of 90 a week and 360 a month. */
     function date(): number;
+    /** Levels of the scenario won since the park opened, each heard as a fanfare. */
+    function levelsWon(): number;
     /** Gives the park prize `id` as winning a level would, its box told like one won. */
     function givePrize(id: number): void;
     /** Moves the calendar to `units`; the clock of the day runs on as it was. */

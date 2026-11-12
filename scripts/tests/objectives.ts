@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // A level whose only goal is a number of guests. The objectives window shows where the park stands on it; with
-// enough guests brought in, the next day's check wins the level: its prize is told in a box, and the window then
-// marks the goal and the level completed.
+// enough guests brought in, the next day's check wins the level: its prize is told in a box with a fanfare, and the
+// window then marks the goal and the level completed.
 //
 //   ./nob script scripts/tests/objectives.ts -- --no-audio
 
@@ -51,6 +51,7 @@ expect(park.guests() >= kGuestsWanted, "enough guests brought in");
 
 park.setDate(park.date() + kDay);
 await until(() => ui.find("prize_won") !== undefined, 600, "the prize box");
+expect(park.levelsWon() === 1, "the level counted won, for its fanfare");
 await screenshot("objectives_prize");
 const box = ui.find("prize_won");
 log("prize", JSON.stringify(box));

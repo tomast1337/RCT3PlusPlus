@@ -18,8 +18,8 @@
 // hill there, or down to sink a canyon, trough or crater, a height unit for each kSlopeDragStep moved
 // (park/ground/shapes.hpp). Moved the other way, each makes its shape upside down: a mountain dragged down digs
 // a pit, a crater dragged up builds a mound. The shape is as wide as the brush's number, centred where the pointer pressed;
-// a ridge runs across the view. Ground the park does not own outright or that what stands on it holds stays,
-// as do cliff edges. Each unit of ground moved is paid for, once.
+// a ridge runs across the view. Ground the park does not own outright or that what stands on it holds stays;
+// a cliff under the brush moves with the ground and keeps its height. Each unit a tile's corner moves is paid for, once.
 //
 // Smoothing: holding the button works the ground under the brush a little more every moment
 // (park/ground/smoothing.hpp), following the pointer. Its tools by their place in the tab: average, level to
@@ -111,7 +111,7 @@ namespace rct3::scene
         std::optional<std::size_t> cliff;                      ///< Chosen, of `cliffs`, in place of a surface
         int brush = 3;                                         ///< Tiles across the brushes cover
         std::optional<rct3::park::ground::GroundShape> shape;  ///< The raising or lowering brush chosen; none for the tile tool
-        rct3::park::ground::CornerHeights before;              ///< As a brush stroke found them
+        rct3::park::ground::GroundBefore before;               ///< The ground as a brush stroke found it
         glm::vec2 middle { 0 };                                ///< Of a brush stroke, in tile units
         glm::vec2 along { 1, 0 };                              ///< Of a ridge: across the view as the stroke began
         float amount = 0;                                      ///< Of the brush stroke so far, in height units

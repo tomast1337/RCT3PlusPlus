@@ -29,7 +29,7 @@ namespace rct3::park::ground
 
     inline constexpr float kDeckRoom = 0.25f; ///< Chosen by eye: kept between the ground and a raised path's underside
     inline constexpr float kPavedTilt = 1.5f; ///< Chosen by eye: how far from flat a tile with a path on the ground may go
-    inline constexpr float kShapeCost = 25;   ///< Price, in hundredths, of a height unit of one corner point moved
+    inline constexpr float kShapeCost = 25;   ///< Price, in hundredths, of a height unit one corner of one tile moves
 
     /// What the land tools must leave be on each tile, by tile (row << 16 | column), gathered as a stroke starts.
     struct GroundHolds

@@ -51,7 +51,7 @@ TEST_CASE("each shape rises or sinks most where it should and not past its reach
 TEST_CASE("a hill raises the corner points round its middle, shared by the tiles, from the stroke's start")
 {
     save::model::TerrainGrid g = flat(10);
-    const CornerHeights before = corner_heights(g, anywhere);
+    const GroundBefore before = ground_before(g, anywhere);
     const float moved = shape_ground(g, before, GroundShape::Hill, { 5, 5 }, 3, { 1, 0 }, 4);
     CHECK(moved > 0);
     CHECK(point(g, 5, 5) == doctest::Approx(6));
@@ -68,7 +68,7 @@ TEST_CASE("a hill raises the corner points round its middle, shared by the tiles
 TEST_CASE("a negative amount turns the shape over: a mountain digs a pit, a crater builds a mound")
 {
     save::model::TerrainGrid g = flat(10);
-    const CornerHeights before = corner_heights(g, anywhere);
+    const GroundBefore before = ground_before(g, anywhere);
     const float dug = shape_ground(g, before, GroundShape::Mountain, { 5, 5 }, 3, { 1, 0 }, -2);
     CHECK(point(g, 5, 5) == doctest::Approx(0));
     CHECK(dug == doctest::Approx(shape_ground(g, before, GroundShape::Mountain, { 5, 5 }, 3, { 1, 0 }, 2))); // Paid alike
@@ -77,13 +77,26 @@ TEST_CASE("a negative amount turns the shape over: a mountain digs a pit, a crat
     CHECK(point(g, 5, 5) == doctest::Approx(4));
 }
 
-TEST_CASE("held corner points stay: land refused, and the edge of a cliff")
+TEST_CASE("corner points touching refused land stay")
 {
     save::model::TerrainGrid g = flat(10);
-    g.at(5, 5).corners = { 4, 4, 4, 4 }; // A raised tile, with cliffs all round
-    const CornerHeights before = corner_heights(g, [](save::model::Tile t) { return t.col < 3 || t.col > 4; });
+    const GroundBefore before = ground_before(g, [](save::model::Tile t) { return t.col < 3 || t.col > 4; });
     shape_ground(g, before, GroundShape::Canyon, { 5, 5 }, 4, { 1, 0 }, 3);
-    CHECK(g.at(5, 5).corners[0] == doctest::Approx(4)); // The cliff's top stays
-    CHECK(point(g, 4, 5) == doctest::Approx(2));        // Touches a refused tile
-    CHECK(point(g, 7, 7) < 2);                          // Free, inside the reach
+    CHECK(point(g, 4, 5) == doctest::Approx(2)); // Touches a refused tile
+    CHECK(point(g, 5, 5) == doctest::Approx(2)); // Its other side too, so no cliff opens along it
+    CHECK(point(g, 7, 7) < 2);                   // Free, inside the reach
+}
+
+TEST_CASE("a cliff under a brush rides with the ground and keeps its height")
+{
+    save::model::TerrainGrid g = flat(10);
+    g.at(5, 5).corners = { 4, 4, 4, 4 }; // A raised tile, with cliffs two units high all round
+    const GroundBefore before = ground_before(g, anywhere);
+    const float moved = shape_ground(g, before, GroundShape::Mesa, { 5.5f, 5.5f }, 4, { 1, 0 }, 3);
+    for (const float h : g.at(5, 5).corners)
+        CHECK(h == doctest::Approx(7));                 // The top went up with the mesa
+    CHECK(g.at(6, 5).corners[0] == doctest::Approx(5)); // And so did the foot beside it
+    CHECK(g.at(4, 4).corners[3] == doctest::Approx(5));
+    // Every tile's own corner is counted: the four points of the raised tile are each held by four tiles.
+    CHECK(moved >= 16 * 3);
 }

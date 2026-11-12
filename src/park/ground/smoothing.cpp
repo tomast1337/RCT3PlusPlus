@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground/smoothing.hpp"
 
-#include "park/ground/shapes.hpp"
 #include "random/generator.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <glm/geometric.hpp>
+#include <optional>
+#include <utility>
 #include <vector>
 
 namespace rct3::park::ground
@@ -26,6 +28,8 @@ namespace rct3::park::ground
             const float next = from + (to - from) * strength;
             return std::abs(to - next) < kSettled ? to : next;
         }
+
+        constexpr float kSame = 0.001f; ///< Heights closer than this are one
 
         /// The tile's corners, each as the point it stands at.
         constexpr glm::vec2 kCornerAt[4] { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
@@ -74,90 +78,103 @@ namespace rct3::park::ground
             return moved;
         }
 
-        // The points as they are, the tiles round each settling on one height or holding it.
-        const CornerHeights before = corner_heights(grid, free);
-        const auto index = [&](int c, int r) { return static_cast<std::size_t>(r) * static_cast<std::size_t>(before.columns) + static_cast<std::size_t>(c); };
+        const auto corner = [&](int c, int r, int dc, int dr) -> std::optional<float&> {
+            // The tile whose corner (1 - dc, 1 - dr) is point (c, r).
+            if (!grid.contains(c - 1 + dc, r - 1 + dr))
+                return std::nullopt;
+            return grid.at(c - 1 + dc, r - 1 + dr).corners[static_cast<std::size_t>((1 - dc) + 2 * (1 - dr))];
+        };
+        // The tiles round the points worked on as they are, for averaging: a pass reads none of its own changes.
+        const int t0 = c0 - 2;
+        const int across = c1 - c0 + 4;
+        std::vector<std::array<float, 4>> was;
+        if (tool == GroundSmoothing::Average)
+        {
+            was.reserve(static_cast<std::size_t>(across) * static_cast<std::size_t>(r1 - r0 + 4));
+            for (int r = r0 - 2; r <= r1 + 1; ++r)
+                for (int c = t0; c <= c1 + 1; ++c)
+                    was.push_back(grid.contains(c, r) ? grid.at(c, r).corners : std::array<float, 4> { });
+        }
+        // Tile (tc, tr)'s height at point (pc, pr), one of its corners.
+        const auto old = [&](int tc, int tr, int pc, int pr) { return was[static_cast<std::size_t>(tr - r0 + 2) * static_cast<std::size_t>(across) + static_cast<std::size_t>(tc - t0)][static_cast<std::size_t>((pc - tc) + 2 * (pr - tr))]; };
+        // The mean of the four points next to (pc, pr) as tile (tc, tr)'s ground has them: each from the tiles
+        // round the point that agree with this one there and reach that way. Where none does, past a cliff, the
+        // tile's own height stands in, so each side of a cliff is averaged by itself and stays in one piece.
+        const auto averaged = [&](int tc, int tr, int pc, int pr) {
+            const float here = old(tc, tr, pc, pr);
+            float sum = 0;
+            for (const auto& [dc, dr] : { std::pair { -1, 0 }, std::pair { 1, 0 }, std::pair { 0, -1 }, std::pair { 0, 1 } })
+            {
+                const int qc = pc + dc;
+                const int qr = pr + dr;
+                float side = 0;
+                int count = 0;
+                for (int nr = pr - 1; nr <= pr; ++nr)
+                    for (int nc = pc - 1; nc <= pc; ++nc)
+                        if (grid.contains(nc, nr) && qc >= nc && qc <= nc + 1 && qr >= nr && qr <= nr + 1 && std::abs(old(nc, nr, pc, pr) - here) < kSame)
+                        {
+                            side += old(nc, nr, qc, qr);
+                            ++count;
+                        }
+                sum += count > 0 ? side / static_cast<float>(count) : here;
+            }
+            return sum / 4;
+        };
         for (int r = r0; r <= r1; ++r)
             for (int c = c0; c <= c1; ++c)
             {
                 if (!within(glm::vec2 { c, r }, middle, reach))
                     continue;
-                const std::size_t at = index(c, r);
-                if (tool == GroundSmoothing::JoinEdges)
-                {
-                    // Held for a cliff is what this tool undoes; held for a tile it may not change is not.
-                    bool all_free = true;
-                    float sum = 0;
-                    float low = 1e9f;
-                    float high = -1e9f;
-                    int count = 0;
-                    for (int dr = 0; dr < 2; ++dr)
-                        for (int dc = 0; dc < 2; ++dc)
+                bool all_free = true;
+                float low = 1e9f;
+                float high = -1e9f;
+                float sum = 0;
+                int count = 0;
+                for (int dr = 0; dr < 2; ++dr)
+                    for (int dc = 0; dc < 2; ++dc)
+                        if (const auto h = corner(c, r, dc, dr))
                         {
-                            const int tc = c - 1 + dc;
-                            const int tr = r - 1 + dr;
-                            if (!grid.contains(tc, tr))
-                                continue;
-                            all_free = all_free && free({ tc, tr });
-                            const float h = grid.at(tc, tr).corners[static_cast<std::size_t>((1 - dc) + 2 * (1 - dr))];
-                            sum += h;
-                            low = std::min(low, h);
-                            high = std::max(high, h);
+                            all_free = all_free && free({ c - 1 + dc, r - 1 + dr });
+                            low = std::min(low, *h);
+                            high = std::max(high, *h);
+                            sum += *h;
                             ++count;
                         }
-                    if (!all_free || count == 0 || high - low <= 0)
-                        continue;
-                    const float mean = sum / static_cast<float>(count);
-                    for (int dr = 0; dr < 2; ++dr)
-                        for (int dc = 0; dc < 2; ++dc)
+                if (!all_free || count == 0 || (tool == GroundSmoothing::JoinEdges && high - low <= 0))
+                    continue;
+                // Roughening moves the tiles' corners here by one amount, a cliff between them keeping its height.
+                std::uint64_t mix = seed * (grid.cells.size() + 1) + static_cast<std::size_t>(r) * static_cast<std::size_t>(grid.width + 1) + static_cast<std::size_t>(c); // One draw per point and pass
+                const float roll = static_cast<float>(random::split_mix(mix) >> 40) / static_cast<float>(1u << 24);
+                for (int dr = 0; dr < 2; ++dr)
+                    for (int dc = 0; dc < 2; ++dc)
+                    {
+                        const auto h = corner(c, r, dc, dr);
+                        if (!h)
+                            continue;
+                        float to = *h;
+                        switch (tool)
                         {
-                            if (!grid.contains(c - 1 + dc, r - 1 + dr))
-                                continue;
-                            float& h = grid.at(c - 1 + dc, r - 1 + dr).corners[static_cast<std::size_t>((1 - dc) + 2 * (1 - dr))];
-                            const float to = ease(h, mean, strength);
-                            moved += std::abs(to - h);
-                            h = to;
+                            case GroundSmoothing::JoinEdges:
+                                to = ease(*h, sum / static_cast<float>(count), strength); // The one tool that closes a cliff
+                                break;
+                            case GroundSmoothing::Average:
+                                to = *h + (averaged(c - 1 + dc, r - 1 + dr, c, r) - *h) * strength;
+                                break;
+                            case GroundSmoothing::Random:
+                                to = *h + (roll - 0.5f) * strength;
+                                break;
+                            case GroundSmoothing::Level:
+                                to = *h + (target - *h) * strength;
+                                break;
+                            case GroundSmoothing::WholeUnits:
+                                to = *h + (std::round(*h) - *h) * strength;
+                                break;
+                            default:
+                                break;
                         }
-                    continue;
-                }
-                if (before.held[at])
-                    continue;
-                const float h = before.heights[at];
-                float goal = h;
-                switch (tool)
-                {
-                    case GroundSmoothing::Average:
-                    {
-                        float sum = 0;
-                        int count = 0;
-                        for (const auto& [dc, dr] : { std::pair { -1, 0 }, std::pair { 1, 0 }, std::pair { 0, -1 }, std::pair { 0, 1 } })
-                            if (c + dc >= 0 && r + dr >= 0 && c + dc < before.columns && r + dr <= grid.height)
-                            {
-                                sum += before.heights[index(c + dc, r + dr)];
-                                ++count;
-                            }
-                        goal = count > 0 ? sum / static_cast<float>(count) : h;
-                        break;
+                        moved += std::abs(to - *h);
+                        *h = to;
                     }
-                    case GroundSmoothing::Random:
-                    {
-                        std::uint64_t mix = seed * (before.heights.size() + 1) + at; // One draw per point and pass
-                        const float roll = static_cast<float>(random::split_mix(mix) >> 40) / static_cast<float>(1u << 24);
-                        goal = h + roll - 0.5f;
-                        break;
-                    }
-                    case GroundSmoothing::Level:
-                        goal = target;
-                        break;
-                    case GroundSmoothing::WholeUnits:
-                        goal = std::round(h);
-                        break;
-                    default:
-                        break;
-                }
-                const float height = h + (goal - h) * strength;
-                moved += std::abs(height - h);
-                set_corner_point(grid, c, r, height);
             }
         return moved;
     }

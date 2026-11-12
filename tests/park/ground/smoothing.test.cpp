@@ -45,7 +45,6 @@ TEST_CASE("levelling goes to the target; whole units round; random stays within 
     CHECK(g.at(6, 6).corners[0] == doctest::Approx(3));
 
     save::model::TerrainGrid w = spiked(10);
-    w.at(2, 2).corners = { 2.3f, 2.3f, 2.3f, 2.3f }; // Cliffs round it: held
     w.at(7, 7).corners[0] = w.at(6, 7).corners[1] = w.at(7, 6).corners[2] = w.at(6, 6).corners[3] = 2.4f;
     smooth_ground(w, GroundSmoothing::WholeUnits, { 7, 7 }, 1, 1, 0, 1, anywhere);
     CHECK(w.at(7, 7).corners[0] == doctest::Approx(2));
@@ -60,6 +59,26 @@ TEST_CASE("levelling goes to the target; whole units round; random stays within 
             changed = changed || (h != 2 && h != 6);
         }
     CHECK(changed);
+}
+
+TEST_CASE("averaging and levelling move both sides of a cliff")
+{
+    save::model::TerrainGrid g = spiked(10);
+    g.at(4, 5).corners[1] = g.at(5, 4).corners[2] = g.at(4, 4).corners[3] = 2;                         // No spike
+    g.at(5, 5).corners = { 6, 6, 6, 6 };                                                               // A raised tile with cliffs four units high round it
+    g.at(7, 5).corners[0] = g.at(6, 5).corners[1] = g.at(7, 4).corners[2] = g.at(6, 4).corners[3] = 4; // A bump at the cliff's foot
+    smooth_ground(g, GroundSmoothing::Average, { 6, 5.5f }, 1.2f, 0.5f, 0, 1, anywhere);
+    for (const float h : g.at(5, 5).corners)
+        CHECK(h == doctest::Approx(6));                     // The flat top is its own ground: the lower ground beside it does not pull it
+    CHECK(g.at(6, 5).corners[0] == doctest::Approx(2.25f)); // The foot follows the bump beside it, not the top
+    CHECK(g.at(6, 5).corners[1] < 4);                       // The bump on the lower ground wears down
+    CHECK(g.at(6, 5).corners[1] == doctest::Approx(g.at(7, 5).corners[0]));
+
+    save::model::TerrainGrid l = spiked(10);
+    l.at(5, 5).corners = { 6, 6, 6, 6 };
+    smooth_ground(l, GroundSmoothing::Level, { 5.5f, 5.5f }, 2, 1, 3, 1, anywhere);
+    CHECK(l.at(5, 5).corners[3] == doctest::Approx(3)); // Both sides reach the level
+    CHECK(l.at(6, 6).corners[0] == doctest::Approx(3));
 }
 
 TEST_CASE("joining edges takes cliffs away; squaring makes them, each tile flat at a whole unit")

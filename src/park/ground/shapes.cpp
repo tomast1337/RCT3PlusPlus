@@ -16,7 +16,6 @@ namespace rct3::park::ground
         constexpr float kRidgeWidth = 0.35f; ///< Of the reach, across the ridge
         constexpr float kCraterBowl = 0.75f; ///< Of the reach, the bowl inside the rim
         constexpr float kCraterRim = 0.25f;  ///< Of the amount, how high the rim stands
-        constexpr float kSame = 0.001f;      ///< Heights closer than this are one
 
         /// 1 at 0, easing down to 0 at 1.
         float bump(float d)
@@ -64,75 +63,54 @@ namespace rct3::park::ground
         return 0;
     }
 
-    CornerHeights corner_heights(const save::model::TerrainGrid& grid, const std::function<bool(save::model::Tile)>& free)
+    GroundBefore ground_before(const save::model::TerrainGrid& grid, const std::function<bool(save::model::Tile)>& free)
     {
-        CornerHeights out;
-        out.columns = grid.width + 1;
-        const auto points = static_cast<std::size_t>(out.columns) * static_cast<std::size_t>(grid.height + 1);
-        out.heights.assign(points, 0);
-        out.held.assign(points, false);
-        for (int r = 0; r <= grid.height; ++r)
-            for (int c = 0; c <= grid.width; ++c)
+        GroundBefore out { .width = grid.width };
+        const auto across = static_cast<std::size_t>(grid.width + 1);
+        out.corners.reserve(grid.cells.size());
+        out.held.assign(across * static_cast<std::size_t>(grid.height + 1), false);
+        for (int r = 0; r < grid.height; ++r)
+            for (int c = 0; c < grid.width; ++c)
             {
-                const auto at = static_cast<std::size_t>(r) * static_cast<std::size_t>(out.columns) + static_cast<std::size_t>(c);
-                bool first = true;
-                for (int dr = 0; dr < 2; ++dr)
-                    for (int dc = 0; dc < 2; ++dc)
-                    {
-                        // The tile whose corner (1 - dc, 1 - dr) is this point.
-                        const int tc = c - 1 + dc;
-                        const int tr = r - 1 + dr;
-                        if (!grid.contains(tc, tr))
-                            continue;
-                        const float h = grid.at(tc, tr).corners[static_cast<std::size_t>((1 - dc) + 2 * (1 - dr))];
-                        if (first)
-                            out.heights[at] = h;
-                        else if (std::abs(h - out.heights[at]) > kSame)
-                            out.held[at] = true;
-                        first = false;
-                        if (!free({ tc, tr }))
-                            out.held[at] = true;
-                    }
+                out.corners.push_back(grid.at(c, r).corners);
+                if (free({ c, r }))
+                    continue;
+                for (std::size_t k = 0; k < 4; ++k)
+                    out.held[(static_cast<std::size_t>(r) + k / 2) * across + static_cast<std::size_t>(c) + k % 2] = true;
             }
         return out;
     }
 
-    void set_corner_point(save::model::TerrainGrid& grid, int col, int row, float height)
+    float shape_ground(save::model::TerrainGrid& grid, const GroundBefore& before, GroundShape shape, glm::vec2 middle, float reach, glm::vec2 along, float amount)
     {
-        for (int dr = 0; dr < 2; ++dr)
-            for (int dc = 0; dc < 2; ++dc)
-            {
-                // The tile whose corner (1 - dc, 1 - dr) is this point.
-                const int tc = col - 1 + dc;
-                const int tr = row - 1 + dr;
-                if (grid.contains(tc, tr))
-                    grid.at(tc, tr).corners[static_cast<std::size_t>((1 - dc) + 2 * (1 - dr))] = height;
-            }
-    }
-
-    float shape_ground(save::model::TerrainGrid& grid, const CornerHeights& before, GroundShape shape, glm::vec2 middle, float reach, glm::vec2 along, float amount)
-    {
-        if (reach <= 0 || before.columns != grid.width + 1)
+        if (reach <= 0 || before.width != grid.width || before.corners.size() != grid.cells.size())
             return 0;
         const glm::vec2 line = glm::length(along) > 0 ? glm::normalize(along) : glm::vec2 { 1, 0 };
         const glm::vec2 side { -line.y, line.x };
+        const auto across = static_cast<std::size_t>(grid.width + 1);
         float moved = 0;
-        const int c0 = std::max(static_cast<int>(std::floor(middle.x - reach)), 0);
-        const int c1 = std::min(static_cast<int>(std::ceil(middle.x + reach)), grid.width);
-        const int r0 = std::max(static_cast<int>(std::floor(middle.y - reach)), 0);
-        const int r1 = std::min(static_cast<int>(std::ceil(middle.y + reach)), grid.height);
+        // The tiles with a corner point inside the reach.
+        const int c0 = std::max(static_cast<int>(std::floor(middle.x - reach)) - 1, 0);
+        const int c1 = std::min(static_cast<int>(std::ceil(middle.x + reach)), grid.width - 1);
+        const int r0 = std::max(static_cast<int>(std::floor(middle.y - reach)) - 1, 0);
+        const int r1 = std::min(static_cast<int>(std::ceil(middle.y + reach)), grid.height - 1);
         for (int r = r0; r <= r1; ++r)
             for (int c = c0; c <= c1; ++c)
             {
-                const auto at = static_cast<std::size_t>(r) * static_cast<std::size_t>(before.columns) + static_cast<std::size_t>(c);
-                if (before.held[at])
-                    continue;
-                const glm::vec2 offset = glm::vec2 { c, r } - middle;
-                const float share = shape == GroundShape::Ridge ? shape_share(shape, glm::dot(offset, side) / reach, glm::dot(offset, line) / reach) : shape_share(shape, glm::length(offset) / reach);
-                const float height = before.heights[at] + share * amount;
-                set_corner_point(grid, c, r, height);
-                // Measured from the stroke's start, so the owner pays the difference between two calls.
-                moved += std::abs(height - before.heights[at]);
+                const auto& was = before.corners[static_cast<std::size_t>(r) * static_cast<std::size_t>(grid.width) + static_cast<std::size_t>(c)];
+                auto& now = grid.at(c, r).corners;
+                for (std::size_t k = 0; k < 4; ++k)
+                {
+                    const int pc = c + static_cast<int>(k % 2);
+                    const int pr = r + static_cast<int>(k / 2);
+                    if (before.held[static_cast<std::size_t>(pr) * across + static_cast<std::size_t>(pc)])
+                        continue;
+                    const glm::vec2 offset = glm::vec2 { pc, pr } - middle;
+                    const float share = shape == GroundShape::Ridge ? shape_share(shape, glm::dot(offset, side) / reach, glm::dot(offset, line) / reach) : shape_share(shape, glm::length(offset) / reach);
+                    now[k] = was[k] + share * amount;
+                    // Measured from the stroke's start, so the owner pays the difference between two calls.
+                    moved += std::abs(share * amount);
+                }
             }
         return moved;
     }

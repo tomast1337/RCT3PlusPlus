@@ -153,11 +153,11 @@ namespace rct3::scene
                             return std::nullopt;
                         again = true;
                         // A brush's points round it stay where they are too.
-                        if (l.before.columns == trial.width + 1)
+                        if (l.before.width == trial.width && !l.before.held.empty())
                         {
                             for (int dr = 0; dr < 2; ++dr)
                                 for (int dc = 0; dc < 2; ++dc)
-                                    l.before.held[static_cast<std::size_t>(r + dr) * static_cast<std::size_t>(l.before.columns) + static_cast<std::size_t>(c + dc)] = true;
+                                    l.before.held[static_cast<std::size_t>(r + dr) * static_cast<std::size_t>(trial.width + 1) + static_cast<std::size_t>(c + dc)] = true;
                         }
                     }
                 }
@@ -336,7 +336,7 @@ namespace rct3::scene
                 // Across the view: the camera looks along (sin yaw, cos yaw) over the ground.
                 l.along = { std::cos(scene.camera.yaw), -std::sin(scene.camera.yaw) };
                 start_stroke(scene);
-                l.before = rct3::park::ground::corner_heights(scene.grid, [&](save::model::Tile t) { return shapeable(scene, t); });
+                l.before = rct3::park::ground::ground_before(scene.grid, [&](save::model::Tile t) { return shapeable(scene, t); });
             }
             const float steps = (l.press_y - at.y) / rct3::park::kSlopeDragStep;
             // A lowering brush digs as the pointer goes down; the other way, each brush makes its shape upside down.

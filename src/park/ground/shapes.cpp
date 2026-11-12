@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground/shapes.hpp"
 
+#include "random/generator.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <glm/geometric.hpp>
@@ -14,6 +16,7 @@ namespace rct3::park::ground
         constexpr float kMesaTop = 0.6f;     ///< Of the reach, flat on top
         constexpr float kCanyonFloor = 0.6f; ///< Of the reach, flat at the bottom
         constexpr float kRidgeWidth = 0.35f; ///< Of the reach, across the ridge
+        constexpr float kCanyonWidth = 0.5f; ///< Of the reach, across the canyon
         constexpr float kCraterBowl = 0.75f; ///< Of the reach, the bowl inside the rim
         constexpr float kCraterRim = 0.25f;  ///< Of the amount, how high the rim stands
 
@@ -52,7 +55,7 @@ namespace rct3::park::ground
             case GroundShape::Ridge:
                 return bump(across / kRidgeWidth) * bump(std::abs(along));
             case GroundShape::Canyon:
-                return -plateau(across, kCanyonFloor);
+                return -plateau(across / kCanyonWidth, kCanyonFloor) * bump(std::abs(along));
             case GroundShape::Trough:
             {
                 const float d = bump(across);
@@ -64,6 +67,27 @@ namespace rct3::park::ground
                     return -bump(across / kCraterBowl) + kCraterRim * (across / kCraterBowl);
                 return kCraterRim * bump((across - kCraterBowl) / (1 - kCraterBowl));
             }
+        }
+        return 0;
+    }
+
+    float shape_roughness(GroundShape shape)
+    {
+        switch (shape)
+        {
+            case GroundShape::Hill:
+                return 0.025f;
+            case GroundShape::Trough:
+                return 0.05f;
+            case GroundShape::Mesa:
+                return 0.1f;
+            case GroundShape::Mountain:
+            case GroundShape::Canyon:
+                return 0.2f;
+            case GroundShape::Crater:
+                return 0.4f;
+            case GroundShape::Ridge:
+                return 0.5f;
         }
         return 0;
     }
@@ -86,7 +110,7 @@ namespace rct3::park::ground
         return out;
     }
 
-    float shape_ground(save::model::TerrainGrid& grid, const GroundBefore& before, GroundShape shape, glm::vec2 middle, float reach, glm::vec2 along, float amount)
+    float shape_ground(save::model::TerrainGrid& grid, const GroundBefore& before, GroundShape shape, glm::vec2 middle, float reach, glm::vec2 along, float amount, std::uint64_t seed)
     {
         if (reach <= 0 || before.width != grid.width || before.corners.size() != grid.cells.size())
             return 0;
@@ -111,7 +135,13 @@ namespace rct3::park::ground
                     if (before.held[static_cast<std::size_t>(pr) * across + static_cast<std::size_t>(pc)])
                         continue;
                     const glm::vec2 offset = glm::vec2 { pc, pr } - middle;
-                    const float share = shape == GroundShape::Ridge ? shape_share(shape, glm::dot(offset, side) / reach, glm::dot(offset, line) / reach) : shape_share(shape, glm::length(offset) / reach);
+                    const bool lined = shape == GroundShape::Ridge || shape == GroundShape::Canyon;
+                    // Rough ground: each corner point a little off the shape, most at the middle, by a draw of its
+                    // own that every tile round it shares, so the ground stays in one piece.
+                    std::uint64_t mix = seed * (grid.cells.size() + 1) + static_cast<std::size_t>(pr) * across + static_cast<std::size_t>(pc);
+                    const float roll = static_cast<float>(random::split_mix(mix) >> 40) / static_cast<float>(1u << 24);
+                    const float rough = shape_roughness(shape) * (0.5f - roll) * std::max(1 - glm::length(offset) / reach, 0.0f);
+                    const float share = (lined ? shape_share(shape, glm::dot(offset, side) / reach, glm::dot(offset, line) / reach) : shape_share(shape, glm::length(offset) / reach)) + rough;
                     now[k] = was[k] + share * amount;
                     // Measured from the stroke's start, so the owner pays the difference between two calls.
                     moved += std::abs(share * amount);

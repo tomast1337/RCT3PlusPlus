@@ -37,10 +37,11 @@ namespace rct3::scene
     namespace
     {
         // Prices, in hundredths: painting one tile (moving the ground is rct3::park::ground::kShapeCost).
-        constexpr float kLongestStep = 0.1f;  ///< Seconds a spray counts a frame as at most, so a hitch does not jolt the ground
-        constexpr float kSteepestDrag = 0.5f; ///< Chosen by eye: a tile tool reads a view steeper than this (the part of the pointer's ray along the ground) as this steep
-        constexpr float kRumbleQuiet = 0.25f; ///< Chosen by eye: the rumble of a shaping stroke while the ground stays still
-        constexpr float kRumbleFade = 0.6f;   ///< Chosen by eye: seconds it takes to fall back to that once the ground stops moving
+        constexpr float kTravelSample = 11.3f; ///< Pixels the pointer moves before the way it goes over the ground is read again
+        constexpr float kLongestStep = 0.1f;   ///< Seconds a spray counts a frame as at most, so a hitch does not jolt the ground
+        constexpr float kSteepestDrag = 0.5f;  ///< Chosen by eye: a tile tool reads a view steeper than this (the part of the pointer's ray along the ground) as this steep
+        constexpr float kRumbleQuiet = 0.25f;  ///< Chosen by eye: the rumble of a shaping stroke while the ground stays still
+        constexpr float kRumbleFade = 0.6f;    ///< Chosen by eye: seconds it takes to fall back to that once the ground stops moving
 
         constexpr std::string_view kPanelName = "land_panel";
         constexpr std::string_view kWaterRefused = "Rct3pp_WaterRefused";
@@ -400,8 +401,10 @@ namespace rct3::scene
                 l.press_y = at.y;
                 l.amount = 0;
                 l.paid_for = 0;
-                // Across the view: the camera looks along (sin yaw, cos yaw) over the ground.
-                l.along = { std::cos(scene.camera.yaw), -std::sin(scene.camera.yaw) };
+                // A ridge or a canyon runs the way the pointer was going over the ground as it pressed; across the
+                // view when it had not moved. The camera looks along (sin yaw, cos yaw) over the ground.
+                l.along = l.travel.value_or(glm::vec2 { std::cos(scene.camera.yaw), -std::sin(scene.camera.yaw) });
+                ++l.passes; // The stroke's own roughness
                 start_stroke(scene);
                 l.before = rct3::park::ground::ground_before(scene.grid, [&](save::model::Tile t) { return shapeable(scene, t); });
             }
@@ -415,7 +418,7 @@ namespace rct3::scene
                     for (int c = std::max(static_cast<int>(std::floor(spot->x - reach)) - 1, 0); c <= std::min(static_cast<int>(std::ceil(spot->x + reach)), width - 1); ++c)
                         l.before.corners[static_cast<std::size_t>(r) * static_cast<std::size_t>(width) + static_cast<std::size_t>(c)] = scene.grid.at(c, r).corners;
                 const float amount = static_cast<float>(l.spray_speed) * rct3::park::ground::kSprayRate * std::min(elapsed, kLongestStep);
-                auto trial = try_shape(scene, scene.grid, [&](save::model::TerrainGrid& g) { return rct3::park::ground::shape_ground(g, l.before, *l.shape, *spot, reach, l.along, amount); });
+                auto trial = try_shape(scene, scene.grid, [&](save::model::TerrainGrid& g) { return rct3::park::ground::shape_ground(g, l.before, *l.shape, *spot, reach, l.along, amount, l.passes); });
                 if (!trial)
                     return;
                 // Paid in whole hundredths; the rest is carried to the next moment.
@@ -434,7 +437,7 @@ namespace rct3::scene
             float amount = rct3::park::ground::drag_amount(lowers ? at.y - l.press_y : l.press_y - at.y);
             if (amount == l.amount)
                 return;
-            const auto shaped = [&](save::model::TerrainGrid& g) { return rct3::park::ground::shape_ground(g, l.before, *l.shape, l.middle, reach, l.along, amount); };
+            const auto shaped = [&](save::model::TerrainGrid& g) { return rct3::park::ground::shape_ground(g, l.before, *l.shape, l.middle, reach, l.along, amount, l.passes); };
             auto trial = try_shape(scene, scene.grid, shaped);
             // Short of cash, the stroke goes as far as the cash pays for: what it moves grows evenly with it.
             if (const float can = l.paid_for + static_cast<float>(std::max<std::int64_t>(scene.park.cash.value_or(0) - 1, 0)) / rct3::park::ground::kShapeCost; trial && scene.park.cash && trial->second > can)
@@ -904,6 +907,18 @@ namespace rct3::scene
         {
             end_stroke(scene);
             l.tile.reset();
+            // Which way the pointer goes over the ground, read again each time it has gone a little way.
+            if (l.tool != LandTools::Tool::Shape || !l.shape || over)
+                l.travel_from.reset();
+            else if (!l.travel_from || glm::distance(glm::vec2 { at.x, at.y }, l.travel_from->first) > kTravelSample)
+            {
+                if (const auto spot = ground_spot(scene, at, size))
+                {
+                    if (l.travel_from && *spot != l.travel_from->second)
+                        l.travel = glm::normalize(*spot - l.travel_from->second);
+                    l.travel_from = std::pair { glm::vec2 { at.x, at.y }, *spot };
+                }
+            }
         }
         else if (l.tool == LandTools::Tool::Shape && l.smoothing)
             smooth(device, scene, assets, at, size, over, elapsed);

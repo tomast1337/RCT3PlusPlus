@@ -6,6 +6,9 @@
 // invented and the next is drawn, by how much the player cares for each research area. What is spent beyond a
 // cost carries over to the next item.
 //
+// The player may also focus research on one item of their choosing: it is worked on at once, at a higher cost,
+// and what it took the place of is taken up again once it is invented, from where it was left.
+//
 // Besides attractions, research invents the scenery that is put up for its looks (park::researchable) and the
 // path and queue styles other than the plain ones.
 //
@@ -62,6 +65,13 @@ namespace rct3::simulation
         std::int64_t cost = 0; ///< Hundredths
     };
 
+    /// An item research was taken off for a focus, with what had been spent on it.
+    struct SetAside
+    {
+        std::uint64_t id = 0; ///< ResearchItem::id
+        std::int64_t spent = 0;
+    };
+
     /// How far the park's research has got.
     struct Research
     {
@@ -73,6 +83,14 @@ namespace rct3::simulation
         std::vector<float> priorities { };         ///< A weight for each ResearchArea, in order; areas past its end weigh 1
         float since_part = 0;                      ///< Calendar units since the last part of the budget was paid
         std::vector<std::uint64_t> invented { };   ///< Items invented since the park file was made, oldest first
+        std::vector<float> invented_at { };        ///< The calendar's time each of `invented` was invented (park::ParkState::time)
+        /// The item the player asked to research next, at its cost times tuning::Research::focus_cost; the current
+        /// item while set.
+        std::optional<std::uint64_t> focus { };
+        std::optional<std::uint64_t> unfocused { }; ///< The item worked on when the focus began, taken up again once it ends
+        /// Items research was taken off for a focus, oldest first; each starts from what was spent on it when it is
+        /// worked on again.
+        std::vector<SetAside> set_aside { };
     };
 
     /// Research as a park file leaves it.
@@ -90,6 +108,18 @@ namespace rct3::simulation
     /// free. An item whose cost is covered leaves `items` and joins Research::invented, and the next is drawn
     /// from the areas that still have any, by their priorities. With nothing left to invent, nothing is paid.
     void step_research(Research& research, float units, std::vector<ResearchItem>& items, park::ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, random::RandomState& dice);
+
+    /// What `item` costs to invent: its cost, more when research is `focused` on it.
+    [[nodiscard]] std::int64_t research_cost(const ResearchItem& item, bool focused);
+
+    /// Focuses research on the item `id` of `items`, at once and at a higher cost, setting aside the item worked
+    /// on with what was spent on it; with no `id`, ends the focus and takes up again the item worked on when it
+    /// began. False, changing nothing, when `id` is not among `items`.
+    bool focus_research(Research& research, std::optional<std::uint64_t> id, std::span<const ResearchItem> items);
+
+    /// What may come next in each area, in the areas' order: the `per_area` cheapest of `items` there, cheapest
+    /// first, leaving out the item being worked on.
+    [[nodiscard]] std::vector<ResearchItem> research_preview(const Research& research, std::span<const ResearchItem> items, std::size_t per_area);
 
     /// How far the item being worked on has got.
     struct ResearchProgress

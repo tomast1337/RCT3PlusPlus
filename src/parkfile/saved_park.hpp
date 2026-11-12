@@ -24,8 +24,8 @@
 //              shows are read again from the original park.
 //   "GOAL" v1  SavedGoals: how far the scenario's goals have got. Only for parks that set goals; without it,
 //              they start again from the original park.
-//   "RSCH" v1  simulation::Research: how far research has got and what it has invented. Saves made before it
-//              lack it; their research starts again from the original park.
+//   "RSCH" v2  simulation::Research: how far research has got and what it has invented, when, and the focus.
+//              Saves made before it lack it, and v1 is skipped; their research starts again from the original park.
 //   "BRKN" v1  std::vector<std::uint64_t>: the path items vandals have broken, by object id. Only when there
 //              are any.
 //   "FALL" v1  std::vector<save::model::Waterfall>: the park's waterfalls, with those the player made or deleted.

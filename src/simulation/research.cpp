@@ -13,6 +13,25 @@
 namespace rct3::simulation
 {
 
+    namespace
+    {
+        /// Makes `id` the item worked on: the one before is set aside with what was spent on it, and `id` starts from
+        /// what was spent on it when it was set aside.
+        void work_on(Research& research, std::uint64_t id)
+        {
+            if (research.current == id)
+                return;
+            if (research.current)
+                research.set_aside.push_back({ .id = *research.current, .spent = std::exchange(research.spent, 0) });
+            research.current = id;
+            if (const auto kept = std::ranges::find(research.set_aside, id, &SetAside::id); kept != research.set_aside.end())
+            {
+                research.spent += kept->spent;
+                research.set_aside.erase(kept);
+            }
+        }
+    } // namespace
+
     Research start_research(const save::model::ResearchState& saved)
     {
         return {
@@ -118,6 +137,13 @@ namespace rct3::simulation
             if (found != items.end())
                 return found;
             research.current.reset();
+            // A focus done, what it took the place of is taken up again.
+            research.focus.reset();
+            if (const auto back = std::exchange(research.unfocused, std::nullopt); back && std::ranges::contains(items, *back, &ResearchItem::id))
+            {
+                work_on(research, *back);
+                return std::ranges::find(items, *back, &ResearchItem::id);
+            }
             if (items.empty())
                 return found;
             std::array<double, kResearchAreas> weights { };
@@ -150,7 +176,7 @@ namespace rct3::simulation
             }
             std::uint64_t nth = random::below(dice, counts[area]);
             found = std::ranges::find_if(items, [&](const ResearchItem& i) { return static_cast<std::size_t>(i.area) == area && nth-- == 0; });
-            research.current = found->id;
+            work_on(research, found->id);
             return found;
         };
 
@@ -170,15 +196,59 @@ namespace rct3::simulation
         research.since_part = std::max(research.since_part - static_cast<float>(static_cast<double>(amount) * kMonth / static_cast<double>(research.budget)), 0.0f);
         park::book(park, finance, kept, amount, park::LedgerLine::Research, false);
         research.spent += amount + std::exchange(research.boost, 0);
-        while (item != items.end() && research.spent >= item->cost)
+        while (item != items.end() && research.spent >= research_cost(*item, research.focus == item->id))
         {
-            research.spent -= item->cost;
+            research.spent -= research_cost(*item, research.focus == item->id);
             research.invented.push_back(item->id);
+            research.invented_at.push_back(park.time);
             research.previous = item->id;
             research.current.reset();
             items.erase(item);
             item = current();
         }
+    }
+
+    std::int64_t research_cost(const ResearchItem& item, bool focused)
+    {
+        return focused ? std::llround(static_cast<double>(item.cost) * kTuning.research.focus_cost) : item.cost;
+    }
+
+    bool focus_research(Research& research, std::optional<std::uint64_t> id, std::span<const ResearchItem> items)
+    {
+        if (!id)
+        {
+            // Ended, the focused item is set aside for what it took the place of, or without that goes on at its
+            // usual cost.
+            if (const auto back = std::exchange(research.unfocused, std::nullopt); research.focus && back && std::ranges::contains(items, *back, &ResearchItem::id))
+                work_on(research, *back);
+            research.focus.reset();
+            return true;
+        }
+        if (!std::ranges::contains(items, *id, &ResearchItem::id))
+            return false;
+        if (!research.focus)
+            research.unfocused = research.current;
+        work_on(research, *id);
+        research.focus = id;
+        return true;
+    }
+
+    std::vector<ResearchItem> research_preview(const Research& research, std::span<const ResearchItem> items, std::size_t per_area)
+    {
+        std::vector<ResearchItem> sorted;
+        for (const ResearchItem& i : items)
+        {
+            if (research.current != i.id)
+                sorted.push_back(i);
+        }
+        std::ranges::stable_sort(sorted, [](const ResearchItem& a, const ResearchItem& b) { return std::pair(a.area, a.cost) < std::pair(b.area, b.cost); });
+        std::vector<ResearchItem> next;
+        for (const ResearchItem& i : sorted)
+        {
+            if (std::ranges::count(next, i.area, &ResearchItem::area) < static_cast<std::ptrdiff_t>(per_area))
+                next.push_back(i);
+        }
+        return next;
     }
 
     std::optional<ResearchProgress> research_progress(const Research& research, std::span<const ResearchItem> items)
@@ -187,10 +257,11 @@ namespace rct3::simulation
         if (item == items.end())
             return std::nullopt;
         const std::int64_t got = research.spent + research.boost;
-        const std::int64_t left = std::max<std::int64_t>(item->cost - got, 0);
+        const std::int64_t cost = research_cost(*item, research.focus == item->id);
+        const std::int64_t left = std::max<std::int64_t>(cost - got, 0);
         return ResearchProgress {
             .id = item->id,
-            .done = item->cost > 0 ? std::clamp(static_cast<float>(got) / static_cast<float>(item->cost), 0.0f, 1.0f) : 1.0f,
+            .done = cost > 0 ? std::clamp(static_cast<float>(got) / static_cast<float>(cost), 0.0f, 1.0f) : 1.0f,
             .months = research.budget > 0 ? std::optional(std::max<std::int64_t>((left + research.budget - 1) / research.budget, 1)) : std::nullopt,
         };
     }

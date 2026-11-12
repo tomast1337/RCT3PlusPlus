@@ -359,7 +359,7 @@ namespace rct3::parkfile
         if (park.goals)
             put_chunk(w, "GOAL", 1, *park.goals);
         if (park.research)
-            put_chunk(w, "RSCH", 1, *park.research);
+            put_chunk(w, "RSCH", 2, *park.research);
         if (!park.broken_items.empty())
             put_chunk(w, "BRKN", 1, park.broken_items);
         if (park.waterfalls)
@@ -411,8 +411,11 @@ namespace rct3::parkfile
             }
             if (tag == "RSCH")
             {
-                if (park.research || version != 1)
+                if (park.research || version == 0 || version > 2) // 2 adds when each item was invented, and the focus
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                // A park saved before is opened as one saved before research was kept.
+                if (version == 1)
+                    return { };
                 return get_chunk(tag, body, park.research.emplace());
             }
             if (tag == "BRKN")

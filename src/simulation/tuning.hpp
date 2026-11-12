@@ -442,6 +442,9 @@ namespace rct3::simulation::tuning
         /// hundreds) are held to under half a month, less than a stall.
         double scenery_cost_per_price = 4;
         Money scenery_cost_cap { 8000 };
+        /// An item the player focuses research on costs this many times its cost. Chosen by eye: half as much
+        /// again, enough that picking every item by hand is a choice with a price.
+        double focus_cost = 1.5;
     };
 
     /// What the park is charged each week.

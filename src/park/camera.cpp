@@ -44,6 +44,15 @@ namespace rct3::park
         return { from, glm::normalize(glm::vec3(far) / far.w - from) };
     }
 
+    std::optional<float> upright_height(const Ray& ray, glm::vec3 at, float steepest)
+    {
+        const glm::vec3 across = glm::normalize(glm::vec3 { ray.direction.x, 0.0f, ray.direction.z });
+        const float along = glm::dot(ray.direction, across);
+        if (!(along > 1e-4f))
+            return std::nullopt;
+        return ray.origin.y + ray.direction.y * glm::dot(at - ray.origin, across) / std::max(along, steepest);
+    }
+
     glm::mat4 ride_look(RideView& view, const glm::mat4& eye, std::optional<glm::vec3> ahead, bool sways, const ovl::RideCameraTuning& tuning, float elapsed, glm::vec2 dice)
     {
         constexpr float kGravity = 9.81f;

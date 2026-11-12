@@ -79,12 +79,10 @@ namespace rct3::scene
 
     std::optional<std::int32_t> lifted_height(const rct3::park::Ray& ray, glm::vec3 at, std::int32_t height)
     {
-        const glm::vec3 across = glm::normalize(glm::vec3 { ray.direction.x, 0.0f, ray.direction.z });
-        const float along = glm::dot(ray.direction, across);
-        if (!(along > 1e-4f))
+        const auto y = rct3::park::upright_height(ray, at);
+        if (!y)
             return std::nullopt;
-        const float y = ray.origin.y + ray.direction.y * glm::dot(at - ray.origin, across) / along;
-        return height + static_cast<std::int32_t>(std::lround(y - at.y));
+        return height + static_cast<std::int32_t>(std::lround(*y - at.y));
     }
 
     namespace

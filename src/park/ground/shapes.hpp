@@ -35,6 +35,13 @@ namespace rct3::park::ground
         Crater,
     };
 
+    inline constexpr float kDragDeadZone = 25; ///< Pixels the pointer moves from where it pressed before the ground starts to move
+    inline constexpr float kDragRate = 0.25f;  ///< Height units the middle of a brush moves for each pixel past that
+
+    /// How far the middle of a dragged brush has gone with the pointer `pixels` up from where it pressed (down
+    /// when negative): nothing inside the dead zone, then evenly, with no steps.
+    [[nodiscard]] float drag_amount(float pixels);
+
     /// The share of the amount the shape takes at `across`, the distance from the middle (or for a ridge from
     /// its line) over the reach, and `along`, the distance along a ridge's line over the reach. Raising shapes
     /// give 0 to 1, lowering ones -1 to 0 (a crater's rim rises a little); 0 from the reach out.

@@ -29,6 +29,16 @@ namespace
     const auto anywhere = [](save::model::Tile) { return true; };
 } // namespace
 
+TEST_CASE("a dragged brush waits out the dead zone, then moves evenly with the pointer, either way")
+{
+    CHECK(drag_amount(0) == 0);
+    CHECK(drag_amount(kDragDeadZone) == 0);
+    CHECK(drag_amount(-kDragDeadZone) == 0);
+    CHECK(drag_amount(kDragDeadZone + 10) == doctest::Approx(10 * kDragRate));
+    CHECK(drag_amount(kDragDeadZone + 10.5f) > drag_amount(kDragDeadZone + 10)); // No steps
+    CHECK(drag_amount(-kDragDeadZone - 40) == doctest::Approx(-40 * kDragRate));
+}
+
 TEST_CASE("each shape rises or sinks most where it should and not past its reach")
 {
     for (const GroundShape up : { GroundShape::Hill, GroundShape::Mountain, GroundShape::Mesa })

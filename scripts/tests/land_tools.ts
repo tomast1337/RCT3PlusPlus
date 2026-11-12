@@ -138,7 +138,7 @@ await frames(2);
 expect(map.water().length === lakes + 1, "the lake poured again");
 await pick("Land_Brush_Height");
 const [dx, dy] = on_view(col, row);
-await pointer.drag([dx, dy], [dx, dy + 0.05], 20);
+await pointer.drag([dx, dy], [dx, dy + 0.15], 20);
 await frames(2);
 log("lakes after digging under one:", map.water().length, "floor", low(col, row));
 await screenshot("water_dug");

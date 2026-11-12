@@ -119,6 +119,18 @@ TEST_CASE("prizes pay out, their cash booked as prize money")
     CHECK(simulation::prize_name(0) == "Prize_Invalid");
 }
 
+TEST_CASE("a park whose money never runs out gets nothing from a cash prize")
+{
+    simulation::park::ParkState park; // No cash kept
+    save::model::Finance finance;
+    save::model::TerrainGrid land;
+    std::optional<std::int64_t> kept;
+    simulation::Research research;
+    simulation::give_prize(park, finance, kept, land, research, 1);
+    CHECK_FALSE(park.cash);
+    CHECK(finance.ledger[0].prize_money == 0);
+}
+
 TEST_CASE("the research prize is free progress at the next part of the budget paid")
 {
     simulation::park::ParkState park;

@@ -24,8 +24,8 @@
 //
 // Smoothing: holding the button works the ground under the brush a little more every moment
 // (park/ground/smoothing.hpp), following the pointer. Its tools by their place in the tab: average, level to
-// the height under the pointer as it moves, level to the height where the stroke began, to whole units, join
-// the tiles' edges, and square them. The game's data also holds pictures for roughening and a second whole-unit
+// the height under the pointer as it moves, level to the height where the stroke began, level to that height's
+// whole unit (a flat pad for rides and scenery), join the tiles' edges, and square them. The game's data also holds pictures for roughening and a second whole-unit
 // level, but they are not usable (one picture is malformed, the other repeats a third), so those are left out.
 // The ground moved is paid for as it goes.
 //

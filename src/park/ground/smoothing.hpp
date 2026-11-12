@@ -8,8 +8,8 @@
 // the owner holds stay.
 //   - Average eases each point towards the mean of the four next to it, each side of a cliff by itself.
 //   - Random roughens: each point goes up or down by up to half a unit.
-//   - Level goes towards `target` (the owner's: the height under the pointer, the brush's mean, a whole unit).
-//   - Whole units goes towards each corner's nearest whole unit, for rides and scenery to stand on.
+//   - Level goes towards `target`, one height for the whole brush (the owner's: the height under the pointer, or
+//     that height's whole unit, which makes a flat pad for rides and scenery to stand on).
 // The other two work on whole tiles that the owner lets them change, easing them part of the way each pass too:
 //   - Join edges takes away the cliffs between those tiles: each corner the tiles round it disagree on goes
 //     towards their mean.
@@ -31,10 +31,12 @@ namespace rct3::park::ground
         Average,
         Random,
         Level,
-        WholeUnits,
         JoinEdges,
         TileEdges,
     };
+
+    /// The whole unit a pad levelled from `height` lies at.
+    [[nodiscard]] float whole_level(float height);
 
     /// The mean height of the corner points within `reach` tiles of `middle`; 0 when there are none.
     [[nodiscard]] float mean_height(const save::model::TerrainGrid& grid, glm::vec2 middle, float reach);

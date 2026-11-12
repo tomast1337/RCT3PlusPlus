@@ -96,9 +96,10 @@ namespace rct3::scene
         {
             rct3::park::ground::GroundSmoothing tool;
             Level level = Level::None;
+            bool whole = false; ///< Levels to the whole unit of that height: a pad
         };
         constexpr std::array kSmoothTools {
-            SmoothTool { rct3::park::ground::GroundSmoothing::Average }, SmoothTool { rct3::park::ground::GroundSmoothing::Level, Level::Pointer }, SmoothTool { rct3::park::ground::GroundSmoothing::Level, Level::Press }, SmoothTool { rct3::park::ground::GroundSmoothing::WholeUnits }, SmoothTool { rct3::park::ground::GroundSmoothing::JoinEdges }, SmoothTool { rct3::park::ground::GroundSmoothing::TileEdges },
+            SmoothTool { rct3::park::ground::GroundSmoothing::Average }, SmoothTool { rct3::park::ground::GroundSmoothing::Level, Level::Pointer }, SmoothTool { rct3::park::ground::GroundSmoothing::Level, Level::Press }, SmoothTool { rct3::park::ground::GroundSmoothing::Level, Level::Press, true }, SmoothTool { rct3::park::ground::GroundSmoothing::JoinEdges }, SmoothTool { rct3::park::ground::GroundSmoothing::TileEdges },
         };
         /// The brushes' tab, in its order: those that raise when dragged up, then those that lower when dragged down.
         constexpr std::array kShapeBrushes { rct3::park::ground::GroundShape::Ridge, rct3::park::ground::GroundShape::Mountain, rct3::park::ground::GroundShape::Mesa, rct3::park::ground::GroundShape::Hill, rct3::park::ground::GroundShape::Canyon, rct3::park::ground::GroundShape::Trough, rct3::park::ground::GroundShape::Crater };
@@ -389,7 +390,11 @@ namespace rct3::scene
                 l.tile = save::model::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
                 start_stroke(scene);
                 l.held = kSmoothPass; // A click smooths once
-                l.target = rct3::park::ground::mean_height(scene.grid, *spot, std::max(reach, 1.0f));
+                // Levelling works to the height of the ground pressed on.
+                const save::model::TerrainGrid& g = scene.grid;
+                l.target = g.height_at(g.origin_x + spot->x * g.tile_size_x, g.origin_z + spot->y * g.tile_size_z).value_or(0);
+                if (tool.whole)
+                    l.target = rct3::park::ground::whole_level(l.target);
             }
             if (!spot)
                 return;

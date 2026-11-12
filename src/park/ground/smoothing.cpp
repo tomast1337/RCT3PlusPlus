@@ -35,6 +35,11 @@ namespace rct3::park::ground
         constexpr glm::vec2 kCornerAt[4] { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
     } // namespace
 
+    float whole_level(float height)
+    {
+        return std::floor(height + 0.5f);
+    }
+
     float mean_height(const save::model::TerrainGrid& grid, glm::vec2 middle, float reach)
     {
         float sum = 0;
@@ -165,9 +170,6 @@ namespace rct3::park::ground
                                 break;
                             case GroundSmoothing::Level:
                                 to = *h + (target - *h) * strength;
-                                break;
-                            case GroundSmoothing::WholeUnits:
-                                to = *h + (std::round(*h) - *h) * strength;
                                 break;
                             default:
                                 break;

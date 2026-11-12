@@ -367,14 +367,16 @@ namespace rct3::ui::screens
                 return;
             }
 
-            // One column a month, this month first, going back.
+            // One column a month, this month first, going back. Chosen by eye: wide enough for the longest month's
+            // name, so the headings do not run into each other.
+            constexpr float kMonthWidth = 86;
             const std::size_t periods = std::min(m->ledger_periods_loaded, save::model::kLedgerPeriods);
             page.columns.push_back({ std::u16string { }, 0, Align::Start, false });
             const std::int32_t month = f.state != nullptr ? f.state->date.month : f.park->clock.date().month;
             for (std::size_t p = 0; p < periods; ++p)
             {
                 const std::int32_t back = ((month - static_cast<std::int32_t>(p)) % 8 + 8) % 8;
-                page.columns.push_back({ text(strings, std::format("Month{}", back)), 76, Align::End, false });
+                page.columns.push_back({ text(strings, std::format("Month{}", back)), kMonthWidth, Align::End, false });
             }
             for (std::size_t r = 0; r < kLedger.size(); ++r)
             {
@@ -913,7 +915,8 @@ namespace rct3::ui::screens
             case ManagementTopic::ParkOperations:
                 return { "Man_Park", "PID_Title", 481, 300 };
             case ManagementTopic::Finances:
-                return { "Man_Finances", "FinancialManagement_Title", 600, 560 };
+                // Chosen by eye: room for the ledger's five month columns beside its line names.
+                return { "Man_Finances", "FinancialManagement_Title", 640, 560 };
             case ManagementTopic::Staff:
                 return { "Man_Staff", "Staff_Title", 520, 420 };
             case ManagementTopic::Guests:

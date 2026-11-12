@@ -1196,6 +1196,7 @@ namespace rct3::scene::park
                             continue;
                         simulation::give_prize(scene.park, scene.park_model.finance, scene.ledger_month, scene.grid, scene.research, prize);
                         scene.prizes.emplace_back(simulation::prize_message(prize));
+                        scene.map.stale = true; // Land put on sale shows on the map
                         // A level won, every guest out on the paths jumps for joy.
                         if (prize >= simulation::kApprenticePrize)
                         {

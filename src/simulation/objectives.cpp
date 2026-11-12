@@ -335,10 +335,9 @@ namespace rct3::simulation
                 finance.max_loan *= 2;
                 break;
             case 7:
-                // shortcut: the land is only marked for sale, as there is no buying land yet; it shows once there is.
                 for (save::model::TerrainCell& cell : land.cells)
                 {
-                    if (cell.has(save::model::TileFlag::NeverPurchasable))
+                    if (cell.has(save::model::TileFlag::HeldBack))
                         cell.flags |= std::to_underlying(save::model::TileFlag::ForSale);
                 }
                 break;

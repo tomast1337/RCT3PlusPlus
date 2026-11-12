@@ -115,6 +115,7 @@ namespace rct3::scene
         glm::vec2 middle { 0 };                                ///< Of a brush stroke, in tile units
         glm::vec2 along { 1, 0 };                              ///< Of a ridge: across the view as the stroke began
         float amount = 0;                                      ///< Of the brush stroke so far, in height units
+        std::optional<glm::vec3> cost_at;                      ///< Where the stroke's cost is shown, once it has paid
         float paid_for = 0;                                    ///< The most ground the stroke has moved, already paid for
         std::optional<std::size_t> smoothing;                  ///< The smoothing brush chosen, by its place in its tab
         float target = 0;                                      ///< Of a levelling stroke

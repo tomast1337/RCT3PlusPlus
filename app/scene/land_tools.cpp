@@ -55,13 +55,24 @@ namespace rct3::scene
             return t;
         }
 
-        /// Pays `cost` for work on `tile` as landscaping, floating it up from there. False when the park cannot
-        /// afford it, and nothing is paid.
+        /// Pays `cost` for work on `tile` as landscaping. A stroke shows one sum, where it first paid, that grows
+        /// while the stroke goes and floats away once it stops. False when the park cannot afford it, and nothing
+        /// is paid.
         bool pay(park::ParkScene& scene, std::int32_t cost, save::model::Tile tile)
         {
             if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
                 return false;
-            park::float_money(scene, park::tile_point(scene.grid, tile), -cost);
+            LandTools& l = scene.land;
+            if (!l.cost_at)
+                l.cost_at = park::tile_point(scene.grid, tile);
+            const auto sum = std::ranges::find_if(scene.money, [&](const park::FloatingMoney& m) { return m.at == *l.cost_at && m.amount < 0; });
+            if (sum == scene.money.end())
+                park::float_money(scene, *l.cost_at, -cost);
+            else if (cost != 0)
+            {
+                sum->amount -= cost;
+                sum->age = 0;
+            }
             return true;
         }
 
@@ -118,6 +129,7 @@ namespace rct3::scene
         {
             LandTools& l = scene.land;
             l.rumble.reset();
+            l.cost_at.reset();
             if (!l.stirred)
                 return;
             if (scene.object_build.valid())

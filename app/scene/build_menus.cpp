@@ -101,7 +101,7 @@ namespace rct3::scene
         }
     } // namespace
 
-    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::screens::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency)
+    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::screens::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency, std::optional<std::size_t> marked)
     {
         const auto list = ui::screens::build_list(item);
         if (!list || !menus.items.valid())
@@ -120,6 +120,8 @@ namespace rct3::scene
         picker.packs_only = menus.packs_only;
         if (!menus.offer.known())
             picker.note = std::u16string(strings.get(kAllShown));
+        if (marked)
+            picker.show_item(*marked);
         // Above the tool bar and its open menu, so it hides none of their buttons, and in the middle of them;
         // layout keeps it on the screen.
         const ui::Rect& r = root.rect();

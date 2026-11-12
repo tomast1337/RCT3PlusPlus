@@ -1006,8 +1006,8 @@ namespace rct3::scene::park
                     if (entry == scene.park_model.content.entries.end())
                         continue;
                     entry->invented = true;
-                    const auto item = std::ranges::find_if(catalogue, [&](const rct3::park::BuildItem& b) { return strings::equals_ignoring_case(b.symbol, entry->symbol) && strings::equals_ignoring_case(b.overlay, entry->overlay_stem); });
-                    simulation::park::post(scene.park.messages, { .text_key = std::string(simulation::kInventedKey), .subject_name = item != catalogue.end() ? strings::to_utf8(assets.strings->get(item->name_text)) : entry->symbol });
+                    const auto item = content_item(scene, entry->id);
+                    simulation::park::post(scene.park.messages, { .text_key = std::string(simulation::kInventedKey), .subject_name = item ? strings::to_utf8(assets.strings->get(catalogue[*item].name_text)) : entry->symbol, .build_item = item });
                 }
                 if (scene.research.invented.size() != had)
                     scene.build.offer = rct3::park::BuildOffer(scene.park_model.content);
@@ -1736,6 +1736,14 @@ namespace rct3::scene::park
             const auto items = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready ? std::span(scene.build.items.get()) : std::span<const rct3::park::BuildItem> { };
             for (std::size_t i = 0; i < shown.size(); ++i)
             {
+                // An invention shows the item's icon and leads to it in its build list.
+                if (const auto& b = scene.park.messages.list[i].build_item; b && *b < items.size())
+                {
+                    if (!items[*b].icon.empty())
+                        shown[i].icon = items[*b].icon;
+                    shown[i].clickable = true;
+                    continue;
+                }
                 const auto& subject = scene.park.messages.list[i].subject;
                 const auto ref = subject ? attraction_with(scene, *subject) : std::nullopt;
                 if (!ref)
@@ -1754,6 +1762,16 @@ namespace rct3::scene::park
             // An award's icon opens the park's awards, as the game does.
             if (message != scene.park.messages.list.end() && message->award)
                 open_management_window(desktop, ui::screens::ManagementTopic::ParkOperations, ui::screens::kAwardsTab, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
+            // An invention's opens its build list with it marked, from the menu item that opens that list.
+            else if (const auto tools = desktop.root().find_as<ui::screens::ToolRow>(kToolsName); message != scene.park.messages.list.end() && message->build_item && *message->build_item < items.size() && tools)
+            {
+                for (auto t = std::to_underlying(ui::screens::ToolItem::DeleteOne); t <= std::to_underlying(ui::screens::ToolItem::GuestPayments); ++t)
+                {
+                    const auto item = static_cast<ui::screens::ToolItem>(t);
+                    if (ui::screens::build_list(item) == items[*message->build_item].list && open_build_list(scene.build, desktop.root(), item, tools->item(item), *tools, *assets.strings, assets.palette, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)), message->build_item))
+                        break;
+                }
+            }
             // An attraction's takes the view to it and opens the info panel on it.
             else if (const auto ref = message != scene.park.messages.list.end() && message->subject ? attraction_with(scene, *message->subject) : std::nullopt; ref && info)
             {

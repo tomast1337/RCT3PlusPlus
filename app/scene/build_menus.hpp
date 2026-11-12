@@ -66,9 +66,9 @@ namespace rct3::scene
     [[nodiscard]] std::vector<DesignFile> designs_for(const BuildMenus& menus, std::string_view symbol);
 
     /// Opens the list of `item` above `bar`, the tool bar, in the middle of its shown buttons, in place of any
-    /// list open before, titled with the help of `button`, the menu button that asked for it. False for an item
-    /// that has no list.
-    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::screens::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency);
+    /// list open before, titled with the help of `button`, the menu button that asked for it, with the item
+    /// numbered `marked` among the items marked (BuildPicker::show_item). False for an item that has no list.
+    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::screens::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency, std::optional<std::size_t> marked = std::nullopt);
 
     /// Closes the open list, if one is.
     void close_build_list(ui::Widget& root);

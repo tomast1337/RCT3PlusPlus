@@ -61,12 +61,13 @@ namespace rct3::ovl
         std::uint32_t script_count = 0;
     };
 
-    /// Link to a research category, present on three items of the oldest file only.
+    /// A row of 12 bytes naming a research category and the level it must reach. Scenery items (three items of the
+    /// oldest file only), path types, queue types and research categories (their prerequisites) hold them.
     struct SceneryItemResearch
     {
         std::string_view category; ///< "rcg" item
         std::int32_t unknown = 0;  ///< -1 in files seen
-        float priority = 0;        ///< Unconfirmed. 10 in files seen.
+        float level = 0;           ///< Level the category must reach, 0 to 100 in files seen
     };
 
     /// SceneryItem::flags bit of path items that stand only on level paths: benches and most signs.

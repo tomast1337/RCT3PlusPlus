@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ovl/overlay.hpp"
+#include "ovl/scenery_item.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -22,10 +23,14 @@ namespace rct3::ovl
         std::uint32_t kind = 0;
         std::string_view name;      ///< The category's own name as stored in the structure
         std::string_view name_text; ///< "txt" item
-        float unknown_0c = 0;       ///< 0, 10, 20, 25 or 50 seen. Unconfirmed.
-        float unknown_10 = 0;       ///< 10, or 1 for the unlockable kind. Unconfirmed.
-        /// "rcg" items that must be researched first. A slot whose reference is missing gives an empty name.
-        std::vector<std::string_view> prerequisites;
+        /// Level the category starts at: 0, 10, 20, 25 or 50 seen. Park files of the base game hold the same
+        /// value as the category's current level.
+        float start_level = 0;
+        /// Cost of developing the category: 10, or 1 for the unlockable kind. Park files hold the same value.
+        float develop_cost = 0;
+        /// Categories that must reach a level first, as 12-byte rows. A row whose reference is missing gives an
+        /// empty name.
+        std::vector<SceneryItemResearch> prerequisites;
     };
 
     struct ResearchCategoryEntry

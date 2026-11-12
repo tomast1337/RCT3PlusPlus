@@ -323,7 +323,7 @@ namespace rct3::ovl
             SceneryItemResearch r;
             r.category = refs_.find(address + i * kResearchSize, kResearchTag);
             r.unknown = static_cast<std::int32_t>(u32_at(*row, 4));
-            r.priority = f32_at(*row, 8);
+            r.level = f32_at(*row, 8);
             out.push_back(r);
         }
         return true;

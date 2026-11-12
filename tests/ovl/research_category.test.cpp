@@ -52,18 +52,18 @@ namespace
         return out;
     }
 
-    // Three 40-byte categories and two slots after them.
+    // Three 40-byte categories and two 12-byte prerequisite rows after them.
     constexpr std::uint32_t kSlots = 120;
 
     std::vector<std::byte> block()
     {
-        std::vector<std::uint32_t> w(kSlots / 4 + 2, 0);
+        std::vector<std::uint32_t> w(kSlots / 4 + 6, 0);
         // Alpha: kind 1, name pointer, two weights, no prerequisites.
         w[0] = 1;
         w[1] = name_at("Beta");
         w[3] = std::bit_cast<std::uint32_t>(25.0f);
         w[4] = std::bit_cast<std::uint32_t>(10.0f);
-        // Beta: needs Alpha and one missing reference.
+        // Beta: needs Alpha at 50 and Gamma at 25.
         w[10 + 0] = 0;
         w[10 + 1] = name_at("Beta");
         w[10 + 5] = 2;
@@ -72,6 +72,11 @@ namespace
         w[20] = 2;
         w[20 + 1] = name_at("Beta");
         w[20 + 4] = std::bit_cast<std::uint32_t>(1.0f);
+        // Beta's rows: category, -1, level.
+        w[30 + 1] = ~0u;
+        w[30 + 2] = std::bit_cast<std::uint32_t>(50.0f);
+        w[30 + 4] = ~0u;
+        w[30 + 5] = std::bit_cast<std::uint32_t>(25.0f);
         std::vector<std::byte> out;
         for (auto v : w)
             append_u32(out, v);
@@ -91,14 +96,14 @@ namespace
     std::vector<std::byte> references()
     {
         std::vector<std::byte> out = reference(kBase + 8, "AlphaText:txt");
-        const auto slot = reference(kBase + kSlots, "Alpha:rcg");
-        out.insert(out.end(), slot.begin(), slot.end());
+        for (const auto& row : { reference(kBase + kSlots, "Alpha:rcg"), reference(kBase + kSlots + 12, "Gamma:rcg") })
+            out.insert(out.end(), row.begin(), row.end());
         return out;
     }
 
 } // namespace
 
-TEST_CASE("research categories expose kind, texts and prerequisites")
+TEST_CASE("research categories expose kind, texts and levels")
 {
     const auto overlay = make(block(), references());
     const auto categories = read_research_categories(overlay, overlay.common());
@@ -108,18 +113,28 @@ TEST_CASE("research categories expose kind, texts and prerequisites")
     REQUIRE(categories[0].category.has_value());
     CHECK(categories[0].category->kind == 1);
     CHECK(categories[0].category->name_text == "AlphaText");
-    CHECK(categories[0].category->unknown_0c == 25.0f);
-    CHECK(categories[0].category->unknown_10 == 10.0f);
+    CHECK(categories[0].category->start_level == 25.0f);
+    CHECK(categories[0].category->develop_cost == 10.0f);
     CHECK(categories[0].category->prerequisites.empty());
-
-    REQUIRE(categories[1].category.has_value());
-    CHECK(categories[1].category->prerequisites.size() == 2);
-    CHECK(categories[1].category->prerequisites[0] == "Alpha");
-    CHECK(categories[1].category->prerequisites[1].empty()); // no reference for the second slot
 
     REQUIRE(categories[2].category.has_value());
     CHECK(categories[2].category->kind == 2);
-    CHECK(categories[2].category->unknown_10 == 1.0f);
+    CHECK(categories[2].category->develop_cost == 1.0f);
+}
+
+TEST_CASE("a research category with two prerequisites reads both names and levels")
+{
+    const auto overlay = make(block(), references());
+    const auto categories = read_research_categories(overlay, overlay.common());
+    REQUIRE(categories.size() == 3);
+    REQUIRE(categories[1].category.has_value());
+    const auto& rows = categories[1].category->prerequisites;
+    REQUIRE(rows.size() == 2);
+    CHECK(rows[0].category == "Alpha");
+    CHECK(rows[0].unknown == -1);
+    CHECK(rows[0].level == 50.0f);
+    CHECK(rows[1].category == "Gamma");
+    CHECK(rows[1].level == 25.0f);
 }
 
 TEST_CASE("research category edge cases")
@@ -163,6 +178,7 @@ TEST_CASE("research category edge cases")
         const auto categories = read_research_categories(*overlay, overlay->common());
         REQUIRE(categories[0].category.has_value());
         CHECK(categories[0].category->prerequisites.size() == 2);
-        CHECK(categories[0].category->prerequisites[0].empty());
+        CHECK(categories[0].category->prerequisites[0].category.empty());
+        CHECK(categories[0].category->prerequisites[1].level == 25.0f);
     }
 }

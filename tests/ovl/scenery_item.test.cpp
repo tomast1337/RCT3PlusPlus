@@ -250,7 +250,7 @@ TEST_CASE("scenery items expose every decoded field")
     REQUIRE(it.research.size() == 1);
     CHECK(it.research[0].category == "Cat");
     CHECK(it.research[0].unknown == -1);
-    CHECK(it.research[0].priority == 10.0f);
+    CHECK(it.research[0].level == 10.0f);
 }
 
 TEST_CASE("scenery item sizes follow the version word")

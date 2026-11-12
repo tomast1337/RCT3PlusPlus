@@ -310,6 +310,19 @@ namespace rct3::scene::park
                     income += attraction.income.value;
             return { intake, income };
         }
+
+        /// One panel at a time at the bottom of the screen: puts the tool out away, with its panel.
+        void put_tools_away(ParkScene& scene)
+        {
+            close_track_building(scene);
+            stop_ride_placing(scene);
+            close_footpath_panel(scene);
+            stop_land_tools(scene);
+            stop_deleting(scene);
+            stop_structure_tools(scene);
+            stop_pooling(scene);
+            stop_enclosing(scene);
+        }
     } // namespace
 
     save::model::AttractionCommon* attraction_common(ParkScene& scene, rct3::park::AttractionRef ref)
@@ -1857,13 +1870,26 @@ namespace rct3::scene::park
         }
         if (auto tools = desktop.root().find_as<ui::screens::ToolRow>(kToolsName))
         {
+            // A menu opening puts the tool out away, and an item list goes with the menu it came from. The view
+            // menu's switches are for use while building, so it leaves the tool out.
+            if (const auto menu = tools->open_menu(); menu != scene.menu_shown)
+            {
+                close_build_list(desktop.root());
+                if (menu && *menu != ui::screens::ParkTool::View)
+                    put_tools_away(scene);
+                scene.menu_shown = menu;
+            }
             const std::optional<ui::screens::ParkTool> pressed = tools->take_pressed();
             if (pressed == ui::screens::ParkTool::Leave)
                 ask_leave(scene, *assets.strings, assets.palette);
             else if (pressed == ui::screens::ParkTool::Map)
+            {
+                put_tools_away(scene);
                 toggle_park_map(scene.map, desktop, *assets.strings, assets.palette);
+            }
             else if (pressed == ui::screens::ParkTool::Paths)
             {
+                tools->close_menu();
                 close_track_building(scene); // One tool panel at the bottom left at a time
                 stop_ride_placing(scene);
                 stop_land_tools(scene);
@@ -1949,7 +1975,10 @@ namespace rct3::scene::park
                     scene.since_rebuild = kObjectRebuildInterval;
                 }
                 else if (*item == ui::screens::ToolItem::Options || *item == ui::screens::ToolItem::About || *item == ui::screens::ToolItem::Save || *item == ui::screens::ToolItem::Load)
+                {
+                    put_tools_away(scene);
                     scene.window_requests.push_back(*item);
+                }
                 else if (const auto topic = ui::screens::management_topic(*item))
                     toggle_management_window(desktop, *topic, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
                 else

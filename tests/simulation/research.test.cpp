@@ -290,3 +290,76 @@ TEST_CASE("the progress of the current item and the months the budget takes to f
         CHECK_FALSE(research_progress(r, items));
     }
 }
+
+TEST_CASE("an invention keeps the calendar's time it was made at")
+{
+    Lab lab;
+    lab.park.time = 4321;
+    lab.research.current = 2;
+    lab.pass(kMonth);
+    CHECK(lab.research.invented == std::vector<std::uint64_t> { 2 });
+    CHECK(lab.research.invented_at == std::vector<float> { 4321 });
+}
+
+TEST_CASE("a focused item is worked on at once, costs more, and what it replaced is taken up again")
+{
+    Lab lab;
+    lab.park.cash = 100000;
+    lab.research.current = 1;
+    lab.research.spent = 4000;
+    CHECK_FALSE(focus_research(lab.research, 99, lab.items));
+    CHECK(lab.research.current == 1);
+    REQUIRE(focus_research(lab.research, 2, lab.items));
+    CHECK(lab.research.current == 2);
+    CHECK(lab.research.focus == 2);
+    CHECK(lab.research.spent == 0);
+    CHECK(research_cost(lab.items[1], lab.research.focus == lab.items[1].id) == 15000); // 100.00 half as much again
+    CHECK(research_cost(lab.items[0], lab.research.focus == lab.items[0].id) == 16000);
+    lab.pass(kMonth); // 20000 against 15000
+    CHECK(lab.research.invented == std::vector<std::uint64_t> { 2 });
+    CHECK_FALSE(lab.research.focus);
+    CHECK(lab.research.current == 1);
+    CHECK(lab.research.spent == 4000 + 5000); // What it had, and what was left over
+    CHECK(lab.research.set_aside.empty());
+}
+
+TEST_CASE("an ended focus gives way to what it set aside, keeping what was spent on both")
+{
+    Lab lab;
+    lab.park.cash = 100000;
+    lab.research.current = 1;
+    lab.research.spent = 4000;
+    REQUIRE(focus_research(lab.research, 2, lab.items));
+    lab.research.spent = 3000;
+    REQUIRE(focus_research(lab.research, std::nullopt, lab.items));
+    CHECK_FALSE(lab.research.focus);
+    lab.pass(12); // 667
+    CHECK(lab.research.current == 1);
+    CHECK(lab.research.spent == 4000 + 667);
+    REQUIRE(focus_research(lab.research, 2, lab.items));
+    CHECK(lab.research.spent == 3000);
+
+    SUBCASE("with nothing set aside the item goes on at its usual cost")
+    {
+        Lab plain;
+        plain.research.current = 2;
+        REQUIRE(focus_research(plain.research, 2, plain.items));
+        CHECK(research_cost(plain.items[1], plain.research.focus == plain.items[1].id) == 15000);
+        REQUIRE(focus_research(plain.research, std::nullopt, plain.items));
+        CHECK(plain.research.current == 2);
+        CHECK(research_cost(plain.items[1], plain.research.focus == plain.items[1].id) == 10000);
+    }
+}
+
+TEST_CASE("the preview shows the cheapest few of each area, leaving out the item worked on")
+{
+    const std::vector<ResearchItem> items {
+        { .id = 1, .area = ResearchArea::Shops, .cost = 10000 }, { .id = 2, .area = ResearchArea::Coasters, .cost = 24000 }, { .id = 3, .area = ResearchArea::Shops, .cost = 6000 }, { .id = 4, .area = ResearchArea::Shops, .cost = 8000 }, { .id = 5, .area = ResearchArea::Coasters, .cost = 16000 },
+    };
+    const Research r { .current = 3 };
+    const std::vector<ResearchItem> next = research_preview(r, items, 2);
+    std::vector<std::uint64_t> ids;
+    for (const ResearchItem& i : next)
+        ids.push_back(i.id);
+    CHECK(ids == std::vector<std::uint64_t> { 5, 2, 4, 1 });
+}

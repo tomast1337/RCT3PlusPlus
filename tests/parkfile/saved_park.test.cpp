@@ -104,7 +104,7 @@ TEST_CASE("a saved park reads back as written")
     CHECK(goals->broken_items.empty());
     CHECK_FALSE(goals->research); // None kept: research starts again from the original park
 
-    hidden.research = simulation::Research { .budget = 20000, .spent = 667, .boost = 50000, .current = 12, .previous = 9, .priorities = { 0.5f, 1.0f }, .since_part = 3.5f, .invented = { 9 } };
+    hidden.research = simulation::Research { .budget = 20000, .spent = 667, .boost = 50000, .current = 12, .previous = 9, .priorities = { 0.5f, 1.0f }, .since_part = 3.5f, .invented = { 9 }, .invented_at = { 1234.5f }, .focus = 12, .set_aside = { { .id = 7, .spent = 400 } } };
     const auto research = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
     REQUIRE(research);
     REQUIRE(research->research);
@@ -116,6 +116,10 @@ TEST_CASE("a saved park reads back as written")
     CHECK(research->research->priorities == std::vector<float> { 0.5f, 1.0f });
     CHECK(research->research->since_part == doctest::Approx(3.5f));
     CHECK(research->research->invented == std::vector<std::uint64_t> { 9 });
+    CHECK(research->research->invented_at == std::vector<float> { 1234.5f });
+    CHECK(research->research->focus == 12);
+    REQUIRE(research->research->set_aside.size() == 1);
+    CHECK(research->research->set_aside[0].spent == 400);
 
     hidden.broken_items = { 42, 43 };
     const auto broken = parkfile::read_saved_park(parkfile::write_saved_park(hidden));

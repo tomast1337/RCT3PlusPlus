@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// What the simulation's tuning numbers measure. Each kind of number is its own type, so a value says what it
-// is where it is declared, and one kind cannot be passed where another is meant. Use `.value` to work with the
-// plain number. Each is marked kUnit, so the park file keeps it as its bare number.
+// What a number measures, as its type: each kind of number is its own type, so a value says what it is where it
+// is declared, and one kind cannot be passed where another is meant. Use `.value` to work with the plain number.
+// Each is marked kUnit, so the park file keeps it as its bare number.
 #pragma once
 
 #include <cstdint>
 
-namespace rct3::simulation
+namespace rct3::units
 {
 
     /// A span of game time.
@@ -118,4 +118,4 @@ namespace rct3::simulation
         float value = 0;
     };
 
-} // namespace rct3::simulation
+} // namespace rct3::units

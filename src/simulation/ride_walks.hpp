@@ -6,7 +6,7 @@
 
 #include "math/glm.hpp"
 #include "profiling/profiler.hpp"
-#include "simulation/units.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -24,8 +24,8 @@ namespace rct3::simulation
     /// its riders on and off where they stand.
     struct RideWalks
     {
-        glm::vec3 ticket { 0.0f };  ///< Where a guest stands at the entrance to hand over their ticket
-        Radians ticket_heading { }; ///< The way they face there, as Pose::heading
+        glm::vec3 ticket { 0.0f };         ///< Where a guest stands at the entrance to hand over their ticket
+        units::Radians ticket_heading { }; ///< The way they face there, as Pose::heading
         /// By seat: from the ticket spot to the seat, and from the seat out past the exit.
         std::vector<std::vector<glm::vec3>> on { };
         std::vector<std::vector<glm::vec3>> off { };
@@ -38,7 +38,7 @@ namespace rct3::simulation
     {
         std::vector<glm::vec3> points;
         std::size_t next = 0; ///< The point walked to now
-        Seconds pause { };
+        units::Seconds pause { };
         bool off = false;
         std::optional<GestureKind> gesture { }; ///< Shown once off, on the paths
     };

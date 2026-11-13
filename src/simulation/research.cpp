@@ -115,7 +115,7 @@ namespace rct3::simulation
                 default:
                     break;
             }
-            const Money cost = item->kind == BuildKind::TrackedRide ? t.tracked_ride_cost : item->kind == BuildKind::FlatRide ? t.flat_ride_cost : item->kind == BuildKind::Shop ? t.shop_cost : t.other_cost;
+            const units::Money cost = item->kind == BuildKind::TrackedRide ? t.tracked_ride_cost : item->kind == BuildKind::FlatRide ? t.flat_ride_cost : item->kind == BuildKind::Shop ? t.shop_cost : t.other_cost;
             items.push_back({ .id = e.id, .area = area, .cost = cost.value });
         }
         return items;

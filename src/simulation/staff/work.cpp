@@ -461,13 +461,13 @@ namespace rct3::simulation::staff
                     {
                         bool dear = false;
                         bool cheap = false;
-                        const auto judge = [&](Money price, Money worth) {
+                        const auto judge = [&](units::Money price, units::Money worth) {
                             if (worth.value <= 0)
                                 return;                               // Nothing to judge it by
                             dear = dear || price.value > worth.value; // Guests would not pay it
                             cheap = cheap || static_cast<float>(price.value) <= kTuning.eating.good_value.value * static_cast<float>(worth.value);
                         };
-                        const auto flat = [](Product p) { return p == Product::Food ? kTuning.eating.food_worth : p == Product::Drink ? kTuning.eating.drink_worth : Money { }; };
+                        const auto flat = [](Product p) { return p == Product::Food ? kTuning.eating.food_worth : p == Product::Drink ? kTuning.eating.drink_worth : units::Money { }; };
                         if (shop->menu.empty())
                             judge(attraction.price, flat(shop->product));
                         for (const Ware& w : shop->menu)

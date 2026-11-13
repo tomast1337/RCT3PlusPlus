@@ -415,7 +415,7 @@ namespace rct3::simulation
             // Riders an hour over the time since the last departure, smoothed over the last few.
             if (ride.since_departure.value >= 0)
                 ride.since_departure.value += dt;
-            const auto depart = [&](std::size_t riding, Seconds& timer) {
+            const auto depart = [&](std::size_t riding, units::Seconds& timer) {
                 if (ride.since_departure.value > 0)
                 {
                     const float rate = static_cast<float>(riding) * 3600 / ride.since_departure.value;
@@ -700,7 +700,7 @@ namespace rct3::simulation
             {
                 auto& queue = station == 0 ? ride.queue : ride.stops[station - 1].queue;
                 const auto& line = station == 0 ? ride.line : ride.stops[station - 1].line;
-                Seconds& timer = station == 0 ? ride.loading : ride.stops[station - 1].loading;
+                units::Seconds& timer = station == 0 ? ride.loading : ride.stops[station - 1].loading;
                 const bool walk_on = station == 0 && walks != nullptr && !walks->on.empty();
                 const bool at_front = !queue.empty() && (line.empty() || !r.valid(queue.front()) || r.get<Stride>(queue.front()).along.value < 0.5f);
                 const bool ready = fleet != nullptr ? standing[station].has_value() : ride.phase == RidePhase::Loading;
@@ -744,7 +744,7 @@ namespace rct3::simulation
                         // An inspector rides free, telling the player when they queued for ages; a swimmer rides a pool
                         // slide free, on the complex's ticket.
                         const bool inspector = r.all_of<Staff>(guest);
-                        const Money price = r.all_of<Swimmer>(guest) ? Money { } : attraction.price;
+                        const units::Money price = r.all_of<Swimmer>(guest) ? units::Money { } : attraction.price;
                         if (!attraction.open || (!inspector && !pay(r, guest, price, &Wallet::spent_rides, park::LedgerLine::RideTickets)))
                         {
                             if (attraction.open)
@@ -893,7 +893,7 @@ namespace rct3::simulation
             be_sick(r, guest, out);
     }
 
-    RideReaction react(RideReaction now, const Felt& feel, bool running, bool lifted, Share happiness, float over, const Leanings& leanings, bool front, random::RandomState& dice, float dt)
+    RideReaction react(RideReaction now, const Felt& feel, bool running, bool lifted, units::Share happiness, float over, const Leanings& leanings, bool front, random::RandomState& dice, float dt)
     {
         const auto& k = kTuning.reactions;
         if (!running || lifted)
@@ -913,7 +913,7 @@ namespace rct3::simulation
         return hands ? RideReaction::HandsUp : RideReaction::Calm;
     }
 
-    RideReaction react_flat(RideReaction now, bool running, Share happiness, float over, const Leanings& leanings, random::RandomState& dice, float dt)
+    RideReaction react_flat(RideReaction now, bool running, units::Share happiness, float over, const Leanings& leanings, random::RandomState& dice, float dt)
     {
         const auto& k = kTuning.reactions;
         if (!running)

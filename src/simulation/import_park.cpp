@@ -910,7 +910,7 @@ namespace rct3::simulation
         for (const auto [e, a] : world.registry.view<Attraction>().each())
             if (a.saved == stall.base.id && sale)
             {
-                a.price = Money { sale->price };
+                a.price = units::Money { sale->price };
                 auto& shop = world.registry.get_or_emplace<Shop>(e);
                 shop.product = sale->shop.product;
                 shop.serve = sale->shop.serve;
@@ -1286,7 +1286,7 @@ namespace rct3::simulation
             .reliability = { std::clamp(ride.breakdown.reliability / 100, 0.0f, 1.0f) },
             .broken = broken,
             .since_inspection = { std::max(ride.base.time_since_inspection, 0.0f) },
-            .inspect_every = interval >= 0 && std::cmp_less(interval, kIntervals.size()) ? Seconds { kIntervals[static_cast<std::size_t>(interval)] } : Upkeep { }.inspect_every,
+            .inspect_every = interval >= 0 && std::cmp_less(interval, kIntervals.size()) ? units::Seconds { kIntervals[static_cast<std::size_t>(interval)] } : Upkeep { }.inspect_every,
             .called = ride.base.mechanic_asked,
             .kind = broken ? static_cast<Breakdown>(std::to_underlying(ride.breakdown.current)) : Breakdown::None,
             .last = static_cast<Breakdown>(std::to_underlying(ride.breakdown.last)),
@@ -1724,7 +1724,7 @@ namespace rct3::simulation
                 r.emplace<Wallet>(e);
                 r.emplace<staff::Rounds>(e, staff::Rounds { .seen = { { *door, 0.0f } } });
                 r.get<Errand>(e) = { .kind = ErrandKind::Swimming, .target = *door };
-                const Seconds left = saved.time_in_pool ? Seconds { std::max(*saved.time_in_pool, 0.0f) } : kTuning.pools.stay;
+                const units::Seconds left = saved.time_in_pool ? units::Seconds { std::max(*saved.time_in_pool, 0.0f) } : kTuning.pools.stay;
                 r.emplace<Swimmer>(e, Swimmer { .changed = true, .left = left, .goal = position, .in_water = std::ranges::any_of(pool.water, within) });
                 auto& pose = r.get<Pose>(e);
                 pose.position = pose.was = position;
@@ -1745,7 +1745,7 @@ namespace rct3::simulation
         return e;
     }
 
-    entt::entity add_lifeguard(SimWorld& world, glm::vec3 at, Radians heading)
+    entt::entity add_lifeguard(SimWorld& world, glm::vec3 at, units::Radians heading)
     {
         auto& r = world.registry;
         const entt::entity e = r.create();
@@ -1887,7 +1887,7 @@ namespace rct3::simulation
                 if (pool == nullptr || (std::ranges::none_of(pool->water, within) && std::ranges::none_of(pool->paved, within) && std::ranges::none_of(pool->spa, within)))
                     continue;
                 r.get<Errand>(e) = { .kind = ErrandKind::Swimming, .target = door };
-                const Seconds left = saved.time_in_pool ? Seconds { std::max(*saved.time_in_pool, 0.0f) } : kTuning.pools.stay;
+                const units::Seconds left = saved.time_in_pool ? units::Seconds { std::max(*saved.time_in_pool, 0.0f) } : kTuning.pools.stay;
                 r.emplace_or_replace<Swimmer>(e, Swimmer { .changed = true, .left = left, .goal = at, .in_water = std::ranges::any_of(pool->water, within) || std::ranges::any_of(pool->spa, within), .to_spa = state == save::model::PersonState::Jacuzzi });
                 auto& pose = r.get<Pose>(e);
                 pose.position = pose.was = at;

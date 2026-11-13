@@ -52,20 +52,20 @@ namespace rct3::simulation
 
     struct Needs
     {
-        Share hunger { };
-        Share thirst { };
-        Share bladder { };
-        Share swim { }; ///< Wish to go swimming, grown by how much they like pools
+        units::Share hunger { };
+        units::Share thirst { };
+        units::Share bladder { };
+        units::Share swim { }; ///< Wish to go swimming, grown by how much they like pools
     };
 
     struct Mood
     {
-        Share happiness { 0.5f };
-        Share energy { 0.5f };
-        Share nausea { };
-        Share tolerance { 0.5f }; ///< How well the guest's stomach takes rides: the higher, the wilder the rides they go on and the slower they sicken
-        Share wet { };            ///< From dry (0) to soaked (1)
-        Share heat { };           ///< From cool (0) to sweltering (1), out in the hot sun
+        units::Share happiness { 0.5f };
+        units::Share energy { 0.5f };
+        units::Share nausea { };
+        units::Share tolerance { 0.5f }; ///< How well the guest's stomach takes rides: the higher, the wilder the rides they go on and the slower they sicken
+        units::Share wet { };            ///< From dry (0) to soaked (1)
+        units::Share heat { };           ///< From cool (0) to sweltering (1), out in the hot sun
     };
 
     /// A place outside the park, mostly where its road leaves the map, where arriving guests appear and walk to
@@ -98,9 +98,9 @@ namespace rct3::simulation
     /// The intensity of rides a guest likes, 0..1 as rides are rated; any when they have none.
     struct Taste
     {
-        Share least { };
-        Share most { 1 };
-        Share pools { 0.5f }; ///< How much they like swimming, which their wish to swim grows by
+        units::Share least { };
+        units::Share most { 1 };
+        units::Share pools { 0.5f }; ///< How much they like swimming, which their wish to swim grows by
     };
 
     /// A guest carrying an umbrella, up while it rains.
@@ -119,8 +119,8 @@ namespace rct3::simulation
         std::uint8_t kind = 0;           ///< As Litter::kind, once dropped
         bool food = true;                ///< Else drink
         std::uint8_t bites = 0;          ///< Left; none once it is an empty
-        Share fill { };                  ///< Of their hunger or thirst each bite takes away
-        Seconds since { };               ///< Since the last bite, or since it was finished
+        units::Share fill { };           ///< Of their hunger or thirst each bite takes away
+        units::Seconds since { };        ///< Since the last bite, or since it was finished
         bool held = true;                ///< In hand; else only empties in their pockets are left
         std::uint8_t pocketed = 0;       ///< Empties in their pockets, up to kPockets
     };
@@ -129,18 +129,18 @@ namespace rct3::simulation
     struct Glance
     {
         entt::entity at = entt::null; ///< The path item looked at: jumping fountains
-        Seconds left { };
+        units::Seconds left { };
     };
 
     /// What brings guests to the park, in the registry's context, kept up from the park as it runs. Guests
     /// come in at the plain weather rate when none is there.
     struct Draw
     {
-        Money entrance_fee { };
+        units::Money entrance_fee { };
         std::uint32_t pool_squares = 0;  ///< Squares of pool water
         std::optional<float> rating { }; ///< The park's, 0..1; none before it has one
-        Money guest_cash { };            ///< What guests bring in on average; none for the tuning's
-        Money guest_bank { };            ///< What cash machines can give them on average; none for the tuning's
+        units::Money guest_cash { };     ///< What guests bring in on average; none for the tuning's
+        units::Money guest_bank { };     ///< What cash machines can give them on average; none for the tuning's
     };
 
     /// Room in the park, in the registry's context, made by open rides that are not simulated yet (water
@@ -152,16 +152,16 @@ namespace rct3::simulation
 
     struct Wallet
     {
-        Money cash { };
-        Money bank { };      ///< What cash machines can still give them
-        Money withdrawn { }; ///< What cash machines have given them
+        units::Money cash { };
+        units::Money bank { };      ///< What cash machines can still give them
+        units::Money withdrawn { }; ///< What cash machines have given them
         /// What they have paid the park in all, and for each kind of thing; toilets and first aid count in all only.
-        Money spent { };
-        Money spent_entry { };
-        Money spent_rides { };
-        Money spent_food { };
-        Money spent_drink { };
-        Money spent_souvenirs { };
+        units::Money spent { };
+        units::Money spent_entry { };
+        units::Money spent_rides { };
+        units::Money spent_food { };
+        units::Money spent_drink { };
+        units::Money spent_souvenirs { };
         bool needs_cash = false; ///< Could not afford something since they last drew cash
     };
 
@@ -173,12 +173,12 @@ namespace rct3::simulation
 
     /// Most a guest pays for `ware`: its item's worth for the weather, more in the cold for a hot drink and in
     /// the heat for an ice cream; `flat` where that is not known.
-    [[nodiscard]] Money worth_of(const Ware& ware, Money flat, float temperature);
+    [[nodiscard]] units::Money worth_of(const Ware& ware, units::Money flat, float temperature);
 
     /// The guest pays the park `price`, counted in all and under `on` (none: in all only), whether they
     /// could. The rest of their party makes up what they are short of, the richest first. The park takes it in
     /// on `line` of its Receipts.
-    bool pay(entt::registry& r, entt::entity guest, Money price, Money Wallet::* on, park::LedgerLine line);
+    bool pay(entt::registry& r, entt::entity guest, units::Money price, units::Money Wallet::* on, park::LedgerLine line);
 
     /// The next tile for `who` wandering at `at`, not back where they came from unless it is the only way.
     [[nodiscard]] NodeId wander(const PathNetwork& paths, NodeId at, NodeId came, Dice& dice, Walker who, const staff::Patrol* patrol = nullptr);
@@ -242,7 +242,7 @@ namespace rct3::simulation
     [[nodiscard]] Gait pick_gait(AgeGroup age, const Mood& mood, const Needs& needs, random::RandomState& dice);
 
     /// The ground covered in a second by a guest whose own walk is `walk`, with `energy` left, in `gait`.
-    [[nodiscard]] Pace gait_pace(Pace walk, Share energy, Gait gait);
+    [[nodiscard]] units::Pace gait_pace(units::Pace walk, units::Share energy, Gait gait);
 
     /// Guests a second coming in at a gate in `weather`: fewer in rain, storms and the cold, more on sunny days.
     [[nodiscard]] double arrivals_per_second(const Weather& weather);

@@ -8,6 +8,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
+namespace units = rct3::units;
 namespace dice_rolls = rct3::random;
 
 namespace
@@ -50,7 +51,7 @@ TEST_CASE("worn out, sick or bursting guests show it in how they walk")
 
 TEST_CASE("a guest's pace grows with their energy and with their gait")
 {
-    const Pace walk { 1.2f };
+    const units::Pace walk { 1.2f };
     CHECK(gait_pace(walk, { 1 }, Gait::Walk).value > gait_pace(walk, { 0 }, Gait::Walk).value);
     CHECK(gait_pace(walk, { 0.5f }, Gait::Run).value > 1.5f * gait_pace(walk, { 0.5f }, Gait::Walk).value);
     CHECK(gait_pace(walk, { 0.5f }, Gait::Weary).value < gait_pace(walk, { 0.5f }, Gait::Walk).value);

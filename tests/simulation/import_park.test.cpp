@@ -666,7 +666,7 @@ TEST_CASE("paths on the ground and the people on them follow the ground when it 
     };
     const entt::entity standing = guest(at(1, 0));
     const entt::entity reeling = guest(at(1, 0));
-    r.emplace<simulation::Gesture>(reeling, simulation::GestureKind::Dizzy, simulation::Seconds { 0.5f });
+    r.emplace<simulation::Gesture>(reeling, simulation::GestureKind::Dizzy, units::Seconds { 0.5f });
     const entt::entity riding = guest(at(1, 0));
     r.emplace<simulation::Thrill>(riding);
     // A handyman on the path, and a keeper on the bare ground of (3, 0).

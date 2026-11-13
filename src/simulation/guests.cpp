@@ -54,7 +54,7 @@ namespace rct3::simulation
         /// paid, when together they cannot pay for all of them: they are turned away, and no longer counted in.
         bool pay_entry(entt::registry& r, std::span<const entt::entity> party)
         {
-            const Money fee = r.ctx().contains<Draw>() ? r.ctx().get<Draw>().entrance_fee : Money { };
+            const units::Money fee = r.ctx().contains<Draw>() ? r.ctx().get<Draw>().entrance_fee : units::Money { };
             if (fee.value <= 0)
                 return true;
             if (std::ranges::fold_left(party, std::int64_t { 0 }, [&](std::int64_t sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) >= fee.value * static_cast<std::int64_t>(party.size()))
@@ -361,13 +361,13 @@ namespace rct3::simulation
         return std::max(pools.least_wish.value, kTuning.needs.want.value + cold - hot);
     }
 
-    Money worth_of(const Ware& ware, Money flat, float temperature)
+    units::Money worth_of(const Ware& ware, units::Money flat, float temperature)
     {
         const std::size_t band = temperature < kTuning.weather.cold.value ? 1 : temperature >= kTuning.weather.hot.value ? 2 : 0;
         return ware.worth[band].value > 0 ? ware.worth[band] : flat;
     }
 
-    bool pay(entt::registry& r, entt::entity guest, Money price, Money Wallet::* on, park::LedgerLine line)
+    bool pay(entt::registry& r, entt::entity guest, units::Money price, units::Money Wallet::* on, park::LedgerLine line)
     {
         std::vector<entt::entity> payers { guest };
         if (const auto* member = r.try_get<Member>(guest); member != nullptr && r.valid(member->party))
@@ -879,7 +879,7 @@ namespace rct3::simulation
                     // with the leader, never passing them. A tile or more behind they run; else they keep the
                     // leader's step, running when the leader does.
                     const bool behind = stride.to != lead.to && stride.to != lead.from;
-                    const Share energy = r.get<Mood>(followers[i]).energy;
+                    const units::Share energy = r.get<Mood>(followers[i]).energy;
                     stride.gait = behind || lead.gait == Gait::Run ? Gait::Run : Gait::Walk;
                     float left = (behind ? gait_pace(stride.speed, energy, Gait::Run).value : kTuning.walking.catch_up.value * stride.speed.value) * dt;
                     for (int tiles = 0; tiles < 3 && left > 0; ++tiles)
@@ -1047,10 +1047,10 @@ namespace rct3::simulation
             // them, any of those; a stall with no menu sells one thing at its price. What a thing is worth is its
             // item's for the weather, more in the cold for a hot drink and in the heat for an ice cream; where that
             // is not known, the same for every food or drink.
-            const Money flat_worth = shop.product == Product::Food ? kTuning.eating.food_worth : kTuning.eating.drink_worth;
+            const units::Money flat_worth = shop.product == Product::Food ? kTuning.eating.food_worth : kTuning.eating.drink_worth;
             const auto worth = [&](const Ware& w) { return worth_of(w, flat_worth, weather.temperature.value); };
             std::size_t ware = shop.menu.size();
-            Money price = attraction.price;
+            units::Money price = attraction.price;
             if (meal && !shop.menu.empty())
             {
                 std::size_t fair = 0, affordable = 0;
@@ -1090,7 +1090,7 @@ namespace rct3::simulation
                 think(r, guest, ThoughtKind::NotPayingToilet, at, now);
                 return false;
             }
-            Money Wallet::* const on = shop.product == Product::Drink ? &Wallet::spent_drink : shop.product == Product::Food ? &Wallet::spent_food : umbrella ? &Wallet::spent_souvenirs : nullptr;
+            units::Money Wallet::* const on = shop.product == Product::Drink ? &Wallet::spent_drink : shop.product == Product::Food ? &Wallet::spent_food : umbrella ? &Wallet::spent_souvenirs : nullptr;
             if (!attraction.open || wallet.cash.value < price.value || !pay(r, guest, price, on, meal ? park::LedgerLine::FoodDrinkSales : park::LedgerLine::ShopSales))
             {
                 mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
@@ -1204,7 +1204,7 @@ namespace rct3::simulation
                 // aid the longer the more they needed it. The rest of a party waits nearby (5.).
                 const auto need = [&](entt::entity m) { return r.all_of<Staff>(m) ? 0.0f : shop->product == Product::Toilet ? r.get<Needs>(m).bladder.value : shop->product == Product::FirstAid ? r.get<Mood>(m).nausea.value : 0.0f; };
                 const auto served = [&](entt::entity m, float needed) {
-                    const Seconds turn { std::max(kTuning.facilities.served.value, needed * kTuning.facilities.relief.value) };
+                    const units::Seconds turn { std::max(kTuning.facilities.served.value, needed * kTuning.facilities.relief.value) };
                     r.get<Errand>(m) = { .kind = ErrandKind::Buying, .target = arrived[i], .rest = ticks(turn.value), .turn = turn };
                     auto& stride = r.get<Stride>(m);
                     const NodeId at = r.get<Attraction>(arrived[i]).entrance;
@@ -1437,7 +1437,7 @@ namespace rct3::simulation
         return random::chance(dice, gaits.run[std::to_underlying(age)].value * mood.energy.value) ? Gait::Run : Gait::Walk;
     }
 
-    Pace gait_pace(Pace walk, Share energy, Gait gait)
+    units::Pace gait_pace(units::Pace walk, units::Share energy, Gait gait)
     {
         const auto& gaits = kTuning.gaits;
         const double by_gait = gait == Gait::Run ? gaits.run_pace.value : gait == Gait::Weary ? gaits.weary_pace.value : gait == Gait::Queasy ? gaits.queasy_pace.value : gait == Gait::Bursting ? gaits.bursting_pace.value : 1.0;
@@ -1594,9 +1594,9 @@ namespace rct3::simulation
             r.emplace<Taste>(guest, least, std::clamp(band.most.value + spread(), least, 1.0f), liking);
             // Around the park's averages, each on its own.
             const auto* draw = r.ctx().find<Draw>();
-            const auto around = [&](Money average, Money fallback) { return Money { std::llround(static_cast<double>(average.value > 0 ? average.value : fallback.value) * (1 + random::between(dice, -1.0, 1.0) * kTuning.arrivals.cash_spread.value)) }; };
-            const Money cash = around(draw != nullptr ? draw->guest_cash : Money { }, kTuning.arrivals.cash);
-            r.emplace<Wallet>(guest, cash, around(draw != nullptr ? draw->guest_bank : Money { }, kTuning.arrivals.bank));
+            const auto around = [&](units::Money average, units::Money fallback) { return units::Money { std::llround(static_cast<double>(average.value > 0 ? average.value : fallback.value) * (1 + random::between(dice, -1.0, 1.0) * kTuning.arrivals.cash_spread.value)) }; };
+            const units::Money cash = around(draw != nullptr ? draw->guest_cash : units::Money { }, kTuning.arrivals.cash);
+            r.emplace<Wallet>(guest, cash, around(draw != nullptr ? draw->guest_bank : units::Money { }, kTuning.arrivals.bank));
             start_walking(world, guest, at);
             ++r.ctx().emplace<Turnstile>().in[static_cast<std::size_t>(age)];
         }

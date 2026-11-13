@@ -13,7 +13,7 @@
 #include "simulation/crash.hpp"
 #include "simulation/entt.hpp"
 #include "simulation/path_network.hpp"
-#include "simulation/units.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -64,7 +64,7 @@ namespace rct3::simulation
         std::vector<NodeId> line { };        ///< As CycleRide::line
         NodeId exit = kNoNode;               ///< Where riders get off; none lets no one off here
         std::vector<entt::entity> queue { }; ///< Guests waiting, first in line first
-        Seconds loading { };                 ///< The train standing here has been loading
+        units::Seconds loading { };          ///< The train standing here has been loading
         static constexpr std::size_t kNone = std::numeric_limits<std::size_t>::max();
         std::size_t saved = kNone;           ///< Its place among the saved ride's stations; kNone till it has doors
         std::vector<glm::vec3> platform { }; ///< Points along its station track
@@ -76,29 +76,29 @@ namespace rct3::simulation
         std::uint32_t room = 0;     ///< Guests the ride makes room for in the park; 0 when its data does not say
         /// How long each part of a cycle lasts, in seconds: starting, one loop of running, and stopping. A
         /// ride timed by a whole lap runs one loop of it.
-        Seconds start { };
-        Seconds run { };
-        Seconds stop { };
+        units::Seconds start { };
+        units::Seconds run { };
+        units::Seconds stop { };
         std::uint32_t loops = 1;
         RidePhase phase = RidePhase::Loading;
-        Seconds in_phase { };                ///< Into the phase; loading counts in `loading` instead
+        units::Seconds in_phase { };         ///< Into the phase; loading counts in `loading` instead
         std::uint32_t loop = 0;              ///< Loops of running done this cycle
-        Share excitement { 0.5f };           ///< How much a ride cheers its riders
-        Share intensity { 0.3f };            ///< How much it shakes them
-        Share nausea { 0.3f };               ///< How sick it makes them
-        Share cover { };                     ///< How much of it is under cover
+        units::Share excitement { 0.5f };    ///< How much a ride cheers its riders
+        units::Share intensity { 0.3f };     ///< How much it shakes them
+        units::Share nausea { 0.3f };        ///< How sick it makes them
+        units::Share cover { };              ///< How much of it is under cover
         bool splash = false;                 ///< Rides through water, splashing its riders
         std::vector<entt::entity> queue { }; ///< Guests waiting, first in line first
         /// The queue line's tiles from the entrance back to where it meets the paths; empty when guests walk
         /// straight in from a path.
         std::vector<NodeId> line { };
-        NodeId exit = kNoNode;                ///< Where riders get off; the attraction's entrance when kNoNode
-        std::vector<entt::entity> riders { }; ///< Guests on the ride now
-        Seconds loading { };                  ///< The train at the start, or the loading ride, has been loading
-        Seconds since_departure { -1 };       ///< Since a train or go last left; -1 before the first
-        float per_hour = 0;                   ///< Riders an hour, smoothed over the last departures; 0 before two
-        bool synced = false;                  ///< Its train is ready and waits for those at the stations beside it
-        bool released = false;                ///< Those are ready too: it leaves with them
+        NodeId exit = kNoNode;                 ///< Where riders get off; the attraction's entrance when kNoNode
+        std::vector<entt::entity> riders { };  ///< Guests on the ride now
+        units::Seconds loading { };            ///< The train at the start, or the loading ride, has been loading
+        units::Seconds since_departure { -1 }; ///< Since a train or go last left; -1 before the first
+        float per_hour = 0;                    ///< Riders an hour, smoothed over the last departures; 0 before two
+        bool synced = false;                   ///< Its train is ready and waits for those at the stations beside it
+        bool released = false;                 ///< Those are ready too: it leaves with them
         /// Its stations after the first (whose queue, line and exit are those above), in the order its trains
         /// come to them; empty for a ride with one
         std::vector<Stop> stops { };
@@ -162,7 +162,7 @@ namespace rct3::simulation
     struct Wrecks
     {
         std::vector<std::vector<Wreck>> trains { }; ///< By train; empty for one not crashed
-        Seconds since { -1 };                       ///< Since the last crash; -1 once the park has forgotten it
+        units::Seconds since { -1 };                ///< Since the last crash; -1 once the park has forgotten it
         std::uint32_t crashes = 0;                  ///< Since the run began
         /// Dangerous happenings for the awards to count, since the run began: each crash of an open ride, and
         /// each car of it with riders.
@@ -220,13 +220,13 @@ namespace rct3::simulation
     /// strong forces; covering their eyes going down a ride `over` (intensity past what they like) too wild for
     /// them; throwing up their hands when `happiness` thrills them or floating over a hill, more readily in
     /// the `front` car, and keeping them up till the forces grow too strong. Drawn with `dice`.
-    [[nodiscard]] RideReaction react(RideReaction now, const Felt& feel, bool running, bool lifted, Share happiness, float over, const Leanings& leanings, bool front, random::RandomState& dice, float dt);
+    [[nodiscard]] RideReaction react(RideReaction now, const Felt& feel, bool running, bool lifted, units::Share happiness, float over, const Leanings& leanings, bool front, random::RandomState& dice, float dt);
 
     /// How a flat ride's rider reacting as `now` reacts `dt` seconds on, the ride `running` its cycle or not:
     /// waiting while it stands; covering their eyes on a ride `over` (intensity past what they like) too wild
     /// for them; otherwise throwing up their hands, once and for the rest of the run, when `happiness` thrills
     /// them or the ride suits them. Drawn with `dice`.
-    [[nodiscard]] RideReaction react_flat(RideReaction now, bool running, Share happiness, float over, const Leanings& leanings, random::RandomState& dice, float dt);
+    [[nodiscard]] RideReaction react_flat(RideReaction now, bool running, units::Share happiness, float over, const Leanings& leanings, random::RandomState& dice, float dt);
 
     /// How exciting a guest of `age` finds a ride rated `excitement`: in the dark a coaster thrills teens more
     /// and families less.

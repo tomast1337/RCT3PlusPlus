@@ -240,7 +240,7 @@ namespace rct3::simulation
                 const glm::vec3 landed = pose.position;
                 const Dice dice = r.get<Dice>(e);
                 const auto* swam = r.try_get<Swimmer>(e); // Off one of its slides, with the time they had left
-                const Seconds left = swam != nullptr ? swam->left : kTuning.pools.stay;
+                const units::Seconds left = swam != nullptr ? swam->left : kTuning.pools.stay;
                 r.remove<Dropped>(e);
                 start_walking(world, e, door_node);
                 r.get<Dice>(e) = dice;

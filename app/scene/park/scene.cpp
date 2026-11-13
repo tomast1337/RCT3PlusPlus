@@ -1554,7 +1554,7 @@ namespace rct3::scene::park
                     {
                         // Facing out over the front of the chair, which its model has along -Z.
                         const glm::mat4& m = scene.places.transforms[c];
-                        const simulation::Radians facing { std::atan2(-m[2][0], -m[2][2]) };
+                        const units::Radians facing { std::atan2(-m[2][0], -m[2][2]) };
                         if (const auto sitter = std::ranges::find_if(lifeguards, [&](entt::entity e) { return r.valid(e) && seated(e, c); }); sitter != lifeguards.end())
                         {
                             auto& pose = r.get<simulation::Pose>(*sitter);

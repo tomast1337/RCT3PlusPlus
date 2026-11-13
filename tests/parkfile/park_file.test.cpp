@@ -25,7 +25,7 @@ namespace
         r.emplace<simulation::Pose>(a, glm::vec3 { 1.5f, 2.0f, -3.25f }, 0.5f);
         r.emplace<simulation::Needs>(a, 0.1f, 0.9f, 0.3f);
         r.emplace<simulation::Mood>(a, 0.8f, 0.6f, 0.0f);
-        r.emplace<simulation::Wallet>(a, simulation::Money { 2550 }, simulation::Money { 9000 }, simulation::Money { 1000 }, simulation::Money { 700 });
+        r.emplace<simulation::Wallet>(a, units::Money { 2550 }, units::Money { 9000 }, units::Money { 1000 }, units::Money { 700 });
         const auto gone = r.create();
         const auto b = r.create();
         r.destroy(gone); // A gap in the ids

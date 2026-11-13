@@ -10,7 +10,7 @@
 //   std::array and glm vectors       each element
 //   std::optional                    u8 1 then the value, or u8 0
 //   std::variant                     u8 index of the alternative held, then its value (std::monostate: none)
-//   a struct                         each member in the order declared; a unit (simulation/units.hpp) as its number
+//   a struct                         each member in the order declared; a unit (units/units.hpp) as its number
 //
 // A chunk written this way starts with a u64 hash of its type's layout (the kinds above, nested), so a reader
 // whose models have changed since the file was written refuses the chunk rather than misread it.

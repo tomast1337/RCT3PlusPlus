@@ -15,6 +15,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
+namespace units = rct3::units;
 
 namespace
 {
@@ -131,7 +132,7 @@ TEST_CASE("an inspector judges a souvenir stall's prices against what its items 
     park.path({ 0, 0 }, { 4, 0 });
     auto& r = park.world().registry;
     const auto stall = park.shop("Umbrellas", Product::Umbrella, { 4, 0 }, 900);
-    r.get<Shop>(stall).menu = { { .product = Product::Umbrella, .price = { 900 }, .worth = { Money { 600 }, Money { 600 }, Money { 600 } } } };
+    r.get<Shop>(stall).menu = { { .product = Product::Umbrella, .price = { 900 }, .worth = { units::Money { 600 }, units::Money { 600 }, units::Money { 600 } } } };
     const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });
     r.get<Staff>(inspector).tasks = kSouvenirsTask;
     CHECK(park.run_until([&] { return r.get<Errand>(inspector).kind == ErrandKind::Buying; }, 60));

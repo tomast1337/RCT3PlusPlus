@@ -122,7 +122,7 @@ TEST_CASE("pages are written from the attraction's state")
     save::model::Ride ride;
     ride.base.name = "Ride";
     ride.base.state = save::model::AttractionState::Open;
-    ride.base.total_profit = 1234;
+    ride.base.total_profit = { 1234 };
     const AttractionFacts f { &ride.base, &ride, nullptr };
     const InfoUnits units;
 
@@ -375,7 +375,7 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     s.add("AttractionCustomersDialogLabel_Customers", u"Per hour");
     save::model::Ride ride;
     ride.kind = save::model::RideKind::Flat;
-    ride.ticket_price = 150;
+    ride.ticket_price = { 150 };
     ride.breakdown.inspection_interval = 2;
     const AttractionFacts f { &ride.base, &ride, nullptr, { 3, 4, 5 } };
 
@@ -494,7 +494,7 @@ TEST_CASE("a running ride shows its riders an hour, the wait its queue now has a
     s.add("AttractionVehicleDialogLabelCapacity", u"Seats");
     save::model::Ride ride;
     ride.kind = save::model::RideKind::Tracked;
-    ride.stations.emplace_back().queue_time = 600; // What the save kept, no longer shown
+    ride.stations.emplace_back().queue_time = { 600 }; // What the save kept, no longer shown
     AttractionFacts f { &ride.base, &ride, nullptr };
     f.flow = RideFlow { .seats = 24, .queued = 60, .per_hour = 720 };
     const auto value = [](const InfoPage& page, std::u16string_view label) { return std::ranges::find(page.lines, std::u16string(label), &InfoLine::label)->value; };

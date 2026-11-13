@@ -18,6 +18,7 @@
 
 #include "save/save_file.hpp"
 #include "save/value.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -124,9 +125,9 @@ namespace rct3::save::model
         /// turn: all three kept the same repair status, while this bit was set on exactly the broken ones, which
         /// were also the ones taped off and the ones missing from the park's ideal guest count.
         static constexpr std::uint32_t kBrokenDown = 1u << 2;
-        float build_time = 0; ///< Game clock seconds when built
+        units::Seconds build_time { }; ///< Game clock when built
         std::int64_t total_guests = 0;
-        std::int64_t total_profit = 0; ///< Hundredths
+        units::Money total_profit { };
         std::int64_t running_cost = 0; ///< Assessed running cost per interval, hundredths
         float popularity = 0;
         float satisfaction = 0;
@@ -270,10 +271,10 @@ namespace rct3::save::model
         std::optional<PlacementSpot> exit_spot { };
         float entrance_timer = 0;
         float exit_timer = 0;
-        ObjectId queue_line = 0;      ///< 0 when the line does not exist
-        std::int32_t queue_size = 0;  ///< Stored size of the queue line (0 without one)
-        std::int32_t queue_tiles = 0; ///< Queue path tiles in the file that belong to the line
-        float queue_time = 0;         ///< Estimated queue time, seconds
+        ObjectId queue_line = 0;       ///< 0 when the line does not exist
+        std::int32_t queue_size = 0;   ///< Stored size of the queue line (0 without one)
+        std::int32_t queue_tiles = 0;  ///< Queue path tiles in the file that belong to the line
+        units::Seconds queue_time { }; ///< Estimated queue time
     };
 
     // ---------------------------------------------------------------------------------------------------------
@@ -299,13 +300,13 @@ namespace rct3::save::model
         ObjectId scenery = 0;   ///< World object that carries the piece, 0 if none
         std::int32_t tile_x = 0;
         std::int32_t tile_z = 0;
-        std::int32_t height = 0;    ///< Integer height level
-        float height_adjust = 0;    ///< Newer files only
-        std::uint8_t direction = 0; ///< Quarter turns, 0..3
-        std::uint8_t corner = 0;    ///< Sub-tile corner, 0..3
-        bool reversed = false;      ///< Traversed against the section's authored direction
-        float start_distance = 0;   ///< Metres from the start of the track, increasing along the chain
-        float reverse_start_distance = 0;
+        std::int32_t height = 0;            ///< Integer height level
+        float height_adjust = 0;            ///< Newer files only
+        std::uint8_t direction = 0;         ///< Quarter turns, 0..3
+        std::uint8_t corner = 0;            ///< Sub-tile corner, 0..3
+        bool reversed = false;              ///< Traversed against the section's authored direction
+        units::Distance start_distance { }; ///< From the start of the track, increasing along the chain
+        units::Distance reverse_start_distance { };
         RideColours colours { };
         /// Per-piece operating parameters. Stored as plain integers; their meaning is only partly established.
         std::int32_t brake_speed = -1;
@@ -407,7 +408,7 @@ namespace rct3::save::model
         ObjectId ride = 0;                 ///< Back reference as stored
         std::int32_t index = 0;            ///< Index as stored; equals the position in Ride::trains in sound files
         TrainState state = TrainState { }; ///< As stored; most numbers are not named
-        float state_time = 0;              ///< Seconds in the current state
+        units::Seconds state_time { };     ///< In the current state
         ObjectId front_piece = 0;
         ObjectId rear_piece = 0;
         float distance = 0; ///< Metres along the track
@@ -435,7 +436,7 @@ namespace rct3::save::model
         RideKind kind = RideKind::Tracked;
         AttractionCommon base { };
         OperatingMode mode = OperatingMode::ContinuousCircuit;
-        std::int64_t ticket_price = 0; ///< Hundredths
+        units::Money ticket_price { };
         std::vector<Station> stations { };
         std::vector<IntervalStats> intervals { };
         std::vector<ThoughtEntry> thoughts { };
@@ -477,8 +478,8 @@ namespace rct3::save::model
         std::int32_t loop_count = 0;
 
         // Special attractions
-        std::int64_t total_withdrawn = 0;   ///< Cash points, hundredths
-        std::int64_t average_withdrawn = 0; ///< Hundredths
+        units::Money total_withdrawn { }; ///< Cash points
+        units::Money average_withdrawn { };
     };
 
     struct StallItem

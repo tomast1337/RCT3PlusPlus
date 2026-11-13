@@ -1127,7 +1127,7 @@ namespace rct3::simulation
             // Cash machines break down as stalls do; toilets and first aid do not.
             const bool breaks = *product == Product::CashMachine;
             const bool broken = breaks && (ride.base.flags & save::model::AttractionCommon::kBrokenDown) != 0;
-            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = ride.base.name, .entrance = entrance, .price = std::max<std::int64_t>(ride.ticket_price, 0), .open = ride.base.state == save::model::AttractionState::Open && !broken, .saved = ride.base.id, .running_cost = { ride.base.running_cost } });
+            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = ride.base.name, .entrance = entrance, .price = units::Money { std::max<std::int64_t>(ride.ticket_price.value, 0) }, .open = ride.base.state == save::model::AttractionState::Open && !broken, .saved = ride.base.id, .running_cost = { ride.base.running_cost } });
             r.emplace<Shop>(e, *product);
             if (breaks)
                 r.emplace<Upkeep>(e, Upkeep { .broken = broken, .inspect_every = { -1 }, .break_in = { 0 } });
@@ -1724,7 +1724,7 @@ namespace rct3::simulation
                 r.emplace<Wallet>(e);
                 r.emplace<staff::Rounds>(e, staff::Rounds { .seen = { { *door, 0.0f } } });
                 r.get<Errand>(e) = { .kind = ErrandKind::Swimming, .target = *door };
-                const units::Seconds left = saved.time_in_pool ? units::Seconds { std::max(*saved.time_in_pool, 0.0f) } : kTuning.pools.stay;
+                const units::Seconds left = saved.time_in_pool ? units::Seconds { std::max(saved.time_in_pool->value, 0.0f) } : kTuning.pools.stay;
                 r.emplace<Swimmer>(e, Swimmer { .changed = true, .left = left, .goal = position, .in_water = std::ranges::any_of(pool.water, within) });
                 auto& pose = r.get<Pose>(e);
                 pose.position = pose.was = position;
@@ -1888,7 +1888,7 @@ namespace rct3::simulation
                 if (pool == nullptr || (std::ranges::none_of(pool->water, within) && std::ranges::none_of(pool->paved, within) && std::ranges::none_of(pool->spa, within)))
                     continue;
                 r.get<Errand>(e) = { .kind = ErrandKind::Swimming, .target = door };
-                const units::Seconds left = saved.time_in_pool ? units::Seconds { std::max(*saved.time_in_pool, 0.0f) } : kTuning.pools.stay;
+                const units::Seconds left = saved.time_in_pool ? units::Seconds { std::max(saved.time_in_pool->value, 0.0f) } : kTuning.pools.stay;
                 r.emplace_or_replace<Swimmer>(e, Swimmer { .changed = true, .left = left, .goal = at, .in_water = std::ranges::any_of(pool->water, within) || std::ranges::any_of(pool->spa, within), .to_spa = state == save::model::PersonState::Jacuzzi });
                 auto& pose = r.get<Pose>(e);
                 pose.position = pose.was = at;

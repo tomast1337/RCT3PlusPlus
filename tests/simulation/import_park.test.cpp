@@ -169,7 +169,7 @@ TEST_CASE("a ride comes over with its queue line, from the entrance back to the 
     ride.kind = save::model::RideKind::Flat;
     ride.base.name = "Spinner";
     ride.base.symbol = "BumperBoats:ffr"; // Boats, which splash their riders
-    ride.ticket_price = 150;
+    ride.ticket_price = { 150 };
     ride.assessment = { .valid = true, .excitement = 5, .intensity = 2, .nausea = 12 };
     save::model::Station& station = ride.stations.emplace_back();
     station.entrance_spot = save::model::PlacementSpot { .col = 6, .row = 0, .direction = 2 }; // Its back to (5, 0)

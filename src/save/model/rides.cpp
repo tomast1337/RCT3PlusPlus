@@ -561,8 +561,8 @@ namespace rct3::save::model
                                 .direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer()),
                                 .corner = static_cast<std::uint8_t>(at[id::kPieceCorner].integer()),
                                 .reversed = f[id::kReversed].boolean(),
-                                .start_distance = f[id::kStartDistance].number(),
-                                .reverse_start_distance = f[id::kStartDistanceBack].number(),
+                                .start_distance = units::Distance { f[id::kStartDistance].number() },
+                                .reverse_start_distance = units::Distance { f[id::kStartDistanceBack].number() },
                                 .colours = colours_of(f[id::kPieceColours]),
                                 .brake_speed = f[id::kPieceBrake].i32(-1),
                                 .holding_time = f[id::kPieceHolding].i32(0),
@@ -658,9 +658,9 @@ namespace rct3::save::model
                     .name = f[id::kName].text(),
                     .state = static_cast<AttractionState>(f[id::kState].i32()),
                     .flags = static_cast<std::uint32_t>(f[id::kFlags].integer()),
-                    .build_time = f[id::kBuildTime].number(),
+                    .build_time = units::Seconds { f[id::kBuildTime].number() },
                     .total_guests = f[id::kTotalGuests].integer(),
-                    .total_profit = f[id::kTotalProfit].integer(),
+                    .total_profit = units::Money { f[id::kTotalProfit].integer() },
                     .running_cost = f[id::kRunningCost].integer(),
                     .popularity = f[id::kPopularity].number(),
                     .satisfaction = f[id::kSatisfaction].number(),
@@ -767,7 +767,7 @@ namespace rct3::save::model
                         .exit_spot = spot_of(exit),
                         .entrance_timer = v[id::kEntranceTimer].number(),
                         .exit_timer = v[id::kExitTimer].number(),
-                        .queue_time = v[id::kQueueTime].number(),
+                        .queue_time = units::Seconds { v[id::kQueueTime].number() },
                     };
                     if (auto q = fetch(v[id::kQueueLineRef].ref(), Role::QueueLine))
                     {
@@ -786,7 +786,7 @@ namespace rct3::save::model
             {
                 const View f(d.fields);
                 ride.mode = static_cast<OperatingMode>(f[id::kOpMode].i32());
-                ride.ticket_price = f[id::kTicket].integer();
+                ride.ticket_price = units::Money { f[id::kTicket].integer() };
                 ride.intervals = read_intervals(f);
                 ride.thoughts = read_thoughts(f);
 
@@ -942,8 +942,8 @@ namespace rct3::save::model
                 }
                 else
                 {
-                    ride.total_withdrawn = f[id::kTotalWithdrawn].integer();
-                    ride.average_withdrawn = f[id::kAverageWithdrawn].integer();
+                    ride.total_withdrawn = units::Money { f[id::kTotalWithdrawn].integer() };
+                    ride.average_withdrawn = units::Money { f[id::kAverageWithdrawn].integer() };
                 }
                 model_.rides.push_back(std::move(ride));
             }
@@ -1084,7 +1084,7 @@ namespace rct3::save::model
                         .ride = tf[id::kTrainRide].ref(),
                         .index = tf[id::kWhichTrain].i32(),
                         .state = static_cast<TrainState>(tf[id::kState].i32()),
-                        .state_time = tf[id::kStateTime].number(),
+                        .state_time = units::Seconds { tf[id::kStateTime].number() },
                         .front_piece = live(tf[id::kFrontPiece]),
                         .rear_piece = live(tf[id::kRearPiece]),
                         .distance = tf[id::kDistance].number(),

@@ -264,11 +264,11 @@ namespace rct3::ui::screens::info
             add(page, strings, "AttractionFinancesDialogLabel_RunningCost", money_text(units.currency, units::Money { f.common->running_cost }));
             add(page, strings, "AttractionFinancesDialogLabel_Profit", missing());
             page.lines.push_back({ });
-            add(page, strings, "AttractionFinancesDialogLabel_TotalProfit", money_text(units.currency, units::Money { f.common->total_profit }));
+            add(page, strings, "AttractionFinancesDialogLabel_TotalProfit", money_text(units.currency, f.common->total_profit));
             if (f.ride == nullptr)
                 return;
             const bool ride = f.ride->kind != save::model::RideKind::Special;
-            page.controls.push_back(price(control_id(AttractionControl::Price), "AttractionFinancesDialogLabel_AdmissionPrice", text(strings, "AttractionFinancesDialogLabel_AdmissionPrice"), f.ride->ticket_price, ride ? kMostRidePrice : kMostPrice));
+            page.controls.push_back(price(control_id(AttractionControl::Price), "AttractionFinancesDialogLabel_AdmissionPrice", text(strings, "AttractionFinancesDialogLabel_AdmissionPrice"), f.ride->ticket_price.value, ride ? kMostRidePrice : kMostPrice));
             // The price over the sums, as the player sets it first.
             page.controls_after = 0;
         }
@@ -306,7 +306,7 @@ namespace rct3::ui::screens::info
             {
                 float longest = 0;
                 for (const save::model::Station& s : f.ride->stations)
-                    longest = std::max(longest, s.queue_time);
+                    longest = std::max(longest, s.queue_time.value);
                 // Running, the wait the queue now has at the rate the ride takes riders; unknown until measured.
                 const bool unknown = f.flow && !measured && f.flow->queued > 0;
                 if (f.flow)

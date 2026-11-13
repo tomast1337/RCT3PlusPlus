@@ -545,7 +545,7 @@ namespace rct3::ui::screens::management
                     return;
                 const AttractionTakings now = f.takings ? f.takings(a.id) : AttractionTakings { };
                 const std::int64_t guests = a.total_guests + now.customers;
-                const std::int64_t profit = a.total_profit + now.income;
+                const std::int64_t profit = a.total_profit.value + now.income;
                 page.rows.push_back({ { info::attraction_name(a, strings), whole(guests), money(units, units::Money { a.running_cost }), money(units, units::Money { profit }) }, { std::nullopt, static_cast<double>(guests), static_cast<double>(a.running_cost), static_cast<double>(profit) }, management_row_id(ref) });
             };
             for (std::size_t i = 0; i < f.rides->rides.size(); ++i)
@@ -750,8 +750,8 @@ namespace rct3::ui::screens::management
             const auto others = [&](widgets::TableRow& row, const save::model::AttractionCommon& a) {
                 row.cells.push_back(whole(a.total_guests));
                 row.keys.emplace_back(static_cast<double>(a.total_guests));
-                row.cells.push_back(money(units, units::Money { a.total_profit }));
-                row.keys.emplace_back(static_cast<double>(a.total_profit));
+                row.cells.push_back(money(units, a.total_profit));
+                row.keys.emplace_back(static_cast<double>(a.total_profit.value));
             };
             for (std::size_t i = 0; i < f.rides->rides.size(); ++i)
             {
@@ -767,7 +767,7 @@ namespace rct3::ui::screens::management
                     for (const save::model::Station& s : r.stations)
                     {
                         queue += s.queue_size;
-                        wait += s.queue_time;
+                        wait += s.queue_time.value;
                     }
                     const float minutes = r.stations.empty() ? 0 : wait / static_cast<float>(r.stations.size()) / 60;
                     row.cells.push_back(whole(queue));

@@ -317,7 +317,7 @@ namespace rct3::scene::park
                     const auto into = cycle != nullptr ? simulation::seconds_into_cycle(*cycle) : std::nullopt;
                     const float length = cycle != nullptr ? simulation::cycle_seconds(*cycle) : 0.0f;
                     // Scenery and stalls carry on from where the save left them, each at its own point in its loop.
-                    const float idle = scene.park_clock + (boned.ride == entt::null ? scene.objects[boned.object].motion_time : 0.0f);
+                    const float idle = scene.park_clock + (boned.ride == entt::null ? scene.objects[boned.object].motion_time.value : 0.0f);
                     playing = rct3::park::flat_ride_motion(seconds, length, into ? std::min(*into + scene.sim_time, length) : 0.0f, into.has_value(), idle);
                 }
                 const auto [motion, time] = playing;

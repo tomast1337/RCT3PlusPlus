@@ -529,7 +529,7 @@ namespace rct3::save::model
                 .attraction_info = ref(get(at::attraction_info), index),
                 .route_controller = ref(get(at::route_controller), index),
                 .holder = ref(get(at::holders), index),
-                .time_to_next_think = f32(get(at::time_to_next_think)),
+                .time_to_next_think = units::Seconds { f32(get(at::time_to_next_think)) },
                 .thinks_to_big_think = i32(get(at::thinks_to_big)),
             };
             if (std::optional<const Value&> world = get(at::world_matrix))
@@ -781,7 +781,7 @@ namespace rct3::save::model
             .leaving_due_to_closed_park = flag(get(at::leaving_closed)),
             .pool_need = opt_f32(get(at::pool_need)),
             .pool_preference = opt_f32(get(at::pool_preference)),
-            .time_in_pool = opt_f32(get(at::time_in_pool)),
+            .time_in_pool = opt_f32(get(at::time_in_pool)).transform([](float s) { return units::Seconds { s }; }),
             .price_modifier = opt_f32(get(at::price_modifier)),
         };
     }
@@ -801,7 +801,7 @@ namespace rct3::save::model
             .training = i32(get(at::training)),
             .laziness = f32(get(at::laziness)),
             .happiness = f32(get(at::happiness), 0.5f),
-            .think_timer = f32(get(at::think_timer)),
+            .think_timer = units::Seconds { f32(get(at::think_timer)) },
             .last_task_type = i32(get(at::last_task_type)),
             .thinks_since_last_task = i32(get(at::thinks_last_task), -1),
             .thinks_since_different_task = i32(get(at::thinks_different_task), -1),
@@ -809,7 +809,7 @@ namespace rct3::save::model
             .thinks_since_happy = i32(get(at::thinks_happy), -1),
             .patrol = { u8(get(at::start_col)), u8(get(at::start_row)), u8(get(at::grid_x)), u8(get(at::grid_y)), flag(get(at::start_state)) },
             .task_flags = i32(get(at::task_flags)),
-            .time_in_pool = opt_f32(get(at::time_in_pool)),
+            .time_in_pool = opt_f32(get(at::time_in_pool)).transform([](float s) { return units::Seconds { s }; }),
         };
         switch (c->kind)
         {

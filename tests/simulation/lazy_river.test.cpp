@@ -51,7 +51,7 @@ namespace
         save::model::Ride& ride = rides.rides.emplace_back();
         ride.mode = save::model::OperatingMode::LazyRiver;
         ride.base.state = save::model::AttractionState::Open;
-        ride.ticket_price = 100;
+        ride.ticket_price = { 100 };
         const std::array coasters { std::optional(course) };
         return import_rides(park.world(), rides, { }, coasters).front();
     }

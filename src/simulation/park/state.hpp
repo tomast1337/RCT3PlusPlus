@@ -40,12 +40,12 @@ namespace rct3::simulation::park
         save::model::CalendarDate date; ///< The calendar's date at `time`
         save::model::WeatherType weather = save::model::WeatherType::Unknown;
         std::optional<save::model::WeatherType> forecast; ///< The weather on its way
-        std::optional<float> temperature;                 ///< Degrees Celsius
-        float wind = 0;                                   ///< How strong the wind blows, 0 calm to 1 strong
-        std::int32_t climate = 0;                         ///< The park file's climate (simulation::Climate)
-        float weather_hold = 0;                           ///< Calendar units before the forecast arrives
-        float wind_change = 0;                            ///< How fast the wind is rising (falling when negative)
-        float wind_wait = 0;                              ///< Calendar units to the wind's next change; not saved
+        std::optional<units::Degrees> temperature;
+        float wind = 0;           ///< How strong the wind blows, 0 calm to 1 strong
+        std::int32_t climate = 0; ///< The park file's climate (simulation::Climate)
+        float weather_hold = 0;   ///< Calendar units before the forecast arrives
+        float wind_change = 0;    ///< How fast the wind is rising (falling when negative)
+        float wind_wait = 0;      ///< Calendar units to the wind's next change; not saved
         GameSpeed speed;
         ParkMessages messages;
     };

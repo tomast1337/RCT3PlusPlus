@@ -14,6 +14,7 @@
 #include "park/path/clearance.hpp"
 #include "random/generator.hpp"
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -57,17 +58,17 @@ namespace rct3::simulation
     {
         glm::vec2 at { };
         glm::vec2 heading { 0, 1 }; ///< Unit
-        float speed = 0;            ///< m/s
+        units::Pace speed { };
         Sailing state = Sailing::Docked;
         std::vector<glm::vec2> marks { }; ///< Still to pass, nearest first
         std::vector<glm::vec2> calls { }; ///< Heading home: the docks still to make for, its own last
-        float out = 0;                    ///< Seconds since it left the dock
-        float on_mark = 0;                ///< Seconds spent making for the nearest mark
-        float turning = 0;                ///< Radians a second it turns, positive from +x towards +y
-        float lean = 0;                   ///< Radians it rolls towards the inside of its turn
+        units::Seconds out { };           ///< Since it left the dock
+        units::Seconds on_mark { };       ///< Spent making for the nearest mark
+        units::TurnRate turning { };      ///< Positive from +x towards +y
+        units::Radians lean { };          ///< It rolls towards the inside of its turn
         glm::vec2 was { };                ///< Where it was when the last sail began, to draw it between steps
         glm::vec2 was_heading { 0, 1 };
-        float was_lean = 0;
+        units::Radians was_lean { };
     };
 
     /// The handling most boats the game ships share.
@@ -79,7 +80,7 @@ namespace rct3::simulation
     {
         glm::vec2 at { };
         glm::vec2 heading { 0, 1 };
-        float lean = 0;
+        units::Radians lean { };
     };
     [[nodiscard]] BoatPose between_sails(const Boat& boat, float along);
 
@@ -91,11 +92,11 @@ namespace rct3::simulation
         Right, ///< Turning to its right
     };
 
-    inline constexpr float kRowRound = 0.2f; ///< Chosen by eye: radians a second a boat turns before it rows round
+    inline constexpr units::TurnRate kRowRound { 0.2f }; ///< Chosen by eye: a boat turns this fast before it rows round
 
-    /// The stroke for a boat turning `turning` radians a second, positive from +x towards +y. That turns it to
-    /// its left, as boats' models put their right at +X.
-    [[nodiscard]] Stroke stroke(float turning);
+    /// The stroke for a boat turning at `turning`, positive from +x towards +y. That turns it to its left, as
+    /// boats' models put their right at +X.
+    [[nodiscard]] Stroke stroke(units::TurnRate turning);
 
     /// Where a boat leaves its dock and where it comes back in.
     struct Dock

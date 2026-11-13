@@ -43,8 +43,8 @@ TEST_CASE("every climate's odds add up to one in every month")
             CHECK(std::accumulate(odds.begin(), odds.end(), 0.0) == doctest::Approx(1.0));
         }
     // An unknown climate is temperate, and months wrap.
-    CHECK(climate_month(99, 0).warmth == climate_month(0, 0).warmth);
-    CHECK(climate_month(0, 9).warmth == climate_month(0, 1).warmth);
+    CHECK(climate_month(99, 0).warmth.value == climate_month(0, 0).warmth.value);
+    CHECK(climate_month(0, 9).warmth.value == climate_month(0, 1).warmth.value);
 }
 
 TEST_CASE("a dry climate never rains and a wet one does")
@@ -62,7 +62,7 @@ TEST_CASE("the forecast arrives when the weather's hold runs out, and a new one 
     s.weather = save::model::WeatherType::Sunny;
     s.forecast = save::model::WeatherType::HeavyRain;
     s.weather_hold = 10;
-    s.temperature = 20;
+    s.temperature = units::Degrees { 20 };
     auto dice = random::seeded({ 3 });
     advance_weather(s, 5, dice, false);
     CHECK(s.weather == save::model::WeatherType::Sunny);
@@ -80,15 +80,15 @@ TEST_CASE("the temperature eases towards what the weather and month bring")
     s.weather = save::model::WeatherType::Sunny;
     s.forecast = save::model::WeatherType::Sunny;
     s.weather_hold = 1e6f;
-    s.temperature = 0;
+    s.temperature = units::Degrees { 0 };
     auto dice = random::seeded({ 1 });
-    const float goal = weather_temperature(s.climate, 0, save::model::WeatherType::Sunny);
+    const float goal = weather_temperature(s.climate, 0, save::model::WeatherType::Sunny).value;
     advance_weather(s, 1, dice, false);
-    CHECK(*s.temperature > 0);
-    CHECK(*s.temperature < goal);
+    CHECK(s.temperature->value > 0);
+    CHECK(s.temperature->value < goal);
     for (int i = 0; i < 1000; ++i)
         advance_weather(s, 1, dice, false);
-    CHECK(*s.temperature == doctest::Approx(goal));
+    CHECK(s.temperature->value == doctest::Approx(goal));
     CHECK(s.wind >= 0);
     CHECK(s.wind <= 1);
 }
@@ -99,13 +99,13 @@ TEST_CASE("frozen weather stays as it is")
     s.weather = save::model::WeatherType::LightRain;
     s.forecast = save::model::WeatherType::Sunny;
     s.weather_hold = 1;
-    s.temperature = 14;
+    s.temperature = units::Degrees { 14 };
     s.wind = 0.5f;
     auto dice = random::seeded({ 5 });
     advance_weather(s, 1000, dice, true);
     CHECK(s.weather == save::model::WeatherType::LightRain);
     CHECK(s.forecast == save::model::WeatherType::Sunny);
-    CHECK(*s.temperature == 14);
+    CHECK(s.temperature->value == 14);
     CHECK(s.wind == 0.5f);
 }
 

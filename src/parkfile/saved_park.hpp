@@ -85,7 +85,7 @@ namespace rct3::parkfile
         save::model::CalendarDate date;
         save::model::WeatherType weather = save::model::WeatherType::Unknown;
         std::optional<save::model::WeatherType> forecast;
-        std::optional<float> temperature;
+        std::optional<units::Degrees> temperature;
         float day_time = 0;       ///< The day clock's time
         std::int32_t climate = 0; ///< simulation::Climate
         float weather_hold = 0;   ///< Calendar units before the forecast arrives

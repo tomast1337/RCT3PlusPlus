@@ -54,7 +54,7 @@ namespace rct3::simulation::tuning
         units::Distance ring_gap { 0.9f };       ///< Between neighbours standing in a ring, so a big party's ring is wider
         units::Seconds regroup { 3 };            ///< A party stands together once all are back, before going on
         units::Distance corner_cut { 0.8f };     ///< Chosen by eye: how far towards the inside of a turn a walker going somewhere takes the tile they turn on
-        float turn_rate = 6.0f;                  ///< Chosen by eye: fastest a walker turns to face where they go, radians a second
+        units::TurnRate turn_rate { 6.0f };      ///< Chosen by eye: fastest a walker turns to face where they go
         float swerve = 0.5f;                     ///< Chosen by eye: most a walker steps aside from others for each unit walked on
         units::Seconds retry_way { 5 };          ///< Chosen by eye: how long one who found no way back to their party waits before looking again
         units::Seconds lost_wait { 20 };         ///< Chosen by eye: how long one cut off from their party stands lost before being put with them
@@ -473,7 +473,7 @@ namespace rct3::simulation::tuning
         units::Pace scatter { 2.5f };      ///< Thrown riders fly at most this much faster or slower than their car, each way
         units::Pace blown { 6 };           ///< A blast throws those on foot beside it outwards at most this fast
         units::Pace lofted { 5 };          ///< And up at most this fast
-        float tumble = 4;                  ///< Radians a second a wreck tumbles at most
+        units::TurnRate tumble { 4 };      ///< A wreck tumbles at most this fast
     };
 
     /// People the player picks up and lets go of.
@@ -597,18 +597,18 @@ namespace rct3::simulation::tuning
         std::uint8_t lounger_places = 2;                          ///< Swimmers a set of sun loungers takes at once, as the saved parks' do
         std::uint8_t shower_places = 3;                           ///< And a shower
         units::Seconds lounging { 45 };                           ///< Chosen by eye: on a lounger
-        float deck = 0.2f;                                        ///< The paving's top over the pool's surface, in metres, where saved guests walk it
-        float lanes = 1.5f;                                       ///< Chosen by eye: from a square's middle to the lanes beside it, in metres; swimmers keep to one of the three lanes each way across a square, so a crowd spreads
-        float queue_gap = 0.85f;                                  ///< From one swimmer in a slide's line to the one ahead, in metres, as a saved park's stand
+        units::Distance deck { 0.2f };                            ///< The paving's top over the pool's surface, where saved guests walk it
+        units::Distance lanes { 1.5f };                           ///< Chosen by eye: from a square's middle to the lanes beside it; swimmers keep to one of the three lanes each way across a square, so a crowd spreads
+        units::Distance queue_gap { 0.85f };                      ///< From one swimmer in a slide's line to the one ahead, as a saved park's stand
         float slide_deck = 2;                                     ///< Chosen by eye: most levels a slide's station track stands over the paving or steps beside its platform
-        float lounger_reach = 1.44f;                              ///< From a set of loungers' middle to where one lying on the last is placed, the way they face, in metres, as a saved park's are
+        units::Distance lounger_reach { 1.44f };                  ///< From a set of loungers' middle to where one lying on the last is placed, the way they face, as a saved park's are
         float lounger_side = 0.55f;                               ///< And sideways from there, as a saved park's are
-        float lounger_gap = 1.75f;                                ///< Between the loungers of a set, the way those on them face, in metres, measured by eye on the model
-        float shower_reach = 0.75f;                               ///< From a shower's pole to those under it, in metres, as a saved park's are
+        units::Distance lounger_gap { 1.75f };                    ///< Between the loungers of a set, the way those on them face, measured by eye on the model
+        units::Distance shower_reach { 0.75f };                   ///< From a shower's pole to those under it, as a saved park's are
         units::Seconds dive_in { 2.0f };                          ///< Diving in off the water's edge, as long as the swimwear's dive motion lasts
         units::Seconds climb_out { 3.4f };                        ///< Climbing out over the wall, as its motion lasts
         units::Seconds ladder { 3.0f };                           ///< Up or down a ladder, as its motion lasts
-        float dive_reach = 0.94f;                                 ///< Out over the water a dive off the edge takes them, in metres, as its motion carries the body
+        units::Distance dive_reach { 0.94f };                     ///< Out over the water a dive off the edge takes them, as its motion carries the body
         float out_reach = 0.43f;                                  ///< On over the wall climbing out takes them, as its motion carries the body
         float ladder_reach = 0.39f;                               ///< And up a ladder
         units::Seconds showering { 6 };                           ///< Chosen by eye: under a shower
@@ -616,7 +616,7 @@ namespace rct3::simulation::tuning
         float spa_water = 0.0f;                                   ///< A spa pool's water over the paving round it, in height units
         float long_ramp = 0.75f;                                  ///< A ramp climbing two or more: from its side to its foot, in tiles, as its model runs
         float short_ramp = 0.25f;                                 ///< One climbing one
-        float dip = 16.0f;                                        ///< Chosen by eye: a way into or out of the water counts as this much longer, in world units (four squares), so walkers keep to the paving
+        units::Distance dip { 16.0f };                            ///< Chosen by eye: a way into or out of the water counts as this much longer (four squares), so walkers keep to the paving
         float platform = 3.5f;                                    ///< Chosen by eye: how many squares off the paving a slide's station may stand and be walked to, a platform three long beside it
         units::PerSecond cheer = units::PerSecond::over({ 600 }); ///< Happiness gained while swimming in clean water; lost in dirty
         /// Dirt a swimmer brings to a pool of one square of water in a second; less in bigger pools.
@@ -638,10 +638,10 @@ namespace rct3::simulation::tuning
         units::Pace most_paddle { 2.0f };
         float least_stay = 0.5f; ///< Laps a rider floats before getting off, from this many to `most_stay`, as saved riders mean to
         float most_stay = 2.0f;
-        float spin = 1.5f;                                      ///< Most radians a second a resting rider's ring turns, about as fast as saved riders' rings turn
+        units::TurnRate spin { 1.5f };                          ///< Most a resting rider's ring turns, about as fast as saved riders' rings turn
         units::Chance paddle { 0.15 };                          ///< Chosen by eye: of paddling off, each time a resting rider's ring comes round to face along the river or back
         units::Frequency rest = units::Frequency::every({ 8 }); ///< Chosen by eye: how often a paddling rider stops to rest
-        float lane = 1.0f;                                      ///< Chosen by eye: most metres to either side of the channel's middle a rider floats
+        units::Distance lane { 1.0f };                          ///< Chosen by eye: most to either side of the channel's middle a rider floats
         float join = 1.75f;                                     ///< Chosen by eye: most tiles across from a pool ride's station track to the middle of a square beside it that joins it to its complex, a wide station's track lying a tile and a half from its sides' squares
         /// Excitement, intensity and nausea of a river not rated yet, as a saved park rates its river (with no test run)
         std::array<float, 3> rated { 3.6f, 0.9f, 0.0f };
@@ -651,7 +651,7 @@ namespace rct3::simulation::tuning
     struct Climbs
     {
         units::Pace climb { 0.9f };   ///< Chosen by eye: up the steps, about a slow walk
-        float gap = 1.5f;             ///< Chosen by eye: metres up the steps the one ahead must be before the next sets off
+        units::Distance gap { 1.5f }; ///< Chosen by eye: up the steps the one ahead must be before the next sets off
         float drag = 0.25f;           ///< Chosen by eye: share of their speed a slider loses each second, against gravity's pull
         units::Pace slowest { 1.0f }; ///< Chosen by eye: down the slide, never slower, so nobody stops on a flat stretch
         units::Pace fastest { 8.0f }; ///< Chosen by eye
@@ -671,14 +671,14 @@ namespace rct3::simulation::tuning
         units::Seconds surfacing { 2.0f };   ///< Chosen by eye: coming back up
         units::Share high_cheer { 0.04f };   ///< Chosen by eye: happiness from a dive off a high board
         units::Share small_cheer { 0.015f }; ///< Chosen by eye: and off a small one
-        float behind = 0.3f;                 ///< Chosen by eye: from the pool's wall back to where swimmers step on a small board, in world units
+        units::Distance behind { 0.3f };     ///< Chosen by eye: from the pool's wall back to where swimmers step on a small board
         float small_reach = 3.5f;            ///< From the wall to where a diver stands at a small board's end, as far as its model reaches
         float small_board = 0.3f;            ///< A small board's top over the paving, as its model stands
         float ladder_foot = -0.15f;          ///< From a high board's square middle towards the water to a climber on its ladder: the rungs' back is 0.05 ahead of the middle, as the tower's model has them, and the climber's middle a fifth of a unit behind that, chosen by eye
         float ladder_side = 0.535f;          ///< And to the side, the middle of the rungs as the tower's model has them
         float ladder_queue = 0.8f;           ///< Chosen by eye: back from a high board's ladder foot to where the next swimmer waits their turn, clear of the tower
         float high_reach = 5.1f;             ///< From the ladder's climber out to where a diver stands at its boards' end, a little short of their tip as the model reaches
-        float board_top = 1.2f;              ///< A high board's top over the height it is placed at, in world units, as its model stands
+        units::Distance board_top { 1.2f };  ///< A high board's top over the height it is placed at, as its model stands
     };
 
     /// What guests make of the park round them, and the scenery they pass.
@@ -700,7 +700,7 @@ namespace rct3::simulation::tuning
         units::Chance fire_cannon { 0.2 };      ///< Chosen by eye: of taking a free water cannon passed
         units::Seconds firing { 30 };           ///< Chosen by eye: a guest fires one for
         units::Distance cannon_reach { 14 };    ///< Chosen by eye: how far off a cannon's firer picks someone to spray
-        float cannon_swing = 1.75f;             ///< Chosen by eye: radians a cannon turns to either side of where it points at rest, a little past square to reach along its path
+        units::Radians cannon_swing { 1.75f };  ///< Chosen by eye: a cannon turns to either side of where it points at rest, a little past square to reach along its path
         units::Chance retarget { 0.25 };        ///< Chosen by eye: a second, of the firer swinging on to someone else
         units::Share soaking { 0.3f };          ///< Chosen by eye: wetness a second for someone the cannon sprays
         units::Share view_cheer { 0.05f };      ///< Chosen by eye: happiness from a fine view

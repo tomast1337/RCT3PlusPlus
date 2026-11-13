@@ -81,7 +81,7 @@ TEST_CASE("the park's weather tells the guests whether it rains")
 {
     ParkState state;
     state.weather = rct3::save::model::WeatherType::Thunderstorm;
-    state.temperature = 12;
+    state.temperature = rct3::units::Degrees { 12 };
     const Weather w = guest_weather(state);
     CHECK(w.rain);
     CHECK(w.storm);

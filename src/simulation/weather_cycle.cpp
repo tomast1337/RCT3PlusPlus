@@ -95,12 +95,12 @@ namespace rct3::simulation
         const double wet = c.wet[m];
         const double dry = 1 - wet;
         const double rain = wet * (1 - c.storm);
-        return { .warmth = c.warmth[m], .odds = { dry * (1 - c.cloud), dry * c.cloud / 2, dry * c.cloud / 2, rain * kLightShare, rain * (1 - kLightShare), wet * c.storm } };
+        return { .warmth = { c.warmth[m] }, .odds = { dry * (1 - c.cloud), dry * c.cloud / 2, dry * c.cloud / 2, rain * kLightShare, rain * (1 - kLightShare), wet * c.storm } };
     }
 
-    float weather_temperature(std::int32_t climate, std::int32_t month, save::model::WeatherType type)
+    units::Degrees weather_temperature(std::int32_t climate, std::int32_t month, save::model::WeatherType type)
     {
-        return shape(climate).warmth[month_index(month)] + kKindWarmth[kind_index(type)];
+        return { shape(climate).warmth[month_index(month)] + kKindWarmth[kind_index(type)] };
     }
 
     std::optional<std::int32_t> career_climate(std::string_view scenario)
@@ -157,10 +157,10 @@ namespace rct3::simulation
         }
 
         // The temperature follows the weather and the month.
-        const float goal = weather_temperature(state.climate, month, state.weather);
-        const float now = state.temperature.value_or(goal);
+        const float goal = weather_temperature(state.climate, month, state.weather).value;
+        const float now = state.temperature ? state.temperature->value : goal;
         const float step = kWarming * units;
-        state.temperature = std::abs(goal - now) <= step ? goal : now + std::copysign(step, goal - now);
+        state.temperature = units::Degrees { std::abs(goal - now) <= step ? goal : now + std::copysign(step, goal - now) };
 
         // The wind wanders round what the weather usually blows, a step at a time.
         state.wind_wait -= units;

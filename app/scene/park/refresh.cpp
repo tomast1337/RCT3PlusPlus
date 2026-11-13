@@ -348,7 +348,7 @@ namespace rct3::scene::park
                         constexpr float kTurn = 2.5f;    ///< Chosen by eye: radians a second the gun turns
                         constexpr float kHighest = 0.8f; ///< Chosen by eye: most the gun tips up, and down
                         constexpr float kLowest = -0.35f;
-                        const float swing = simulation::kTuning.surroundings.cannon_swing;
+                        const float swing = simulation::kTuning.surroundings.cannon_swing.value;
                         float yaw = 0.6f * swing * std::sin(scene.park_clock * 0.5f + static_cast<float>(boned.object)); // Sweeping about
                         float pitch = 0.35f;
                         float ground = boned.placed[3].y;
@@ -675,7 +675,7 @@ namespace rct3::scene::park
                 const glm::vec3 kept(place[3]);
                 const glm::vec2 kept_way = glm::vec2(place[2].x, place[2].z);
                 const float turn = glm::length(kept_way) > 0 ? std::atan2(kept_way.x, kept_way.y) - std::atan2(boat.heading.x, boat.heading.y) : 0.0f;
-                const glm::mat4 lean = glm::rotate(glm::mat4(1.0f), boat.lean, glm::vec3(boat.heading.x, 0, boat.heading.y));
+                const glm::mat4 lean = glm::rotate(glm::mat4(1.0f), boat.lean.value, glm::vec3(boat.heading.x, 0, boat.heading.y));
                 place = glm::translate(glm::mat4(1.0f), glm::vec3(boat.at.x, kept.y, boat.at.y)) * lean * glm::rotate(glm::mat4(1.0f), -turn, glm::vec3(0, 1, 0)) * glm::translate(glm::mat4(1.0f), -kept) * place;
             }
             else if (fleet && spot.train < fleet->trains.size() && scene.courses[spot.ride])
@@ -687,16 +687,16 @@ namespace rct3::scene::park
                 // end, how long it has flown by now: below 0 while it is still running down to the end in the step
                 // it went off in.
                 const float along = std::clamp(scene.sim_time / simulation::kTickSeconds, 0.0f, 1.0f);
-                const float flown_for = train.flight ? train.flight->off - (1 - along) * simulation::kTickSeconds : 0.0f;
-                const float at = train.flight ? std::max(train.was_at, train.at + train.flight->speed * std::min(flown_for, 0.0f)) : simulation::between_drives(train, along);
+                const float flown_for = train.flight ? train.flight->off.value - (1 - along) * simulation::kTickSeconds : 0.0f;
+                const float at = train.flight ? std::max(train.was_at, train.at + train.flight->speed.value * std::min(flown_for, 0.0f)) : simulation::between_drives(train, along);
                 moved[i] = at - scene.rides.rides[spot.ride].trains[spot.train].distance;
                 place = rct3::park::track::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, moved[i]);
                 // A slide's car swung up its trough's wall, turned about its shape's pivot.
-                if (train.trough && train.lean != 0)
+                if (train.trough && train.lean.value != 0)
                 {
                     const glm::vec3 way = glm::normalize(glm::vec3(place[2]));
                     const glm::vec3 pivot = glm::vec3(place[3]) + glm::normalize(glm::vec3(place[1])) * train.trough->pivot;
-                    place = glm::translate(glm::mat4(1.0f), pivot) * glm::rotate(glm::mat4(1.0f), -train.lean, way) * glm::translate(glm::mat4(1.0f), -pivot) * place;
+                    place = glm::translate(glm::mat4(1.0f), pivot) * glm::rotate(glm::mat4(1.0f), -train.lean.value, way) * glm::translate(glm::mat4(1.0f), -pivot) * place;
                 }
                 // Crashed, each car flies on and tumbles as its wreck does from where it left the track, and is
                 // gone with it; a train whose wrecks are gone is off the track till it is back in the station.
@@ -712,11 +712,11 @@ namespace rct3::scene::park
                     std::optional<simulation::Flight> flight;
                     if (const auto& f = train.flight)
                     {
-                        flight = simulation::Flight { .from = f->from, .way = f->way, .at = f->from, .velocity = f->way * f->speed, .water = f->water, .speed = f->speed, .reach = f->reach };
+                        flight = simulation::Flight { .from = f->from, .way = f->way, .at = f->from, .velocity = f->way * f->speed.value, .water = f->water, .speed = f->speed, .reach = f->reach };
                         simulation::fly(*flight, std::max(flown_for, 0.0f));
                     }
                     // The car comes down with a splash too, ridden or not.
-                    if (flight && flight->afloat >= 0 && !std::exchange(scene.car_waters[i].landed, true))
+                    if (flight && flight->afloat && !std::exchange(scene.car_waters[i].landed, true))
                         scene.splashdowns.emplace_back(scene.park_clock, flight->at);
                     if (!std::exchange(scene.car_waters[i].off_end, true))
                         for (const auto [guest, drop, pose] : scene.sim.registry.view<const simulation::Dropped, const simulation::Pose>().each())

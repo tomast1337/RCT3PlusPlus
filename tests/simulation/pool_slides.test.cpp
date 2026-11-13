@@ -85,7 +85,7 @@ TEST_CASE("a swimmer goes up a slide ending in their pool, rides it free in thei
     CHECK(park.run_until(
         [&] {
             const auto& f = r.get<Trains>(slide).trains.front().flight;
-            return f && f->afloat >= 0;
+            return f && f->afloat.has_value();
         },
         5));
     CHECK(r.get<Trains>(slide).trains.front().flight->at.y == doctest::Approx(water));
@@ -102,7 +102,7 @@ TEST_CASE("a swimmer goes up a slide ending in their pool, rides it free in thei
     CHECK(r.get<Attraction>(slide).open);
     const Coaster& train = r.get<Trains>(slide).trains.front();
     CHECK_FALSE(train.crashed);
-    CHECK(park.run_until([&] { return !train.splashed && standing_at(train).has_value(); }, 10 + kGone));
+    CHECK(park.run_until([&] { return !train.splashed && standing_at(train).has_value(); }, 10 + kGone.value));
 }
 
 TEST_CASE("a fast slide's car and rider thrown at a small pool's far wall stop at it and come down in the water")
@@ -231,7 +231,7 @@ TEST_CASE("swimmers queueing for a pool slide stand apart in a line, never two o
     }
     CAPTURE(most);
     CHECK(most >= 3);
-    CHECK(closest > kTuning.pools.queue_gap / 2);
+    CHECK(closest > kTuning.pools.queue_gap.value / 2);
 }
 
 TEST_CASE("a slide that throws its rider onto the path is a danger: it is shut, and the inspector says so")

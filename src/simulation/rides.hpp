@@ -92,13 +92,13 @@ namespace rct3::simulation
         /// The queue line's tiles from the entrance back to where it meets the paths; empty when guests walk
         /// straight in from a path.
         std::vector<NodeId> line { };
-        NodeId exit = kNoNode;                 ///< Where riders get off; the attraction's entrance when kNoNode
-        std::vector<entt::entity> riders { };  ///< Guests on the ride now
-        units::Seconds loading { };            ///< The train at the start, or the loading ride, has been loading
-        units::Seconds since_departure { -1 }; ///< Since a train or go last left; -1 before the first
-        float per_hour = 0;                    ///< Riders an hour, smoothed over the last departures; 0 before two
-        bool synced = false;                   ///< Its train is ready and waits for those at the stations beside it
-        bool released = false;                 ///< Those are ready too: it leaves with them
+        NodeId exit = kNoNode;                             ///< Where riders get off; the attraction's entrance when kNoNode
+        std::vector<entt::entity> riders { };              ///< Guests on the ride now
+        units::Seconds loading { };                        ///< The train at the start, or the loading ride, has been loading
+        std::optional<units::Seconds> since_departure { }; ///< Since a train or go last left; none before the first
+        float per_hour = 0;                                ///< Riders an hour, smoothed over the last departures; 0 before two
+        bool synced = false;                               ///< Its train is ready and waits for those at the stations beside it
+        bool released = false;                             ///< Those are ready too: it leaves with them
         /// Its stations after the first (whose queue, line and exit are those above), in the order its trains
         /// come to them; empty for a ride with one
         std::vector<Stop> stops { };
@@ -162,7 +162,7 @@ namespace rct3::simulation
     struct Wrecks
     {
         std::vector<std::vector<Wreck>> trains { }; ///< By train; empty for one not crashed
-        units::Seconds since { -1 };                ///< Since the last crash; -1 once the park has forgotten it
+        std::optional<units::Seconds> since { };    ///< Since the last crash; none once the park has forgotten it
         std::uint32_t crashes = 0;                  ///< Since the run began
         /// Dangerous happenings for the awards to count, since the run began: each crash of an open ride, and
         /// each car of it with riders.

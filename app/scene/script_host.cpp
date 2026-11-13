@@ -561,7 +561,7 @@ namespace rct3::scene
         engine_.define("park.setTemperature", [this](const Json& a) -> Json {
             if (a.size() != 1 || !a[0].is_number())
                 throw std::invalid_argument("park.setTemperature takes degrees");
-            park_of(park_).park.temperature = a[0].get<float>();
+            park_of(park_).park.temperature = units::Degrees { a[0].get<float>() };
             return Json(nullptr);
         });
         engine_.define("park.weather", [this](const Json&) { return Json(save::model::to_string(park_of(park_).park.weather)); });
@@ -577,7 +577,7 @@ namespace rct3::scene
         engine_.define("park.weatherLook", [this](const Json&) {
             const park::ParkScene& p = park_of(park_);
             const rct3::park::WeatherLook& look = p.weather_look;
-            return Json { { "rain", look.rain }, { "gloom", look.gloom }, { "flash", look.flash }, { "forecast", p.park.forecast ? save::model::to_string(*p.park.forecast) : "" }, { "climate", p.park.climate }, { "temperature", p.park.temperature.value_or(0.0f) } };
+            return Json { { "rain", look.rain }, { "gloom", look.gloom }, { "flash", look.flash }, { "forecast", p.park.forecast ? save::model::to_string(*p.park.forecast) : "" }, { "climate", p.park.climate }, { "temperature", p.park.temperature ? p.park.temperature->value : 0.0f } };
         });
         engine_.define("park.vipGoals", [this](const Json&) {
             Json out = Json::array();
@@ -1337,7 +1337,7 @@ namespace rct3::scene
                             const simulation::Coaster& c = fleet->trains[t];
                             const auto standing = simulation::standing_at(c);
                             const auto held = simulation::held_in_station(c);
-                            at.push_back({ { "front", c.at }, { "speed", c.speed }, { "lean", c.trough ? Json(c.lean) : Json(nullptr) }, { "length", c.train_length }, { "station", standing ? Json(*standing) : Json(nullptr) }, { "held", held ? Json(*held) : Json(nullptr) }, { "riders", t < fleet->riders.size() ? fleet->riders[t].size() : 0 } });
+                            at.push_back({ { "front", c.at }, { "speed", c.speed }, { "lean", c.trough ? Json(c.lean.value) : Json(nullptr) }, { "length", c.train_length }, { "station", standing ? Json(*standing) : Json(nullptr) }, { "held", held ? Json(*held) : Json(nullptr) }, { "riders", t < fleet->riders.size() ? fleet->riders[t].size() : 0 } });
                         }
                         one["trainsAt"] = std::move(at);
                         one["trackLength"] = fleet->trains.empty() ? 0.0f : fleet->trains.front().length();

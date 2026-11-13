@@ -22,6 +22,7 @@
 #include "random/generator.hpp"
 #include "save/model/rides.hpp"
 #include "simulation/crash.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -70,22 +71,22 @@ namespace rct3::simulation
     /// down, drifting to a stop, till it sinks out of sight.
     struct Flight
     {
-        glm::vec3 from { };     ///< Where it left the track
-        glm::vec3 way { };      ///< The track's way there
-        glm::vec3 at { };       ///< Where it is now
-        glm::vec3 velocity { }; ///< Metres a second
-        float water = 0;        ///< Height it comes down at: the pool's water, or the ground with no pool under it
-        float afloat = -1;      ///< Seconds since it came down; below 0 while it flies
-        float off = 0;          ///< Seconds since it left the track
-        float speed = 0;        ///< Metres a second it left the track at, along `way`
-        /// Metres across the ground from `from` it goes at most: where the far wall of the pool it comes down in
-        /// stops it, going on only down.
-        float reach = std::numeric_limits<float>::infinity();
+        glm::vec3 from { };                       ///< Where it left the track
+        glm::vec3 way { };                        ///< The track's way there
+        glm::vec3 at { };                         ///< Where it is now
+        glm::vec3 velocity { };                   ///< Metres a second
+        float water = 0;                          ///< Height it comes down at: the pool's water, or the ground with no pool under it
+        std::optional<units::Seconds> afloat { }; ///< Since it came down; empty while it flies
+        units::Seconds off { };                   ///< Since it left the track
+        units::Pace speed { };                    ///< It left the track at, along `way`
+        /// Across the ground from `from` it goes at most: where the far wall of the pool it comes down in stops it,
+        /// going on only down.
+        units::Distance reach { std::numeric_limits<float>::infinity() };
     };
 
-    /// Seconds after it left the track a car off a slide's end is gone. Measured: a capture of the original game,
-    /// where such a car is back on its track ten seconds after it left it.
-    inline constexpr float kGone = 10;
+    /// After it left the track, a car off a slide's end is gone. Measured: a capture of the original game, where
+    /// such a car is back on its track ten seconds after it left it.
+    inline constexpr units::Seconds kGone { 10 };
 
     /// Moves `flight` on by `seconds`: flying it falls, and comes down on its water; afloat it drifts on slowing
     /// and sinks in its last second. False once kGone seconds have passed since it left the track and it is gone.
@@ -150,20 +151,20 @@ namespace rct3::simulation
         float air = 0.0004f;
         // The train
         bool running = false;
-        float at = 0;              ///< Distance of the front of the train
-        float was_at = 0;          ///< Where the front was when the last step began, for drawing between steps
-        float travelled = 0;       ///< Since it set off
-        std::size_t next_stop = 0; ///< Of `stops`, the next it comes to; past one, it stands there until set off
-        float speed = 0;           ///< Along the track
-        float slow = 0;            ///< Seconds it has been all but stopped away from a chain or station
-        bool launched = false;     ///< Its tail has left the platform since it set off, so it is pushed no more there
-        float lean = 0;            ///< Of a slide's car, radians it has swung up the trough's wall from the bottom, to its right
-        float lean_rate = 0;       ///< How fast that swing is changing, in radians a second
+        float at = 0;                  ///< Distance of the front of the train
+        float was_at = 0;              ///< Where the front was when the last step began, for drawing between steps
+        float travelled = 0;           ///< Since it set off
+        std::size_t next_stop = 0;     ///< Of `stops`, the next it comes to; past one, it stands there until set off
+        float speed = 0;               ///< Along the track
+        units::Seconds slow { };       ///< It has been all but stopped away from a chain or station
+        bool launched = false;         ///< Its tail has left the platform since it set off, so it is pushed no more there
+        units::Radians lean { };       ///< Of a slide's car, it has swung up the trough's wall from the bottom, to its right
+        units::TurnRate lean_rate { }; ///< How fast that swing is changing
         // A shuttle's train
-        int passed = 0;   ///< Times it has come into the station since it set off
-        float push = 0;   ///< The speed it is being pushed to, negative backwards; 0 when it is not
-        float pushed = 0; ///< Metres it has moved under that push
-        float held = 0;   ///< Seconds it has been held at the top of its climb
+        int passed = 0;             ///< Times it has come into the station since it set off
+        float push = 0;             ///< The speed it is being pushed to, negative backwards; 0 when it is not
+        units::Distance pushed { }; ///< It has moved under that push
+        units::Seconds held { };    ///< It has been held at the top of its climb
         /// Run off an end of its track, or a slide's car over its trough's rim: stopped running, where it left the
         /// track and at the speed it left at
         bool crashed = false;

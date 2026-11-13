@@ -47,7 +47,7 @@ namespace rct3::simulation
         glm::vec3 foot { 0.0f };       ///< On the paving: a high board's ladder foot, a small board's back
         units::Radians heading { };    ///< Out over the water, the way they dive
         std::vector<float> levels { }; ///< The boards' tops they may walk out on, lowest first, in world units; one for a small board
-        float reach = 0;               ///< From the foot to the boards' end, the way it faces, in world units
+        units::Distance reach { };     ///< From the foot to the boards' end, the way it faces
         bool high = false;
     };
 
@@ -185,7 +185,7 @@ namespace rct3::simulation
         std::int32_t board = -1;        ///< The pool's diving board they head for or dive off; -1 for none
         DiveStep dive = DiveStep::None; ///< How far they are with it
         float height = 0;               ///< The board's top they climb to and walk out on, in world units
-        float fall = 0;                 ///< Their speed down, falling, in world units a second
+        units::Pace fall { };           ///< Their speed down, falling
         units::Seconds diving { };      ///< In this step so far
         std::int32_t ladder = -1;       ///< The pool's ladder they head for, to climb out or in by; -1 for none
         PoolEdge edge = PoolEdge::None; ///< Over the water's edge now
@@ -231,7 +231,7 @@ namespace rct3::simulation
         float stay = 0;            ///< How far they float before getting off at the next station on
         float lane = -1;           ///< Across the channel, -1 to 1
         units::Radians facing { }; ///< In their ring, from along the current
-        float spin = 0;            ///< Radians a second their ring turns while they rest
+        units::TurnRate spin { };  ///< Their ring turns while they rest
         units::Pace paddle { };    ///< How fast they paddle, the way they face
         bool paddling = false;
     };

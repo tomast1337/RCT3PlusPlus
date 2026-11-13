@@ -142,7 +142,7 @@ namespace rct3::simulation
         units::Seconds filling { 5 };     ///< The keeper at the troughs
         units::Seconds clearing { 3 };    ///< The keeper at a dung
         int stroll_tries = 8;             ///< Spots picked for a stroll before giving up till later
-        float roam = 4;                   ///< Farthest an escaped animal wanders at a time, in world units
+        units::Distance roam { 4 };       ///< Farthest an escaped animal wanders at a time
         units::Seconds catching { 4 };    ///< The keeper shutting an escaped animal in its crate
         int empty_tries = 3;              ///< Times in a row an animal finds its food trough empty before the inspector tells
     };

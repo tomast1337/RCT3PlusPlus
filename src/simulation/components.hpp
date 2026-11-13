@@ -622,10 +622,10 @@ namespace rct3::simulation
 
     struct Vandalism
     {
-        std::uint32_t broken = 0;            ///< Things broken since the run began
-        float recent = 0;                    ///< Things broken lately, each fading away over a game hour or so
-        units::Seconds since_warning { -1 }; ///< Since the player was last told; -1 never
-        std::uint32_t warnings = 0;          ///< Times the player has been told, for the park to post as messages
+        std::uint32_t broken = 0;                        ///< Things broken since the run began
+        float recent = 0;                                ///< Things broken lately, each fading away over a game hour or so
+        std::optional<units::Seconds> since_warning { }; ///< Since the player was last told; none before the first time
+        std::uint32_t warnings = 0;                      ///< Times the player has been told, for the park to post as messages
     };
 
 } // namespace rct3::simulation

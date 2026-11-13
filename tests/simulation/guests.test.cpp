@@ -629,7 +629,7 @@ TEST_CASE("a walker turns a corner across its inside, turning no faster than tur
         const float was = r.get<Pose>(g).heading.value;
         park.run(1);
         const auto& s = r.get<Stride>(g);
-        CHECK(std::abs(std::remainder(r.get<Pose>(g).heading.value - was, 2 * glm::pi<float>())) <= kTuning.walking.turn_rate * kTickSeconds + 1e-4f);
+        CHECK(std::abs(std::remainder(r.get<Pose>(g).heading.value - was, 2 * glm::pi<float>())) <= kTuning.walking.turn_rate.value * kTickSeconds + 1e-4f);
         if (s.fresh && s.from == at(3, 0))
         {
             CHECK(glm::dot(s.lane_from, inside) > 0.2f);

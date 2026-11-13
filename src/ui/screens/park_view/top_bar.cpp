@@ -146,7 +146,7 @@ namespace rct3::ui::screens::park_view
         if (state.rating)
             v.rating_help = park_rating_help(strings, *state.rating, state.rating_parts);
         if (state.temperature)
-            v.temperature = temperature_text(*state.temperature, units.fahrenheit);
+            v.temperature = temperature_text(state.temperature->value, units.fahrenheit);
         v.weather = state.weather;
         v.forecast = state.forecast;
         const auto minutes = static_cast<std::int32_t>(std::lround(day_time * save::model::kMinutesPerDay));

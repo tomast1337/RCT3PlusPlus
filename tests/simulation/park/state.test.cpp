@@ -28,7 +28,7 @@ TEST_CASE("a park starts from what its save holds")
     CHECK(*s.rating == doctest::Approx(0.25f));
     CHECK(s.weather == save::model::WeatherType::Cloudy);
     CHECK(s.forecast == save::model::WeatherType::LightRain);
-    CHECK(s.temperature == 19.5f);
+    CHECK(s.temperature->value == 19.5f);
     CHECK(s.speed == simulation::GameSpeed { });
 }
 

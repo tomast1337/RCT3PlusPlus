@@ -29,6 +29,7 @@
 
 #include "math/glm.hpp"
 #include "park/turns.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -98,8 +99,8 @@ namespace rct3::simulation
     {
         NodeId from = kNoNode;
         NodeId to = kNoNode;
-        float length = 0;        ///< In steps between tiles side by side
-        std::int64_t toll = 0;   ///< In cents
+        float length = 0; ///< In steps between tiles side by side
+        units::Money toll { };
         std::uint32_t owner = 0; ///< What it stands for, as whoever made it numbers it
     };
 

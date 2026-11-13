@@ -412,7 +412,7 @@ namespace rct3::simulation::staff
                     rounds->seen.emplace_back(w, now);
                     rounds->watching = w;
                     rounds->chased_from = now;
-                    rounds->watched_from = -1;
+                    rounds->watched_from.reset();
                     stride.route = std::move(*way);
                     break;
                 }
@@ -498,9 +498,9 @@ namespace rct3::simulation::staff
                 const entt::entity w = rounds->watching;
                 const bool there = r.valid(w) && r.all_of<Staff, Pose, Stride>(w);
                 const bool near = there && (glm::distance(pose.position, r.get<Pose>(w).position) <= kTuning.inspector.watch_near.value || r.get<Stride>(w).to == at);
-                if (near && rounds->watched_from < 0)
+                if (near && !rounds->watched_from)
                     rounds->watched_from = now;
-                const bool watched = rounds->watched_from >= 0 && now - rounds->watched_from >= kTuning.inspector.watch.value;
+                const bool watched = rounds->watched_from && now - *rounds->watched_from >= kTuning.inspector.watch.value;
                 if (watched && there)
                 {
                     const Staff& worker = r.get<Staff>(w);
@@ -512,7 +512,7 @@ namespace rct3::simulation::staff
                 if (!near && there && !watched && stride.route.empty())
                     if (auto way = paths.route(at, r.get<Stride>(w).to, Walker::Staff))
                         stride.route = std::move(*way);
-                const bool chasing = there && !watched && !near && !stride.route.empty() && (rounds->watched_from >= 0 || now - rounds->chased_from < kTuning.inspector.chase.value);
+                const bool chasing = there && !watched && !near && !stride.route.empty() && (rounds->watched_from || now - rounds->chased_from < kTuning.inspector.chase.value);
                 if (chasing)
                 {
                     stride.to = stride.route.front();

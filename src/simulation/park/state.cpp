@@ -41,7 +41,7 @@ namespace rct3::simulation::park
         {
             s.weather = world.weather->type;
             s.forecast = world.weather->forecast;
-            s.temperature = world.weather->temperature;
+            s.temperature = units::Degrees { world.weather->temperature };
             s.wind = std::clamp(world.weather->wind_speed, 0.0f, 1.0f);
             s.climate = world.weather->climate;
             // The file's time until the next change is in calendar units as ours is.
@@ -87,7 +87,7 @@ namespace rct3::simulation::park
         using enum save::model::WeatherType;
         // A snowstorm keeps guests in as a thunderstorm does.
         const bool storm = state.weather == Thunderstorm || state.weather == Snowstorm;
-        return { .rain = storm || state.weather == LightRain || state.weather == HeavyRain, .storm = storm, .sunny = state.weather == Sunny || state.weather == SunnyCloudy, .temperature = { state.temperature.value_or(Weather { }.temperature.value) } };
+        return { .rain = storm || state.weather == LightRain || state.weather == HeavyRain, .storm = storm, .sunny = state.weather == Sunny || state.weather == SunnyCloudy, .temperature = state.temperature.value_or(Weather { }.temperature) };
     }
 
 } // namespace rct3::simulation::park

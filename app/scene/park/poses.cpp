@@ -129,7 +129,7 @@ namespace rct3::scene::park
             const auto& r = scene.sim.registry;
             // Each by turns, offset by who they are so they do not all move at once.
             const auto turn = static_cast<std::size_t>(scene.park_clock / kChatTurnSeconds) + entt::to_integral(shown.guest);
-            if (const auto& errand = r.get<simulation::Errand>(shown.guest); errand.kind == simulation::ErrandKind::Queueing && errand.queued.value >= simulation::kLongQueue)
+            if (const auto& errand = r.get<simulation::Errand>(shown.guest); errand.kind == simulation::ErrandKind::Queueing && errand.queued.value >= simulation::kLongQueue.value)
                 return turn % kImpatientEvery == 0 ? kImpatientMotions[turn / kImpatientEvery % kImpatientMotions.size()] : rct3::park::person::motion::kIdle;
             const auto* member = r.try_get<simulation::Member>(shown.guest);
             if (member == nullptr || r.get<simulation::Party>(member->party).huddle == 0)

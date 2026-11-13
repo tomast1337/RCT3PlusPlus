@@ -61,7 +61,7 @@ namespace rct3::simulation
         /// A spot an escaped animal at `at` wanders to, anywhere near.
         glm::vec3 roam_spot(glm::vec3 at, random::RandomState& dice)
         {
-            const auto off = [&] { return static_cast<float>(random::between(dice, -static_cast<double>(kRates.roam), static_cast<double>(kRates.roam))); };
+            const auto off = [&] { return static_cast<float>(random::between(dice, -static_cast<double>(kRates.roam.value), static_cast<double>(kRates.roam.value))); };
             return { at.x + off(), 0.0f, at.z + off() };
         }
 

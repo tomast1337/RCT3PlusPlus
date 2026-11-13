@@ -10,6 +10,7 @@
 #include "units/units.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -30,9 +31,9 @@ namespace rct3::simulation::staff
         units::Seconds gap { }; ///< Before they next look for somewhere to go
         /// The attractions visited and workers watched, with when (seconds into the run).
         std::vector<std::pair<entt::entity, float>> seen { };
-        entt::entity watching = entt::null; ///< The worker they are after, or watching
-        float chased_from = 0;              ///< When they set off after them
-        float watched_from = -1;            ///< When they came close enough to watch; -1 not yet
+        entt::entity watching = entt::null;    ///< The worker they are after, or watching
+        float chased_from = 0;                 ///< When they set off after them
+        std::optional<float> watched_from { }; ///< When they came close enough to watch; none yet
         /// What they told the player about what, with when: not told again for a while.
         std::vector<std::tuple<entt::entity, Finding, float>> told { };
     };

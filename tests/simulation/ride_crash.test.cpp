@@ -157,7 +157,7 @@ TEST_CASE("a ghost train's crash flies its wrecks but hurts no one, closes nothi
     CHECK(wrecks.crashes == 0);
     CHECK(wrecks.dangers == 0);
     CHECK(wrecks.injured == 0);
-    CHECK(wrecks.since.value == -1);
+    CHECK_FALSE(wrecks.since.has_value());
     CHECK(r.get<Attraction>(ride).testing);
     CHECK_FALSE(thought(r, near, ThoughtKind::Disaster));
     // Right by a wreck as it blows up, and still standing.
@@ -182,11 +182,12 @@ TEST_CASE("the park forgets a crash after a while")
     park.path({ 0, 0 }, { 4, 0 });
     const auto ride = park.flat_ride("Looper", { 4, 0 }, 100);
     auto& r = park.world().registry;
-    r.emplace<Wrecks>(ride, Wrecks { .since = { kTuning.crashes.forgotten.value - 2 } });
+    r.emplace<Wrecks>(ride, Wrecks { .since = rct3::units::Seconds { kTuning.crashes.forgotten.value - 2 } });
     park.run_seconds(1);
-    CHECK(r.get<Wrecks>(ride).since.value > 0);
+    REQUIRE(r.get<Wrecks>(ride).since.has_value());
+    CHECK(r.get<Wrecks>(ride).since->value > 0);
     park.run_seconds(2);
-    CHECK(r.get<Wrecks>(ride).since.value == -1);
+    CHECK_FALSE(r.get<Wrecks>(ride).since.has_value());
 }
 
 TEST_CASE("a guest on ground grown too steep slides down it along the ground, falls over, then gets up and walks to a path")

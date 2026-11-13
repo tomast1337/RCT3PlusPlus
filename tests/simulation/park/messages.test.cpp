@@ -11,7 +11,7 @@ namespace
     {
         simulation::park::ParkMessage m;
         m.text_key = std::move(key);
-        m.age = age;
+        m.age = { age };
         return m;
     }
 } // namespace
@@ -34,7 +34,7 @@ TEST_CASE("a park's messages start from its save, oldest first")
     const auto messages = simulation::park::park_messages(log);
     REQUIRE(messages.list.size() == 2);
     CHECK(messages.list[0].text_key == "Invented_Thing");
-    CHECK(messages.list[0].age == 300);
+    CHECK(messages.list[0].age.value == 300);
     CHECK(messages.list[0].subject == 77u);
     CHECK(messages.list[0].subject_name == "Big Wheel");
     CHECK(messages.list[0].panel == 8);
@@ -54,11 +54,11 @@ TEST_CASE("the list keeps the newest messages and lets old ones go")
     CHECK(messages.list.back().serial == simulation::park::kMessageCapacity + 3);
 
     simulation::park::ParkMessages few;
-    simulation::park::post(few, note("Old", simulation::park::kMessageLifetime - 10));
+    simulation::park::post(few, note("Old", simulation::park::kMessageLifetime.value - 10));
     simulation::park::post(few, note("New"));
     simulation::park::age(few, 5);
     CHECK(few.list.size() == 2);
-    CHECK(few.list.back().age == 5);
+    CHECK(few.list.back().age.value == 5);
     simulation::park::age(few, 6);
     REQUIRE(few.list.size() == 1);
     CHECK(few.list.front().text_key == "New");

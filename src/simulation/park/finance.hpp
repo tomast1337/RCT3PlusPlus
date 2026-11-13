@@ -30,8 +30,8 @@ namespace rct3::simulation::park
 
     /// The message telling the player the park cannot pay for something: the game's own text.
     inline constexpr std::string_view kCannotPayKey = "PlaceObject_NotEnoughMoney";
-    /// Game seconds before that message is posted again. Chosen by eye: a tool dragged with no cash says it once.
-    inline constexpr float kCannotPayGap = 5;
+    /// Game time before that message is posted again. Chosen by eye: a tool dragged with no cash says it once.
+    inline constexpr units::Seconds kCannotPayGap { 5 };
 
     /// Tells the player `park` cannot pay: posts kCannotPayKey to its messages, unless one was posted less than
     /// kCannotPayGap ago.

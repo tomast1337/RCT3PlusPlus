@@ -116,13 +116,13 @@ TEST_CASE("an inspector who queued for ages at a ride says so")
     Sandbox park;
     park.path({ 0, 0 }, { 4, 0 });
     auto& r = park.world().registry;
-    const auto ride = park.flat_ride("Twister", { 4, 0 }, 300, { .cycle_seconds = kLongQueue + 30 });
+    const auto ride = park.flat_ride("Twister", { 4, 0 }, 300, { .cycle_seconds = kLongQueue.value + 30 });
     auto& cycle = r.get<CycleRide>(ride);
     cycle.phase = RidePhase::Running; // Busy with others till then
     const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });
     CHECK(park.run_until([&] { return r.get<Errand>(inspector).kind == ErrandKind::Queueing; }, 60));
     CHECK_FALSE(found(r, Finding::LongQueue, ride));
-    CHECK(park.run_until([&] { return r.get<Errand>(inspector).kind == ErrandKind::Riding; }, kLongQueue + 60));
+    CHECK(park.run_until([&] { return r.get<Errand>(inspector).kind == ErrandKind::Riding; }, kLongQueue.value + 60));
     CHECK(found(r, Finding::LongQueue, ride));
 }
 

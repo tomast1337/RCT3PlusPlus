@@ -21,12 +21,13 @@ await frames(3);
 const designs = build.construction()?.designs ?? [];
 expect(designs.length > 0, "a saved corkscrew design");
 
-// The designs window opens on the custom track, the first row; the first saved design is a heading and two rows
-// below it, in the window's units (a button is 22 of them high).
+// The designs window opens on the custom track, the first row; the designs follow by name. The third, Triple
+// Corkscrew, has its station on the ground beside its lowest piece, so ground paths reach its doors. It is a
+// heading and four rows below it, in the window's units (a button is 22 of them high).
 const list = ui.find("design_browser/content/list")!;
 const button = ui.find("design_browser/content/build")!;
 const unit = (button.bottom - button.top) / 22;
-await pointer.click(list.x, list.top + (18 + 16 * 2) * unit);
+await pointer.click(list.x, list.top + (18 + 16 * 4) * unit);
 await frames(5);
 await ui.click("design_browser/content/build");
 await frames(10);

@@ -461,7 +461,7 @@ TEST_CASE("the research window sets the budget and a priority an area")
     s.add("Rct3pp_Research_NothingLeft", u"Nothing left");
     s.add("Carousel_Name", u"Carousel");
     simulation::Research research { .budget = 5000, .spent = 4000, .current = 7, .priorities = { 0.5f, 0.25f, 1.0f } };
-    std::vector<simulation::ResearchItem> left { { .id = 7, .area = simulation::ResearchArea::GentleRides, .cost = 16000 } };
+    std::vector<simulation::ResearchItem> left { { .id = 7, .area = simulation::ResearchArea::GentleRides, .cost = units::Money { 16000 } } };
     ManagementPage page = management_page(ManagementTopic::Research, 0, { .research = &research, .research_left = left, .research_name = [](std::uint64_t) { return std::string_view("Carousel_Name"); } }, s, kUnits);
     CHECK(value_of(page, u"Researching:") == u"Carousel");
     REQUIRE(page.lines.size() == 2);
@@ -508,9 +508,9 @@ TEST_CASE("the research window's list of what may come next offers a focus on th
     s.add("Rct3pp_Research_Focus", u"Focus (%AMOUNT%)");
     const simulation::Research research { .budget = 20000, .current = 1 };
     const std::vector<simulation::ResearchItem> left {
-        { .id = 1, .area = simulation::ResearchArea::Shops, .cost = 10000 },
-        { .id = 2, .area = simulation::ResearchArea::Shops, .cost = 6000 },
-        { .id = 3, .area = simulation::ResearchArea::Coasters, .cost = 24000 },
+        { .id = 1, .area = simulation::ResearchArea::Shops, .cost = units::Money { 10000 } },
+        { .id = 2, .area = simulation::ResearchArea::Shops, .cost = units::Money { 6000 } },
+        { .id = 3, .area = simulation::ResearchArea::Coasters, .cost = units::Money { 24000 } },
     };
     ManagementPage page = management_page(ManagementTopic::Research, kComingTab, { .research = &research, .research_left = left }, s, kUnits);
     CHECK(page.rows.size() == 2); // Not the item under way

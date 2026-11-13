@@ -18,7 +18,7 @@ namespace
     struct Lab
     {
         Research research { .budget = 20000 };
-        std::vector<ResearchItem> items { { .id = 1, .area = ResearchArea::ThrillRides, .cost = 16000 }, { .id = 2, .area = ResearchArea::Shops, .cost = 10000 } };
+        std::vector<ResearchItem> items { { .id = 1, .area = ResearchArea::ThrillRides, .cost = units::Money { 16000 } }, { .id = 2, .area = ResearchArea::Shops, .cost = units::Money { 10000 } } };
         simulation::park::ParkState park;
         save::model::Finance money;
         std::optional<std::int64_t> kept;
@@ -260,7 +260,7 @@ TEST_CASE("the next item is drawn from the areas the player cares for")
 
 TEST_CASE("the progress of the current item and the months the budget takes to finish it")
 {
-    const std::vector<ResearchItem> items { { .id = 1, .cost = 24000 }, { .id = 2, .cost = 10000 } };
+    const std::vector<ResearchItem> items { { .id = 1, .cost = units::Money { 24000 } }, { .id = 2, .cost = units::Money { 10000 } } };
     Research r { .budget = 20000, .spent = 6000, .current = 1 };
     auto p = research_progress(r, items);
     REQUIRE(p);
@@ -355,7 +355,7 @@ TEST_CASE("an ended focus gives way to what it set aside, keeping what was spent
 TEST_CASE("the preview shows the cheapest few of each area, leaving out the item worked on")
 {
     const std::vector<ResearchItem> items {
-        { .id = 1, .area = ResearchArea::Shops, .cost = 10000 }, { .id = 2, .area = ResearchArea::Coasters, .cost = 24000 }, { .id = 3, .area = ResearchArea::Shops, .cost = 6000 }, { .id = 4, .area = ResearchArea::Shops, .cost = 8000 }, { .id = 5, .area = ResearchArea::Coasters, .cost = 16000 },
+        { .id = 1, .area = ResearchArea::Shops, .cost = units::Money { 10000 } }, { .id = 2, .area = ResearchArea::Coasters, .cost = units::Money { 24000 } }, { .id = 3, .area = ResearchArea::Shops, .cost = units::Money { 6000 } }, { .id = 4, .area = ResearchArea::Shops, .cost = units::Money { 8000 } }, { .id = 5, .area = ResearchArea::Coasters, .cost = units::Money { 16000 } },
     };
     const Research r { .current = 3 };
     const std::vector<ResearchItem> next = research_preview(r, items, 2);

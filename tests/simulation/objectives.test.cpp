@@ -139,7 +139,7 @@ TEST_CASE("the research prize is free progress at the next part of the budget pa
     save::model::TerrainGrid land;
     std::optional<std::int64_t> kept;
     simulation::Research research { .budget = 30000, .current = 1 };
-    std::vector<simulation::ResearchItem> items { { .id = 1, .cost = 100000 } };
+    std::vector<simulation::ResearchItem> items { { .id = 1, .cost = units::Money { 100000 } } };
     random::RandomState dice = random::seeded(random::Seed { 1 });
     simulation::give_prize(park, finance, kept, land, research, 9);
     CHECK(research.boost == simulation::kTuning.prizes.research_boost);

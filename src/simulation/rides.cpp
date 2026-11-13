@@ -224,7 +224,7 @@ namespace rct3::simulation
                 const auto& line = station == 0 ? ride.line : ride.stops[station - 1].line;
                 const NodeId entrance = entrance_of(r, e, station);
                 for (const entt::entity guest : queue)
-                    if (r.valid(guest) && (r.get<Errand>(guest).queued.value += dt) >= kLongQueue)
+                    if (r.valid(guest) && (r.get<Errand>(guest).queued.value += dt) >= kLongQueue.value)
                         think(r, guest, ThoughtKind::QueueingForAges, e, now);
                 // Unhappy guests who have waited very long now and then give up and walk off.
                 std::erase_if(queue, [&](entt::entity guest) {
@@ -413,15 +413,15 @@ namespace rct3::simulation
                 std::erase_if(riders, [&](entt::entity) { return off[seat++]; });
             };
             // Riders an hour over the time since the last departure, smoothed over the last few.
-            if (ride.since_departure.value >= 0)
-                ride.since_departure.value += dt;
+            if (ride.since_departure)
+                ride.since_departure->value += dt;
             const auto depart = [&](std::size_t riding, units::Seconds& timer) {
-                if (ride.since_departure.value > 0)
+                if (ride.since_departure && ride.since_departure->value > 0)
                 {
-                    const float rate = static_cast<float>(riding) * 3600 / ride.since_departure.value;
+                    const float rate = static_cast<float>(riding) * 3600 / ride.since_departure->value;
                     ride.per_hour = ride.per_hour > 0 ? std::lerp(ride.per_hour, rate, kTuning.wear.flow_smoothing.value) : rate;
                 }
-                ride.since_departure.value = 0;
+                ride.since_departure = units::Seconds { };
                 timer.value = 0;
                 // Each run with riders wears the ride, and may end in a breakdown that closes it.
                 if (riding == 0)
@@ -447,8 +447,8 @@ namespace rct3::simulation
             auto* wrecks = r.try_get<Wrecks>(e);
             if (wrecks != nullptr)
             {
-                if (wrecks->since.value >= 0 && (wrecks->since.value += dt) >= crashes.forgotten.value)
-                    wrecks->since.value = -1;
+                if (wrecks->since && (wrecks->since->value += dt) >= crashes.forgotten.value)
+                    wrecks->since.reset();
                 const auto* surroundings = r.ctx().find<WreckSurroundings>();
                 const WreckSurroundings around = surroundings != nullptr ? *surroundings : WreckSurroundings { };
                 for (std::vector<Wreck>& cars : wrecks->trains)
@@ -509,7 +509,7 @@ namespace rct3::simulation
                         train.was_at = train.at;
                         train.travelled = 0;
                         train.speed = 0;
-                        train.slow = 0;
+                        train.slow = { };
                         train.launched = false;
                         train.passed = 0;
                         train.push = 0;
@@ -565,7 +565,7 @@ namespace rct3::simulation
                         if (pool != nullptr && !pool->water.empty())
                             water = std::ranges::min(pool->water, { }, [&](const glm::vec3& w) { return glm::distance(glm::vec2(w.x, w.z), glm::vec2(at.x, at.z)); }).y;
                         const glm::vec3 way = track_way(train, train.at);
-                        train.flight = Flight { .from = at, .way = way, .at = at, .velocity = way * train.speed, .water = std::min(water, at.y), .speed = train.speed };
+                        train.flight = Flight { .from = at, .way = way, .at = at, .velocity = way * train.speed, .water = std::min(water, at.y), .speed = { train.speed } };
                         // A pool's far wall stops it, its middle half a car short of it, however far it would fly.
                         constexpr float kFar = 100;   ///< Metres on it looks for the wall. Chosen by eye: past any slide's throw
                         constexpr float kHalfCar = 1; ///< Metres from a slide car's middle to its nose. Chosen by eye
@@ -574,7 +574,7 @@ namespace rct3::simulation
                             const glm::vec2 from { at.x, at.z };
                             const glm::vec2 far = from + glm::normalize(level) * kFar;
                             if (const glm::vec2 stop = pool_stop(*pool, from, far, world.paths.tile_size); stop != far)
-                                train.flight->reach = std::max(glm::distance(from, stop) - kHalfCar, 0.0f);
+                                train.flight->reach.value = std::max(glm::distance(from, stop) - kHalfCar, 0.0f);
                         }
                         // It flies the rest of the step it ran off in.
                         fly(*train.flight, off_for(train));
@@ -612,7 +612,7 @@ namespace rct3::simulation
                         const std::size_t seats = std::max<std::size_t>((ride.capacity + cars - 1) / cars, 1);
                         wrecks->dangers += (attraction.open ? 1 : 0) + static_cast<std::uint32_t>(std::min(cars, (riders.size() + seats - 1) / seats));
                         ++wrecks->crashes;
-                        wrecks->since.value = 0;
+                        wrecks->since = units::Seconds { };
                         // Riders fly out of their car as fast as it went, though never thrown downwards, land
                         // knocked over and, once up, walk back to the ride's exit.
                         // shortcut: they fly through what stands in the park and walk straight back over whatever
@@ -760,7 +760,7 @@ namespace rct3::simulation
                             attraction.income.value += price.value;
                             ++attraction.customers;
                         }
-                        else if (r.get<Errand>(guest).queued.value >= kLongQueue)
+                        else if (r.get<Errand>(guest).queued.value >= kLongQueue.value)
                             tell(r, guest, Finding::LongQueue, e, now);
                         r.get<Errand>(guest).kind = ErrandKind::Riding;
                         if (const std::size_t seat = riders->size(); walk_on && seat < walks->on.size())

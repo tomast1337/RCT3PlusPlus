@@ -50,15 +50,15 @@ TEST_CASE("a refused spend tells the player, once in a while however often it is
     for (int i = 0; i < 10; ++i)
         CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, false));
     CHECK(told() == 1);
-    age(park.messages, kCannotPayGap / 2);
+    age(park.messages, kCannotPayGap.value / 2);
     CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, false));
     CHECK(told() == 1);
-    age(park.messages, kCannotPayGap);
+    age(park.messages, kCannotPayGap.value);
     CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, false));
     CHECK(told() == 2);
     // Forced or paid for, nothing is said.
     CHECK(book(park, money, kept, units::Money { 300 }, LedgerLine::StaffWages, true));
-    age(park.messages, kCannotPayGap);
+    age(park.messages, kCannotPayGap.value);
     CHECK(book(park, money, kept, units::Money { -50 }, LedgerLine::RideTickets, false));
     CHECK(told() == 2);
 }

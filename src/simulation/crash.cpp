@@ -27,8 +27,8 @@ namespace rct3::simulation
             const float dt = std::min(seconds - static_cast<float>(step) * kStep, kStep);
             if (w.state == WreckState::Burning)
             {
-                w.burnt += dt;
-                if (w.burnt >= kBurnsFor)
+                w.burnt.value += dt;
+                if (w.burnt.value >= kBurnsFor)
                 {
                     w.state = WreckState::Gone;
                     event = WreckEvent::Vanished;
@@ -39,9 +39,9 @@ namespace rct3::simulation
             w.at += w.velocity * dt;
             if (const float turn = glm::length(w.spin); turn > 0)
                 w.turned = glm::normalize(glm::angleAxis(turn * dt, w.spin / turn) * w.turned);
-            w.flying += dt;
+            w.flying.value += dt;
             const float ground = around.ground ? around.ground({ w.at.x, w.at.z }) : 0.0f;
-            bool blown = w.flying >= kFlightMost || (around.struck && around.struck(w.at));
+            bool blown = w.flying.value >= kFlightMost || (around.struck && around.struck(w.at));
             if (w.at.y <= ground && w.velocity.y < 0)
             {
                 w.at.y = ground;

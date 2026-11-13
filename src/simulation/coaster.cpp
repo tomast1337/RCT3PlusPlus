@@ -157,7 +157,7 @@ namespace rct3::simulation
         for (std::size_t k = 0; k < cars; ++k)
         {
             const float d = c.at - (static_cast<float>(k) + 0.5f) * car;
-            const glm::vec3 spin = glm::vec3(spread(), spread(), spread()) * kTuning.crashes.tumble;
+            const glm::vec3 spin = glm::vec3(spread(), spread(), spread()) * kTuning.crashes.tumble.value;
             const glm::vec3 from = track_point(c, d);
             thrown.push_back({ .at = from, .from = from, .velocity = track_way(c, d) * c.speed, .spin = spin, .ghost = c.ghost });
         }
@@ -179,15 +179,15 @@ namespace rct3::simulation
         // Across the ground it goes straight on, so stopping it at its reach is the same in any steps.
         const auto stopped = [&f] {
             const glm::vec2 across { f.at.x - f.from.x, f.at.z - f.from.z };
-            if (glm::length(across) <= f.reach)
+            if (glm::length(across) <= f.reach.value)
                 return;
-            const glm::vec2 kept = glm::normalize(across) * f.reach;
+            const glm::vec2 kept = glm::normalize(across) * f.reach.value;
             f.at.x = f.from.x + kept.x;
             f.at.z = f.from.z + kept.y;
             f.velocity.x = f.velocity.z = 0;
         };
-        f.off += seconds;
-        if (f.afloat < 0)
+        f.off.value += seconds;
+        if (!f.afloat)
         {
             const float down = f.at.y - f.water;
             // Down on its water within the step: at the moment the fall from its height takes.
@@ -197,19 +197,19 @@ namespace rct3::simulation
             f.velocity.y -= kGravity * flown;
             stopped();
             if (flown < t)
-                return f.off < kGone;
+                return f.off.value < kGone.value;
             f.at.y = f.water;
             f.velocity.y = 0;
-            f.afloat = 0;
+            f.afloat = units::Seconds { };
             seconds -= flown;
         }
-        f.afloat += seconds;
+        f.afloat->value += seconds;
         const float drift = (1 - std::exp(-kWaterDrag * seconds)) / kWaterDrag;
         f.at += f.velocity * drift;
         f.velocity *= std::exp(-kWaterDrag * seconds);
         stopped();
-        f.at.y = f.water - kSink * std::max(f.off - (kGone - 1), 0.0f);
-        return f.off < kGone;
+        f.at.y = f.water - kSink * std::max(f.off.value - (kGone.value - 1), 0.0f);
+        return f.off.value < kGone.value;
     }
 
     glm::mat4 flown(const Flight& f, const glm::mat4& place)
@@ -217,9 +217,10 @@ namespace rct3::simulation
         // Nose along the way it flies, as if no wall stopped it, then levelling off once afloat. With nothing
         // stored but how it left, so it turns the same between steps as at them.
         const glm::vec3 level = glm::length(glm::vec2(f.way.x, f.way.z)) > 1e-3f ? glm::normalize(glm::vec3(f.way.x, 0, f.way.z)) : f.way;
-        const glm::vec3 fall = f.way * f.speed - glm::vec3(0, kGravity * (f.afloat < 0 ? f.off : f.off - f.afloat), 0);
+        const float fallen_for = f.afloat ? f.off.value - f.afloat->value : f.off.value;
+        const glm::vec3 fall = f.way * f.speed.value - glm::vec3(0, kGravity * fallen_for, 0);
         const glm::vec3 nose = glm::length(fall) > 1e-3f ? glm::normalize(fall) : level;
-        const glm::vec3 to = f.afloat < 0 ? nose : glm::normalize(glm::mix(nose, level, std::min(f.afloat / kSettle, 1.0f)) + level * 1e-3f);
+        const glm::vec3 to = f.afloat ? glm::normalize(glm::mix(nose, level, std::min(f.afloat->value / kSettle, 1.0f)) + level * 1e-3f) : nose;
         const glm::vec3 axis = glm::cross(f.way, to);
         const float turn = std::atan2(glm::length(axis), glm::dot(f.way, to));
         const glm::mat4 turned = glm::length(axis) > 1e-6f ? glm::rotate(glm::mat4(1.0f), turn, glm::normalize(axis)) : glm::mat4(1.0f);
@@ -256,8 +257,8 @@ namespace rct3::simulation
         {
             c.passed = 0;
             c.push = push_on(0, 1);
-            c.pushed = 0;
-            c.held = 0;
+            c.pushed = { };
+            c.held = { };
         }
         const int steps = static_cast<int>(std::ceil(seconds / kStep));
         for (int step = 0; step < steps; ++step)
@@ -309,11 +310,11 @@ namespace rct3::simulation
                     // valleys should roll it back for good.
                     const float pace = open ? std::abs(c.speed) : c.speed;
                     if (pace < 0.1f)
-                        c.slow += dt;
-                    if (c.slow > kStuck)
+                        c.slow.value += dt;
+                    if (c.slow.value > kStuck)
                         c.speed = std::max(c.speed, c.station_speed);
                     if (pace > c.station_speed)
-                        c.slow = 0;
+                        c.slow = { };
                 }
                 // Each car over a brake or block brake slows the train while it is faster than that brake's speed,
                 // down to it and no further, whichever way it goes; each over a block brake pushes it on while it is
@@ -367,10 +368,10 @@ namespace rct3::simulation
                 if (blocked && std::isfinite(room))
                     c.speed = std::min(c.speed, std::sqrt(2 * c.brake_pull * std::max(room, 0.0f)));
                 // A drop tower's train is held where its first climb tops out, then let fall.
-                if (c.shuttle == Shuttle::Drop && c.passed == 0 && c.push == 0 && c.travelled > 0 && c.speed <= 0 && c.held < kTopHold)
+                if (c.shuttle == Shuttle::Drop && c.passed == 0 && c.push == 0 && c.travelled > 0 && c.speed <= 0 && c.held.value < kTopHold)
                 {
                     c.speed = 0;
-                    c.held += dt;
+                    c.held.value += dt;
                     continue;
                 }
             }
@@ -384,7 +385,7 @@ namespace rct3::simulation
             if (open)
             {
                 target = c.push;
-                left -= c.pushed;
+                left -= c.pushed.value;
             }
             else if (c.launch_speed && (platform || assisted))
             {
@@ -427,19 +428,21 @@ namespace rct3::simulation
                 const std::size_t i = point_at(c, wrap(c, d));
                 const bool steady = i < c.steady.size() && c.steady[i];
                 const glm::vec3 weight = glm::vec3(0, -kGravity, 0) - (steady ? glm::vec3(0) : bend * c.speed * c.speed);
-                const glm::vec3 hang = right * std::sin(c.lean) - up * std::cos(c.lean);
-                const glm::vec3 arc = right * std::cos(c.lean) + up * std::sin(c.lean);
+                const float lean = c.lean.value;
+                const glm::vec3 hang = right * std::sin(lean) - up * std::cos(lean);
+                const glm::vec3 arc = right * std::cos(lean) + up * std::sin(lean);
                 // Turned by the pull along its arc times its arm, as a weight its own size.
-                float rate = c.lean_rate + glm::dot(weight, arc) * t.length * dt;
+                float rate = c.lean_rate.value + glm::dot(weight, arc) * t.length * dt;
                 const float held = t.friction * std::max(glm::dot(weight, hang), 0.0f) * t.length * dt;
                 rate = std::abs(rate) <= held ? 0.0f : (rate - std::copysign(held, rate)) * std::exp(-t.damping * dt);
-                c.lean = (c.lean + rate * dt) * std::exp(-t.centring * dt);
-                c.lean_rate = rate;
-                if (std::abs(c.lean) > kRim && !(i < c.covered.size() && c.covered[i]))
+                c.lean.value = (lean + rate * dt) * std::exp(-t.centring * dt);
+                c.lean_rate.value = rate;
+                if (std::abs(c.lean.value) > kRim && !(i < c.covered.size() && c.covered[i]))
                 {
                     c.crashed = true;
                     c.running = false;
-                    c.lean = c.lean_rate = 0;
+                    c.lean = { };
+                    c.lean_rate = { };
                     return false;
                 }
             }
@@ -455,7 +458,8 @@ namespace rct3::simulation
                     c.crashed = !splash;
                     c.splashed = splash;
                     c.running = false;
-                    c.lean = c.lean_rate = 0;
+                    c.lean = { };
+                    c.lean_rate = { };
                     return splash;
                 }
             }
@@ -464,7 +468,7 @@ namespace rct3::simulation
                 const float from = c.at;
                 c.at += moved;
                 c.travelled += std::abs(moved);
-                if (c.push != 0 && (c.pushed += std::abs(moved)) >= c.train_length)
+                if (c.push != 0 && (c.pushed.value += std::abs(moved)) >= c.train_length)
                     c.push = 0;
                 // Coming into the station, its leading end first: on a tower, only falling back into it.
                 const float lead = moved < 0 ? -c.train_length : 0;
@@ -473,7 +477,7 @@ namespace rct3::simulation
                     if (tower)
                         c.speed = 0; // Braked to a stop on its base, as brakes stop a train here
                     c.push = push_on(c.passed, moved);
-                    c.pushed = 0;
+                    c.pushed = { };
                 }
                 // Back where it set off for the last time, its run is over.
                 if (c.passed >= c.passes && (from - c.start) * (c.at - c.start) <= 0 && c.at != from)
@@ -481,7 +485,7 @@ namespace rct3::simulation
                     c.at = c.start;
                     c.travelled = 0;
                     c.speed = 0;
-                    c.slow = 0;
+                    c.slow = { };
                     c.push = 0;
                     c.running = false;
                     return true;
@@ -497,7 +501,7 @@ namespace rct3::simulation
                 c.travelled = c.stops[c.next_stop++];
                 c.at = wrap(c, c.start + c.travelled);
                 c.speed = 0;
-                c.slow = 0;
+                c.slow = { };
                 c.running = false;
                 return false;
             }
@@ -514,7 +518,7 @@ namespace rct3::simulation
                 c.at = c.start;
                 c.travelled = 0;
                 c.speed = 0;
-                c.slow = 0;
+                c.slow = { };
                 c.launched = false;
                 c.running = false;
                 c.next_stop = 0;

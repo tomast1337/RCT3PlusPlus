@@ -120,8 +120,8 @@ namespace rct3::simulation
             // Guests outside the park walk to the gate, and new parties come (simulation/guests.cpp).
             step_gates(world, weather);
             vandalism.recent *= std::exp(-dt / kTuning.vandals.fade.value);
-            if (vandalism.since_warning.value >= 0)
-                vandalism.since_warning.value += dt;
+            if (vandalism.since_warning)
+                vandalism.since_warning->value += dt;
 
             // What lies and stands on each tile, in entity order. Emptying a tile's list keeps its memory for the next tick.
             StepBuffers& buffers = world.buffers;
@@ -234,7 +234,7 @@ namespace rct3::simulation
                                 if (t == g || cannon == nullptr || !r.valid(t) || !r.all_of<Pose, Mood, Visitor>(t) || r.any_of<Staff>(t))
                                     return false;
                                 const glm::vec3 to = r.get<Pose>(t).position - from;
-                                return glm::length(to) <= reach && cannon_turn(cannon->heading, { to.x, to.z }, kTuning.surroundings.cannon_swing).has_value();
+                                return glm::length(to) <= reach && cannon_turn(cannon->heading, { to.x, to.z }, kTuning.surroundings.cannon_swing.value).has_value();
                             };
                             if (!in_reach(linger->target) || random::chance(dice.state, kTuning.surroundings.retarget.value * dt))
                             {
@@ -452,10 +452,10 @@ namespace rct3::simulation
                         r.get<PathItem>(*whole).broken = true;
                         ++vandalism.broken;
                         vandalism.recent += 1;
-                        if (vandalism.recent >= kTuning.vandals.bad && (vandalism.since_warning.value < 0 || vandalism.since_warning.value >= kTuning.vandals.warning_every.value))
+                        if (vandalism.recent >= kTuning.vandals.bad && (!vandalism.since_warning || vandalism.since_warning->value >= kTuning.vandals.warning_every.value))
                         {
                             ++vandalism.warnings;
-                            vandalism.since_warning.value = 0;
+                            vandalism.since_warning = units::Seconds { };
                         }
                     }
                 }

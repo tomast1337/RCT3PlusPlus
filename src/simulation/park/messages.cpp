@@ -30,7 +30,7 @@ namespace rct3::simulation::park
         {
             ParkMessage message;
             message.text_key = table_key(m.text_key);
-            message.age = std::max(m.time, 0.0f);
+            message.age = { std::max(m.time, 0.0f) };
             message.subject = m.object;
             message.subject_name = m.object_name;
             message.panel = m.panel;
@@ -51,8 +51,8 @@ namespace rct3::simulation::park
     void age(ParkMessages& messages, float game_seconds)
     {
         for (ParkMessage& m : messages.list)
-            m.age += game_seconds;
-        std::erase_if(messages.list, [](const ParkMessage& m) { return m.age > kMessageLifetime; });
+            m.age.value += game_seconds;
+        std::erase_if(messages.list, [](const ParkMessage& m) { return m.age.value > kMessageLifetime.value; });
     }
 
 } // namespace rct3::simulation::park

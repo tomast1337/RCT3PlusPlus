@@ -97,7 +97,7 @@ TEST_CASE("a boat roams the lake, keeps to the water and docks once its time is 
         // Turns are wide, so it may stray half a tile past the middles it steers by.
         const bool near_water = water.at(t.x, t.y) || water.at(water.tile_of(boat.at + glm::vec2 { 2, 0 }).x, t.y) || water.at(water.tile_of(boat.at - glm::vec2 { 2, 0 }).x, t.y) || water.at(t.x, water.tile_of(boat.at + glm::vec2 { 0, 2 }).y) || water.at(t.x, water.tile_of(boat.at - glm::vec2 { 0, 2 }).y);
         REQUIRE(near_water);
-        CHECK(boat.speed <= 3.01f);
+        CHECK(boat.speed.value <= 3.01f);
     }
     CHECK(docked);
     CHECK(seconds > 40);
@@ -156,18 +156,18 @@ TEST_CASE("a boat slows in a hard turn and gains speed again once its mark lies 
     const simulation::Dock dock { .leave = { 40, 40 }, .heading = { 1, 0 }, .enter = { 40, 40 } };
     simulation::Boat boat;
     simulation::cast_off(boat, dock);
-    boat.speed = 3;
+    boat.speed = { 3 };
     boat.marks = { { 40, 70 } }; // Off its side, far
     auto dice = random::seeded(random::Seed { 1 });
     simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
-    CHECK(boat.speed < 2.5f);
-    CHECK(boat.turning == doctest::Approx(simulation::kMostBoats.turn_most));
+    CHECK(boat.speed.value < 2.5f);
+    CHECK(boat.turning.value == doctest::Approx(simulation::kMostBoats.turn_most));
     for (int i = 0; i < 6; ++i)
         simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
-    const float lined_up = boat.speed;
+    const float lined_up = boat.speed.value;
     for (int i = 0; i < 6; ++i)
         simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
-    CHECK(boat.speed > lined_up);
+    CHECK(boat.speed.value > lined_up);
 }
 
 TEST_CASE("a boat leans into its turn, no further than its handling lets it, and upright again on a straight")
@@ -180,25 +180,25 @@ TEST_CASE("a boat leans into its turn, no further than its handling lets it, and
     boat.marks = { { 40, 70 } };
     auto dice = random::seeded(random::Seed { 1 });
     simulation::sail(boat, water, dock, ski, 3, 1e9f, 0.25f, dice);
-    CHECK(boat.turning > 0);
-    CHECK(boat.lean > 0);
+    CHECK(boat.turning.value > 0);
+    CHECK(boat.lean.value > 0);
     for (int i = 0; i < 8; ++i)
         simulation::sail(boat, water, dock, ski, 3, 1e9f, 0.25f, dice);
-    CHECK(boat.lean <= ski.lean_most);
+    CHECK(boat.lean.value <= ski.lean_most);
     boat.marks = { boat.at + boat.heading * 40.0f };
     for (int i = 0; i < 12; ++i)
         simulation::sail(boat, water, dock, ski, 3, 1e9f, 0.25f, dice);
-    CHECK(std::abs(boat.lean) < 0.05f);
+    CHECK(std::abs(boat.lean.value) < 0.05f);
 }
 
 TEST_CASE("a boat is drawn between where its last sail began and ended, turning smoothly")
 {
-    simulation::Boat boat { .at = { 2, 0 }, .heading = { 0, 1 }, .lean = 0.2f, .was = { 0, 0 }, .was_heading = { 1, 0 }, .was_lean = 0 };
+    simulation::Boat boat { .at = { 2, 0 }, .heading = { 0, 1 }, .lean = { 0.2f }, .was = { 0, 0 }, .was_heading = { 1, 0 }, .was_lean = { } };
     const auto half = simulation::between_sails(boat, 0.5f);
     CHECK(half.at.x == doctest::Approx(1));
     CHECK(half.heading.x == doctest::Approx(std::sqrt(0.5f)));
     CHECK(half.heading.y == doctest::Approx(std::sqrt(0.5f)));
-    CHECK(half.lean == doctest::Approx(0.1f));
+    CHECK(half.lean.value == doctest::Approx(0.1f));
     CHECK(simulation::between_sails(boat, 1).at == boat.at);
 }
 
@@ -244,11 +244,11 @@ TEST_CASE("bumper boats run into each other and bounce off")
 
 TEST_CASE("a rowing boat rows with both oars on a straight and with those that turn it in a turn")
 {
-    CHECK(simulation::stroke(0) == simulation::Stroke::Both);
-    CHECK(simulation::stroke(simulation::kRowRound / 2) == simulation::Stroke::Both);
-    CHECK(simulation::stroke(-simulation::kRowRound / 2) == simulation::Stroke::Both);
-    CHECK(simulation::stroke(1) == simulation::Stroke::Left);
-    CHECK(simulation::stroke(-1) == simulation::Stroke::Right);
+    CHECK(simulation::stroke({ 0 }) == simulation::Stroke::Both);
+    CHECK(simulation::stroke({ simulation::kRowRound.value / 2 }) == simulation::Stroke::Both);
+    CHECK(simulation::stroke({ -simulation::kRowRound.value / 2 }) == simulation::Stroke::Both);
+    CHECK(simulation::stroke({ 1 }) == simulation::Stroke::Left);
+    CHECK(simulation::stroke({ -1 }) == simulation::Stroke::Right);
 }
 
 TEST_CASE("a boat ride given boats again has them all back at its dock, as many as its trains, on the water as it is now")

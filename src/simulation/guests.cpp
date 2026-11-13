@@ -430,7 +430,7 @@ namespace rct3::simulation
         if (glm::dot(moved, moved) < 0.0001f)
             return;
         const float turn = std::remainder(std::atan2(moved.x, moved.y) - pose.was_heading.value, 2 * glm::pi<float>()) / 2;
-        const float most = kTuning.walking.turn_rate * dt;
+        const float most = kTuning.walking.turn_rate.value * dt;
         pose.heading.value = pose.was_heading.value + std::clamp(turn, -most, most);
     }
 
@@ -630,7 +630,7 @@ namespace rct3::simulation
                         for (std::size_t k = 0; k <= ride.stops.size(); ++k)
                             passed += k != from && ahead(k) < along;
                         const float seconds = kTuning.transport.boarding.value + wait + lap * along / length + kTuning.transport.dwell.value * static_cast<float>(passed);
-                        world.paths.link({ .from = entrance_of(r, e, from), .to = exit_of(r, e, to), .length = seconds * pace, .toll = attraction.price.value, .owner = entt::to_integral(e) });
+                        world.paths.link({ .from = entrance_of(r, e, from), .to = exit_of(r, e, to), .length = seconds * pace, .toll = attraction.price, .owner = entt::to_integral(e) });
                     }
                 }
             }

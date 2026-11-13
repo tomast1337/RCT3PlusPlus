@@ -105,7 +105,7 @@ TEST_CASE("the bar's values are written from the park's state")
     state.cash = units::Money { -150075 };
     state.guests = 312;
     state.rating = 0.5f;
-    state.temperature = 30.2f;
+    state.temperature = units::Degrees { 30.2f };
     state.date.month = 1;
     state.date.year = 2;
     state.weather = save::model::WeatherType::Sunny;

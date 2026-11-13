@@ -312,7 +312,7 @@ namespace rct3::simulation
                     for (auto it = first; it != last; ++it)
                     {
                         const PathLink& l = it->second;
-                        const std::int64_t paid = spent[at] + l.toll;
+                        const std::int64_t paid = spent[at] + l.toll.value;
                         if (paid > *purse || l.to >= nodes_.size() || nodes_[l.to].removed || so_far + l.length >= length[l.to] || (nodes_[l.to].queue && target[l.to] == kNotTarget))
                             continue;
                         length[l.to] = so_far + l.length;

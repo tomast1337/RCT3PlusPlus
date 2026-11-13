@@ -39,7 +39,7 @@ namespace rct3::simulation::park
 
     void cannot_pay(ParkState& park)
     {
-        if (std::ranges::none_of(park.messages.list, [](const ParkMessage& m) { return m.text_key == kCannotPayKey && m.age < kCannotPayGap; }))
+        if (std::ranges::none_of(park.messages.list, [](const ParkMessage& m) { return m.text_key == kCannotPayKey && m.age.value < kCannotPayGap.value; }))
             post(park.messages, { .text_key = std::string(kCannotPayKey) });
     }
 

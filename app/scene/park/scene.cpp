@@ -1693,7 +1693,7 @@ namespace rct3::scene::park
                     if (wrecks == nullptr)
                         continue;
                     save::model::Ride& ride = scene.rides.rides[i];
-                    ride.base.time_since_crash = wrecks->since.value;
+                    ride.base.time_since_crash = wrecks->since ? wrecks->since->value : -1;
                     // Each wreck goes up in flames and smoke as it blows up.
                     for (std::size_t t = 0; t < wrecks->trains.size(); ++t)
                         for (std::size_t k = 0; k < wrecks->trains[t].size(); ++k)

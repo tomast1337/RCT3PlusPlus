@@ -1315,7 +1315,8 @@ namespace rct3::scene::track
                 t.wrecks.clear();
                 t.train.at = t.train.start;
                 t.train.travelled = 0;
-                t.train.lean = t.train.lean_rate = 0;
+                t.train.lean = { };
+                t.train.lean_rate = { };
                 t.train.launched = false;
                 t.train.running = true;
                 t.train.speed = t.train.splash_out ? 0 : t.train.station_speed;

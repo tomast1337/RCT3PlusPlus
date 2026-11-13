@@ -692,9 +692,9 @@ namespace rct3::simulation
                 else if (s.kind == rct3::park::pools::PoolKind::Jacuzzi)
                     complex.spa.push_back(middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.spa_water));
                 else if (s.kind == rct3::park::pools::PoolKind::Tile || s.kind == rct3::park::pools::PoolKind::Path) // Not a diving board's, a slope or stairs
-                    complex.paved.push_back(middle(s.col, s.row, static_cast<float>(s.surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 });
+                    complex.paved.push_back(middle(s.col, s.row, static_cast<float>(s.surface)) + glm::vec3 { 0, kTuning.pools.deck.value, 0 });
                 else if (s.kind == rct3::park::pools::PoolKind::PathStairs) // At their top, where a station beside them joins them
-                    complex.steps.push_back(middle(s.col, s.row, static_cast<float>(s.surface + rct3::park::pools::kPathStairsRise)) + glm::vec3 { 0, kTuning.pools.deck, 0 });
+                    complex.steps.push_back(middle(s.col, s.row, static_cast<float>(s.surface + rct3::park::pools::kPathStairsRise)) + glm::vec3 { 0, kTuning.pools.deck.value, 0 });
                 for (const rct3::park::Side side : rct3::park::kSides)
                     for (auto [it, end] = squares.equal_range({ s.col + side.step()[0], s.row + side.step()[1] }); it != end; ++it)
                         if (complex_of.try_emplace(it->second, complexes.size() - 1).second)
@@ -711,7 +711,7 @@ namespace rct3::simulation
                     // Facing along the extra's length, as those on a saved park's loungers lie.
                     const auto [dc, dr] = extra.side.right().step();
                     const PoolUse use = extra.fit.lounger ? PoolUse::Lounge : extra.fit.shower ? PoolUse::Shower : PoolUse::Stand;
-                    complexes[complex_of.at(&*square)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<float>(square->surface)) + glm::vec3 { 0, kTuning.pools.deck, 0 }, .heading = { std::atan2(static_cast<float>(dc), static_cast<float>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : std::uint8_t { 1 } });
+                    complexes[complex_of.at(&*square)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<float>(square->surface)) + glm::vec3 { 0, kTuning.pools.deck.value, 0 }, .heading = { std::atan2(static_cast<float>(dc), static_cast<float>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : std::uint8_t { 1 } });
                 }
                 // Small diving boards stand in the water against its wall: swimmers step on from the paving just
                 // behind it. Ladders stand at the open water's edge, a quarter tile in from the square's side, the
@@ -720,8 +720,8 @@ namespace rct3::simulation
                 {
                     const auto [dc, dr] = extra.side.step();
                     const glm::vec3 back { static_cast<float>(dc), 0, static_cast<float>(dr) };
-                    const float deck = static_cast<float>(square->surface) + kTuning.pools.deck / paths.level_height;
-                    const glm::vec3 foot = middle(extra.col, extra.row, deck) + back * (paths.tile_size / 2 + kTuning.dives.behind);
+                    const float deck = static_cast<float>(square->surface) + kTuning.pools.deck.value / paths.level_height;
+                    const glm::vec3 foot = middle(extra.col, extra.row, deck) + back * (paths.tile_size / 2 + kTuning.dives.behind.value);
                     SwimPool& complex = complexes[complex_of.at(&*square)];
                     if (extra.fit.ladder)
                     {
@@ -729,7 +729,7 @@ namespace rct3::simulation
                         complex.ladders.push_back({ .water = water, .deck = glm::vec3 { water.x, deck * paths.level_height, water.z } + back * kTuning.pools.ladder_reach, .heading = { std::atan2(back.x, back.z) } });
                     }
                     else
-                        complex.boards.push_back({ .foot = foot, .heading = { std::atan2(-back.x, -back.z) }, .levels = { foot.y + kTuning.dives.small_board }, .reach = kTuning.dives.behind + kTuning.dives.small_reach });
+                        complex.boards.push_back({ .foot = foot, .heading = { std::atan2(-back.x, -back.z) }, .levels = { foot.y + kTuning.dives.small_board }, .reach = { kTuning.dives.behind.value + kTuning.dives.small_reach } });
                 }
         // A high diving board's ladder rises at the back of its tower, which stands at the front of its square; its
         // boards, one a level, reach out over the water it faces.
@@ -738,9 +738,9 @@ namespace rct3::simulation
             {
                 const auto [dc, dr] = s.side.step();
                 const glm::vec3 ahead { static_cast<float>(dc), 0, static_cast<float>(dr) };
-                PoolBoard board { .foot = middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.deck / paths.level_height) + ahead * kTuning.dives.ladder_foot + glm::vec3 { -ahead.z, 0, ahead.x } * kTuning.dives.ladder_side, .heading = { std::atan2(ahead.x, ahead.z) }, .reach = kTuning.dives.high_reach, .high = true };
+                PoolBoard board { .foot = middle(s.col, s.row, static_cast<float>(s.surface) + kTuning.pools.deck.value / paths.level_height) + ahead * kTuning.dives.ladder_foot + glm::vec3 { -ahead.z, 0, ahead.x } * kTuning.dives.ladder_side, .heading = { std::atan2(ahead.x, ahead.z) }, .reach = { kTuning.dives.high_reach }, .high = true };
                 for (std::int32_t level = 0; level < std::max(s.board / rct3::park::pools::kBoardLevel, 1); ++level)
-                    board.levels.push_back(static_cast<float>(s.surface + 2 + rct3::park::pools::kBoardLevel * level) * paths.level_height + kTuning.dives.board_top);
+                    board.levels.push_back(static_cast<float>(s.surface + 2 + rct3::park::pools::kBoardLevel * level) * paths.level_height + kTuning.dives.board_top.value);
                 complexes[complex_of.at(&s)].boards.push_back(std::move(board));
             }
         // The squares as swimmers go from one to the next. Two meet across a side where both are at the same height
@@ -749,7 +749,7 @@ namespace rct3::simulation
         // meets, so nobody goes off the paving, nor up or down but by a ramp or staircase.
         // shortcut: a square at a time, through the middles of the sides between; upgrade to spots within a square
         // should walkers need to go round things standing on it.
-        const glm::vec3 deck { 0, kTuning.pools.deck, 0 };
+        const glm::vec3 deck { 0, kTuning.pools.deck.value, 0 };
         struct Meet
         {
             std::size_t complex = 0;
@@ -862,7 +862,7 @@ namespace rct3::simulation
             attraction.price = { room.ticket };
             attraction.open = room.open;
             r.get_or_emplace<PoolTank>(e).fluid = static_cast<PoolFluid>(std::min<std::uint8_t>(room.fluid, 2));
-            r.emplace_or_replace<PoolDoor>(e, PoolDoor { .pool = pool, .col = room.col, .row = room.row, .room = middle(room.col, room.row, surface), .poolside = middle(square->col, square->row, surface) + glm::vec3 { 0, kTuning.pools.deck, 0 } });
+            r.emplace_or_replace<PoolDoor>(e, PoolDoor { .pool = pool, .col = room.col, .row = room.row, .room = middle(room.col, room.row, surface), .poolside = middle(square->col, square->row, surface) + glm::vec3 { 0, kTuning.pools.deck.value, 0 } });
         }
         // A complex kept keeps its dirt.
         for (std::size_t c = 0; c < complexes.size(); ++c)
@@ -1445,7 +1445,7 @@ namespace rct3::simulation
             {
                 struct Run
                 {
-                    float end = -1; ///< Along the track, where a train waits at its far end; -1 for one round the track's end
+                    std::optional<float> end { }; ///< Along the track, where a train waits at its far end; none for one round the track's end
                     std::vector<glm::vec3> points { };
                 };
                 std::vector<Run> runs;
@@ -1460,16 +1460,16 @@ namespace rct3::simulation
                     if (k + 1 < kinds.size() && kinds[k + 1] != Stretch::Station)
                         runs.back().end = stopping->distance[k + 1];
                 }
-                std::erase_if(runs, [](const Run& run) { return run.end < 0; });
+                std::erase_if(runs, [](const Run& run) { return !run.end; });
                 const auto first = runs.size() > 1 && !ride.stations.empty() ? nearest_platform(world.paths, ride.stations.front(), runs, &Run::points) : std::nullopt;
                 if (first)
                 {
-                    const float start = runs[*first].end;
+                    const float start = *runs[*first].end;
                     const float length = stopping->length();
                     std::vector<std::pair<float, Stop>> others;
                     for (std::size_t k = 0; k < runs.size(); ++k)
                         if (k != *first)
-                            others.push_back({ std::fmod(runs[k].end - start + length, length), Stop { .platform = runs[k].points } });
+                            others.push_back({ std::fmod(*runs[k].end - start + length, length), Stop { .platform = runs[k].points } });
                     std::ranges::sort(others, { }, &std::pair<float, Stop>::first);
                     // A station no path reaches yet is stopped at empty till one does (relink_attractions).
                     for (std::size_t k = 1; k < ride.stations.size(); ++k)
@@ -1497,7 +1497,7 @@ namespace rct3::simulation
             if (stopping)
                 r.emplace<Trains>(e, trains_of(*stopping, ride));
             if (ride.base.time_since_crash >= 0)
-                r.emplace<Wrecks>(e, Wrecks { .since = { ride.base.time_since_crash } });
+                r.emplace<Wrecks>(e, Wrecks { .since = units::Seconds { ride.base.time_since_crash } });
             r.emplace<Upkeep>(e, upkeep_of(ride));
             if (r.get<Upkeep>(e).broken)
                 r.get<Attraction>(e).open = false;
@@ -1824,7 +1824,7 @@ namespace rct3::simulation
                 const auto& tuning = kTuning.rivers;
                 const float length = river->course.length();
                 r.emplace_or_replace<Floating>(
-                    e, Floating { .river = ride->second, .along = river->course.distance[static_cast<std::size_t>(near - points.begin())], .stay = static_cast<float>(random::between(dice, tuning.least_stay, tuning.most_stay)) * length, .lane = static_cast<float>(random::between(dice, -1.0, 1.0)), .spin = static_cast<float>(random::between(dice, -tuning.spin, tuning.spin)), .paddle = { static_cast<float>(random::between(dice, tuning.least_paddle.value, tuning.most_paddle.value)) } });
+                    e, Floating { .river = ride->second, .along = river->course.distance[static_cast<std::size_t>(near - points.begin())], .stay = static_cast<float>(random::between(dice, tuning.least_stay, tuning.most_stay)) * length, .lane = static_cast<float>(random::between(dice, -1.0, 1.0)), .spin = { static_cast<float>(random::between(dice, -tuning.spin.value, tuning.spin.value)) }, .paddle = { static_cast<float>(random::between(dice, tuning.least_paddle.value, tuning.most_paddle.value)) } });
                 r.emplace_or_replace<Swimmer>(e, Swimmer { .changed = true, .left = kTuning.pools.stay, .in_water = true, .room = *room });
                 r.get<Errand>(e) = { ErrandKind::Riding, ride->second, 0 };
                 cycle.riders.push_back(e);

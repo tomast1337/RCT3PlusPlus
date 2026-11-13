@@ -10,6 +10,7 @@
 #pragma once
 
 #include "math/glm.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -41,8 +42,8 @@ namespace rct3::simulation
         glm::vec3 spin { };              ///< Its tumble: the axis, as long as the radians a second
         glm::quat turned { 1, 0, 0, 0 }; ///< From how it sat on the track
         int landings = 0;                ///< Times it has come down on the ground
-        float flying = 0;                ///< Seconds since it was thrown
-        float burnt = 0;                 ///< Seconds since it blew up
+        units::Seconds flying { };       ///< Since it was thrown
+        units::Seconds burnt { };        ///< Since it blew up
         WreckState state = WreckState::Flying;
         bool ghost = false; ///< Of a test train shown while the track is built: blowing up, it hurts no one
     };

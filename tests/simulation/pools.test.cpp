@@ -595,7 +595,7 @@ TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into t
                 if (swimmer->dive == DiveStep::Surface)
                 {
                     CHECK(swimmer->in_water);
-                    CHECK(glm::dot(r.get<Pose>(guests[i]).position - board.foot, glm::vec3 { 0, 0, 1 }) > board.reach);
+                    CHECK(glm::dot(r.get<Pose>(guests[i]).position - board.foot, glm::vec3 { 0, 0, 1 }) > board.reach.value);
                 }
                 done = done || steps[i] == std::vector { DiveStep::Climb, DiveStep::Walk, DiveStep::Jump, DiveStep::Fall, DiveStep::Surface, DiveStep::None };
             }
@@ -726,7 +726,7 @@ TEST_CASE("swimmers waiting for a high diving board stand in a line behind its l
     }
     CAPTURE(most);
     CHECK(most >= 2);
-    CHECK(closest > kTuning.pools.queue_gap * 0.9f);
+    CHECK(closest > kTuning.pools.queue_gap.value * 0.9f);
     CHECK(off == 0);
 }
 
@@ -838,7 +838,7 @@ TEST_CASE("swimmers cross the water's edge only diving in or climbing out, in th
     std::set<PoolEdge> crossed;
     constexpr float kTick = 0.1f;
     // Fastest along the way: a walker, or the dive's reach over its time.
-    const float most = std::max({ 2.0f, kTuning.pools.dive_reach / kTuning.pools.dive_in.value }) * kTick + 0.01f;
+    const float most = std::max({ 2.0f, kTuning.pools.dive_reach.value / kTuning.pools.dive_in.value }) * kTick + 0.01f;
     for (int t = 0; t < static_cast<int>(kTuning.pools.stay.value / kTick); ++t)
     {
         park.run_seconds(kTick);
@@ -914,7 +914,7 @@ TEST_CASE("pool squares join where they meet at the same height, a slope at its 
     const PoolWalk& slope = pool.walks[*walk(4, 2, 0.5f)];
     REQUIRE(slope.joins.size() == 2);
     for (const PoolWalk::Join& join : slope.joins)
-        CHECK(join.via.front().y == doctest::Approx((join.via.front().x < slope.at.x ? 1.0f : 0.0f) * paths.level_height + kTuning.pools.deck));
+        CHECK(join.via.front().y == doctest::Approx((join.via.front().x < slope.at.x ? 1.0f : 0.0f) * paths.level_height + kTuning.pools.deck.value));
 }
 
 TEST_CASE("a ramp or a spiral staircase joins a raised square to the paving below")
@@ -966,7 +966,7 @@ TEST_CASE("swimmers never go where no way over the pool leads, and keep to the p
                 CHECK(col >= 3);
                 CHECK(col <= 6);
                 // On the path a unit up at its height, on the slope between, elsewhere at the deck's.
-                const float height = (col == 3 ? 1.0f : col == 4 && row == 2 ? std::clamp((static_cast<float>(5) - (at.x - paths.origin.x) / paths.tile_size), 0.0f, 1.0f) : 0.0f) * paths.level_height + kTuning.pools.deck;
+                const float height = (col == 3 ? 1.0f : col == 4 && row == 2 ? std::clamp((static_cast<float>(5) - (at.x - paths.origin.x) / paths.tile_size), 0.0f, 1.0f) : 0.0f) * paths.level_height + kTuning.pools.deck.value;
                 if (row == 2 && col != 6)
                     CHECK(at.y == doctest::Approx(height).epsilon(0.02));
                 up = up || col == 3;
@@ -1004,7 +1004,7 @@ TEST_CASE("swimmers spread over the three lanes each way across a square, not on
                 {
                     const float off = along - (std::floor(along / paths.tile_size) + 0.5f) * paths.tile_size;
                     for (std::size_t k = 0; k < 3; ++k)
-                        on[k] += std::abs(off - (static_cast<float>(k) - 1.0f) * kTuning.pools.lanes) < 0.05f;
+                        on[k] += std::abs(off - (static_cast<float>(k) - 1.0f) * kTuning.pools.lanes.value) < 0.05f;
                 }
             }
     }

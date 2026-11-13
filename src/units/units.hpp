@@ -128,6 +128,13 @@ namespace rct3::units
         float value = 0;
     };
 
+    /// How fast something turns: radians a second.
+    struct TurnRate
+    {
+        static constexpr bool kUnit = true;
+        float value = 0;
+    };
+
     /// A ride's excitement, intensity or nausea, on the 0 to 10 scale rides are rated on.
     struct RideScore
     {

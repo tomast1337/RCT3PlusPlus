@@ -763,12 +763,12 @@ TEST_CASE("a slide's car swings up its trough's wall in a turn, the further the 
     Coaster gentle = circling(10, 5);
     for (int i = 0; i < 80; ++i)
         drive(gentle, 0.05f);
-    CHECK(gentle.lean == 0);
+    CHECK(gentle.lean.value == 0);
     REQUIRE(slow.running);
     REQUIRE(fast.running);
-    CHECK(std::abs(slow.lean) > 0.05f);
-    CHECK(std::abs(fast.lean) > std::abs(slow.lean));
-    CHECK(slow.lean * fast.lean > 0); // Both out of the turn, the same way
+    CHECK(std::abs(slow.lean.value) > 0.05f);
+    CHECK(std::abs(fast.lean.value) > std::abs(slow.lean.value));
+    CHECK(slow.lean.value * fast.lean.value > 0); // Both out of the turn, the same way
 }
 
 TEST_CASE("a slide's car taken round a tight turn too fast flies out of its trough and crashes, but not in a tube")
@@ -793,7 +793,7 @@ TEST_CASE("a slide's car taken round onto its lift is not swung up the wall by t
     for (int i = 0; i < 12; ++i)
         drive(c, 0.05f);
     CHECK_FALSE(c.crashed);
-    CHECK(c.lean == 0);
+    CHECK(c.lean.value == 0);
 }
 
 TEST_CASE("a slide's car on the straight stays in the middle of its trough")
@@ -805,7 +805,7 @@ TEST_CASE("a slide's car on the straight stays in the middle of its trough")
     for (int i = 0; i < 200 && c.running; ++i)
     {
         drive(c, 0.05f);
-        CHECK(c.lean == doctest::Approx(0).epsilon(1e-4));
+        CHECK(c.lean.value == doctest::Approx(0).epsilon(1e-4));
     }
 }
 
@@ -835,14 +835,14 @@ TEST_CASE("a car off a slide's end flies on, comes down on its water ahead and f
     // From 2 m over the water it falls for sqrt(2 * 2 / g) seconds, going on at its speed.
     const float fall = std::sqrt(4 / 9.81f);
     CHECK(fly(f, fall / 2));
-    CHECK(f.afloat < 0);
+    CHECK_FALSE(f.afloat.has_value());
     CHECK(f.at.y == doctest::Approx(3 - 9.81f / 2 * fall * fall / 4));
     CHECK(f.at.z == doctest::Approx(4 * fall));
     // Nose down as it falls, levelling off once afloat.
     const float dived = flown(f, glm::mat4(1.0f))[2].y;
     CHECK(dived < 0);
     CHECK(fly(f, fall));
-    CHECK(f.afloat >= 0);
+    CHECK(f.afloat.has_value());
     CHECK(f.at.y == doctest::Approx(1));
     CHECK(f.at.z > 8 * fall);
     CHECK(flown(f, glm::mat4(1.0f))[2].y > dived);
@@ -856,13 +856,13 @@ TEST_CASE("a car off a slide's end flies on, comes down on its water ahead and f
     float t = 0;
     while (fly(f, 0.1f) && t < 20)
         t += 0.1f;
-    CHECK(t == doctest::Approx(kGone - 1 - fall * 1.5f - 0.1f).epsilon(0.05));
+    CHECK(t == doctest::Approx(kGone.value - 1 - fall * 1.5f - 0.1f).epsilon(0.05));
     CHECK(f.at.y < 1);
 }
 
 TEST_CASE("a car off a slide's end is stopped by its pool's far wall, and flies the same however its time is stepped")
 {
-    const Flight start { .from = { 0, 3, 0 }, .way = { 0, 0, 1 }, .at = { 0, 3, 0 }, .velocity = { 0, 0, 8 }, .water = 1, .speed = 8, .reach = 5 };
+    const Flight start { .from = { 0, 3, 0 }, .way = { 0, 0, 1 }, .at = { 0, 3, 0 }, .velocity = { 0, 0, 8 }, .water = 1, .speed = { 8 }, .reach = { 5 } };
     Flight stepped = start;
     for (int i = 0; i < 20; ++i)
         fly(stepped, 0.25f);
@@ -870,7 +870,7 @@ TEST_CASE("a car off a slide's end is stopped by its pool's far wall, and flies 
     fly(whole, 5);
     CHECK(stepped.at.z == doctest::Approx(5));
     CHECK(stepped.at.x == doctest::Approx(0));
-    CHECK(stepped.afloat >= 0);
+    CHECK(stepped.afloat.has_value());
     CHECK(glm::distance(stepped.at, whole.at) < 1e-3f);
     CHECK(stepped.velocity.z == 0);
 }

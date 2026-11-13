@@ -11,6 +11,7 @@
 
 #include "random/generator.hpp"
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -48,7 +49,7 @@ namespace rct3::simulation
     /// What a climate is like in one month.
     struct ClimateMonth
     {
-        float warmth = 0;                             ///< Degrees Celsius on a cloudy day
+        units::Degrees warmth { };                    ///< On a cloudy day
         std::array<double, kRolledWeathers> odds { }; ///< Of each kind, sunny first; they add up to 1
     };
 
@@ -57,7 +58,7 @@ namespace rct3::simulation
     [[nodiscard]] ClimateMonth climate_month(std::int32_t climate, std::int32_t month);
 
     /// The temperature weather `type` brings in month `month` of `climate`.
-    [[nodiscard]] float weather_temperature(std::int32_t climate, std::int32_t month, save::model::WeatherType type);
+    [[nodiscard]] units::Degrees weather_temperature(std::int32_t climate, std::int32_t month, save::model::WeatherType type);
 
     /// The climate the original game's career scenario `scenario` (by its id) is played in; none for any other
     /// park, which keeps its file's.

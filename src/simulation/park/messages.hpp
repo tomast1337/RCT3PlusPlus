@@ -9,6 +9,7 @@
 #pragma once
 
 #include "save/model/park.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -21,14 +22,14 @@ namespace rct3::simulation::park
 
     /// Messages kept at most.
     inline constexpr std::size_t kMessageCapacity = 48;
-    /// Game seconds a message is kept, at normal speed twenty minutes.
-    inline constexpr float kMessageLifetime = 1200;
+    /// Game time a message is kept, at normal speed twenty minutes.
+    inline constexpr units::Seconds kMessageLifetime { 1200 };
 
     struct ParkMessage
     {
         std::uint64_t serial = 0;                  ///< Counts up from 1 in the order messages joined the list
         std::string text_key { };                  ///< Names the message's text in the string table
-        float age = 0;                             ///< Game seconds since it was posted
+        units::Seconds age { };                    ///< Game time since it was posted
         std::optional<std::uint64_t> subject { };  ///< The object the message is about
         std::string subject_name { };              ///< Its name when the message was posted; may be empty
         std::optional<std::int32_t> panel { };     ///< The info panel's tab its subject opens at, by number (ui::screens::info::kMessageTabs); none or negative keeps the last

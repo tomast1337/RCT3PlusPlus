@@ -159,7 +159,7 @@ namespace rct3::scene
             for (;;)
             {
                 save::model::TerrainGrid trial = from;
-                const float moved = shape(trial);
+                const float moved = std::max(0.0f, shape(trial) - rct3::park::ground::limit_ground(trial, from)); // What a limit stopped is not paid for
                 bool again = false;
                 for (int r = 0; r < trial.height; ++r)
                 {

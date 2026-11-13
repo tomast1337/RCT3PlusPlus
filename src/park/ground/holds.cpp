@@ -78,6 +78,23 @@ namespace rct3::park::ground
         return out;
     }
 
+    float limit_ground(save::model::TerrainGrid& grid, const save::model::TerrainGrid& was)
+    {
+        float trimmed = 0;
+        for (std::size_t i = 0; i < grid.cells.size() && i < was.cells.size(); ++i)
+        {
+            for (std::size_t k = 0; k < 4; ++k)
+            {
+                float& now = grid.cells[i].corners[k];
+                const float before = was.cells[i].corners[k];
+                const float kept = std::clamp(now, std::min(kLowestGround, before), std::max(kHighestGround, before));
+                trimmed += std::abs(now - kept);
+                now = kept;
+            }
+        }
+        return trimmed;
+    }
+
     bool refuses(const GroundHolds& holds, save::model::Tile tile, const std::array<float, 4>& was, const std::array<float, 4>& now)
     {
         const std::uint32_t key = key_of(tile.col, tile.row);

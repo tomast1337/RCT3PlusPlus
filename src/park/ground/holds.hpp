@@ -9,6 +9,9 @@
 // one of their solid squares. Everything else standing on the ground (trees, rocks, fences, walls, lamps)
 // follows it: once the ground under it moved, it is seated again on the ground's new height.
 //
+// No tool takes a corner past the lowest or the highest ground; a park may hold ground past them, which can
+// then only come back.
+//
 // The tools ask tile by tile, with the tile's corners before and after: a tile refused keeps its corners and
 // the rest of the stroke still moves.
 #pragma once
@@ -27,9 +30,11 @@
 namespace rct3::park::ground
 {
 
-    inline constexpr float kDeckRoom = 0.25f; ///< Chosen by eye: kept between the ground and a raised path's underside
-    inline constexpr float kPavedTilt = 1.5f; ///< Chosen by eye: how far from flat a tile with a path on the ground may go
-    inline constexpr float kShapeCost = 25;   ///< Price, in hundredths, of a height unit one corner of one tile moves
+    inline constexpr float kDeckRoom = 0.25f;    ///< Chosen by eye: kept between the ground and a raised path's underside
+    inline constexpr float kPavedTilt = 1.5f;    ///< Chosen by eye: how far from flat a tile with a path on the ground may go
+    inline constexpr float kShapeCost = 25;      ///< Price, in hundredths, of a height unit one corner of one tile moves
+    inline constexpr float kLowestGround = -75;  ///< No tool digs a corner below this height
+    inline constexpr float kHighestGround = 150; ///< No tool raises a corner above this height
 
     /// What the land tools must leave be on each tile, by tile (row << 16 | column), gathered as a stroke starts.
     struct GroundHolds
@@ -45,6 +50,10 @@ namespace rct3::park::ground
 
     /// Whether the ground of `tile` may not go from corners `was` to `now`.
     [[nodiscard]] bool refuses(const GroundHolds& holds, save::model::Tile tile, const std::array<float, 4>& was, const std::array<float, 4>& now);
+
+    /// Stops the corners of `grid` at the lowest and highest ground: a corner `was` has past a limit may come back
+    /// but not go further. Returns the sum of how far it moved corners back.
+    float limit_ground(save::model::TerrainGrid& grid, const save::model::TerrainGrid& was);
 
     /// A tile's ground after a cut or levelling.
     struct GroundCut

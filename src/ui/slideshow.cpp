@@ -53,13 +53,13 @@ namespace rct3::ui
         over_ = pictures_.size() > 1 ? 1 : 0;
     }
 
-    void Slideshow::update(float elapsed)
+    void Slideshow::update(units::Seconds elapsed)
     {
-        if (pictures_.empty() || elapsed <= 0)
+        if (pictures_.empty() || elapsed <= units::Seconds { })
             return;
         time_ += elapsed;
-        const float cycle = timing_.fade + timing_.hold;
-        if (cycle <= 0)
+        const units::Seconds cycle = timing_.fade + timing_.hold;
+        if (cycle <= units::Seconds { })
             return;
         while (time_ >= cycle)
         {
@@ -73,7 +73,8 @@ namespace rct3::ui
     {
         if (pictures_.empty())
             return { };
-        const float alpha = timing_.fade > 0 ? std::min(time_ / timing_.fade, 1.0f) : 1.0f;
+        const float fade = timing_.fade.value;
+        const float alpha = fade > 0 ? std::min(time_.value / fade, 1.0f) : 1.0f;
         return { under_, over_, alpha };
     }
 

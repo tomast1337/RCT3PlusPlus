@@ -29,6 +29,11 @@ namespace rct3::units
             value += b.value;
             return *this;
         }
+        constexpr Seconds& operator-=(Seconds b) noexcept
+        {
+            value -= b.value;
+            return *this;
+        }
     };
 
     /// How fast something on a 0 to 1 scale (a need, happiness, nausea, wetness) moves: how much a second.

@@ -14,6 +14,7 @@
 #pragma once
 
 #include "ui/draw_list.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -27,8 +28,8 @@ namespace rct3::ui
 
     struct SlideshowTiming
     {
-        float fade = 1; ///< Seconds a picture takes to fade in
-        float hold = 3; ///< Seconds it then stays
+        units::Seconds fade { 1 }; ///< A picture takes this long to fade in
+        units::Seconds hold { 3 }; ///< Then it stays this long
     };
 
     /// The picture files in `folders`, the list shuffled with `seed` after each folder's are added.
@@ -51,7 +52,7 @@ namespace rct3::ui
         /// Shows another list, starting at its beginning; a fade under way carries on with the new pictures.
         void set_pictures(std::vector<std::filesystem::path> pictures);
 
-        void update(float elapsed);
+        void update(units::Seconds elapsed);
 
         /// What to draw: `under` whole, then `over` with `over_alpha`. Indices into pictures().
         struct Shown
@@ -67,7 +68,7 @@ namespace rct3::ui
         SlideshowTiming timing_;
         std::size_t under_ = 0;
         std::size_t over_ = 0;
-        float time_ = 0; ///< Since `over_` began to fade in
+        units::Seconds time_; ///< Since `over_` began to fade in
     };
 
 } // namespace rct3::ui

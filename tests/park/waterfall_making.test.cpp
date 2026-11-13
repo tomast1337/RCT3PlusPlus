@@ -40,7 +40,7 @@ namespace
 
 } // namespace
 
-TEST_CASE("make_waterfall: pours over the higher lake's edge toward the lower one, along the whole edge")
+TEST_CASE("make_waterfall: pours over the higher lake's edge toward the lower one, between the edge's end tiles")
 {
     const auto fall = make_waterfall(owned_grid(), kLakes, 1, 0, { 1, 1 }); // Picked in either order
     REQUIRE(fall);
@@ -48,20 +48,23 @@ TEST_CASE("make_waterfall: pours over the higher lake's edge toward the lower on
     CHECK(fall->flow.z == 0.0f);
     CHECK(fall->lip_left.x == 12.0f); // The far side of column 2, the spillway beyond the edge
     CHECK(fall->lip_left.y == 10.0f);
-    CHECK(std::abs(fall->lip_right.z - fall->lip_left.z) == 12.0f); // Rows 0 to 2
+    CHECK(std::abs(fall->lip_right.z - fall->lip_left.z) == 4.0f); // Row 1, of the edge's rows 0 to 2
+    CHECK(fall->lip_left.z + fall->lip_right.z == 12.0f);
     CHECK(fall->bottom.y == 2.0f);
     CHECK(fall->bottom.x == 18.0f); // The middle of column 4
 }
 
-TEST_CASE("make_waterfall: refuses one lake, too little drop, too far apart and land not owned")
+TEST_CASE("make_waterfall: refuses one lake, too little drop, too far apart, a narrow edge and land not owned")
 {
     const save::model::TerrainGrid grid = owned_grid();
     CHECK(make_waterfall(grid, kLakes, 0, 0, { }).error() == kWaterfallSameWater);
     std::vector<save::model::WaterBody> level = kLakes;
-    level[1].level = 9;
+    level[1].level = 2.5f;
     CHECK(make_waterfall(grid, level, 0, 1, { }).error() == kWaterfallTooLittleDrop);
     const std::vector<save::model::WaterBody> far { kLakes[0], lake(2, 7, 7, 3, 3) }; // Off to the side, not straight out
     CHECK(make_waterfall(grid, far, 0, 1, { }).error() == kWaterfallTooFarApart);
+    const std::vector<save::model::WaterBody> narrow { lake(10, 0, 1, 0, 1), kLakes[1] }; // Two rows of edge
+    CHECK(make_waterfall(grid, narrow, 0, 1, { }).error() == kWaterfallEdgeTooNarrow);
     save::model::TerrainGrid sold = grid;
     sold.at(3, 1).flags = 0;
     sold.at(3, 0).flags = 0;
@@ -96,7 +99,10 @@ TEST_CASE("make_waterfall: keeps the ground of the spillway, cut_spillway cuts i
     CHECK(cut.at(1, 1).corners == std::array { 8.0f, kFloor, 8.0f, kFloor });     // The old edge sinks
     CHECK(cut.at(2, 1).corners == std::array { kFloor, kRim, kFloor, kRim });     // The spillway
     CHECK(cut.at(3, 1).corners == std::array { kFloor, kFloor, kFloor, kFloor }); // On the way down
-    CHECK(cut.at(2, 3).corners == grid.at(2, 3).corners);                         // Beside the edge
+    CHECK(cut.at(2, 0).corners == std::array { 12.0f, 12.0f, kFloor, kRim });     // An end tile slopes up to its bank
+    CHECK(cut.at(1, 2).corners == std::array { 8.0f, kFloor, 8.0f, 8.0f });
+    CHECK(cut.at(3, 0).corners == grid.at(3, 0).corners); // No water falls beside the middle
+    CHECK(cut.at(2, 3).corners == grid.at(2, 3).corners); // Beside the edge
     CHECK(cut.at(0, 1).corners == grid.at(0, 1).corners);
     restore_spillway(cut, *fall);
     for (std::size_t i = 0; i < grid.cells.size(); ++i)

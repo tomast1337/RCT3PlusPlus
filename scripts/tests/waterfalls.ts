@@ -87,3 +87,24 @@ log("falls after deleting", map.waterfalls().length);
 expect(map.waterfalls().length === falls.length, "the new fall deleted");
 expect(ground() === before, "the ground put back");
 await screenshot("deleted");
+
+// The water tool on a lake that has waterfalls asks first; yes takes the lake and its falls away.
+if (!ui.find("tools/Land/Land_Water"))
+    await ui.click("tools/Land/Land");
+await ui.click("tools/Land/Land_Water");
+await frames(2);
+const lakes = map.water().length;
+await click_tile(upper.col, upper.row);
+await frames(2);
+expect(ui.find("lake_question") !== undefined, "a question before a lake with waterfalls goes");
+await screenshot("lake_question");
+await ui.click("lake_question/content/GUI2MiniDialog_Cancel");
+await frames(2);
+expect(map.water().length === lakes && map.waterfalls().length === falls.length, "the lake and its falls kept on a no");
+await click_tile(upper.col, upper.row);
+await frames(2);
+await ui.click("lake_question/content/GUI2MiniDialog_Confirm");
+await frames(3);
+log("lakes", lakes, "->", map.water().length, "falls", falls.length, "->", map.waterfalls().length);
+expect(map.water().length === lakes - 1 && map.waterfalls().length < falls.length, "the lake and its falls gone on a yes");
+await screenshot("lake_removed");

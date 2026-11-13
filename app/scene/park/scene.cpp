@@ -2322,6 +2322,12 @@ namespace rct3::scene::park
                     }
                 }
         }
+        if (auto question = desktop.root().find_as<ui::widgets::QuestionBox>(kLakeName))
+        {
+            if (const auto answer = question->take_answer(); answer && *answer == 0)
+                if (const auto tile = std::exchange(scene.land.lake_asked, std::nullopt))
+                    remove_lake(device, scene, assets, *tile);
+        }
         if (auto question = desktop.root().find_as<ui::widgets::QuestionBox>(kDemolishName))
         {
             if (const auto answer = question->take_answer(); answer && *answer == 0)

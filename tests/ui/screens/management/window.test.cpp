@@ -185,7 +185,9 @@ TEST_CASE("a graph's span is picked by its ranges or zoomed by the wheel, and re
     f.window->show_page(page);
     f.desktop.layout({ 0, 0, 1024, 768 });
     plot = dynamic_cast<LinePlot*>(rct3::core::as_pointer(f.window->find("content/page/lines/graph")));
+    month = dynamic_cast<Button*>(rct3::core::as_pointer(f.window->find("content/page/lines/range0"))); // The new page built new buttons
     REQUIRE(plot != nullptr);
+    REQUIRE(month != nullptr);
     CHECK(plot->span() == 4);
 
     // The newest week at the right edge, read out with its time.

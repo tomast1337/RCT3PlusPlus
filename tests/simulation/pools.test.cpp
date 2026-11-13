@@ -106,7 +106,7 @@ TEST_CASE("nobody swims on a cold day, and those wishing to think it too cold")
     Sandbox park;
     pool_by_path(park);
     auto& r = park.world().registry;
-    r.ctx().emplace<Weather>(Weather { .temperature = 0 });
+    r.ctx().emplace<Weather>(Weather { .temperature = units::Degrees { 0 } });
     const auto guest = park.guest({ 0, 0 }, { .swim = 1.0f });
     park.run_seconds(60);
     CHECK(r.get<Attraction>(room_of(r)).customers == 0);

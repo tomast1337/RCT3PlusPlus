@@ -139,9 +139,9 @@ TEST_CASE("staff think about their work and how they feel")
 {
     const auto thinks = [](Staff s) { return staff_thoughts(s); };
     using enum ThoughtKind;
-    CHECK(thinks({ .happiness = 1, .load = 0 }) == std::vector { StaffBored, StaffHappy });
-    CHECK(thinks({ .wage_level = 2, .happiness = 0.6f, .load = 1 }) == std::vector { StaffTooBusy, StaffMotivated });
-    CHECK(thinks({ .wage_level = 0, .happiness = 0.6f, .laziness = 0.7f, .load = 1 }) == std::vector { StaffUnderpaid, StaffTired });
+    CHECK(thinks({ .happiness = rct3::units::Share { 1 }, .load = rct3::units::Share { 0 } }) == std::vector { StaffBored, StaffHappy });
+    CHECK(thinks({ .wage_level = 2, .happiness = rct3::units::Share { 0.6f }, .load = rct3::units::Share { 1 } }) == std::vector { StaffTooBusy, StaffMotivated });
+    CHECK(thinks({ .wage_level = 0, .happiness = rct3::units::Share { 0.6f }, .laziness = rct3::units::Share { 0.7f }, .load = rct3::units::Share { 1 } }) == std::vector { StaffUnderpaid, StaffTired });
 
     SUBCASE("one miserable for long thinks of quitting, and stops once content again")
     {

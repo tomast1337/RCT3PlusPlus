@@ -106,3 +106,22 @@ TEST_CASE("a path on the ground follows it while its tile stays near flat")
     CHECK(refuses(holds, { 1, 1 }, kLevel, { 3, 0, 0, 0 }));
     CHECK_FALSE(refuses(holds, { 1, 1 }, { 3, 0, 0, 0 }, { 2, 0, 0, 0 })); // Flatter than it was
 }
+
+TEST_CASE("limit_ground: corners stop at the lowest and highest ground, and ground past them only comes back")
+{
+    const auto was = [] {
+        auto g = flat_grid(2, 1);
+        g.at(1, 0).corners = { 160, -80, 0, 0 };
+        return g;
+    }();
+    auto grid = was;
+    grid.at(0, 0).corners = { 200, -100, 20, -20 };
+    grid.at(1, 0).corners = { 170, -90, 155, -78 };
+    CHECK(limit_ground(grid, was) == doctest::Approx(50 + 25 + 10 + 10 + 5 + 3));
+    CHECK(grid.at(0, 0).corners == std::array<float, 4> { kHighestGround, kLowestGround, 20, -20 });
+    CHECK(grid.at(1, 0).corners == std::array<float, 4> { 160, -80, kHighestGround, kLowestGround });
+
+    grid.at(1, 0).corners = { 152, -76, 0, 0 }; // Past the limits still, but nearer than it was
+    CHECK(limit_ground(grid, was) == 0);
+    CHECK(grid.at(1, 0).corners == std::array<float, 4> { 152, -76, 0, 0 });
+}

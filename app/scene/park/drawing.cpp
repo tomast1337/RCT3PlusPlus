@@ -658,7 +658,7 @@ namespace rct3::scene::park
             const float strength = scene.darkness * kLampStrength;
             if (strength < 0.01f || (scene.lamps.empty() && !scene.car_lamps))
                 return;
-            if (scene.lamps_due || scene.car_lamps || std::abs(strength - scene.lamp_strength) > 0.01f)
+            if (scene.lamps_due || scene.car_lamps || !scene.lamp_strength || std::abs(strength - *scene.lamp_strength) > 0.01f)
             {
                 std::vector<rct3::park::Lamp> lamps = scene.lamps;
                 if (scene.car_lamps)

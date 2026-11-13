@@ -276,7 +276,7 @@ namespace rct3::ui::screens::dialogs
             row.box->enabled = !kept_[i];
             rows_.push_back(&row);
         }
-        since_complete_ = files_.empty() ? 0 : -1;
+        since_complete_ = files_.empty() ? std::optional<float> { 0.0f } : std::nullopt;
         show_status();
     }
 
@@ -302,7 +302,7 @@ namespace rct3::ui::screens::dialogs
         row.set_lines(summary ? save_lines(strings_, *summary, twelve_hour_) : std::array<std::u16string, 3> { });
         read_[index] = true;
         if (std::ranges::all_of(read_, [](bool r) { return r; }))
-            since_complete_ = 0;
+            since_complete_ = 0.0f;
         show_status();
     }
 
@@ -314,7 +314,7 @@ namespace rct3::ui::screens::dialogs
             status_->style.colour = style_.text_colour;
             return;
         }
-        if (since_complete_ < 0)
+        if (!since_complete_)
         {
             const auto done = static_cast<std::size_t>(std::ranges::count(read_, true));
             std::u16string s = text(kScanning);
@@ -323,13 +323,13 @@ namespace rct3::ui::screens::dialogs
             status_->style.colour = style_.text_colour;
             return;
         }
-        if (since_complete_ >= style_.complete_time)
+        if (*since_complete_ >= style_.complete_time)
         {
             status_->text.clear();
             return;
         }
         status_->text = text(kScanComplete);
-        const float fade = std::clamp(since_complete_ - (style_.complete_time - 1), 0.0f, 1.0f);
+        const float fade = std::clamp(*since_complete_ - (style_.complete_time - 1), 0.0f, 1.0f);
         status_->style.colour = mix(style_.text_colour, style_.faded_colour, fade);
     }
 
@@ -461,9 +461,9 @@ namespace rct3::ui::screens::dialogs
     {
         widgets::Window::update(context);
         since_click_ += context.elapsed;
-        if (since_complete_ >= 0 && since_complete_ < style_.complete_time)
+        if (since_complete_ && *since_complete_ < style_.complete_time)
         {
-            since_complete_ += context.elapsed;
+            *since_complete_ += context.elapsed;
             show_status();
         }
 

@@ -545,8 +545,8 @@ namespace rct3::ui::screens::management
                     return;
                 const AttractionTakings now = f.takings ? f.takings(a.id) : AttractionTakings { };
                 const std::int64_t guests = a.total_guests + now.customers;
-                const std::int64_t profit = a.total_profit.value + now.income;
-                page.rows.push_back({ { info::attraction_name(a, strings), whole(guests), money(units, units::Money { a.running_cost }), money(units, units::Money { profit }) }, { std::nullopt, static_cast<double>(guests), static_cast<double>(a.running_cost), static_cast<double>(profit) }, management_row_id(ref) });
+                const units::Money profit = a.total_profit + now.income;
+                page.rows.push_back({ { info::attraction_name(a, strings), whole(guests), money(units, units::Money { a.running_cost }), money(units, profit) }, { std::nullopt, static_cast<double>(guests), static_cast<double>(a.running_cost), static_cast<double>(profit.value) }, management_row_id(ref) });
             };
             for (std::size_t i = 0; i < f.rides->rides.size(); ++i)
                 add(f.rides->rides[i].base, { ManagementRow::Kind::Ride, i });

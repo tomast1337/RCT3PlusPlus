@@ -136,7 +136,7 @@ namespace rct3::ui::screens::park_view
         std::optional<ToolItem> sub_open_;
         std::optional<ParkTool> pressed_;
         std::optional<ToolItem> picked_;
-        float placed_for_ = -1; ///< The width the buttons were last placed for
+        std::optional<float> placed_for_ { }; ///< The width the buttons were last placed for; none before the first time
     };
 
 } // namespace rct3::ui::screens::park_view

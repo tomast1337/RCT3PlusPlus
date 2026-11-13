@@ -220,7 +220,7 @@ namespace rct3::ui::screens::dialogs
         std::optional<std::u16string> open_out_;
         std::optional<std::u16string> delete_out_;
         std::optional<std::pair<std::u16string, std::u16string>> rename_out_;
-        float since_complete_ = -1; // Seconds since every file was read; negative while reading
+        std::optional<float> since_complete_ { }; // Seconds since every file was read; none while reading
         float since_click_ = 1e9f;
         std::optional<std::size_t> last_clicked_;
     };

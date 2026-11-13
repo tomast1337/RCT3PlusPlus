@@ -151,9 +151,9 @@ TEST_CASE("the items fill as many columns as the panel is wide")
 TEST_CASE("items dearer than the cash are marked; none when money never runs out")
 {
     PickerRow cheap = row(u"Cheap", 1);
-    cheap.cost = 500;
+    cheap.cost = units::Money { 500 };
     PickerRow dear = row(u"Dear", 2);
-    dear.cost = 5000;
+    dear.cost = units::Money { 5000 };
     Fixture f({ cheap, dear });
     CHECK_FALSE(f.picker->rows()[1]->dear);
     f.picker->cash = units::Money { 1000 };

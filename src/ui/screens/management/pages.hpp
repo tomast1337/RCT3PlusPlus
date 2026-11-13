@@ -17,6 +17,7 @@
 #include "ui/screens/management/window.hpp"
 #include "ui/screens/park_view/tool_menus.hpp"
 #include "ui/string_table.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -75,7 +76,7 @@ namespace rct3::ui::screens::management
     /// What an attraction has taken since the park was opened, which its saved totals do not hold yet.
     struct AttractionTakings
     {
-        std::int64_t income = 0; ///< Hundredths
+        units::Money income { };
         std::int64_t customers = 0;
     };
 

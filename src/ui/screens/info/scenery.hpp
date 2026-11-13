@@ -12,6 +12,7 @@
 #include "ui/money_text.hpp"
 #include "ui/screens/info/panel.hpp"
 #include "ui/string_table.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -67,7 +68,7 @@ namespace rct3::ui::screens::info
     {
         std::u16string name { }; ///< Empty for the default
         std::size_t number = 1;  ///< Of the room among the park's rooms of its kind, from 1, for its name
-        std::int64_t ticket = 0; ///< Hundredths
+        units::Money ticket { };
         bool open = false;
         std::int64_t people = 0; ///< In the complex
         std::size_t dirt = 0;    ///< How dirty its water is, in six steps, cleanest 0
@@ -75,11 +76,11 @@ namespace rct3::ui::screens::info
         park::pools::PoolWaves waves { };
         bool machines = false; ///< It has wave machines; without, their times cannot be set
         Currency currency { };
-        std::int64_t customers = 0;                          ///< The room's, so far
-        std::int64_t income = 0;                             ///< Its takings so far, hundredths
-        std::int64_t refill = 0;                             ///< A full tank of its fluid, which a mechanic's inspection tops up, hundredths
-        float reliability = 1;                               ///< 0 to 1
-        float since_inspection = 0;                          ///< Seconds
+        std::int64_t customers = 0; ///< The room's, so far
+        units::Money income { };    ///< Its takings so far
+        units::Money refill { };    ///< A full tank of its fluid, which a mechanic's inspection tops up
+        float reliability = 1;      ///< 0 to 1
+        units::Seconds since_inspection { };
         int inspection = kPoolInspection;                    ///< As kPoolInspectionControl's value
         std::vector<save::model::ThoughtEntry> thoughts { }; ///< Guests' thoughts about the room
     };

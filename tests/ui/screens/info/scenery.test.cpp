@@ -164,7 +164,7 @@ TEST_CASE("a changing room's finances put its ticket price over its sums, in mon
     s.add("AttractionNumberArea_PerHour", u"# an hour");
     s.add("AttractionFinancesDialogLabel_CostPerInspection", u"Inspection");
     s.add("AttractionFinancesDialogLabel_TotalProfit", u"Total");
-    const InfoPage page = scenery_page(SceneryTab::RoomFinances, { .pool = PoolComplexFacts { .ticket = 150, .currency = { .before = u"$", .after = u"", .decimal = u"." }, .income = 450, .refill = 2000 } }, s);
+    const InfoPage page = scenery_page(SceneryTab::RoomFinances, { .pool = PoolComplexFacts { .ticket = units::Money { 150 }, .currency = { .before = u"$", .after = u"", .decimal = u"." }, .income = units::Money { 450 }, .refill = units::Money { 2000 } } }, s);
     REQUIRE(page.controls.size() == 1);
     CHECK(page.controls[0].id == kPoolTicketControl);
     CHECK(page.controls[0].value == 150);
@@ -225,7 +225,7 @@ TEST_CASE("a changing room's upkeep shows its reliability and water, and picks i
     s.add("Fluid_ZaniClenz", u"Mild");
     s.add("Fluid_MegaKleen", u"Strong");
     s.add("Fluid_ToxiScrub", u"Harsh");
-    const InfoPage page = scenery_page(SceneryTab::RoomMaintenance, { .pool = PoolComplexFacts { .dirt = 3, .fluid = 1, .reliability = 0.75f, .since_inspection = 150 } }, s);
+    const InfoPage page = scenery_page(SceneryTab::RoomMaintenance, { .pool = PoolComplexFacts { .dirt = 3, .fluid = 1, .reliability = 0.75f, .since_inspection = units::Seconds { 150 } } }, s);
     REQUIRE(page.lines.size() == 3);
     CHECK(page.lines[0].bar == 0.75f);
     CHECK(page.controls_after == 1);

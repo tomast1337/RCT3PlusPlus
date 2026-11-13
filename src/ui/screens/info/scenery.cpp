@@ -193,14 +193,14 @@ namespace rct3::ui::screens::info
                     const auto mark = words.find(u'#');
                     return mark == std::u16string::npos ? money(amount) : words.replace(mark, 1, money(amount));
                 };
-                const auto ticket = static_cast<int>(std::clamp<std::int64_t>(pool.ticket, 0, kMostPoolTicket));
+                const auto ticket = static_cast<int>(std::clamp<std::int64_t>(pool.ticket.value, 0, kMostPoolTicket));
                 page.controls.push_back({ .id = kPoolTicketControl, .name = std::string(kTicket), .kind = InfoControlKind::Number, .label = text(kTicket), .value = ticket, .maximum = kMostPoolTicket, .step = kTicketStep, .decimals = 2, .shown = money(ticket) });
                 page.controls_after = 0;
                 line("AttractionFinancesDialogLabel_Income", per_hour(0));
-                line("AttractionFinancesDialogLabel_CostPerInspection", money(pool.refill));
+                line("AttractionFinancesDialogLabel_CostPerInspection", money(pool.refill.value));
                 line("AttractionFinancesDialogLabel_ProjectedRunningCost", per_hour(0));
                 line("AttractionFinancesDialogLabel_Profit", per_hour(0));
-                line("AttractionFinancesDialogLabel_TotalProfit", money(pool.income));
+                line("AttractionFinancesDialogLabel_TotalProfit", money(pool.income.value));
             }
             else if (tab == SceneryTab::RoomThoughts)
             {
@@ -252,7 +252,7 @@ namespace rct3::ui::screens::info
                 choice(kPoolInspectionControl, kInspection, kInspections, pool.inspection);
                 choice(kPoolFluidControl, kFluid, kFluids, pool.fluid);
                 button(kPoolMechanicControl, "Staff_JobIsMechanicIcon", "TT_RideMaintenanceDialog_MechanicButton", true);
-                line("RideMaintenanceDialogLabel_TimeSinceLastInspection", ascii(std::to_string(std::lround(pool.since_inspection / kSecondsPerMinute))));
+                line("RideMaintenanceDialogLabel_TimeSinceLastInspection", ascii(std::to_string(std::lround(pool.since_inspection.value / kSecondsPerMinute))));
                 line(kDirt, text(kDirtSteps[std::min(pool.dirt, kDirtSteps.size() - 1)]));
             }
         }

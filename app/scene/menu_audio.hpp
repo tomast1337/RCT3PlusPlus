@@ -30,8 +30,8 @@ namespace rct3::scene
     struct MenuAudio
     {
         std::optional<audio::MusicPlayer> music;
-        float music_volume = -1;                  // As last set; below 0 before the first update
-        float music_level = -1;                   // The fade last asked for; below 0 for music just started
+        std::optional<float> music_volume;        // As last set; none before the first update
+        std::optional<float> music_level;         // The fade last asked for; none for music just started
         std::filesystem::path folder;             ///< The game's music folder; empty without one
         std::vector<std::string> files;           ///< Its tracks
         std::optional<std::size_t> cycle_file;    ///< The cycle's track for this run, when there is one

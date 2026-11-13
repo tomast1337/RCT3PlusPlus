@@ -233,7 +233,7 @@ namespace rct3::scene::park
         std::optional<save::model::Tile> corner;                                  ///< Of the area marked, where the drag began
         std::optional<save::model::Tile> other;                                   ///< And the opposite corner, where it is now
         std::optional<std::array<std::int32_t, 4>> drawn;                         ///< Columns and rows the marks show now
-        std::int32_t drawn_look = -1;                                             ///< And how: the part of the tile marked, and the colour
+        std::optional<std::int32_t> drawn_look;                                   ///< And how: the part of the tile marked, and the colour
         std::optional<std::int32_t> height;                                       ///< Of the surface, when the pool panel does not snap it to the ground
         bool grid = false;                                                        ///< The pool panel's grid switch, as last seen
         rct3::park::pools::PoolEdge edge = rct3::park::pools::PoolEdge::Straight; ///< The pool panel's edge setting, for the squares laid
@@ -426,7 +426,7 @@ namespace rct3::scene::park
         float darkness = 0;                 ///< How dark the sky is, 0 by day to 1 at night (rct3::park::sky::sky_darkness)
         render::TextureHandle lamp_texture; ///< render::SceneLight::lamps
         std::uint32_t lamp_rows = 0;        ///< Of that texture
-        float lamp_strength = -1;           ///< The strength it was packed with
+        std::optional<float> lamp_strength; ///< The strength it was packed with; none before the first packing
         /// Where the objects stand, and the boxes they are clicked in, brought up to date (place_objects) after a
         /// change or when objects are added.
         mutable rct3::park::object::ObjectPlaces places;
@@ -576,8 +576,8 @@ namespace rct3::scene::park
         std::vector<rct3::park::track::TrackRules> track_rules;             ///< By ride, what its kind asks of its track; defaults past the end
         std::vector<entt::entity> ride_entities;
         std::vector<simulation::RideGroup> ride_groups;     ///< By ride, for the scenario's coaster goals and the awards
-        std::int32_t awards_month = -1;                     ///< The calendar month the awards were last looked at in
-        std::int64_t goals_day = -1;                        ///< The calendar day the scenario's goals were last checked on
+        std::optional<std::int32_t> awards_month;           ///< The calendar month the awards were last looked at in
+        std::optional<std::int64_t> goals_day;              ///< The calendar day the scenario's goals were last checked on
         std::vector<simulation::GoalReading> goal_readings; ///< By place in the park's goals, as last checked
         /// The park's running totals as the week began (week_totals), for its weekly graphs, and its cash. A week
         /// begun before a saved park was loaded began below nought, the simulation counting again from there.

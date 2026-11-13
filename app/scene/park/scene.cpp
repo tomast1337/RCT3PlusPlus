@@ -1133,7 +1133,7 @@ namespace rct3::scene::park
                     began = { .intake = intake, .income = income, .cash = cash };
                 }
                 // Awards, as each month begins, from the park as it runs. The month the park opens in is not judged.
-                const bool new_month = scene.awards_month >= 0 && scene.park.date.month != scene.awards_month;
+                const bool new_month = scene.awards_month && scene.park.date.month != *scene.awards_month;
                 scene.awards_month = scene.park.date.month;
                 if (new_month && scene.simulate && scene.park_model.has_awards)
                 {

@@ -62,8 +62,8 @@ namespace rct3::scene
             if (menu.music)
                 menu.music->stop(engine);
             menu.music.reset();
-            menu.music_volume = -1;
-            menu.music_level = -1;
+            menu.music_volume.reset();
+            menu.music_level.reset();
             std::optional<std::size_t> file;
             switch (wish.source)
             {
@@ -187,9 +187,9 @@ namespace rct3::scene
                 menu.music_volume = volume;
             }
             // Music just started comes in at once; after that a change fades, by how far it goes.
-            if (std::abs(level - menu.music_level) > 0.01f)
+            if (!menu.music_level || std::abs(level - *menu.music_level) > 0.01f)
             {
-                menu.music->fade(engine, level, menu.music_level < 0 ? 0.0f : audio::kMusicFadeSeconds * std::abs(level - menu.music_level));
+                menu.music->fade(engine, level, menu.music_level ? audio::kMusicFadeSeconds * std::abs(level - *menu.music_level) : 0.0f);
                 menu.music_level = level;
             }
             if (auto fed = menu.music->update(engine); !fed)

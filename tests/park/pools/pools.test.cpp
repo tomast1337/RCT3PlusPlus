@@ -348,7 +348,7 @@ TEST_CASE("pools: saved pool path steps climbing on from steps below have their 
     // A pool path at row 2, then three flights of steps climbing on along the column, two levels each.
     world.pool_segments = { { .id = 1, .col = 5, .row = 2, .type = 5, .surface = 0 } };
     for (std::int32_t k = 0; k < 3; ++k)
-        world.pool_segments.push_back({ .id = 2 + k, .col = 5, .row = 3 + k, .type = 7, .surface = 2 * k });
+        world.pool_segments.push_back({ .id = static_cast<std::uint64_t>(2 + k), .col = 5, .row = 3 + k, .type = 7, .surface = 2 * k });
     const auto map = saved_pools(world, { });
     for (std::int32_t row = 3; row < 6; ++row)
         CHECK(map.at(5, row)->side == Side::kRowBefore);

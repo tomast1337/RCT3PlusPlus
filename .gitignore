@@ -27,3 +27,6 @@ imgui.ini
 .ccache/
 __pycache__/
 *.pyc
+
+# npm installs (Prettier, TypeScript) are never tracked.
+node_modules/

@@ -1,0 +1,6 @@
+# Prettier formats the game's test scripts and the script prelude only; clang-format owns the C++.
+/*
+!/scripts/
+!/assets/
+/assets/*
+!/assets/scripting/

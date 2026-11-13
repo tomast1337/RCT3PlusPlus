@@ -22,7 +22,7 @@
 #include <array>
 #include <cstddef>
 
-namespace rct3::ui::screens::front_screen
+namespace rct3::ui::screens::front::front_screen
 {
 
     inline constexpr float kDesignWidth = 1024;
@@ -159,4 +159,4 @@ namespace rct3::ui::screens::front_screen
     /// One step of the easing; returns whether the button has arrived.
     bool ease(Polar& current, const Polar& goal, float elapsed);
 
-} // namespace rct3::ui::screens::front_screen
+} // namespace rct3::ui::screens::front::front_screen

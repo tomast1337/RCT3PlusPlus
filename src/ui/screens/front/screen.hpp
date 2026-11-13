@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The front screen: the game's main menu and the menus under it, laid out as in front_screen_layout.hpp.
+// The front screen: the game's main menu and the menus under it, laid out as in layout.hpp.
 //
 // Each menu is a short list of round picture buttons. A button either opens another menu, whose buttons fly
 // in along the circle while the old ones move out of the way, or asks for something the front screen does
@@ -16,7 +16,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
-#include "ui/screens/front_screen_layout.hpp"
+#include "ui/screens/front/layout.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
 
@@ -28,12 +28,12 @@
 #include <string_view>
 #include <vector>
 
-namespace rct3::ui::screens
+namespace rct3::ui::screens::front
 {
 
     namespace front_screen
     {
-        // The artwork's skins (front_screen_layout.hpp says where each goes).
+        // The artwork's skins (layout.hpp says where each goes).
         inline constexpr std::string_view kBandTopSkin = "FrontScreen_TopLeft";
         inline constexpr std::string_view kBandBottomSkin = "FrontScreen_BottomLeft";
         inline constexpr std::string_view kStripRightSkin = "FrontScreen_BottomRight";
@@ -184,7 +184,7 @@ namespace rct3::ui::screens
         void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
 
-        /// Lay the design out at one scale (front_screen_layout.hpp), for a backdrop drawn in code.
+        /// Lay the design out at one scale (layout.hpp), for a backdrop drawn in code.
         bool round = false;
 
     private:
@@ -219,4 +219,4 @@ namespace rct3::ui::screens
         std::vector<FrontRequest> requests_;
     };
 
-} // namespace rct3::ui::screens
+} // namespace rct3::ui::screens::front

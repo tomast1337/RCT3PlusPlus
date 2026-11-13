@@ -11,6 +11,7 @@
 using namespace rct3;
 using namespace rct3::ui;
 using namespace rct3::ui::screens;
+using namespace rct3::ui::screens::front;
 
 namespace
 {

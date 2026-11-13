@@ -252,7 +252,7 @@ namespace
     // The front screen's backdrop at its design size, from the three pictures it is drawn with.
     void draw_front_backdrop(ui::DrawContext& context, PanelLook, ui::Rect)
     {
-        namespace fs = ui::screens::front_screen;
+        namespace fs = ui::screens::front::front_screen;
         draw_skin_at(context, fs::kBandTopSkin, { fs::kBandTop });
         draw_skin_at(context, fs::kBandBottomSkin, { fs::kBandBottom });
         draw_skin_at(context, fs::kStripRightSkin, { fs::kStripRight });
@@ -262,7 +262,7 @@ namespace
     // a few shapes, and at its own size.
     void draw_label_band(ui::DrawContext& context, PanelLook, ui::Rect)
     {
-        namespace fs = ui::screens::front_screen;
+        namespace fs = ui::screens::front::front_screen;
         draw_skin_at(context, fs::kPatchSkin, { { 8, 8, 103, 105 } });
         draw_skin_at(context, fs::kBandEndSkin, { { 112, 8, 207, 93 }, { 216, 8, 266, 58 }, { 276, 8, 316, 98 }, { 112, 100, 232, 130 } });
     }

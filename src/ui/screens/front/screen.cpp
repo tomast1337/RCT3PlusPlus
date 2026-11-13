@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/screens/front_screen.hpp"
+#include "ui/screens/front/screen.hpp"
 
 #include "core/maybe.hpp"
 #include "ui/game_frames.hpp"
@@ -11,7 +11,7 @@
 #include <format>
 #include <utility>
 
-namespace rct3::ui::screens
+namespace rct3::ui::screens::front
 {
 
     namespace
@@ -467,4 +467,4 @@ namespace rct3::ui::screens
         draw_front_help(context, frame, help_title_, help_text_);
     }
 
-} // namespace rct3::ui::screens
+} // namespace rct3::ui::screens::front

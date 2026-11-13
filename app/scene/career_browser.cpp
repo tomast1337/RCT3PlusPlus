@@ -187,7 +187,7 @@ namespace rct3::scene
         }
 
         /// Shows the map of career `entry`.
-        void open_map(CareerBrowser& browser, ui::screens::FrontEnd& front, career::CareerEntry entry, const ui::StringTable& strings)
+        void open_map(CareerBrowser& browser, ui::screens::front::FrontEnd& front, career::CareerEntry entry, const ui::StringTable& strings)
         {
             browser.playing = std::move(entry);
             const career::Career& c = browser.playing->data.career;
@@ -244,7 +244,7 @@ namespace rct3::scene
             browser.played = true;
         }
 
-        void carry_out_map(CareerBrowser& browser, ui::screens::FrontEnd& front, ui::screens::CareerBoard& map, const ui::StringTable& strings, const config::game::GameInstall& install)
+        void carry_out_map(CareerBrowser& browser, ui::screens::front::FrontEnd& front, ui::screens::CareerBoard& map, const ui::StringTable& strings, const config::game::GameInstall& install)
         {
             career::CareerEntry& entry = *browser.playing;
             career::Career& c = entry.data.career;
@@ -266,11 +266,11 @@ namespace rct3::scene
             if (map.take_load() && c.current < c.scenarios.size())
             {
                 browser.game = career_game(entry, c.current);
-                front.open_files(ui::screens::FrontAction::Campaign, config::UserFolder::Careers);
+                front.open_files(ui::screens::front::FrontAction::Campaign, config::UserFolder::Careers);
             }
         }
 
-        void carry_out(CareerBrowser& browser, ui::screens::CareerDialog& dialog, ui::screens::FrontEnd& front, int pack, const ui::StringTable& strings)
+        void carry_out(CareerBrowser& browser, ui::screens::CareerDialog& dialog, ui::screens::front::FrontEnd& front, int pack, const ui::StringTable& strings)
         {
             const auto log = logging::logger("ui");
             if (const auto rename = dialog.take_rename(); rename && rename->first < browser.careers.size())
@@ -304,7 +304,7 @@ namespace rct3::scene
 
     } // namespace
 
-    void update_career_browser(render::Device& device, CareerBrowser& browser, ui::screens::FrontEnd& front, const ui::StringTable& strings, const config::game::GameInstall& install)
+    void update_career_browser(render::Device& device, CareerBrowser& browser, ui::screens::front::FrontEnd& front, const ui::StringTable& strings, const config::game::GameInstall& install)
     {
         auto map = front.career_board();
         if (map && browser.playing && browser.played && !browser.park)
@@ -354,7 +354,7 @@ namespace rct3::scene
         carry_out(browser, *dialog, front, front.career_pack(), strings);
     }
 
-    bool start_career_scenario(CareerBrowser& browser, ui::screens::FrontEnd& front, int pack, std::size_t index, const ui::StringTable& strings, const config::game::GameInstall& install)
+    bool start_career_scenario(CareerBrowser& browser, ui::screens::front::FrontEnd& front, int pack, std::size_t index, const ui::StringTable& strings, const config::game::GameInstall& install)
     {
         const auto log = logging::logger("ui");
         if (!browser.data)

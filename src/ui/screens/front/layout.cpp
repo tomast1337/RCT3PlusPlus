@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/screens/front_screen_layout.hpp"
+#include "ui/screens/front/layout.hpp"
 
 #include <algorithm>
 #include <cmath>
 
-namespace rct3::ui::screens::front_screen
+namespace rct3::ui::screens::front::front_screen
 {
 
     Frame frame_for(const Rect& screen, bool uniform)
@@ -95,4 +95,4 @@ namespace rct3::ui::screens::front_screen
         return true;
     }
 
-} // namespace rct3::ui::screens::front_screen
+} // namespace rct3::ui::screens::front::front_screen

@@ -9,6 +9,7 @@
 #include "scene/park/ride_camera.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
+#include "scene/track/trains.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/parties.hpp"
@@ -358,7 +359,7 @@ namespace rct3::scene::park
         {
             // A tracked ride's train limits are read the first time its window shows them.
             if (scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && assets.install)
-                ready_trains(scene, *assets.install, scene.shown->index);
+                track::ready_trains(scene, *assets.install, scene.shown->index);
             panel.show_page(ui::screens::info::attraction_page(scene.info_tab, facts(scene, *scene.shown), *assets.strings, info_units(assets, options), scene.info_section));
         }
     }
@@ -657,7 +658,7 @@ namespace rct3::scene::park
         else if ((change.id == ui::screens::info::control_id(Trains) || change.id == ui::screens::info::control_id(Cars)) && scene.train_limits.contains(ref.index) && ride->base.state != save::model::AttractionState::Open && assets.install)
         {
             const bool trains = change.id == ui::screens::info::control_id(Trains);
-            (void)set_trains(device, scene, *assets.install, ref.index, trains ? change.value : ride->train_count, trains ? ride->cars_per_train : change.value);
+            (void)track::set_trains(device, scene, *assets.install, ref.index, trains ? change.value : ride->train_count, trains ? ride->cars_per_train : change.value);
         }
         else if (change.id == ui::screens::info::control_id(CarKind) && scene.train_limits.contains(ref.index) && ride->base.state != save::model::AttractionState::Open && assets.install && !ride->trains.empty())
         {
@@ -667,10 +668,10 @@ namespace rct3::scene::park
             const std::string_view now = symbol.substr(0, symbol.find(':'));
             const auto at = std::ranges::find_if(choices, [&](const std::string& c) { return strings::equals_ignoring_case(c, now); });
             if (choices.size() > 1)
-                if (use_train(scene, *assets.install, ref.index, choices[at == choices.end() ? 0 : static_cast<std::size_t>(at - choices.begin() + 1) % choices.size()]))
+                if (track::use_train(scene, *assets.install, ref.index, choices[at == choices.end() ? 0 : static_cast<std::size_t>(at - choices.begin() + 1) % choices.size()]))
                 {
-                    (void)set_trains(device, scene, *assets.install, ref.index, ride->train_count, ride->cars_per_train);
-                    update_platforms(scene, ref.index, assets);
+                    (void)track::set_trains(device, scene, *assets.install, ref.index, ride->train_count, ride->cars_per_train);
+                    track::update_platforms(scene, ref.index, assets);
                 }
         }
         else if (change.id == ui::screens::info::control_id(Circuits))

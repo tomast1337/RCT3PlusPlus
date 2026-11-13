@@ -19,7 +19,7 @@
 #include "render/device.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
-#include "scene/track_building.hpp"
+#include "scene/objects.hpp"
 #include "ui/font/font.hpp"
 #include "ui/interface_assets.hpp"
 

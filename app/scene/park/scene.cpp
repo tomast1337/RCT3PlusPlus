@@ -42,7 +42,8 @@
 #include "scene/park/view.hpp"
 #include "scene/park/water.hpp"
 #include "scene/pool_tools.hpp"
-#include "scene/track_building.hpp"
+#include "scene/track/building.hpp"
+#include "scene/track/trains.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/awards.hpp"
 #include "simulation/components.hpp"
@@ -343,7 +344,7 @@ namespace rct3::scene::park
         /// being placed stay out with `keep_doors`.
         void put_tools_away(ParkScene& scene, bool keep_doors = false)
         {
-            close_track_building(scene);
+            track::close_track_building(scene);
             if (!keep_doors || scene.placing.step == RidePlacing::Step::Ride || scene.placing.step == RidePlacing::Step::Scenery)
                 stop_ride_placing(scene);
             close_footpath_panel(scene);
@@ -451,7 +452,7 @@ namespace rct3::scene::park
 
         // Tracked rides put to test or opened: their trains made ready, as the game does, and run round a whole
         // circuit, a shuttle's track, or an unfinished one to its end, where they crash. While the panel builds an
-        // unfinished track, a test of it runs a ghost instead (track_building.hpp); closing the panel readies it again.
+        // unfinished track, a test of it runs a ghost instead (scene/track/building.hpp); closing the panel readies it again.
         for (const std::size_t ride : std::exchange(scene.readying, { }))
         {
             const auto& course = ride < scene.courses.size() ? scene.courses[ride] : std::nullopt;
@@ -463,7 +464,7 @@ namespace rct3::scene::park
                 continue;
             const bool ghosted = coaster && !coaster->closed && coaster->shuttle == simulation::Shuttle::None && scene.building.ride == ride;
             // A lazy river has no trains: swimmers float round it; nor has a slide climbed on foot.
-            if ((r.mode == save::model::OperatingMode::LazyRiver || (!coaster && !boats) || set_trains(device, scene, *assets.install, ride, r.train_count, r.cars_per_train)) && !ghosted && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
+            if ((r.mode == save::model::OperatingMode::LazyRiver || (!coaster && !boats) || track::set_trains(device, scene, *assets.install, ride, r.train_count, r.cars_per_train)) && !ghosted && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
                 scene.placing.unjoined.push_back(ride);
             if (auto info = desktop.root().find_as<ui::screens::info::InfoPanel>(kInfoName); info && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && scene.shown->index == ride)
                 show_info_page(scene, *info, assets, options);
@@ -636,7 +637,7 @@ namespace rct3::scene::park
                 }
                 else if (still && !over && scene.deleting.tool == DeleteTools::Tool::One)
                     delete_under(pointer.position, { screen.width(), screen.height() });
-                else if (still && !over && (structure_tools_click(device, scene, assets) || ride_placing_click(device, scene, assets) || track_building_click(scene, assets, pointer.position, { screen.width(), screen.height() })))
+                else if (still && !over && (structure_tools_click(device, scene, assets) || ride_placing_click(device, scene, assets) || track::track_building_click(scene, assets, pointer.position, { screen.width(), screen.height() })))
                     ;
                 else if (still && !over && !footpath_click(scene, pointer.position, { screen.width(), screen.height() }, input.control) && !footpath_panel_open(scene) && !scene.building.ride)
                 {
@@ -740,7 +741,7 @@ namespace rct3::scene::park
                     kind = std::ranges::find_if(items, in_overlay);
                 const auto any = std::ranges::find_if(items, [](const rct3::park::BuildItem& i) { return !i.entrance.empty(); });
                 const auto item = kind != items.end() || scene.rides.rides[ride].kind == save::model::RideKind::Flat ? kind : any;
-                return item != items.end() && start_door_placing(scene, ride, *item, station_pieces(scene, ride, assets), exit);
+                return item != items.end() && start_door_placing(scene, ride, *item, track::station_pieces(scene, ride, assets), exit);
             };
             // A closed circuit goes on to its doors, the entrance first, while its window shows, as in the game.
             if (const auto ride = std::exchange(scene.doors_requested, std::nullopt); ride && *ride < scene.rides.rides.size())
@@ -947,9 +948,9 @@ namespace rct3::scene::park
                 if (info && scene.shown)
                     open_info(scene, *info, *scene.shown, assets, options);
             }
-            else if (const auto overlay = ride_track_overlay(scene, asked->index))
+            else if (const auto overlay = track::ride_track_overlay(scene, asked->index))
             {
-                if (open_track_building(scene, asked->index, *overlay, assets))
+                if (track::open_track_building(scene, asked->index, *overlay, assets))
                 {
                     close_footpath_panel(scene); // One tool panel at the bottom left at a time
                     stop_land_tools(scene);
@@ -959,7 +960,7 @@ namespace rct3::scene::park
         }
         profiling::section("TrackBuilding", [&] {
             const ui::Rect screen = desktop.root().rect();
-            update_track_building(device, scene, assets, options.choice(config::game::GameOption::Currency), info_units(assets, options).distance, pointer.position, { screen.width(), screen.height() }, over, input.shift, input.commands, elapsed);
+            track::update_track_building(device, scene, assets, options.choice(config::game::GameOption::Currency), info_units(assets, options).distance, pointer.position, { screen.width(), screen.height() }, over, input.shift, input.commands, elapsed);
         });
         // A slide built up to a pool, or taken away, opens or closes its railing there.
         if (!scene.pools.squares.empty() && pool_openings(scene) != scene.pool_openings)
@@ -1941,7 +1942,7 @@ namespace rct3::scene::park
             else if (pressed == ui::screens::park_view::ParkTool::Paths)
             {
                 tools->close_menu();
-                close_track_building(scene); // One tool panel at the bottom left at a time
+                track::close_track_building(scene); // One tool panel at the bottom left at a time
                 stop_ride_placing(scene);
                 stop_land_tools(scene);
                 stop_deleting(scene);
@@ -1953,7 +1954,7 @@ namespace rct3::scene::park
             {
                 if (*item == ui::screens::park_view::ToolItem::ShapeGround || *item == ui::screens::park_view::ToolItem::PaintGround || *item == ui::screens::park_view::ToolItem::Water || *item == ui::screens::park_view::ToolItem::Waterfalls)
                 {
-                    close_track_building(scene);
+                    track::close_track_building(scene);
                     stop_ride_placing(scene);
                     close_footpath_panel(scene);
                     stop_deleting(scene);
@@ -1964,7 +1965,7 @@ namespace rct3::scene::park
                 }
                 else if (*item == ui::screens::park_view::ToolItem::DeleteOne || *item == ui::screens::park_view::ToolItem::DeleteArea)
                 {
-                    close_track_building(scene);
+                    track::close_track_building(scene);
                     stop_ride_placing(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
@@ -1980,7 +1981,7 @@ namespace rct3::scene::park
                 }
                 else if (*item == ui::screens::park_view::ToolItem::StructureGrab || *item == ui::screens::park_view::ToolItem::StructureList)
                 {
-                    close_track_building(scene);
+                    track::close_track_building(scene);
                     stop_ride_placing(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
@@ -1991,7 +1992,7 @@ namespace rct3::scene::park
                 else if (*item == ui::screens::park_view::ToolItem::Pools)
                 {
                     // The pools button opens the pool panel, as in the game, not a list.
-                    close_track_building(scene);
+                    track::close_track_building(scene);
                     stop_ride_placing(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
@@ -2069,7 +2070,7 @@ namespace rct3::scene::park
                 {
                     stop_enclosing(scene);
                     stop_ride_placing(scene);
-                    close_track_building(scene);
+                    track::close_track_building(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
                     stop_deleting(scene);
@@ -2079,7 +2080,7 @@ namespace rct3::scene::park
                 {
                     stop_pooling(scene);
                     stop_ride_placing(scene);
-                    close_track_building(scene);
+                    track::close_track_building(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
                     stop_deleting(scene);
@@ -2089,14 +2090,14 @@ namespace rct3::scene::park
                 {
                     stop_enclosing(scene);
                     stop_pooling(scene);
-                    close_track_building(scene);
+                    track::close_track_building(scene);
                     close_footpath_panel(scene);
                     stop_land_tools(scene);
                     stop_deleting(scene);
                     stop_structure_tools(scene);
                     building = picked->kind != rct3::park::BuildKind::Scenery;
                 }
-                else if (new_tracked_ride(scene, *picked, assets))
+                else if (track::new_tracked_ride(scene, *picked, assets))
                 {
                     stop_enclosing(scene);
                     stop_pooling(scene);

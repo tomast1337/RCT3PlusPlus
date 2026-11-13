@@ -128,7 +128,7 @@ namespace rct3::scene::park
             return;
         const bool ride = ref.kind == rct3::park::AttractionRef::Kind::Ride;
         if (ride && scene.building.ride == ref.index)
-            close_track_building(scene);
+            track::close_track_building(scene);
         stop_ride_placing(scene);
         wait_for_build(scene);
         // shortcut: a flat ride or a stall gives back its item's price by the tracked rides' rule; use what its
@@ -136,7 +136,7 @@ namespace rct3::scene::park
         const auto main = base->spot ? std::ranges::find(scene.objects, base->spot->object, &save::model::PlacedObject::id) : scene.objects.end();
         const auto model = main != scene.objects.end() ? scene.models.find(rct3::park::object::model_ref(*main)) : scene.models.end();
         const bool tracked = ride && scene.rides.rides[ref.index].kind == save::model::RideKind::Tracked;
-        const std::int64_t value = tracked ? track_cost(scene, ref.index, assets) : (model != scene.models.end() ? model->second.price : 0);
+        const std::int64_t value = tracked ? track::track_cost(scene, ref.index, assets) : (model != scene.models.end() ? model->second.price : 0);
         const std::int64_t back = rct3::park::demolish_refund(value, (base->flags & save::model::AttractionCommon::kNeverOpened) == 0);
         std::set<std::uint64_t> parts;
         // Its fence, which the park built round it, goes with it.

@@ -12,6 +12,7 @@
 #include "park/water/jet.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "profiling/profiler.hpp"
+#include "scene/ghosts.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/glow.hpp"
 #include "scene/park/occlusion.hpp"
@@ -314,7 +315,7 @@ namespace rct3::scene::park
                 profiling::section("SeeThrough", [&] { draw_objects(rct3::park::object::PartBlend::Blended); });
             if (parts.ghosts)
             {
-                draw_track_ghost(device, scene, transform, light);
+                track::draw_track_ghost(device, scene, transform, light);
                 draw_raised_footpath_ghost(device, scene, transform, light);
                 draw_ride_placing_ghost(device, scene, transform, light);
                 draw_structure_ghost(device, scene, transform, light);

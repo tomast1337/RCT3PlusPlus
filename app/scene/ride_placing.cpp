@@ -20,12 +20,15 @@
 #include "park/track/ground.hpp"
 #include "park/water/fill.hpp"
 #include "scene/enclosure_tools.hpp"
+#include "scene/ghosts.hpp"
+#include "scene/objects.hpp"
 #include "scene/park/attraction_state.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
 #include "scene/park/view.hpp"
-#include "scene/track_building.hpp"
+#include "scene/track/building.hpp"
+#include "scene/track/trains.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/systems.hpp"
 #include "ui/screens/info/scenery.hpp"
@@ -219,7 +222,7 @@ namespace rct3::scene
                 if (scene.building.ride == i && course && !course->closed)
                     if (const auto runs = simulation::coaster_of(*course, ride); runs && runs->shuttle == simulation::Shuttle::None)
                         return false;
-                stand_trains(scene, i);
+                track::stand_trains(scene, i);
                 const std::array coaster { course ? simulation::coaster_of(*course, ride) : std::nullopt };
                 save::model::RideModel one;
                 one.rides.push_back(ride);
@@ -241,7 +244,7 @@ namespace rct3::scene
                 park::seat_flat_ride(device, scene, i);
                 if (assets.install && ride.kind == save::model::RideKind::Tracked)
                     park::replace_ride_cars(device, scene, *assets.install, i);
-                ready_boats(scene, i);
+                track::ready_boats(scene, i);
                 logging::logger("park").info("{} joins the paths", ride.base.name);
                 return true;
             });
@@ -360,7 +363,7 @@ namespace rct3::scene
     {
         RidePlacing& p = scene.placing;
         join_rides(device, scene, assets);
-        // A ride that is one building borrows the round panel while it is set down (track_building.cpp).
+        // A ride that is one building borrows the round panel while it is set down (scene/track/building.cpp).
         if (!p.item && scene.building.ride)
             return;
         auto panel = scene.desktop->root().find_as<ui::screens::info::InfoPanel>(park::kPlacingName);
@@ -758,7 +761,7 @@ namespace rct3::scene
         save::model::Station& station = r.stations[station_index];
         (exit ? station.exit : station.entrance) = object;
         (exit ? station.exit_spot : station.entrance_spot) = save::model::PlacementSpot { object, door.col, door.row, height, static_cast<std::uint8_t>(door.rotation) };
-        update_platforms(scene, ride, assets);
+        track::update_platforms(scene, ride, assets);
         fence_ride(scene, assets, r);
         park::refresh_pavings(scene);
         if (station.entrance != 0 && station.exit != 0 && !std::ranges::contains(p.unjoined, ride))

@@ -23,6 +23,7 @@
 #include "scene/objects.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/scene.hpp"
+#include "scene/park/supports.hpp"
 #include "scene/park/view.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/track/trains.hpp"

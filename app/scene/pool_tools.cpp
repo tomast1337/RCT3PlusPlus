@@ -11,6 +11,7 @@
 #include "scene/ghosts.hpp"
 #include "scene/objects.hpp"
 #include "scene/park/footpaths.hpp"
+#include "scene/park/ground.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/view.hpp"
 #include "scene/ride_placing.hpp"

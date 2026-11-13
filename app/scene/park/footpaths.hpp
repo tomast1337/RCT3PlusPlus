@@ -157,28 +157,12 @@ namespace rct3::scene::park
     void close_footpath_panel(ParkScene& scene);
     [[nodiscard]] bool footpath_panel_open(const ParkScene& scene);
 
-    /// Builds the ground again from the scene's grid, with the paths and what the rides and stalls pave as they are now;
-    /// what changed lies on the tiles of `touched`, or anywhere without it.
-    void rebuild_ground(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::optional<rct3::park::TileRect> touched = std::nullopt);
+    /// The object drawing raised path `path` of `style`, with the piece the paths around it call for.
+    save::model::PlacedObject deck_object(const rct3::park::path::PathStyle& style, const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::uint64_t id);
 
     /// Stands the fence or wall `wall` between the paths either side of it, or takes it away when not
     /// `standing`, once the scene's objects show it: the paths' looks and the walks guests take change.
     void wall_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const rct3::park::EdgeWall& wall, bool standing);
-
-    /// Works out what the rides and stalls pave again from the scene's attractions and the models of what they
-    /// are placed as, and marks the ground for building again.
-    void refresh_pavings(ParkScene& scene);
-
-    /// The supports' pieces, read when first needed; none when the install has none.
-    const rct3::park::support::SupportSets* support_sets(ParkScene& scene, const ui::InterfaceAssets& assets);
-
-    /// What columns pass by as if it were not there: the rides' station platforms and the paving off the ground.
-    [[nodiscard]] std::unordered_set<std::uint64_t> supports_passed(const ParkScene& scene);
-
-    /// The support pieces that would hold up `ghosts`, were they added to the scene's objects.
-    /// shortcut: the columns of what is there already stay as they are under a ghost; show them changed too if
-    /// the difference shows.
-    [[nodiscard]] std::vector<save::model::PlacedObject> supports_under(const ParkScene& scene, std::span<const save::model::PlacedObject> ghosts, const rct3::park::support::SupportSets& sets);
 
     /// Acts on what the player did in the panel since the last frame, and shows the result.
     void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);

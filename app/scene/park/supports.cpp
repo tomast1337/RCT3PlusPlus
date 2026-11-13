@@ -6,11 +6,18 @@
 #include "profiling/profiler.hpp"
 #include "scene/park/refresh.hpp"
 #include "scene/park/scene.hpp"
+#include "ui/interface_assets.hpp"
 
 #include <algorithm>
 #include <chrono>
+#include <format>
 #include <optional>
 #include <set>
+#include <span>
+#include <string_view>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 namespace rct3::scene::park
 {
@@ -159,6 +166,78 @@ namespace rct3::scene::park
         objects_changed(scene);
         w.stale = false; // That was only the supports
         logging::logger("park").debug("supports on {} tiles built again in {} us", tiles.size(), std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count());
+    }
+
+    const rct3::park::support::SupportSets* support_sets(ParkScene& scene, const ui::InterfaceAssets& assets)
+    {
+        ParkFootpaths& f = scene.footpaths;
+        if (!f.support_sets && assets.install)
+        {
+            if (const auto found = assets.install->find(std::format("{}.common.ovl", rct3::park::support::kSupportOverlay)))
+            {
+                if (auto sets = rct3::park::support::load_support_sets(*found))
+                    f.support_sets = std::move(*sets);
+                else
+                    logging::logger("park").warning("supports: {}", sets.error());
+            }
+        }
+        return f.support_sets ? &*f.support_sets : nullptr;
+    }
+
+    std::vector<save::model::PlacedObject> supports_under(const ParkScene& scene, std::span<const save::model::PlacedObject> ghosts, const rct3::park::support::SupportSets& sets)
+    {
+        std::vector<save::model::PlacedObject> objects = scene.objects;
+        std::uint64_t last = 0;
+        for (const save::model::PlacedObject& o : objects)
+            last = std::max(last, o.id);
+        std::set<rct3::park::support::SupportTile> tiles;
+        std::unordered_set<std::uint64_t> ids;
+        for (const save::model::PlacedObject& ghost : ghosts)
+        {
+            save::model::PlacedObject& o = objects.emplace_back(ghost);
+            o.id = ++last;
+            const auto under = rct3::park::support::support_tiles(o, scene.models);
+            tiles.insert(under.begin(), under.end());
+            ids.insert(o.id);
+        }
+        rct3::park::support::BuiltSupports built = rct3::park::support::support_columns(objects, scene.models, scene.footpaths.paths, scene.grid, sets, last, supports_passed(scene), tiles);
+        std::vector<save::model::PlacedObject> out;
+        for (std::size_t i = 0; i < built.pieces.size(); ++i)
+        {
+            if (ids.contains(built.of[i].held))
+                out.push_back(std::move(built.pieces[i]));
+        }
+        return out;
+    }
+
+    std::unordered_set<std::uint64_t> supports_passed(const ParkScene& scene)
+    {
+        std::unordered_set<std::uint64_t> platforms;
+        for (const save::model::Ride& ride : scene.rides.rides)
+        {
+            for (const save::model::TrackPiece& piece : ride.track ? ride.track->pieces : std::vector<save::model::TrackPiece> { })
+            {
+                if (piece.platform)
+                    platforms.insert(piece.platform->id);
+            }
+        }
+        // A queue's railings stand on its deck: they hold up nothing and are not in the way of its columns.
+        std::set<std::pair<std::string_view, std::string_view>> railings;
+        for (const save::model::PathTile& p : scene.footpaths.paths)
+        {
+            if (p.queue)
+                railings.emplace(p.queue->fence_symbol, p.queue->fence_overlay);
+        }
+        std::unordered_set<std::uint64_t> out(scene.footpaths.paving_decks.begin(), scene.footpaths.paving_decks.end());
+        // A ride's fence stands on its floor's rim: it holds up nothing and is not in the way of the ride's columns.
+        for (const auto& [_, pieces] : scene.ride_fence_pieces)
+            out.insert(pieces.begin(), pieces.end());
+        for (const save::model::PlacedObject& o : scene.objects)
+        {
+            if ((o.owner_ref != o.id && platforms.contains(o.owner_ref)) || (o.fixture && railings.contains({ o.symbol, o.overlay })))
+                out.insert(o.id);
+        }
+        return out;
     }
 
 } // namespace rct3::scene::park

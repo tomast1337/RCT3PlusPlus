@@ -11,18 +11,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
-
 const kPool = "Pool/Default/Default_Stub";
 const kDeck = 0.2; ///< The paving's top over a square's surface, in height units, where swimmers walk
 const kSlack = 0.12; ///< Chosen by eye: how far off the paving's height a walker may be
@@ -55,7 +43,7 @@ if (built)
         camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col + 0.5, row: row + 2, up: 16 });
         await frames(3);
     };
-    const rides = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+    const rides = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
     if (!ui.find("tools/Rides/Obj_Pools"))
         await ui.click(rides);
     await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
@@ -128,7 +116,7 @@ if (built)
     await until(() => ui.find("pool_panel/Pool_ChangingRoomPanel") !== undefined, 120, "the pool panel");
     await ui.click("pool_panel/Pool_ChangingRoomPanel");
     await frames(2);
-    await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
+    await ui.click(`pool_panel/body/${must(ui.children("pool_panel/body"), "pool_panel/body shown")[0]}`);
     await frames(3);
     await from_above(c + 1, r);
     await pointer.click(...on_view(c + 1.5, r + 0.5));

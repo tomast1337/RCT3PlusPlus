@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/ChequeredFlag.dat");
 await park.ready();
 await frames(30);
@@ -40,45 +35,33 @@ camera.look({ col: guest.col!, row: guest.row! }, { col: guest.col! + 5, row: gu
 await frames(10);
 people.show(who);
 await until(() => ui.find("info") !== undefined, 120, "the guest's window");
-const tab = (part: string) => ui.children("info")!.find((t) => t.toLowerCase().includes(part));
-const cashTab = tab("cash");
+const cashTab = info_tab("cash");
 if (cashTab !== undefined) {
     await ui.click(`info/${cashTab}`);
     await frames(10);
     await screenshot("cash_tab");
     // Their party's Cash tab: the same rows, summed over the members.
-    const partyTab = tab("group");
+    const partyTab = info_tab("group");
     if (partyTab !== undefined) {
         await ui.click(`info/${partyTab}`);
         await frames(10);
-        const partyCash = tab("cash");
+        const partyCash = info_tab("cash");
         if (partyCash !== undefined) {
             await ui.click(`info/${partyCash}`);
             await frames(10);
             await screenshot("party_cash_tab");
         }
         people.show(who);
-        await until(() => tab("options") !== undefined, 120, "the guest's window again");
+        await until(() => info_tab("options") !== undefined, 120, "the guest's window again");
     }
-    await ui.click(`info/${tab("options")}`);
+    await ui.click(`info/${info_tab("options")}`);
     await frames(5);
 }
 
 /** Finds the pick-up button wherever the window holds it. */
-const button = (path: string): string | undefined => {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === "PickUp")
-            return at;
-        const found = button(at);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-};
 
 const pickUp = async () => {
-    const at = button("info");
+    const at = under("info", "PickUp");
     expect(at !== undefined, "a pick-up button on the guest's window");
     await ui.click(at!);
     await until(() => state() === "held", 60, "the guest to be held");
@@ -98,7 +81,7 @@ const dropAt = async (col: number, row: number) => {
 await pickUp();
 const target = paths.find((p) => Math.abs(p.col - guest.col!) + Math.abs(p.row - guest.row!) >= 3 && clear(p.col, p.row));
 expect(target !== undefined, "a path in sight a few tiles off");
-const over = map.screen(target!.col, target!.row)!;
+const over = must(map.screen(target!.col, target!.row), "the tile in sight");
 pointer.move(over.x, over.y);
 await frames(10);
 const hung = people.list()[who];
@@ -125,7 +108,7 @@ await dropAt(target!.col + 0.5, target!.row + 0.5);
 await until(() => state() !== "held", 30, "let go");
 await until(() => onFoot(), 300, "walking");
 await pickUp();
-const away = map.screen(target!.col, target!.row)!;
+const away = must(map.screen(target!.col, target!.row), "the tile in sight");
 pointer.move(away.x, away.y);
 await frames(5);
 await pointer.click(away.x, away.y, "right");

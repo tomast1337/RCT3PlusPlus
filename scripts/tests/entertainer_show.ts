@@ -8,23 +8,7 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
 
 await park.open("Campaigns/Base/ChequeredFlag.dat");
 await park.ready();
@@ -39,13 +23,12 @@ const busy = paths.reduce((a, b) => (crowd_at(b.col, b.row) > crowd_at(a.col, a.
 camera.look({ col: busy.col + 0.5, row: busy.row + 0.5 }, { col: busy.col + 4, row: busy.row + 4, up: 9 });
 await frames(5);
 
-await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Staff") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Staff");
 await until(() => under("Staff_Title", "Staff_HireEntertainerIcon") !== undefined, 120, "the staff window's hire buttons");
-const staff = () => people.list().filter((p) => p.staff);
 const count = staff().length;
-await ui.click(under("Staff_Title", "Staff_HireEntertainerIcon")!);
+await ui.click(must(under("Staff_Title", "Staff_HireEntertainerIcon"), "Staff_HireEntertainerIcon under Staff_Title"));
 await until(() => staff().length === count + 1, 60, "an entertainer hired");
 const star = () => staff()[count];
 expect(star().role === "entertainer", `an entertainer, not ${star().role}`);
@@ -53,7 +36,7 @@ await until(() => star().state === "held", 30, "the entertainer in hand");
 // The window out of the way, then put down on the busy tile.
 await ui.click(under("Staff_Title", "close") ?? under("Staff_Title", "Close") ?? "Staff_Title");
 await frames(5);
-const at = map.screen(busy.col + 0.5, busy.row + 0.5)!;
+const at = must(map.screen(busy.col + 0.5, busy.row + 0.5), `tile ${busy.col + 0.5}, ${busy.row + 0.5} in sight`);
 pointer.move(at.x, at.y);
 await frames(5);
 await pointer.click(at.x, at.y);

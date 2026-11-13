@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await until(() => park.loaded(), 1200, "the park");
 await frames(10);
 park.setWeather("sunny");
@@ -87,7 +82,7 @@ log("customers", info().customers, "riders now", info().riders);
 const ride = info();
 expect((ride.platformSquares ?? []).length > 0, "the slide's platform squares");
 log("platform squares", JSON.stringify(ride.platformSquares));
-const rides_menu = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+const rides_menu = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
 await until(() => build.flatRides() !== undefined, 1200, "the build items");
 if (!ui.find("tools/Rides/Obj_Pools"))
     await ui.click(rides_menu);

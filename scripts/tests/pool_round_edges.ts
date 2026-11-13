@@ -10,18 +10,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
-
 const kPool = "Pool/Default/Default_Stub";
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
@@ -37,7 +25,7 @@ await frames(10);
 // Tiles eight by seven east of the room's tile, water six by five inside them, laid with loose curves; then the
 // corner far from the road and the room laid with a tight curve, and the one near the road and far from the room
 // cut across.
-const rides = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+const rides = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
 if (!ui.find("tools/Rides/Obj_Pools"))
     await ui.click(rides);
 await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
@@ -68,7 +56,7 @@ await frames(2);
 await until(() => ui.find("pool_panel/Pool_ChangingRoomPanel") !== undefined, 120, "the pool panel");
 await ui.click("pool_panel/Pool_ChangingRoomPanel");
 await frames(2);
-await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
+await ui.click(`pool_panel/body/${must(ui.children("pool_panel/body"), "pool_panel/body shown")[0]}`);
 await frames(3);
 await pointer.click(...on_view(c + 1.5, r + 0.5));
 await frames(3);

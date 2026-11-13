@@ -7,23 +7,7 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined, 1200, "the tool row and the build lists");
@@ -33,23 +17,12 @@ expect(kind !== undefined, "a plain burger stall");
 const col = gate.col + 8;
 const row = gate.row - 10;
 
-async function look(c: number, r: number, up = 30): Promise<void> {
-    camera.look({ col: c + 0.5, row: r + 0.5 }, { col: c + 0.5, row: r + 0.5 + up / 3, up });
-    await frames(3);
-}
-function onView(c: number, r: number): [number, number] {
-    const on = map.screen(c, r);
-    if (!on)
-        throw new Error(`tile ${c}, ${r} is not in sight`);
-    return [on.x, on.y];
-}
-
 // A burger stall on open grass, with a short path up to its front.
-await look(col, row, 40);
+await look_down(col, row, 40);
 expect(build.pick(kind!.overlay, kind!.symbol), `${kind!.symbol} picked`);
-pointer.move(...onView(col, row));
+pointer.move(...on_view(col, row));
 await frames(3);
-await pointer.click(...onView(col, row));
+await pointer.click(...on_view(col, row));
 await frames(3);
 await ui.click("info/close");
 const at = stalls.list().findIndex((s) => s.symbol === `${kind!.symbol}:sta`);
@@ -66,16 +39,15 @@ const front = kFront[site.direction & 3];
 await ui.click("tools/Paths/Obj_Paths");
 await until(() => ui.find("footpaths/route") !== undefined, 120, "the path panel");
 await ui.toggle("footpaths/follow", false);
-const has = (c: number, r: number) => map.paths().some((p) => p.col === c && p.row === r);
 const far: [number, number] = [col + 4 * front[0], row + 4 * front[1]];
 const by: [number, number] = [col + front[0], row + front[1]];
 await ui.toggle("footpaths/route", false);
-await pointer.click(...onView(...far));
+await pointer.click(...on_view(...far));
 await ui.toggle("footpaths/route", true);
-for (let wait = 1; wait <= 96 && !has(...by); wait *= 2) {
-    pointer.move(...onView(...by));
+for (let wait = 1; wait <= 96 && !has_path(...by); wait *= 2) {
+    pointer.move(...on_view(...by));
     await frames(wait);
-    await pointer.click(...onView(...by));
+    await pointer.click(...on_view(...by));
 }
 await ui.toggle("footpaths/route", false);
 await ui.click("footpaths/close");
@@ -92,16 +64,15 @@ await until(() => told("FoodStallBrokenMessage") === 1, 60, "the player told the
 expect(stall().broken === true && stall().selling === false, "the stall shut while broken");
 
 // A mechanic hired, put on the far end of its path.
-const staff = () => people.list().filter((p) => p.staff);
 const near = { col: far[0], row: far[1] };
 camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col + 0.5 + 8 * front[0] + 4, row: row + 0.5 + 8 * front[1] + 4, up: 12 });
 await frames(5);
-await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Staff") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Staff");
 await until(() => under("Staff_Title", "Staff_HireMechanicIcon") !== undefined, 120, "the staff window's hire buttons");
 const count = staff().length;
-await ui.click(under("Staff_Title", "Staff_HireMechanicIcon")!);
+await ui.click(must(under("Staff_Title", "Staff_HireMechanicIcon"), "Staff_HireMechanicIcon under Staff_Title"));
 await until(() => staff().length === count + 1 && staff()[count].state === "held", 60, "a mechanic hired, in hand");
 const drop = map.screen(near.col + 0.5, near.row + 0.5);
 expect(drop !== undefined, "the path by the stall in sight");

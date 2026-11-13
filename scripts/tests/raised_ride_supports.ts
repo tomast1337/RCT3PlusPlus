@@ -8,11 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => build.flatRides() !== undefined, 1200, "the build lists");
 const ride = build.flatRides()!.find((r) => r.symbol === "Aviator");

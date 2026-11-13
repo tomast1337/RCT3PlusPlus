@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kPool = "Pool/Default/Default_Stub";
 
 await until(() => park.loaded(), 1200, "the park");
@@ -34,7 +29,7 @@ expect(map.objects().filter((o) => o.col === room!.col && o.row === room!.row &&
 camera.look({ col: room!.col + 0.5, row: room!.row + 0.5 }, { col: room!.col + 0.5, row: room!.row + 6, up: 5 });
 await frames(10);
 // Its roof, above the guests' heads.
-const middle = map.screen(room!.col + 0.5, room!.row + 0.5)!;
+const middle = must(map.screen(room!.col + 0.5, room!.row + 0.5), "the tile in sight");
 await pointer.click(middle.x, middle.y - 0.12);
 await until(() => ui.find("info/Attraction_OpMode") !== undefined, 120, "the changing room's window");
 const state = () => (ui.find("info/Attraction_General_Open") !== undefined ? "Open" : "Closed");
@@ -52,9 +47,6 @@ await screenshot("pool_saved_room_open");
 await ui.click("info/close");
 
 // Saved and loaded again: the squares kept, and the pieces placed from them only once.
-async function click_tool(tool: string): Promise<void> {
-    await ui.click(`tools/${tool}/${ui.children(`tools/${tool}`)![0]}`);
-}
 const objects = map.objects().length;
 park.setTemperature(28);
 // Squares stacked on a tile, the decks' heights and the ground under them, to find again after loading.
@@ -99,7 +91,6 @@ expect(reloaded_swimmers >= saved_swimmers * 0.9, `most of the ${saved_swimmers}
 
 park.setWeather("sunny");
 park.setTemperature(28);
-const swimmers = () => people.list().filter((p) => p.state === "swimming");
 await until(() => swimmers().length >= 3, 6000, "guests swimming");
 log("swimming", swimmers().length);
 const at = swimmers()[0];

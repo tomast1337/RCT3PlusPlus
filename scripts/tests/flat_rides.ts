@@ -24,11 +24,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** Tiles of free ground between the side of one ride's slot and the next's. */
 const slotGap = 4;
 /** Rows between a ride's last row and its lane's road: entrance, queue, queue. */
@@ -67,12 +62,6 @@ function reach(cols: number, rows: number): number {
 }
 
 /** Where the middle of tile (col, row) is on the view; throws when it is out of sight. */
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
 
 // The rides, laid out in lanes before anything is built so the roads are known.
 interface Slot {

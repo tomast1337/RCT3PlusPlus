@@ -10,11 +10,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kBoats = /rowingboat|swanboat|canoe|bumperboat|jetski|windsurf|watertricycle/i;
 const kFrames = 60 * 20; // Frames watched, a sixtieth of a second each
 const kMostTurn = 0.06; // Radians a boat may turn in a frame: the quickest boats turn some 2 a second

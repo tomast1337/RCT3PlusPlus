@@ -14,11 +14,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined, 1200, "the tool row and the build lists");
 const gate = map.paths().reduce((a, b) => (b.row > a.row ? b : a));
@@ -28,23 +23,12 @@ expect(kind !== undefined, "a plain burger stall");
 const col = gate.col + 8;
 const row = gate.row - 10;
 
-async function look(c: number, r: number, up = 30): Promise<void> {
-    camera.look({ col: c + 0.5, row: r + 0.5 }, { col: c + 0.5, row: r + 0.5 + up / 3, up });
-    await frames(3);
-}
-function onView(c: number, r: number): [number, number] {
-    const at = map.screen(c, r);
-    if (!at)
-        throw new Error(`tile ${c}, ${r} is not in sight`);
-    return [at.x, at.y];
-}
-
-await look(col, row, 40);
+await look_down(col, row, 40);
 expect(build.pick(kind!.overlay, kind!.symbol), `${kind!.symbol} picked`);
-pointer.move(...onView(col, row));
+pointer.move(...on_view(col, row));
 await frames(3);
 expect(build.placing()?.problem === "none", `the stall placeable on the grass, not ${JSON.stringify(build.placing())}`);
-await pointer.click(...onView(col, row));
+await pointer.click(...on_view(col, row));
 await frames(3);
 await ui.click("info/close");
 const at = stalls.list().findIndex((s) => s.symbol === `${kind!.symbol}:sta`);
@@ -76,19 +60,18 @@ await frames(2);
 const styles = (ui.children("footpaths/body") ?? []).filter((n) => !queues.includes(n));
 await ui.click(`footpaths/body/${styles.find((s) => s.toLowerCase().includes("asphalt")) ?? styles[0]}`);
 await frames(2);
-const has = (c: number, r: number) => map.paths().some((p) => p.col === c && p.row === r);
 async function route(a: [number, number], b: [number, number]): Promise<void> {
-    await look((a[0] + b[0]) >> 1, (a[1] + b[1]) >> 1, 40);
+    await look_down((a[0] + b[0]) >> 1, (a[1] + b[1]) >> 1, 40);
     await ui.toggle("footpaths/route", false);
-    await pointer.click(...onView(...a));
+    await pointer.click(...on_view(...a));
     await ui.toggle("footpaths/route", true);
-    for (let wait = 1; wait <= 96 && !has(...b); wait *= 2) {
-        pointer.move(...onView(...b));
+    for (let wait = 1; wait <= 96 && !has_path(...b); wait *= 2) {
+        pointer.move(...on_view(...b));
         await frames(wait);
-        await pointer.click(...onView(...b));
+        await pointer.click(...on_view(...b));
     }
     await ui.toggle("footpaths/route", false);
-    expect(has(...a) && has(...b), `a path from ${a} to ${b}, laid ${JSON.stringify(map.paths().filter((p) => Math.abs(p.col - a[0]) + Math.abs(p.row - a[1]) < 8).map((p) => [p.col, p.row]))}`);
+    expect(has_path(...a) && has_path(...b), `a path from ${a} to ${b}, laid ${JSON.stringify(map.paths().filter((p) => Math.abs(p.col - a[0]) + Math.abs(p.row - a[1]) < 8).map((p) => [p.col, p.row]))}`);
 }
 
 // At its side, leading away from it: not joined.

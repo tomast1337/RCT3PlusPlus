@@ -10,11 +10,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The tool whose menu is open, "" when none is. */
 function open_menu(): string {
     return (ui.children("tools") ?? []).filter((tool) => (ui.children(`tools/${tool}`) ?? []).length > 1).join(",");
@@ -22,7 +17,7 @@ function open_menu(): string {
 
 /** Presses the row's button of `tool`, which opens its menu or closes it. */
 async function press(tool: string): Promise<void> {
-    await ui.click(`tools/${tool}/${ui.children(`tools/${tool}`)![0]}`);
+    await ui.click(`tools/${tool}/${must(ui.children(`tools/${tool}`), `tools/${tool} shown`)[0]}`);
     await frames(4);
 }
 
@@ -36,7 +31,7 @@ async function pick(tool: string, item: string): Promise<void> {
 
 /** What the path panel's band tells with the pointer on it, off the ground where it would tell what a click lays. */
 async function band(): Promise<string | undefined> {
-    pointer.move(ui.find("footpaths/status")!.x, ui.find("footpaths/status")!.y);
+    pointer.move(must(ui.find("footpaths/status"), "footpaths/status shown").x, must(ui.find("footpaths/status"), "footpaths/status shown").y);
     await frames(4);
     return ui.find("footpaths/status")?.text;
 }
@@ -98,7 +93,7 @@ await press("Land");
 expect(ui.find("build_list") === undefined, "the list to close when another menu opens");
 await pick("Scenery", "Obj_Scenery_PathExtras");
 await until(() => ui.find("build_list/content/list/view/content") !== undefined, 300, "the path extras' list");
-const rows = ui.children("build_list/content/list/view/content")!;
+const rows = must(ui.children("build_list/content/list/view/content"), "build_list/content/list/view/content shown");
 await ui.click(`build_list/content/list/view/content/${rows[rows.length > 1 ? 1 : 0]}`);
 await frames(6);
 expect(build.placing() !== undefined && ui.find("build_list") !== undefined && open_menu() === "Scenery", "the scenery list and menu to stay once an item is picked");

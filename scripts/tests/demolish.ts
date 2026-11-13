@@ -8,11 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/VanillaHills.dat");
 await park.ready();
 await frames(60);
@@ -52,7 +47,7 @@ await screenshot("demolish_ride");
 
 // A stall placed beside a path and pulled down before it ever opened gives all its price back.
 await until(() => build.stalls() !== undefined, 1200, "the build lists");
-const kind = build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.goods.length > 0)!;
+const kind = must(build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.goods.length > 0), "a vanilla stall with goods");
 expect(build.pick(kind.overlay, kind.symbol), `${kind.symbol} picked`);
 let spot: { x: number; y: number } | undefined;
 for (const p of map.paths().slice(0, 40)) {

@@ -8,31 +8,15 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
 
 async function management(item: string, title: string, tab: string): Promise<void> {
     if (ui.find(`tools/Management/${item}`) === undefined)
-        await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+        await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
     await until(() => ui.find(`tools/Management/${item}`) !== undefined, 120, "the management menu");
     await ui.click(`tools/Management/${item}`);
     await until(() => under(title, tab) !== undefined, 120, `the ${tab} tab`);
-    await ui.click(under(title, tab)!);
+    await ui.click(must(under(title, tab), `${tab} under ${title}`));
     await frames(10);
 }
 
@@ -63,7 +47,7 @@ await close("PID_Title");
 await management("Man_Finances", "FinancialManagement_Title", "CashGraphTabIcon");
 expect(under("FinancialManagement_Title", "graph") !== undefined, "the finances' graph");
 // Unticked, a series stays unticked when the page comes again.
-const tick = under("FinancialManagement_Title", "Graph_WeeklyProfit_tick")!;
+const tick = must(under("FinancialManagement_Title", "Graph_WeeklyProfit_tick"), "Graph_WeeklyProfit_tick under FinancialManagement_Title");
 expect(ui.find(tick)?.on === true, "every series ticked at first");
 await ui.click(tick);
 await frames(90);
@@ -75,17 +59,11 @@ await close("FinancialManagement_Title");
 await ui.click("bar/Top_Pause");
 await frames(5);
 const before = JSON.stringify(park.history());
-const files = async (item: string) => {
-    if (ui.find(`tools/Files/${item}`) === undefined)
-        await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
-    await until(() => ui.find(`tools/Files/${item}`) !== undefined, 120, "the files menu");
-    await ui.click(`tools/Files/${item}`);
-};
-await files("File_SaveGame");
+await files_menu("File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
 await ui.click("park_files/content/open");
 await until(() => ui.find("park_files") === undefined, 120, "the save window to close");
-await files("File_LoadGame");
+await files_menu("File_LoadGame");
 // Loading asks first whether to save; the park was saved just now.
 await until(() => ui.find("load_question") !== undefined, 120, "the question before loading");
 await ui.click("load_question/content/answer1");

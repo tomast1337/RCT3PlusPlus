@@ -12,23 +12,7 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
 
 await until(() => park.loaded(), 1200, "the park");
 await frames(10);
@@ -67,12 +51,12 @@ for (let k = 0; k < 20 && inspector()!.state === "swimming"; ++k) {
 }
 
 // 2. A mechanic hired onto the path by a changing room: they go to a room's door and mend the slide from there.
-await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Staff") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Staff");
 await until(() => under("Staff_Title", "Staff_HireMechanicIcon") !== undefined, 120, "the staff window's hire buttons");
 const staffCount = people.list().filter((p) => p.staff).length;
-await ui.click(under("Staff_Title", "Staff_HireMechanicIcon")!);
+await ui.click(must(under("Staff_Title", "Staff_HireMechanicIcon"), "Staff_HireMechanicIcon under Staff_Title"));
 await until(() => people.list().filter((p) => p.staff).length === staffCount + 1, 60, "a mechanic hired");
 const mechanic = () => people.list().filter((p) => p.staff && p.role === "mechanic")[0];
 await until(() => mechanic().state === "held", 30, "the mechanic in hand");

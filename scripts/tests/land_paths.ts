@@ -8,11 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/ChequeredFlag.dat");
 await park.ready();
 await frames(30);
@@ -50,7 +45,7 @@ await until(() => ui.find("land_panel/body/Land_Vertex_Neighbour") !== undefined
 await ui.click("land_panel/body/Land_Vertex_Neighbour");
 
 // By hand, to look at the guests while the ground still moves.
-const at = map.screen(col + 0.5, row + 0.5)!;
+const at = must(map.screen(col + 0.5, row + 0.5), `tile ${col + 0.5}, ${row + 0.5} in sight`);
 pointer.move(at.x, at.y);
 pointer.press();
 await frames(2);
@@ -85,7 +80,7 @@ if (!ui.find("land_panel/body/Land_Vertex_Freeform"))
     await ui.click("land_panel/Land_Vertex");
 await until(() => ui.find("land_panel/body/Land_Vertex_Freeform") !== undefined, 60, "the tile tools");
 await ui.click("land_panel/body/Land_Vertex_Freeform");
-const edge = map.screen(col + 0.5, row + 0.05)!;
+const edge = must(map.screen(col + 0.5, row + 0.05), `tile ${col + 0.5}, ${row + 0.05} in sight`);
 const index = new Map<number, { row: number; up: number; slide: string }>(); // Of people.list, as each starts sliding
 const sliding = () => people.list().map((p, i) => [p, i] as const).filter(([p]) => p.state === "sliding");
 pointer.move(edge.x, edge.y);

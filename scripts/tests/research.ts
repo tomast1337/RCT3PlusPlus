@@ -10,23 +10,7 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
 
 /** The priorities that want only the areas listed (scenery is 8, paths 9), or all but them. */
 function wanting(areas: number[], only: boolean): number[] {
@@ -77,28 +61,28 @@ expect(JSON.stringify(park.research()) === stopped, "research standing still wit
 park.setResearch(20000);
 
 // The research window: the budget's arrows and an area's bar set them, and it tells what is under way.
-await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Research") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Research");
 await until(() => under("Research_Title", "Research_Label_Budget") !== undefined, 120, "the research window");
 await frames(70); // A page written again, now the window has drawn once
-const current = ui.find(under("Research_Title", "Rct3pp_Research_Current_value")!)!;
-const left = ui.find(under("Research_Title", "Rct3pp_Research_MonthsLeft_label")!)!;
+const current = must(ui.find(must(under("Research_Title", "Rct3pp_Research_Current_value"), "Rct3pp_Research_Current_value under Research_Title")), "Rct3pp_Research_Current_value shown");
+const left = must(ui.find(must(under("Research_Title", "Rct3pp_Research_MonthsLeft_label"), "Rct3pp_Research_MonthsLeft_label under Research_Title")), "Rct3pp_Research_MonthsLeft_label shown");
 log("window:", current.text, "/", left.text);
 expect(current.text !== undefined && current.text.length > 1, `the item under way named, not ${current.text}`);
 expect(left.text !== undefined && /\d|month/.test(left.text), `the months left, not ${left.text}`);
 await screenshot("research_window");
-const arrows = ui.find(under("Research_Title", "Research_Label_Budget")!)!;
+const arrows = must(ui.find(must(under("Research_Title", "Research_Label_Budget"), "Research_Label_Budget under Research_Title")), "Research_Label_Budget shown");
 await pointer.click(arrows.x, arrows.top + (arrows.bottom - arrows.top) / 4); // The upper arrow
 await frames(5);
 expect(park.research().budget === 25000, `a step of 50.00 more, not ${park.research().budget}`);
-const thrill = ui.find(under("Research_Title", "Obj_Rides_ThrillRidesHelp")!)!;
+const thrill = must(ui.find(must(under("Research_Title", "Obj_Rides_ThrillRidesHelp"), "Obj_Rides_ThrillRidesHelp under Research_Title")), "Obj_Rides_ThrillRidesHelp shown");
 await pointer.click(thrill.left + (thrill.right - thrill.left) * 0.8, thrill.y);
 await frames(5);
 log("priorities:", JSON.stringify(park.research().priorities));
 expect(Math.abs(park.research().priorities[2] - 0.8) < 0.03, `thrill rides at about 80 %, not ${park.research().priorities[2]}`);
 await frames(70);
-expect(ui.find(under("Research_Title", "Research_Label_Budget_value")!)!.text!.includes("250"), "the window showing the new budget");
+expect(must(ui.find(must(under("Research_Title", "Research_Label_Budget_value"), "Research_Label_Budget_value under Research_Title")), "Research_Label_Budget_value shown").text!.includes("250"), "the window showing the new budget");
 await ui.click("Research_Title/close");
 await until(() => ui.find("Research_Title") === undefined, 120, "the research window to close");
 
@@ -106,17 +90,11 @@ await until(() => ui.find("Research_Title") === undefined, 120, "the research wi
 await ui.click("bar/Top_Pause");
 await frames(5);
 const before = JSON.stringify(park.research());
-const files = async (item: string) => {
-    if (ui.find(`tools/Files/${item}`) === undefined)
-        await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
-    await until(() => ui.find(`tools/Files/${item}`) !== undefined, 120, "the files menu");
-    await ui.click(`tools/Files/${item}`);
-};
-await files("File_SaveGame");
+await files_menu("File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
 await ui.click("park_files/content/open");
 await until(() => ui.find("park_files") === undefined, 120, "the save window to close");
-await files("File_LoadGame");
+await files_menu("File_LoadGame");
 // Loading asks first whether to save; the park was saved just now.
 await until(() => ui.find("load_question") !== undefined, 120, "the question before loading");
 await ui.click("load_question/content/answer1");
@@ -143,21 +121,21 @@ expect(newest()?.key === "Invented_Attraction", `an invention's message the newe
 const drawerWidth = 480;
 const drawerOpen = 360;
 const isOpen = () => {
-    const d = ui.find("messages")!;
+    const d = must(ui.find("messages"), "messages shown");
     return d.bottom - d.top > ((d.right - d.left) * (drawerOpen - 1)) / drawerWidth / 2;
 };
 for (let tries = 0; tries < 3 && !isOpen(); ++tries) {
-    const d = ui.find("messages")!;
+    const d = must(ui.find("messages"), "messages shown");
     await pointer.click(d.x, d.y);
     await pointer.click(d.x, d.y);
     await frames(30);
 }
-const drawer = ui.find("messages")!;
+const drawer = must(ui.find("messages"), "messages shown");
 await pointer.click(drawer.left + ((drawer.right - drawer.left) * 27) / drawerWidth, drawer.bottom - ((drawer.bottom - drawer.top) * 35) / drawerOpen); // The newest message's icon
 await until(() => ui.find("build_list") !== undefined, 60, "the build list");
 await frames(5);
 log("invention:", invention, "shown at", JSON.stringify(ui.find(under("build_list", invention) ?? "build_list")));
-expect(under("build_list", invention) !== undefined && ui.find(under("build_list", invention)!) !== undefined, `${invention} shown in its list`);
+expect(under("build_list", invention) !== undefined && ui.find(must(under("build_list", invention), `${invention} under build_list`)) !== undefined, `${invention} shown in its list`);
 await screenshot("invention_list");
 
 // The item under research shows locked in its list, with how far it has got, and does not pick; hidden items
@@ -167,7 +145,7 @@ const researched = park.research().current!;
 let lockedRow: string | undefined;
 for (const menu of ["Rides", "Shops"]) {
     // The menu's entries are there only while it is out.
-    const first = ui.children(`tools/${menu}`)![0];
+    const first = must(ui.children(`tools/${menu}`), `tools/${menu} shown`)[0];
     const button = `tools/${menu}/${first}`;
     await ui.click(button);
     await frames(5);
@@ -187,7 +165,7 @@ for (const menu of ["Rides", "Shops"]) {
 }
 expect(lockedRow !== undefined, `${researched} listed, locked`);
 log("locked:", JSON.stringify(ui.find(lockedRow!)));
-expect(ui.find(lockedRow!)!.tooltip!.includes("Being researched"), `${researched} told as being researched`);
+expect(must(ui.find(lockedRow!), "the widget shown").tooltip!.includes("Being researched"), `${researched} told as being researched`);
 await screenshot("locked_item");
 await ui.click(lockedRow!);
 await frames(5);

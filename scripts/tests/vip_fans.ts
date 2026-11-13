@@ -8,16 +8,11 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/ChequeredFlag.dat");
 await park.ready();
 await frames(30);
 await park.advanceUntil(() => park.guests() >= 60, 1200, "guests in the park");
-const goal = park.vipGoals().find((g) => g.level === 0)!;
+const goal = must(park.vipGoals().find((g) => g.level === 0), "the first VIP goal");
 park.setDate(goal.next);
 await until(() => park.vips().length === 1, 120, "the VIP to come in");
 

@@ -9,23 +9,7 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
 
 await park.open("Campaigns/Base/ChequeredFlag.dat");
 await park.ready();
@@ -36,14 +20,13 @@ const spot = paths[Math.floor(paths.length / 2)];
 camera.look({ col: spot.col + 0.5, row: spot.row + 0.5 }, { col: spot.col + 6, row: spot.row + 6, up: 20 });
 await frames(5);
 
-await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Staff") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Staff");
 await until(() => under("Staff_Title", "Staff_HireMaintenanceIcon") !== undefined, 120, "the staff window's hire buttons");
 await frames(5);
 await screenshot("staff_menu");
 
-const staff = () => people.list().filter((p) => p.staff);
 const hires: [string, "handyman" | "mechanic" | "guard" | "entertainer"][] = [
     ["Staff_HireMaintenanceIcon", "handyman"],
     ["Staff_HireMechanicIcon", "mechanic"],
@@ -53,7 +36,7 @@ const hires: [string, "handyman" | "mechanic" | "guard" | "entertainer"][] = [
 const before = staff().length;
 for (const [button, role] of hires) {
     const count = staff().length;
-    await ui.click(under("Staff_Title", button)!);
+    await ui.click(must(under("Staff_Title", button), `${button} under Staff_Title`));
     await until(() => staff().length === count + 1, 60, `a ${role} hired`);
     const hired = staff()[count];
     expect(hired.role === role, `a ${role}, not ${hired.role}`);
@@ -64,7 +47,7 @@ for (const [button, role] of hires) {
         return on !== undefined && (on.x < 0.25 || on.x > 0.75) && on.x > 0.05 && on.x < 0.95 && on.y > 0.1 && on.y < 0.85;
     });
     expect(free !== undefined, "a path in sight beside the window");
-    const at = map.screen(free!.col + 0.5, free!.row + 0.5)!;
+    const at = must(map.screen(free!.col + 0.5, free!.row + 0.5), "the tile in sight");
     pointer.move(at.x, at.y);
     await frames(5);
     await pointer.click(at.x, at.y, role === "entertainer" ? "right" : undefined);
@@ -83,8 +66,8 @@ await park.advance(20);
 log("cash", cash, "->", park.cash());
 
 // The first row unfolded, then its worker sacked from the discipline button.
-const list = `${under("Staff_Title", "table")!}/view/content`;
-const row = `${list}/${ui.children(list)![0]}`;
+const list = `${must(under("Staff_Title", "table"), "table under Staff_Title")}/view/content`;
+const row = `${list}/${must(ui.children(list), `${list} shown`)[0]}`;
 await ui.click(`${row}/Expand`);
 await until(() => ui.find(`${row}/Discipline`) !== undefined, 30, "the row unfolded");
 await ui.click(`${row}/Discipline`);

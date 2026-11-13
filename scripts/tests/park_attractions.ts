@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "the build lists");
 const paths = map.paths();
@@ -52,7 +47,7 @@ async function show(name: string, found: () => { col?: number; row?: number } | 
     await park.advanceUntil(() => found() !== undefined, 1800, name);
     if (after > 0)
         await park.advance(after);
-    const who = found() ?? people.list().find((p) => p.col !== undefined)!;
+    const who = found() ?? must(people.list().find((p) => p.col !== undefined), "someone walking");
     log(name, JSON.stringify(who));
     camera.look({ col: who.col!, row: who.row!, up: 0.8 }, { col: who.col! + from.col, row: who.row! + from.row, up: from.up });
     await frames(4);

@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kPool = "Pool/Default/Default_Stub";
 const kSteps: [number, number][] = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // By side, as the pool tool counts them
 let here: [number, number] = [0, 0]; // Where the pointer was last moved for a ghost
@@ -24,7 +19,7 @@ async function aim(goal: { col: number; row: number }): Promise<boolean> {
     for (let i = 0; i < 4; ++i) {
         camera.look({ col: at.col, row: at.row }, { col: at.col, row: at.row + 30, up: 45 });
         await frames(4);
-        const p = map.screen(at.col, at.row)!;
+        const p = must(map.screen(at.col, at.row), `tile ${at.col}, ${at.row} in sight`);
         here = [p.x, p.y];
         pointer.move(...here);
         await frames(4);
@@ -47,7 +42,7 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
     const across = c.poolSides.map((s) => ({ col: s.col + kSteps[s.side][0], row: s.row + kSteps[s.side][1] }));
     await ui.click("design_placing/close");
     await frames(5);
-    const rides_tab = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+    const rides_tab = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
     if (!ui.find("tools/Rides/Obj_Pools"))
         await ui.click(rides_tab);
     await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
@@ -57,7 +52,7 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
     for (const t of across) {
         camera.look({ col: t.col, row: t.row }, { col: t.col, row: t.row + 30, up: 45 });
         await frames(4);
-        const p = map.screen(t.col, t.row)!;
+        const p = must(map.screen(t.col, t.row), `tile ${t.col}, ${t.row} in sight`);
         await pointer.drag([p.x, p.y], [p.x, p.y], 4);
         await frames(3);
     }
@@ -110,7 +105,7 @@ await frames(20);
 await screenshot("slide_pool_end_open");
 
 // The Undertow on open ground: refused there for its way back, which runs through a pool.
-const rides_tab = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+const rides_tab = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
 await until(() => build.flatRides() !== undefined, 1200, "the build items");
 const { width, height } = map.size();
 camera.look({ col: width / 2, row: height / 2 }, { col: width / 2, row: height / 2 + 30, up: 40 });
@@ -121,8 +116,8 @@ const pick = async () => {
     await frames(3);
     const row = build.construction()!.designs.findIndex((d) => d.includes("Undertow"));
     expect(row >= 0, "the Undertow design");
-    const list = ui.find("design_browser/content/list")!;
-    const button = ui.find("design_browser/content/build")!;
+    const list = must(ui.find("design_browser/content/list"), "design_browser/content/list shown");
+    const button = must(ui.find("design_browser/content/build"), "design_browser/content/build shown");
     const unit = (button.bottom - button.top) / 22;
     await pointer.click(list.x, list.top + (18 + 16 * (row + 1) + 8) * unit);
     await frames(5);

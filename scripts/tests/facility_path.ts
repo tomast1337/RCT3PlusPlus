@@ -15,11 +15,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.facilities() !== undefined, 1200, "the tool row and the build lists");
 const gate = map.paths().reduce((a, b) => (b.row > a.row ? b : a));
@@ -33,23 +28,12 @@ log("toilet", kind.symbol, kind.overlay, `${kind.width}x${kind.length}`);
 const col = gate.col + 8;
 const row = gate.row - 10;
 
-async function look(c: number, r: number, up = 30): Promise<void> {
-    camera.look({ col: c + 0.5, row: r + 0.5 }, { col: c + 0.5, row: r + 0.5 + up / 3, up });
-    await frames(3);
-}
-function onView(c: number, r: number): [number, number] {
-    const at = map.screen(c, r);
-    if (!at)
-        throw new Error(`tile ${c}, ${r} is not in sight`);
-    return [at.x, at.y];
-}
-
-await look(col, row, 40);
+await look_down(col, row, 40);
 expect(build.pick(kind.overlay, kind.symbol), `${kind.symbol} picked`);
-pointer.move(...onView(col, row));
+pointer.move(...on_view(col, row));
 await frames(3);
 expect(build.placing()?.problem === "none", `the toilet placeable on the grass, not ${JSON.stringify(build.placing())}`);
-await pointer.click(...onView(col, row));
+await pointer.click(...on_view(col, row));
 await frames(3);
 expect(build.placing() === undefined, "the tool put away once the toilet stands");
 if (ui.find("info") !== undefined)
@@ -74,19 +58,18 @@ await frames(2);
 const styles = (ui.children("footpaths/body") ?? []).filter((n) => !queues.includes(n));
 await ui.click(`footpaths/body/${styles.find((s) => s.toLowerCase().includes("asphalt")) ?? styles[0]}`);
 await frames(2);
-const has = (c: number, r: number) => map.paths().some((p) => p.col === c && p.row === r);
 async function route(a: [number, number], b: [number, number]): Promise<void> {
-    await look((a[0] + b[0]) >> 1, (a[1] + b[1]) >> 1, 40);
+    await look_down((a[0] + b[0]) >> 1, (a[1] + b[1]) >> 1, 40);
     await ui.toggle("footpaths/route", false);
-    await pointer.click(...onView(...a));
+    await pointer.click(...on_view(...a));
     await ui.toggle("footpaths/route", true);
-    for (let wait = 1; wait <= 96 && !has(...b); wait *= 2) {
-        pointer.move(...onView(...b));
+    for (let wait = 1; wait <= 96 && !has_path(...b); wait *= 2) {
+        pointer.move(...on_view(...b));
         await frames(wait);
-        await pointer.click(...onView(...b));
+        await pointer.click(...on_view(...b));
     }
     await ui.toggle("footpaths/route", false);
-    expect(has(...a) && has(...b), `a path from ${a} to ${b}, laid ${JSON.stringify(map.paths().filter((p) => Math.abs(p.col - a[0]) + Math.abs(p.row - a[1]) < 8).map((p) => [p.col, p.row]))}`);
+    expect(has_path(...a) && has_path(...b), `a path from ${a} to ${b}, laid ${JSON.stringify(map.paths().filter((p) => Math.abs(p.col - a[0]) + Math.abs(p.row - a[1]) < 8).map((p) => [p.col, p.row]))}`);
 }
 
 // At its corner: not joined.
@@ -122,9 +105,6 @@ log("in the toilet, drawn at", JSON.stringify({ col: user()?.col, row: user()?.r
 await screenshot("facility_path_using");
 
 // Saved and loaded again.
-async function click_tool(tool: string): Promise<void> {
-    await ui.click(`tools/${tool}/${ui.children(`tools/${tool}`)![0]}`);
-}
 await click_tool("Files");
 await ui.click("tools/Files/File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
@@ -143,12 +123,12 @@ await ui.click(first);
 await ui.click("park_files/content/open");
 await until(() => park.loaded() && rides.list().some((r) => r.symbol === `${kind.symbol}:sat`), 1200, "the saved park");
 await frames(10);
-const again = rides.list().find((r) => r.symbol === `${kind.symbol}:sat`)!;
+const again = must(rides.list().find((r) => r.symbol === `${kind.symbol}:sat`), "the toilet after loading");
 log("loaded", JSON.stringify({ site: again.site, joined: again.joined, servedFrom: again.servedFrom, open: again.open }));
 expect(again.site?.col === col && again.site?.row === row, `the toilet where it stood, not ${JSON.stringify(again.site)}`);
 expect(again.joined && again.servedFrom?.col === col - 1 && again.servedFrom?.row === row, `it joined to the same path, not ${JSON.stringify(again.servedFrom)}`);
 park.setTime(0.5); // Shown by day
-await look(col, row, 30);
+await look_down(col, row, 30);
 await screenshot("facility_path_loaded");
 
 // Pulled down from its window: the park no longer runs it.

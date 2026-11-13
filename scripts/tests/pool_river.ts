@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await until(() => park.loaded(), 1200, "the park");
 await frames(10);
 park.setWeather("sunny");
@@ -51,7 +46,7 @@ const customers = info().customers ?? 0;
 await until(() => (info().customers ?? 0) > customers, 6000, "a swimmer getting on");
 const names = new Set(floating().map((p) => p.name));
 await until(() => people.list().some((p) => names.has(p.name) && p.floating === undefined && p.state === "swimming"), 6000, "a rider off into a pool");
-const off = people.list().find((p) => names.has(p.name) && p.floating === undefined && p.state === "swimming")!;
+const off = must(people.list().find((p) => names.has(p.name) && p.floating === undefined && p.state === "swimming"), "a rider off the river, swimming");
 expect(off.swimwear === true, "the rider off still in their swimwear");
 expect(people.list().some((p) => p.floating === "paddling") || people.list().some((p) => p.floating === "resting"), "riders resting or paddling");
 camera.look({ col: off.col!, row: off.row!, up: off.up! }, { col: off.col! + 4, row: off.row! + 4, up: off.up! + 4 });

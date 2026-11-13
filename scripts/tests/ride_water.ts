@@ -10,11 +10,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kWet = /flume|splash|rapid|watercoaster|dingy|slide/i;
 
 await until(() => park.loaded(), 1200, "the park");
@@ -36,7 +31,7 @@ await screenshot("ride_water_curve_later");
 // A car splashing through the water sprays from its splash points: pictured close up.
 const kSprays = /^(splash2|splash4|watersplashbig)$/;
 await until(() => map.effects().some((e) => kSprays.test(e.effect)), 60 * 120, "a car splashing through water");
-const spray = map.effects().find((e) => kSprays.test(e.effect))!;
+const spray = must(map.effects().find((e) => kSprays.test(e.effect)), "a spray");
 log("spray", spray.effect, spray.col, spray.row, spray.up);
 camera.look({ col: spray.col, row: spray.row, up: spray.up }, { col: spray.col + 3, row: spray.row + 2.5, up: spray.up + 4 });
 await frames(6);

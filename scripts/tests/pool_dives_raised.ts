@@ -7,11 +7,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kPool = "Pool/Default/Default_Stub";
 
 await until(() => park.loaded(), 1200, "the park");

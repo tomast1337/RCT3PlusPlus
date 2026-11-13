@@ -9,18 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
-
 const kPool = "Pool/Default/Default_Stub";
 // The pieces the squares are built of, not the extras standing on them.
 const kSquarePiece = /^(Solid|Edge|Corner|Curve|End|Full|Base|Railing|Stairs|DB|Jacuzzi|Path|Central)/;
@@ -65,7 +53,7 @@ camera.look({ col: c + 1, row: r }, { col: c + 1, row: r + 8, up: 9 });
 await frames(10);
 await screenshot("pool_edit_saved_before");
 
-const rides = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+const rides = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
 await until(() => build.flatRides() !== undefined, 1200, "the build items");
 if (!ui.find("tools/Rides/Obj_Pools"))
     await ui.click(rides);
@@ -144,7 +132,6 @@ const edited = all_pieces();
 // Not the supports: those built under a pool path as it is laid are not built again when the park loads.
 const listed = () => map.objects().filter((o) => !o.overlay.startsWith("Supports")).map((o) => `${o.overlay}:${key(o)}`).sort();
 const objects = JSON.stringify(listed());
-const click_tool = async (tool: string) => ui.click(`tools/${tool}/${ui.children(`tools/${tool}`)![0]}`);
 await click_tool("Files");
 await ui.click("tools/Files/File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");

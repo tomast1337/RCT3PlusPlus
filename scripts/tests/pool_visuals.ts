@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kPool = "Pool/Default/Default_Stub";
 
 await until(() => park.loaded(), 1200, "the park");
@@ -60,7 +55,7 @@ expect(paved !== undefined, "a paved square beside the stepped platform");
 expect(build.pick(kPool, "Pool_DeleteArea"), "the pool delete tool");
 camera.look({ col: paved!.col + 0.5, row: paved!.row + 0.5, up: up }, { col: paved!.col + 0.5, row: paved!.row + 20, up: up + 30 });
 await frames(5);
-const p = map.screen(paved!.col, paved!.row)!;
+const p = must(map.screen(paved!.col, paved!.row), "the tile in sight");
 await pointer.drag([p.x, p.y], [p.x, p.y], 4);
 await frames(10);
 build.stop();

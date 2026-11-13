@@ -6,11 +6,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The park's animals, each where it stands. */
 function animals_list(): { species: string; col: number; row: number }[] {
     return animals.list().map((a) => ({ species: a.species, col: a.at.col, row: a.at.row }));

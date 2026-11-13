@@ -19,11 +19,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined && build.stalls() !== undefined, 1200, "the tool row and the build lists");
 const gate = map.paths().reduce((a, b) => (b.row > a.row ? b : a));
@@ -41,27 +36,16 @@ const last = first + item.length - 1;
 const right = col + item.width - 1;
 const road = last + 4;
 
-async function look(c: number, r: number, up = 30): Promise<void> {
-    camera.look({ col: c + 0.5, row: r + 0.5 }, { col: c + 0.5, row: r + 0.5 + up / 3, up });
-    await frames(3);
-}
-function onView(c: number, r: number): [number, number] {
-    const at = map.screen(c, r);
-    if (!at)
-        throw new Error(`tile ${c}, ${r} is not in sight`);
-    return [at.x, at.y];
-}
-
 /** Clicks tile (c, r) for the placing step `step`. */
 async function place(step: string, c: number, r: number): Promise<void> {
-    pointer.move(...onView(c, r));
+    pointer.move(...on_view(c, r));
     await frames(2);
     expect(build.placing()?.step === step && build.placing()?.problem === "none", `${step} to place at ${c},${r}, not ${JSON.stringify(build.placing())}`);
-    await pointer.click(...onView(c, r));
+    await pointer.click(...on_view(c, r));
     await frames(2);
 }
 
-await look(col + 1, last, 40);
+await look_down(col + 1, last, 40);
 expect(build.pick(item.overlay, item.symbol), `${item.symbol} picked`);
 await place("ride", col + ((item.width - 1) >> 1), first + ((item.length - 1) >> 1));
 await place("entrance", col, last + 1);
@@ -80,7 +64,7 @@ const kFront: [number, number][] = [
 async function placeStall(named: string, c: number, r: number): Promise<{ index: number; front: [number, number] }> {
     const kind = build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.symbol.toLowerCase().includes(named));
     expect(kind !== undefined, `a plain ${named} stall`);
-    await look(c, r, 40);
+    await look_down(c, r, 40);
     expect(build.pick(kind!.overlay, kind!.symbol), `${kind!.symbol} picked`);
     const before = stalls.list().length;
     await place("ride", c, r);
@@ -107,26 +91,25 @@ await frames(2);
 const styles = (ui.children("footpaths/body") ?? []).filter((n) => !queues.includes(n));
 await ui.click(`footpaths/body/${styles.find((s) => s.toLowerCase().includes("asphalt")) ?? styles[0]}`);
 await frames(2);
-const has = (c: number, r: number) => map.paths().some((p) => p.col === c && p.row === r);
 async function route(a: [number, number], b: [number, number]): Promise<void> {
-    await look((a[0] + b[0]) >> 1, (a[1] + b[1]) >> 1, Math.max(60, 17 * (Math.abs(a[0] - b[0]) / 2 + 1), 8 * (Math.abs(a[1] - b[1]) / 2 + 1)));
+    await look_down((a[0] + b[0]) >> 1, (a[1] + b[1]) >> 1, Math.max(60, 17 * (Math.abs(a[0] - b[0]) / 2 + 1), 8 * (Math.abs(a[1] - b[1]) / 2 + 1)));
     await ui.toggle("footpaths/route", false);
-    await pointer.click(...onView(...a));
+    await pointer.click(...on_view(...a));
     await ui.toggle("footpaths/route", true);
-    for (let wait = 1; wait <= 96 && !has(...b); wait *= 2) {
-        pointer.move(...onView(...b));
+    for (let wait = 1; wait <= 96 && !has_path(...b); wait *= 2) {
+        pointer.move(...on_view(...b));
         await frames(wait);
-        await pointer.click(...onView(...b));
+        await pointer.click(...on_view(...b));
     }
     await ui.toggle("footpaths/route", false);
-    expect(has(...a) && has(...b), `a path from ${a} to ${b}`);
+    expect(has_path(...a) && has_path(...b), `a path from ${a} to ${b}`);
 }
 await route([gate.col, gate.row + 1], [gate.col, road]);
 await route([gate.col + 1, road], [right + 4, road]);
 await route([col, last + 2], [col, road - 1]);
 await route([right + 2, last], [right + 2, road - 1]);
 for (const front of [burger.front, umbrella.front])
-    if (!has(...front))
+    if (!has_path(...front))
         await route(front, [front[0], road]);
 await ui.click("footpaths/close");
 await frames(3);
@@ -175,7 +158,7 @@ log("messages", JSON.stringify(park.messages()));
 
 // The messages, in the drawer: a double press opens it.
 for (let tries = 0; tries < 3; ++tries) {
-    const d = ui.find("messages")!;
+    const d = must(ui.find("messages"), "messages shown");
     if (d.bottom - d.top > (d.right - d.left) / 2)
         break;
     await pointer.click(d.x, d.y);

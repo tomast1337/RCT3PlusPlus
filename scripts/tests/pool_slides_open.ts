@@ -10,11 +10,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await until(() => park.loaded(), 1200, "the park");
 await frames(10);
 park.setWeather("sunny");
@@ -43,7 +38,7 @@ for (const slide of saved.filter((i) => !/LazyRiver/i.test(rides.list()[i].symbo
         continue;
     }
     await until(() => people.list().some((p) => p.state === "riding" && p.ride === slide) && (info().trainsAt ?? []).some((t) => t.station === null && t.riders > 0), 6000, `a swimmer riding ${info().name}`);
-    const rider = people.list().find((p) => p.state === "riding" && p.ride === slide)!;
+    const rider = must(people.list().find((p) => p.state === "riding" && p.ride === slide), "a rider on the slide");
     camera.look({ col: rider.col!, row: rider.row!, up: rider.up! }, { col: rider.col! + 9, row: rider.row! + 9, up: rider.up! + 9 });
     await frames(10);
     await screenshot(`pool_slides_open_riding_${slide}`);
@@ -56,7 +51,7 @@ async function aim(goal: { col: number; row: number }): Promise<boolean> {
     for (let i = 0; i < 4; ++i) {
         camera.look({ col: at.col, row: at.row }, { col: at.col, row: at.row + 30, up: 45 });
         await frames(4);
-        const p = map.screen(at.col, at.row)!;
+        const p = must(map.screen(at.col, at.row), `tile ${at.col}, ${at.row} in sight`);
         here = [p.x, p.y];
         pointer.move(...here);
         await frames(4);
@@ -75,8 +70,8 @@ const pick = async () => {
     await frames(3);
     const row = build.construction()!.designs.findIndex((d) => d.includes("Undertow"));
     expect(row >= 0, `the Undertow design among ${build.construction()!.designs.join(", ")}`);
-    const list = ui.find("design_browser/content/list")!;
-    const button = ui.find("design_browser/content/build")!;
+    const list = must(ui.find("design_browser/content/list"), "design_browser/content/list shown");
+    const button = must(ui.find("design_browser/content/build"), "design_browser/content/build shown");
     const unit = (button.bottom - button.top) / 22;
     await pointer.click(list.x, list.top + (18 + 16 * row) * unit);
     await frames(5);
@@ -103,7 +98,7 @@ if (spot && build.construction()!.refusal !== "") {
     const across = c.poolSides.map((s) => ({ col: s.col + kSteps[s.side][0], row: s.row + kSteps[s.side][1] }));
     await ui.click("design_placing/close");
     await frames(5);
-    const rides_tab = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+    const rides_tab = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
     if (!ui.find("tools/Rides/Obj_Pools"))
         await ui.click(rides_tab);
     await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
@@ -113,7 +108,7 @@ if (spot && build.construction()!.refusal !== "") {
     for (const t of across) {
         camera.look({ col: t.col, row: t.row }, { col: t.col, row: t.row + 30, up: 45 });
         await frames(4);
-        const p = map.screen(t.col, t.row)!;
+        const p = must(map.screen(t.col, t.row), `tile ${t.col}, ${t.row} in sight`);
         await pointer.drag([p.x, p.y], [p.x, p.y], 4);
         await frames(3);
     }

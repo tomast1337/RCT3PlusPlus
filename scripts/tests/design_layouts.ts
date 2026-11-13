@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 // The ride's overlay, its kind, the design's place among its kind's designs and how many pieces it has.
 const designs: [string, string, number, number, string][] = [
     ["tracks/coasters/Heartline/Heartline", "Heartline", 0, 44, "heartline"],
@@ -31,8 +26,8 @@ for (const [overlay, kind, place, pieces, name] of designs) {
     await frames(3);
     // Its designs come a heading and the custom track below the top, in the window's units (a button is 22 of
     // them high).
-    const list = ui.find("design_browser/content/list")!;
-    const button = ui.find("design_browser/content/build")!;
+    const list = must(ui.find("design_browser/content/list"), "design_browser/content/list shown");
+    const button = must(ui.find("design_browser/content/build"), "design_browser/content/build shown");
     const unit = (button.bottom - button.top) / 22;
     await pointer.click(list.x, list.top + (18 + 16 * (2 + place)) * unit);
     await frames(5);

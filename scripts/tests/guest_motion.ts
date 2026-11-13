@@ -8,11 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 function count<T>(list: T[], test: (item: T) => boolean): number {
     return list.filter(test).length;
 }

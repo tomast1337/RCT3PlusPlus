@@ -7,11 +7,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 async function pick(icon: string): Promise<void> {
     if (!ui.find(`tools/Land/${icon}`))
         await ui.click("tools/Land/Land");
@@ -46,7 +41,7 @@ const top = (): number => Math.max(...map.tile(col, row)!.corners);
 pointer.move(0.5, 0.5);
 camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col - 3, row: row - 6, up: 40 });
 await frames(2);
-const at = map.screen(col + 0.5, row + 0.5)!;
+const at = must(map.screen(col + 0.5, row + 0.5), `tile ${col + 0.5}, ${row + 0.5} in sight`);
 
 // A hill dragged far up with little cash: the cash runs out, the hill stops short.
 await pick("Land_Brush_Height");
@@ -68,7 +63,7 @@ expect(park.cash()! >= 0 && park.cash()! <= 1, "the cash spent");
 
 // The same drag with cash to spare goes further.
 park.setCash(10000000);
-const again = map.screen(col + 0.5, row + 0.5, short)!;
+const again = must(map.screen(col + 0.5, row + 0.5, short), `tile ${col + 0.5}, ${row + 0.5} in sight`);
 await pointer.drag([again.x, again.y], [again.x, again.y - 0.3], 30);
 await frames(2);
 log("with cash: top", short, "->", top(), "cash", park.cash());
@@ -79,9 +74,9 @@ await pick("Land_Brush_Paint");
 await until(() => (ui.children("land_panel/body")?.length ?? 0) > 1, 60, "the surfaces");
 const cash = park.cash();
 const surface = map.tile(col - 3, row + 2)!.surface;
-const here = map.screen(col - 2.5, row + 2.5)!;
+const here = must(map.screen(col - 2.5, row + 2.5), `tile ${col - 2.5}, ${row + 2.5} in sight`);
 let painted = false;
-for (const name of ui.children("land_panel/body")!.slice(0, 2)) {
+for (const name of must(ui.children("land_panel/body"), "land_panel/body shown").slice(0, 2)) {
     await ui.click(`land_panel/body/${name}`);
     await pointer.drag([here.x, here.y], [here.x + 0.02, here.y], 10);
     await frames(2);

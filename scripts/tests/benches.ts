@@ -8,11 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await park.ready();
 await until(() => build.flatRides() !== undefined, 1200, "the build lists");
@@ -58,7 +53,7 @@ await park.advanceUntil(() => {
     most = Math.max(most, ...pairs().map((b) => b.length), 0);
     return pairs().some((b) => b.length === 2 && b.every((p) => !p.rising));
 }, 600, "two guests sitting side by side");
-const pair = pairs().find((b) => b.length === 2)!;
+const pair = must(pairs().find((b) => b.length === 2), "two sitting on one bench");
 log("sitting", sitters().length, "pair on seats", pair.map((p) => `${p.seat} at ${p.col!.toFixed(2)},${p.row!.toFixed(2)},${p.up!.toFixed(2)}`).join("; "), "road column", gate.col);
 expect(new Set(pair.map((p) => p.seat)).size === 2, "the two on different seats");
 expect(most <= 2, `no more than two on a bench, not ${most}`);

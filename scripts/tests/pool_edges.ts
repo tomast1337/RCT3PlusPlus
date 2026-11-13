@@ -11,11 +11,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kTile = 4; ///< World units across a tile, as a person's col and row count them
 const kTick = 0.1; ///< Park seconds run on between looks; drawing a frame runs the park on a little more
 const kMostPaces = 2.5; ///< Chosen by eye: a step of a swimmer crossing the edge is at most this many of the others' middle step

@@ -10,11 +10,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined, 1200, "the build lists");
 const plain = build.stalls()!.filter((s) => s.overlay === "Style/Vanilla/Style" && s.goods.length > 0);
@@ -75,7 +70,7 @@ expect(stall.extras.length > 0 && stall.extras.every((e) => e.level === 2) && st
 expect(stall.shown && ui.find("info") !== undefined, "its window open");
 // The road runs past the tile it faces, so the park runs it at once, closed.
 await frames(2);
-const running = stalls.list().find((s) => s.symbol === `${kind.symbol}:sta`)!;
+const running = must(stalls.list().find((s) => s.symbol === `${kind.symbol}:sta`), "the stall the park runs");
 expect(running.joined && running.selling === false && running.price === kind.goods[0].price, `the park running it, closed, at its first item's price (${JSON.stringify(running)})`);
 
 // Its window's items page takes items off the menu and puts them back. Bare, it cannot open.
@@ -90,14 +85,14 @@ await frames(2);
 expect(menu().sync, "its synchronise tick on");
 // The menu: goods stacked up from the bin at its bottom-left, a row for each item, its handle left of its name.
 // Places are fractions of the screen; the synchronise tick is one cell of the strip across and down.
-const pane = ui.find("info/body/StallMenu")!;
-const tick = ui.find("info/body/StallMenu/Stall_Synchronize")!;
+const pane = must(ui.find("info/body/StallMenu"), "info/body/StallMenu shown");
+const tick = must(ui.find("info/body/StallMenu/Stall_Synchronize"), "info/body/StallMenu/Stall_Synchronize shown");
 const across = tick.right - tick.left;
 const down = tick.bottom - tick.top;
 const bin: [number, number] = [pane.left + across / 2, pane.bottom - down / 2];
 const good = (i: number): [number, number] => [bin[0], bin[1] - down * (i + 1)];
 const handle = (i: number): [number, number] => {
-    const name = ui.find(`info/body/StallMenu/menu/view/content/ItemName${i}`)!;
+    const name = must(ui.find(`info/body/StallMenu/menu/view/content/ItemName${i}`), `info/body/StallMenu/menu/view/content/ItemName${i} shown`);
     return [name.left - across / 2, name.y];
 };
 await frames(2);

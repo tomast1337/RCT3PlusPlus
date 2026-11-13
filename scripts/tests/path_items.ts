@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "the build lists");
 const paths = map.paths();
@@ -60,7 +55,7 @@ await until(() => ui.find("footpaths/route") !== undefined, 120, "the path panel
 await ui.toggle("footpaths/follow", false);
 await ui.toggle("footpaths/route", false);
 const laid = map.paths().length;
-const east = [map.screen(climb.col + 1, climb.row)!, map.screen(climb.col + 2, climb.row)!];
+const east = [must(map.screen(climb.col + 1, climb.row), `tile ${climb.col + 1}, ${climb.row} in sight`), must(map.screen(climb.col + 2, climb.row), `tile ${climb.col + 2}, ${climb.row} in sight`)];
 await pointer.drag([east[0].x, east[0].y], [east[1].x, east[1].y], 10);
 await ui.click("footpaths/body/Path_UpwardSlope");
 await ui.click("footpaths/body/Path_Straight");
@@ -106,10 +101,10 @@ await frames(2);
 const queued = (c: number, r: number) => map.paths().some((p) => p.col === c && p.row === r && p.queue);
 for (const col of [lane.col + 1, lane.col + 2]) {
     await ui.toggle("footpaths/route", false);
-    const from = map.screen(col, lane.row)!;
+    const from = must(map.screen(col, lane.row), `tile ${col}, ${lane.row} in sight`);
     await pointer.click(from.x, from.y);
     await ui.toggle("footpaths/route", true);
-    const to = map.screen(col, lane.row + 2)!;
+    const to = must(map.screen(col, lane.row + 2), `tile ${col}, ${lane.row + 2} in sight`);
     for (let wait = 1; wait <= 96 && !queued(col, lane.row + 2); wait *= 2) {
         pointer.move(to.x, to.y);
         await frames(wait);
@@ -136,7 +131,7 @@ await frames(1);
 // Through the interface now: the bench's row in the path extras list. A right drag moves the camera and keeps the
 // placing and its ghost; put away, its row picks it again, also once the tool row's button has been pressed again
 // while its menu is out.
-const scenery = `tools/Scenery/${ui.children("tools/Scenery")![0]}`;
+const scenery = `tools/Scenery/${must(ui.children("tools/Scenery"), "tools/Scenery shown")[0]}`;
 const extras = "tools/Scenery/Obj_Scenery_PathExtras";
 const bench = "build_list/content/list/view/content/Bench";
 async function pickBench(): Promise<void> {
@@ -149,13 +144,13 @@ async function pickBench(): Promise<void> {
         await frames(2); // Laid out
     }
     // Rolled into sight in the list, which holds more than it shows.
-    const list = ui.find("build_list/content/list")!;
-    for (let i = 0; i < 60 && ui.find(bench)!.bottom > list.bottom; ++i) {
+    const list = must(ui.find("build_list/content/list"), "build_list/content/list shown");
+    for (let i = 0; i < 60 && must(ui.find(bench), `${bench} shown`).bottom > list.bottom; ++i) {
         pointer.move(list.x, list.y);
         pointer.wheel(-1);
         await frames(2);
     }
-    expect(ui.find(bench)!.bottom <= list.bottom, "the bench's row rolled into sight");
+    expect(must(ui.find(bench), `${bench} shown`).bottom <= list.bottom, "the bench's row rolled into sight");
     await ui.click(bench);
     await frames(2);
 }

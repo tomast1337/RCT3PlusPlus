@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 // Each with the pieces its file holds, so the one laid is known to be the one picked.
 const kDesigns: [string, string, number][] = [
     ["BodySlide", "Crossover", 33], ["BodySlide", "DareDevil", 23], ["BodySlide", "Flyover Falls", 33], ["BodySlide", "Reef Rider", 21],
@@ -35,7 +30,7 @@ async function aim(goal: { col: number; row: number }): Promise<boolean> {
     for (let i = 0; i < 4; ++i) {
         camera.look({ col: at.col, row: at.row }, { col: at.col, row: at.row + 30, up: 45 });
         await frames(4);
-        const p = map.screen(at.col, at.row)!;
+        const p = must(map.screen(at.col, at.row), `tile ${at.col}, ${at.row} in sight`);
         here = [p.x, p.y];
         pointer.move(...here);
         await frames(4);
@@ -58,7 +53,7 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
     const across = c.poolSides.map((s) => ({ col: s.col + kSteps[s.side][0], row: s.row + kSteps[s.side][1] }));
     await ui.click("design_placing/close");
     await frames(5);
-    const rides_tab = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+    const rides_tab = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
     if (!ui.find("tools/Rides/Obj_Pools"))
         await ui.click(rides_tab);
     await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
@@ -68,7 +63,7 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
     for (const t of across) {
         camera.look({ col: t.col, row: t.row }, { col: t.col, row: t.row + 30, up: 45 });
         await frames(4);
-        const p = map.screen(t.col, t.row)!;
+        const p = must(map.screen(t.col, t.row), `tile ${t.col}, ${t.row} in sight`);
         await pointer.drag([p.x, p.y], [p.x, p.y], 4);
         await frames(3);
     }
@@ -93,8 +88,8 @@ for (const [kind, design, size] of kDesigns) {
         await frames(3);
         const row = build.construction()!.designs.findIndex((d) => d.includes(design));
         expect(row >= 0, `the ${design} design among ${build.construction()!.designs.join(", ")}`);
-        const list = ui.find("design_browser/content/list")!;
-        const button = ui.find("design_browser/content/build")!;
+        const list = must(ui.find("design_browser/content/list"), "design_browser/content/list shown");
+        const button = must(ui.find("design_browser/content/build"), "design_browser/content/build shown");
         const unit = (button.bottom - button.top) / 22;
         // Under the column heads and the custom track's row, which stays first.
         await pointer.click(list.x, list.top + (18 + 16 * (row + 1) + 8) * unit);

@@ -8,18 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
-
 const kPool = "Pool/Default/Default_Stub";
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
@@ -33,7 +21,7 @@ await frames(10);
 
 // A small pool east of the road, and a changing room between them; the pool panel stays out once it is placed, and
 // a click on the room opens its window.
-const rides = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+const rides = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
 if (!ui.find("tools/Rides/Obj_Pools"))
     await ui.click(rides);
 await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
@@ -48,13 +36,13 @@ await pointer.drag(on_view(c + 3.5, r + 0.5), on_view(c + 6.5, r + 2.5), 6);
 await frames(3);
 await ui.click("pool_panel/Pool_ChangingRoomPanel");
 await frames(2);
-await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
+await ui.click(`pool_panel/body/${must(ui.children("pool_panel/body"), "pool_panel/body shown")[0]}`);
 await frames(3);
 await pointer.click(...on_view(c + 1.5, r + 0.5));
 await frames(3);
 expect(ui.find("pool_panel") !== undefined, "the pool panel still out once the room is placed");
 // The room's name and price in the band fit the strip.
-const choice = ui.find(`pool_panel/body/${ui.children("pool_panel/body")![0]}`)!;
+const choice = must(ui.find(`pool_panel/body/${must(ui.children("pool_panel/body"), "pool_panel/body shown")[0]}`), "the widget shown");
 pointer.move(choice.x, choice.y);
 await frames(3);
 await screenshot("pool_room_panel_wide");

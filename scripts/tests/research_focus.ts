@@ -8,23 +8,7 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
 
 await park.open("Campaigns/Base/Gunslinger.dat", { sandbox: false });
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined, 1200, "the park");
@@ -58,29 +42,29 @@ log("after the focus ended:", JSON.stringify(park.research()));
 expect(park.research().focus === null && park.research().current === dropped, `${dropped} taken up again, not ${park.research().current}`);
 
 // The research window: the history tab lists each invention with its date.
-await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Research") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Research");
 await until(() => under("Research_Title", "Research_Label_Budget") !== undefined, 120, "the research window");
-await ui.click(under("Research_Title", "AttractionListDialogIconAllAttractions")!);
+await ui.click(must(under("Research_Title", "AttractionListDialogIconAllAttractions"), "AttractionListDialogIconAllAttractions under Research_Title"));
 await frames(70);
 await screenshot("research_invented");
 
 // The tab of what may come next: a row picked names the focus's cost on the button, which focuses on it.
-await ui.click(under("Research_Title", "Obj_Rides")!);
+await ui.click(must(under("Research_Title", "Obj_Rides"), "Obj_Rides under Research_Title"));
 await frames(10);
-const focusButton = () => ui.find(under("Research_Title", "Rct3pp_Research_Focus")!)!;
+const focusButton = () => must(ui.find(must(under("Research_Title", "Rct3pp_Research_Focus"), "Rct3pp_Research_Focus under Research_Title")), "Rct3pp_Research_Focus shown");
 expect(!/\d/.test(focusButton().text ?? "0"), `no cost on the focus button with nothing picked, not ${focusButton().text}`);
-const frame = ui.find("Research_Title")!;
+const frame = must(ui.find("Research_Title"), "Research_Title shown");
 const down = (frame.bottom - frame.top) / 380; // Of the screen's height, a unit of the window's
-const table = ui.find(under("Research_Title", "table")!)!;
+const table = must(ui.find(must(under("Research_Title", "table"), "table under Research_Title")), "table shown");
 await pointer.click(table.left + (table.right - table.left) / 3, table.top + (3 + 18 + 16 + 8) * down); // The second row
 await frames(5);
 log("focus button:", JSON.stringify(focusButton()));
 expect(/\d/.test(focusButton().text ?? ""), `the focus button naming a cost, not ${focusButton().text}`);
 await screenshot("research_coming");
 const listed = park.research().next[1]!;
-await ui.click(under("Research_Title", "Rct3pp_Research_Focus")!);
+await ui.click(must(under("Research_Title", "Rct3pp_Research_Focus"), "Rct3pp_Research_Focus under Research_Title"));
 await frames(70);
 log("focused:", JSON.stringify(park.research()));
 expect(park.research().focus === listed && park.research().current === listed, `the second row's ${listed} focused, not ${park.research().focus}`);
@@ -92,17 +76,11 @@ await until(() => ui.find("Research_Title") === undefined, 120, "the research wi
 await ui.click("bar/Top_Pause");
 await frames(5);
 const before = JSON.stringify(park.research());
-const files = async (item: string) => {
-    if (ui.find(`tools/Files/${item}`) === undefined)
-        await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
-    await until(() => ui.find(`tools/Files/${item}`) !== undefined, 120, "the files menu");
-    await ui.click(`tools/Files/${item}`);
-};
-await files("File_SaveGame");
+await files_menu("File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
 await ui.click("park_files/content/open");
 await until(() => ui.find("park_files") === undefined, 120, "the save window to close");
-await files("File_LoadGame");
+await files_menu("File_LoadGame");
 // Loading asks first whether to save; the park was saved just now.
 await until(() => ui.find("load_question") !== undefined, 120, "the question before loading");
 await ui.click("load_question/content/answer1");

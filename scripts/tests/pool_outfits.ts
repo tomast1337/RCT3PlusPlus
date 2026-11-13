@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kPool = "Pool/Default/Default_Stub";
 
 await until(() => park.loaded(), 1200, "the park");
@@ -21,7 +16,6 @@ await frames(10);
 park.setWeather("sunny");
 park.setTemperature(28);
 park.setTime(0.5);
-const swimmers = () => people.list().filter((p) => p.state === "swimming");
 await until(() => swimmers().length >= 3, 6000, "guests swimming");
 
 // Everyone in a pool in their swimwear, nobody outside one.
@@ -44,21 +38,10 @@ for (const [k, at] of inWater.slice(0, 2).entries()) {
 }
 
 /** Finds the pick-up button wherever the window holds it. */
-const button = (path: string): string | undefined => {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === "PickUp")
-            return at;
-        const found = button(at);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-};
 const pickUp = async (who: number) => {
     people.show(who);
-    await until(() => button("info") !== undefined, 120, "the pick-up button");
-    await ui.click(button("info")!);
+    await until(() => under("info", "PickUp") !== undefined, 120, "the pick-up button");
+    await ui.click(must(under("info", "PickUp"), "PickUp under info"));
     await until(() => people.list()[who].state === "held", 60, "the guest held");
 };
 /** Hangs the held guest over (col, row), a while for a look, then lets them go there. */

@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 async function designs(): Promise<void> {
     expect(build.pick("tracks/coasters/Corkscrew/Corkscrew", "Corkscrew", "designs"), "a corkscrew coaster to build");
     await until(() => ui.find("design_browser") !== undefined, 600, "the designs window");
@@ -26,18 +21,12 @@ await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRi
 const gate = map.paths().reduce((a, b) => (b.row > a.row ? b : a));
 
 /** Where the middle of tile (col, row) is on the view; throws when it is out of sight. */
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
 
 // A design with a gap, opened with guests about: the third by name, Triple Corkscrew, whose station is on the
 // ground beside its lowest piece, so ground paths reach its doors.
 await designs();
-const list = ui.find("design_browser/content/list")!;
-const button = ui.find("design_browser/content/build")!;
+const list = must(ui.find("design_browser/content/list"), "design_browser/content/list shown");
+const button = must(ui.find("design_browser/content/build"), "design_browser/content/build shown");
 const unit = (button.bottom - button.top) / 22;
 await pointer.click(list.x, list.top + (18 + 16 * 4) * unit);
 await frames(5);

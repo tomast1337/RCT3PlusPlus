@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kWeek = 90;
 const kMonth = 360;
 
@@ -48,7 +43,7 @@ for (const level of ["ChequeredFlag", "TheMoneyPit"]) {
     await frames(30);
     await until(() => ui.find("info") !== undefined, 120, `${level}: the VIP's window`);
     log(level, "window", JSON.stringify(ui.children("info")));
-    const stats = ui.children("info")!.find((t) => t.toLowerCase().includes("stat"));
+    const stats = must(ui.children("info"), "info shown").find((t) => t.toLowerCase().includes("stat"));
     if (stats !== undefined) {
         await ui.click(`info/${stats}`);
         await frames(10);
@@ -63,7 +58,7 @@ for (const level of ["ChequeredFlag", "TheMoneyPit"]) {
     const told = keys().slice(posted);
     log(level, JSON.stringify(told));
     expect(told.includes("VIP_LeftPark"), `${level}: the VIP's going told`);
-    const after = park.vipGoals().find((g) => g.level === 0)!;
+    const after = must(park.vipGoals().find((g) => g.level === 0), "the first VIP goal");
     if (told.includes("VIPCondition_Failure"))
         expect(!after.met && after.next > park.date(), `${level}: another visit after one that went badly`);
     else

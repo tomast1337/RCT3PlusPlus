@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/ChequeredFlag.dat");
 await park.ready();
 await frames(30);
@@ -57,7 +52,7 @@ const bands = () => {
 log("bands", JSON.stringify(bands()));
 await park.advanceUntil(() => bands().every((n) => n > 0), 1800, "guests in each third of happiness");
 log("bands", JSON.stringify(bands()));
-await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Guests") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Guests");
 await until(() => ui.find("Man_GuestsHelp") !== undefined, 120, "the guest list");
@@ -73,7 +68,7 @@ const tableOf = (path: string): string | undefined => {
     }
     return undefined;
 };
-const table = ui.find(tableOf("Man_GuestsHelp")!)!;
+const table = must(ui.find(tableOf("Man_GuestsHelp")!), "the widget shown");
 // Sorted by happiness one way and then the other, so both ends of the scale show. Of the table's 456 units across
 // and 408 down, the happiness heading's middle is 124 from the right, left of the cash column and the scroll bar.
 for (const shot of ["guest_list_least_happy", "guest_list_most_happy"]) {

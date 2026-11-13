@@ -29,6 +29,7 @@
 #include "scene/park/camera_controls.hpp"
 #include "scene/park/deleting.hpp"
 #include "scene/park/footpaths.hpp"
+#include "scene/park/ground.hpp"
 #include "scene/park/holding.hpp"
 #include "scene/park/info_panel.hpp"
 #include "scene/park/management.hpp"

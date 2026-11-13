@@ -4,6 +4,7 @@
 #include "logging/log.hpp"
 #include "park/demolish_refund.hpp"
 #include "park/edge_walls.hpp"
+#include "scene/park/ground.hpp"
 #include "scene/park/questions.hpp"
 #include "scene/park/ride_camera.hpp"
 #include "scene/park/scene.hpp"

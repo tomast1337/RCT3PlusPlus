@@ -13,6 +13,7 @@
 #include "park/waterfall_mesh.hpp"
 #include "scene/objects.hpp"
 #include "scene/park/footpaths.hpp"
+#include "scene/park/ground.hpp"
 #include "scene/park/questions.hpp"
 #include "scene/park/refresh.hpp"
 #include "scene/park/scene.hpp"

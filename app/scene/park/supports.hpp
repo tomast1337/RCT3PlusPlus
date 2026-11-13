@@ -5,16 +5,19 @@
 // paths and ground are compared with how they were when last looked at, and the columns are built again on the
 // tiles where any of them changed: under an item built, taken away, moved or swapped for another, beside it
 // where its support points stand, and where a ground path or the ground itself changed. Each rebuilt tile loses
-// its old pieces first.
+// its old pieces first. The support pieces are read here too, and the columns a ghost would stand on worked out.
 #pragma once
 
+#include "park/support/sets.hpp"
 #include "save/model/world.hpp"
 
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -54,5 +57,16 @@ namespace rct3::scene::park
 
     /// Builds the supports again where the park changed, when it may have.
     void refresh_supports(ParkScene& scene, const ui::InterfaceAssets& assets);
+
+    /// The supports' pieces, read when first needed; none when the install has none.
+    const rct3::park::support::SupportSets* support_sets(ParkScene& scene, const ui::InterfaceAssets& assets);
+
+    /// What columns pass by as if it were not there: the rides' station platforms and the paving off the ground.
+    [[nodiscard]] std::unordered_set<std::uint64_t> supports_passed(const ParkScene& scene);
+
+    /// The support pieces that would hold up `ghosts`, were they added to the scene's objects.
+    /// shortcut: the columns of what is there already stay as they are under a ghost; show them changed too if
+    /// the difference shows.
+    [[nodiscard]] std::vector<save::model::PlacedObject> supports_under(const ParkScene& scene, std::span<const save::model::PlacedObject> ghosts, const rct3::park::support::SupportSets& sets);
 
 } // namespace rct3::scene::park

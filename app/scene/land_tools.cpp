@@ -597,10 +597,20 @@ namespace rct3::scene
                     return park::ask_remove_lake(scene, *assets.strings, assets.palette, *l.tile);
                 return remove_lake(device, scene, assets, *l.tile);
             }
-            // shortcut: waterfalls of a lake raised this way keep their old heights, ask before covering them when
-            // falls get a yes/no question
             else if (auto poured = rct3::park::water::pour_water(scene.footpaths.water, g, *l.tile, height, allowed))
+            {
+                // Water that would take in a lake with waterfalls is not poured: the player is asked whether those
+                // falls should go, and pours again once they have.
+                const auto& falls = scene.footpaths.waterfalls;
+                if (const auto flooded = rct3::park::water::flooded_falls(scene.footpaths.water, *poured, falls, g); !flooded.empty())
+                {
+                    std::vector<save::model::WorldPoint3> tops;
+                    for (const std::size_t i : flooded)
+                        tops.push_back(falls[i].top);
+                    return park::ask_flood_falls(scene, *assets.strings, assets.palette, std::move(tops));
+                }
                 scene.footpaths.water = std::move(*poured);
+            }
             else
                 return say(scene, kWaterRefused);
             park::rebuild_ground(device, scene, assets);
@@ -864,6 +874,30 @@ namespace rct3::scene
         start_stroke(scene);
         take_ground(device, scene, assets, std::move(ground), false);
         end_stroke(scene);
+    }
+
+    void remove_falls(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const save::model::WorldPoint3> tops)
+    {
+        auto& falls = scene.footpaths.waterfalls;
+        save::model::TerrainGrid ground = scene.grid;
+        std::vector<save::model::WorldPoint3> gone;
+        std::erase_if(falls, [&](const save::model::Waterfall& f) {
+            if (std::ranges::none_of(tops, [&](const save::model::WorldPoint3& p) { return p.x == f.top.x && p.y == f.top.y && p.z == f.top.z; }))
+                return false;
+            rct3::park::restore_spillway(ground, f);
+            gone.push_back(f.top);
+            return true;
+        });
+        if (gone.empty())
+            return;
+        park::show_park_particles(scene.particles, rct3::park::waterfall_spray(falls), &park::ParkParticles::sprays);
+        start_stroke(scene);
+        take_ground(device, scene, assets, std::move(ground), false);
+        end_stroke(scene);
+        // Each lake draws back out of the spillway it had spread into.
+        for (const save::model::WorldPoint3& top : gone)
+            refit_lake(scene, top, { });
+        park::rebuild_ground(device, scene, assets);
     }
 
     void update_land_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed)

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The yes-or-no boxes the park asks in: whether to leave the park, to pull attractions down, or to sell a pool
-// complex, or to remove a lake that has waterfalls. Each box is asked once at a time, by its name; the answer comes back in the park's update.
+// complex, to remove a lake that has waterfalls, or the waterfalls a rising lake would flood. Each box is asked once at a time, by its name; the answer comes back in the park's update.
 #pragma once
 
 #include "park/attraction_objects.hpp"
@@ -22,6 +22,7 @@ namespace rct3::scene::park
     inline constexpr std::string_view kDemolishName = "demolish_question";
     inline constexpr std::string_view kSellPoolName = "sell_pool_question";
     inline constexpr std::string_view kLakeName = "lake_question";
+    inline constexpr std::string_view kFloodName = "flood_question";
 
     /// Asks whether to leave the park.
     void ask_leave(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette);
@@ -34,5 +35,8 @@ namespace rct3::scene::park
 
     /// Asks whether to remove the lake holding `tile`, which has waterfalls that go with it.
     void ask_remove_lake(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, save::model::Tile tile);
+
+    /// Asks whether the waterfalls pouring from `tops` should go, which water about to be poured would flood.
+    void ask_flood_falls(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, std::vector<save::model::WorldPoint3> tops);
 
 } // namespace rct3::scene::park

@@ -2328,6 +2328,11 @@ namespace rct3::scene::park
                 if (const auto tile = std::exchange(scene.land.lake_asked, std::nullopt))
                     remove_lake(device, scene, assets, *tile);
         }
+        if (auto question = desktop.root().find_as<ui::widgets::QuestionBox>(kFloodName))
+        {
+            if (const auto answer = question->take_answer(); answer && *answer == 0)
+                remove_falls(device, scene, assets, std::exchange(scene.land.falls_asked, { }));
+        }
         if (auto question = desktop.root().find_as<ui::widgets::QuestionBox>(kDemolishName))
         {
             if (const auto answer = question->take_answer(); answer && *answer == 0)

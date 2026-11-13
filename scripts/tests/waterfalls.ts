@@ -88,23 +88,75 @@ expect(map.waterfalls().length === falls.length, "the new fall deleted");
 expect(ground() === before, "the ground put back");
 await screenshot("deleted");
 
-// The water tool on a lake that has waterfalls asks first; yes takes the lake and its falls away.
+// The water tool raising a lake that has waterfalls asks first, and pours nothing: no keeps the falls, yes takes
+// those of that lake away, for the player to pour again.
 if (!ui.find("tools/Land/Land_Water"))
     await ui.click("tools/Land/Land");
 await ui.click("tools/Land/Land_Water");
 await frames(2);
+// Bank tiles beside a lake with a waterfall that rise a little over it, clicked until water poured from one reaches the lake.
+const levels = falls.flatMap((f) => [f.top, f.bottom]);
+const size = map.size();
+const banks: { col: number; row: number }[] = [];
+for (let r = 1; r < size.height - 1; ++r)
+    for (let c = 1; c < size.width - 1; ++c) {
+        const t = map.tile(c, r);
+        if (!t || !t.owned)
+            continue;
+        const beside = [t, map.tile(c - 1, r), map.tile(c + 1, r), map.tile(c, r - 1), map.tile(c, r + 1)].find((n) => n?.water !== undefined && levels.some((l) => Math.abs(l - (n.water ?? 1e9)) < 0.1))?.water;
+        const middle = t.corners.reduce((x, y) => x + y, 0) / 4;
+        if (beside !== undefined && middle > beside + 0.3 && middle < beside + 0.9 && Math.min(...t.corners) < beside)
+            banks.push({ col: c, row: r });
+    }
+log("banks", banks.length);
+let bank: { x: number; y: number } | undefined;
+for (const b of banks.slice(0, 60)) {
+    camera.look({ col: b.col + 0.5, row: b.row + 0.5 }, { col: b.col - 1.5, row: b.row - 8, up: 140 });
+    await frames(2);
+    const at = map.screen(b.col, b.row);
+    if (!at)
+        continue;
+    await pointer.click(at.x, at.y);
+    await frames(2);
+    if (ui.find("lake_question"))
+        await ui.click("lake_question/content/GUI2MiniDialog_Cancel");
+    if (ui.find("flood_question")) {
+        log("bank", JSON.stringify(b), JSON.stringify(map.tile(b.col, b.row)));
+        bank = at;
+        break;
+    }
+}
 const lakes = map.water().length;
-await click_tile(upper.col, upper.row);
+expect(bank !== undefined, "a question before a lake with waterfalls is raised");
+await screenshot("flood_question");
+await ui.click("flood_question/content/GUI2MiniDialog_Cancel");
+await frames(2);
+expect(map.water().length === lakes && map.waterfalls().length === falls.length, "the lake and its falls kept on a no");
+await pointer.click(bank!.x, bank!.y);
+await frames(2);
+await ui.click("flood_question/content/GUI2MiniDialog_Confirm");
+await frames(3);
+const kept = map.waterfalls();
+log("falls after the flood question", falls.length, "->", kept.length, "lakes", lakes, "->", map.water().length);
+expect(kept.length > 0 && kept.length < falls.length, "the raised lake's falls gone on a yes");
+expect(map.water().length === lakes, "no water poured by the answer");
+await screenshot("flood_falls_gone");
+
+// The water tool on a lake that has waterfalls asks first; yes takes the lake and its falls away.
+const land = { col: Math.floor(kept[0].landCol), row: Math.floor(kept[0].landRow) };
+camera.look({ col: land.col + 0.5, row: land.row + 0.5 }, { col: land.col - 2, row: land.row - 10, up: 120 });
+await frames(2);
+await click_tile(land.col, land.row);
 await frames(2);
 expect(ui.find("lake_question") !== undefined, "a question before a lake with waterfalls goes");
 await screenshot("lake_question");
 await ui.click("lake_question/content/GUI2MiniDialog_Cancel");
 await frames(2);
-expect(map.water().length === lakes && map.waterfalls().length === falls.length, "the lake and its falls kept on a no");
-await click_tile(upper.col, upper.row);
+expect(map.water().length === lakes && map.waterfalls().length === kept.length, "the lake and its falls kept on a no");
+await click_tile(land.col, land.row);
 await frames(2);
 await ui.click("lake_question/content/GUI2MiniDialog_Confirm");
 await frames(3);
-log("lakes", lakes, "->", map.water().length, "falls", falls.length, "->", map.waterfalls().length);
-expect(map.water().length === lakes - 1 && map.waterfalls().length < falls.length, "the lake and its falls gone on a yes");
+log("lakes", lakes, "->", map.water().length, "falls", kept.length, "->", map.waterfalls().length);
+expect(map.water().length === lakes - 1 && map.waterfalls().length < kept.length, "the lake and its falls gone on a yes");
 await screenshot("lake_removed");

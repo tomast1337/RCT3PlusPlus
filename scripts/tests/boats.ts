@@ -17,7 +17,10 @@ const kMostChange = 0.02; // Metres a boat's step may change by from one frame t
 
 await until(() => park.loaded(), 1200, "the park");
 await frames(10);
-const hires = rides.list().map((r, i) => ({ r, i })).filter(({ r }) => kBoats.test(r.symbol) && (r.cars?.length ?? 0) > 0);
+const hires = rides
+    .list()
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => kBoats.test(r.symbol) && (r.cars?.length ?? 0) > 0);
 expect(hires.length > 0, "a boat hire ride in the park");
 log("boat rides", hires.map(({ r }) => `${r.symbol} (${r.cars!.length} boats)`).join(", "));
 const bumping = (i: number) => /bumperboat/i.test(rides.list()[i].symbol);
@@ -26,7 +29,14 @@ const tile = (c: { col: number; row: number }) => map.tile(Math.floor(c.col), Ma
 const water_at = (c: { col: number; row: number }) => tile(c)?.water !== undefined;
 const docked = hires.map(({ i }) => cars(i));
 // Out on the water: the first boat to leave its dock.
-await park.advanceUntil(() => hires.some(({ i }, k) => cars(i).some((c, b) => Math.hypot(c.col - docked[k][b].col, c.row - docked[k][b].row) > 2)), 1200, "a boat out on the water");
+await park.advanceUntil(
+    () =>
+        hires.some(({ i }, k) =>
+            cars(i).some((c, b) => Math.hypot(c.col - docked[k][b].col, c.row - docked[k][b].row) > 2),
+        ),
+    1200,
+    "a boat out on the water",
+);
 
 const kTile = 4; // Metres a tile
 let worst_turn = 0;
@@ -55,21 +65,37 @@ for (let n = 0; n < kFrames; ++n) {
             }
             worst_turn = Math.max(worst_turn, turn);
             const before = last_step[k][b];
-            if (before)
-                worst_change = Math.max(worst_change, Math.hypot(step.x - before.x, step.z - before.z));
+            if (before) worst_change = Math.max(worst_change, Math.hypot(step.x - before.x, step.z - before.z));
             last_step[k][b] = step;
             off_water += water_at(c) ? 0 : 1;
             for (const d of now.slice(b + 1))
-                if (Math.hypot(d.col - docked[k][now.indexOf(d)].col, d.row - docked[k][now.indexOf(d)].row) > 1 && !bumping(i))
+                if (
+                    Math.hypot(d.col - docked[k][now.indexOf(d)].col, d.row - docked[k][now.indexOf(d)].row) > 1 &&
+                    !bumping(i)
+                )
                     closest = Math.min(closest, Math.hypot(d.col - c.col, d.row - c.row) * kTile);
         }
         last[k] = now;
     }
 }
-log("boat frames", moving, "most turn a frame", worst_turn.toFixed(3), "most change of step", worst_change.toFixed(3), "closest apart", closest.toFixed(2), "off water", off_water);
+log(
+    "boat frames",
+    moving,
+    "most turn a frame",
+    worst_turn.toFixed(3),
+    "most change of step",
+    worst_change.toFixed(3),
+    "closest apart",
+    closest.toFixed(2),
+    "off water",
+    off_water,
+);
 expect(moving > 60, "boats moving on the water");
 expect(worst_turn < kMostTurn, `no boat turning more than ${kMostTurn} in a frame, not ${worst_turn.toFixed(3)}`);
-expect(worst_change < kMostChange, `no boat's step jumping by ${kMostChange} m or more, not ${worst_change.toFixed(3)}`);
+expect(
+    worst_change < kMostChange,
+    `no boat's step jumping by ${kMostChange} m or more, not ${worst_change.toFixed(3)}`,
+);
 expect(closest > 1.5, `boats keeping clear of each other, not ${closest.toFixed(2)} m apart`);
 expect(off_water < moving / 50, `boats keeping to the water, ${off_water} frames off it`);
 
@@ -78,7 +104,10 @@ expect(off_water < moving / 50, `boats keeping to the water, ${off_water} frames
 if (strokes.size > 0) {
     log("strokes", [...strokes].map(([k, v]) => `${k} ${v.frames} frames turning ${v.turned.toFixed(2)}`).join(", "));
     expect((strokes.get("both")?.frames ?? 0) > 0, "boats rowing with both oars");
-    expect((strokes.get("left")?.turned ?? 0) <= 0 && (strokes.get("right")?.turned ?? 0) >= 0, "boats rowing with the oars that turn them the way they turn");
+    expect(
+        (strokes.get("left")?.turned ?? 0) <= 0 && (strokes.get("right")?.turned ?? 0) >= 0,
+        "boats rowing with the oars that turn them the way they turn",
+    );
     park.setTime(0.5);
     await frames(2);
     const rowing = hires.flatMap(({ i }) => cars(i).filter((c) => c.stroke))[0];
@@ -90,7 +119,9 @@ if (strokes.size > 0) {
 }
 
 // Pictured out on the water.
-const out = hires.flatMap(({ i }, k) => cars(i).filter((c, b) => Math.hypot(c.col - docked[k][b].col, c.row - docked[k][b].row) > 2))[0];
+const out = hires.flatMap(({ i }, k) =>
+    cars(i).filter((c, b) => Math.hypot(c.col - docked[k][b].col, c.row - docked[k][b].row) > 2),
+)[0];
 if (out) {
     camera.look({ col: out.col, row: out.row }, { col: out.col + 2, row: out.row + 3, up: 5 });
     await frames(30);

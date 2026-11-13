@@ -24,12 +24,16 @@ await screenshot("loan_buttons");
 const loan = park.loan();
 const cash = park.cash()!;
 const repaid = Math.min(kStep, loan);
-await ui.click(must(under("FinancialManagement_Title", "Rct3pp_Repay"), "Rct3pp_Repay under FinancialManagement_Title"));
+await ui.click(
+    must(under("FinancialManagement_Title", "Rct3pp_Repay"), "Rct3pp_Repay under FinancialManagement_Title"),
+);
 await frames(5);
 log("repay: loan", loan, "->", park.loan(), "cash", cash, "->", park.cash());
 expect(park.loan() === loan - repaid && park.cash() === cash - repaid, `the loan and cash down by ${repaid}`);
 
-await ui.click(must(under("FinancialManagement_Title", "Rct3pp_Borrow"), "Rct3pp_Borrow under FinancialManagement_Title"));
+await ui.click(
+    must(under("FinancialManagement_Title", "Rct3pp_Borrow"), "Rct3pp_Borrow under FinancialManagement_Title"),
+);
 await frames(5);
 log("borrow: loan ->", park.loan(), "cash ->", park.cash());
 const borrowed = park.loan() - (loan - repaid);

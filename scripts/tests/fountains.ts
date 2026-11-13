@@ -9,7 +9,11 @@
 export {};
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "the build lists");
+await until(
+    () => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined,
+    1200,
+    "the build lists",
+);
 const paths = map.paths();
 const gate = paths.reduce((a, b) => (b.row > a.row ? b : a));
 const fountains = [

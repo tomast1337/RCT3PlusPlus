@@ -15,8 +15,14 @@ await until(() => park.loaded(), 1200, "the park");
 await frames(10);
 const pieces = map.objects().filter((o) => o.overlay === kPool);
 log("pool pieces", pieces.length, [...new Set(pieces.map((o) => o.symbol))].join(" "));
-expect(pieces.some((o) => o.symbol === "Base"), "water squares placed from the pool's squares");
-expect(pieces.some((o) => o.symbol === "SolidTop"), "paved squares placed from them");
+expect(
+    pieces.some((o) => o.symbol === "Base"),
+    "water squares placed from the pool's squares",
+);
+expect(
+    pieces.some((o) => o.symbol === "SolidTop"),
+    "paved squares placed from them",
+);
 // Those the park had swimming swim on in its pools, not out on the paths.
 const saved_swimmers = people.list().filter((p) => p.state === "swimming").length;
 log("swimming as saved", saved_swimmers);
@@ -25,7 +31,10 @@ expect(saved_swimmers > 0, "the park's swimmers still in the water");
 // Its changing room, there once, opens its complex's window, where the complex opens.
 const room = map.objects().find((o) => o.overlay !== kPool && o.symbol.startsWith("CRoom"));
 expect(room !== undefined, "a changing room");
-expect(map.objects().filter((o) => o.col === room!.col && o.row === room!.row && o.symbol === room!.symbol).length === 1, "the changing room there once");
+expect(
+    map.objects().filter((o) => o.col === room!.col && o.row === room!.row && o.symbol === room!.symbol).length === 1,
+    "the changing room there once",
+);
 camera.look({ col: room!.col + 0.5, row: room!.row + 0.5 }, { col: room!.col + 0.5, row: room!.row + 6, up: 5 });
 await frames(10);
 // Its roof, above the guests' heads.
@@ -34,8 +43,7 @@ await pointer.click(middle.x, middle.y - 0.12);
 await until(() => ui.find("info/Attraction_OpMode") !== undefined, 120, "the changing room's window");
 const state = () => (ui.find("info/Attraction_General_Open") !== undefined ? "Open" : "Closed");
 const saved_state = state();
-if (saved_state !== "Open")
-{
+if (saved_state !== "Open") {
     await ui.click("info/Attraction_General_Closed");
     await until(() => ui.find("info/Attraction_Button_Open") !== undefined, 60, "the flag's lights");
     await ui.click("info/Attraction_Button_Open");
@@ -52,12 +60,21 @@ park.setTemperature(28);
 // Squares stacked on a tile, the decks' heights and the ground under them, to find again after loading.
 const stacks = () => {
     const decks = new Map<string, Set<number>>();
-    for (const o of map.objects().filter((o) => o.overlay === kPool && (o.symbol === "SolidTop" || o.symbol === "Base" || o.symbol === "StairsBase")))
+    for (const o of map
+        .objects()
+        .filter(
+            (o) => o.overlay === kPool && (o.symbol === "SolidTop" || o.symbol === "Base" || o.symbol === "StairsBase"),
+        ))
         decks.set(`${o.col},${o.row}`, (decks.get(`${o.col},${o.row}`) ?? new Set()).add(o.height!));
-    return JSON.stringify([...decks].filter(([, h]) => h.size > 1).sort().map(([k, h]) => {
-        const [col, row] = k.split(",").map(Number);
-        return [k, [...h].sort((a, b) => a - b), map.tile(col, row)!.corners];
-    }));
+    return JSON.stringify(
+        [...decks]
+            .filter(([, h]) => h.size > 1)
+            .sort()
+            .map(([k, h]) => {
+                const [col, row] = k.split(",").map(Number);
+                return [k, [...h].sort((a, b) => a - b), map.tile(col, row)!.corners];
+            }),
+    );
 };
 const saved_stacks = stacks();
 log("stacked tiles", saved_stacks);
@@ -67,8 +84,7 @@ await until(() => ui.find("park_files") !== undefined, 120, "the save window");
 await ui.click("park_files/content/open");
 await until(() => ui.find("park_files") === undefined, 120, "the save window to close");
 park.setTemperature(2); // Back as saved once loaded
-if (!ui.find("tools/Files/File_LoadGame"))
-    await click_tool("Files");
+if (!ui.find("tools/Files/File_LoadGame")) await click_tool("Files");
 await until(() => ui.find("tools/Files/File_LoadGame") !== undefined, 120, "the files menu");
 await ui.click("tools/Files/File_LoadGame");
 // Loading asks first whether to save; the park was saved just now.
@@ -81,13 +97,19 @@ await ui.click("park_files/content/open");
 await until(() => park.loaded() && park.weatherLook().temperature > 20, 1200, "the saved park");
 await frames(10);
 const again = map.objects().filter((o) => o.overlay === kPool).length;
-expect(stacks() === saved_stacks, `the stacked squares and the ground under them as saved, ${saved_stacks}, not ${stacks()}`);
+expect(
+    stacks() === saved_stacks,
+    `the stacked squares and the ground under them as saved, ${saved_stacks}, not ${stacks()}`,
+);
 expect(again === pieces.length, `${pieces.length} pool pieces after loading, not ${again}`);
 expect(map.objects().length === objects, `${objects} objects after loading, not ${map.objects().length}`);
 // Its swimmers saved with it, still in the water.
 const reloaded_swimmers = people.list().filter((p) => p.state === "swimming").length;
 log("swimming after loading", reloaded_swimmers);
-expect(reloaded_swimmers >= saved_swimmers * 0.9, `most of the ${saved_swimmers} swimmers still swimming, not ${reloaded_swimmers}`);
+expect(
+    reloaded_swimmers >= saved_swimmers * 0.9,
+    `most of the ${saved_swimmers} swimmers still swimming, not ${reloaded_swimmers}`,
+);
 
 park.setWeather("sunny");
 park.setTemperature(28);
@@ -102,12 +124,16 @@ await screenshot("pool_saved_swimming");
 const spa = map.objects().find((o) => o.overlay === kPool && o.symbol === "Jacuzzi");
 if (spa) {
     log("spa at", spa.col, spa.row);
-    const sitting = () => swimmers().find((p) => Math.abs(p.col! - spa.col - 0.5) < 0.05 && Math.abs(p.row! - spa.row - 0.5) < 0.05);
+    const sitting = () =>
+        swimmers().find((p) => Math.abs(p.col! - spa.col - 0.5) < 0.05 && Math.abs(p.row! - spa.row - 0.5) < 0.05);
     await ui.click("bar/Top_SuperFastForward");
     await until(() => sitting() !== undefined, 20000, "a swimmer in the spa pool");
     await ui.click("bar/Top_Play");
     await frames(120);
-    camera.look({ col: spa.col + 0.5, row: spa.row + 0.5, up: 0.3 }, { col: spa.col + 1.3, row: spa.row + 0.9, up: 0.9 });
+    camera.look(
+        { col: spa.col + 0.5, row: spa.row + 0.5, up: 0.3 },
+        { col: spa.col + 1.3, row: spa.row + 0.9, up: 0.9 },
+    );
     await frames(4);
     await screenshot("pool_saved_spa");
 }
@@ -116,7 +142,10 @@ if (spa) {
 const extra = map.objects().find((o) => o.symbol.startsWith("SunLoungers") || o.symbol === "PoolShower");
 if (extra) {
     log("extra", extra.symbol, "at", extra.col, extra.row);
-    const using_it = () => swimmers().find((p) => p.pool_extra !== undefined && Math.floor(p.col!) === extra.col && Math.floor(p.row!) === extra.row);
+    const using_it = () =>
+        swimmers().find(
+            (p) => p.pool_extra !== undefined && Math.floor(p.col!) === extra.col && Math.floor(p.row!) === extra.row,
+        );
     await ui.click("bar/Top_SuperFastForward");
     await until(() => using_it() !== undefined, 20000, `a swimmer on the ${extra.symbol}`);
     await ui.click("bar/Top_Play");

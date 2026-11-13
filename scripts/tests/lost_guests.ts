@@ -19,7 +19,16 @@ const clear = (col: number, row: number) => {
 };
 
 // One of a party of guests walking the paths.
-const inParty = () => people.list().findIndex((p) => !p.staff && p.state === "walking" && p.party !== undefined && people.list().filter((q) => q.party === p.party).length > 1);
+const inParty = () =>
+    people
+        .list()
+        .findIndex(
+            (p) =>
+                !p.staff &&
+                p.state === "walking" &&
+                p.party !== undefined &&
+                people.list().filter((q) => q.party === p.party).length > 1,
+        );
 await park.advanceUntil(() => inParty() >= 0, 10, "a party walking");
 const who = inParty();
 const party = people.list()[who].party!;
@@ -43,7 +52,10 @@ await until(() => me().state === "held", 60, "the guest held");
 // Put down on a path well away from the rest, in sight.
 const far = paths
     .filter((p) => clear(p.col, p.row))
-    .sort((p, q) => Math.hypot(q.col - guest.col!, q.row - guest.row!) - Math.hypot(p.col - guest.col!, p.row - guest.row!))[0];
+    .sort(
+        (p, q) =>
+            Math.hypot(q.col - guest.col!, q.row - guest.row!) - Math.hypot(p.col - guest.col!, p.row - guest.row!),
+    )[0];
 expect(far !== undefined && Math.hypot(far.col - guest.col!, far.row - guest.row!) >= 5, "a path in sight well away");
 const over = must(map.screen(far!.col, far!.row), "the tile in sight");
 pointer.move(over.x, over.y);
@@ -57,8 +69,20 @@ await screenshot("put_down_far");
 
 // They find each other: all on one or neighbouring tiles.
 const spread = () => Math.max(...others().map((o) => Math.hypot(o.col! - me().col!, o.row! - me().row!)));
-await park.advanceUntil(() => spread() < 1.5 && me().state !== "lost", 100, `the party together again (${spread().toFixed(1)} tiles apart, ${me().state})`);
-log("together after", apart.toFixed(1), "tiles apart; states", me().state, others().map((o) => o.state).join(","));
+await park.advanceUntil(
+    () => spread() < 1.5 && me().state !== "lost",
+    100,
+    `the party together again (${spread().toFixed(1)} tiles apart, ${me().state})`,
+);
+log(
+    "together after",
+    apart.toFixed(1),
+    "tiles apart; states",
+    me().state,
+    others()
+        .map((o) => o.state)
+        .join(","),
+);
 await screenshot("together");
 expect(others().length > 0 && me().party === party, "still one party");
 quit(0);

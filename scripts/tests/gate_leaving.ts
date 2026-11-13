@@ -24,19 +24,30 @@ let left = 0;
 let stuck: string[] = [];
 for (let look = 0; look < kLooks; ++look) {
     await frames(150);
-    const there = people.list().map((p, i) => ({ ...p, i })).filter((p) => !p.staff && p.col !== undefined && onGate(p.col, p.row!));
+    const there = people
+        .list()
+        .map((p, i) => ({ ...p, i }))
+        .filter((p) => !p.staff && p.col !== undefined && onGate(p.col, p.row!));
     const next = new Map<number, number>();
-    for (const p of there)
-        next.set(p.i, (since.get(p.i) ?? 0) + 1);
+    for (const p of there) next.set(p.i, (since.get(p.i) ?? 0) + 1);
     since = next;
     left += there.filter((p) => p.leaving).length;
-    stuck = there.filter((p) => next.get(p.i)! >= kStuck).map((p) => `${p.i} ${p.name} (${p.state}${p.leaving ? ", leaving" : ""}${p.party !== undefined ? `, party ${p.party}` : ""})`);
+    stuck = there
+        .filter((p) => next.get(p.i)! >= kStuck)
+        .map(
+            (p) =>
+                `${p.i} ${p.name} (${p.state}${p.leaving ? ", leaving" : ""}${p.party !== undefined ? `, party ${p.party}` : ""})`,
+        );
     const states = new Map<string, number>();
     for (const p of there)
-        states.set(`${p.state}${p.leaving ? " leaving" : ""}`, (states.get(`${p.state}${p.leaving ? " leaving" : ""}`) ?? 0) + 1);
-    log(`look ${look} (${park.date()}): longest ${Math.max(0, ...next.values())}, ${there.length} on the gate tiles (${[...states].map(([k, n]) => `${n} ${k}`).join(", ")}), ${stuck.length} there ${kStuck} looks in a row`);
-    if (stuck.length > 0)
-        break;
+        states.set(
+            `${p.state}${p.leaving ? " leaving" : ""}`,
+            (states.get(`${p.state}${p.leaving ? " leaving" : ""}`) ?? 0) + 1,
+        );
+    log(
+        `look ${look} (${park.date()}): longest ${Math.max(0, ...next.values())}, ${there.length} on the gate tiles (${[...states].map(([k, n]) => `${n} ${k}`).join(", ")}), ${stuck.length} there ${kStuck} looks in a row`,
+    );
+    if (stuck.length > 0) break;
 }
 await screenshot("gate");
 log("guests seen leaving through the gate", left);

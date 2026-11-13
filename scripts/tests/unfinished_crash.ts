@@ -60,16 +60,19 @@ await ui.click("tools/Paths/Obj_Paths");
 await until(() => ui.find("footpaths/route") !== undefined, 120, "the path panel");
 await ui.toggle("footpaths/follow", false);
 let door: [number, number] | undefined;
-for (const [dc, dr] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
-    if (rides.list()[ride].joined)
-        break;
+for (const [dc, dr] of [
+    [0, 1],
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+]) {
+    if (rides.list()[ride].joined) break;
     const col = entrance!.col + dc;
     const r = entrance!.row + dr;
     camera.look({ col: col + 0.5, row: r + 0.5 }, { col: col + 0.5, row: r + 10.5, up: 30 });
     await frames(5);
     const at = map.screen(col, r);
-    if (at === undefined)
-        continue;
+    if (at === undefined) continue;
     pointer.move(at.x, at.y);
     await frames(10);
     await pointer.click(at.x, at.y);
@@ -101,10 +104,18 @@ await frames(5);
 const refused = rides.setState(ride, "open");
 expect(refused == null, `the unfinished coaster opened, not refused with ${refused}`);
 const drops = park.dropParties(40);
-log("dropped", drops.reduce((n, p) => n + p.guests, 0), "guests on the paths");
+log(
+    "dropped",
+    drops.reduce((n, p) => n + p.guests, 0),
+    "guests on the paths",
+);
 await ui.click("bar/Top_SuperFastForward");
 // Watched till its train sets off with riders aboard.
-await until(() => (rides.list()[ride].riders ?? 0) > 0 && (rides.list()[ride].moving ?? 0) > 0, 20000, "the unfinished coaster under way with riders");
+await until(
+    () => (rides.list()[ride].riders ?? 0) > 0 && (rides.list()[ride].moving ?? 0) > 0,
+    20000,
+    "the unfinished coaster under way with riders",
+);
 log("aboard:", rides.list()[ride].riders);
 await until(() => (rides.list()[ride].crashes ?? 0) > 0, 20000, "the train with riders crashed");
 await ui.click("bar/Top_Play");
@@ -115,7 +126,10 @@ expect(thrown().length > 0, "riders thrown out");
 const car = (rides.list()[ride].wrecks ?? [])[0];
 camera.look(car, { col: car.col + 5, row: car.row + 12, up: (car.up ?? 0) + 2 });
 await frames(6);
-expect(thrown().some((p) => (p.up ?? 0) > 2), "riders in the air");
+expect(
+    thrown().some((p) => (p.up ?? 0) > 2),
+    "riders in the air",
+);
 await screenshot("riders_flying");
 await until(() => thrown().length === 0, 1200, "the thrown riders landed");
 const lying = people.list().filter((p) => p.state === "dropped");
@@ -126,7 +140,10 @@ await screenshot("landed");
 expect(rides.list()[ride].open === false, "the crashed ride closed");
 
 // Begun by hand well away from the design: the custom track's first piece, its station, and straights on from it.
-camera.look({ col: entrance!.col - 30.5, row: entrance!.row + 0.5 }, { col: entrance!.col - 30.5, row: entrance!.row + 16.5, up: 30 });
+camera.look(
+    { col: entrance!.col - 30.5, row: entrance!.row + 0.5 },
+    { col: entrance!.col - 30.5, row: entrance!.row + 16.5, up: 30 },
+);
 await frames(5);
 await designs();
 await ui.click("design_browser/content/build");

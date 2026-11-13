@@ -23,7 +23,11 @@ await frames(5);
 await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Staff") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Staff");
-await until(() => under("Staff_Title", "Staff_HireMaintenanceIcon") !== undefined, 120, "the staff window's hire buttons");
+await until(
+    () => under("Staff_Title", "Staff_HireMaintenanceIcon") !== undefined,
+    120,
+    "the staff window's hire buttons",
+);
 await frames(5);
 await screenshot("staff_menu");
 
@@ -44,7 +48,9 @@ for (const [button, role] of hires) {
     // The entertainer goes back where they were made; the others onto a path in sight beside the window.
     const free = paths.find((p) => {
         const on = map.screen(p.col + 0.5, p.row + 0.5);
-        return on !== undefined && (on.x < 0.25 || on.x > 0.75) && on.x > 0.05 && on.x < 0.95 && on.y > 0.1 && on.y < 0.85;
+        return (
+            on !== undefined && (on.x < 0.25 || on.x > 0.75) && on.x > 0.05 && on.x < 0.95 && on.y > 0.1 && on.y < 0.85
+        );
     });
     expect(free !== undefined, "a path in sight beside the window");
     const at = must(map.screen(free!.col + 0.5, free!.row + 0.5), "the tile in sight");
@@ -53,8 +59,7 @@ for (const [button, role] of hires) {
     await pointer.click(at.x, at.y, role === "entertainer" ? "right" : undefined);
     await until(() => staff()[count].state !== "held", 60, `the ${role} let go`);
     // Put back, they walk across the ground to where they were made, which may be far off.
-    if (role !== "entertainer")
-        await until(() => staff()[count].state === "walking", 600, `the ${role} walking`);
+    if (role !== "entertainer") await until(() => staff()[count].state === "walking", 600, `the ${role} walking`);
 }
 expect(staff().length === before + hires.length, "every hire kept");
 await frames(60);

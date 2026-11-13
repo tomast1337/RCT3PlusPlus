@@ -16,7 +16,11 @@
 export {};
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.facilities() !== undefined, 1200, "the tool row and the build lists");
+await until(
+    () => ui.find("tools/Paths/Obj_Paths") !== undefined && build.facilities() !== undefined,
+    1200,
+    "the tool row and the build lists",
+);
 const gate = map.paths().reduce((a, b) => (b.row > a.row ? b : a));
 // The smallest toilet (kind 11).
 const kind = build
@@ -32,12 +36,14 @@ await look_down(col, row, 40);
 expect(build.pick(kind.overlay, kind.symbol), `${kind.symbol} picked`);
 pointer.move(...on_view(col, row));
 await frames(3);
-expect(build.placing()?.problem === "none", `the toilet placeable on the grass, not ${JSON.stringify(build.placing())}`);
+expect(
+    build.placing()?.problem === "none",
+    `the toilet placeable on the grass, not ${JSON.stringify(build.placing())}`,
+);
 await pointer.click(...on_view(col, row));
 await frames(3);
 expect(build.placing() === undefined, "the tool put away once the toilet stands");
-if (ui.find("info") !== undefined)
-    await ui.click("info/close");
+if (ui.find("info") !== undefined) await ui.click("info/close");
 const at = rides.list().findIndex((r) => r.symbol === `${kind.symbol}:sat`);
 expect(at >= 0, `a ${kind.symbol}:sat among the rides, not ${JSON.stringify(rides.list().map((r) => r.symbol))}`);
 const toilet = () => rides.list()[at];
@@ -69,7 +75,15 @@ async function route(a: [number, number], b: [number, number]): Promise<void> {
         await pointer.click(...on_view(...b));
     }
     await ui.toggle("footpaths/route", false);
-    expect(has_path(...a) && has_path(...b), `a path from ${a} to ${b}, laid ${JSON.stringify(map.paths().filter((p) => Math.abs(p.col - a[0]) + Math.abs(p.row - a[1]) < 8).map((p) => [p.col, p.row]))}`);
+    expect(
+        has_path(...a) && has_path(...b),
+        `a path from ${a} to ${b}, laid ${JSON.stringify(
+            map
+                .paths()
+                .filter((p) => Math.abs(p.col - a[0]) + Math.abs(p.row - a[1]) < 8)
+                .map((p) => [p.col, p.row]),
+        )}`,
+    );
 }
 
 // At its corner: not joined.
@@ -81,7 +95,10 @@ expect(!toilet().joined, `a path at the toilet's corner not taken, not ${JSON.st
 await route([col - 3, row], [col - 1, row]);
 await until(() => toilet().joined === true, 60, "the toilet joined by the path at its side");
 log("served from", JSON.stringify(toilet().servedFrom));
-expect(toilet().servedFrom?.col === col - 1 && toilet().servedFrom?.row === row, `it served from the path at its side, not ${JSON.stringify(toilet().servedFrom)}`);
+expect(
+    toilet().servedFrom?.col === col - 1 && toilet().servedFrom?.row === row,
+    `it served from the path at its side, not ${JSON.stringify(toilet().servedFrom)}`,
+);
 await ui.click("footpaths/close");
 await frames(3);
 camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col - 6.5, row: row + 8.5, up: 14 });
@@ -95,7 +112,18 @@ park.dropParties(40, 3);
 await park.advanceUntil(() => (toilet().customers ?? 0) > 0, 600, "a guest using the toilet");
 log("customers", toilet().customers);
 // One going in, close up at the door: they step in and are out of sight inside.
-const user = () => people.list().find((p) => p.state === "buying" && p.at !== null && p.at.col >= col - 1 && p.at.col <= col + kind.width && p.at.row >= row - 1 && p.at.row <= row + kind.length);
+const user = () =>
+    people
+        .list()
+        .find(
+            (p) =>
+                p.state === "buying" &&
+                p.at !== null &&
+                p.at.col >= col - 1 &&
+                p.at.col <= col + kind.width &&
+                p.at.row >= row - 1 &&
+                p.at.row <= row + kind.length,
+        );
 await park.advanceUntil(() => user() !== undefined, 600, "a guest going into the toilet");
 park.setTime(0.5); // Shown by day
 await frames(20);
@@ -110,8 +138,7 @@ await ui.click("tools/Files/File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
 await ui.click("park_files/content/open");
 await until(() => ui.find("park_files") === undefined, 120, "the save window to close");
-if (!ui.find("tools/Files/File_LoadGame"))
-    await click_tool("Files");
+if (!ui.find("tools/Files/File_LoadGame")) await click_tool("Files");
 await until(() => ui.find("tools/Files/File_LoadGame") !== undefined, 120, "the files menu");
 await ui.click("tools/Files/File_LoadGame");
 // Loading asks first whether to save; the park was saved just now.
@@ -123,10 +150,22 @@ await ui.click(first);
 await ui.click("park_files/content/open");
 await until(() => park.loaded() && rides.list().some((r) => r.symbol === `${kind.symbol}:sat`), 1200, "the saved park");
 await frames(10);
-const again = must(rides.list().find((r) => r.symbol === `${kind.symbol}:sat`), "the toilet after loading");
-log("loaded", JSON.stringify({ site: again.site, joined: again.joined, servedFrom: again.servedFrom, open: again.open }));
-expect(again.site?.col === col && again.site?.row === row, `the toilet where it stood, not ${JSON.stringify(again.site)}`);
-expect(again.joined && again.servedFrom?.col === col - 1 && again.servedFrom?.row === row, `it joined to the same path, not ${JSON.stringify(again.servedFrom)}`);
+const again = must(
+    rides.list().find((r) => r.symbol === `${kind.symbol}:sat`),
+    "the toilet after loading",
+);
+log(
+    "loaded",
+    JSON.stringify({ site: again.site, joined: again.joined, servedFrom: again.servedFrom, open: again.open }),
+);
+expect(
+    again.site?.col === col && again.site?.row === row,
+    `the toilet where it stood, not ${JSON.stringify(again.site)}`,
+);
+expect(
+    again.joined && again.servedFrom?.col === col - 1 && again.servedFrom?.row === row,
+    `it joined to the same path, not ${JSON.stringify(again.servedFrom)}`,
+);
 park.setTime(0.5); // Shown by day
 await look_down(col, row, 30);
 await screenshot("facility_path_loaded");

@@ -11,18 +11,35 @@ export {};
 
 // Each with the pieces its file holds, so the one laid is known to be the one picked.
 const kDesigns: [string, string, number][] = [
-    ["BodySlide", "Crossover", 33], ["BodySlide", "DareDevil", 23], ["BodySlide", "Flyover Falls", 33], ["BodySlide", "Reef Rider", 21],
-    ["BodySlide", "Splashback", 29], ["BodySlide", "Torpedo", 25],
-    ["RingSlide", "Seawave", 54], ["RingSlide", "Splash Down", 34], ["RingSlide", "Undertow", 56],
-    ["ProSlide", "Drop Out", 18], ["ProSlide", "Orange Bowl", 27], ["ProSlide", "The Frightful Funnel", 21], ["ProSlide", "The Juicer", 23],
+    ["BodySlide", "Crossover", 33],
+    ["BodySlide", "DareDevil", 23],
+    ["BodySlide", "Flyover Falls", 33],
+    ["BodySlide", "Reef Rider", 21],
+    ["BodySlide", "Splashback", 29],
+    ["BodySlide", "Torpedo", 25],
+    ["RingSlide", "Seawave", 54],
+    ["RingSlide", "Splash Down", 34],
+    ["RingSlide", "Undertow", 56],
+    ["ProSlide", "Drop Out", 18],
+    ["ProSlide", "Orange Bowl", 27],
+    ["ProSlide", "The Frightful Funnel", 21],
+    ["ProSlide", "The Juicer", 23],
     ["ProSlide", "The Vortex", 9],
-    ["MasterBlaster", "Aqua Launch", 26], ["MasterBlaster", "Blasted", 61], ["MasterBlaster", "Journey to the deep", 73],
-    ["MasterBlaster", "Slipstream", 69], ["MasterBlaster", "Tubular", 63],
+    ["MasterBlaster", "Aqua Launch", 26],
+    ["MasterBlaster", "Blasted", 61],
+    ["MasterBlaster", "Journey to the deep", 73],
+    ["MasterBlaster", "Slipstream", 69],
+    ["MasterBlaster", "Tubular", 63],
 ];
 
 const kPool = "Pool/Default/Default_Stub";
 let here: [number, number] = [0, 0]; // Where the pointer was last moved for a ghost
-const kSteps: [number, number][] = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // By side, as the pools count them
+const kSteps: [number, number][] = [
+    [0, 1],
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+]; // By side, as the pools count them
 
 /** Moves the pointer until the design in hand has its first piece on tile `goal`; whether it does. */
 async function aim(goal: { col: number; row: number }): Promise<boolean> {
@@ -35,10 +52,8 @@ async function aim(goal: { col: number; row: number }): Promise<boolean> {
         pointer.move(...here);
         await frames(4);
         const g = build.construction()?.ghostAt;
-        if (!g)
-            return false;
-        if (g.col === goal.col && g.row === goal.row)
-            return true;
+        if (!g) return false;
+        if (g.col === goal.col && g.row === goal.row) return true;
         at = { col: at.col + goal.col - g.col, row: at.row + goal.row - g.row };
     }
     return false;
@@ -54,8 +69,7 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
     await ui.click("design_placing/close");
     await frames(5);
     const rides_tab = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
-    if (!ui.find("tools/Rides/Obj_Pools"))
-        await ui.click(rides_tab);
+    if (!ui.find("tools/Rides/Obj_Pools")) await ui.click(rides_tab);
     await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
     await ui.click("tools/Rides/Obj_Pools");
     await until(() => ui.find("pool_panel/body/editor/Pool_PlaceWater") !== undefined, 120, "the pool panel");
@@ -110,8 +124,7 @@ for (const [kind, design, size] of kDesigns) {
     if (!spot || (build.construction()!.refusal !== "" && !(await byPool(pick)))) {
         log("DESIGN", kind, design, "no clear ground", build.construction()?.refusal);
         failed.push(`${design}: no clear ground`);
-        if (build.construction() !== undefined)
-            await ui.click("design_placing/close");
+        if (build.construction() !== undefined) await ui.click("design_placing/close");
         continue;
     }
     // Laid, its building closes and its window opens.
@@ -147,7 +160,16 @@ for (const [kind, design, size] of kDesigns) {
         await park.advance(1 / 30);
         watch();
         for (const [i, t] of (info().trainsAt ?? []).entries())
-            log("TRACE", `${kind}/${design}`, (k / 30).toFixed(3), i, t.front.toFixed(3), t.speed.toFixed(3), (t.lean ?? 0).toFixed(4), t.station ?? "-");
+            log(
+                "TRACE",
+                `${kind}/${design}`,
+                (k / 30).toFixed(3),
+                i,
+                t.front.toFixed(3),
+                t.speed.toFixed(3),
+                (t.lean ?? 0).toFixed(4),
+                t.station ?? "-",
+            );
     }
     const tested = info().crashes ?? 0;
     const refused = rides.setState(slide, "open");
@@ -165,7 +187,11 @@ for (const [kind, design, size] of kDesigns) {
         camera.look({ col: at.col, row: at.row, up: at.up + 1 }, { col: at.col + 5, row: at.row + 5, up: at.up + 4 });
         await until(() => landing() === undefined, 2400, "the splash settled");
         const length = info().trackLength ?? 0;
-        await until(() => (info().trainsAt ?? []).some((t) => t.station === null && t.front > length - 1 && t.speed > 1), 2400, "the next car at the end");
+        await until(
+            () => (info().trainsAt ?? []).some((t) => t.station === null && t.front > length - 1 && t.speed > 1),
+            2400,
+            "the next car at the end",
+        );
         await frames(8);
         await screenshot("slide_designs_flying");
         await until(() => landing() !== undefined, 600, "the car down off the end");
@@ -175,13 +201,29 @@ for (const [kind, design, size] of kDesigns) {
     }
     const crashes = info().crashes ?? 0;
     const moving = info().moving ?? 0;
-    log("DESIGN", kind, design, "result pieces", info().pieces, "top speed", top.toFixed(1), "most lean", lean.toFixed(2),
-        "crashes", crashes, "while tested", tested, "test", state ?? "ok", "open", refused ?? "ok", "moving", moving);
-    if (info().pieces !== size)
-        failed.push(`${design}: ${info().pieces} of ${size} pieces laid`);
-    if (crashes > 0)
-        failed.push(`${design}: ${crashes} crashes`);
-    if (state != null)
-        failed.push(`${design}: not tested (${state})`);
+    log(
+        "DESIGN",
+        kind,
+        design,
+        "result pieces",
+        info().pieces,
+        "top speed",
+        top.toFixed(1),
+        "most lean",
+        lean.toFixed(2),
+        "crashes",
+        crashes,
+        "while tested",
+        tested,
+        "test",
+        state ?? "ok",
+        "open",
+        refused ?? "ok",
+        "moving",
+        moving,
+    );
+    if (info().pieces !== size) failed.push(`${design}: ${info().pieces} of ${size} pieces laid`);
+    if (crashes > 0) failed.push(`${design}: ${crashes} crashes`);
+    if (state != null) failed.push(`${design}: not tested (${state})`);
 }
 expect(failed.length === 0, `every design laid and run with no crash, not: ${failed.join("; ")}`);

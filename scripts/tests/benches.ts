@@ -14,7 +14,10 @@ await until(() => build.flatRides() !== undefined, 1200, "the build lists");
 const paths = map.paths();
 const gate = paths.reduce((a, b) => (b.row > a.row ? b : a));
 // Three tiles of the road in from the entrance, clear of the entrance itself.
-const road = paths.filter((p) => p.col === gate.col && p.row < gate.row - 1).sort((a, b) => b.row - a.row).slice(0, 3);
+const road = paths
+    .filter((p) => p.col === gate.col && p.row < gate.row - 1)
+    .sort((a, b) => b.row - a.row)
+    .slice(0, 3);
 expect(road.length === 3, `3 tiles of road, not ${road.length}`);
 camera.look({ col: gate.col + 0.5, row: gate.row - 2.5 }, { col: gate.col + 0.5, row: gate.row + 6.5, up: 25 });
 await frames(3);
@@ -28,7 +31,10 @@ for (const tile of road)
         expect(at !== undefined, `tile ${tile.col},${tile.row} in sight`);
         pointer.move(at!.x, at!.y);
         await frames(3);
-        expect(build.placing()?.problem === "none", `a bench placeable at ${tile.col + side},${tile.row}, not ${build.placing()?.problem}`);
+        expect(
+            build.placing()?.problem === "none",
+            `a bench placeable at ${tile.col + side},${tile.row}, not ${build.placing()?.problem}`,
+        );
         await pointer.click(at!.x, at!.y);
         await frames(2);
     }
@@ -44,17 +50,30 @@ const sitters = () => people.list().filter((p) => p.state === "sitting");
 /** The sitters on each bench. */
 const pairs = () => {
     const byBench = new Map<number, ReturnType<typeof sitters>>();
-    for (const p of sitters())
-        byBench.set(p.bench!, [...(byBench.get(p.bench!) ?? []), p]);
+    for (const p of sitters()) byBench.set(p.bench!, [...(byBench.get(p.bench!) ?? []), p]);
     return [...byBench.values()];
 };
 let most = 0;
-await park.advanceUntil(() => {
-    most = Math.max(most, ...pairs().map((b) => b.length), 0);
-    return pairs().some((b) => b.length === 2 && b.every((p) => !p.rising));
-}, 600, "two guests sitting side by side");
-const pair = must(pairs().find((b) => b.length === 2), "two sitting on one bench");
-log("sitting", sitters().length, "pair on seats", pair.map((p) => `${p.seat} at ${p.col!.toFixed(2)},${p.row!.toFixed(2)},${p.up!.toFixed(2)}`).join("; "), "road column", gate.col);
+await park.advanceUntil(
+    () => {
+        most = Math.max(most, ...pairs().map((b) => b.length), 0);
+        return pairs().some((b) => b.length === 2 && b.every((p) => !p.rising));
+    },
+    600,
+    "two guests sitting side by side",
+);
+const pair = must(
+    pairs().find((b) => b.length === 2),
+    "two sitting on one bench",
+);
+log(
+    "sitting",
+    sitters().length,
+    "pair on seats",
+    pair.map((p) => `${p.seat} at ${p.col!.toFixed(2)},${p.row!.toFixed(2)},${p.up!.toFixed(2)}`).join("; "),
+    "road column",
+    gate.col,
+);
 expect(new Set(pair.map((p) => p.seat)).size === 2, "the two on different seats");
 expect(most <= 2, `no more than two on a bench, not ${most}`);
 
@@ -70,6 +89,14 @@ await frames(10);
 await screenshot("benches_pair_later");
 
 // Rested, they get up again.
-await park.advanceUntil(() => people.list().some((p) => p.state === "sitting" && p.rising === true), 900, "a guest getting up");
-await park.advanceUntil(() => sitters().length === 0 || people.list().filter((p) => p.state === "walking").length > 0, 120, "guests walking on");
+await park.advanceUntil(
+    () => people.list().some((p) => p.state === "sitting" && p.rising === true),
+    900,
+    "a guest getting up",
+);
+await park.advanceUntil(
+    () => sitters().length === 0 || people.list().filter((p) => p.state === "walking").length > 0,
+    120,
+    "guests walking on",
+);
 quit(0);

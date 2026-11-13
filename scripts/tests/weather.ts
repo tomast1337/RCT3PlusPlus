@@ -16,7 +16,10 @@ expect(start.forecast !== "", "a forecast from the park file");
 
 // A view over the park's middle, looking across it.
 const size = map.size();
-camera.look({ col: size.width / 2, row: size.height / 2 }, { col: size.width / 2 - 12, row: size.height / 2 - 12, up: 10 });
+camera.look(
+    { col: size.width / 2, row: size.height / 2 },
+    { col: size.width / 2 - 12, row: size.height / 2 - 12, up: 10 },
+);
 
 park.setWeather("sunny");
 await until(() => park.weatherLook().gloom === 0 && park.weatherLook().rain === 0, 3000, "the sky to clear");

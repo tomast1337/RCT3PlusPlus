@@ -11,7 +11,7 @@ pointer.drag = async (from, to, count = 10, button) => {
     pointer.press(button);
     for (let i = 1; i <= count; ++i) {
         await frames(1);
-        pointer.move(from[0] + (to[0] - from[0]) * i / count, from[1] + (to[1] - from[1]) * i / count);
+        pointer.move(from[0] + ((to[0] - from[0]) * i) / count, from[1] + ((to[1] - from[1]) * i) / count);
     }
     await frames(1);
     pointer.release(button);
@@ -59,7 +59,7 @@ ui.click = async (path) => {
     // The park asked for loads as the frame ends.
     const open = park.open;
     park.open = async (path, settings) => {
-        open(path, settings ?? { });
+        open(path, settings ?? {});
         await frames(1);
         await park.ready();
     };

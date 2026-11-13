@@ -18,7 +18,12 @@ park.setTemperature(28);
 park.setTime(0.5);
 const kPool = "Pool/Default/Default_Stub";
 let here: [number, number] = [0, 0]; // Where the pointer was last moved for a ghost
-const kSteps: [number, number][] = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // By side, as the pools count them
+const kSteps: [number, number][] = [
+    [0, 1],
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+]; // By side, as the pools count them
 
 /** Moves the pointer until the design in hand has its first piece on tile `goal`; whether it does. */
 async function aim(goal: { col: number; row: number }): Promise<boolean> {
@@ -31,10 +36,8 @@ async function aim(goal: { col: number; row: number }): Promise<boolean> {
         pointer.move(...here);
         await frames(4);
         const g = build.construction()?.ghostAt;
-        if (!g)
-            return false;
-        if (g.col === goal.col && g.row === goal.row)
-            return true;
+        if (!g) return false;
+        if (g.col === goal.col && g.row === goal.row) return true;
         at = { col: at.col + goal.col - g.col, row: at.row + goal.row - g.row };
     }
     return false;
@@ -50,8 +53,7 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
     await ui.click("design_placing/close");
     await frames(5);
     const rides_tab = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
-    if (!ui.find("tools/Rides/Obj_Pools"))
-        await ui.click(rides_tab);
+    if (!ui.find("tools/Rides/Obj_Pools")) await ui.click(rides_tab);
     await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
     await ui.click("tools/Rides/Obj_Pools");
     await until(() => ui.find("pool_panel/body/editor/Pool_PlaceWater") !== undefined, 120, "the pool panel");
@@ -73,7 +75,8 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
     return (await aim(at)) && build.construction()?.refusal === "";
 }
 
-const rivers = () => rides.list().flatMap((r, i) => (!r.flat && !r.demolished && /lazyriver/i.test(r.symbol) ? [i] : []));
+const rivers = () =>
+    rides.list().flatMap((r, i) => (!r.flat && !r.demolished && /lazyriver/i.test(r.symbol) ? [i] : []));
 const river = rivers()[0];
 expect(river !== undefined, "a lazy river in the park");
 const info = () => rides.list()[river];
@@ -85,11 +88,24 @@ const refused = rides.setState(river, "open");
 expect(refused == null, `the river opened, not refused with ${refused}`);
 await until(() => (info().riverJoined ?? 0) > 0, 60, "a station joined to a pool complex");
 const squares = info().riverSquares!;
-log("river", info().name, "stations", info().riverStations, "joined", info().riverJoined, "squares", JSON.stringify(squares));
+log(
+    "river",
+    info().name,
+    "stations",
+    info().riverStations,
+    "joined",
+    info().riverJoined,
+    "squares",
+    JSON.stringify(squares),
+);
 expect(info().entrance == null && info().exit == null, "no entrance or exit");
-const near = (p: { col?: number; row?: number }, by: number) => squares.some((s) => Math.hypot(p.col! - s.col, p.row! - s.row) <= by);
+const near = (p: { col?: number; row?: number }, by: number) =>
+    squares.some((s) => Math.hypot(p.col! - s.col, p.row! - s.row) <= by);
 const square = squares[0];
-camera.look({ col: square.col, row: square.row, up: square.up }, { col: square.col + 4, row: square.row + 4, up: square.up + 6 });
+camera.look(
+    { col: square.col, row: square.row, up: square.up },
+    { col: square.col + 4, row: square.row + 4, up: square.up + 6 },
+);
 await frames(20);
 await screenshot("river_station_joined");
 
@@ -106,8 +122,7 @@ for (let second = 0; second < 600 && (boarded.length < 2 || off.length < 2); ++s
     // Known by name; the few names two people share are left out.
     const all = people.list();
     const named = new Map<string, number>();
-    for (const p of all)
-        named.set(p.name, (named.get(p.name) ?? 0) + 1);
+    for (const p of all) named.set(p.name, (named.get(p.name) ?? 0) + 1);
     const now = all.filter((p) => named.get(p.name) === 1);
     const floating_now = new Set(now.filter((p) => p.floating !== undefined && p.ride === river).map((p) => p.name));
     for (const p of now) {
@@ -118,7 +133,10 @@ for (let second = 0; second < 600 && (boarded.length < 2 || off.length < 2); ++s
             expect(near(was, 1.5), `${p.name} on from beside a joined square, not from ${JSON.stringify(was)}`);
             boarded.push(p.name);
             if (!boarding_shot) {
-                camera.look({ col: square.col, row: square.row, up: square.up }, { col: square.col + 3, row: square.row + 3, up: square.up + 4 });
+                camera.look(
+                    { col: square.col, row: square.row, up: square.up },
+                    { col: square.col + 3, row: square.row + 3, up: square.up + 4 },
+                );
                 await frames(10);
                 await screenshot("river_boarding");
                 boarding_shot = true;
@@ -133,13 +151,15 @@ for (let second = 0; second < 600 && (boarded.length < 2 || off.length < 2); ++s
         before.set(p.name, { col: p.col, row: p.row });
     }
     aboard = floating_now;
-    if (second % 30 === 0)
-        riders.push(info().riders ?? 0);
+    if (second % 30 === 0) riders.push(info().riders ?? 0);
 }
 log("riders every 30 s", riders.join(" "), "boarded", boarded.length, "off", off.length, "customers", info().customers);
 expect(boarded.length > 0, "a swimmer getting on from beside a station");
 expect(off.length > 0, "a rider getting off onto a joined square");
-expect(riders.every((n) => n > 0), `riders floating round all along, not ${riders.join(" ")}`);
+expect(
+    riders.every((n) => n > 0),
+    `riders floating round all along, not ${riders.join(" ")}`,
+);
 expect(info().open === true, "the river still open");
 
 // 3. A pool ride laid from a saved design away from the park's pools, a ring slide (the river's own saved design does not
@@ -147,7 +167,10 @@ expect(info().open === true, "the river still open");
 // a pool.
 await until(() => build.flatRides() !== undefined, 1200, "the build lists");
 const pick = async () => {
-    expect(build.pick("tracks/TrackedRides/RingSlide/RingSlide", "RingSlide", "designs"), "a ring slide design to build");
+    expect(
+        build.pick("tracks/TrackedRides/RingSlide/RingSlide", "RingSlide", "designs"),
+        "a ring slide design to build",
+    );
     await until(() => ui.find("design_browser") !== undefined, 600, "the designs window");
     await frames(3);
     const row = build.construction()!.designs.findIndex((d) => d.includes("Undertow"));
@@ -194,9 +217,16 @@ expect(why === "CantOpenPoolRideNoEntrance", `the slide refused till joined to a
 expect(rides.list()[built].entrance == null, "the slide with no entrance");
 
 // 4. Its window offers no entrance or exit to place.
-camera.look({ col: square.col, row: square.row, up: square.up }, { col: square.col + 6, row: square.row + 6, up: square.up + 10 });
+camera.look(
+    { col: square.col, row: square.row, up: square.up },
+    { col: square.col + 6, row: square.row + 6, up: square.up + 10 },
+);
 rides.show(river);
 await until(() => rides.shown()?.ride === river, 60, "the river's window");
 await frames(10);
-expect(ui.find("info/body/Attraction_General_Entrance") === undefined && ui.find("info/body/Attraction_General_Exit") === undefined, "no entrance or exit buttons for the river");
+expect(
+    ui.find("info/body/Attraction_General_Entrance") === undefined &&
+        ui.find("info/body/Attraction_General_Exit") === undefined,
+    "no entrance or exit buttons for the river",
+);
 await screenshot("river_window");

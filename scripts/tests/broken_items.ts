@@ -11,10 +11,17 @@ export {};
 /** The path of the widget named `name` somewhere under `path`. */
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "the build lists");
+await until(
+    () => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined,
+    1200,
+    "the build lists",
+);
 const paths = map.paths();
 const gate = paths.reduce((a, b) => (b.row > a.row ? b : a));
-const road = paths.filter((p) => p.col === gate.col && p.row < gate.row - 1).sort((a, b) => b.row - a.row).slice(0, 3);
+const road = paths
+    .filter((p) => p.col === gate.col && p.row < gate.row - 1)
+    .sort((a, b) => b.row - a.row)
+    .slice(0, 3);
 expect(road.length === 3, `3 tiles of road, not ${road.length}`);
 camera.look({ col: gate.col + 0.5, row: gate.row - 3.5 }, { col: gate.col + 3.5, row: gate.row + 1.5, up: 6 });
 await frames(3);
@@ -43,7 +50,11 @@ const before = park.cash();
 await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Park") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Park");
-await until(() => under("PID_Title", "Staff_JobIsMaintenanceIcon") !== undefined, 120, "the park window's replace button");
+await until(
+    () => under("PID_Title", "Staff_JobIsMaintenanceIcon") !== undefined,
+    120,
+    "the park window's replace button",
+);
 const replace = must(under("PID_Title", "Staff_JobIsMaintenanceIcon"), "Staff_JobIsMaintenanceIcon under PID_Title");
 for (let tries = 0; tries < 10 && broken() > 0; ++tries) {
     await ui.click(replace);

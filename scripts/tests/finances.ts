@@ -28,8 +28,7 @@ async function tab(icon: string): Promise<void> {
 
 async function close(): Promise<void> {
     const button = under(kWindow, "close");
-    if (button !== undefined)
-        await ui.click(button);
+    if (button !== undefined) await ui.click(button);
     await until(() => ui.find(kWindow) === undefined, 120, "the finances window to close");
 }
 
@@ -72,7 +71,10 @@ for (let notch = 0; notch < 3; ++notch) {
     await frames(2);
 }
 await frames(90);
-expect((must(ui.find(must(under(kWindow, "graph"), `graph under ${kWindow}`)), "graph shown").tooltip ?? "").includes(":"), "a readout under the pointer");
+expect(
+    (must(ui.find(must(under(kWindow, "graph"), `graph under ${kWindow}`)), "graph shown").tooltip ?? "").includes(":"),
+    "a readout under the pointer",
+);
 log("readout", must(ui.find(must(under(kWindow, "graph"), `graph under ${kWindow}`)), "graph shown").tooltip);
 await screenshot("graphs_zoomed");
 await ui.click(must(under(kWindow, "range2"), `range2 under ${kWindow}`));
@@ -81,7 +83,15 @@ await screenshot("graphs_all");
 // The loan's bar dragged to its end borrows up to the most, and back repays.
 await tab("Attraction_Finances");
 const loan_before = park.loan();
-const bar = must(ui.find(must(under(must(under(kWindow, "controls"), `controls under ${kWindow}`), "FinancialSummary_Loan"), "FinancialSummary_Loan")), "the widget shown");
+const bar = must(
+    ui.find(
+        must(
+            under(must(under(kWindow, "controls"), `controls under ${kWindow}`), "FinancialSummary_Loan"),
+            "FinancialSummary_Loan",
+        ),
+    ),
+    "the widget shown",
+);
 // Past its end, a little: the pointer goes by shares of the screen.
 await pointer.drag([bar.x, bar.y], [bar.right + 0.02, bar.y], 10);
 await frames(70);
@@ -101,7 +111,10 @@ await close();
 // The original layout: the summary and the graphs only.
 options.set("original_finances", 1);
 await open_finances();
-expect(under(kWindow, "CashGraphTabIcon") !== undefined && under(kWindow, "Man_Finances") === undefined, "the original's two tabs");
+expect(
+    under(kWindow, "CashGraphTabIcon") !== undefined && under(kWindow, "Man_Finances") === undefined,
+    "the original's two tabs",
+);
 await screenshot("original_layout");
 options.set("original_finances", 0);
 quit(0);

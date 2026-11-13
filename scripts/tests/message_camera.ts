@@ -33,7 +33,10 @@ async function clickNewest(): Promise<void> {
         await frames(30);
     }
     const open = must(ui.find("messages"), "messages shown");
-    await pointer.click(open.left + ((open.right - open.left) * camera.fromLeft) / drawerWidth, open.bottom - ((open.bottom - open.top) * camera.fromBottom) / drawerOpen);
+    await pointer.click(
+        open.left + ((open.right - open.left) * camera.fromLeft) / drawerWidth,
+        open.bottom - ((open.bottom - open.top) * camera.fromBottom) / drawerOpen,
+    );
     await frames(30);
 }
 

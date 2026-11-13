@@ -35,7 +35,10 @@ for (const level of ["ChequeredFlag", "TheMoneyPit"]) {
     await until(() => park.vips().length === 1, 120, `${level}: the VIP to come in`);
     const vip = park.vips()[0];
     expect(vip.name.length > 0, `${level}: the VIP to have a name`);
-    expect(park.messages().at(-1)!.key === "VIP_ArrivedInPark" && park.messages().at(-1)!.name === vip.name, `${level}: the arrival told by name`);
+    expect(
+        park.messages().at(-1)!.key === "VIP_ArrivedInPark" && park.messages().at(-1)!.name === vip.name,
+        `${level}: the arrival told by name`,
+    );
     await until(() => park.vips()[0].shown !== null, 600, `${level}: the VIP to be dressed and shown`);
     const at = park.vips()[0];
     camera.look({ col: at.col, row: at.row });
@@ -54,15 +57,21 @@ for (const level of ["ChequeredFlag", "TheMoneyPit"]) {
     park.setDate(goal!.next + goal!.months * kMonth);
     await until(() => park.vips().length === 0 || park.vips()[0].leaving, 600, `${level}: the VIP to head home`);
     expect(keys().includes("VIP_IsLeavingPark"), `${level}: the leaving told`);
-    await until(() => keys().includes("VIPCondition_Success") || keys().includes("VIPCondition_Failure"), 20000, `${level}: the visit judged`);
+    await until(
+        () => keys().includes("VIPCondition_Success") || keys().includes("VIPCondition_Failure"),
+        20000,
+        `${level}: the visit judged`,
+    );
     const told = keys().slice(posted);
     log(level, JSON.stringify(told));
     expect(told.includes("VIP_LeftPark"), `${level}: the VIP's going told`);
-    const after = must(park.vipGoals().find((g) => g.level === 0), "the first VIP goal");
+    const after = must(
+        park.vipGoals().find((g) => g.level === 0),
+        "the first VIP goal",
+    );
     if (told.includes("VIPCondition_Failure"))
         expect(!after.met && after.next > park.date(), `${level}: another visit after one that went badly`);
-    else
-        expect(after.met, `${level}: the goal met`);
+    else expect(after.met, `${level}: the goal met`);
     await screenshot(`${level}_judged`);
 }
 quit(0);

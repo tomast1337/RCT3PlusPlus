@@ -13,22 +13,30 @@ export {};
 const kPool = "Pool/Default/Default_Stub";
 
 // The neighbours as the pool walls count them: the four sides by turn, then the corners after each side.
-const kAround: [number, number][] = [[0, 1], [1, 0], [0, -1], [-1, 0], [1, 1], [1, -1], [-1, -1], [-1, 1]];
+const kAround: [number, number][] = [
+    [0, 1],
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+    [1, 1],
+    [1, -1],
+    [-1, -1],
+    [-1, 1],
+];
 const cases: { label: string; rows: string[] }[] = [];
 const seen = new Set<number>();
-for (let mask = 0; mask < 256; ++mask)
-{
+for (let mask = 0; mask < 256; ++mask) {
     let m = mask & 0x0f;
-    for (let t = 0; t < 4; ++t)
-        if ((mask & (16 << t)) && (mask & (1 << t)) && (mask & (1 << ((t + 1) & 3))))
-            m |= 16 << t;
-    if (seen.has(m))
-        continue;
+    for (let t = 0; t < 4; ++t) if (mask & (16 << t) && mask & (1 << t) && mask & (1 << ((t + 1) & 3))) m |= 16 << t;
+    if (seen.has(m)) continue;
     seen.add(m);
-    const rows = [[".", ".", "."], [".", "#", "."], [".", ".", "."]];
+    const rows = [
+        [".", ".", "."],
+        [".", "#", "."],
+        [".", ".", "."],
+    ];
     kAround.forEach(([dc, dr], bit) => {
-        if (m & (1 << bit))
-            rows[1 + dr][1 + dc] = "#";
+        if (m & (1 << bit)) rows[1 + dr][1 + dc] = "#";
     });
     cases.push({ label: `mask ${m.toString(2).padStart(8, "0")}`, rows: rows.map((r) => r.join("")) });
 }
@@ -45,8 +53,7 @@ const shapes: { label: string; rows: string[] }[] = [
 // Rows of blocks, each block its pattern and one square of paving round it.
 const kPerRow = 8;
 const sections: { label: string; rows: string[] }[][] = [];
-for (let i = 0; i < cases.length; i += kPerRow)
-    sections.push(cases.slice(i, i + kPerRow));
+for (let i = 0; i < cases.length; i += kPerRow) sections.push(cases.slice(i, i + kPerRow));
 sections.push(shapes.slice(0, 4), shapes.slice(4));
 const kCell = 7;
 const width = kPerRow * kCell + 1;
@@ -59,19 +66,15 @@ const size = map.size();
 const flat = (c: number, r: number) => {
     const level = map.tile(c, r)?.corners[0] ?? 0;
     for (let row = r - 1; row <= r + height; ++row)
-        for (let col = c - 1; col <= c + width; ++col)
-        {
+        for (let col = c - 1; col <= c + width; ++col) {
             const tile = map.tile(col, row);
-            if (!tile?.owned || tile.water !== undefined || tile.corners.some((h) => h !== level))
-                return false;
+            if (!tile?.owned || tile.water !== undefined || tile.corners.some((h) => h !== level)) return false;
         }
     return true;
 };
 let site: { col: number; row: number } | undefined;
 for (let r = 12; r < size.height - height - 2 && !site; r += 3)
-    for (let c = 12; c < size.width - width - 2 && !site; c += 3)
-        if (flat(c, r))
-            site = { col: c, row: r };
+    for (let c = 12; c < size.width - width - 2 && !site; c += 3) if (flat(c, r)) site = { col: c, row: r };
 expect(site !== undefined, "flat ground for the grid");
 const c0 = site!.col;
 const r0 = site!.row;
@@ -79,21 +82,29 @@ log("grid at", c0, r0);
 
 const rides = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
 await until(() => build.flatRides() !== undefined, 1200, "the build items");
-if (!ui.find("tools/Rides/Obj_Pools"))
-    await ui.click(rides);
+if (!ui.find("tools/Rides/Obj_Pools")) await ui.click(rides);
 await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
 await ui.click("tools/Rides/Obj_Pools");
 await until(() => ui.find("pool_panel/body/editor/Pool_PlaceWater") !== undefined, 120, "the pool panel");
 
-const water = () => map.objects().filter((o) => o.overlay === kPool && o.symbol === "Base" && o.col >= c0 && o.col < c0 + width && o.row >= r0 && o.row < r0 + height).length;
+const water = () =>
+    map
+        .objects()
+        .filter(
+            (o) =>
+                o.overlay === kPool &&
+                o.symbol === "Base" &&
+                o.col >= c0 &&
+                o.col < c0 + width &&
+                o.row >= r0 &&
+                o.row < r0 + height,
+        ).length;
 
 let laid = 0;
-for (let s = 0; s < sections.length; ++s)
-{
+for (let s = 0; s < sections.length; ++s) {
     const top = r0 + s * kCell;
     const mid = top + kCell / 2;
-    for (const [i, block] of sections[s].entries())
-    {
+    for (const [i, block] of sections[s].entries()) {
         log(`row ${s} block ${i}: ${block.label}`);
         // The block's paving, then its water, square by square, with the block in sight.
         const left = c0 + i * kCell;
@@ -105,8 +116,7 @@ for (let s = 0; s < sections.length; ++s)
         expect(build.pick(kPool, "Pool_DepthNormal"), "the water in the pool list");
         for (const [dr, line] of block.rows.entries())
             for (let dc = 0; dc < line.length; ++dc)
-                if (line[dc] === "#")
-                {
+                if (line[dc] === "#") {
                     const at = on_view(left + 1 + dc + 0.5, top + 1 + dr + 0.5);
                     await pointer.drag(at, at, 2);
                     await frames(2);
@@ -121,8 +131,7 @@ log("water squares", laid);
 // Each block on its own, from above at a slant, once the prices shown for laying it are gone.
 await frames(150);
 for (let s = 0; s < sections.length; ++s)
-    for (const [i, block] of sections[s].entries())
-    {
+    for (const [i, block] of sections[s].entries()) {
         const col = c0 + i * kCell + 1 + block.rows[0].length / 2;
         const row = r0 + s * kCell + 1 + block.rows.length / 2;
         camera.look({ col, row }, { col, row: row + 3, up: 6 });

@@ -25,14 +25,12 @@ const owned: [number, number][] = [];
 for (let col = 0; col < width; ++col)
     for (let row = 0; row < height; ++row) {
         const kind = map.tile(col, row)!.ownership;
-        if (kind === "locked")
-            held.push([col, row]);
-        else if (kind === "owned")
-            owned.push([col, row]);
+        if (kind === "locked") held.push([col, row]);
+        else if (kind === "owned") owned.push([col, row]);
     }
 log("held back", held.length, "owned", owned.length);
 expect(held.length > 0, "land held back");
-const distance = (t: [number, number]) => Math.min(...owned.map(o => Math.abs(o[0] - t[0]) + Math.abs(o[1] - t[1])));
+const distance = (t: [number, number]) => Math.min(...owned.map((o) => Math.abs(o[0] - t[0]) + Math.abs(o[1] - t[1])));
 const [col, row] = held.reduce((best, t) => (distance(t) < distance(best) ? t : best));
 
 await click_tool("Map");
@@ -45,7 +43,10 @@ await until(() => ui.find("prize_won") !== undefined, 120, "the prize box");
 await screenshot("prize_box");
 await ui.click(`prize_won/${must(ui.children("prize_won"), "prize_won shown").at(-1)!}`);
 await until(() => ui.find("prize_won") === undefined, 120, "the box to close");
-expect(held.every(([c, r]) => map.tile(c, r)!.ownership === "for sale"), "the held back land on sale");
+expect(
+    held.every(([c, r]) => map.tile(c, r)!.ownership === "for sale"),
+    "the held back land on sale",
+);
 
 await click_tool("Map");
 await frames(30);

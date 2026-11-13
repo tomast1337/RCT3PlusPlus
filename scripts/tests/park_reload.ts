@@ -19,9 +19,10 @@ async function open(path: string) {
 }
 
 const first = await open(kBlank);
-for (const path of kOthers)
-    await open(path);
+for (const path of kOthers) await open(path);
 const again = await open(kBlank);
 for (const key of ["buffers", "pipelines", "textures"] as const)
     if (again[key] !== first[key])
-        throw new Error(`expected the blank landscape's ${key} alive again: ${first[key]} the first time, ${again[key]} after other parks`);
+        throw new Error(
+            `expected the blank landscape's ${key} alive again: ${first[key]} the first time, ${again[key]} after other parks`,
+        );

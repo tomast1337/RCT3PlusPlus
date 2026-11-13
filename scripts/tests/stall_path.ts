@@ -15,10 +15,16 @@
 export {};
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined, 1200, "the tool row and the build lists");
+await until(
+    () => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined,
+    1200,
+    "the tool row and the build lists",
+);
 const gate = map.paths().reduce((a, b) => (b.row > a.row ? b : a));
 // A food stall: the park runs only stalls that sell food or drink.
-const kind = build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.symbol.toLowerCase().includes("burger"));
+const kind = build
+    .stalls()!
+    .find((s) => s.overlay === "Style/Vanilla/Style" && s.symbol.toLowerCase().includes("burger"));
 expect(kind !== undefined, "a plain burger stall");
 const col = gate.col + 8;
 const row = gate.row - 10;
@@ -71,7 +77,15 @@ async function route(a: [number, number], b: [number, number]): Promise<void> {
         await pointer.click(...on_view(...b));
     }
     await ui.toggle("footpaths/route", false);
-    expect(has_path(...a) && has_path(...b), `a path from ${a} to ${b}, laid ${JSON.stringify(map.paths().filter((p) => Math.abs(p.col - a[0]) + Math.abs(p.row - a[1]) < 8).map((p) => [p.col, p.row]))}`);
+    expect(
+        has_path(...a) && has_path(...b),
+        `a path from ${a} to ${b}, laid ${JSON.stringify(
+            map
+                .paths()
+                .filter((p) => Math.abs(p.col - a[0]) + Math.abs(p.row - a[1]) < 8)
+                .map((p) => [p.col, p.row]),
+        )}`,
+    );
 }
 
 // At its side, leading away from it: not joined.
@@ -85,7 +99,10 @@ await route([col + 3 * front[0], row + 3 * front[1]], [col + front[0], row + fro
 await until(() => stall().joined === true, 60, "the stall joined by the path at its front");
 await ui.click("footpaths/close");
 // Seen from in front, once the costs have floated away.
-camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col + 0.5 + 8 * front[0] + 4 * side[0], row: row + 0.5 + 8 * front[1] + 4 * side[1], up: 12 });
+camera.look(
+    { col: col + 0.5, row: row + 0.5 },
+    { col: col + 0.5 + 8 * front[0] + 4 * side[0], row: row + 0.5 + 8 * front[1] + 4 * side[1], up: 12 },
+);
 await frames(240);
 await screenshot("stall_path_front");
 log("stall joined from", JSON.stringify([col + front[0], row + front[1]]));

@@ -11,7 +11,11 @@
 export {};
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined, 1200, "the build lists");
+await until(
+    () => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined,
+    1200,
+    "the build lists",
+);
 const paths = map.paths();
 const gate = paths.reduce((a, b) => (b.row > a.row ? b : a));
 // The road in from the entrance, clear of the entrance itself: a bench, a bare tile, and a stall beside.
@@ -40,7 +44,10 @@ await click(binned.col, binned.row);
 build.stop();
 const items = park.pathItems().length;
 expect(items === 2, `the bench and the bin on the road, not ${items}`);
-const kind = must(build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.goods.length > 0), "a vanilla stall with goods");
+const kind = must(
+    build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.goods.length > 0),
+    "a vanilla stall with goods",
+);
 expect(build.pick(kind.overlay, kind.symbol), `${kind.symbol} picked`);
 await frames(2);
 const beside = { col: bare.col - 1, row: bare.row - 2 };
@@ -53,8 +60,7 @@ expect(stall >= 0, "the stall placed");
 await ui.click("info/close").catch(() => undefined);
 await frames(2);
 
-if (!ui.find("tools/Delete/GUI2_DeleteSingleItem"))
-    await ui.click("tools/Delete/Obj_Delete");
+if (!ui.find("tools/Delete/GUI2_DeleteSingleItem")) await ui.click("tools/Delete/Obj_Delete");
 await ui.click("tools/Delete/GUI2_DeleteSingleItem");
 await frames(2);
 
@@ -85,12 +91,14 @@ expect(!map.paths().some((p) => p.col === bare.col && p.row === bare.row), "no r
 // The road under the bin takes the bin with it.
 await click(binned.col, binned.row, 0, -0.01);
 expect(map.paths().length === pieces - 2, "the road under the bin gone");
-expect(park.pathItems().length === items - 2, `the bin gone with it, not left standing (${park.pathItems().length} left)`);
+expect(
+    park.pathItems().length === items - 2,
+    `the bin gone with it, not left standing (${park.pathItems().length} left)`,
+);
 await screenshot("delete_binned_road"); // One sum floats up for the road and its bin together
 
 // Picking the tool again puts it away; a click on the road then leaves it be.
-if (!ui.find("tools/Delete/GUI2_DeleteSingleItem"))
-    await ui.click("tools/Delete/Obj_Delete");
+if (!ui.find("tools/Delete/GUI2_DeleteSingleItem")) await ui.click("tools/Delete/Obj_Delete");
 await ui.click("tools/Delete/GUI2_DeleteSingleItem");
 await frames(2);
 await click(road[3].col, road[3].row);
@@ -107,7 +115,10 @@ await click(road[5].col, road[5].row, 0.01, 0.016);
 expect(ui.find("info") !== undefined, "the bench's panel open");
 await ui.click("info/Attraction_General_Delete");
 await frames(3);
-expect(park.pathItems().length === placed - 1, `the bench pulled down from its panel (${placed} then ${park.pathItems().length})`);
+expect(
+    park.pathItems().length === placed - 1,
+    `the bench pulled down from its panel (${placed} then ${park.pathItems().length})`,
+);
 await screenshot("destroy_bench");
 
 // The area tool: a stall beside the road and a bench on it, then the road there and both marked.
@@ -120,7 +131,10 @@ await frames(2);
 const aside = { col: road[7].col - 1, row: road[7].row - 2 };
 pointer.move(...on_view(aside.col, aside.row));
 await frames(3);
-expect(build.placing()?.problem === "none", `the second stall placeable beside the road, not ${build.placing()?.problem}`);
+expect(
+    build.placing()?.problem === "none",
+    `the second stall placeable beside the road, not ${build.placing()?.problem}`,
+);
 await click(aside.col, aside.row);
 const second = stalls.list().length - 1;
 expect(second > stall, "the second stall placed");
@@ -128,8 +142,7 @@ await ui.click("info/close").catch(() => undefined);
 await frames(2);
 const before = { paths: map.paths().length, items: park.pathItems().length };
 
-if (!ui.find("tools/Delete/GUI2_DeleteSelection"))
-    await ui.click("tools/Delete/Obj_Delete");
+if (!ui.find("tools/Delete/GUI2_DeleteSelection")) await ui.click("tools/Delete/Obj_Delete");
 await ui.click("tools/Delete/GUI2_DeleteSelection");
 await frames(2);
 expect(ui.find("delete_area") !== undefined, "the area panel out");
@@ -138,7 +151,11 @@ const site = stalls.list()[second].site!;
 const corner = { col: Math.min(site.col, gate.col) - 1, row: Math.min(site.row, road[7].row) - 1 };
 const from = must(map.screen(road[6].col + 1, road[6].row), `tile ${road[6].col + 1}, ${road[6].row} in sight`);
 const to = must(map.screen(corner.col, corner.row), `tile ${corner.col}, ${corner.row} in sight`);
-const marked = map.paths().filter((p) => p.col >= corner.col && p.col <= road[6].col + 1 && p.row >= corner.row && p.row <= road[6].row).length;
+const marked = map
+    .paths()
+    .filter(
+        (p) => p.col >= corner.col && p.col <= road[6].col + 1 && p.row >= corner.row && p.row <= road[6].row,
+    ).length;
 await pointer.drag([from.x, from.y], [to.x, to.y], 10);
 await frames(3);
 await screenshot("delete_area_marked");
@@ -150,7 +167,10 @@ await pointer.drag([from.x, from.y], [to.x, to.y], 10);
 await frames(3);
 await ui.click("delete_area/GUI2_DeleteSelection_DeleteIcon");
 await frames(2);
-expect(map.paths().length === before.paths - marked, `the ${marked} tiles of road marked gone (${before.paths} then ${map.paths().length})`);
+expect(
+    map.paths().length === before.paths - marked,
+    `the ${marked} tiles of road marked gone (${before.paths} then ${map.paths().length})`,
+);
 expect(park.pathItems().length === before.items - 1, "the bench gone");
 expect(ui.find("demolish_question") !== undefined, "the question asked for the stall in the area");
 await screenshot("delete_area_question");

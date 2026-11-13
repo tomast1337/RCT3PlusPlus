@@ -21,7 +21,11 @@ async function hire(hires: readonly (readonly [string, string])[]): Promise<void
     await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
     await until(() => ui.find("tools/Management/Man_Staff") !== undefined, 120, "the management menu");
     await ui.click("tools/Management/Man_Staff");
-    await until(() => under("Staff_Title", "Staff_HireMaintenanceIcon") !== undefined, 120, "the staff window's hire buttons");
+    await until(
+        () => under("Staff_Title", "Staff_HireMaintenanceIcon") !== undefined,
+        120,
+        "the staff window's hire buttons",
+    );
     for (const [button, role] of hires) {
         const count = staff().length;
         await ui.click(must(under("Staff_Title", button), `${button} under Staff_Title`));
@@ -29,7 +33,14 @@ async function hire(hires: readonly (readonly [string, string])[]): Promise<void
         await until(() => staff()[count].state === "held", 30, `the ${role} in hand`);
         const free = paths.find((p) => {
             const on = map.screen(p.col + 0.5, p.row + 0.5);
-            return on !== undefined && (on.x < 0.25 || on.x > 0.75) && on.x > 0.05 && on.x < 0.95 && on.y > 0.1 && on.y < 0.85;
+            return (
+                on !== undefined &&
+                (on.x < 0.25 || on.x > 0.75) &&
+                on.x > 0.05 &&
+                on.x < 0.95 &&
+                on.y > 0.1 &&
+                on.y < 0.85
+            );
         });
         expect(free !== undefined, "a path in sight beside the window");
         const at = must(map.screen(free!.col + 0.5, free!.row + 0.5), "the tile in sight");

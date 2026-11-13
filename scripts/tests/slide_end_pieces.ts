@@ -12,14 +12,18 @@ export {};
 
 const kPanel = "placing/body/construction";
 // Each piece, its enclosed twin, and the least length of its path.
-const kEnds: [string, string, number][] = [["Funnel", "FunnelCapped", 50], ["FunnelRight", "FunnelRightCapped", 50], ["Bowl", "BowlCapped", 22], ["BowlRight", "BowlRightCapped", 22]];
+const kEnds: [string, string, number][] = [
+    ["Funnel", "FunnelCapped", 50],
+    ["FunnelRight", "FunnelRightCapped", 50],
+    ["Bowl", "BowlCapped", 22],
+    ["BowlRight", "BowlRightCapped", 22],
+];
 
 /** Picks the row of the building's list that holds `open` or `enclosed`, whichever the toggles give, going down it
  * with the keys; whether one is picked. */
 async function pickListed(open: string, enclosed: string): Promise<boolean> {
     const list = ui.find(`${kPanel}/list`);
-    if (!list)
-        return false;
+    if (!list) return false;
     // Not soon after the last press, which would make it a double press that builds.
     await frames(40);
     await pointer.click(list.x, list.top + 0.005);
@@ -30,8 +34,7 @@ async function pickListed(open: string, enclosed: string): Promise<boolean> {
     for (let i = 0; i < 16; ++i) {
         const piece = build.construction()?.piece;
         seen.push(`${piece}`);
-        if (piece === open || piece === enclosed)
-            return true;
+        if (piece === open || piece === enclosed) return true;
         keys.press("Down");
         await frames(3);
     }
@@ -66,7 +69,10 @@ for (const turn of [0, 1]) {
                 await frames(2);
             }
             await frames(5);
-            expect(/station/i.test(build.construction()!.piece ?? ""), `${name}: a station picked to begin with, not ${build.construction()!.piece}`);
+            expect(
+                /station/i.test(build.construction()!.piece ?? ""),
+                `${name}: a station picked to begin with, not ${build.construction()!.piece}`,
+            );
             await pointer.click(0.5, 0.5);
             await frames(20);
             const slide = build.construction()!.ride;
@@ -84,8 +90,7 @@ for (const turn of [0, 1]) {
             if (build.construction()!.piece !== want) {
                 await ui.click(`${kPanel}/toggle1`);
                 await frames(5);
-                if (build.construction()!.piece === want)
-                    await pickListed(want, want);
+                if (build.construction()!.piece === want) await pickListed(want, want);
             }
             const c = build.construction()!;
             log("PIECE", name, "picked", c.piece, "ghost", c.ghost, "clashes", c.clashes);
@@ -115,8 +120,7 @@ for (const turn of [0, 1]) {
             for (let k = 0; k < 1800 && farthest < length - 1; ++k) {
                 await park.advance(1 / 15);
                 for (const [i, t] of (info().trainsAt ?? []).entries()) {
-                    if (t.station !== null)
-                        continue;
+                    if (t.station !== null) continue;
                     farthest = Math.max(farthest, t.front);
                     const car = (info().cars ?? [])[i];
                     if (!shot && car && t.front > length - least / 2) {
@@ -127,11 +131,19 @@ for (const turn of [0, 1]) {
                     }
                 }
             }
-            log("RUN", name, "track", length.toFixed(1), "farthest", farthest.toFixed(1), "crashes", info().crashes ?? 0);
+            log(
+                "RUN",
+                name,
+                "track",
+                length.toFixed(1),
+                "farthest",
+                farthest.toFixed(1),
+                "crashes",
+                info().crashes ?? 0,
+            );
             if (length < least + 3 || farthest < length - 1)
                 failed.push(`${name}: run ${farthest.toFixed(1)} of ${length.toFixed(1)} m`);
-            if ((info().crashes ?? 0) > 0)
-                failed.push(`${name}: crashed`);
+            if ((info().crashes ?? 0) > 0) failed.push(`${name}: crashed`);
             rides.setState(slide, "closed");
             await frames(5);
         }

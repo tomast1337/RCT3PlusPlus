@@ -12,7 +12,12 @@
 export {};
 
 const kPanel = "design_placing";
-const kSteps: [number, number][] = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // By side, as the pools count them
+const kSteps: [number, number][] = [
+    [0, 1],
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+]; // By side, as the pools count them
 type Spot = { col: number; row: number };
 
 /** Picks the saved design of `kind` whose file names `design` (the first when none), leaving it in hand. */
@@ -57,10 +62,8 @@ async function aim(goal: Spot): Promise<boolean> {
     for (let i = 0; i < 4; ++i) {
         await over(at);
         const g = build.construction()!.ghostAt;
-        if (g === null)
-            return false;
-        if (g.col === goal.col && g.row === goal.row)
-            return true;
+        if (g === null) return false;
+        if (g.col === goal.col && g.row === goal.row) return true;
         at = { col: at.col + goal.col - g.col, row: at.row + goal.row - g.row };
     }
     return false;
@@ -78,24 +81,43 @@ const pooled = new Set(map.pools().squares.map((s) => `${s.col},${s.row}`));
 const wet = new Set(water.map((s) => `${s.col},${s.row}`));
 expect(water.length > 0, "a pool in the park");
 const slide = await pickDesign("tracks/TrackedRides/RingSlide/RingSlide", "RingSlide", "Undertow");
-expect(ui.find(kPanel) !== undefined && ui.find("placing") === undefined, "the design's own round panel, not the construction panel");
+expect(
+    ui.find(kPanel) !== undefined && ui.find("placing") === undefined,
+    "the design's own round panel, not the construction panel",
+);
 const tabs = ui.children(kPanel) ?? [];
-for (const tab of ["IconAttractionEditorRotate", "Guest_Rides", "Attraction_Colour", "TerrainFlattener_SmoothOff", "TerrainFlattener_SharpOff"])
+for (const tab of [
+    "IconAttractionEditorRotate",
+    "Guest_Rides",
+    "Attraction_Colour",
+    "TerrainFlattener_SmoothOff",
+    "TerrainFlattener_SharpOff",
+])
     expect(tabs.includes(tab), `the ${tab} tab, among ${tabs.join(", ")}`);
 const price = ui.find(`${kPanel}/view_text`)?.text ?? "";
 expect(/\d/.test(price), `the design's price on the disc, not "${price}"`);
-expect(ui.find(`${kPanel}/body/TT_AttractionDialogIconLabelButton`)?.text === "Undertow", "the design's name to type over");
+expect(
+    ui.find(`${kPanel}/body/TT_AttractionDialogIconLabelButton`)?.text === "Undertow",
+    "the design's name to type over",
+);
 log("undertow price", price);
 
 // Away from the pools: refused for its pool sides.
 await over({ col: 20, row: 20 });
 expect(refusal() === "PlaceObject_MustEndOnPoolEdge", `the slide refused off a pool's edge, not ${refusal()}`);
-expect(status() !== "" && status() === must(ui.find(`${kPanel}/body/status_label`), `${kPanel}/body/status_label shown`).text, "why, on its page");
+expect(
+    status() !== "" &&
+        status() === must(ui.find(`${kPanel}/body/status_label`), `${kPanel}/body/status_label shown`).text,
+    "why, on its page",
+);
 log("off the edge:", status());
 await screenshot("design_place_off_pool_edge");
 const away = rides.list()[slide].pieces ?? 0;
 await lay();
-expect((rides.list()[slide].pieces ?? 0) === away && build.construction() !== undefined, "nothing laid off the edge, the design still in hand");
+expect(
+    (rides.list()[slide].pieces ?? 0) === away && build.construction() !== undefined,
+    "nothing laid off the edge, the design still in hand",
+);
 
 // Each way round, where its pool sides would face water across them from dry ground: tried until one may stand.
 let fitted: Spot | undefined;
@@ -105,15 +127,18 @@ for (let turn = 0; turn < 4 && fitted === undefined; ++turn) {
     const g = c.ghostAt!;
     const rel = c.poolSides.map((s) => ({ col: s.col - g.col, row: s.row - g.row, side: s.side }));
     expect(rel.length > 0, "pool sides on the slide");
-    const meets = (at: Spot) => rel.every((r) => {
-        const [dc, dr] = kSteps[r.side];
-        return wet.has(`${at.col + r.col + dc},${at.row + r.row + dr}`) && !pooled.has(`${at.col + r.col},${at.row + r.row}`);
-    });
+    const meets = (at: Spot) =>
+        rel.every((r) => {
+            const [dc, dr] = kSteps[r.side];
+            return (
+                wet.has(`${at.col + r.col + dc},${at.row + r.row + dr}`) &&
+                !pooled.has(`${at.col + r.col},${at.row + r.row}`)
+            );
+        });
     for (const w of water) {
         const [dc, dr] = kSteps[rel[0].side];
         const at = { col: w.col - dc - rel[0].col, row: w.row - dr - rel[0].row };
-        if (!meets(at) || !(await aim(at)))
-            continue;
+        if (!meets(at) || !(await aim(at))) continue;
         log("turn", turn, "tried", JSON.stringify(at), refusal());
         if (refusal() === "") {
             fitted = at;
@@ -158,7 +183,10 @@ await over(middle);
 await screenshot("design_place_turned");
 keys.press(".");
 await frames(3);
-expect(build.construction()!.turn === (turn + 2) % 4, `a quarter turn more from its key, not ${build.construction()!.turn}`);
+expect(
+    build.construction()!.turn === (turn + 2) % 4,
+    `a quarter turn more from its key, not ${build.construction()!.turn}`,
+);
 for (let i = 0; i < 2; ++i) {
     await ui.click(`${kPanel}/IconAttractionEditorRotate`);
     await frames(3);
@@ -203,7 +231,10 @@ const cash = park.cash();
 await lay();
 const first = rides.list()[coaster];
 log("coaster laid", first.pieces, "pieces for", cash !== undefined ? cash - park.cash()! : "-");
-expect((first.pieces ?? 0) > 0 && first.entrance !== null && first.exit !== null, `the design laid with its doors, not ${JSON.stringify(first)}`);
+expect(
+    (first.pieces ?? 0) > 0 && first.entrance !== null && first.exit !== null,
+    `the design laid with its doors, not ${JSON.stringify(first)}`,
+);
 expect(first.name === "Design Corkscrew", `the name typed, not ${first.name}`);
 expect(build.construction() === undefined, "its building closed once laid");
 expect(ui.find("info/title")?.text === "Design Corkscrew", `its window open, not ${ui.find("info/title")?.text}`);
@@ -216,15 +247,17 @@ expect(refusal() === "PlaceObject_Intersects", `the second refused over the firs
 log("in the way:", status());
 await screenshot("design_place_intersects");
 await lay();
-expect((rides.list()[second].pieces ?? 0) === 0 && build.construction()?.ride === second, "nothing of it laid, still in hand");
+expect(
+    (rides.list()[second].pieces ?? 0) === 0 && build.construction()?.ride === second,
+    "nothing of it laid, still in hand",
+);
 await ui.click(`${kPanel}/close`);
 await frames(5);
 expect(build.construction() === undefined && ui.find(kPanel) === undefined, "put away by its panel's close button");
 
 // ── 3. Into a hill: refused with neither ground tab lit, laid once the ground is cut ──
 async function land(icon: string): Promise<void> {
-    if (!ui.find(`tools/Land/${icon}`))
-        await ui.click("tools/Land/Land");
+    if (!ui.find(`tools/Land/${icon}`)) await ui.click("tools/Land/Land");
     await ui.click(`tools/Land/${icon}`);
 }
 const hill = { col: middle.col - 20, row: middle.row + 24 };
@@ -251,16 +284,21 @@ let dig: Spot | undefined;
 for (let k = 0; k < 121 && dig === undefined; ++k) {
     const at = { col: hill.col + 2 * (k % 11) - 10, row: hill.row + 2 * Math.floor(k / 11) - 10 };
     await over(at);
-    if (refusal() === "PlaceObject_IntersectsGround")
-        dig = at;
+    if (refusal() === "PlaceObject_IntersectsGround") dig = at;
 }
 expect(dig !== undefined, "a spot where the design passes into the hill");
 log("into the ground:", status());
 await screenshot("design_place_into_ground");
-for (const [tab, lit] of [["Sharp", "TerrainFlattener_SharpOn"], ["Smooth", "TerrainFlattener_SmoothOn"]]) {
+for (const [tab, lit] of [
+    ["Sharp", "TerrainFlattener_SharpOn"],
+    ["Smooth", "TerrainFlattener_SmoothOn"],
+]) {
     await ui.click(`${kPanel}/TerrainFlattener_${tab}Off`);
     await frames(3);
-    expect(ui.find(`${kPanel}/${lit}`) !== undefined && refusal() === "", `the ground cut ${tab.toLowerCase()}ly, the design free, not ${refusal()}`);
+    expect(
+        ui.find(`${kPanel}/${lit}`) !== undefined && refusal() === "",
+        `the ground cut ${tab.toLowerCase()}ly, the design free, not ${refusal()}`,
+    );
 }
 expect(ui.find(`${kPanel}/TerrainFlattener_SharpOff`) !== undefined, "one ground tab lit at a time");
 await ui.click(`${kPanel}/TerrainFlattener_SmoothOn`);
@@ -286,7 +324,12 @@ await pickDesign("tracks/coasters/Corkscrew/Corkscrew", "Corkscrew");
 let edge: Spot | undefined;
 for (let k = 0; k < size.width * size.height && edge === undefined; k += 3) {
     const at = { col: k % size.width, row: Math.floor(k / size.width) };
-    if (at.col >= 8 && at.row >= 8 && map.tile(at.col, at.row)?.owned === false && map.tile(at.col + 6, at.row + 6)?.owned === false)
+    if (
+        at.col >= 8 &&
+        at.row >= 8 &&
+        map.tile(at.col, at.row)?.owned === false &&
+        map.tile(at.col + 6, at.row + 6)?.owned === false
+    )
         edge = at;
 }
 log("unowned", JSON.stringify(edge));

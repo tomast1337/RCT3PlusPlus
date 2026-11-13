@@ -21,7 +21,11 @@ const designs = build.construction()?.designs ?? [];
 expect(designs.length > 0, "a saved corkscrew design");
 expect(ui.find("placing/Attraction_Construction") !== undefined, "the construction crane on the ring");
 expect(ui.find("placing/Attraction_General_Closed") !== undefined, "the closed flag on the ring");
-expect(ui.find("placing/Attraction_Button_Testing") === undefined && ui.find("placing/Attraction_Button_Testing_Disabled") === undefined, "no test light on the ring");
+expect(
+    ui.find("placing/Attraction_Button_Testing") === undefined &&
+        ui.find("placing/Attraction_Button_Testing_Disabled") === undefined,
+    "no test light on the ring",
+);
 
 // The window opens on the custom track, the first row; the designs follow by name. The third, Triple Corkscrew,
 // has its station on the ground beside its lowest piece, so ground paths reach its doors. It is a heading and
@@ -40,7 +44,10 @@ pointer.move(0.5, 0.45);
 await frames(30);
 await pointer.click(0.5, 0.45);
 await frames(30);
-expect(rides.list().some((r) => (r.pieces ?? 0) > 0), "the design laid");
+expect(
+    rides.list().some((r) => (r.pieces ?? 0) > 0),
+    "the design laid",
+);
 // Laid, its building closes and its window opens; the window's crane opens the building again.
 expect(build.construction() === undefined, "the building closed once the design is laid");
 await until(() => ui.find("info/Attraction_Construction") !== undefined, 120, "the ride's window");
@@ -94,8 +101,7 @@ const door = rides.list()[ride].entrance!;
 const straight = () => {
     const at = build.construction()?.selected;
     const track = rides.list()[ride].track ?? [];
-    if (typeof at !== "number")
-        return false;
+    if (typeof at !== "number") return false;
     // Not just past the station, which would leave the train no track to run on.
     const before = track[(at + track.length - 1) % track.length] ?? "";
     return (track[at] ?? "").startsWith("Straight") && !before.startsWith("Station");
@@ -104,8 +110,7 @@ camera.look({ col: door.col + 0.5, row: door.row + 0.5 }, { col: door.col + 0.5,
 await frames(5);
 for (let i = 0; i < 81 && !straight(); ++i) {
     const at = map.screen(door.col + (i % 9) - 4, door.row + Math.floor(i / 9) - 4);
-    if (at === undefined)
-        continue;
+    if (at === undefined) continue;
     await pointer.click(at.x, at.y);
     await frames(3);
 }
@@ -119,7 +124,10 @@ expect(build.construction()?.ghost === true, "the piece taken out offered again 
 expect(build.construction()?.clashes === false, "the gap's piece clear of the pieces either side");
 expect(build.construction()?.arrows === true, "arrows where the gap's piece starts and ends");
 const gap = build.construction()!.ghostAt!;
-camera.look({ col: gap.col + 0.5, row: gap.row - 0.5, up: gap.height + 8 }, { col: gap.col + 0.5, row: gap.row + 3.5, up: gap.height + 18 });
+camera.look(
+    { col: gap.col + 0.5, row: gap.row - 0.5, up: gap.height + 8 },
+    { col: gap.col + 0.5, row: gap.row + 3.5, up: gap.height + 18 },
+);
 await frames(5);
 await screenshot("gap_arrows");
 
@@ -144,16 +152,19 @@ expect(build.construction()?.testing === false, "the test train gone once the ri
 await ui.click("tools/Paths/Obj_Paths");
 await until(() => ui.find("footpaths/route") !== undefined, 120, "the path panel");
 await ui.toggle("footpaths/follow", false);
-for (const [dc, dr] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
-    if (rides.list()[ride].joined)
-        break;
+for (const [dc, dr] of [
+    [0, 1],
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+]) {
+    if (rides.list()[ride].joined) break;
     const col = door.col + dc;
     const r = door.row + dr;
     camera.look({ col: col + 0.5, row: r + 0.5 }, { col: col + 0.5, row: r + 10.5, up: 30 });
     await frames(5);
     const at = map.screen(col, r);
-    if (at === undefined)
-        continue;
+    if (at === undefined) continue;
     pointer.move(at.x, at.y);
     await frames(10);
     await pointer.click(at.x, at.y);
@@ -170,7 +181,11 @@ expect(build.construction()?.ride === ride, "the construction panel back on the 
 // Tested again while the panel has it, the park's own train runs to the gap and crashes off it, but as a ghost: no
 // crash counted.
 expect(rides.setState(ride, "testing") == null, "the ride the park runs tested");
-await park.advanceUntil(() => (rides.list()[ride].wrecks ?? []).length > 0, 1500, "the park's train crashed off the gap");
+await park.advanceUntil(
+    () => (rides.list()[ride].wrecks ?? []).length > 0,
+    1500,
+    "the park's train crashed off the gap",
+);
 expect((rides.list()[ride].crashes ?? 0) === 0, "no crash counted while the panel has the ride");
 expect(rides.setState(ride, "closed") == null, "the ride closed once more");
 await frames(3);
@@ -179,9 +194,15 @@ await frames(3);
 // second click.
 await ui.click("placing/body/construction/complete");
 await frames(1);
-expect(build.construction()?.completing === true || (build.construction()?.proposed ?? 0) > 0, "auto-complete looking for a way");
+expect(
+    build.construction()?.completing === true || (build.construction()?.proposed ?? 0) > 0,
+    "auto-complete looking for a way",
+);
 await until(() => build.construction()?.completing === false, 600, "auto-complete done");
-expect((build.construction()?.proposed ?? 0) > 0, `a way found round to the station, not ${build.construction()?.complaint}`);
+expect(
+    (build.construction()?.proposed ?? 0) > 0,
+    `a way found round to the station, not ${build.construction()?.complaint}`,
+);
 expect(rides.list()[ride].pieces === before - 1, "the way not laid before the second click");
 await screenshot("proposed");
 await ui.click("placing/body/construction/complete");

@@ -17,9 +17,24 @@ park.setTime(0.5);
 const river = rides.list().findIndex((r) => !r.flat && !r.demolished && /lazyriver/i.test(r.symbol));
 expect(river >= 0, "a lazy river in the park");
 const info = () => rides.list()[river];
-const complaints = () => park.messages().filter((m) => /NoPathToEntrance/.test(m.key) && (m.name === info().name || /lazy river/i.test(m.name))).length;
+const complaints = () =>
+    park
+        .messages()
+        .filter((m) => /NoPathToEntrance/.test(m.key) && (m.name === info().name || /lazy river/i.test(m.name))).length;
 const saved = complaints();
-log("river", info().name, info().symbol, "length", info().trackLength?.toFixed(1), "stations", info().riverStations, "joined", info().riverJoined, "ratings", JSON.stringify(info().ratings));
+log(
+    "river",
+    info().name,
+    info().symbol,
+    "length",
+    info().trackLength?.toFixed(1),
+    "stations",
+    info().riverStations,
+    "joined",
+    info().riverJoined,
+    "ratings",
+    JSON.stringify(info().ratings),
+);
 expect(info().joined, "the river run by the park");
 expect(info().price === 0, `the river free, not ${info().price}`);
 expect((info().riverStations ?? 0) > 0, "the river's stations");
@@ -31,13 +46,19 @@ log("joined", info().riverJoined, "of", info().riverStations);
 const floating = () => people.list().filter((p) => p.floating !== undefined && p.ride === river);
 await until(() => floating().length > 0, 60, "riders on the river");
 log("floating now", floating().length);
-expect(floating().every((p) => p.swimwear === true), "the riders in their swimwear");
+expect(
+    floating().every((p) => p.swimwear === true),
+    "the riders in their swimwear",
+);
 const one = floating()[0];
 camera.look({ col: one.col!, row: one.row!, up: one.up! }, { col: one.col! + 3, row: one.row! + 3, up: one.up! + 10 });
 await frames(30);
 await screenshot("pool_river_floating");
 // Close by, sitting in their rings.
-camera.look({ col: one.col!, row: one.row!, up: one.up! }, { col: one.col! + 0.15, row: one.row! + 0.15, up: one.up! + 3 });
+camera.look(
+    { col: one.col!, row: one.row!, up: one.up! },
+    { col: one.col! + 0.15, row: one.row! + 0.15, up: one.up! + 3 },
+);
 await frames(30);
 await screenshot("pool_river_rings");
 
@@ -45,10 +66,20 @@ await screenshot("pool_river_rings");
 const customers = info().customers ?? 0;
 await until(() => (info().customers ?? 0) > customers, 6000, "a swimmer getting on");
 const names = new Set(floating().map((p) => p.name));
-await until(() => people.list().some((p) => names.has(p.name) && p.floating === undefined && p.state === "swimming"), 6000, "a rider off into a pool");
-const off = must(people.list().find((p) => names.has(p.name) && p.floating === undefined && p.state === "swimming"), "a rider off the river, swimming");
+await until(
+    () => people.list().some((p) => names.has(p.name) && p.floating === undefined && p.state === "swimming"),
+    6000,
+    "a rider off into a pool",
+);
+const off = must(
+    people.list().find((p) => names.has(p.name) && p.floating === undefined && p.state === "swimming"),
+    "a rider off the river, swimming",
+);
 expect(off.swimwear === true, "the rider off still in their swimwear");
-expect(people.list().some((p) => p.floating === "paddling") || people.list().some((p) => p.floating === "resting"), "riders resting or paddling");
+expect(
+    people.list().some((p) => p.floating === "paddling") || people.list().some((p) => p.floating === "resting"),
+    "riders resting or paddling",
+);
 camera.look({ col: off.col!, row: off.row!, up: off.up! }, { col: off.col! + 4, row: off.row! + 4, up: off.up! + 4 });
 await frames(10);
 await screenshot("pool_river_off");

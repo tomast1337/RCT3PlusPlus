@@ -18,7 +18,9 @@ const wet = rides.list().filter((r) => kWet.test(r.overlay) || kWet.test(r.symbo
 expect(wet.length > 0, "a water ride in the park");
 log("water rides", wet.map((r) => r.symbol).join(", "));
 // Open pieces of ride track turning right: tubes hide their water.
-const pieces = map.objects().filter((o) => /trackedrides/i.test(o.overlay) && /curve.*right/i.test(o.symbol) && !/capped/i.test(o.symbol));
+const pieces = map
+    .objects()
+    .filter((o) => /trackedrides/i.test(o.overlay) && /curve.*right/i.test(o.symbol) && !/capped/i.test(o.symbol));
 const curve = pieces.find((o) => /slope/i.test(o.symbol)) ?? pieces[0];
 expect(curve !== undefined, "a piece of water ride track");
 log("piece", curve.symbol, curve.col, curve.row, curve.height);
@@ -31,8 +33,14 @@ await screenshot("ride_water_curve_later");
 // A car splashing through the water sprays from its splash points: pictured close up.
 const kSprays = /^(splash2|splash4|watersplashbig)$/;
 await until(() => map.effects().some((e) => kSprays.test(e.effect)), 60 * 120, "a car splashing through water");
-const spray = must(map.effects().find((e) => kSprays.test(e.effect)), "a spray");
+const spray = must(
+    map.effects().find((e) => kSprays.test(e.effect)),
+    "a spray",
+);
 log("spray", spray.effect, spray.col, spray.row, spray.up);
-camera.look({ col: spray.col, row: spray.row, up: spray.up }, { col: spray.col + 3, row: spray.row + 2.5, up: spray.up + 4 });
+camera.look(
+    { col: spray.col, row: spray.row, up: spray.up },
+    { col: spray.col + 3, row: spray.row + 2.5, up: spray.up + 4 },
+);
 await frames(6);
 await screenshot("ride_water_splash");

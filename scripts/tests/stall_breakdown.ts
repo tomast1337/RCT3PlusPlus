@@ -10,9 +10,15 @@ export {};
 /** The path of the widget named `name` somewhere under `path`. */
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined, 1200, "the tool row and the build lists");
+await until(
+    () => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined,
+    1200,
+    "the tool row and the build lists",
+);
 const gate = map.paths().reduce((a, b) => (b.row > a.row ? b : a));
-const kind = build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.symbol.toLowerCase().includes("burger"));
+const kind = build
+    .stalls()!
+    .find((s) => s.overlay === "Style/Vanilla/Style" && s.symbol.toLowerCase().includes("burger"));
 expect(kind !== undefined, "a plain burger stall");
 const col = gate.col + 8;
 const row = gate.row - 10;
@@ -65,7 +71,10 @@ expect(stall().broken === true && stall().selling === false, "the stall shut whi
 
 // A mechanic hired, put on the far end of its path.
 const near = { col: far[0], row: far[1] };
-camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col + 0.5 + 8 * front[0] + 4, row: row + 0.5 + 8 * front[1] + 4, up: 12 });
+camera.look(
+    { col: col + 0.5, row: row + 0.5 },
+    { col: col + 0.5 + 8 * front[0] + 4, row: row + 0.5 + 8 * front[1] + 4, up: 12 },
+);
 await frames(5);
 await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Staff") !== undefined, 120, "the management menu");
@@ -84,7 +93,13 @@ await ui.click(under("Staff_Title", "close") ?? under("Staff_Title", "Close") ??
 
 // At work on it: the window shows it broken down.
 const mechanic = () => staff()[count];
-await until(() => Math.hypot((mechanic().col ?? 1e9) - (site.col + 0.5), (mechanic().row ?? 1e9) - (site.row + 0.5)) < 1.6 || !stall().broken, 600, "the mechanic at the stall");
+await until(
+    () =>
+        Math.hypot((mechanic().col ?? 1e9) - (site.col + 0.5), (mechanic().row ?? 1e9) - (site.row + 0.5)) < 1.6 ||
+        !stall().broken,
+    600,
+    "the mechanic at the stall",
+);
 expect(stall().broken === true, "the stall still broken as the mechanic sets to work");
 stalls.show(at);
 await frames(30);

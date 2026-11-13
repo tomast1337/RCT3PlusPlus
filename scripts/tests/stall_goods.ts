@@ -10,7 +10,11 @@
 export {};
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined, 1200, "the build lists");
+await until(
+    () => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined,
+    1200,
+    "the build lists",
+);
 const paths = map.paths();
 const gate = paths.reduce((a, b) => (b.row > a.row ? b : a));
 const wanted = ["pumpkinpiestall", "BloodMilkStall", "CocnutStall"];
@@ -35,29 +39,42 @@ for (let k = 0; k < wanted.length; ++k) {
         pointer.move(spot.x, spot.y);
         await frames(3);
     }
-    expect(build.placing()?.site?.turns === 1, `${kind!.symbol} turned to the road (${JSON.stringify(build.placing())})`);
-    expect(build.placing()?.problem === "none", `${kind!.symbol} placeable beside the road, not ${build.placing()?.problem}`);
+    expect(
+        build.placing()?.site?.turns === 1,
+        `${kind!.symbol} turned to the road (${JSON.stringify(build.placing())})`,
+    );
+    expect(
+        build.placing()?.problem === "none",
+        `${kind!.symbol} placeable beside the road, not ${build.placing()?.problem}`,
+    );
     await pointer.click(spot.x, spot.y);
     await frames(3);
-    if (ui.find("info") !== undefined)
-        await ui.click("info/close");
+    if (ui.find("info") !== undefined) await ui.click("info/close");
     const i = stalls.list().findIndex((s) => s.symbol === `${kind!.symbol}:sta`);
     expect(i >= 0, `${kind!.symbol} in the park`);
     const stall = stalls.list()[i];
-    expect(JSON.stringify(stall.items.map((x) => x.item)) === JSON.stringify(kind!.goods.map((g) => `${g.item}:cid`)), `${kind!.symbol} selling its kind's goods (${JSON.stringify(stall.items)})`);
+    expect(
+        JSON.stringify(stall.items.map((x) => x.item)) === JSON.stringify(kind!.goods.map((g) => `${g.item}:cid`)),
+        `${kind!.symbol} selling its kind's goods (${JSON.stringify(stall.items)})`,
+    );
     const why = stalls.setState(i, "open");
     expect(why == null, `${kind!.symbol} opened, not kept closed by ${why}`);
     at.push(i);
 }
 await frames(2);
 for (const i of at)
-    expect(stalls.list()[i].selling === true, `${stalls.list()[i].symbol} run by the park, open (${JSON.stringify(stalls.list()[i])})`);
+    expect(
+        stalls.list()[i].selling === true,
+        `${stalls.list()[i].symbol} run by the park, open (${JSON.stringify(stalls.list()[i])})`,
+    );
 park.dropParties(60, 3);
 const served = () => at.map((i) => `${stalls.list()[i].symbol} ${stalls.list()[i].customers}`).join(", ");
-for (let t = 0; t < 30 && !at.every((i) => (stalls.list()[i].customers ?? 0) > 0); ++t)
-    await park.advance(120);
+for (let t = 0; t < 30 && !at.every((i) => (stalls.list()[i].customers ?? 0) > 0); ++t) await park.advance(120);
 log("customers", served(), "guests", park.guests());
-expect(at.every((i) => (stalls.list()[i].customers ?? 0) > 0), `guests buying at every stall (${served()})`);
+expect(
+    at.every((i) => (stalls.list()[i].customers ?? 0) > 0),
+    `guests buying at every stall (${served()})`,
+);
 park.setTime(0.5);
 camera.look({ col: gate.col + 1.5, row: gate.row - 6.5 }, { col: gate.col - 4.5, row: gate.row - 1.5, up: 7 });
 await frames(240);

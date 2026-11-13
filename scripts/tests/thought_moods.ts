@@ -18,8 +18,7 @@ const thoughtful = () => {
     const list = people.list();
     let best = -1;
     for (let i = 0; i < list.length; ++i)
-        if (!list[i].staff && (list[i].thoughts?.length ?? 0) > (best < 0 ? 2 : list[best].thoughts!.length))
-            best = i;
+        if (!list[i].staff && (list[i].thoughts?.length ?? 0) > (best < 0 ? 2 : list[best].thoughts!.length)) best = i;
     return best;
 };
 await park.advanceUntil(() => thoughtful() >= 0, 600, "a guest with three thoughts");
@@ -47,7 +46,11 @@ await screenshot("message_faces");
 // to the highest.
 const bands = () => {
     const happiness = people.list().flatMap((p) => (p.staff || p.happiness === undefined ? [] : [p.happiness]));
-    return [happiness.filter((h) => h < 1 / 3).length, happiness.filter((h) => h >= 1 / 3 && h <= 2 / 3).length, happiness.filter((h) => h > 2 / 3).length];
+    return [
+        happiness.filter((h) => h < 1 / 3).length,
+        happiness.filter((h) => h >= 1 / 3 && h <= 2 / 3).length,
+        happiness.filter((h) => h > 2 / 3).length,
+    ];
 };
 log("bands", JSON.stringify(bands()));
 await park.advanceUntil(() => bands().every((n) => n > 0), 1800, "guests in each third of happiness");
@@ -60,11 +63,9 @@ await frames(5);
 const tableOf = (path: string): string | undefined => {
     for (const child of ui.children(path) ?? []) {
         const at = `${path}/${child}`;
-        if (child === "table")
-            return at;
+        if (child === "table") return at;
         const found = tableOf(at);
-        if (found !== undefined)
-            return found;
+        if (found !== undefined) return found;
     }
     return undefined;
 };
@@ -72,7 +73,10 @@ const table = must(ui.find(tableOf("Man_GuestsHelp")!), "the widget shown");
 // Sorted by happiness one way and then the other, so both ends of the scale show. Of the table's 456 units across
 // and 408 down, the happiness heading's middle is 124 from the right, left of the cash column and the scroll bar.
 for (const shot of ["guest_list_least_happy", "guest_list_most_happy"]) {
-    await pointer.click(table.right - ((table.right - table.left) * 124) / 456, table.top + ((table.bottom - table.top) * 10) / 408);
+    await pointer.click(
+        table.right - ((table.right - table.left) * 124) / 456,
+        table.top + ((table.bottom - table.top) * 10) / 408,
+    );
     await frames(5);
     await screenshot(shot);
 }

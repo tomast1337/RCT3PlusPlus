@@ -23,7 +23,12 @@ await ui.click("tools/Management/Man_Staff");
 await until(() => under("Staff_Title", "Staff_HireMaintenanceIcon") !== undefined, 120, "the staff window");
 
 // One of each job the window hires, let go where they were made.
-for (const button of ["Staff_HireMaintenanceIcon", "Staff_HireMechanicIcon", "Staff_HireSecurityIcon", "Staff_HireEntertainerIcon"]) {
+for (const button of [
+    "Staff_HireMaintenanceIcon",
+    "Staff_HireMechanicIcon",
+    "Staff_HireSecurityIcon",
+    "Staff_HireEntertainerIcon",
+]) {
     const count = staff().length;
     await ui.click(must(under("Staff_Title", button), `${button} under Staff_Title`));
     await until(() => staff().length === count + 1 && staff()[count].state === "held", 60, "a worker in hand");
@@ -47,7 +52,14 @@ await frames(5);
 await screenshot("staff_list_row_unfolded");
 
 await ui.click(must(under("Staff_Title", "ExpandAll"), "ExpandAll under Staff_Title"));
-await until(() => rows().every((r) => ui.find(`${list}/${r}/Hired`) !== undefined || ui.find(`${list}/${r}/Patrol`) === undefined), 30, "every row unfolded");
+await until(
+    () =>
+        rows().every(
+            (r) => ui.find(`${list}/${r}/Hired`) !== undefined || ui.find(`${list}/${r}/Patrol`) === undefined,
+        ),
+    30,
+    "every row unfolded",
+);
 await frames(5);
 await screenshot("staff_list_all_unfolded");
 await ui.click(must(under("Staff_Title", "ContractAll"), "ContractAll under Staff_Title"));
@@ -56,7 +68,7 @@ await ui.click(must(under("Staff_Title", "ContractAll"), "ContractAll under Staf
 await ui.click(must(under("Staff_Title", "SortBy"), "SortBy under Staff_Title"));
 await until(() => ui.find("SortBy.menu") !== undefined, 30, "the sort choices");
 const menu = must(ui.find("SortBy.menu"), "SortBy.menu shown");
-await pointer.click((menu.left + menu.right) / 2, menu.top + (menu.bottom - menu.top) * 1.5 / 12);
+await pointer.click((menu.left + menu.right) / 2, menu.top + ((menu.bottom - menu.top) * 1.5) / 12);
 const shown = rows().length;
 await ui.toggle(must(under("Staff_Title", "Staff_ViewMaintenance"), "Staff_ViewMaintenance under Staff_Title"), false);
 await until(() => rows().length < shown, 60, "the handymen hidden");
@@ -64,7 +76,9 @@ await frames(10);
 await screenshot("staff_list_sorted_filtered");
 
 // A keeper needs an animal house to look after.
-await ui.click(must(under("Staff_Title", "Staff_HireAnimalKeeperIcon"), "Staff_HireAnimalKeeperIcon under Staff_Title"));
+await ui.click(
+    must(under("Staff_Title", "Staff_HireAnimalKeeperIcon"), "Staff_HireAnimalKeeperIcon under Staff_Title"),
+);
 await until(() => ui.find("StaffQuestion") !== undefined, 30, "the enclosure message");
 await frames(5);
 await screenshot("staff_list_enclosure_needed");

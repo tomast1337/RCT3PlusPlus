@@ -12,8 +12,7 @@ export {};
 
 /** Picks a tool from the land menu, opening the menu when it is shut. */
 async function pick(icon: string): Promise<void> {
-    if (!ui.find(`tools/Land/${icon}`))
-        await ui.click("tools/Land/Land");
+    if (!ui.find(`tools/Land/${icon}`)) await ui.click("tools/Land/Land");
     await ui.click(`tools/Land/${icon}`);
 }
 
@@ -36,8 +35,7 @@ for (let r = 0; r < Math.max(width, height) && col < 0; ++r)
         for (const dr of [-r, r]) {
             const c = (width >> 1) + dc;
             const w = (height >> 1) + dr;
-            if (map.tile(c, w)?.owned && map.screen(c, w) && col < 0)
-                [col, row] = [c, w];
+            if (map.tile(c, w)?.owned && map.screen(c, w) && col < 0) [col, row] = [c, w];
         }
 expect(col >= 0, "an owned tile in sight");
 log("working on tile", col, row);
@@ -69,7 +67,10 @@ pointer.release();
 await frames(2);
 log("rumble:", still, "->", moving, "->", build.sounds().rumble);
 expect(still !== null && moving !== null && moving > still, "the stroke rumbling, louder as the ground moves");
-expect(build.sounds().rumble === null && build.sounds().thumps === thumps, "the rumble stopped on letting go, and no thump");
+expect(
+    build.sounds().rumble === null && build.sounds().thumps === thumps,
+    "the rumble stopped on letting go, and no thump",
+);
 
 log("dug a pit:", before, "->", low(col, row), "cash", cash, "->", park.cash());
 
@@ -112,7 +113,10 @@ log("lakes", lakes, "->", now.length, JSON.stringify(now[now.length - 1]), "leve
 await screenshot("water");
 expect(now.length === lakes + 1, "a new lake in the pit");
 const level = map.tile(col, row)?.water ?? -1e9;
-expect(level > low(col, row) && level <= 0 && Number.isInteger(level), "the lake's level a whole unit between the pit's floor and its rim");
+expect(
+    level > low(col, row) && level <= 0 && Number.isInteger(level),
+    "the lake's level a whole unit between the pit's floor and its rim",
+);
 
 // A click on the lake takes it away.
 const [lx, ly] = on_view(col, row);
@@ -132,7 +136,10 @@ await pointer.drag([dx, dy], [dx, dy + 0.15], 20);
 await frames(2);
 log("lakes after digging under one:", map.water().length, "floor", low(col, row));
 await screenshot("water_dug");
-expect(map.water().length === lakes + 1 && map.tile(col, row)?.water === level, "the lake kept at its level by digging under it");
+expect(
+    map.water().length === lakes + 1 && map.tile(col, row)?.water === level,
+    "the lake kept at its level by digging under it",
+);
 await pick("Land_Water");
 await pointer.click(...on_view(col, row));
 await frames(2);
@@ -248,7 +255,10 @@ await frames(30);
 pointer.release();
 await frames(2);
 log("hill smoothed by a spray:", hill_top, "->", sprayed, "->", high(hill_at, row));
-expect(sprayed < hill_top && high(hill_at, row) < sprayed, "the hill to wear down for as long as a smoothing spray is held");
+expect(
+    sprayed < hill_top && high(hill_at, row) < sprayed,
+    "the hill to wear down for as long as a smoothing spray is held",
+);
 
 // A raising brush sprayed builds where the pointer goes, one way only.
 await ui.click("land_panel/Land_Brush_Height_Raise");
@@ -294,7 +304,10 @@ await frames(3);
 log("planting:", JSON.stringify(build.placing()));
 await pointer.click(tx, ty);
 await frames(2);
-const planted = map.objects().slice(trees).find((o) => o.symbol === "Common_Linden_2");
+const planted = map
+    .objects()
+    .slice(trees)
+    .find((o) => o.symbol === "Common_Linden_2");
 expect(planted !== undefined, "the tree planted");
 const tree = planted!;
 const tree_ground = low(tree.col, tree.row);
@@ -311,7 +324,10 @@ const seated = map.objects().find((o) => o.symbol === "Common_Linden_2" && o.col
 log("tree tile:", tree_ground, "->", low(tree.col, tree.row), "tree height", tree.height, "->", seated?.height);
 await screenshot("tree_raised");
 expect(low(tree.col, tree.row) > tree_ground, "the ground under the tree to rise");
-expect(seated !== undefined && seated.height !== null && seated.height >= Math.ceil(low(tree.col, tree.row)), "the tree seated on the raised ground");
+expect(
+    seated !== undefined && seated.height !== null && seated.height >= Math.ceil(low(tree.col, tree.row)),
+    "the tree seated on the raised ground",
+);
 
 // A right click with a land tool out deletes what is under the pointer, and the tool stays out.
 await pick("Land_Brush_Height");
@@ -320,5 +336,8 @@ const [rx, ry] = on_view(tree.col + 0.5, tree.row + 0.5);
 await pointer.click(rx, ry, "right");
 await frames(3);
 await screenshot("right_click");
-expect(!map.objects().some((o) => o.symbol === "Common_Linden_2" && o.col === tree.col && o.row === tree.row), "the tree deleted by a right click with a land tool out");
+expect(
+    !map.objects().some((o) => o.symbol === "Common_Linden_2" && o.col === tree.col && o.row === tree.row),
+    "the tree deleted by a right click with a land tool out",
+);
 expect(ui.find("land_panel") !== undefined, "the land tool to stay out after a right click");

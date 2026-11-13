@@ -10,7 +10,11 @@
 export {};
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "the build lists");
+await until(
+    () => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined,
+    1200,
+    "the build lists",
+);
 const paths = map.paths();
 const gate = paths.reduce((a, b) => (b.row > a.row ? b : a));
 // Grass beside the road, a few tiles in.
@@ -43,14 +47,20 @@ const edges: [number, number][] = [
 for (const [turns, [dc, dr]] of edges.entries()) {
     const { placing } = await hover(col + dc, row + dr);
     log("wall at", dc, dr, "turns", placing.site?.turns, placing.problem);
-    expect(placing.site?.turns === turns, `the wall on edge ${turns} with the pointer at ${dc},${dr}, not ${placing.site?.turns}`);
+    expect(
+        placing.site?.turns === turns,
+        `the wall on edge ${turns} with the pointer at ${dc},${dr}, not ${placing.site?.turns}`,
+    );
     expect(placing.problem === "none", `the wall placeable on edge ${turns}, not ${placing.problem}`);
 }
 const first = await hover(col + 0.1, row + 0.5);
 const ground = first.placing.site!.height;
 await pointer.click(first.x, first.y);
 const again = await hover(col + 0.1, row + 0.5);
-expect(again.placing.problem === "blocked", `a second wall refused where the first stands, not ${again.placing.problem}`);
+expect(
+    again.placing.problem === "blocked",
+    `a second wall refused where the first stands, not ${again.placing.problem}`,
+);
 pointer.shift(true);
 await frames(3);
 const raised = await hover(col + 0.1, row + 0.5);

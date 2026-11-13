@@ -11,7 +11,12 @@ export {};
 
 const kPool = "Pool/Default/Default_Stub";
 let here: [number, number] = [0, 0]; // Where the pointer was last moved for a ghost
-const kSteps: [number, number][] = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // By side, as the pools count them
+const kSteps: [number, number][] = [
+    [0, 1],
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+]; // By side, as the pools count them
 
 /** Moves the pointer until the design in hand has its first piece on tile `goal`; whether it does. */
 async function aim(goal: { col: number; row: number }): Promise<boolean> {
@@ -24,10 +29,8 @@ async function aim(goal: { col: number; row: number }): Promise<boolean> {
         pointer.move(...here);
         await frames(4);
         const g = build.construction()?.ghostAt;
-        if (!g)
-            return false;
-        if (g.col === goal.col && g.row === goal.row)
-            return true;
+        if (!g) return false;
+        if (g.col === goal.col && g.row === goal.row) return true;
         at = { col: at.col + goal.col - g.col, row: at.row + goal.row - g.row };
     }
     return false;
@@ -43,8 +46,7 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
     await ui.click("design_placing/close");
     await frames(5);
     const rides_tab = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
-    if (!ui.find("tools/Rides/Obj_Pools"))
-        await ui.click(rides_tab);
+    if (!ui.find("tools/Rides/Obj_Pools")) await ui.click(rides_tab);
     await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
     await ui.click("tools/Rides/Obj_Pools");
     await until(() => ui.find("pool_panel/body/editor/Pool_PlaceWater") !== undefined, 120, "the pool panel");
@@ -68,18 +70,25 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
 
 const kSlides = /^(BodySlide|RingSlide|ProSlide|MasterBlaster):/;
 // Those with track: a design put away to lay water for it leaves its ride with none.
-const slides = () => rides.list().flatMap((r, i) => (!r.flat && !r.demolished && (r.pieces ?? 0) > 0 && kSlides.test(r.symbol) ? [i] : []));
+const slides = () =>
+    rides
+        .list()
+        .flatMap((r, i) => (!r.flat && !r.demolished && (r.pieces ?? 0) > 0 && kSlides.test(r.symbol) ? [i] : []));
 
 await frames(300);
 let names: string[] = [];
 if (park.loaded()) {
     names = slides().map((i) => rides.list()[i].symbol);
-}
-else {
+} else {
     // A saved design of each kind, laid where its ghost fits.
     await park.open("Campaigns/Base/BlankLandscape.dat");
     await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
-    for (const [kind, design] of [["BodySlide", "Reef Rider"], ["RingSlide", "Undertow"], ["ProSlide", "The Vortex"], ["MasterBlaster", "Tubular"]]) {
+    for (const [kind, design] of [
+        ["BodySlide", "Reef Rider"],
+        ["RingSlide", "Undertow"],
+        ["ProSlide", "The Vortex"],
+        ["MasterBlaster", "Tubular"],
+    ]) {
         const pick = async () => {
             expect(build.pick(`tracks/TrackedRides/${kind}/${kind}`, kind, "designs"), `a ${kind} to build`);
             await until(() => ui.find("design_browser") !== undefined, 600, "the designs window");
@@ -124,7 +133,10 @@ else {
 }
 const found = slides();
 log("pool slides", found.map((i) => `${rides.list()[i].name} ${rides.list()[i].symbol}`).join(", "));
-expect(found.length > 0 && found.length >= names.length, `a pool slide to test, not ${found.length} of ${names.join(" ")}`);
+expect(
+    found.length > 0 && found.length >= names.length,
+    `a pool slide to test, not ${found.length} of ${names.join(" ")}`,
+);
 
 const messages = park.messages().length;
 for (const slide of found) {
@@ -135,13 +147,27 @@ for (const slide of found) {
     expect(rides.setState(slide, "testing") == null, `${kind} tested`);
     await frames(10);
     const length = info().trackLength ?? 0;
-    expect(length > 0 && (info().trainsAt ?? []).length > 0, `${kind} run on its track by the park, not ${JSON.stringify(info())}`);
+    expect(
+        length > 0 && (info().trainsAt ?? []).length > 0,
+        `${kind} run on its track by the park, not ${JSON.stringify(info())}`,
+    );
     // Ending in an open end, one car waits at the top and any others are out of sight past that end. A ring slide
     // may instead go round, carried back up by a lift, as a coaster does.
     const at = info().trainsAt!;
     const open_end = /^(EndStraight|Bowl|Funnel)/.test(info().track!.at(-1) ?? "");
-    log(kind, "length", length.toFixed(1), "open end", open_end, "trains", JSON.stringify(at.map((t) => t.front.toFixed(1))));
-    expect(!open_end || at.filter((t) => t.front < length - 0.01).length === 1, `one car on ${kind}'s track, the rest past its end, not ${JSON.stringify(at)}`);
+    log(
+        kind,
+        "length",
+        length.toFixed(1),
+        "open end",
+        open_end,
+        "trains",
+        JSON.stringify(at.map((t) => t.front.toFixed(1))),
+    );
+    expect(
+        !open_end || at.filter((t) => t.front < length - 0.01).length === 1,
+        `one car on ${kind}'s track, the rest past its end, not ${JSON.stringify(at)}`,
+    );
 
     // Setting off: eased off the platform, not shot out of it. Its speed each tenth of a second for its first two
     // seconds under way (logged), and the speed it has left the platform at.
@@ -165,8 +191,7 @@ for (const slide of found) {
         for (let k = 0; k < 120; ++k) {
             const t = info().trainsAt![top];
             fastest = Math.max(fastest, t.speed);
-            if (k % 4 === 0)
-                climb.push(`${t.speed.toFixed(1)}@${t.front.toFixed(0)}`);
+            if (k % 4 === 0) climb.push(`${t.speed.toFixed(1)}@${t.front.toFixed(0)}`);
             await park.advance(0.25);
         }
         log(kind, "under way, speed@front", climb.join(" "), "fastest", fastest.toFixed(1));
@@ -174,8 +199,13 @@ for (const slide of found) {
     }
 
     // Under way down the slide: a look at the empty car.
-    const sliding = () => (info().trainsAt ?? []).findIndex((t) => t.station === null && t.front > 5 && t.front < length - 5);
-    await park.advanceUntil(() => sliding() >= 0 && info().trainsAt![sliding()].front > length / 3, 120, `${kind}'s car on its way down`);
+    const sliding = () =>
+        (info().trainsAt ?? []).findIndex((t) => t.station === null && t.front > 5 && t.front < length - 5);
+    await park.advanceUntil(
+        () => sliding() >= 0 && info().trainsAt![sliding()].front > length / 3,
+        120,
+        `${kind}'s car on its way down`,
+    );
     const down = sliding();
     const car = info().cars![down];
     camera.look(car, { col: car.col + 3, row: car.row + 3, up: car.up! + 4 });
@@ -210,7 +240,14 @@ for (const slide of found) {
         await frames(5);
         await screenshot(`${kind}_up_the_wall`);
     }
-    await park.advanceUntil(() => { swing(); return done(); }, 240, open_end ? `${kind}'s car off the end` : `${kind}'s car round past its station`);
+    await park.advanceUntil(
+        () => {
+            swing();
+            return done();
+        },
+        240,
+        open_end ? `${kind}'s car off the end` : `${kind}'s car round past its station`,
+    );
     log(kind, "swung up the wall at most", most.toFixed(2), "at", most_at.toFixed(1));
     await park.advance(20);
     expect((info().crashes ?? 0) === 0, `no crash on ${kind}, not ${info().crashes}`);
@@ -220,13 +257,15 @@ for (const slide of found) {
     // Opened, it runs on with no crash either; laid on dry land, away from a pool, it may not open.
     const refused = rides.setState(slide, "open");
     log(kind, "opened", refused ?? "yes");
-    if (refused != null)
-        continue;
+    if (refused != null) continue;
     await park.advance(30);
     expect((info().crashes ?? 0) === 0 && (info().wrecks ?? []).length === 0, `no crash on ${kind} once open`);
     expect(info().open === true, `${kind} still open`);
 }
-const told = park.messages().slice(messages).map((m) => m.key);
+const told = park
+    .messages()
+    .slice(messages)
+    .map((m) => m.key);
 expect(!told.some((k) => /crash/i.test(k)), `no crash message, not ${told.join(" ")}`);
 
 // Too fast for its turns: a ring slide's car driven round at a speed far past what its drops give flies out of its
@@ -241,15 +280,19 @@ if (ring !== undefined) {
     rides.setFixedSpeed(ring, 25);
     let most = 0;
     let car = 0;
-    await park.advanceUntil(() => {
-        info().trainsAt!.forEach((t, k) => {
-            if (Math.abs(t.lean ?? 0) > most) {
-                most = Math.abs(t.lean ?? 0);
-                car = k;
-            }
-        });
-        return (info().crashes ?? 0) > 0;
-    }, 60, "the ring slide's car flying out of its trough");
+    await park.advanceUntil(
+        () => {
+            info().trainsAt!.forEach((t, k) => {
+                if (Math.abs(t.lean ?? 0) > most) {
+                    most = Math.abs(t.lean ?? 0);
+                    car = k;
+                }
+            });
+            return (info().crashes ?? 0) > 0;
+        },
+        60,
+        "the ring slide's car flying out of its trough",
+    );
     log("RingSlide at 25 m/s flew out at", info().trainsAt![car].front.toFixed(1), "swung", most.toFixed(2));
     const c = info().cars?.[car];
     if (c !== undefined) {

@@ -63,6 +63,9 @@ const look_at = async (i: number, name: string, behind = false) => {
 // Up the ladder, out on a board, off its end and into the water; nobody else on it meanwhile.
 await until(() => diver(true, "climb") >= 0, 6000, "a swimmer climbing the high board");
 const high = diver(true);
+// Where they set off from, at the ladder's foot: the ground the pool is on need not be at height 0.
+const start = people.list()[high];
+const foot = start.up!;
 await look_at(high, "pool_dives_climb");
 await look_at(high, "pool_dives_climb_back", true);
 let most = 0;
@@ -71,7 +74,7 @@ await until(() => (count(), people.list()[high].diving === "walk"), 3600, "the d
 const top = people.list()[high].up!;
 await until(() => (count(), people.list()[high].diving === "jump"), 600, "the diver at the board's end");
 await look_at(high, "pool_dives_board");
-await until(() => (count(), people.list()[high].diving === "fall" && people.list()[high].up! < top / 2), 600, "the diver halfway down");
+await until(() => (count(), people.list()[high].diving === "fall" && people.list()[high].up! < (top + foot) / 2), 600, "the diver halfway down");
 await look_at(high, "pool_dives_fall");
 await until(() => (count(), people.list()[high].diving === "surface"), 600, "the diver in the water");
 await frames(2);
@@ -80,7 +83,8 @@ await until(() => (count(), people.list()[high].diving === undefined), 600, "the
 expect(people.list()[high].state === "swimming" && people.list()[high].swimwear === true, "the diver swimming on in their swimwear");
 expect(most === 1, `one on the high board at a time, not ${most}`);
 
-// A small board on the water's edge beside the high one, turned until it fits against the wall.
+// A small board on the water's edge beside the high one they dived off, turned until it fits against the wall.
+const off = map.objects().filter((o) => o.overlay === kPool && o.symbol === "DBTopBoard").sort((a, b) => Math.hypot(a.col - start.col!, a.row - start.row!) - Math.hypot(b.col - start.col!, b.row - start.row!))[0];
 const extras = () => map.objects().filter((o) => o.overlay === kPool && !/^(Curve)?(Solid|Edge|Corner|End|Full|Base|Railing|DB\w|Path)/.test(o.symbol));
 const before = extras().length;
 const boards = () => extras().length - before;
@@ -93,8 +97,8 @@ await until(() => ui.find("pool_panel") !== undefined, 120, "the pool panel");
 // The panel opens on its water tool; pick the board once it has.
 await frames(5);
 expect(build.pick(kPool, "DB"), "the diving board in the pool list");
-const water = map.objects().filter((o) => o.overlay === kPool && /^(Curve)?Edge\d*Top$/.test(o.symbol) && (o.col !== tower!.col || o.row !== tower!.row));
-const away = (o: { col: number; row: number }) => Math.abs(o.col - tower!.col) + Math.abs(o.row - tower!.row);
+const water = map.objects().filter((o) => o.overlay === kPool && /^(Curve)?Edge\d*Top$/.test(o.symbol) && (o.col !== off.col || o.row !== off.row));
+const away = (o: { col: number; row: number }) => Math.abs(o.col - off.col) + Math.abs(o.row - off.row);
 water.sort((a, b) => away(a) - away(b));
 expect(water.length > 0, "the pool's wall near the high board");
 for (const square of water.slice(0, 30))

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "config/game_options.hpp"
+#include "config/game/options.hpp"
 
 #include "config/json_text.hpp"
 
@@ -7,7 +7,7 @@
 #include <cmath>
 #include <format>
 
-namespace rct3::config
+namespace rct3::config::game
 {
 
     namespace
@@ -228,4 +228,4 @@ namespace rct3::config
         return write_text_file(path, text());
     }
 
-} // namespace rct3::config
+} // namespace rct3::config::game

@@ -59,7 +59,7 @@ namespace rct3::scene::park
             sounds.train_sounds.clear();
         }
 
-        std::vector<audio::SoundBuffer> load_named(const config::GameInstall& install, std::string_view file, std::span<const std::string_view> names)
+        std::vector<audio::SoundBuffer> load_named(const config::game::GameInstall& install, std::string_view file, std::span<const std::string_view> names)
         {
             const auto path = install.find(file);
             if (!path)
@@ -86,7 +86,7 @@ namespace rct3::scene::park
 
     } // namespace
 
-    ParkSounds load_park_sounds(const config::GameInstall& install, std::uint32_t seed)
+    ParkSounds load_park_sounds(const config::game::GameInstall& install, std::uint32_t seed)
     {
         ParkSounds s;
         s.random.seed(seed);

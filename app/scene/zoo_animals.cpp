@@ -54,7 +54,7 @@ namespace rct3::scene
         }
     } // namespace
 
-    void load_zoo_animals(park::ParkScene& scene, const config::GameInstall& install)
+    void load_zoo_animals(park::ParkScene& scene, const config::game::GameInstall& install)
     {
         constexpr std::string_view kAnimalFolder = "WildAnimals";
         const auto folder = install.find(kAnimalFolder);

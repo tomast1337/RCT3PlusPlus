@@ -53,7 +53,7 @@ namespace rct3::scene::park
         return { };
     }
 
-    void add_loading_logo(render::Device& device, const config::GameInstall& install, ui::InterfaceAssets& assets)
+    void add_loading_logo(render::Device& device, const config::game::GameInstall& install, ui::InterfaceAssets& assets)
     {
         namespace loading = ui::screens::loading_screen;
         const auto log = logging::logger("ui");

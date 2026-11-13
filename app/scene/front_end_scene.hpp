@@ -6,8 +6,8 @@
 // of language, which needs the strings and fonts again, are for the owner to take.
 #pragma once
 
-#include "config/game_install.hpp"
-#include "config/game_options.hpp"
+#include "config/game/install.hpp"
+#include "config/game/options.hpp"
 #include "render/device.hpp"
 #include "scene/career_browser.hpp"
 #include "scene/save_browser.hpp"
@@ -56,7 +56,7 @@ namespace rct3::scene
         // On the heap: the front end keeps references to the desktop and the options, and the scene moves.
         struct Live
         {
-            config::GameOptions options;
+            config::game::GameOptions options;
             ui::Desktop desktop;
             std::optional<ui::screens::FrontEnd> front;
         };
@@ -82,7 +82,7 @@ namespace rct3::scene
         ParkGame game;                             ///< What that park is played as
     };
 
-    [[nodiscard]] std::expected<FrontEndScene, std::string> create_front_end_scene(render::Device& device, const config::GameInstall& install, FrontEndSceneSetup setup);
+    [[nodiscard]] std::expected<FrontEndScene, std::string> create_front_end_scene(render::Device& device, const config::game::GameInstall& install, FrontEndSceneSetup setup);
 
     /// Lays out for the device's size and routes the pointer, given in framebuffer pixels, and the keys.
     /// Returns whether the interface has the pointer.

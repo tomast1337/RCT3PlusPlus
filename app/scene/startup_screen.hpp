@@ -12,7 +12,7 @@
 
 #include "audio/audio.hpp"
 #include "audio/music_player.hpp"
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 #include "render/device.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/skin/set.hpp"
@@ -50,7 +50,7 @@ namespace rct3::scene
     };
 
     /// Loads the banner logos (the game's logo among them, for the loading screen) and the logo movies.
-    [[nodiscard]] std::expected<StartupScreen, std::string> create_startup_screen(render::Device& device, const config::GameInstall& install, const ui::StartupOptions& options);
+    [[nodiscard]] std::expected<StartupScreen, std::string> create_startup_screen(render::Device& device, const config::game::GameInstall& install, const ui::StartupOptions& options);
 
     /// Brings the current logo's movie, if it is one, to its time: its picture into its texture and its
     /// sound into `audio` (none: silent); a movie's sound stops once its step is over. Call between

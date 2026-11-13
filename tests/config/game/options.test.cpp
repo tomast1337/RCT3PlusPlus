@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "config/game_options.hpp"
+#include "config/game/options.hpp"
 
 #include <doctest/doctest.h>
 #include <filesystem>
 #include <set>
 
 using namespace rct3::config;
+using namespace rct3::config::game;
 namespace fs = std::filesystem;
 
 TEST_CASE("every game option is registered once, in id order, its default in range")

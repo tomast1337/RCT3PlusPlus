@@ -13,7 +13,7 @@
 
 #include "audio/audio.hpp"
 #include "audio/ride_sounds.hpp"
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 #include "simulation/crash.hpp"
 #include "simulation/entt.hpp"
 
@@ -84,7 +84,7 @@ namespace rct3::scene::park
         std::minstd_rand random;
     };
 
-    [[nodiscard]] ParkSounds load_park_sounds(const config::GameInstall& install, std::uint32_t seed);
+    [[nodiscard]] ParkSounds load_park_sounds(const config::game::GameInstall& install, std::uint32_t seed);
     /// Plays what is heard in `scene` now, `elapsed` seconds after the last update.
     void update_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds, const ParkScene& scene, float elapsed);
     void stop_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds);

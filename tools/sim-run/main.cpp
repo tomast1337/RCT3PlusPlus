@@ -9,7 +9,7 @@
 // time each phase of a step took, as the profiler's table. --awards (with --game) adds how many rides and stalls
 // carry each theme, as the theme awards count them. Flat rides take their timing from their models, so they come
 // over only with --game, the game's folder.
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 #include "logging/crash.hpp"
 #include "logging/log.hpp"
 #include "park/asset_index.hpp"
@@ -169,7 +169,7 @@ int main(int argc, char** argv)
     std::map<std::uint64_t, std::uint32_t> facility_kinds;      // Special attractions' kinds, by attraction
     if (game)
     {
-        const auto install = config::open_game_install(game);
+        const auto install = config::game::open_game_install(game);
         if (!install)
         {
             out.error("{}: not the game's folder", game);

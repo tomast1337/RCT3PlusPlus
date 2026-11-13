@@ -40,7 +40,7 @@ namespace rct3::scene
         };
 
         // A movie that cannot be read is left out: its logo's picture shows instead, if the install has one.
-        void load_movies(render::Device& device, const config::GameInstall& install, StartupScreen& screen)
+        void load_movies(render::Device& device, const config::game::GameInstall& install, StartupScreen& screen)
         {
             for (const MovieChoice& choice : kMovies)
                 for (const std::string_view name : choice.files)
@@ -69,7 +69,7 @@ namespace rct3::scene
                 }
         }
 
-        std::expected<void, std::string> load(render::Device& device, const config::GameInstall& install, StartupScreen& screen)
+        std::expected<void, std::string> load(render::Device& device, const config::game::GameInstall& install, StartupScreen& screen)
         {
             const auto banner = install.find(ui::screens::loading_screen::kLogoFile);
             if (!banner)
@@ -87,7 +87,7 @@ namespace rct3::scene
 
     } // namespace
 
-    std::expected<StartupScreen, std::string> create_startup_screen(render::Device& device, const config::GameInstall& install, const ui::StartupOptions& options)
+    std::expected<StartupScreen, std::string> create_startup_screen(render::Device& device, const config::game::GameInstall& install, const ui::StartupOptions& options)
     {
         StartupScreen screen;
         auto renderer = ui::create_ui_renderer(device);

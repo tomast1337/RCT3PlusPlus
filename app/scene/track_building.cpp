@@ -2,7 +2,7 @@
 #include "scene/track_building.hpp"
 
 #include "career/career_file.hpp"
-#include "config/game_saves.hpp"
+#include "config/game/saves.hpp"
 #include "core/maybe.hpp"
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
@@ -455,7 +455,7 @@ namespace rct3::scene
         }
 
         /// The file of the train named `train_name` among the install's cars.
-        std::optional<std::filesystem::path> train_file(const config::GameInstall& install, std::string_view train_name)
+        std::optional<std::filesystem::path> train_file(const config::game::GameInstall& install, std::string_view train_name)
         {
             std::error_code error;
             const std::filesystem::path cars = install.find("Cars").value_or(std::filesystem::path { });
@@ -466,7 +466,7 @@ namespace rct3::scene
         }
 
         /// The car counts trains of the kind named `train_name` allow, as the install's file of it sets them.
-        ui::screens::TrainLimits train_limits_of(const config::GameInstall& install, std::string_view train_name)
+        ui::screens::TrainLimits train_limits_of(const config::game::GameInstall& install, std::string_view train_name)
         {
             ui::screens::TrainLimits limits;
             const auto file = train_file(install, train_name);
@@ -1603,7 +1603,7 @@ namespace rct3::scene
         return cost;
     }
 
-    bool fit_trains(park::ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars)
+    bool fit_trains(park::ParkScene& scene, const config::game::GameInstall& install, std::size_t index, int trains, int cars)
     {
         save::model::Ride& ride = scene.rides.rides[index];
         if (ride.trains.empty() || trains < 1 || cars < 1)
@@ -1676,7 +1676,7 @@ namespace rct3::scene
         return arm;
     }
 
-    std::optional<bool> use_train(park::ParkScene& scene, const config::GameInstall& install, std::size_t index, std::string_view train_name)
+    std::optional<bool> use_train(park::ParkScene& scene, const config::game::GameInstall& install, std::size_t index, std::string_view train_name)
     {
         save::model::Ride& ride = scene.rides.rides[index];
         if (const auto file = train_file(install, train_name))
@@ -1702,7 +1702,7 @@ namespace rct3::scene
         return std::nullopt;
     }
 
-    void ready_trains(park::ParkScene& scene, const config::GameInstall& install, std::size_t index)
+    void ready_trains(park::ParkScene& scene, const config::game::GameInstall& install, std::size_t index)
     {
         const save::model::Ride& ride = scene.rides.rides[index];
         if (ride.kind != save::model::RideKind::Tracked || scene.train_limits.contains(index))
@@ -1782,7 +1782,7 @@ namespace rct3::scene
                 boats->handling = model->second.boat_handling;
     }
 
-    bool set_trains(render::Device& device, park::ParkScene& scene, const config::GameInstall& install, std::size_t index, int trains, int cars)
+    bool set_trains(render::Device& device, park::ParkScene& scene, const config::game::GameInstall& install, std::size_t index, int trains, int cars)
     {
         save::model::Ride& ride = scene.rides.rides[index];
         const entt::entity e = index < scene.ride_entities.size() ? scene.ride_entities[index] : entt::null;

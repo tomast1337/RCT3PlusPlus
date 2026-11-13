@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 
 #include "strings/ascii.hpp"
 
@@ -8,7 +8,7 @@
 #include <format>
 #include <system_error>
 
-namespace rct3::config
+namespace rct3::config::game
 {
 
     namespace fs = std::filesystem;
@@ -104,4 +104,4 @@ namespace rct3::config
         return install;
     }
 
-} // namespace rct3::config
+} // namespace rct3::config::game

@@ -96,7 +96,7 @@ namespace rct3::scene::park
         class AttractionTypes
         {
         public:
-            explicit AttractionTypes(const config::GameInstall& install)
+            explicit AttractionTypes(const config::game::GameInstall& install)
                 : install_(install)
             {
             }
@@ -155,7 +155,7 @@ namespace rct3::scene::park
                 return overlays_.emplace(path, std::move(overlay)).first->second.get();
             }
 
-            const config::GameInstall& install_;
+            const config::game::GameInstall& install_;
             std::map<std::string, std::unique_ptr<ovl::Overlay>, std::less<>> overlays_;
             std::map<std::string, std::optional<std::uint32_t>, std::less<>> types_;
         };
@@ -238,7 +238,7 @@ namespace rct3::scene::park
 
     } // namespace
 
-    ParkMap park_map(const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const save::model::WaterLayer& water, std::span<const save::model::PlacedObject> objects, const rct3::park::object::ObjectModels& models, const rct3::park::object::Fitted& fitted, const rct3::park::AttractionObjects& attractions, const save::model::RideModel& rides, const rct3::park::ground::GroundImages& images, const config::GameInstall& install)
+    ParkMap park_map(const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const save::model::WaterLayer& water, std::span<const save::model::PlacedObject> objects, const rct3::park::object::ObjectModels& models, const rct3::park::object::Fitted& fitted, const rct3::park::AttractionObjects& attractions, const save::model::RideModel& rides, const rct3::park::ground::GroundImages& images, const config::game::GameInstall& install)
     {
         const profiling::Scope zone("Map");
         ParkMap map;

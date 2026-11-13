@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "config/game_saves.hpp"
+#include "config/game/saves.hpp"
 
 #include <system_error>
 
-namespace rct3::config
+namespace rct3::config::game
 {
 
     namespace
@@ -91,4 +91,4 @@ namespace rct3::config
         }
     }
 
-} // namespace rct3::config
+} // namespace rct3::config::game

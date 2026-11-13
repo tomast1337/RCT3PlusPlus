@@ -11,7 +11,7 @@
 // desktop update, so it finds its window by name.
 #pragma once
 
-#include "config/game_options.hpp"
+#include "config/game/options.hpp"
 #include "core/maybe.hpp"
 #include "ui/desktop.hpp"
 #include "ui/screens/options_dialog.hpp"
@@ -27,7 +27,7 @@ namespace rct3::ui::screens
     {
     public:
         /// For windows on `desktop`, writing to `options`. The desktop, strings and options must outlive it.
-        OptionsSession(Desktop& desktop, OptionsDialogStyle style, const StringTable& strings, config::GameOptions& options, OptionsChoices choices);
+        OptionsSession(Desktop& desktop, OptionsDialogStyle style, const StringTable& strings, config::game::GameOptions& options, OptionsChoices choices);
 
         /// Opens the window, or brings it to the front.
         void open();
@@ -62,7 +62,7 @@ namespace rct3::ui::screens
         Desktop& desktop_;
         OptionsDialogStyle style_;
         const StringTable& strings_;
-        config::GameOptions& options_;
+        config::game::GameOptions& options_;
         OptionsChoices choices_;
         bool open_ = false;
         bool closed_ = false;

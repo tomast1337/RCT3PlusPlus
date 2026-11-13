@@ -249,12 +249,12 @@ namespace rct3::scene::park
         return f;
     }
 
-    ui::screens::InfoUnits info_units(const ui::InterfaceAssets& assets, const config::GameOptions& options)
+    ui::screens::InfoUnits info_units(const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
     {
         ui::screens::InfoUnits units;
-        units.currency = ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
-        units.distance = static_cast<ui::screens::DistanceUnits>(options.choice(config::GameOption::DistanceUnits));
-        units.original_finances = options.flag(config::GameOption::OriginalFinances);
+        units.currency = ui::currency(*assets.strings, options.choice(config::game::GameOption::Currency));
+        units.distance = static_cast<ui::screens::DistanceUnits>(options.choice(config::game::GameOption::DistanceUnits));
+        units.original_finances = options.flag(config::game::GameOption::OriginalFinances);
         return units;
     }
 
@@ -341,7 +341,7 @@ namespace rct3::scene::park
         logging::logger("park").info("{} carried items, {} extras, {} pictures", scene.carried.items.size(), scene.carried.extras.size(), skins);
     }
 
-    void show_info_page(ParkScene& scene, ui::screens::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+    void show_info_page(ParkScene& scene, ui::screens::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
     {
         if (!scene.shown_party.empty())
             panel.show_page(ui::screens::party_page(scene.party_tab, party_facts(scene), *assets.strings, info_units(assets, options)));
@@ -373,7 +373,7 @@ namespace rct3::scene::park
         return camera;
     }
 
-    void open_person(ParkScene& scene, ui::screens::InfoPanel& panel, std::size_t shown, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+    void open_person(ParkScene& scene, ui::screens::InfoPanel& panel, std::size_t shown, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
     {
         if (shown >= scene.shown_people.size())
             return;
@@ -413,7 +413,7 @@ namespace rct3::scene::park
         show_info_page(scene, panel, assets, options);
     }
 
-    void open_party(ParkScene& scene, ui::screens::InfoPanel& panel, std::size_t shown, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+    void open_party(ParkScene& scene, ui::screens::InfoPanel& panel, std::size_t shown, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
     {
         std::vector<ui::screens::InfoTab> tabs;
         std::size_t picked = 0;
@@ -431,7 +431,7 @@ namespace rct3::scene::park
         show_info_page(scene, panel, assets, options);
     }
 
-    void open_info(ParkScene& scene, ui::screens::InfoPanel& panel, rct3::park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::GameOptions& options, std::optional<ui::screens::AttractionTab> tab)
+    void open_info(ParkScene& scene, ui::screens::InfoPanel& panel, rct3::park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, std::optional<ui::screens::AttractionTab> tab)
     {
         const ui::screens::AttractionFacts f = facts(scene, ref);
         if (f.common == nullptr)
@@ -486,7 +486,7 @@ namespace rct3::scene::park
         show_info_page(scene, panel, assets, options);
     }
 
-    void open_prop(ParkScene& scene, ui::screens::InfoPanel& panel, std::size_t index, const ui::InterfaceAssets& assets, const config::GameOptions& options, std::optional<ui::screens::SceneryTab> open)
+    void open_prop(ParkScene& scene, ui::screens::InfoPanel& panel, std::size_t index, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, std::optional<ui::screens::SceneryTab> open)
     {
         if (index >= scene.objects.size())
             return;
@@ -525,7 +525,7 @@ namespace rct3::scene::park
             change_object(device, scene, index, [&](save::model::PlacedObject& o) { o.colours.at(slot) = colour; });
     }
 
-    void change_attraction(render::Device& device, ParkScene& scene, ui::screens::InfoPanel& panel, rct3::park::AttractionRef ref, const ui::screens::InfoChange& change, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+    void change_attraction(render::Device& device, ParkScene& scene, ui::screens::InfoPanel& panel, rct3::park::AttractionRef ref, const ui::screens::InfoChange& change, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
     {
         using enum ui::screens::AttractionControl;
         save::model::Ride* ride = ref.kind == rct3::park::AttractionRef::Kind::Ride && ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index] : nullptr;
@@ -764,7 +764,7 @@ namespace rct3::scene::park
                 *departure = simulation::departure_of(ride->options);
     }
 
-    void open_row(ParkScene& scene, ui::screens::InfoPanel& panel, ui::screens::ManagementRow row, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+    void open_row(ParkScene& scene, ui::screens::InfoPanel& panel, ui::screens::ManagementRow row, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
     {
         using Kind = ui::screens::ManagementRow::Kind;
         if (row.kind == Kind::Ride || row.kind == Kind::Stall)

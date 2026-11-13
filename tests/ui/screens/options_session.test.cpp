@@ -15,7 +15,7 @@ namespace
     struct Fixture
     {
         StringTable strings;
-        config::GameOptions options;
+        config::game::GameOptions options;
         Desktop desktop;
         OptionsSession session { desktop, game_skins::options_dialog_style(kGamePalette), strings, options, OptionsChoices { } };
 

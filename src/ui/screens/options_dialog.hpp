@@ -25,7 +25,7 @@
 // on the right.
 #pragma once
 
-#include "config/game_options.hpp"
+#include "config/game/options.hpp"
 #include "core/maybe.hpp"
 #include "ui/key_map.hpp"
 #include "ui/screens/option_rows.hpp"
@@ -66,9 +66,9 @@ namespace rct3::ui::screens
         /// The music files the park can play when zoomed out; the row shows with any. The choice goes into the
         /// options.
         std::vector<std::string> background_music { };
-        std::optional<std::size_t> background_track { }; ///< Shown while the player has not chosen; nothing for no music
-        std::bitset<config::kGameOptionCount> inert { }; ///< Options nothing acts on yet: shown, not usable
-        bool language_locked = false;                    ///< The language shows but cannot change, e.g. in a park
+        std::optional<std::size_t> background_track { };       ///< Shown while the player has not chosen; nothing for no music
+        std::bitset<config::game::kGameOptionCount> inert { }; ///< Options nothing acts on yet: shown, not usable
+        bool language_locked = false;                          ///< The language shows but cannot change, e.g. in a park
     };
 
     /// The keys page: one scrolling list, the commands in groups under blue bars.
@@ -135,7 +135,7 @@ namespace rct3::ui::screens
     {
     public:
         /// The window writes to `options`, which must outlive it.
-        OptionsDialog(std::string name, const OptionsDialogStyle& style, const StringTable& strings, config::GameOptions& options, OptionsChoices choices);
+        OptionsDialog(std::string name, const OptionsDialogStyle& style, const StringTable& strings, config::game::GameOptions& options, OptionsChoices choices);
 
         [[nodiscard]] OptionsPage page() const
         {
@@ -206,7 +206,7 @@ namespace rct3::ui::screens
         void update_camera_help();
 
         OptionsDialogStyle style_;
-        config::GameOptions& options_;
+        config::game::GameOptions& options_;
         OptionsChoices choices_;
         KeyMap keys_;
         std::array<Widget*, kOptionsPageCount> pages_ { };

@@ -5,7 +5,7 @@
 // still in its crate, or of a species whose model cannot be read, is drawn as the crate.
 #pragma once
 
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 #include "park/animal_mesh.hpp"
 #include "park/moving_meshes.hpp"
 #include "render/device.hpp"
@@ -36,7 +36,7 @@ namespace rct3::scene
     };
 
     /// Finds the animals' models in `install`, to read as animals come.
-    void load_zoo_animals(park::ParkScene& scene, const config::GameInstall& install);
+    void load_zoo_animals(park::ParkScene& scene, const config::game::GameInstall& install);
 
     /// The crate animals come in, as an object to load the model of.
     [[nodiscard]] save::model::PlacedObject animal_crate();

@@ -19,7 +19,7 @@ namespace
     struct Fixture
     {
         StringTable strings;
-        config::GameOptions options;
+        config::game::GameOptions options;
         Desktop desktop;
         FrontEnd front;
 

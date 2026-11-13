@@ -128,9 +128,9 @@ namespace rct3::scene::park
         }
     } // namespace
 
-    WaterLook water_look(const config::GameOptions& options)
+    WaterLook water_look(const config::game::GameOptions& options)
     {
-        using config::GameOption;
+        using config::game::GameOption;
         return {
             .reflection = options.flag(GameOption::ReflectiveWater),
             .refraction = options.flag(GameOption::Refraction),

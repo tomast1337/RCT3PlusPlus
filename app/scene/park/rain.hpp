@@ -5,7 +5,7 @@
 // about the eye, and lean with the wind. How many fall follows how hard it rains.
 #pragma once
 
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 #include "render/device.hpp"
 #include "render/types.hpp"
 
@@ -45,7 +45,7 @@ namespace rct3::scene::park
     };
 
     /// Loads the rain texture from the install. Without it, nothing is drawn.
-    void load_park_rain(render::Device& device, ParkRain& rain, const config::GameInstall& install);
+    void load_park_rain(render::Device& device, ParkRain& rain, const config::game::GameInstall& install);
     /// Draws the streaks into the open pass, over the opaque world.
     void draw_park_rain(render::Device& device, ParkRain& rain, const RainView& view);
     void destroy_park_rain(render::Device& device, ParkRain& rain);

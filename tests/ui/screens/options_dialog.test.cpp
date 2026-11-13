@@ -10,14 +10,14 @@ using namespace rct3;
 using namespace rct3::ui;
 using namespace rct3::ui::widgets;
 using namespace rct3::ui::screens;
-using O = config::GameOption;
+using O = config::game::GameOption;
 
 namespace
 {
     struct Fixture
     {
         StringTable strings;
-        config::GameOptions options;
+        config::game::GameOptions options;
         Desktop desktop;
         OptionsDialog* dialog = nullptr;
 
@@ -67,7 +67,7 @@ TEST_CASE("the custom graphics settings always show, usable only with the custom
     f.desktop.update({ });
     CHECK(f.dialog->custom_graphics().visible);
     CHECK_FALSE(usable());
-    f.options.set(O::GraphicsQuality, config::kCustomQuality);
+    f.options.set(O::GraphicsQuality, config::game::kCustomQuality);
     f.desktop.update({ });
     CHECK(usable());
 }

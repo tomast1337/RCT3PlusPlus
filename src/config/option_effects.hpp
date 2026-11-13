@@ -7,7 +7,7 @@
 // changes track.
 #pragma once
 
-#include "config/game_options.hpp"
+#include "config/game/options.hpp"
 
 #include <bitset>
 #include <span>
@@ -16,9 +16,9 @@ namespace rct3::config
 {
 
     /// The options something in the program reads, the interface's own included.
-    [[nodiscard]] std::span<const GameOption> acted_on_options();
+    [[nodiscard]] std::span<const game::GameOption> acted_on_options();
 
     /// Every option not in acted_on_options().
-    [[nodiscard]] std::bitset<kGameOptionCount> inert_options();
+    [[nodiscard]] std::bitset<game::kGameOptionCount> inert_options();
 
 } // namespace rct3::config

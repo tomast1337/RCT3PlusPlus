@@ -8,7 +8,7 @@
 namespace rct3::ui::screens
 {
 
-    OptionsSession::OptionsSession(Desktop& desktop, OptionsDialogStyle style, const StringTable& strings, config::GameOptions& options, OptionsChoices choices)
+    OptionsSession::OptionsSession(Desktop& desktop, OptionsDialogStyle style, const StringTable& strings, config::game::GameOptions& options, OptionsChoices choices)
         : desktop_(desktop)
         , style_(std::move(style))
         , strings_(strings)

@@ -119,7 +119,7 @@ namespace rct3::scene::park
         } };
 
         /// The top folders of the install that the park's objects come from, as they are spelled on disk.
-        std::vector<std::string> object_folders(const config::GameInstall& install, std::span<const save::model::PlacedObject> objects)
+        std::vector<std::string> object_folders(const config::game::GameInstall& install, std::span<const save::model::PlacedObject> objects)
         {
             std::vector<std::string> folders;
             for (const save::model::PlacedObject& o : objects)
@@ -141,7 +141,7 @@ namespace rct3::scene::park
         /// The models of the park's objects, by model key, and the pictures they use.
         /// Adds the models of `objects` that `models` does not have yet, and their pictures.
         /// With `cars`, the objects are ride cars and these are their designs, by object.
-        void load_models(const config::GameInstall& install, std::span<const save::model::PlacedObject> objects, bool modelled_plants, rct3::park::object::ObjectModels& models, rct3::park::object::ModelPictures& pictures, std::span<const rct3::park::ride::CarDesign> cars = { })
+        void load_models(const config::game::GameInstall& install, std::span<const save::model::PlacedObject> objects, bool modelled_plants, rct3::park::object::ObjectModels& models, rct3::park::object::ModelPictures& pictures, std::span<const rct3::park::ride::CarDesign> cars = { })
         {
             const profiling::Scope zone("Models");
             const std::vector<std::string> folders = object_folders(install, objects);
@@ -195,7 +195,7 @@ namespace rct3::scene::park
         /// Reads the umbrellas guests carry, the food and drink as stalls hand it over and as its empty is left,
         /// the litter and sick on the paths, the handymen's tools and the lazy river's swim ring, and uploads their
         /// pictures with the people's.
-        void load_carried_models(render::Device& device, ParkScene& scene, const config::GameInstall& install)
+        void load_carried_models(render::Device& device, ParkScene& scene, const config::game::GameInstall& install)
         {
             const auto found = install.find(kCarriedFolder);
             const std::string folder = found.value_or(std::filesystem::path(kCarriedFolder)).filename().string();
@@ -320,7 +320,7 @@ namespace rct3::scene::park
         }
 
         /// Reads the models of the park's guests and staff and uploads their pictures.
-        void load_people_models(render::Device& device, ParkScene& scene, const config::GameInstall& install, random::Seed seed)
+        void load_people_models(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, random::Seed seed)
         {
             const profiling::Scope zone("PeopleModels");
             const auto folder = install.find(kCharacterFolder);
@@ -504,7 +504,7 @@ namespace rct3::scene::park
         }
 
         /// The sky from the install, ready to draw; a sky that cannot be read is left out.
-        std::expected<void, std::string> load_sky(render::Device& device, const config::GameInstall& install, const config::GameOptions& options, std::string_view theme, ParkScene& scene)
+        std::expected<void, std::string> load_sky(render::Device& device, const config::game::GameInstall& install, const config::game::GameOptions& options, std::string_view theme, ParkScene& scene)
         {
             const profiling::Scope zone("Sky");
             const auto log = logging::logger("park");
@@ -527,11 +527,11 @@ namespace rct3::scene::park
             scene.horizon_band = rct3::park::sky::horizon_band(*sky);
             scene.sky = std::move(sky->models);
             // Without the sky, the clear colour stands in for it; without clouds, the sky is clear.
-            if (!options.flag(config::GameOption::Sky))
+            if (!options.flag(config::game::GameOption::Sky))
                 scene.sky.dome = scene.sky.stars = scene.sky.milky_way = { };
-            if (!options.flag(config::GameOption::Clouds))
+            if (!options.flag(config::game::GameOption::Clouds))
                 scene.sky.clouds = { };
-            if (options.flag(config::GameOption::Mountains))
+            if (options.flag(config::game::GameOption::Mountains))
                 scene.mountains = rct3::park::mountain_mesh(sky->mountains, rct3::park::mountain_place(scene.grid, theme));
             const render::VertexLayout layout { sizeof(rct3::park::GroundVertex), kGroundAttributes };
             auto pipeline = device.create_pipeline({ .shader = render::Shader::Textured, .layout = layout, .blend = render::BlendMode::Alpha, .depth_test = false, .depth_write = false, .label = "sky" });
@@ -543,7 +543,7 @@ namespace rct3::scene::park
 
         /// The park's time of day as its file left it, in the window its mode keeps. A park without opening
         /// hours keeps the whole day.
-        simulation::DayClock park_day(const save::SaveFile& file, const save::ObjectIndex& index, const save::model::WorldModel& world, const config::GameOptions& options)
+        simulation::DayClock park_day(const save::SaveFile& file, const save::ObjectIndex& index, const save::model::WorldModel& world, const config::game::GameOptions& options)
         {
             simulation::DayWindow hours;
             if (const auto park = save::model::load_park(file, index); park && park->has_park)
@@ -551,7 +551,7 @@ namespace rct3::scene::park
             const std::optional<std::int32_t> mode = world.time ? world.time->day_night_mode : std::nullopt;
             const std::optional<float> time = world.time ? std::optional(world.time->day_fraction) : std::nullopt;
             const simulation::DayMode day_mode = simulation::day_mode(mode);
-            simulation::DayClock clock = simulation::start_day(time, simulation::day_window(day_mode, hours), simulation::day_transition(options.choice(config::GameOption::DayNight)));
+            simulation::DayClock clock = simulation::start_day(time, simulation::day_window(day_mode, hours), simulation::day_transition(options.choice(config::game::GameOption::DayNight)));
             clock.mode = day_mode;
             clock.park_hours = hours;
             return clock;
@@ -696,7 +696,7 @@ namespace rct3::scene::park
         }
     }
 
-    void add_referenced(rct3::park::AssetIndex& index, const config::GameInstall& install)
+    void add_referenced(rct3::park::AssetIndex& index, const config::game::GameInstall& install)
     {
         std::set<std::string, std::less<>> tried_files;
         for (auto missing = index.missing_references(); !missing.empty(); missing = index.missing_references())
@@ -714,7 +714,7 @@ namespace rct3::scene::park
         }
     }
 
-    void add_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t from, std::size_t count)
+    void add_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, std::size_t from, std::size_t count)
     {
         std::uint64_t last = 0;
         for (const auto& list : { std::span<const save::model::PlacedObject>(scene.objects), std::span<const save::model::PlacedObject>(scene.cars) })
@@ -786,7 +786,7 @@ namespace rct3::scene::park
             scene.riding = kept[*scene.riding];
     }
 
-    void replace_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index)
+    void replace_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, std::size_t ride_index)
     {
         drop_ride_cars(scene, ride_index);
         add_ride_cars(device, scene, install, ride_index, 1);
@@ -806,12 +806,12 @@ namespace rct3::scene::park
         }
     }
 
-    void load_car_models(ParkScene& scene, const config::GameInstall& install, const rct3::park::ride::RideCars& cars)
+    void load_car_models(ParkScene& scene, const config::game::GameInstall& install, const rct3::park::ride::RideCars& cars)
     {
         load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
     }
 
-    void board_tracked_ride(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index)
+    void board_tracked_ride(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, std::size_t ride_index)
     {
         const entt::entity entity = ride_index < scene.ride_entities.size() ? scene.ride_entities[ride_index] : entt::null;
         if (entity == entt::null)
@@ -881,7 +881,7 @@ namespace rct3::scene::park
     namespace
     {
         /// The park's people read and handed to the simulation, with the rides, path items, animals and the rest it runs.
-        void start_simulation(render::Device& device, ParkScene& scene, const config::GameInstall& install, const save::SaveFile& file, const save::ObjectIndex& index, const std::optional<parkfile::SavedPark>& saved, const save::model::WorldModel& world, const std::expected<save::model::ParkModel, save::Error>& park_model, random::Seed seed, const simulation::RatingModel& ratings)
+        void start_simulation(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, const save::SaveFile& file, const save::ObjectIndex& index, const std::optional<parkfile::SavedPark>& saved, const save::model::WorldModel& world, const std::expected<save::model::ParkModel, save::Error>& park_model, random::Seed seed, const simulation::RatingModel& ratings)
         {
             const auto log = logging::logger("park");
             auto people = profiling::section("ReadPeople", [&] { return save::model::load_people(file, index); });
@@ -1122,7 +1122,7 @@ namespace rct3::scene::park
         }
     } // namespace
 
-    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const ui::Palette& palette, const config::GameOptions& options, const std::filesystem::path& path, random::Seed seed, const simulation::RatingModel& ratings, const ParkLoadReport& report)
+    std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::game::GameInstall& install, const ui::StringTable& strings, const ui::Palette& palette, const config::game::GameOptions& options, const std::filesystem::path& path, random::Seed seed, const simulation::RatingModel& ratings, const ParkLoadReport& report)
     {
         const profiling::Scope zone("LoadPark");
         const auto log = logging::logger("park");
@@ -1167,9 +1167,9 @@ namespace rct3::scene::park
 
         ParkScene scene;
         scene.base = *bytes;
-        scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
+        scene.surface_detail = options.choice(config::game::GameOption::SurfaceDetail);
         scene.relief_maps = scene.surface_detail >= 2;
-        scene.texture_detail = options.get(config::GameOption::TextureDetail);
+        scene.texture_detail = options.get(config::game::GameOption::TextureDetail);
         scene.grid = std::move(world->terrain);
         scene.seed = seed;
         scene.file = path;
@@ -1345,7 +1345,7 @@ namespace rct3::scene::park
                 if (auto uploaded = ui::upload_textures(device, pictures))
                     scene.object_textures.merge(*uploaded);
             }
-            scene.modelled_plants = options.flag(config::GameOption::Trees3D);
+            scene.modelled_plants = options.flag(config::game::GameOption::Trees3D);
             load_models(install, world->objects, scene.modelled_plants, scene.models, scene.pictures);
             scene.objects = std::move(world->objects);
             scene.own_objects = scene.objects.size();
@@ -1478,7 +1478,7 @@ namespace rct3::scene::park
             add_ride_cars(device, scene, install, 0, scene.rides.rides.size());
             log.info("{} ride cars, {} on arms, {} vertices{}", scene.cars.size(), scene.arm_cars.size(), scene.car_meshes.own.size(), scene.car_lamps ? ", some with lamps" : "");
             refresh_pavings(scene);
-            if (options.flag(config::GameOption::OffMapTrees))
+            if (options.flag(config::game::GameOption::OffMapTrees))
             {
                 scene.off_map_stream = random::stream(seed, random::RandomStream::Scenery);
                 // The park's own list where it has one; grown round its trees where not.
@@ -1501,7 +1501,7 @@ namespace rct3::scene::park
                                                     return edge && rct3::park::walled(scene.footpaths.walls, { p.col, p.row }, side, *edge);
                                                 });
                                             });
-            scene.blend_band = options.get(config::GameOption::DetailBlendBand);
+            scene.blend_band = options.get(config::game::GameOption::DetailBlendBand);
             scene.level_scales = level_scales(options);
             place_objects(scene);
             std::ranges::transform(scene.places.transforms, std::back_inserter(scene.anchors), [](const glm::mat4& m) { return glm::vec3(m[3]); });

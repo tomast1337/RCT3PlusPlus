@@ -15,7 +15,7 @@
 // The score is the mean difference of red, green and blue, 0 to 255, over the pixels either look colours.
 // The tool also prints the share of those pixels that differ by more than a quarter. A panel scoring above
 // T (default 12) is flagged, and the tool then exits with 1. The pictures hold game art: keep them out of git.
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 #include "image/png_encoder.hpp"
 #include "logging/log.hpp"
 #include "ui/desktop.hpp"
@@ -358,7 +358,7 @@ namespace
         return picture;
     }
 
-    std::expected<Assets, std::string> load_assets(const config::GameInstall& install)
+    std::expected<Assets, std::string> load_assets(const config::game::GameInstall& install)
     {
         const auto path = install.find(ui::game_skins::kMainOverlay);
         if (!path)
@@ -447,10 +447,10 @@ int main(int argc, char** argv)
         }
     }
 
-    const auto install = game ? config::open_game_install(*game) : config::find_game_install(config::Environment::from_process());
+    const auto install = game ? config::game::open_game_install(*game) : config::game::find_game_install(config::Environment::from_process());
     if (!install)
     {
-        out.error("{}", config::describe(install.error()).c_str());
+        out.error("{}", config::game::describe(install.error()).c_str());
         return 2;
     }
     const auto assets = load_assets(*install);

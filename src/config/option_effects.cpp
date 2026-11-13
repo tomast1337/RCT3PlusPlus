@@ -9,7 +9,7 @@ namespace rct3::config
     namespace
     {
 
-        using O = GameOption;
+        using O = game::GameOption;
 
         constexpr std::array kActedOn = {
             O::Fullscreen,       // The window
@@ -74,16 +74,16 @@ namespace rct3::config
 
     } // namespace
 
-    std::span<const GameOption> acted_on_options()
+    std::span<const game::GameOption> acted_on_options()
     {
         return kActedOn;
     }
 
-    std::bitset<kGameOptionCount> inert_options()
+    std::bitset<game::kGameOptionCount> inert_options()
     {
-        std::bitset<kGameOptionCount> inert;
+        std::bitset<game::kGameOptionCount> inert;
         inert.set();
-        for (const GameOption o : kActedOn)
+        for (const game::GameOption o : kActedOn)
             inert.reset(static_cast<std::size_t>(o));
         return inert;
     }

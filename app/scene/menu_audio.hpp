@@ -11,8 +11,8 @@
 #include "audio/audio.hpp"
 #include "audio/menu_music.hpp"
 #include "audio/music_player.hpp"
-#include "config/game_install.hpp"
-#include "config/game_options.hpp"
+#include "config/game/install.hpp"
+#include "config/game/options.hpp"
 #include "ovl/sound.hpp"
 #include "ui/interface_sound.hpp"
 
@@ -46,14 +46,14 @@ namespace rct3::scene
     [[nodiscard]] std::vector<audio::SoundBuffer> sounds_named(const std::vector<ovl::SoundItem>& items, std::span<const std::string_view> names);
 
     /// The names of the files in the game's music folder that it can play, sorted; nothing without the folder.
-    [[nodiscard]] std::vector<std::string> music_files(const config::GameInstall& install);
+    [[nodiscard]] std::vector<std::string> music_files(const config::game::GameInstall& install);
 
     /// Picks the run's track, which moves the menu music's cycle on in `options`, and starts it.
-    [[nodiscard]] MenuAudio start_menu_audio(audio::AudioEngine& engine, const config::GameInstall& install, config::GameOptions& options, std::uint32_t seed);
+    [[nodiscard]] MenuAudio start_menu_audio(audio::AudioEngine& engine, const config::game::GameInstall& install, config::game::GameOptions& options, std::uint32_t seed);
 
     /// Keeps the music going at the volume of `options`, fading to `level` of it (0..1), and plays the interface's
     /// sounds. Sets the engine's master volume to the game volume. `in_park` while a park is open, which quiets the menus' own music.
-    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::GameOptions& options, std::span<const ui::InterfaceSound> sounds, bool in_park = false, float level = 1);
+    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::game::GameOptions& options, std::span<const ui::InterfaceSound> sounds, bool in_park = false, float level = 1);
 
     void stop_menu_audio(audio::AudioEngine& engine, MenuAudio& menu);
 

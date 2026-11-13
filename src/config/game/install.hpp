@@ -17,7 +17,7 @@
 #include <string>
 #include <string_view>
 
-namespace rct3::config
+namespace rct3::config::game
 {
 
     enum class InstallError : std::uint8_t
@@ -68,4 +68,4 @@ namespace rct3::config
     /// The install named by RCT3PP_GAME_PATH, else by game_path in `settings`.
     [[nodiscard]] std::expected<GameInstall, InstallProblem> find_game_install(const Environment& env, const Settings& settings = { });
 
-} // namespace rct3::config
+} // namespace rct3::config::game

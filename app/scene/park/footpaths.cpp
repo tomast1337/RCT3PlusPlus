@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/footpaths.hpp"
 
-#include "config/game_options.hpp"
+#include "config/game/options.hpp"
 #include "logging/log.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
@@ -149,9 +149,9 @@ namespace rct3::scene::park
             return f.style && *f.style < f.styles.size() && f.styles[*f.style].queue;
         }
 
-        ui::Currency currency_of(const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        ui::Currency currency_of(const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
         {
-            return ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
+            return ui::currency(*assets.strings, options.choice(config::game::GameOption::Currency));
         }
 
         std::u16string name_of(const ui::InterfaceAssets& assets, const rct3::park::path::PathStyle& style)
@@ -198,7 +198,7 @@ namespace rct3::scene::park
         }
 
         /// The panel's choices: the path styles the park offers, then its queue styles.
-        std::pair<std::vector<ui::screens::FootpathStyle>, std::vector<ui::screens::FootpathStyle>> panel_styles(const ParkFootpaths& f, const rct3::park::BuildOffer& offer, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+        std::pair<std::vector<ui::screens::FootpathStyle>, std::vector<ui::screens::FootpathStyle>> panel_styles(const ParkFootpaths& f, const rct3::park::BuildOffer& offer, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
         {
             const ui::Currency money = currency_of(assets, options);
             std::pair<std::vector<ui::screens::FootpathStyle>, std::vector<ui::screens::FootpathStyle>> out;
@@ -1260,7 +1260,7 @@ namespace rct3::scene::park
         }
     }
 
-    void toggle_footpath_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options)
+    void toggle_footpath_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::game::GameOptions& options)
     {
         auto panel = panel_of(scene);
         if (!panel)
@@ -1287,7 +1287,7 @@ namespace rct3::scene::park
         auto [paths, queues] = panel_styles(f, scene.build.offer, assets, options);
         panel->show(std::move(paths), std::move(queues));
         panel->set_chosen(pick_of(f, scene.build.offer));
-        panel->set_following(options.flag(config::GameOption::PathCameraFollow));
+        panel->set_following(options.flag(config::game::GameOption::PathCameraFollow));
         f.dirty = true;
     }
 
@@ -1319,7 +1319,7 @@ namespace rct3::scene::park
         return panel && panel->showing();
     }
 
-    void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options)
+    void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
     {
         auto panel = panel_of(scene);
         ParkFootpaths& f = scene.footpaths;
@@ -1376,7 +1376,7 @@ namespace rct3::scene::park
             f.route_goal_height.reset();
             f.dirty = true;
         }
-        if (panel->following() != options.flag(config::GameOption::PathCameraFollow))
+        if (panel->following() != options.flag(config::game::GameOption::PathCameraFollow))
             f.follow_changed = panel->following();
         if (panel->removing() != f.removing)
         {

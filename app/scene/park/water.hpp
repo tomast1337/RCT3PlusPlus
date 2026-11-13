@@ -15,7 +15,7 @@
 //   (see-through objects, the interface)
 #pragma once
 
-#include "config/game_options.hpp"
+#include "config/game/options.hpp"
 #include "park/camera.hpp"
 #include "park/pools/waves.hpp"
 #include "park/terrain_mesh.hpp"
@@ -51,7 +51,7 @@ namespace rct3::scene::park
         bool reflect_people = false;
     };
 
-    [[nodiscard]] WaterLook water_look(const config::GameOptions& options);
+    [[nodiscard]] WaterLook water_look(const config::game::GameOptions& options);
 
     struct ParkWater
     {

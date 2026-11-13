@@ -11,7 +11,7 @@
 // player's own, once the folders are known; a tracked ride's row tells how many it has.
 #pragma once
 
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 #include "park/build_catalogue.hpp"
 #include "save/model/design.hpp"
 #include "save/model/park.hpp"
@@ -58,7 +58,7 @@ namespace rct3::scene
 
     /// Starts reading the install's items. `content`: what the park records of the items it offers, if
     /// it was read.
-    [[nodiscard]] BuildMenus start_build_menus(const config::GameInstall& install, const save::model::RequiredContent* content);
+    [[nodiscard]] BuildMenus start_build_menus(const config::game::GameInstall& install, const save::model::RequiredContent* content);
 
     /// Starts reading the saved designs in `folders`, in their order; those that do not read are left out.
     void start_design_scan(BuildMenus& menus, std::vector<std::filesystem::path> folders);

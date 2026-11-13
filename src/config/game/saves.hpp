@@ -18,7 +18,7 @@
 #include <optional>
 #include <string_view>
 
-namespace rct3::config
+namespace rct3::config::game
 {
 
     /// The game's folder of the player's games, if it is there. `install` is the game's root folder.
@@ -27,4 +27,4 @@ namespace rct3::config
     /// The folder in the game's that holds what our `folder` holds; nothing for folders it has no match for.
     [[nodiscard]] std::optional<std::string_view> game_saves_folder(UserFolder folder);
 
-} // namespace rct3::config
+} // namespace rct3::config::game

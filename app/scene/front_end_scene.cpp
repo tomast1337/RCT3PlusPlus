@@ -38,7 +38,7 @@ namespace rct3::scene
 
     } // namespace
 
-    std::expected<FrontEndScene, std::string> create_front_end_scene(render::Device& device, const config::GameInstall& install, FrontEndSceneSetup setup)
+    std::expected<FrontEndScene, std::string> create_front_end_scene(render::Device& device, const config::game::GameInstall& install, FrontEndSceneSetup setup)
     {
         const auto log = logging::logger("ui");
         auto assets = ui::load_interface_assets(device, install, setup.language, setup.fallback_font, kMoreSkins);
@@ -58,7 +58,7 @@ namespace rct3::scene
         if (scene.options_file)
         {
             std::vector<config::FileProblem> problems;
-            if (auto loaded = config::GameOptions::load(*scene.options_file, problems))
+            if (auto loaded = config::game::GameOptions::load(*scene.options_file, problems))
                 scene.live->options = std::move(*loaded);
             else
                 log.warning("options: {}", loaded.error());
@@ -178,7 +178,7 @@ namespace rct3::scene
         r.keys = front.take_keys();
         r.park = std::exchange(scene.park_to_play, std::nullopt);
         r.game = scene.game_to_play;
-        const bool fullscreen = scene.live->options.flag(config::GameOption::Fullscreen);
+        const bool fullscreen = scene.live->options.flag(config::game::GameOption::Fullscreen);
         if (fullscreen != scene.fullscreen)
         {
             scene.fullscreen = fullscreen;

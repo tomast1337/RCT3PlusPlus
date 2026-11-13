@@ -32,14 +32,14 @@ namespace rct3::scene::park
 
     } // namespace
 
-    void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, const config::GameOptions& options, float elapsed)
+    void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, const config::game::GameOptions& options, float elapsed)
     {
         using rct3::park::ControlMode;
         const ui::Point p = input.pointer.position;
         const float dx = p.x - scene.last_pointer.x;
         const float dy = p.y - scene.last_pointer.y;
         scene.last_pointer = p;
-        const auto mode = static_cast<ControlMode>(options.choice(config::GameOption::CameraMode));
+        const auto mode = static_cast<ControlMode>(options.choice(config::game::GameOption::CameraMode));
         const float scale = scene.scale.value_or(1);
 
         rct3::park::ParkCamera c = scene.camera;
@@ -62,10 +62,10 @@ namespace rct3::scene::park
             // ground, or unless the option says not, the scenery in front of it.
             const ui::Rect screen = scene.desktop->root().rect();
             const glm::vec2 size = glm::vec2 { screen.width(), screen.height() } * scale;
-            const glm::vec2 at = options.flag(config::GameOption::CameraFocusOnMiddle) ? size / 2.0f : glm::vec2 { p.x, p.y };
+            const glm::vec2 at = options.flag(config::game::GameOption::CameraFocusOnMiddle) ? size / 2.0f : glm::vec2 { p.x, p.y };
             const rct3::park::Ray ray = rct3::park::view_ray(c, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
             std::optional<float> hit = rct3::park::object::ground_hit(ray, scene.grid);
-            if (!options.flag(config::GameOption::CameraIgnoresScenery) && scene.show_scenery)
+            if (!options.flag(config::game::GameOption::CameraIgnoresScenery) && scene.show_scenery)
             {
                 if (scene.pick_boxes_of != scene.objects.size())
                     place_objects(scene);
@@ -89,7 +89,7 @@ namespace rct3::scene::park
         };
         // Notches to zoom; free look has no zoom.
         float wheel = over_interface || mode == ControlMode::Freelook ? 0 : input.pointer.wheel.y;
-        const float fly = options.get(config::GameOption::FreeLookSpeed) * kFlySpeed; ///< World units a second, flying
+        const float fly = options.get(config::game::GameOption::FreeLookSpeed) * kFlySpeed; ///< World units a second, flying
 
         switch (mode)
         {
@@ -100,7 +100,7 @@ namespace rct3::scene::park
                 {
                     // Far enough across, the view turns a quarter; then the drag counts afresh.
                     scene.iso_drag += dx;
-                    const float needed = options.get(config::GameOption::IsometricRotation) * kIsoTurnDrag * scale;
+                    const float needed = options.get(config::game::GameOption::IsometricRotation) * kIsoTurnDrag * scale;
                     if (std::abs(scene.iso_drag) >= needed)
                     {
                         scene.iso_step += scene.iso_drag > 0 ? 1 : -1;
@@ -128,7 +128,7 @@ namespace rct3::scene::park
             {
                 // Three ways to share the buttons out, as the camera controls option picks; the middle
                 // button always turns and tilts.
-                const int scheme = options.choice(config::GameOption::CameraControls);
+                const int scheme = options.choice(config::game::GameOption::CameraControls);
                 const bool turns = held == DragButtons::Middle || (scheme == 1 && held == DragButtons::Both) || (scheme == 2 && held == DragButtons::Right);
                 const bool slides = (scheme == 1 && held == DragButtons::Right) || (scheme != 1 && held == DragButtons::Both);
                 if (turns)
@@ -170,7 +170,7 @@ namespace rct3::scene::park
         }
 
         glm::vec2 slide { (input.right_key ? 1.0f : 0.0f) - (input.left_key ? 1.0f : 0.0f), (input.up_key ? 1.0f : 0.0f) - (input.down_key ? 1.0f : 0.0f) };
-        if (options.flag(config::GameOption::AutoScrollAtEdge) && input.in_window && !over_interface && held == DragButtons::None)
+        if (options.flag(config::game::GameOption::AutoScrollAtEdge) && input.in_window && !over_interface && held == DragButtons::None)
         {
             const ui::Rect screen = scene.desktop->root().rect();
             slide += rct3::park::edge_push({ p.x, p.y }, glm::vec2 { screen.width(), screen.height() } * scale, kEdgeBand * scale);

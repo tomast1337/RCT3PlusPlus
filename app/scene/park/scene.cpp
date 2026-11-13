@@ -2,7 +2,7 @@
 #include "scene/park/scene.hpp"
 
 #include "career/career_file.hpp"
-#include "config/game_saves.hpp"
+#include "config/game/saves.hpp"
 #include "core/maybe.hpp"
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
@@ -385,7 +385,7 @@ namespace rct3::scene::park
         return ripple_park_water(scene.water, rct3::park::view_ray(scene.camera, size.x / size.y, ndc), scene.grid);
     }
 
-    void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed)
+    void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::game::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed)
     {
         // The ground is built before the models that give the rides' and stalls' paving its size are read.
         if (scene.footpaths.pavings_stale)
@@ -488,7 +488,7 @@ namespace rct3::scene::park
             else if (scene.ride_dragging)
             {
                 const glm::vec2 screen(desktop.root().rect().width() * scale, desktop.root().rect().height() * scale);
-                const float pitch = options.flag(config::GameOption::InvertRideCameraY) ? -1.0f : 1.0f;
+                const float pitch = options.flag(config::game::GameOption::InvertRideCameraY) ? -1.0f : 1.0f;
                 scene.ride_turn = rct3::park::look_round_limited(scene.ride_turn + glm::vec2(-moved.x / screen.x, -pitch * moved.y / screen.y) * rct3::park::kRideLookPerScreen);
             }
             if (!over_interface)
@@ -959,7 +959,7 @@ namespace rct3::scene::park
         }
         profiling::section("TrackBuilding", [&] {
             const ui::Rect screen = desktop.root().rect();
-            update_track_building(device, scene, assets, options.choice(config::GameOption::Currency), info_units(assets, options).distance, pointer.position, { screen.width(), screen.height() }, over, input.shift, input.commands, elapsed);
+            update_track_building(device, scene, assets, options.choice(config::game::GameOption::Currency), info_units(assets, options).distance, pointer.position, { screen.width(), screen.height() }, over, input.shift, input.commands, elapsed);
         });
         // A slide built up to a pool, or taken away, opens or closes its railing there.
         if (!scene.pools.squares.empty() && pool_openings(scene) != scene.pool_openings)
@@ -982,16 +982,16 @@ namespace rct3::scene::park
         scene.chain_shifts.resize(scene.rides.rides.size());
         for (std::size_t i = 0; i < scene.chain_shifts.size(); ++i)
             scene.chain_shifts[i] = rct3::park::chain_shift(scene.chain_shifts[i], scene.rides.rides[i].options.lift_speed, park_seconds);
-        advance_park_particles(scene.particles, park_seconds, viewer, static_cast<std::size_t>(options.get(config::GameOption::ParticleBudget)));
+        advance_park_particles(scene.particles, park_seconds, viewer, static_cast<std::size_t>(options.get(config::game::GameOption::ParticleBudget)));
         scene.water.look = water_look(options);
-        scene.shadows = options.choice(config::GameOption::Shadows);
-        scene.blend_shadows = options.flag(config::GameOption::BlendShadows);
-        scene.blend_band = options.get(config::GameOption::DetailBlendBand);
+        scene.shadows = options.choice(config::game::GameOption::Shadows);
+        scene.blend_shadows = options.flag(config::game::GameOption::BlendShadows);
+        scene.blend_band = options.get(config::game::GameOption::DetailBlendBand);
         scene.level_scales = level_scales(options);
-        scene.bloom = options.flag(config::GameOption::Bloom);
-        scene.light_shafts = options.flag(config::GameOption::LightShafts);
-        scene.ambient_occlusion = options.flag(config::GameOption::AmbientOcclusion);
-        scene.surface_detail = options.choice(config::GameOption::SurfaceDetail);
+        scene.bloom = options.flag(config::game::GameOption::Bloom);
+        scene.light_shafts = options.flag(config::game::GameOption::LightShafts);
+        scene.ambient_occlusion = options.flag(config::game::GameOption::AmbientOcclusion);
+        scene.surface_detail = options.choice(config::game::GameOption::SurfaceDetail);
         advance_park_water(scene.water, park_seconds);
         rct3::park::pools::drop_spent_waves(scene.drawn_waves, scene.park_clock);
         rct3::park::pools::drop_spent_waves(scene.rings, scene.park_clock);
@@ -1017,7 +1017,7 @@ namespace rct3::scene::park
                 .car_splashes = splashes,
             };
             // As the game has it, drops are drawn only where refraction is.
-            advance_park_lens(scene.lens, around, options.flag(config::GameOption::WaterDroplets) && options.flag(config::GameOption::Refraction), elapsed);
+            advance_park_lens(scene.lens, around, options.flag(config::game::GameOption::WaterDroplets) && options.flag(config::game::GameOption::Refraction), elapsed);
         });
         profiling::section("People", [&] { refresh_people(scene, viewer, rct3::park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
         profiling::section("ZooAnimals", [&] { place_animals(scene); });
@@ -1059,7 +1059,7 @@ namespace rct3::scene::park
             simulation::advance(scene.day, game_seconds);
             const float before = scene.park.time;
             const std::int32_t weeks = simulation::park::pass_time(scene.park, game_seconds);
-            simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, options.flag(config::GameOption::DisableWeather));
+            simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, options.flag(config::game::GameOption::DisableWeather));
             scene.thunder = rct3::park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed, scene.weather_dice);
             // Research, once the build lists say what each item is. It goes by the calendar, so that a calendar set
             // on by hand takes research with it.
@@ -1576,7 +1576,7 @@ namespace rct3::scene::park
                 if (auto* photos = scene.sim.registry.ctx().find<simulation::Photos>())
                 {
                     const auto& r = scene.sim.registry;
-                    const bool wanted = options.flag(config::GameOption::AllPhotos) && options.flag(config::GameOption::PhotoSpotPhotos);
+                    const bool wanted = options.flag(config::game::GameOption::AllPhotos) && options.flag(config::game::GameOption::PhotoSpotPhotos);
                     for (const simulation::Photo& photo : std::exchange(photos->taken, { }))
                     {
                         // shortcut: photos past a few waiting are dropped, rather than stalling frame after frame; queue them over time if parks take many at once.
@@ -1820,8 +1820,8 @@ namespace rct3::scene::park
         if (bar)
         {
             ui::screens::ParkBarUnits units;
-            units.currency = ui::currency(*assets.strings, options.choice(config::GameOption::Currency));
-            units.fahrenheit = options.choice(config::GameOption::TemperatureUnits) == kFahrenheit;
+            units.currency = ui::currency(*assets.strings, options.choice(config::game::GameOption::Currency));
+            units.fahrenheit = options.choice(config::game::GameOption::TemperatureUnits) == kFahrenheit;
             // The game writes its times with am and pm in English only.
             units.twelve_hour = assets.fonts.language == ui::kDefaultLanguage;
             const auto& ledger = scene.park_model.finance.ledger;
@@ -1879,7 +1879,7 @@ namespace rct3::scene::park
                 for (auto t = std::to_underlying(ui::screens::ToolItem::DeleteOne); t <= std::to_underlying(ui::screens::ToolItem::GuestPayments); ++t)
                 {
                     const auto item = static_cast<ui::screens::ToolItem>(t);
-                    if (ui::screens::build_list(item) == items[*message->build_item].list && open_build_list(scene.build, desktop.root(), item, tools->item(item), *tools, *assets.strings, assets.palette, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)), message->build_item))
+                    if (ui::screens::build_list(item) == items[*message->build_item].list && open_build_list(scene.build, desktop.root(), item, tools->item(item), *tools, *assets.strings, assets.palette, ui::currency(*assets.strings, options.choice(config::game::GameOption::Currency)), message->build_item))
                         break;
                 }
             }
@@ -1999,7 +1999,7 @@ namespace rct3::scene::park
                     stop_structure_tools(scene);
                     stop_enclosing(scene);
                     close_build_list(desktop.root());
-                    toggle_pool_panel(device, scene, assets, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
+                    toggle_pool_panel(device, scene, assets, ui::currency(*assets.strings, options.choice(config::game::GameOption::Currency)));
                 }
                 else if (*item == ui::screens::ToolItem::People)
                     scene.show_people = tools->switched_on(*item);
@@ -2034,7 +2034,7 @@ namespace rct3::scene::park
                 else if (const auto topic = ui::screens::management_topic(*item))
                     toggle_management_window(desktop, *topic, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
                 else
-                    open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *tools, *assets.strings, assets.palette, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)));
+                    open_build_list(scene.build, desktop.root(), *item, tools->item(*item), *tools, *assets.strings, assets.palette, ui::currency(*assets.strings, options.choice(config::game::GameOption::Currency)));
             }
             // A ride's window names it after its kind, looked up by the kind's symbol; some kinds' files give their
             // name under another key, so once the items are read each such kind's name is kept under its symbol too.
@@ -2057,7 +2057,7 @@ namespace rct3::scene::park
             if (!scene.build.designs.valid() && assets.install && scene.saves.data)
             {
                 std::vector<std::filesystem::path> folders { scene.saves.data->folder(config::UserFolder::Coasters) };
-                if (const auto name = config::game_saves_folder(config::UserFolder::Coasters); scene.saves.game_saves && name)
+                if (const auto name = config::game::game_saves_folder(config::UserFolder::Coasters); scene.saves.game_saves && name)
                     folders.push_back(*scene.saves.game_saves / *name);
                 folders.push_back(assets.install->find("Coaster Designs").value_or(std::filesystem::path { }));
                 start_design_scan(scene.build, std::move(folders));
@@ -2156,7 +2156,7 @@ namespace rct3::scene::park
         if (auto money = desktop.root().find_as<ui::widgets::MoneyFloaters>(kMoneyName))
         {
             const ui::Rect view = desktop.root().rect();
-            money->floats = money_floats(scene, { view.width(), view.height() }, ui::currency(*assets.strings, options.choice(config::GameOption::Currency)), elapsed);
+            money->floats = money_floats(scene, { view.width(), view.height() }, ui::currency(*assets.strings, options.choice(config::game::GameOption::Currency)), elapsed);
         }
         if (const auto picked = update_park_map(device, scene.map, desktop, scene.grid, scene.camera, aspect(device), [&] { return map_people(scene); }, elapsed))
         {
@@ -2360,12 +2360,12 @@ namespace rct3::scene::park
         return std::exchange(scene.message_alert, false);
     }
 
-    rct3::park::object::LevelScales level_scales(const config::GameOptions& options)
+    rct3::park::object::LevelScales level_scales(const config::game::GameOptions& options)
     {
-        static_assert(config::kDetailPairs.size() == rct3::park::kDetailKinds); // In the same order
+        static_assert(config::game::kDetailPairs.size() == rct3::park::kDetailKinds); // In the same order
         rct3::park::object::LevelScales scales;
         for (std::size_t i = 0; i < scales.size(); ++i)
-            scales[i] = { .detail = options.get(config::kDetailPairs[i].detail), .distance = options.get(config::kDetailPairs[i].distance) };
+            scales[i] = { .detail = options.get(config::game::kDetailPairs[i].detail), .distance = options.get(config::game::kDetailPairs[i].distance) };
         return scales;
     }
 

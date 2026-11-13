@@ -16,7 +16,7 @@
 // close in the middle of a desktop update, so it finds them by name.
 #pragma once
 
-#include "config/game_options.hpp"
+#include "config/game/options.hpp"
 #include "config/user_data.hpp"
 #include "core/maybe.hpp"
 #include "ui/desktop.hpp"
@@ -61,7 +61,7 @@ namespace rct3::ui::screens
     {
     public:
         /// Adds the front screen to `desktop`. The strings and options must outlive the front end.
-        FrontEnd(Desktop& desktop, FrontEndStyle style, const StringTable& strings, config::GameOptions& options, FrontEndSetup setup);
+        FrontEnd(Desktop& desktop, FrontEndStyle style, const StringTable& strings, config::game::GameOptions& options, FrontEndSetup setup);
 
         void update();
 

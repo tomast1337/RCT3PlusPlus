@@ -8,7 +8,7 @@
 // to wherever the player clicks or drags on the map.
 #pragma once
 
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 #include "park/attraction_objects.hpp"
 #include "park/camera.hpp"
 #include "park/ground/textures.hpp"
@@ -42,7 +42,7 @@ namespace rct3::scene::park
     /// What a park's map shows: its paths, water, scenery and attractions by kind, and the ground in the
     /// colours of its surfaces' pictures in `images`. The kinds of stalls and facilities are read from the
     /// overlays that hold them, under `install`.
-    [[nodiscard]] ParkMap park_map(const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const save::model::WaterLayer& water, std::span<const save::model::PlacedObject> objects, const rct3::park::object::ObjectModels& models, const rct3::park::object::Fitted& fitted, const rct3::park::AttractionObjects& attractions, const save::model::RideModel& rides, const rct3::park::ground::GroundImages& images, const config::GameInstall& install);
+    [[nodiscard]] ParkMap park_map(const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const save::model::WaterLayer& water, std::span<const save::model::PlacedObject> objects, const rct3::park::object::ObjectModels& models, const rct3::park::object::Fitted& fitted, const rct3::park::AttractionObjects& attractions, const save::model::RideModel& rides, const rct3::park::ground::GroundImages& images, const config::game::GameInstall& install);
 
     /// Opens the map window, or closes it when it is open.
     void toggle_park_map(ParkMap& map, ui::Desktop& desktop, const ui::StringTable& strings, const ui::Palette& palette);

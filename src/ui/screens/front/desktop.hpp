@@ -23,7 +23,7 @@
 #include "ui/screens/career_board.hpp"
 #include "ui/screens/career_dialog.hpp"
 #include "ui/screens/file_dialog.hpp"
-#include "ui/screens/front_screen.hpp"
+#include "ui/screens/front/screen.hpp"
 #include "ui/screens/options_dialog.hpp"
 #include "ui/screens/options_session.hpp"
 #include "ui/screens/tutorial_picker.hpp"
@@ -34,7 +34,7 @@
 #include <string>
 #include <vector>
 
-namespace rct3::ui::screens
+namespace rct3::ui::screens::front
 {
 
     struct FrontEndStyle
@@ -177,4 +177,4 @@ namespace rct3::ui::screens
         std::vector<FrontRequest> unhandled_;
     };
 
-} // namespace rct3::ui::screens
+} // namespace rct3::ui::screens::front

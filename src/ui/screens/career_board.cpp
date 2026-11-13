@@ -14,7 +14,7 @@ namespace rct3::ui::screens
     namespace
     {
 
-        namespace fs = front_screen;
+        namespace fs = front::front_screen;
         namespace cm = career_board;
         using career::ScenarioStatus;
 
@@ -46,10 +46,10 @@ namespace rct3::ui::screens
 
         /// A scenario's round button, with its mark in the corner. It grows whole under the pointer, and
         /// looks the same when locked.
-        class ScenarioButton : public FrontButton
+        class ScenarioButton : public front::FrontButton
         {
         public:
-            using FrontButton::FrontButton;
+            using front::FrontButton::FrontButton;
             std::string mark;
 
             void draw(DrawContext& context) const override
@@ -121,15 +121,15 @@ namespace rct3::ui::screens
             b.enabled = career::is_open(scenarios_[i].status);
             buttons_.push_back(&b);
         }
-        new_ = &add<FrontButton>("new", style_.small_button, style_.new_icon);
-        resume_ = &add<FrontButton>("resume", style_.small_button, style_.resume_icon);
-        load_ = &add<FrontButton>("load", style_.small_button, style_.load_icon);
-        menu_ = &add<FrontButton>("menu", style_.small_button, style_.menu_icon);
-        quit_ = &add<FrontButton>("quit", style_.small_button, style_.quit_icon);
+        new_ = &add<front::FrontButton>("new", style_.small_button, style_.new_icon);
+        resume_ = &add<front::FrontButton>("resume", style_.small_button, style_.resume_icon);
+        load_ = &add<front::FrontButton>("load", style_.small_button, style_.load_icon);
+        menu_ = &add<front::FrontButton>("menu", style_.small_button, style_.menu_icon);
+        quit_ = &add<front::FrontButton>("quit", style_.small_button, style_.quit_icon);
         // Nowhere until the first layout, so nothing is under the pointer before then.
-        for (FrontButton* w : { new_, resume_, load_, menu_, quit_ })
+        for (front::FrontButton* w : { new_, resume_, load_, menu_, quit_ })
             w->placement = top_left(0, 0, 0, 0);
-        for (FrontButton* b : buttons_)
+        for (front::FrontButton* b : buttons_)
             b->placement = top_left(0, 0, 0, 0);
         picked_ = picked < scenarios_.size() && career::is_open(scenarios_[picked].status) ? picked : 0;
         set_can_resume(picked_, picked_ < scenarios_.size() && scenarios_[picked_].can_resume);
@@ -244,7 +244,7 @@ namespace rct3::ui::screens
                     break;
             }
         }
-        const std::array<std::pair<const FrontButton*, std::string_view>, 5> named = { {
+        const std::array<std::pair<const front::FrontButton*, std::string_view>, 5> named = { {
             { new_, kNewName },
             { resume_, kResumeName },
             { load_, kLoadName },
@@ -290,17 +290,17 @@ namespace rct3::ui::screens
         title_box_ = { text_left, panel_.y0, text_right, panel_.y0 + title_height };
         description_box_ = { text_left, title_box_.y1, text_right, panel_.y1 };
 
-        const std::array<FrontButton*, 3> under = { new_, resume_, load_ };
+        const std::array<front::FrontButton*, 3> under = { new_, resume_, load_ };
         const float button_bottom = panel_.y1 - cm::kButtonUp * button;
         for (std::size_t i = 0; i < under.size(); ++i)
         {
             const float x = panel_.x1 - cm::kButtonSteps.at(i) * cm::kButtonStep * button;
             under[i]->placement = placed({ x, button_bottom - button, x + button, button_bottom }, rect());
         }
-        const std::array<FrontButton*, 2> small = { menu_, quit_ };
+        const std::array<front::FrontButton*, 2> small = { menu_, quit_ };
         for (std::size_t i = 0; i < small.size(); ++i)
             small[i]->placement = placed(fs::button_rect(frame, fs::on_ring(cm::kSmallAngles.at(i), fs::kSmallRadius), fs::kSmallButtonSize), rect());
-        for (FrontButton* b : { new_, resume_, load_, menu_, quit_ })
+        for (front::FrontButton* b : { new_, resume_, load_, menu_, quit_ })
         {
             b->swell = button * (fs::kSwellFactor - 1) / 2;
             b->swell_time = (fs::kSwellFactor - 1) / fs::kSwellRate;
@@ -359,7 +359,7 @@ namespace rct3::ui::screens
     void CareerBoard::draw(DrawContext& context) const
     {
         const fs::Frame frame = fs::frame_for(rect(), style_.round);
-        draw_front_bands(context, frame);
+        front::draw_front_bands(context, frame);
 
         // The large picture in the bottom-left corner, the front piece over it settling from a little big.
         if (picked_ < scenarios_.size())
@@ -394,7 +394,7 @@ namespace rct3::ui::screens
             if (const auto f = context.fonts.get(font::FontRole::ScaledSmall))
                 draw_text(context.list, *f, info.description, description_box_, { style_.text_colour, Align::Start, Align::Start, true });
         }
-        draw_front_help(context, frame, help_title_, help_text_);
+        front::draw_front_help(context, frame, help_title_, help_text_);
     }
 
 } // namespace rct3::ui::screens

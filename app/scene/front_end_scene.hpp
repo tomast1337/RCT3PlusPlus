@@ -15,7 +15,7 @@
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/interface_assets.hpp"
-#include "ui/screens/front_end.hpp"
+#include "ui/screens/front/desktop.hpp"
 
 #include <expected>
 #include <filesystem>
@@ -58,7 +58,7 @@ namespace rct3::scene
         {
             config::game::GameOptions options;
             ui::Desktop desktop;
-            std::optional<ui::screens::FrontEnd> front;
+            std::optional<ui::screens::front::FrontEnd> front;
         };
         std::unique_ptr<Live> live = std::make_unique<Live>();
         const ui::font::FontSet* current_fonts = nullptr; ///< The set for the width of the last update

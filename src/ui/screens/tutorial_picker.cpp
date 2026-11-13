@@ -13,7 +13,7 @@ namespace rct3::ui::screens
     namespace
     {
 
-        namespace fs = front_screen;
+        namespace fs = front::front_screen;
         namespace tm = tutorial_picker;
 
         constexpr std::string_view kStartName = "FrontScreen_StartTutorial_TT";
@@ -50,13 +50,13 @@ namespace rct3::ui::screens
     {
         for (std::size_t i = 0; i < tutorials_.size(); ++i)
         {
-            auto& b = add<FrontButton>(tutorials_[i].icon, style_.button, tutorials_[i].icon);
+            auto& b = add<front::FrontButton>(tutorials_[i].icon, style_.button, tutorials_[i].icon);
             b.icon_own_size = true;
             b.placement = top_left(0, 0, 0, 0); // Nowhere until the first layout
             buttons_.push_back(&b);
         }
         labels_.resize(tutorials_.size());
-        start_ = &add<FrontButton>("start", style_.button, style_.start_icon);
+        start_ = &add<front::FrontButton>("start", style_.button, style_.start_icon);
         start_->icon_own_size = true;
         start_->placement = top_left(0, 0, 0, 0);
     }
@@ -103,7 +103,7 @@ namespace rct3::ui::screens
 
         const tm::DiscPlace disc = tm::disc_place(fs::frame_for(rect(), style_.round));
         const float size = tm::kButtonSize * disc.scale;
-        const auto lay = [&](FrontButton& b, float angle) {
+        const auto lay = [&](front::FrontButton& b, float angle) {
             const Point c = disc.at(fs::on_ring(angle, tm::kRadius));
             const Rect r { c.x - size / 2, c.y - size / 2, c.x + size / 2, c.y + size / 2 };
             b.placement = placed(r, rect());

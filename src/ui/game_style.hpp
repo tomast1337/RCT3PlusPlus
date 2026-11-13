@@ -18,7 +18,7 @@
 #include "ui/screens/design_browser.hpp"
 #include "ui/screens/file_dialog.hpp"
 #include "ui/screens/footpath_panel.hpp"
-#include "ui/screens/front_screen.hpp"
+#include "ui/screens/front/screen.hpp"
 #include "ui/screens/info_panel.hpp"
 #include "ui/screens/land_panel.hpp"
 #include "ui/screens/management_window.hpp"
@@ -149,7 +149,7 @@ namespace rct3::ui::game_skins
     };
 
     /// The front screen's design, the rectangle its backdrop's pieces are cut from.
-    inline constexpr Rect kFrontDesign { 0, 0, screens::front_screen::kDesignWidth, screens::front_screen::kDesignHeight };
+    inline constexpr Rect kFrontDesign { 0, 0, screens::front::front_screen::kDesignWidth, screens::front::front_screen::kDesignHeight };
 
     [[nodiscard]] inline std::vector<CodedSkin> coded_skins(const Palette& p)
     {
@@ -176,11 +176,11 @@ namespace rct3::ui::game_skins
             { kWindowFrame, "window", Coded, game_frames::window(p) },
             { kWindowFrameUnfocused, "window", Coded, game_frames::window(p) },
             { kWindowBackground, "window-background", Coded, game_frames::window_background(p) },
-            { screens::front_screen::kBandTopSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), screens::front_screen::kBandTop) },
-            { screens::front_screen::kBandBottomSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), screens::front_screen::kBandBottom) },
-            { screens::front_screen::kStripRightSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), screens::front_screen::kStripRight) },
-            { screens::front_screen::kPatchSkin, "label-band", Coded, game_frames::label_patch(p) },
-            { screens::front_screen::kBandEndSkin, "label-band", Coded, game_frames::label_end(p) },
+            { screens::front::front_screen::kBandTopSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), screens::front::front_screen::kBandTop) },
+            { screens::front::front_screen::kBandBottomSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), screens::front::front_screen::kBandBottom) },
+            { screens::front::front_screen::kStripRightSkin, "front-backdrop", Coded, game_frames::front_piece(game_frames::front_backdrop(p, kFrontDesign), screens::front::front_screen::kStripRight) },
+            { screens::front::front_screen::kPatchSkin, "label-band", Coded, game_frames::label_patch(p) },
+            { screens::front::front_screen::kBandEndSkin, "label-band", Coded, game_frames::label_end(p) },
             { kStandardBorder, "controls", Coded, game_frames::plain_box(p) },
             { kListBox, "controls", Coded, game_frames::plain_box(p) },
             { kListBoxFocused, "controls", Coded, game_frames::focused_box(p) },
@@ -226,7 +226,7 @@ namespace rct3::ui::game_skins
     }
 
     /// Whether the game's look draws the front screen's backdrop in code, and so lays the screen out at one
-    /// scale (front_screen_layout.hpp).
+    /// scale (front/layout.hpp).
     [[nodiscard]] inline bool front_screen_round()
     {
         return std::ranges::any_of(coded_skins(Palette { }), [](const CodedSkin& c) { return c.panel == "front-backdrop" && c.look == PanelLook::Coded; });

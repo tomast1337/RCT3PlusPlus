@@ -18,7 +18,7 @@
 #include "career/career.hpp"
 #include "core/maybe.hpp"
 #include "ui/career_scenarios.hpp"
-#include "ui/screens/front_screen.hpp"
+#include "ui/screens/front/screen.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/question_box.hpp"
 
@@ -33,7 +33,7 @@ namespace rct3::ui::screens
 
     namespace career_board
     {
-        // In the front screen's 1024 by 768 design frame, y down (front_screen_layout.hpp).
+        // In the front screen's 1024 by 768 design frame, y down (front/layout.hpp).
 
         /// The scenarios on a circle round the buttons' centre, the first at the top left.
         inline constexpr float kScenarioRadius = 430; ///< The middle of the white ring, measured on its pictures
@@ -68,7 +68,7 @@ namespace rct3::ui::screens
         inline constexpr std::array<float, 3> kButtonSteps = { 4.0f, 3.0f, 2.0f }; ///< New, resume, load
 
         /// Main menu and quit, on the front screen's small circle.
-        inline constexpr std::array<float, 2> kSmallAngles = front_screen::kSmallAngles;
+        inline constexpr std::array<float, 2> kSmallAngles = front::front_screen::kSmallAngles;
 
         /// The large picture: its bottom-left corner kPictureBottom above the screen's bottom, at
         /// kPictureScale of its own size when a front piece goes over it. The front piece settles from
@@ -99,7 +99,7 @@ namespace rct3::ui::screens
         std::string no_picture;          ///< For a scenario without a large picture
         widgets::QuestionBoxStyle question;
         Color text_colour = hex("#000000");
-        bool round = false; ///< The front screen's design at one scale (front_screen_layout.hpp)
+        bool round = false; ///< The front screen's design at one scale (front/layout.hpp)
     };
 
     /// One scenario as the map shows it.
@@ -142,27 +142,27 @@ namespace rct3::ui::screens
         [[nodiscard]] bool take_quit();
 
         // For tests and owners that drive the screen.
-        [[nodiscard]] FrontButton& scenario_button(std::size_t index) const
+        [[nodiscard]] front::FrontButton& scenario_button(std::size_t index) const
         {
             return *buttons_.at(index);
         }
-        [[nodiscard]] FrontButton& new_button() const
+        [[nodiscard]] front::FrontButton& new_button() const
         {
             return *new_;
         }
-        [[nodiscard]] FrontButton& resume_button() const
+        [[nodiscard]] front::FrontButton& resume_button() const
         {
             return *resume_;
         }
-        [[nodiscard]] FrontButton& load_button() const
+        [[nodiscard]] front::FrontButton& load_button() const
         {
             return *load_;
         }
-        [[nodiscard]] FrontButton& menu_button() const
+        [[nodiscard]] front::FrontButton& menu_button() const
         {
             return *menu_;
         }
-        [[nodiscard]] FrontButton& quit_button() const
+        [[nodiscard]] front::FrontButton& quit_button() const
         {
             return *quit_;
         }
@@ -205,12 +205,12 @@ namespace rct3::ui::screens
         CareerBoardStyle style_;
         const StringTable& strings_;
         std::vector<CareerBoardScenario> scenarios_;
-        std::vector<FrontButton*> buttons_;
-        FrontButton* new_ = nullptr;
-        FrontButton* resume_ = nullptr;
-        FrontButton* load_ = nullptr;
-        FrontButton* menu_ = nullptr;
-        FrontButton* quit_ = nullptr;
+        std::vector<front::FrontButton*> buttons_;
+        front::FrontButton* new_ = nullptr;
+        front::FrontButton* resume_ = nullptr;
+        front::FrontButton* load_ = nullptr;
+        front::FrontButton* menu_ = nullptr;
+        front::FrontButton* quit_ = nullptr;
         widgets::QuestionBox* question_ = nullptr;
         Asking asking_ = Asking::New;
         std::size_t picked_ = 0;

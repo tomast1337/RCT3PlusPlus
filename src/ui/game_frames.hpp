@@ -59,7 +59,7 @@ namespace rct3::ui::game_frames
     /// tile of it, 16 units square; the window repeats it down its body.
     [[nodiscard]] CodedFrame window_background(const Palette& p);
 
-    // The front screen's backdrop, in its 1024 by 768 design (front_screen_layout.hpp): round its circle's
+    // The front screen's backdrop, in its 1024 by 768 design (front/layout.hpp): round its circle's
     // centre a white veil, blue outside it to the left, and along the bottom the striped blue strip with the
     // white lozenge the help sits on. Each frame is measured on the whole design; `screen` gives the
     // screen's edges in design units, which the blue, the veil and the strip reach out to, so on a screen of

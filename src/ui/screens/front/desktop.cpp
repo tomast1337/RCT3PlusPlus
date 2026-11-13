@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/screens/front_end.hpp"
+#include "ui/screens/front/desktop.hpp"
 
 #include "core/maybe.hpp"
 
 #include <utility>
 
-namespace rct3::ui::screens
+namespace rct3::ui::screens::front
 {
 
     namespace
@@ -238,4 +238,4 @@ namespace rct3::ui::screens
         return r;
     }
 
-} // namespace rct3::ui::screens
+} // namespace rct3::ui::screens::front

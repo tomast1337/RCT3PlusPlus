@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "ui/screens/front_screen_layout.hpp"
+#include "ui/screens/front/layout.hpp"
 
 #include <cmath>
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
-using namespace rct3::ui::screens::front_screen;
+using namespace rct3::ui::screens::front::front_screen;
 
 TEST_CASE("the design frame stretches to the screen, round things by the smaller scale")
 {

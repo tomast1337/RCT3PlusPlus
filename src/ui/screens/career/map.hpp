@@ -72,15 +72,15 @@ namespace rct3::ui::screens::career
 
         /// The large picture: its bottom-left corner kPictureBottom above the screen's bottom, at
         /// kPictureScale of its own size when a front piece goes over it. The front piece settles from
-        /// kPopFactor bigger over kPopTime seconds.
+        /// kPopFactor bigger over kPopTime.
         inline constexpr float kPictureBottom = 76;
         inline constexpr float kPictureScale = 0.8f;
         inline constexpr float kPopFactor = 1.12f;
-        inline constexpr float kPopTime = 0.25f;
+        inline constexpr units::Seconds kPopTime { 0.25f };
 
         [[nodiscard]] float scenario_angle(std::size_t index);
-        /// How big the front piece is, times its settled size, `time` seconds after the pick.
-        [[nodiscard]] float pop(float time);
+        /// How big the front piece is, times its settled size, `since` the pick.
+        [[nodiscard]] float pop(units::Seconds since);
     } // namespace career_board
 
     struct CareerBoardStyle
@@ -214,7 +214,7 @@ namespace rct3::ui::screens::career
         widgets::QuestionBox* question_ = nullptr;
         Asking asking_ = Asking::New;
         std::size_t picked_ = 0;
-        float since_pick_ = 0;
+        units::Seconds since_pick_;
         Rect panel_;
         Rect title_box_;
         Rect description_box_;

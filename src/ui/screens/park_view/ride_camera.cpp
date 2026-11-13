@@ -81,7 +81,7 @@ namespace rct3::ui::screens::park_view
     void RideCameraPanel::pointer_moved(float distance)
     {
         if (distance > ride_camera_panel::kWakeDistance)
-            still_ = 0;
+            still_ = { };
     }
 
     void RideCameraPanel::update(const UpdateContext& context)
@@ -94,8 +94,8 @@ namespace rct3::ui::screens::park_view
         pin_->icon = pin_->on ? style_.unpin : style_.pin;
 
         still_ += context.elapsed;
-        const bool wanted = pin_->on || hovered() || still_ < ride_camera_panel::kStillSeconds;
-        const float step = context.elapsed / ride_camera_panel::kSlideSeconds;
+        const bool wanted = pin_->on || hovered() || still_ < ride_camera_panel::kStill;
+        const float step = context.elapsed.value / ride_camera_panel::kSlide.value;
         shown_ = std::clamp(shown_ + (wanted ? step : -step), 0.0f, 1.0f);
         // Eased, so it slows as it comes to rest at either end.
         const float eased = shown_ * (2 - shown_);

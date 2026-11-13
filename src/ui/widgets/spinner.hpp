@@ -25,8 +25,8 @@ namespace rct3::ui::widgets
         std::string up;            ///< Family base name of the upper arrow (see SkinLibrary)
         std::string down;
         float arrow_width = 20;
-        float repeat_delay = 0.4f; ///< Seconds an arrow is held before it repeats
-        float repeat_interval = 0.08f;
+        units::Seconds repeat_delay { 0.4f }; ///< An arrow is held this long before it repeats
+        units::Seconds repeat_interval { 0.08f };
     };
 
     class Spinner : public Widget
@@ -84,8 +84,8 @@ namespace rct3::ui::widgets
         EditBox* field_ = nullptr;
         int value_ = 0;
         int held_ = 0; // +1 while the up arrow is held, -1 for the down arrow
-        float held_time_ = 0;
-        float next_repeat_ = 0;
+        units::Seconds held_time_;
+        units::Seconds next_repeat_;
         bool typing_ = false; // The field has text not yet read back
         int changes_ = 0;
     };

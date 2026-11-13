@@ -314,7 +314,7 @@ namespace rct3::ui::screens::career
             const bool twice = last_clicked_ == i && since_click_ <= style_.double_click;
             select(i);
             last_clicked_ = i;
-            since_click_ = 0;
+            since_click_ = { };
             if (twice)
                 load();
         }

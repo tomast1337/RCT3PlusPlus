@@ -624,7 +624,7 @@ namespace rct3::ui::game_skins
         s.colour = p.text;
         s.skin = kTooltip;
         s.font = font::FontRole::Small;
-        s.delay = 0.5f;
+        s.delay = units::Seconds { 0.5f };
         s.padding = { kLozengeInset.x0 + 4, kLozengeInset.y0 + 4, kLozengeInset.x1 + 4, kLozengeInset.y1 + 4 };
         return s;
     }

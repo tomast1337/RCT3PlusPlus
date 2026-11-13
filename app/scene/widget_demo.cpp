@@ -338,7 +338,7 @@ namespace rct3::scene
         ui::PointerState pointer = pointer_pixels;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
         demo.current_fonts = &ui::fonts_for(device, demo.assets, demo.desktop.root().rect().width());
-        const bool over = demo.desktop.update(pointer, keyboard, { elapsed, demo.current_fonts });
+        const bool over = demo.desktop.update(pointer, keyboard, { units::Seconds { elapsed }, demo.current_fonts });
         follow_bars(demo);
         return over;
     }

@@ -108,7 +108,7 @@ namespace rct3::ui::screens::tutorial
             const Rect r { c.x - size / 2, c.y - size / 2, c.x + size / 2, c.y + size / 2 };
             b.placement = placed(r, rect());
             b.swell = size * (fs::kSwellFactor - 1) / 2;
-            b.swell_time = (fs::kSwellFactor - 1) / fs::kSwellRate;
+            b.swell_time = units::Seconds { (fs::kSwellFactor - 1) / fs::kSwellRate };
             b.icon_scale = disc.scale;
             return r;
         };

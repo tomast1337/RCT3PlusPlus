@@ -11,6 +11,7 @@ using namespace rct3::ui;
 using namespace rct3::ui::widgets;
 using namespace rct3::ui::screens;
 using namespace rct3::ui::screens::career;
+namespace units = rct3::units;
 
 namespace
 {
@@ -32,7 +33,7 @@ namespace
 
         void tick(float seconds = 0)
         {
-            desktop.update({ }, { }, { seconds, nullptr });
+            desktop.update({ }, { }, { units::Seconds { seconds }, nullptr });
         }
 
         void answer(bool yes)

@@ -18,6 +18,7 @@
 #include "ui/palette.hpp"
 #include "ui/placement.hpp"
 #include "ui/skin/library.hpp"
+#include "units/units.hpp"
 
 #include <memory>
 #include <optional>
@@ -44,7 +45,7 @@ namespace rct3::ui
     /// What widgets update with.
     struct UpdateContext
     {
-        float elapsed = 0;                    ///< Seconds since the last update
+        units::Seconds elapsed;               ///< Since the last update
         const font::FontSet* fonts = nullptr; ///< For widgets that measure text; null when there are none
     };
 

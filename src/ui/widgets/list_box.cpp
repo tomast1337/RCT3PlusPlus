@@ -104,7 +104,7 @@ namespace rct3::ui::widgets
         {
             last_pressed_ = row;
         }
-        since_press_ = 0;
+        since_press_ = { };
     }
 
     void ListBox::on_drag(Point p)

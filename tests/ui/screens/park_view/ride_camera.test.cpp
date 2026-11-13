@@ -10,6 +10,7 @@ using namespace rct3;
 using namespace rct3::ui;
 using namespace rct3::ui::screens;
 using namespace rct3::ui::screens::park_view;
+namespace units = rct3::units;
 
 namespace
 {
@@ -31,7 +32,7 @@ namespace
         void frame(float seconds = 0, Point at = { 10, 10 }, bool down = false)
         {
             desktop.layout({ 0, 0, 1000, 700 });
-            desktop.update({ at, down }, { }, { .elapsed = seconds });
+            desktop.update({ at, down }, { }, { .elapsed = units::Seconds { seconds } });
         }
 
         void click(const Widget& w)

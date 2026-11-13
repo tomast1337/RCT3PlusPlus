@@ -76,9 +76,9 @@ namespace rct3::ui::screens::front::front_screen
         return { x0, y1 - kBadgeSize, x0 + kBadgeSize, y1 };
     }
 
-    bool ease(Polar& current, const Polar& goal, float elapsed)
+    bool ease(Polar& current, const Polar& goal, units::Seconds elapsed)
     {
-        const float k = std::max(0.0f, elapsed) * kEaseRate;
+        const float k = std::max(0.0f, elapsed.value) * kEaseRate;
         const auto toward = [k](float from, float to) { return (from + to * k) / (1 + k); };
         if (std::abs(current.angle - goal.angle) > kAngleClose)
         {

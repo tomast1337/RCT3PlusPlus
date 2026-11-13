@@ -56,9 +56,9 @@ namespace rct3::ui::screens::park_view
 
     namespace ride_camera_panel
     {
-        inline constexpr float kStillSeconds = 3;    ///< The pointer still this long, it hides
-        inline constexpr float kSlideSeconds = 0.3f; ///< To slide fully in or out
-        inline constexpr float kWakeDistance = 2;    ///< Units the pointer moves in a frame to bring it back
+        inline constexpr units::Seconds kStill { 3 };    ///< The pointer still this long, it hides
+        inline constexpr units::Seconds kSlide { 0.3f }; ///< To slide fully in or out
+        inline constexpr float kWakeDistance = 2;        ///< Units the pointer moves in a frame to bring it back
     } // namespace ride_camera_panel
 
     class RideCameraPanel : public Widget
@@ -114,7 +114,7 @@ namespace rct3::ui::screens::park_view
         std::array<widgets::Button*, 6> buttons_ { }; ///< By RideCameraAction
         std::optional<RideCameraAction> asked_;
         float shown_ = 1;
-        float still_ = 0; ///< Seconds the pointer has been still
+        units::Seconds still_; ///< How long the pointer has been still
     };
 
 } // namespace rct3::ui::screens::park_view

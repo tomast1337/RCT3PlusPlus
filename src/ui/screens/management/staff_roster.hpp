@@ -104,8 +104,8 @@ namespace rct3::ui::screens::management
 
         /// Writes the rows again from `facts`, keeping those that did not change.
         void show(const ManagementFacts& facts, const StringTable& strings, const info::InfoUnits& units);
-        /// Seconds since show() last ran.
-        [[nodiscard]] float page_age() const
+        /// Since show() last ran.
+        [[nodiscard]] units::Seconds page_age() const
         {
             return page_age_;
         }
@@ -167,8 +167,8 @@ namespace rct3::ui::screens::management
         RosterSort sort_ = RosterSort::Job;
         RosterJobs jobs_ = kStartRosterJobs;
         bool animal_houses_ = false;
-        float page_age_ = 0;
-        float since_portrait_ = 0;                                    ///< Seconds since the last click on a picture
+        units::Seconds page_age_;
+        units::Seconds since_portrait_;                               ///< Since the last click on a picture
         std::optional<std::size_t> last_portrait_;                    ///< Whose picture it was
         widgets::ColourPalette* palette_ = nullptr;                   ///< Open for the swatch `painting_`
         std::optional<std::pair<std::size_t, std::size_t>> painting_; ///< Worker and pot

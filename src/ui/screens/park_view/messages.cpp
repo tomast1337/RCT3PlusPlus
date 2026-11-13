@@ -200,8 +200,8 @@ namespace rct3::ui::screens::park_view
             clicked_ = serial;
             return;
         }
-        const bool twice = since_press_ <= style_.double_press;
-        since_press_ = twice ? 1e9f : 0;
+        const bool twice = since_press_ && *since_press_ <= style_.double_press;
+        since_press_ = twice ? std::nullopt : std::optional { units::Seconds { } };
         slide_ = Slide::Resting;
         unseen_ = 0;
         if (twice)
@@ -242,7 +242,8 @@ namespace rct3::ui::screens::park_view
 
     void MessageDrawer::update(const UpdateContext& context)
     {
-        since_press_ += context.elapsed;
+        if (since_press_)
+            *since_press_ += context.elapsed;
 
         // Each message's row is as tall as its text wrapped to the row's width.
         const auto font = context.fonts ? context.fonts->get(font::FontRole::Small) : std::nullopt;
@@ -270,7 +271,7 @@ namespace rct3::ui::screens::park_view
         older_->enabled = after_first >= kPage && skipped_ + 1 < messages_.size();
         newer_->enabled = skipped_ > 0 && !messages_.empty();
 
-        const float speed = kSlideSpeed * context.elapsed;
+        const float speed = kSlideSpeed * context.elapsed.value;
         switch (slide_)
         {
             case Slide::Resting:
@@ -282,13 +283,13 @@ namespace rct3::ui::screens::park_view
                 if (height_ >= want)
                 {
                     slide_ = Slide::Holding;
-                    held_ = 0;
+                    held_ = { };
                 }
                 break;
             }
             case Slide::Holding:
                 held_ += context.elapsed;
-                if (held_ >= kHoldSeconds)
+                if (held_ >= kHold)
                 {
                     slide_ = Slide::Closing;
                     unseen_ = 0;

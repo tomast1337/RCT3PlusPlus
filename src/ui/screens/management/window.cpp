@@ -78,7 +78,7 @@ namespace rct3::ui::screens::management
 
     void ManagementWindow::show_page(const ManagementPage& shown)
     {
-        page_age_ = 0;
+        page_age_ = { };
         // The fan goes with the buttons, and comes back beside the same button if it is still there.
         const std::optional<std::size_t> choosing = choosing_;
         close_choices();

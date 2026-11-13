@@ -276,7 +276,7 @@ namespace rct3::ui::screens::dialogs
             row.box->enabled = !kept_[i];
             rows_.push_back(&row);
         }
-        since_complete_ = files_.empty() ? std::optional<float> { 0.0f } : std::nullopt;
+        since_complete_ = files_.empty() ? std::optional { units::Seconds { } } : std::nullopt;
         show_status();
     }
 
@@ -302,7 +302,7 @@ namespace rct3::ui::screens::dialogs
         row.set_lines(summary ? save_lines(strings_, *summary, twelve_hour_) : std::array<std::u16string, 3> { });
         read_[index] = true;
         if (std::ranges::all_of(read_, [](bool r) { return r; }))
-            since_complete_ = 0.0f;
+            since_complete_ = units::Seconds { };
         show_status();
     }
 
@@ -329,7 +329,7 @@ namespace rct3::ui::screens::dialogs
             return;
         }
         status_->text = text(kScanComplete);
-        const float fade = std::clamp(*since_complete_ - (style_.complete_time - 1), 0.0f, 1.0f);
+        const float fade = std::clamp((*since_complete_ - (style_.complete_time - units::Seconds { 1 })).value, 0.0f, 1.0f);
         status_->style.colour = mix(style_.text_colour, style_.faded_colour, fade);
     }
 
@@ -484,7 +484,7 @@ namespace rct3::ui::screens::dialogs
             const bool twice = last_clicked_ == i && since_click_ <= style_.double_click;
             select(i);
             last_clicked_ = i;
-            since_click_ = 0;
+            since_click_ = { };
             if (twice)
                 open_chosen();
         }

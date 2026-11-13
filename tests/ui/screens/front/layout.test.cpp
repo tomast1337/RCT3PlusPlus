@@ -6,6 +6,7 @@
 
 using namespace rct3::ui;
 using namespace rct3::ui::screens::front::front_screen;
+namespace units = rct3::units;
 
 TEST_CASE("the design frame stretches to the screen, round things by the smaller scale")
 {
@@ -123,11 +124,11 @@ TEST_CASE("buttons ease round first, then out, and arrive")
 {
     Polar p = kStart;
     const Polar goal { 3, 650 };
-    CHECK_FALSE(ease(p, goal, 0.1f));
+    CHECK_FALSE(ease(p, goal, units::Seconds { 0.1f }));
     CHECK(p.angle > kStart.angle);
     CHECK(p.radius == kStart.radius); // Not while the angle is far
     int frames = 0;
-    while (!ease(p, goal, 1.0f / 60) && frames < 1000)
+    while (!ease(p, goal, units::Seconds { 1.0f / 60 }) && frames < 1000)
         ++frames;
     CHECK(frames < 1000);
     CHECK(p.angle == goal.angle);

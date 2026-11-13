@@ -10,6 +10,7 @@ using namespace rct3;
 using namespace rct3::ui;
 using namespace rct3::ui::screens;
 using namespace rct3::ui::screens::build;
+namespace units = rct3::units;
 
 namespace
 {
@@ -28,7 +29,7 @@ namespace
         void frame(Point at = { 500, 10 }, bool down = false)
         {
             desktop.layout({ 0, 0, 1000, 700 });
-            desktop.update({ at, down }, { }, { .elapsed = 0 });
+            desktop.update({ at, down }, { }, { .elapsed = units::Seconds { } });
         }
 
         void click(std::string_view name)

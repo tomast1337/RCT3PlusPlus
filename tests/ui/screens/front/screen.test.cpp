@@ -8,6 +8,7 @@
 using namespace rct3::ui;
 using namespace rct3::ui::screens;
 using namespace rct3::ui::screens::front;
+namespace units = rct3::units;
 
 namespace
 {
@@ -25,7 +26,7 @@ namespace
     void settle(Desktop& desktop)
     {
         for (int i = 0; i < 300; ++i)
-            desktop.update({ }, { 1.0f / 30, nullptr });
+            desktop.update({ }, { units::Seconds { 1.0f / 30 }, nullptr });
     }
 
     struct Fixture
@@ -43,7 +44,7 @@ namespace
         {
             REQUIRE(b);
             b->click();
-            desktop.update({ }, { 1.0f / 30, nullptr });
+            desktop.update({ }, { units::Seconds { 1.0f / 30 }, nullptr });
         }
     };
 } // namespace
@@ -114,7 +115,7 @@ TEST_CASE("only the open menu's buttons count, and only those of installed packs
 TEST_CASE("the last pack's badge comes first round the circle")
 {
     Fixture f;
-    f.desktop.update({ }, { 1.0f / 30, nullptr });
+    f.desktop.update({ }, { units::Seconds { 1.0f / 30 }, nullptr });
     auto first = f.screen->find("badge0");
     auto last = f.screen->find("badge1");
     REQUIRE(first);
@@ -126,7 +127,7 @@ TEST_CASE("the last pack's badge comes first round the circle")
 TEST_CASE("names show beside the buttons once they arrive, and go with the menu")
 {
     Fixture f;
-    f.desktop.update({ }, { 1.0f / 30, nullptr });
+    f.desktop.update({ }, { units::Seconds { 1.0f / 30 }, nullptr });
     CHECK(f.screen->label(0).empty());
     settle(f.desktop);
     CHECK(f.screen->label(0) == u"Ride");
@@ -151,10 +152,10 @@ TEST_CASE("the help lines show what the pointer is on")
     settle(f.desktop);
     const Rect r = f.screen->button(FrontMenu::Main, 0)->rect();
     const Point centre { (r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2 };
-    f.desktop.update({ centre, false, true }, { 1.0f / 30, nullptr });
+    f.desktop.update({ centre, false, true }, { units::Seconds { 1.0f / 30 }, nullptr });
     CHECK(f.screen->help_title() == u"Ride");
     CHECK(f.screen->help_text() == u"Go riding");
-    f.desktop.update({ { 900, 100 }, false, true }, { 1.0f / 30, nullptr });
+    f.desktop.update({ { 900, 100 }, false, true }, { units::Seconds { 1.0f / 30 }, nullptr });
     CHECK(f.screen->help_title().empty());
 }
 

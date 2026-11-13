@@ -10,6 +10,7 @@ using namespace rct3::ui;
 using namespace rct3::ui::widgets;
 using namespace rct3::ui::skin;
 using namespace rct3::ui::font;
+namespace units = rct3::units;
 
 namespace
 {
@@ -168,7 +169,7 @@ TEST_CASE("the pointer places the caret and drags a selection")
     EditBox& box = desktop.root().add<EditBox>("box", u"abcdef");
     box.placement = top_left(0, 0, 200, 24);
     desktop.layout({ 0, 0, 300, 100 });
-    const UpdateContext context { 0, &fonts };
+    const UpdateContext context { units::Seconds { }, &fonts };
     const float x0 = box.padding.x0;
 
     desktop.update({ { x0 + 21, 10 }, true, true }, context); // Nearer the end of b than the middle of c
@@ -200,8 +201,8 @@ TEST_CASE("a double press selects a word, a triple one everything")
     // Waits `wait` seconds, then presses at `x` and lets go.
     const auto press = [&](float x, float wait = 0.1f) {
         desktop.update({ { x0 + x, 10 }, false, true }, { wait, &fonts });
-        desktop.update({ { x0 + x, 10 }, true, true }, { 0, &fonts });
-        desktop.update({ { x0 + x, 10 }, false, true }, { 0, &fonts });
+        desktop.update({ { x0 + x, 10 }, true, true }, { units::Seconds { }, &fonts });
+        desktop.update({ { x0 + x, 10 }, false, true }, { units::Seconds { }, &fonts });
     };
 
     press(72);
@@ -234,7 +235,7 @@ TEST_CASE("long text scrolls to keep the caret in view")
     EditBox& box = desktop.root().add<EditBox>("box", u"abcdefghijklmnopqrst"); // 200 wide
     box.placement = top_left(0, 0, 56, 24);                                     // 50 for text
     desktop.layout({ 0, 0, 300, 100 });
-    const UpdateContext context { 0, &fonts };
+    const UpdateContext context { units::Seconds { }, &fonts };
     desktop.set_keyboard_focus(&box);
 
     DrawList list;
@@ -345,7 +346,7 @@ TEST_CASE("text being composed shows at the caret without being typed")
     EditBox& box = desktop.root().add<EditBox>("box", u"ab");
     box.placement = top_left(0, 0, 200, 24);
     desktop.layout({ 0, 0, 300, 100 });
-    const UpdateContext context { 0, &fonts };
+    const UpdateContext context { units::Seconds { }, &fonts };
     desktop.set_keyboard_focus(&box);
 
     KeyboardState keys;

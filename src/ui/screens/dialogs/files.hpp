@@ -88,11 +88,11 @@ namespace rct3::ui::screens::dialogs
         Rect name_box_rect { 91, 9, 371, 23 }; ///< In a row
         float lines_x = 96;
         float lines_width = 200;
-        float lines_top = 23;           ///< In a row, each line `line_height - 4` below the last
-        std::size_t name_length = 39;   ///< In the save box
-        std::size_t rename_length = 80; ///< In a row's box
-        float double_click = 0.4f;      ///< Seconds between the clicks of a double click (ours)
-        float complete_time = 3;        ///< Seconds the end of the reading shows, the last one fading
+        float lines_top = 23;                 ///< In a row, each line `line_height - 4` below the last
+        std::size_t name_length = 39;         ///< In the save box
+        std::size_t rename_length = 80;       ///< In a row's box
+        units::Seconds double_click { 0.4f }; ///< Between the clicks of a double click (ours)
+        units::Seconds complete_time { 3 };   ///< The end of the reading shows this long, the last second fading
     };
 
     class FileDialog : public widgets::Window
@@ -220,8 +220,8 @@ namespace rct3::ui::screens::dialogs
         std::optional<std::u16string> open_out_;
         std::optional<std::u16string> delete_out_;
         std::optional<std::pair<std::u16string, std::u16string>> rename_out_;
-        std::optional<float> since_complete_ { }; // Seconds since every file was read; none while reading
-        float since_click_ = 1e9f;
+        std::optional<units::Seconds> since_complete_; // Since every file was read; none while reading
+        units::Seconds since_click_;
         std::optional<std::size_t> last_clicked_;
     };
 

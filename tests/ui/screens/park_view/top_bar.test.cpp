@@ -243,9 +243,9 @@ TEST_CASE("a double click on the money asks for the finances")
     CHECK_FALSE(f.bar->take_finances());
 
     // Two clicks far apart are two single clicks.
-    f.desktop.update({ }, UpdateContext { .elapsed = 1 });
+    f.desktop.update({ }, UpdateContext { .elapsed = units::Seconds { 1 } });
     f.click(f.bar->money());
-    f.desktop.update({ }, UpdateContext { .elapsed = 1 });
+    f.desktop.update({ }, UpdateContext { .elapsed = units::Seconds { 1 } });
     f.click(f.bar->money());
     CHECK_FALSE(f.bar->take_finances());
 }

@@ -398,7 +398,7 @@ namespace rct3::ui::screens::front
                 {
                     if (labels_[i].empty())
                         labels_[i] = strings_.get(mb.entry->label_key);
-                    label_alpha_[i] = std::min(1.0f, label_alpha_[i] + context.elapsed * fs::kLabelFadeRate);
+                    label_alpha_[i] = std::min(1.0f, label_alpha_[i] + context.elapsed.value * fs::kLabelFadeRate);
                 }
             }
         }

@@ -12,9 +12,9 @@ namespace rct3::scene::park
 
     namespace
     {
-        /// Seconds between rewrites of an open window's page: often enough for the date and the money to
-        /// follow the park.
-        constexpr float kRefresh = 1;
+        /// Between rewrites of an open window's page: often enough for the date and the money to follow the
+        /// park.
+        constexpr units::Seconds kRefresh { 1 };
 
         std::string window_name(ui::screens::management::ManagementTopic topic)
         {

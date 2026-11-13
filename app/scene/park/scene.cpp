@@ -474,7 +474,7 @@ namespace rct3::scene::park
         ui::PointerState pointer = input.pointer;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
         scene.current_fonts = &ui::fonts_for(device, assets, desktop.root().rect().width());
-        const bool over_interface = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { elapsed, scene.current_fonts }); });
+        const bool over_interface = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { units::Seconds { elapsed }, scene.current_fonts }); });
         // Riding along, the park takes no clicks: the whole screen counts as interface.
         const bool over = over_interface || scene.riding_along();
         if (auto panel = scene.riding_along() ? desktop.root().find_as<ui::screens::park_view::RideCameraPanel>(kRideCameraName) : std::nullopt)

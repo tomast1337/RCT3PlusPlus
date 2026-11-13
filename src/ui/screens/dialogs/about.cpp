@@ -125,7 +125,7 @@ namespace rct3::ui::screens::dialogs
             offset_ = 0;
             return;
         }
-        offset_ += context.elapsed * style_.roll_speed * (pressed() ? style_.fast_factor : 1.0f);
+        offset_ += context.elapsed.value * style_.roll_speed * (pressed() ? style_.fast_factor : 1.0f);
         if (offset_ > end)
             offset_ = 0;
     }

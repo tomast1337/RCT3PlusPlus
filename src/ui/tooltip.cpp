@@ -20,7 +20,7 @@ namespace rct3::ui
         return { };
     }
 
-    void Tooltip::update(const Widget* under, Point pointer, bool pressed, float elapsed, const TooltipStyle& style)
+    void Tooltip::update(const Widget* under, Point pointer, bool pressed, units::Seconds elapsed, const TooltipStyle& style)
     {
         const std::u16string_view text = tooltip_text(under);
         if (text != text_)
@@ -28,7 +28,7 @@ namespace rct3::ui
             text_ = text;
             shown_ = false;
             blocked_ = false;
-            rested_ = 0;
+            rested_ = { };
         }
         if (pressed)
         {
@@ -40,7 +40,7 @@ namespace rct3::ui
         const float dy = pointer.y - last_.y;
         last_ = pointer;
         if (dx * dx + dy * dy > style.still_distance * style.still_distance)
-            rested_ = 0;
+            rested_ = { };
         else
             rested_ += elapsed;
 

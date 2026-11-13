@@ -47,9 +47,9 @@ namespace rct3::ui::screens::park_view
         /// The arrow before the money, out of its width. Chosen by eye: square, as tall as the money's figures.
         constexpr float kTrendWidth = 9;
         constexpr float kTrendHeight = 9;
-        constexpr float kArcRadius = 24;     ///< From the day mode button's middle to each mode's
-        constexpr float kArcSpread = 0.8f;   ///< Radians between neighbouring modes in the arc
-        constexpr float kDoubleClick = 0.4f; ///< Seconds within which a second click on the money counts
+        constexpr float kArcRadius = 24;                ///< From the day mode button's middle to each mode's
+        constexpr float kArcSpread = 0.8f;              ///< Radians between neighbouring modes in the arc
+        constexpr units::Seconds kDoubleClick { 0.4f }; ///< A second click on the money this soon counts
         constexpr float kGuestsWidth = 40;
         constexpr float kThumbWidth = 12;
         constexpr float kThumbHeight = 15;
@@ -320,12 +320,14 @@ namespace rct3::ui::screens::park_view
             for (widgets::Button* b : day_choices_)
                 b->visible = false;
         }
-        since_money_click_ += context.elapsed;
+        if (since_money_click_)
+            *since_money_click_ += context.elapsed;
         if (money_->take_click())
         {
-            asked_finances_ = asked_finances_ || since_money_click_ <= kDoubleClick;
+            const bool twice = since_money_click_ && *since_money_click_ <= kDoubleClick;
+            asked_finances_ = asked_finances_ || twice;
             // A third click starts a new pair.
-            since_money_click_ = since_money_click_ <= kDoubleClick ? kDoubleClick + 1 : 0;
+            since_money_click_ = twice ? std::nullopt : std::optional { units::Seconds { } };
         }
 
         if (highlight_->take_click())

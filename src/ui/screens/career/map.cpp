@@ -101,9 +101,9 @@ namespace rct3::ui::screens::career
         return kScenarioFirstAngle + kScenarioAngleStep * static_cast<float>(index);
     }
 
-    float career_board::pop(float time)
+    float career_board::pop(units::Seconds since)
     {
-        const float t = std::clamp(time / kPopTime, 0.0f, 1.0f);
+        const float t = std::clamp(since.value / kPopTime.value, 0.0f, 1.0f);
         return 1 + (kPopFactor - 1) * (1 - std::sqrt(t));
     }
 
@@ -157,7 +157,7 @@ namespace rct3::ui::screens::career
         if (index >= scenarios_.size() || !rct3::career::is_open(scenarios_[index].status) || index == picked_)
             return;
         picked_ = index;
-        since_pick_ = 0;
+        since_pick_ = { };
     }
 
     void CareerBoard::set_can_resume(std::size_t index, bool can)
@@ -269,7 +269,7 @@ namespace rct3::ui::screens::career
             b.placement = placed(fs::button_rect(frame, fs::on_ring(cm::scenario_angle(i), cm::kScenarioRadius), size), rect());
             const float swell = picked ? cm::kPickedSwell : fs::kSwellFactor;
             b.swell = size * frame.round * (swell - 1) / 2;
-            b.swell_time = (swell - 1) / fs::kSwellRate;
+            b.swell_time = units::Seconds { (swell - 1) / fs::kSwellRate };
             b.icon_scale = (picked ? cm::kPickedIconScale : cm::kIconScale) * frame.round;
         }
 
@@ -303,7 +303,7 @@ namespace rct3::ui::screens::career
         for (front::FrontButton* b : { new_, resume_, load_, menu_, quit_ })
         {
             b->swell = button * (fs::kSwellFactor - 1) / 2;
-            b->swell_time = (fs::kSwellFactor - 1) / fs::kSwellRate;
+            b->swell_time = units::Seconds { (fs::kSwellFactor - 1) / fs::kSwellRate };
         }
     }
 

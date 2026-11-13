@@ -24,15 +24,15 @@ namespace rct3::ui::widgets
 
     struct ScrollBarStyle
     {
-        std::string back_arrow;    ///< Up or left
-        std::string forward_arrow; ///< Down or right
-        std::string rail;          ///< Stretched along the track
-        std::string rider;         ///< Family base name (see SkinLibrary)
-        float thickness = 15;      ///< Across the bar; the arrows are squares of this size
-        float step = 20;           ///< Per arrow press
-        float wheel_step = 60;     ///< Per wheel notch
-        float repeat_delay = 0.4f; ///< Seconds an arrow is held before it repeats
-        float repeat_interval = 0.05f;
+        std::string back_arrow;               ///< Up or left
+        std::string forward_arrow;            ///< Down or right
+        std::string rail;                     ///< Stretched along the track
+        std::string rider;                    ///< Family base name (see SkinLibrary)
+        float thickness = 15;                 ///< Across the bar; the arrows are squares of this size
+        float step = 20;                      ///< Per arrow press
+        float wheel_step = 60;                ///< Per wheel notch
+        units::Seconds repeat_delay { 0.4f }; ///< An arrow is held this long before it repeats
+        units::Seconds repeat_interval { 0.05f };
         float min_rider = 10; ///< So a long list keeps a rider that can be grabbed
     };
 
@@ -103,8 +103,8 @@ namespace rct3::ui::widgets
         Orientation orientation_;
         Part held_ = Part::None;
         float grab_ = 0; ///< Pointer offset from the rider's start while it is dragged
-        float held_time_ = 0;
-        float next_repeat_ = 0;
+        units::Seconds held_time_;
+        units::Seconds next_repeat_;
     };
 
 } // namespace rct3::ui::widgets

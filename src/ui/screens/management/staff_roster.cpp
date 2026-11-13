@@ -69,8 +69,8 @@ namespace rct3::ui::screens::management
         constexpr std::string_view kOk = "SMB_Label_OK";
         constexpr std::string_view kYes = "SMB_Label_Yes";
         constexpr std::string_view kNo = "SMB_Label_No";
-        constexpr float kSecondClick = 0.4f; ///< Chosen by eye: seconds within which a second click on a picture counts
-        constexpr float kBox = 9;            ///< The unfold box, as the picture of it is wide
+        constexpr units::Seconds kSecondClick { 0.4f }; ///< Chosen by eye: a second click on a picture this soon counts
+        constexpr float kBox = 9;                       ///< The unfold box, as the picture of it is wide
         constexpr float kPortraitWidth = 32;
         constexpr float kPortraitHeight = 41;
         constexpr float kIcon = 18;
@@ -197,7 +197,7 @@ namespace rct3::ui::screens::management
 
     void StaffRoster::show(const ManagementFacts& facts, const StringTable& strings, const info::InfoUnits& units)
     {
-        page_age_ = 0;
+        page_age_ = { };
         strings_ = &strings;
         units_ = units;
         animal_houses_ = facts.animal_houses;
@@ -405,7 +405,7 @@ namespace rct3::ui::screens::management
                 if (last_portrait_ == who && since_portrait_ < kSecondClick)
                     asks_.centre = who;
                 last_portrait_ = who;
-                since_portrait_ = 0;
+                since_portrait_ = { };
             }
             if (r.name->take_commit())
                 asks_.change = { who, info::InfoChange { .id = info::person_control(info::PersonControl::Name), .value = 0, .pot = 0, .text = r.name->text } };
@@ -515,7 +515,7 @@ namespace rct3::ui::screens::management
             }
         }
         if (relist && strings_ != nullptr)
-            page_age_ = 1e9f; // The owner shows the park again at once
+            page_age_ = units::Seconds { 1e9f }; // The owner shows the park again at once
     }
 
 } // namespace rct3::ui::screens::management

@@ -11,6 +11,7 @@ using namespace rct3::ui;
 using namespace rct3::ui::widgets;
 using namespace rct3::ui::skin;
 using namespace rct3::ui::font;
+namespace units = rct3::units;
 
 namespace
 {
@@ -87,7 +88,7 @@ TEST_CASE("wrapped labels count their text, not their box")
     label.style.wrap = true;
     desktop.layout({ 0, 0, 300, 300 });
 
-    const UpdateContext context { 0, &fonts };
+    const UpdateContext context { units::Seconds { }, &fonts };
     desktop.update({ { 200, 200 }, false, true }, context);
     CHECK(label.extent().y1 == 60);
     desktop.update({ { 200, 200 }, false, true }, context);
@@ -190,7 +191,7 @@ TEST_CASE("unwrapped labels count their widest line")
     label.placement = fill();
     desktop.layout({ 0, 0, 300, 300 });
 
-    const UpdateContext context { 0, &fonts };
+    const UpdateContext context { units::Seconds { }, &fonts };
     desktop.update({ { 200, 200 }, false, true }, context);
     CHECK(label.extent().x1 == 80);
     desktop.update({ { 200, 200 }, false, true }, context);

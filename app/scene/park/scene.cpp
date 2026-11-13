@@ -666,8 +666,8 @@ namespace rct3::scene::park
             if (input.right || input.middle)
                 scene.press.reset();
             // A right click deletes what is under the pointer with the tools that build or place things one by one, as
-            // the delete menu's tools do, and with the structure tools; the tool stays out. Only a land tool is put
-            // away. Escape puts any away.
+            // the delete menu's tools do, and with the structure and land tools; the tool stays out. Escape puts
+            // any away.
             if (input.right && !scene.right_press && !over)
                 scene.right_press = pointer.position;
             else if (!input.right && scene.right_press)
@@ -691,8 +691,9 @@ namespace rct3::scene::park
                 }
                 else if (land_tool(scene))
                 {
-                    if (!delete_waterfall(device, scene, assets, pointer.position, { screen.width(), screen.height() }))
-                        stop_land_tools(scene);
+                    // A waterfall pointed at goes first.
+                    if (!over && !delete_waterfall(device, scene, assets, pointer.position, { screen.width(), screen.height() }))
+                        delete_under(pointer.position, { screen.width(), screen.height() });
                 }
                 else if (!over)
                     (void)footpath_sell(scene, pointer.position, { screen.width(), screen.height() });

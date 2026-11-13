@@ -323,3 +323,13 @@ log("tree tile:", tree_ground, "->", low(tree.col, tree.row), "tree height", tre
 await screenshot("tree_raised");
 expect(low(tree.col, tree.row) > tree_ground, "the ground under the tree to rise");
 expect(seated !== undefined && seated.height !== null && seated.height >= Math.ceil(low(tree.col, tree.row)), "the tree seated on the raised ground");
+
+// A right click with a land tool out deletes what is under the pointer, and the tool stays out.
+await pick("Land_Brush_Height");
+await until(() => ui.find("land_panel") !== undefined, 60, "the land panel");
+const [rx, ry] = on_view(tree.col + 0.5, tree.row + 0.5);
+await pointer.click(rx, ry, "right");
+await frames(3);
+await screenshot("right_click");
+expect(!map.objects().some((o) => o.symbol === "Common_Linden_2" && o.col === tree.col && o.row === tree.row), "the tree deleted by a right click with a land tool out");
+expect(ui.find("land_panel") !== undefined, "the land tool to stay out after a right click");

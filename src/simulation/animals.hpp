@@ -23,7 +23,7 @@
 #include "simulation/components.hpp"
 #include "simulation/park/messages.hpp"
 #include "simulation/sim_world.hpp"
-#include "simulation/units.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -55,9 +55,9 @@ namespace rct3::simulation
         /// The ground the house stands on, across the park from its least corner to its greatest; nobody
         /// strolls to a spot on it.
         glm::vec2 low { 0.0f }, high { 0.0f };
-        Share food { 1 };      ///< Left in its food trough
-        Share water { 1 };     ///< Left in its water trough
-        Seconds since_fed { }; ///< Since its keeper last filled the troughs
+        units::Share food { 1 };      ///< Left in its food trough
+        units::Share water { 1 };     ///< Left in its water trough
+        units::Seconds since_fed { }; ///< Since its keeper last filled the troughs
     };
 
     /// What a keeper is doing.
@@ -77,7 +77,7 @@ namespace rct3::simulation
         KeeperJob job = KeeperJob::Idle;
         glm::vec3 goal { 0.0f };
         entt::entity target = entt::null; ///< The dung they are clearing, or the animal they are catching
-        Seconds busy { };                 ///< Left at the job in hand where it is done, or standing about
+        units::Seconds busy { };          ///< Left at the job in hand where it is done, or standing about
     };
 
     /// What an animal is doing.
@@ -101,15 +101,15 @@ namespace rct3::simulation
         std::int32_t enclosure = -1; ///< The one it lives in
         AnimalJob job = AnimalJob::Crated;
         glm::vec3 goal { 0.0f };
-        Seconds busy { }; ///< Left in its crate, at what it is doing, or standing about
-        Share hunger { };
-        Share thirst { };
-        Share tiredness { };
-        Share loneliness { };
-        Share health { 1 };
-        Seconds dung_in { };   ///< Till it next leaves dung
-        int empty_troughs = 0; ///< Times in a row it went hungry to its house and found the food trough empty
-        bool escaped = false;  ///< Out of every enclosure
+        units::Seconds busy { }; ///< Left in its crate, at what it is doing, or standing about
+        units::Share hunger { };
+        units::Share thirst { };
+        units::Share tiredness { };
+        units::Share loneliness { };
+        units::Share health { 1 };
+        units::Seconds dung_in { }; ///< Till it next leaves dung
+        int empty_troughs = 0;      ///< Times in a row it went hungry to its house and found the food trough empty
+        bool escaped = false;       ///< Out of every enclosure
     };
 
     /// Dung an animal left in its enclosure.
@@ -121,30 +121,30 @@ namespace rct3::simulation
     /// Values for how animals and keepers live.
     struct AnimalRates
     {
-        Seconds crated { 8 };      ///< In the crate before it opens
-        float animal_pace = 1.4f;  ///< World units a second an animal walks
-        float keeper_pace = 1.8f;  ///< And a keeper
-        Seconds idle { 6 };        ///< Longest anybody stands about between strolls
-        Seconds hungry { 400 };    ///< From fed to starving
-        Seconds thirsty { 300 };   ///< From watered to parched
-        Seconds sleepy { 400 };    ///< From rested to worn out
-        Seconds lonely { 300 };    ///< From content to lonely, with no others of its kind about
-        Share wants { 0.5f };      ///< A need this high sends it to the troughs or to sleep
-        Seconds eating { 6 };      ///< At the troughs
-        Seconds sleeping { 20 };   ///< Beside them
-        Share meal { 0.1f };       ///< Of a trough an animal empties as it eats or drinks
-        Seconds dung { 120 };      ///< Between one dung and the next
-        int dung_limit = 3;        ///< Dung in an enclosure for each animal in it, beyond which it wears their health down
-        Seconds sickening { 300 }; ///< From well to dead, starving, parched or among too much dung
-        Seconds mending { 600 };   ///< From dying to well again, while nothing ails it
-        Seconds feeding { 300 };   ///< Between the keeper's rounds filling the troughs
-        Share refill { 0.3f };     ///< Either trough this low calls the keeper at once
-        Seconds filling { 5 };     ///< The keeper at the troughs
-        Seconds clearing { 3 };    ///< The keeper at a dung
-        int stroll_tries = 8;      ///< Spots picked for a stroll before giving up till later
-        float roam = 4;            ///< Farthest an escaped animal wanders at a time, in world units
-        Seconds catching { 4 };    ///< The keeper shutting an escaped animal in its crate
-        int empty_tries = 3;       ///< Times in a row an animal finds its food trough empty before the inspector tells
+        units::Seconds crated { 8 };      ///< In the crate before it opens
+        float animal_pace = 1.4f;         ///< World units a second an animal walks
+        float keeper_pace = 1.8f;         ///< And a keeper
+        units::Seconds idle { 6 };        ///< Longest anybody stands about between strolls
+        units::Seconds hungry { 400 };    ///< From fed to starving
+        units::Seconds thirsty { 300 };   ///< From watered to parched
+        units::Seconds sleepy { 400 };    ///< From rested to worn out
+        units::Seconds lonely { 300 };    ///< From content to lonely, with no others of its kind about
+        units::Share wants { 0.5f };      ///< A need this high sends it to the troughs or to sleep
+        units::Seconds eating { 6 };      ///< At the troughs
+        units::Seconds sleeping { 20 };   ///< Beside them
+        units::Share meal { 0.1f };       ///< Of a trough an animal empties as it eats or drinks
+        units::Seconds dung { 120 };      ///< Between one dung and the next
+        int dung_limit = 3;               ///< Dung in an enclosure for each animal in it, beyond which it wears their health down
+        units::Seconds sickening { 300 }; ///< From well to dead, starving, parched or among too much dung
+        units::Seconds mending { 600 };   ///< From dying to well again, while nothing ails it
+        units::Seconds feeding { 300 };   ///< Between the keeper's rounds filling the troughs
+        units::Share refill { 0.3f };     ///< Either trough this low calls the keeper at once
+        units::Seconds filling { 5 };     ///< The keeper at the troughs
+        units::Seconds clearing { 3 };    ///< The keeper at a dung
+        int stroll_tries = 8;             ///< Spots picked for a stroll before giving up till later
+        float roam = 4;                   ///< Farthest an escaped animal wanders at a time, in world units
+        units::Seconds catching { 4 };    ///< The keeper shutting an escaped animal in its crate
+        int empty_tries = 3;              ///< Times in a row an animal finds its food trough empty before the inspector tells
     };
 
     inline constexpr AnimalRates kAnimalRates { };
@@ -174,6 +174,6 @@ namespace rct3::simulation
 
     /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape, and leaving what the
     /// park's inspector finds among the Findings.
-    void step_animals(SimWorld& world, const AnimalGround& ground, Seconds dt, park::ParkMessages& messages);
+    void step_animals(SimWorld& world, const AnimalGround& ground, units::Seconds dt, park::ParkMessages& messages);
 
 } // namespace rct3::simulation

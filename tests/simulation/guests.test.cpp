@@ -12,6 +12,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
+namespace units = rct3::units;
 
 TEST_CASE("a thirsty guest walks to the drink stand and buys a drink")
 {
@@ -55,7 +56,7 @@ TEST_CASE("at a stall a guest picks something off its menu they think worth its 
         const auto stall = park.shop("Food", Product::Food, { 4, 0 }, 100);
         auto& r = park.world().registry;
         // A dear one, and a cheap one unless the whole menu is dear.
-        const Money cheap { dear ? kTuning.eating.food_worth.value + 100 : 120 };
+        const units::Money cheap { dear ? kTuning.eating.food_worth.value + 100 : 120 };
         r.get<Shop>(stall).menu = { { Product::Food, Serve::Any, { kTuning.eating.food_worth.value + 200 }, "Big" }, { Product::Food, Serve::Any, cheap, "Small" } };
         const auto guest = park.guest({ 0, 0 }, { .hunger = 0.9f });
         const auto thought = [&](ThoughtKind kind) { return r.all_of<Thoughts>(guest) && std::ranges::any_of(r.get<Thoughts>(guest).recent, [&](const Thought& t) { return t.kind == kind; }); };
@@ -81,7 +82,7 @@ TEST_CASE("a drink worth more in the cold sells on a cold day and not a mild one
         const auto stall = park.shop("Drinks", Product::Drink, { 4, 0 }, 150);
         auto& r = park.world().registry;
         r.ctx().emplace<Weather>(Weather { .temperature = cold ? kTuning.weather.cold.value - 1 : kTuning.weather.cold.value + 1 });
-        r.get<Shop>(stall).menu = { { .product = Product::Drink, .price = { 150 }, .symbol = "Cocoa", .cost = { 40 }, .worth = { Money { 120 }, Money { 160 }, Money { 100 } } } };
+        r.get<Shop>(stall).menu = { { .product = Product::Drink, .price = { 150 }, .symbol = "Cocoa", .cost = { 40 }, .worth = { units::Money { 120 }, units::Money { 160 }, units::Money { 100 } } } };
         const auto guest = park.guest({ 0, 0 }, { .thirst = 0.9f });
         park.run_seconds(30);
         CHECK(r.all_of<Carried>(guest) == cold);
@@ -905,7 +906,7 @@ TEST_CASE("while one of a party sits on a bench the others wait nearby, and all 
     const auto others = std::array { park.guest({ 4, 0 }), park.guest({ 4, 0 }) };
     park.party({ sitter, others[0], others[1] });
     auto& r = park.world().registry;
-    r.emplace<Linger>(sitter, PathItemKind::Bench, Seconds { 5 });
+    r.emplace<Linger>(sitter, PathItemKind::Bench, units::Seconds { 5 });
     park.run_seconds(3);
     for (const auto g : others)
     {

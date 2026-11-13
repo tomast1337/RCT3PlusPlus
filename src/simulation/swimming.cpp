@@ -975,7 +975,7 @@ namespace rct3::simulation
                     const glm::vec3 off = spot.use == PoolUse::Lounge ? ahead * (tuning.lounger_reach - static_cast<float>(spot.places - 1 - free) * tuning.lounger_gap) + side * tuning.lounger_side : (side * std::cos(turn) + ahead * std::sin(turn)) * tuning.shower_reach;
                     swimmer.goal = spot.at + off;
                     pose.position = swimmer.goal;
-                    pose.heading = spot.use == PoolUse::Lounge ? spot.heading : Radians { std::atan2(-off.x, -off.z) };
+                    pose.heading = spot.use == PoolUse::Lounge ? spot.heading : units::Radians { std::atan2(-off.x, -off.z) };
                     continue;
                 }
                 // shortcut: those waiting stand in the middle of its square together; upgrade to a line beside it.

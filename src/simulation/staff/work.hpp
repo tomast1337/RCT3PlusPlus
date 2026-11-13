@@ -7,7 +7,7 @@
 
 #include "simulation/components.hpp"
 #include "simulation/entt.hpp"
-#include "simulation/units.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <tuple>
@@ -26,8 +26,8 @@ namespace rct3::simulation::staff
     /// guests' code walks, queues and rides them; let go, they are staff again.
     struct Rounds
     {
-        std::uint8_t task = 0; ///< The next of their tasks to look at, by its bit among the task flags
-        Seconds gap { };       ///< Before they next look for somewhere to go
+        std::uint8_t task = 0;  ///< The next of their tasks to look at, by its bit among the task flags
+        units::Seconds gap { }; ///< Before they next look for somewhere to go
         /// The attractions visited and workers watched, with when (seconds into the run).
         std::vector<std::pair<entt::entity, float>> seen { };
         entt::entity watching = entt::null; ///< The worker they are after, or watching

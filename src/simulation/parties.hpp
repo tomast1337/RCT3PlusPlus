@@ -7,7 +7,7 @@
 #include "profiling/profiler.hpp"
 #include "simulation/entt.hpp"
 #include "simulation/path_network.hpp"
-#include "simulation/units.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -42,7 +42,7 @@ namespace rct3::simulation
     struct PartyMix
     {
         std::array<float, kPartyKinds> weights { };
-        Chance single_parent { };
+        units::Chance single_parent { };
     };
 
     /// Parties at the rides so far, in the registry's context: those held back from a load to ride together

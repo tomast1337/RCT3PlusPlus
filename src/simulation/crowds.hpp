@@ -40,9 +40,9 @@ namespace rct3::simulation
     struct Show
     {
         std::vector<ShowMove> moves; ///< Empty between shows
-        Seconds into { };            ///< Since the show began
+        units::Seconds into { };     ///< Since the show began
         bool poor = false;           ///< Put on miserable or lazy: the crowd goes away unimpressed
-        Seconds gap { };             ///< Before they look for a crowd again
+        units::Seconds gap { };      ///< Before they look for a crowd again
     };
 
     /// The VIPs a guest has had an autograph from, so they do not ask again.

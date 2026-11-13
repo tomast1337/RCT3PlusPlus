@@ -6,7 +6,7 @@
 
 #include "math/glm.hpp"
 #include "profiling/profiler.hpp"
-#include "simulation/units.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -43,15 +43,15 @@ namespace rct3::simulation
     {
         Product product = Product::Drink;
         Serve serve = Serve::Any;
-        Money price { };
+        units::Money price { };
         std::string symbol { };  ///< Of the item a guest carries away, as `Burger:cid`; empty when not known
         std::uint8_t extras = 0; ///< How many extras (toppings, sauces, ice) its item can take
         std::uint8_t topped = 0; ///< How many of those go on it
         /// What those add to how much it feeds, quenches and sickens, each by how much of it goes on.
         std::array<float, 3> topping { };
-        Money cost { }; ///< Of its stock, with the extras going on, to the park for each one sold
+        units::Money cost { }; ///< Of its stock, with the extras going on, to the park for each one sold
         /// Most a guest pays for it, with those extras, in mild weather, the cold and the heat; none when not known.
-        std::array<Money, 3> worth { };
+        std::array<units::Money, 3> worth { };
     };
 
     struct Shop

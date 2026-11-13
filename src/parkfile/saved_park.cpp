@@ -80,7 +80,7 @@ namespace rct3::parkfile
 
     save::model::Cash kept_cash(const simulation::Wallet& wallet)
     {
-        const auto i32 = [](simulation::Money m) { return static_cast<std::int32_t>(std::clamp<std::int64_t>(m.value, std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max())); };
+        const auto i32 = [](units::Money m) { return static_cast<std::int32_t>(std::clamp<std::int64_t>(m.value, std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max())); };
         return { .bank = i32(wallet.bank), .current = i32(wallet.cash), .withdrawn = i32(wallet.withdrawn), .spent_drink = i32(wallet.spent_drink), .spent_food = i32(wallet.spent_food), .spent_park_entry = i32(wallet.spent_entry), .spent_rides = i32(wallet.spent_rides), .spent_souvenirs = i32(wallet.spent_souvenirs), .total_spent = i32(wallet.spent) };
     }
 
@@ -245,7 +245,7 @@ namespace rct3::parkfile
             if (paged)
                 staff::take_saved_work(staff, people.model.staff[static_cast<std::size_t>(w.look)]);
             staff.mended = w.mended;
-            staff.think = Seconds { w.think };
+            staff.think = units::Seconds { w.think };
             staff.miserable = w.miserable;
             r.emplace<Staff>(e, staff);
             r.emplace<Pose>(e, w.position, w.heading, w.position, w.heading);
@@ -339,7 +339,7 @@ namespace rct3::parkfile
             const std::span<const entt::entity> targets = saved.job == KeeperJob::Clearing ? std::span(dropped) : saved.job == KeeperJob::Catching ? std::span(placed) : saved.job == KeeperJob::Filling ? std::span(homes) : std::span<const entt::entity> { };
             const entt::entity target = saved.target >= 0 && static_cast<std::size_t>(saved.target) < targets.size() ? targets[static_cast<std::size_t>(saved.target)] : entt::null;
             const bool lost = target == entt::null && saved.job != KeeperJob::Idle && saved.job != KeeperJob::Strolling;
-            r.emplace_or_replace<KeeperDuty>(keeper, lost ? KeeperDuty { .house = homes[i] } : KeeperDuty { .house = homes[i], .job = saved.job, .goal = saved.goal, .target = target, .busy = Seconds { saved.busy } });
+            r.emplace_or_replace<KeeperDuty>(keeper, lost ? KeeperDuty { .house = homes[i] } : KeeperDuty { .house = homes[i], .job = saved.job, .goal = saved.goal, .target = target, .busy = units::Seconds { saved.busy } });
             r.emplace_or_replace<Dice>(keeper, dice_for(world, keeper));
         }
     }

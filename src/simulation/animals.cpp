@@ -18,7 +18,7 @@ namespace rct3::simulation
         constexpr const AnimalRates& kRates = kAnimalRates;
 
         /// Takes `pose` towards `goal` at `pace` for `dt`, over the ground; true once there.
-        bool walk_towards(Pose& pose, glm::vec3 goal, float pace, Seconds dt, const AnimalGround& ground)
+        bool walk_towards(Pose& pose, glm::vec3 goal, float pace, units::Seconds dt, const AnimalGround& ground)
         {
             const glm::vec2 from { pose.position.x, pose.position.z };
             const glm::vec2 to { goal.x, goal.z };
@@ -65,7 +65,7 @@ namespace rct3::simulation
             return { at.x + off(), 0.0f, at.z + off() };
         }
 
-        void rise(Share& need, Seconds dt, Seconds full)
+        void rise(units::Share& need, units::Seconds dt, units::Seconds full)
         {
             need.value = std::min(1.0f, need.value + dt.value / full.value);
         }
@@ -147,7 +147,7 @@ namespace rct3::simulation
             const glm::vec3 at { z.world[12], z.world[13], z.world[14] };
             const std::int32_t in = enclosure ? enclosure({ at.x, at.z }) : -1;
             // The park keeps how fed, watered and in company it is, where we keep how much it wants each.
-            const auto share = [](float v) { return Share { std::clamp(v, 0.0f, 1.0f) }; };
+            const auto share = [](float v) { return units::Share { std::clamp(v, 0.0f, 1.0f) }; };
             const entt::entity e = add_animal(world, { .species = z.species, .name = z.first_names, .adult = z.is_adult, .male = z.is_male, .enclosure = in, .hunger = share(1 - z.food), .thirst = share(1 - z.drink), .tiredness = share(z.tiredness), .loneliness = share(1 - z.social), .health = share(z.health) }, at);
             auto& r = world.registry;
             r.get<Pose>(e).heading.value = r.get<Pose>(e).was_heading.value = std::atan2(z.world[8], z.world[10]);
@@ -161,7 +161,7 @@ namespace rct3::simulation
         }
     }
 
-    void step_animals(SimWorld& world, const AnimalGround& ground, Seconds dt, park::ParkMessages& messages)
+    void step_animals(SimWorld& world, const AnimalGround& ground, units::Seconds dt, park::ParkMessages& messages)
     {
         auto& r = world.registry;
         const float now = static_cast<float>(world.tick) * kTickSeconds;
@@ -300,7 +300,7 @@ namespace rct3::simulation
                     else if (house != nullptr)
                     {
                         // What the troughs hold goes as far as it goes.
-                        const auto take = [&](Share& trough, Share& need) {
+                        const auto take = [&](units::Share& trough, units::Share& need) {
                             const float had = trough.value;
                             trough.value = std::max(0.0f, trough.value - kRates.meal.value);
                             if (had > 0)

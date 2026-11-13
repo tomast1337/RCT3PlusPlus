@@ -12,6 +12,7 @@
 #include <utility>
 
 using namespace rct3::simulation;
+namespace units = rct3::units;
 using rct3::simulation::park::LedgerLine;
 
 TEST_CASE("a ride ticket, a food or drink sale and the stock it took each land on their own ledger line")
@@ -31,11 +32,11 @@ TEST_CASE("a ride ticket, a food or drink sale and the stock it took each land o
     const auto on = [](const auto& lines, LedgerLine line) { return lines.paid[std::to_underlying(line)].value; };
     CHECK(on(*receipts, LedgerLine::FoodDrinkSales) == r.get<Attraction>(stand).income.value);
     CHECK(on(*receipts, LedgerLine::RideTickets) == r.get<Attraction>(ride).income.value);
-    CHECK(std::ranges::fold_left(receipts->paid, std::int64_t { 0 }, [](std::int64_t sum, Money m) { return sum + m.value; }) == r.get<Attraction>(stand).income.value + r.get<Attraction>(ride).income.value);
+    CHECK(std::ranges::fold_left(receipts->paid, std::int64_t { 0 }, [](std::int64_t sum, units::Money m) { return sum + m.value; }) == r.get<Attraction>(stand).income.value + r.get<Attraction>(ride).income.value);
     const auto* supplies = r.ctx().find<Supplies>();
     REQUIRE(supplies != nullptr);
     CHECK(on(*supplies, LedgerLine::FoodDrinkStock) == 40 * r.get<Attraction>(stand).customers);
-    CHECK(std::ranges::fold_left(supplies->paid, std::int64_t { 0 }, [](std::int64_t sum, Money m) { return sum + m.value; }) == on(*supplies, LedgerLine::FoodDrinkStock));
+    CHECK(std::ranges::fold_left(supplies->paid, std::int64_t { 0 }, [](std::int64_t sum, units::Money m) { return sum + m.value; }) == on(*supplies, LedgerLine::FoodDrinkStock));
 }
 
 TEST_CASE("guests bring cash and bank around the park's averages, or the tuning's where it sets none")
@@ -47,8 +48,8 @@ TEST_CASE("guests bring cash and bank around the park's averages, or the tuning'
         auto& r = park.world().registry;
         if (averages)
             r.ctx().emplace<Draw>(Draw { .guest_cash = { 10000 }, .guest_bank = { 30000 } });
-        const Money cash = averages ? Money { 10000 } : kTuning.arrivals.cash;
-        const Money bank = averages ? Money { 30000 } : kTuning.arrivals.bank;
+        const units::Money cash = averages ? units::Money { 10000 } : kTuning.arrivals.cash;
+        const units::Money bank = averages ? units::Money { 30000 } : kTuning.arrivals.bank;
         rct3::random::RandomState dice = rct3::random::seeded({ 7 });
         double sum = 0;
         std::size_t count = 0;

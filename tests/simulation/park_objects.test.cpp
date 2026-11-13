@@ -15,6 +15,7 @@
 #include <vector>
 
 using namespace rct3::simulation;
+namespace units = rct3::units;
 
 TEST_CASE("guests use toilets, cash machines and first aid when they need them")
 {
@@ -320,7 +321,7 @@ TEST_CASE("a water cannon's firer sprays another guest in reach, who gets wet")
     auto& r = park.world().registry;
     const glm::vec3 way = r.get<Pose>(passer).position - r.get<Pose>(firer).position;
     r.get<PathItem>(cannon).heading = std::atan2(way.x, way.z);
-    r.emplace_or_replace<Linger>(firer, Linger { .at = PathItemKind::WaterCannon, .left = Seconds { 20 }, .bench = cannon });
+    r.emplace_or_replace<Linger>(firer, Linger { .at = PathItemKind::WaterCannon, .left = units::Seconds { 20 }, .bench = cannon });
     park.run_seconds(3);
     REQUIRE(r.all_of<Linger>(firer));
     CHECK(r.get<Linger>(firer).target == passer);
@@ -338,7 +339,7 @@ TEST_CASE("a water cannon's firer sprays no one behind it, but aims about in fro
     auto& r = park.world().registry;
     const glm::vec3 way = r.get<Pose>(passer).position - r.get<Pose>(firer).position;
     r.get<PathItem>(cannon).heading = std::atan2(-way.x, -way.z);
-    r.emplace_or_replace<Linger>(firer, Linger { .at = PathItemKind::WaterCannon, .left = Seconds { 20 }, .bench = cannon });
+    r.emplace_or_replace<Linger>(firer, Linger { .at = PathItemKind::WaterCannon, .left = units::Seconds { 20 }, .bench = cannon });
     park.run_seconds(3);
     REQUIRE(r.all_of<Linger>(firer));
     CHECK(r.get<Linger>(firer).target == entt::entity { entt::null });

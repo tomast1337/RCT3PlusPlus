@@ -6,7 +6,7 @@
 #include "simulation/parties.hpp"
 #include "simulation/staff/patrol.hpp"
 #include "simulation/swimming.hpp"
-#include "simulation/units.hpp"
+#include "units/units.hpp"
 
 #include <doctest/doctest.h>
 
@@ -205,9 +205,9 @@ TEST_CASE("a cut or changed saved park is refused")
 
 TEST_CASE("a unit is laid out as its bare number, so parks saved before it was wrapped still load")
 {
-    CHECK(parkfile::detail::layout_hash<simulation::Share>() == parkfile::detail::layout_hash<float>());
-    CHECK(parkfile::detail::layout_hash<simulation::Money>() == parkfile::detail::layout_hash<std::int64_t>());
-    CHECK(parkfile::detail::layout_hash<std::optional<simulation::Seconds>>() == parkfile::detail::layout_hash<std::optional<float>>());
+    CHECK(parkfile::detail::layout_hash<units::Share>() == parkfile::detail::layout_hash<float>());
+    CHECK(parkfile::detail::layout_hash<units::Money>() == parkfile::detail::layout_hash<std::int64_t>());
+    CHECK(parkfile::detail::layout_hash<std::optional<units::Seconds>>() == parkfile::detail::layout_hash<std::optional<float>>());
 }
 
 TEST_CASE("a save keeps the park's objects and those the player built, platforms too, not those loading makes")

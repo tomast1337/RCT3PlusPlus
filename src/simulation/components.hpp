@@ -18,7 +18,7 @@
 #include "simulation/entt.hpp"
 #include "simulation/park/ledger_line.hpp"
 #include "simulation/path_network.hpp"
-#include "simulation/units.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -37,16 +37,16 @@ namespace rct3::simulation
     struct Pose
     {
         glm::vec3 position { 0.0f };
-        Radians heading { };    ///< Round the vertical, 0 along +Z
-        glm::vec3 was { 0.0f }; ///< Position when the last step began, to draw the entity between steps
-        Radians was_heading { };
-        Distance walked { }; ///< Ground covered up to `was`, across, for the feet to keep step with
+        units::Radians heading { }; ///< Round the vertical, 0 along +Z
+        glm::vec3 was { 0.0f };     ///< Position when the last step began, to draw the entity between steps
+        units::Radians was_heading { };
+        units::Distance walked { }; ///< Ground covered up to `was`, across, for the feet to keep step with
     };
 
     /// The time of day the guests feel, in the registry's context; midday when none is there.
     struct Daylight
     {
-        Share time { 0.5f }; ///< Of the day, from midnight
+        units::Share time { 0.5f }; ///< Of the day, from midnight
     };
 
     /// Where guests come into the park and leave it; none come in while the park is closed.
@@ -74,7 +74,7 @@ namespace rct3::simulation
         bool rain = false;
         bool storm = false;
         bool sunny = false; ///< Sun out, beating down on those not in the shade
-        Degrees temperature { 20 };
+        units::Degrees temperature { 20 };
     };
 
     // ----- guests on the move -----
@@ -97,12 +97,12 @@ namespace rct3::simulation
         ErrandKind kind = ErrandKind::Wandering;
         entt::entity target = entt::null; ///< The attraction, when heading for one, queueing or riding
         std::uint32_t rest = 0;           ///< Ticks until the guest next considers what to do
-        Seconds queued { };               ///< In the queue so far, while queueing
+        units::Seconds queued { };        ///< In the queue so far, while queueing
         /// Of a ride with more than one station, the one queued at or boarded at (0 the first, k its k-th stop),
         /// and the one to get off at
         std::uint8_t station = 0;
         std::uint8_t off = 0;
-        Seconds turn { }; ///< At a counter, how long their turn there lasts all told
+        units::Seconds turn { }; ///< At a counter, how long their turn there lasts all told
     };
 
     /// What a guest thinks, numbered as saved parks number their guests' thoughts, so the game's language
@@ -177,7 +177,7 @@ namespace rct3::simulation
     {
         ThoughtKind kind = ThoughtKind::Tired;
         entt::entity about = entt::null; ///< The attraction thought about, if any
-        Seconds time { };                ///< Into the run
+        units::Seconds time { };         ///< Into the run
         std::uint32_t variant = 0;       ///< Picks which of the ways to say it
     };
 
@@ -203,15 +203,15 @@ namespace rct3::simulation
     {
         NodeId from = kNoNode;
         NodeId to = kNoNode;
-        Share progress { };
-        bool fresh = false;  ///< Came to `from` this tick
-        Pace speed { 1.3f }; ///< Their own walk, before their gait's pace (gait_pace)
+        units::Share progress { };
+        bool fresh = false;         ///< Came to `from` this tick
+        units::Pace speed { 1.3f }; ///< Their own walk, before their gait's pace (gait_pace)
         Gait gait = Gait::Walk;
         /// How far off the tiles' middles, along x and z, the guest walks at `from` and at `to`, so people
         /// spread over the path instead of keeping to one line.
         glm::vec2 lane_from { 0.0f }, lane_to { 0.0f };
-        Tiles along { };               ///< While queueing, from the front of the line
-        Distance side { };             ///< While queueing, right of the line's middle
+        units::Tiles along { };        ///< While queueing, from the front of the line
+        units::Distance side { };      ///< While queueing, right of the line's middle
         std::vector<NodeId> route { }; ///< Nodes still to reach after `to`, when heading somewhere
     };
 
@@ -235,14 +235,14 @@ namespace rct3::simulation
         AttractionKind kind = AttractionKind::Shop;
         std::string name;
         NodeId entrance = kNoNode; ///< The path node guests go to for it
-        Money price { };
+        units::Money price { };
         bool open = true;
-        bool testing = false;   ///< A ride run empty to try it out, guests kept off
-        bool off_theme = false; ///< Unlike the scenery round it, as the park last judged
-        Money income { };       ///< Taken so far
+        bool testing = false;    ///< A ride run empty to try it out, guests kept off
+        bool off_theme = false;  ///< Unlike the scenery round it, as the park last judged
+        units::Money income { }; ///< Taken so far
         std::uint32_t customers = 0;
-        std::uint64_t saved = 0; ///< The saved park's own id of it; 0 when not from a save
-        Money running_cost { };  ///< Charged each week it is open; none for stalls and pools
+        std::uint64_t saved = 0;       ///< The saved park's own id of it; 0 when not from a save
+        units::Money running_cost { }; ///< Charged each week it is open; none for stalls and pools
     };
 
     /// A guest riding from one station of a ride to another on the way somewhere: what they were doing, and the
@@ -264,8 +264,8 @@ namespace rct3::simulation
         /// shortcut: which saved number is a cup or a wrapper is not known, so ours are 0 for food and 1 for
         /// drink; upgrade when litter is drawn.
         std::uint8_t kind = 0;
-        Seconds age { };    ///< It has lain
-        bool vomit = false; ///< Left by a sick guest
+        units::Seconds age { }; ///< It has lain
+        bool vomit = false;     ///< Left by a sick guest
     };
 
     enum class PathItemKind : std::uint8_t
@@ -321,10 +321,10 @@ namespace rct3::simulation
     struct Linger
     {
         PathItemKind at = PathItemKind::Bench;
-        Seconds left { };                 ///< Watching: till they walk on. Sitting: till they may get up, then getting up
+        units::Seconds left { };          ///< Watching: till they walk on. Sitting: till they may get up, then getting up
         entt::entity bench = entt::null;  ///< The bench they sit on, the water cannon they fire, or the view they take in
         std::uint8_t seat = 0;            ///< Which of its seats, counting as its model numbers them
-        Seconds sat { };                  ///< Since they sat down
+        units::Seconds sat { };           ///< Since they sat down
         bool rising = false;              ///< Getting up, for what `left` holds
         entt::entity target = entt::null; ///< Firing a water cannon: who they spray, none while they aim about
         bool camera = false;              ///< At a view, taking the photo of the rest of their party
@@ -351,7 +351,7 @@ namespace rct3::simulation
     struct Gesture
     {
         GestureKind kind = GestureKind::Nod;
-        Seconds left { };
+        units::Seconds left { };
         entt::entity at = entt::null; ///< What it is made at, if anything: the bin their rubbish goes in
     };
 
@@ -360,19 +360,19 @@ namespace rct3::simulation
     struct Watching
     {
         entt::entity star = entt::null;
-        Radians angle { };
+        units::Radians angle { };
         bool autograph = false; ///< Waiting for the star, a VIP, to sign for them
         bool chasing = false;   ///< A fan walking after the VIP over the paths, too far off to be signed yet
-        Seconds waited { };
+        units::Seconds waited { };
     };
 
     /// A person the player has picked up, hanging under the cursor: out of the simulation's walking and
     /// queueing till let go, their party waiting for them. Where they hang is the player's to move (Pose).
     struct Held
     {
-        Distance height { };   ///< Over the ground under them
-        bool happy = false;    ///< Enjoying it, or cross
-        bool swimwear = false; ///< Taken out of a pool in their swimwear, kept on till they land
+        units::Distance height { }; ///< Over the ground under them
+        bool happy = false;         ///< Enjoying it, or cross
+        bool swimwear = false;      ///< Taken out of a pool in their swimwear, kept on till they land
     };
 
     /// A person let go of, thrown by a crash or sliding down ground grown too steep: falling to `ground`, then
@@ -380,12 +380,12 @@ namespace rct3::simulation
     /// lands knocked over; one sliding keeps to the ground, and falls over once they stop.
     struct Dropped
     {
-        float ground = 0;     ///< World height they land at; under them as they fly, for one thrown
-        Pace fall { };        ///< Downwards, now; below 0 while thrown upwards
-        glm::vec2 drift { };  ///< World units a second across the ground, x and z
-        bool thrown = false;  ///< Lands knocked over, and lies there a while before walking on
-        bool sliding = false; ///< Down the slope, along the ground
-        Seconds slid { };     ///< Since they began sliding
+        float ground = 0;        ///< World height they land at; under them as they fly, for one thrown
+        units::Pace fall { };    ///< Downwards, now; below 0 while thrown upwards
+        glm::vec2 drift { };     ///< World units a second across the ground, x and z
+        bool thrown = false;     ///< Lands knocked over, and lies there a while before walking on
+        bool sliding = false;    ///< Down the slope, along the ground
+        units::Seconds slid { }; ///< Since they began sliding
         NodeId node = kNoNode;
         bool swimwear = false;           ///< Taken out of a pool in their swimwear, kept on till they land
         entt::entity pool = entt::null;  ///< The changing room of the pool complex they fall into, to swim there
@@ -457,19 +457,19 @@ namespace rct3::simulation
     {
         StaffRole role = StaffRole::Other;
         std::int32_t tasks = kEveryTask; ///< Task flags, as save::model::Staff keeps them
-        Seconds busy { };                ///< Left at the job in hand
+        units::Seconds busy { };         ///< Left at the job in hand
         entt::entity ride = entt::null;  ///< The ride a mechanic is going to, or working on, to repair or inspect
-        Money wage { };                  ///< A month
+        units::Money wage { };           ///< A month
         std::int32_t wage_level = 1;     ///< 0 to 2, what `wage` follows (staff/care.hpp); 1 as hired
         std::int32_t training = 3;       ///< 0 untrained to 3; a hire's is set by hired_training (staff/care.hpp)
         std::int32_t warnings = 0;
-        Share happiness { 1 };
-        Share laziness { };            ///< How much longer each job takes, and how often they stop to rest
-        Share load { };                ///< Of the recent past, spent at work
+        units::Share happiness { 1 };
+        units::Share laziness { };     ///< How much longer each job takes, and how often they stop to rest
+        units::Share load { };         ///< Of the recent past, spent at work
         StaffJob job = StaffJob::None; ///< What `busy` is spent on
-        Seconds job_length { };        ///< `busy` as the job began
+        units::Seconds job_length { }; ///< `busy` as the job began
         std::uint32_t mended = 0;      ///< Broken path items mended since the run began
-        Seconds think { };             ///< To their next thought
+        units::Seconds think { };      ///< To their next thought
         std::uint32_t miserable = 0;   ///< Thoughts in a row had while miserable
         // Work done since they were hired, as their window counts it.
         std::int32_t swept = 0;
@@ -506,23 +506,23 @@ namespace rct3::simulation
     /// cash machines wear with time instead (`break_in`), and are never inspected.
     struct Upkeep
     {
-        Share reliability { 1 };
+        units::Share reliability { 1 };
         bool broken = false;
-        Seconds since_inspection { };
-        Seconds inspect_every { 600 };      ///< Negative never
-        entt::entity mechanic = entt::null; ///< Sent to it, or at work on it
-        bool called = false;                ///< The player asked for a mechanic, who inspects it as if due
-        std::uint32_t breakdowns = 0;       ///< Since the run began
-        Breakdown kind = Breakdown::None;   ///< The breakdown going on
-        Breakdown last = Breakdown::None;   ///< The latest one, going on or fixed
+        units::Seconds since_inspection { };
+        units::Seconds inspect_every { 600 }; ///< Negative never
+        entt::entity mechanic = entt::null;   ///< Sent to it, or at work on it
+        bool called = false;                  ///< The player asked for a mechanic, who inspects it as if due
+        std::uint32_t breakdowns = 0;         ///< Since the run began
+        Breakdown kind = Breakdown::None;     ///< The breakdown going on
+        Breakdown last = Breakdown::None;     ///< The latest one, going on or fixed
         /// Downtime: each window is sampled a set number of times, and counts the samples the ride was down
         /// in. Newest first; the oldest drops off as a new window starts.
         std::array<std::uint8_t, 8> downtime { };
-        std::uint8_t samples = 0; ///< Taken in the newest window
-        Seconds sample_clock { }; ///< Since the last sample
+        std::uint8_t samples = 0;        ///< Taken in the newest window
+        units::Seconds sample_clock { }; ///< Since the last sample
         /// A stall's or cash machine's wear: what is left before it breaks down, counted down faster the fewer
         /// guards the park has for its guests. Zero for one to be rolled afresh; negative for rides and pools.
-        Seconds break_in { -1 };
+        units::Seconds break_in { -1 };
 
         /// Share of the samples in all windows taken while down, 0..1.
         [[nodiscard]] float downtime_share() const;
@@ -534,30 +534,30 @@ namespace rct3::simulation
     {
         std::int64_t loan = 0; ///< Hundredths
         float rate = 0;        ///< Yearly, in percent
-        Money interest { };
-        Money running { };
-        Seconds week { }; ///< Into the week, charged as it ends
+        units::Money interest { };
+        units::Money running { };
+        units::Seconds week { }; ///< Into the week, charged as it ends
     };
 
     /// What the park has paid its staff, kept in the registry's context.
     struct Payroll
     {
-        Money paid { };
-        Seconds week { }; ///< Into the week, paid as it ends
+        units::Money paid { };
+        units::Seconds week { }; ///< Into the week, paid as it ends
     };
 
     /// What the park has paid for supplies, such as pools' cleaning fluid and stalls' stock, by the ledger line it
     /// goes on (an index of park::LedgerLine), kept in the registry's context.
     struct Supplies
     {
-        std::array<Money, park::kLedgerLines> paid { };
+        std::array<units::Money, park::kLedgerLines> paid { };
     };
 
     /// What guests have paid the park for rides, shops and entry, by the ledger line it goes on (an index of
     /// park::LedgerLine), kept in the registry's context.
     struct Receipts
     {
-        std::array<Money, park::kLedgerLines> paid { };
+        std::array<units::Money, park::kLedgerLines> paid { };
     };
 
     /// The park's run of vandalism, kept in the registry's context.
@@ -622,10 +622,10 @@ namespace rct3::simulation
 
     struct Vandalism
     {
-        std::uint32_t broken = 0;     ///< Things broken since the run began
-        float recent = 0;             ///< Things broken lately, each fading away over a game hour or so
-        Seconds since_warning { -1 }; ///< Since the player was last told; -1 never
-        std::uint32_t warnings = 0;   ///< Times the player has been told, for the park to post as messages
+        std::uint32_t broken = 0;            ///< Things broken since the run began
+        float recent = 0;                    ///< Things broken lately, each fading away over a game hour or so
+        units::Seconds since_warning { -1 }; ///< Since the player was last told; -1 never
+        std::uint32_t warnings = 0;          ///< Times the player has been told, for the park to post as messages
     };
 
 } // namespace rct3::simulation

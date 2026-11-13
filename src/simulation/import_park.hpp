@@ -157,7 +157,7 @@ namespace rct3::simulation
     /// other new staff are.
     entt::entity add_vendor(SimWorld& world, glm::vec3 at);
     /// A lifeguard come with a lifeguard chair placed since, sitting in it at `at`, facing `heading`; unpaid.
-    entt::entity add_lifeguard(SimWorld& world, glm::vec3 at, Radians heading);
+    entt::entity add_lifeguard(SimWorld& world, glm::vec3 at, units::Radians heading);
     /// A worker in `role` hired since, walking from path node `at`, paid as other new staff are.
     entt::entity add_staff(SimWorld& world, StaffRole role, NodeId at);
 

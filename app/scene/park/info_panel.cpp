@@ -302,18 +302,18 @@ namespace rct3::scene::park
                 people += door != nullptr && r.valid(errand.target) && r.all_of<simulation::PoolDoor>(errand.target) && r.get<simulation::PoolDoor>(errand.target).pool == door->pool;
             const rct3::park::pools::PoolRoom& at = scene.pools.rooms[*room];
             f.pool = ui::screens::info::PoolComplexFacts {
-                .name = strings::to_utf16(at.complex_name), .number = static_cast<std::size_t>(std::ranges::count(scene.pools.rooms.begin(), scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room) + 1, at.symbol, &rct3::park::pools::PoolRoom::symbol)), .ticket = at.ticket, .open = at.open, .people = people, .dirt = pool != nullptr ? simulation::dirt_step(*pool) : 0, .fluid = at.fluid, .waves = at.waves, .refill = simulation::kTuning.pools.refill.at(std::min<std::size_t>(at.fluid, 2)).value
+                .name = strings::to_utf16(at.complex_name), .number = static_cast<std::size_t>(std::ranges::count(scene.pools.rooms.begin(), scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room) + 1, at.symbol, &rct3::park::pools::PoolRoom::symbol)), .ticket = units::Money { at.ticket }, .open = at.open, .people = people, .dirt = pool != nullptr ? simulation::dirt_step(*pool) : 0, .fluid = at.fluid, .waves = at.waves, .refill = simulation::kTuning.pools.refill.at(std::min<std::size_t>(at.fluid, 2))
             };
             // The room's takings and upkeep, and what guests thought of it, as the simulation has them.
             if (const auto* attraction = e != entt::null ? r.try_get<simulation::Attraction>(e) : nullptr)
             {
                 f.pool->customers = attraction->customers;
-                f.pool->income = attraction->income.value;
+                f.pool->income = attraction->income;
             }
             if (const auto* upkeep = e != entt::null ? r.try_get<simulation::Upkeep>(e) : nullptr)
             {
                 f.pool->reliability = upkeep->reliability.value;
-                f.pool->since_inspection = upkeep->since_inspection.value;
+                f.pool->since_inspection = upkeep->since_inspection;
                 if (const auto interval = std::ranges::find(simulation::kInspectionSeconds, upkeep->inspect_every.value); interval != simulation::kInspectionSeconds.end())
                     f.pool->inspection = static_cast<int>(interval - simulation::kInspectionSeconds.begin());
             }

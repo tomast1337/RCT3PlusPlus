@@ -223,7 +223,7 @@ namespace rct3::scene::park
                         ui::screens::management::AttractionTakings t;
                         for (const auto [e, a] : scene.sim.registry.view<simulation::Attraction>().each())
                             if (id != 0 && a.saved == id)
-                                t = { .income = t.income + a.income.value, .customers = t.customers + a.customers };
+                                t = { .income = t.income + a.income, .customers = t.customers + a.customers };
                         return t;
                     },
             };

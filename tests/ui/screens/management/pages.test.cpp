@@ -207,7 +207,7 @@ TEST_CASE("the finances' attractions tab lists each ride and stall with its taki
     rides.stalls.push_back({ });
     rides.stalls[1].base.demolished = true;
     // Taken since the park was opened, on top of what the park file kept.
-    const auto takings = [](std::uint64_t id) { return id == 7 ? AttractionTakings { .income = 1000, .customers = 5 } : AttractionTakings { }; };
+    const auto takings = [](std::uint64_t id) { return id == 7 ? AttractionTakings { .income = units::Money { 1000 }, .customers = 5 } : AttractionTakings { }; };
     const ManagementPage page = management_page(ManagementTopic::Finances, 4, { .rides = &rides, .takings = takings }, s, kUnits);
     REQUIRE(page.rows.size() == 2);
     CHECK(page.sort == 3);

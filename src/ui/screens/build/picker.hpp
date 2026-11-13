@@ -74,7 +74,7 @@ namespace rct3::ui::screens::build
         std::string icon;                ///< Skin
         std::u16string size;             ///< Second line of the help, under the name
         std::u16string price;            ///< Third line; empty when the item has no price
-        std::int64_t cost = 0;           ///< The price in hundredths of the currency unit
+        units::Money cost { };           ///< The price
         std::string badge;               ///< Skin in the right-hand corner, if any
         std::string style;               ///< The theme's name; empty for items of no theme
         std::uint32_t addon = 0;         ///< 0 for the base game, else its add-on pack

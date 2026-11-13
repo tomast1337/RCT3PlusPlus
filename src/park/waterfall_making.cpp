@@ -15,9 +15,9 @@ namespace rct3::park
 
     namespace
     {
-        constexpr float kMinDrop = 2.0f;    ///< Least height, in world units, the water must fall.
+        constexpr float kMinDrop = 8.0f;    ///< Least height, in world units, the water must fall.
         constexpr int kMaxReach = 6;        ///< Most tiles out from the edge the lower lake may lie.
-        constexpr int kMaxEdgeTiles = 5;    ///< Most tiles along the edge one waterfall pours over.
+        constexpr int kNarrowestEdge = 3;   ///< Fewest tiles of edge a waterfall needs: one pouring between two banks.
         constexpr float kPickMargin = 1.0f; ///< World units round a waterfall it can be picked.
 
         save::model::Tile step(save::model::Tile t, save::model::Tile d, int n = 1)
@@ -83,10 +83,12 @@ namespace rct3::park
         const auto edge = [&](save::model::Tile t) { return in(t, 1) && !in(step(t, best->out), 1) && in(step(t, best->out, best->reach), 2); };
         int from = 0;
         int to = 0;
-        while (to - from + 1 < kMaxEdgeTiles && edge(step(best->from, side, to + 1)))
+        while (edge(step(best->from, side, to + 1)))
             ++to;
-        while (to - from + 1 < kMaxEdgeTiles && edge(step(best->from, side, from - 1)))
+        while (edge(step(best->from, side, from - 1)))
             --from;
+        if (to - from + 1 < kNarrowestEdge)
+            return std::unexpected(kWaterfallEdgeTooNarrow);
         for (int s = from; s <= to; ++s)
             for (int k = 0; k <= best->reach; ++k)
             {
@@ -112,7 +114,8 @@ namespace rct3::park
         const glm::vec3 size { grid.tile_size_x, 0.0f, grid.tile_size_z };
         const glm::vec3 centre = glm::vec3 { grid.world_x(best->from.col) + grid.tile_size_x / 2, high.level, grid.world_z(best->from.row) + grid.tile_size_z / 2 } + across * size * (static_cast<float>(from + to) / 2);
         const glm::vec3 lip = centre + flow * size * (spillway ? 1.5f : 0.5f);
-        const glm::vec3 half = across * size * (static_cast<float>(to - from + 1) / 2);
+        // The water pours between the edge's two end tiles, which slope up to the banks.
+        const glm::vec3 half = across * size * (static_cast<float>(to - from - 1) / 2);
         glm::vec3 bottom = centre + flow * size * static_cast<float>(best->reach);
         bottom.y = low.level;
         return save::model::Waterfall { .lip_left = world(lip - half), .lip_right = world(lip + half), .top = world(centre), .bottom = world(bottom), .flow = world(flow), .carved = std::move(carved) };
@@ -124,18 +127,30 @@ namespace rct3::park
         const glm::vec2 lip = (glm::vec2 { fall.lip_left.x, fall.lip_left.z } + glm::vec2 { fall.lip_right.x, fall.lip_right.z }) / 2.0f;
         const float length = std::abs(flow.x) * grid.tile_size_x + std::abs(flow.y) * grid.tile_size_z; // Of a tile, along the flow
         const float level = fall.top.y;
-        constexpr float kOn = 0.01f; ///< Tiles from a line a corner may be and still be on it
+        const glm::vec2 across { -flow.y, flow.x };
+        const float width = std::abs(across.x) * grid.tile_size_x + std::abs(across.y) * grid.tile_size_z;                                                // Of a tile, along the edge
+        const float pouring = glm::length(glm::vec2 { fall.lip_right.x, fall.lip_right.z } - glm::vec2 { fall.lip_left.x, fall.lip_left.z }) / width / 2; // Tiles from the middle
+        constexpr float kOn = 0.01f;                                                                                                                      ///< Tiles from a line a corner may be and still be on it
         for (const save::model::CarvedTile& c : fall.carved)
         {
             if (!grid.contains(c.tile.col, c.tile.row))
                 continue;
             // Measured in tiles out from the lip: the edge tiles' middles at -1.5, the spillway's at -0.5.
             const auto out = [&](float x, float z) { return glm::dot(glm::vec2 { x, z } - lip, flow) / length; };
+            const auto aside = [&](float x, float z) { return std::abs(glm::dot(glm::vec2 { x, z } - lip, across)) / width; };
             const float middle = out(grid.world_x(c.tile.col) + grid.tile_size_x / 2, grid.world_z(c.tile.row) + grid.tile_size_z / 2);
+            // The ground on the way down sinks only under the falling water.
+            if (middle > 0 && aside(grid.world_x(c.tile.col) + grid.tile_size_x / 2, grid.world_z(c.tile.row) + grid.tile_size_z / 2) > pouring)
+                continue;
             auto& corners = grid.at(c.tile.col, c.tile.row).corners;
             for (std::size_t k = 0; k < 4; ++k)
             {
-                const float at = out(grid.world_x(c.tile.col) + static_cast<float>(k % 2) * grid.tile_size_x, grid.world_z(c.tile.row) + static_cast<float>(k / 2) * grid.tile_size_z);
+                const float x = grid.world_x(c.tile.col) + static_cast<float>(k % 2) * grid.tile_size_x;
+                const float z = grid.world_z(c.tile.row) + static_cast<float>(k / 2) * grid.tile_size_z;
+                const float at = out(x, z);
+                // The edge's two ends stay with the banks, so its end tiles slope up to them and no wall opens.
+                if (aside(x, z) > pouring + 1 - kOn)
+                    continue;
                 if (middle > 0)
                     corners[k] = std::min(corners[k], level - kSpillwayDepth); // On the way down
                 else if (std::abs(at + 1) < kOn)

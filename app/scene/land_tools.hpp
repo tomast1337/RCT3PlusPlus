@@ -153,11 +153,12 @@ namespace rct3::scene
         float paid_for = 0;               ///< The most ground the stroke has moved, already paid for
         bool spray = true;                ///< The brushes spray while held, rather than follow a drag
         int spray_speed = rct3::park::ground::kDefaultSpray;
-        std::optional<std::size_t> smoothing;  ///< The smoothing brush chosen, by its place in its tab
-        float target = 0;                      ///< Of a levelling stroke
-        std::uint64_t passes = 0;              ///< Of smoothing, the seed of each pass
-        std::optional<std::size_t> upper_lake; ///< Of a waterfall: the lake picked first, of the park's water
-        save::model::Tile upper_tile;          ///< Where it was picked
+        std::optional<std::size_t> smoothing;        ///< The smoothing brush chosen, by its place in its tab
+        float target = 0;                            ///< Of a levelling stroke
+        std::uint64_t passes = 0;                    ///< Of smoothing, the seed of each pass
+        std::optional<std::size_t> upper_lake;       ///< Of a waterfall: the lake picked first, of the park's water
+        save::model::Tile upper_tile;                ///< Where it was picked
+        std::optional<save::model::Tile> lake_asked; ///< A tile of the lake the player was asked whether to remove, waterfalls and all
         rct3::park::LandBuy buying = rct3::park::LandBuy::Land;
         std::optional<float> rumble; ///< While a shaping stroke goes: how loud its ground is heard moving, 0..1
     };
@@ -167,6 +168,9 @@ namespace rct3::scene
     /// Takes out the tool that buys `what` of the land on sale, opening the panel on it.
     void buy_land_tool(park::ParkScene& scene, rct3::park::LandBuy what, const ui::InterfaceAssets& assets);
     void stop_land_tools(park::ParkScene& scene);
+
+    /// Takes the lake holding `tile` away, its waterfalls with it, putting back the ground they cut.
+    void remove_lake(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Tile tile);
     [[nodiscard]] bool land_tool(const park::ParkScene& scene);
 
     /// A right click at `at` (of a view `size`) with the waterfall tool out: deletes the waterfall there; whether

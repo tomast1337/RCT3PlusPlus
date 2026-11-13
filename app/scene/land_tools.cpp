@@ -12,6 +12,7 @@
 #include "park/waterfall_making.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "scene/park/footpaths.hpp"
+#include "scene/park/questions.hpp"
 #include "scene/park/refresh.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/view.hpp"
@@ -590,13 +591,11 @@ namespace rct3::scene
                 // The ground clicked is under the lake: the click was on its surface.
                 if (!allowed(*l.tile))
                     return say(scene, kWaterRefused);
-                // Its waterfalls go with it, putting back the ground they cut.
-                save::model::TerrainGrid ground = g;
-                rct3::park::water::remove_lake(scene.footpaths.water, scene.footpaths.waterfalls, ground, *l.tile);
-                park::show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &park::ParkParticles::sprays);
-                start_stroke(scene);
-                take_ground(device, scene, assets, std::move(ground), false);
-                return end_stroke(scene);
+                // A lake with waterfalls goes only once the player said so.
+                const auto on_lake = [&](const save::model::WorldPoint3& p) { return rct3::park::water::holds(*lake, { static_cast<int>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((p.z - g.origin_z) / g.tile_size_z)) }); };
+                if (std::ranges::any_of(scene.footpaths.waterfalls, [&](const save::model::Waterfall& f) { return on_lake(f.top) || on_lake(f.bottom); }))
+                    return park::ask_remove_lake(scene, *assets.strings, assets.palette, *l.tile);
+                return remove_lake(device, scene, assets, *l.tile);
             }
             // shortcut: waterfalls of a lake raised this way keep their old heights, ask before covering them when
             // falls get a yes/no question
@@ -854,6 +853,17 @@ namespace rct3::scene
         refit_lake(scene, top, { });
         park::rebuild_ground(device, scene, assets);
         return true;
+    }
+
+    void remove_lake(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Tile tile)
+    {
+        save::model::TerrainGrid ground = scene.grid;
+        if (!rct3::park::water::remove_lake(scene.footpaths.water, scene.footpaths.waterfalls, ground, tile))
+            return;
+        park::show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &park::ParkParticles::sprays);
+        start_stroke(scene);
+        take_ground(device, scene, assets, std::move(ground), false);
+        end_stroke(scene);
     }
 
     void update_land_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed)

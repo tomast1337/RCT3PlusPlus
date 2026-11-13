@@ -104,7 +104,7 @@ TEST_CASE("a saved park reads back as written")
     CHECK(goals->broken_items.empty());
     CHECK_FALSE(goals->research); // None kept: research starts again from the original park
 
-    hidden.research = simulation::Research { .budget = 20000, .spent = 667, .boost = 50000, .current = 12, .previous = 9, .priorities = { 0.5f, 1.0f }, .since_part = 3.5f, .invented = { 9 }, .invented_at = { 1234.5f }, .focus = 12, .set_aside = { { .id = 7, .spent = 400 } } };
+    hidden.research = simulation::Research { .budget = 20000, .spent = 667, .boost = 50000, .current = 12, .previous = 9, .priorities = { 0.5f, 1.0f }, .since_part = 3.5f, .invented = { 9 }, .invented_at = { 1234.5f }, .focus = 12, .set_aside = { { .id = 7, .spent = units::Money { 400 } } } };
     const auto research = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
     REQUIRE(research);
     REQUIRE(research->research);

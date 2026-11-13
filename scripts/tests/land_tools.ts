@@ -162,6 +162,9 @@ await pick("Land_Brush_Height");
 
 await until(() => ui.find("land_panel/Land_Brush_Height_Raise") !== undefined, 60, "the land panel's brush tab");
 
+await ui.click("land_panel/Land_Brush_Height_Mode"); // The brushes open spraying; these strokes are dragged
+await until(() => ui.find("land_panel/body/Land_Brush_Height_Mode_Drag") !== undefined, 60, "the mode tab");
+await ui.click("land_panel/body/Land_Brush_Height_Mode_Drag");
 await ui.click("land_panel/Land_Brush_Height_Raise");
 
 await until(() => ui.find("land_panel/body/Land_Brush_Height_Raise_Hill") !== undefined, 60, "the hill brush");
@@ -225,7 +228,7 @@ const hill_top = high(hill_at, row);
 await ui.click("land_panel/Land_Brush_Height_Smooth");
 await until(() => ui.find("land_panel/body/Land_Brush_Height_Smooth_Average") !== undefined, 60, "the averaging brush");
 await ui.click("land_panel/body/Land_Brush_Height_Smooth_Average");
-// Dragged, as the panel opens: further from the press wears the hill further; back at the press it stands again.
+// Dragged: further from the press wears the hill further; back at the press it stands again.
 const [sx, sy] = on_view(hill_at, row);
 pointer.move(sx, sy);
 pointer.press();
@@ -243,7 +246,7 @@ expect(Math.abs(high(hill_at, row) - hill_top) < 1e-3, "the hill back as it was 
 pointer.release();
 await frames(2);
 
-// Sprayed: the mode tab's other choice. Holding the button still wears the hill down, more the longer.
+// Sprayed, as the panel opens. Holding the button still wears the hill down, more the longer.
 await ui.click("land_panel/Land_Brush_Height_Mode");
 await until(() => ui.find("land_panel/body/Land_Brush_Height_Mode_Spray") !== undefined, 60, "the mode tab");
 expect(ui.find("land_panel/body/Land_Brush_Height_Mode_SpraySpeed") !== undefined, "the spray speed on the mode tab");
@@ -274,9 +277,6 @@ await frames(2);
 log("sprayed hill:", flat, "->", high(hill_at + 4, row - 2));
 await screenshot("sprayed");
 expect(high(hill_at + 4, row - 2) > flat, "the ground raised under a held raising spray");
-await ui.click("land_panel/Land_Brush_Height_Mode");
-await until(() => ui.find("land_panel/body/Land_Brush_Height_Mode_Drag") !== undefined, 60, "the mode tab");
-await ui.click("land_panel/body/Land_Brush_Height_Mode_Drag");
 
 // Cliff faces: painted on the tiles under the brush, like surfaces.
 await pick("Land_Brush_Paint");

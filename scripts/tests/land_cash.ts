@@ -50,6 +50,9 @@ const at = map.screen(col + 0.5, row + 0.5)!;
 
 // A hill dragged far up with little cash: the cash runs out, the hill stops short.
 await pick("Land_Brush_Height");
+await ui.click("land_panel/Land_Brush_Height_Mode"); // The brushes open spraying; these strokes are dragged
+await until(() => ui.find("land_panel/body/Land_Brush_Height_Mode_Drag") !== undefined, 60, "the mode tab");
+await ui.click("land_panel/body/Land_Brush_Height_Mode_Drag");
 await ui.click("land_panel/Land_Brush_Height_Raise");
 await until(() => ui.find("land_panel/body/Land_Brush_Height_Raise_Hill") !== undefined, 60, "the hill brush");
 await ui.click("land_panel/body/Land_Brush_Height_Raise_Hill");

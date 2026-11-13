@@ -25,9 +25,9 @@
 // Sprayed, a raising brush only raises and a lowering one only lowers, under the pointer as it moves.
 //
 // The mode tab sets how the raising, lowering and smoothing brushes are worked, for all of them at once:
-//   - Drag (as the panel opens): press and move the pointer up or down; the ground under the brush goes with
+//   - Drag: press and move the pointer up or down; the ground under the brush goes with
 //     it, both ways, and comes back when the pointer does. Good for fine work.
-//   - Spray: hold the button and the ground under the pointer goes one way, a little every moment, at the
+//   - Spray (as the panel opens): hold the button and the ground under the pointer goes one way, a little every moment, at the
 //     spray speed set by the tab's number (1 to 9); moving the pointer while holding leaves a trail. Good for
 //     big changes.
 //
@@ -151,7 +151,7 @@ namespace rct3::scene
         std::optional<Start> start;
         std::optional<glm::vec3> cost_at; ///< Where the stroke's cost is shown, once it has paid
         float paid_for = 0;               ///< The most ground the stroke has moved, already paid for
-        bool spray = false;               ///< The brushes spray while held, rather than follow a drag
+        bool spray = true;                ///< The brushes spray while held, rather than follow a drag
         int spray_speed = rct3::park::ground::kDefaultSpray;
         std::optional<std::size_t> smoothing;  ///< The smoothing brush chosen, by its place in its tab
         float target = 0;                      ///< Of a levelling stroke

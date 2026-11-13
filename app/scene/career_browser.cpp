@@ -214,7 +214,7 @@ namespace rct3::scene
         }
 
         /// The park file scenario `index` of the career starts from, if the game has it.
-        std::optional<fs::path> scenario_park(const career::Career& c, std::size_t index, const ui::StringTable& strings, const config::GameInstall& install)
+        std::optional<fs::path> scenario_park(const career::Career& c, std::size_t index, const ui::StringTable& strings, const config::game::GameInstall& install)
         {
             const auto folder = install.find(ui::career_park_folder(strings, c.pack));
             if (!folder || index >= c.scenarios.size())
@@ -244,7 +244,7 @@ namespace rct3::scene
             browser.played = true;
         }
 
-        void carry_out_map(CareerBrowser& browser, ui::screens::FrontEnd& front, ui::screens::CareerBoard& map, const ui::StringTable& strings, const config::GameInstall& install)
+        void carry_out_map(CareerBrowser& browser, ui::screens::FrontEnd& front, ui::screens::CareerBoard& map, const ui::StringTable& strings, const config::game::GameInstall& install)
         {
             career::CareerEntry& entry = *browser.playing;
             career::Career& c = entry.data.career;
@@ -304,7 +304,7 @@ namespace rct3::scene
 
     } // namespace
 
-    void update_career_browser(render::Device& device, CareerBrowser& browser, ui::screens::FrontEnd& front, const ui::StringTable& strings, const config::GameInstall& install)
+    void update_career_browser(render::Device& device, CareerBrowser& browser, ui::screens::FrontEnd& front, const ui::StringTable& strings, const config::game::GameInstall& install)
     {
         auto map = front.career_board();
         if (map && browser.playing && browser.played && !browser.park)
@@ -354,7 +354,7 @@ namespace rct3::scene
         carry_out(browser, *dialog, front, front.career_pack(), strings);
     }
 
-    bool start_career_scenario(CareerBrowser& browser, ui::screens::FrontEnd& front, int pack, std::size_t index, const ui::StringTable& strings, const config::GameInstall& install)
+    bool start_career_scenario(CareerBrowser& browser, ui::screens::FrontEnd& front, int pack, std::size_t index, const ui::StringTable& strings, const config::game::GameInstall& install)
     {
         const auto log = logging::logger("ui");
         if (!browser.data)

@@ -15,7 +15,7 @@ namespace rct3::ui::screens
 
     } // namespace
 
-    OptionRows::OptionRows(Widget& page, float width, OptionRowsStyle style, config::GameOptions& options, std::bitset<config::kGameOptionCount> inert)
+    OptionRows::OptionRows(Widget& page, float width, OptionRowsStyle style, config::game::GameOptions& options, std::bitset<config::game::kGameOptionCount> inert)
         : page_(page)
         , width_(width)
         , style_(std::move(style))
@@ -47,10 +47,10 @@ namespace rct3::ui::screens
         return label;
     }
 
-    widgets::Tickbox& OptionRows::tick(config::GameOption option, std::u16string name, std::u16string tip)
+    widgets::Tickbox& OptionRows::tick(config::game::GameOption option, std::u16string name, std::u16string tip)
     {
         Row& row = add_row();
-        const std::string_view widget = config::game_option_info(option).name;
+        const std::string_view widget = config::game::game_option_info(option).name;
         auto& box = page_.add<widgets::Tickbox>(control_name(widget, "tick"), style_.tick_box, style_.tick);
         box.tooltip = tip;
         row.parts.push_back({ &box, style_.left, style_.tick_size, style_.tick_size });
@@ -60,9 +60,9 @@ namespace rct3::ui::screens
         return box;
     }
 
-    widgets::Dropdown& OptionRows::choice(config::GameOption option, std::u16string name, std::vector<std::u16string> items, std::u16string tip)
+    widgets::Dropdown& OptionRows::choice(config::game::GameOption option, std::u16string name, std::vector<std::u16string> items, std::u16string tip)
     {
-        widgets::Dropdown& d = list(std::move(name), std::move(items), std::move(tip), std::string(config::game_option_info(option).name));
+        widgets::Dropdown& d = list(std::move(name), std::move(items), std::move(tip), std::string(config::game::game_option_info(option).name));
         Row& row = rows_.back();
         bind(row, { option, Kind::Choice, &d });
         return d;
@@ -91,10 +91,10 @@ namespace rct3::ui::screens
         return style_.slider_inset > 0 ? style_.row_height - 2 * style_.slider_inset : 0;
     }
 
-    widgets::Slider& OptionRows::level(config::GameOption option, std::u16string name, std::u16string tip)
+    widgets::Slider& OptionRows::level(config::game::GameOption option, std::u16string name, std::u16string tip)
     {
         Row& row = add_row();
-        const config::GameOptionInfo& info = config::game_option_info(option);
+        const config::game::GameOptionInfo& info = config::game::game_option_info(option);
         name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip, info.name);
         auto& s = page_.add<widgets::Slider>(control_name(info.name, "level"), style_.slider);
         s.minimum = info.minimum;
@@ -106,10 +106,10 @@ namespace rct3::ui::screens
         return s;
     }
 
-    widgets::Spinner& OptionRows::number(config::GameOption option, std::u16string name, std::u16string tip)
+    widgets::Spinner& OptionRows::number(config::game::GameOption option, std::u16string name, std::u16string tip)
     {
         Row& row = add_row();
-        const config::GameOptionInfo& info = config::game_option_info(option);
+        const config::game::GameOptionInfo& info = config::game::game_option_info(option);
         name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip, info.name);
         auto& s = page_.add<widgets::Spinner>(control_name(info.name, "number"), style_.spinner);
         s.minimum = static_cast<int>(info.minimum);
@@ -121,13 +121,13 @@ namespace rct3::ui::screens
         return s;
     }
 
-    void OptionRows::pair(config::DetailPair options, std::u16string name, std::u16string tip)
+    void OptionRows::pair(config::game::DetailPair options, std::u16string name, std::u16string tip)
     {
         Row& row = add_row();
-        name_label(row, std::move(name), style_.left, kFirstColumn - style_.left - kNameGap, std::move(tip), config::game_option_info(options.detail).name);
+        name_label(row, std::move(name), style_.left, kFirstColumn - style_.left - kNameGap, std::move(tip), config::game::game_option_info(options.detail).name);
         for (const auto& [option, x] : { std::pair { options.detail, kFirstColumn }, std::pair { options.distance, kSecondColumn } })
         {
-            const config::GameOptionInfo& info = config::game_option_info(option);
+            const config::game::GameOptionInfo& info = config::game::game_option_info(option);
             auto& s = page_.add<widgets::Slider>(control_name(info.name, "level"), style_.slider);
             s.minimum = info.minimum;
             s.maximum = info.maximum;

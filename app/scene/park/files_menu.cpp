@@ -170,7 +170,7 @@ namespace rct3::scene::park
             park.park_to_load = std::move(picked);
         if (const auto follow = std::exchange(park.footpaths.follow_changed, std::nullopt))
         {
-            front.live->options.set(config::GameOption::PathCameraFollow, *follow ? 1.0f : 0.0f);
+            front.live->options.set(config::game::GameOption::PathCameraFollow, *follow ? 1.0f : 0.0f);
             save_front_end_options(front);
         }
         if (!park.options)
@@ -195,7 +195,7 @@ namespace rct3::scene::park
             if (r.keys)
                 shared.keys = *r.keys;
         }
-        const bool fullscreen = front.live->options.flag(config::GameOption::Fullscreen);
+        const bool fullscreen = front.live->options.flag(config::game::GameOption::Fullscreen);
         if (fullscreen != front.fullscreen)
         {
             front.fullscreen = fullscreen;

@@ -312,7 +312,7 @@ namespace rct3::scene
 
     } // namespace
 
-    std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::GameInstall& install, const std::string& language, const std::filesystem::path& fallback_font)
+    std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::game::GameInstall& install, const std::string& language, const std::filesystem::path& fallback_font)
     {
         auto assets = ui::load_interface_assets(device, install, language, fallback_font);
         if (!assets)

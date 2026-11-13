@@ -54,7 +54,7 @@ namespace rct3::scene::park
         }
     } // namespace
 
-    void load_park_rain(render::Device& device, ParkRain& rain, const config::GameInstall& install)
+    void load_park_rain(render::Device& device, ParkRain& rain, const config::game::GameInstall& install)
     {
         const auto file = install.find(kRainFile);
         if (!file)

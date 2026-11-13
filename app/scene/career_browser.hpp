@@ -14,7 +14,7 @@
 #pragma once
 
 #include "career/career_file.hpp"
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 #include "config/user_data.hpp"
 #include "render/device.hpp"
 #include "scene/save_browser.hpp"
@@ -47,11 +47,11 @@ namespace rct3::scene
         bool played = false;                       ///< A park was started from the map, which is out of date when back
     };
 
-    void update_career_browser(render::Device& device, CareerBrowser& browser, ui::screens::FrontEnd& front, const ui::StringTable& strings, const config::GameInstall& install);
+    void update_career_browser(render::Device& device, CareerBrowser& browser, ui::screens::FrontEnd& front, const ui::StringTable& strings, const config::game::GameInstall& install);
 
     /// Starts scenario `index` of the first career of game `pack`, made when there is none, as its map's New
     /// does, the map shown under the park. False when the scenario is not there or not open.
-    bool start_career_scenario(CareerBrowser& browser, ui::screens::FrontEnd& front, int pack, std::size_t index, const ui::StringTable& strings, const config::GameInstall& install);
+    bool start_career_scenario(CareerBrowser& browser, ui::screens::FrontEnd& front, int pack, std::size_t index, const ui::StringTable& strings, const config::game::GameInstall& install);
 
     void destroy_career_browser(render::Device& device, CareerBrowser& browser);
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/save_browser.hpp"
 
-#include "config/game_saves.hpp"
+#include "config/game/saves.hpp"
 #include "logging/log.hpp"
 #include "parkfile/saved_park.hpp"
 #include "save/summary.hpp"
@@ -77,7 +77,7 @@ namespace rct3::scene
         /// The game's folder for ours, if there is one.
         fs::path game_folder(const SaveBrowser& browser, const ParkGame& game)
         {
-            const auto name = config::game_saves_folder(game.folder);
+            const auto name = config::game::game_saves_folder(game.folder);
             if (!browser.game_saves || !name || !game.games.empty())
                 return { };
             return *browser.game_saves / *name;

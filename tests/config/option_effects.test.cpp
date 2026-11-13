@@ -4,6 +4,7 @@
 #include <doctest/doctest.h>
 
 using namespace rct3::config;
+using namespace rct3::config::game;
 
 TEST_CASE("the options nothing reads yet are the ones not acted on")
 {

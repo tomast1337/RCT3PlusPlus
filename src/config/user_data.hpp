@@ -52,7 +52,7 @@ namespace rct3::config
     enum class UserFile : std::uint8_t
     {
         Settings,    ///< The program's settings (settings.hpp)
-        GameOptions, ///< What the options window sets (game_options.hpp)
+        GameOptions, ///< What the options window sets (config/game/options.hpp)
         Keys,        ///< The keys of the game's and the interface's commands (key_map.hpp)
         RideRatings, ///< The user's own ride rating model, when they keep one (simulation/ratings.hpp)
 

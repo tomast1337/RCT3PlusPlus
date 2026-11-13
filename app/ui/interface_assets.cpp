@@ -15,7 +15,7 @@
 namespace rct3::ui
 {
 
-    std::expected<InterfaceAssets, std::string> load_interface_assets(render::Device& device, const config::GameInstall& install, const std::string& language, const std::filesystem::path& fallback_font, std::span<const std::string_view> more_skins)
+    std::expected<InterfaceAssets, std::string> load_interface_assets(render::Device& device, const config::game::GameInstall& install, const std::string& language, const std::filesystem::path& fallback_font, std::span<const std::string_view> more_skins)
     {
         const auto log = logging::logger("ui");
         // Our own strings; a key the language lacks falls back to English.

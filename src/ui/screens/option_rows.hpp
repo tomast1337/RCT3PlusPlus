@@ -11,7 +11,7 @@
 // usable, so the page reads as the game's does.
 #pragma once
 
-#include "config/game_options.hpp"
+#include "config/game/options.hpp"
 #include "ui/widgets/dropdown.hpp"
 #include "ui/widgets/key_box.hpp"
 #include "ui/widgets/label.hpp"
@@ -56,7 +56,7 @@ namespace rct3::ui::screens
     /// A value an option must have.
     struct OptionIs
     {
-        config::GameOption option = config::GameOption::Fullscreen;
+        config::game::GameOption option = config::game::GameOption::Fullscreen;
         float value = 1;
     };
 
@@ -65,14 +65,14 @@ namespace rct3::ui::screens
     public:
         /// Rows go into `page`, `width` units wide, from its top; controls write to `options`, which must
         /// outlive the rows. Rows of the `inert` options cannot be used.
-        OptionRows(Widget& page, float width, OptionRowsStyle style, config::GameOptions& options, std::bitset<config::kGameOptionCount> inert = { });
+        OptionRows(Widget& page, float width, OptionRowsStyle style, config::game::GameOptions& options, std::bitset<config::game::kGameOptionCount> inert = { });
 
-        widgets::Tickbox& tick(config::GameOption option, std::u16string name, std::u16string tip = { });
-        widgets::Dropdown& choice(config::GameOption option, std::u16string name, std::vector<std::u16string> items, std::u16string tip = { });
-        widgets::Slider& level(config::GameOption option, std::u16string name, std::u16string tip = { });
-        widgets::Spinner& number(config::GameOption option, std::u16string name, std::u16string tip = { });
+        widgets::Tickbox& tick(config::game::GameOption option, std::u16string name, std::u16string tip = { });
+        widgets::Dropdown& choice(config::game::GameOption option, std::u16string name, std::vector<std::u16string> items, std::u16string tip = { });
+        widgets::Slider& level(config::game::GameOption option, std::u16string name, std::u16string tip = { });
+        widgets::Spinner& number(config::game::GameOption option, std::u16string name, std::u16string tip = { });
         /// Two sliders side by side under column headings (see headings()).
-        void pair(config::DetailPair options, std::u16string name, std::u16string tip = { });
+        void pair(config::game::DetailPair options, std::u16string name, std::u16string tip = { });
         /// Headings over the two slider columns of pair rows.
         void headings(std::u16string first, std::u16string second);
         /// A drop-down the owner handles.
@@ -131,7 +131,7 @@ namespace rct3::ui::screens
         };
         struct Binding
         {
-            config::GameOption option = config::GameOption::Fullscreen;
+            config::game::GameOption option = config::game::GameOption::Fullscreen;
             Kind kind = Kind::Tick;
             Widget* control = nullptr;
         };
@@ -159,8 +159,8 @@ namespace rct3::ui::screens
         Widget& page_;
         float width_;
         OptionRowsStyle style_;
-        config::GameOptions& options_;
-        std::bitset<config::kGameOptionCount> inert_;
+        config::game::GameOptions& options_;
+        std::bitset<config::game::kGameOptionCount> inert_;
         std::vector<Row> rows_;
         float next_gap_ = 0;
         float height_ = 0;

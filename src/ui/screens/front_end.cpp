@@ -19,7 +19,7 @@ namespace rct3::ui::screens
 
     } // namespace
 
-    FrontEnd::FrontEnd(Desktop& desktop, FrontEndStyle style, const StringTable& strings, config::GameOptions& options, FrontEndSetup setup)
+    FrontEnd::FrontEnd(Desktop& desktop, FrontEndStyle style, const StringTable& strings, config::game::GameOptions& options, FrontEndSetup setup)
         : desktop_(desktop)
         , style_(std::move(style))
         , strings_(strings)

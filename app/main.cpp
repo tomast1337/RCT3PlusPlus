@@ -30,9 +30,9 @@
 //   --help            this text, the user's data folder (config/user_data.hpp), the settings
 //                     (config/settings.hpp) and the environment variables read (config/environment.hpp)
 #include "config/environment.hpp"
-#include "config/game_install.hpp"
-#include "config/game_options.hpp"
-#include "config/game_saves.hpp"
+#include "config/game/install.hpp"
+#include "config/game/options.hpp"
+#include "config/game/saves.hpp"
 #include "config/settings.hpp"
 #include "config/text_file.hpp"
 #include "config/user_data.hpp"
@@ -713,11 +713,11 @@ int main(int argc, char** argv)
     bool developer_windows = false;
 
     // Only the startup screens and widget demo use the game so far, so a missing install is not fatal for now.
-    const auto install = config::find_game_install(env, settings);
+    const auto install = config::game::find_game_install(env, settings);
     if (install)
         log.info("game install: {}", install->root().string());
     else
-        log.warning("{}", config::describe(install.error()));
+        log.warning("{}", config::game::describe(install.error()));
 
     auto window = rct3::platform::Window::open({ .headless = headless }, backend);
     if (!window)
@@ -789,7 +789,7 @@ int main(int argc, char** argv)
     std::optional<rct3::audio::AudioEngine> audio;
     std::optional<rct3::scene::MenuAudio> menu_audio;
     std::optional<rct3::scene::park::ParkSounds> park_sounds; ///< While a park is open
-    config::GameOptions audio_options;
+    config::game::GameOptions audio_options;
     // The engine starts before the menus' sound where the startup logos have sound of their own.
     const auto create_audio = [&] {
         if (audio)
@@ -810,7 +810,7 @@ int main(int argc, char** argv)
         bool keep = options_file.has_value();
         if (options_file)
         {
-            if (auto loaded = config::GameOptions::load(*options_file))
+            if (auto loaded = config::game::GameOptions::load(*options_file))
                 audio_options = std::move(*loaded);
             else
                 keep = false; // The front end reports it; not written over
@@ -876,7 +876,7 @@ int main(int argc, char** argv)
         setup.options_file = user_file(config::UserFile::GameOptions);
         setup.data = data;
         if (install)
-            setup.game_saves = config::find_game_saves(env, install->root());
+            setup.game_saves = config::game::find_game_saves(env, install->root());
         const auto current = window->size();
         for (const auto& s : window->screen_sizes())
         {
@@ -1288,11 +1288,11 @@ int main(int argc, char** argv)
                     // The anti-aliasing option picks among the levels the device offers, after none.
                     if (front)
                     {
-                        const auto level = static_cast<std::size_t>(front->live->options.choice(config::GameOption::AntiAliasing));
+                        const auto level = static_cast<std::size_t>(front->live->options.choice(config::game::GameOption::AntiAliasing));
                         device->set_samples(level > 0 && level <= sample_levels.size() ? sample_levels[level - 1] : 1);
-                        device->set_render_scale(front->live->options.get(config::GameOption::RenderScale) / 100);
-                        device->set_smooth_scaling(front->live->options.get(config::GameOption::SmoothScaling) != 0);
-                        device->set_brightness(front->live->options.get(config::GameOption::Brightness));
+                        device->set_render_scale(front->live->options.get(config::game::GameOption::RenderScale) / 100);
+                        device->set_smooth_scaling(front->live->options.get(config::game::GameOption::SmoothScaling) != 0);
+                        device->set_brightness(front->live->options.get(config::game::GameOption::Brightness));
                     }
                     prof::section("BeginFrame", [&] { device->begin_frame(); });
                     if (phase == Phase::Intro)

@@ -37,7 +37,7 @@ namespace rct3::scene
 
     } // namespace
 
-    BuildMenus start_build_menus(const config::GameInstall& install, const save::model::RequiredContent* content)
+    BuildMenus start_build_menus(const config::game::GameInstall& install, const save::model::RequiredContent* content)
     {
         BuildMenus menus;
         menus.items = std::async(std::launch::async, [root = install.root()] { return rct3::park::read_build_catalogue(root); }).share();

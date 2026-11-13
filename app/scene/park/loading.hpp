@@ -7,7 +7,7 @@
 // how many warnings it has logged so far: the log has the rest.
 #pragma once
 
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 #include "render/device.hpp"
 #include "scene/park/scene.hpp"
 #include "ui/draw_list.hpp"
@@ -26,7 +26,7 @@ namespace rct3::scene::park
     [[nodiscard]] std::string_view park_load_name(ParkLoadStage stage);
 
     /// Adds the game's logo to `assets`' textures, for the loading screen; without it the screen has none.
-    void add_loading_logo(render::Device& device, const config::GameInstall& install, ui::InterfaceAssets& assets);
+    void add_loading_logo(render::Device& device, const config::game::GameInstall& install, ui::InterfaceAssets& assets);
 
     /// Records the loading screen with `stage` under way into the current pass, over the whole target. Its
     /// detail comes from the log's entries after `log_from` (logging::global().latest_sequence() when the

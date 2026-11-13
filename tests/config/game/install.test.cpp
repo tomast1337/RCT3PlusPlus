@@ -2,13 +2,14 @@
 //
 // Game install checks against a fake install built in a temp directory: empty folders and files with
 // invented names, no game data.
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 
 #include <doctest/doctest.h>
 #include <filesystem>
 #include <fstream>
 
 using namespace rct3::config;
+using namespace rct3::config::game;
 namespace fs = std::filesystem;
 
 namespace

@@ -63,7 +63,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace rct3::config
+namespace rct3::config::game
 {
     class GameOptions;
 }
@@ -151,7 +151,7 @@ namespace rct3::scene::park
     void read_path_styles(ParkFootpaths& f, const ui::InterfaceAssets& assets);
 
     /// Opens the path panel, or closes it when it is open.
-    void toggle_footpath_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options);
+    void toggle_footpath_panel(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::game::GameOptions& options);
 
     /// Closes the path panel if it is open.
     void close_footpath_panel(ParkScene& scene);
@@ -181,7 +181,7 @@ namespace rct3::scene::park
     [[nodiscard]] std::vector<save::model::PlacedObject> supports_under(const ParkScene& scene, std::span<const save::model::PlacedObject> ghosts, const rct3::park::support::SupportSets& sets);
 
     /// Acts on what the player did in the panel since the last frame, and shows the result.
-    void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::GameOptions& options);
+    void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);
 
     /// Whether a click on the park at `at` (interface units, on a view `size` across) went to the path panel:
     /// while it shows its controls, a click on the ground picks where the path starts.

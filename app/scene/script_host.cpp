@@ -660,8 +660,8 @@ namespace rct3::scene
         engine_.define("options.set", [this](const Json& a) {
             if (front_ == nullptr || a.size() < 2 || !a[0].is_string() || !a[1].is_number())
                 throw std::invalid_argument("options.set takes an option's name and a number, with the game running");
-            const auto& table = config::game_options_table();
-            const auto info = std::ranges::find(table, a[0].get<std::string>(), &config::GameOptionInfo::name);
+            const auto& table = config::game::game_options_table();
+            const auto info = std::ranges::find(table, a[0].get<std::string>(), &config::game::GameOptionInfo::name);
             if (info == table.end())
                 throw std::invalid_argument(std::format("options.set: no option {}", a[0].get<std::string>()));
             front_->live->options.set(info->option, a[1].get<float>());

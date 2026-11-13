@@ -4,7 +4,7 @@
 // behaviour and graphics detail. They are kept apart from the program's settings (settings.hpp), in their
 // own file in the user's data folder (user_data.hpp), written whenever the dialog closes.
 //
-// Every option is a number with a range, registered once in the table in game_options.cpp: on/off options
+// Every option is a number with a range, registered once in the table in options.cpp: on/off options
 // are 0 or 1, choices count from 0, levels are any value in their range or whole steps of it. The file is a
 // JSON object holding the options that differ from their defaults (true and false read as 1 and 0); values
 // it does not understand are reported and skipped. One option is a file name rather than a number: the
@@ -27,7 +27,7 @@
 #include <utility>
 #include <vector>
 
-namespace rct3::config
+namespace rct3::config::game
 {
 
     enum class GameOption : std::uint8_t
@@ -207,4 +207,4 @@ namespace rct3::config
         std::optional<std::string> background_music_;
     };
 
-} // namespace rct3::config
+} // namespace rct3::config::game

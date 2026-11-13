@@ -21,7 +21,7 @@
 // it is in, and where it is reached (file:line, the prefix and its comment, or the overlay naming it).
 #include "assets/embedded_files.hpp"
 #include "config/environment.hpp"
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/text.hpp"
 #include "strings/ascii.hpp"
@@ -59,7 +59,7 @@ namespace
         int unread = 0;
     };
 
-    GameKeys read_game(const config::GameInstall& install)
+    GameKeys read_game(const config::game::GameInstall& install)
     {
         GameKeys out;
         if (const auto text = install.find(ui::text_overlay(ui::kDefaultLanguage)))
@@ -158,7 +158,7 @@ int main(int argc, char** argv)
     }
 
     GameKeys game;
-    const auto install = game_dir ? config::open_game_install(*game_dir) : config::find_game_install(config::Environment::from_process());
+    const auto install = game_dir ? config::game::open_game_install(*game_dir) : config::game::find_game_install(config::Environment::from_process());
     if (install)
     {
         game = read_game(*install);
@@ -166,7 +166,7 @@ int main(int argc, char** argv)
     }
     else if (game_dir)
     {
-        std::println(stderr, "{}", config::describe(install.error()));
+        std::println(stderr, "{}", config::game::describe(install.error()));
         return 1;
     }
     else

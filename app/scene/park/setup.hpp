@@ -4,7 +4,7 @@
 // names of the windows it puts up, and uploading meshes and pictures.
 #pragma once
 
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 #include "park/asset_index.hpp"
 #include "park/ground/textures.hpp"
 #include "park/object/mesh.hpp"
@@ -51,6 +51,6 @@ namespace rct3::scene::park
     void add_textures(render::Device& device, ParkScene& scene, std::span<const rct3::park::object::ObjectBatch> batches);
 
     /// Adds to `index` the install's overlays its overlays take assets from, and those they take from in turn.
-    void add_referenced(rct3::park::AssetIndex& index, const config::GameInstall& install);
+    void add_referenced(rct3::park::AssetIndex& index, const config::game::GameInstall& install);
 
 } // namespace rct3::scene::park

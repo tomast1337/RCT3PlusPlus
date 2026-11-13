@@ -14,7 +14,7 @@ namespace rct3::ui::screens
     namespace
     {
 
-        using O = config::GameOption;
+        using O = config::game::GameOption;
 
         struct TabInfo
         {
@@ -130,7 +130,7 @@ namespace rct3::ui::screens
 
     } // namespace
 
-    OptionsDialog::OptionsDialog(std::string name, const OptionsDialogStyle& style, const StringTable& strings, config::GameOptions& options, OptionsChoices choices)
+    OptionsDialog::OptionsDialog(std::string name, const OptionsDialogStyle& style, const StringTable& strings, config::game::GameOptions& options, OptionsChoices choices)
         : widgets::Window(std::move(name), style.window, style.page_width + style.window.content_inset.x0 + style.window.content_inset.x1, style.tab_bar_height + style.page_height + style.window.content_inset.y0 + style.window.content_inset.y1)
         , style_(style)
         , options_(options)
@@ -204,7 +204,7 @@ namespace rct3::ui::screens
                 rows.disable();
         }
         std::vector<std::u16string> currencies;
-        const int last_currency = static_cast<int>(config::game_option_info(O::Currency).maximum);
+        const int last_currency = static_cast<int>(config::game::game_option_info(O::Currency).maximum);
         for (int n = 0; n <= last_currency; ++n)
         {
             const Currency c = currency(strings, n);
@@ -411,10 +411,10 @@ namespace rct3::ui::screens
         const OptionIs details { O::ShowDetailLevels, 1 };
         rows.headings(str(strings, "GameOptionsDialog_LODTitle"), str(strings, "GameOptionsDialog_DrawDistanceTitle"));
         rows.shown_when(details);
-        const std::array<std::string_view, config::kDetailPairs.size()> kinds = { "GameOptionsDialog_PeopleLOD", "GameOptionsDialog_AnimalLOD", "GameOptionsDialog_VegetationLOD", "GameOptionsDialog_FenceLOD", "GameOptionsDialog_BuildingLOD", "GameOptionsDialog_PathsLOD", "GameOptionsDialog_SceneryLOD", "GameOptionsDialog_SupportLOD", "GameOptionsDialog_TrackLOD", "GameOptionsDialog_RideLOD" };
+        const std::array<std::string_view, config::game::kDetailPairs.size()> kinds = { "GameOptionsDialog_PeopleLOD", "GameOptionsDialog_AnimalLOD", "GameOptionsDialog_VegetationLOD", "GameOptionsDialog_FenceLOD", "GameOptionsDialog_BuildingLOD", "GameOptionsDialog_PathsLOD", "GameOptionsDialog_SceneryLOD", "GameOptionsDialog_SupportLOD", "GameOptionsDialog_TrackLOD", "GameOptionsDialog_RideLOD" };
         for (std::size_t i = 0; i < kinds.size(); ++i)
         {
-            rows.pair(config::kDetailPairs[i], str(strings, kinds[i]));
+            rows.pair(config::game::kDetailPairs[i], str(strings, kinds[i]));
             rows.shown_when(details);
         }
         rows.number(O::ImposterDistance, str(strings, "GameOptionsDialog_GeometryImposterDistance"), str(strings, "GameOptionsDialog_GeometryImposterDistance_TT"));
@@ -612,7 +612,7 @@ namespace rct3::ui::screens
         show_page(page_); // A click on the open tab would have turned it off
 
         // The quality levels decide the settings below them, which only the custom level lets the player change.
-        custom_rows_->locked = options_.choice(O::GraphicsQuality) != config::kCustomQuality;
+        custom_rows_->locked = options_.choice(O::GraphicsQuality) != config::game::kCustomQuality;
         for (const auto& rows : rows_)
         {
             if (rows->update())

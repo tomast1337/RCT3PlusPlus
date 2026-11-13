@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "config/game_saves.hpp"
+#include "config/game/saves.hpp"
 
 #include <doctest/doctest.h>
 #include <filesystem>
 #include <system_error>
 
 using namespace rct3::config;
+using namespace rct3::config::game;
 namespace fs = std::filesystem;
 
 namespace

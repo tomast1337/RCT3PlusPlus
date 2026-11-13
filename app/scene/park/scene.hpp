@@ -21,7 +21,7 @@
 // The scene borrows the interface's skins, strings and fonts from the front end, which must outlive it.
 #pragma once
 
-#include "config/game_options.hpp"
+#include "config/game/options.hpp"
 #include "ovl/texture/image.hpp"
 #include "park/attraction_objects.hpp"
 #include "park/bone_poses.hpp"
@@ -844,9 +844,9 @@ namespace rct3::scene::park
 
     /// Loads the park file at `path`, its objects as the game options ask. The strings must outlive the scene.
     /// Its random numbers come from `seed`: the same park and seed give the same park.
-    [[nodiscard]] std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::GameInstall& install, const ui::StringTable& strings, const ui::Palette& palette, const config::GameOptions& options, const std::filesystem::path& path, random::Seed seed, const simulation::RatingModel& ratings, const ParkLoadReport& report = { });
+    [[nodiscard]] std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::game::GameInstall& install, const ui::StringTable& strings, const ui::Palette& palette, const config::game::GameOptions& options, const std::filesystem::path& path, random::Seed seed, const simulation::RatingModel& ratings, const ParkLoadReport& report = { });
 
-    void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed);
+    void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::game::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed);
 
     /// True once the player has confirmed leaving.
     [[nodiscard]] bool take_park_leave(ParkScene& scene);
@@ -865,7 +865,7 @@ namespace rct3::scene::park
     bool ripple_at(ParkScene& scene, ui::Point at, ui::Point size);
 
     /// Each kind's detail and draw distance, from the graphics options.
-    [[nodiscard]] rct3::park::object::LevelScales level_scales(const config::GameOptions& options);
+    [[nodiscard]] rct3::park::object::LevelScales level_scales(const config::game::GameOptions& options);
 
     /// The colour to clear to before drawing the park.
     [[nodiscard]] render::Color park_background(const ParkScene& scene);
@@ -886,25 +886,25 @@ namespace rct3::scene::park
 
     /// Adds the cars of `count` rides from `from` (of scene.rides) to the scene, where the park keeps them; cars
     /// without a kept place are left out.
-    void add_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t from, std::size_t count);
+    void add_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, std::size_t from, std::size_t count);
 
     /// Takes the scene's cars of ride `ride_index` (of scene.rides) away.
     void drop_ride_cars(ParkScene& scene, std::size_t ride_index);
 
     /// Has the scene's cars of ride `ride_index` (of scene.rides) be its trains' cars as they are now: those it had
     /// go and its trains' cars are added where they stand, boarded as board_tracked_ride boards them.
-    void replace_ride_cars(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index);
+    void replace_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, std::size_t ride_index);
 
     /// Has `train`, of cars of `model`, swing in a pool slide's trough as the car does (not at all for a car that
     /// does not) and, on a pool slide, be held back as its train's file has it.
     void fit_car(simulation::Coaster& train, const rct3::park::object::ObjectModel& model, bool pool_slide);
 
     /// Loads the models of `cars` the scene does not have yet, and their pictures.
-    void load_car_models(ParkScene& scene, const config::GameInstall& install, const rct3::park::ride::RideCars& cars);
+    void load_car_models(ParkScene& scene, const config::game::GameInstall& install, const rct3::park::ride::RideCars& cars);
 
     /// Has the simulated tracked ride `ride_index` (of scene.rides) carry riders in its scene cars, boarding its
     /// first train at the station. Nothing for a ride the simulation does not run.
-    void board_tracked_ride(render::Device& device, ParkScene& scene, const config::GameInstall& install, std::size_t ride_index);
+    void board_tracked_ride(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, std::size_t ride_index);
 
     /// Has object `k` (of scene.objects) move on its own when its model has bones and it is scenery of no attraction,
     /// as animatronics are.

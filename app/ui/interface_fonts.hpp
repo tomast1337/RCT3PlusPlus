@@ -5,7 +5,7 @@
 // there is one, for the characters it lacks.
 #pragma once
 
-#include "config/game_install.hpp"
+#include "config/game/install.hpp"
 #include "render/device.hpp"
 #include "ui/font/set.hpp"
 #include "ui/truetype_font.hpp"
@@ -31,10 +31,10 @@ namespace rct3::ui
     /// The fonts for an interface `view_width` units wide: the fixed set's, with the scaled roles from the set
     /// for the width, loading the sets first if needed. A set that cannot be loaded is reported once and left
     /// empty, so its text is not drawn.
-    [[nodiscard]] const font::FontSet& fonts_for(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, float view_width);
+    [[nodiscard]] const font::FontSet& fonts_for(render::Device& device, const config::game::GameInstall& install, InterfaceFonts& fonts, float view_width);
 
     /// Loads one set: every font of its overlay that fills a role.
-    [[nodiscard]] std::expected<font::FontSet, std::string> load_font_set(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, int width);
+    [[nodiscard]] std::expected<font::FontSet, std::string> load_font_set(render::Device& device, const config::game::GameInstall& install, InterfaceFonts& fonts, int width);
 
     void destroy_interface_fonts(render::Device& device, InterfaceFonts& fonts);
 

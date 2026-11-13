@@ -50,7 +50,7 @@ namespace rct3::ui
 
     } // namespace
 
-    std::expected<font::FontSet, std::string> load_font_set(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, int width)
+    std::expected<font::FontSet, std::string> load_font_set(render::Device& device, const config::game::GameInstall& install, InterfaceFonts& fonts, int width)
     {
         const std::string relative = font::font_overlay(fonts.language, width);
         const auto path = install.find(relative);
@@ -87,7 +87,7 @@ namespace rct3::ui
     namespace
     {
 
-        const font::FontSet& loaded_set(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, int width)
+        const font::FontSet& loaded_set(render::Device& device, const config::game::GameInstall& install, InterfaceFonts& fonts, int width)
         {
             if (const auto it = fonts.sets.find(width); it != fonts.sets.end())
                 return it->second;
@@ -102,7 +102,7 @@ namespace rct3::ui
 
     } // namespace
 
-    const font::FontSet& fonts_for(render::Device& device, const config::GameInstall& install, InterfaceFonts& fonts, float view_width)
+    const font::FontSet& fonts_for(render::Device& device, const config::game::GameInstall& install, InterfaceFonts& fonts, float view_width)
     {
         const int width = font::font_set_width(view_width);
         if (const auto it = fonts.mixed.find(width); it != fonts.mixed.end())

@@ -9,7 +9,7 @@ using namespace rct3;
 using namespace rct3::ui;
 using namespace rct3::ui::widgets;
 using namespace rct3::ui::screens;
-using O = config::GameOption;
+using O = config::game::GameOption;
 
 namespace
 {
@@ -25,7 +25,7 @@ namespace
 
 TEST_CASE("controls start at their option and write changes straight back")
 {
-    config::GameOptions options;
+    config::game::GameOptions options;
     options.set(O::Clouds, 0);
     options.set(O::Shadows, 1);
     Widget page("page");
@@ -48,7 +48,7 @@ TEST_CASE("controls start at their option and write changes straight back")
 
 TEST_CASE("rows run down the page, hidden rows take no room")
 {
-    config::GameOptions options;
+    config::game::GameOptions options;
     options.set(O::ReflectiveWater, 0);
     Widget page("page");
     OptionRows rows(page, 400, style(), options);
@@ -74,7 +74,7 @@ TEST_CASE("rows run down the page, hidden rows take no room")
 
 TEST_CASE("a row can be usable only while another option is on")
 {
-    config::GameOptions options;
+    config::game::GameOptions options;
     options.set(O::AllPhotos, 0);
     Widget page("page");
     OptionRows rows(page, 400, style(), options);
@@ -91,15 +91,15 @@ TEST_CASE("a row can be usable only while another option is on")
 
 TEST_CASE("pairs of sliders write both their options")
 {
-    config::GameOptions options;
+    config::game::GameOptions options;
     Widget page("page");
     OptionRows rows(page, 400, style(), options);
-    rows.pair(config::kDetailPairs[0], u"People");
+    rows.pair(config::game::kDetailPairs[0], u"People");
     rows.update();
     REQUIRE(page.children().size() == 3); // The name and two sliders
     auto& distance = static_cast<Slider&>(*page.children()[2]);
     distance.on_key({ Key::Home });
     CHECK(rows.update());
-    CHECK(options.get(config::kDetailPairs[0].distance) == 0);
-    CHECK(options.get(config::kDetailPairs[0].detail) > 0);
+    CHECK(options.get(config::game::kDetailPairs[0].distance) == 0);
+    CHECK(options.get(config::game::kDetailPairs[0].detail) > 0);
 }

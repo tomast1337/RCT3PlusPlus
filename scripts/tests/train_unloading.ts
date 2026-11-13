@@ -23,7 +23,8 @@ expect(
 
 const kStep = 0.25; // Park seconds between looks
 const kOffWithin = 0.5; // Park seconds a stopped train's riders may take to be off
-const stopped: ({ since: number; riders: number } | undefined)[] = []; // Since when each train has stood in a station with riders, and how many
+// Since when each train has stood in a station with riders, and how many
+const stopped: ({ since: number; riders: number } | undefined)[] = [];
 let heldOff = 0;
 let endOff = 0;
 let boarded = 0;

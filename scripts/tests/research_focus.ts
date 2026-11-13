@@ -79,7 +79,8 @@ expect(
 const frame = must(ui.find("Research_Title"), "Research_Title shown");
 const down = (frame.bottom - frame.top) / 380; // Of the screen's height, a unit of the window's
 const table = must(ui.find(must(under("Research_Title", "table"), "table under Research_Title")), "table shown");
-await pointer.click(table.left + (table.right - table.left) / 3, table.top + (3 + 18 + 16 + 8) * down); // The second row
+// The second row
+await pointer.click(table.left + (table.right - table.left) / 3, table.top + (3 + 18 + 16 + 8) * down);
 await frames(5);
 log("focus button:", JSON.stringify(focusButton()));
 expect(/\d/.test(focusButton().text ?? ""), `the focus button naming a cost, not ${focusButton().text}`);

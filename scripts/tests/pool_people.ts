@@ -146,7 +146,8 @@ const line = (ride: number) =>
 const q = line(broken![1]);
 log("line", q.length, q.map((p) => `${p.col?.toFixed(1)},${p.row?.toFixed(1)},${p.up?.toFixed(1)}`).join(" "));
 const spread = Math.max(...q.map((a) => Math.max(...q.map((b) => Math.hypot(a.col! - b.col!, a.row! - b.row!)))));
-expect(spread > (q.length - 1) * 0.1, "the line strung out a step apart, not all on one spot"); // Under a metre a step, four to a square
+// Under a metre a step, four to a square
+expect(spread > (q.length - 1) * 0.1, "the line strung out a step apart, not all on one spot");
 const first = q[0];
 camera.look(
     { col: first.col!, row: first.row!, up: first.up! },

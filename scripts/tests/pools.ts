@@ -360,7 +360,8 @@ for (let i = 1; i <= 8; ++i) {
 pointer.release();
 await frames(40);
 await screenshot("pool_wave_line");
-const circle = (a: number): [number, number] => on_view(c0 + 4.5 + Math.cos(a), r0 + 4.5 + Math.sin(a)); // Near the view
+// Near the view
+const circle = (a: number): [number, number] => on_view(c0 + 4.5 + Math.cos(a), r0 + 4.5 + Math.sin(a));
 pointer.move(...circle(0));
 pointer.press();
 for (let i = 1; i <= 24; ++i) {

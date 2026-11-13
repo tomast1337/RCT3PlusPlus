@@ -11,7 +11,8 @@ export {};
 await park.open("Campaigns/Base/VanillaHills.dat");
 await park.ready();
 await frames(60);
-const busy = () => rides.list().findIndex((r) => r.flat && !r.demolished && r.joined && ((r.queue ?? 0) > 0 || (r.riders ?? 0) > 0));
+const busy = () =>
+    rides.list().findIndex((r) => r.flat && !r.demolished && r.joined && ((r.queue ?? 0) > 0 || (r.riders ?? 0) > 0));
 await until(() => busy() >= 0, 3000, "a flat ride with guests on it or queueing");
 const ride = busy();
 const before = rides.list()[ride];
@@ -23,8 +24,7 @@ async function answer(answer: "GUI2MiniDialog_Confirm" | "GUI2MiniDialog_Cancel"
     await ui.click("info/body/Attraction_General_Delete");
     await frames(2);
     expect(ui.find("demolish_question") !== undefined, "the question asked");
-    if (shot)
-        await screenshot(shot);
+    if (shot) await screenshot(shot);
     await ui.click(`demolish_question/content/${answer}`);
     await frames(2);
     expect(ui.find("demolish_question") === undefined, "the question gone once answered");
@@ -47,16 +47,23 @@ await screenshot("demolish_ride");
 
 // A stall placed beside a path and pulled down before it ever opened gives all its price back.
 await until(() => build.stalls() !== undefined, 1200, "the build lists");
-const kind = must(build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.goods.length > 0), "a vanilla stall with goods");
+const kind = must(
+    build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.goods.length > 0),
+    "a vanilla stall with goods",
+);
 expect(build.pick(kind.overlay, kind.symbol), `${kind.symbol} picked`);
 let spot: { x: number; y: number } | undefined;
 for (const p of map.paths().slice(0, 40)) {
     camera.look({ col: p.col + 0.5, row: p.row + 0.5 }, { col: p.col + 0.5, row: p.row + 10.5, up: 25 });
     await frames(2);
-    for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dc, dr] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+    ]) {
         const at = map.screen(p.col + dc, p.row + dr);
-        if (at === undefined)
-            continue;
+        if (at === undefined) continue;
         pointer.move(at.x, at.y);
         await frames(3);
         if (build.placing()?.problem === "none") {
@@ -64,8 +71,7 @@ for (const p of map.paths().slice(0, 40)) {
             break;
         }
     }
-    if (spot)
-        break;
+    if (spot) break;
 }
 expect(spot !== undefined, "somewhere beside a path to place the stall");
 await pointer.click(spot!.x, spot!.y);

@@ -53,7 +53,10 @@ for (const kind of ["Giga", "HyperTwist", "LoopingRC", "Drifting", "Reverser", "
     const r = rides.list()[ride];
     const cars: Car[] = (r.cars ?? []).slice(0, r.carsPerTrain);
     log(`${kind}: ${r.trains} trains of ${r.passengerCars} cars (${r.carsPerTrain} with links)`);
-    expect(cars.length === r.carsPerTrain, `${kind}'s first train drawn, not ${r.cars?.length} of ${r.trains! * r.carsPerTrain!} cars drawn`);
+    expect(
+        cars.length === r.carsPerTrain,
+        `${kind}'s first train drawn, not ${r.cars?.length} of ${r.trains! * r.carsPerTrain!} cars drawn`,
+    );
     const linked = r.carsPerTrain! > r.passengerCars!;
     const step = linked ? 2 : 1;
     const gaps: number[] = [];
@@ -75,7 +78,10 @@ for (const kind of ["Giga", "HyperTwist", "LoopingRC", "Drifting", "Reverser", "
         problems.push(`${kind}'s cars nose to tail, not ${gaps.map((g) => g.toFixed(2))} tiles apart`);
     const front = cars[0];
     const middle = cars[Math.min(2 * step, cars.length - 1)];
-    camera.look({ col: (front.col + middle.col) / 2, row: (front.row + middle.row) / 2, up: front.up ?? 0 }, { col: front.col + 2, row: front.row + 3, up: (front.up ?? 0) + 4 });
+    camera.look(
+        { col: (front.col + middle.col) / 2, row: (front.row + middle.row) / 2, up: front.up ?? 0 },
+        { col: front.col + 2, row: front.row + 3, up: (front.up ?? 0) + 4 },
+    );
     await frames(40);
     await screenshot(`${kind}_train`);
 }

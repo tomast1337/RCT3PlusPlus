@@ -23,10 +23,12 @@ for (let row = 2; row < size.height - 2 && !lake; ++row)
     for (let col = 2; col < size.width - 2 && !lake; ++col) {
         const wet = (c: number, r: number) => map.tile(c, r)?.water;
         const here = wet(col, row);
-        if (here !== undefined && [wet(col + 1, row), wet(col - 1, row), wet(col, row + 1), wet(col, row - 1)].every((w) => w !== undefined)) {
+        if (
+            here !== undefined &&
+            [wet(col + 1, row), wet(col - 1, row), wet(col, row + 1), wet(col, row - 1)].every((w) => w !== undefined)
+        ) {
             const ground = Math.max(...map.tile(col, row)!.corners);
-            if (here - ground > 1.5)
-                lake = { col: col + 0.5, row: row + 0.5, level: here };
+            if (here - ground > 1.5) lake = { col: col + 0.5, row: row + 0.5, level: here };
         }
     }
 expect(lake !== undefined, "a lake deep enough to dive in");

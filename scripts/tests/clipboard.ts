@@ -60,7 +60,10 @@ try {
     keys.press("Ctrl+C");
     await frames(2);
     expect(clipboard.get() === name, `the title copied, not "${clipboard.get()}"`);
-    expect(ui.find("info/title") !== undefined, "the ride's window still open, Control+C not taken as the ride camera key");
+    expect(
+        ui.find("info/title") !== undefined,
+        "the ride's window still open, Control+C not taken as the ride camera key",
+    );
     await screenshot("title copied");
 } finally {
     clipboard.set(saved);

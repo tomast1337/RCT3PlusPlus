@@ -10,7 +10,12 @@
 export {};
 
 const kPool = "Pool/Default/Default_Stub";
-const kSteps: [number, number][] = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // By side, as the pool tool counts them
+const kSteps: [number, number][] = [
+    [0, 1],
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+]; // By side, as the pool tool counts them
 let here: [number, number] = [0, 0]; // Where the pointer was last moved for a ghost
 
 /** Moves the pointer until the design in hand has its first piece on tile `goal`; whether it does. */
@@ -24,10 +29,8 @@ async function aim(goal: { col: number; row: number }): Promise<boolean> {
         pointer.move(...here);
         await frames(4);
         const g = build.construction()?.ghostAt;
-        if (!g)
-            return false;
-        if (g.col === goal.col && g.row === goal.row)
-            return true;
+        if (!g) return false;
+        if (g.col === goal.col && g.row === goal.row) return true;
         at = { col: at.col + goal.col - g.col, row: at.row + goal.row - g.row };
     }
     return false;
@@ -43,8 +46,7 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
     await ui.click("design_placing/close");
     await frames(5);
     const rides_tab = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
-    if (!ui.find("tools/Rides/Obj_Pools"))
-        await ui.click(rides_tab);
+    if (!ui.find("tools/Rides/Obj_Pools")) await ui.click(rides_tab);
     await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
     await ui.click("tools/Rides/Obj_Pools");
     await until(() => ui.find("pool_panel/body/editor/Pool_PlaceWater") !== undefined, 120, "the pool panel");
@@ -66,7 +68,6 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
     return (await aim(at)) && build.construction()?.refusal === "";
 }
 
-
 await until(() => park.loaded(), 1200, "the park");
 await frames(10);
 park.setWeather("sunny");
@@ -79,16 +80,14 @@ const missing = () => {
     const railings = map.objects().filter((o) => o.symbol === "Railing");
     const out: { col: number; row: number; up: number }[] = [];
     for (const s of squares) {
-        if (s.kind !== "water")
-            continue;
-        const beside = (dc: number, dr: number) => squares.some((o) => o.col === s.col + dc && o.row === s.row + dr && o.surface === s.surface);
+        if (s.kind !== "water") continue;
+        const beside = (dc: number, dr: number) =>
+            squares.some((o) => o.col === s.col + dc && o.row === s.row + dr && o.surface === s.surface);
         const near = (t: { col: number; row: number }) => Math.abs(t.col - s.col) + Math.abs(t.row - s.row) <= 1;
-        if (rooms.some(near) || ramps.some(near))
-            continue;
+        if (rooms.some(near) || ramps.some(near)) continue;
         const want = kSteps.filter(([dc, dr]) => !beside(dc, dr)).length;
         const have = railings.filter((r) => r.col === s.col && r.row === s.row && r.height === s.surface).length;
-        if (have < want)
-            out.push({ col: s.col, row: s.row, up: s.surface });
+        if (have < want) out.push({ col: s.col, row: s.row, up: s.surface });
     }
     return out;
 };
@@ -97,10 +96,20 @@ const missing = () => {
 const slide = rides.list().findIndex((r) => !r.flat && !r.demolished && /(body|ring|pro)slide/i.test(r.symbol));
 expect(slide >= 0, "a pool slide in the park");
 const open_end = missing();
-log("slide", rides.list()[slide].name, "last piece", rides.list()[slide].track?.at(-1), "open squares", JSON.stringify(open_end));
+log(
+    "slide",
+    rides.list()[slide].name,
+    "last piece",
+    rides.list()[slide].track?.at(-1),
+    "open squares",
+    JSON.stringify(open_end),
+);
 expect(open_end.length === 1, `one square open to the slide's end, not ${JSON.stringify(open_end)}`);
 const end = open_end[0];
-camera.look({ col: end.col + 0.5, row: end.row + 0.5, up: end.up }, { col: end.col + 4.5, row: end.row + 3.5, up: end.up + 4 });
+camera.look(
+    { col: end.col + 0.5, row: end.row + 0.5, up: end.up },
+    { col: end.col + 4.5, row: end.row + 3.5, up: end.up + 4 },
+);
 await frames(20);
 await screenshot("slide_pool_end_open");
 
@@ -136,7 +145,12 @@ for (let k = 0; k < 60 && !spot; ++k) {
 expect(spot, "open ground where only a pool keeps the Undertow from standing");
 // Its stretch through the pool: the tiles of its pool sides.
 const sides = build.construction()!.poolSides;
-const box = { c0: Math.min(...sides.map((s) => s.col)), c1: Math.max(...sides.map((s) => s.col)), r0: Math.min(...sides.map((s) => s.row)), r1: Math.max(...sides.map((s) => s.row)) };
+const box = {
+    c0: Math.min(...sides.map((s) => s.col)),
+    c1: Math.max(...sides.map((s) => s.col)),
+    r0: Math.min(...sides.map((s) => s.row)),
+    r1: Math.max(...sides.map((s) => s.row)),
+};
 log("its way back runs through a pool beside tiles", JSON.stringify(box));
 
 // A pool laid beside that stretch, then the Undertow laid there.
@@ -147,7 +161,9 @@ const undertow = rides.list().length - 1;
 const info = () => rides.list()[undertow];
 log("undertow", info().name, "pieces", info().pieces);
 expect(info().pieces === 56, `the Undertow laid whole, not ${info().pieces} pieces`);
-const joined = missing().filter((s) => s.col >= box.c0 - 2 && s.col <= box.c1 + 2 && s.row >= box.r0 - 2 && s.row <= box.r1 + 2);
+const joined = missing().filter(
+    (s) => s.col >= box.c0 - 2 && s.col <= box.c1 + 2 && s.row >= box.r0 - 2 && s.row <= box.r1 + 2,
+);
 log("pool squares open to the Undertow", JSON.stringify(joined));
 expect(joined.length > 0, "the new pool's railing open where the Undertow runs through it");
 
@@ -173,12 +189,22 @@ const lowest = Math.min(...wet.map((s) => s.up));
 const dip = wet.filter((s) => s.up < lowest + 0.6);
 const dipped = { from: Math.min(...dip.map((s) => s.front)), to: Math.max(...dip.map((s) => s.front)) };
 const in_dip = (front: number) => front >= dipped.from && front <= dipped.to;
-log("its way back dips to", lowest.toFixed(2), "from", dipped.from.toFixed(1), "to", dipped.to.toFixed(1), "m along it");
+log(
+    "its way back dips to",
+    lowest.toFixed(2),
+    "from",
+    dipped.from.toFixed(1),
+    "to",
+    dipped.to.toFixed(1),
+    "m along it",
+);
 let shown = false;
 for (let k = 0; k < 3000 && !shown; ++k) {
     await park.advance(0.1);
     const cars = info().cars ?? [];
-    const t = (info().trainsAt ?? []).findIndex((t, i) => cars[i] !== undefined && t.station === null && in_dip(t.front));
+    const t = (info().trainsAt ?? []).findIndex(
+        (t, i) => cars[i] !== undefined && t.station === null && in_dip(t.front),
+    );
     if (t >= 0) {
         const car = { col: cars[t].col, row: cars[t].row, up: cars[t].up ?? 0 };
         camera.look({ col: car.col, row: car.row, up: car.up }, { col: car.col + 3, row: car.row + 3, up: car.up + 3 });
@@ -190,10 +216,22 @@ for (let k = 0; k < 3000 && !shown; ++k) {
 expect(shown, "a car down in the pool");
 const more = await run(60);
 const wading = [...wet, ...more].filter((s) => in_dip(s.front));
-log("in the pool at", Math.min(...wading.map((s) => s.speed)).toFixed(2), "to", Math.max(...wading.map((s) => s.speed)).toFixed(2), "m/s");
-expect(wading.length > 0 && wading.every((s) => s.speed > 2.5 && s.speed < 3.5), "cars carried through the pool at about 3 m/s");
+log(
+    "in the pool at",
+    Math.min(...wading.map((s) => s.speed)).toFixed(2),
+    "to",
+    Math.max(...wading.map((s) => s.speed)).toFixed(2),
+    "m/s",
+);
+expect(
+    wading.length > 0 && wading.every((s) => s.speed > 2.5 && s.speed < 3.5),
+    "cars carried through the pool at about 3 m/s",
+);
 expect((info().crashes ?? 0) === 0, "no crash");
-camera.look({ col: joined[0].col + 0.5, row: joined[0].row + 0.5, up: joined[0].up }, { col: joined[0].col + 5, row: joined[0].row + 4, up: joined[0].up + 6 });
+camera.look(
+    { col: joined[0].col + 0.5, row: joined[0].row + 0.5, up: joined[0].up },
+    { col: joined[0].col + 5, row: joined[0].row + 4, up: joined[0].up + 6 },
+);
 await frames(20);
 await screenshot("slide_pool_end_undertow_pool");
 
@@ -206,7 +244,10 @@ await ui.click("demolish_question/content/GUI2MiniDialog_Confirm");
 await frames(10);
 expect(rides.list()[slide].demolished, "the slide pulled down");
 expect(!missing().some((s) => s.col === end.col && s.row === end.row), "the railing back where the slide ended");
-camera.look({ col: end.col + 0.5, row: end.row + 0.5, up: end.up }, { col: end.col + 4.5, row: end.row + 3.5, up: end.up + 4 });
+camera.look(
+    { col: end.col + 0.5, row: end.row + 0.5, up: end.up },
+    { col: end.col + 4.5, row: end.row + 3.5, up: end.up + 4 },
+);
 await frames(20);
 await screenshot("slide_pool_end_closed");
 log("SLIDE_POOL_END ok");

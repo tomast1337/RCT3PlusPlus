@@ -23,15 +23,17 @@ async function press(tool: string): Promise<void> {
 
 /** Opens the menu of `tool` unless it is open, and picks `item` from it. */
 async function pick(tool: string, item: string): Promise<void> {
-    if (open_menu() !== tool)
-        await press(tool);
+    if (open_menu() !== tool) await press(tool);
     await ui.click(`tools/${tool}/${item}`);
     await frames(6);
 }
 
 /** What the path panel's band tells with the pointer on it, off the ground where it would tell what a click lays. */
 async function band(): Promise<string | undefined> {
-    pointer.move(must(ui.find("footpaths/status"), "footpaths/status shown").x, must(ui.find("footpaths/status"), "footpaths/status shown").y);
+    pointer.move(
+        must(ui.find("footpaths/status"), "footpaths/status shown").x,
+        must(ui.find("footpaths/status"), "footpaths/status shown").y,
+    );
     await frames(4);
     return ui.find("footpaths/status")?.text;
 }
@@ -42,17 +44,23 @@ async function escape(): Promise<void> {
 }
 
 await park.open("Campaigns/Base/VanillaHills.dat");
-await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 2400, "the build lists");
+await until(
+    () => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined,
+    2400,
+    "the build lists",
+);
 await frames(10);
 
 // 1. The paths button closes the open menu, and a menu opening puts the path panel away.
 await press("Land");
 expect(open_menu() === "Land", `the land menu open, not "${open_menu()}"`);
 await press("Paths");
-expect(open_menu() === "" && ui.find("footpaths") !== undefined, "the paths button to close the land menu and open its panel");
+expect(
+    open_menu() === "" && ui.find("footpaths") !== undefined,
+    "the paths button to close the land menu and open its panel",
+);
 for (const tool of ["Delete", "Land", "Scenery", "Shops", "Rides", "Management", "Files"]) {
-    if (ui.find("footpaths") === undefined)
-        await press("Paths");
+    if (ui.find("footpaths") === undefined) await press("Paths");
     await press(tool);
     expect(open_menu() === tool && ui.find("footpaths") === undefined, `the ${tool} menu to put the path panel away`);
 }
@@ -96,7 +104,10 @@ await until(() => ui.find("build_list/content/list/view/content") !== undefined,
 const rows = must(ui.children("build_list/content/list/view/content"), "build_list/content/list/view/content shown");
 await ui.click(`build_list/content/list/view/content/${rows[rows.length > 1 ? 1 : 0]}`);
 await frames(6);
-expect(build.placing() !== undefined && ui.find("build_list") !== undefined && open_menu() === "Scenery", "the scenery list and menu to stay once an item is picked");
+expect(
+    build.placing() !== undefined && ui.find("build_list") !== undefined && open_menu() === "Scenery",
+    "the scenery list and menu to stay once an item is picked",
+);
 await screenshot("scenery_list_stays");
 await press("Scenery");
 expect(ui.find("build_list") === undefined && open_menu() === "", "the list to close with the scenery menu");
@@ -106,12 +117,18 @@ build.stop();
 rides.show(0);
 await until(() => ui.find("info") !== undefined, 120, "the ride's window");
 await press("Paths");
-expect(ui.find("footpaths") !== undefined && ui.find("info") === undefined, "the path panel to put the ride's window away");
+expect(
+    ui.find("footpaths") !== undefined && ui.find("info") === undefined,
+    "the path panel to put the ride's window away",
+);
 rides.show(0);
 await until(() => ui.find("info") !== undefined, 120, "the ride's window again");
 expect(ui.find("footpaths") === undefined, "the ride's window to put the path panel away");
 await pick("Land", "Land_Brush_Height");
-expect(ui.find("land_panel") !== undefined && ui.find("info") === undefined, "the land menu and its panel to put the ride's window away");
+expect(
+    ui.find("land_panel") !== undefined && ui.find("info") === undefined,
+    "the land menu and its panel to put the ride's window away",
+);
 rides.show(0);
 await until(() => ui.find("info") !== undefined, 120, "the ride's window a third time");
 expect(ui.find("land_panel") === undefined, "the ride's window to put the shaping panel away");
@@ -128,7 +145,10 @@ const fresh = await band();
 await ui.click("footpaths/remove");
 await ui.click("footpaths/straight");
 await frames(2);
-expect(ui.find("footpaths/remove")?.on === true && ui.find("footpaths/straight")?.on === true, "the remove and straight tabs switched on");
+expect(
+    ui.find("footpaths/remove")?.on === true && ui.find("footpaths/straight")?.on === true,
+    "the remove and straight tabs switched on",
+);
 await ui.click("footpaths/remove");
 await pointer.click(0.55, 0.5);
 await frames(6);
@@ -137,7 +157,12 @@ await screenshot("path_trail_started");
 await ui.click("footpaths/close");
 await frames(4);
 await press("Paths");
-expect(ui.find("footpaths/remove")?.on === false && ui.find("footpaths/straight")?.on === false && ui.find("footpaths/route")?.on === false, "the tabs off again");
+expect(
+    ui.find("footpaths/remove")?.on === false &&
+        ui.find("footpaths/straight")?.on === false &&
+        ui.find("footpaths/route")?.on === false,
+    "the tabs off again",
+);
 expect((await band()) === fresh, `no trail going on, the band "${fresh}" again`);
 await screenshot("path_panel_clean");
 await press("Paths");
@@ -152,11 +177,20 @@ await pick("Files", "File_AboutRCT");
 await until(() => ui.find("about") !== undefined, 120, "the about window");
 await screenshot("windows_stacked");
 await escape();
-expect(ui.find("about") === undefined && ui.find("options") !== undefined, "the first Escape to close the about window, on top");
+expect(
+    ui.find("about") === undefined && ui.find("options") !== undefined,
+    "the first Escape to close the about window, on top",
+);
 await escape();
-expect(ui.find("options") === undefined && ui.find("FinancialManagement_Title") !== undefined, "the second to close the options, over the finances");
+expect(
+    ui.find("options") === undefined && ui.find("FinancialManagement_Title") !== undefined,
+    "the second to close the options, over the finances",
+);
 await escape();
-expect(ui.find("FinancialManagement_Title") === undefined && open_menu() === "Files", "the third to close the finances");
+expect(
+    ui.find("FinancialManagement_Title") === undefined && open_menu() === "Files",
+    "the third to close the finances",
+);
 await escape();
 expect(open_menu() === "" && ui.find(question) === undefined, "the fourth to close the menu");
 
@@ -179,7 +213,10 @@ await pointer.click(0.55, 0.5);
 await frames(6);
 expect((await band()) !== fresh, "a trail started");
 await escape();
-expect(ui.find("footpaths") !== undefined && (await band()) === fresh, "Escape to let the trail go and leave the panel");
+expect(
+    ui.find("footpaths") !== undefined && (await band()) === fresh,
+    "Escape to let the trail go and leave the panel",
+);
 await escape();
 expect(ui.find("footpaths") === undefined && ui.find(question) === undefined, "and then to close the path panel");
 
@@ -196,7 +233,10 @@ expect(ui.find("info") === undefined && ui.find(question) === undefined, "Escape
 await escape();
 expect(ui.find(question) !== undefined, "Escape to ask to leave once nothing is left");
 const asked = ui.find(`${question}/content/text`)?.text ?? "";
-expect(asked.length > 0 && !asked.includes("tutorial"), `the question not to speak of a tutorial outside one: "${asked}"`);
+expect(
+    asked.length > 0 && !asked.includes("tutorial"),
+    `the question not to speak of a tutorial outside one: "${asked}"`,
+);
 await screenshot("leave_question");
 await escape();
 expect(ui.find(question) === undefined, "Escape to answer no");
@@ -212,7 +252,12 @@ await pick("Files", "File_LoadGame");
 await until(() => ui.find("load_question") !== undefined, 120, "the question again");
 await ui.click("load_question/content/answer1");
 await until(() => ui.find("park_files") !== undefined, 120, "the load window after no");
-log("files", JSON.stringify(ui.children("park_files")), JSON.stringify(ui.children("park_files/content")), JSON.stringify(ui.find("park_files/title")));
+log(
+    "files",
+    JSON.stringify(ui.children("park_files")),
+    JSON.stringify(ui.children("park_files/content")),
+    JSON.stringify(ui.find("park_files/title")),
+);
 await screenshot("load_window");
 await escape();
 expect(ui.find("park_files") === undefined, "Escape to close the load window");

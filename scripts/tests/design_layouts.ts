@@ -41,16 +41,21 @@ for (const [overlay, kind, place, pieces, name] of designs) {
         pointer.move(...at);
         await frames(20);
         const c = build.construction()!;
-        if (!c.ghost || c.clashes)
-            continue;
+        if (!c.ghost || c.clashes) continue;
         await pointer.click(...at);
         await frames(30);
         laid = (rides.list()[ride].pieces ?? 0) > 0;
     }
     const r = rides.list()[ride];
     expect(r.pieces === pieces, `the ${kind} design laid whole, ${pieces} pieces, not ${r.pieces}`);
-    const heights = map.objects().filter((o) => o.overlay.toLowerCase().startsWith("tracks/") && o.height !== null).map((o) => o.height!);
-    expect(Math.min(...heights) >= ground, `the ${kind} design above the ground, its lowest piece at ${Math.min(...heights)}, not below ${ground}`);
+    const heights = map
+        .objects()
+        .filter((o) => o.overlay.toLowerCase().startsWith("tracks/") && o.height !== null)
+        .map((o) => o.height!);
+    expect(
+        Math.min(...heights) >= ground,
+        `the ${kind} design above the ground, its lowest piece at ${Math.min(...heights)}, not below ${ground}`,
+    );
     // Laid, its building closes on its own.
     expect(build.construction() === undefined, `the ${kind} building closed once laid`);
     await frames(5);

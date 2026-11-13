@@ -9,12 +9,16 @@ export {};
 /** Clicks a front screen button once it has flown in and stopped. */
 async function click_front(path: string): Promise<void> {
     let last = -1;
-    await until(() => {
-        const at = ui.find(path);
-        const settled = at !== undefined && at.top >= 0 && Math.abs(at.top - last) < 1e-4;
-        last = at?.top ?? -1;
-        return settled;
-    }, 3000, path);
+    await until(
+        () => {
+            const at = ui.find(path);
+            const settled = at !== undefined && at.top >= 0 && Math.abs(at.top - last) < 1e-4;
+            last = at?.top ?? -1;
+            return settled;
+        },
+        3000,
+        path,
+    );
     await ui.click(path);
 }
 
@@ -23,14 +27,17 @@ await click_front("front/FrontScreen_MainMenu/FrontScreen_Icon_Play");
 await click_front("front/FrontScreen_PlayMenu/FrontScreen_Icon_StartSandbox");
 // The Custom Scenario menu is titled like the main menu, as in the game; the main menu has no New.
 await click_front("front/FrontScreen_MainMenu/FrontScreen_Icon_NewScenario");
-await until(() => ui.find("load_game/content/list/view/content/row0") !== undefined, 300, "a scenario to start from in new_scenarios/");
+await until(
+    () => ui.find("load_game/content/list/view/content/row0") !== undefined,
+    300,
+    "a scenario to start from in new_scenarios/",
+);
 await screenshot("scenarios_to_start_from");
 await ui.click("load_game/content/list/view/content/row0");
 await ui.click("load_game/content/open");
 await park.ready();
 await until(() => ui.find("tools/Files") !== undefined, 300, "the tool row");
-if (ui.find("bar/day_mode") !== undefined)
-    throw new Error("expected no day mode button outside a sandbox");
+if (ui.find("bar/day_mode") !== undefined) throw new Error("expected no day mode button outside a sandbox");
 await screenshot("custom_scenario_started");
 
 await ui.click(`tools/Files/${must(ui.children("tools/Files"), "tools/Files shown")[0]}`);

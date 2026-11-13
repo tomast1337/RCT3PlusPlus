@@ -36,7 +36,10 @@ async function station(overlay: string, kind: string, type: RegExp): Promise<num
     expect(/^station/i.test(first), `a new ${kind} to start on its station, not ${first}`);
     // Its ghost shows the platform it will stand in before it is placed.
     const alone = build.construction()?.ghostPlatform ?? "";
-    expect(type.test(alone) && /startEnd/i.test(alone), `the ${kind} ghost station in a platform alone, not "${alone}"`);
+    expect(
+        type.test(alone) && /startEnd/i.test(alone),
+        `the ${kind} ghost station in a platform alone, not "${alone}"`,
+    );
     await pointer.click(p.x, p.y);
     await frames(30);
     // Then the plain station among the pictured pieces, clicked again to build it, up to five pieces.
@@ -44,14 +47,16 @@ async function station(overlay: string, kind: string, type: RegExp): Promise<num
     for (let tries = 0; tries < 12 && laid() < 5; ++tries) {
         for (let i = 0; i < 8 && laid() < 5; ++i) {
             const button = `placing/body/construction/special${i}`;
-            if (ui.find(button) === undefined)
-                continue;
+            if (ui.find(button) === undefined) continue;
             await ui.click(button);
             await frames(10);
             if (/^station/i.test(build.construction()?.piece ?? "")) {
                 // After a station piece, the ghost's platform ends the station.
                 const ghost = build.construction()?.ghostPlatform ?? "";
-                expect(type.test(ghost) && /end/i.test(ghost) && !/start/i.test(ghost), `the ${kind} ghost station's platform to end the station, not "${ghost}"`);
+                expect(
+                    type.test(ghost) && /end/i.test(ghost) && !/start/i.test(ghost),
+                    `the ${kind} ghost station's platform to end the station, not "${ghost}"`,
+                );
                 if (kind === "Corkscrew" && laid() === 4) {
                     view();
                     await frames(30);
@@ -71,18 +76,31 @@ async function station(overlay: string, kind: string, type: RegExp): Promise<num
 
 // The middle of the map, where the station starts.
 let at = { col: 0, row: 0 };
-const view = () => camera.look({ col: at.col + 2.5, row: at.row + 0.5 }, { col: at.col + 0.5, row: at.row + 3, up: 3.5 });
+const view = () =>
+    camera.look({ col: at.col + 2.5, row: at.row + 0.5 }, { col: at.col + 0.5, row: at.row + 3, up: 3.5 });
 
 function check(ride: number, kind: string, type: RegExp): string[] {
     const built = rides.list()[ride];
     log(kind, JSON.stringify({ track: built.track, platforms: built.platforms }));
     expect(built.track?.length === 5, `five ${kind} station pieces, not ${JSON.stringify(built.track)}`);
     const platforms = built.platforms ?? [];
-    expect(platforms.length === 5 && platforms.every((p) => type.test(p)), `a ${type} platform model on each ${kind} station piece, not ${JSON.stringify(platforms)}`);
-    expect(/start/i.test(platforms[0]) && /middle/i.test(platforms[2]) && /end/i.test(platforms[4]), `the ${kind} station capped at both ends, not ${JSON.stringify(platforms)}`);
+    expect(
+        platforms.length === 5 && platforms.every((p) => type.test(p)),
+        `a ${type} platform model on each ${kind} station piece, not ${JSON.stringify(platforms)}`,
+    );
+    expect(
+        /start/i.test(platforms[0]) && /middle/i.test(platforms[2]) && /end/i.test(platforms[4]),
+        `the ${kind} station capped at both ends, not ${JSON.stringify(platforms)}`,
+    );
     const colours = JSON.stringify(built.trackColours);
-    expect(colours === JSON.stringify(Array(5).fill([0, 0, 0])), `the ${kind} track in its first listed piece's colours, not ${colours}`);
-    expect(JSON.stringify(built.platformColours) === colours, `the ${kind} platforms in the track's colours, not ${JSON.stringify(built.platformColours)}`);
+    expect(
+        colours === JSON.stringify(Array(5).fill([0, 0, 0])),
+        `the ${kind} track in its first listed piece's colours, not ${colours}`,
+    );
+    expect(
+        JSON.stringify(built.platformColours) === colours,
+        `the ${kind} platforms in the track's colours, not ${JSON.stringify(built.platformColours)}`,
+    );
     return platforms;
 }
 
@@ -94,7 +112,10 @@ for (const [overlay, kind, type] of [
 ] as [string, string, RegExp][]) {
     const ride = await station(overlay, kind, type);
     check(ride, kind, type);
-    expect(rides.list()[ride].track!.every((piece) => !/^inv/i.test(piece)), `an upright ${kind} station`);
+    expect(
+        rides.list()[ride].track!.every((piece) => !/^inv/i.test(piece)),
+        `an upright ${kind} station`,
+    );
     view();
     await frames(30);
     await screenshot(kind);
@@ -135,4 +156,7 @@ log("loaded", JSON.stringify({ track: loaded.track, platforms: loaded.platforms 
 view();
 await frames(30);
 await screenshot("loaded");
-expect(JSON.stringify(loaded.platforms) === JSON.stringify(platforms), `the platforms back after loading, not ${JSON.stringify(loaded.platforms)}`);
+expect(
+    JSON.stringify(loaded.platforms) === JSON.stringify(platforms),
+    `the platforms back after loading, not ${JSON.stringify(loaded.platforms)}`,
+);

@@ -24,14 +24,16 @@ expect(stepped.length > 0, "a slide platform with steps where a pool's paving me
 // A pool ride's window: the pool path button in place of the doors and fence.
 let shown = false;
 for (const [i, r] of rides.list().entries()) {
-    if (r.demolished)
-        continue;
+    if (r.demolished) continue;
     rides.show(i);
     await frames(10);
-    if (ui.find("info/body/Pool_PathPanel") === undefined)
-        continue;
+    if (ui.find("info/body/Pool_PathPanel") === undefined) continue;
     log("pool ride", r.name);
-    expect(ui.find("info/body/Attraction_General_Entrance") === undefined && ui.find("info/body/Attraction_General_PickFence") === undefined, "no entrance or fence button for a pool ride");
+    expect(
+        ui.find("info/body/Attraction_General_Entrance") === undefined &&
+            ui.find("info/body/Attraction_General_PickFence") === undefined,
+        "no entrance or fence button for a pool ride",
+    );
     shown = true;
     break;
 }
@@ -48,12 +50,22 @@ await screenshot("pool_visuals_paths_page");
 
 // The paving across from a stepped platform taken up: its steps go that side.
 const before = platforms().map((o) => `${o.col},${o.row}:${o.symbol}`);
-const kSteps: [number, number][] = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+const kSteps: [number, number][] = [
+    [0, 1],
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+];
 const { squares } = map.pools();
-const paved = kSteps.map(([dc, dr]) => squares.find((s) => s.col === step.col + dc && s.row === step.row + dr && s.kind !== "water")).find((s) => s !== undefined);
+const paved = kSteps
+    .map(([dc, dr]) => squares.find((s) => s.col === step.col + dc && s.row === step.row + dr && s.kind !== "water"))
+    .find((s) => s !== undefined);
 expect(paved !== undefined, "a paved square beside the stepped platform");
 expect(build.pick(kPool, "Pool_DeleteArea"), "the pool delete tool");
-camera.look({ col: paved!.col + 0.5, row: paved!.row + 0.5, up: up }, { col: paved!.col + 0.5, row: paved!.row + 20, up: up + 30 });
+camera.look(
+    { col: paved!.col + 0.5, row: paved!.row + 0.5, up: up },
+    { col: paved!.col + 0.5, row: paved!.row + 20, up: up + 30 },
+);
 await frames(5);
 const p = must(map.screen(paved!.col, paved!.row), "the tile in sight");
 await pointer.drag([p.x, p.y], [p.x, p.y], 4);
@@ -63,7 +75,9 @@ await frames(10);
 const after = platforms().find((o) => o.col === step.col && o.row === step.row);
 log("platform", step.symbol, "now", after?.symbol);
 expect(after !== undefined && after.symbol !== step.symbol, "the platform's steps gone with the paving");
-const changed = platforms().map((o) => `${o.col},${o.row}:${o.symbol}`).filter((o) => !before.includes(o));
+const changed = platforms()
+    .map((o) => `${o.col},${o.row}:${o.symbol}`)
+    .filter((o) => !before.includes(o));
 log("changed", changed.join(" "));
 expect(changed.length === 1, "the other platforms' steps as the game saved them");
 camera.look({ col: step.col + 0.5, row: step.row + 0.5, up: up }, { col: step.col + 6, row: step.row + 5, up: up + 5 });

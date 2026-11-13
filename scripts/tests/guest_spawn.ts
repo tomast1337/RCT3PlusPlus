@@ -9,7 +9,8 @@
 export {};
 
 type Tile = { col: number; row: number };
-const near = (p: { col?: number; row?: number }, t: Tile, tiles: number) => p.col !== undefined && Math.hypot(p.col - (t.col + 0.5), p.row! - (t.row + 0.5)) < tiles;
+const near = (p: { col?: number; row?: number }, t: Tile, tiles: number) =>
+    p.col !== undefined && Math.hypot(p.col - (t.col + 0.5), p.row! - (t.row + 0.5)) < tiles;
 
 /** Looks close at guest `who` from the side and keeps a screenshot named `name`. */
 async function look(name: string, who: { col?: number; row?: number }): Promise<void> {
@@ -18,7 +19,10 @@ async function look(name: string, who: { col?: number; row?: number }): Promise<
     await screenshot(name);
 }
 
-for (const [file, name] of [["Campaigns/Base/BlankLandscape.dat", "blank"], ["Campaigns/Base/BoxOffice.dat", "box_office"]]) {
+for (const [file, name] of [
+    ["Campaigns/Base/BlankLandscape.dat", "blank"],
+    ["Campaigns/Base/BoxOffice.dat", "box_office"],
+]) {
     await park.open(file);
     await until(() => park.loaded(), 1200, "the park");
     const spawns = park.spawns();
@@ -30,7 +34,8 @@ for (const [file, name] of [["Campaigns/Base/BlankLandscape.dat", "blank"], ["Ca
     camera.look({ col: spawn.col + 0.5, row: spawn.row + 0.5 }, { col: spawn.col + 4.5, row: spawn.row + 4.5, up: 4 });
 
     // Someone just appeared at a spawn point, not through the gate yet.
-    const fresh = () => people.list().findIndex((p) => !p.staff && p.arriving === true && spawns.some((t) => near(p, t, 1.5)));
+    const fresh = () =>
+        people.list().findIndex((p) => !p.staff && p.arriving === true && spawns.some((t) => near(p, t, 1.5)));
     await park.advanceUntil(() => fresh() >= 0, 1800, `${name}: a guest appearing at a spawn point`);
     const i = fresh();
     const name_of = people.list()[i].name;
@@ -47,7 +52,10 @@ for (const [file, name] of [["Campaigns/Base/BlankLandscape.dat", "blank"], ["Ca
     await park.advanceUntil(() => people.list()[i].arriving !== true, 600, `${name}: the guest through the gate`);
     const inside = people.list()[i];
     log(name, "came in", JSON.stringify(inside));
-    expect(gates.some((g) => near(inside, g, 2)), `${name}: the guest come in at the gate, not at ${inside.col}, ${inside.row}`);
+    expect(
+        gates.some((g) => near(inside, g, 2)),
+        `${name}: the guest come in at the gate, not at ${inside.col}, ${inside.row}`,
+    );
     await look(`${name}_gate`, inside);
 }
 quit(0);

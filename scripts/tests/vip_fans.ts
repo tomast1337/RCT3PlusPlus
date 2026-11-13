@@ -12,7 +12,10 @@ await park.open("Campaigns/Base/ChequeredFlag.dat");
 await park.ready();
 await frames(30);
 await park.advanceUntil(() => park.guests() >= 60, 1200, "guests in the park");
-const goal = must(park.vipGoals().find((g) => g.level === 0), "the first VIP goal");
+const goal = must(
+    park.vipGoals().find((g) => g.level === 0),
+    "the first VIP goal",
+);
 park.setDate(goal.next);
 await until(() => park.vips().length === 1, 120, "the VIP to come in");
 
@@ -27,7 +30,15 @@ look();
 await frames(10);
 await screenshot("fans_trailing");
 
-const signing = () => people.list().some((p) => !p.staff && p.gesture === "handticket" && Math.hypot(p.col! - park.vips()[0].col, p.row! - park.vips()[0].row) < 1);
+const signing = () =>
+    people
+        .list()
+        .some(
+            (p) =>
+                !p.staff &&
+                p.gesture === "handticket" &&
+                Math.hypot(p.col! - park.vips()[0].col, p.row! - park.vips()[0].row) < 1,
+        );
 await park.advanceUntil(signing, 300, "a fan signed for");
 look();
 await frames(3);

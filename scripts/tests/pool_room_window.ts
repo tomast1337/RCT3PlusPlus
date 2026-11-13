@@ -11,7 +11,11 @@ export {};
 const kPool = "Pool/Default/Default_Stub";
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined || ui.find("tools/Rides") !== undefined, 600, "the tool row");
+await until(
+    () => ui.find("tools/Rides/Obj_Pools") !== undefined || ui.find("tools/Rides") !== undefined,
+    600,
+    "the tool row",
+);
 await until(() => build.flatRides() !== undefined, 1200, "the build items");
 const gate = map.paths().reduce((a, b) => (b.row > a.row ? b : a));
 const c = gate.col;
@@ -22,8 +26,7 @@ await frames(10);
 // A small pool east of the road, and a changing room between them; the pool panel stays out once it is placed, and
 // a click on the room opens its window.
 const rides = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
-if (!ui.find("tools/Rides/Obj_Pools"))
-    await ui.click(rides);
+if (!ui.find("tools/Rides/Obj_Pools")) await ui.click(rides);
 await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
 await ui.click("tools/Rides/Obj_Pools");
 await until(() => ui.find("pool_panel/body/editor/Pool_PlaceTiles") !== undefined, 120, "the pool panel");
@@ -42,7 +45,10 @@ await pointer.click(...on_view(c + 1.5, r + 0.5));
 await frames(3);
 expect(ui.find("pool_panel") !== undefined, "the pool panel still out once the room is placed");
 // The room's name and price in the band fit the strip.
-const choice = must(ui.find(`pool_panel/body/${must(ui.children("pool_panel/body"), "pool_panel/body shown")[0]}`), "the widget shown");
+const choice = must(
+    ui.find(`pool_panel/body/${must(ui.children("pool_panel/body"), "pool_panel/body shown")[0]}`),
+    "the widget shown",
+);
 pointer.move(choice.x, choice.y);
 await frames(3);
 await screenshot("pool_room_panel_wide");
@@ -54,7 +60,16 @@ camera.look({ col: c + 3, row: r + 1 }, { col: c - 2, row: r + 6, up: 6 });
 await frames(5);
 
 // The ring, in the game's order round the view.
-const ring = ["Guest_Rides", "Attraction_Finances", "Guest_Thoughts", "Attraction_General_Closed", "Attraction_OpMode", "Attraction_Construction", "Attraction_Customers", "Attraction_Maintenance"];
+const ring = [
+    "Guest_Rides",
+    "Attraction_Finances",
+    "Guest_Thoughts",
+    "Attraction_General_Closed",
+    "Attraction_OpMode",
+    "Attraction_Construction",
+    "Attraction_Customers",
+    "Attraction_Maintenance",
+];
 for (const tab of ring)
     expect(ui.find(`info/${tab}`) !== undefined, `the ${tab} tab, not ${JSON.stringify(ui.children("info"))}`);
 await ui.click("info/hide");
@@ -64,15 +79,58 @@ await screenshot("pool_room_window_ring");
 // Each page: what it shows, as the game's does.
 const body = (name: string) => ui.find(`info/body/${name}`) !== undefined;
 const pages: [string, string, string[]][] = [
-    ["Guest_Rides", "details", ["ChangingRoomName", "PoolComplexName", "status_label", "Attraction_General_Delete", "GUI2_DeleteSelection", "File_SaveGame", "CenterInViewIcon"]],
-    ["Attraction_Finances", "finances", ["AttractionFinancesDialogLabel_AdmissionPrice", "AttractionFinancesDialogLabel_Income_label", "AttractionFinancesDialogLabel_CostPerInspection_label", "AttractionFinancesDialogLabel_ProjectedRunningCost_label", "AttractionFinancesDialogLabel_Profit_label", "AttractionFinancesDialogLabel_TotalProfit_label"]],
+    [
+        "Guest_Rides",
+        "details",
+        [
+            "ChangingRoomName",
+            "PoolComplexName",
+            "status_label",
+            "Attraction_General_Delete",
+            "GUI2_DeleteSelection",
+            "File_SaveGame",
+            "CenterInViewIcon",
+        ],
+    ],
+    [
+        "Attraction_Finances",
+        "finances",
+        [
+            "AttractionFinancesDialogLabel_AdmissionPrice",
+            "AttractionFinancesDialogLabel_Income_label",
+            "AttractionFinancesDialogLabel_CostPerInspection_label",
+            "AttractionFinancesDialogLabel_ProjectedRunningCost_label",
+            "AttractionFinancesDialogLabel_Profit_label",
+            "AttractionFinancesDialogLabel_TotalProfit_label",
+        ],
+    ],
     ["Guest_Thoughts", "thoughts", []],
     ["Attraction_OpMode", "waves", ["WaveHeightText", "WaveLengthText", "WaveOnPeriodText", "WaveTotalPeriodText"]],
-    ["Attraction_Customers", "customers", ["AttractionCustomersDialogLabel_Customers_label", "AttractionCustomersDialogLabel_Popularity_label", "AttractionCustomersDialogLabel_Satisfaction_label", "AttractionCustomersDialogLabel_TotalCustomers_label", "AttractionCustomersDialogLabel_AgeYears_label"]],
-    ["Attraction_Maintenance", "maintenance", ["RideMaintenanceDialogLabel_Reliability_label", "RideMaintenanceDialogLabel_Inspection", "Fluid_TypeLabel", "RideMaintenanceDialogLabel_TimeSinceLastInspection_label", "PoolDirt_Label_label", "Staff_JobIsMechanicIcon"]],
+    [
+        "Attraction_Customers",
+        "customers",
+        [
+            "AttractionCustomersDialogLabel_Customers_label",
+            "AttractionCustomersDialogLabel_Popularity_label",
+            "AttractionCustomersDialogLabel_Satisfaction_label",
+            "AttractionCustomersDialogLabel_TotalCustomers_label",
+            "AttractionCustomersDialogLabel_AgeYears_label",
+        ],
+    ],
+    [
+        "Attraction_Maintenance",
+        "maintenance",
+        [
+            "RideMaintenanceDialogLabel_Reliability_label",
+            "RideMaintenanceDialogLabel_Inspection",
+            "Fluid_TypeLabel",
+            "RideMaintenanceDialogLabel_TimeSinceLastInspection_label",
+            "PoolDirt_Label_label",
+            "Staff_JobIsMechanicIcon",
+        ],
+    ],
 ];
-for (const [tab, page, names] of pages)
-{
+for (const [tab, page, names] of pages) {
     await ui.click(`info/${tab}`);
     await frames(3);
     for (const name of names)
@@ -81,7 +139,10 @@ for (const [tab, page, names] of pages)
 }
 await ui.click("info/Guest_Rides");
 await frames(3);
-expect(ui.find("info/body/status_label")?.text === "Closed", `the complex closed at first, not ${ui.find("info/body/status_label")?.text}`);
+expect(
+    ui.find("info/body/status_label")?.text === "Closed",
+    `the complex closed at first, not ${ui.find("info/body/status_label")?.text}`,
+);
 
 // The flag fans out its two lights; the green one opens the complex, the red one closes it again.
 await ui.click("info/Attraction_General_Closed");
@@ -93,13 +154,19 @@ await until(() => ui.find("info/Attraction_General_Open") !== undefined, 60, "th
 await ui.click("info/Guest_Rides");
 await frames(3);
 log("open status", ui.find("info/body/status_label")?.text);
-expect(ui.find("info/body/status_label")?.text?.includes("pool complex") ?? false, `the complex open, not ${ui.find("info/body/status_label")?.text}`);
+expect(
+    ui.find("info/body/status_label")?.text?.includes("pool complex") ?? false,
+    `the complex open, not ${ui.find("info/body/status_label")?.text}`,
+);
 await ui.click("info/Attraction_General_Open");
 await until(() => ui.find("info/Attraction_Button_Closed") !== undefined, 60, "the flag's lights again");
 await ui.click("info/Attraction_Button_Closed");
 await until(() => ui.find("info/Attraction_General_Closed") !== undefined, 60, "the flag showing closed");
 await frames(3);
-expect(ui.find("info/body/status_label")?.text === "Closed", `the complex closed, not ${ui.find("info/body/status_label")?.text}`);
+expect(
+    ui.find("info/body/status_label")?.text === "Closed",
+    `the complex closed, not ${ui.find("info/body/status_label")?.text}`,
+);
 
 // The construction tab opens the pool panel, which takes the window's place.
 await ui.click("info/Attraction_Construction");

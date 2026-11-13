@@ -24,18 +24,19 @@ await frames(10);
 const ride = build.construction()!.ride;
 const { width, height } = map.size();
 const centre = { col: Math.floor(width / 2), row: Math.floor(height / 2) };
-camera.look({ col: centre.col + 0.5, row: centre.row + 0.5 }, { col: centre.col + 0.5, row: centre.row + 14.5, up: 30 });
+camera.look(
+    { col: centre.col + 0.5, row: centre.row + 0.5 },
+    { col: centre.col + 0.5, row: centre.row + 14.5, up: 30 },
+);
 await frames(5);
 /** Picks the station among the pictured pieces: its button, clicked again to build it. */
 async function pickStation(): Promise<string | undefined> {
     for (let i = 0; i < 8; ++i) {
         const special = `placing/body/construction/special${i}`;
-        if (ui.find(special) === undefined)
-            continue;
+        if (ui.find(special) === undefined) continue;
         await ui.click(special);
         await frames(10);
-        if ((build.construction()?.piece ?? "").toLowerCase().includes("station"))
-            return special;
+        if ((build.construction()?.piece ?? "").toLowerCase().includes("station")) return special;
     }
     return undefined;
 }
@@ -70,7 +71,11 @@ await straight();
 log("track", JSON.stringify(rides.list()[ride].track));
 
 await ui.click("placing/body/construction/complete");
-await until(() => build.construction()?.completing === false && (build.construction()?.proposed ?? 0) > 0, 600, "a way round to the first station");
+await until(
+    () => build.construction()?.completing === false && (build.construction()?.proposed ?? 0) > 0,
+    600,
+    "a way round to the first station",
+);
 await ui.click("placing/body/construction/complete");
 await frames(10);
 log("closed", JSON.stringify(rides.list()[ride].track));
@@ -86,12 +91,19 @@ async function placeDoor(station: Tile, step: "entrance" | "exit"): Promise<void
         await frames(3);
     }
     expect(build.placing()?.step === step, `placing the ${step}, not ${JSON.stringify(build.placing())}`);
-    camera.look({ col: station.col + 0.5, row: station.row + 0.5 }, { col: station.col + 0.5, row: station.row + 10.5, up: 20 });
+    camera.look(
+        { col: station.col + 0.5, row: station.row + 0.5 },
+        { col: station.col + 0.5, row: station.row + 10.5, up: 20 },
+    );
     await frames(5);
-    for (const [dc, dr] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+    for (const [dc, dr] of [
+        [0, 1],
+        [0, -1],
+        [1, 0],
+        [-1, 0],
+    ]) {
         const p = map.screen(station.col + dc, station.row + dr);
-        if (p === undefined)
-            continue;
+        if (p === undefined) continue;
         pointer.move(p.x, p.y);
         await frames(3);
         if (build.placing()?.problem === "none") {
@@ -127,9 +139,7 @@ async function watch(count: number): Promise<{ stood: number[]; change: number; 
     for (let n = 0; n < count; ++n) {
         await frames(1);
         const r = rides.list()[ride];
-        for (const t of r.trainsAt ?? [])
-            if (t.station !== null && t.station < stood.length)
-                ++stood[t.station];
+        for (const t of r.trainsAt ?? []) if (t.station !== null && t.station < stood.length) ++stood[t.station];
         const cars = r.cars ?? [];
         const now = cars.map((c, k) => ({ dc: c.col - (last[k]?.col ?? c.col), dr: c.row - (last[k]?.row ?? c.row) }));
         if (last.length === cars.length && steps.length === cars.length)
@@ -153,7 +163,12 @@ async function pathsBehind(k: number): Promise<void> {
     await ui.click("tools/Paths/Obj_Paths");
     await until(() => ui.find("footpaths/route") !== undefined, 120, "the path panel");
     await ui.toggle("footpaths/follow", false);
-    const behind = [[1, 0], [0, -1], [-1, 0], [0, 1]];
+    const behind = [
+        [1, 0],
+        [0, -1],
+        [-1, 0],
+        [0, 1],
+    ];
     for (const door of [doors()[k].entrance!, doors()[k].exit!]) {
         const [dc, dr] = behind[door.direction & 3];
         const col = door.col + dc;
@@ -174,26 +189,47 @@ await placeDoor(first, "entrance");
 await placeDoor(first, "exit");
 await pathsBehind(0);
 await until(() => rides.list()[ride].joined, 300, "the ride run by the park");
-expect(rides.list()[ride].stops === 1, `a stop at the second station before its doors, not ${rides.list()[ride].stops}`);
+expect(
+    rides.list()[ride].stops === 1,
+    `a stop at the second station before its doors, not ${rides.list()[ride].stops}`,
+);
 // Two trains: one at each station, apart.
 await step("AttractionVehicleDialogLabelNumTrains", true);
 const spread = rides.list()[ride].trainsAt ?? [];
 log("two trains", JSON.stringify(spread), "track", rides.list()[ride].trackLength);
 expect(spread.length === 2, `two trains, not ${spread.length}`);
-expect(spread.map((t) => t.station).sort().join() === "0,1", `a train standing at each station, not ${JSON.stringify(spread)}`);
+expect(
+    spread
+        .map((t) => t.station)
+        .sort()
+        .join() === "0,1",
+    `a train standing at each station, not ${JSON.stringify(spread)}`,
+);
 const whole = rides.list()[ride].trackLength!;
 const apart = (((spread[0].front - spread[1].front) % whole) + whole) % whole;
-expect(Math.min(apart, whole - apart) > Math.max(spread[0].length, spread[1].length), `the trains apart, not ${apart.toFixed(1)} m`);
-camera.look({ col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 0.5 }, { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 16.5, up: 22 });
+expect(
+    Math.min(apart, whole - apart) > Math.max(spread[0].length, spread[1].length),
+    `the trains apart, not ${apart.toFixed(1)} m`,
+);
+camera.look(
+    { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 0.5 },
+    { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 16.5, up: 22 },
+);
 await frames(10);
 await screenshot("two_trains");
 // Tested, the trains stop at both stations, the second without doors, and are drawn moving on smoothly.
 expect(rides.setState(ride, "testing") == null, "the ride tested");
 const tested = await watch(60 * 60);
 log("tested", JSON.stringify(tested));
-expect(tested.stood[0] > 0 && tested.stood[1] > 0, `trains stopped at both stations while tested, the second without doors, not ${JSON.stringify(tested.stood)}`);
+expect(
+    tested.stood[0] > 0 && tested.stood[1] > 0,
+    `trains stopped at both stations while tested, the second without doors, not ${JSON.stringify(tested.stood)}`,
+);
 expect(tested.back === 0, `no car drawn turning back, not ${tested.back} times`);
-expect(tested.change < 0.02, `no car's drawn step changing by more than 0.02 of a tile a frame, not ${tested.change.toFixed(3)}`);
+expect(
+    tested.change < 0.02,
+    `no car's drawn step changing by more than 0.02 of a tile a frame, not ${tested.change.toFixed(3)}`,
+);
 // The second station's doors, placed once it is closed again (its window offers doors only then): the park keeps
 // running it as it is, its guests coming once a path reaches them.
 expect(rides.setState(ride, "closed") == null, "the ride closed");
@@ -202,13 +238,27 @@ await placeDoor(second, "entrance");
 await placeDoor(second, "exit");
 build.stop();
 log("stations", JSON.stringify(doors()));
-expect(doors().length === 2 && doors().every((s) => s.entrance !== null && s.exit !== null), `an entrance and an exit at both stations, not ${JSON.stringify(doors())}`);
+expect(
+    doors().length === 2 && doors().every((s) => s.entrance !== null && s.exit !== null),
+    `an entrance and an exit at both stations, not ${JSON.stringify(doors())}`,
+);
 expect(rides.list()[ride].stops === 1, "still a stop at the second station");
 await pathsBehind(1);
 // Open, a train stands at each station for its riders.
 expect(rides.setState(ride, "open") == null, `the ride opened, not refused with ${rides.setState(ride, "open")}`);
-await park.advanceUntil(() => (rides.list()[ride].trainsAt ?? []).map((t) => t.station).sort().join() === "0,1", 120, "a train standing at each station once open");
-camera.look({ col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 0.5 }, { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 16.5, up: 22 });
+await park.advanceUntil(
+    () =>
+        (rides.list()[ride].trainsAt ?? [])
+            .map((t) => t.station)
+            .sort()
+            .join() === "0,1",
+    120,
+    "a train standing at each station once open",
+);
+camera.look(
+    { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 0.5 },
+    { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 16.5, up: 22 },
+);
 await frames(30);
 await screenshot("two_stations");
 
@@ -217,7 +267,10 @@ const saved = JSON.stringify(doors());
 // Each station piece of both stations stands in its platform, with stairs beside the doors.
 const platforms = rides.list()[ride].platforms ?? [];
 log("platforms", JSON.stringify(platforms));
-expect(platforms.length === 2 && platforms.every((p) => /stair/i.test(p)), `a platform with stairs on both station pieces, not ${JSON.stringify(platforms)}`);
+expect(
+    platforms.length === 2 && platforms.every((p) => /stair/i.test(p)),
+    `a platform with stairs on both station pieces, not ${JSON.stringify(platforms)}`,
+);
 await ui.click(`tools/Files/${must(ui.children("tools/Files"), "tools/Files shown")[0]}`);
 await ui.click("tools/Files/File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
@@ -235,9 +288,19 @@ await until(() => ui.find(row) !== undefined, 120, "the save in the load window"
 await ui.click(row);
 await ui.click("park_files/content/open");
 await until(() => park.loaded() && rides.list().length > ride, 1200, "the park back after loading");
-await until(() => rides.list()[ride].joined && (rides.list()[ride].stops ?? 0) > 0, 600, "the second station stopped at after loading");
+await until(
+    () => rides.list()[ride].joined && (rides.list()[ride].stops ?? 0) > 0,
+    600,
+    "the second station stopped at after loading",
+);
 expect(JSON.stringify(doors()) === saved, `both stations' doors back after loading, not ${JSON.stringify(doors())}`);
-expect(JSON.stringify(rides.list()[ride].platforms) === JSON.stringify(platforms), `both stations' platforms back after loading, not ${JSON.stringify(rides.list()[ride].platforms)}`);
-camera.look({ col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 0.5 }, { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 16.5, up: 22 });
+expect(
+    JSON.stringify(rides.list()[ride].platforms) === JSON.stringify(platforms),
+    `both stations' platforms back after loading, not ${JSON.stringify(rides.list()[ride].platforms)}`,
+);
+camera.look(
+    { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 0.5 },
+    { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 16.5, up: 22 },
+);
 await frames(30);
 await screenshot("two_stations_loaded");

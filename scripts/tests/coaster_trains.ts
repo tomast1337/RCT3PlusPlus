@@ -83,8 +83,7 @@ expect(now.cars?.length === now.trains! * now.carsPerTrain!, "each train's cars 
 
 // A car fewer, or one more where it has the fewest its kind allows.
 await step(coaster, kCars, false);
-if (rides.list()[coaster].passengerCars === now.passengerCars)
-    await step(coaster, kCars, true);
+if (rides.list()[coaster].passengerCars === now.passengerCars) await step(coaster, kCars, true);
 const cars = rides.list()[coaster];
 log("other cars:", shown(coaster));
 expect(cars.passengerCars !== now.passengerCars, "the cars changed");
@@ -99,7 +98,10 @@ await screenshot("trains");
 expect(rides.list()[coaster].simulated === 1, "the ride still run once");
 
 // Open, its trains stay as they are.
-expect(rides.setState(coaster, "open") == null, `the coaster opened, not refused with ${rides.setState(coaster, "open")}`);
+expect(
+    rides.setState(coaster, "open") == null,
+    `the coaster opened, not refused with ${rides.setState(coaster, "open")}`,
+);
 await frames(5);
 now = rides.list()[coaster];
 await step(coaster, kTrains, true);

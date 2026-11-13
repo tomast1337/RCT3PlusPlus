@@ -20,25 +20,30 @@ const taken = new Set([...map.objects(), ...map.paths()].map((o) => `${o.col},${
 const clear = (c: number, r: number) => {
     const level = map.tile(c, r)?.corners[0] ?? 0;
     for (let row = r - 1; row < r + 15; ++row)
-        for (let col = c - 1; col < c + 11; ++col)
-        {
+        for (let col = c - 1; col < c + 11; ++col) {
             const tile = map.tile(col, row);
-            if (!tile?.owned || tile.water !== undefined || tile.corners.some((h) => Math.abs(h - level) > 1) || taken.has(`${col},${row}`))
+            if (
+                !tile?.owned ||
+                tile.water !== undefined ||
+                tile.corners.some((h) => Math.abs(h - level) > 1) ||
+                taken.has(`${col},${row}`)
+            )
                 return false;
         }
     return true;
 };
 let site: { col: number; row: number } | undefined;
 for (let r = 1; r < height - 16 && !site; r += 2)
-    for (let c = 1; c < width - 12 && !site; c += 2)
-        if (clear(c, r))
-            site = { col: c, row: r };
+    for (let c = 1; c < width - 12 && !site; c += 2) if (clear(c, r)) site = { col: c, row: r };
 expect(site !== undefined, "room for a pool");
 const c0 = site!.col;
 const r0 = site!.row;
 log("pool at", c0, r0);
 // The pool pieces on the site; the park has pools of its own elsewhere.
-const pieces = () => map.objects().filter((o) => o.overlay === kPool && o.col >= c0 && o.col < c0 + 10 && o.row >= r0 && o.row < r0 + 14);
+const pieces = () =>
+    map
+        .objects()
+        .filter((o) => o.overlay === kPool && o.col >= c0 && o.col < c0 + 10 && o.row >= r0 && o.row < r0 + 14);
 const count = (symbol: string) => pieces().filter((o) => o.symbol === symbol).length;
 camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 16, up: 14 });
 await frames(10);
@@ -47,8 +52,7 @@ await frames(10);
 // and the changing rooms.
 const rides = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
 await until(() => build.flatRides() !== undefined, 1200, "the build items");
-if (!ui.find("tools/Rides/Obj_Pools"))
-    await ui.click(rides);
+if (!ui.find("tools/Rides/Obj_Pools")) await ui.click(rides);
 await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
 await ui.click("tools/Rides/Obj_Pools");
 await until(() => ui.find("pool_panel/body/editor/Pool_PlaceWater") !== undefined, 120, "the pool panel");
@@ -61,12 +65,21 @@ expect(ui.find("pool_panel/body/Icon_Default_HighDive") !== undefined, "the high
 // The game's eleven: nine extras of the pool type, the high diving board and the spa pool; the ramps and the spiral
 // staircase are on the paths page.
 const offered_extras = must(ui.children("pool_panel/body"), "pool_panel/body shown");
-expect(offered_extras.every((n) => ui.find(`pool_panel/body/${n}`)?.tooltip), "every extra named");
-expect(offered_extras.length === 11 && !offered_extras.includes("Icon_Default_SpiralStairs"), `the eleven extras, not ${JSON.stringify(offered_extras)}`);
+expect(
+    offered_extras.every((n) => ui.find(`pool_panel/body/${n}`)?.tooltip),
+    "every extra named",
+);
+expect(
+    offered_extras.length === 11 && !offered_extras.includes("Icon_Default_SpiralStairs"),
+    `the eleven extras, not ${JSON.stringify(offered_extras)}`,
+);
 await screenshot("pool_panel_extras");
 await ui.click("pool_panel/Pool_ChangingRoomPanel");
 await frames(3);
-expect(must(ui.children("pool_panel/body"), "pool_panel/body shown").length > 1, `changing rooms on their page, not ${JSON.stringify(ui.children("pool_panel/body"))}`);
+expect(
+    must(ui.children("pool_panel/body"), "pool_panel/body shown").length > 1,
+    `changing rooms on their page, not ${JSON.stringify(ui.children("pool_panel/body"))}`,
+);
 await screenshot("pool_panel_rooms");
 await ui.click("pool_panel/Pool_PoolPanel");
 await frames(2);
@@ -99,8 +112,14 @@ await frames(3);
 expect(park.cash()! < cash, "the water paid for");
 expect(count("Base") === 36, `36 squares of water, not ${count("Base")}`);
 expect(count("SolidTop") === 28, `28 tiles left round it, not ${count("SolidTop")}`);
-expect(count("Corner1Top") === 4 && count("EdgeTop") === 16, `four corners and sixteen edges, not ${count("Corner1Top")} and ${count("EdgeTop")}`);
-expect(map.tile(c0 + 3, r0 + 3)!.corners.every((h) => h < map.tile(c0 - 1, r0 - 1)!.corners[0]), "the ground dug out under the pool");
+expect(
+    count("Corner1Top") === 4 && count("EdgeTop") === 16,
+    `four corners and sixteen edges, not ${count("Corner1Top")} and ${count("EdgeTop")}`,
+);
+expect(
+    map.tile(c0 + 3, r0 + 3)!.corners.every((h) => h < map.tile(c0 - 1, r0 - 1)!.corners[0]),
+    "the ground dug out under the pool",
+);
 await screenshot("pool_built");
 camera.look({ col: c0 + 1.5, row: r0 + 1.5 }, { col: c0 + 4.5, row: r0 + 5, up: 2.5 });
 await frames(10);
@@ -146,7 +165,10 @@ cash = park.cash()!;
 const dive = on_view(c0 + 7.5, r0 + 4.5);
 await pointer.drag(dive, [dive[0], dive[1] - 0.08], 8);
 await frames(3);
-expect(count("DBTopBoard") === 1 && count("DBMidBoard") >= 1, `a board raised by the drag, not ${count("DBMidBoard")} levels below its top`);
+expect(
+    count("DBTopBoard") === 1 && count("DBMidBoard") >= 1,
+    `a board raised by the drag, not ${count("DBMidBoard")} levels below its top`,
+);
 expect(park.cash()! < cash, "the board paid for");
 camera.look({ col: c0 + 7.5, row: r0 + 4.5, up: 2 }, { col: c0 + 3.5, row: r0 + 2.5, up: 4 });
 await frames(10);
@@ -154,36 +176,60 @@ await screenshot("pool_high_dive");
 // One on each of the other sides. Each one's boards cover three squares in a row, the tower's in the middle,
 // named by the first; their tip reaches out over the water square in front of the tower. The one on the far side
 // is dragged up to five levels, as high as the tower a saved park has (pool_dives.ts), to be seen alike from above.
-for (const [col, row, up] of [[c0 + 4, r0 + 7, 0.08], [c0 + 5, r0, 0.2], [c0, r0 + 5, 0.08]])
-{
+for (const [col, row, up] of [
+    [c0 + 4, r0 + 7, 0.08],
+    [c0 + 5, r0, 0.2],
+    [c0, r0 + 5, 0.08],
+]) {
     camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col + 0.5, row: row + 3, up: 12 });
     await frames(10);
     const at = on_view(col + 0.5, row + 0.5);
     await pointer.drag(at, [at[0], at[1] - up], 8);
     await frames(3);
 }
-const boards = (col: number, row: number) => map.objects().some((o) => o.overlay === kPool && o.symbol === "DBTopBoard" && o.col === col && o.row === row);
-expect(map.objects().some((o) => o.overlay === kPool && o.symbol === "DBTopBoard" && o.col === c0 + 5 && o.height === 14), "the far tower five levels high");
-expect(boards(c0 + 6, r0 + 4) && boards(c0 + 4, r0 + 6) && boards(c0 + 5, r0 - 1) && boards(c0 - 1, r0 + 5), `four towers' boards over their pool, not ${JSON.stringify(pieces().filter((o) => o.symbol === "DBTopBoard"))}`);
+const boards = (col: number, row: number) =>
+    map.objects().some((o) => o.overlay === kPool && o.symbol === "DBTopBoard" && o.col === col && o.row === row);
+expect(
+    map.objects().some((o) => o.overlay === kPool && o.symbol === "DBTopBoard" && o.col === c0 + 5 && o.height === 14),
+    "the far tower five levels high",
+);
+expect(
+    boards(c0 + 6, r0 + 4) && boards(c0 + 4, r0 + 6) && boards(c0 + 5, r0 - 1) && boards(c0 - 1, r0 + 5),
+    `four towers' boards over their pool, not ${JSON.stringify(pieces().filter((o) => o.symbol === "DBTopBoard"))}`,
+);
 // One laid on a water square at the pool's wall: the square turns to paving at the pool's surface, paid for less
 // the water's refund, the tower stands on it, and its boards reach out over the water square in front.
 camera.look({ col: c0 + 6.5, row: r0 + 2.5 }, { col: c0 + 3, row: r0 + 4.5, up: 6 });
 await frames(10);
-const on_square = (symbol: string, col: number, row: number) => pieces().some((o) => o.symbol === symbol && o.col === col && o.row === row);
+const on_square = (symbol: string, col: number, row: number) =>
+    pieces().some((o) => o.symbol === symbol && o.col === col && o.row === row);
 expect(on_square("Base", c0 + 6, r0 + 2), "water at the wall before");
 cash = park.cash()!;
 pointer.move(...on_view(c0 + 6.5, r0 + 2.8));
 await frames(3);
-expect(on_square("SolidTop", c0 + 6, r0 + 2) && !on_square("Base", c0 + 6, r0 + 2) && on_square("DBBase", c0 + 6, r0 + 2), "the tower shown on paving where the water was");
+expect(
+    on_square("SolidTop", c0 + 6, r0 + 2) && !on_square("Base", c0 + 6, r0 + 2) && on_square("DBBase", c0 + 6, r0 + 2),
+    "the tower shown on paving where the water was",
+);
 await screenshot("pool_high_dive_on_water_shown");
 const at_wall = on_view(c0 + 6.5, r0 + 2.8);
 await pointer.drag(at_wall, [at_wall[0], at_wall[1] - 0.08], 8);
 await frames(3);
-expect(on_square("SolidTop", c0 + 6, r0 + 2) && !on_square("Base", c0 + 6, r0 + 2) && on_square("DBBase", c0 + 6, r0 + 2), "the water square paved under the tower");
-expect(pieces().find((o) => o.symbol === "SolidTop" && o.col === c0 + 6 && o.row === r0 + 2)!.height === pieces().find((o) => o.symbol === "SolidTop" && o.col === c0 + 7 && o.row === r0 + 2)!.height, "the paving at the pool's surface");
+expect(
+    on_square("SolidTop", c0 + 6, r0 + 2) && !on_square("Base", c0 + 6, r0 + 2) && on_square("DBBase", c0 + 6, r0 + 2),
+    "the water square paved under the tower",
+);
+expect(
+    pieces().find((o) => o.symbol === "SolidTop" && o.col === c0 + 6 && o.row === r0 + 2)!.height ===
+        pieces().find((o) => o.symbol === "SolidTop" && o.col === c0 + 7 && o.row === r0 + 2)!.height,
+    "the paving at the pool's surface",
+);
 // Facing away from the wall, straight out over the pool: its boards cover the tower's square and the squares
 // either side along the columns.
-expect(boards(c0 + 5, r0 + 2) && on_square("Base", c0 + 5, r0 + 2), `its boards straight out from the wall over the water, not ${JSON.stringify(pieces().filter((o) => o.symbol === "DBTopBoard"))}`);
+expect(
+    boards(c0 + 5, r0 + 2) && on_square("Base", c0 + 5, r0 + 2),
+    `its boards straight out from the wall over the water, not ${JSON.stringify(pieces().filter((o) => o.symbol === "DBTopBoard"))}`,
+);
 expect(park.cash()! < cash, "the tower paid for");
 await screenshot("pool_high_dive_on_water");
 build.stop();
@@ -205,10 +251,17 @@ await frames(10);
 await screenshot("pool_high_dives_above");
 // Each from straight over the water in front of it, its boards reaching out over that square, across the wall,
 // to be seen alike with the saved park's tower in pool_dives.ts.
-for (const [col, row, dc, dr, name] of [[c0 + 7, r0 + 4, -1, 0, "east"], [c0 + 4, r0 + 7, 0, -1, "south"], [c0 + 5, r0, 0, 1, "north"], [c0, r0 + 5, 1, 0, "west"]] as const)
-{
+for (const [col, row, dc, dr, name] of [
+    [c0 + 7, r0 + 4, -1, 0, "east"],
+    [c0 + 4, r0 + 7, 0, -1, "south"],
+    [c0 + 5, r0, 0, 1, "north"],
+    [c0, r0 + 5, 1, 0, "west"],
+] as const) {
     // Leaning a touch across the boards, not along them, so their height does not slide them on the view.
-    camera.look({ col: col + 0.5 + dc, row: row + 0.5 + dr }, { col: col + 0.5 + dc + 0.1 * Math.abs(dr), row: row + 0.5 + dr + 0.1 * Math.abs(dc), up: 30 });
+    camera.look(
+        { col: col + 0.5 + dc, row: row + 0.5 + dr },
+        { col: col + 0.5 + dc + 0.1 * Math.abs(dr), row: row + 0.5 + dr + 0.1 * Math.abs(dc), up: 30 },
+    );
     await frames(10);
     await screenshot(`pool_high_dive_${name}`);
 }
@@ -222,8 +275,7 @@ await screenshot("pool_extras");
 // pool complex opens and its ticket price is set.
 const room = () => map.objects().find((o) => o.overlay !== kPool && o.col === c0 - 1 && o.row === r0 + 4);
 const railings = count("Railing");
-if (!ui.find("tools/Rides/Obj_Pools"))
-    await ui.click(rides);
+if (!ui.find("tools/Rides/Obj_Pools")) await ui.click(rides);
 await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
 await ui.click("tools/Rides/Obj_Pools");
 await until(() => ui.find("pool_panel/Pool_ChangingRoomPanel") !== undefined, 120, "the pool panel");
@@ -250,13 +302,19 @@ await until(() => ui.find("info") !== undefined, 120, "the changing room's windo
 await frames(5);
 await screenshot("pool_changing_room");
 // Its window is an attraction's: details naming the complex, its mode, its money, its customers and upkeep.
-expect(JSON.stringify(ui.children("info")).includes("Attraction_OpMode"), `the attraction tabs, not ${JSON.stringify(ui.children("info"))}`);
+expect(
+    JSON.stringify(ui.children("info")).includes("Attraction_OpMode"),
+    `the attraction tabs, not ${JSON.stringify(ui.children("info"))}`,
+);
 await ui.click("info/body/PoolComplexName");
 keys.press("Ctrl+A");
 keys.type("Lagoon");
 keys.press("Enter");
 await frames(3);
-expect(ui.find("info/body/PoolComplexName")?.text === "Lagoon", `the complex named, not ${ui.find("info/body/PoolComplexName")?.text}`);
+expect(
+    ui.find("info/body/PoolComplexName")?.text === "Lagoon",
+    `the complex named, not ${ui.find("info/body/PoolComplexName")?.text}`,
+);
 await screenshot("pool_room_details");
 // Opened from the flag's green light.
 await ui.click("info/Attraction_General_Closed");
@@ -269,9 +327,11 @@ await ui.click("info/Attraction_OpMode");
 await frames(3);
 // The complex has a wave machine, so its settings are shown.
 for (const name of ["WaveHeightText", "WaveLengthText", "WaveOnPeriodText", "WaveTotalPeriodText"])
-    expect(ui.find(`info/body/${name}`) !== undefined, `the ${name} setting there, not ${JSON.stringify(ui.children("info/body"))}`);
-for (const tab of ["Attraction_Finances", "Attraction_Customers", "Attraction_Maintenance"])
-{
+    expect(
+        ui.find(`info/body/${name}`) !== undefined,
+        `the ${name} setting there, not ${JSON.stringify(ui.children("info/body"))}`,
+    );
+for (const tab of ["Attraction_Finances", "Attraction_Customers", "Attraction_Maintenance"]) {
     await ui.click(`info/${tab}`);
     await frames(3);
     await screenshot(`pool_room_${tab}`);
@@ -293,8 +353,7 @@ camera.look({ col: c0 + 3, row: r0 + 3 }, { col: c0 + 7.5, row: r0 + 7.5, up: 2.
 await frames(10);
 pointer.move(...on_view(c0 + 1.5, r0 + 4.5));
 pointer.press();
-for (let i = 1; i <= 8; ++i)
-{
+for (let i = 1; i <= 8; ++i) {
     pointer.move(...on_view(c0 + 1.5 + i * 0.5, r0 + 4.5));
     await frames(1);
 }
@@ -304,8 +363,7 @@ await screenshot("pool_wave_line");
 const circle = (a: number): [number, number] => on_view(c0 + 4.5 + Math.cos(a), r0 + 4.5 + Math.sin(a)); // Near the view
 pointer.move(...circle(0));
 pointer.press();
-for (let i = 1; i <= 24; ++i)
-{
+for (let i = 1; i <= 24; ++i) {
     pointer.move(...circle((i * Math.PI) / 8));
     await frames(1);
 }
@@ -321,8 +379,24 @@ await frames(10);
 await pointer.drag(on_view(c0, r0 + 9), on_view(c0 + 9, r0 + 13), 8);
 await frames(3);
 expect(build.pick(kPool, "Pool_DepthDeep"), "the deep water in the pool list");
-for (const [a, b] of [[[c0 + 1, r0 + 11], [c0 + 1, r0 + 11]], [[c0 + 3, r0 + 10], [c0 + 3, r0 + 12]], [[c0 + 5, r0 + 10], [c0 + 8, r0 + 10]], [[c0 + 5, r0 + 11], [c0 + 6, r0 + 12]]] as [number, number][][])
-{
+for (const [a, b] of [
+    [
+        [c0 + 1, r0 + 11],
+        [c0 + 1, r0 + 11],
+    ],
+    [
+        [c0 + 3, r0 + 10],
+        [c0 + 3, r0 + 12],
+    ],
+    [
+        [c0 + 5, r0 + 10],
+        [c0 + 8, r0 + 10],
+    ],
+    [
+        [c0 + 5, r0 + 11],
+        [c0 + 6, r0 + 12],
+    ],
+] as [number, number][][]) {
     await pointer.drag(on_view(a[0], a[1]), on_view(b[0], b[1]), 6);
     await frames(3);
 }
@@ -344,15 +418,13 @@ expect(count("CurveCorner1Top") === 1, `the rounded inner corner, not ${count("C
 // them, for nothing. Then a tight curve on one corner, and one cut across.
 const open_editor = async () => {
     build.stop();
-    if (!ui.find("tools/Rides/Obj_Pools"))
-        await ui.click(rides);
+    if (!ui.find("tools/Rides/Obj_Pools")) await ui.click(rides);
     await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
     await ui.click("tools/Rides/Obj_Pools");
     await until(() => ui.find("pool_panel/Pool_PoolPanel") !== undefined, 120, "the pool panel");
     // It opens on the page last shown.
     const on_editor = () => ui.children("pool_panel/body")?.includes("editor") === true;
-    if (!on_editor())
-        await ui.click("pool_panel/Pool_PoolPanel");
+    if (!on_editor()) await ui.click("pool_panel/Pool_PoolPanel");
     await until(on_editor, 120, "the pool panel's editor");
 };
 const relay = async (edge: string, a: [number, number], b: [number, number]) => {
@@ -369,12 +441,18 @@ await frames(2);
 cash = park.cash()!;
 await relay("Pool_CurveLarge", [c0 + 1, r0 + 1], [c0 + 6, r0 + 6]);
 expect(count("CurveCorner9Top") === 4, `four sweeping corners, not ${count("CurveCorner9Top")}`);
-expect(count("CurveEdge1Top") === 4 && count("CurveEdge2Top") === 4, `the edges meeting them, not ${count("CurveEdge1Top")} and ${count("CurveEdge2Top")}`);
+expect(
+    count("CurveEdge1Top") === 4 && count("CurveEdge2Top") === 4,
+    `the edges meeting them, not ${count("CurveEdge1Top")} and ${count("CurveEdge2Top")}`,
+);
 // The park runs meanwhile, a few cents either way.
 expect(Math.abs(park.cash()! - cash) < 100, `a new edge free, not ${park.cash()! - cash}`);
 await relay("Pool_CurveSmall", [c0 + 6, r0 + 6], [c0 + 6, r0 + 6]);
 await relay("Pool_CurveDiagonal", [c0 + 1, r0 + 6], [c0 + 1, r0 + 6]);
-expect(count("CurveCorner9Top") === 2 && count("Corner2Top") === 1, `two sweeps left and a corner cut across, not ${count("CurveCorner9Top")} and ${count("Corner2Top")}`);
+expect(
+    count("CurveCorner9Top") === 2 && count("Corner2Top") === 1,
+    `two sweeps left and a corner cut across, not ${count("CurveCorner9Top")} and ${count("Corner2Top")}`,
+);
 expect(count("CurveCorner5Top") + count("CurveCorner6Top") + count("CurveCorner7Top") === 1, "a tight curve");
 build.stop();
 await frames(2);
@@ -420,7 +498,10 @@ await frames(3);
 build.stop();
 await frames(2);
 expect(count("SolidTop") === unpaved, `no tiles laid without the money, ${count("SolidTop")} not ${unpaved}`);
-expect(park.messages().some((m) => m.key === "PlaceObject_NotEnoughMoney"), "the not enough money message");
+expect(
+    park.messages().some((m) => m.key === "PlaceObject_NotEnoughMoney"),
+    "the not enough money message",
+);
 park.setCash(before_broke);
 await frames(10);
 await screenshot("pool_cut");
@@ -457,22 +538,35 @@ await screenshot("pool_loaded");
 
 // A changing room on each other side of the pool, each turned unasked to the paving there, or where two sides are
 // paved, the one the pointer is nearer.
-const sides = [[c0 - 1, r0 + 4, 0.5, 0.5], [c0 + 8, r0 + 3, 0.2, 0.5], [c0 + 3, r0 - 1, 0.5, 0.8], [c0, r0 + 7, 0.5, 0.5]];
-const rooms = () => sides.filter(([col, row]) => map.objects().some((o) => o.overlay !== kPool && o.col === col && o.row === row)).length;
+const sides = [
+    [c0 - 1, r0 + 4, 0.5, 0.5],
+    [c0 + 8, r0 + 3, 0.2, 0.5],
+    [c0 + 3, r0 - 1, 0.5, 0.8],
+    [c0, r0 + 7, 0.5, 0.5],
+];
+const rooms = () =>
+    sides.filter(([col, row]) => map.objects().some((o) => o.overlay !== kPool && o.col === col && o.row === row))
+        .length;
 camera.look({ col: c0 + 4, row: r0 + 4 }, { col: c0 + 4, row: r0 + 16, up: 14 });
 await frames(10);
-for (const [col, row, x, y] of sides.slice(1))
-{
+for (const [col, row, x, y] of sides.slice(1)) {
     await open_editor();
     await ui.click("pool_panel/Pool_ChangingRoomPanel");
     await until(() => (ui.children("pool_panel/body")?.length ?? 0) > 1, 120, "the changing rooms");
     await ui.click(`pool_panel/body/${must(ui.children("pool_panel/body"), "pool_panel/body shown")[0]}`);
     await frames(2);
     await pointer.click(...on_view(col + x, row + y));
-    await until(() => map.objects().some((o) => o.overlay !== kPool && o.col === col && o.row === row), 120, `the room at ${col - c0}, ${row - r0}`);
+    await until(
+        () => map.objects().some((o) => o.overlay !== kPool && o.col === col && o.row === row),
+        120,
+        `the room at ${col - c0}, ${row - r0}`,
+    );
     await ui.click("pool_panel/close");
     await frames(3);
-    expect(map.pavings().some((p) => p.col === col && p.row === row), `the floor of the room at ${col - c0}, ${row - r0} paved`);
+    expect(
+        map.pavings().some((p) => p.col === col && p.row === row),
+        `the floor of the room at ${col - c0}, ${row - r0} paved`,
+    );
 }
 expect(rooms() === 4, `a changing room on each side, not ${rooms()}`);
 await screenshot("pool_rooms_each_side");
@@ -494,7 +588,10 @@ await until(() => ui.find("sell_pool_question") !== undefined, 120, "the questio
 await screenshot("pool_sell_question");
 await ui.click("sell_pool_question/content/GUI2MiniDialog_Confirm");
 await frames(3);
-expect(first() === 0 && rooms() === 0, `the complex gone, not ${first()} pieces and rooms at ${JSON.stringify(sides.filter(([col, row]) => map.objects().some((o) => o.overlay !== kPool && o.col === col && o.row === row)).map(([col, row]) => [col - c0, row - r0]))}`);
+expect(
+    first() === 0 && rooms() === 0,
+    `the complex gone, not ${first()} pieces and rooms at ${JSON.stringify(sides.filter(([col, row]) => map.objects().some((o) => o.overlay !== kPool && o.col === col && o.row === row)).map(([col, row]) => [col - c0, row - r0]))}`,
+);
 expect(pieces().length === below, "the pool below kept");
 expect(park.cash()! > cash, "money back for the complex");
 
@@ -521,17 +618,39 @@ await pointer.drag(on_view(c0 + 1.5, r0 + 1.5), on_view(c0 + 3.5, r0 + 3.5), 6);
 await frames(3);
 const raised = pieces().filter((o) => o.symbol === "SolidTop" && o.row < r0 + 8 && o.height === level + 3).length;
 expect(raised === 9 && park.cash()! < cash, `nine raised squares, paid for, not ${raised}`);
-expect(ground_at(c0 + 2, r0 + 2) === ground_before, `the land left as it was, ${ground_before}, not ${ground_at(c0 + 2, r0 + 2)}`);
-await until(() => map.supports().some((s) => s.col === c0 + 2 && s.row === r0 + 2), 120, "supports under the raised squares");
+expect(
+    ground_at(c0 + 2, r0 + 2) === ground_before,
+    `the land left as it was, ${ground_before}, not ${ground_at(c0 + 2, r0 + 2)}`,
+);
+await until(
+    () => map.supports().some((s) => s.col === c0 + 2 && s.row === r0 + 2),
+    120,
+    "supports under the raised squares",
+);
 await ui.click("pool_panel/body/editor/Pool_Height");
 await ui.click("pool_panel/Pool_PathPanel");
-await until(() => ui.find("pool_panel/body/Icon_Default_SpiralStairs") !== undefined, 120, "the spiral staircase on the paths page");
-expect(must(ui.children("pool_panel/body"), "pool_panel/body shown").filter((n) => n !== "paths").length === 3, `two ramps and the staircase on the paths page, not ${JSON.stringify(ui.children("pool_panel/body"))}`);
+await until(
+    () => ui.find("pool_panel/body/Icon_Default_SpiralStairs") !== undefined,
+    120,
+    "the spiral staircase on the paths page",
+);
+expect(
+    must(ui.children("pool_panel/body"), "pool_panel/body shown").filter((n) => n !== "paths").length === 3,
+    `two ramps and the staircase on the paths page, not ${JSON.stringify(ui.children("pool_panel/body"))}`,
+);
 // Each way between levels is named, with its price, as the pointer rests on it: the staircase its foot's.
-const stairs_help = must(ui.find("pool_panel/body/Icon_Default_SpiralStairs"), "pool_panel/body/Icon_Default_SpiralStairs shown");
+const stairs_help = must(
+    ui.find("pool_panel/body/Icon_Default_SpiralStairs"),
+    "pool_panel/body/Icon_Default_SpiralStairs shown",
+);
 expect(stairs_help.tooltip === "Spiral Stairs : $24.00", `the staircase's help, not ${stairs_help.tooltip}`);
-const ramp_help = must(ui.children("pool_panel/body"), "pool_panel/body shown").filter((n) => n !== "paths" && n !== "Icon_Default_SpiralStairs").map((n) => must(ui.find(`pool_panel/body/${n}`), `pool_panel/body/${n} shown`).tooltip);
-expect(ramp_help.length === 2 && ramp_help.every((h) => h?.match(/^\dm Ramp : \$12\.00$/)), `the ramps' help, not ${JSON.stringify(ramp_help)}`);
+const ramp_help = must(ui.children("pool_panel/body"), "pool_panel/body shown")
+    .filter((n) => n !== "paths" && n !== "Icon_Default_SpiralStairs")
+    .map((n) => must(ui.find(`pool_panel/body/${n}`), `pool_panel/body/${n} shown`).tooltip);
+expect(
+    ramp_help.length === 2 && ramp_help.every((h) => h?.match(/^\dm Ramp : \$12\.00$/)),
+    `the ramps' help, not ${JSON.stringify(ramp_help)}`,
+);
 pointer.move(stairs_help.x, stairs_help.y);
 await frames(60);
 await screenshot("pool_panel_tooltip");
@@ -542,16 +661,27 @@ await pointer.click(...on_view(c0 + 4.5, r0 + 2.5));
 await frames(3);
 // Laid on the paving at its lowest, it costs its price: its climb, less the paving it takes the place of.
 const stairs_paid = cash - park.cash()!;
-expect(count("StairsBase") === 1 && count("StairsTop") === 1 && stairs_paid === 2400, `a staircase, paid $24.00, not ${count("StairsBase")} for ${stairs_paid}`);
+expect(
+    count("StairsBase") === 1 && count("StairsTop") === 1 && stairs_paid === 2400,
+    `a staircase, paid $24.00, not ${count("StairsBase")} for ${stairs_paid}`,
+);
 // A ramp from the same column, against a side of the paved square past the staircase.
-const ramp = must(must(ui.children("pool_panel/body"), "pool_panel/body shown").find((n) => n !== "paths" && n !== "Icon_Default_SpiralStairs"), "a ramp on the paths page");
+const ramp = must(
+    must(ui.children("pool_panel/body"), "pool_panel/body shown").find(
+        (n) => n !== "paths" && n !== "Icon_Default_SpiralStairs",
+    ),
+    "a ramp on the paths page",
+);
 await ui.click(`pool_panel/body/${ramp}`);
 await frames(2);
 const before_ramp = pieces().length;
 cash = park.cash()!;
 await pointer.click(...on_view(c0 + 5.5, r0 + 2.5));
 await frames(3);
-expect(pieces().length > before_ramp && park.cash()! < cash, `a ramp, paid for, not ${pieces().length - before_ramp} pieces more`);
+expect(
+    pieces().length > before_ramp && park.cash()! < cash,
+    `a ramp, paid for, not ${pieces().length - before_ramp} pieces more`,
+);
 build.stop();
 await frames(5);
 await screenshot("pool_raised_stairs");
@@ -564,27 +694,42 @@ cash = park.cash()!;
 await open_editor();
 await ui.click("pool_panel/Pool_PathPanel");
 await until(() => ui.children("pool_panel/body")?.includes("paths") === true, 120, "the paths page");
-expect(must(ui.children("pool_panel/body/paths"), "pool_panel/body/paths shown").length === 9, `the path controls, not ${JSON.stringify(ui.children("pool_panel/body/paths"))}`);
+expect(
+    must(ui.children("pool_panel/body/paths"), "pool_panel/body/paths shown").length === 9,
+    `the path controls, not ${JSON.stringify(ui.children("pool_panel/body/paths"))}`,
+);
 // Above the paths tab, the pin (in) and the camera follow switch (off), as on the path panel.
-expect(ui.find("pool_panel/pin")?.on === true && ui.find("pool_panel/follow")?.on === false, "the pin in and the camera follow off");
+expect(
+    ui.find("pool_panel/pin")?.on === true && ui.find("pool_panel/follow")?.on === false,
+    "the pin in and the camera follow off",
+);
 await screenshot("pool_panel_paths");
 // Unpinned, the controls hide and the pointer lays paths by dragging.
 await ui.toggle("pool_panel/pin", false);
 expect(ui.find("pool_panel/body/paths") === undefined, "the controls hidden while unpinned");
 await pointer.drag(on_view(c0 + 6.5, r0 + 2.5), on_view(c0 + 8.5, r0 + 5.5), 6);
 await frames(3);
-expect(count("PathCorner") === 1 && count("PathStraight") === 5 && park.cash()! < cash, `an L of path, paid for, not ${count("PathCorner")} corners and ${count("PathStraight")} straights`);
+expect(
+    count("PathCorner") === 1 && count("PathStraight") === 5 && park.cash()! < cash,
+    `an L of path, paid for, not ${count("PathCorner")} corners and ${count("PathStraight")} straights`,
+);
 await ui.toggle("pool_panel/pin", true);
 await ui.click("pool_panel/body/paths/Path_UpwardSlope");
 await ui.click("pool_panel/body/paths/Path_Straight");
 await frames(3);
 const slope = pieces().find((o) => o.symbol === "PathSlope");
-expect(slope !== undefined && slope.col === c0 + 8 && slope.row === r0 + 6, `a slope on from the L's end, not ${JSON.stringify(slope)}`);
+expect(
+    slope !== undefined && slope.col === c0 + 8 && slope.row === r0 + 6,
+    `a slope on from the L's end, not ${JSON.stringify(slope)}`,
+);
 await ui.click("pool_panel/body/paths/Path_NoSlope");
 await ui.click("pool_panel/body/paths/Path_Straight");
 await frames(3);
 const above = pieces().find((o) => o.symbol.startsWith("Path") && o.col === c0 + 8 && o.row === r0 + 7);
-expect(above !== undefined && above.height! > slope!.height!, `a path past the slope's top, not ${JSON.stringify(above)}`);
+expect(
+    above !== undefined && above.height! > slope!.height!,
+    `a path past the slope's top, not ${JSON.stringify(above)}`,
+);
 await screenshot("pool_paths_trail");
 await ui.click("pool_panel/body/paths/PathEditor_Delete");
 await frames(3);
@@ -607,23 +752,43 @@ await ui.click("pool_panel/body/paths/Path_Straight");
 await frames(10);
 // The view's height keeps to what is under it; along the ground it holds still.
 const still = camera.view().target;
-expect(still[0] === view_before[0] && still[2] === view_before[2], `the camera kept still while not following, not from ${view_before} to ${still}`);
+expect(
+    still[0] === view_before[0] && still[2] === view_before[2],
+    `the camera kept still while not following, not from ${view_before} to ${still}`,
+);
 await ui.toggle("pool_panel/follow", true);
 await ui.click("pool_panel/body/paths/Path_DownwardSlope");
 await ui.click("pool_panel/body/paths/Path_Straight");
 await ui.click("pool_panel/body/paths/Path_NoSlope");
 await ui.click("pool_panel/body/paths/Path_Straight");
 await frames(60);
-const trail = [4, 5, 6].map((row) => pieces().find((o) => o.symbol.startsWith("Path") && o.col === c0 + 1 && o.row === r0 + row));
+const trail = [4, 5, 6].map((row) =>
+    pieces().find((o) => o.symbol.startsWith("Path") && o.col === c0 + 1 && o.row === r0 + row),
+);
 log("trail from the edge", JSON.stringify(trail.map((o) => o && [o.symbol, o.height])));
-expect(trail.every((o) => o !== undefined), `three pieces out from the edge, not ${JSON.stringify(trail)}`);
-expect(trail[0]!.height === level + 3 && trail[1]!.symbol === "PathSlope" && trail[1]!.height === level + 2 && trail[2]!.height === level + 2, `level with the paving, then down a slope to a flat piece, not ${JSON.stringify(trail)}`);
+expect(
+    trail.every((o) => o !== undefined),
+    `three pieces out from the edge, not ${JSON.stringify(trail)}`,
+);
+expect(
+    trail[0]!.height === level + 3 &&
+        trail[1]!.symbol === "PathSlope" &&
+        trail[1]!.height === level + 2 &&
+        trail[2]!.height === level + 2,
+    `level with the paving, then down a slope to a flat piece, not ${JSON.stringify(trail)}`,
+);
 const view_after = camera.view().target;
-expect(Math.hypot(view_after[0] - view_before[0], view_after[2] - view_before[2]) > 1, `the camera following the trail, from ${view_before} to ${view_after}`);
+expect(
+    Math.hypot(view_after[0] - view_before[0], view_after[2] - view_before[2]) > 1,
+    `the camera following the trail, from ${view_before} to ${view_after}`,
+);
 await screenshot("pool_paths_from_edge");
 // Unpinned again, the pointer lays by dragging and the controls go.
 await ui.toggle("pool_panel/pin", false);
-expect(ui.find("pool_panel/body/paths") === undefined && ui.find("pool_panel/follow") !== undefined, "back to the pointer, the switches kept");
+expect(
+    ui.find("pool_panel/body/paths") === undefined && ui.find("pool_panel/follow") !== undefined,
+    "back to the pointer, the switches kept",
+);
 await ui.toggle("pool_panel/pin", true);
 await ui.toggle("pool_panel/follow", false);
 build.stop();
@@ -639,8 +804,7 @@ const shift_ground = [ground_at(c0 + 2, r0 + 6), ground_at(c0 + 3, r0 + 6)];
 pointer.move(...lift);
 await frames(3);
 pointer.shift(true);
-for (let i = 1; i <= 6; ++i)
-{
+for (let i = 1; i <= 6; ++i) {
     pointer.move(lift[0], lift[1] - i * 0.015);
     await frames(1);
 }
@@ -653,8 +817,14 @@ pointer.release();
 pointer.shift(false);
 await frames(3);
 const lifted = pieces().filter((o) => o.symbol === "SolidTop" && o.row === r0 + 6);
-expect(lifted.length === 2 && lifted.every((o) => o.height !== null && o.height >= level + 2), `two squares raised with Shift, not ${JSON.stringify(lifted)} over ${level}`);
-expect(ground_at(c0 + 2, r0 + 6) === shift_ground[0] && ground_at(c0 + 3, r0 + 6) === shift_ground[1], `the land under them left as it was, ${shift_ground}, not ${ground_at(c0 + 2, r0 + 6)} ${ground_at(c0 + 3, r0 + 6)}`);
+expect(
+    lifted.length === 2 && lifted.every((o) => o.height !== null && o.height >= level + 2),
+    `two squares raised with Shift, not ${JSON.stringify(lifted)} over ${level}`,
+);
+expect(
+    ground_at(c0 + 2, r0 + 6) === shift_ground[0] && ground_at(c0 + 3, r0 + 6) === shift_ground[1],
+    `the land under them left as it was, ${shift_ground}, not ${ground_at(c0 + 2, r0 + 6)} ${ground_at(c0 + 3, r0 + 6)}`,
+);
 build.stop();
 camera.look({ col: c0 + 3, row: r0 + 6.5 }, { col: c0 + 3, row: r0 + 11, up: 4 });
 await frames(10);
@@ -681,11 +851,29 @@ await pointer.drag(on_view(c0 + 2.5, r0 + 1.5), on_view(c0 + 2.5, r0 + 3.5), 6);
 await frames(3);
 await ui.click("pool_panel/body/editor/Pool_Height");
 build.stop();
-const stacked = (col: number, row: number) => pieces().filter((o) => o.col === col && o.row === row && (o.symbol === "SolidTop" || o.symbol === "Base")).map((o) => o.height).sort((a, b) => a! - b!);
-log("stacked at the middle", JSON.stringify(stacked(c0 + 2, r0 + 2)), "corner", JSON.stringify(stacked(c0 + 1, r0 + 1)));
-expect(JSON.stringify(stacked(c0 + 1, r0 + 1)) === JSON.stringify([level + 3, top]), `a paved square over a paved square, not ${JSON.stringify(stacked(c0 + 1, r0 + 1))}`);
-expect(JSON.stringify(stacked(c0 + 2, r0 + 2)) === JSON.stringify([level + 3, top - 2]), `water over a raised paved square, not ${JSON.stringify(stacked(c0 + 2, r0 + 2))}`);
-expect(ground_at(c0 + 2, r0 + 2) === ground_before, `the land under both left as it was, not ${ground_at(c0 + 2, r0 + 2)}`);
+const stacked = (col: number, row: number) =>
+    pieces()
+        .filter((o) => o.col === col && o.row === row && (o.symbol === "SolidTop" || o.symbol === "Base"))
+        .map((o) => o.height)
+        .sort((a, b) => a! - b!);
+log(
+    "stacked at the middle",
+    JSON.stringify(stacked(c0 + 2, r0 + 2)),
+    "corner",
+    JSON.stringify(stacked(c0 + 1, r0 + 1)),
+);
+expect(
+    JSON.stringify(stacked(c0 + 1, r0 + 1)) === JSON.stringify([level + 3, top]),
+    `a paved square over a paved square, not ${JSON.stringify(stacked(c0 + 1, r0 + 1))}`,
+);
+expect(
+    JSON.stringify(stacked(c0 + 2, r0 + 2)) === JSON.stringify([level + 3, top - 2]),
+    `water over a raised paved square, not ${JSON.stringify(stacked(c0 + 2, r0 + 2))}`,
+);
+expect(
+    ground_at(c0 + 2, r0 + 2) === ground_before,
+    `the land under both left as it was, not ${ground_at(c0 + 2, r0 + 2)}`,
+);
 camera.look({ col: c0 + 2.5, row: r0 + 2.5, up: 5 }, { col: c0 + 9, row: r0 + 9, up: 9 });
 await frames(10);
 await screenshot("pool_stacked");
@@ -696,8 +884,7 @@ await screenshot("pool_stacked");
 let tall: { col: number; row: number } | undefined;
 for (let r = 1; r < height - 16 && !tall; r += 2)
     for (let c = 1; c < width - 12 && !tall; c += 2)
-        if ((c > c0 + 12 || c + 12 < c0 || r > r0 + 16 || r + 16 < r0) && clear(c, r))
-            tall = { col: c, row: r };
+        if ((c > c0 + 12 || c + 12 < c0 || r > r0 + 16 || r + 16 < r0) && clear(c, r)) tall = { col: c, row: r };
 expect(tall !== undefined, "room for a tall pool path");
 const tc = tall!.col;
 const tr = tall!.row;
@@ -722,30 +909,48 @@ pointer.move(...on_view(tc + 1.5, tr + 1.9));
 await frames(3);
 const hover = build.pooling()!;
 log("hovered at the edge", JSON.stringify(hover));
-expect(hover.ghost === "PathStraight" && hover.ghostAt?.col === tc + 1 && hover.ghostAt?.row === tr + 2 && hover.ghostAt?.height === deck && hover.arrow, `the first piece's ghost and arrow out from the edge, not ${JSON.stringify(hover)}`);
+expect(
+    hover.ghost === "PathStraight" &&
+        hover.ghostAt?.col === tc + 1 &&
+        hover.ghostAt?.row === tr + 2 &&
+        hover.ghostAt?.height === deck &&
+        hover.arrow,
+    `the first piece's ghost and arrow out from the edge, not ${JSON.stringify(hover)}`,
+);
 await pointer.click(...on_view(tc + 1.5, tr + 1.9));
 await frames(2);
 await ui.click("pool_panel/body/paths/Path_DownwardSlope");
 await frames(2);
 const next = build.pooling()!;
-expect(next.ghost === "PathSlope" && next.ghostAt?.row === tr + 2 && next.ghostAt?.height === deck - 1 && next.arrow, `a slope's ghost and arrow while pinned, not ${JSON.stringify(next)}`);
+expect(
+    next.ghost === "PathSlope" && next.ghostAt?.row === tr + 2 && next.ghostAt?.height === deck - 1 && next.arrow,
+    `a slope's ghost and arrow while pinned, not ${JSON.stringify(next)}`,
+);
 await screenshot("pool_paths_ghost");
 const slopes = 6;
-for (let i = 0; i < slopes; ++i)
-    await ui.click("pool_panel/body/paths/Path_Straight");
+for (let i = 0; i < slopes; ++i) await ui.click("pool_panel/body/paths/Path_Straight");
 await frames(5);
 build.stop();
-await until(() => map.supports().some((s) => s.col === tc + 1 && s.row === tr + 2 + slopes - 1), 120, "supports under the tall path");
+await until(
+    () => map.supports().some((s) => s.col === tc + 1 && s.row === tr + 2 + slopes - 1),
+    120,
+    "supports under the tall path",
+);
 const laid = pieces_at(tc + 1, tr + 2, slopes);
 log("tall path", JSON.stringify(laid.map((o) => o && [o.symbol, o.height])));
-expect(laid.every((o, i) => o?.symbol === "PathSlope" && o.height === deck - 1 - i), `${slopes} slopes down from the paving, not ${JSON.stringify(laid)}`);
-for (let i = 0; i < slopes; ++i)
-{
+expect(
+    laid.every((o, i) => o?.symbol === "PathSlope" && o.height === deck - 1 - i),
+    `${slopes} slopes down from the paving, not ${JSON.stringify(laid)}`,
+);
+for (let i = 0; i < slopes; ++i) {
     const row = tr + 2 + i;
     const posts = map.objects().filter((o) => o.overlay !== kPool && o.col === tc + 1 && o.row === row);
     const ground = Math.min(...map.tile(tc + 1, row)!.corners);
     const lowest = Math.min(...posts.map((o) => o.height ?? Infinity));
-    expect(posts.length > 0 && posts.every((o) => /^DPPSupport/.test(o.symbol)), `the pool paths' posts under the slope at row ${i}, not ${JSON.stringify(posts.map((o) => o.symbol))}`);
+    expect(
+        posts.length > 0 && posts.every((o) => /^DPPSupport/.test(o.symbol)),
+        `the pool paths' posts under the slope at row ${i}, not ${JSON.stringify(posts.map((o) => o.symbol))}`,
+    );
     expect(lowest <= Math.ceil(ground), `the column at row ${i} reaching the ground at ${ground}, not from ${lowest}`);
 }
 camera.look({ col: tc + 1.5, row: tr + 5, up: 4 }, { col: tc + 12, row: tr + 5, up: 6 });
@@ -753,5 +958,9 @@ await frames(10);
 await screenshot("pool_path_tall");
 
 function pieces_at(col: number, row: number, n: number) {
-    return Array.from({ length: n }, (_, i) => map.objects().find((o) => o.overlay === kPool && o.col === col && o.row === row + i && o.symbol.startsWith("Path")));
+    return Array.from({ length: n }, (_, i) =>
+        map
+            .objects()
+            .find((o) => o.overlay === kPool && o.col === col && o.row === row + i && o.symbol.startsWith("Path")),
+    );
 }

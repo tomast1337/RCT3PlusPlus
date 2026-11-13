@@ -38,7 +38,11 @@ const runFrames = 2400;
 const dropped = 1200;
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "the tool row and the build lists");
+await until(
+    () => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined,
+    1200,
+    "the tool row and the build lists",
+);
 // Paused while building: the rides stand still, so each frame is quicker to work out.
 await ui.click("bar/Top_Pause");
 const { width, height } = map.size();
@@ -70,17 +74,26 @@ interface Slot {
     lane: number;
 }
 // Each ride takes its theme's fence, the plain scaffold for the plain theme.
-const themeFence = (theme: string) => build.flatRides()!.find((i) => i.overlay.toLowerCase().includes(`/${theme}/`))?.fence.toLowerCase();
+const themeFence = (theme: string) =>
+    build
+        .flatRides()!
+        .find((i) => i.overlay.toLowerCase().includes(`/${theme}/`))
+        ?.fence.toLowerCase();
 log("fences", JSON.stringify([...new Set(build.flatRides()!.map((i) => i.fence))]));
 expect(themeFence("vanilla") === "van_scaffold2", "the plain theme's rides fenced with the scaffold");
-expect(themeFence("spooky") === "spiderwebfence" && themeFence("wildwest") === "corralbarbedwirefence", "themed rides fenced with their theme's fence");
+expect(
+    themeFence("spooky") === "spiderwebfence" && themeFence("wildwest") === "corralbarbedwirefence",
+    "themed rides fenced with their theme's fence",
+);
 // Rides that stand on water need a lake, which this park has none of.
-const items = build.flatRides()!.filter((i) => !i.water).sort((a, b) => b.length - a.length || b.width - a.width);
+const items = build
+    .flatRides()!
+    .filter((i) => !i.water)
+    .sort((a, b) => b.length - a.length || b.width - a.width);
 const slots: Slot[] = [];
 const roads: number[] = [];
 const crossings: number[] = [];
-for (let c = crossEvery; c < lastCol - 1; c += crossEvery)
-    crossings.push(c);
+for (let c = crossEvery; c < lastCol - 1; c += crossEvery) crossings.push(c);
 {
     let col = 2;
     let laneTop = topRoad + 1;
@@ -88,8 +101,7 @@ for (let c = crossEvery; c < lastCol - 1; c += crossEvery)
     for (const ride of items) {
         // The slot takes the ride, its exit and the path from it; it moves past a crossing in its way.
         const blocked = crossings.find((c) => c >= col && c <= col + ride.width + 2);
-        if (blocked !== undefined)
-            col = blocked + 2;
+        if (blocked !== undefined) col = blocked + 2;
         if (laneLength === 0 || col + ride.width + slotGap > lastCol) {
             if (laneLength > 0) {
                 laneTop += laneLength + toRoad;
@@ -98,8 +110,7 @@ for (let c = crossEvery; c < lastCol - 1; c += crossEvery)
             col = 2;
             laneLength = ride.length;
             const first = crossings.find((c) => c >= col && c <= col + ride.width + 2);
-            if (first !== undefined)
-                col = first + 2;
+            if (first !== undefined) col = first + 2;
         }
         slots.push({ ride, col, lane: roads.length });
         col += ride.width + slotGap;
@@ -107,7 +118,10 @@ for (let c = crossEvery; c < lastCol - 1; c += crossEvery)
     roads.push(laneTop + laneLength + toRoad - 1);
 }
 log("rides", items.length, "lanes", roads.length, "roads at", JSON.stringify(roads));
-expect(roads[roads.length - 1] < height - 1, `the lanes to fit on the map (last road at row ${roads[roads.length - 1]})`);
+expect(
+    roads[roads.length - 1] < height - 1,
+    `the lanes to fit on the map (last road at row ${roads[roads.length - 1]})`,
+);
 
 // Paths and queues.
 await ui.click("tools/Paths/Obj_Paths");
@@ -124,7 +138,10 @@ const pathPage = await styles("paths");
 const queuePage = await styles("queues");
 const queueStyle = queuePage.find((n) => !pathPage.includes(n));
 const pathStyle = pathPage.find((n) => !queuePage.includes(n));
-expect(queueStyle !== undefined && pathStyle !== undefined, `a path style and a queue style (paths ${pathPage}, queues ${queuePage})`);
+expect(
+    queueStyle !== undefined && pathStyle !== undefined,
+    `a path style and a queue style (paths ${pathPage}, queues ${queuePage})`,
+);
 let queueNow = true;
 /** Picks the queue style, or the path style. */
 async function choose(queue: boolean): Promise<void> {
@@ -134,8 +151,7 @@ async function choose(queue: boolean): Promise<void> {
         await until(() => ui.find("footpaths/route") !== undefined, 120, "the path panel again");
         await ui.toggle("footpaths/follow", false);
     }
-    if (queue === queueNow)
-        return;
+    if (queue === queueNow) return;
     await ui.click(`footpaths/${queue ? "queues" : "paths"}`);
     const style = `footpaths/body/${queue ? queueStyle : pathStyle}`;
     await until(() => ui.find(style) !== undefined, 60, style);
@@ -150,7 +166,11 @@ const laid = () => new Set(map.paths().map((p) => `${p.col},${p.row}`));
 
 /** Lays a path from tile `a` to tile `b`, with the camera on the middle of them. */
 async function route(a: [number, number], b: [number, number]): Promise<void> {
-    await look((a[0] + b[0]) >> 1, (a[1] + b[1]) >> 1, reach(Math.abs(a[0] - b[0]) / 2 + 1, Math.abs(a[1] - b[1]) / 2 + 1));
+    await look(
+        (a[0] + b[0]) >> 1,
+        (a[1] + b[1]) >> 1,
+        reach(Math.abs(a[0] - b[0]) / 2 + 1, Math.abs(a[1] - b[1]) / 2 + 1),
+    );
     await ui.toggle("footpaths/route", false);
     await pointer.click(...on_view(a[0], a[1]));
     await ui.toggle("footpaths/route", true);
@@ -170,22 +190,16 @@ async function road(row: number): Promise<void> {
 
 // From the entrance path to the top road, the roads, and a road down their west end joining them.
 await route([gate.col, gate.row + 1], [gate.col, topRoad - 1]);
-for (const row of [topRoad, ...roads])
-    await road(row);
+for (const row of [topRoad, ...roads]) await road(row);
 for (const [i, row] of roads.entries())
-    for (const c of [1, ...crossings])
-        await route([c, (i === 0 ? topRoad : roads[i - 1]) + 1], [c, row - 1]);
+    for (const c of [1, ...crossings]) await route([c, (i === 0 ? topRoad : roads[i - 1]) + 1], [c, row - 1]);
 const roadGaps: string[] = [];
 const paths = laid();
 const has = (col: number, row: number) => paths.has(`${col},${row}`);
 for (const row of [topRoad, ...roads])
-    for (let c = 1; c <= lastCol; ++c)
-        if (!has(c, row))
-            roadGaps.push(`${c},${row}`);
+    for (let c = 1; c <= lastCol; ++c) if (!has(c, row)) roadGaps.push(`${c},${row}`);
 for (const c of [1, ...crossings])
-    for (let r = topRoad; r <= roads[roads.length - 1]; ++r)
-        if (!has(c, r))
-            roadGaps.push(`${c},${r}`);
+    for (let r = topRoad; r <= roads[roads.length - 1]; ++r) if (!has(c, r)) roadGaps.push(`${c},${r}`);
 expect(roadGaps.length === 0, `every road tile laid; missing ${roadGaps.slice(0, 20).join(" ")}`);
 await look(width >> 1, (topRoad + roads[roads.length - 1]) >> 1, 300);
 await screenshot("roads");
@@ -238,7 +252,10 @@ for (const slot of slots) {
     }
     // A ride is centred on the tile pointed at; its entrance goes under its first column, its exit by its
     // last row on the east.
-    const placed = (await place("ride", col + ((ride.width - 1) >> 1), first + ((ride.length - 1) >> 1))) && (await place("entrance", col, last + 1)) && (await place("exit", right + 1, last));
+    const placed =
+        (await place("ride", col + ((ride.width - 1) >> 1), first + ((ride.length - 1) >> 1))) &&
+        (await place("entrance", col, last + 1)) &&
+        (await place("exit", right + 1, last));
     if (!placed) {
         build.stop();
         await frames(1);
@@ -262,27 +279,36 @@ for (const queue of [true, false]) {
                 trouble.push("no queue laid in front of the entrance");
         } else {
             await route([right + 2, last], [right + 2, road - 1]);
-            if (!laid().has(`${right + 2},${road - 1}`))
-                trouble.push("no path laid from the exit");
+            if (!laid().has(`${right + 2},${road - 1}`)) trouble.push("no path laid from the exit");
         }
     }
 }
 await screenshot("rides");
 
 // Rides are built closed: each is tested a while, then opened, as a player would.
-for (const [i] of rides.list().entries())
-    rides.setState(i, "testing");
+for (const [i] of rides.list().entries()) rides.setState(i, "testing");
 await ui.click("bar/Top_SuperFastForward");
 await frames(120);
-for (const [i] of rides.list().entries())
-    rides.setState(i, "open");
-log("dropped", park.dropParties(dropped).reduce((n, p) => n + p.guests, 0), "guests across the paths");
+for (const [i] of rides.list().entries()) rides.setState(i, "open");
+log(
+    "dropped",
+    park.dropParties(dropped).reduce((n, p) => n + p.guests, 0),
+    "guests across the paths",
+);
 
 // Run the park, until every ride has carried someone.
 for (let i = 0; i < runFrames; i += 60) {
     await frames(60);
     if (i % 600 === 0)
-        log("running", i, "frames;", rides.list().filter((r) => (r.riders ?? 0) > 0).length, "rides carrying riders,", park.guests(), "guests");
+        log(
+            "running",
+            i,
+            "frames;",
+            rides.list().filter((r) => (r.riders ?? 0) > 0).length,
+            "rides carrying riders,",
+            park.guests(),
+            "guests",
+        );
     if (rides.list().every((r) => (r.customers ?? 0) > 0)) {
         log("every ride carried someone by frame", i + 60);
         break;
@@ -295,17 +321,20 @@ await screenshot("gate");
 const all = rides.list();
 const fenced = all.filter((r) => r.flat && /themed[\\/]spooky/i.test(r.overlay));
 log("spooky fences", JSON.stringify(fenced.map((r) => r.fence)));
-expect(fenced.length > 0 && fenced.every((r) => r.fence.toLowerCase() === "spiderwebfence"), "the spooky rides placed with spider web fences");
+expect(
+    fenced.length > 0 && fenced.every((r) => r.fence.toLowerCase() === "spiderwebfence"),
+    "the spooky rides placed with spider web fences",
+);
 for (const o of outcomes) {
     const { ride } = o.slot;
     const info = all.find((r) => r.overlay === ride.overlay && r.symbol.split(":")[0] === ride.symbol);
     if (o.trouble.length === 0 && info) {
-        if (!info.entrance || !info.exit)
-            o.trouble.push("no entrance or exit recorded");
-        if (!info.joined)
-            o.trouble.push("never joined the paths (no timing from its model?)");
+        if (!info.entrance || !info.exit) o.trouble.push("no entrance or exit recorded");
+        if (!info.joined) o.trouble.push("never joined the paths (no timing from its model?)");
         else if ((info.customers ?? 0) === 0)
-            o.trouble.push(`nobody rode it (queue ${info.queue}, line ${info.queueLine} tiles, ${info.onPaths ? "on" : "OFF"} the paths, ${info.open ? "open" : "CLOSED"}, price ${info.price}, cycle ${info.cycleSeconds?.toFixed(1)} s, ratings ${info.ratings?.map((x) => x.toFixed(2))})`);
+            o.trouble.push(
+                `nobody rode it (queue ${info.queue}, line ${info.queueLine} tiles, ${info.onPaths ? "on" : "OFF"} the paths, ${info.open ? "open" : "CLOSED"}, price ${info.price}, cycle ${info.cycleSeconds?.toFixed(1)} s, ratings ${info.ratings?.map((x) => x.toFixed(2))})`,
+            );
     } else if (o.trouble.length === 0) {
         o.trouble.push("placed but not in the park's rides");
     }
@@ -313,7 +342,12 @@ for (const o of outcomes) {
 const bad = outcomes.filter((o) => o.trouble.length > 0);
 log("guests carried by ride:", all.map((r) => `${r.symbol}=${r.customers ?? "-"}`).join(" "));
 for (const o of bad)
-    log("TROUBLE", `${o.slot.ride.overlay}/${o.slot.ride.symbol}`, `${o.slot.ride.width}x${o.slot.ride.length}:`, o.trouble.join("; "));
+    log(
+        "TROUBLE",
+        `${o.slot.ride.overlay}/${o.slot.ride.symbol}`,
+        `${o.slot.ride.width}x${o.slot.ride.length}:`,
+        o.trouble.join("; "),
+    );
 log(`${outcomes.length - bad.length} of ${outcomes.length} flat rides placed, joined and carried guests`);
 await look(width >> 1, (topRoad + roads[roads.length - 1]) >> 1, 300);
 await screenshot("park");

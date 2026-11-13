@@ -26,8 +26,7 @@ await frames(30);
 
 async function close(title: string): Promise<void> {
     const button = under(title, "close");
-    if (button !== undefined)
-        await ui.click(button);
+    if (button !== undefined) await ui.click(button);
     await frames(5);
 }
 
@@ -47,7 +46,10 @@ await close("PID_Title");
 await management("Man_Finances", "FinancialManagement_Title", "CashGraphTabIcon");
 expect(under("FinancialManagement_Title", "graph") !== undefined, "the finances' graph");
 // Unticked, a series stays unticked when the page comes again.
-const tick = must(under("FinancialManagement_Title", "Graph_WeeklyProfit_tick"), "Graph_WeeklyProfit_tick under FinancialManagement_Title");
+const tick = must(
+    under("FinancialManagement_Title", "Graph_WeeklyProfit_tick"),
+    "Graph_WeeklyProfit_tick under FinancialManagement_Title",
+);
 expect(ui.find(tick)?.on === true, "every series ticked at first");
 await ui.click(tick);
 await frames(90);
@@ -67,7 +69,11 @@ await files_menu("File_LoadGame");
 // Loading asks first whether to save; the park was saved just now.
 await until(() => ui.find("load_question") !== undefined, 120, "the question before loading");
 await ui.click("load_question/content/answer1");
-await until(() => ui.find("park_files/content/list/view/content/row0") !== undefined, 120, "the save in the load window");
+await until(
+    () => ui.find("park_files/content/list/view/content/row0") !== undefined,
+    120,
+    "the save in the load window",
+);
 await ui.click("park_files/content/list/view/content/row0");
 await ui.click("park_files/content/open");
 await frames(5);
@@ -94,21 +100,17 @@ await ui.click("bar/Top_Play");
 const list = rides.list();
 let shown = false;
 for (let i = 0; i < list.length && !shown; ++i) {
-    if (list[i].flat || list[i].demolished)
-        continue;
+    if (list[i].flat || list[i].demolished) continue;
     rides.show(i);
     await frames(5);
-    if (ui.find("info/Attraction_Graphs") === undefined)
-        continue;
+    if (ui.find("info/Attraction_Graphs") === undefined) continue;
     await ui.click("info/Attraction_Graphs");
     await frames(5);
-    if (under("info", "graph") === undefined)
-        continue;
+    if (under("info", "graph") === undefined) continue;
     // Every series on.
     for (const key of ["Graph_Altitude", "Graph_VerticalG", "Graph_LateralG"]) {
         const tick = under("info", key);
-        if (tick !== undefined)
-            await ui.click(tick);
+        if (tick !== undefined) await ui.click(tick);
     }
     await frames(5);
     log("ride graphs:", list[i].name);

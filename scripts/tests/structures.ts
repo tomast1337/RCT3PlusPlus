@@ -15,7 +15,11 @@ function count(symbol: string): number {
 }
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "the build lists");
+await until(
+    () => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined,
+    1200,
+    "the build lists",
+);
 const gate = map.paths().reduce((a, b) => (b.row > a.row ? b : a));
 const col = gate.col + 3;
 const row = gate.row - 6;
@@ -74,7 +78,10 @@ pointer.move(at.x, at.y);
 await frames(3);
 const placing = structures.placing()!;
 log("placing", JSON.stringify(placing));
-expect(placing.items === 2 && placing.turns === 1, `both items, turned once (${placing.items} items, ${placing.turns} turns)`);
+expect(
+    placing.items === 2 && placing.turns === 1,
+    `both items, turned once (${placing.items} items, ${placing.turns} turns)`,
+);
 expect(placing.problem === "none" && placing.affordable, `room for it, not ${placing.problem}`);
 expect(placing.cost > 0, "a price for the two items");
 const cash = park.cash();
@@ -86,8 +93,13 @@ for (let i = 0; i < symbols.length; ++i)
 if (cash !== undefined)
     expect(park.cash() === cash - placing.cost, `${placing.cost} paid, not ${cash - (park.cash() ?? 0)}`);
 // Turned a quarter, the two items stand one above the other along the rows, on the tile pointed at and next to it.
-const built = map.objects().filter((o) => symbols.includes(o.symbol) && Math.abs(o.col - site.col) <= 2 && Math.abs(o.row - site.row) <= 2);
-expect(built.length === 2 && built[0].col === built[1].col && Math.abs(built[0].row - built[1].row) === 1, `the two turned along the rows: ${JSON.stringify(built)}`);
+const built = map
+    .objects()
+    .filter((o) => symbols.includes(o.symbol) && Math.abs(o.col - site.col) <= 2 && Math.abs(o.row - site.row) <= 2);
+expect(
+    built.length === 2 && built[0].col === built[1].col && Math.abs(built[0].row - built[1].row) === 1,
+    `the two turned along the rows: ${JSON.stringify(built)}`,
+);
 expect(structures.placing() !== undefined, "the tool still out for another");
 pointer.move(at.x + 40, at.y);
 await frames(3);

@@ -16,7 +16,10 @@ const coaster = rides.list().findIndex((r) => r.symbol === "SuspendedSwinging:tr
 expect(coaster >= 0, "the suspended coaster in the park");
 const info = rides.list()[coaster];
 log("coaster", info.trains, "trains of", info.passengerCars, "cars, seats", info.capacity);
-expect((info.trains ?? 0) >= 2 && (info.passengerCars ?? 0) >= 2 && info.open === true, "an open coaster with two trains of several cars");
+expect(
+    (info.trains ?? 0) >= 2 && (info.passengerCars ?? 0) >= 2 && info.open === true,
+    "an open coaster with two trains of several cars",
+);
 
 const kStep = 0.25; // Park seconds between looks
 const kOffWithin = 0.5; // Park seconds a stopped train's riders may take to be off
@@ -38,11 +41,12 @@ for (let k = 0; k < 300 / kStep && endOff < 3; ++k) {
             stopped[t] = { since: k * kStep, riders: was.riders };
         // Off, though those boarding next may already be sitting down, one at a time.
         if (stopped[t] !== undefined && train.riders < stopped[t]!.riders) {
-            log(`train ${t} riders off ${(k * kStep - stopped[t]!.since).toFixed(2)} s after stopping`, train.held !== null ? `held ${train.front.toFixed(1)} m along` : "at the end");
-            if (train.held !== null)
-                ++heldOff;
-            else
-                ++endOff;
+            log(
+                `train ${t} riders off ${(k * kStep - stopped[t]!.since).toFixed(2)} s after stopping`,
+                train.held !== null ? `held ${train.front.toFixed(1)} m along` : "at the end",
+            );
+            if (train.held !== null) ++heldOff;
+            else ++endOff;
             if (!pictured) {
                 const cars = rides.list()[coaster].cars!;
                 const per = rides.list()[coaster].carsPerTrain!;
@@ -54,9 +58,11 @@ for (let k = 0; k < 300 / kStep && endOff < 3; ++k) {
             }
             stopped[t] = undefined;
         }
-        expect(stopped[t] === undefined || k * kStep - stopped[t]!.since <= kOffWithin, `train ${t}'s riders off within ${kOffWithin} s of it stopping, not ${JSON.stringify(train)}`);
-        if (train.station === 0 && train.riders > was.riders)
-            ++boarded;
+        expect(
+            stopped[t] === undefined || k * kStep - stopped[t]!.since <= kOffWithin,
+            `train ${t}'s riders off within ${kOffWithin} s of it stopping, not ${JSON.stringify(train)}`,
+        );
+        if (train.station === 0 && train.riders > was.riders) ++boarded;
     }
     last = now;
 }

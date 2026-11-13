@@ -36,8 +36,7 @@ const { width, height } = map.size();
 const c0 = (width - span) >> 1;
 const r0 = (height - span) >> 1;
 for (let r = r0; r <= r0 + span; ++r)
-    for (let c = c0; c <= c0 + span; ++c)
-        expect(map.tile(c, r)!.owned, `tile ${c}, ${r} to be the park's`);
+    for (let c = c0; c <= c0 + span; ++c) expect(map.tile(c, r)!.owned, `tile ${c}, ${r} to be the park's`);
 
 const mid = { col: c0 + span / 2 + 0.5, row: r0 + span / 2 + 0.5 };
 camera.look(mid, { col: mid.col, row: mid.row - 14, up: 70 });
@@ -62,10 +61,8 @@ async function route(a: [number, number], b: [number, number]): Promise<void> {
 }
 
 // Across first, then down between them, so each line starts on bare ground.
-for (let i = 0; i < lines; ++i)
-    await route([c0, r0 + i * gap], [c0 + span, r0 + i * gap]);
-for (let i = 0; i < lines; ++i)
-    await route([c0 + i * gap, r0 + 1], [c0 + i * gap, r0 + span - 1]);
+for (let i = 0; i < lines; ++i) await route([c0, r0 + i * gap], [c0 + span, r0 + i * gap]);
+for (let i = 0; i < lines; ++i) await route([c0 + i * gap, r0 + 1], [c0 + i * gap, r0 + span - 1]);
 await ui.toggle("footpaths/route", false);
 await frames(5);
 await screenshot("paths");
@@ -74,13 +71,15 @@ const laid = new Set(map.paths().map((p) => `${p.col},${p.row}`));
 const missing: string[] = [];
 for (let r = r0; r <= r0 + span; ++r)
     for (let c = c0; c <= c0 + span; ++c)
-        if (((r - r0) % gap === 0 || (c - c0) % gap === 0) && !laid.has(`${c},${r}`))
-            missing.push(`${c},${r}`);
+        if (((r - r0) % gap === 0 || (c - c0) % gap === 0) && !laid.has(`${c},${r}`)) missing.push(`${c},${r}`);
 const extra = map.paths().length - before - (2 * lines * (span + 1) - lines * lines);
 log("paths", map.paths().length, "missing", missing.length, "beyond the grid", extra);
 expect(missing.length === 0, `a path on every grid tile; missing ${missing.join(" ")}`);
 expect(extra === 0, "no paths off the grid");
-expect(map.paths().every((p) => !p.raised), "every path on the ground");
+expect(
+    map.paths().every((p) => !p.raised),
+    "every path on the ground",
+);
 
 // The climb: a stroke east off the grid's second line sets the way, then the controls lay it piece by piece.
 const climb_row = r0 + gap;
@@ -89,8 +88,7 @@ await pointer.drag(on_view(c0 + span + 1, climb_row), on_view(c0 + span + 2, cli
 /** Picks the slope `control`, then lays `count` pieces straight on. */
 async function lay(control: string, count: number): Promise<void> {
     await ui.click(`footpaths/body/${control}`);
-    for (let i = 0; i < count; ++i)
-        await ui.click("footpaths/body/Path_Straight");
+    for (let i = 0; i < count; ++i) await ui.click("footpaths/body/Path_Straight");
 }
 await lay("Path_UpwardSlope", 1);
 await lay("Path_UpwardSteps", 1);
@@ -105,7 +103,16 @@ await screenshot("climb");
 
 const pieces = map.paths().slice(ground);
 const raised = pieces.filter((p) => p.raised);
-log("climb pieces", pieces.length, "raised", raised.length, "heights", JSON.stringify(raised.map((p) => p.height)), "top", top);
+log(
+    "climb pieces",
+    pieces.length,
+    "raised",
+    raised.length,
+    "heights",
+    JSON.stringify(raised.map((p) => p.height)),
+    "top",
+    top,
+);
 expect(pieces.length === 2 + 1 + 1 + 3 + 1 + 1 + 1, "every piece of the climb laid");
 expect(raised.length > 0 && top > 0, "the climb to leave the ground");
 expect(!pieces[pieces.length - 1].raised, "the climb to come back down to the ground");

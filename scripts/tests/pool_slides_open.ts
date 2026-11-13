@@ -16,7 +16,12 @@ park.setWeather("sunny");
 park.setTemperature(28);
 park.setTime(0.5);
 const kPool = "Pool/Default/Default_Stub";
-const kSteps: [number, number][] = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // By side, as the pools count them
+const kSteps: [number, number][] = [
+    [0, 1],
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+]; // By side, as the pools count them
 const pool_ride = (symbol: string) => /^(BodySlide|ProSlide|RingSlide|MasterBlaster|LazyRiver):/i.test(symbol);
 
 // 1. Each saved pool ride, closed and opened again, opens.
@@ -37,9 +42,21 @@ for (const slide of saved.filter((i) => !/LazyRiver/i.test(rides.list()[i].symbo
         log("not ridden, broken down:", info().name);
         continue;
     }
-    await until(() => people.list().some((p) => p.state === "riding" && p.ride === slide) && (info().trainsAt ?? []).some((t) => t.station === null && t.riders > 0), 6000, `a swimmer riding ${info().name}`);
-    const rider = must(people.list().find((p) => p.state === "riding" && p.ride === slide), "a rider on the slide");
-    camera.look({ col: rider.col!, row: rider.row!, up: rider.up! }, { col: rider.col! + 9, row: rider.row! + 9, up: rider.up! + 9 });
+    await until(
+        () =>
+            people.list().some((p) => p.state === "riding" && p.ride === slide) &&
+            (info().trainsAt ?? []).some((t) => t.station === null && t.riders > 0),
+        6000,
+        `a swimmer riding ${info().name}`,
+    );
+    const rider = must(
+        people.list().find((p) => p.state === "riding" && p.ride === slide),
+        "a rider on the slide",
+    );
+    camera.look(
+        { col: rider.col!, row: rider.row!, up: rider.up! },
+        { col: rider.col! + 9, row: rider.row! + 9, up: rider.up! + 9 },
+    );
     await frames(10);
     await screenshot(`pool_slides_open_riding_${slide}`);
 }
@@ -56,16 +73,17 @@ async function aim(goal: { col: number; row: number }): Promise<boolean> {
         pointer.move(...here);
         await frames(4);
         const g = build.construction()?.ghostAt;
-        if (!g)
-            return false;
-        if (g.col === goal.col && g.row === goal.row)
-            return true;
+        if (!g) return false;
+        if (g.col === goal.col && g.row === goal.row) return true;
         at = { col: at.col + goal.col - g.col, row: at.row + goal.row - g.row };
     }
     return false;
 }
 const pick = async () => {
-    expect(build.pick("tracks/TrackedRides/RingSlide/RingSlide", "RingSlide", "designs"), "a ring slide design to build");
+    expect(
+        build.pick("tracks/TrackedRides/RingSlide/RingSlide", "RingSlide", "designs"),
+        "a ring slide design to build",
+    );
     await until(() => ui.find("design_browser") !== undefined, 600, "the designs window");
     await frames(3);
     const row = build.construction()!.designs.findIndex((d) => d.includes("Undertow"));
@@ -99,8 +117,7 @@ if (spot && build.construction()!.refusal !== "") {
     await ui.click("design_placing/close");
     await frames(5);
     const rides_tab = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
-    if (!ui.find("tools/Rides/Obj_Pools"))
-        await ui.click(rides_tab);
+    if (!ui.find("tools/Rides/Obj_Pools")) await ui.click(rides_tab);
     await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
     await ui.click("tools/Rides/Obj_Pools");
     await until(() => ui.find("pool_panel/body/editor/Pool_PlaceWater") !== undefined, 120, "the pool panel");
@@ -144,24 +161,33 @@ await ui.click("pool_panel/body/paths/Path_NoSlope");
 let laid = false;
 for (const side of [deck.turn, (deck.turn + 2) % 4]) {
     const [dc, dr] = kSteps[side];
-    camera.look({ col: deck.col - 5 * dc, row: deck.row - 5 * dr }, { col: deck.col + 5 * dc + 2 * dr, row: deck.row + 5 * dr + 2 * dc, up: deck.height + 14 });
+    camera.look(
+        { col: deck.col - 5 * dc, row: deck.row - 5 * dr },
+        { col: deck.col + 5 * dc + 2 * dr, row: deck.row + 5 * dr + 2 * dc, up: deck.height + 14 },
+    );
     await frames(20);
     const at = map.screen(deck.col + 0.5 + 0.35 * dc, deck.row + 0.5 + 0.35 * dr, deck.height);
-    if (!at)
-        continue;
+    if (!at) continue;
     pointer.move(at.x, at.y);
     await frames(3);
     const g = build.pooling()?.ghostAt;
     log("side", side, "ghost", JSON.stringify(build.pooling()));
-    if (g?.col !== deck.col + dc || g?.row !== deck.row + dr || g?.height !== deck.height)
-        continue;
+    if (g?.col !== deck.col + dc || g?.row !== deck.row + dr || g?.height !== deck.height) continue;
     await pointer.click(at.x, at.y);
     await frames(3);
     await ui.click("pool_panel/body/paths/Path_Straight");
     await frames(5);
-    laid = map.objects().some((o) => o.overlay === kPool && o.symbol.startsWith("Path") && o.col === deck.col + dc && o.row === deck.row + dr && o.height === deck.height);
-    if (laid)
-        break;
+    laid = map
+        .objects()
+        .some(
+            (o) =>
+                o.overlay === kPool &&
+                o.symbol.startsWith("Path") &&
+                o.col === deck.col + dc &&
+                o.row === deck.row + dr &&
+                o.height === deck.height,
+        );
+    if (laid) break;
 }
 expect(laid, "a pool path laid off the new slide's platform at its deck");
 build.stop();

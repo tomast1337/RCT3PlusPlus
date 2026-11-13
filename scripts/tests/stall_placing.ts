@@ -11,9 +11,16 @@
 export {};
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined, 1200, "the build lists");
+await until(
+    () => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined,
+    1200,
+    "the build lists",
+);
 const plain = build.stalls()!.filter((s) => s.overlay === "Style/Vanilla/Style" && s.goods.length > 0);
-log("plain stalls", plain.map((s) => `${s.symbol} ${s.goods.map((g) => `${g.item} ${g.price}`).join(", ")}`).join("; "));
+log(
+    "plain stalls",
+    plain.map((s) => `${s.symbol} ${s.goods.map((g) => `${g.item} ${g.price}`).join(", ")}`).join("; "),
+);
 const kind = plain.find((s) => s.symbol.toLowerCase().includes("burger")) ?? plain[0];
 expect(kind !== undefined, "a plain stall that sells something");
 const paths = map.paths();
@@ -35,10 +42,17 @@ async function hover(col: number, row: number): Promise<{ x: number; y: number; 
 expect(build.pick(kind.overlay, kind.symbol), `${kind.symbol} picked`);
 await frames(2);
 expect(build.placing()?.flatten === "off", "the ground left as it is at first");
-for (const [tab, after] of [["SharpOff", "sharp"], ["SmoothOff", "smooth"], ["SmoothOn", "off"]]) {
+for (const [tab, after] of [
+    ["SharpOff", "sharp"],
+    ["SmoothOff", "smooth"],
+    ["SmoothOn", "off"],
+]) {
     await ui.click(`placing/TerrainFlattener_${tab}`);
     await frames(2);
-    expect(build.placing()?.flatten === after, `the ground levelled ${after} after ${tab}, not ${build.placing()?.flatten}`);
+    expect(
+        build.placing()?.flatten === after,
+        `the ground levelled ${after} after ${tab}, not ${build.placing()?.flatten}`,
+    );
 }
 // A quarter turn from where it starts faces it the way of falling columns, to the road west of it.
 await ui.click("placing/IconAttractionEditorRotate");
@@ -47,7 +61,10 @@ expect(onRoad.problem === "path", `the stall refused on the road, not ${onRoad.p
 const thumps = build.sounds().thumps;
 await pointer.click(onRoad.x, onRoad.y);
 await frames(2);
-expect(build.sounds().thumps === thumps && build.placing() !== undefined, "a click on the road building nothing, silent");
+expect(
+    build.sounds().thumps === thumps && build.placing() !== undefined,
+    "a click on the road building nothing, silent",
+);
 const grass = await hover(road!.col + 1, road!.row);
 expect(grass.problem === "none", `the stall placeable beside the road, not ${grass.problem}`);
 expect(build.placing()?.arrow === true, "an arrow on the side the stall serves from");
@@ -60,18 +77,34 @@ const placed = stalls.list().filter((s) => s.symbol === `${kind.symbol}:sta`);
 expect(placed.length === 1, `one ${kind.symbol} in the park, not ${placed.length}`);
 const stall = placed[0];
 log("placed", JSON.stringify(stall));
-expect(stall.site?.col === road!.col + 1 && stall.site?.row === road!.row && stall.site?.direction === 1, `it on the tile beside the road, facing it (${JSON.stringify(stall.site)})`);
+expect(
+    stall.site?.col === road!.col + 1 && stall.site?.row === road!.row && stall.site?.direction === 1,
+    `it on the tile beside the road, facing it (${JSON.stringify(stall.site)})`,
+);
 expect(stall.name === "%ME% 1", `it named after its kind, not ${stall.name}`);
 expect(!stall.open, "it built closed");
 expect(!stall.moving, "a stall whose model has no motion standing still");
-expect(JSON.stringify(stall.items.map((i) => ({ item: i.item, price: i.price }))) === JSON.stringify(kind.goods.map((g) => ({ item: `${g.item}:cid`, price: g.price }))), "it selling all its kind's goods at their prices");
+expect(
+    JSON.stringify(stall.items.map((i) => ({ item: i.item, price: i.price }))) ===
+        JSON.stringify(kind.goods.map((g) => ({ item: `${g.item}:cid`, price: g.price }))),
+    "it selling all its kind's goods at their prices",
+);
 // Burgers take extras: the stall offers each at the usual amount, ticked on none of its items yet.
-expect(stall.extras.length > 0 && stall.extras.every((e) => e.level === 2) && stall.items.every((i) => i.extras === 0), `it offering its items' extras, some of each, on none yet (${JSON.stringify(stall.extras)})`);
+expect(
+    stall.extras.length > 0 && stall.extras.every((e) => e.level === 2) && stall.items.every((i) => i.extras === 0),
+    `it offering its items' extras, some of each, on none yet (${JSON.stringify(stall.extras)})`,
+);
 expect(stall.shown && ui.find("info") !== undefined, "its window open");
 // The road runs past the tile it faces, so the park runs it at once, closed.
 await frames(2);
-const running = must(stalls.list().find((s) => s.symbol === `${kind.symbol}:sta`), "the stall the park runs");
-expect(running.joined && running.selling === false && running.price === kind.goods[0].price, `the park running it, closed, at its first item's price (${JSON.stringify(running)})`);
+const running = must(
+    stalls.list().find((s) => s.symbol === `${kind.symbol}:sta`),
+    "the stall the park runs",
+);
+expect(
+    running.joined && running.selling === false && running.price === kind.goods[0].price,
+    `the park running it, closed, at its first item's price (${JSON.stringify(running)})`,
+);
 
 // Its window's items page takes items off the menu and puts them back. Bare, it cannot open.
 const at = stalls.list().findIndex((s) => s.symbol === `${kind.symbol}:sta`);
@@ -92,7 +125,10 @@ const down = tick.bottom - tick.top;
 const bin: [number, number] = [pane.left + across / 2, pane.bottom - down / 2];
 const good = (i: number): [number, number] => [bin[0], bin[1] - down * (i + 1)];
 const handle = (i: number): [number, number] => {
-    const name = must(ui.find(`info/body/StallMenu/menu/view/content/ItemName${i}`), `info/body/StallMenu/menu/view/content/ItemName${i} shown`);
+    const name = must(
+        ui.find(`info/body/StallMenu/menu/view/content/ItemName${i}`),
+        `info/body/StallMenu/menu/view/content/ItemName${i} shown`,
+    );
     return [name.left - across / 2, name.y];
 };
 await frames(2);
@@ -102,7 +138,10 @@ if (kind.goods.length > 1) {
     const second = handle(1);
     await pointer.drag(handle(0), [second[0] + across * 3, second[1] + down * 0.4], 8);
     await frames(2);
-    expect(menu().items[1].item === `${kind.goods[0].item}:cid`, `the first item moved down one (${JSON.stringify(menu().items)})`);
+    expect(
+        menu().items[1].item === `${kind.goods[0].item}:cid`,
+        `the first item moved down one (${JSON.stringify(menu().items)})`,
+    );
 }
 // Dragged onto the bin, an item goes off; a click on a handle and then on the bin takes one off too.
 await pointer.drag(handle(0), bin, 8);
@@ -119,12 +158,20 @@ expect(stalls.setState(at, "open") === "CantOpenStallNoItems", "a stall with not
 // A click on a good puts it on; one dragged onto the pane goes in where it drops.
 await pointer.click(...good(kind.goods.length - 1));
 await frames(2);
-expect(menu().items.length === 1 && menu().items[0].item === `${kind.goods[kind.goods.length - 1].item}:cid`, `its last good back on (${JSON.stringify(menu().items)})`);
+expect(
+    menu().items.length === 1 && menu().items[0].item === `${kind.goods[kind.goods.length - 1].item}:cid`,
+    `its last good back on (${JSON.stringify(menu().items)})`,
+);
 const first = handle(0);
 await pointer.drag(good(0), [first[0] + across * 4, first[1] - down * 0.4], 8);
 await frames(2);
 const back = menu();
-expect(back.items.length === 2 && back.items[0].item === `${kind.goods[0].item}:cid` && back.items[0].price === kind.goods[0].price, `its first good dragged on before it (${JSON.stringify(back)})`);
+expect(
+    back.items.length === 2 &&
+        back.items[0].item === `${kind.goods[0].item}:cid` &&
+        back.items[0].price === kind.goods[0].price,
+    `its first good dragged on before it (${JSON.stringify(back)})`,
+);
 expect(back.price === kind.goods[0].price, "the park selling it at that item's price");
 expect(stalls.setState(at, "open") == null && menu().selling === true, "it opened again");
 // The park's objects are built again a few times a second, beside the frame; a frame here takes far less.
@@ -145,7 +192,10 @@ await pointer.click(spot.x, spot.y);
 await frames(3);
 const drink = stalls.list().find((s) => s.symbol === "DrinkStall:sta");
 expect(drink !== undefined && !drink.open && drink.moving, `the drink stall moving, closed (${JSON.stringify(drink)})`);
-camera.look({ col: road!.col + 1.5, row: road!.row - 1.5, up: 1.5 }, { col: road!.col - 2, row: road!.row - 1.5, up: 4 });
+camera.look(
+    { col: road!.col + 1.5, row: road!.row - 1.5, up: 1.5 },
+    { col: road!.col - 2, row: road!.row - 1.5, up: 4 },
+);
 await frames(30);
 await screenshot("drink_stall_a");
 await frames(45);

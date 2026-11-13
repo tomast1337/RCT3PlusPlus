@@ -24,7 +24,10 @@ await frames(3);
 pointer.move(0.5, 0.25);
 await frames(5);
 const raised = build.construction()!.ghostAt!;
-expect(raised.height > start.height && raised.col === start.col && raised.row === start.row, "the first piece raised on its tile");
+expect(
+    raised.height > start.height && raised.col === start.col && raised.row === start.row,
+    "the first piece raised on its tile",
+);
 await screenshot("raised");
 pointer.move(0.5, 0.6);
 await frames(5);
@@ -37,7 +40,10 @@ await frames(3);
 pointer.move(0.4, 0.5);
 await frames(5);
 const moved = build.construction()!.ghostAt!;
-expect(moved.height === lifted && (moved.col !== start.col || moved.row !== start.row), "the height kept as the piece follows the pointer");
+expect(
+    moved.height === lifted && (moved.col !== start.col || moved.row !== start.row),
+    "the height kept as the piece follows the pointer",
+);
 await pointer.click(0.4, 0.5);
 await frames(20);
 const ride = build.construction()!.ride;
@@ -51,7 +57,10 @@ await screenshot("demolished"); // Its price floats up, paid back
 pointer.move(0.35, 0.6);
 await frames(10);
 const free = build.construction()!.ghostAt!;
-expect(free.height === start.height && (free.col !== moved.col || free.row !== moved.row), "the first piece placed anywhere again, on the ground");
+expect(
+    free.height === start.height && (free.col !== moved.col || free.row !== moved.row),
+    "the first piece placed anywhere again, on the ground",
+);
 await pointer.click(0.35, 0.6);
 await frames(20);
 expect(rides.list()[ride].pieces === 1, "the first piece laid again");

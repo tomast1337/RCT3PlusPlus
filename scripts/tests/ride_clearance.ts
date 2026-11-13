@@ -26,14 +26,18 @@ await until(() => ui.find("footpaths/route") !== undefined, 120, "the path panel
 await pointer.drag(on_view(col - 3, row), on_view(col - 2, row), 10);
 async function lay(control: string, count: number): Promise<void> {
     await ui.click(`footpaths/body/${control}`);
-    for (let i = 0; i < count; ++i)
-        await ui.click("footpaths/body/Path_Straight");
+    for (let i = 0; i < count; ++i) await ui.click("footpaths/body/Path_Straight");
 }
 await lay("Path_UpwardSteps", 3);
 await lay("Path_NoSlope", 3);
 await ui.click("tools/Paths/Obj_Paths"); // Put away
 await frames(5);
-const top = Math.max(...map.paths().filter((p) => p.row === row && p.raised).map((p) => p.height ?? 0));
+const top = Math.max(
+    ...map
+        .paths()
+        .filter((p) => p.row === row && p.raised)
+        .map((p) => p.height ?? 0),
+);
 const over = map.paths().find((p) => p.row === row && p.raised && p.height === top && p.col > col);
 log("paths", JSON.stringify(map.paths().filter((p) => p.raised)));
 expect(over !== undefined && (over.height ?? 0) >= 5, "a path raised at least five units over the tile under test");
@@ -65,16 +69,17 @@ for (let i = 1; i <= 60 && Math.max(-Infinity, ...free.keys()) < deck + 4; ++i) 
     pointer.move(x, y - 0.008 * i);
     await frames(5);
     const c = build.construction()!;
-    if (!c.ghostAt || c.ghostAt.col !== start.col || c.ghostAt.row !== start.row)
-        continue;
-    if (c.ghostAt.height === deck - 3 && !free.has(deck - 3))
-        await screenshot("station_under_path_refused");
+    if (!c.ghostAt || c.ghostAt.col !== start.col || c.ghostAt.row !== start.row) continue;
+    if (c.ghostAt.height === deck - 3 && !free.has(deck - 3)) await screenshot("station_under_path_refused");
     free.set(c.ghostAt.height, !c.clashes);
     lifts.set(c.ghostAt.height, y - 0.008 * i);
 }
 log("deck", deck, "station heights free:", JSON.stringify([...free]));
 const under = Math.max(...[...free].filter(([h, ok]) => ok && h < deck).map(([h]) => h));
-expect(free.get(deck - 3) === false, "the station refused with its top three units under the path, inside its riders' room");
+expect(
+    free.get(deck - 3) === false,
+    "the station refused with its top three units under the path, inside its riders' room",
+);
 expect(deck - under >= 4, `the highest station under the path four units or more under it, not ${deck - under}`);
 expect(free.get(deck + 3) === true, "the station free three units over the path, as before");
 // Laid as high under the path as it may stand, for a look at it.
@@ -113,19 +118,28 @@ await frames(20);
 const names = rides.list()[ride].track ?? [];
 log("dive pieces", rides.list()[ride].pieces, JSON.stringify(names));
 const track = map.objects().filter((o) => o.overlay.includes("Track") && o.height !== null && o.row === dive.row);
-log("track objects on the dive's row", JSON.stringify(track.map((o) => [o.symbol, o.col, o.height, map.tile(o.col, o.row)!.corners])));
+log(
+    "track objects on the dive's row",
+    JSON.stringify(track.map((o) => [o.symbol, o.col, o.height, map.tile(o.col, o.row)!.corners])),
+);
 // A straight's levels reach 3 over its base; the riders' room 0.75 more and a unit of ground over that make a tunnel.
 const straights = track.filter((o) => /^straight$/i.test(o.symbol) && o.height! < 0);
 expect(straights.length > 0, "level straights under the ground");
 for (const s of straights) {
     const cut = Math.min(...map.tile(s.col, s.row)!.corners) < -0.01;
-    expect(cut === s.height! + 3 + 0.75 + 1 > 0, `the ground over the straight at ${s.height} ${cut ? "cut" : "left as a tunnel"} the other way`);
+    expect(
+        cut === s.height! + 3 + 0.75 + 1 > 0,
+        `the ground over the straight at ${s.height} ${cut ? "cut" : "left as a tunnel"} the other way`,
+    );
 }
 // The tunnel's mouth, seen from the trench in front of it.
 const mouth = Math.min(...straights.map((s) => s.col));
 camera.look({ col: mouth + 1, row: dive.row + 0.5, up: -4.5 }, { col: mouth - 2.5, row: dive.row + 0.5, up: -1 });
 await frames(10);
 await screenshot("tunnel_mouth");
-camera.look({ col: over!.col + 0.5, row: row + 0.5, up: deck - 2 }, { col: over!.col - 2.5, row: row + 5, up: deck + 2 });
+camera.look(
+    { col: over!.col + 0.5, row: row + 0.5, up: deck - 2 },
+    { col: over!.col - 2.5, row: row + 5, up: deck + 2 },
+);
 await frames(10);
 await screenshot("path_over_tile");

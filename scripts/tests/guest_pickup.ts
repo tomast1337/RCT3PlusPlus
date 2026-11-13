@@ -79,7 +79,9 @@ const dropAt = async (col: number, row: number) => {
 
 // Onto a path a few tiles off: they fall, then walk on from there.
 await pickUp();
-const target = paths.find((p) => Math.abs(p.col - guest.col!) + Math.abs(p.row - guest.row!) >= 3 && clear(p.col, p.row));
+const target = paths.find(
+    (p) => Math.abs(p.col - guest.col!) + Math.abs(p.row - guest.row!) >= 3 && clear(p.col, p.row),
+);
 expect(target !== undefined, "a path in sight a few tiles off");
 const over = must(map.screen(target!.col, target!.row), "the tile in sight");
 pointer.move(over.x, over.y);
@@ -88,7 +90,10 @@ const hung = people.list()[who];
 expect(tileOf(hung) === `${target!.col},${target!.row}`, "the guest hanging over the tile under the pointer");
 await screenshot("held");
 // A close look at them hanging, the pointer kept over the same spot.
-camera.look({ col: hung.col!, row: hung.row!, up: hung.up! - 2 }, { col: hung.col! + 1.5, row: hung.row! + 1.5, up: hung.up! + 2 });
+camera.look(
+    { col: hung.col!, row: hung.row!, up: hung.up! - 2 },
+    { col: hung.col! + 1.5, row: hung.row! + 1.5, up: hung.up! + 2 },
+);
 await frames(5);
 await screenshot("held_close");
 camera.look({ col: guest.col!, row: guest.row! }, { col: guest.col! + 5, row: guest.row! + 5, up: 25 });
@@ -121,7 +126,14 @@ let bare: { col: number; row: number } | undefined;
 for (let d = 2; d < 8 && bare === undefined; ++d)
     for (const p of paths) {
         const t = map.tile(p.col + d, p.row);
-        if (t !== undefined && t.owned && t.water === undefined && !onPath.has(`${p.col + d},${p.row}`) && p.col + d < size.width && clear(p.col + d, p.row)) {
+        if (
+            t !== undefined &&
+            t.owned &&
+            t.water === undefined &&
+            !onPath.has(`${p.col + d},${p.row}`) &&
+            p.col + d < size.width &&
+            clear(p.col + d, p.row)
+        ) {
             bare = { col: p.col + d, row: p.row };
             break;
         }
@@ -132,10 +144,11 @@ if (bare !== undefined) {
     await until(() => state() !== "held", 30, "the guest let go over bare land");
     await screenshot("bare_land");
     await until(() => onFoot(), 3000, `the guest at a path, walking (${JSON.stringify(people.list()[who])})`);
-    expect(onPath.has(tileOf(people.list()[who])), `the guest walking on a path after landing on bare land, not at ${tileOf(people.list()[who])}`);
-}
-else
-    log("no bare land of the park in sight near a path");
+    expect(
+        onPath.has(tileOf(people.list()[who])),
+        `the guest walking on a path after landing on bare land, not at ${tileOf(people.list()[who])}`,
+    );
+} else log("no bare land of the park in sight near a path");
 
 // Water does not take them.
 let wet: { col: number; row: number } | undefined;
@@ -155,9 +168,7 @@ if (wet !== undefined) {
     await screenshot("over_water");
     await pointer.click(0.5, 0.5, "right");
     await until(() => onFoot(), 300, "the guest put back from over the water");
-}
-else
-    log("no water in sight");
+} else log("no water in sight");
 
 log("cash", cash, "to", park.cash());
 quit(0);

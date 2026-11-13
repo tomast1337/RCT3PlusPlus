@@ -56,16 +56,19 @@ expect(entrance !== null, "the design's entrance placed");
 await ui.click("tools/Paths/Obj_Paths");
 await until(() => ui.find("footpaths/route") !== undefined, 120, "the path panel");
 await ui.toggle("footpaths/follow", false);
-for (const [dc, dr] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
-    if (rides.list()[ride].joined)
-        break;
+for (const [dc, dr] of [
+    [0, 1],
+    [1, 0],
+    [0, -1],
+    [-1, 0],
+]) {
+    if (rides.list()[ride].joined) break;
     const col = entrance!.col + dc;
     const r = entrance!.row + dr;
     camera.look({ col: col + 0.5, row: r + 0.5 }, { col: col + 0.5, row: r + 10.5, up: 30 });
     await frames(5);
     const at = map.screen(col, r);
-    if (at === undefined)
-        continue;
+    if (at === undefined) continue;
     pointer.move(at.x, at.y);
     await frames(10);
     await pointer.click(at.x, at.y);
@@ -90,7 +93,10 @@ camera.look(first, { col: first.col + 6, row: first.row + 14, up: (first.up ?? 0
 await frames(10);
 await screenshot("flying");
 await until(() => (rides.list()[ride].wrecks ?? []).some((w) => w.state === "burning"), 1200, "a wreck blown up");
-const burning = must((rides.list()[ride].wrecks ?? []).find((w) => w.state === "burning"), "a burning wreck");
+const burning = must(
+    (rides.list()[ride].wrecks ?? []).find((w) => w.state === "burning"),
+    "a burning wreck",
+);
 camera.look(burning, { col: burning.col + 6, row: burning.row + 14, up: (burning.up ?? 0) + 8 });
 await frames(20);
 await screenshot("burning");

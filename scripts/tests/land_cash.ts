@@ -8,8 +8,7 @@
 export {};
 
 async function pick(icon: string): Promise<void> {
-    if (!ui.find(`tools/Land/${icon}`))
-        await ui.click("tools/Land/Land");
+    if (!ui.find(`tools/Land/${icon}`)) await ui.click("tools/Land/Land");
     await ui.click(`tools/Land/${icon}`);
 }
 
@@ -23,7 +22,12 @@ expect(park.cash() !== undefined, "a park with money");
 const { width, height } = map.size();
 const flat = (c: number, r: number): boolean => {
     const t = map.tile(c, r);
-    return t !== undefined && t.ownership === "owned" && t.water === undefined && t.corners.every((h) => h === t.corners[0]);
+    return (
+        t !== undefined &&
+        t.ownership === "owned" &&
+        t.water === undefined &&
+        t.corners.every((h) => h === t.corners[0])
+    );
 };
 let site: [number, number] | undefined;
 for (let col = 3; col < width - 3 && !site; ++col)
@@ -31,9 +35,10 @@ for (let col = 3; col < width - 3 && !site; ++col)
         let all = true;
         for (let dc = -3; dc <= 3 && all; ++dc)
             for (let dr = -3; dr <= 3 && all; ++dr)
-                all = flat(col + dc, row + dr) && map.tile(col + dc, row + dr)!.corners[0] === map.tile(col, row)!.corners[0];
-        if (all)
-            site = [col, row];
+                all =
+                    flat(col + dc, row + dr) &&
+                    map.tile(col + dc, row + dr)!.corners[0] === map.tile(col, row)!.corners[0];
+        if (all) site = [col, row];
     }
 expect(site !== undefined, "a flat stretch of owned land");
 const [col, row] = site!;

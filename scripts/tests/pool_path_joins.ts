@@ -19,7 +19,8 @@ await frames(10);
 park.setWeather("sunny");
 park.setTime(0.5);
 
-const path_at = (col: number, row: number) => map.objects().find((o) => o.overlay === kPool && o.symbol.startsWith("Path") && o.col === col && o.row === row);
+const path_at = (col: number, row: number) =>
+    map.objects().find((o) => o.overlay === kPool && o.symbol.startsWith("Path") && o.col === col && o.row === row);
 const shape = (col: number, row: number) => {
     const o = path_at(col, row);
     return o ? `${o.symbol} ${o.turn} @${o.height}` : "none";
@@ -28,18 +29,23 @@ const slide = rides.list().findIndex((r) => !r.demolished && /(body|ring|pro)sli
 expect(slide >= 0, "a pool slide in the park");
 const decks = rides.list()[slide].platformSquares ?? [];
 log("platform squares", JSON.stringify(decks));
-expect([24, 25, 26].every((row) => decks.some((d) => d.col === 83 && d.row === row && d.height === kDeck)), "the slide's platform along column 83 at height 16");
+expect(
+    [24, 25, 26].every((row) => decks.some((d) => d.col === 83 && d.row === row && d.height === kDeck)),
+    "the slide's platform along column 83 at height 16",
+);
 
 // The saved square beside the station: the slope to the north and the station to the west meet it, a corner.
 log("(84,24)", shape(84, 24));
-expect(shape(84, 24) === `PathCorner 2 @${kDeck}`, `a corner joining the slope and the station at (84,24), not ${shape(84, 24)}`);
+expect(
+    shape(84, 24) === `PathCorner 2 @${kDeck}`,
+    `a corner joining the slope and the station at (84,24), not ${shape(84, 24)}`,
+);
 
 // The camera keeps its target on the ground: it looks past the station from above so its deck is in the middle.
 const look = () => camera.look({ col: 78, row: 25.5 }, { col: 88, row: 27, up: 30 });
 const screen = (col: number, row: number): [number, number] => {
     const at = map.screen(col, row, kDeck);
-    if (!at)
-        throw new Error(`${col}, ${row} is not in sight`);
+    if (!at) throw new Error(`${col}, ${row} is not in sight`);
     return [at.x, at.y];
 };
 look();
@@ -61,7 +67,13 @@ pointer.move(...screen(83.85, 25.5));
 await frames(3);
 const shown = build.pooling();
 log("at the platform", JSON.stringify(shown));
-expect(shown?.ghost?.startsWith("Path") === true && shown.ghostAt?.col === 84 && shown.ghostAt?.row === 25 && shown.ghostAt?.height === kDeck, `the first piece's ghost off the platform at its deck, not ${JSON.stringify(shown)}`);
+expect(
+    shown?.ghost?.startsWith("Path") === true &&
+        shown.ghostAt?.col === 84 &&
+        shown.ghostAt?.row === 25 &&
+        shown.ghostAt?.height === kDeck,
+    `the first piece's ghost off the platform at its deck, not ${JSON.stringify(shown)}`,
+);
 await pointer.click(...screen(83.85, 25.5));
 await frames(3);
 await ui.click("pool_panel/body/paths/Path_Straight");
@@ -74,7 +86,10 @@ await ui.toggle("pool_panel/pin", false);
 await pointer.drag(screen(83.85, 26.5), screen(83.85, 26.5), 4);
 await frames(5);
 log("drag from the platform", shape(84, 26), "on the platform", shape(83, 26));
-expect(path_at(84, 26)?.height === kDeck && path_at(83, 26) === undefined, `a path laid off the platform at its deck, not ${shape(84, 26)} and ${shape(83, 26)}`);
+expect(
+    path_at(84, 26)?.height === kDeck && path_at(83, 26) === undefined,
+    `a path laid off the platform at its deck, not ${shape(84, 26)} and ${shape(83, 26)}`,
+);
 build.stop();
 await frames(5);
 

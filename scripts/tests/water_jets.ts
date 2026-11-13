@@ -9,7 +9,11 @@
 export {};
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
-await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "the build lists");
+await until(
+    () => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined,
+    1200,
+    "the build lists",
+);
 const paths = map.paths();
 const gate = paths.reduce((a, b) => (b.row > a.row ? b : a));
 const road = paths.filter((p) => p.col === gate.col && p.row < gate.row - 1).sort((a, b) => b.row - a.row);
@@ -21,7 +25,10 @@ const items = [
 ];
 for (const item of items) {
     expect(item.tile !== undefined, `road for the ${item.symbol}`);
-    camera.look({ col: item.tile.col + 0.5, row: item.tile.row + 0.5 }, { col: item.tile.col + 0.5, row: item.tile.row + 8.5, up: 25 });
+    camera.look(
+        { col: item.tile.col + 0.5, row: item.tile.row + 0.5 },
+        { col: item.tile.col + 0.5, row: item.tile.row + 8.5, up: 25 },
+    );
     await frames(3);
     expect(build.pick(item.overlay, item.symbol), `${item.symbol} in the scenery lists`);
     await frames(2);
@@ -59,7 +66,11 @@ for (const [name, eye] of views(row, 0)) {
 }
 
 park.dropParties(40, 3);
-await park.advanceUntil(() => people.list().some((p) => p.lingering === "water cannon" && p.col !== undefined), 1800, "a guest firing the cannon");
+await park.advanceUntil(
+    () => people.list().some((p) => p.lingering === "water cannon" && p.col !== undefined),
+    1800,
+    "a guest firing the cannon",
+);
 const cannon = road[7];
 for (const [name, eye] of views(cannon, 0)) {
     camera.look({ col: cannon.col + 0.5, row: cannon.row + 0.5, up: 1 }, eye);

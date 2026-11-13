@@ -28,8 +28,7 @@ park.setDate(park.date() + kDay);
 await frames(30);
 await screenshot("objectives_before");
 
-for (let seed = 1; seed <= 100 && park.guests() < kGuestsWanted; ++seed)
-    park.dropParties(20, seed);
+for (let seed = 1; seed <= 100 && park.guests() < kGuestsWanted; ++seed) park.dropParties(20, seed);
 log("guests", park.guests());
 expect(park.guests() >= kGuestsWanted, "enough guests brought in");
 
@@ -40,7 +39,11 @@ await screenshot("objectives_prize");
 const box = ui.find("prize_won");
 log("prize", JSON.stringify(box));
 await ui.click(`prize_won/${must(ui.children("prize_won"), "prize_won shown").at(-1)!}`);
-await until(() => ui.find("prize_won") === undefined || must(ui.find("prize_won"), "prize_won shown").text !== box!.text, 120, "the next box");
+await until(
+    () => ui.find("prize_won") === undefined || must(ui.find("prize_won"), "prize_won shown").text !== box!.text,
+    120,
+    "the next box",
+);
 await frames(30);
 await screenshot("objectives_won");
 quit(0);

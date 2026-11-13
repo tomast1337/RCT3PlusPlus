@@ -31,6 +31,9 @@ await park.advanceUntil(() => sampled() !== samples, 5, "a week's end a month on
 log("poorly as the month is judged", animals.list().filter((a) => !a.crated && a.health < 0.4).length);
 const told = park.messages().filter((m) => m.award !== undefined);
 log("awards", JSON.stringify(told));
-expect(told.some((m) => m.award === kNeglected && m.key === "Award_Fine"), "the fine for neglected animals");
+expect(
+    told.some((m) => m.award === kNeglected && m.key === "Award_Fine"),
+    "the fine for neglected animals",
+);
 await screenshot("awards_fined");
 quit(0);

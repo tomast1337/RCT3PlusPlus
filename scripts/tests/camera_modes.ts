@@ -22,18 +22,21 @@ const other = ride === 0 ? 1 : 0; // Shown before each click, so the click must 
 expect(rides.list().length > 1, "two rides");
 
 /** Drags with `buttons` from the middle of the view `by` shares across and down. */
-async function drag(buttons: ("left" | "right" | "middle")[], by: [number, number], count = 10, from: [number, number] = [0.5, 0.5]): Promise<void> {
+async function drag(
+    buttons: ("left" | "right" | "middle")[],
+    by: [number, number],
+    count = 10,
+    from: [number, number] = [0.5, 0.5],
+): Promise<void> {
     pointer.move(from[0], from[1]);
     await frames(2);
-    for (const b of buttons)
-        b === "left" ? pointer.press() : pointer.button(b, true);
+    for (const b of buttons) b === "left" ? pointer.press() : pointer.button(b, true);
     await frames(1);
     for (let i = 1; i <= count; ++i) {
         pointer.move(from[0] + (by[0] * i) / count, from[1] + (by[1] * i) / count);
         await frames(1);
     }
-    for (const b of buttons)
-        b === "left" ? pointer.release() : pointer.button(b, false);
+    for (const b of buttons) b === "left" ? pointer.release() : pointer.button(b, false);
     await frames(2);
 }
 
@@ -64,7 +67,11 @@ await frames(2);
 let before = camera.view();
 await drag(["right"], [0.2, 0]);
 let after = camera.view();
-expect(near(after.yaw, before.yaw) && !near(after.target[0], before.target[0], 0.5) || !near(after.target[2], before.target[2], 0.5), "normal: the right button to slide the view");
+expect(
+    (near(after.yaw, before.yaw) && !near(after.target[0], before.target[0], 0.5)) ||
+        !near(after.target[2], before.target[2], 0.5),
+    "normal: the right button to slide the view",
+);
 before = after;
 await drag(["right", "left"], [0.1, 0.05]);
 after = camera.view();
@@ -77,7 +84,11 @@ await frames(60);
 before = camera.view();
 log("isometric", JSON.stringify(before));
 expect(near(before.pitch, Math.PI / 4), "isometric: tilted half way down");
-expect(near(turn(before.yaw, Math.PI / 4) % (Math.PI / 2), 0) || near(Math.abs(turn(before.yaw, Math.PI / 4) % (Math.PI / 2)), Math.PI / 2), "isometric: facing a diagonal");
+expect(
+    near(turn(before.yaw, Math.PI / 4) % (Math.PI / 2), 0) ||
+        near(Math.abs(turn(before.yaw, Math.PI / 4) % (Math.PI / 2)), Math.PI / 2),
+    "isometric: facing a diagonal",
+);
 await drag(["right", "left"], [0.3, 0.1]);
 await frames(60);
 after = camera.view();
@@ -87,7 +98,10 @@ expect(near(after.pitch, Math.PI / 4), "isometric: the tilt kept");
 before = after;
 await drag(["middle"], [0.2, 0.2]);
 after = camera.view();
-expect(near(after.yaw, before.yaw) && near(after.target[0], before.target[0]) && near(after.target[2], before.target[2]), "isometric: the middle button to do nothing");
+expect(
+    near(after.yaw, before.yaw) && near(after.target[0], before.target[0]) && near(after.target[2], before.target[2]),
+    "isometric: the middle button to do nothing",
+);
 pointer.move(0.5, 0.5);
 pointer.wheel(2);
 await frames(30);
@@ -101,7 +115,10 @@ const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1], 
 before = camera.view();
 await drag(["right"], [0.1, 0.05]);
 after = camera.view();
-expect(!near(after.yaw, before.yaw) && dist(after.eye, before.eye) < 0.1, "free look: the right button to look round from the eye");
+expect(
+    !near(after.yaw, before.yaw) && dist(after.eye, before.eye) < 0.1,
+    "free look: the right button to look round from the eye",
+);
 before = after;
 await drag(["middle"], [0.1, -0.2]);
 after = camera.view();
@@ -136,7 +153,10 @@ await frames(2);
 before = camera.view();
 await drag(["right"], [0.1, 0.1]);
 after = camera.view();
-expect(!near(after.yaw, before.yaw) && !near(after.distance, before.distance) && near(after.pitch, before.pitch), "advanced 0: the right button to turn and zoom");
+expect(
+    !near(after.yaw, before.yaw) && !near(after.distance, before.distance) && near(after.pitch, before.pitch),
+    "advanced 0: the right button to turn and zoom",
+);
 before = after;
 pointer.move(0.5, 0.5);
 pointer.wheel(2);
@@ -151,7 +171,10 @@ await frames(2);
 before = camera.view();
 await drag(["right"], [0.1, 0.05]);
 after = camera.view();
-expect(!near(after.yaw, before.yaw) && !near(after.pitch, before.pitch), "advanced 2: the right button to turn and tilt");
+expect(
+    !near(after.yaw, before.yaw) && !near(after.pitch, before.pitch),
+    "advanced 2: the right button to turn and tilt",
+);
 
 // The point a drag starts on keeps its place on the view while the view turns round it.
 options.set("camera_ignores_scenery", 1);
@@ -163,7 +186,10 @@ log("pivot", JSON.stringify(start));
 await drag(["middle"], [0.08, 0.03], 10, [start.x, start.y]);
 const end = map.screen(...pivotTile)!;
 log("pivot after", JSON.stringify(end));
-expect(near(end.x, start.x, 0.02) && near(end.y, start.y, 0.02), "advanced: the drag to turn round the point it started on");
+expect(
+    near(end.x, start.x, 0.02) && near(end.y, start.y, 0.02),
+    "advanced: the drag to turn round the point it started on",
+);
 options.set("camera_ignores_scenery", 0);
 await clickRide("advanced");
 

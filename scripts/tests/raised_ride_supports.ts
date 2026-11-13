@@ -19,7 +19,17 @@ camera.look({ col: col + 3, row: row + 3 }, { col: col + 3, row: row + 18, up: 1
 await frames(3);
 
 /** The support pieces standing on the tiles the ride covers. */
-const columns = () => map.objects().filter((o) => o.overlay.endsWith("Supports") && o.col >= col && o.col < col + ride!.width && o.row >= row && o.row < row + ride!.length);
+const columns = () =>
+    map
+        .objects()
+        .filter(
+            (o) =>
+                o.overlay.endsWith("Supports") &&
+                o.col >= col &&
+                o.col < col + ride!.width &&
+                o.row >= row &&
+                o.row < row + ride!.length,
+        );
 const at = (c: number, r: number) => {
     const p = map.screen(c, r);
     expect(p !== undefined, `tile ${c},${r} in sight`);
@@ -37,17 +47,26 @@ pointer.move(centre.x, centre.y - 0.1);
 await frames(5);
 const raised = build.placing()!;
 log("raised from", ground, "to", raised.site?.height, raised.problem);
-expect(raised.site!.height > ground + 4 && raised.problem === "none", `the ride raised and placeable, not ${raised.problem} at ${raised.site?.height}`);
+expect(
+    raised.site!.height > ground + 4 && raised.problem === "none",
+    `the ride raised and placeable, not ${raised.problem} at ${raised.site?.height}`,
+);
 expect(raised.ghost, "a ghost to show");
 await screenshot("ghost_scaffolding");
 await pointer.click(centre.x, centre.y - 0.1);
 pointer.shift(false);
 await frames(2);
-for (const [step, c, r] of [["entrance", col, row + ride!.length], ["exit", col + ride!.width, row + ride!.length - 1]] as const) {
+for (const [step, c, r] of [
+    ["entrance", col, row + ride!.length],
+    ["exit", col + ride!.width, row + ride!.length - 1],
+] as const) {
     const p = at(c, r);
     pointer.move(p.x, p.y);
     await frames(2);
-    expect(build.placing()?.step === step && build.placing()?.problem === "none", `the ${step} placeable, not ${JSON.stringify(build.placing())}`);
+    expect(
+        build.placing()?.step === step && build.placing()?.problem === "none",
+        `the ${step} placeable, not ${JSON.stringify(build.placing())}`,
+    );
     await pointer.click(p.x, p.y);
     await frames(2);
 }
@@ -57,8 +76,15 @@ await frames(10);
 const placed = columns();
 log("columns", [...new Set(placed.map((o) => o.symbol))].join(", "));
 expect(placed.length > 0, "columns under the raised ride");
-expect(placed.every((o) => !o.symbol.startsWith("Scaff")), "no scaffolding left once placed");
-expect(placed.every((o) => o.symbol.toLowerCase().startsWith("asph")), "the plain path style's columns under it");
-const rim = (o: { col: number; row: number }) => o.col === col || o.row === row || o.col === col + ride!.width - 1 || o.row === row + ride!.length - 1;
+expect(
+    placed.every((o) => !o.symbol.startsWith("Scaff")),
+    "no scaffolding left once placed",
+);
+expect(
+    placed.every((o) => o.symbol.toLowerCase().startsWith("asph")),
+    "the plain path style's columns under it",
+);
+const rim = (o: { col: number; row: number }) =>
+    o.col === col || o.row === row || o.col === col + ride!.width - 1 || o.row === row + ride!.length - 1;
 expect(placed.every(rim), "columns under its rim only");
 await screenshot("placed_path_columns");

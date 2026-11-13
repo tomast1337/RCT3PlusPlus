@@ -806,7 +806,7 @@ namespace rct3::save::model
             if (std::optional<const Value&> b = o.find(names::kSceneryBehaviours); b && b->kind() == ValueKind::List)
                 p.behaviour_count = static_cast<std::uint32_t>(b->items().size());
             if (std::optional<const Value&> m = o.find(names::kSceneryMotions); m && m->kind() == ValueKind::List && !m->items().empty() && m->items().front().kind() == ValueKind::Struct)
-                p.motion_time = float_or(m->items().front().field(names::kSceneryMotionTime));
+                p.motion_time = units::Seconds { float_or(m->items().front().field(names::kSceneryMotionTime)) };
             return p;
         }
 

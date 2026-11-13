@@ -680,11 +680,11 @@ int main(int argc, char** argv)
                     for (const Car& c : t.cars)
                         riders += c.passengers;
                     const TrackPiece* front = piece(t.front_piece);
-                    note(trains[static_cast<int>(t.state)], argv[i], t.speed, t.state_time, t.acceleration, front != nullptr && front->platform.has_value(), riders, front ? shape(front->symbol) : "-", t.cars.empty() ? -1 : static_cast<int>(t.cars.front().state));
+                    note(trains[static_cast<int>(t.state)], argv[i], t.speed, t.state_time.value, t.acceleration, front != nullptr && front->platform.has_value(), riders, front ? shape(front->symbol) : "-", t.cars.empty() ? -1 : static_cast<int>(t.cars.front().state));
                     for (const Car& c : t.cars)
                     {
                         const TrackPiece* at = piece(c.front_piece);
-                        note(cars[static_cast<int>(c.state)], argv[i], c.speed, t.state_time, t.acceleration, at != nullptr && at->platform.has_value(), c.passengers, at ? shape(at->symbol) : "-", static_cast<int>(t.state));
+                        note(cars[static_cast<int>(c.state)], argv[i], c.speed, t.state_time.value, t.acceleration, at != nullptr && at->platform.has_value(), c.passengers, at ? shape(at->symbol) : "-", static_cast<int>(t.state));
                     }
                 }
             }
@@ -1105,7 +1105,7 @@ int main(int argc, char** argv)
             g.track_back_link_mismatch, g.unresolved_tracks, g.truncated_tracks, g.segment_piece_mismatch, g.piece_segment_mismatch, g.platform_back_link_mismatch, g.open_ends_with_live_link, g.train_back_link_mismatch, g.train_index_mismatch, g.car_back_link_mismatch, g.car_index_mismatch, g.car_count_mismatch, g.unresolved_trains, g.unresolved_cars, g.duplicate_refs, g.queue_size_mismatch, g.item_back_link_mismatch, g.unresolved_items);
         for (const auto& r : model->rides)
         {
-            out.info("  ride {:<10d} kind {:d} state {:d} mode {:d} ticket {:d} stations {:d} trains {:d} pieces {:d}{}", static_cast<unsigned long long>(r.base.id), static_cast<unsigned>(r.kind), static_cast<int>(r.base.state), static_cast<int>(r.mode), static_cast<long long>(r.ticket_price), r.stations.size(), r.trains.size(), r.track ? r.track->pieces.size() : 0, r.track ? (r.track->circuit ? " circuit" : " open") : "");
+            out.info("  ride {:<10d} kind {:d} state {:d} mode {:d} ticket {:d} stations {:d} trains {:d} pieces {:d}{}", static_cast<unsigned long long>(r.base.id), static_cast<unsigned>(r.kind), static_cast<int>(r.base.state), static_cast<int>(r.mode), static_cast<long long>(r.ticket_price.value), r.stations.size(), r.trains.size(), r.track ? r.track->pieces.size() : 0, r.track ? (r.track->circuit ? " circuit" : " open") : "");
         }
     }
     // --- rides: end -----------------------------------------------------------------------------------

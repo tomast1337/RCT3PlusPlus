@@ -739,8 +739,8 @@ TEST_CASE("load_world: a complete synthetic save")
     CHECK(o.colours[2] == 2);
     CHECK(o.break_flags == 35);
     CHECK(o.behaviour_count == 2);
-    CHECK(o.motion_time == 2.5f);
-    CHECK(w.objects[1].motion_time == 0.0f); // nothing playing
+    CHECK(o.motion_time.value == 2.5f);
+    CHECK(w.objects[1].motion_time.value == 0.0f); // nothing playing
     CHECK_FALSE(o.hidden);
     CHECK_FALSE(w.objects[1].base_height.has_value()); // sentinel
     CHECK_FALSE(w.objects[1].free_standing());

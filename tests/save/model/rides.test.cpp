@@ -376,7 +376,7 @@ TEST_CASE("an open three piece track loads in travel order")
     CHECK(r.base.name == "Test Ride");
     CHECK(r.base.state == AttractionState::Open);
     CHECK(r.mode == OperatingMode::Shuttle);
-    CHECK(r.ticket_price == 250); // hundredths
+    CHECK(r.ticket_price.value == 250); // hundredths
     REQUIRE(r.track.has_value());
     const auto& t = *r.track;
     REQUIRE(t.pieces.size() == 3);
@@ -389,7 +389,7 @@ TEST_CASE("an open three piece track loads in travel order")
     CHECK(t.pieces[0].height == -3);
     CHECK(t.pieces[0].direction == 2);
     CHECK(t.pieces[0].corner == 1);
-    CHECK(t.pieces[2].start_distance == 8.0f);
+    CHECK(t.pieces[2].start_distance.value == 8.0f);
     CHECK_FALSE(t.circuit);
     CHECK_FALSE(t.truncated);
     REQUIRE(t.segments.size() == 1);
@@ -663,7 +663,7 @@ TEST_CASE("stations resolve through the holder object and count queue tiles")
     CHECK(r.stations[0].queue_line == 71);
     CHECK(r.stations[0].queue_size == 2);
     CHECK(r.stations[0].queue_tiles == 2);
-    CHECK(r.stations[0].queue_time == 30.0f);
+    CHECK(r.stations[0].queue_time.value == 30.0f);
     CHECK(r.stations[1].entrance == 0);
     CHECK(r.stations[1].queue_size == 3);
     CHECK(r.stations[1].queue_tiles == 1);
@@ -724,7 +724,7 @@ TEST_CASE("stalls load items and extras with prices in hundredths")
     const auto& s = w->model.stalls[0];
     CHECK(s.base.name == "Shop");
     CHECK(s.base.symbol == "Invented:sta");
-    CHECK(s.base.total_profit == -80);
+    CHECK(s.base.total_profit.value == -80);
     CHECK(s.base.facing == 3);
     CHECK(s.base.placement == 310);
     REQUIRE(s.items.size() == 2);

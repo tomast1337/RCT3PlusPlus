@@ -17,6 +17,7 @@
 
 #include "save/save_file.hpp"
 #include "save/value.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -247,8 +248,8 @@ namespace rct3::save::model
         std::vector<PeopleRef> attractions_visited { };
         PeopleRef attraction_info { }; ///< Per-attraction session object
         PeopleRef route_controller { };
-        PeopleRef holder { };         ///< The person's item holder object (MyHolders)
-        float time_to_next_think = 0; ///< Seconds
+        PeopleRef holder { }; ///< The person's item holder object (MyHolders)
+        units::Seconds time_to_next_think { };
         std::int32_t thinks_to_big_think = 0;
         // The player's switches on their window, kept in rct3++'s own saves.
         bool thoughts_to_console = false; ///< Their new thoughts are posted as messages
@@ -333,8 +334,8 @@ namespace rct3::save::model
         bool leaving_due_to_closed_park = false;
         std::optional<float> pool_need { };
         std::optional<float> pool_preference { };
-        std::optional<float> time_in_pool { };   ///< Seconds still to swim, while in a pool
-        std::optional<float> price_modifier { }; ///< Willingness-to-pay multiplier
+        std::optional<units::Seconds> time_in_pool { }; ///< Still to swim, while in a pool
+        std::optional<float> price_modifier { };        ///< Willingness-to-pay multiplier
     };
 
     // ----- staff -----
@@ -408,7 +409,7 @@ namespace rct3::save::model
         std::int32_t training = 0; ///< 0 untrained .. 3 fully trained
         float laziness = 0;        ///< 0..1
         float happiness = 0.5f;    ///< 0..1
-        float think_timer = 0;     ///< Seconds
+        units::Seconds think_timer { };
         std::int32_t last_task_type = 0;
         // Counters of thinks since an event; -1 means never.
         std::int32_t thinks_since_last_task = -1;
@@ -417,7 +418,7 @@ namespace rct3::save::model
         std::int32_t thinks_since_happy = -1;
         PatrolArea patrol { };
         std::int32_t task_flags = 0;
-        std::optional<float> time_in_pool { }; ///< Seconds still to swim, while in a pool (an inspector looking one over)
+        std::optional<units::Seconds> time_in_pool { }; ///< Still to swim, while in a pool (an inspector looking one over)
         std::variant<std::monostate, HandymanWork, MechanicWork, EntertainerWork, VendorWork, KeeperWork, LifeGuardWork> work { };
     };
 

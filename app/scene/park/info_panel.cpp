@@ -629,7 +629,7 @@ namespace rct3::scene::park
         else if (ride == nullptr)
             return;
         else if (change.id == ui::screens::info::control_id(Price))
-            ride->ticket_price = change.value;
+            ride->ticket_price = { change.value };
         else if (change.id == ui::screens::info::control_id(Inspection))
         {
             ride->breakdown.inspection_interval = change.value;

@@ -2404,7 +2404,7 @@ namespace rct3::scene::park
             const auto fold = [&](save::model::AttractionCommon& c) {
                 if (a.saved != 0 && c.id == a.saved)
                 {
-                    c.total_profit += a.income.value;
+                    c.total_profit += a.income;
                     c.total_guests += a.customers;
                 }
             };

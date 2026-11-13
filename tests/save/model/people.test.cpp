@@ -428,7 +428,7 @@ TEST_CASE("values stored under the wrong declared type are reinterpreted")
     const auto w = make_world({ g });
     const auto guest = build(*w, 1, make_guest);
     REQUIRE(guest);
-    CHECK(guest->person.time_to_next_think == 2.5f);
+    CHECK(guest->person.time_to_next_think.value == 2.5f);
     CHECK(guest->person.thinks_to_big_think == 7);
     CHECK_FALSE(guest->in_park);
     CHECK(guest->person.type == PersonType::Adult);

@@ -4,7 +4,7 @@
 #include "logging/log.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
-#include "ui/screens/about_window.hpp"
+#include "ui/screens/dialogs/about.hpp"
 #include "ui/skin/set.hpp"
 #include "ui/translation_file.hpp"
 #include "ui/truetype_font.hpp"
@@ -80,7 +80,7 @@ namespace rct3::ui
                 continue;
             if (auto game = StringTable::load(*path))
             {
-                screens::add_game_credits(*assets.strings, *game);
+                screens::dialogs::add_game_credits(*assets.strings, *game);
                 break;
             }
         }

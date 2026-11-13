@@ -5,8 +5,8 @@
 #include "scene/park/setup.hpp"
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
-#include "ui/screens/attraction_info.hpp"
-#include "ui/screens/scenery_info.hpp"
+#include "ui/screens/info/attraction.hpp"
+#include "ui/screens/info/scenery.hpp"
 #include "ui/widgets/question_box.hpp"
 
 #include <string>
@@ -54,7 +54,7 @@ namespace rct3::scene::park
         for (const rct3::park::AttractionRef ref : refs)
         {
             const save::model::AttractionCommon& a = ref.kind == rct3::park::AttractionRef::Kind::Stall ? scene.rides.stalls.at(ref.index).base : scene.rides.rides.at(ref.index).base;
-            names += (names.empty() ? u"" : u", ") + ui::screens::attraction_name(a, strings);
+            names += (names.empty() ? u"" : u", ") + ui::screens::info::attraction_name(a, strings);
         }
         std::u16string text(strings.get(kDemolishText));
         if (const auto at = text.find(u"%NAME%"); at != std::u16string::npos)
@@ -75,7 +75,7 @@ namespace rct3::scene::park
             text.replace(at, kSellPoolMark.size(), named.empty() ? std::u16string(strings.get(kPoolDefaultName)) : strings::to_utf16(named));
         // It names the room asked from as well.
         if (const auto at = text.find(u"%NAME%"); at != std::u16string::npos)
-            text.replace(at, 6, ui::screens::scenery_name({ .symbol = scene.pools.rooms.at(room).symbol }, strings));
+            text.replace(at, 6, ui::screens::info::scenery_name({ .symbol = scene.pools.rooms.at(room).symbol }, strings));
         const ui::widgets::QuestionBoxStyle style = skins::question_box_style(palette);
         auto& box = scene.desktop->root().add<ui::widgets::QuestionBox>(std::string(kSellPoolName), style, std::move(text), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
         box.title = std::u16string(strings.get(kSellPoolTitle));

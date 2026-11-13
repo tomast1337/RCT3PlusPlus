@@ -67,7 +67,7 @@
 #include "ui/inspect.hpp"
 #include "ui/key_map.hpp"
 #include "ui/language.hpp"
-#include "ui/screens/tool_row.hpp"
+#include "ui/screens/park_view/tool_row.hpp"
 
 #include <algorithm>
 #include <array>
@@ -1009,7 +1009,7 @@ int main(int argc, char** argv)
                 park->day.fade = 0;
             }
             // In a career, leaving goes back to the career's map, under the park.
-            if (auto tools = park->desktop->root().find_as<rct3::ui::screens::ToolRow>(rct3::scene::park::kToolsName))
+            if (auto tools = park->desktop->root().find_as<rct3::ui::screens::park_view::ToolRow>(rct3::scene::park::kToolsName))
                 tools->set_career(!park_game.career.empty());
         }
         else

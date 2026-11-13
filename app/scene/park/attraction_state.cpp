@@ -66,18 +66,18 @@ namespace rct3::scene::park
         return rct3::park::track::open_refusal(r, rules, state, scene.building.ride == ride, course, joined);
     }
 
-    std::vector<ui::screens::StateChoice> state_choices(const ParkScene& scene, rct3::park::AttractionRef ref)
+    std::vector<ui::screens::info::StateChoice> state_choices(const ParkScene& scene, rct3::park::AttractionRef ref)
     {
         if (ref.kind == rct3::park::AttractionRef::Kind::Stall)
-            return ui::screens::state_choices(ui::screens::AttractionKind::Stall);
+            return ui::screens::info::state_choices(ui::screens::info::AttractionKind::Stall);
         const bool tested = ref.index >= scene.track_rules.size() || !scene.track_rules[ref.index].never_tested;
-        return ui::screens::state_choices(ui::screens::attraction_kind(scene.rides.rides.at(ref.index)), tested);
+        return ui::screens::info::state_choices(ui::screens::info::attraction_kind(scene.rides.rides.at(ref.index)), tested);
     }
 
-    std::vector<ui::screens::InfoChoice> state_fan(const ParkScene& scene, rct3::park::AttractionRef ref, const ui::StringTable& strings)
+    std::vector<ui::screens::info::InfoChoice> state_fan(const ParkScene& scene, rct3::park::AttractionRef ref, const ui::StringTable& strings)
     {
-        std::vector<ui::screens::InfoChoice> fan;
-        for (const ui::screens::StateChoice& c : state_choices(scene, ref))
+        std::vector<ui::screens::info::InfoChoice> fan;
+        for (const ui::screens::info::StateChoice& c : state_choices(scene, ref))
         {
             // Greyed only where the attraction cannot be put in that state, saying why; the state it is in stays live.
             const auto refused = state_refusal(scene, ref, c.state);

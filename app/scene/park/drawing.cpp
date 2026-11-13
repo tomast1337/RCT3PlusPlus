@@ -22,7 +22,7 @@
 #include "scene/park/view.hpp"
 #include "scene/park/water.hpp"
 #include "scene/pool_tools.hpp"
-#include "ui/screens/pool_panel.hpp"
+#include "ui/screens/build/pools.hpp"
 
 #include <algorithm>
 #include <array>
@@ -454,7 +454,7 @@ namespace rct3::scene::park
         template<typename Panel, typename Draw> void draw_view(render::Device& device, ParkScene& scene, Panel& panel, render::TextureHandle& target, std::uint32_t& pixels, std::string_view label, render::Color back, Draw&& draw)
         {
             const float scale = scale_for(device, scene);
-            const auto wanted = static_cast<std::uint32_t>(std::lround(ui::screens::info_panel::kView * scale));
+            const auto wanted = static_cast<std::uint32_t>(std::lround(ui::screens::info::info_panel::kView * scale));
             if (target && pixels != wanted)
             {
                 device.destroy_texture(target);
@@ -630,7 +630,7 @@ namespace rct3::scene::park
             });
         profiling::section("LedSigns", [&] { roll_led_signs(device, scene); });
         // A person shows alone on a light ground, turning as the build list's pieces do; the rest in the park.
-        if (auto info = scene.desktop->root().find_as<ui::screens::InfoPanel>(kInfoName); info && (scene.shown || scene.shown_person || scene.shown_prop || !scene.shown_party.empty()))
+        if (auto info = scene.desktop->root().find_as<ui::screens::info::InfoPanel>(kInfoName); info && (scene.shown || scene.shown_person || scene.shown_prop || !scene.shown_party.empty()))
         {
             // A person, or a party, stands alone; anything else is seen where it is in the park.
             const std::array person { scene.shown_person.value_or(0) };
@@ -640,9 +640,9 @@ namespace rct3::scene::park
         // The item being placed, alone on the disc's grey, lit as the park is.
         // shortcut: its see-through parts are drawn in the mesh's order, not after the rest; sort them if a
         // preview shows a part hidden behind glass.
-        if (auto pools = scene.desktop->root().find_as<ui::screens::PoolPanel>("pool_panel"); pools && pools->showing() && scene.pooling.item && !scene.pooling.preview.indices.empty())
+        if (auto pools = scene.desktop->root().find_as<ui::screens::build::PoolPanel>("pool_panel"); pools && pools->showing() && scene.pooling.item && !scene.pooling.preview.indices.empty())
             draw_view(device, scene, *pools, scene.pooling.preview_target, scene.pooling.preview_pixels, "pool view", render::hex("#7f7f7f"), [&] { draw_ghost_mesh(device, scene, scene.pooling.preview, rct3::park::view_projection(scene.pooling.preview_camera, 1), scene.light, true); });
-        if (auto placing = scene.desktop->root().find_as<ui::screens::InfoPanel>(kPlacingName); placing && placing->showing() && !scene.placing.preview_mesh.indices.empty())
+        if (auto placing = scene.desktop->root().find_as<ui::screens::info::InfoPanel>(kPlacingName); placing && placing->showing() && !scene.placing.preview_mesh.indices.empty())
             profiling::section("PlacingView", [&] { draw_view(device, scene, *placing, scene.placing.preview_target, scene.placing.preview_pixels, "placing view", render::hex("#7f7f7f"), [&] { draw_ghost_mesh(device, scene, scene.placing.preview_bones.empty() ? scene.placing.preview_mesh : scene.placing.preview_moving.mesh, rct3::park::view_projection(scene.placing.preview_camera, 1), scene.light, true); }); });
         if (!scene.photos.empty() && !scene.photo_reading)
             profiling::section("Photo", [&] { draw_photo(device, scene); });

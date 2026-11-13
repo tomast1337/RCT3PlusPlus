@@ -1,0 +1,303 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// The round panel in the bottom-left corner of the park view that lays paths, opened by the tool row's paths
+// button. It is the info panel's shape turned the other way: a disc in the corner with tabs on a ring round
+// it, and a strip running out to the right of the disc that shows one page at a time.
+//
+// Tabs, going round the ring: one shows the building controls, one keeps the camera on the build point while
+// building, one switches route building on (paths find their own way to a tile picked), two open the path
+// styles and the queue styles, and one has routes keep to the straight line to the tile picked. A style page shows each style's picture; the
+// one chosen is marked, and choosing one goes back to the controls. The controls are three arrows that turn
+// left, go straight on or turn right, five slopes from steps down to steps up, a switch to cut into the
+// ground and a button that takes the last piece away. A line under them tells what the control under the
+// pointer does. The band along the strip's top shows what the owner gives it, such as the chosen style and its
+// price. The disc shows the chosen style's picture, and at its foot the size of the square a stroke paints.
+//
+// The panel keeps no park state. The owner gives it the styles with show(), says which controls can be used
+// with set_controls(), and hears through take_control() and take_style() what the player pressed.
+#pragma once
+
+#include "ui/panel_look.hpp"
+#include "ui/screens/info/panel.hpp"
+#include "ui/string_table.hpp"
+#include "ui/widgets/button.hpp"
+#include "ui/widgets/label.hpp"
+#include "ui/widgets/spinner.hpp"
+
+#include <array>
+#include <cstddef>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace rct3::ui::screens::build
+{
+
+    /// The panel's controls, in the order of park::PathControl.
+    inline constexpr std::size_t kFootpathControls = 10;
+
+    struct FootpathPanelStyle
+    {
+        PanelLook look = PanelLook::Coded;
+        info::CodedInfoPanel coded;
+        std::string tab_face;   ///< Behind each tab's icon
+        std::string close_icon; ///< On the close button
+        std::string controls_icon;
+        /// From the screen's bottom edge to the disc's: the tool row and its open menu stay clear below.
+        float bottom = info::info_panel::kDiscMargin;
+        std::string follow_icon;
+        std::string route_icon;
+        std::string remove_icon;
+        std::string paths_icon;
+        std::string queues_icon;
+        std::string straight_icon;
+        widgets::SpinnerStyle size; ///< The brush's size at the disc's foot
+        /// Strings keys of the tabs' help, in the order above.
+        std::array<std::string, 7> tab_help; ///< Controls, follow, route, remove, paths, queues, straight
+        /// Each control's picture when it can be used and when it cannot; the cut switch has its own two
+        /// pictures instead, for on and off.
+        std::array<std::string, kFootpathControls> usable_icons;
+        std::array<std::string, kFootpathControls> unusable_icons;
+        std::string cut_on_icon;
+        std::string cut_off_icon;
+        std::array<std::string, kFootpathControls> control_help; ///< Strings keys
+        Color text_colour = hex("#ffffff");                      ///< In the band
+        Color page_text_colour = hex("#000000");                 ///< On the page's paper
+        Color chosen = hex("#efe8ef");                           ///< Behind the chosen style on a style page
+    };
+
+    namespace footpath_panel
+    {
+        /// Of the ring's slots, how far round each tab sits: the first is up and to the left of the disc's
+        /// middle, the others follow clockwise.
+        inline constexpr float kFirstAngle = 128;
+        inline constexpr float kSlotAngle = -32;
+        inline constexpr int kControlsSlot = 0;
+        inline constexpr int kFollowSlot = 1;
+        inline constexpr int kRouteSlot = 2;
+        inline constexpr int kRemoveSlot = 3;
+        inline constexpr int kPathsSlot = 4;
+        inline constexpr int kQueuesSlot = 5;
+        inline constexpr int kStraightSlot = 6;
+        inline constexpr float kCloseLeft = 9; ///< From the screen's left edge
+        inline constexpr float kCloseBottom = 9;
+        /// From the strip's left edge to the page: the ring's tabs on the right of the disc stand over the room
+        /// left before it, as they do in the game's own panel.
+        inline constexpr float kBodyLeft = 40;
+        inline constexpr float kBodyRight = 16; ///< After the page
+        inline constexpr float kPaperLeft = 12; ///< Of the paper, before the page
+        inline constexpr float kDividerY = 65;  ///< Of the line under the arrows, down the controls page
+        inline constexpr float kBodyTop = 22;   ///< From the strip's top edge, below its band
+        inline constexpr float kStatusGap = 8;  ///< Between the disc and the band's text
+        /// The controls page and the rectangle of each control on it, in the order of the controls.
+        inline constexpr float kControlsWidth = 160;
+        inline constexpr float kControlsHeight = 100;
+        inline constexpr std::array<Rect, kFootpathControls> kControlRects { {
+            { 32, 4, 60, 30 },
+            { 62, 4, 90, 30 },
+            { 92, 4, 120, 30 },
+            { 2, 34, 30, 62 },
+            { 32, 34, 60, 62 },
+            { 62, 34, 90, 62 },
+            { 92, 34, 120, 62 },
+            { 122, 34, 150, 62 },
+            { 122, 68, 158, 98 },
+            { 82, 68, 118, 98 },
+        } };
+        inline constexpr Rect kTextRect { 0, 68, 80, 98 };
+        inline constexpr float kLargeIcon = 40; ///< Of the remove and cut pictures, drawn smaller to fit
+        inline constexpr std::size_t kStyleColumns = 5;
+        inline constexpr float kStyleCell = 36; ///< A style's picture and the room round it
+        inline constexpr float kStyleIcon = 40; ///< Of the styles' own pictures
+        inline constexpr float kLineHeight = 15;
+        inline constexpr float kDiscIcon = 56;  ///< The chosen style's picture on the disc
+        inline constexpr int kLargestBrush = 5; ///< Tiles along each side of the widest stroke.
+    } // namespace footpath_panel
+
+    /// The middle of the tab at `slot`, from the middle of the disc, with y down.
+    [[nodiscard]] Point footpath_tab_offset(int slot);
+
+    /// A style the player can choose.
+    struct FootpathStyle
+    {
+        std::string icon;
+        std::u16string name;
+        std::u16string price; ///< As written beside its name
+    };
+
+    /// Which page the strip shows.
+    enum class FootpathPage : std::uint8_t
+    {
+        None,
+        Controls,
+        Paths,
+        Queues,
+    };
+
+    /// A style the player chose: a queue style or a path style, and which of them.
+    struct FootpathPick
+    {
+        bool queue = false;
+        std::size_t index = 0;
+    };
+
+    class FootpathPanel : public Widget
+    {
+    public:
+        FootpathPanel(std::string name, FootpathPanelStyle style, const StringTable& strings);
+
+        /// Opens the panel with the styles to choose from, the controls page out and the route, straight and remove
+        /// tabs off.
+        void show(std::vector<FootpathStyle> paths, std::vector<FootpathStyle> queues);
+        void hide();
+        [[nodiscard]] bool showing() const
+        {
+            return visible;
+        }
+
+        /// Marks the chosen style; none when `pick` is empty.
+        void set_chosen(std::optional<FootpathPick> pick);
+        [[nodiscard]] std::optional<FootpathPick> chosen() const
+        {
+            return chosen_;
+        }
+        /// Which controls can be used, which slope is picked and whether cutting into the ground is on.
+        void set_controls(const std::array<bool, kFootpathControls>& usable, std::size_t slope_control, bool cut);
+        /// What the band along the strip's top shows while the controls are out.
+        void set_status(std::u16string text);
+
+        void open_page(FootpathPage page);
+        [[nodiscard]] FootpathPage page() const
+        {
+            return page_;
+        }
+        [[nodiscard]] bool following() const
+        {
+            return follow_->on;
+        }
+        void set_following(bool on)
+        {
+            follow_->on = on;
+        }
+        [[nodiscard]] bool routing() const
+        {
+            return route_->on;
+        }
+        /// Routes keep to the straight line to their goal rather than turn once.
+        [[nodiscard]] bool straight() const
+        {
+            return straight_->on;
+        }
+        /// Tiles along each side of the square a stroke paints round the pointer's tile.
+        [[nodiscard]] int brush() const
+        {
+            return size_->value();
+        }
+        /// Clicks take paths away rather than lay them.
+        [[nodiscard]] bool removing() const
+        {
+            return remove_->on;
+        }
+
+        /// The control pressed since the last call, by its index.
+        [[nodiscard]] std::optional<std::size_t> take_control()
+        {
+            return std::exchange(control_now_, std::nullopt);
+        }
+        /// The style chosen since the last call.
+        [[nodiscard]] std::optional<FootpathPick> take_style()
+        {
+            return std::exchange(style_now_, std::nullopt);
+        }
+        /// True once after the player closed the panel.
+        [[nodiscard]] bool take_closed()
+        {
+            return std::exchange(closed_, false);
+        }
+
+        [[nodiscard]] Rect disc() const;
+        [[nodiscard]] Rect strip() const;
+        [[nodiscard]] widgets::Button& control(std::size_t i) const
+        {
+            return *controls_.at(i);
+        }
+        [[nodiscard]] widgets::Button& tab(FootpathPage page) const;
+        [[nodiscard]] widgets::Button& follow_tab() const
+        {
+            return *follow_;
+        }
+        [[nodiscard]] widgets::Button& route_tab() const
+        {
+            return *route_;
+        }
+        [[nodiscard]] widgets::Button& straight_tab() const
+        {
+            return *straight_;
+        }
+        [[nodiscard]] widgets::Button& remove_tab() const
+        {
+            return *remove_;
+        }
+        [[nodiscard]] std::size_t style_count() const
+        {
+            return styles_.size();
+        }
+        [[nodiscard]] widgets::Button& style_button(std::size_t i) const
+        {
+            return *styles_.at(i);
+        }
+        [[nodiscard]] const widgets::Label& text_line() const
+        {
+            return *text_;
+        }
+        [[nodiscard]] const widgets::Label& status_line() const
+        {
+            return *status_line_;
+        }
+
+        [[nodiscard]] bool takes_pointer() const override
+        {
+            return true;
+        }
+        [[nodiscard]] bool covers(Point p) const override;
+        void update(const UpdateContext& context) override;
+        void draw(DrawContext& context) const override;
+
+    private:
+        [[nodiscard]] Point body_size() const;
+        void place();
+        void fill_styles();
+        void mark();
+
+        FootpathPanelStyle style_;
+        const StringTable& strings_;
+        widgets::Button* close_ = nullptr;
+        widgets::Button* controls_tab_ = nullptr;
+        widgets::Button* follow_ = nullptr;
+        widgets::Button* route_ = nullptr;
+        widgets::Button* remove_ = nullptr;
+        widgets::Button* paths_tab_ = nullptr;
+        widgets::Button* queues_tab_ = nullptr;
+        widgets::Button* straight_ = nullptr;
+        widgets::Spinner* size_ = nullptr;
+        Widget* body_ = nullptr;
+        std::array<widgets::Button*, kFootpathControls> controls_ { };
+        std::array<bool, kFootpathControls> usable_ { };
+        widgets::Label* text_ = nullptr;
+        widgets::Label* status_line_ = nullptr;
+        widgets::Label* style_name_ = nullptr;
+        std::vector<widgets::Button*> styles_;
+        std::vector<FootpathStyle> paths_;
+        std::vector<FootpathStyle> queues_;
+        std::u16string status_;
+        std::optional<FootpathPick> chosen_;
+        std::optional<std::size_t> control_now_;
+        std::optional<FootpathPick> style_now_;
+        FootpathPage page_ = FootpathPage::Controls;
+        std::size_t slope_ = 5; ///< The control of the picked slope
+        bool cut_ = false;
+        bool closed_ = false;
+    };
+
+} // namespace rct3::ui::screens::build

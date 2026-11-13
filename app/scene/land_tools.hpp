@@ -2,7 +2,7 @@
 //
 // The land menu's tools that work on the ground itself.
 //
-// Shape ground and paint ground open the land panel (ui/screens/land_panel.hpp) in the bottom-left corner.
+// Shape ground and paint ground open the land panel (ui/screens/build/land.hpp) in the bottom-left corner.
 // Shaping's tabs hold the tile tools and the smoothing, raising and lowering brushes.
 //
 // Tile tools: press on the ground and move the pointer up or down to move it: the ground follows the pointer, up

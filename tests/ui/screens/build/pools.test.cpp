@@ -1,0 +1,156 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "ui/screens/build/pools.hpp"
+
+#include "ui/desktop.hpp"
+#include "ui/game_style.hpp"
+
+#include <doctest/doctest.h>
+
+using namespace rct3::ui;
+using namespace rct3::ui::widgets;
+using namespace rct3::ui::screens;
+using namespace rct3::ui::screens::build;
+
+namespace
+{
+    struct Fixture
+    {
+        StringTable strings;
+        Desktop desktop;
+        PoolPanel* panel = nullptr;
+
+        Fixture()
+        {
+            panel = &desktop.root().add<PoolPanel>("pools", game_skins::pool_panel_style(kGamePalette), strings);
+            desktop.layout({ 0, 0, 1000, 700 });
+            desktop.update({ });
+            panel->show({ { "lamp", u"Lamp" }, { "ladder", u"Ladder" } }, { { "room", u"Room" } }, { { "ramp", u"Ramp" } });
+            desktop.update({ });
+        }
+
+        Button& button(std::string_view path) const
+        {
+            return *desktop.root().find_as<Button>(path);
+        }
+
+        void click(std::string_view path)
+        {
+            const Rect r = button(path).rect();
+            PointerState s;
+            s.position = { (r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2 };
+            desktop.update(s);
+            s.down = true;
+            desktop.update(s);
+            s.down = false;
+            desktop.update(s);
+        }
+    };
+} // namespace
+
+TEST_CASE("the pool panel opens on the editor with water out")
+{
+    Fixture f;
+    CHECK(f.panel->showing());
+    CHECK(f.panel->page() == PoolPage::Editor);
+    CHECK(f.panel->take_change());
+    CHECK(f.panel->editor().mode == PoolMode::Water);
+    CHECK(f.panel->editor().snap);
+    CHECK_FALSE(f.button("pools/File_LoadGame").enabled);
+}
+
+TEST_CASE("a tab clicked again keeps its page open")
+{
+    Fixture f;
+    f.click("pools/Pool_ChangingRoomPanel");
+    f.click("pools/Pool_ChangingRoomPanel");
+    CHECK(f.panel->page() == PoolPage::Rooms);
+    CHECK(f.desktop.root().find("pools/body/room").has_value());
+}
+
+TEST_CASE("the paths tab puts paths out, its controls pressed one at a time, and the editor's tab water again")
+{
+    Fixture f;
+    f.click("pools/Pool_PathPanel");
+    CHECK(f.panel->editor().mode == PoolMode::Path);
+    (void)f.panel->take_change();
+    f.click("pools/body/paths/Path_UpwardSteps");
+    CHECK(f.panel->take_path_control() == std::size_t { 7 });
+    CHECK_FALSE(f.panel->take_path_control());
+    CHECK(f.panel->take_change());
+    f.click("pools/body/paths/Path_Straight");
+    CHECK(f.panel->take_path_control() == std::size_t { 1 });
+    CHECK_FALSE(f.panel->take_change());
+    f.click("pools/Pool_PoolPanel");
+    CHECK(f.panel->editor().mode == PoolMode::Water);
+}
+
+TEST_CASE("an edge button sets the edge and puts the water out")
+{
+    Fixture f;
+    f.click("pools/body/editor/Pool_PlaceTiles");
+    (void)f.panel->take_change();
+    f.click("pools/body/editor/Pool_CurveLarge");
+    CHECK(f.panel->take_change());
+    CHECK(f.panel->editor().edge == 3);
+    CHECK(f.panel->editor().mode == PoolMode::Water);
+}
+
+TEST_CASE("the editor's buttons change the tool and keep their choices")
+{
+    Fixture f;
+    (void)f.panel->take_change();
+    f.click("pools/body/editor/Pool_DeleteArea");
+    CHECK(f.panel->take_change());
+    CHECK(f.panel->editor().mode == PoolMode::Delete);
+    f.click("pools/body/editor/Pool_DepthDeep");
+    CHECK(f.panel->editor().depth == 3);
+    f.panel->hide();
+    f.panel->show({ }, { }, { });
+    CHECK(f.panel->editor().mode == PoolMode::Delete);
+    CHECK(f.panel->editor().depth == 3);
+}
+
+TEST_CASE("an extra picked replaces the editor's tool until the editor's tab opens again")
+{
+    Fixture f;
+    f.click("pools/Pool_ExtraPanel");
+    CHECK(f.panel->page() == PoolPage::Extras);
+    (void)f.panel->take_change();
+    f.click("pools/body/ladder");
+    CHECK(f.panel->take_change());
+    CHECK(f.panel->placing() == std::pair { PoolPage::Extras, std::size_t { 1 } });
+    f.click("pools/Pool_PoolPanel");
+    CHECK(f.panel->take_change());
+    CHECK_FALSE(f.panel->placing());
+}
+
+TEST_CASE("the paths page offers the ways between levels, picked like the extras")
+{
+    Fixture f;
+    f.click("pools/Pool_PathPanel");
+    (void)f.panel->take_change();
+    f.click("pools/body/ramp");
+    CHECK(f.panel->take_change());
+    CHECK(f.panel->placing() == std::pair { PoolPage::Paths, std::size_t { 0 } });
+}
+
+TEST_CASE("the paths page alone has the pin and the camera follow switch, and the pin shows its controls")
+{
+    Fixture f;
+    CHECK_FALSE(f.button("pools/pin").visible);
+    CHECK_FALSE(f.button("pools/follow").visible);
+    f.click("pools/Pool_PathPanel");
+    CHECK(f.button("pools/pin").visible);
+    CHECK(f.panel->pinned());
+    CHECK_FALSE(f.panel->following());
+    CHECK(f.desktop.root().find_as<Widget>("pools/body/paths")->visible);
+    f.click("pools/follow");
+    CHECK(f.panel->following());
+    f.click("pools/pin");
+    CHECK_FALSE(f.panel->pinned());
+    CHECK_FALSE(f.desktop.root().find_as<Widget>("pools/body/paths")->visible);
+    f.click("pools/pin");
+    CHECK(f.panel->pinned());
+    f.click("pools/Pool_ExtraPanel");
+    CHECK_FALSE(f.button("pools/pin").visible);
+}

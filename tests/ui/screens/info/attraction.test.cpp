@@ -1,0 +1,528 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "ui/screens/info/attraction.hpp"
+
+#include <algorithm>
+#include <doctest/doctest.h>
+#include <optional>
+#include <span>
+#include <utility>
+
+using namespace rct3;
+using namespace rct3::ui;
+using namespace rct3::ui::widgets;
+using namespace rct3::ui::screens;
+using namespace rct3::ui::screens::info;
+
+namespace
+{
+    StringTable table()
+    {
+        StringTable s;
+        s.add("SpinnerRideName", u"Spinner");
+        s.add("SweetShopStallName", u"Sweets");
+        s.add("TwirlerRideName", u"Twirl");
+        s.add("RideNameZoom", u"Zoom!");
+        s.add("TT_AttractionInstance_UnnamedAttraction", u"Nameless");
+        s.add("RideRating0", u"Low");
+        s.add("RideRating1", u"Medium");
+        s.add("RideRating6", u"Off the scale");
+        s.add("AttractionStatusOpen", u"Open");
+        s.add("AttractionStatusClosed", u"Closed");
+        s.add("AttractionFinancesDialogLabel_TotalProfit", u"Profit");
+        s.add("AttractionResultsDialogLabel_NotAssessed", u"Not yet");
+        s.add("AttractionResultsDialogLabel_Excitement", u"Fun");
+        s.add("AttractionResultsDialogLabel_MaxSpeed", u"Fastest");
+        s.add("RideMaintenanceDialogLabel_Reliability", u"Sound");
+        return s;
+    }
+
+    bool has(const std::vector<AttractionTabInfo>& tabs, AttractionTab tab)
+    {
+        return std::ranges::any_of(tabs, [&](const AttractionTabInfo& t) { return t.tab == tab; });
+    }
+} // namespace
+
+namespace
+{
+    /// The state words the view page shows under the name.
+    std::u16string status_words(const InfoPage& page)
+    {
+        const auto found = std::ranges::find(page.controls, std::string("status"), &InfoControl::name);
+        return found == page.controls.end() ? std::u16string { } : found->label;
+    }
+} // namespace
+
+TEST_CASE("each kind of attraction has its own tabs, in the order of their places on the ring")
+{
+    const auto tracked = attraction_tabs(AttractionKind::Tracked, save::model::AttractionState::Open);
+    CHECK(tracked.size() == 11);
+    CHECK(has(tracked, AttractionTab::Graphs));
+    CHECK(std::ranges::is_sorted(tracked, { }, &AttractionTabInfo::slot));
+    const auto flat = attraction_tabs(AttractionKind::Flat, save::model::AttractionState::Closed);
+    CHECK(flat.size() == 9);
+    CHECK_FALSE(has(flat, AttractionTab::Construction));
+    const auto facility = attraction_tabs(AttractionKind::Facility, save::model::AttractionState::Closed);
+    CHECK(facility.size() == 5);
+    const auto stall = attraction_tabs(AttractionKind::Stall, save::model::AttractionState::Closed);
+    CHECK(has(stall, AttractionTab::Items));
+    CHECK_FALSE(has(stall, AttractionTab::Tests));
+    // The open-or-close tab shows the state.
+    const auto state = [](const std::vector<AttractionTabInfo>& tabs) { return std::ranges::find(tabs, AttractionTab::State, &AttractionTabInfo::tab)->icon; };
+    CHECK(state(tracked) != state(flat));
+}
+
+TEST_CASE("an attraction's name is its own, a named string, or its kind and number")
+{
+    const StringTable s = table();
+    save::model::AttractionCommon a;
+    a.name = "Loop the loop";
+    CHECK(attraction_name(a, s) == u"Loop the loop");
+    a.name = "#RideNameZoom#";
+    CHECK(attraction_name(a, s) == u"Zoom!");
+    a.name = "%ME% 03";
+    a.symbol = "spinnerride:anr";
+    CHECK(attraction_name(a, s) == u"Spinner 3");
+    a.symbol = "SweetShopstall:sta";
+    a.name = "%ME% 01";
+    CHECK(attraction_name(a, s) == u"Sweets 1");
+    a.symbol = "Twirler:anr"; // Its name's string has "Ride" before "Name"
+    CHECK(attraction_name(a, s) == u"Twirl 1");
+    a.symbol = "Unknown:sta";
+    CHECK(attraction_name(a, s) == u"Nameless");
+}
+
+TEST_CASE("ratings are put in words by how high they are")
+{
+    const StringTable s = table();
+    CHECK(rating_word(0.5f, s) == u"Low");
+    CHECK(rating_word(3, s) == u"Medium");
+    CHECK(rating_word(99, s) == u"Off the scale");
+}
+
+TEST_CASE("why a ride was not opened shows in place of its state")
+{
+    StringTable s = table();
+    s.add("RideHasNoStation", u"No station");
+    save::model::Ride ride;
+    ride.base.name = "Ride";
+    AttractionFacts f;
+    f.common = &ride.base;
+    f.ride = &ride;
+    f.refusal = "RideHasNoStation";
+    CHECK(attraction_page(AttractionTab::State, f, s, { }).note == u"No station");
+    CHECK(status_words(attraction_page(AttractionTab::View, f, s, { })) == u"No station");
+    f.refusal = { };
+    CHECK(attraction_page(AttractionTab::State, f, s, { }).note == u"Closed");
+}
+
+TEST_CASE("pages are written from the attraction's state")
+{
+    const StringTable s = table();
+    save::model::Ride ride;
+    ride.base.name = "Ride";
+    ride.base.state = save::model::AttractionState::Open;
+    ride.base.total_profit = 1234;
+    const AttractionFacts f { &ride.base, &ride, nullptr };
+    const InfoUnits units;
+
+    const InfoPage view = attraction_page(AttractionTab::View, f, s, units);
+    CHECK(view.title == u"Ride");
+    CHECK(status_words(view) == u"Open");
+    // Running, how many are on it follows.
+    StringTable counted = s;
+    counted.add("PeopleOnRide0", u"# aboard");
+    counted.add("PeopleOnRide1", u"# alone");
+    AttractionFacts running = f;
+    running.flow = RideFlow { .riding = 3 };
+    CHECK(status_words(attraction_page(AttractionTab::View, running, counted, units)) == u"Open, 3 aboard");
+    running.flow->riding = 1;
+    CHECK(status_words(attraction_page(AttractionTab::View, running, counted, units)) == u"Open, 1 alone");
+
+    const InfoPage money = attraction_page(AttractionTab::Finances, f, s, units);
+    const auto profit = std::ranges::find(money.lines, std::u16string(u"Profit"), &InfoLine::label);
+    REQUIRE(profit != money.lines.end());
+    CHECK(profit->value == money_text(units.currency, 1234));
+
+    InfoPage tests = attraction_page(AttractionTab::Tests, f, s, units);
+    CHECK(tests.lines.empty());
+    CHECK(tests.note == u"Not yet");
+    ride.assessment.valid = true;
+    ride.assessment.excitement = 0.25f;
+    save::model::TestResults lap;
+    lap.valid = true;
+    lap.max_speed = 10;
+    ride.stats.last_lap = lap;
+    tests = attraction_page(AttractionTab::Tests, f, s, units);
+    CHECK(tests.lines[0].value == u"0.25 (Low)");
+    tests = attraction_page(AttractionTab::Tests, f, s, units, 1);
+    const auto fastest = std::ranges::find(tests.lines, std::u16string(u"Fastest"), &InfoLine::label);
+    REQUIRE(fastest != tests.lines.end());
+    CHECK(fastest->value == u"36.0 km/h");
+    InfoUnits imperial;
+    imperial.distance = DistanceUnits::Imperial;
+    const InfoPage slow = attraction_page(AttractionTab::Tests, f, s, imperial, 1);
+    CHECK(std::ranges::find(slow.lines, std::u16string(u"Fastest"), &InfoLine::label)->value == u"22.4 mph");
+
+    ride.breakdown.reliability = 87.4f;
+    CHECK(attraction_page(AttractionTab::Maintenance, f, s, units).lines[0].value == u"87 %");
+    CHECK(attraction_page(AttractionTab::Maintenance, f, s, units).lines[0].bar == doctest::Approx(0.874f));
+}
+
+TEST_CASE("rides can be tested as well as opened and closed, other attractions only opened and closed")
+{
+    CHECK(state_choices(AttractionKind::Tracked).size() == 3);
+    CHECK(state_choices(AttractionKind::Flat).size() == 3);
+    const auto stall = state_choices(AttractionKind::Stall);
+    REQUIRE(stall.size() == 2);
+    CHECK(stall[0].state == save::model::AttractionState::Open);
+    CHECK(stall[1].state == save::model::AttractionState::Closed);
+    CHECK(state_choices(AttractionKind::Facility).size() == 2);
+    CHECK(state_choices(AttractionKind::Tracked, false).size() == 2);
+}
+
+TEST_CASE("a tracked ride's test results come in sections, a flat ride's in one")
+{
+    StringTable s = table();
+    s.add("RideTest_Force", u"Forces");
+    s.add("AttractionResultsDialogLabel_MaxLateralG", u"Sideways");
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Tracked;
+    save::model::TestResults lap;
+    lap.valid = true;
+    lap.max_lateral = 9.81f * 2;
+    ride.stats.last_lap = lap;
+    const AttractionFacts f { &ride.base, &ride, nullptr };
+    const InfoPage forces = attraction_page(AttractionTab::Tests, f, s, { }, 2);
+    CHECK(forces.sections.size() == 4);
+    CHECK(forces.section_list);
+    CHECK(forces.section == 2);
+    CHECK(forces.sections[2] == u"Forces");
+    CHECK(std::ranges::find(forces.lines, std::u16string(u"Sideways"), &InfoLine::label)->value == u"2.00 g");
+    // Asking past the last section shows the last.
+    CHECK(attraction_page(AttractionTab::Tests, f, s, { }, 9).section == 3);
+
+    ride.kind = save::model::RideKind::Flat;
+    CHECK(attraction_page(AttractionTab::Tests, f, s, { }, 2).sections.empty());
+}
+
+TEST_CASE("vehicles, operating mode and graphs are written from the ride")
+{
+    StringTable s = table();
+    s.add("AttractionVehicleDialogLabelNumTrains", u"Trains");
+    s.add("RideOpModeDialog_OpModeShuttle", u"Back and forth");
+    s.add("RideOpModeDialog_MinWaitTime", u"Least wait");
+    s.add("Graph_Speed", u"Speed");
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Tracked;
+    ride.base.symbol = "SpinnerRide:trr";
+    ride.trains.resize(3);
+    ride.mode = save::model::OperatingMode::Shuttle;
+    ride.options.min_wait = 12;
+    const AttractionFacts f { &ride.base, &ride, nullptr };
+
+    const InfoPage vehicles = attraction_page(AttractionTab::Vehicles, f, s, { });
+    CHECK(vehicles.heading == u"Spinner");
+    // Named after its cars where they have a name.
+    {
+        StringTable named = s;
+        named.add("TeacupCarName", u"Teacup car");
+        save::model::Ride cups = ride;
+        cups.trains[0].symbol = "Teacup:rit";
+        CHECK(attraction_page(AttractionTab::Vehicles, { &cups.base, &cups, nullptr }, named, { }).heading == u"Teacup car");
+    }
+    // Number boxes even once its trains are fixed, greyed then; the car button greyed too.
+    const auto trains = std::ranges::find(vehicles.controls, control_id(AttractionControl::Trains), &InfoControl::id);
+    REQUIRE(trains != vehicles.controls.end());
+    CHECK(trains->label == u"Trains");
+    CHECK(trains->value == 3);
+    CHECK_FALSE(trains->enabled);
+    CHECK(vehicles.controls.back().id == control_id(AttractionControl::CarKind));
+    CHECK_FALSE(vehicles.controls.back().enabled);
+
+    // Its mode, greyed, and how it runs down the left; when its trains leave down the right.
+    const InfoPage mode = attraction_page(AttractionTab::Mode, f, s, { });
+    const auto find = [&](AttractionControl id) {
+        const auto found = std::ranges::find(mode.controls, control_id(id), &InfoControl::id);
+        REQUIRE(found != mode.controls.end());
+        return *found;
+    };
+    CHECK(mode.width > 0);
+    CHECK(find(AttractionControl::Mode).items == std::vector<std::u16string> { u"Back and forth" });
+    CHECK_FALSE(find(AttractionControl::Mode).enabled);
+    CHECK(find(AttractionControl::BlockSection).column == 0);
+    CHECK(find(AttractionControl::WaitFor).items.size() == 5);
+    CHECK(find(AttractionControl::WaitFor).value == 4); // Any load, the list's last
+    CHECK(find(AttractionControl::WaitFor).column == 1);
+    CHECK(find(AttractionControl::MinWaitOn).label == u"Least wait");
+    CHECK(find(AttractionControl::MinWaitOn).value == 1);
+    CHECK(find(AttractionControl::MinWait).value == 12);
+    CHECK(find(AttractionControl::MinWait).beside);
+    CHECK(find(AttractionControl::MaxWaitOn).value == 0); // No longest wait: unticked, its seconds greyed
+    CHECK_FALSE(find(AttractionControl::MaxWait).enabled);
+    CHECK(find(AttractionControl::LowFriction).column == 1);
+
+    // A launch's speed is set in the player's unit, in hundredths.
+    ride.mode = save::model::OperatingMode::PoweredLaunch;
+    ride.options.launch_speed = 10;
+    InfoUnits imperial;
+    imperial.distance = DistanceUnits::Imperial;
+    const InfoPage launch = attraction_page(AttractionTab::Mode, f, s, imperial);
+    const auto speed = std::ranges::find(launch.controls, control_id(AttractionControl::LaunchSpeed), &InfoControl::id);
+    REQUIRE(speed != launch.controls.end());
+    CHECK(speed->value == 2237);
+    CHECK(speed->text == u" mph");
+    CHECK(speed->decimals == 2);
+    CHECK(static_cast<float>(speed->value) / 100 / speed_scale(DistanceUnits::Imperial) == doctest::Approx(10).epsilon(0.001));
+
+    CHECK(attraction_page(AttractionTab::Graphs, f, s, { }).graph.empty());
+    ride.graphs.speed = { 1, 2, 3 };
+    const InfoPage graphs = attraction_page(AttractionTab::Graphs, f, s, { });
+    REQUIRE(graphs.graph.size() == 4);
+    CHECK(graphs.graph[0].name == u"Speed");
+    // Saved newest first, drawn oldest first.
+    REQUIRE(graphs.graph[0].values.size() == 3);
+    CHECK(graphs.graph[0].values.front() == doctest::Approx(3 * 3.6f));
+    CHECK(graphs.graph[0].full == doctest::Approx(20));
+    // A mark each second, the first one timed.
+    REQUIRE(graphs.graph_ticks.size() == 1);
+    CHECK(graphs.graph_ticks[0].back == 2);
+    CHECK(graphs.graph_ticks[0].label == u"0:00");
+    // Speed alone shows at first, its numbers up the left in km/h from its round full value; a tick for each
+    // series.
+    CHECK(graphs.graph[0].shown);
+    CHECK_FALSE(graphs.graph[1].shown);
+    REQUIRE(graphs.graph_axis.size() == 5);
+    CHECK(graphs.graph_axis.front() == u"20 km/h");
+    CHECK(graphs.graph_axis.back() == u"0 km/h");
+    REQUIRE(graphs.controls.size() == 4);
+    CHECK(graphs.controls[0].id == control_id(AttractionControl::AltitudeSeries));
+    CHECK(graphs.controls[0].series == 1u);
+    CHECK(graphs.controls[2].id == control_id(AttractionControl::LateralSeries));
+    CHECK(graphs.controls[2].column == 1);
+    CHECK(graphs.controls[1].value == 1); // Speed, ticked
+    AttractionFacts heights = f;
+    heights.graph_series = 0b10;
+    ride.graphs.altitude = { 2, 4 };
+    CHECK(attraction_page(AttractionTab::Graphs, heights, s, { }).graph_axis.front() == u"5.0 m");
+}
+
+TEST_CASE("a flat ride's operating mode page sets how many times round it runs, and has no waits")
+{
+    StringTable s = table();
+    s.add("RideOpModeDialog_NumCircuits", u"Circuits");
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Flat;
+    ride.loop_count = 0; // Never set: runs once
+    const AttractionFacts f { &ride.base, &ride, nullptr };
+    const InfoPage page = attraction_page(AttractionTab::Mode, f, s, { });
+    CHECK(page.sections.empty());
+    REQUIRE(page.controls.size() == 1);
+    CHECK(page.controls[0].id == control_id(AttractionControl::Circuits));
+    CHECK(page.controls[0].label == u"Circuits");
+    CHECK(page.controls[0].value == 1);
+    CHECK(page.controls[0].minimum == 1);
+    CHECK(page.controls[0].maximum == kMostCircuits);
+}
+
+TEST_CASE("a show ride's operating mode page sets its show trick by trick")
+{
+    StringTable s = table();
+    s.add("PonyHop", u"Hop");
+    s.add("PonySpin", u"Spin");
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Flat;
+    const save::model::RideShow show { .ride = 1, .tricks = { { .name = "PonyIdle", .seconds = 5, .available = true, .invented = true }, { .name = "PonyHop", .seconds = 30, .available = true, .invented = true }, { .name = "PonySecret", .seconds = 9, .hidden = true, .available = true, .invented = true }, { .name = "PonySpin", .seconds = 45, .available = true, .invented = true }, { .name = "PonyNew", .seconds = 9, .available = true } }, .order = { 3, 1 } };
+    CHECK(show_offers(show) == std::vector<std::uint32_t> { 1, 3 }); // Not the idle one, a hidden one or one not researched
+    AttractionFacts f { &ride.base, &ride, nullptr };
+    f.show = &show;
+    const InfoPage second = attraction_page(AttractionTab::Mode, f, s, { }, 1);
+    CHECK(second.sections == std::vector<std::u16string> { u"1", u"2", u"+" });
+    REQUIRE(second.lines.size() == 1);
+    CHECK(second.lines[0].value == u"1:15");
+    REQUIRE(second.controls.size() == 2);
+    CHECK(second.controls[0].id == control_id(AttractionControl::ShowTrick));
+    CHECK(second.controls[0].items == std::vector<std::u16string> { u"Hop", u"Spin" });
+    CHECK(second.controls[0].value == 0);
+    CHECK(second.controls[1].id == control_id(AttractionControl::ShowDelete));
+    const InfoPage adding = attraction_page(AttractionTab::Mode, f, s, { }, 9);
+    CHECK(adding.section == 2);
+    REQUIRE(adding.controls.size() == 1); // Nothing to delete
+    CHECK(adding.controls[0].value == -1);
+}
+
+TEST_CASE("the thoughts page shows the latest thoughts about the attraction first")
+{
+    StringTable s = table();
+    s.add("Thought_ImLost1", u"Lost at %NAME%");
+    s.add("Thought_ImTired1", u"Tired");
+    save::model::Ride ride;
+    ride.base.name = "Big One";
+    ride.thoughts = { { 0, 1, 10, 0 }, { 0, 0, -1, 0 }, { 0, 2, 20, 5 }, { 0, 1, 5, 0 } };
+    const AttractionFacts f { &ride.base, &ride, nullptr };
+    const InfoPage page = attraction_page(AttractionTab::Thoughts, f, s, { });
+    REQUIRE(page.lines.size() == 3);
+    CHECK(page.lines[0].label == u"Tired");
+    CHECK(page.lines[1].label == u"Lost at Big One");
+    CHECK(page.lines[0].value.empty());
+}
+
+TEST_CASE("values the save does not hold are shown as missing, and what it holds can be changed")
+{
+    StringTable s = table();
+    s.add("RideInspectionIntervalEvery30Mins", u"Half hourly");
+    s.add("AttractionCustomersDialogLabel_Sold", u"%NAME% sold");
+    s.add("AttractionCustomersDialogLabel_Customers", u"Per hour");
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Flat;
+    ride.ticket_price = 150;
+    ride.breakdown.inspection_interval = 2;
+    const AttractionFacts f { &ride.base, &ride, nullptr, { 3, 4, 5 } };
+
+    const InfoPage money = attraction_page(AttractionTab::Finances, f, s, { });
+    REQUIRE(money.controls.size() == 1);
+    CHECK(money.controls[0].id == control_id(AttractionControl::Price));
+    CHECK(money.controls[0].value == 150);
+    CHECK(money.controls[0].decimals == 2);
+    CHECK(money.controls[0].maximum == kMostRidePrice);
+    CHECK(money.controls_after == 0u);
+
+    const InfoPage people = attraction_page(AttractionTab::Customers, f, s, { });
+    CHECK(std::ranges::find(people.lines, std::u16string(u"Per hour"), &InfoLine::label)->value == kMissingValue);
+
+    const InfoPage care = attraction_page(AttractionTab::Maintenance, f, s, { });
+    REQUIRE(care.controls.size() == 2); // The interval, and the mechanic's button beside it
+    CHECK(care.controls[1].enabled);    // Never greyed
+    CHECK(care.controls[0].items.size() == 7);
+    CHECK(care.controls[0].items[2] == u"Half hourly");
+    CHECK(care.controls[0].value == 2);
+
+    const InfoPage cars = attraction_page(AttractionTab::Vehicles, f, s, { });
+    REQUIRE(cars.controls.size() == 1);
+    CHECK(cars.controls[0].kind == InfoControlKind::Paint);
+    CHECK(cars.controls[0].paints == std::vector<std::size_t> { 3, 4, 5 });
+    // The name, the tune, the state, then the buttons: pulling down, finding it and riding along.
+    const InfoPage details = attraction_page(AttractionTab::View, f, s, { });
+    REQUIRE(details.controls.size() == 6);
+    CHECK(details.controls[0].kind == InfoControlKind::Text);
+    CHECK(details.controls[0].text == details.title);
+    CHECK(details.controls[1].id == control_id(AttractionControl::Music));
+    CHECK(details.controls[1].beside);
+    CHECK(details.controls[1].value == 0);
+    CHECK_FALSE(details.controls[3].beside);
+    CHECK(details.controls[3].id == control_id(AttractionControl::Demolish));
+    CHECK(details.controls[3].enabled);
+    CHECK(details.controls[4].id == control_id(AttractionControl::Locate));
+    CHECK(details.controls[4].beside);
+
+    save::model::Stall stall;
+    stall.base.symbol = "SweetShopStall:shs";
+    save::model::StallItem sweets;
+    sweets.price = 90;
+    sweets.total_sold = 41;
+    stall.items = { sweets, sweets };
+    const AttractionFacts shop { &stall.base, nullptr, &stall, { 1 } };
+    const InfoPage items = attraction_page(AttractionTab::Items, shop, s, { });
+    // The menu: a line for each item, with its name and price.
+    REQUIRE(items.menu.has_value());
+    REQUIRE(items.menu->lines.size() == 2);
+    CHECK(items.menu->lines[1].name == u"Sweets");
+    CHECK(items.menu->lines[1].price == 90);
+    CHECK(items.menu->ids[std::to_underlying(MenuAction::Price)] == control_id(AttractionControl::ItemPrice));
+    const InfoPage sold = attraction_page(AttractionTab::Customers, shop, s, { });
+    CHECK(std::ranges::find(sold.lines, std::u16string(u"Sweets sold"), &InfoLine::label)->value == u"41");
+    // A stall has no tune; its name, state, two buttons and its paint.
+    CHECK(attraction_page(AttractionTab::View, shop, s, { }).controls.size() == 5);
+}
+
+TEST_CASE("a stall's items page offers what its kind sells and is not yet on its menu")
+{
+    save::model::Stall stall;
+    stall.base.symbol = "BurgerStall:sta";
+    stall.sync = true;
+    stall.items = { save::model::StallItem { .kind_symbol = "Burger:cid", .price = 150 } };
+    AttractionFacts f { &stall.base, nullptr, &stall, { } };
+    f.offers = { "Burger:cid", "MedBurger:cid", "LrgBurger:cid" };
+    const park::CarriedKind burger { .symbol = "Burger:cid", .name_text = "CarriedItem_Hamburger", .icon = "BurgerIcon", .extras = { "Ketchup:ced", "Relish:ced" } };
+    f.carried = std::span(&burger, 1);
+    stall.extras = { save::model::StallExtra { .kind_symbol = "Ketchup:ced", .level = 1 } };
+    stall.items[0].extras = 1;
+    StringTable s = table();
+    s.add("CarriedItem_Hamburger", u"Hamburger");
+    const InfoPage page = attraction_page(AttractionTab::Items, f, s, { });
+    REQUIRE(page.menu.has_value());
+    const StallMenuView& menu = *page.menu;
+    CHECK(menu.sync);
+    CHECK(menu.most_price == kMostRidePrice);
+    CHECK(menu.price_step == kItemPriceStep);
+    // Every good the kind sells stays on the strip, named as its item is when known.
+    REQUIRE(menu.goods.size() == 3);
+    CHECK(menu.goods[0].name == u"Hamburger");
+    CHECK(menu.goods[0].icon == "BurgerIcon");
+    CHECK(menu.goods[1].name == u"MedBurger");
+    REQUIRE(menu.lines.size() == 1);
+    CHECK(menu.lines[0].icon == "BurgerIcon");
+    CHECK(menu.lines[0].ticked == 1);
+    // The item's first extra is the stall's first; its second the stall does not offer.
+    REQUIRE(menu.lines[0].extras.size() == 2);
+    CHECK(menu.lines[0].extras[0] == std::optional<std::size_t>(0));
+    CHECK_FALSE(menu.lines[0].extras[1].has_value());
+}
+
+TEST_CASE("a stall's extras page sets how much of each extra goes on")
+{
+    StringTable s = table();
+    s.add("GUITextSymbol_ShopExtraSetting_NotProvided", u"Not Provided");
+    s.add("GUITextSymbol_ShopExtraSetting_GuestChoice", u"Guest Choice");
+    save::model::Stall stall;
+    stall.extras = { save::model::StallExtra { .kind_symbol = "Ketchup:ced", .level = 5 } };
+    const InfoPage page = attraction_page(AttractionTab::Extras, AttractionFacts { &stall.base, nullptr, &stall, { } }, s, { });
+    REQUIRE(page.controls.size() == 1);
+    CHECK(page.controls[0].id == control_id(AttractionControl::ExtraLevel, 0));
+    CHECK(page.controls[0].label == u"Ketchup");
+    REQUIRE(page.controls[0].items.size() == 6);
+    CHECK(page.controls[0].items.front() == u"Not Provided");
+    CHECK(page.controls[0].items[5] == u"Guest Choice");
+    CHECK(page.controls[0].value == 5);
+}
+
+TEST_CASE("a running ride shows its riders an hour, the wait its queue now has and its seats")
+{
+    StringTable s = table();
+    s.add("AttractionCustomersDialogLabel_Customers", u"Per hour");
+    s.add("AttractionCustomersDialogLabel_QueueTime", u"Queue");
+    s.add("AttractionVehicleDialogLabelCapacity", u"Seats");
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Tracked;
+    ride.stations.emplace_back().queue_time = 600; // What the save kept, no longer shown
+    AttractionFacts f { &ride.base, &ride, nullptr };
+    f.flow = RideFlow { .seats = 24, .queued = 60, .per_hour = 720 };
+    const auto value = [](const InfoPage& page, std::u16string_view label) { return std::ranges::find(page.lines, std::u16string(label), &InfoLine::label)->value; };
+
+    const InfoPage people = attraction_page(AttractionTab::Customers, f, s, { });
+    CHECK(value(people, u"Per hour") == u"720");
+    CHECK(value(people, u"Queue") == u"5:00"); // 60 in line at 12 a minute
+    s.add("AttractionVehicleDialogLabelPassengersPerRide", u"%NUMBER% a go");
+    CHECK(value(attraction_page(AttractionTab::Vehicles, f, s, { }), u"Seats") == u"24 a go");
+    ride.seats = { { .car = 0, .seat = 0 }, { .car = 0, .seat = 1 }, { .car = 1, .seat = 0 } };
+    s.add("AttractionVehicleDialogLabelPassengersPerCar", u"%NUMBER% a car");
+    CHECK(value(attraction_page(AttractionTab::Vehicles, f, s, { }), u"Seats") == u"2 a car");
+
+    f.flow->per_hour = 0; // Not yet measured
+    CHECK(value(attraction_page(AttractionTab::Customers, f, s, { }), u"Queue") == kMissingValue);
+    f.flow->queued = 0;
+    CHECK(value(attraction_page(AttractionTab::Customers, f, s, { }), u"Queue") == u"0:00");
+}
+
+TEST_CASE("saved messages name tabs by number: a breakdown opens maintenance, a long queue the operating mode")
+{
+    CHECK(message_tab(8) == AttractionTab::Maintenance);
+    CHECK(message_tab(6) == AttractionTab::Mode);
+    CHECK(message_tab(4) == AttractionTab::Items);
+    CHECK(message_tab(0) == AttractionTab::View);
+    CHECK_FALSE(message_tab(-1));
+    CHECK(message_tab(11) == AttractionTab::Items);
+    CHECK_FALSE(message_tab(99));
+    CHECK(message_panel(AttractionTab::Maintenance) == 8);
+    CHECK(message_panel(AttractionTab::Items) == 4);
+    CHECK(message_panel(AttractionTab::Thoughts) == 10);
+}

@@ -1,0 +1,223 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// The bar along the top of the park view, as the game shows it: a strip of fixed size centred at the top of
+// the screen. Its left part holds the objectives button and the game speed buttons, then the park's money,
+// its guests and its rating between a thumb down and a thumb up; a divider leads to the right part, with
+// the temperature, the weather and its forecast, and the date and time.
+//
+// Everything the bar shows is given by the owner with show(), as text ready to draw, so the bar never needs
+// the park itself; park_bar_values() writes it from the park's state. A press on a speed button is a
+// request: the owner takes the speed asked for with take_speed() and puts it in the park's state. A notch in
+// the middle of the bar lets the pointer through to the message drawer behind it.
+//
+// Where the player may choose how the day goes (in a sandbox), a button after the objectives button shows
+// the day's mode; pressing it opens the three modes in an arc below it, and picking one is a request the owner
+// takes with take_day_mode(). The money narrows to make room. A double click on the money asks for the
+// finances, taken with take_finances().
+//
+// At the bar's right end, a button turns on and off the labels floating over the people the player picked to
+// highlight; highlights() tells whether they show.
+#pragma once
+
+#include "save/model/world.hpp"
+#include "simulation/day_clock.hpp"
+#include "simulation/park/rating.hpp"
+#include "simulation/park/state.hpp"
+#include "ui/money_text.hpp"
+#include "ui/string_table.hpp"
+#include "ui/widgets/button.hpp"
+#include "ui/widgets/label.hpp"
+#include "ui/widgets/panel.hpp"
+
+#include <array>
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <utility>
+
+namespace rct3::ui::screens::park_view
+{
+
+    struct ParkBarStyle
+    {
+        std::string left_frame;  ///< Behind the left part
+        std::string divider;     ///< Between the parts
+        std::string right_frame; ///< Behind the right part
+        std::string objective_icon;
+        /// Pause, play, fast and fastest, and the same picked; the picked ones may be missing.
+        std::array<std::string, 4> speed_icons;
+        std::array<std::string, 4> picked_speed_icons;
+        std::string thumb_down;
+        std::string thumb_up;
+        /// One for each kind of weather, in the order of save::model::WeatherType.
+        std::array<std::string, 7> weather_icons;
+        std::string forecast_arrow;
+        /// Before the money: last month made money, and lost it.
+        std::array<std::string, 2> money_trend_icons;
+        /// The day's modes, in the order of simulation::DayMode.
+        std::array<std::string, 3> day_mode_icons;
+        /// The highlights button's picture while off and while on.
+        std::array<std::string, 2> highlight_icons;
+        Color text_colour = hex("#ffffff");
+        Color rating_back = hex("#00000080");
+        Color rating_low = hex("#d8402c");  ///< The rating bar's colour at no rating
+        Color rating_high = hex("#4cc23a"); ///< And at the highest
+    };
+
+    /// What the bar shows. Empty text leaves its place empty.
+    struct ParkBarValues
+    {
+        simulation::GameSpeed speed;
+        std::u16string money;
+        std::u16string money_help;      ///< Last month's profit; empty before a month has ended
+        std::optional<bool> money_rose; ///< Whether last month made money; nothing for an even month or none yet
+        std::u16string guests;
+        std::optional<float> rating; ///< 0 to 1; no bar without one
+        std::u16string rating_help;  ///< The rating's tooltip: its number, and its parts once a week has been rated
+        std::u16string temperature;
+        save::model::WeatherType weather = save::model::WeatherType::Unknown;
+        /// The weather on its way, shown after an arrow; nothing when it stays the same.
+        std::optional<save::model::WeatherType> forecast;
+        std::u16string date;
+        /// The day's mode, when the player may change it; nothing hides the day mode button.
+        std::optional<simulation::DayMode> day_mode;
+    };
+
+    namespace park_bar
+    {
+        inline constexpr float kWidth = 680;
+        inline constexpr float kHeight = 28;
+        inline constexpr float kLeftWidth = 304; ///< Of the left part; the divider starts there
+        inline constexpr float kDividerWidth = 38;
+        inline constexpr float kLowerEdge = 3; ///< The frame's border along the bottom; items centre above it
+        /// The notch in the middle of the bar that lets the pointer through to the message drawer behind it:
+        /// a half disc of this radius up from the bar's bottom edge, centred on the divider.
+        inline constexpr float kNotchRadius = 18;
+    } // namespace park_bar
+
+    /// "<Month>, Year <n>", two spaces, then the time: the bar's date. `month` counts from 0, `year` from 1.
+    [[nodiscard]] std::u16string park_bar_date(const StringTable& strings, std::int32_t month, std::int64_t year, std::int32_t minutes, bool twelve_hour);
+
+    /// How the player asked to see amounts, temperatures and times.
+    struct ParkBarUnits
+    {
+        Currency currency;
+        bool fahrenheit = false;
+        bool twelve_hour = true;
+    };
+
+    /// The bar's values for the park's state at `day_time` (a fraction of the day), with the profit of the last
+    /// month that ended (hundredths), when one has.
+    /// The rating's tooltip: the rating out of the most there is, then a line for each of its parts when known.
+    [[nodiscard]] std::u16string park_rating_help(const StringTable& strings, float rating, const std::optional<simulation::park::RatingParts>& parts);
+
+    [[nodiscard]] ParkBarValues park_bar_values(const simulation::park::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units, std::optional<std::int64_t> last_month_profit = std::nullopt);
+
+    class ParkBar : public Widget
+    {
+    public:
+        ParkBar(std::string name, ParkBarStyle style, const StringTable& strings);
+
+        void show(const ParkBarValues& values);
+        /// The speed a button asked for since the last call, worked out from the speed last shown.
+        [[nodiscard]] std::optional<simulation::GameSpeed> take_speed()
+        {
+            return std::exchange(asked_, std::nullopt);
+        }
+        /// The day mode picked since the last call.
+        [[nodiscard]] std::optional<simulation::DayMode> take_day_mode()
+        {
+            return std::exchange(asked_day_, std::nullopt);
+        }
+        /// True once for each double click on the money since the last call.
+        [[nodiscard]] bool take_finances()
+        {
+            return std::exchange(asked_finances_, false);
+        }
+
+        [[nodiscard]] widgets::Button& objective_button() const
+        {
+            return *objective_;
+        }
+        /// Pause, play, fast and fastest.
+        [[nodiscard]] widgets::Button& speed_button(std::size_t i) const
+        {
+            return *speeds_.at(i);
+        }
+        [[nodiscard]] widgets::Button& day_mode_button() const
+        {
+            return *day_mode_;
+        }
+        /// Of the arc below the day mode button, in the order of simulation::DayMode.
+        [[nodiscard]] widgets::Button& day_mode_choice(std::size_t i) const
+        {
+            return *day_choices_.at(i);
+        }
+        [[nodiscard]] widgets::Button& money() const
+        {
+            return *money_;
+        }
+        [[nodiscard]] widgets::Button& highlight_button() const
+        {
+            return *highlight_;
+        }
+        /// Whether the people picked for it show their highlight.
+        [[nodiscard]] bool highlights() const
+        {
+            return highlight_->on;
+        }
+        [[nodiscard]] const widgets::Label& date() const
+        {
+            return *date_;
+        }
+        [[nodiscard]] const widgets::Panel& weather() const
+        {
+            return *weather_;
+        }
+        [[nodiscard]] const widgets::Panel& forecast() const
+        {
+            return *forecast_;
+        }
+
+        /// The bar stops the pointer, so pressing on it never reaches the park.
+        [[nodiscard]] bool takes_pointer() const override
+        {
+            return true;
+        }
+        /// Everywhere but the notch.
+        [[nodiscard]] bool covers(Point p) const override;
+        void update(const UpdateContext& context) override;
+        void draw(DrawContext& context) const override;
+
+    private:
+        void show_speed();
+        /// Places the left part's items, with room for the day mode button when it shows.
+        void place_left();
+
+        ParkBarStyle style_;
+        const StringTable& strings_;
+        simulation::GameSpeed speed_;
+        std::optional<simulation::GameSpeed> asked_;
+        std::optional<simulation::DayMode> asked_day_;
+        bool asked_finances_ = false;
+        float since_money_click_ = 1000; ///< Seconds since the money was last clicked; long ago at first
+        std::optional<float> rating_;
+        widgets::Button* objective_ = nullptr;
+        widgets::Button* day_mode_ = nullptr;
+        std::array<widgets::Button*, 3> day_choices_ { };
+        std::array<widgets::Button*, 4> speeds_ { };
+        std::array<widgets::Panel*, 2> money_trend_ { }; ///< Rose and fell, by ParkBarStyle::money_trend_icons
+        widgets::Button* money_ = nullptr;
+        widgets::Label* guests_ = nullptr;
+        widgets::Panel* thumb_down_ = nullptr;
+        widgets::Panel* rating_area_ = nullptr;
+        widgets::Panel* thumb_up_ = nullptr;
+        widgets::Label* temperature_ = nullptr;
+        widgets::Panel* weather_ = nullptr;
+        widgets::Panel* arrow_ = nullptr;
+        widgets::Panel* forecast_ = nullptr;
+        widgets::Label* date_ = nullptr;
+        widgets::Button* highlight_ = nullptr;
+    };
+
+} // namespace rct3::ui::screens::park_view

@@ -75,12 +75,12 @@ namespace
     // The round panel in a corner, with a page of lines so the strip shows. Its style picks the look.
     void draw_info_panel(ui::DrawContext& context, PanelLook look, ui::Rect view)
     {
-        ui::screens::InfoPanelStyle style = ui::game_skins::info_panel_style({ });
+        ui::screens::info::InfoPanelStyle style = ui::game_skins::info_panel_style({ });
         style.look = look;
         ui::Desktop desktop;
-        auto& panel = desktop.root().add<ui::screens::InfoPanel>("info", style);
+        auto& panel = desktop.root().add<ui::screens::info::InfoPanel>("info", style);
         panel.show({ }, 0);
-        panel.set_body_size(ui::screens::info_panel::kPageWidth, 60);
+        panel.set_body_size(ui::screens::info::info_panel::kPageWidth, 60);
         desktop.layout(view);
         // The frame alone: tabs, the close button and the page are pictures and text either way.
         panel.draw(context);
@@ -191,10 +191,10 @@ namespace
     {
         // A short bar: the left part, the divider with its notch, the right part.
         constexpr float kTop = 8;
-        constexpr float kBottom = kTop + ui::screens::park_bar::kHeight;
+        constexpr float kBottom = kTop + ui::screens::park_view::park_bar::kHeight;
         draw_skin_at(context, "Top_WindowFrame_Left", { { 8, kTop, 128, kBottom } });
-        draw_skin_at(context, "Top_WindowFrame_Middle", { { 128, kTop, 128 + ui::screens::park_bar::kDividerWidth, kBottom } });
-        draw_skin_at(context, "Top_WindowFrame_Right", { { 128 + ui::screens::park_bar::kDividerWidth, kTop, 260, kBottom } });
+        draw_skin_at(context, "Top_WindowFrame_Middle", { { 128, kTop, 128 + ui::screens::park_view::park_bar::kDividerWidth, kBottom } });
+        draw_skin_at(context, "Top_WindowFrame_Right", { { 128 + ui::screens::park_view::park_bar::kDividerWidth, kTop, 260, kBottom } });
     }
 
     void draw_menu_circles(ui::DrawContext& context, PanelLook, ui::Rect)
@@ -217,7 +217,7 @@ namespace
     void draw_message_drawer(ui::DrawContext& context, PanelLook, ui::Rect)
     {
         // Pulled down far enough to show the back repeated three times.
-        ui::screens::draw_drawer_frame(context, ui::game_skins::message_drawer_style({ }), { 8, 8, 8 + ui::screens::message_drawer::kWidth, 155 });
+        ui::screens::park_view::draw_drawer_frame(context, ui::game_skins::message_drawer_style({ }), { 8, 8, 8 + ui::screens::park_view::message_drawer::kWidth, 155 });
     }
 
     void draw_window(ui::DrawContext& context, const ui::widgets::WindowStyle& style, ui::Rect view)

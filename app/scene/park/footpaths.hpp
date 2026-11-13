@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The park's paths as the player lays them: the path panel (ui/screens/footpath_panel.hpp) opened from the
+// The park's paths as the player lays them: the path panel (ui/screens/build/paths.hpp) opened from the
 // tool row, the styles it offers, and the paths laid with it. Laying changes the park's paths in memory and
 // builds the ground again so they show at once; the piece the controls would lay next is drawn faintly over its
 // tile, tinted when it cannot be laid there. A raised piece adds the object that draws it and the supports
@@ -49,7 +49,7 @@
 #include "save/model/world.hpp"
 #include "scene/track_building.hpp"
 #include "ui/interface_assets.hpp"
-#include "ui/screens/footpath_panel.hpp"
+#include "ui/screens/build/paths.hpp"
 
 #include <array>
 #include <cstddef>

@@ -16,7 +16,7 @@
 #include "simulation/park/messages.hpp"
 #include "ui/extra_skins.hpp"
 #include "ui/game_style.hpp"
-#include "ui/screens/pool_panel.hpp"
+#include "ui/screens/build/pools.hpp"
 
 #include <algorithm>
 #include <array>
@@ -37,9 +37,9 @@ namespace rct3::scene
         constexpr std::int32_t kHighestBoard = 30;
         constexpr float kArrowLift = 0.04f; ///< Of the arrow over the next pool path piece, so it shows over the piece, as on the path tool
 
-        std::optional<ui::screens::PoolPanel&> panel_of(const park::ParkScene& scene)
+        std::optional<ui::screens::build::PoolPanel&> panel_of(const park::ParkScene& scene)
         {
-            return scene.desktop->root().find_as<ui::screens::PoolPanel>(kPanelName);
+            return scene.desktop->root().find_as<ui::screens::build::PoolPanel>(kPanelName);
         }
 
         /// What the pool panel offers to pick, each in its order.
@@ -95,7 +95,7 @@ namespace rct3::scene
                 return stop_pooling(scene);
             if (!panel->showing())
                 return;
-            const ui::screens::PoolEditor& e = panel->editor();
+            const ui::screens::build::PoolEditor& e = panel->editor();
             scene.pooling.height = e.snap ? std::nullopt : std::optional(e.height);
             scene.pooling.edge = static_cast<rct3::park::pools::PoolEdge>(std::clamp(e.edge, 0, 3));
             if (e.grid != scene.pooling.grid)
@@ -106,7 +106,7 @@ namespace rct3::scene
             const rct3::park::BuildItem* item = nullptr;
             if (const auto p = panel->placing())
             {
-                const auto& from = p->first == ui::screens::PoolPage::Extras ? offer.extras : p->first == ui::screens::PoolPage::Paths ? offer.stairs : offer.rooms;
+                const auto& from = p->first == ui::screens::build::PoolPage::Extras ? offer.extras : p->first == ui::screens::build::PoolPage::Paths ? offer.stairs : offer.rooms;
                 item = p->second < from.size() ? from[p->second] : nullptr;
             }
             else if (const auto& items = scene.build.items; items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
@@ -115,7 +115,7 @@ namespace rct3::scene
                 const rct3::park::PathSlope slope = scene.pooling.trail.slope;
                 const std::string_view path = slope == rct3::park::PathSlope::Flat ? rct3::park::kPoolPath : slope == rct3::park::PathSlope::Up || slope == rct3::park::PathSlope::Down ? rct3::park::kPoolPathSlope : rct3::park::kPoolPathStairs;
                 constexpr std::array<std::string_view, 3> kTools { "", rct3::park::kPoolTiles, rct3::park::kPoolDelete };
-                const std::string_view symbol = e.mode == ui::screens::PoolMode::Water ? rct3::park::kPoolWater[static_cast<std::size_t>(std::clamp(e.depth, 1, 3) - 1)] : e.mode == ui::screens::PoolMode::Path ? path : kTools[std::to_underlying(e.mode)];
+                const std::string_view symbol = e.mode == ui::screens::build::PoolMode::Water ? rct3::park::kPoolWater[static_cast<std::size_t>(std::clamp(e.depth, 1, 3) - 1)] : e.mode == ui::screens::build::PoolMode::Path ? path : kTools[std::to_underlying(e.mode)];
                 const auto found = std::ranges::find_if(items.get(), [&](const rct3::park::BuildItem& i) { return i.list == rct3::park::BuildList::Pools && i.overlay == rct3::park::kPoolOverlay && i.symbol == symbol; });
                 item = found != items.get().end() ? &*found : nullptr;
             }
@@ -468,7 +468,7 @@ namespace rct3::scene
                     scene.footpaths.camera_goal = glm::vec3 { scene.grid.world_x(next->col) + scene.grid.tile_size_x / 2, static_cast<float>(height), scene.grid.world_z(next->row) + scene.grid.tile_size_z / 2 };
                 }
             }
-            std::array<bool, ui::screens::kPoolPathControls> usable;
+            std::array<bool, ui::screens::build::kPoolPathControls> usable;
             usable.fill(true);
             const bool going = rct3::park::next_spot(t.trail).has_value();
             usable[std::to_underlying(rct3::park::PathControl::TurnLeft)] = going && rct3::park::can_turn(t.trail);
@@ -531,7 +531,7 @@ namespace rct3::scene
         return panel && panel->showing();
     }
 
-    void toggle_pool_panel(render::Device& device, park::ParkScene& scene, ui::InterfaceAssets& assets, const ui::Currency& currency, std::optional<ui::screens::PoolPage> page)
+    void toggle_pool_panel(render::Device& device, park::ParkScene& scene, ui::InterfaceAssets& assets, const ui::Currency& currency, std::optional<ui::screens::build::PoolPage> page)
     {
         auto panel = panel_of(scene);
         if (panel && panel->showing() && !page)
@@ -541,12 +541,12 @@ namespace rct3::scene
             // The extras' pictures live in an overlay of their own.
             constexpr std::array<std::string_view, 1> kIconFiles { "Pool/PoolIcons.common.ovl" };
             (void)ui::add_extra_skins(device, assets, kIconFiles);
-            panel = scene.desktop->root().add<ui::screens::PoolPanel>(std::string(kPanelName), ui::game_skins::pool_panel_style(assets.palette), *assets.strings);
+            panel = scene.desktop->root().add<ui::screens::build::PoolPanel>(std::string(kPanelName), ui::game_skins::pool_panel_style(assets.palette), *assets.strings);
         }
         const Offered offer = offered(scene);
         // Each choice's help is its name, and its price where it has one.
         const auto choices = [&](const std::vector<const rct3::park::BuildItem*>& items) {
-            std::vector<ui::screens::PoolChoice> out;
+            std::vector<ui::screens::build::PoolChoice> out;
             for (const rct3::park::BuildItem* i : items)
                 out.push_back({ i->icon, std::u16string(assets.strings->get(i->name_text)) + (i->price > 0 ? u" : " + ui::money_text(currency, i->price) : std::u16string { }) });
             return out;
@@ -602,7 +602,7 @@ namespace rct3::scene
                 const glm::vec3 lift_at { g.origin_x + t.lift->spot.x * g.tile_size_x, static_cast<float>(t.lift->surface), g.origin_z + t.lift->spot.y * g.tile_size_z };
                 const rct3::park::Ray ray = rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
                 if (const auto h = lifted_height(ray, lift_at, t.lift->surface))
-                    t.lifted = std::clamp(*h, ui::screens::pool_panel::kHeightLowest, ui::screens::pool_panel::kHeightHighest);
+                    t.lifted = std::clamp(*h, ui::screens::build::pool_panel::kHeightLowest, ui::screens::build::pool_panel::kHeightHighest);
                 spot = t.lift->spot;
             }
         }

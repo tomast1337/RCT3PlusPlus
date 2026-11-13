@@ -7,9 +7,9 @@
 #pragma once
 
 #include "ui/desktop.hpp"
-#include "ui/screens/management_pages.hpp"
-#include "ui/screens/staff_roster.hpp"
-#include "ui/screens/tool_menus.hpp"
+#include "ui/screens/management/pages.hpp"
+#include "ui/screens/management/staff_roster.hpp"
+#include "ui/screens/park_view/tool_menus.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -21,10 +21,10 @@ namespace rct3::scene::park
 {
 
     /// Opens the window of `topic`, or closes it when it is open: the menu item works as a switch.
-    void toggle_management_window(ui::Desktop& desktop, ui::screens::ManagementTopic topic, const ui::screens::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::InfoUnits& units);
+    void toggle_management_window(ui::Desktop& desktop, ui::screens::management::ManagementTopic topic, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::info::InfoUnits& units);
 
     /// Opens the window of `topic` at tab `tab`, or turns the open one to it.
-    void open_management_window(ui::Desktop& desktop, ui::screens::ManagementTopic topic, std::size_t tab, const ui::screens::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::InfoUnits& units);
+    void open_management_window(ui::Desktop& desktop, ui::screens::management::ManagementTopic topic, std::size_t tab, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::info::InfoUnits& units);
 
     /// Whether any management window is open.
     [[nodiscard]] bool management_window_open(const ui::Desktop& desktop);
@@ -32,28 +32,28 @@ namespace rct3::scene::park
     /// What the player asked of the management windows this frame.
     struct ManagementAsks
     {
-        std::optional<ui::screens::ManagementRow> row; ///< The row activated
-        bool replace_broken = false;                   ///< Replace every broken path item (ui::screens::kReplaceBrokenButton)
-        std::optional<bool> park_open;                 ///< Open the park, or close it (ui::screens::kOpenCloseParkButton)
-        bool centre_entrance = false;                  ///< Take the view to the next entrance (ui::screens::kCentreEntranceButton)
-        bool buy_land = false;                         ///< Take out the tool buying land (ui::screens::kBuyLandButton)
-        bool buy_rights = false;                       ///< Or building rights (ui::screens::kBuyRightsButton)
-        std::optional<bool> borrow;                    ///< Borrow a step of loan, or repay one (ui::screens::kBorrowButton, kRepayButton)
-        bool export_ledger = false;                    ///< Write the ledger out (ui::screens::kExportLedgerButton)
-        std::optional<std::int64_t> loan;              ///< Borrow or repay towards this loan (ui::screens::kLoanControl)
-        /// Put every attraction in `listed` in this state (ui::screens::kOpenCloseAllButton)
+        std::optional<ui::screens::management::ManagementRow> row; ///< The row activated
+        bool replace_broken = false;                               ///< Replace every broken path item (ui::screens::management::kReplaceBrokenButton)
+        std::optional<bool> park_open;                             ///< Open the park, or close it (ui::screens::management::kOpenCloseParkButton)
+        bool centre_entrance = false;                              ///< Take the view to the next entrance (ui::screens::management::kCentreEntranceButton)
+        bool buy_land = false;                                     ///< Take out the tool buying land (ui::screens::management::kBuyLandButton)
+        bool buy_rights = false;                                   ///< Or building rights (ui::screens::management::kBuyRightsButton)
+        std::optional<bool> borrow;                                ///< Borrow a step of loan, or repay one (ui::screens::management::kBorrowButton, kRepayButton)
+        bool export_ledger = false;                                ///< Write the ledger out (ui::screens::management::kExportLedgerButton)
+        std::optional<std::int64_t> loan;                          ///< Borrow or repay towards this loan (ui::screens::management::kLoanControl)
+        /// Put every attraction in `listed` in this state (ui::screens::management::kOpenCloseAllButton)
         std::optional<save::model::AttractionState> state_all;
-        std::vector<ui::screens::ManagementRow> listed;
-        ui::screens::RosterAsks staff;               ///< Of the staff window
-        std::optional<std::int64_t> research_budget; ///< A month, in hundredths (ui::screens::kResearchBudgetControl)
-        /// A research area's priority, from 0 to 1 (ui::screens::kFirstPriorityControl)
+        std::vector<ui::screens::management::ManagementRow> listed;
+        ui::screens::management::RosterAsks staff;   ///< Of the staff window
+        std::optional<std::int64_t> research_budget; ///< A month, in hundredths (ui::screens::management::kResearchBudgetControl)
+        /// A research area's priority, from 0 to 1 (ui::screens::management::kFirstPriorityControl)
         std::optional<std::pair<std::size_t, float>> research_priority;
-        /// Focus research on this item, or end the focus when it holds none (ui::screens::kFocusButton, kUnfocusButton)
+        /// Focus research on this item, or end the focus when it holds none (ui::screens::management::kFocusButton, kUnfocusButton)
         std::optional<std::optional<std::uint64_t>> research_focus;
     };
 
     /// Writes the open windows' pages again where the player picked a tab or where it is time to, and returns
     /// what the player asked.
-    [[nodiscard]] ManagementAsks update_management_windows(ui::Desktop& desktop, const ui::screens::ManagementFacts& facts, const ui::StringTable& strings, const ui::screens::InfoUnits& units);
+    [[nodiscard]] ManagementAsks update_management_windows(ui::Desktop& desktop, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::screens::info::InfoUnits& units);
 
 } // namespace rct3::scene::park

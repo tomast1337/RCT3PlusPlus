@@ -149,9 +149,9 @@ namespace rct3::scene::park
             ride_person(scene, assets, shown, false);
     }
 
-    bool change_person(ParkScene& scene, std::size_t shown, const ui::screens::InfoChange& change)
+    bool change_person(ParkScene& scene, std::size_t shown, const ui::screens::info::InfoChange& change)
     {
-        using enum ui::screens::PersonControl;
+        using enum ui::screens::info::PersonControl;
         if (shown >= scene.shown_people.size())
             return false;
         const ShownPerson& p = scene.shown_people[shown];
@@ -160,7 +160,7 @@ namespace rct3::scene::park
         save::model::Person* person = staff != nullptr ? &staff->person : guest != nullptr ? &guest->person : nullptr;
         if (person == nullptr)
             return false;
-        if (change.id == ui::screens::person_control(Name))
+        if (change.id == ui::screens::info::person_control(Name))
         {
             // A blank name keeps the old one.
             if (change.text.empty())
@@ -168,12 +168,12 @@ namespace rct3::scene::park
             person->name = strings::to_utf8(change.text);
             return true;
         }
-        if (change.id == ui::screens::person_control(ToConsole))
+        if (change.id == ui::screens::info::person_control(ToConsole))
         {
             person->thoughts_to_console = !person->thoughts_to_console;
             return true;
         }
-        if (change.id == ui::screens::person_control(Highlight))
+        if (change.id == ui::screens::info::person_control(Highlight))
         {
             person->highlight = !person->highlight;
             return true;
@@ -181,37 +181,37 @@ namespace rct3::scene::park
         if (staff == nullptr)
             return false;
         // The details page shows the tools for painting while it goes on.
-        if (change.id == ui::screens::person_control(PatrolPaint))
+        if (change.id == ui::screens::info::person_control(PatrolPaint))
         {
             scene.painting_patrol = change.value != 0;
             return true;
         }
-        if (change.id == ui::screens::person_control(PatrolEdit))
+        if (change.id == ui::screens::info::person_control(PatrolEdit))
         {
             scene.painting_patrol = !scene.painting_patrol;
             return true;
         }
-        if (const entt::entity e = shown_staff(scene); e != entt::null && change.id == ui::screens::person_control(PatrolClear))
+        if (const entt::entity e = shown_staff(scene); e != entt::null && change.id == ui::screens::info::person_control(PatrolClear))
         {
             simulation::staff::clear_patrol(scene.sim.registry, e);
             return true;
         }
-        else if (e != entt::null && change.id == ui::screens::person_control(PatrolFill))
+        else if (e != entt::null && change.id == ui::screens::info::person_control(PatrolFill))
         {
             simulation::staff::fill_patrol(scene.sim.registry, e);
             return true;
         }
-        else if (e != entt::null && change.id == ui::screens::person_control(PatrolZone))
+        else if (e != entt::null && change.id == ui::screens::info::person_control(PatrolZone))
         {
             simulation::staff::join_zone(scene.sim.registry, e, static_cast<std::uint32_t>(std::max(change.value, 0)));
             return true;
         }
-        if (change.id == ui::screens::person_control(PatrolBrush))
+        if (change.id == ui::screens::info::person_control(PatrolBrush))
         {
             scene.patrol_brush = change.value;
             return false;
         }
-        if (change.id == ui::screens::person_control(PatrolCopy))
+        if (change.id == ui::screens::info::person_control(PatrolCopy))
         {
             copy_patrol(scene);
             return true;
@@ -225,13 +225,13 @@ namespace rct3::scene::park
             copy_mood(care, *staff);
             return true;
         };
-        if (change.id == ui::screens::person_control(Warn))
+        if (change.id == ui::screens::info::person_control(Warn))
         {
-            if (care.warnings < ui::screens::kMostWarnings)
+            if (care.warnings < ui::screens::info::kMostWarnings)
                 simulation::staff::warn(care);
             return show();
         }
-        if (change.id == ui::screens::person_control(Train))
+        if (change.id == ui::screens::info::person_control(Train))
         {
             // Paid for at once, free in a park without money; none when the park cannot afford it.
             if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, simulation::staff::training_cost(care), simulation::park::LedgerLine::StaffTraining, false))
@@ -239,12 +239,12 @@ namespace rct3::scene::park
             simulation::staff::train(care);
             return show();
         }
-        if (change.id == ui::screens::person_control(Wage))
+        if (change.id == ui::screens::info::person_control(Wage))
         {
             simulation::staff::set_wage_level(care, change.value);
             (void)show();
         }
-        else if (change.id == ui::screens::person_control(Costume))
+        else if (change.id == ui::screens::info::person_control(Costume))
         {
             person->sub_type = static_cast<std::uint8_t>(change.value);
             // They change into it, where the install has it.
@@ -260,9 +260,9 @@ namespace rct3::scene::park
                 std::tie(person->appearance.head, person->appearance.body, person->appearance.legs) = std::tuple(save::model::PeopleRef { worn[0]->id }, save::model::PeopleRef { worn[1]->id }, save::model::PeopleRef { worn[2]->id });
             }
         }
-        else if (change.id >= ui::screens::person_control(Task))
+        else if (change.id >= ui::screens::info::person_control(Task))
         {
-            staff->task_flags ^= 1 << (change.id - ui::screens::person_control(Task));
+            staff->task_flags ^= 1 << (change.id - ui::screens::info::person_control(Task));
             care.tasks = staff->task_flags;
         }
         return false;
@@ -270,14 +270,14 @@ namespace rct3::scene::park
 
     void paint_person(ParkScene& scene, std::size_t shown, std::size_t pot, std::size_t colour)
     {
-        if (shown >= scene.shown_people.size() || ui::screens::kUpperPalette + pot >= rct3::park::person::PersonLook { }.colours.size())
+        if (shown >= scene.shown_people.size() || ui::screens::info::kUpperPalette + pot >= rct3::park::person::PersonLook { }.colours.size())
             return;
         change_people(scene);
         ShownPerson& p = scene.shown_people[shown];
         const auto c = static_cast<std::uint8_t>(colour);
-        p.pose.look.colours.at(ui::screens::kUpperPalette + pot) = c;
+        p.pose.look.colours.at(ui::screens::info::kUpperPalette + pot) = c;
         save::model::Person* person = p.staff ? &scene.people.staff.at(p.saved).person : &scene.people.guests.at(p.saved).person;
-        person->appearance.palettes.at(ui::screens::kUpperPalette + pot) = c;
+        person->appearance.palettes.at(ui::screens::info::kUpperPalette + pot) = c;
     }
 
     void fire(ParkScene& scene, std::size_t shown)

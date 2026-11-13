@@ -7,7 +7,7 @@
 
 #include "park/object/models.hpp"
 #include "ui/interface_assets.hpp"
-#include "ui/screens/ride_camera_panel.hpp"
+#include "ui/screens/park_view/ride_camera.hpp"
 
 #include <cstddef>
 #include <vector>
@@ -33,7 +33,7 @@ namespace rct3::scene::park
     /// Leaves, or changes to the train's first camera of the next kind it has, or steps to the previous or next
     /// camera of the same kind on the train (round from the last to the first), or to the previous or next
     /// train, on from a ride's last train to the next ride's first, round the park.
-    void ride_action(ParkScene& scene, const ui::InterfaceAssets& assets, ui::screens::RideCameraAction action);
+    void ride_action(ParkScene& scene, const ui::InterfaceAssets& assets, ui::screens::park_view::RideCameraAction action);
 
     /// Back to the overhead view, with what was on screen before.
     void stop_riding(ParkScene& scene);

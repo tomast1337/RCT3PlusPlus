@@ -11,8 +11,8 @@
 #include "strings/unicode.hpp"
 #include "ui/font/images.hpp"
 #include "ui/font/sets.hpp"
-#include "ui/screens/attraction_info.hpp"
-#include "ui/screens/management_pages.hpp"
+#include "ui/screens/info/attraction.hpp"
+#include "ui/screens/management/pages.hpp"
 #include "ui/sign_text.hpp"
 
 #include <algorithm>
@@ -275,11 +275,11 @@ namespace rct3::scene
                 words = no_entry ? std::u16string(assets.strings->get("Sign_NoEntry")) : placed.kind == 0 || placed.kind == 1 ? strings::to_utf16(placed.text) : std::u16string { };
             }
             else if (!sign.ride)
-                words = park.flags.has(save::model::ParkFlag::Open) ? ui::screens::park_name(park, *assets.strings) : std::u16string(assets.strings->get("AttractionStatusClosed"));
+                words = park.flags.has(save::model::ParkFlag::Open) ? ui::screens::management::park_name(park, *assets.strings) : std::u16string(assets.strings->get("AttractionStatusClosed"));
             else
             {
                 const save::model::AttractionCommon& ride = scene.rides.rides[*sign.ride].base;
-                words = ride.state == save::model::AttractionState::Open && ride.repair_status == save::model::RepairStatus::Fine ? ui::screens::attraction_name(ride, *assets.strings) : ui::screens::attraction_status(ride, *assets.strings);
+                words = ride.state == save::model::AttractionState::Open && ride.repair_status == save::model::RepairStatus::Fine ? ui::screens::info::attraction_name(ride, *assets.strings) : ui::screens::info::attraction_status(ride, *assets.strings);
             }
             if (words == sign.shown)
                 continue;

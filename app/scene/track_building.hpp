@@ -12,7 +12,7 @@
 //
 // A new ride starts with no pieces: its first piece, one its kind may start a track with, follows the
 // pointer over the ground until it is built. A new ride picked from a build list whose kind has saved designs
-// first opens their window (ui/screens/design_browser.hpp): building a design lays it whole with the train
+// first opens their window (ui/screens/build/designs.hpp): building a design lays it whole with the train
 // picked there, a custom track is built piece by piece, and cancelling closes the building as closing its
 // panel does. A design in hand has a round panel of its own, as a flat ride being placed does: turning it with
 // its price, its name and tune with why it may not stand where it is, its colours, and whether the ground it
@@ -39,7 +39,7 @@
 #include "scene/build_menus.hpp"
 #include "simulation/coaster.hpp"
 #include "ui/key_map.hpp"
-#include "ui/screens/attraction_info.hpp"
+#include "ui/screens/info/attraction.hpp"
 
 #include <cstddef>
 #include <filesystem>
@@ -269,7 +269,7 @@ namespace rct3::scene
     /// Handles the panel's events, and for a track with no pieces the pointer at `at` on a view of `size` (`over`
     /// the interface or not), the turn commands and `shift`, held to raise or sink the first piece. Call once per
     /// update after the interface, `elapsed` seconds after the last.
-    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed);
+    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed);
 
     /// The arrows where the picked piece starts and ends (see park/build_arrows.hpp); empty while no piece is.
     [[nodiscard]] rct3::park::TerrainMesh track_arrows(const park::ParkScene& scene);

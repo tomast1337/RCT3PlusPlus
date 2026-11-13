@@ -139,9 +139,9 @@ namespace rct3::scene::park
         constexpr std::string_view kQueueRailing = "Van_Scaffold2";
         constexpr std::string_view kQueueRailingOverlay = "Style\\Vanilla\\style";
 
-        std::optional<ui::screens::FootpathPanel&> panel_of(const ParkScene& scene)
+        std::optional<ui::screens::build::FootpathPanel&> panel_of(const ParkScene& scene)
         {
-            return scene.desktop->root().find_as<ui::screens::FootpathPanel>(kFootpathPanelName);
+            return scene.desktop->root().find_as<ui::screens::build::FootpathPanel>(kFootpathPanelName);
         }
 
         bool chosen_queue(const ParkFootpaths& f)
@@ -198,10 +198,10 @@ namespace rct3::scene::park
         }
 
         /// The panel's choices: the path styles the park offers, then its queue styles.
-        std::pair<std::vector<ui::screens::FootpathStyle>, std::vector<ui::screens::FootpathStyle>> panel_styles(const ParkFootpaths& f, const rct3::park::BuildOffer& offer, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
+        std::pair<std::vector<ui::screens::build::FootpathStyle>, std::vector<ui::screens::build::FootpathStyle>> panel_styles(const ParkFootpaths& f, const rct3::park::BuildOffer& offer, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
         {
             const ui::Currency money = currency_of(assets, options);
-            std::pair<std::vector<ui::screens::FootpathStyle>, std::vector<ui::screens::FootpathStyle>> out;
+            std::pair<std::vector<ui::screens::build::FootpathStyle>, std::vector<ui::screens::build::FootpathStyle>> out;
             for (const rct3::park::path::PathStyle& s : f.styles)
             {
                 if (offered(offer, s))
@@ -210,16 +210,16 @@ namespace rct3::scene::park
             return out;
         }
 
-        std::optional<ui::screens::FootpathPick> pick_of(const ParkFootpaths& f, const rct3::park::BuildOffer& offer)
+        std::optional<ui::screens::build::FootpathPick> pick_of(const ParkFootpaths& f, const rct3::park::BuildOffer& offer)
         {
             if (!f.style || *f.style >= f.styles.size())
                 return std::nullopt;
             const bool queue = f.styles[*f.style].queue;
             const auto before = std::ranges::count_if(std::span(f.styles).first(*f.style), [&](const rct3::park::path::PathStyle& s) { return s.queue == queue && offered(offer, s); });
-            return ui::screens::FootpathPick { queue, static_cast<std::size_t>(before) };
+            return ui::screens::build::FootpathPick { queue, static_cast<std::size_t>(before) };
         }
 
-        std::optional<std::size_t> style_of(const ParkFootpaths& f, const rct3::park::BuildOffer& offer, ui::screens::FootpathPick pick)
+        std::optional<std::size_t> style_of(const ParkFootpaths& f, const rct3::park::BuildOffer& offer, ui::screens::build::FootpathPick pick)
         {
             std::size_t seen = 0;
             for (std::size_t i = 0; i < f.styles.size(); ++i)
@@ -1437,7 +1437,7 @@ namespace rct3::scene::park
             f.camera_goal.reset();
         // Once a trail is started only the controls that lead to a piece that fits; before, any slope may be
         // picked for the first piece.
-        std::array<bool, ui::screens::kFootpathControls> usable { };
+        std::array<bool, ui::screens::build::kFootpathControls> usable { };
         if (f.builder.start)
             usable = rct3::park::fitting_controls(f.builder, scene.grid, f.paths, f.solids);
         else
@@ -1487,7 +1487,7 @@ namespace rct3::scene::park
         std::optional<rct3::park::Ray> controls_ray(const ParkScene& scene, ui::Point at, ui::Point size)
         {
             auto panel = panel_of(scene);
-            if (!panel || !panel->showing() || panel->page() != ui::screens::FootpathPage::Controls || size.x <= 0 || size.y <= 0)
+            if (!panel || !panel->showing() || panel->page() != ui::screens::build::FootpathPage::Controls || size.x <= 0 || size.y <= 0)
                 return std::nullopt;
             const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
             return rct3::park::view_ray(scene.camera, size.x / size.y, ndc);

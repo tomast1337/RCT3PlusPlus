@@ -57,7 +57,7 @@ namespace rct3::scene
 
         /// Lists the folders again, ours and then the game's, and hands the names to the window, which starts
         /// reading again.
-        void list(render::Device& device, SaveBrowser& browser, ui::screens::FileDialog& dialog, const fs::path& game_folder)
+        void list(render::Device& device, SaveBrowser& browser, ui::screens::dialogs::FileDialog& dialog, const fs::path& game_folder)
         {
             free_pictures(device, browser);
             browser.next = 0;
@@ -105,7 +105,7 @@ namespace rct3::scene
             return bytes;
         }
 
-        void read_next(render::Device& device, SaveBrowser& browser, ui::screens::FileDialog& dialog)
+        void read_next(render::Device& device, SaveBrowser& browser, ui::screens::dialogs::FileDialog& dialog)
         {
             if (browser.next >= browser.files.size())
                 return;
@@ -165,7 +165,7 @@ namespace rct3::scene
                 log.info("saves: saved {} ({} bytes)", path.filename().string(), bytes.size());
         }
 
-        void carry_out(render::Device& device, SaveBrowser& browser, ui::screens::FileDialog& dialog, const fs::path& game_folder)
+        void carry_out(render::Device& device, SaveBrowser& browser, ui::screens::dialogs::FileDialog& dialog, const fs::path& game_folder)
         {
             const auto log = logging::logger("ui");
             if (const auto file = dialog.take_delete())
@@ -196,7 +196,7 @@ namespace rct3::scene
 
     } // namespace
 
-    std::optional<fs::path> update_save_browser(render::Device& device, SaveBrowser& browser, std::optional<ui::screens::FileDialog&> dialog, std::size_t opened, const ParkGame& game, const SaveWriter& write)
+    std::optional<fs::path> update_save_browser(render::Device& device, SaveBrowser& browser, std::optional<ui::screens::dialogs::FileDialog&> dialog, std::size_t opened, const ParkGame& game, const SaveWriter& write)
     {
         if (!dialog)
         {
@@ -232,9 +232,9 @@ namespace rct3::scene
         if (const auto name = dialog->take_open())
         {
             const auto picked = dialog->selected();
-            if (dialog->mode() == ui::screens::FileDialogMode::Load && picked && *picked < browser.files.size())
+            if (dialog->mode() == ui::screens::dialogs::FileDialogMode::Load && picked && *picked < browser.files.size())
                 return browser.files[*picked];
-            if (dialog->mode() == ui::screens::FileDialogMode::Save && write && !browser.folder.empty())
+            if (dialog->mode() == ui::screens::dialogs::FileDialogMode::Save && write && !browser.folder.empty())
             {
                 const fs::path path = browser.folder / *name;
                 write_save(path, write(path));

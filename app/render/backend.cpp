@@ -2,7 +2,7 @@
 #include "render/backend.hpp"
 
 #include "render/null/null_device.hpp"
-#include "render/vulkan/vulkan_device.hpp"
+#include "render/vulkan/device.hpp"
 
 #include <GLFW/glfw3.h>
 #include <array>

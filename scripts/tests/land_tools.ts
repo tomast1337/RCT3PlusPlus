@@ -10,11 +10,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** Picks a tool from the land menu, opening the menu when it is shut. */
 async function pick(icon: string): Promise<void> {
     if (!ui.find(`tools/Land/${icon}`))
@@ -23,12 +18,6 @@ async function pick(icon: string): Promise<void> {
 }
 
 /** Where tile (col, row) is on the view; throws when it is out of sight. */
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
 
 function low(col: number, row: number): number {
     return Math.min(...map.tile(col, row)!.corners);
@@ -114,8 +103,8 @@ await frames(2);
 expect(map.water().length === lakes, "no water from a click on flat ground");
 
 // A click on the pit's far wall, halfway up: the lake rises to that height, rounded up.
-const foot = map.screen(col + 0.5, row + 0.98)!;
-const top = map.screen(col + 0.5, row + 1.02)!;
+const foot = must(map.screen(col + 0.5, row + 0.98), `tile ${col + 0.5}, ${row + 0.98} in sight`);
+const top = must(map.screen(col + 0.5, row + 1.02), `tile ${col + 0.5}, ${row + 1.02} in sight`);
 await pointer.click((foot.x + top.x) / 2, (foot.y + top.y) / 2);
 await frames(2);
 const now = map.water();

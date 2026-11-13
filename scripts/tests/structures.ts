@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** How many shown objects there are of `symbol`. */
 function count(symbol: string): number {
     return map.objects().filter((o) => o.symbol === symbol).length;
@@ -31,7 +26,7 @@ await frames(3);
 async function place(symbol: string, c: number, r: number): Promise<void> {
     expect(build.pick("Style/Vanilla/Style", symbol), `${symbol} in the scenery lists`);
     await frames(2);
-    const at = map.screen(c, r)!;
+    const at = must(map.screen(c, r), `tile ${c}, ${r} in sight`);
     pointer.move(at.x, at.y);
     await frames(3);
     expect(build.placing()?.problem === "none", `${symbol} placeable at ${c},${r}, not ${build.placing()?.problem}`);
@@ -50,8 +45,8 @@ await ui.click("tools/Scenery/SavedSelection_SubMenu");
 await ui.click("tools/Scenery/SavedSelection_Grab");
 await frames(2);
 expect(ui.find("structure_grab") !== undefined, "the picking out panel");
-const from = map.screen(col + 0.5, row + 0.5)!;
-const to = map.screen(col + 1.5, row + 0.5)!;
+const from = must(map.screen(col + 0.5, row + 0.5), `tile ${col + 0.5}, ${row + 0.5} in sight`);
+const to = must(map.screen(col + 1.5, row + 0.5), `tile ${col + 1.5}, ${row + 0.5} in sight`);
 await pointer.drag([from.x, from.y], [to.x, to.y], 6);
 await frames(3);
 expect(structures.marked() === 2, `two tiles marked, not ${structures.marked()}`);
@@ -71,7 +66,7 @@ await ui.click(first);
 await ui.click("structure_files/content/open");
 await until(() => structures.placing() !== undefined, 120, "the structure to place");
 const site = { col: col + 1, row: row + 4 };
-const at = map.screen(site.col + 0.5, site.row + 0.5)!;
+const at = must(map.screen(site.col + 0.5, site.row + 0.5), `tile ${site.col + 0.5}, ${site.row + 0.5} in sight`);
 pointer.move(at.x, at.y);
 await frames(3);
 await ui.click("structure_place/IconAttractionEditorRotate");

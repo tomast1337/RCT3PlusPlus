@@ -10,11 +10,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 // The tutorial's mechanic has thought nothing of their own yet, only of being picked up.
 await park.open("Tutorials/Tutorial7.dat");
 await park.ready();
@@ -28,14 +23,13 @@ expect(own().length > 0, `a worker's thought after a while, got ${people.list()[
 
 people.show(who);
 await until(() => ui.find("info") !== undefined, 120, "the mechanic's window");
-const tab = (part: string) => ui.children("info")!.find((t) => t.toLowerCase().includes(part));
-await ui.click(`info/${tab("thoughts")}`);
+await ui.click(`info/${info_tab("thoughts")}`);
 await frames(10);
 await screenshot("staff_thoughts");
-await ui.click(`info/${tab("tools")}`);
+await ui.click(`info/${info_tab("tools")}`);
 await frames(10);
 await screenshot("staff_tasks");
-await ui.click(`info/${tab("stats")}`);
+await ui.click(`info/${info_tab("stats")}`);
 await frames(10);
 await screenshot("staff_stats");
 // Scrolled to its bottom with the wheel over it.
@@ -48,7 +42,7 @@ for (let i = 0; i < 5; ++i) {
 }
 await frames(5);
 await screenshot("staff_stats_bottom");
-await ui.click(`info/${tab("infoicon")}`);
+await ui.click(`info/${info_tab("infoicon")}`);
 await frames(10);
 await screenshot("staff_details");
 
@@ -90,7 +84,7 @@ if (train !== undefined && cash !== undefined) {
 
 // Warned four times while idle and untrained, they grow miserable: they think of quitting, told once, and
 // in time quit, told once too, gone from the park and their window closed.
-await ui.click(`info/${tab("infoicon")}`);
+await ui.click(`info/${info_tab("infoicon")}`);
 await frames(5);
 for (let i = 0; i < 4; ++i) {
     const warn = find("info", "Staff_WarnIconLarge");
@@ -115,7 +109,7 @@ const sweeper = people.list().findIndex((p) => p.role === "handyman");
 if (sweeper >= 0) {
     people.show(sweeper);
     await until(() => ui.find("info") !== undefined, 120, "the handyman's window");
-    await ui.click(`info/${tab("tools")}`);
+    await ui.click(`info/${info_tab("tools")}`);
     await frames(10);
     expect(find("info", "StaffTasks_SweepPaths") !== undefined, "a toggle for sweeping paths");
     await screenshot("handyman_tasks");

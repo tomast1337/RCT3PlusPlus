@@ -8,11 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const near = (a: number, b: number, by = 1e-2) => Math.abs(a - b) < by;
 /** `a` less `b`, taken round a full turn into -pi..pi. */
 const turn = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b));

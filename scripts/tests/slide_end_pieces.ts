@@ -10,11 +10,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kPanel = "placing/body/construction";
 // Each piece, its enclosed twin, and the least length of its path.
 const kEnds: [string, string, number][] = [["Funnel", "FunnelCapped", 50], ["FunnelRight", "FunnelRightCapped", 50], ["Bowl", "BowlCapped", 22], ["BowlRight", "BowlRightCapped", 22]];

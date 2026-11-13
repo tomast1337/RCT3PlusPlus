@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined, 1200, "the build lists");
 const paths = map.paths();
@@ -32,7 +27,7 @@ for (let k = 0; k < wanted.length; ++k) {
     expect(build.pick(kind!.overlay, kind!.symbol), `${kind!.symbol} picked`);
     await frames(2);
     // Turned a quarter from where it starts it faces west, to the road; the tool keeps the last stall's turn.
-    const spot = map.screen(road!.col + 1, road!.row)!;
+    const spot = must(map.screen(road!.col + 1, road!.row), "the tile in sight");
     pointer.move(spot.x, spot.y);
     await frames(3);
     for (let turn = 0; turn < 4 && build.placing()?.site?.turns !== 1; ++turn) {

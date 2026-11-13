@@ -9,18 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
-
 const kPool = "Pool/Default/Default_Stub";
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
@@ -34,7 +22,7 @@ camera.look({ col: c + 3, row: r + 0.5 }, { col: c + 3, row: r + 12, up: 14 });
 await frames(10);
 
 // Tiles four by four east of the room's tile, water two by two inside them.
-const rides = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+const rides = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
 if (!ui.find("tools/Rides/Obj_Pools"))
     await ui.click(rides);
 await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
@@ -64,7 +52,7 @@ for (const [symbol, col] of [["SunLoungers", c + 4], ["PoolShower", c + 6]] as c
 await until(() => ui.find("pool_panel/Pool_ChangingRoomPanel") !== undefined, 120, "the pool panel");
 await ui.click("pool_panel/Pool_ChangingRoomPanel");
 await frames(2);
-await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
+await ui.click(`pool_panel/body/${must(ui.children("pool_panel/body"), "pool_panel/body shown")[0]}`);
 await frames(3);
 await pointer.click(...on_view(c + 1.5, r + 0.5));
 await frames(3);
@@ -88,7 +76,6 @@ park.setTemperature(28);
 const cash = park.cash();
 const dropped = park.dropParties(40, 7).reduce((n, p) => n + p.guests, 0);
 log("dropped", dropped, "guests");
-const swimmers = () => people.list().filter((p) => p.state === "swimming");
 // Seen in the water, after changing.
 const in_pool = () => swimmers().filter((p) => p.col !== undefined && p.col > c + 3.2 && p.col < c + 6.8 && p.row! > r + 0.2 && p.row! < r + 2.8);
 await until(() => in_pool().length >= 4, 6000, `guests in the pool (${JSON.stringify(swimmers())})`);
@@ -127,7 +114,7 @@ await screenshot("pool_guests_customers");
 await ui.click("info/Attraction_Maintenance");
 await frames(3);
 expect(ui.find("info/body/PoolDirt_Label_label") !== undefined, `the water's dirt shown, not ${JSON.stringify(ui.children("info/body"))}`);
-const fluid = ui.find("info/body/Fluid_TypeLabel")!;
+const fluid = must(ui.find("info/body/Fluid_TypeLabel"), "info/body/Fluid_TypeLabel shown");
 await pointer.drag([fluid.x, fluid.y], [fluid.x, fluid.bottom + (fluid.bottom - fluid.top) * 3.5], 6);
 await frames(3);
 await screenshot("pool_guests_upkeep");

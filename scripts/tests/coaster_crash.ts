@@ -8,11 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
 expect(build.pick("tracks/coasters/Corkscrew/Corkscrew", "Corkscrew", "designs"), "a corkscrew coaster to build");
@@ -24,8 +19,8 @@ expect(designs.length > 0, "a saved corkscrew design");
 // The designs window opens on the custom track, the first row; the designs follow by name. The third, Triple
 // Corkscrew, has its station on the ground beside its lowest piece, so ground paths reach its doors. It is a
 // heading and four rows below it, in the window's units (a button is 22 of them high).
-const list = ui.find("design_browser/content/list")!;
-const button = ui.find("design_browser/content/build")!;
+const list = must(ui.find("design_browser/content/list"), "design_browser/content/list shown");
+const button = must(ui.find("design_browser/content/build"), "design_browser/content/build shown");
 const unit = (button.bottom - button.top) / 22;
 await pointer.click(list.x, list.top + (18 + 16 * 4) * unit);
 await frames(5);
@@ -95,7 +90,7 @@ camera.look(first, { col: first.col + 6, row: first.row + 14, up: (first.up ?? 0
 await frames(10);
 await screenshot("flying");
 await until(() => (rides.list()[ride].wrecks ?? []).some((w) => w.state === "burning"), 1200, "a wreck blown up");
-const burning = (rides.list()[ride].wrecks ?? []).find((w) => w.state === "burning")!;
+const burning = must((rides.list()[ride].wrecks ?? []).find((w) => w.state === "burning"), "a burning wreck");
 camera.look(burning, { col: burning.col + 6, row: burning.row + 14, up: (burning.up ?? 0) + 8 });
 await frames(20);
 await screenshot("burning");

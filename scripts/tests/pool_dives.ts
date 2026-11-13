@@ -8,18 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
-
 const kPool = "Pool/Default/Default_Stub";
 
 await until(() => park.loaded(), 1200, "the park");
@@ -32,7 +20,7 @@ options.set("camera_mode", 1);
 const tower = map.objects().find((o) => o.overlay === kPool && o.symbol === "DBTopBoard");
 expect(tower !== undefined, "a high diving board in the park");
 // The tower as the park has it, from both sides along its boards.
-const base = map.objects().find((o) => o.overlay === kPool && o.symbol === "DBBase")!;
+const base = must(map.objects().find((o) => o.overlay === kPool && o.symbol === "DBBase"), "the diving board's base");
 for (const [name, dc, dr] of [["pool_dives_tower", 6, 4], ["pool_dives_tower_back", -5, -4]] as const)
 {
     camera.look({ col: base.col + 0.5, row: base.row + 0.5, up: 8 }, { col: base.col + 0.5 + dc, row: base.row + 0.5 + dr, up: 8 });
@@ -88,7 +76,7 @@ const off = map.objects().filter((o) => o.overlay === kPool && o.symbol === "DBT
 const extras = () => map.objects().filter((o) => o.overlay === kPool && !/^(Curve)?(Solid|Edge|Corner|End|Full|Base|Railing|DB\w|Path)/.test(o.symbol));
 const before = extras().length;
 const boards = () => extras().length - before;
-const rides = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+const rides = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
 if (!ui.find("tools/Rides/Obj_Pools"))
     await ui.click(rides);
 await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");

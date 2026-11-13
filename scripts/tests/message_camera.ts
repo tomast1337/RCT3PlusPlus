@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** Units across the drawer and down it when fully open, and where the newest message's camera sits in it. */
 const drawerWidth = 480;
 const drawerOpen = 360;
@@ -28,16 +23,16 @@ async function clickNewest(): Promise<void> {
     // A double press opens the drawer from closed and closes it from anywhere else, and a new message slides it
     // part way down, so it may take two.
     const isOpen = () => {
-        const d = ui.find("messages")!;
+        const d = must(ui.find("messages"), "messages shown");
         return d.bottom - d.top > ((d.right - d.left) * (drawerOpen - 1)) / drawerWidth / 2;
     };
     for (let tries = 0; tries < 3 && !isOpen(); ++tries) {
-        const d = ui.find("messages")!;
+        const d = must(ui.find("messages"), "messages shown");
         await pointer.click(d.x, d.y);
         await pointer.click(d.x, d.y);
         await frames(30);
     }
-    const open = ui.find("messages")!;
+    const open = must(ui.find("messages"), "messages shown");
     await pointer.click(open.left + ((open.right - open.left) * camera.fromLeft) / drawerWidth, open.bottom - ((open.bottom - open.top) * camera.fromBottom) / drawerOpen);
     await frames(30);
 }

@@ -8,11 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 type Tile = { col: number; row: number };
 const near = (p: { col?: number; row?: number }, t: Tile, tiles: number) => p.col !== undefined && Math.hypot(p.col - (t.col + 0.5), p.row! - (t.row + 0.5)) < tiles;
 

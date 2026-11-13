@@ -7,11 +7,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/Soaked/OasisOfFun.dat");
 await until(() => ui.find("tools/Land/Land") !== undefined, 300, "the tool row");
 

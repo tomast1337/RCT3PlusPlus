@@ -8,11 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 type Tile = { col: number; row: number };
 
 await until(() => park.loaded(), 1200, "the park");
@@ -60,7 +55,7 @@ async function pickStation(): Promise<string | undefined> {
     }
     return undefined;
 }
-const at = map.screen(middle!.col, middle!.row)!;
+const at = must(map.screen(middle!.col, middle!.row), "the tile in sight");
 pointer.move(at.x, at.y);
 await frames(10);
 const station = await pickStation();
@@ -104,8 +99,8 @@ if (water(shore, lane) === undefined && water(shore - 1, lane) === undefined) {
     await ui.toggle("footpaths/route", false);
     camera.look({ col: shore + 0.5, row: lane + 0.5 }, { col: shore + 0.5, row: lane + 10.5, up: 25 });
     await frames(5);
-    const from = map.screen(shore - 1, lane)!;
-    const to = map.screen(shore, lane)!;
+    const from = must(map.screen(shore - 1, lane), `tile ${shore - 1}, ${lane} in sight`);
+    const to = must(map.screen(shore, lane), `tile ${shore}, ${lane} in sight`);
     await pointer.drag([from.x, from.y], [to.x, to.y], 10);
     for (let n = 0; n < middle!.col + 3 - shore; ++n)
         await ui.click("footpaths/body/Path_Straight");

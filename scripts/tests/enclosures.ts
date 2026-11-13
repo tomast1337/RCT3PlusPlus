@@ -12,18 +12,7 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** Where the middle of tile (col, row) is on the view; throws when it is out of sight. */
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
 
 await park.open("Campaigns/Base/Wild/ScrubGardens.dat");
 await until(() => ui.find("tools/Land/Land") !== undefined, 600, "the tool row");
@@ -202,7 +191,7 @@ expect(map.objects().some((o) => o.symbol === "CattleShelter" && o.col >= c0 && 
 expect(huts.length === 1, `one keeper's hut in the enclosure, not ${huts.length}`);
 await until(() => keepers() === staff + 1, 300, "a keeper hired");
 // The delete tool leaves the tiles under the house in the enclosure.
-const shelter = map.objects().find((o) => o.symbol === "CattleShelter" && o.col >= c0 && o.col < c0 + 5 && o.row >= r0 && o.row < r0 + 4)!;
+const shelter = must(map.objects().find((o) => o.symbol === "CattleShelter" && o.col >= c0 && o.col < c0 + 5 && o.row >= r0 && o.row < r0 + 4), "the cattle shelter in the enclosure");
 expect(build.pick("", "EnclosureDelete"), "the enclosure delete tool");
 const under_house = await drag_enclosure([shelter.col, shelter.row], [shelter.col, shelter.row]);
 expect(under_house.tiles === 0, `the house's tile kept, not ${under_house.tiles} taken out`);
@@ -273,13 +262,13 @@ await screenshot("enclosure_cut");
 
 // Saved and loaded again: the enclosure, its keeper and both zebras come back.
 const kept = { fences: fenced(), keepers: keepers(), animals: animals.list().length, enclosure: map.tile(c0 + 1, r0 + 1)!.enclosure };
-await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
+await ui.click(`tools/Files/${must(ui.children("tools/Files"), "tools/Files shown")[0]}`);
 await ui.click("tools/Files/File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
 await ui.click("park_files/content/open");
 await until(() => ui.find("park_files") === undefined, 120, "the save window to close");
 if (!ui.find("tools/Files/File_LoadGame"))
-    await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
+    await ui.click(`tools/Files/${must(ui.children("tools/Files"), "tools/Files shown")[0]}`);
 await until(() => ui.find("tools/Files/File_LoadGame") !== undefined, 120, "the files menu");
 await ui.click("tools/Files/File_LoadGame");
 // Loading asks first whether to save; the park was saved just now.

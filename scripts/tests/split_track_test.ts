@@ -8,11 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
 expect(build.pick("tracks/coasters/Seizmic/Seizmic", "seizmic"), "a ride of two tracks to build");
@@ -25,7 +20,7 @@ const col = Math.floor(width / 2);
 const row = Math.floor(height / 2);
 camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col + 0.5, row: row + 6.5, up: 15 });
 await frames(5);
-const at = map.screen(col, row)!;
+const at = must(map.screen(col, row), `tile ${col}, ${row} in sight`);
 pointer.move(at.x, at.y);
 await frames(30);
 await pointer.click(at.x, at.y);

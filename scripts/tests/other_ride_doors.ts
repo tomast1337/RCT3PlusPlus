@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
 
@@ -77,8 +72,8 @@ expect(build.pick("tracks/TrackedRides/VintageCars/VintageCars", "VintageCars", 
 await until(() => ui.find("design_browser") !== undefined, 600, "the designs window");
 await frames(3);
 expect((build.construction()?.designs ?? []).length > 0, "a saved vintage cars design");
-const list = ui.find("design_browser/content/list")!;
-const button = ui.find("design_browser/content/build")!;
+const list = must(ui.find("design_browser/content/list"), "design_browser/content/list shown");
+const button = must(ui.find("design_browser/content/build"), "design_browser/content/build shown");
 const unit = (button.bottom - button.top) / 22;
 await pointer.click(list.x, list.top + (18 + 16 * 2) * unit);
 await frames(5);

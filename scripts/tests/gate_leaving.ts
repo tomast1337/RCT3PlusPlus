@@ -7,11 +7,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await until(() => park.loaded(), 1200, "the park");
 await frames(10);
 const gates = park.gates();

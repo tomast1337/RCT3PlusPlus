@@ -8,15 +8,7 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** Clicks a tool's own button, which comes first in its group. */
-async function click_tool(tool: string): Promise<void> {
-    await ui.click(`tools/${tool}/${ui.children(`tools/${tool}`)![0]}`);
-}
 
 /** How many shown objects there are of each symbol. */
 function counts(): Map<string, number> {

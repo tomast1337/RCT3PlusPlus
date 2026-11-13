@@ -9,23 +9,7 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
 
 await until(() => park.loaded(), 1200, "the park");
 await frames(30);
@@ -47,12 +31,12 @@ await frames(30);
 await screenshot("lifeguard_facing");
 
 // The staff window: a row for every other worker, none for the lifeguards.
-await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Staff") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Staff");
 await until(() => under("Staff_Title", "table") !== undefined, 120, "the staff window");
 await frames(10);
-const list = `${under("Staff_Title", "table")!}/view/content`;
+const list = `${must(under("Staff_Title", "table"), "table under Staff_Title")}/view/content`;
 const rows = ui.children(list) ?? [];
 // The list starts with the vendors' switch off.
 const listed = people.list().filter((p) => p.staff && p.role !== "other" && p.role !== "vendor").length;

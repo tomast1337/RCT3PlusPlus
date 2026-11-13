@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kOverlay = "tracks/TrackedRides/SinkingShipSlide/SinkingShip";
 const isShip = (r: RideInfo) => /sinkingship/i.test(r.symbol ?? "");
 
@@ -99,7 +94,7 @@ for (let minute = 0; minute < 12 && (counts.at(-1) ?? 0) < 3; ++minute) {
         climbed += on.filter((p) => p.climbing === "climbing").length;
         slid += on.filter((p) => p.climbing === "sliding").length;
         if (!shot && on.some((p) => p.climbing === "sliding")) {
-            const p = on.find((q) => q.climbing === "sliding")!;
+            const p = must(on.find((q) => q.climbing === "sliding"), "someone sliding down the ship");
             camera.look({ col: p.col!, row: p.row!, up: p.up! }, { col: p.col! + 3, row: p.row! + 4, up: p.up! + 3 });
             await frames(5);
             await screenshot("pool_ship_sliding");

@@ -33,7 +33,7 @@ if (ui.find("bar/day_mode") !== undefined)
     throw new Error("expected no day mode button outside a sandbox");
 await screenshot("custom_scenario_started");
 
-await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
+await ui.click(`tools/Files/${must(ui.children("tools/Files"), "tools/Files shown")[0]}`);
 await ui.click("tools/Files/File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
 await ui.click("park_files/content/open");

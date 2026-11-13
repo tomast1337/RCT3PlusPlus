@@ -11,11 +11,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 type Tile = { col: number; row: number };
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
@@ -54,7 +49,7 @@ async function straight(): Promise<void> {
     expect((rides.list()[ride].pieces ?? 0) === before + 1, "a straight laid");
 }
 
-const at = map.screen(centre.col, centre.row)!;
+const at = must(map.screen(centre.col, centre.row), `tile ${centre.col}, ${centre.row} in sight`);
 pointer.move(at.x, at.y);
 await frames(10);
 expect((await pickStation()) !== undefined, "a station piece to start with");
@@ -165,7 +160,7 @@ async function pathsBehind(k: number): Promise<void> {
         const row = door.row + dr;
         camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col + 0.5, row: row + 10.5, up: 30 });
         await frames(5);
-        const p = map.screen(col, row)!;
+        const p = must(map.screen(col, row), `tile ${col}, ${row} in sight`);
         pointer.move(p.x, p.y);
         await frames(10);
         await pointer.click(p.x, p.y);
@@ -223,13 +218,13 @@ const saved = JSON.stringify(doors());
 const platforms = rides.list()[ride].platforms ?? [];
 log("platforms", JSON.stringify(platforms));
 expect(platforms.length === 2 && platforms.every((p) => /stair/i.test(p)), `a platform with stairs on both station pieces, not ${JSON.stringify(platforms)}`);
-await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
+await ui.click(`tools/Files/${must(ui.children("tools/Files"), "tools/Files shown")[0]}`);
 await ui.click("tools/Files/File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
 await ui.click("park_files/content/open");
 await until(() => ui.find("park_files") === undefined, 120, "the save window to close");
 if (!ui.find("tools/Files/File_LoadGame"))
-    await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
+    await ui.click(`tools/Files/${must(ui.children("tools/Files"), "tools/Files shown")[0]}`);
 await until(() => ui.find("tools/Files/File_LoadGame") !== undefined, 120, "the files menu");
 await ui.click("tools/Files/File_LoadGame");
 // Loading asks first whether to save; the park was saved just now.

@@ -11,11 +11,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kPanel = "design_placing";
 const kSteps: [number, number][] = [[0, 1], [1, 0], [0, -1], [-1, 0]]; // By side, as the pools count them
 type Spot = { col: number; row: number };
@@ -27,8 +22,8 @@ async function pickDesign(overlay: string, kind: string, design?: string): Promi
     await frames(3);
     const row = design === undefined ? 0 : build.construction()!.designs.findIndex((d) => d.includes(design));
     expect(row >= 0, `the ${design} design among ${build.construction()!.designs.join(", ")}`);
-    const list = ui.find("design_browser/content/list")!;
-    const button = ui.find("design_browser/content/build")!;
+    const list = must(ui.find("design_browser/content/list"), "design_browser/content/list shown");
+    const button = must(ui.find("design_browser/content/build"), "design_browser/content/build shown");
     const unit = (button.bottom - button.top) / 22;
     // Under the column heads and the custom track's row, which stays first.
     await pointer.click(list.x, list.top + (18 + 16 * (row + 1) + 8) * unit);
@@ -45,7 +40,7 @@ let last = { x: 0.5, y: 0.5 }; // Where the pointer was left
 async function over(at: Spot): Promise<void> {
     camera.look({ col: at.col, row: at.row }, { col: at.col, row: at.row + 30, up: 45 });
     await frames(4);
-    last = map.screen(at.col, at.row)!;
+    last = must(map.screen(at.col, at.row), `tile ${at.col}, ${at.row} in sight`);
     pointer.move(last.x, last.y);
     await frames(4);
 }
@@ -95,7 +90,7 @@ log("undertow price", price);
 // Away from the pools: refused for its pool sides.
 await over({ col: 20, row: 20 });
 expect(refusal() === "PlaceObject_MustEndOnPoolEdge", `the slide refused off a pool's edge, not ${refusal()}`);
-expect(status() !== "" && status() === ui.find(`${kPanel}/body/status_label`)!.text, "why, on its page");
+expect(status() !== "" && status() === must(ui.find(`${kPanel}/body/status_label`), `${kPanel}/body/status_label shown`).text, "why, on its page");
 log("off the edge:", status());
 await screenshot("design_place_off_pool_edge");
 const away = rides.list()[slide].pieces ?? 0;
@@ -173,7 +168,7 @@ expect(build.construction()!.turn === turn, "turned back round");
 // Lifted with Shift high over the ground: too high.
 await over(middle);
 const ground = build.construction()!.ghostAt!.height;
-const p = map.screen(middle.col, middle.row)!;
+const p = must(map.screen(middle.col, middle.row), `tile ${middle.col}, ${middle.row} in sight`);
 pointer.shift(true);
 await frames(3);
 for (let i = 1; i <= 60 && refusal() !== "PlaceObject_TooHigh"; ++i) {
@@ -243,7 +238,7 @@ await ui.click("land_panel/Land_Brush_Height_Raise");
 await until(() => ui.find("land_panel/body/Land_Brush_Height_Raise_Hill") !== undefined, 60, "the hill brush");
 await ui.click("land_panel/body/Land_Brush_Height_Raise_Hill");
 for (let i = 0; i < 3; ++i) {
-    const at = map.screen(hill.col, hill.row)!;
+    const at = must(map.screen(hill.col, hill.row), `tile ${hill.col}, ${hill.row} in sight`);
     await pointer.drag([at.x, at.y], [at.x, at.y - 0.15], 40);
 }
 await land("Land_Brush_Height"); // Put away

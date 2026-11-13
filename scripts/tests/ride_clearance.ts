@@ -10,18 +10,7 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** Where the middle of tile (col, row) is on the view; throws when it is out of sight. */
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");

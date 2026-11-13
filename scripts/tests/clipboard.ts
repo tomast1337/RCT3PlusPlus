@@ -8,11 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const saved = clipboard.get();
 try {
     await park.open("Campaigns/Base/VanillaHills.dat");

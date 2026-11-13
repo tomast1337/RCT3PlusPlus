@@ -10,11 +10,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined, 1200, "the build lists");
 const paths = map.paths();
@@ -45,11 +40,11 @@ await click(binned.col, binned.row);
 build.stop();
 const items = park.pathItems().length;
 expect(items === 2, `the bench and the bin on the road, not ${items}`);
-const kind = build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.goods.length > 0)!;
+const kind = must(build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.goods.length > 0), "a vanilla stall with goods");
 expect(build.pick(kind.overlay, kind.symbol), `${kind.symbol} picked`);
 await frames(2);
 const beside = { col: bare.col - 1, row: bare.row - 2 };
-pointer.move(map.screen(beside.col, beside.row)!.x, map.screen(beside.col, beside.row)!.y);
+pointer.move(...on_view(beside.col, beside.row));
 await frames(3);
 expect(build.placing()?.problem === "none", `the stall placeable beside the road, not ${build.placing()?.problem}`);
 await click(beside.col, beside.row);
@@ -123,7 +118,7 @@ build.stop();
 expect(build.pick(kind.overlay, kind.symbol), `${kind.symbol} picked again`);
 await frames(2);
 const aside = { col: road[7].col - 1, row: road[7].row - 2 };
-pointer.move(map.screen(aside.col, aside.row)!.x, map.screen(aside.col, aside.row)!.y);
+pointer.move(...on_view(aside.col, aside.row));
 await frames(3);
 expect(build.placing()?.problem === "none", `the second stall placeable beside the road, not ${build.placing()?.problem}`);
 await click(aside.col, aside.row);
@@ -141,8 +136,8 @@ expect(ui.find("delete_area") !== undefined, "the area panel out");
 // From the road below the bench to past the stall.
 const site = stalls.list()[second].site!;
 const corner = { col: Math.min(site.col, gate.col) - 1, row: Math.min(site.row, road[7].row) - 1 };
-const from = map.screen(road[6].col + 1, road[6].row)!;
-const to = map.screen(corner.col, corner.row)!;
+const from = must(map.screen(road[6].col + 1, road[6].row), `tile ${road[6].col + 1}, ${road[6].row} in sight`);
+const to = must(map.screen(corner.col, corner.row), `tile ${corner.col}, ${corner.row} in sight`);
 const marked = map.paths().filter((p) => p.col >= corner.col && p.col <= road[6].col + 1 && p.row >= corner.row && p.row <= road[6].row).length;
 await pointer.drag([from.x, from.y], [to.x, to.y], 10);
 await frames(3);

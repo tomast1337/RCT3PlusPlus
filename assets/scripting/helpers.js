@@ -82,3 +82,39 @@ park.advanceUntil = async (check, seconds = 60, what = "the wait") => {
     }
     if (!check()) throw new Error(`${what} timed out after ${seconds} park seconds`);
 };
+// What the test scripts share: checks, widget lookups and looks at the map.
+globalThis.expect = (ok, what) => {
+    if (!ok) throw new Error(`expected ${what}`);
+};
+globalThis.must = (value, what) => {
+    if (value === undefined || value === null) throw new Error(`expected ${what}`);
+    return value;
+};
+globalThis.under = (path, name) => {
+    for (const child of ui.children(path) ?? []) {
+        const at = `${path}/${child}`;
+        if (child === name) return at;
+        const found = under(at, name);
+        if (found !== undefined) return found;
+    }
+    return undefined;
+};
+globalThis.on_view = (col, row) => {
+    const at = map.screen(col, row);
+    if (!at) throw new Error(`tile ${col}, ${row} is not in sight`);
+    return [at.x, at.y];
+};
+globalThis.look_down = async (col, row, up = 30) => {
+    camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col + 0.5, row: row + 0.5 + up / 3, up });
+    await frames(3);
+};
+globalThis.click_tool = async (tool) => ui.click(`tools/${tool}/${ui.children(`tools/${tool}`)[0]}`);
+globalThis.files_menu = async (item) => {
+    if (ui.find(`tools/Files/${item}`) === undefined) await ui.click(`tools/Files/${ui.children("tools/Files")[0]}`);
+    await until(() => ui.find(`tools/Files/${item}`) !== undefined, 120, "the files menu");
+    await ui.click(`tools/Files/${item}`);
+};
+globalThis.info_tab = (part) => ui.children("info").find((t) => t.toLowerCase().includes(part));
+globalThis.has_path = (col, row) => map.paths().some((p) => p.col === col && p.row === row);
+globalThis.staff = () => people.list().filter((p) => p.staff);
+globalThis.swimmers = () => people.list().filter((p) => p.state === "swimming");

@@ -9,18 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
-
 const kPool = "Pool/Default/Default_Stub";
 
 await park.open("Campaigns/Base/VanillaHills.dat");
@@ -156,7 +144,7 @@ const escape = async (item?: string) => {
     await frames(2);
 };
 if (!ui.find("tools/Rides/Obj_Pools"))
-    await ui.click(`tools/Rides/${ui.children("tools/Rides")![0]}`);
+    await ui.click(`tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`);
 await ui.click("tools/Rides/Obj_Pools");
 await until(() => ui.find("pool_panel") !== undefined, 120, "the pool panel");
 expect(build.pick(kPool, "Pool_PlaceTiles"), "the pool tiles");

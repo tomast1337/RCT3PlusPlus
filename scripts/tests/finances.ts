@@ -8,29 +8,13 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
 
 const kWindow = "FinancialManagement_Title";
 
 async function open_finances(): Promise<void> {
     if (ui.find("tools/Management/Man_Finances") === undefined)
-        await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+        await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
     await until(() => ui.find("tools/Management/Man_Finances") !== undefined, 120, "the management menu");
     await ui.click("tools/Management/Man_Finances");
     await until(() => ui.find(kWindow) !== undefined, 120, "the finances window");
@@ -38,7 +22,7 @@ async function open_finances(): Promise<void> {
 
 async function tab(icon: string): Promise<void> {
     await until(() => under(kWindow, icon) !== undefined, 120, `the ${icon} tab`);
-    await ui.click(under(kWindow, icon)!);
+    await ui.click(must(under(kWindow, icon), `${icon} under ${kWindow}`));
     await frames(10);
 }
 
@@ -63,7 +47,7 @@ log("ledger months", months);
 expect(months > 5, "more ledger months than a park file's five");
 
 // The bar's money with an arrow before it the way last month went, and its profit under the pointer.
-const money = ui.find("bar/money")!;
+const money = must(ui.find("bar/money"), "bar/money shown");
 const trend = ui.find("bar/money_rose") ?? ui.find("bar/money_fell");
 log("bar money", money.text, money.tooltip, ui.find("bar/money_rose") !== undefined ? "rose" : "fell");
 expect(trend !== undefined && trend.right <= money.left && (money.tooltip ?? "") !== "", "the money's trend");
@@ -73,14 +57,14 @@ await tab("Man_Finances");
 expect(under(kWindow, "Rct3pp_Finance_Line") !== undefined, "the ledger's line picker");
 await screenshot("ledger");
 // Written out, the player is told where.
-await ui.click(under(kWindow, "Rct3pp_Finance_Export")!);
+await ui.click(must(under(kWindow, "Rct3pp_Finance_Export"), `Rct3pp_Finance_Export under ${kWindow}`));
 await frames(30);
 await screenshot("exported");
 // The graphs over the last month, zoomed out a few notches with the wheel, and read out under the pointer.
 await tab("CashGraphTabIcon");
-await ui.click(under(kWindow, "range0")!);
+await ui.click(must(under(kWindow, "range0"), `range0 under ${kWindow}`));
 await frames(5);
-const graph = ui.find(under(kWindow, "graph")!)!;
+const graph = must(ui.find(must(under(kWindow, "graph"), `graph under ${kWindow}`)), "graph shown");
 pointer.move(graph.right - (graph.right - graph.left) / 3, (graph.top + graph.bottom) / 2);
 await frames(3);
 for (let notch = 0; notch < 3; ++notch) {
@@ -88,16 +72,16 @@ for (let notch = 0; notch < 3; ++notch) {
     await frames(2);
 }
 await frames(90);
-expect((ui.find(under(kWindow, "graph")!)!.tooltip ?? "").includes(":"), "a readout under the pointer");
-log("readout", ui.find(under(kWindow, "graph")!)!.tooltip);
+expect((must(ui.find(must(under(kWindow, "graph"), `graph under ${kWindow}`)), "graph shown").tooltip ?? "").includes(":"), "a readout under the pointer");
+log("readout", must(ui.find(must(under(kWindow, "graph"), `graph under ${kWindow}`)), "graph shown").tooltip);
 await screenshot("graphs_zoomed");
-await ui.click(under(kWindow, "range2")!);
+await ui.click(must(under(kWindow, "range2"), `range2 under ${kWindow}`));
 await frames(5);
 await screenshot("graphs_all");
 // The loan's bar dragged to its end borrows up to the most, and back repays.
 await tab("Attraction_Finances");
 const loan_before = park.loan();
-const bar = ui.find(under(under(kWindow, "controls")!, "FinancialSummary_Loan")!)!;
+const bar = must(ui.find(must(under(must(under(kWindow, "controls"), `controls under ${kWindow}`), "FinancialSummary_Loan"), "FinancialSummary_Loan")), "the widget shown");
 // Past its end, a little: the pointer goes by shares of the screen.
 await pointer.drag([bar.x, bar.y], [bar.right + 0.02, bar.y], 10);
 await frames(70);

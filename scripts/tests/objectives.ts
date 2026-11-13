@@ -8,23 +8,7 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
 
 const kGuestsWanted = 200; // The level's goal, as the park file sets it
 const kDay = 90 / 7;
@@ -36,7 +20,7 @@ await frames(30);
 expect(park.guests() < kGuestsWanted, "the level not met as it opens");
 
 if (ui.find("tools/Management/Man_Objectives") === undefined)
-    await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+    await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Objectives") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Objectives");
 await until(() => under("", "Objectives_DialogTitle") !== undefined, 120, "the objectives window");
@@ -55,8 +39,8 @@ expect(park.levelsWon() === 1, "the level counted won, for its fanfare");
 await screenshot("objectives_prize");
 const box = ui.find("prize_won");
 log("prize", JSON.stringify(box));
-await ui.click(`prize_won/${ui.children("prize_won")!.at(-1)!}`);
-await until(() => ui.find("prize_won") === undefined || ui.find("prize_won")!.text !== box!.text, 120, "the next box");
+await ui.click(`prize_won/${must(ui.children("prize_won"), "prize_won shown").at(-1)!}`);
+await until(() => ui.find("prize_won") === undefined || must(ui.find("prize_won"), "prize_won shown").text !== box!.text, 120, "the next box");
 await frames(30);
 await screenshot("objectives_won");
 quit(0);

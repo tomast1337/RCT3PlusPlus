@@ -9,18 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
-
 const kPool = "Pool/Default/Default_Stub";
 
 await park.open("Campaigns/Base/VanillaHills.dat");
@@ -57,7 +45,7 @@ await frames(10);
 
 // The rides menu's pools button opens the pool panel on its editor, water out; its other tabs hold the extras
 // and the changing rooms.
-const rides = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+const rides = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
 await until(() => build.flatRides() !== undefined, 1200, "the build items");
 if (!ui.find("tools/Rides/Obj_Pools"))
     await ui.click(rides);
@@ -72,13 +60,13 @@ await until(() => ui.find("pool_panel/body/Icon_Default_Jacuzzi") !== undefined,
 expect(ui.find("pool_panel/body/Icon_Default_HighDive") !== undefined, "the high diving board on the extras page");
 // The game's eleven: nine extras of the pool type, the high diving board and the spa pool; the ramps and the spiral
 // staircase are on the paths page.
-const offered_extras = ui.children("pool_panel/body")!;
+const offered_extras = must(ui.children("pool_panel/body"), "pool_panel/body shown");
 expect(offered_extras.every((n) => ui.find(`pool_panel/body/${n}`)?.tooltip), "every extra named");
 expect(offered_extras.length === 11 && !offered_extras.includes("Icon_Default_SpiralStairs"), `the eleven extras, not ${JSON.stringify(offered_extras)}`);
 await screenshot("pool_panel_extras");
 await ui.click("pool_panel/Pool_ChangingRoomPanel");
 await frames(3);
-expect(ui.children("pool_panel/body")!.length > 1, `changing rooms on their page, not ${JSON.stringify(ui.children("pool_panel/body"))}`);
+expect(must(ui.children("pool_panel/body"), "pool_panel/body shown").length > 1, `changing rooms on their page, not ${JSON.stringify(ui.children("pool_panel/body"))}`);
 await screenshot("pool_panel_rooms");
 await ui.click("pool_panel/Pool_PoolPanel");
 await frames(2);
@@ -241,7 +229,7 @@ await ui.click("tools/Rides/Obj_Pools");
 await until(() => ui.find("pool_panel/Pool_ChangingRoomPanel") !== undefined, 120, "the pool panel");
 await ui.click("pool_panel/Pool_ChangingRoomPanel");
 await frames(2);
-await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
+await ui.click(`pool_panel/body/${must(ui.children("pool_panel/body"), "pool_panel/body shown")[0]}`);
 camera.look({ col: c0 - 0.5, row: r0 + 4.5 }, { col: c0 + 3, row: r0 + 5.5, up: 2.5 });
 await frames(10);
 await pointer.click(...on_view(c0 - 1.5, r0 + 4.5));
@@ -443,13 +431,13 @@ expect(build.pick(kPool, "Pool_PlaceTiles"), "the tiles in the pool list");
 pointer.move(...on_view(c0 + 1.5, r0 + 7.5));
 await frames(3);
 expect(pieces().length > kept, "the square under the pointer shown before saving");
-await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
+await ui.click(`tools/Files/${must(ui.children("tools/Files"), "tools/Files shown")[0]}`);
 await ui.click("tools/Files/File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
 await ui.click("park_files/content/open");
 await until(() => ui.find("park_files") === undefined, 120, "the save window to close");
 if (!ui.find("tools/Files/File_LoadGame"))
-    await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
+    await ui.click(`tools/Files/${must(ui.children("tools/Files"), "tools/Files shown")[0]}`);
 await until(() => ui.find("tools/Files/File_LoadGame") !== undefined, 120, "the files menu");
 await ui.click("tools/Files/File_LoadGame");
 // Loading asks first whether to save; the park was saved just now.
@@ -478,7 +466,7 @@ for (const [col, row, x, y] of sides.slice(1))
     await open_editor();
     await ui.click("pool_panel/Pool_ChangingRoomPanel");
     await until(() => (ui.children("pool_panel/body")?.length ?? 0) > 1, 120, "the changing rooms");
-    await ui.click(`pool_panel/body/${ui.children("pool_panel/body")![0]}`);
+    await ui.click(`pool_panel/body/${must(ui.children("pool_panel/body"), "pool_panel/body shown")[0]}`);
     await frames(2);
     await pointer.click(...on_view(col + x, row + y));
     await until(() => map.objects().some((o) => o.overlay !== kPool && o.col === col && o.row === row), 120, `the room at ${col - c0}, ${row - r0}`);
@@ -538,11 +526,11 @@ await until(() => map.supports().some((s) => s.col === c0 + 2 && s.row === r0 + 
 await ui.click("pool_panel/body/editor/Pool_Height");
 await ui.click("pool_panel/Pool_PathPanel");
 await until(() => ui.find("pool_panel/body/Icon_Default_SpiralStairs") !== undefined, 120, "the spiral staircase on the paths page");
-expect(ui.children("pool_panel/body")!.filter((n) => n !== "paths").length === 3, `two ramps and the staircase on the paths page, not ${JSON.stringify(ui.children("pool_panel/body"))}`);
+expect(must(ui.children("pool_panel/body"), "pool_panel/body shown").filter((n) => n !== "paths").length === 3, `two ramps and the staircase on the paths page, not ${JSON.stringify(ui.children("pool_panel/body"))}`);
 // Each way between levels is named, with its price, as the pointer rests on it: the staircase its foot's.
-const stairs_help = ui.find("pool_panel/body/Icon_Default_SpiralStairs")!;
+const stairs_help = must(ui.find("pool_panel/body/Icon_Default_SpiralStairs"), "pool_panel/body/Icon_Default_SpiralStairs shown");
 expect(stairs_help.tooltip === "Spiral Stairs : $24.00", `the staircase's help, not ${stairs_help.tooltip}`);
-const ramp_help = ui.children("pool_panel/body")!.filter((n) => n !== "paths" && n !== "Icon_Default_SpiralStairs").map((n) => ui.find(`pool_panel/body/${n}`)!.tooltip);
+const ramp_help = must(ui.children("pool_panel/body"), "pool_panel/body shown").filter((n) => n !== "paths" && n !== "Icon_Default_SpiralStairs").map((n) => must(ui.find(`pool_panel/body/${n}`), `pool_panel/body/${n} shown`).tooltip);
 expect(ramp_help.length === 2 && ramp_help.every((h) => h?.match(/^\dm Ramp : \$12\.00$/)), `the ramps' help, not ${JSON.stringify(ramp_help)}`);
 pointer.move(stairs_help.x, stairs_help.y);
 await frames(60);
@@ -556,7 +544,7 @@ await frames(3);
 const stairs_paid = cash - park.cash()!;
 expect(count("StairsBase") === 1 && count("StairsTop") === 1 && stairs_paid === 2400, `a staircase, paid $24.00, not ${count("StairsBase")} for ${stairs_paid}`);
 // A ramp from the same column, against a side of the paved square past the staircase.
-const ramp = ui.children("pool_panel/body")!.find((n) => n !== "paths" && n !== "Icon_Default_SpiralStairs")!;
+const ramp = must(must(ui.children("pool_panel/body"), "pool_panel/body shown").find((n) => n !== "paths" && n !== "Icon_Default_SpiralStairs"), "a ramp on the paths page");
 await ui.click(`pool_panel/body/${ramp}`);
 await frames(2);
 const before_ramp = pieces().length;
@@ -576,7 +564,7 @@ cash = park.cash()!;
 await open_editor();
 await ui.click("pool_panel/Pool_PathPanel");
 await until(() => ui.children("pool_panel/body")?.includes("paths") === true, 120, "the paths page");
-expect(ui.children("pool_panel/body/paths")!.length === 9, `the path controls, not ${JSON.stringify(ui.children("pool_panel/body/paths"))}`);
+expect(must(ui.children("pool_panel/body/paths"), "pool_panel/body/paths shown").length === 9, `the path controls, not ${JSON.stringify(ui.children("pool_panel/body/paths"))}`);
 // Above the paths tab, the pin (in) and the camera follow switch (off), as on the path panel.
 expect(ui.find("pool_panel/pin")?.on === true && ui.find("pool_panel/follow")?.on === false, "the pin in and the camera follow off");
 await screenshot("pool_panel_paths");

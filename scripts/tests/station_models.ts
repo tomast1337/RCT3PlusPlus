@@ -12,11 +12,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** Builds a station of `kind` and gives its ride's place in rides.list(). */
 async function station(overlay: string, kind: string, type: RegExp): Promise<number> {
     await park.open("Campaigns/Base/BlankLandscape.dat");
@@ -33,7 +28,7 @@ async function station(overlay: string, kind: string, type: RegExp): Promise<num
     at = { col: Math.floor(width / 2), row: Math.floor(height / 2) };
     view();
     await frames(5);
-    const p = map.screen(at.col, at.row)!;
+    const p = must(map.screen(at.col, at.row), `tile ${at.col}, ${at.row} in sight`);
     pointer.move(p.x, p.y);
     await frames(10);
     // A new track starts on its plain station, not an inverted one.
@@ -118,13 +113,13 @@ await frames(30);
 await screenshot("LoopingRC");
 
 // Saved and loaded again.
-await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
+await ui.click(`tools/Files/${must(ui.children("tools/Files"), "tools/Files shown")[0]}`);
 await ui.click("tools/Files/File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
 await ui.click("park_files/content/open");
 await until(() => ui.find("park_files") === undefined, 120, "the save window to close");
 if (!ui.find("tools/Files/File_LoadGame"))
-    await ui.click(`tools/Files/${ui.children("tools/Files")![0]}`);
+    await ui.click(`tools/Files/${must(ui.children("tools/Files"), "tools/Files shown")[0]}`);
 await until(() => ui.find("tools/Files/File_LoadGame") !== undefined, 120, "the files menu");
 await ui.click("tools/Files/File_LoadGame");
 // Loading asks first whether to save; the park was saved just now.

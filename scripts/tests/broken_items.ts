@@ -8,23 +8,7 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "the build lists");
@@ -56,11 +40,11 @@ await screenshot("broken_benches");
 // The blank landscape has no money; in a park with money the replacing is paid for.
 const before = park.cash();
 // The tool's own button comes first in its group, before its menu's items.
-await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Park") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Park");
 await until(() => under("PID_Title", "Staff_JobIsMaintenanceIcon") !== undefined, 120, "the park window's replace button");
-const replace = under("PID_Title", "Staff_JobIsMaintenanceIcon")!;
+const replace = must(under("PID_Title", "Staff_JobIsMaintenanceIcon"), "Staff_JobIsMaintenanceIcon under PID_Title");
 for (let tries = 0; tries < 10 && broken() > 0; ++tries) {
     await ui.click(replace);
     await frames(30);

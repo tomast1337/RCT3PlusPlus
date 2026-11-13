@@ -10,11 +10,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kPool = "Pool/Default/Default_Stub";
 
 // The neighbours as the pool walls count them: the four sides by turn, then the corners after each side.
@@ -82,14 +77,7 @@ const c0 = site!.col;
 const r0 = site!.row;
 log("grid at", c0, r0);
 
-function on_view(col: number, row: number): [number, number] {
-    const at = map.screen(col, row);
-    if (!at)
-        throw new Error(`tile ${col}, ${row} is not in sight`);
-    return [at.x, at.y];
-}
-
-const rides = `tools/Rides/${ui.children("tools/Rides")![0]}`;
+const rides = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
 await until(() => build.flatRides() !== undefined, 1200, "the build items");
 if (!ui.find("tools/Rides/Obj_Pools"))
     await ui.click(rides);

@@ -11,45 +11,28 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
 
 await park.open("Campaigns/Base/ChequeredFlag.dat");
 await park.ready();
 await frames(30);
 
-await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
 await until(() => ui.find("tools/Management/Man_Staff") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Staff");
 await until(() => under("Staff_Title", "Staff_HireMaintenanceIcon") !== undefined, 120, "the staff window");
 
 // One of each job the window hires, let go where they were made.
-const staff = () => people.list().filter((p) => p.staff);
 for (const button of ["Staff_HireMaintenanceIcon", "Staff_HireMechanicIcon", "Staff_HireSecurityIcon", "Staff_HireEntertainerIcon"]) {
     const count = staff().length;
-    await ui.click(under("Staff_Title", button)!);
+    await ui.click(must(under("Staff_Title", button), `${button} under Staff_Title`));
     await until(() => staff().length === count + 1 && staff()[count].state === "held", 60, "a worker in hand");
     pointer.move(0.1, 0.5);
     await frames(3);
     await pointer.click(0.1, 0.5, "right");
     await until(() => staff()[count].state !== "held", 60, "the worker let go");
 }
-const list = `${under("Staff_Title", "table")!}/view/content`;
+const list = `${must(under("Staff_Title", "table"), "table under Staff_Title")}/view/content`;
 const rows = () => ui.children(list) ?? [];
 // Vendors, at their stalls, stay out of the list until their switch is on.
 await until(() => rows().length >= 4, 120, "a row for each worker hired");
@@ -63,25 +46,25 @@ await until(() => ui.find(`${first}/Wage`) !== undefined, 30, "the first row unf
 await frames(5);
 await screenshot("staff_list_row_unfolded");
 
-await ui.click(under("Staff_Title", "ExpandAll")!);
+await ui.click(must(under("Staff_Title", "ExpandAll"), "ExpandAll under Staff_Title"));
 await until(() => rows().every((r) => ui.find(`${list}/${r}/Hired`) !== undefined || ui.find(`${list}/${r}/Patrol`) === undefined), 30, "every row unfolded");
 await frames(5);
 await screenshot("staff_list_all_unfolded");
-await ui.click(under("Staff_Title", "ContractAll")!);
+await ui.click(must(under("Staff_Title", "ContractAll"), "ContractAll under Staff_Title"));
 
 // Sorted by name, the second choice, and the handymen hidden.
-await ui.click(under("Staff_Title", "SortBy")!);
+await ui.click(must(under("Staff_Title", "SortBy"), "SortBy under Staff_Title"));
 await until(() => ui.find("SortBy.menu") !== undefined, 30, "the sort choices");
-const menu = ui.find("SortBy.menu")!;
+const menu = must(ui.find("SortBy.menu"), "SortBy.menu shown");
 await pointer.click((menu.left + menu.right) / 2, menu.top + (menu.bottom - menu.top) * 1.5 / 12);
 const shown = rows().length;
-await ui.toggle(under("Staff_Title", "Staff_ViewMaintenance")!, false);
+await ui.toggle(must(under("Staff_Title", "Staff_ViewMaintenance"), "Staff_ViewMaintenance under Staff_Title"), false);
 await until(() => rows().length < shown, 60, "the handymen hidden");
 await frames(10);
 await screenshot("staff_list_sorted_filtered");
 
 // A keeper needs an animal house to look after.
-await ui.click(under("Staff_Title", "Staff_HireAnimalKeeperIcon")!);
+await ui.click(must(under("Staff_Title", "Staff_HireAnimalKeeperIcon"), "Staff_HireAnimalKeeperIcon under Staff_Title"));
 await until(() => ui.find("StaffQuestion") !== undefined, 30, "the enclosure message");
 await frames(5);
 await screenshot("staff_list_enclosure_needed");

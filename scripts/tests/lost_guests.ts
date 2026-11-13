@@ -7,11 +7,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await park.open("Campaigns/Base/ChequeredFlag.dat");
 await park.ready();
 await frames(30);
@@ -35,24 +30,12 @@ camera.look({ col: guest.col!, row: guest.row! }, { col: guest.col! + 8, row: gu
 await frames(10);
 people.show(who);
 await until(() => ui.find("info") !== undefined, 120, "the guest's window");
-const tab = (part: string) => ui.children("info")!.find((t) => t.toLowerCase().includes(part));
-const options = tab("options");
+const options = info_tab("options");
 if (options !== undefined) {
     await ui.click(`info/${options}`);
     await frames(5);
 }
-const button = (path: string): string | undefined => {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === "PickUp")
-            return at;
-        const found = button(at);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-};
-const pick = button("info");
+const pick = under("info", "PickUp");
 expect(pick !== undefined, "a pick-up button on the guest's window");
 await ui.click(pick!);
 await until(() => me().state === "held", 60, "the guest held");
@@ -62,7 +45,7 @@ const far = paths
     .filter((p) => clear(p.col, p.row))
     .sort((p, q) => Math.hypot(q.col - guest.col!, q.row - guest.row!) - Math.hypot(p.col - guest.col!, p.row - guest.row!))[0];
 expect(far !== undefined && Math.hypot(far.col - guest.col!, far.row - guest.row!) >= 5, "a path in sight well away");
-const over = map.screen(far!.col, far!.row)!;
+const over = must(map.screen(far!.col, far!.row), "the tile in sight");
 pointer.move(over.x, over.y);
 await frames(10);
 await pointer.click(over.x, over.y);

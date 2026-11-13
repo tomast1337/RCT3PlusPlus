@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The sellers in the park, each with the object they serve at. */
 const sellers = () => people.list().filter((p) => p.post !== undefined);
 
@@ -26,9 +21,6 @@ async function sellers_come(count: number, what: string): Promise<void> {
 }
 
 /** Clicks a tool's own button, which comes first in its group. */
-async function click_tool(tool: string): Promise<void> {
-    await ui.click(`tools/${tool}/${ui.children(`tools/${tool}`)![0]}`);
-}
 
 await park.open("Campaigns/Base/BlankLandscape.dat");
 await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.stalls() !== undefined && build.flatRides() !== undefined, 1200, "the build lists");
@@ -49,8 +41,7 @@ async function place(step: string, col: number, row: number): Promise<void> {
 }
 
 // A stall beside the road, facing it.
-const kind = build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.symbol.toLowerCase().includes("burger"))!;
-expect(kind !== undefined, "the burger stall");
+const kind = must(build.stalls()!.find((s) => s.overlay === "Style/Vanilla/Style" && s.symbol.toLowerCase().includes("burger")), "the burger stall");
 camera.look({ col: road.col + 0.5, row: road.row + 0.5 }, { col: road.col + 0.5, row: road.row + 10.5, up: 25 });
 await frames(3);
 expect(build.pick(kind.overlay, kind.symbol), `${kind.symbol} picked`);

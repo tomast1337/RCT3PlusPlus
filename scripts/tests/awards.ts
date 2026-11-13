@@ -6,11 +6,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 const kWeek = 90; // Calendar units
 const kMonth = 360;
 const kWeekSeconds = 150; // Of park time

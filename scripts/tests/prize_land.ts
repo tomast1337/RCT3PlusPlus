@@ -7,28 +7,9 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
 
 /** Clicks a tool's own button, which comes first in its group. */
-async function click_tool(tool: string): Promise<void> {
-    await ui.click(`tools/${tool}/${ui.children(`tools/${tool}`)![0]}`);
-}
 
 const kConstructionRights = 7;
 
@@ -62,7 +43,7 @@ await click_tool("Map");
 park.givePrize(kConstructionRights);
 await until(() => ui.find("prize_won") !== undefined, 120, "the prize box");
 await screenshot("prize_box");
-await ui.click(`prize_won/${ui.children("prize_won")!.at(-1)!}`);
+await ui.click(`prize_won/${must(ui.children("prize_won"), "prize_won shown").at(-1)!}`);
 await until(() => ui.find("prize_won") === undefined, 120, "the box to close");
 expect(held.every(([c, r]) => map.tile(c, r)!.ownership === "for sale"), "the held back land on sale");
 
@@ -76,10 +57,10 @@ await click_tool("Management");
 await until(() => ui.find("tools/Management/Man_Park") !== undefined, 120, "the management menu");
 await ui.click("tools/Management/Man_Park");
 await until(() => under("PID_Title", "ParkInfoIcon_BuyLand") !== undefined, 120, "the park window's buy land button");
-await ui.click(under("PID_Title", "ParkInfoIcon_BuyLand")!);
+await ui.click(must(under("PID_Title", "ParkInfoIcon_BuyLand"), "ParkInfoIcon_BuyLand under PID_Title"));
 await frames(10);
 // The window out of the way; the tool stays out.
-await ui.click(under("PID_Title", "close")!);
+await ui.click(must(under("PID_Title", "close"), "close under PID_Title"));
 await frames(10);
 camera.look({ col: col + 0.5, row: row + 0.5 });
 await frames(30);

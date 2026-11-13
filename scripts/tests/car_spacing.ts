@@ -8,11 +8,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** Lays the first saved design of the coaster `kind` on a new blank landscape, and gives its place in rides.list(). */
 async function lay(kind: string): Promise<number> {
     await park.open("Campaigns/Base/BlankLandscape.dat");
@@ -23,8 +18,8 @@ async function lay(kind: string): Promise<number> {
     expect((build.construction()?.designs ?? []).length > 0, `a saved ${kind} design`);
     // The first saved design is a heading and two rows below the custom track, in the window's units (a button is
     // 22 of them high).
-    const list = ui.find("design_browser/content/list")!;
-    const button = ui.find("design_browser/content/build")!;
+    const list = must(ui.find("design_browser/content/list"), "design_browser/content/list shown");
+    const button = must(ui.find("design_browser/content/build"), "design_browser/content/build shown");
     const unit = (button.bottom - button.top) / 22;
     await pointer.click(list.x, list.top + (18 + 16 * 2) * unit);
     await frames(5);

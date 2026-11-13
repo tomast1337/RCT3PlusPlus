@@ -9,11 +9,6 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 await until(() => park.loaded(), 1200, "the park");
 await frames(10);
 park.setWeather("sunny");
@@ -64,7 +59,7 @@ let jumper: string | undefined;
 await until(() => (jumper = people.list().find((p) => dry.has(p.name) && p.in_water === true && p.diving === undefined)?.name) !== undefined, 9000, "a swimmer diving in off the edge");
 const dived = who(jumper!);
 await until(() => map.rings().some((r) => near(r, dived) && r.age > 0.6), 300, "rings where they dived in");
-const edge = map.rings().find((r) => near(r, dived))!;
+const edge = must(map.rings().find((r) => near(r, dived)), "a ring off the edge");
 expect(edge.crest < first!.crest, `smaller rings off the edge, ${edge.crest} against ${first!.crest}`);
 await shots(dived, "pool_ripples_edge");
 await until(() => !map.rings().some((r) => near(r, edge)), 900, "the edge rings dying out");

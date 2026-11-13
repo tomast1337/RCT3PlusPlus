@@ -14,6 +14,29 @@ declare function screenshot(name?: string): Promise<void>;
 /** Leaves the game with `code` (0 when left out). */
 declare function quit(code?: number): void;
 
+/** Throws "expected `what`" unless `ok`. */
+declare function expect(ok: boolean, what: string): void;
+/** `value`, or throws "expected `what`" when it is undefined or null: for a lookup the script relies on. */
+declare function must<T>(value: T | undefined | null, what: string): T;
+/** The path of the first widget named `name` anywhere below the one at `path`, or undefined. */
+declare function under(path: string, name: string): string | undefined;
+/** Where the middle of tile (col, row) is on screen; throws when it is not in sight. */
+declare function on_view(col: number, row: number): [number, number];
+/** Points the camera down at tile (col, row) from the south, `up` (30) above it, and waits for it to draw. */
+declare function look_down(col: number, row: number, up?: number): Promise<void>;
+/** Clicks the first button of the tool bar menu `tool` (such as "Land"), which opens or closes it. */
+declare function click_tool(tool: string): Promise<void>;
+/** Clicks `item` in the files menu, opening the menu first when it is shut. */
+declare function files_menu(item: string): Promise<void>;
+/** The tab of the open info window whose name holds `part` (lower case), or undefined. */
+declare function info_tab(part: string): string | undefined;
+/** Whether a path lies on tile (col, row). */
+declare function has_path(col: number, row: number): boolean;
+/** The staff among people.list(). */
+declare function staff(): ReturnType<typeof people.list>;
+/** The people swimming, among people.list(). */
+declare function swimmers(): ReturnType<typeof people.list>;
+
 declare namespace pointer {
     function move(x: number, y: number): void;
     /** Holds the left button down, or the right one with "right". */

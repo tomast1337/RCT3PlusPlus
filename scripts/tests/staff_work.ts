@@ -9,25 +9,7 @@
 
 export {};
 
-function expect(ok: boolean, what: string): void {
-    if (!ok)
-        throw new Error(`expected ${what}`);
-}
-
 /** The path of the widget named `name` somewhere under `path`. */
-function under(path: string, name: string): string | undefined {
-    for (const child of ui.children(path) ?? []) {
-        const at = `${path}/${child}`;
-        if (child === name)
-            return at;
-        const found = under(at, name);
-        if (found !== undefined)
-            return found;
-    }
-    return undefined;
-}
-
-const staff = () => people.list().filter((p) => p.staff);
 
 /** Hires each of `hires` from the staff window and lets them go on a path in sight, the camera over the park's
  *  middle path. */
@@ -36,13 +18,13 @@ async function hire(hires: readonly (readonly [string, string])[]): Promise<void
     const spot = paths[Math.floor(paths.length / 2)];
     camera.look({ col: spot.col + 0.5, row: spot.row + 0.5 }, { col: spot.col + 6, row: spot.row + 6, up: 20 });
     await frames(5);
-    await ui.click(`tools/Management/${ui.children("tools/Management")![0]}`);
+    await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
     await until(() => ui.find("tools/Management/Man_Staff") !== undefined, 120, "the management menu");
     await ui.click("tools/Management/Man_Staff");
     await until(() => under("Staff_Title", "Staff_HireMaintenanceIcon") !== undefined, 120, "the staff window's hire buttons");
     for (const [button, role] of hires) {
         const count = staff().length;
-        await ui.click(under("Staff_Title", button)!);
+        await ui.click(must(under("Staff_Title", button), `${button} under Staff_Title`));
         await until(() => staff().length === count + 1, 60, `a ${role} hired`);
         await until(() => staff()[count].state === "held", 30, `the ${role} in hand`);
         const free = paths.find((p) => {
@@ -50,7 +32,7 @@ async function hire(hires: readonly (readonly [string, string])[]): Promise<void
             return on !== undefined && (on.x < 0.25 || on.x > 0.75) && on.x > 0.05 && on.x < 0.95 && on.y > 0.1 && on.y < 0.85;
         });
         expect(free !== undefined, "a path in sight beside the window");
-        const at = map.screen(free!.col + 0.5, free!.row + 0.5)!;
+        const at = must(map.screen(free!.col + 0.5, free!.row + 0.5), "the tile in sight");
         pointer.move(at.x, at.y);
         await frames(5);
         await pointer.click(at.x, at.y);

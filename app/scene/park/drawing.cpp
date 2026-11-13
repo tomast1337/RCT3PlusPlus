@@ -17,6 +17,7 @@
 #include "scene/park/glow.hpp"
 #include "scene/park/occlusion.hpp"
 #include "scene/park/patrol.hpp"
+#include "scene/park/poses.hpp"
 #include "scene/park/refresh.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"

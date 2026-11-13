@@ -12,6 +12,7 @@
 #include "scene/enclosure_tools.hpp"
 #include "scene/front_end_scene.hpp"
 #include "scene/park/attraction_state.hpp"
+#include "scene/park/poses.hpp"
 #include "scene/park/refresh.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/pool_tools.hpp"

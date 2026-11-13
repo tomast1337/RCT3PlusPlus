@@ -27,14 +27,6 @@ namespace rct3::scene::park
     /// has walked them while that runs, else where they were saved. Reads the simulation, so only on the
     /// frame's thread.
     [[nodiscard]] glm::mat4 person_place(const ParkScene& scene, const ShownPerson& shown);
-    /// Shown person `i` posed as they are at `clock`, as the park draws them, at the finest level; with
-    /// `simulate`, a simulated guest where and as the simulation has them. Nothing for those not drawn
-    /// standing: gone home, or seated on a ride.
-    [[nodiscard]] std::optional<rct3::park::person::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate);
-    /// The motion a person sliding down a slope plays, by name: on their front facing down it (`heading`, as
-    /// simulation::Pose has it, against their `drift`), on their back facing up it, else sitting; staff, who
-    /// have no sliding motions, flail.
-    [[nodiscard]] std::string_view slide_motion(float heading, glm::vec2 drift, bool staff);
     /// Where person_place has `shown`.
     glm::vec3 standing_at(const ParkScene& scene, const ShownPerson& shown);
 

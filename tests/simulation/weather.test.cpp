@@ -147,7 +147,7 @@ TEST_CASE("fewer guests come in the rain and the cold, more on a sunny day")
     const double mild = arrivals_per_second({ });
     CHECK(arrivals_per_second({ .rain = true }) < mild);
     CHECK(arrivals_per_second({ .rain = true, .storm = true }) < arrivals_per_second({ .rain = true }));
-    CHECK(arrivals_per_second({ .temperature = 2 }) < mild);
+    CHECK(arrivals_per_second({ .temperature = rct3::units::Degrees { 2 } }) < mild);
     CHECK(arrivals_per_second({ .sunny = true }) > mild);
 }
 
@@ -159,7 +159,7 @@ TEST_CASE("on a hot day a thirsty guest goes for a cold drink over a nearer plai
     const auto cold = park.shop("Milkshakes", Product::Drink, { 8, 0 }, 100);
     auto& r = park.world().registry;
     r.get<Shop>(cold).serve = Serve::Cold;
-    r.ctx().emplace<Weather>(Weather { .temperature = 30 });
+    r.ctx().emplace<Weather>(Weather { .temperature = rct3::units::Degrees { 30 } });
     const auto g = park.guest({ 0, 0 }, { .thirst = 0.9f, .happiness = 0.5f });
     REQUIRE(park.run_until([&] { return r.get<Attraction>(cold).customers == 1; }, 60));
     CHECK(r.get<Attraction>(plain).customers == 0);
@@ -173,7 +173,7 @@ TEST_CASE("the sun heats guests out in it, not those in the shade, and a cold tr
     auto& paths = park.world().paths;
     paths.cover(*paths.find({ 4, 0, 0 }), false, true);
     auto& r = park.world().registry;
-    r.ctx().emplace<Weather>(Weather { .sunny = true, .temperature = 32 });
+    r.ctx().emplace<Weather>(Weather { .sunny = true, .temperature = rct3::units::Degrees { 32 } });
     const auto out = park.guest({ 0, 0 });
     const auto shaded = park.guest({ 4, 0 });
     park.run_seconds(600);
@@ -192,7 +192,7 @@ TEST_CASE("a guest too hot buys an ice cream though not hungry, and it cools the
     const auto stand = park.shop("Ice Cream", Product::Food, { 4, 0 }, 100);
     auto& r = park.world().registry;
     r.get<Shop>(stand).serve = Serve::Cold;
-    r.ctx().emplace<Weather>(Weather { .sunny = true, .temperature = 32 });
+    r.ctx().emplace<Weather>(Weather { .sunny = true, .temperature = rct3::units::Degrees { 32 } });
     const auto g = park.guest({ 0, 0 });
     r.get<Mood>(g).heat.value = 0.9f;
     REQUIRE(park.run_until([&] { return r.get<Attraction>(stand).customers == 1; }, 60));

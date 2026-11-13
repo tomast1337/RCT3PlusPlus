@@ -106,7 +106,7 @@ namespace rct3::ui::widgets
         if (range() <= 0)
             return;
         const ScrollBarParts parts_now = parts();
-        held_time_ = 0;
+        held_time_ = { };
         next_repeat_ = style_.repeat_delay;
         if (contains(parts_now.back, p))
         {
@@ -163,7 +163,7 @@ namespace rct3::ui::widgets
         if ((held_ != Part::Back && held_ != Part::Forward) || !pressed())
             return;
         held_time_ += context.elapsed;
-        while (held_time_ >= next_repeat_ && style_.repeat_interval > 0)
+        while (held_time_ >= next_repeat_ && style_.repeat_interval > units::Seconds { })
         {
             scroll_by(held_ == Part::Back ? -style_.step : style_.step);
             next_repeat_ += style_.repeat_interval;

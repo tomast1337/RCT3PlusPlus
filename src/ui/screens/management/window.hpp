@@ -170,15 +170,15 @@ namespace rct3::ui::screens::management
         }
 
         void show_page(const ManagementPage& page);
-        /// Seconds since the last page came.
-        [[nodiscard]] float page_age() const
+        /// Since the last page came.
+        [[nodiscard]] units::Seconds page_age() const
         {
             return page_age_;
         }
         /// Makes the page as old as can be, so it is made again on the next update, once what it shows has moved.
         void age_page()
         {
-            page_age_ = std::numeric_limits<float>::infinity();
+            page_age_ = units::Seconds { std::numeric_limits<float>::infinity() };
         }
         [[nodiscard]] std::optional<widgets::ColumnTable&> table() const
         {
@@ -238,7 +238,7 @@ namespace rct3::ui::screens::management
         std::vector<std::optional<std::pair<std::size_t, bool>>> sorts_;
         std::optional<std::pair<std::size_t, bool>> page_sort_; ///< The page's own, for when the player has none
         std::size_t tab_ = 0;
-        float page_age_ = 0;
+        units::Seconds page_age_;
         std::optional<std::size_t> tab_now_;
         std::optional<std::size_t> button_now_;
         std::optional<std::pair<std::size_t, std::size_t>> choice_now_;

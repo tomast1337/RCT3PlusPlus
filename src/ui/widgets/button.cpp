@@ -68,7 +68,8 @@ namespace rct3::ui::widgets
     void Button::update(const UpdateContext& context)
     {
         const float target = hovered() && enabled && swell > 0 ? 1.0f : 0.0f;
-        const float step = swell_time > 0 ? context.elapsed / swell_time : 1.0f;
+        const float swell_seconds = swell_time.value;
+        const float step = swell_seconds > 0 ? context.elapsed.value / swell_seconds : 1.0f;
         grown_ = grown_ < target ? std::min(target, grown_ + step) : std::max(target, grown_ - step);
     }
 

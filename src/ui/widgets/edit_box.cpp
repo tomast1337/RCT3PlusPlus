@@ -17,10 +17,10 @@ namespace rct3::ui::widgets
         using strings::is_high_surrogate;
         using strings::is_low_surrogate;
 
-        constexpr float kBlinkPeriod = 1.0f; ///< Seconds; the caret shows for the first half
+        constexpr units::Seconds kBlinkPeriod { 1.0f }; ///< The caret shows for the first half
         constexpr float kCaretHalfWidth = 1.0f;
-        constexpr float kMultiPressSeconds = 0.4f; ///< A press this soon after the last adds to it
-        constexpr float kMultiPressReach = 4.0f;   ///< Units the pointer may move between them
+        constexpr units::Seconds kMultiPress { 0.4f }; ///< A press this soon after the last adds to it
+        constexpr float kMultiPressReach = 4.0f;       ///< Units the pointer may move between them
 
         // The position `at` moved back to the start of the character it falls in.
         std::size_t boundary(const std::u16string& s, std::size_t at)
@@ -105,14 +105,14 @@ namespace rct3::ui::widgets
         caret_ = boundary(text, position);
         if (!extend)
             anchor_ = caret_;
-        blink_time_ = 0;
+        blink_time_ = { };
     }
 
     void EditBox::select_all()
     {
         anchor_ = 0;
         caret_ = text.size();
-        blink_time_ = 0;
+        blink_time_ = { };
     }
 
     bool EditBox::take_commit()
@@ -133,9 +133,9 @@ namespace rct3::ui::widgets
 
     void EditBox::on_press(Point p)
     {
-        const bool again = since_press_ <= kMultiPressSeconds && std::abs(p.x - last_press_.x) <= kMultiPressReach && std::abs(p.y - last_press_.y) <= kMultiPressReach;
+        const bool again = since_press_ <= kMultiPress && std::abs(p.x - last_press_.x) <= kMultiPressReach && std::abs(p.y - last_press_.y) <= kMultiPressReach;
         presses_ = again ? presses_ + 1 : 1;
-        since_press_ = 0;
+        since_press_ = { };
         last_press_ = p;
         pointer_ = p;
         pointer_pending_ = true;
@@ -161,7 +161,7 @@ namespace rct3::ui::widgets
     void EditBox::changed()
     {
         ++changes_;
-        blink_time_ = 0;
+        blink_time_ = { };
     }
 
     std::u16string EditBox::accepted(std::u16string_view typed) const
@@ -316,7 +316,7 @@ namespace rct3::ui::widgets
     void EditBox::on_composition(const Composition& composition)
     {
         if (composition != composition_)
-            blink_time_ = 0;
+            blink_time_ = { };
         composition_ = composition;
         composition_.caret = boundary(composition_.text, std::min(composition_.caret, composition_.text.size()));
     }
@@ -325,7 +325,7 @@ namespace rct3::ui::widgets
     {
         if (!has_keyboard_focus())
             composition_ = { };
-        blink_time_ = std::fmod(blink_time_ + context.elapsed, kBlinkPeriod);
+        blink_time_ = units::Seconds { std::fmod((blink_time_ + context.elapsed).value, kBlinkPeriod.value) };
         since_press_ += context.elapsed;
         caret_ = boundary(text, caret_);
         anchor_ = boundary(text, anchor_);
@@ -394,7 +394,7 @@ namespace rct3::ui::widgets
             }
             const Rect line { origin, top, origin + text_width(*f, shown) + 1, bottom };
             draw_text(context.list, *f, shown, line, { enabled ? text_colour : disabled_text_colour, Align::Start, Align::Start, false });
-            if (has_keyboard_focus() && blink_time_ < kBlinkPeriod / 2)
+            if (has_keyboard_focus() && blink_time_.value < kBlinkPeriod.value / 2)
             {
                 const float x = x_of(caret_ + composition_.caret);
                 context.list.fill({ x - kCaretHalfWidth, top, x + kCaretHalfWidth, bottom }, caret_colour);

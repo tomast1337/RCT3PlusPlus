@@ -10,6 +10,7 @@ using namespace rct3;
 using namespace rct3::ui;
 using namespace rct3::ui::screens;
 using namespace rct3::ui::screens::career;
+namespace units = rct3::units;
 using rct3::career::ScenarioStatus;
 
 namespace
@@ -49,7 +50,7 @@ namespace
 
         void tick(float seconds = 0)
         {
-            desktop.update({ }, { }, { seconds, nullptr });
+            desktop.update({ }, { }, { units::Seconds { seconds }, nullptr });
         }
         void hover(const Widget& w)
         {
@@ -151,8 +152,8 @@ TEST_CASE("the bottom strip names the picked scenario, the one under the pointer
 
 TEST_CASE("the front piece of the large picture settles in a third of a second")
 {
-    CHECK(career_board::pop(0) == doctest::Approx(career_board::kPopFactor));
-    CHECK(career_board::pop(0.3f) == doctest::Approx(1.0f));
-    CHECK(career_board::pop(1) == doctest::Approx(1.0f));
-    CHECK(career_board::pop(0.15f) < 1.05f);
+    CHECK(career_board::pop(units::Seconds { 0 }) == doctest::Approx(career_board::kPopFactor));
+    CHECK(career_board::pop(units::Seconds { 0.3f }) == doctest::Approx(1.0f));
+    CHECK(career_board::pop(units::Seconds { 1 }) == doctest::Approx(1.0f));
+    CHECK(career_board::pop(units::Seconds { 0.15f }) < 1.05f);
 }

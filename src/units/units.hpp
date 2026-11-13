@@ -10,11 +10,25 @@
 namespace rct3::units
 {
 
-    /// A span of game time.
+    /// A span of time. Spans add, take away and compare as they are; scaling one goes through `.value`.
     struct Seconds
     {
         static constexpr bool kUnit = true;
         float value = 0;
+        friend constexpr auto operator<=>(Seconds, Seconds) noexcept = default;
+        friend constexpr Seconds operator+(Seconds a, Seconds b) noexcept
+        {
+            return { a.value + b.value };
+        }
+        friend constexpr Seconds operator-(Seconds a, Seconds b) noexcept
+        {
+            return { a.value - b.value };
+        }
+        constexpr Seconds& operator+=(Seconds b) noexcept
+        {
+            value += b.value;
+            return *this;
+        }
     };
 
     /// How fast something on a 0 to 1 scale (a need, happiness, nausea, wetness) moves: how much a second.

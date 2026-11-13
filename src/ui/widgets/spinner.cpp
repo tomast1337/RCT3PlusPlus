@@ -138,7 +138,7 @@ namespace rct3::ui::widgets
         if (held_ == 0)
             return;
         step_by(held_);
-        held_time_ = 0;
+        held_time_ = { };
         next_repeat_ = style_.repeat_delay;
     }
 

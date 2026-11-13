@@ -39,8 +39,8 @@ namespace rct3::ui::widgets
         bool kept_down = false; ///< Drawn held down, as while pressed: what it starts is under way
         /// Clicking does nothing now, though the face, whose picture shows it, stays as it is: the pointer says so.
         bool inert = false;
-        float swell = 0;         ///< Units the face grows by on each side while the pointer is over it
-        float swell_time = 0.1f; ///< Seconds to grow or shrink fully
+        float swell = 0;                    ///< Units the face grows by on each side while the pointer is over it
+        units::Seconds swell_time { 0.1f }; ///< To grow or shrink fully
 
         /// True once for each click since the last call.
         [[nodiscard]] bool take_click();

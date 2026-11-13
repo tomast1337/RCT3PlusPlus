@@ -38,9 +38,9 @@ namespace rct3::ui::widgets
         float icon_gap = 1;                   ///< Between the pictures, and after the last
         font::FontRole font = font::FontRole::Small;
         float row_height = 18;
-        Rect padding { 3, 3, 3, 3 }; ///< Between the edges and the rows and bar; fixed when the list is made
-        float text_indent = 4;       ///< From a row's left edge to its text
-        float double_click = 0.4f;   ///< Seconds within which a second press activates
+        Rect padding { 3, 3, 3, 3 };          ///< Between the edges and the rows and bar; fixed when the list is made
+        float text_indent = 4;                ///< From a row's left edge to its text
+        units::Seconds double_click { 0.4f }; ///< A second press this soon activates
     };
 
     class ListBox : public Widget
@@ -103,8 +103,8 @@ namespace rct3::ui::widgets
 
         ScrollBar* bar_ = nullptr;
         std::optional<std::size_t> selected_;
-        bool reveal_ = false;      // Scroll the selection into view at the next update
-        float since_press_ = 1e9f; // Seconds since the last press on a row
+        bool reveal_ = false;        // Scroll the selection into view at the next update
+        units::Seconds since_press_; // Since the last press on a row
         std::optional<std::size_t> last_pressed_;
         int changes_ = 0;
         int activations_ = 0;

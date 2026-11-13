@@ -99,7 +99,7 @@ namespace rct3::scene
         ui::PointerState pointer = pointer_pixels;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
         scene.current_fonts = &ui::fonts_for(device, scene.assets, desktop.root().rect().width());
-        const bool over = desktop.update(pointer, keyboard, { elapsed, scene.current_fonts });
+        const bool over = desktop.update(pointer, keyboard, { units::Seconds { elapsed }, scene.current_fonts });
         update_slideshow_view(device, scene.slideshow, elapsed);
         scene.live->front->update();
         ui::screens::front::FrontEnd& front = *scene.live->front;

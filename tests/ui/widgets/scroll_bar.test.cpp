@@ -7,6 +7,7 @@
 
 using namespace rct3::ui;
 using namespace rct3::ui::widgets;
+namespace units = rct3::units;
 
 namespace
 {
@@ -16,8 +17,8 @@ namespace
         s.thickness = 10;
         s.step = 20;
         s.wheel_step = 50;
-        s.repeat_delay = 0.4f;
-        s.repeat_interval = 0.1f;
+        s.repeat_delay = units::Seconds { 0.4f };
+        s.repeat_interval = units::Seconds { 0.1f };
         s.min_rider = 5;
         return s;
     }

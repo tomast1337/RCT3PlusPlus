@@ -111,12 +111,12 @@ namespace rct3::ui::widgets
 
         std::size_t caret_ = 0;
         std::size_t anchor_ = 0;
-        float scroll_ = 0;     // Units the text is moved left by
-        float blink_time_ = 0; // Since the last change or caret move
+        float scroll_ = 0;          // Units the text is moved left by
+        units::Seconds blink_time_; // Since the last change or caret move
         bool pointer_pending_ = false;
         bool pointer_extends_ = false; // A drag, not a press
         int presses_ = 0;              // In a row, each soon after the last and near it
-        float since_press_ = 0;        // Seconds
+        units::Seconds since_press_;
         Point last_press_;
         Point pointer_; // Placed at the next update, which has the font
         int commits_ = 0;

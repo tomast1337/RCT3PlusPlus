@@ -157,6 +157,6 @@ namespace rct3::ui::screens::front::front_screen
     inline constexpr float kLabelFadeRate = 4; ///< Labels fade in over a quarter second once their button arrives
 
     /// One step of the easing; returns whether the button has arrived.
-    bool ease(Polar& current, const Polar& goal, float elapsed);
+    bool ease(Polar& current, const Polar& goal, units::Seconds elapsed);
 
 } // namespace rct3::ui::screens::front::front_screen

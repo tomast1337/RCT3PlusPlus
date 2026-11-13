@@ -14,6 +14,7 @@ using namespace rct3;
 using namespace rct3::ui;
 using namespace rct3::ui::screens;
 using namespace rct3::ui::screens::park_view;
+namespace units = rct3::units;
 
 namespace
 {
@@ -39,7 +40,7 @@ namespace
             for (float t = 0; t < seconds; t += step)
             {
                 desktop.layout({ 0, 0, 1000, 700 });
-                desktop.update({ { 900, 650 }, false }, { }, { step, nullptr });
+                desktop.update({ { 900, 650 }, false }, { }, { units::Seconds { step }, nullptr });
             }
         }
 
@@ -53,8 +54,8 @@ namespace
         void press(Point p)
         {
             desktop.layout({ 0, 0, 1000, 700 });
-            desktop.update({ p, true }, { }, { 0.1f, nullptr });
-            desktop.update({ p, false }, { }, { 0.1f, nullptr });
+            desktop.update({ p, true }, { }, { units::Seconds { 0.1f }, nullptr });
+            desktop.update({ p, false }, { }, { units::Seconds { 0.1f }, nullptr });
         }
     };
 } // namespace
@@ -172,7 +173,7 @@ TEST_CASE("messages the drawer starts with are not new; later ones slide it down
     const float shown = f.drawer->height();
     CHECK(shown > message_drawer::kClosed);
     CHECK(shown < message_drawer::kOpen);
-    f.run(message_drawer::kHoldSeconds - 2);
+    f.run(message_drawer::kHold.value - 2);
     CHECK(f.drawer->height() == shown);
     f.run(4);
     CHECK(f.drawer->height() == message_drawer::kClosed);
@@ -184,9 +185,9 @@ TEST_CASE("dragging sets where the drawer rests; a double press opens or closes 
     f.post(1);
     const Rect b = f.bar->rect();
     const Point notch { b.x0 + park_bar::kLeftWidth + 19, b.y1 - 4 };
-    f.desktop.update({ notch, true }, { }, { 1, nullptr });
-    f.desktop.update({ { notch.x, notch.y + 100 }, true }, { }, { 0.1f, nullptr });
-    f.desktop.update({ { notch.x, notch.y + 100 }, false }, { }, { 0.1f, nullptr });
+    f.desktop.update({ notch, true }, { }, { units::Seconds { 1 }, nullptr });
+    f.desktop.update({ { notch.x, notch.y + 100 }, true }, { }, { units::Seconds { 0.1f }, nullptr });
+    f.desktop.update({ { notch.x, notch.y + 100 }, false }, { }, { units::Seconds { 0.1f }, nullptr });
     const float dragged = f.drawer->height();
     CHECK(dragged == doctest::Approx(message_drawer::kClosed + 100).epsilon(0.05));
     f.post(1);

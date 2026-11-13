@@ -52,10 +52,10 @@ namespace rct3::ui::widgets
         font::FontRole heading_font = font::FontRole::Small;
         float heading_height = 18;
         float row_height = 16;
-        Rect padding { 3, 3, 3, 3 }; ///< Between the edges and the headings, rows and bar
-        float cell_indent = 4;       ///< Inside each cell, on the side its text keeps to
-        float sort_mark = 7;         ///< Width of the triangle that marks the sorted column
-        float double_click = 0.4f;   ///< Seconds within which a second press activates
+        Rect padding { 3, 3, 3, 3 };          ///< Between the edges and the headings, rows and bar
+        float cell_indent = 4;                ///< Inside each cell, on the side its text keeps to
+        float sort_mark = 7;                  ///< Width of the triangle that marks the sorted column
+        units::Seconds double_click { 0.4f }; ///< A second press this soon activates
     };
 
     /// Sorts `rows` by `column`, by its numbers where both rows have one and by its text otherwise, rows with a
@@ -112,7 +112,7 @@ namespace rct3::ui::widgets
         ScrollBar* bar_ = nullptr;
         std::optional<std::size_t> selected_;
         std::optional<std::size_t> sort_now_;
-        float since_press_ = 1e9f; // Seconds since the last press on a row
+        units::Seconds since_press_; // Since the last press on a row
         std::optional<std::size_t> last_pressed_;
         int activations_ = 0;
     };

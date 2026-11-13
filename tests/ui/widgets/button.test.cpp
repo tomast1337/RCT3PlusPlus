@@ -9,6 +9,7 @@ using namespace rct3::ui;
 using namespace rct3::ui::widgets;
 using namespace rct3::ui::skin;
 using namespace rct3::ui::font;
+namespace units = rct3::units;
 
 namespace
 {
@@ -197,9 +198,9 @@ TEST_CASE("a swelling button grows its face while the pointer is over it")
 {
     Fixture f;
     f.button.swell = 4;
-    f.button.swell_time = 0.1f;
+    f.button.swell_time = units::Seconds { 0.1f };
     UpdateContext half;
-    half.elapsed = 0.05f;
+    half.elapsed = units::Seconds { 0.05f };
 
     f.desktop.update(at(5, 5), half);
     CHECK(f.button.face() == Rect { -2, -2, 22, 22 }); // Half way, eased
@@ -220,7 +221,7 @@ TEST_CASE("buttons without a swell keep their face")
 {
     Fixture f;
     UpdateContext later;
-    later.elapsed = 1;
+    later.elapsed = units::Seconds { 1 };
     f.desktop.update(at(5, 5), later);
     CHECK(f.button.face() == f.button.rect());
 }

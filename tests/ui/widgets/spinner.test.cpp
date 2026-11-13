@@ -8,6 +8,7 @@
 using namespace rct3;
 using namespace rct3::ui;
 using namespace rct3::ui::widgets;
+namespace units = rct3::units;
 
 namespace
 {
@@ -16,8 +17,8 @@ namespace
     {
         SpinnerStyle s;
         s.arrow_width = 20;
-        s.repeat_delay = 0.5f;
-        s.repeat_interval = 0.1f;
+        s.repeat_delay = units::Seconds { 0.5f };
+        s.repeat_interval = units::Seconds { 0.1f };
         return s;
     }
 

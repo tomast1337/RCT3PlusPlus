@@ -200,7 +200,7 @@ namespace rct3::ui::screens::park_view
         std::optional<simulation::GameSpeed> asked_;
         std::optional<simulation::DayMode> asked_day_;
         bool asked_finances_ = false;
-        float since_money_click_ = 1000; ///< Seconds since the money was last clicked; long ago at first
+        std::optional<units::Seconds> since_money_click_; ///< Since the first click of a pair on the money
         std::optional<float> rating_;
         widgets::Button* objective_ = nullptr;
         widgets::Button* day_mode_ = nullptr;

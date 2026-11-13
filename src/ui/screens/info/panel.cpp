@@ -827,13 +827,14 @@ namespace rct3::ui::screens::info
         const float dy = p.y - (v.y0 + v.y1) / 2;
         if (dx * dx + dy * dy > info_panel::kView * info_panel::kView / 4)
             return;
-        view_double_ = since_view_press_ < info_panel::kDoubleClickSeconds;
-        since_view_press_ = view_double_ ? info_panel::kDoubleClickSeconds : 0;
+        view_double_ = since_view_press_ && *since_view_press_ < info_panel::kDoubleClick;
+        since_view_press_ = view_double_ ? std::nullopt : std::optional { units::Seconds { } };
     }
 
     void InfoPanel::update(const UpdateContext& context)
     {
-        since_view_press_ += context.elapsed;
+        if (since_view_press_)
+            *since_view_press_ += context.elapsed;
         // The page follows its bar, moved by its arrows, its rider or the wheel.
         if (bar_->position != scroll_)
         {

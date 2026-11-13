@@ -9,6 +9,7 @@ using namespace rct3;
 using namespace rct3::ui;
 using namespace rct3::ui::skin;
 using namespace rct3::ui::font;
+namespace units = rct3::units;
 
 namespace
 {
@@ -39,7 +40,7 @@ namespace
     {
         TooltipStyle s;
         s.skin = "Tip";
-        s.delay = 0.5f;
+        s.delay = units::Seconds { 0.5f };
         s.padding = { 2, 3, 4, 5 };
         s.max_width = 50;
         s.offset = { 0, 10 };
@@ -68,49 +69,49 @@ TEST_CASE("a tooltip shows after the pointer rests")
     Tooltip t;
     const TooltipStyle s = style();
 
-    t.update(&w, { 10, 10 }, false, 0.3f, s); // Arriving is a move: the wait starts now
-    t.update(&w, { 10, 10 }, false, 0.3f, s);
+    t.update(&w, { 10, 10 }, false, units::Seconds { 0.3f }, s); // Arriving is a move: the wait starts now
+    t.update(&w, { 10, 10 }, false, units::Seconds { 0.3f }, s);
     CHECK_FALSE(t.shown());
     SUBCASE("moving starts the wait again")
     {
-        t.update(&w, { 15, 10 }, false, 0.3f, s);
+        t.update(&w, { 15, 10 }, false, units::Seconds { 0.3f }, s);
         CHECK_FALSE(t.shown());
-        t.update(&w, { 15, 10 }, false, 0.3f, s);
+        t.update(&w, { 15, 10 }, false, units::Seconds { 0.3f }, s);
         CHECK_FALSE(t.shown());
-        t.update(&w, { 15, 10 }, false, 0.3f, s);
+        t.update(&w, { 15, 10 }, false, units::Seconds { 0.3f }, s);
         REQUIRE(t.shown());
         CHECK(t.text() == u"help");
         CHECK(t.anchor().x == 15);
     }
     SUBCASE("it stays while the pointer moves over the same text")
     {
-        t.update(&w, { 10, 10 }, false, 0.3f, s);
+        t.update(&w, { 10, 10 }, false, units::Seconds { 0.3f }, s);
         REQUIRE(t.shown());
-        t.update(&w, { 30, 12 }, false, 0.1f, s);
+        t.update(&w, { 30, 12 }, false, units::Seconds { 0.1f }, s);
         CHECK(t.shown());
         CHECK(t.anchor().x == 10);
     }
     SUBCASE("other text or none hides it")
     {
-        t.update(&w, { 10, 10 }, false, 0.3f, s);
+        t.update(&w, { 10, 10 }, false, units::Seconds { 0.3f }, s);
         REQUIRE(t.shown());
         Widget other("other");
         other.tooltip = u"other";
-        t.update(&other, { 10, 10 }, false, 0.1f, s);
+        t.update(&other, { 10, 10 }, false, units::Seconds { 0.1f }, s);
         CHECK_FALSE(t.shown());
-        t.update(nullptr, { 10, 10 }, false, 1, s);
+        t.update(nullptr, { 10, 10 }, false, units::Seconds { 1 }, s);
         CHECK_FALSE(t.shown());
     }
     SUBCASE("a press hides it until the text under the pointer changes")
     {
-        t.update(&w, { 10, 10 }, false, 0.3f, s);
+        t.update(&w, { 10, 10 }, false, units::Seconds { 0.3f }, s);
         REQUIRE(t.shown());
-        t.update(&w, { 10, 10 }, true, 0.1f, s);
+        t.update(&w, { 10, 10 }, true, units::Seconds { 0.1f }, s);
         CHECK_FALSE(t.shown());
-        t.update(&w, { 10, 10 }, false, 2, s);
+        t.update(&w, { 10, 10 }, false, units::Seconds { 2 }, s);
         CHECK_FALSE(t.shown());
-        t.update(nullptr, { 10, 10 }, false, 0.1f, s);
-        t.update(&w, { 10, 10 }, false, 0.6f, s);
+        t.update(nullptr, { 10, 10 }, false, units::Seconds { 0.1f }, s);
+        t.update(&w, { 10, 10 }, false, units::Seconds { 0.6f }, s);
         CHECK(t.shown());
     }
 }
@@ -122,8 +123,8 @@ TEST_CASE("the box fits the wrapped text and stays in the view")
     Widget w("w");
     w.tooltip = u"abc defg";
     Tooltip t;
-    t.update(&w, { 20, 30 }, false, 0, style());
-    t.update(&w, { 20, 30 }, false, 1, style());
+    t.update(&w, { 20, 30 }, false, units::Seconds { }, style());
+    t.update(&w, { 20, 30 }, false, units::Seconds { 1 }, style());
     REQUIRE(t.shown());
 
     // "abc defg" is 80 wide: it wraps to "abc" and "defg" (40) under a 50 limit.

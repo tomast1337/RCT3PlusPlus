@@ -21,11 +21,11 @@ namespace rct3::ui
         std::string skin; ///< Stretched behind the text
         font::FontRole font = font::FontRole::Small;
         Color colour = hex("#000000");
-        float delay = 0.5f;          ///< Seconds the pointer must rest before the tooltip shows
-        float still_distance = 0.1f; ///< Movement up to this many units still counts as resting
-        Rect padding { 4, 4, 4, 4 }; ///< Between the box edges and the text
-        float max_width = 240;       ///< Text wider than this wraps
-        Point offset { 0, 20 };      ///< From the pointer to the box's top-left corner
+        units::Seconds delay { 0.5f }; ///< The pointer rests this long before the tooltip shows
+        float still_distance = 0.1f;   ///< Movement up to this many units still counts as resting
+        Rect padding { 4, 4, 4, 4 };   ///< Between the box edges and the text
+        float max_width = 240;         ///< Text wider than this wraps
+        Point offset { 0, 20 };        ///< From the pointer to the box's top-left corner
     };
 
     /// The tooltip text for the pointer resting on `w`: its own, or its nearest ancestor's.
@@ -35,8 +35,8 @@ namespace rct3::ui
     {
     public:
         /// `under` is the widget under the pointer (null when none), `pressed` whether the button is down,
-        /// `elapsed` the seconds since the last update.
-        void update(const Widget* under, Point pointer, bool pressed, float elapsed, const TooltipStyle& style);
+        /// `elapsed` the time since the last update.
+        void update(const Widget* under, Point pointer, bool pressed, units::Seconds elapsed, const TooltipStyle& style);
 
         [[nodiscard]] bool shown() const
         {
@@ -62,7 +62,7 @@ namespace rct3::ui
         std::u16string text_; // Copied: the widget that owned it may close while the tooltip is up
         Point last_;
         Point anchor_;
-        float rested_ = 0;
+        units::Seconds rested_;
         bool shown_ = false;
         bool blocked_ = false; // A press hid it; stays hidden until the text under the pointer changes
     };

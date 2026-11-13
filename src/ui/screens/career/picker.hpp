@@ -66,11 +66,11 @@ namespace rct3::ui::screens::career
         float button_gap = 8;
         float row_width = 362;
         float row_height = 60;
-        float cell = 20;                 ///< Hats and counts are cells this size, three down the row's left
-        Rect picture { 43, 1, 117, 59 }; ///< In a row
-        float text_x = 120;              ///< Name and progress, from here to the row's right
-        std::size_t name_length = 40;    ///< Ours; the game sets none
-        float double_click = 0.4f;       ///< Seconds between the clicks of a double click (ours)
+        float cell = 20;                      ///< Hats and counts are cells this size, three down the row's left
+        Rect picture { 43, 1, 117, 59 };      ///< In a row
+        float text_x = 120;                   ///< Name and progress, from here to the row's right
+        std::size_t name_length = 40;         ///< Ours; the game sets none
+        units::Seconds double_click { 0.4f }; ///< Between the clicks of a double click (ours)
     };
 
     /// What a row shows of one career.
@@ -161,7 +161,7 @@ namespace rct3::ui::screens::career
         std::optional<std::size_t> delete_out_;
         std::optional<std::pair<std::size_t, std::u16string>> rename_out_;
         std::size_t made_ = 0; // Rows made, so each has its own name
-        float since_click_ = 1e9f;
+        units::Seconds since_click_;
         std::optional<std::size_t> last_clicked_;
     };
 

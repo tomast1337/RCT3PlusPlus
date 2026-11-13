@@ -40,9 +40,9 @@ namespace rct3::ui::screens::park_view
         std::string objective; ///< Of messages about the scenario's goals
         std::string inspector; ///< Of the park inspector's reports
         Color text_colour = hex("#000000");
-        Color stripe = hex("#ffffff");     ///< Behind the newest message and every second one up from it
-        Color stripe_alt = hex("#e5e5e5"); ///< Behind the others
-        float double_press = 0.4f;         ///< Seconds within which a second press opens or closes (ours)
+        Color stripe = hex("#ffffff");        ///< Behind the newest message and every second one up from it
+        Color stripe_alt = hex("#e5e5e5");    ///< Behind the others
+        units::Seconds double_press { 0.4f }; ///< A second press this soon opens or closes (ours)
     };
 
     /// One message as the drawer shows it.
@@ -58,12 +58,12 @@ namespace rct3::ui::screens::park_view
     namespace message_drawer
     {
         inline constexpr float kWidth = 480;
-        inline constexpr float kLeft = -258;      ///< From the middle of the screen to the drawer's left edge
-        inline constexpr float kTop = 4;          ///< From the top of the screen; the top never moves
-        inline constexpr float kClosed = 22;      ///< Height when closed, all of it behind the bar
-        inline constexpr float kOpen = 360;       ///< Height when fully open
-        inline constexpr float kSlideSpeed = 200; ///< Units a second it slides by itself
-        inline constexpr float kHoldSeconds = 8;  ///< It stays down this long to show new messages
+        inline constexpr float kLeft = -258;         ///< From the middle of the screen to the drawer's left edge
+        inline constexpr float kTop = 4;             ///< From the top of the screen; the top never moves
+        inline constexpr float kClosed = 22;         ///< Height when closed, all of it behind the bar
+        inline constexpr float kOpen = 360;          ///< Height when fully open
+        inline constexpr float kSlideSpeed = 200;    ///< Units a second it slides by itself
+        inline constexpr units::Seconds kHold { 8 }; ///< It stays down this long to show new messages
     } // namespace message_drawer
 
     /// The text of `message`: its string with the subject's name, or the award's, filled in. A name that is
@@ -163,11 +163,11 @@ namespace rct3::ui::screens::park_view
         float rest_ = message_drawer::kClosed; ///< Where it goes back to by itself
         Slide slide_ = Slide::Resting;
         std::size_t unseen_ = 0; ///< New messages to slide down for
-        float held_ = 0;
+        units::Seconds held_;
         std::size_t skipped_ = 0;
         bool dragging_ = false;
-        float drag_from_ = 0; ///< Pointer height minus drawer height at the press
-        float since_press_ = 1e9f;
+        float drag_from_ = 0;                       ///< Pointer height minus drawer height at the press
+        std::optional<units::Seconds> since_press_; ///< Since the first press of a pair
         widgets::Button* older_ = nullptr;
         widgets::Button* newer_ = nullptr;
     };

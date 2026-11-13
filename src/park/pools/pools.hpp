@@ -39,6 +39,7 @@
 #include "park/footpath_builder.hpp"
 #include "park/turns.hpp"
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -151,7 +152,7 @@ namespace rct3::park::pools
         std::int32_t col = 0;
         std::int32_t row = 0;
         Side side { };           ///< The side it is against
-        std::int64_t refund = 0; ///< What taking it away costs, hundredths; below zero, money back
+        units::Money refund { }; ///< What taking it away costs; below zero, money back
         PoolExtraFit fit { };
     };
 

@@ -33,26 +33,26 @@ namespace rct3::park
         const float speed = glm::length(velocity);
         // Into the water from dry track, or stopped short by it at the foot of a drop; a car held at the top of a
         // spike stops short too, but stands still.
-        const bool stopped = water.rise && *water.rise < -kSplashFall && (velocity.y - *water.rise) / seconds > kSplashPull;
+        const bool stopped = water.rise && water.rise->value < -kSplashFall && (velocity.y - water.rise->value) / seconds > kSplashPull;
         CarSplash out;
-        water.rest = std::max(0.0f, water.rest - seconds);
-        water.wake = std::max(0.0f, water.wake - seconds);
-        if (wet && speed > kSplashRun && water.rest <= 0 && (!water.wet || stopped))
+        water.rest.value = std::max(0.0f, water.rest.value - seconds);
+        water.wake.value = std::max(0.0f, water.wake.value - seconds);
+        if (wet && speed > kSplashRun && water.rest.value <= 0 && (!water.wet || stopped))
         {
             out.splash = true;
-            water.rest = kSplashRest;
+            water.rest = { kSplashRest };
             ++water.splashes;
             water.strength = speed > kHigh ? 2 : speed > kMedium ? 1 : 0;
         }
         // shortcut: no wake in the park's water, where a car dives under rather than skims; upgrade for cars
         // that skim a lake.
-        if (course.wet[piece] && speed > kSplashRun && water.wake <= 0)
+        if (course.wet[piece] && speed > kSplashRun && water.wake.value <= 0)
         {
             out.wake = true;
-            water.wake = kWakeEvery;
+            water.wake = { kWakeEvery };
         }
         water.wet = wet;
-        water.rise = velocity.y;
+        water.rise = units::Pace { velocity.y };
         return out;
     }
 

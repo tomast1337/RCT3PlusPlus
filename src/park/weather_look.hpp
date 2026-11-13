@@ -8,20 +8,22 @@
 
 #include "random/generator.hpp"
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <glm/vec3.hpp>
+#include <optional>
 
 namespace rct3::park
 {
 
     struct WeatherLook
     {
-        float rain = 0;        ///< 0 dry to 1 a downpour
-        float gloom = 0;       ///< 0 clear to 1 as dark as a storm
-        float flash = 0;       ///< The lightning's brightness now, 0 to 1
-        float to_flash = 0;    ///< Seconds to the next stroke while it storms
-        float to_thunder = -1; ///< Seconds until the last stroke is heard; below 0 when none is coming
-        float flicker = -1;    ///< Seconds to a stroke's second flicker; below 0 when none is coming
+        float rain = 0;                               ///< 0 dry to 1 a downpour
+        float gloom = 0;                              ///< 0 clear to 1 as dark as a storm
+        float flash = 0;                              ///< The lightning's brightness now, 0 to 1
+        units::Seconds to_flash { };                  ///< To the next stroke while it storms
+        std::optional<units::Seconds> to_thunder { }; ///< Until the last stroke is heard; none when none is coming
+        std::optional<units::Seconds> flicker { };    ///< To a stroke's second flicker; none when none is coming
     };
 
     /// What weather `type` looks like once the look has settled.

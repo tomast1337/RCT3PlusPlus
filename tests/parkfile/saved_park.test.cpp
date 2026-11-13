@@ -498,7 +498,7 @@ TEST_CASE("a save keeps the house a keeper is filling the troughs of")
 TEST_CASE("a save keeps the pools, their extras and changing rooms")
 {
     parkfile::SavedPark park = small_park();
-    park.pools = park::pools::PoolMap { { { .col = 3, .row = 4, .kind = park::pools::PoolKind::Jacuzzi, .surface = 6, .depth = 3 } }, { { .symbol = "Lamp", .overlay = "Pools/Own", .col = 3, .row = 4, .side = rct3::park::Side { 2 }, .refund = -5, .fit = { .side = true, .step = 1 } } }, { { .symbol = "Hut", .overlay = "Style/Own", .col = 2, .row = 4, .side = rct3::park::Side { 1 }, .ticket = 250, .open = true } } };
+    park.pools = park::pools::PoolMap { { { .col = 3, .row = 4, .kind = park::pools::PoolKind::Jacuzzi, .surface = 6, .depth = 3 } }, { { .symbol = "Lamp", .overlay = "Pools/Own", .col = 3, .row = 4, .side = rct3::park::Side { 2 }, .refund = units::Money { -5 }, .fit = { .side = true, .step = 1 } } }, { { .symbol = "Hut", .overlay = "Style/Own", .col = 2, .row = 4, .side = rct3::park::Side { 1 }, .ticket = 250, .open = true } } };
     const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
     REQUIRE_MESSAGE(read, (read ? "" : read.error()));
     REQUIRE(read->pools);
@@ -507,7 +507,7 @@ TEST_CASE("a save keeps the pools, their extras and changing rooms")
     CHECK((s.col == 3 && s.row == 4 && s.kind == park::pools::PoolKind::Jacuzzi && s.surface == 6 && s.depth == 3));
     REQUIRE(read->pools->extras.size() == 1);
     const park::pools::PoolExtra& e = read->pools->extras[0];
-    CHECK((e.symbol == "Lamp" && e.overlay == "Pools/Own" && e.side == park::Side { 2 } && e.refund == -5 && e.fit.side && e.fit.step == 1 && !e.fit.wall));
+    CHECK((e.symbol == "Lamp" && e.overlay == "Pools/Own" && e.side == park::Side { 2 } && e.refund.value == -5 && e.fit.side && e.fit.step == 1 && !e.fit.wall));
     REQUIRE(read->pools->rooms.size() == 1);
     const park::pools::PoolRoom& r = read->pools->rooms[0];
     CHECK((r.symbol == "Hut" && r.overlay == "Style/Own" && r.col == 2 && r.row == 4 && r.side == park::Side { 1 } && r.ticket == 250 && r.open));

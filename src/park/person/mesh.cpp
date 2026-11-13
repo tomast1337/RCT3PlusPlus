@@ -116,10 +116,10 @@ namespace rct3::park::person
                 bones[bone] = (parent >= 0 ? bones[static_cast<std::size_t>(parent)] : person.world) * local;
             }
             // Turned to look at something: the head bone and all that hangs from it, about the upright through it.
-            if (person.head_turn != 0 && head.turns < bones.size())
+            if (person.head_turn.value != 0 && head.turns < bones.size())
             {
                 const glm::vec3 pivot { bones[head.turns][3] };
-                const glm::mat4 turn = glm::translate(glm::mat4(1.0f), pivot) * glm::rotate(glm::mat4(1.0f), person.head_turn, glm::normalize(glm::vec3(person.world[1]))) * glm::translate(glm::mat4(1.0f), -pivot);
+                const glm::mat4 turn = glm::translate(glm::mat4(1.0f), pivot) * glm::rotate(glm::mat4(1.0f), person.head_turn.value, glm::normalize(glm::vec3(person.world[1]))) * glm::translate(glm::mat4(1.0f), -pivot);
                 std::vector<bool> under(bones.size());
                 for (std::size_t bone = 0; bone < bones.size(); ++bone)
                 {

@@ -16,6 +16,7 @@
 #include "park/moving_meshes.hpp"
 #include "park/object/mesh.hpp"
 #include "park/person/models.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -50,7 +51,7 @@ namespace rct3::park::person
         const object::ObjectModel* held = nullptr; ///< Held in the left hand, drawn at its finest level in its own picture;
                                                    ///< with no body, lying on its own at `world` (litter on a path)
         const object::ObjectModel* tool = nullptr; ///< Held in the hand as its socket turns, drawn as `held` is
-        float head_turn = 0;                       ///< Radians the head turns about the upright from its motion's pose, to the left
+        units::Radians head_turn { };              ///< The head turns about the upright from its motion's pose, to the left
     };
 
     /// How far a person's texture coordinates move to reach cell `colour`.

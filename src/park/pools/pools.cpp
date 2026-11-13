@@ -142,7 +142,7 @@ namespace rct3::park::pools
             std::erase_if(map.extras, [&](const PoolExtra& e) {
                 if (e.col != col || e.row != row)
                     return false;
-                cost += e.refund;
+                cost += e.refund.value;
                 return true;
             });
             return cost;
@@ -823,7 +823,7 @@ namespace rct3::park::pools
         std::erase_if(map.extras, [&](const PoolExtra& e) {
             if (e.col < c0 || e.col > c1 || e.row < r0 || e.row > r1)
                 return false;
-            cost += e.refund;
+            cost += e.refund.value;
             return true;
         });
         drop_loose_rooms(map);

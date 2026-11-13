@@ -6,6 +6,7 @@
 #pragma once
 
 #include "park/track/course.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -16,15 +17,15 @@ namespace rct3::park
     /// What a car on a track knows of the water it runs through, from step to step.
     struct CarWater
     {
-        bool wet = false;              ///< On a piece with water at the last step
-        std::optional<float> rise { }; ///< How fast it rose at the last step, world units a second; none before one
-        float rest = 0;                ///< Seconds before it can splash again
-        float wake = 0;                ///< Seconds before its next wake
-        std::uint32_t splashes = 0;    ///< Times it has splashed
-        std::uint8_t strength = 0;     ///< Of the last splash: 0 low, 1 medium, 2 high, by its speed
-        bool off_end = false;          ///< Run off a pool slide's end; its riders' splashes are on their way
-        bool landed = false;           ///< Flown off a pool slide's end, it has come down with its splash
-        bool ridden = false;           ///< Has carried a rider since it last stood empty, off a slide's end with them and back
+        bool wet = false;                    ///< On a piece with water at the last step
+        std::optional<units::Pace> rise { }; ///< How fast it rose at the last step; none before one
+        units::Seconds rest { };             ///< Before it can splash again
+        units::Seconds wake { };             ///< Before its next wake
+        std::uint32_t splashes = 0;          ///< Times it has splashed
+        std::uint8_t strength = 0;           ///< Of the last splash: 0 low, 1 medium, 2 high, by its speed
+        bool off_end = false;                ///< Run off a pool slide's end; its riders' splashes are on their way
+        bool landed = false;                 ///< Flown off a pool slide's end, it has come down with its splash
+        bool ridden = false;                 ///< Has carried a rider since it last stood empty, off a slide's end with them and back
     };
 
     /// What a car does in the water this step.

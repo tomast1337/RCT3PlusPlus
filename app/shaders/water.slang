@@ -36,7 +36,7 @@ import common;
 [[vk::binding(0, 6)]] Texture2D u_shadow;
 [[vk::binding(0, 7)]] Texture2D u_sun_view;
 
-// render::WaterView and render::SceneLight, packed (render/vulkan/vulkan_device.cpp).
+// render::WaterView and render::SceneLight, packed (render/vulkan/device.cpp).
 struct Draw
 {
     float4x4 transform;

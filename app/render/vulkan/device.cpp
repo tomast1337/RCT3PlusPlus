@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Vulkan backend: setup, shutdown, swapchain and the frame loop. Resource creation is in vulkan_resources.cpp.
-#include "render/vulkan/vulkan_device.hpp"
+// Vulkan backend: setup, shutdown, swapchain and the frame loop. Resource creation is in resources.cpp.
+#include "render/vulkan/device.hpp"
 
 #include "backends/imgui_impl_vulkan.h"
 #include "imgui.h"
 #include "logging/log.hpp"
 #include "profiling/profiler.hpp"
-#include "render/vulkan/vulkan_check.hpp"
+#include "render/vulkan/check.hpp"
 
 #include <GLFW/glfw3.h>
 #include <algorithm>

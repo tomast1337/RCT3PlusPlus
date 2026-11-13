@@ -161,7 +161,7 @@ namespace rct3::render::vulkan
             InPass,
         };
 
-        // Setup, in call order (vulkan_device.cpp)
+        // Setup, in call order (device.cpp)
         void create_instance();
         void pick_device();
         void create_device();
@@ -180,7 +180,7 @@ namespace rct3::render::vulkan
         [[nodiscard]] Garbage& garbage_slot();
         void reset_transient(Frame& frame);
 
-        // Resources (vulkan_resources.cpp)
+        // Resources (resources.cpp)
         [[nodiscard]] std::uint32_t find_memory_type(std::uint32_t type_bits, VkMemoryPropertyFlags properties) const;
         [[nodiscard]] Buffer make_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         void destroy(const Buffer& buffer);

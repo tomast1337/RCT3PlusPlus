@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Vulkan backend: buffers, textures, per-frame memory, pipelines and the shader programs behind render::Shader.
-#include "render/vulkan/vulkan_check.hpp"
-#include "render/vulkan/vulkan_device.hpp"
+#include "render/vulkan/check.hpp"
+#include "render/vulkan/device.hpp"
 
 #include <algorithm>
 #include <cassert>

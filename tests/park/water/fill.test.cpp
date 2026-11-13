@@ -128,6 +128,22 @@ TEST_CASE("taking a lake away takes the waterfalls pouring from or into it")
     CHECK_FALSE(remove_lake(water, falls, grid, { 0, 0 }));
 }
 
+TEST_CASE("a lake raised floods the waterfalls pouring from or into it, and no others")
+{
+    const save::model::TerrainGrid grid = valley();
+    save::model::WaterLayer water;
+    water.bodies.push_back(*fill_water(grid, { 1, 0 }, 2, any));
+    std::vector<save::model::Waterfall> falls(2);
+    falls[0].top = { 6, 2, 2 };     // Over tile 1, in the lake
+    falls[0].bottom = { 40, 0, 2 }; // Off the map
+    falls[1].top = { 40, 2, 2 };
+    falls[1].bottom = { 44, 0, 2 };
+    CHECK(flooded_falls(water, water, falls, grid).empty());
+    save::model::WaterLayer raised = water;
+    raised.bodies[0].level = 3;
+    CHECK(flooded_falls(water, raised, falls, grid) == std::vector<std::size_t> { 0 });
+}
+
 TEST_CASE("a lake keeps the water the reshaped ground still holds")
 {
     const save::model::TerrainGrid was = valley();

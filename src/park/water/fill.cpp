@@ -119,6 +119,22 @@ namespace rct3::park::water
         return true;
     }
 
+    std::vector<std::size_t> flooded_falls(const save::model::WaterLayer& was, const save::model::WaterLayer& now, std::span<const save::model::Waterfall> falls, const save::model::TerrainGrid& grid)
+    {
+        const auto level = [&](const save::model::WaterLayer& water, const save::model::WorldPoint3& p) -> std::optional<float> {
+            const save::model::Tile tile { static_cast<int>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<int>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) };
+            const auto lake = std::ranges::find_if(water.bodies, [&](const save::model::WaterBody& b) { return holds(b, tile); });
+            return lake == water.bodies.end() ? std::nullopt : std::optional(lake->level);
+        };
+        std::vector<std::size_t> out;
+        for (std::size_t i = 0; i < falls.size(); ++i)
+        {
+            if (level(was, falls[i].top) != level(now, falls[i].top) || level(was, falls[i].bottom) != level(now, falls[i].bottom))
+                out.push_back(i);
+        }
+        return out;
+    }
+
     bool settle_water(save::model::WaterLayer& water, std::vector<save::model::Waterfall>& falls, const save::model::TerrainGrid& was, const save::model::TerrainGrid& grid)
     {
         const auto at = [&](int col, int row) { return static_cast<std::size_t>(row * grid.width + col); };

@@ -32,6 +32,7 @@ namespace rct3::scene::park
         constexpr std::u16string_view kSellPoolMark = u"%POOLCOMPLEXNAME%";
         constexpr std::string_view kPoolDefaultName = "PoolComplexDefaultName";
         constexpr std::string_view kRemoveLakeText = "Water_DeleteResponse_WaterfallPrompt";
+        constexpr std::string_view kFloodFallsText = "Water_FloodResponse_WaterfallPrompt";
 
     } // namespace
 
@@ -88,6 +89,15 @@ namespace rct3::scene::park
         const ui::widgets::QuestionBoxStyle style = skins::question_box_style(palette);
         scene.desktop->root().add<ui::widgets::QuestionBox>(std::string(kLakeName), style, std::u16string(strings.get(kRemoveLakeText)), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
         scene.land.lake_asked = tile;
+    }
+
+    void ask_flood_falls(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, std::vector<save::model::WorldPoint3> tops)
+    {
+        if (scene.desktop->root().find(kFloodName))
+            return;
+        const ui::widgets::QuestionBoxStyle style = skins::question_box_style(palette);
+        scene.desktop->root().add<ui::widgets::QuestionBox>(std::string(kFloodName), style, std::u16string(strings.get(kFloodFallsText)), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(strings.get(kYes)), style.confirm_icon }, { std::u16string(strings.get(kNo)), style.cancel_icon } });
+        scene.land.falls_asked = std::move(tops);
     }
 
 } // namespace rct3::scene::park

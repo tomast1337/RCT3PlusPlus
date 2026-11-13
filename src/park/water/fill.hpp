@@ -34,6 +34,10 @@ namespace rct3::park::water
     /// the ground their spillways were cut from; whether there was one.
     bool remove_lake(save::model::WaterLayer& water, std::vector<save::model::Waterfall>& falls, save::model::TerrainGrid& grid, save::model::Tile tile);
 
+    /// Of `falls`, those pouring from or into a lake that `now` no longer holds as `was` did: one whose level
+    /// changed, or that another lake took in.
+    [[nodiscard]] std::vector<std::size_t> flooded_falls(const save::model::WaterLayer& was, const save::model::WaterLayer& now, std::span<const save::model::Waterfall> falls, const save::model::TerrainGrid& grid);
+
     /// After the ground moved from `was` to `grid`: settles every lake on a tile that moved, or beside one that now
     /// dips below its level. Such a lake keeps its level where the ground still holds it: tiles that rose out of it
     /// dry, ground dug beside it floods, and ground risen through its middle splits it in two. Where the ground

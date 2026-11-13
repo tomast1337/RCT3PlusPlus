@@ -126,3 +126,9 @@ behaviour identical: `sim-run` output must not change.
 - Build a value with designated initializers (`T { .a = x, .b = y }`), fields in declaration order, not by
   declaring it and assigning field after field. Assign afterwards only fields that depend on control flow.
   Give every struct member a default (`{ }` when nothing else fits) so leaving a field out does not warn.
+- A value with a unit has a unit type from `units/units.hpp` (`units::Money`, `units::Seconds`,
+  `units::Radians`, ...), so the declaration says what it measures: `units::Seconds idle { 5 };`, not
+  `float idle = 5; ///< Seconds`. Add a kind there when none fits, with one doc comment. Plain numbers stay at
+  the edges a type cannot cross (file layouts, the GPU, third-party code) and in short locals.
+- No magic "none" values: a value that may be missing is `std::optional<T>` (or an enum when there are more
+  than two states), not `-1` meaning "never".

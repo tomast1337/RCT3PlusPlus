@@ -33,12 +33,13 @@ function on_view(col: number, row: number): [number, number] {
     return [at.x, at.y];
 }
 
-// A design with a gap, opened with guests about.
+// A design with a gap, opened with guests about: the third by name, Triple Corkscrew, whose station is on the
+// ground beside its lowest piece, so ground paths reach its doors.
 await designs();
 const list = ui.find("design_browser/content/list")!;
 const button = ui.find("design_browser/content/build")!;
 const unit = (button.bottom - button.top) / 22;
-await pointer.click(list.x, list.top + (18 + 16 * 2) * unit);
+await pointer.click(list.x, list.top + (18 + 16 * 4) * unit);
 await frames(5);
 await ui.click("design_browser/content/build");
 await frames(10);

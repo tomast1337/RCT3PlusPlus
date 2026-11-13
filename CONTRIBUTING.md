@@ -144,8 +144,9 @@ Security problems (for example a file that crashes the parser or reads out of bo
    ./nob format --check
    ```
 
-   Parser changes also run `./nob test --sanitize`, and a new parser entry point that reads untrusted
-   bytes gets a fuzz target in `fuzz/`.
+   `./nob format` also runs Prettier over `scripts/` (through `npx`, so it needs Node.js; without it the
+   scripts are skipped, but CI checks them). Parser changes also run `./nob test --sanitize`, and a new
+   parser entry point that reads untrusted bytes gets a fuzz target in `fuzz/`.
 3. Follow the design and code style in [AGENTS.md](AGENTS.md): plain data and free functions where they fit,
    bounds-checked parsing that returns `std::expected`, `std::format` for text, no new warnings.
    Lay code out by feature: a feature's data and its functions in one `.hpp`/`.cpp` pair, three or more

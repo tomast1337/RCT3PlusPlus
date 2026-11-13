@@ -85,8 +85,9 @@ jobs:
         run: ./nob test ${{ matrix.cache == 'sanitize' && '--sanitize --no-tools' || '' }}
 
   # Formatting first: it takes a minute, and the build jobs wait for it, so a formatting slip fails fast instead
-  # of after a full build. The tool versions are pinned from PyPI so the result does not depend on what the base
-  # image ships: formatting differs between clang-format releases, so a floating version would make this flaky.
+  # of after a full build. The tool versions are pinned (clang-format from PyPI, Prettier in nob.cpp) so the result
+  # does not depend on what the base image ships: formatting differs between releases, so a floating version would
+  # make this flaky.
   format:
     name: format
     runs-on: ubuntu-latest
@@ -104,6 +105,12 @@ jobs:
           apt-get install -y -qq --no-install-recommends python3-pip
           pip install --break-system-packages clang-format==23.1.1
           clang-format --version
+
+      # ./nob format runs Prettier over the scripts through npx, at the version nob pins.
+      - name: Install Node.js
+        run: |
+          apt-get install -y -qq --no-install-recommends nodejs npm
+          npx --version
 
       - name: Bootstrap nob
         run: g++ -std=c++26 -o nob nob.cpp

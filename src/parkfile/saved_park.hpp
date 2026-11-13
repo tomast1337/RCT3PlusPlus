@@ -92,9 +92,11 @@ namespace rct3::parkfile
         float wind = 0;
         float wind_change = 0;
         std::vector<save::model::LedgerPeriod> ledger; ///< The months' accounts, newest first
-        std::int32_t max_loan = 0;                     ///< Hundredths; goal prizes may have raised it
-        float interest_rate_percent = 0;               ///< Goal prizes may have lowered it
-        std::optional<std::int64_t> ledger_month;      ///< The month the newest ledger period is for (simulation::park::ledger_month)
+        /// Hundredths; goal prizes may have raised it. Kept 32-bit while the park file layout may still change;
+        /// once it is settled, this can become units::Money (64-bit) like the cash and loan.
+        std::int32_t max_loan = 0;
+        float interest_rate_percent = 0;          ///< Goal prizes may have lowered it
+        std::optional<std::int64_t> ledger_month; ///< The month the newest ledger period is for (simulation::park::ledger_month)
         /// The weekly graphs (simulation/park/graphs.hpp), the money's then the park's, as the models keep them.
         save::model::Series cash_less_loan, company_value, expenditure, income, park_value, share_price, weekly_profit;
         save::model::Series park_rating, guests_in_park, adults_in_park, teenagers_in_park, children_in_park, guest_intake, publicity_level;
